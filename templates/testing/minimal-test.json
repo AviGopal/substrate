@@ -1,0 +1,27 @@
+{
+  "name": "Minimal Test Template",
+  "description": "Ultra-simple template for testing activity execution",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "echo-hello",
+      "subagent": "general",
+      "description": "Echo hello message",
+      "dependencies": [],
+      "prompt": {
+        "template": "Echo 'Hello from minimal test activity' using bash tool. Report success.",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ]
+}

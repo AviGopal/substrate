@@ -1,0 +1,36 @@
+{
+  "name": "Test Context Hints V2",
+  "description": "Template with context requirements to test context gathering via session memory agent",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "projectStructure",
+      "hint": "Get project file structure to understand codebase layout",
+      "required": false,
+      "impulseTypes": ["bashOutput", "file"],
+      "budgetRange": [500, 2000]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "echo-with-context",
+      "subagent": "general",
+      "description": "Echo hello message",
+      "dependencies": [],
+      "prompt": {
+        "template": "Echo 'Hello from test with context hints v2' using bash tool. Context requirements were provided as hints to the session memory agent. Report success.",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ]
+}
