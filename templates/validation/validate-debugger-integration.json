@@ -1,0 +1,137 @@
+{
+  "name": "Validate Debugger Integration",
+  "description": "Validates that the Activity Execution Debugger is properly integrated with the learning system and all data flows work correctly",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1-run-validation-script",
+      "subagent": "general",
+      "description": "Run debugger integration validation script",
+      "dependencies": [],
+      "prompt": {
+        "template": "Run the Activity Execution Debugger integration validation script.\n\n**Objective**: Validate that the debugger is properly integrated with the learning system\n\n**Script**: `scripts/validate-debugger-integration.ts`\n\n**What to validate**:\n1. Setup and prerequisites\n   - Debugger library exists\n   - Integration library exists\n   - Documentation exists\n\n2. Debugger creation\n   - Activity ID validation\n   - Activity type validation\n   - Output directory configuration\n\n3. Phase tracking\n   - All 7 execution phases defined\n   - Phase transitions work correctly\n   - State management validated\n\n4. Checkpoint validation\n   - Checkpoint creation works\n   - Checkpoint IDs are unique\n   - State tracking works\n\n5. Assertion evaluation\n   - All assertion types work (assert, assertTrue, assertEqual, assertNotEqual)\n   - Pass/fail detection works\n   - Reason capturing works\n\n6. Metrics recording\n   - Numeric metrics work\n   - String metrics work\n   - Boolean metrics work\n   - Metric aggregation works\n\n7. Error handling\n   - Checkpoint failures detected\n   - Assertion failures detected\n   - Error recovery attempted\n   - Fallback strategies used\n\n8. Diagnostic generation\n   - Activity metadata captured\n   - Checkpoints recorded\n   - Failures tracked\n   - Timeline built\n   - Reports generated (text and JSON)\n\n9. Feedback schema\n   - Impression ID format correct\n   - Outcome values valid\n   - Metrics structure correct\n   - Diagnostic data complete\n\n10. Learning integration\n    - Recommendation endpoint defined\n    - Feedback endpoint defined\n    - Thompson Sampling configured\n    - Association learning configured\n    - Celery tasks configured\n    - Data flow validated\n\n**Steps**:\n1. Make validation script executable: `chmod +x scripts/validate-debugger-integration.ts`\n2. Run validation: `npx ts-node scripts/validate-debugger-integration.ts`\n3. Check exit code (0 = success, 1 = failure)\n4. Review validation report\n5. If any phase fails, investigate and fix\n6. Re-run until all phases pass\n\n**Success Criteria**:\n- All 10 validation phases pass\n- Exit code is 0\n- No errors in validation report\n- All checks show ✅\n\n**Output**: Validation report showing pass/fail for each phase",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "npx ts-node scripts/validate-debugger-integration.ts"
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2-validate-data-flow",
+      "subagent": "general",
+      "description": "Validate data flow from execution to learning system",
+      "dependencies": ["task-1-run-validation-script"],
+      "prompt": {
+        "template": "Validate the complete data flow from activity execution through to the learning system.\n\n**Objective**: Ensure diagnostic data flows correctly through all integration points\n\n**Data Flow to Validate**:\n\n```\nActivity Execute (with Debugger)\n    ↓ Produces\nDiagnostic Data {\n  activityId, type, duration,\n  checkpoints[], failures[], warnings[],\n  rootCause\n}\n    ↓ Converts to\nFeedback {\n  impression_id, outcome, metrics,\n  diagnostic_data, result_data\n}\n    ↓ Sends to\nLearning System (/api/v1/feedback/record)\n    ↓ Updates\nThompson Parameters {\n  alpha (successes),\n  beta (failures)\n}\n    ↓ Improves\nNext Recommendation\n```\n\n**Validation Steps**:\n\n1. **Create Test Activity**:\n   ```typescript\n   // Simulate activity execution\n   const executor = new ActivityExecutionDebugger('test_001', 'feature');\n   \n   executor.enterPhase(ExecutionPhase.EXECUTION);\n   const cp = executor.checkpoint('cp_test', 'Test checkpoint');\n   executor.assertTrue('test_assertion', true);\n   cp.complete(ExecutionState.SUCCESS);\n   executor.exitPhase(ExecutionState.SUCCESS);\n   \n   executor.finalize();\n   const diagnostic = executor.getDiagnostic();\n   ```\n\n2. **Validate Diagnostic Structure**:\n   - Check activityId present\n   - Check type present\n   - Check duration calculated\n   - Check checkpoints array populated\n   - Check assertions captured\n\n3. **Create Feedback**:\n   ```typescript\n   const feedback = {\n     impression_id: diagnostic.activityId,\n     outcome: diagnostic.failures.length === 0 ? 'success' : 'failure',\n     metrics: {\n       duration_ms: diagnostic.duration,\n       checkpoint_count: diagnostic.checkpoints.length,\n       assertion_count: countAssertions(diagnostic),\n     },\n     diagnostic_data: diagnostic,\n   };\n   ```\n\n4. **Validate Feedback Schema**:\n   - Check impression_id format\n   - Check outcome is 'success' or 'failure'\n   - Check metrics structure\n   - Check diagnostic_data complete\n\n5. **Simulate Learning System Update**:\n   ```typescript\n   // Thompson Sampling update\n   if (feedback.outcome === 'success') {\n     variant.alpha += 1;  // Increment successes\n   } else {\n     variant.beta += 1;   // Increment failures\n   }\n   ```\n\n6. **Validate Parameter Updates**:\n   - Check alpha increments on success\n   - Check beta increments on failure\n   - Check parameters stored correctly\n\n**Create Validation Script**: `scripts/validate-data-flow.ts`\n\n**Run Validation**: `npx ts-node scripts/validate-data-flow.ts`\n\n**Success Criteria**:\n- Diagnostic created correctly\n- Feedback converted correctly\n- Schema matches expectations\n- Parameter updates simulated\n- All checks pass\n\n**Output**: Data flow validation report",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "scripts/validate-data-flow.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "npx ts-node scripts/validate-data-flow.ts"
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3-test-end-to-end",
+      "subagent": "general",
+      "description": "Test complete end-to-end flow with real activity",
+      "dependencies": ["task-2-validate-data-flow"],
+      "prompt": {
+        "template": "Test the complete end-to-end flow using a real activity execution.\n\n**Objective**: Execute a real activity with debugging and validate complete flow\n\n**Test Activity**: create-activity-template (infrastructure)\n\n**End-to-End Flow**:\n\n1. **Get Recommendation** (simulate):\n   ```typescript\n   const recommendation = {\n     recommended_activity: 'create-activity-template',\n     context_impulses: [\n       { impulse_id: 'pattern_activity_structure', content: '...' },\n     ],\n     impression_id: 'imp_e2e_test_001',\n   };\n   ```\n\n2. **Execute Activity with Debugger**:\n   ```typescript\n   const executor = new ActivityExecutionDebugger(\n     recommendation.impression_id,\n     recommendation.recommended_activity\n   );\n   \n   // INITIALIZATION phase\n   executor.enterPhase(ExecutionPhase.INITIALIZATION);\n   // ... validation code ...\n   executor.exitPhase(ExecutionState.SUCCESS);\n   \n   // PLANNING phase\n   executor.enterPhase(ExecutionPhase.PLANNING);\n   // ... planning code ...\n   executor.exitPhase(ExecutionState.SUCCESS);\n   \n   // EXECUTION phase\n   executor.enterPhase(ExecutionPhase.EXECUTION);\n   // ... execution code ...\n   executor.exitPhase(ExecutionState.SUCCESS);\n   \n   // VALIDATION phase\n   executor.enterPhase(ExecutionPhase.VALIDATION);\n   // ... validation code ...\n   executor.exitPhase(ExecutionState.SUCCESS);\n   \n   executor.finalize();\n   ```\n\n3. **Capture Diagnostic**:\n   ```typescript\n   const diagnostic = executor.getDiagnostic();\n   \n   // Validate diagnostic\n   assert(diagnostic.activityId === recommendation.impression_id);\n   assert(diagnostic.checkpoints.length > 0);\n   assert(diagnostic.failures.length === 0);  // Should succeed\n   ```\n\n4. **Convert to Feedback**:\n   ```typescript\n   const feedback = {\n     impression_id: recommendation.impression_id,\n     outcome: diagnostic.failures.length === 0 ? 'success' : 'failure',\n     metrics: {\n       duration_ms: diagnostic.duration,\n       checkpoint_count: diagnostic.checkpoints.length,\n       phase_count: countPhases(diagnostic),\n     },\n     diagnostic_data: diagnostic,\n   };\n   ```\n\n5. **Validate Quality Gates**:\n   ```typescript\n   const gates = {\n     no_failures: diagnostic.failures.length === 0,\n     all_phases_complete: hasAllPhases(diagnostic),\n     performance_ok: diagnostic.duration < 60000,\n   };\n   \n   assert(gates.no_failures, 'Should have no failures');\n   assert(gates.all_phases_complete, 'Should complete all phases');\n   assert(gates.performance_ok, 'Should meet performance threshold');\n   ```\n\n6. **Simulate Learning System**:\n   ```typescript\n   // Would send to /api/v1/feedback/record\n   // For now, validate schema and simulate update\n   \n   const variant = {\n     activity_id: 'create-activity-template',\n     alpha: 24,  // Previous successes\n     beta: 4,    // Previous failures\n   };\n   \n   if (feedback.outcome === 'success') {\n     variant.alpha += 1;  // Now 25\n   }\n   \n   const success_rate = variant.alpha / (variant.alpha + variant.beta);\n   assert(success_rate > 0.8, 'Success rate should be high');\n   ```\n\n**Create Test Script**: `scripts/test-e2e-debugger-flow.ts`\n\n**Run Test**: `npx ts-node scripts/test-e2e-debugger-flow.ts`\n\n**Success Criteria**:\n- Activity executes with debugger\n- All phases complete\n- Diagnostic captured\n- Feedback converted\n- Quality gates pass\n- Learning system update simulated\n- All assertions pass\n\n**Output**: End-to-end test report with pass/fail",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "scripts/test-e2e-debugger-flow.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "npx ts-node scripts/test-e2e-debugger-flow.ts"
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4-generate-validation-report",
+      "subagent": "general",
+      "description": "Generate comprehensive validation report",
+      "dependencies": ["task-3-test-end-to-end"],
+      "prompt": {
+        "template": "Generate a comprehensive validation report documenting all test results.\n\n**Objective**: Create complete validation documentation\n\n**Report Structure**:\n\n```markdown\n# Activity Debugger Integration - Validation Report\n\nGenerated: {{timestamp}}\n\n## Executive Summary\n\n- Total Validations: {{total}}\n- Passed: {{passed}}\n- Failed: {{failed}}\n- Success Rate: {{success_rate}}%\n\n## Validation Results\n\n### 1. Setup Validation\n{{setup_results}}\n\n### 2. Debugger Creation\n{{debugger_creation_results}}\n\n### 3. Phase Tracking\n{{phase_tracking_results}}\n\n### 4. Checkpoint Validation\n{{checkpoint_validation_results}}\n\n### 5. Assertion Evaluation\n{{assertion_evaluation_results}}\n\n### 6. Metrics Recording\n{{metrics_recording_results}}\n\n### 7. Error Handling\n{{error_handling_results}}\n\n### 8. Diagnostic Generation\n{{diagnostic_generation_results}}\n\n### 9. Feedback Schema\n{{feedback_schema_results}}\n\n### 10. Learning Integration\n{{learning_integration_results}}\n\n### 11. Data Flow Validation\n{{data_flow_results}}\n\n### 12. End-to-End Test\n{{e2e_test_results}}\n\n## Issues Found\n\n{{issues_list}}\n\n## Recommendations\n\n{{recommendations}}\n\n## Conclusion\n\n{{conclusion}}\n```\n\n**Collect Data**:\n1. Read validation script output\n2. Read data flow validation output\n3. Read e2e test output\n4. Aggregate results\n\n**Generate Report**: `VALIDATION_REPORT.md`\n\n**Include**:\n- All test results\n- Pass/fail for each phase\n- Error details (if any)\n- Performance metrics\n- Recommendations\n- Next steps\n\n**Success Criteria**:\n- Report generated\n- All results documented\n- Issues identified\n- Recommendations provided\n\n**Output**: `VALIDATION_REPORT.md` in project root",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "VALIDATION_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Executive Summary",
+            "description": "Report must have executive summary"
+          },
+          {
+            "pattern": "Validation Results",
+            "description": "Report must have validation results section"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": "system",
+  "created_at": "2026-01-30T13:00:00.000Z",
+  "metadata": {
+    "version": "1.0.0",
+    "purpose": "Validate debugger integration and data flows",
+    "integration": "double-blind-learning-system"
+  }
+}

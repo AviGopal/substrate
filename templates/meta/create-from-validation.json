@@ -1,0 +1,148 @@
+{
+  "name": "Create From Validation",
+  "description": "Meta-activity that analyzes validation results, identifies missing functionality, and creates activity templates to implement the missing pieces",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1-analyze-validation-results",
+      "subagent": "general",
+      "description": "Analyze validation output and categorize missing functionality",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze validation results to identify and categorize all missing functionality.\n\n**Objective**: Extract structured information about what needs to be implemented\n\n**Input**: {{validation_output_file}}\n**Target System**: {{target_system}}\n\n**Analysis Steps**:\n\n1. **Load Validation Results**:\n   ```typescript\n   const validation = JSON.parse(readFileSync('{{validation_output_file}}', 'utf8'));\n   ```\n\n2. **Extract Failed Checks**:\n   ```typescript\n   interface FailedCheck {\n     id: string;\n     phase: string;\n     description: string;\n     reason: string;\n     severity: 'critical' | 'high' | 'medium' | 'low';\n     category: 'missing_file' | 'missing_function' | 'missing_class' | \n                'missing_test' | 'incomplete_implementation' | 'missing_integration';\n   }\n   \n   const failedChecks: FailedCheck[] = validation.results\n     .filter(r => !r.passed)\n     .map(extractFailureDetails);\n   ```\n\n3. **Categorize by Implementation Type**:\n   ```typescript\n   interface MissingFunctionality {\n     files: {\n       path: string;\n       purpose: string;\n       dependencies: string[];\n     }[];\n     classes: {\n       name: string;\n       file: string;\n       methods: string[];\n       interfaces: string[];\n     }[];\n     functions: {\n       name: string;\n       file: string;\n       signature: string;\n       purpose: string;\n     }[];\n     tests: {\n       file: string;\n       test_cases: string[];\n       coverage_target: number;\n     }[];\n     integrations: {\n       component_a: string;\n       component_b: string;\n       integration_type: 'api' | 'data_flow' | 'event' | 'callback';\n       description: string;\n     }[];\n   }\n   ```\n\n4. **Prioritize by Dependency Order**:\n   ```typescript\n   // Build dependency graph\n   const dependencyGraph = buildDependencyGraph(failedChecks);\n   \n   // Topological sort to determine implementation order\n   const implementationOrder = topologicalSort(dependencyGraph);\n   ```\n\n5. **Group into Activities**:\n   ```typescript\n   interface ActivityGroup {\n     activity_type: 'feature' | 'infrastructure' | 'integration' | 'test';\n     name: string;\n     description: string;\n     implements: string[];  // List of failed check IDs this activity will fix\n     estimated_complexity: 'simple' | 'moderate' | 'complex';\n     dependencies: string[];  // Other activity groups this depends on\n   }\n   \n   const activityGroups: ActivityGroup[] = groupIntoActivities(implementationOrder);\n   ```\n\n6. **Generate Analysis Report**:\n   Create `VALIDATION_ANALYSIS.md`:\n   ```markdown\n   # Validation Analysis Report\n   \n   Generated: {{timestamp}}\n   Validation Source: {{validation_output_file}}\n   Target System: {{target_system}}\n   \n   ## Summary\n   - Total Failed Checks: {{failed_count}}\n   - Missing Files: {{missing_files_count}}\n   - Missing Classes: {{missing_classes_count}}\n   - Missing Functions: {{missing_functions_count}}\n   - Missing Tests: {{missing_tests_count}}\n   - Missing Integrations: {{missing_integrations_count}}\n   \n   ## Categorized Missing Functionality\n   \n   ### Files to Create\n   {{#each missing_files}}\n   - `{{path}}` - {{purpose}}\n     Dependencies: {{dependencies}}\n   {{/each}}\n   \n   ### Classes to Implement\n   {{#each missing_classes}}\n   - `{{name}}` in `{{file}}`\n     Methods: {{methods}}\n     Interfaces: {{interfaces}}\n   {{/each}}\n   \n   ### Functions to Implement\n   {{#each missing_functions}}\n   - `{{signature}}` in `{{file}}`\n     Purpose: {{purpose}}\n   {{/each}}\n   \n   ### Tests to Write\n   {{#each missing_tests}}\n   - `{{file}}`\n     Test Cases: {{test_cases}}\n     Coverage Target: {{coverage_target}}%\n   {{/each}}\n   \n   ### Integrations to Build\n   {{#each missing_integrations}}\n   - {{component_a}} ↔ {{component_b}} ({{integration_type}})\n     Description: {{description}}\n   {{/each}}\n   \n   ## Recommended Activity Groups\n   \n   {{#each activity_groups}}\n   ### {{index}}. {{name}} ({{activity_type}}, {{estimated_complexity}})\n   \n   **Description**: {{description}}\n   \n   **Implements**:\n   {{#each implements}}\n   - {{this}}\n   {{/each}}\n   \n   **Dependencies**: {{dependencies}}\n   {{/each}}\n   \n   ## Implementation Order\n   \n   Based on dependency analysis:\n   {{#each implementation_order}}\n   {{index}}. {{this}}\n   {{/each}}\n   ```\n\n7. **Save Structured Data**:\n   Save to `validation-analysis.json`:\n   ```json\n   {\n     \"timestamp\": \"...\",\n     \"source\": \"...\",\n     \"missing_functionality\": { ... },\n     \"activity_groups\": [ ... ],\n     \"implementation_order\": [ ... ]\n   }\n   ```\n\n**Success Criteria**:\n- ✅ All failed checks analyzed\n- ✅ Missing functionality categorized\n- ✅ Dependency graph built\n- ✅ Activity groups identified\n- ✅ Implementation order determined\n- ✅ Reports generated (markdown + JSON)\n\n**Output Files**:\n- `VALIDATION_ANALYSIS.md`\n- `validation-analysis.json`",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "validation_output_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to validation output JSON file"
+          },
+          {
+            "name": "target_system",
+            "type": "string",
+            "required": true,
+            "description": "Name of system being analyzed"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "VALIDATION_ANALYSIS.md",
+          "validation-analysis.json"
+        ],
+        "requiredPatterns": [
+          "Summary",
+          "Recommended Activity Groups",
+          "Implementation Order"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2-generate-activity-templates",
+      "subagent": "general",
+      "description": "Generate activity templates for each identified activity group",
+      "dependencies": [
+        "task-1-analyze-validation-results"
+      ],
+      "prompt": {
+        "template": "Generate activity template JSON files for each activity group identified in the analysis.\n\n**Objective**: Create executable activity templates to implement missing functionality\n\n**Input**: `validation-analysis.json`\n**Output Directory**: {{output_directory}}\n\n**Template Generation Process**:\n\n1. **Load Activity Groups**:\n   ```typescript\n   const analysis = JSON.parse(readFileSync('validation-analysis.json', 'utf8'));\n   const activityGroups = analysis.activity_groups;\n   ```\n\n2. **For Each Activity Group, Generate Template**:\n   ```typescript\n   interface ActivityTemplate {\n     name: string;\n     description: string;\n     category: 'feature' | 'bugfix' | 'refactor' | 'tool' | 'infrastructure';\n     tasks: Task[];\n     integration: IntegrationConfig;\n     estimated_metrics: Metrics;\n   }\n   \n   function generateTemplate(group: ActivityGroup): ActivityTemplate {\n     return {\n       name: group.name,\n       description: group.description,\n       category: mapActivityTypeToCategory(group.activity_type),\n       tasks: generateTasksForGroup(group),\n       integration: generateIntegrationConfig(group),\n       estimated_metrics: estimateMetrics(group),\n     };\n   }\n   ```\n\n3. **Generate Tasks Based on Missing Functionality**:\n   ```typescript\n   function generateTasksForGroup(group: ActivityGroup): Task[] {\n     const tasks: Task[] = [];\n     \n     // Task 1: Create file structure\n     if (group.involves_files) {\n       tasks.push({\n         id: 'task-1-create-files',\n         description: 'Create file structure and boilerplate',\n         prompt: generateFileCreationPrompt(group.files),\n         validation: {\n           requiredFiles: group.files.map(f => f.path),\n         },\n       });\n     }\n     \n     // Task 2: Implement core logic\n     if (group.involves_classes || group.involves_functions) {\n       tasks.push({\n         id: 'task-2-implement-logic',\n         description: 'Implement core classes and functions',\n         prompt: generateImplementationPrompt(group),\n         dependencies: ['task-1-create-files'],\n       });\n     }\n     \n     // Task 3: Add tests\n     if (group.involves_tests) {\n       tasks.push({\n         id: 'task-3-add-tests',\n         description: 'Write comprehensive tests',\n         prompt: generateTestPrompt(group),\n         dependencies: ['task-2-implement-logic'],\n         validation: {\n           commands: ['npm test', 'npm run test:coverage'],\n         },\n       });\n     }\n     \n     // Task 4: Create integration\n     if (group.involves_integrations) {\n       tasks.push({\n         id: 'task-4-integrate',\n         description: 'Integrate with existing systems',\n         prompt: generateIntegrationPrompt(group),\n         dependencies: ['task-2-implement-logic'],\n       });\n     }\n     \n     // Task 5: Validate\n     tasks.push({\n       id: `task-${tasks.length + 1}-validate`,\n       description: 'Validate implementation against original validation',\n       prompt: generateValidationPrompt(group),\n       dependencies: [tasks[tasks.length - 1].id],\n       validation: {\n         commands: [group.validation_command || 'npm test'],\n       },\n     });\n     \n     return tasks;\n   }\n   ```\n\n4. **Generate Detailed Prompts**:\n   Each task prompt should:\n   - Reference the original validation failure\n   - Provide implementation guidance\n   - Include code examples\n   - Specify success criteria\n   - Include validation commands\n\n5. **Add Variables for Customization**:\n   ```typescript\n   // Extract variables from the implementation requirements\n   const variables = extractVariables(group);\n   ```\n\n6. **Add Quality Gates**:\n   ```typescript\n   const qualityGates = [\n     {\n       name: 'validation_passes',\n       description: 'Original validation check now passes',\n       type: 'command',\n       command: group.validation_command,\n     },\n     {\n       name: 'tests_pass',\n       description: 'All tests pass',\n       type: 'command',\n       command: 'npm test',\n     },\n     {\n       name: 'no_new_issues',\n       description: 'No new critical issues',\n       type: 'metabob',\n       threshold: 0,\n     },\n   ];\n   ```\n\n7. **Save Templates**:\n   ```typescript\n   for (const group of activityGroups) {\n     const template = generateTemplate(group);\n     const filename = kebabCase(group.name) + '.json';\n     const filepath = join(outputDirectory, filename);\n     \n     writeFileSync(filepath, JSON.stringify(template, null, 2));\n     console.log(`✅ Generated: ${filepath}`);\n   }\n   ```\n\n8. **Generate Index**:\n   Create `GENERATED_ACTIVITIES.md`:\n   ```markdown\n   # Generated Activity Templates\n   \n   Generated: {{timestamp}}\n   Source: {{validation_output_file}}\n   Output Directory: {{output_directory}}\n   \n   ## Activities Generated\n   \n   {{#each generated_activities}}\n   ### {{index}}. {{name}}\n   \n   - **File**: `{{filename}}`\n   - **Category**: {{category}}\n   - **Complexity**: {{complexity}}\n   - **Tasks**: {{task_count}}\n   - **Fixes**: {{fixes_count}} validation failures\n   - **Dependencies**: {{dependencies}}\n   \n   **What it implements**:\n   {{#each implements}}\n   - {{this}}\n   {{/each}}\n   \n   **Execution order**: {{execution_order}}\n   {{/each}}\n   \n   ## Execution Plan\n   \n   Execute in this order:\n   {{#each execution_order}}\n   {{index}}. `{{activity_filename}}`\n   {{/each}}\n   \n   ## Usage\n   \n   ```bash\n   # Register activities\n   {{#each generated_activities}}\n   opencode activity register {{output_directory}}/{{filename}}\n   {{/each}}\n   \n   # Execute in order\n   {{#each execution_order}}\n   opencode activity run {{activity_id}}\n   {{/each}}\n   ```\n   ```\n\n**Success Criteria**:\n- ✅ One template generated per activity group\n- ✅ Templates are valid JSON\n- ✅ Tasks properly structured with dependencies\n- ✅ Prompts reference original validation failures\n- ✅ Quality gates ensure validation passes\n- ✅ Index document created\n\n**Output**:\n- `{{output_directory}}/*.json` - Activity template files\n- `GENERATED_ACTIVITIES.md` - Index and usage guide",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "output_directory",
+            "type": "string",
+            "required": false,
+            "description": "Directory to save generated templates",
+            "default": "templates/generated"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "GENERATED_ACTIVITIES.md"
+        ],
+        "requiredPatterns": [
+          "Activities Generated",
+          "Execution Plan"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3-validate-generated-templates",
+      "subagent": "general",
+      "description": "Validate that generated templates are well-formed and executable",
+      "dependencies": [
+        "task-2-generate-activity-templates"
+      ],
+      "prompt": {
+        "template": "Validate all generated activity templates for correctness and completeness.\n\n**Objective**: Ensure generated templates are valid and will execute successfully\n\n**Input Directory**: {{output_directory}}\n\n**Validation Checks**:\n\n1. **JSON Validity**:\n   ```typescript\n   for (const file of templateFiles) {\n     try {\n       const template = JSON.parse(readFileSync(file, 'utf8'));\n     } catch (error) {\n       errors.push(`Invalid JSON in ${file}: ${error.message}`);\n     }\n   }\n   ```\n\n2. **Required Fields**:\n   ```typescript\n   const requiredFields = ['name', 'description', 'category', 'tasks'];\n   for (const field of requiredFields) {\n     if (!template[field]) {\n       errors.push(`Missing required field: ${field}`);\n     }\n   }\n   ```\n\n3. **Task Structure**:\n   ```typescript\n   for (const task of template.tasks) {\n     // Check required task fields\n     if (!task.id || !task.description || !task.prompt) {\n       errors.push(`Invalid task: ${task.id}`);\n     }\n     \n     // Check dependencies exist\n     for (const dep of task.dependencies || []) {\n       if (!template.tasks.find(t => t.id === dep)) {\n         errors.push(`Task ${task.id} depends on non-existent task ${dep}`);\n       }\n     }\n     \n     // Check for circular dependencies\n     if (hasCircularDependency(task, template.tasks)) {\n       errors.push(`Circular dependency detected involving ${task.id}`);\n     }\n   }\n   ```\n\n4. **Prompt Quality**:\n   ```typescript\n   for (const task of template.tasks) {\n     const prompt = task.prompt.template;\n     \n     // Check minimum length\n     if (prompt.length < 200) {\n       warnings.push(`Task ${task.id} has short prompt (${prompt.length} chars)`);\n     }\n     \n     // Check for variable references\n     const varRefs = prompt.match(/{{\\w+}}/g) || [];\n     for (const ref of varRefs) {\n       const varName = ref.slice(2, -2);\n       if (!task.prompt.variables?.find(v => v.name === varName)) {\n         errors.push(`Task ${task.id} references undefined variable: ${varName}`);\n       }\n     }\n   }\n   ```\n\n5. **Validation Rules**:\n   ```typescript\n   for (const task of template.tasks) {\n     if (task.validation) {\n       // Check required files are reasonable\n       for (const file of task.validation.requiredFiles || []) {\n         if (!file.match(/^[a-zA-Z0-9\\/._-]+$/)) {\n           warnings.push(`Suspicious file path: ${file}`);\n         }\n       }\n       \n       // Check commands are safe\n       for (const cmd of task.validation.commands || []) {\n         if (cmd.includes('rm -rf') || cmd.includes('sudo')) {\n           errors.push(`Dangerous command in ${task.id}: ${cmd}`);\n         }\n       }\n     }\n   }\n   ```\n\n6. **Estimate Execution Feasibility**:\n   ```typescript\n   // Check if implementation is actually possible\n   for (const template of templates) {\n     const complexity = estimateComplexity(template);\n     if (complexity > 100) {\n       warnings.push(`Template ${template.name} may be too complex (complexity: ${complexity})`);\n     }\n   }\n   ```\n\n7. **Generate Validation Report**:\n   Create `TEMPLATE_VALIDATION_REPORT.md`:\n   ```markdown\n   # Generated Template Validation Report\n   \n   Generated: {{timestamp}}\n   Templates Directory: {{output_directory}}\n   \n   ## Summary\n   - Total Templates: {{total}}\n   - Valid: {{valid}}\n   - Invalid: {{invalid}}\n   - Warnings: {{warning_count}}\n   \n   ## Validation Results\n   \n   {{#each templates}}\n   ### {{name}}\n   \n   - **File**: {{filename}}\n   - **Status**: {{status}}\n   - **Tasks**: {{task_count}}\n   - **Complexity**: {{complexity}}\n   \n   {{#if errors}}\n   **Errors**:\n   {{#each errors}}\n   - ❌ {{this}}\n   {{/each}}\n   {{/if}}\n   \n   {{#if warnings}}\n   **Warnings**:\n   {{#each warnings}}\n   - ⚠️  {{this}}\n   {{/each}}\n   {{/if}}\n   \n   {{#if valid}}\n   ✅ Template is valid and ready to execute\n   {{/if}}\n   {{/each}}\n   \n   ## Overall Assessment\n   \n   {{#if all_valid}}\n   ✅ All generated templates are valid and ready for registration.\n   {{else}}\n   ❌ Some templates have errors and need correction.\n   {{/if}}\n   \n   ## Next Steps\n   \n   {{#if all_valid}}\n   1. Register templates with activity system\n   2. Execute templates in dependency order\n   3. Re-run original validation to verify fixes\n   {{else}}\n   1. Fix errors in invalid templates\n   2. Re-validate templates\n   3. Then proceed with registration\n   {{/if}}\n   ```\n\n**Success Criteria**:\n- ✅ All templates validated\n- ✅ JSON validity confirmed\n- ✅ Required fields present\n- ✅ Task dependencies valid\n- ✅ No circular dependencies\n- ✅ No dangerous commands\n- ✅ Validation report generated\n\n**Failure Conditions**:\n- ❌ Any template has invalid JSON\n- ❌ Any template missing required fields\n- ❌ Any task has invalid dependencies\n- ❌ Any task has circular dependencies\n\n**Output**:\n- `TEMPLATE_VALIDATION_REPORT.md`",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "TEMPLATE_VALIDATION_REPORT.md"
+        ],
+        "requiredPatterns": [
+          "All generated templates are valid"
+        ],
+        "forbiddenPatterns": [
+          "templates have errors"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": [
+      {
+        "name": "templates_generated",
+        "description": "Activity templates generated for all missing functionality",
+        "command": "echo 'Checking: generated_template_count > 0'",
+        "required": true
+      },
+      {
+        "name": "templates_valid",
+        "description": "All generated templates are valid",
+        "command": "grep -q \"All generated templates are valid\" TEMPLATE_VALIDATION_REPORT.md",
+        "required": true
+      }
+    ]
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": "AGENT",
+  "created_at": "2026-01-30T14:00:00.000Z",
+  "metadata": {
+    "version": "1.0.0",
+    "purpose": "Meta-activity: Creates activities from validation results",
+    "type": "meta-activity",
+    "generates": "activity-templates"
+  }
+}

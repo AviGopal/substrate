@@ -1,0 +1,62 @@
+{
+  "name": "Fix Model Config Persistence",
+  "description": "Ensure the model configuration field is properly set and persists in all DevBob container configurations",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "check-current-configs",
+      "subagent": "general",
+      "description": "Check current model configuration in all containers",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check the current model configuration in all DevBob containers:\n\nFor each container (devbob-opencode, devbob-rpc-api, devbob-cli, devbob-dashboard):\n\nRun:\n```bash\ndocker exec CONTAINER_NAME cat /workspace/.opencode/opencode.json | jq '.model'\n```\n\nReport:\n- What is the current value of .model field?\n- Is it null?\n- Is it set to a model name?\n- Which containers have the field vs missing it?",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "add-model-to-configs",
+      "subagent": "general",
+      "description": "Add model field to all container configurations",
+      "dependencies": ["check-current-configs"],
+      "prompt": {
+        "template": "Add the model field to all DevBob container configurations:\n\nFor each container that's missing or has null model:\n\n```bash\ndocker exec CONTAINER_NAME bash -c '\ncd /workspace/.opencode\njq \"{model: \\\"anthropic/claude-sonnet-4-20250514\\\"} + .\" opencode.json > /tmp/new.json\nmv /tmp/new.json opencode.json\ncat opencode.json | jq \".model\"\n'\n```\n\nDo this for all 4 containers:\n- devbob-opencode\n- devbob-rpc-api\n- devbob-cli\n- devbob-dashboard\n\nVerify:\n- Does jq successfully merge the configs?\n- Does the model field show after update?\n- Are there any jq errors?\n\nReport the model value for each container after update.",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "update-entrypoint-script",
+      "subagent": "general",
+      "description": "Update entrypoint script to always set model in config",
+      "dependencies": ["add-model-to-configs"],
+      "prompt": {
+        "template": "Update the devbob-entrypoint.sh script to ensure model is always set:\n\n1. Find the entrypoint script:\nfind /home/avi/documents/work/exp-repo/metabob-devbob -name devbob-entrypoint.sh\n\n2. Look for where the opencode.json config is generated (likely around line 40-80)\n\n3. Ensure the config generation includes:\n```json\n{\n  \"model\": \"${MODEL:-anthropic/claude-sonnet-4-20250514}\",\n  \"...\": \"other fields\"\n}\n```\n\n4. The model should be set from the MODEL environment variable (with a default)\n\n5. If config already exists, the script should:\n- Check if model field is missing\n- Add it using jq if missing\n- NOT overwrite entire config\n\n6. Show the updated init_opencode_config() function\n\n7. Explain how this ensures model persists across container restarts",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "rebuild-containers-with-fix",
+      "subagent": "general",
+      "description": "Rebuild containers with updated entrypoint script",
+      "dependencies": ["update-entrypoint-script"],
+      "prompt": {
+        "template": "Rebuild DevBob containers with the updated entrypoint script:\n\n1. Rebuild the Docker image:\n```bash\ncd /home/avi/documents/work/exp-repo/metabob-devbob\ndocker build -t devbob:latest -f configs/Dockerfile.devbob .\n```\n\n2. Stop and remove old containers:\n```bash\ndocker-compose -f configs/docker-compose.devbob.yaml down\n```\n\n3. Update docker-compose to use the new image:\n- Verify devbob-entrypoint.sh is the entrypoint in docker-compose\n\n4. Start fresh containers:\n```bash\ndocker-compose -f configs/docker-compose.devbob.yaml up -d\n```\n\n5. Wait 30 seconds for startup\n\n6. Verify new containers have model set:\n```bash\nfor container in devbob-opencode devbob-rpc-api devbob-cli devbob-dashboard; do\n  echo \"$container model:\"\n  docker exec $container cat /workspace/.opencode/opencode.json | jq '.model'\ndone\n```\n\nReport:\n- Did all containers start successfully?\n- Do all have model field set?\n- Any configuration errors during startup?",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "verify-config-persistence",
+      "subagent": "general",
+      "description": "Verify config persists across container restarts",
+      "dependencies": ["rebuild-containers-with-fix"],
+      "prompt": {
+        "template": "Verify that the model configuration persists across container restarts:\n\n1. Check initial config:\n```bash\ndocker exec devbob-opencode cat /workspace/.opencode/opencode.json | jq '.model'\n```\n\n2. Restart the container:\n```bash\ndocker restart devbob-opencode\n```\n\n3. Wait 30 seconds\n\n4. Check config again:\n```bash\ndocker exec devbob-opencode cat /workspace/.opencode/opencode.json | jq '.model'\n```\n\n5. Verify it's the same:\n- Does the model value match before and after restart?\n- Is it still set to anthropic/claude-sonnet-4-20250514?\n\nIf model persists through restart, this fix is SUCCESSFUL.\nIf model is missing or different, the entrypoint script isn't working correctly.\n\nReport:\n- Model before restart: ___\n- Model after restart: ___\n- Configuration persists: YES/NO",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      }
+    }
+  ]
+}

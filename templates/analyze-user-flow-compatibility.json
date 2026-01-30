@@ -1,0 +1,186 @@
+{
+  "name": "Analyze User Flow Compatibility",
+  "description": "Walk through user flows across metabob repositories to identify component execution sequences and validate data compatibility",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Map user flow endpoints and entry points",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the {{repository}} repository to map user flow entry points:\n\n1. Identify all public API endpoints (if backend) or CLI commands (if CLI)\n2. Map entry points to their handler functions\n3. Document expected input schemas and validation rules\n4. List response/output schemas\n5. Identify authentication/authorization requirements\n\nCreate a comprehensive map of: Entry Point -> Handler -> Input Schema -> Output Schema\n\nRepository: {{repository}}\nFocus Areas: {{focus_areas}}",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repository",
+            "type": "string",
+            "required": true,
+            "description": "Repository path to analyze (e.g., repos/metabob-rpc-api)"
+          },
+          {
+            "name": "focus_areas",
+            "type": "string",
+            "required": false,
+            "description": "Specific areas to focus on (e.g., 'activity management, parameter server')"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Trace component execution sequences",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": "For each major user flow in {{repository}}, trace the complete execution sequence:\n\n1. Start from entry point (API endpoint or CLI command)\n2. Follow the execution path through all components:\n   - Route handlers -> Action handlers -> Models -> Database/External APIs\n3. Identify all data transformations along the path\n4. Document all external dependencies (other services, databases, APIs)\n5. Map error handling and edge cases\n\nCreate execution sequence diagrams for the top {{num_flows}} most important flows.\n\nUse metabob_list_file_components to find components in key files.\nUse metabob_suggest_related_changes to identify connected components.",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repository",
+            "type": "string",
+            "required": true,
+            "description": "Repository to analyze"
+          },
+          {
+            "name": "num_flows",
+            "type": "string",
+            "required": false,
+            "description": "Number of flows to trace (default: 5)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3",
+      "subagent": "general",
+      "description": "Validate data schemas and compatibility",
+      "dependencies": ["task-2"],
+      "prompt": {
+        "template": "Analyze data compatibility across {{repository}} components:\n\n1. Extract all data models/schemas (Pydantic, TypeScript interfaces, etc.)\n2. Validate consistency:\n   - Request schemas match handler expectations\n   - Database models match API responses\n   - Type annotations are correct and consistent\n3. Check for breaking changes or mismatches:\n   - Optional vs required fields\n   - Type incompatibilities\n   - Missing validation\n4. Identify deprecated or unused schemas\n5. Validate external API contracts (if applicable)\n\nUse metabob_search_codebase_issues to find type mismatches and validation issues.\n\nCreate a compatibility report with:\n- ✅ Valid schemas\n- ⚠️  Warnings (potential issues)\n- ❌ Errors (breaking incompatibilities)",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repository",
+            "type": "string",
+            "required": true,
+            "description": "Repository to validate"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4",
+      "subagent": "general",
+      "description": "Test cross-repository integration points",
+      "dependencies": ["task-3"],
+      "prompt": {
+        "template": "Identify and validate integration points between repositories:\n\n1. Find all cross-repository calls:\n   - metabob-cli -> metabob-rpc-api\n   - metabob-opencode -> metabob-rpc-api\n   - metabob-rpc-api -> external services\n2. Validate API contracts:\n   - Request/response schemas match on both sides\n   - Authentication mechanisms compatible\n   - Error handling consistent\n3. Check version compatibility:\n   - API versions aligned\n   - Breaking changes documented\n   - Deprecation notices present\n4. Identify potential integration failures:\n   - Network timeouts\n   - Authentication failures\n   - Schema mismatches\n   - Missing error handling\n\nFor each integration point, document:\n- Source: [repo/file]\n- Target: [repo/endpoint]\n- Contract: [request/response schemas]\n- Status: [✅ valid | ⚠️  warning | ❌ broken]\n\nRepositories to analyze: {{repositories}}",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repositories",
+            "type": "string",
+            "required": true,
+            "description": "Comma-separated list of repositories to check integration between"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-5",
+      "subagent": "general",
+      "description": "Generate compatibility report and recommendations",
+      "dependencies": ["task-4"],
+      "prompt": {
+        "template": "Create a comprehensive compatibility report:\n\n1. Summarize findings from all analysis tasks\n2. Categorize issues by severity:\n   - 🔴 Critical: Breaking incompatibilities requiring immediate fix\n   - 🟡 Warning: Potential issues that should be addressed\n   - 🟢 Info: Recommendations for improvement\n3. Provide actionable recommendations:\n   - Schema updates needed\n   - Missing validations to add\n   - Integration fixes required\n   - Documentation improvements\n4. Estimate effort for each fix:\n   - Quick fix (< 1 hour)\n   - Medium (1-4 hours)\n   - Large (> 4 hours)\n5. Suggest priority order for fixes\n\nSave the report to: {{output_file}}\n\nInclude:\n- Executive summary\n- Detailed findings per repository\n- Cross-repository integration status\n- Prioritized action items\n- Code examples for critical fixes",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "output_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to save the compatibility report"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["{{output_file}}"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "Repositories exist and are accessible",
+      "Metabob MCP tools available"
+    ],
+    "postChecks": [
+      "Compatibility report generated",
+      "All critical issues documented",
+      "Recommendations provided"
+    ],
+    "qualityGates": [
+      "All user flows traced",
+      "Integration points identified",
+      "Schemas validated"
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "name": "Validate Double-Blind Architecture Compliance",
+  "description": "Validates that metabob-cli, metabob-opencode, and metabob-rpc-api are compliant with the Double-Blind Learning System architecture defined in FINAL_ARCHITECTURE_SUMMARY.md",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1-validate-metabob-cli",
+      "subagent": "general",
+      "description": "Validate metabob-cli MCP sidecar compliance",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate that metabob-cli MCP sidecar is compliant with the double-blind architecture.\n\n**Objective**: Ensure MCP tools return WHAT, never WHY or HOW GOOD\n\n**Target Repository**: repos/metabob-cli\n\n**Architecture Requirements** (from FINAL_ARCHITECTURE_SUMMARY.md):\n\n### MCP Tools Must Return Pure CPG Analysis:\n\n1. **metabob_search_codebase_issues(query)**\n   - ✅ Returns: `[{component_id, file_path}]`\n   - ❌ Must NOT return: similarity scores, confidence, relevance\n   - Pure CPG analysis, no learning bias\n\n2. **metabob_analyze_change_impact(file, component)**\n   - ✅ Returns: `{dependencies, dependents}`\n   - ❌ Must NOT return: impact scores, severity, probability\n   - Pure dependency graph, no scoring\n\n3. **metabob_suggest_related_changes(changed_files)**\n   - ✅ Returns: `[file_paths]`\n   - ❌ Must NOT return: confidence scores, priorities\n   - Pure list of related files\n\n4. **metabob_assess_deletion_safety(file, component)**\n   - ✅ Returns: `{safe: bool, reason: str}`\n   - ❌ Must NOT return: liveness scores, usage metrics\n   - Simple boolean with explanation\n\n5. **metabob_list_file_components(file)**\n   - ✅ Returns: `[component_ids]`\n   - ❌ Must NOT return: metadata, scores, annotations\n   - Pure list of IDs\n\n**Validation Steps**:\n\n1. **Check MCP Tool Definitions**:\n   ```bash\n   cd repos/metabob-cli\n   \n   # Find MCP tool implementations\n   find . -name \"*mcp*\" -o -name \"*tool*\" | grep -v node_modules\n   \n   # Search for return schemas\n   rg \"metabob_search_codebase_issues\" -A 20\n   rg \"metabob_analyze_change_impact\" -A 20\n   rg \"metabob_suggest_related_changes\" -A 20\n   rg \"metabob_assess_deletion_safety\" -A 20\n   rg \"metabob_list_file_components\" -A 20\n   ```\n\n2. **Check for Prohibited Fields**:\n   ```bash\n   # Search for scoring/confidence in return values\n   rg \"similarity.*score|confidence|relevance|priority|weight\" src/\n   rg \"impact.*score|severity|probability\" src/\n   ```\n\n3. **Verify Pure CPG Analysis**:\n   - No embeddings in responses\n   - No learning data in responses\n   - No internal metrics exposed\n   - Only structural analysis from cpg-inference\n\n4. **Generate Validation Report**:\n   Create `METABOB_CLI_VALIDATION.md`:\n   ```markdown\n   # metabob-cli MCP Sidecar Validation\n   \n   Generated: {{timestamp}}\n   Repository: repos/metabob-cli\n   \n   ## MCP Tools Compliance\n   \n   ### metabob_search_codebase_issues\n   - [✅/❌] Returns only component_id and file_path\n   - [✅/❌] No similarity scores\n   - [✅/❌] No confidence values\n   - Findings: {{findings}}\n   \n   ### metabob_analyze_change_impact\n   - [✅/❌] Returns only dependencies and dependents\n   - [✅/❌] No impact scores\n   - [✅/❌] No severity metrics\n   - Findings: {{findings}}\n   \n   ### metabob_suggest_related_changes\n   - [✅/❌] Returns only file paths\n   - [✅/❌] No confidence scores\n   - [✅/❌] No priorities\n   - Findings: {{findings}}\n   \n   ### metabob_assess_deletion_safety\n   - [✅/❌] Returns only safe boolean and reason\n   - [✅/❌] No liveness scores\n   - [✅/❌] No usage metrics\n   - Findings: {{findings}}\n   \n   ### metabob_list_file_components\n   - [✅/❌] Returns only component IDs\n   - [✅/❌] No metadata\n   - [✅/❌] No annotations\n   - Findings: {{findings}}\n   \n   ## Issues Found\n   \n   {{#each issues}}\n   ### Issue {{@index}}: {{title}}\n   - **Tool**: {{tool}}\n   - **Problem**: {{problem}}\n   - **Location**: {{file}}:{{line}}\n   - **Current**: {{current_behavior}}\n   - **Required**: {{required_behavior}}\n   - **Fix**: {{fix_description}}\n   {{/each}}\n   \n   ## Summary\n   \n   - Total Tools: 5\n   - Compliant: {{compliant_count}}\n   - Non-Compliant: {{non_compliant_count}}\n   - Overall Status: {{#if all_compliant}}✅ PASS{{else}}❌ FAIL{{/if}}\n   ```\n\n**Success Criteria**:\n- ✅ All 5 MCP tools validated\n- ✅ No scoring/confidence in responses\n- ✅ Pure CPG analysis only\n- ✅ Report generated\n\n**Output**: `METABOB_CLI_VALIDATION.md`",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "METABOB_CLI_VALIDATION.md"
+        ],
+        "requiredPatterns": [
+          "MCP Tools Compliance"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2-validate-metabob-opencode",
+      "subagent": "general",
+      "description": "Validate metabob-opencode agent compliance",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate that metabob-opencode agents are compliant with the double-blind architecture.\n\n**Objective**: Ensure agents see minimal data, no internal metrics\n\n**Target Repository**: repos/metabob-opencode\n\n**Architecture Requirements**:\n\n### Agents Must:\n\n1. **Use RPC API for Recommendations**:\n   - Call `POST /api/v1/recommendations/get`\n   - Receive: `{recommended_activity, context_impulses, impression_id}`\n   - Must NOT see: variant assignment, Thompson samples, alpha/beta, scores\n\n2. **Submit Feedback Simply**:\n   - Call `POST /api/v1/feedback/record`\n   - Send: `{impression_id, outcome, metrics}`\n   - Receive: `{recorded: true}`\n   - Must NOT see: parameter updates, learning data\n\n3. **Use MCP Tools Correctly**:\n   - Call metabob MCP tools for CPG analysis\n   - Accept responses without questioning lack of scores\n   - Make decisions based on structural analysis\n\n4. **Never Expose Learning Internals**:\n   - No alpha/beta in logs\n   - No Thompson samples in output\n   - No variant IDs visible\n   - No association weights shown\n\n**Validation Steps**:\n\n1. **Check RPC Client Implementation**:\n   ```bash\n   cd repos/metabob-opencode\n   \n   # Find RPC client code\n   rg \"recommendations/get|feedback/record\" -A 10\n   \n   # Check response handling\n   rg \"recommended_activity|impression_id\" -A 5\n   ```\n\n2. **Check for Exposed Internals**:\n   ```bash\n   # Search for prohibited internal data\n   rg \"alpha|beta|theta|variant_id|sampled_\" src/\n   rg \"thompson|association.*weight\" src/\n   ```\n\n3. **Check MCP Tool Usage**:\n   ```bash\n   # Verify agents use MCP tools correctly\n   rg \"metabob_search_codebase|metabob_analyze_change\" src/\n   \n   # Check they don't expect scores\n   rg \"similarity.*score|confidence\" src/\n   ```\n\n4. **Check Activity Execution**:\n   ```bash\n   # Verify activity execution uses impression_id\n   rg \"executeActivity|runActivity\" -A 10\n   ```\n\n5. **Generate Validation Report**:\n   Create `METABOB_OPENCODE_VALIDATION.md`:\n   ```markdown\n   # metabob-opencode Agent Compliance Validation\n   \n   Generated: {{timestamp}}\n   Repository: repos/metabob-opencode\n   \n   ## RPC API Integration\n   \n   ### Recommendation Endpoint\n   - [✅/❌] Calls POST /api/v1/recommendations/get\n   - [✅/❌] Receives only: recommended_activity, context_impulses, impression_id\n   - [✅/❌] Does not process internal metrics\n   - Implementation: {{file}}:{{line}}\n   - Findings: {{findings}}\n   \n   ### Feedback Endpoint\n   - [✅/❌] Calls POST /api/v1/feedback/record\n   - [✅/❌] Sends only: impression_id, outcome, metrics\n   - [✅/❌] Does not expect learning data in response\n   - Implementation: {{file}}:{{line}}\n   - Findings: {{findings}}\n   \n   ## MCP Tool Usage\n   \n   - [✅/❌] Uses metabob MCP tools for CPG analysis\n   - [✅/❌] Accepts responses without scores\n   - [✅/❌] Makes decisions from structural analysis\n   - Findings: {{findings}}\n   \n   ## Learning Internals Exposure\n   \n   - [✅/❌] No alpha/beta in logs or code\n   - [✅/❌] No Thompson samples visible\n   - [✅/❌] No variant IDs exposed to agents\n   - [✅/❌] No association weights shown\n   - Findings: {{findings}}\n   \n   ## Issues Found\n   \n   {{#each issues}}\n   ### Issue {{@index}}: {{title}}\n   - **Component**: {{component}}\n   - **Problem**: {{problem}}\n   - **Location**: {{file}}:{{line}}\n   - **Violation**: {{violation_type}}\n   - **Fix**: {{fix_description}}\n   {{/each}}\n   \n   ## Summary\n   \n   - RPC Integration: {{rpc_status}}\n   - MCP Usage: {{mcp_status}}\n   - No Internal Exposure: {{exposure_status}}\n   - Overall Status: {{#if all_compliant}}✅ PASS{{else}}❌ FAIL{{/if}}\n   ```\n\n**Success Criteria**:\n- ✅ RPC API client implemented correctly\n- ✅ No internal metrics exposed\n- ✅ MCP tools used properly\n- ✅ Report generated\n\n**Output**: `METABOB_OPENCODE_VALIDATION.md`",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "METABOB_OPENCODE_VALIDATION.md"
+        ],
+        "requiredPatterns": [
+          "RPC API Integration"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3-validate-metabob-rpc-api",
+      "subagent": "general",
+      "description": "Validate metabob-rpc-api server compliance",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate that metabob-rpc-api server is compliant with the double-blind architecture.\n\n**Objective**: Ensure server tracks everything internally but exposes minimal data\n\n**Target Repository**: repos/metabob-rpc-api\n\n**Architecture Requirements**:\n\n### Must Implement:\n\n1. **Text Embedding Service** (Week 1):\n   - sentence-transformers → 32-dim embeddings\n   - Used for task text and component similarity\n   - NOT exposed to agents\n\n2. **SurrealDB Schema** (Week 1):\n   ```sql\n   CREATE variant_assignments { impression_id, variant_id, sampled_theta, outcome }\n   CREATE activity_variants { variant_id, activity_id, alpha, beta }\n   CREATE component_impulse_associations { component_id, impulse_id, weight }\n   CREATE component_embeddings { component_id, embedding[32] }\n   ```\n\n3. **Recommendation Endpoint** (Week 2):\n   - `POST /api/v1/recommendations/get`\n   - Input: `{task, component_ids}`\n   - Internal: Thompson Sampling, context selection, impression tracking\n   - Output: `{recommended_activity, context_impulses, impression_id}`\n   - NO scores, NO reasons, NO variant info\n\n4. **Feedback Endpoint** (Week 3):\n   - `POST /api/v1/feedback/record`\n   - Input: `{impression_id, outcome, metrics}`\n   - Internal: Update alpha/beta, update associations, trigger Celery\n   - Output: `{recorded: true}`\n   - NO parameter updates shown\n\n5. **Celery Beat Tasks** (Week 4):\n   - Update Thompson parameters (15 min)\n   - Update association weights (hourly)\n   - Prune weak associations (weekly)\n   - Generate analytics (daily, humans only)\n\n**Validation Steps**:\n\n1. **Check Endpoint Implementations**:\n   ```bash\n   cd repos/metabob-rpc-api\n   \n   # Find recommendation endpoint\n   rg \"recommendations/get|@router.post.*recommendations\" -A 20\n   \n   # Find feedback endpoint\n   rg \"feedback/record|@router.post.*feedback\" -A 20\n   ```\n\n2. **Check Internal Services**:\n   ```bash\n   # Thompson Sampling implementation\n   rg \"thompson|Beta\\(|beta_distribution\" src/\n   \n   # Association learning\n   rg \"association.*weight|impulse.*association\" src/\n   \n   # Embedding service\n   rg \"sentence.*transformer|embedding.*32\" src/\n   ```\n\n3. **Check SurrealDB Schema**:\n   ```bash\n   # Database schema files\n   find . -name \"*schema*\" -o -name \"*migration*\" | grep -v node_modules\n   \n   # Check for required tables\n   rg \"variant_assignments|activity_variants|component_embeddings\" .\n   ```\n\n4. **Check Response Filtering**:\n   ```bash\n   # Ensure internal data not exposed\n   rg \"alpha|beta|sampled_theta|variant_id\" src/routes/\n   \n   # Should only appear in internal services, not routes\n   ```\n\n5. **Check Celery Integration**:\n   ```bash\n   # Celery tasks\n   rg \"celery|@task|beat_schedule\" src/\n   \n   # Periodic updates\n   rg \"update_parameters|update_associations\" src/\n   ```\n\n6. **Generate Validation Report**:\n   Create `METABOB_RPC_API_VALIDATION.md`:\n   ```markdown\n   # metabob-rpc-api Server Compliance Validation\n   \n   Generated: {{timestamp}}\n   Repository: repos/metabob-rpc-api\n   \n   ## Week 1: Foundation\n   \n   ### Text Embedding Service\n   - [✅/❌] sentence-transformers integrated\n   - [✅/❌] 32-dim embeddings generated\n   - [✅/❌] Not exposed to agents\n   - Implementation: {{file}}:{{line}}\n   - Status: {{status}}\n   \n   ### SurrealDB Schema\n   - [✅/❌] variant_assignments table exists\n   - [✅/❌] activity_variants table exists\n   - [✅/❌] component_impulse_associations table exists\n   - [✅/❌] component_embeddings table exists\n   - [✅/❌] Vector indexes configured\n   - Schema files: {{files}}\n   - Status: {{status}}\n   \n   ## Week 2: Variant Assignment\n   \n   ### Recommendation Endpoint\n   - [✅/❌] POST /api/v1/recommendations/get exists\n   - [✅/❌] Accepts: task, component_ids\n   - [✅/❌] Returns: recommended_activity, context_impulses, impression_id\n   - [✅/❌] Thompson Sampling implemented\n   - [✅/❌] Context selection working\n   - [✅/❌] Impression tracking enabled\n   - [✅/❌] NO internal metrics in response\n   - Implementation: {{file}}:{{line}}\n   - Status: {{status}}\n   \n   ### Thompson Sampling\n   - [✅/❌] Beta distribution sampling\n   - [✅/❌] Variant selection logic\n   - [✅/❌] Samples logged internally\n   - [✅/❌] NOT exposed to agents\n   - Implementation: {{file}}:{{line}}\n   - Status: {{status}}\n   \n   ## Week 3: Feedback Processing\n   \n   ### Feedback Endpoint\n   - [✅/❌] POST /api/v1/feedback/record exists\n   - [✅/❌] Accepts: impression_id, outcome, metrics\n   - [✅/❌] Returns: {recorded: true}\n   - [✅/❌] Updates alpha/beta parameters\n   - [✅/❌] Updates association weights\n   - [✅/❌] Triggers Celery tasks\n   - [✅/❌] NO parameter updates shown\n   - Implementation: {{file}}:{{line}}\n   - Status: {{status}}\n   \n   ## Week 4: Celery Beat\n   \n   ### Periodic Tasks\n   - [✅/❌] Update parameters task (15 min)\n   - [✅/❌] Update associations task (hourly)\n   - [✅/❌] Prune associations task (weekly)\n   - [✅/❌] Generate analytics task (daily)\n   - [✅/❌] Beat schedule configured\n   - Implementation: {{file}}:{{line}}\n   - Status: {{status}}\n   \n   ## Data Flow Validation\n   \n   - [✅/❌] Agent request → Minimal response\n   - [✅/❌] Internal tracking complete\n   - [✅/❌] Learning updates async\n   - [✅/❌] No bias introduced\n   - Status: {{status}}\n   \n   ## Issues Found\n   \n   {{#each issues}}\n   ### Issue {{@index}}: {{title}}\n   - **Week**: {{week}}\n   - **Component**: {{component}}\n   - **Problem**: {{problem}}\n   - **Location**: {{file}}:{{line}}\n   - **Status**: {{implementation_status}}\n   - **Fix**: {{fix_description}}\n   {{/each}}\n   \n   ## Implementation Status by Week\n   \n   - Week 1 (Foundation): {{week1_percentage}}% complete\n   - Week 2 (Variant Assignment): {{week2_percentage}}% complete\n   - Week 3 (Feedback): {{week3_percentage}}% complete\n   - Week 4 (Celery): {{week4_percentage}}% complete\n   \n   ## Overall Summary\n   \n   - Total Checks: {{total_checks}}\n   - Implemented: {{implemented_count}}\n   - Missing: {{missing_count}}\n   - Overall Status: {{overall_percentage}}% complete\n   ```\n\n**Success Criteria**:\n- ✅ All required endpoints identified (or marked missing)\n- ✅ Internal services validated\n- ✅ No data leaks to agents\n- ✅ Report generated with implementation status\n\n**Output**: `METABOB_RPC_API_VALIDATION.md`",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "METABOB_RPC_API_VALIDATION.md"
+        ],
+        "requiredPatterns": [
+          "Week 1: Foundation",
+          "Implementation Status by Week"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4-cross-repo-integration",
+      "subagent": "general",
+      "description": "Validate cross-repository integration",
+      "dependencies": [
+        "task-1-validate-metabob-cli",
+        "task-2-validate-metabob-opencode",
+        "task-3-validate-metabob-rpc-api"
+      ],
+      "prompt": {
+        "template": "Validate that the three repositories work together correctly for the double-blind architecture.\n\n**Objective**: Ensure end-to-end data flow is correct\n\n**Architecture Data Flow**:\n\n```\nAgent (metabob-opencode)\n  ↓ 1. Search for components\nMCP Sidecar (metabob-cli)\n  → Returns: [{component_id, file_path}] (NO scores)\n  ↓ 2. Get recommendation\nRPC API (metabob-rpc-api)\n  → Internal: Thompson Sampling, context selection\n  → Returns: {recommended_activity, context_impulses, impression_id}\n  ↓ 3. Execute activity\nAgent (metabob-opencode)\n  ↓ 4. Record feedback\nRPC API (metabob-rpc-api)\n  → Internal: Update parameters, trigger Celery\n  → Returns: {recorded: true}\n```\n\n**Integration Validation**:\n\n1. **Load All Three Reports**:\n   ```bash\n   cat METABOB_CLI_VALIDATION.md\n   cat METABOB_OPENCODE_VALIDATION.md\n   cat METABOB_RPC_API_VALIDATION.md\n   ```\n\n2. **Check Data Flow Consistency**:\n   \n   **MCP → Agent**:\n   - CLI returns component_ids\n   - OpenCode expects component_ids\n   - No score mismatch\n   \n   **Agent → RPC API**:\n   - OpenCode sends task + component_ids\n   - RPC API expects task + component_ids\n   - Response format matches\n   \n   **RPC API → Agent**:\n   - RPC returns impression_id\n   - OpenCode uses impression_id for feedback\n   - No internal data leaked\n\n3. **Identify Integration Gaps**:\n   ```typescript\n   interface IntegrationGap {\n     between: [string, string];  // [repo1, repo2]\n     issue: string;\n     impact: 'critical' | 'high' | 'medium' | 'low';\n     component1: string;  // file:line in repo1\n     component2: string;  // file:line in repo2\n     fix_description: string;\n   }\n   ```\n\n4. **Check for Circular Dependencies**:\n   - Ensure clean separation\n   - No CLI → RPC calls\n   - No OpenCode → CLI direct calls (only via MCP)\n   - Only OpenCode → RPC allowed\n\n5. **Validate Double-Blind Property**:\n   ```typescript\n   // Agent should never see:\n   const prohibitedData = [\n     'alpha', 'beta', 'theta',\n     'variant_id', 'sampled_',\n     'thompson', 'association_weight',\n     'similarity_score', 'confidence',\n     'impact_score', 'priority'\n   ];\n   \n   // Check all cross-repo interfaces\n   for (const data of prohibitedData) {\n     if (agentCanSee(data)) {\n       errors.push(`Double-blind violated: ${data} visible to agent`);\n     }\n   }\n   ```\n\n6. **Generate Integration Report**:\n   Create `CROSS_REPO_INTEGRATION_VALIDATION.md`:\n   ```markdown\n   # Cross-Repository Integration Validation\n   \n   Generated: {{timestamp}}\n   Architecture: Double-Blind Learning System\n   \n   ## Component Summary\n   \n   | Repository | Status | Issues | Overall |\n   |------------|--------|--------|----------|\n   | metabob-cli | {{cli_status}} | {{cli_issues}} | {{cli_overall}} |\n   | metabob-opencode | {{opencode_status}} | {{opencode_issues}} | {{opencode_overall}} |\n   | metabob-rpc-api | {{rpc_status}} | {{rpc_issues}} | {{rpc_overall}} |\n   \n   ## Data Flow Validation\n   \n   ### Flow 1: Agent → MCP → Agent\n   - [✅/❌] Agent calls MCP tools correctly\n   - [✅/❌] MCP returns pure CPG analysis\n   - [✅/❌] No scores in response\n   - Status: {{flow1_status}}\n   \n   ### Flow 2: Agent → RPC API → Agent (Recommendation)\n   - [✅/❌] Agent sends task + component_ids\n   - [✅/❌] RPC performs Thompson Sampling\n   - [✅/❌] RPC returns activity + impression_id\n   - [✅/❌] No internal metrics in response\n   - Status: {{flow2_status}}\n   \n   ### Flow 3: Agent → RPC API → Agent (Feedback)\n   - [✅/❌] Agent sends impression_id + outcome\n   - [✅/❌] RPC updates parameters\n   - [✅/❌] RPC returns simple ack\n   - [✅/❌] No parameter updates shown\n   - Status: {{flow3_status}}\n   \n   ### Flow 4: RPC API → Celery → SurrealDB (Internal)\n   - [✅/❌] Celery tasks configured\n   - [✅/❌] Periodic updates scheduled\n   - [✅/❌] Parameters update in background\n   - [✅/❌] Not visible to agents\n   - Status: {{flow4_status}}\n   \n   ## Integration Gaps\n   \n   {{#each gaps}}\n   ### Gap {{@index}}: {{title}}\n   - **Between**: {{between.0}} ↔ {{between.1}}\n   - **Impact**: {{impact}}\n   - **Issue**: {{issue}}\n   - **Component 1**: {{component1}}\n   - **Component 2**: {{component2}}\n   - **Fix**: {{fix_description}}\n   {{/each}}\n   \n   ## Double-Blind Verification\n   \n   - [✅/❌] No variant IDs visible to agents\n   - [✅/❌] No Thompson samples visible\n   - [✅/❌] No alpha/beta visible\n   - [✅/❌] No similarity scores visible\n   - [✅/❌] No confidence values visible\n   - [✅/❌] No association weights visible\n   - Status: {{double_blind_status}}\n   \n   ## Architecture Compliance\n   \n   | Requirement | Status | Evidence |\n   |-------------|--------|----------|\n   | MCP tools pure CPG | {{mcp_pure}} | {{mcp_evidence}} |\n   | Agent sees minimal data | {{agent_minimal}} | {{agent_evidence}} |\n   | Server tracks everything | {{server_tracks}} | {{server_evidence}} |\n   | Learning async (Celery) | {{learning_async}} | {{celery_evidence}} |\n   | Double-blind property | {{double_blind}} | {{double_blind_evidence}} |\n   \n   ## Missing Implementations\n   \n   {{#each missing}}\n   ### {{repository}}: {{component}}\n   - **Required By**: {{required_by}}\n   - **Priority**: {{priority}}\n   - **Description**: {{description}}\n   - **Estimated Effort**: {{effort}}\n   {{/each}}\n   \n   ## Recommendations\n   \n   {{#each recommendations}}\n   {{@index}}. {{this}}\n   {{/each}}\n   \n   ## Overall Assessment\n   \n   - **Architecture Compliance**: {{compliance_percentage}}%\n   - **Integration Gaps**: {{gap_count}}\n   - **Critical Issues**: {{critical_count}}\n   - **Overall Status**: {{#if production_ready}}✅ READY{{else}}❌ NOT READY{{/if}}\n   \n   {{#unless production_ready}}\n   ### Blockers for Production\n   {{#each blockers}}\n   - {{this}}\n   {{/each}}\n   {{/unless}}\n   ```\n\n**Success Criteria**:\n- ✅ All data flows validated\n- ✅ Integration gaps identified\n- ✅ Double-blind property verified\n- ✅ Missing implementations listed\n- ✅ Report generated\n\n**Output**: `CROSS_REPO_INTEGRATION_VALIDATION.md`",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "CROSS_REPO_INTEGRATION_VALIDATION.md"
+        ],
+        "requiredPatterns": [
+          "Data Flow Validation",
+          "Double-Blind Verification",
+          "Overall Assessment"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-5-generate-implementation-roadmap",
+      "subagent": "general",
+      "description": "Generate implementation roadmap for missing pieces",
+      "dependencies": [
+        "task-4-cross-repo-integration"
+      ],
+      "prompt": {
+        "template": "Generate a comprehensive implementation roadmap based on validation findings.\n\n**Objective**: Create actionable plan to achieve full compliance\n\n**Input Reports**:\n- METABOB_CLI_VALIDATION.md\n- METABOB_OPENCODE_VALIDATION.md\n- METABOB_RPC_API_VALIDATION.md\n- CROSS_REPO_INTEGRATION_VALIDATION.md\n\n**Roadmap Structure**:\n\n1. **Load All Validation Data**:\n   ```typescript\n   const validations = {\n     cli: parseMarkdown('METABOB_CLI_VALIDATION.md'),\n     opencode: parseMarkdown('METABOB_OPENCODE_VALIDATION.md'),\n     rpcApi: parseMarkdown('METABOB_RPC_API_VALIDATION.md'),\n     integration: parseMarkdown('CROSS_REPO_INTEGRATION_VALIDATION.md'),\n   };\n   ```\n\n2. **Extract All Issues**:\n   ```typescript\n   const allIssues = [\n     ...validations.cli.issues,\n     ...validations.opencode.issues,\n     ...validations.rpcApi.issues,\n     ...validations.integration.gaps,\n   ];\n   ```\n\n3. **Prioritize by Impact**:\n   ```typescript\n   const prioritized = allIssues\n     .sort((a, b) => {\n       const impactOrder = {critical: 0, high: 1, medium: 2, low: 3};\n       return impactOrder[a.impact] - impactOrder[b.impact];\n     });\n   ```\n\n4. **Group into Implementation Phases**:\n   ```typescript\n   interface Phase {\n     name: string;\n     duration: string;\n     goal: string;\n     tasks: Task[];\n     dependencies: string[];  // Previous phases\n     deliverables: string[];\n     success_criteria: string[];\n   }\n   ```\n\n5. **Generate Activity Templates for Each Phase**:\n   For each phase, list which activities from `create-from-validation` will be generated.\n\n6. **Create Implementation Roadmap**:\n   Create `IMPLEMENTATION_ROADMAP.md`:\n   ```markdown\n   # Double-Blind Architecture - Implementation Roadmap\n   \n   Generated: {{timestamp}}\n   Based on: Validation results from all three repositories\n   \n   ## Executive Summary\n   \n   - **Current State**: {{current_compliance}}% compliant\n   - **Target State**: 100% compliant with FINAL_ARCHITECTURE_SUMMARY.md\n   - **Total Issues**: {{total_issues}}\n   - **Critical Issues**: {{critical_issues}}\n   - **Estimated Duration**: {{total_duration}}\n   - **Required Resources**: {{required_resources}}\n   \n   ## Validation Summary\n   \n   | Repository | Compliant | Non-Compliant | Status |\n   |------------|-----------|---------------|--------|\n   | metabob-cli | {{cli_compliant}} | {{cli_non_compliant}} | {{cli_status}} |\n   | metabob-opencode | {{opencode_compliant}} | {{opencode_non_compliant}} | {{opencode_status}} |\n   | metabob-rpc-api | {{rpc_compliant}} | {{rpc_non_compliant}} | {{rpc_status}} |\n   | **Total** | **{{total_compliant}}** | **{{total_non_compliant}}** | **{{overall_status}}** |\n   \n   ## Implementation Phases\n   \n   ### Phase 1: Fix metabob-cli MCP Tools (Week 1)\n   \n   **Goal**: {{phase1_goal}}\n   **Duration**: {{phase1_duration}}\n   **Dependencies**: None (can start immediately)\n   \n   **Tasks**:\n   {{#each phase1_tasks}}\n   {{@index}}. **{{title}}** ({{repo}})\n      - Issue: {{issue}}\n      - Location: {{location}}\n      - Fix: {{fix}}\n      - Effort: {{effort}}\n   {{/each}}\n   \n   **Deliverables**:\n   {{#each phase1_deliverables}}\n   - {{this}}\n   {{/each}}\n   \n   **Success Criteria**:\n   {{#each phase1_success_criteria}}\n   - {{this}}\n   {{/each}}\n   \n   **Activity Templates to Generate**:\n   {{#each phase1_activities}}\n   - {{activity_name}}: {{description}}\n   {{/each}}\n   \n   ---\n   \n   ### Phase 2: Implement RPC API Foundation (Week 1-2)\n   \n   **Goal**: {{phase2_goal}}\n   **Duration**: {{phase2_duration}}\n   **Dependencies**: None (can run parallel with Phase 1)\n   \n   **Tasks**:\n   {{#each phase2_tasks}}\n   {{@index}}. **{{title}}** ({{repo}})\n      - Requirement: {{requirement}}\n      - Implementation: {{implementation}}\n      - Effort: {{effort}}\n   {{/each}}\n   \n   **Deliverables**:\n   {{#each phase2_deliverables}}\n   - {{this}}\n   {{/each}}\n   \n   **Success Criteria**:\n   {{#each phase2_success_criteria}}\n   - {{this}}\n   {{/each}}\n   \n   **Activity Templates to Generate**:\n   {{#each phase2_activities}}\n   - {{activity_name}}: {{description}}\n   {{/each}}\n   \n   ---\n   \n   ### Phase 3: Integrate OpenCode with RPC API (Week 2-3)\n   \n   **Goal**: {{phase3_goal}}\n   **Duration**: {{phase3_duration}}\n   **Dependencies**: Phase 2 (RPC API endpoints must exist)\n   \n   **Tasks**:\n   {{#each phase3_tasks}}\n   {{@index}}. **{{title}}** ({{repo}})\n      - Integration: {{integration}}\n      - Dependencies: {{dependencies}}\n      - Effort: {{effort}}\n   {{/each}}\n   \n   **Deliverables**:\n   {{#each phase3_deliverables}}\n   - {{this}}\n   {{/each}}\n   \n   **Success Criteria**:\n   {{#each phase3_success_criteria}}\n   - {{this}}\n   {{/each}}\n   \n   **Activity Templates to Generate**:\n   {{#each phase3_activities}}\n   - {{activity_name}}: {{description}}\n   {{/each}}\n   \n   ---\n   \n   ### Phase 4: Implement Feedback and Learning (Week 3-4)\n   \n   **Goal**: {{phase4_goal}}\n   **Duration**: {{phase4_duration}}\n   **Dependencies**: Phase 2, Phase 3 (RPC + OpenCode integration)\n   \n   **Tasks**:\n   {{#each phase4_tasks}}\n   {{@index}}. **{{title}}** ({{repo}})\n      - Implementation: {{implementation}}\n      - Learning Component: {{learning_component}}\n      - Effort: {{effort}}\n   {{/each}}\n   \n   **Deliverables**:\n   {{#each phase4_deliverables}}\n   - {{this}}\n   {{/each}}\n   \n   **Success Criteria**:\n   {{#each phase4_success_criteria}}\n   - {{this}}\n   {{/each}}\n   \n   **Activity Templates to Generate**:\n   {{#each phase4_activities}}\n   - {{activity_name}}: {{description}}\n   {{/each}}\n   \n   ---\n   \n   ### Phase 5: Background Learning (Celery) (Week 4-5)\n   \n   **Goal**: {{phase5_goal}}\n   **Duration**: {{phase5_duration}}\n   **Dependencies**: Phase 4 (feedback system must work)\n   \n   **Tasks**:\n   {{#each phase5_tasks}}\n   {{@index}}. **{{title}}** ({{repo}})\n      - Task: {{task_description}}\n      - Schedule: {{schedule}}\n      - Effort: {{effort}}\n   {{/each}}\n   \n   **Deliverables**:\n   {{#each phase5_deliverables}}\n   - {{this}}\n   {{/each}}\n   \n   **Success Criteria**:\n   {{#each phase5_success_criteria}}\n   - {{this}}\n   {{/each}}\n   \n   **Activity Templates to Generate**:\n   {{#each phase5_activities}}\n   - {{activity_name}}: {{description}}\n   {{/each}}\n   \n   ---\n   \n   ### Phase 6: Integration Testing (Week 5-6)\n   \n   **Goal**: {{phase6_goal}}\n   **Duration**: {{phase6_duration}}\n   **Dependencies**: All previous phases\n   \n   **Tasks**:\n   {{#each phase6_tasks}}\n   {{@index}}. **{{title}}**\n      - Test: {{test_description}}\n      - Validates: {{validates}}\n      - Effort: {{effort}}\n   {{/each}}\n   \n   **Deliverables**:\n   {{#each phase6_deliverables}}\n   - {{this}}\n   {{/each}}\n   \n   **Success Criteria**:\n   {{#each phase6_success_criteria}}\n   - {{this}}\n   {{/each}}\n   \n   **Activity Templates to Generate**:\n   {{#each phase6_activities}}\n   - {{activity_name}}: {{description}}\n   {{/each}}\n   \n   ---\n   \n   ## Implementation Timeline\n   \n   ```\n   Week 1:  [Phase 1: CLI] [Phase 2: RPC Foundation]\n   Week 2:  [Phase 2 cont.] [Phase 3: OpenCode Integration]\n   Week 3:  [Phase 3 cont.] [Phase 4: Feedback/Learning]\n   Week 4:  [Phase 4 cont.] [Phase 5: Celery]\n   Week 5:  [Phase 5 cont.] [Phase 6: Testing]\n   Week 6:  [Phase 6 cont.] [Production Deployment]\n   ```\n   \n   ## Critical Path\n   \n   ```\n   Phase 2 (RPC Foundation)\n      ↓\n   Phase 3 (OpenCode Integration)\n      ↓\n   Phase 4 (Feedback/Learning)\n      ↓\n   Phase 5 (Celery)\n      ↓\n   Phase 6 (Testing)\n   \n   Phase 1 (CLI) can run in parallel\n   ```\n   \n   ## Resource Requirements\n   \n   | Phase | Engineers | Effort (days) | Skills Required |\n   |-------|-----------|---------------|------------------|\n   | Phase 1 | {{phase1_engineers}} | {{phase1_effort}} | {{phase1_skills}} |\n   | Phase 2 | {{phase2_engineers}} | {{phase2_effort}} | {{phase2_skills}} |\n   | Phase 3 | {{phase3_engineers}} | {{phase3_effort}} | {{phase3_skills}} |\n   | Phase 4 | {{phase4_engineers}} | {{phase4_effort}} | {{phase4_skills}} |\n   | Phase 5 | {{phase5_engineers}} | {{phase5_effort}} | {{phase5_skills}} |\n   | Phase 6 | {{phase6_engineers}} | {{phase6_effort}} | {{phase6_skills}} |\n   | **Total** | **{{total_engineers}}** | **{{total_effort}}** | - |\n   \n   ## Risks and Mitigations\n   \n   {{#each risks}}\n   ### Risk {{@index}}: {{title}}\n   - **Probability**: {{probability}}\n   - **Impact**: {{impact}}\n   - **Description**: {{description}}\n   - **Mitigation**: {{mitigation}}\n   {{/each}}\n   \n   ## Next Steps\n   \n   1. **Immediate (Today)**:\n      {{#each immediate_actions}}\n      - {{this}}\n      {{/each}}\n   \n   2. **This Week**:\n      {{#each this_week_actions}}\n      - {{this}}\n      {{/each}}\n   \n   3. **This Month**:\n      {{#each this_month_actions}}\n      - {{this}}\n      {{/each}}\n   \n   ## Activity Generation\n   \n   Use `create-from-validation` to generate activity templates:\n   \n   ```bash\n   opencode activity run create-from-validation \\\n     --var validation_output_file=CROSS_REPO_INTEGRATION_VALIDATION.md \\\n     --var target_system=double-blind-architecture \\\n     --var output_directory=templates/generated/double-blind\n   ```\n   \n   Expected output:\n   - {{expected_activity_count}} activity templates\n   - Covering all {{total_issues}} identified issues\n   - Organized by phase and repository\n   ```\n\n**Success Criteria**:\n- ✅ All phases defined\n- ✅ Dependencies identified\n- ✅ Timeline estimated\n- ✅ Resources calculated\n- ✅ Next steps clear\n- ✅ Ready for `create-from-validation`\n\n**Output**: `IMPLEMENTATION_ROADMAP.md`",
+        "maxTokens": 18000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "IMPLEMENTATION_ROADMAP.md"
+        ],
+        "requiredPatterns": [
+          "Implementation Phases",
+          "Implementation Timeline",
+          "Next Steps"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": [
+      {
+        "name": "all_repos_validated",
+        "description": "All three repositories must be validated",
+        "command": "test -f METABOB_CLI_VALIDATION.md",
+        "required": true
+      },
+      {
+        "name": "integration_validated",
+        "description": "Cross-repository integration must be validated",
+        "command": "test -f CROSS_REPO_INTEGRATION_VALIDATION.md",
+        "required": true
+      },
+      {
+        "name": "roadmap_created",
+        "description": "Implementation roadmap must be created",
+        "command": "test -f IMPLEMENTATION_ROADMAP.md",
+        "required": true
+      }
+    ]
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": "AGENT",
+  "created_at": "2026-01-30T15:00:00.000Z",
+  "metadata": {
+    "version": "1.0.0",
+    "purpose": "Validate double-blind architecture compliance across all three repositories",
+    "architecture_document": "FINAL_ARCHITECTURE_SUMMARY.md",
+    "repositories": [
+      "metabob-cli",
+      "metabob-opencode",
+      "metabob-rpc-api"
+    ]
+  }
+}

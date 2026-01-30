@@ -1,0 +1,180 @@
+{
+  "name": "Implement Self-Healing DevBob System",
+  "description": "Deploy metabob-driven autocephalous debugging infrastructure with observability, coordination, and autonomous fix execution",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1-observability",
+      "subagent": "general",
+      "description": "Add observability layer (health endpoints, structured logging, metrics)",
+      "dependencies": [],
+      "prompt": {
+        "template": "Implement observability infrastructure for self-healing system:\n\n## Task: Add Health Endpoints & Structured Logging\n\n### Health Endpoints\nAdd `/health` endpoint to each service:\n- metabob-opencode (packages/opencode/src/server/health.ts)\n- metabob-cli (src/metabob_cli/health.py)\n- metabob-rpc-api (server/health.py)\n\nReturn JSON with:\n- status (healthy/degraded/unhealthy)\n- memory, CPU, disk checks\n- response time metrics\n- error rates\n\n### Structured Logging\nUpdate log formatters to output JSON:\n- Add correlation IDs to all log statements\n- Include service name, level, timestamp, context\n- Add error stack traces for error logs\n\n### Metrics Exporter\nAdd `/metrics` endpoint (Prometheus format):\n- Activity execution durations (histogram)\n- Activity failures (counter)\n- Memory impulses loaded (gauge)\n- Memory bytes loaded (gauge)\n\n### Performance Profiling\nAdd slow operation detection:\n- Log when operations exceed thresholds\n- Include operation name, duration, context\n- Suggest optimizations in log messages\n\nUse existing code:\n- repos/metabob-opencode/packages/opencode/src/tool/memory-health.ts (reference)\n- repos/metabob-opencode/packages/opencode/src/session/session-memory-metrics.ts (reference)\n\nIMPORTANT:\n1. Make all endpoints non-blocking\n2. Use consistent JSON schema across services\n3. Add correlation ID middleware\n4. Test each endpoint after implementation\n\nCommit message: \"Add observability layer for self-healing system\"",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/metabob-opencode/packages/opencode/src/server/health.ts",
+          "repos/metabob-cli/src/metabob_cli/health.py",
+          "repos/metabob-rpc-api/server/health.py"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2-coordinator",
+      "subagent": "general",
+      "description": "Build self-healing coordinator service",
+      "dependencies": ["task-1-observability"],
+      "prompt": {
+        "template": "Implement self-healing coordinator service:\n\n## Task: Build Coordinator Service\n\nCreate coordinator at: repos/metabob-opencode/packages/opencode/src/coordinator/self-healing-coordinator.ts\n\n### Core Components\n\n1. **Issue Triage**\n   - Filter actionable issues from metabob\n   - Calculate confidence scores\n   - Correlate with health metrics and logs\n\n2. **Agent Routing**\n   - Map issue category → devbob agent\n   - Routes:\n     - activity/session → devbob-opencode\n     - CLI tools → devbob-cli\n     - API/RPC → devbob-rpc-api\n     - UI → devbob-dashboard\n\n3. **Fix Directive Generation**\n   - Create FixDirective interface\n   - Include context, evidence, suggested template\n   - Generate acceptance criteria\n\n4. **ACP Delegation Wrapper**\n   - Wrap acp_delegate with retry logic\n   - Create context impulses automatically\n   - Handle delegation failures gracefully\n\n5. **Cross-Agent Notification**\n   - Notify related agents after fixes\n   - Use MESSAGE_FOR pattern\n   - Track coordination state\n\nReference existing code:\n- repos/metabob-opencode/packages/opencode/src/tool/acp-delegate.ts\n- repos/metabob-opencode/packages/opencode/src/tool/acp-error-reporter.ts\n- repos/metabob-opencode/packages/opencode/src/util/metabob.ts\n\nIMPORTANT:\n1. Use TypeScript interfaces for all data structures\n2. Add comprehensive error handling\n3. Log all coordination events (JSON format)\n4. Make coordinator stateless (use SessionMemory for state)\n5. Add unit tests for triage and routing logic\n\nCommit message: \"Add self-healing coordinator service\"",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/metabob-opencode/packages/opencode/src/coordinator/self-healing-coordinator.ts"
+        ],
+        "requiredPatterns": [
+          "interface FixDirective",
+          "export.*SelfHealingCoordinator"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3-watchdog",
+      "subagent": "general",
+      "description": "Add watchdog process to devbob containers",
+      "dependencies": ["task-2-coordinator"],
+      "prompt": {
+        "template": "Implement watchdog process for devbob containers:\n\n## Task: Add Self-Healing Watchdog\n\nCreate watchdog script: scripts/self-healing-watchdog.ts\n\n### Watchdog Responsibilities\n\n1. **Poll for Fix Directives** (every 30s)\n   - Check coordinator for pending directives\n   - Filter by target agent name\n   - Prioritize by severity\n\n2. **Execute Fix Directives**\n   - Use activity templates (fix-bug-complete, etc.)\n   - Pass context via shared impulses\n   - Set timeout based on priority\n\n3. **Self-Health Check**\n   - Check own memory health (memory_health tool)\n   - Check response time (track own metrics)\n   - Self-diagnose if unhealthy\n\n4. **Post-Fix Coordination**\n   - Annotate fixed components (metabob_annotate_component)\n   - Check for related changes (metabob_suggest_related_changes)\n   - Add MESSAGE_FOR annotations if needed\n\n5. **Failure Reporting**\n   - Report failures back to coordinator\n   - Include error context\n   - Suggest manual intervention if needed\n\n### Container Integration\n\nUpdate configs/devbob-entrypoint.sh:\n- Start watchdog process alongside main service\n- Use zombie-reaper pattern for process management\n- Log watchdog status to separate log file\n\n### Configuration\n\nAdd to configs/devbob-config.json:\n```json\n{\n  \"selfHealing\": {\n    \"enabled\": true,\n    \"pollIntervalSeconds\": 30,\n    \"maxConcurrentFixes\": 1,\n    \"autoCommit\": true,\n    \"requireTests\": true\n  }\n}\n```\n\nIMPORTANT:\n1. Make watchdog crash-resistant (catch all errors)\n2. Add exponential backoff for failures\n3. Never block main service\n4. Log all actions for audit trail\n5. Add graceful shutdown on SIGTERM\n\nCommit message: \"Add self-healing watchdog to devbob containers\"",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "scripts/self-healing-watchdog.ts",
+          "configs/devbob-entrypoint.sh"
+        ],
+        "requiredPatterns": [
+          "selfHealing"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4-message-for",
+      "subagent": "general",
+      "description": "Implement MESSAGE_FOR cross-agent coordination",
+      "dependencies": ["task-3-watchdog"],
+      "prompt": {
+        "template": "Implement MESSAGE_FOR cross-agent coordination:\n\n## Task: Add Cross-Agent Messaging\n\nCreate: repos/metabob-opencode/packages/opencode/src/coordinator/cross-agent-messaging.ts\n\n### MESSAGE_FOR Pattern\n\n1. **Message Sender**\n   ```typescript\n   async function sendMessageToAgent(\n     targetAgent: string,\n     filePath: string,\n     componentName: string,\n     message: string\n   ) {\n     await metabob_annotate_component({\n       file_path: filePath,\n       component_name: componentName,\n       component_type: \"function\",\n       reason: `MESSAGE_FOR:${targetAgent} - ${message}`\n     })\n   }\n   ```\n\n2. **Message Poller**\n   ```typescript\n   async function checkForMessages(agentName: string) {\n     const issues = await metabob_search_codebase_issues({\n       query: `MESSAGE_FOR:${agentName}`,\n       limit: 20\n     })\n     \n     // Filter to recent (last 1 hour)\n     const recent = issues.filter(isRecent)\n     \n     for (const issue of recent) {\n       await processMessage(issue)\n     }\n   }\n   ```\n\n3. **Message Processor**\n   - Parse MESSAGE_FOR annotations\n   - Extract context and action items\n   - Create fix directives if needed\n   - Mark message as processed\n\n4. **Shared Impulse Helper**\n   ```typescript\n   async function createSharedContext(\n     contextId: string,\n     type: string,\n     content: string\n   ) {\n     return await impulse_create({\n       id: contextId,\n       type,\n       pointer: {\n         type: \"memo\",\n         content,\n         source: \"cross-agent-coordination\"\n       },\n       budget: 5000\n     })\n   }\n   ```\n\n### Integration\n\n- Add message polling to watchdog (every 60s)\n- Log all messages sent/received\n- Track message response times\n- Add metrics for coordination effectiveness\n\nReference:\n- docs/SELF_HEALING_DEVBOB_ARCHITECTURE.md (section 5)\n\nIMPORTANT:\n1. Prevent infinite message loops (max 3 hops)\n2. Add message deduplication\n3. Include timestamp in all messages\n4. Add expiry for old messages (24h)\n5. Test cross-agent scenarios\n\nCommit message: \"Add MESSAGE_FOR cross-agent coordination\"",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/metabob-opencode/packages/opencode/src/coordinator/cross-agent-messaging.ts"
+        ],
+        "requiredPatterns": [
+          "MESSAGE_FOR"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-5-monitoring",
+      "subagent": "general",
+      "description": "Add self-healing metrics and audit logging",
+      "dependencies": ["task-4-message-for"],
+      "prompt": {
+        "template": "Implement monitoring for self-healing system:\n\n## Task: Add Metrics & Audit Logging\n\nCreate: repos/metabob-opencode/packages/opencode/src/coordinator/self-healing-metrics.ts\n\n### Metrics to Track\n\n1. **Issue Detection**\n   - selfhealing_issues_detected_total (counter, labels: severity)\n   - selfhealing_issue_detection_latency (histogram)\n\n2. **Fix Execution**\n   - selfhealing_fixes_attempted_total (counter, labels: agent, result)\n   - selfhealing_fix_duration_seconds (histogram, labels: agent)\n   - selfhealing_fix_success_rate (gauge, labels: agent)\n\n3. **Cross-Agent Coordination**\n   - selfhealing_coordination_messages_total (counter, labels: from, to)\n   - selfhealing_message_processing_latency (histogram)\n\n4. **System Health**\n   - selfhealing_coordinator_health (gauge)\n   - selfhealing_watchdog_health (gauge, labels: agent)\n\n### Audit Logging\n\nCreate: repos/metabob-opencode/packages/opencode/src/coordinator/audit-log.ts\n\nLog structure:\n```typescript\ninterface AuditLogEntry {\n  timestamp: number\n  event: \"fix_applied\" | \"fix_failed\" | \"message_sent\" | \"issue_detected\"\n  directiveId?: string\n  agent?: string\n  issue?: {\n    id: string\n    severity: string\n    category: string\n    files: string[]\n  }\n  fix?: {\n    activityTemplate: string\n    duration: number\n    changedFiles: string[]\n    commitSha?: string\n  }\n  verification?: {\n    healthBefore: string\n    healthAfter: string\n    metricImprovement: Record<string, any>\n  }\n}\n```\n\nStore audit logs:\n- JSON file: .metabob/logs/self-healing-audit.jsonl\n- Structured format (one JSON per line)\n- Rotate daily\n- Queryable by directive ID, agent, event type\n\n### Dashboard\n\nCreate simple CLI dashboard: scripts/self-healing-dashboard.ts\n\nShow:\n- Recent fix attempts (last 10)\n- Success rate by agent\n- Active issues\n- Coordination messages pending\n- System health status\n\nIMPORTANT:\n1. Make metrics collection non-blocking\n2. Add error handling for metric failures\n3. Use consistent labels across metrics\n4. Add metric documentation\n5. Test metric collection performance\n\nCommit message: \"Add self-healing metrics and audit logging\"",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/metabob-opencode/packages/opencode/src/coordinator/self-healing-metrics.ts",
+          "repos/metabob-opencode/packages/opencode/src/coordinator/audit-log.ts",
+          "scripts/self-healing-dashboard.ts"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-6-integration-test",
+      "subagent": "general",
+      "description": "Create end-to-end self-healing integration test",
+      "dependencies": ["task-5-monitoring"],
+      "prompt": {
+        "template": "Create end-to-end integration test for self-healing system:\n\n## Task: Build Integration Test\n\nCreate: test-self-healing-e2e.ts\n\n### Test Scenario: Memory Leak Auto-Fix\n\n1. **Setup**\n   - Start devbob-opencode container\n   - Enable self-healing in config\n   - Create test session with memory leak\n\n2. **Inject Issue**\n   - Create impulses without proper cleanup\n   - Trigger memory growth (>10MB/min)\n   - Wait for health degradation\n\n3. **Verify Detection** (T+2min)\n   - Check coordinator detects issue\n   - Verify fix directive created\n   - Confirm target agent is devbob-opencode\n\n4. **Verify Fix Execution** (T+5min)\n   - Watchdog receives directive\n   - Activity template executes\n   - Tests pass\n   - Commit created\n\n5. **Verify Coordination** (T+7min)\n   - Component annotated\n   - Related changes suggested\n   - No MESSAGE_FOR needed (isolated fix)\n\n6. **Verify Health Recovery** (T+10min)\n   - Memory growth rate < 1MB/min\n   - Health status: healthy\n   - Stale impulses: 0\n\n7. **Verify Audit Trail**\n   - Audit log entry created\n   - Metrics updated\n   - Dashboard shows success\n\n### Test Scenario: Cross-Agent Coordination\n\n1. **Setup**\n   - Start devbob-opencode and devbob-cli\n   - Enable self-healing\n\n2. **Inject Issue**\n   - Fix auth bug in opencode\n   - Add MESSAGE_FOR:devbob-cli annotation\n\n3. **Verify Message Delivery** (T+2min)\n   - devbob-cli polls messages\n   - Finds MESSAGE_FOR annotation\n   - Processes message\n\n4. **Verify Response** (T+5min)\n   - devbob-cli creates fix directive\n   - Applies similar fix pattern\n   - Annotates fix\n\n### Test Output\n\n- ✅/❌ for each verification step\n- Timing measurements\n- Log excerpts\n- Metric snapshots\n\nIMPORTANT:\n1. Make test idempotent (can run multiple times)\n2. Clean up after test (reset state)\n3. Add timeout for each phase (fail fast)\n4. Log detailed progress for debugging\n5. Test both success and failure paths\n\nCommit message: \"Add end-to-end self-healing integration test\"",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "test-self-healing-e2e.ts"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "docker ps --filter name=devbob --format '{{.Names}}' | grep -q devbob-opencode",
+      "test -f repos/metabob-opencode/opencode.json"
+    ],
+    "postChecks": [
+      "curl -f http://localhost:3004/health",
+      "grep -q 'selfHealing' configs/devbob-config.json"
+    ],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}

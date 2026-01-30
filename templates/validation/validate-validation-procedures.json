@@ -1,0 +1,106 @@
+{
+  "name": "Validate Validation Procedures",
+  "description": "Meta-validation: Tests that our validation activities themselves work correctly. Ensures validation activities can detect both passing and failing conditions, and that their pass/fail criteria are meaningful.",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "test-with-known-good-input",
+      "subagent": "general",
+      "description": "Run validate-cost-tracking with known-good scenario",
+      "dependencies": [],
+      "prompt": {
+        "template": "Execute the validate-cost-tracking activity template.\n\nThis should PASS because:\n- Cost tracking is mostly implemented\n- Local metrics ARE captured\n- Some ACP metadata exists\n\nVerify:\n1. Activity completes without errors\n2. Creates validation report\n3. Report shows which tests passed\n4. Report identifies specific gaps\n5. Pass/fail status is reasonable\n\nDocument:\n- Did the validation activity work correctly?\n- Were the tests meaningful?\n- Did it identify the known cost tracking gaps?\n- Is the output actionable?",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["templates/validation/COST_TRACKING_VALIDATION_REPORT.md"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-validation-failure-detection",
+      "subagent": "general",
+      "description": "Verify validation can detect failures (test negative cases)",
+      "dependencies": ["test-with-known-good-input"],
+      "prompt": {
+        "template": "Analyze the validation report created by test-with-known-good-input.\n\nCheck that it correctly identifies failures:\n1. Did it detect that ACP cost passthrough is incomplete?\n2. Did it mark that test as failing or partially passing?\n3. Are the required fixes specific and actionable?\n\nThe validation is good if:\n- ✓ Correctly identifies broken functionality\n- ✓ Distinguishes passing vs failing tests\n- ✓ Provides clear fix recommendations\n- ✗ False positives (marks working code as broken)\n- ✗ False negatives (misses actual problems)\n\nAssess:\n- Does the validation catch real problems?\n- Are pass/fail criteria meaningful?\n- Would a developer know what to fix?",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "assess-validation-quality",
+      "subagent": "general",
+      "description": "Grade the validation activity itself",
+      "dependencies": ["test-validation-failure-detection"],
+      "prompt": {
+        "template": "Grade the validate-cost-tracking activity on these criteria:\n\n**Completeness** (30 points):\n- Tests all critical aspects?\n- No major gaps in coverage?\n- Appropriate test granularity?\n\n**Accuracy** (30 points):\n- Correctly identifies problems?\n- No false positives/negatives?\n- Pass/fail criteria appropriate?\n\n**Actionability** (25 points):\n- Provides specific fix recommendations?\n- Developer knows what to do next?\n- Links to relevant code/docs?\n\n**Efficiency** (15 points):\n- Runs in reasonable time?\n- Doesn't waste resources?\n- Could be automated?\n\n**Total Score**: /100\n**Grade**: [A/B/C/D/F]\n\nProvide score breakdown and overall assessment.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "recommend-validation-improvements",
+      "subagent": "general",
+      "description": "Suggest improvements to validation procedures",
+      "dependencies": ["assess-validation-quality"],
+      "prompt": {
+        "template": "Based on the grading, recommend improvements to validation procedures.\n\nCreate: templates/validation/VALIDATION_SYSTEM_RECOMMENDATIONS.md\n\nInclude:\n\n## Current Validation Quality\n\n- Grade: [X]\n- Score: [X/100]\n- Strengths: [list]\n- Weaknesses: [list]\n\n## Recommendations\n\n### High Priority\n1. [Specific improvement]\n   - Why: [rationale]\n   - How: [implementation]\n   - Impact: [expected benefit]\n\n### Medium Priority\n[Similar format]\n\n### Low Priority\n[Similar format]\n\n## Validation Best Practices\n\n[General principles learned]\n\n## Meta-Insight\n\nDid validating our validation procedures reveal systemic issues? Are we testing the right things? Is our pass/fail criteria meaningful?\n\n[Philosophical reflection on validation quality]\n\nWrite this recommendations file.",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["templates/validation/VALIDATION_SYSTEM_RECOMMENDATIONS.md"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

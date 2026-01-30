@@ -1,0 +1,149 @@
+{
+  "name": "Find Disconnected Code",
+  "description": "Identify unused functionality and files with no imports using Metabob tools and code analysis",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Discover all Python files and components using Metabob",
+      "dependencies": [],
+      "prompt": {
+        "template": "Use Metabob tools to discover all Python files in {{target_dir}}:\n\n1. Use glob tool to find all .py files: glob({ pattern: '{{target_dir}}/**/*.py' })\n2. Filter out __init__.py, __main__.py, test files, and __pycache__\n3. For each file, use metabob_list_file_components({ file_path }) to get components\n4. Build a list of all files with their components (classes, functions)\n\nIMPORTANT: Use the actual tool calls, don't just describe them.\n\nCreate a JSON structure:\n{\n  \"files\": [\n    {\n      \"path\": \"lib/module.py\",\n      \"components\": [\"ClassName\", \"function_name\"],\n      \"line_count\": 150\n    }\n  ]\n}\n\nStore this in memory for the next task.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "target_dir",
+            "type": "string",
+            "required": true,
+            "description": "Directory to analyze (e.g., repos/metabob-rpc-api or lib)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Search for import references using grep",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": "For each file discovered in task-1, check if it's imported anywhere:\n\n1. For each file from task-1, extract the module name\n   Example: lib/acp_delegator.py → acp_delegator\n2. Use grep tool to search for import statements:\n   grep({ pattern: 'import.*acp_delegator|from.*acp_delegator', path: '{{target_dir}}' })\n3. Count references (exclude self-references from the same file)\n4. Mark files with 0 imports as DISCONNECTED\n\nIMPORTANT: Actually execute grep for each file, don't simulate.\n\nCreate a summary:\n{\n  \"disconnected_files\": [\n    {\n      \"file\": \"lib/unused.py\",\n      \"module_name\": \"unused\",\n      \"imports_found\": 0,\n      \"line_count\": 200,\n      \"components\": [\"UnusedClass\"]\n    }\n  ],\n  \"connected_files\": [\n    {\n      \"file\": \"lib/active.py\",\n      \"imports_found\": 5\n    }\n  ]\n}",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "target_dir",
+            "type": "string",
+            "required": true,
+            "description": "Directory to search for imports"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3",
+      "subagent": "general",
+      "description": "Analyze git history and usage patterns",
+      "dependencies": ["task-2"],
+      "prompt": {
+        "template": "For disconnected files from task-2, analyze git history:\n\n1. Use bash tool to check git log for each disconnected file:\n   bash({ command: 'cd {{target_dir}} && git log --format=\"%ai\" --follow -- FILEPATH | head -1' })\n2. Check last modification date\n3. Use metabob_suggest_related_changes to see if any files should be using them\n4. Use metabob_search_codebase_issues to check for existing problems\n\nIMPORTANT: Execute actual bash and metabob commands.\n\nEnrich the disconnected files list:\n{\n  \"disconnected_files\": [\n    {\n      \"file\": \"lib/old_module.py\",\n      \"imports_found\": 0,\n      \"added_date\": \"2025-10-15\",\n      \"days_old\": 106,\n      \"should_be_used_by\": [],\n      \"has_issues\": false\n    }\n  ]\n}",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "target_dir",
+            "type": "string",
+            "required": true,
+            "description": "Directory for git analysis"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4",
+      "subagent": "general",
+      "description": "Generate removal recommendations and save report",
+      "dependencies": ["task-3"],
+      "prompt": {
+        "template": "Create a comprehensive disconnected code report and save it:\n\n1. Categorize disconnected files by priority:\n   - HIGH: 0 imports, >60 days old, no metabob issues\n   - MEDIUM: 0 imports, 30-60 days old OR has potential uses\n   - LOW: Recent (<30 days) or uncertain\n\n2. Calculate total impact:\n   - Total files\n   - Total lines of code\n   - Disk space saved\n\n3. Generate removal commands for HIGH priority\n\n4. Write report to {{output_file}} using write tool:\n   write({ filePath: '{{output_file}}', content: report })\n\nReport format:\n# Disconnected Code Analysis Report\nGenerated: [date]\nDirectory: {{target_dir}}\n\n## Executive Summary\n- Total files analyzed: X\n- Disconnected files found: Y\n- Removable lines of code: Z\n\n## High Priority (Safe to Remove)\n[List with details and git rm commands]\n\n## Medium Priority (Review Needed)\n[List with reasons to review]\n\n## Low Priority (Keep for Now)\n[List with reasons to keep]\n\n## Removal Script\n```bash\n# Commands to remove HIGH priority files\ngit rm file1.py\ngit rm file2.py\ngit commit -m \"Remove disconnected code: [summary]\"\n```",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "target_dir",
+            "type": "string",
+            "required": true,
+            "description": "Directory that was analyzed"
+          },
+          {
+            "name": "output_file",
+            "type": "string",
+            "required": true,
+            "description": "Output file path (e.g., reports/disconnected_code_report.md)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["{{output_file}}"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "Target directory exists",
+      "Git repository accessible"
+    ],
+    "postChecks": [
+      "Report file created",
+      "Recommendations provided"
+    ],
+    "qualityGates": [
+      "All tasks completed",
+      "Actionable findings documented"
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}

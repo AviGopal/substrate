@@ -1,0 +1,296 @@
+{
+  "name": "Specification-Driven Implementation",
+  "description": "Implement a feature from a specification impulse using existing tools",
+  "category": "feature",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Load and analyze specification",
+      "dependencies": [],
+      "prompt": {
+        "template": `## Task: Load and Analyze Specification
+
+### Step 1: Load Specification Impulse
+\`\`\`typescript
+const specImpulse = await impulse_load({ id: "{{specId}}" });
+const specContent = specImpulse.pointer.content;
+const constraints = specImpulse.metadata?.constraints || [];
+const dependencies = specImpulse.metadata?.dependencies || [];
+\`\`\`
+
+### Step 2: Parse Requirements
+Extract from specification:
+- What needs to be built
+- Success criteria
+- Constraints (performance, compatibility, etc.)
+- Dependencies on other components
+
+### Step 3: Query Related Files
+Use Metabob to find potentially affected files:
+\`\`\`typescript
+const relatedChanges = await metabob_suggest_related_changes({
+  changed_files: ["<primary file from spec>"]
+});
+\`\`\`
+
+### Step 4: Create Implementation Plan
+Based on specification, list:
+- Files to create/modify
+- Tests to write
+- Documentation to update
+
+### Output
+Summarize the plan before implementation.
+
+### Specification Impulse
+{{specId}}`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "specId",
+            "type": "string",
+            "required": true,
+            "description": "Specification impulse ID to load"
+          }
+        ]
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Implement changes",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": `## Task: Implement Changes
+
+### Implementation Guidelines
+1. Follow requirements from specification impulse {{specId}}
+2. Adhere to all constraints
+3. Update ALL files identified in task-1 (including tests, docs)
+4. Write clean, well-documented code
+5. Use existing patterns from codebase
+
+### Metabob Guidance
+Before writing code:
+\`\`\`typescript
+// Check for existing patterns
+const similar = await metabob_search_codebase_issues({
+  query: "<feature name from spec>"
+});
+
+// Check for issues to avoid
+const issues = await metabob_get_priority_issues();
+\`\`\`
+
+### Implementation Steps
+1. Create/modify main implementation files
+2. Write comprehensive tests
+3. Update documentation
+4. Update any related configuration files
+
+### Quality Checks
+- Code follows existing patterns
+- Tests cover edge cases
+- Documentation is clear
+
+### Output
+List all files created/modified.`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "specId",
+            "type": "string",
+            "required": true,
+            "description": "Specification impulse ID"
+          }
+        ]
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3",
+      "subagent": "general",
+      "description": "Test and validate",
+      "dependencies": ["task-2"],
+      "prompt": {
+        "template": `## Task: Test and Validate
+
+### Step 1: Run Tests
+\`\`\`bash
+npm test 2>&1 | tee test-output.txt
+# or
+pytest -v 2>&1 | tee test-output.txt
+\`\`\`
+
+### Step 2: Capture Test Results
+\`\`\`typescript
+const testOutput = await bash({ command: "npm test 2>&1" });
+
+await impulse_create({
+  id: "test-result-" + Date.now(),
+  pointer: {
+    type: "memo",
+    content: testOutput
+  },
+  budget: 1000,
+  type: "test-result",
+  metadata: {
+    passed: testOutput.includes("passing") || testOutput.includes("PASS"),
+    timestamp: new Date().toISOString(),
+    specId: "{{specId}}",
+    activityId: "<current activity id>"
+  }
+});
+\`\`\`
+
+### Step 3: Validate Against Specification
+Load specification impulse {{specId}} and check:
+- All requirements met?
+- All constraints satisfied?
+- Success criteria achieved?
+
+### Step 4: Fix Issues
+If tests fail or validation fails:
+- Identify root cause
+- Fix issues
+- Re-run tests
+- Update test-result impulse
+
+### Output
+Report validation status and any remaining issues.`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "specId",
+            "type": "string",
+            "required": true,
+            "description": "Specification impulse ID"
+          }
+        ]
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4",
+      "subagent": "general",
+      "description": "Document and annotate",
+      "dependencies": ["task-3"],
+      "prompt": {
+        "template": `## Task: Document and Annotate
+
+### Step 1: Annotate Key Components
+For each major component modified (3-5 max):
+\`\`\`typescript
+await metabob_annotate_component({
+  file_path: "<file path>",
+  component_name: "<component name>",
+  component_type: "function" | "class" | "method",
+  reason: \`
+DESIGN_DECISION: <What was decided>
+WHY: <Why this approach>
+ALTERNATIVES: <Other options considered>
+TRADEOFFS: <What was sacrificed>
+CONSTRAINTS: <What forced this decision>
+VALIDATED_BY: test-result-<timestamp>
+MESSAGE_FOR: <other containers if affected>
+  \`.trim()
+});
+\`\`\`
+
+### Step 2: Cross-Container Coordination
+If changes affect other containers:
+- Add MESSAGE_FOR:<container> to annotations
+- List what they need to do
+- Example: "MESSAGE_FOR:dashboard - Update auth API calls to pass algorithm parameter"
+
+### Step 3: Create Activity Result Impulse
+\`\`\`typescript
+await impulse_create({
+  id: "activity-result-" + "<activity-id>",
+  pointer: {
+    type: "memo",
+    content: JSON.stringify({
+      activityId: "<activity-id>",
+      templateId: "specification-driven-implementation",
+      specId: "{{specId}}",
+      success: true,
+      duration: <duration-ms>,
+      filesChanged: ["<list files>"],
+      testsRan: <number>,
+      testsPassed: <number>,
+      annotations: <number>,
+      summary: "<one-line summary>"
+    }, null, 2)
+  },
+  budget: 1000,
+  type: "activity-result",
+  metadata: {
+    specId: "{{specId}}",
+    success: true,
+    timestamp: new Date().toISOString()
+  }
+});
+\`\`\`
+
+### Step 4: Commit Changes
+Create organized git commits:
+- Commit message references specification
+- Clear description of what changed and why
+
+### Output
+Confirm annotations created and activity result saved.`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "specId",
+            "type": "string",
+            "required": true,
+            "description": "Specification impulse ID"
+          }
+        ]
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

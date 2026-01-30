@@ -1,0 +1,73 @@
+{
+  "name": "Investigate Session Memory Leak",
+  "description": "Investigate memory leak in OpenCode session memory management, specifically around impulse loading and undo/redo operations",
+  "category": "bugfix",
+  "tasks": [
+    {
+      "id": "profile-baseline",
+      "subagent": "general",
+      "description": "Create baseline memory profile of OpenCode session",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a baseline memory profile of OpenCode to understand normal memory usage:\n\n1. Start OpenCode in devbob-opencode container:\n```bash\ndocker exec devbob-opencode bash -c 'cd /workspace && node --max-old-space-size=2048 ./dist/index.js' &\n```\n\n2. In another terminal, monitor memory:\n```bash\ndocker stats devbob-opencode --no-stream\n```\n\n3. Run a simple operation (create a session, load minimal impulse):\n```bash\ncurl -X POST http://localhost:3004/sessions -H 'Content-Type: application/json' -d '{\"prompt\": \"List files\"}'\n```\n\n4. Record baseline memory:\n- Container memory usage\n- Node process memory\n- Heap size\n\n5. Document the baseline values so we can compare after reproducing the leak.",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "identify-leak-trigger",
+      "subagent": "general",
+      "description": "Identify what operations trigger the memory leak",
+      "dependencies": ["profile-baseline"],
+      "prompt": {
+        "template": "Identify the specific operations that trigger the memory leak:\n\nBased on the description, the leak involves:\n1. Session memory management\n2. Impulse loading\n3. Undo/redo operations\n\nTest these scenarios:\n\nScenario A - Impulse Loading:\n```bash\n# Load multiple impulses in sequence\nfor i in {1..10}; do\n  curl -X POST http://localhost:3004/sessions/SESSION_ID/impulses \\\n    -d '{\"id\": \"impulse_'$i'\", \"type\": \"memo\", \"content\": \"Large content...\"}'\n  # Check memory after each load\ndone\n```\n\nScenario B - Undo Operations:\n```bash\n# Perform operations then undo them repeatedly\nfor i in {1..20}; do\n  curl -X POST http://localhost:3004/sessions/SESSION_ID/undo\ndone\n```\n\nScenario C - Mixed Operations:\n- Load impulse\n- Perform activity\n- Undo activity\n- Load another impulse\n- Repeat 10 times\n\nMonitor memory after each scenario:\n```bash\ndocker stats devbob-opencode --no-stream\n```\n\nReport which scenario causes memory to grow and not be reclaimed.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "examine-session-code",
+      "subagent": "general",
+      "description": "Examine OpenCode session memory management code",
+      "dependencies": ["identify-leak-trigger"],
+      "prompt": {
+        "template": "Examine the OpenCode session management code to identify memory leak sources:\n\n1. Look at session memory handling:\n```bash\nfind /workspace -name '*.ts' -path '*/session/*' -type f | grep -E 'session|memory|undo' | head -20\n```\n\n2. Search for key patterns in session code:\n```bash\ngrep -r 'impulse' /workspace/src --include='*.ts' | grep -E 'load|cache|store|memory' | head -20\ngrep -r 'undo' /workspace/src --include='*.ts' | head -20\ngrep -r 'sessionMemory' /workspace/src --include='*.ts' | head -20\n```\n\n3. Look for memory management issues:\n- Are impulses being cached and not cleared?\n- Are undo history items being properly garbage collected?\n- Are event listeners being removed properly?\n- Are closures capturing large objects?\n\n4. Identify files that likely have the leak:\n- Session memory implementation\n- Impulse loading/caching\n- Undo/redo stack management\n\n5. Report the suspected code locations and potential causes.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "analyze-impulse-loading",
+      "subagent": "general",
+      "description": "Analyze impulse loading and caching mechanisms",
+      "dependencies": ["examine-session-code"],
+      "prompt": {
+        "template": "Analyze how impulses are loaded and cached:\n\n1. Find impulse loading code:\n```bash\nfind /workspace -name '*.ts' -type f -exec grep -l 'loadImpulse\\|impulseCache\\|impulseStore' {} \\; | head -10\n```\n\n2. For each file, examine:\n- How impulses are loaded into memory\n- What caching strategy is used\n- How old impulses are evicted/cleaned\n- Are there reference counting or cleanup functions?\n\n3. Look for patterns:\n```bash\ngrep -r 'Map<.*impulse' /workspace/src --include='*.ts'\ngrep -r 'impulse.*cache' /workspace/src --include='*.ts' -i\ngrep -r 'weakMap\\|weakRef' /workspace/src --include='*.ts' -i\n```\n\n4. Check for:\n- Unbounded caches (growing without limit)\n- Missing cleanup on impulse deletion\n- Circular references in impulse objects\n- Large object references held by impulses\n\n5. Document:\n- Current impulse caching strategy\n- Potential memory issues\n- Recommended fixes",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "analyze-undo-redo",
+      "subagent": "general",
+      "description": "Analyze undo/redo stack management",
+      "dependencies": ["examine-session-code"],
+      "prompt": {
+        "template": "Analyze undo/redo stack management for memory leaks:\n\n1. Find undo/redo implementation:\n```bash\nfind /workspace -name '*.ts' -type f -exec grep -l 'undoStack\\|redoStack\\|undo.*redo' {} \\; | head -10\n```\n\n2. For each file, examine:\n- How undo/redo history is stored\n- What data is kept for each undo entry\n- Is history ever truncated or cleared?\n- Are there references to old states being held?\n\n3. Look for:\n```bash\ngrep -r 'undoStack.*push\\|redoStack.*push' /workspace/src --include='*.ts'\ngrep -r 'deepCopy\\|JSON.stringify' /workspace/src --include='*.ts' | grep -i undo\ngrep -r 'maxUndoSize\\|undoLimit' /workspace/src --include='*.ts'\n```\n\n4. Check for:\n- Unbounded undo history (never cleared)\n- Deep copies of entire state being stored\n- Circular references in undo entries\n- Memory not freed when undo/redo is cleared\n\n5. Document:\n- Current undo/redo strategy\n- How much memory each undo entry consumes\n- Maximum undo history size\n- Potential memory leaks",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "create-fix-plan",
+      "subagent": "general",
+      "description": "Create a plan to fix the memory leak",
+      "dependencies": ["analyze-impulse-loading", "analyze-undo-redo"],
+      "prompt": {
+        "template": "Based on the analysis, create a plan to fix the memory leak:\n\n1. Summarize findings:\n- Root cause of memory leak\n- Which operations trigger it (impulse loading, undo, or both)\n- How memory grows unbounded\n\n2. Propose fixes:\n- For impulse caching: use WeakMap, LRU cache, or explicit cleanup\n- For undo/redo: limit history size, use deep equality checks, or compress state\n- For session memory: implement periodic cleanup, weak references\n\n3. Fix implementation plan:\n- Files to modify\n- Changes required (with code examples)\n- Testing strategy\n- Backwards compatibility considerations\n\n4. Performance impact:\n- Will fixes impact performance?\n- Trade-offs (memory vs speed)\n- Acceptable limits\n\n5. Create a summary that can guide implementation:\n\nFormat the fix plan as:\n```\nROOT CAUSE:\n[description]\n\nAFFECTED COMPONENTS:\n[list files/modules]\n\nFIXES REQUIRED:\n1. [fix 1 with reasoning]\n2. [fix 2 with reasoning]\n\nIMPLEMENTATION STEPS:\n1. [step 1]\n2. [step 2]\n\nTESTING PLAN:\n1. [test]\n2. [test]\n```",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
+      }
+    }
+  ]
+}

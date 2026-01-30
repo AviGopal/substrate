@@ -1,0 +1,656 @@
+{
+  "name": "Implement Intent-Driven Dataflow Orchestration",
+  "description": "Build the dual-graph system (functional dataflow + intent) with LLM-based routing for intelligent task delegation across DevBob agents",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Build functional dataflow graph from Metabob CPG",
+      "dependencies": [],
+      "prompt": {
+        "template": `## Task: Build Functional Dataflow Graph
+
+Build the functional dataflow graph for the {{repository}} repository using Metabob MCP tools.
+
+### Objectives
+1. Discover all components using metabob_list_file_components
+2. Build dependency edges using metabob_analyze_change_impact
+3. Identify entry points using metabob_assess_deletion_safety
+4. Trace dataflow paths from entry points
+5. Store graph in SurrealDB
+
+### Implementation Steps
+
+1. **Component Discovery**
+   - Get all tracked files in repository
+   - For each file, call metabob_list_file_components
+   - Create FunctionalNode for each component
+   - Store component metadata (type, file, line)
+
+2. **Dependency Mapping**
+   - For each component, call metabob_analyze_change_impact
+   - Extract callsComponents (dependencies)
+   - Extract calledByComponents (dependents)
+   - Determine edge strength (strong/weak)
+
+3. **Entry Point Identification**
+   - For each component, call metabob_assess_deletion_safety
+   - Mark as entry point if liveness === "live" && live_paths > 0
+   - These are API endpoints, CLI commands, etc.
+
+4. **Dataflow Path Tracing**
+   - Start from each entry point
+   - Follow dependency edges (BFS/DFS)
+   - Record all unique paths from entry to terminal nodes
+   - Label paths with data types (if detectable)
+
+5. **Storage**
+   - Store nodes in SurrealDB component table
+   - Store edges in dataflow table
+   - Store paths in dataflow_path table
+   - Create indexes for fast queries
+
+### Expected Outputs
+- Functional graph JSON export
+- SurrealDB schema populated
+- Statistics: X components, Y edges, Z entry points, W paths
+
+### Repository
+{{repository}}
+
+### Tools to Use
+- metabob_list_file_components
+- metabob_analyze_change_impact
+- metabob_assess_deletion_safety
+- bash (for SurrealDB queries)
+
+### Success Criteria
+- All components discovered and mapped
+- Dependency edges accurate (validate sample paths)
+- Entry points correctly identified
+- Graph queryable via API`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repository",
+            "type": "string",
+            "required": true,
+            "description": "Repository to analyze (e.g., 'metabob-rpc-api')"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Build intent graph from annotations and feedback",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": `## Task: Build Intent Graph
+
+Build the intent graph for {{repository}} from Metabob annotations and activity execution feedback.
+
+### Objectives
+1. Extract all Metabob annotations
+2. Parse intent metadata (purpose, constraints, MESSAGE_FOR:)
+3. Merge activity execution feedback
+4. Cluster components by intent similarity
+5. Store in SurrealDB
+
+### Implementation Steps
+
+1. **Annotation Extraction**
+   - Query Metabob API for all annotations in repository
+   - Parse each annotation for:
+     - purpose (reason field)
+     - design decisions (from message)
+     - constraints (from message)
+     - MESSAGE_FOR: dependencies
+   - Extract intent tags using LLM/NLP
+
+2. **Execution Feedback Integration**
+   - Query Metabob API for activity executions
+   - For each activity:
+     - Identify components modified
+     - Extract success/failure, cost, duration
+     - Record error patterns
+   - Update IntentNode metrics:
+     - successRate (running average)
+     - avgCost (running average)
+     - avgDuration (running average)
+     - errorPatterns (list)
+
+3. **Intent Clustering**
+   - Use LLM to embed intent tags
+   - Cluster components with similar intents (cosine similarity > 0.7)
+   - Assign initial specialist (agent with most components in cluster)
+   - Compute cluster-level success rates
+
+4. **Storage**
+   - Store intent nodes in intent_node table
+   - Store clusters in intent_cluster table
+   - Link to functional graph via component_id
+
+### Expected Outputs
+- Intent graph JSON export
+- Intent clusters with specialists
+- Statistics: X annotated components, Y clusters, Z specialists
+
+### Repository
+{{repository}}
+
+### Tools to Use
+- bash (curl to Metabob API)
+- LLM (for intent extraction and clustering)
+- bash (SurrealDB queries)
+
+### Success Criteria
+- All annotations extracted and parsed
+- Execution feedback merged
+- Intent clusters make sense (manual validation)
+- Specialists assigned based on data`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repository",
+            "type": "string",
+            "required": true,
+            "description": "Repository to analyze"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3",
+      "subagent": "general",
+      "description": "Implement LLM-based intent router",
+      "dependencies": ["task-1", "task-2"],
+      "prompt": {
+        "template": `## Task: Implement Intent Router
+
+Implement the LLM-based intent router that uses both graphs to make routing decisions.
+
+### Objectives
+1. Implement intent extraction from task descriptions
+2. Implement agent scoring algorithm
+3. Implement context selection (impulses to share)
+4. Create routing API endpoint
+5. Integrate with acp_delegate
+
+### Implementation Steps
+
+1. **Intent Extraction Service**
+   \`\`\`typescript
+   async function extractIntent(taskDescription: string): Promise<Intent> {
+     // LLM call to extract:
+     // - primary intent
+     // - secondary intents
+     // - data types involved
+     // - constraints
+   }
+   \`\`\`
+
+2. **Agent Scoring Algorithm**
+   \`\`\`typescript
+   function scoreAgent(
+     agent: Agent,
+     intentClusters: IntentCluster[],
+     dataflowPaths: DataPath[],
+     intentGraph: IntentGraph
+   ): number {
+     let score = 0;
+     
+     // Factor 1: Specialization (50 points)
+     if (cluster.specialist === agent.name) score += 50;
+     
+     // Factor 2: Component ownership (10 points per component)
+     score += agentComponents.length * 10;
+     
+     // Factor 3: Success rate (30 points max)
+     score += avgSuccessRate * 30;
+     
+     return score;
+   }
+   \`\`\`
+
+3. **Context Selection**
+   \`\`\`typescript
+   function selectRelevantContext(
+     taskIntent: Intent,
+     agent: Agent,
+     intentClusters: IntentCluster[],
+     intentGraph: IntentGraph
+   ): string[] {
+     // Return impulse IDs for:
+     // - Related annotations
+     // - Similar past tasks
+     // - Design decisions
+     // - Error patterns to avoid
+   }
+   \`\`\`
+
+4. **Routing API**
+   - Create POST /api/v1/route-task endpoint
+   - Input: TaskDescription + available agents
+   - Output: RoutingDecision (target agent, dataflow path, context, confidence)
+   - Include reasoning in response
+
+5. **ACP Integration**
+   - Wrap acp_delegate with routing logic
+   - Auto-select target agent
+   - Auto-inject context impulses
+   - Handle fallback on failure
+
+### Expected Outputs
+- IntentRouter service implementation
+- REST API endpoint
+- Integration tests
+- Example routing decisions
+
+### Tools to Use
+- write (TypeScript/Python implementation)
+- bash (test API endpoint)
+- LLM (intent extraction)
+
+### Success Criteria
+- Routing decisions are explainable
+- Intent alignment scores > 0.7 on average
+- Context selection is relevant
+- Fallback logic works`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "commands": [
+          {
+            "command": "curl -sf http://localhost:8080/api/v1/route-task -X POST -H 'Content-Type: application/json' -d '{\"task\": {\"description\": \"test\"}, \"availableAgents\": [\"devbob-rpc-api\"]}' | jq .targetAgent",
+            "description": "Test routing API endpoint"
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4",
+      "subagent": "general",
+      "description": "Implement feedback loop and learning system",
+      "dependencies": ["task-3"],
+      "prompt": {
+        "template": `## Task: Implement Feedback Loop
+
+Implement the feedback loop that updates graphs based on activity execution outcomes.
+
+### Objectives
+1. Hook activity execution lifecycle
+2. Capture execution outcomes
+3. Update IntentGraph nodes
+4. Auto-annotate components
+5. Re-cluster and update specialists
+
+### Implementation Steps
+
+1. **Activity Result Capture**
+   - Hook into activity execution system
+   - Capture: activityId, success, cost, duration, errors, componentsModified
+   - Store in feedback_log table
+
+2. **Feedback Processing**
+   \`\`\`typescript
+   async function processFeedback(
+     activityResult: ActivityResult,
+     intentGraph: IntentGraph
+   ): Promise<void> {
+     // 1. Identify affected components
+     const components = await identifyComponents(activityResult.filesChanged);
+     
+     // 2. Update intent nodes
+     for (const comp of components) {
+       node.updateFeedback({
+         success: activityResult.success,
+         cost: activityResult.cost,
+         duration: activityResult.duration,
+         errors: activityResult.errors
+       });
+     }
+     
+     // 3. Auto-annotate key components
+     await annotateComponents(components, activityResult);
+     
+     // 4. Re-cluster by intent
+     intentGraph.recluster();
+     
+     // 5. Update specialists
+     for (const cluster of intentGraph.clusters) {
+       cluster.specialist = findBestAgent(cluster);
+     }
+   }
+   \`\`\`
+
+3. **Auto-Annotation**
+   - Use LLM to generate annotation from activity result
+   - Include: what changed, why it changed, outcome
+   - Call metabob_annotate_component for key components (3-5 max)
+   - Format: "{{change}}. {{reason}}. {{outcome}}."
+
+4. **Re-Clustering Logic**
+   - Compute intent embeddings for all nodes
+   - Use hierarchical clustering (cosine similarity)
+   - Threshold: 0.7 for same cluster
+   - Update cluster assignments
+
+5. **Specialist Update Logic**
+   - For each cluster, compute agent scores
+   - Agent with highest avg success rate = new specialist
+   - Log specialist changes for observability
+
+### Expected Outputs
+- FeedbackProcessor service
+- Auto-annotation pipeline
+- Learning metrics dashboard
+- Specialist evolution log
+
+### Tools to Use
+- write (implementation)
+- metabob_annotate_component
+- LLM (annotation generation)
+- bash (SurrealDB updates)
+
+### Success Criteria
+- Feedback captured for 100% of activities
+- Intent nodes show improving success rates
+- Specialists converge to optimal assignments
+- Annotations are high quality`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-5",
+      "subagent": "general",
+      "description": "Build visualization dashboard and test end-to-end",
+      "dependencies": ["task-4"],
+      "prompt": {
+        "template": `## Task: Dashboard and End-to-End Testing
+
+Build visualization dashboards and test the complete system end-to-end.
+
+### Objectives
+1. Build functional graph visualization
+2. Build intent graph visualization
+3. Build routing decision dashboard
+4. Build learning metrics dashboard
+5. Test complete workflow
+
+### Implementation Steps
+
+1. **Functional Graph Viz**
+   - Show components as nodes
+   - Show dependencies as edges
+   - Highlight entry points
+   - Show dataflow paths
+   - Interactive: click component → see details
+
+2. **Intent Graph Viz**
+   - Show intent clusters
+   - Color by specialist
+   - Show success rates
+   - Show annotation density
+   - Interactive: click cluster → see components
+
+3. **Routing Dashboard**
+   - Recent routing decisions (table)
+   - Intent alignment distribution (histogram)
+   - Agent utilization (pie chart)
+   - Fallback usage rate (metric)
+
+4. **Learning Dashboard**
+   - Specialist changes over time (timeline)
+   - Success rate trends per agent (line chart)
+   - Intent cluster evolution (animation)
+   - Error pattern frequency (bar chart)
+
+5. **End-to-End Test**
+   \`\`\`typescript
+   // Test: Route → Delegate → Execute → Feedback → Learn
+   
+   const task = {
+     description: "Add authentication to /api/test endpoint"
+   };
+   
+   // 1. Route
+   const decision = await routeTask(task);
+   assert(decision.targetAgent === "devbob-rpc-api");
+   assert(decision.intentAlignment > 0.7);
+   
+   // 2. Delegate
+   const result = await acp_delegate({
+     target: decision.targetAgent,
+     prompt: task.description,
+     shareImpulses: decision.contextToShare
+   });
+   assert(result.success);
+   
+   // 3. Process feedback
+   await processFeedback(result);
+   
+   // 4. Verify learning
+   const updatedGraph = await getIntentGraph();
+   assert(updatedGraph.nodes.get("auth.py::verify_token").successRate > oldSuccessRate);
+   
+   // 5. Route similar task
+   const nextTask = {
+     description: "Add authentication to /api/posts endpoint"
+   };
+   const nextDecision = await routeTask(nextTask);
+   assert(nextDecision.intentAlignment > decision.intentAlignment); // Improved!
+   \`\`\`
+
+### Expected Outputs
+- 4 visualization dashboards
+- End-to-end test suite passing
+- Documentation with screenshots
+- Demo video
+
+### Tools to Use
+- write (React/Vue dashboard code)
+- bash (test execution)
+- playwright (UI testing)
+
+### Success Criteria
+- Dashboards load without errors
+- Visualizations are accurate
+- End-to-end test passes
+- System learns from feedback`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-6",
+      "subagent": "general",
+      "description": "Commit and document implementation",
+      "dependencies": ["task-5"],
+      "prompt": {
+        "template": `## Task: Commit and Document
+
+Create organized commits and comprehensive documentation.
+
+### Objectives
+1. Organize git changes into logical commits
+2. Write comprehensive documentation
+3. Create usage examples
+4. Update architecture diagrams
+
+### Commit Strategy
+
+1. **Commit 1: Functional Graph System**
+   - DataflowGraphBuilder service
+   - Metabob MCP integration
+   - SurrealDB schema
+   - Tests
+
+2. **Commit 2: Intent Graph System**
+   - IntentGraphBuilder service
+   - Annotation parsing
+   - Clustering logic
+   - Tests
+
+3. **Commit 3: Intent Router**
+   - IntentRouter service
+   - Agent scoring algorithm
+   - Context selection
+   - API endpoints
+   - Tests
+
+4. **Commit 4: Feedback Loop**
+   - FeedbackProcessor service
+   - Auto-annotation pipeline
+   - Learning metrics
+   - Tests
+
+5. **Commit 5: Visualization Dashboards**
+   - Graph visualizations
+   - Routing dashboard
+   - Learning dashboard
+   - Tests
+
+6. **Commit 6: Documentation**
+   - Architecture doc
+   - API docs
+   - Usage examples
+   - Troubleshooting guide
+
+### Documentation
+
+1. **README.md updates**
+   - Add section on intent-driven routing
+   - Link to architecture doc
+   - Include quick start guide
+
+2. **API Documentation**
+   - OpenAPI spec for routing API
+   - Example requests/responses
+   - Error codes
+
+3. **Usage Examples**
+   - Route a task
+   - Process feedback
+   - Query graphs
+   - Visualize dataflow
+
+4. **Architecture Diagrams**
+   - Update INTENT_DRIVEN_DATAFLOW_ORCHESTRATION.md with implementation notes
+   - Add sequence diagrams
+   - Add deployment architecture
+
+### Expected Outputs
+- 6 atomic commits with clear messages
+- Updated documentation
+- Examples directory
+- Architecture diagrams
+
+### Tools to Use
+- bash (git commands)
+- write (documentation)
+- edit (update existing docs)
+
+### Success Criteria
+- All changes committed
+- Documentation complete
+- Examples work
+- Ready for review`,
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "commands": [
+          {
+            "command": "git status --porcelain | wc -l",
+            "description": "Verify all changes committed (should be 0)"
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      {
+        "command": "docker ps --filter name=devbob --format '{{.Names}}' | wc -l",
+        "expected": "4",
+        "description": "Verify all 4 DevBob containers are running"
+      },
+      {
+        "command": "docker ps --filter name=metabob-api-dev --format '{{.Status}}' | grep -q healthy && echo 'healthy' || echo 'unhealthy'",
+        "expected": "healthy",
+        "description": "Verify Metabob backend is healthy"
+      }
+    ],
+    "postChecks": [
+      {
+        "command": "curl -sf http://localhost:8080/api/v1/route-task --head | grep -q '200\\|404' && echo 'ok' || echo 'fail'",
+        "expected": "ok",
+        "description": "Verify routing API is accessible"
+      }
+    ],
+    "qualityGates": [
+      {
+        "metric": "test_coverage",
+        "threshold": 80,
+        "description": "Minimum 80% test coverage"
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

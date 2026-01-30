@@ -1,0 +1,73 @@
+{
+  "name": "Analyze Memory Fix Quality with Metabob",
+  "description": "Use Metabob to analyze the quality of memory fixes, identify dead code, validate that fixes actually resolve memory leaks, and flag components that need cleanup or revision",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "get-metabob-priority-issues",
+      "subagent": "general",
+      "description": "Get Metabob priority issues in affected files",
+      "dependencies": [],
+      "prompt": {
+        "template": "Use Metabob to identify priority issues in the memory fix changes:\n\n1. Run metabob-cli to get priority issues:\n```bash\ncd /workspace\nmetabob-cli get-priority-issues --severity HIGH,CRITICAL\n```\n\n2. Filter for memory-related code:\n```bash\nmetabob-cli get-priority-issues | grep -E 'memory|cache|undo|impulse|leak'\n```\n\n3. Check files modified in recent commits:\nFiles likely affected:\n- src/session/sessionMemory.ts\n- src/impulse/impulseCache.ts\n- src/session/undoRedo.ts\n- src/memory/memoryMonitor.ts\n- src/session/cleanup.ts\n\n4. For each file, run:\n```bash\nmetabob-cli search-issues --file=SRC_FILE\n```\n\n5. Report findings:\n- HIGH/CRITICAL issues in memory code\n- Dead code that needs cleanup\n- Code smells or anti-patterns\n- Unused imports/variables\n\nThis will tell us if the fix actually improved code quality or just added technical debt.",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "analyze-change-impact",
+      "subagent": "general",
+      "description": "Analyze impact of memory fixes on codebase",
+      "dependencies": ["get-metabob-priority-issues"],
+      "prompt": {
+        "template": "Analyze what components are affected by the memory fixes:\n\n1. Get list of changed files from recent commits:\n```bash\ncd /workspace\ngit diff HEAD~6..HEAD --name-only | grep -E '\\.(ts|tsx)$'\n```\n\n2. For each changed file, use Metabob to find related components:\n```bash\nmetabob-cli list-file-components --file=FILE\n```\n\n3. For each component, check:\n- Is it used elsewhere in codebase?\n- Are there tests for this component?\n- Does it have proper error handling?\n- Is it properly documented?\n\n4. Create dependency graph:\n```bash\nmetabob-cli analyze-change-impact --files=CHANGED_FILES\n```\n\n5. Report:\n- Components affected by changes\n- Ripple effects on dependent code\n- Risk assessment (HIGH/MEDIUM/LOW)\n- Suggested code review focus areas\n\nExample output:\n```\nCOMPONENT IMPACT ANALYSIS\n=========================\n\nimpulseCache.ts (MODIFIED)\n  ├─ Used by: sessionManager.ts, activityExecutor.ts\n  ├─ Tests: impulseCache.test.ts (EXISTS)\n  ├─ Risk: MEDIUM (affects session lifecycle)\n  └─ Review: Check for cache eviction correctness\n\nundoRedo.ts (MODIFIED)\n  ├─ Used by: session.ts, editor.ts\n  ├─ Tests: undoRedo.test.ts (MISSING)\n  ├─ Risk: HIGH (no test coverage)\n  └─ Review: URGENT - Add regression tests\n\ncleanup.ts (NEW)\n  ├─ Used by: sessionManager.ts\n  ├─ Tests: cleanup.test.ts (EXISTS)\n  ├─ Risk: MEDIUM (new code)\n  └─ Review: Verify cleanup doesn't affect active sessions\n```",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "identify-dead-code",
+      "subagent": "general",
+      "description": "Identify unused code added in memory fixes",
+      "dependencies": [],
+      "prompt": {
+        "template": "Identify dead code and unused functions in memory fixes:\n\n1. Run metabob-cli to find unused code:\n```bash\ncd /workspace\nmetabob-cli search-issues --pattern 'unused.*variable|unused.*function|dead.*code' --severity MEDIUM,HIGH\n```\n\n2. Check for functions that:\n- Are defined but never called\n- Have no test coverage\n- Are part of experimental fixes\n\n3. Look specifically in memory fix files:\n```bash\ngrep -n 'export.*function\\|export.*class' src/memory/*.ts\n# Then check if each is used:\nfor func in $(grep -o 'export [^ ]* [a-zA-Z_]*' src/memory/*.ts | cut -d' ' -f3); do\n  echo \"$func: $(grep -r \"$func\" src --exclude-dir=memory | wc -l) uses\"\ndone\n```\n\n4. Document all dead code:\n```\nDEAD CODE FOUND:\n\n1. src/memory/memoryMonitor.ts - MemoryMonitor class\n   - Created: 6 commits ago\n   - Used in: NOWHERE\n   - Reason: Superseded by different approach\n   - Action: DELETE\n\n2. src/impulse/impulseCache.ts - getCacheStats() function\n   - Created: 5 commits ago\n   - Called by: Nothing\n   - Reason: Was for debugging, not integrated\n   - Action: DELETE or move to dev tools\n```\n\n5. Report:\n- Total dead code lines\n- Files with most dead code\n- Recommended deletions\n- Code that should be kept but documented",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "validate-fix-effectiveness",
+      "subagent": "general",
+      "description": "Verify that memory fixes actually resolve the leak",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate that the memory fixes actually work:\n\n1. Create a test that reproduces the original memory leak:\n```bash\ncd /workspace\ncat > test-memory-leak.ts << 'TESTEOF'\nimport { Session } from './src/session';\nimport { Activity } from './src/activity';\n\ntest('memory leak: loading many impulses', async () => {\n  const initialMem = process.memoryUsage().heapUsed;\n  const session = new Session();\n  \n  // Load 200 impulses (should trigger old leak)\n  for (let i = 0; i < 200; i++) {\n    await session.loadImpulse({ id: `impulse_${i}`, type: 'memo', content: 'x'.repeat(1000) });\n  }\n  \n  const afterLoad = process.memoryUsage().heapUsed;\n  const growth = afterLoad - initialMem;\n  \n  console.log(`Memory growth: ${(growth / 1024 / 1024).toFixed(2)}MB`);\n  \n  // With fix: should be < 50MB\n  // Without fix: would be > 200MB\n  expect(growth).toBeLessThan(50 * 1024 * 1024);\n});\nTESTEOF\n\nnpm test test-memory-leak.ts\n```\n\n2. Check if test PASSES:\n   - PASS = Fix works\n   - FAIL = Fix doesn't work (needs revision)\n\n3. If test fails:\n   - Which commit introduced the regression?\n   - Is the fix code actually being used?\n   - Is there a logic error?\n\n4. Run stress test:\n```bash\ncd /workspace\nNODE_OPTIONS='--max-old-space-size=512' npm test test-memory-leak.ts\n```\n\nThis simulates low-memory environment where leak would crash app.\n\n5. Report:\n- Test result: PASS/FAIL\n- Memory usage before fix: X MB\n- Memory usage after fix: Y MB\n- Improvement: (X - Y) / X * 100 %\n- If improvement < 30%, mark as INEFFECTIVE",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "flag-problematic-components",
+      "subagent": "general",
+      "description": "Use Metabob to flag components that need revision",
+      "dependencies": ["analyze-change-impact", "identify-dead-code", "validate-fix-effectiveness"],
+      "prompt": {
+        "template": "Use Metabob to flag and annotate problematic components:\n\n1. For each affected file, create Metabob annotation:\n```bash\nmetabob-cli annotate-component \\\n  --file=src/memory/memoryMonitor.ts \\\n  --component=MemoryMonitor \\\n  --type=EXPERIMENTAL \\\n  --message='EXPERIMENTAL: This monitoring code was added to debug memory leaks. Effectiveness unproven. Needs validation before production use.'\n```\n\n2. Flag dead code:\n```bash\nmetabob-cli annotate-component \\\n  --file=src/impulse/impulseCache.ts \\\n  --component=getCacheStats \\\n  --type=DEAD_CODE \\\n  --message='DEAD CODE: Function created for debugging, never used. Consider removing or integrating into monitoring.'\n```\n\n3. Flag components needing tests:\n```bash\nmetabob-cli annotate-component \\\n  --file=src/session/undoRedo.ts \\\n  --component=UndoRedoManager \\\n  --type=NO_TEST_COVERAGE \\\n  --message='CRITICAL: No test coverage for this critical component. Memory leak fix here but no regression tests. MUST ADD TESTS BEFORE SHIPPING.'\n```\n\n4. Flag risky changes:\n```bash\nmetabob-cli annotate-component \\\n  --file=src/session/cleanup.ts \\\n  --component=SessionCleanup \\\n  --type=RISKY_CHANGE \\\n  --message='HIGH RISK: New cleanup logic that modifies active sessions. Extensive testing required. May have race conditions.'\n```\n\n5. Create annotations for all affected components, then query them:\n```bash\nmetabob-cli list-file-components --file=src/session/*.ts\n# Shows all components with their annotations\n```\n\n6. Report all flags:\n```\nCOMPONENT FLAGS SUMMARY\n=======================\n\nCRITICAL FLAGS (Must fix before merge):\n  ❌ undoRedo.ts: UndoRedoManager - NO TEST COVERAGE\n  ❌ cleanup.ts: SessionCleanup - RISKY CHANGE, needs review\n\nWARNING FLAGS (Fix before shipping):\n  ⚠️  memoryMonitor.ts: MemoryMonitor - EXPERIMENTAL, unproven\n  ⚠️  impulseCache.ts: getCacheStats - DEAD CODE\n\nINFO FLAGS (Document for maintainers):\n  ℹ️  sessionMemory.ts: - WeakMap usage for auto-GC\n```",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "create-quality-gate-report",
+      "subagent": "general",
+      "description": "Create a quality gate report to prevent bad commits",
+      "dependencies": ["get-metabob-priority-issues", "validate-fix-effectiveness", "flag-problematic-components"],
+      "prompt": {
+        "template": "Create a comprehensive quality gate report:\n\n1. Summarize findings:\n```\nQUALITY GATE REPORT: Memory Leak Fixes\n======================================\n\nCODE QUALITY:\n  ✅ Test coverage: 85%\n  ✅ No new HIGH issues\n  ❌ Dead code identified: 3 functions\n  ⚠️  Experimental code: 2 components\n\nMEMORY FIX VALIDATION:\n  ✅ Stress test: PASSED\n  ✅ Memory improvement: 45%\n  ❌ No regression tests\n  ✅ Undo/redo still works\n\nCHANGE IMPACT:\n  Affected components: 8\n  Risky changes: 2\n  Untested changes: 1\n  New dependencies: 0\n\nRECOMMENDATION: ⚠️  CONDITIONAL APPROVAL\n  - Approve IF: All flags below are resolved\n  - Reason: Code has unvalidated paths and dead code\n```\n\n2. List all required actions:\n```\nREQUIRED ACTIONS BEFORE MERGE\n=============================\n\n1. CRITICAL (Block merge if not done):\n   [ ] Add regression tests for undoRedo.ts\n   [ ] Review SessionCleanup for race conditions\n   [ ] Validate that MemoryMonitor doesn't affect performance\n\n2. HIGH PRIORITY (Do before shipping):\n   [ ] Remove dead code (getCacheStats, etc.)\n   [ ] Document WeakMap usage in code comments\n   [ ] Update session lifecycle documentation\n\n3. MEDIUM PRIORITY (Do within sprint):\n   [ ] Add monitoring dashboard for memory metrics\n   [ ] Create memory leak regression test suite\n   [ ] Document experimental components\n```\n\n3. Set flag for activity failure if:\n```\nACtIVITY FAILS IF ANY OF:\n  - Test coverage drops below 80%\n  - New HIGH/CRITICAL issues introduced\n  - Memory improvement < 30%\n  - More than 2 components flagged as risky\n  - Dead code remains in main branch\n  - Requires manual user input to verify fixes\n```\n\n4. Output structured report:\n```bash\ncat > quality-gate-report.json << 'EOF'\n{\n  \"timestamp\": \"2026-01-30T...\",\n  \"commits_analyzed\": 6,\n  \"files_changed\": 12,\n  \"components_affected\": 8,\n  \"quality_score\": 0.72,\n  \"memory_improvement\": 0.45,\n  \"test_coverage\": 0.85,\n  \"critical_issues\": [\"missing_tests_undoRedo\"],\n  \"warnings\": [\"experimental_monitoring\", \"dead_code\"],\n  \"recommendation\": \"CONDITIONAL_APPROVAL\",\n  \"must_resolve_before_merge\": 2,\n  \"should_resolve_before_ship\": 4\n}\nEOF\n```\n\n5. Report outcome:\n- If all gates pass: Activity SUCCESS ✅\n- If some gates fail: Activity PARTIAL (needs fixes) ⚠️\n- If critical gates fail: Activity FAILURE ❌",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
+      }
+    }
+  ]
+}
