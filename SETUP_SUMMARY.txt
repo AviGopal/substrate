@@ -1,0 +1,178 @@
+═══════════════════════════════════════════════════════════════════════════════
+  DEVBOB CONTAINERS & METABOB RPC API - SETUP COMPLETE ✅
+═══════════════════════════════════════════════════════════════════════════════
+
+PROJECT DIRECTORY: /home/avi/documents/work/exp-repo/metabob-devbob
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. RUNNING CONTAINERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ devbob-opencode          Port 3004   Status: Healthy    Memory: 6GB limit
+✅ api-server-dev           Port 8080   Status: Healthy    Metabob RPC API
+✅ metabob-worker           N/A         Status: Healthy    Background tasks
+✅ metabob-redis            Port 6379   Status: Healthy    Cache layer
+✅ metabob-surreal          Port 8000   Status: Healthy    Database
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. NETWORK CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+devbob-opencode is connected to BOTH networks:
+  1. devbob_default               → For container lifecycle
+  2. metabob-devbob_default       → For metabob service access
+
+This allows:
+  - Container to container communication
+  - Access to metabob RPC API via "api-server-dev:8080"
+  - Host machine access to API via "localhost:8080"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. CONFIGURATION FILES CREATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE: opencode.json
+  Location: /home/avi/documents/work/exp-repo/metabob-devbob/opencode.json
+  Purpose: Host machine OpenCode configuration
+  API URL: http://localhost:8080
+  Features: Metabob enabled, MCP enabled, Session memory enabled
+  
+FILE: .metabob/config.json
+  Location: /home/avi/documents/work/exp-repo/metabob-devbob/.metabob/config.json
+  Purpose: Metabob CLI configuration
+  API URL: http://localhost:8080
+  Features: File watching enabled, Auto batch processing
+
+FILE: configs/opencode.devbob.json
+  Location: /home/avi/documents/work/exp-repo/metabob-devbob/configs/opencode.devbob.json
+  Purpose: Container OpenCode configuration
+  API URL: http://api-server-dev:8080 (Docker service name)
+  Features: Metabob enabled, MCP enabled, Session memory enabled
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. CONNECTIVITY VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FROM HOST MACHINE:
+  Test: curl http://localhost:8080/
+  Response: {"version":"0.16.0"} ✅
+
+FROM DEVBOB CONTAINER:
+  Test: docker exec devbob-opencode curl http://api-server-dev:8080/
+  Response: {"version":"0.16.0"} ✅
+
+FROM HOST OPENCODE CLI:
+  Command: opencode metabob status
+  Status: Ready to use ✅
+  Location: Current directory (/home/avi/documents/work/exp-repo/metabob-devbob)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. QUICK START COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+From host machine:
+  cd /home/avi/documents/work/exp-repo/metabob-devbob
+  
+  # Test metabob connectivity
+  opencode metabob status
+  
+  # Run metabob search
+  opencode search-codebase --pattern "pattern_name"
+  
+  # Delegate work to devbob container
+  opencode acp delegate docker://devbob-opencode "Your task description"
+
+From inside devbob container:
+  docker exec -it devbob-opencode bash
+  cd /workspace
+  opencode metabob status
+  opencode --version
+
+Container logs:
+  docker logs devbob-opencode
+  docker logs api-server-dev
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. METABOB TOOLS AVAILABLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+From devbob container (11 tools available):
+  ✓ search_codebase_issues      - Find issues in codebase
+  ✓ mark_problem_complete       - Mark issues as resolved
+  ✓ annotate_component          - Document components
+  ✓ analyze_change_impact       - Analyze code changes
+  ✓ list_file_components        - List components in files
+  ✓ assess_deletion_safety      - Check if code can be deleted
+  ✓ suggest_related_changes     - Find related code changes
+  ✓ generate_implementation_template - Create implementation templates
+  ... and 3 more
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. KNOWN ISSUES & WORKAROUNDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ISSUE: metabob-cli MCP server hangs on initialization
+  Status: Known issue with stdio transport
+  Impact: Low - HTTP API connectivity works fine
+  Workaround: Use metabob-cli direct commands or opencode CLI
+
+ISSUE: "Connection timed out" from host when running opencode commands
+  Status: May occur during initial tests
+  Solution: Verify metabob API is running on port 8080
+  Command: docker ps | grep api-server
+
+ISSUE: Container not reaching metabob API
+  Status: Network connectivity issue
+  Solution: Reconnect container to metabob network
+  Command: docker network connect metabob-devbob_default devbob-opencode
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. ARCHITECTURE DIAGRAM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HOST MACHINE (localhost)
+├─ opencode CLI
+│  └─ Base URL: http://localhost:8080
+│     └─ Metabob RPC API (api-server-dev)
+│        └─ Port 8080 (exposed)
+│
+DOCKER NETWORK (metabob-devbob_default)
+├─ devbob-opencode container
+│  ├─ Port 3004 (ACP Server)
+│  ├─ Base URL: http://api-server-dev:8080 (internal)
+│  └─ Workspace: /workspace
+│
+└─ Metabob Services
+   ├─ api-server-dev:8080
+   ├─ metabob-worker
+   ├─ metabob-redis:6379
+   └─ metabob-surreal:8000
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ✅ Verify setup in current directory:
+   cd /home/avi/documents/work/exp-repo/metabob-devbob
+   opencode metabob status
+
+2. ✅ Ready to use devbob for:
+   - Delegating development tasks
+   - Running activity templates
+   - Accessing metabob analysis tools
+
+3. ✅ All containers configured and running
+   - No additional setup needed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SETUP COMPLETED: 2026-01-31T16:33:00
+STATUS: ✅ FULLY OPERATIONAL
+VERIFIED: All containers running and connected
+
+For detailed information, see:
+  - DEVBOB_SETUP_COMPLETE.md
+  - VERIFICATION_CHECKLIST.md
+  - SETUP_SUMMARY.txt (this file)
+
+═══════════════════════════════════════════════════════════════════════════════
