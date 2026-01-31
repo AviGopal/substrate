@@ -1,0 +1,32 @@
+# Quick devbob startup using existing devbob:latest image
+services:
+  devbob-opencode:
+    env_file:
+      - .env.devbob
+    container_name: devbob-opencode
+    image: devbob:latest
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./repos/metabob-opencode:/workspace
+      - devbob_config:/config
+      - devbob_opencode_state:/workspace/.opencode
+    environment:
+      CODEBASE_NAME: opencode
+      ACP_PORT: "3004"
+      ACP_HOSTNAME: "0.0.0.0"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LOG_LEVEL: INFO
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      # Use container-specific config (metabob-rpc-api-server:8080)
+      OPENCODE_CONFIG: /workspace/configs/opencode.devbob.json
+      # Auto-approve permissions for TUI attach mode
+      OPENCODE_AUTO_APPROVE_PERMISSIONS: "true"
+    mem_limit: 6g
+    mem_reservation: 2g
+    restart: unless-stopped
+    command: ["acp"]
+
+volumes:
+  devbob_config:
+  devbob_opencode_state:
