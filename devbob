@@ -738,8 +738,17 @@ cmd_tui() {
             exit 1
         fi
         
-        # Launch with fallback options
-        exec opencode
+        # Check if ACP server is running on port 3005
+        ACP_PORT="${ACP_PORT:-3005}"
+        if ! nc -z localhost "$ACP_PORT" 2>/dev/null; then
+            echo "⚠️  Warning: No ACP server detected on port $ACP_PORT"
+            echo "   Starting standalone TUI mode..."
+            exec opencode
+        else
+            echo "✅ Connecting to ACP server on port $ACP_PORT..."
+            # Attach to the existing ACP server
+            exec opencode attach "http://localhost:$ACP_PORT" --dir /workspace
+        fi
     '
     
     # Reset terminal title after exit
