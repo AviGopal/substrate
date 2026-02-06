@@ -1,0 +1,196 @@
+{
+  "name": "Jiggle Documentation",
+  "description": "Systematically review documentation files in reverse chronological order (newest to oldest), consolidate newer information into older docs, remove outdated/superseded content, and create/update overview docs. Deletes files only when they're truly obsolete.",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "analyze-documentation-state",
+      "subagent": "general",
+      "description": "Analyze current documentation structure and identify relationships",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the documentation in {{documentationPath}}.\n\n1. List all markdown files sorted by modification time (newest first)\n2. Group files by topic/area (e.g., DataFlow, SessionManagement, Memory, Activity, Configuration)\n3. Identify potential overlaps or redundancies between files\n4. Flag files that reference each other or have clear supersession relationships\n5. Return a summary with: total files, topics, potential consolidations, and suggested overview structure\n\nDocumentation path: {{documentationPath}}\nMaximum files to analyze: {{maxFilesToAnalyze}}\n\nReturn a JSON structure with: fileCount, topics, overlaps, supersessions, and recommendations.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "documentationPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to documentation directory (e.g., /home/avi/documents/work/exp-repo/metabob-devbob)"
+          },
+          {
+            "name": "maxFilesToAnalyze",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of files to analyze (default: all)",
+            "default": 9999
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "review-and-plan-consolidation",
+      "subagent": "general",
+      "description": "Review analysis and create consolidation plan",
+      "dependencies": [
+        "analyze-documentation-state"
+      ],
+      "prompt": {
+        "template": "Based on the documentation analysis, create a consolidation and cleanup plan.\n\nAnalysis results from previous task:\n{{TASK_OUTPUT:analyze-documentation-state}}\n\nFor each topic identified:\n1. Determine if there's a clear overview/master file (should be the oldest, most comprehensive)\n2. Identify which newer files contain information that should be merged into older files\n3. Flag files that are purely superseded (newer file has all content + more, with no unique value)\n4. Identify files that need minor updates to reference consolidated information\n\nPlan structure:\n- topics: [{ name, masterFile?, filesToUpdate: [], filesToDelete: [], rationale }]\n- overallStrategy: description of the consolidation approach\n- estimatedFileReductions: count of files to delete\n- safetyNotes: any concerns about deletion\n\nConstraint: ONLY mark files for deletion if they are truly superseded with no unique content remaining.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "execute-consolidation-updates",
+      "subagent": "general",
+      "description": "Apply consolidation plan by updating files with newer information",
+      "dependencies": [
+        "review-and-plan-consolidation"
+      ],
+      "prompt": {
+        "template": "Execute the consolidation plan for documentation.\n\nConsolidation plan from previous task:\n{{TASK_OUTPUT:review-and-plan-consolidation}}\n\nDocumentation path: {{documentationPath}}\n\nFor each topic:\n1. Identify the master/overview file (oldest, most comprehensive)\n2. For each file marked to update:\n   - Read both the old file (being updated) and new file (source of information)\n   - Integrate new information into old file while preserving existing structure\n   - Update cross-references and see-also sections\n   - Add \"Last consolidated: [date]\" note at top if not present\n3. Preserve the purpose of each file (specific vs general, detailed vs summary)\n\nUpdate strategy: Only modify files if new information materially improves them.\nMinimum change: Update reference links and see-also sections.\nMaximum change: Merge new content sections with clear attribution.\n\nReturn: { filesUpdated: count, filesSkipped: count, updates: [{file, changes}] }",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "documentationPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to documentation directory"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "cleanup-obsolete-files",
+      "subagent": "general",
+      "description": "Delete files that are truly obsolete and superseded",
+      "dependencies": [
+        "execute-consolidation-updates"
+      ],
+      "prompt": {
+        "template": "Delete documentation files that are truly obsolete.\n\nConsolidation plan from earlier task:\n{{TASK_OUTPUT:review-and-plan-consolidation}}\n\nDocumentation path: {{documentationPath}}\n\nDeletion criteria (STRICT):\n- File is marked for deletion in consolidationPlan\n- File has no unique content (all content merged to master/newer files)\n- File is NOT referenced as a primary resource in README or other key files\n- File is NOT part of a deliberate versioning/history structure\n\nFor each file marked for deletion:\n1. Verify it meets ALL deletion criteria\n2. Check if it's referenced in other docs (if yes, add redirect/deprecation notice instead)\n3. If safe to delete: DELETE IT\n4. If unsafe: Add deprecation notice at top pointing to successor file\n\nReturn: { deletedFiles: [], deprecatedFiles: [], retainedFiles: [], totalReduction: 'X files deleted' }",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "documentationPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to documentation directory"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-overview-document",
+      "subagent": "general",
+      "description": "Create or update master overview document",
+      "dependencies": [
+        "cleanup-obsolete-files"
+      ],
+      "prompt": {
+        "template": "Create or update a master documentation overview document.\n\nAnalysis from first task:\n{{TASK_OUTPUT:analyze-documentation-state}}\n\nConsolidation plan:\n{{TASK_OUTPUT:review-and-plan-consolidation}}\n\nCleanup results from recent task:\n{{TASK_OUTPUT:cleanup-obsolete-files}}\n\nDocumentation path: {{documentationPath}}\n\nOverview document should:\n1. List all major documentation topics and their purpose\n2. Map each topic to its master/primary file\n3. Provide navigation structure (which doc to read for what purpose)\n4. Include update history: \"Last jiggled: [date], removed X files, consolidated Y topics\"\n5. Add quick reference: what each major doc covers\n\nFile naming: DOCUMENTATION_OVERVIEW.md or UPDATE_DOCUMENTATION_INDEX.md (if it exists)\nLocation: {{documentationPath}}/\n\nStructure:\n- Overview (what's in this documentation set)\n- Quick Start (which file to read first)\n- By Topic (organized navigation)\n- File Manifest (comprehensive file listing with purpose)\n- Last Updated (date and summary of changes)\n\nReturn: { overviewFile: 'filename', created: true/false, updated: true/false, structure: {...} }",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "documentationPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to documentation directory"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-and-commit",
+      "subagent": "general",
+      "description": "Verify documentation quality and prepare commit",
+      "dependencies": [
+        "create-overview-document"
+      ],
+      "prompt": {
+        "template": "Verify documentation quality after jiggling and prepare for commit.\n\nVerification checklist:\n1. All markdown files are valid (no syntax errors)\n2. No broken internal links (files referenced should exist)\n3. No orphaned files (files not referenced anywhere)\n4. Overview document is complete and navigable\n5. Cross-references are updated\n6. Deprecation notices are clear (if any)\n\nQuality report:\n- Total files remaining\n- Files modified\n- Files deleted\n- Files created/updated (overview)\n- Broken links found (if any)\n- Recommendations for future maintenance\n\nReturn: { verified: true/false, issues: [], stats: {...} }",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  },
+  "id": "jiggle-documentation"
+}

@@ -1,0 +1,182 @@
+{
+  "name": "Test All Container Connectivity",
+  "description": "Verify all 4 devbob containers can execute remote tasks via ACP delegation",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "local-coordinator",
+      "subagent": "general",
+      "description": "Test local execution in coordinator",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file /workspace/test-coordinator.txt with content:\n\nContainer: Coordinator (Host)\nStatus: Active\nTimestamp: {{timestamp}}\n\nUse the bash tool to create this file.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-opencode-agent",
+      "subagent": "general",
+      "description": "Test devbob-opencode-agent container",
+      "dependencies": ["local-coordinator"],
+      "executionTarget": {
+        "type": "remote",
+        "connection": "docker://devbob-opencode-agent",
+        "repository": "opencode",
+        "shareImpulses": false,
+        "syncSessionState": false,
+        "syncActivityState": false
+      },
+      "prompt": {
+        "template": "You are executing in devbob-opencode-agent container.\n\nCreate a file /workspace/test-opencode.txt with content:\n\nContainer: devbob-opencode-agent\nRepository: metabob-opencode\nStatus: Connected\nTimestamp: [current time]\n\nUse the bash tool. Verify with pwd and hostname commands.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-rpc-api",
+      "subagent": "general",
+      "description": "Test devbob-rpc-api container",
+      "dependencies": ["test-opencode-agent"],
+      "executionTarget": {
+        "type": "remote",
+        "connection": "docker://devbob-rpc-api",
+        "repository": "api",
+        "shareImpulses": false,
+        "syncSessionState": false,
+        "syncActivityState": false
+      },
+      "prompt": {
+        "template": "You are executing in devbob-rpc-api container.\n\nCreate a file /workspace/test-api.txt with content:\n\nContainer: devbob-rpc-api\nRepository: metabob-api\nStatus: Connected\nTimestamp: [current time]\n\nUse the bash tool. Verify with pwd and hostname commands.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-cli-agent",
+      "subagent": "general",
+      "description": "Test devbob-cli-agent container",
+      "dependencies": ["test-rpc-api"],
+      "executionTarget": {
+        "type": "remote",
+        "connection": "docker://devbob-cli-agent",
+        "repository": "cli",
+        "shareImpulses": false,
+        "syncSessionState": false,
+        "syncActivityState": false
+      },
+      "prompt": {
+        "template": "You are executing in devbob-cli-agent container.\n\nCreate a file /workspace/test-cli.txt with content:\n\nContainer: devbob-cli-agent\nRepository: metabob-cli\nStatus: Connected\nTimestamp: [current time]\n\nUse the bash tool. Verify with pwd and hostname commands.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-dashboard-agent",
+      "subagent": "general",
+      "description": "Test devbob-dashboard-agent container",
+      "dependencies": ["test-cli-agent"],
+      "executionTarget": {
+        "type": "remote",
+        "connection": "docker://devbob-dashboard-agent",
+        "repository": "dashboard",
+        "shareImpulses": false,
+        "syncSessionState": false,
+        "syncActivityState": false
+      },
+      "prompt": {
+        "template": "You are executing in devbob-dashboard-agent container.\n\nCreate a file /workspace/test-dashboard.txt with content:\n\nContainer: devbob-dashboard-agent\nRepository: metabob-dashboard\nStatus: Connected\nTimestamp: [current time]\n\nUse the bash tool. Verify with pwd and hostname commands.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-all-containers",
+      "subagent": "general",
+      "description": "Verify all containers created their test files",
+      "dependencies": ["test-dashboard-agent"],
+      "prompt": {
+        "template": "Verify that all 5 test files were created successfully:\n\n1. Local: /workspace/test-coordinator.txt\n2. OpenCode: check with docker exec devbob-opencode-agent cat /workspace/test-opencode.txt\n3. API: check with docker exec devbob-rpc-api cat /workspace/test-api.txt\n4. CLI: check with docker exec devbob-cli-agent cat /workspace/test-cli.txt\n5. Dashboard: check with docker exec devbob-dashboard-agent cat /workspace/test-dashboard.txt\n\nCreate /workspace/container-test-summary.txt with:\n- Total containers tested: 5\n- Successful connections: [count]\n- Failed connections: [count]\n- List of successful containers\n- List of failed containers (if any)\n\nIf all 5 files exist, report SUCCESS for all containers.",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 0,
+    "annotationStrategy": "key-components"
+  }
+}

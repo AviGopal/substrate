@@ -1,0 +1,203 @@
+{
+  "name": "Multi-Agent ACP Workflow",
+  "version": 1,
+  "description": "Test and demonstrate multi-agent communication via ACP protocol with Docker containers, impulse-based context sharing, and prompt injection verification",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "containerConfig",
+      "hint": "Docker container details for remote agent connection: container name, agent type, and command to execute opencode acp server",
+      "impulseTypes": ["memo"],
+      "required": true,
+      "budgetRange": [200, 500]
+    },
+    {
+      "key": "taskContext",
+      "hint": "Files, components, or context needed for the delegated task. Can include file paths, code snippets, or analysis results",
+      "impulseTypes": ["file", "component", "memo"],
+      "required": true,
+      "budgetRange": [1000, 3000]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "setup-connection",
+      "subagent": "general",
+      "description": "Establish ACP connection to Docker container",
+      "dependencies": [],
+      "impulseReferences": ["containerConfig"],
+      "prompt": {
+        "template": "Establish ACP connection to remote agent in Docker container.\n\nContainer: {{containerName}}\nAgent Type: {{agentType}}\n\nSteps:\n1. Use acp_connect tool with type=\"container\"\n2. Set transport=\"stdio\" \n3. Command: [\"docker\", \"exec\", \"-i\", \"{{containerName}}\", \"opencode\", \"acp\"]\n4. Verify connection with acp_list_connections\n5. Run acp_ping to confirm agent is responsive\n\nExpected: Connection established, agent responds to ping with version info.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "containerName",
+            "type": "string",
+            "required": true,
+            "description": "Docker container name or ID"
+          },
+          {
+            "name": "agentType",
+            "type": "string",
+            "required": true,
+            "description": "Type of agent in container (e.g., python-expert, rust-analyzer)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["acp_connect", "acp_ping"],
+        "forbiddenPatterns": ["TODO", "FIXME"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "create-context-impulses",
+      "subagent": "general",
+      "description": "Create impulses for context sharing",
+      "dependencies": ["setup-connection"],
+      "impulseReferences": ["taskContext"],
+      "prompt": {
+        "template": "Create impulses to share context with the remote agent.\n\nContext Type: {{contextType}}\nContext Description: {{contextDescription}}\n\nSteps:\n1. Review taskContext impulse for files/components/data needed\n2. Create impulses using impulse_create tool:\n   - For files: { type: \"file\", path: \"...\", offset: X, limit: Y }\n   - For components: { type: \"component\", file: \"...\", name: \"...\" }\n   - For memo: { type: \"memo\", content: \"...\" }\n3. Set appropriate token budgets (500-2000 per impulse)\n4. Load impulses with impulse_load to verify content\n5. Use memory_outline to check allocation\n\nExpected: 1-3 impulses created with appropriate budgets, content verified.",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "contextType",
+            "type": "string",
+            "required": true,
+            "description": "Type of context to share (files, components, analysis results, etc.)"
+          },
+          {
+            "name": "contextDescription",
+            "type": "string",
+            "required": true,
+            "description": "What context is needed and why"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["impulse_create", "impulse_load"],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "delegate-task",
+      "subagent": "general",
+      "description": "Delegate task to remote agent via ACP",
+      "dependencies": ["create-context-impulses"],
+      "impulseReferences": ["taskContext"],
+      "prompt": {
+        "template": "Delegate task to remote agent and capture response.\n\nTask: {{taskDescription}}\nExpected Output: {{expectedOutput}}\n\nSteps:\n1. Use acp_delegate_task with:\n   - connectionName: from setup-connection task\n   - promptText: Clear task description for remote agent\n   - dataToShare: Array of impulse IDs created in previous task\n   - captureAs: \"{{responseImpulseId}}\" (for response capture)\n   - reason: \"{{delegationReason}}\"\n2. Wait for task completion\n3. Load response impulse with impulse_load\n4. Verify response contains expected content\n5. Use memory_budget to check token usage\n\nExpected: Task delegated, response captured in impulse, content accessible.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "taskDescription",
+            "type": "string",
+            "required": true,
+            "description": "Clear description of task for remote agent"
+          },
+          {
+            "name": "expectedOutput",
+            "type": "string",
+            "required": true,
+            "description": "What the remote agent should produce"
+          },
+          {
+            "name": "responseImpulseId",
+            "type": "string",
+            "required": true,
+            "description": "ID for capturing response impulse"
+          },
+          {
+            "name": "delegationReason",
+            "type": "string",
+            "required": true,
+            "description": "Why this task is being delegated to remote agent"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["acp_delegate_task", "impulse_load"],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "verify-prompt-injection",
+      "subagent": "general",
+      "description": "Verify previous agent communications are injected in prompts",
+      "dependencies": ["delegate-task"],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "Verify that the prompt injection system correctly includes previous agent communications.\n\nVerification Steps:\n1. Review the system prompt received in this session\n2. Check for <agent_communication_history> section\n3. Verify it includes:\n   - Connection establishment from setup-connection task\n   - Impulse creation from create-context-impulses task\n   - Task delegation from delegate-task task\n4. Confirm format matches:\n   <agent_communication>\n     <source_agent>...</source_agent>\n     <target_agent>...</target_agent>\n     <message>...</message>\n     <timestamp>...</timestamp>\n   </agent_communication>\n5. Use inspect_llm_request tool to examine full prompt if needed\n\nExpected: Agent communications properly injected, history visible, format correct.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "cleanup-connection",
+      "subagent": "general",
+      "description": "Clean up ACP connection",
+      "dependencies": ["verify-prompt-injection"],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "Clean up ACP connection and impulses.\n\nCleanup Steps:\n1. Use acp_disconnect to close connection to {{containerName}}\n2. Verify with acp_list_connections (should show connection removed)\n3. Optional: Use impulse_delete to remove temporary impulses\n4. Use memory_budget to verify cleanup\n\nExpected: Connection closed gracefully, resources freed.",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "containerName",
+            "type": "string",
+            "required": true,
+            "description": "Docker container name (same as setup)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["acp_disconnect"],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

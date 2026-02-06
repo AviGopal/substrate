@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+recursive-include cpg_inference *.py
+recursive-include cpg_inference/bundled_models *.onnx
+recursive-include cpg_inference/bundled_models *.onnx.data
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+

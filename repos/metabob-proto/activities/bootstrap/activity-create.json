@@ -1,0 +1,104 @@
+{
+  "variant_id": "activity-create-v1",
+  "activity_id": "activity-create",
+  "variant_name": "v1-baseline",
+  "version": 1,
+  "description": "Create a new activity template from a successful interaction pattern",
+  "task_steps": [
+    {
+      "step_id": "identify-pattern",
+      "title": "Identify Interaction Pattern",
+      "description": "Analyze successful conversations to extract reusable patterns",
+      "tools": ["read_file", "grep_search"],
+      "guidance": [
+        "Look for recurring user intents that led to successful outcomes",
+        "Identify the key steps that made the interaction effective",
+        "Note which tools and context were most useful"
+      ]
+    },
+    {
+      "step_id": "define-scope",
+      "title": "Define Activity Scope",
+      "description": "Determine what the activity should and should not cover",
+      "tools": [],
+      "guidance": [
+        "Keep activities focused on a single goal",
+        "Avoid overlapping with existing activities",
+        "Consider edge cases and failure modes"
+      ]
+    },
+    {
+      "step_id": "design-steps",
+      "title": "Design Task Steps",
+      "description": "Break down the activity into discrete, measurable steps",
+      "tools": ["read_file"],
+      "guidance": [
+        "Each step should have a clear completion criteria",
+        "Order steps logically with dependencies",
+        "Include appropriate guidance for agent behavior"
+      ]
+    },
+    {
+      "step_id": "create-template",
+      "title": "Create Activity Template",
+      "description": "Write the activity JSON following the schema",
+      "tools": ["create_file", "read_file"],
+      "guidance": [
+        "Follow the ActivityVariant schema exactly",
+        "Set realistic cost and duration estimates",
+        "Start with status 'testing' for new activities"
+      ]
+    },
+    {
+      "step_id": "validate-template",
+      "title": "Validate Template",
+      "description": "Ensure the template is valid and complete",
+      "tools": ["run_terminal"],
+      "guidance": [
+        "Validate JSON syntax",
+        "Check all required fields are present",
+        "Verify step_ids are unique"
+      ]
+    }
+  ],
+  "variables": {
+    "source_pattern": "",
+    "activity_name": "",
+    "target_category": ""
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 15000,
+  "expected_duration_ms": 180000,
+  "expected_cost": 0.20,
+  "expected_quality_score": 0.75,
+  "status": "active",
+  "hooks": {
+    "preActivity": {
+      "workingDirectory": {
+        "type": "temporary",
+        "prefix": "template-create-",
+        "cleanup": "onSuccess"
+      },
+      "environment": {
+        "TEMPLATE_CREATION_MODE": "isolated",
+        "METABOB_ACTIVITY_TYPE": "template-creation"
+      }
+    },
+    "postActivity": {
+      "extractFiles": {
+        "pattern": "**/*.json",
+        "destination": "./created-templates",
+        "action": "copy"
+      },
+      "createSummary": true
+    },
+    "onError": {
+      "captureEnvironment": true,
+      "captureLogs": {
+        "tail": 200
+      },
+      "createDiagnosticImpulse": true,
+      "createBoredomTask": true
+    }
+  }
+}

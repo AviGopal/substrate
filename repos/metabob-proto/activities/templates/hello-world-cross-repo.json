@@ -1,0 +1,92 @@
+{
+  "name": "Hello World Cross-Repo",
+  "description": "Simple smoke test for cross-repository activity execution",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "local-hello",
+      "subagent": "general",
+      "description": "Create hello file locally",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file /workspace/hello-local.txt with the content 'Hello from coordinator!' using the bash tool.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "remote-api-hello",
+      "subagent": "general",
+      "description": "Create hello file in API container",
+      "dependencies": ["local-hello"],
+      "executionTarget": {
+        "type": "remote",
+        "connection": "docker://devbob-rpc-api",
+        "repository": "api",
+        "shareImpulses": false,
+        "syncSessionState": false,
+        "syncActivityState": false
+      },
+      "prompt": {
+        "template": "Create a file /workspace/hello-api.txt with the content 'Hello from API container!' using the bash tool.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-both",
+      "subagent": "general",
+      "description": "Verify both files exist",
+      "dependencies": ["remote-api-hello"],
+      "prompt": {
+        "template": "Verify that both hello files were created:\n1. Check /workspace/hello-local.txt exists\n2. Use docker exec to check /workspace/hello-api.txt exists in devbob-rpc-api\n3. Report success if both exist.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 0,
+    "annotationStrategy": "key-components"
+  }
+}

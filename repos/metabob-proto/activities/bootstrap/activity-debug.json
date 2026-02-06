@@ -1,0 +1,91 @@
+{
+  "variant_id": "activity-debug-abde265e",
+  "activity_id": "activity-debug",
+  "variant_name": "v1-baseline",
+  "version": 1,
+  "description": "Debug and improve an underperforming activity template",
+  "task_steps": [
+    {
+      "step_id": "gather-metrics",
+      "title": "Gather Performance Metrics",
+      "description": "Collect data on activity execution outcomes",
+      "tools": [
+        "read_file",
+        "run_terminal"
+      ],
+      "guidance": [
+        "Look at success rate, cost, and duration metrics",
+        "Identify failure patterns from execution logs",
+        "Compare against similar activities"
+      ]
+    },
+    {
+      "step_id": "analyze-failures",
+      "title": "Analyze Failure Cases",
+      "description": "Understand why the activity fails or underperforms",
+      "tools": [
+        "read_file",
+        "grep_search"
+      ],
+      "guidance": [
+        "Review failed execution transcripts",
+        "Identify which steps commonly fail",
+        "Look for unclear guidance or missing context"
+      ]
+    },
+    {
+      "step_id": "identify-improvements",
+      "title": "Identify Improvements",
+      "description": "Propose changes to improve activity performance",
+      "tools": [],
+      "guidance": [
+        "Consider adding more specific guidance",
+        "Adjust step order or granularity",
+        "Update tool recommendations"
+      ]
+    },
+    {
+      "step_id": "create-variant",
+      "title": "Create Improved Variant",
+      "description": "Create a new variant with proposed improvements",
+      "tools": [
+        "create_file",
+        "read_file"
+      ],
+      "guidance": [
+        "Increment version number",
+        "Document what changes were made and why",
+        "Set status to 'testing' for A/B comparison"
+      ]
+    },
+    {
+      "step_id": "setup-test",
+      "title": "Setup A/B Test",
+      "description": "Configure the learning system to test both variants",
+      "tools": [
+        "run_terminal"
+      ],
+      "guidance": [
+        "Ensure both variants are active for testing",
+        "Set appropriate exploration rate",
+        "Define success criteria for evaluation"
+      ]
+    }
+  ],
+  "variables": {
+    "activity_id": "",
+    "variant_id": "",
+    "failure_pattern": ""
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 15000,
+  "expected_duration_ms": 150000,
+  "expected_cost": 0.18,
+  "expected_quality_score": 0.8,
+  "status": "active",
+  "content_hash": "abde265ec9dfb652",
+  "parent_hash": null,
+  "lineage": [],
+  "evolution_type": "root",
+  "evolution_note": "Bootstrap seed"
+}

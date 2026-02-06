@@ -1,0 +1,104 @@
+{
+  "variant_id": "activity-evolve-v1",
+  "activity_id": "activity-evolve",
+  "variant_name": "v1-baseline",
+  "version": 1,
+  "description": "Evolve activities by merging, refining, or separating based on performance data",
+  "task_steps": [
+    {
+      "step_id": "review-performance",
+      "title": "Review Activity Performance",
+      "description": "Analyze performance across all active activities",
+      "tools": ["run_terminal", "read_file"],
+      "guidance": [
+        "Identify top and bottom performers",
+        "Look for activities with overlapping scope",
+        "Find activities that are too broad or too narrow"
+      ]
+    },
+    {
+      "step_id": "identify-evolution",
+      "title": "Identify Evolution Opportunity",
+      "description": "Determine what type of evolution is needed",
+      "tools": [],
+      "guidance": [
+        "MERGE: Combine similar activities with overlapping success",
+        "REFINE: Improve a single activity based on learnings",
+        "SEPARATE: Split an overly broad activity into focused ones"
+      ]
+    },
+    {
+      "step_id": "plan-evolution",
+      "title": "Plan Evolution",
+      "description": "Design the target state for the evolution",
+      "tools": ["read_file"],
+      "guidance": [
+        "Preserve successful patterns from source activities",
+        "Address identified weaknesses",
+        "Maintain backward compatibility where possible"
+      ]
+    },
+    {
+      "step_id": "execute-evolution",
+      "title": "Execute Evolution",
+      "description": "Create new activities and deprecate old ones",
+      "tools": ["create_file", "edit_file"],
+      "guidance": [
+        "Create new variants with 'testing' status",
+        "Mark deprecated activities appropriately",
+        "Update any references to evolved activities"
+      ]
+    },
+    {
+      "step_id": "validate-evolution",
+      "title": "Validate Evolution",
+      "description": "Ensure evolved activities work correctly",
+      "tools": ["run_terminal"],
+      "guidance": [
+        "Test new activities end-to-end",
+        "Verify no broken references",
+        "Document the evolution for future reference"
+      ]
+    }
+  ],
+  "variables": {
+    "source_activities": [],
+    "evolution_type": "",
+    "rationale": ""
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 20000,
+  "expected_duration_ms": 240000,
+  "expected_cost": 0.25,
+  "expected_quality_score": 0.75,
+  "status": "active",
+  "hooks": {
+    "preActivity": {
+      "workingDirectory": {
+        "type": "temporary",
+        "prefix": "template-evolve-",
+        "cleanup": "onSuccess"
+      },
+      "environment": {
+        "TEMPLATE_CREATION_MODE": "isolated",
+        "METABOB_ACTIVITY_TYPE": "template-evolution"
+      }
+    },
+    "postActivity": {
+      "extractFiles": {
+        "pattern": "**/*.json",
+        "destination": "./evolved-templates",
+        "action": "copy"
+      },
+      "createSummary": true
+    },
+    "onError": {
+      "captureEnvironment": true,
+      "captureLogs": {
+        "tail": 200
+      },
+      "createDiagnosticImpulse": true,
+      "createBoredomTask": true
+    }
+  }
+}

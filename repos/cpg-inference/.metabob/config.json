@@ -1,0 +1,7 @@
+{
+  "base_url": "http://localhost:8080",
+  "state_directory": ".metabob",
+  "include_paths": [
+    "**/*.py"
+  ]
+}

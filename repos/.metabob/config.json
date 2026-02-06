@@ -1,0 +1,35 @@
+{
+  "base_url": "http://localhost:8080",
+  "api_key": "mb_ahm4jy57u4kgjzoXxp0xFhikPeWx5V8JIEgIgDL5ECU",
+  "state_directory": ".metabob",
+  "include_paths": [
+    "**/*.ts",
+    "**/*.js",
+    "**/*.py",
+    "**/*.go",
+    "**/*.java",
+    "**/*.rs"
+  ],
+  "exclude_paths": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    "target/**",
+    "vendor/**",
+    ".git/**",
+    "coverage/**",
+    "tmp/**",
+    "temp/**",
+    ".next/**",
+    ".turbo/**",
+    "bin/**",
+    "obj/**",
+    ".venv/**",
+    "venv/**",
+    "__pycache__/**",
+    "*.pyc",
+    ".pytest_cache/**",
+    ".idea/**",
+    ".vscode/**"
+  ]
+}

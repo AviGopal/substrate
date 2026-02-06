@@ -1,0 +1,231 @@
+{
+  "name": "Impulse Context Management",
+  "version": 1,
+  "description": "Refactor context management to use impulses for ALL context (messages, reasoning, files) instead of split message/impulse approach. Memory agent manages everything uniformly.",
+  "category": "refactor",
+  "tasks": [
+    {
+      "id": "add-reasoning-impulse-type",
+      "subagent": "general",
+      "description": "Add reasoning impulse pointer type to activity-template.ts",
+      "dependencies": [],
+      "prompt": {
+        "template": "Add a new impulse pointer type for reasoning parts.\n\n## Context\n\nReasoning tokens from extended thinking models (like o1) are currently stored in MessageV2.ReasoningPart but not tracked as impulses. This prevents the memory agent from properly accounting for reasoning tokens during compaction.\n\n## Task\n\nIn `src/session/activity-template.ts`, add a new pointer type to the Impulse.Pointer discriminated union:\n\n```typescript\ntype ReasoningPointer = {\n  type: \"reasoning\"\n  messageID: string\n  partID: string\n}\n```\n\n## Acceptance Criteria\n\n- [ ] ReasoningPointer type added to schema\n- [ ] Type properly integrated into discriminated union\n- [ ] Zod schema includes reasoning pointer type\n- [ ] TypeScript types regenerate successfully\n- [ ] No compilation errors",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/activity-template.ts"],
+        "requiredPatterns": ["type.*reasoning", "messageID.*string", "partID.*string"],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "implement-reasoning-resolver",
+      "subagent": "general",
+      "description": "Implement resolver for reasoning impulse pointers",
+      "dependencies": ["add-reasoning-impulse-type"],
+      "prompt": {
+        "template": "Implement the resolver for reasoning impulse pointers in impulse-resolver.ts.\n\n## Task\n\nIn `src/session/impulse-resolver.ts`, add a case to handle `reasoning` pointer type:\n\n```typescript\ncase \"reasoning\": {\n  // Load reasoning part from message storage\n  const part = await Storage.read<MessageV2.ReasoningPart>([\n    \"part\",\n    impulse.sessionID || input.sessionID,\n    pointer.messageID,\n    pointer.partID\n  ])\n  \n  if (!part) {\n    return `// Reasoning part not found: ${pointer.messageID}/${pointer.partID}`\n  }\n  \n  // Format reasoning content\n  return `=== Reasoning ==\\n${part.text}`\n}\n```\n\n## Notes\n\n- Follow existing resolver patterns (memo, file, component, etc.)\n- Handle missing parts gracefully with error message\n- Format reasoning text clearly for context injection\n- Add logging for debugging\n\n## Acceptance Criteria\n\n- [ ] Case added to switch statement\n- [ ] Loads reasoning part from storage\n- [ ] Returns formatted reasoning text\n- [ ] Handles errors gracefully\n- [ ] Follows existing resolver patterns",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/impulse-resolver.ts"],
+        "requiredPatterns": ["case.*reasoning", "Storage\\.read", "ReasoningPart"],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-reasoning-impulses-on-stream",
+      "subagent": "general",
+      "description": "Create reasoning impulses when reasoning parts are streamed",
+      "dependencies": ["implement-reasoning-resolver"],
+      "prompt": {
+        "template": "Automatically create reasoning impulses when reasoning parts complete streaming.\n\n## Context\n\nWhen extended thinking models produce reasoning, we need to create impulses so the memory agent can track and manage reasoning token usage.\n\n## Task\n\nIn `src/session/prompt.ts`, in the `createProcessor()` function, find the `reasoning-end` case and add impulse creation:\n\n```typescript\ncase \"reasoning-end\":\n  if (value.id in reasoningMap) {\n    const part = reasoningMap[value.id]\n    part.text = part.text.trimEnd()\n    part.time = {\n      ...part.time,\n      end: Date.now(),\n    }\n    if (value.providerMetadata) part.metadata = value.providerMetadata\n    await Session.updatePart(part)\n    \n    // NEW: Create impulse for reasoning\n    try {\n      const { SessionMemory } = await import(\"./session-memory\")\n      const { Token } = await import(\"../util/token\")\n      \n      const impulse: ActivityTemplate.Impulse.Schema = {\n        id: `reasoning-${part.id}`,\n        type: \"reasoning\",\n        sessionID: assistantMsg.sessionID,\n        scope: \"session\",\n        pointer: {\n          type: \"reasoning\",\n          messageID: assistantMsg.id,\n          partID: part.id,\n        },\n        budget: Token.estimate(part.text),\n        priority: \"medium\", // Reasoning is useful but not critical\n        loaded: false,\n        metadata: {\n          description: \"Extended thinking reasoning\",\n          createdBy: \"prompt-processor\",\n        },\n      }\n      \n      await SessionMemory.addImpulse(assistantMsg.sessionID, impulse)\n      \n      log.debug(\"created reasoning impulse\", {\n        impulseId: impulse.id,\n        messageID: assistantMsg.id,\n        partID: part.id,\n        tokenEstimate: impulse.budget,\n      })\n    } catch (error) {\n      log.warn(\"failed to create reasoning impulse\", { error })\n      // Non-fatal, continue\n    }\n    \n    delete reasoningMap[value.id]\n  }\n  break\n```\n\n## Acceptance Criteria\n\n- [ ] Reasoning impulse created after reasoning-end\n- [ ] Impulse has correct pointer with messageID and partID\n- [ ] Token budget estimated from reasoning text\n- [ ] Error handling prevents stream failures\n- [ ] Logging added for debugging\n- [ ] No compilation errors",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/prompt.ts"],
+        "requiredPatterns": ["reasoning-end", "SessionMemory", "reasoning.*impulse"],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "refactor-renegotiation-to-load-impulses",
+      "subagent": "general",
+      "description": "Refactor renegotiateContext to load all impulses internally instead of receiving messages array",
+      "dependencies": ["create-reasoning-impulses-on-stream"],
+      "prompt": {
+        "template": "Refactor SessionMemoryAgent.renegotiateContext() to load all impulses internally.\n\n## Context\n\nCurrently, renegotiateContext receives a `messages` array parameter. We want it to load ALL impulses (messages, reasoning, context files) internally so the memory agent has a unified view.\n\n## Task\n\nIn `src/session/memory-agent.ts`, refactor `renegotiateContext()`:\n\n### 1. Update Function Signature\n\nChange from:\n```typescript\nexport async function renegotiateContext(input: {\n  sessionID: string\n  messages?: MessageV2.WithParts[] // OLD: direct messages\n  messageImpulses?: ActivityTemplate.Impulse.Schema[]\n  otherImpulses?: ActivityTemplate.Impulse.Schema[]\n  currentTokens: number\n  targetTokens: number\n  model: { providerID: string; modelID: string }\n})\n```\n\nTo:\n```typescript\nexport async function renegotiateContext(input: {\n  sessionID: string\n  model: { providerID: string; modelID: string }\n})\n```\n\n### 2. Load All Impulses Internally\n\n```typescript\n// Load ALL impulses from session memory\nconst allImpulses = await SessionMemory.listImpulses(input.sessionID)\n\n// Categorize impulses by type\nconst turnImpulses = allImpulses.filter(i => i.type === \"messageHistory\")\nconst reasoningImpulses = allImpulses.filter(i => i.type === \"reasoning\")\nconst contextImpulses = allImpulses.filter(i => \n  ![\"messageHistory\", \"reasoning\"].includes(i.type)\n)\n\n// Calculate current token usage from LOADED impulses\nconst currentTokens = allImpulses\n  .filter(i => i.loaded)\n  .reduce((sum, i) => sum + (i.tokenCount || 0), 0)\n\n// Calculate target tokens (60% of context window)\nconst model = await Provider.getModel(input.model.providerID, input.model.modelID)\nconst outputTokens = Math.min(\n  model.info.limit.output,\n  SessionPrompt.OUTPUT_TOKEN_MAX\n)\nconst usableContext = model.info.limit.context - outputTokens\nconst targetTokens = Math.floor(usableContext * 0.6)\n```\n\n### 3. Update System Prompt\n\nUpdate the LLM prompt to include impulse categories:\n\n```typescript\nconst system = SystemPrompt.header(input.model.providerID)\nsystem.push(`You are the Session Memory Agent - context manager for conversational coding assistance.\n\n## Current Situation\n\n- Current tokens: ${currentTokens}\n- Target tokens: ${targetTokens}\n- Overflow: ${currentTokens - targetTokens} tokens\n\n## Impulses to Manage\n\n**Turn History** (${turnImpulses.length} impulses):\n- Message conversation turns\n- Recent: last 2-3 turns (keep loaded)\n- Old: > 10 turns (consider unloading)\n\n**Reasoning** (${reasoningImpulses.length} impulses):\n- Extended thinking from o1/extended models\n- Can unload old reasoning if not actively referenced\n\n**Context** (${contextImpulses.length} impulses):\n- Files, components, commits, issues\n- Keep high-priority and recently accessed\n- Unload low-priority or stale context\n\n## Strategy\n\nDecide which impulses to:\n1. Keep loaded (essential for current task)\n2. Unload (free memory, keep pointer for reload)\n3. Delete (no longer relevant)\n\n...\n`)\n```\n\n### 4. Return Same Interface\n\nReturn the same decision structure (backward compatible):\n\n```typescript\nreturn {\n  messagesToKeep: [], // Empty (deprecated)\n  messagesToRemove: [], // Empty (deprecated)\n  messagesToCompress: [], // Empty (deprecated)\n  impulsesToUnload: parsed.impulsesToUnload,\n  impulsesToDelete: parsed.impulsesToDelete,\n  reasoning: parsed.reasoning,\n  estimatedTokensSaved: parsed.estimatedTokensSaved,\n}\n```\n\n## Acceptance Criteria\n\n- [ ] Function signature simplified (no messages parameter)\n- [ ] Loads all impulses internally\n- [ ] Categorizes impulses by type\n- [ ] Calculates tokens from loaded impulses\n- [ ] Updates system prompt with impulse categories\n- [ ] Returns backward-compatible decision structure\n- [ ] No compilation errors\n- [ ] Existing tests still pass",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/memory-agent.ts"],
+        "requiredPatterns": ["renegotiateContext", "listImpulses", "turnImpulses", "reasoningImpulses"],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "update-compaction-caller",
+      "subagent": "general",
+      "description": "Update SessionCompaction.renegotiate() to use new impulse-only interface",
+      "dependencies": ["refactor-renegotiation-to-load-impulses"],
+      "prompt": {
+        "template": "Update SessionCompaction.renegotiate() to call the new impulse-only renegotiateContext().\n\n## Task\n\nIn `src/session/compaction.ts`, update the `renegotiate()` function:\n\n### Remove Old Code\n\nRemove:\n- Message loading and token calculation (lines ~113-139)\n- Message passing to renegotiateContext\n- Message compaction logic (lines ~169-181)\n\n### New Implementation\n\n```typescript\nexport async function renegotiate(input: {\n  sessionID: string\n  providerID: string\n  modelID: string\n  signal?: AbortSignal\n}) {\n  if (!input.signal) SessionLock.assertUnlocked(input.sessionID)\n  await using lock = input.signal === undefined ? SessionLock.acquire({ sessionID: input.sessionID }) : undefined\n  const signal = input.signal ?? lock!.signal\n\n  await Session.update(input.sessionID, (draft) => {\n    draft.time.compacting = Date.now()\n  })\n  await using _ = defer(async () => {\n    await Session.update(input.sessionID, (draft) => {\n      draft.time.compacting = undefined\n    })\n  })\n\n  log.info(\"renegotiating context\", {\n    sessionID: input.sessionID,\n  })\n\n  // Use memory agent to decide what to keep/remove\n  // Memory agent loads impulses internally\n  const { SessionMemoryAgent } = await import(\"./memory-agent\")\n  const decision = await SessionMemoryAgent.renegotiateContext({\n    sessionID: input.sessionID,\n    model: {\n      providerID: input.providerID,\n      modelID: input.modelID,\n    },\n  })\n\n  log.info(\"renegotiation decision\", {\n    sessionID: input.sessionID,\n    impulsesToUnload: decision.impulsesToUnload.length,\n    impulsesToDelete: decision.impulsesToDelete.length,\n    estimatedSaved: decision.estimatedTokensSaved,\n    reasoning: decision.reasoning,\n  })\n\n  // Execute the decision\n  const { SessionMemory } = await import(\"./session-memory\")\n\n  // Unload impulses (keep pointer, free content)\n  for (const impulseID of decision.impulsesToUnload) {\n    await SessionMemory.updateImpulse(input.sessionID, impulseID, {\n      loaded: false,\n      content: undefined,\n    })\n    log.debug(\"unloaded impulse\", { impulseID })\n  }\n\n  // Remove impulses permanently\n  for (const impulseID of decision.impulsesToDelete) {\n    await SessionMemory.removeImpulse(input.sessionID, impulseID)\n    log.debug(\"removed impulse\", { impulseID })\n  }\n\n  // Create summary note if context was renegotiated\n  if (decision.impulsesToUnload.length > 0 || decision.impulsesToDelete.length > 0) {\n    const summaryText = `[Context renegotiated: ${decision.impulsesToUnload.length} impulses unloaded, ${decision.impulsesToDelete.length} impulses removed]\\n\\nReasoning: ${decision.reasoning}`\n\n    const resumeMsgID = Identifier.ascending(\"message\")\n    await Session.updateMessage({\n      id: resumeMsgID,\n      role: \"user\",\n      sessionID: input.sessionID,\n      time: {\n        created: Date.now(),\n      },\n    })\n\n    await Session.updatePart({\n      type: \"text\",\n      sessionID: input.sessionID,\n      messageID: resumeMsgID,\n      id: Identifier.ascending(\"part\"),\n      text: summaryText,\n      time: {\n        start: Date.now(),\n        end: Date.now(),\n      },\n      synthetic: true,\n    })\n  }\n\n  Bus.publish(Event.Compacted, {\n    sessionID: input.sessionID,\n  })\n\n  return {\n    decision,\n    tokensFreed: decision.estimatedTokensSaved,\n  }\n}\n```\n\n## Acceptance Criteria\n\n- [ ] Removes message loading logic\n- [ ] Calls renegotiateContext with simplified interface\n- [ ] Executes impulse unload/delete decisions\n- [ ] Creates summary message for user\n- [ ] Publishes compaction event\n- [ ] No compilation errors\n- [ ] Maintains backward compatibility",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/compaction.ts"],
+        "requiredPatterns": ["renegotiate", "SessionMemoryAgent", "impulsesToUnload", "impulsesToDelete"],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "update-getmessages-to-use-impulses",
+      "subagent": "general",
+      "description": "Update getMessages() to reconstruct messages from loaded impulses",
+      "dependencies": ["update-compaction-caller"],
+      "prompt": {
+        "template": "Update getMessages() in prompt.ts to reconstruct messages from impulse loading state.\n\n## Context\n\nAfter renegotiation, some turn impulses will be unloaded. getMessages() should only return messages whose turn impulses are loaded.\n\n## Task\n\nIn `src/session/prompt.ts`, update the `getMessages()` function:\n\n```typescript\nasync function getMessages(input: {\n  sessionID: string\n  model: ModelsDev.Model\n  providerID: string\n  signal: AbortSignal\n}) {\n  // Get all messages\n  let msgs = await MessageV2.filterCompacted(MessageV2.stream(input.sessionID))\n  \n  // Check if we need compaction\n  const lastAssistant = msgs.findLast((msg) => msg.info.role === \"assistant\")\n  if (\n    lastAssistant?.info.role === \"assistant\" &&\n    SessionCompaction.isOverflow({\n      tokens: lastAssistant.info.tokens,\n      model: input.model,\n    })\n  ) {\n    // Check compaction strategy from config\n    const cfg = await Config.get()\n    const strategy = cfg.sessionMemory?.compaction?.strategy ?? \"renegotiate\"\n\n    if (strategy === \"renegotiate\" || strategy === \"auto\") {\n      try {\n        // Use intelligent renegotiation: memory agent decides what to keep/remove\n        await SessionCompaction.renegotiate({\n          sessionID: input.sessionID,\n          providerID: input.providerID,\n          modelID: input.model.id,\n          signal: input.signal,\n        })\n        \n        // After renegotiation, filter messages by loaded impulses\n        const { SessionMemory } = await import(\"./session-memory\")\n        const impulses = await SessionMemory.listImpulses(input.sessionID)\n        const turnImpulses = impulses.filter(i => i.type === \"messageHistory\")\n        \n        // Get loaded turn impulses\n        const loadedTurns = new Set(\n          turnImpulses\n            .filter(i => i.loaded)\n            .flatMap(i => {\n              if (i.pointer.type === \"messageHistory\") {\n                return i.pointer.messageIDs\n              }\n              return []\n            })\n        )\n        \n        // Filter messages to only include those in loaded turns\n        msgs = msgs.filter(msg => loadedTurns.has(msg.info.id))\n        \n        log.info(\"filtered messages by loaded impulses\", {\n          totalMessages: (await MessageV2.stream(input.sessionID)).length,\n          loadedMessages: msgs.length,\n          loadedTurns: loadedTurns.size,\n        })\n        \n      } catch (error) {\n        log.warn(\"renegotiation failed, falling back to summarization\", {\n          error: error instanceof Error ? error.message : String(error),\n        })\n        if (strategy === \"auto\") {\n          // Fallback to summarization\n          const summaryMsg = await SessionCompaction.run({\n            sessionID: input.sessionID,\n            providerID: input.providerID,\n            modelID: input.model.id,\n            signal: input.signal,\n          })\n          const resumeMsgID = Identifier.ascending(\"message\")\n          const resumeMsg = {\n            info: await Session.updateMessage({\n              id: resumeMsgID,\n              role: \"user\",\n              sessionID: input.sessionID,\n              time: {\n                created: Date.now(),\n              },\n            }),\n            parts: [\n              await Session.updatePart({\n                type: \"text\",\n                sessionID: input.sessionID,\n                messageID: resumeMsgID,\n                id: Identifier.ascending(\"part\"),\n                text: \"Use the above summary generated from your last session to resume from where you left off.\",\n                time: {\n                  start: Date.now(),\n                  end: Date.now(),\n                },\n                synthetic: true,\n              }),\n            ],\n          }\n          msgs = [summaryMsg, resumeMsg]\n        } else {\n          throw error\n        }\n      }\n    } else {\n      // Use traditional summarization\n      const summaryMsg = await SessionCompaction.run({\n        sessionID: input.sessionID,\n        providerID: input.providerID,\n        modelID: input.model.id,\n        signal: input.signal,\n      })\n      const resumeMsgID = Identifier.ascending(\"message\")\n      const resumeMsg = {\n        info: await Session.updateMessage({\n          id: resumeMsgID,\n          role: \"user\",\n          sessionID: input.sessionID,\n          time: {\n            created: Date.now(),\n          },\n        }),\n        parts: [\n          await Session.updatePart({\n            type: \"text\",\n            sessionID: input.sessionID,\n            messageID: resumeMsgID,\n            id: Identifier.ascending(\"part\"),\n            text: \"Use the above summary generated from your last session to resume from where you left off.\",\n            time: {\n              start: Date.now(),\n              end: Date.now(),\n            },\n            synthetic: true,\n          }),\n        ],\n      }\n      msgs = [summaryMsg, resumeMsg]\n    }\n  }\n  return msgs\n}\n```\n\n## Acceptance Criteria\n\n- [ ] After renegotiation, filters messages by loaded impulses\n- [ ] Only includes messages whose turn impulse is loaded\n- [ ] Logs message filtering stats\n- [ ] Maintains fallback to summarization\n- [ ] No compilation errors",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/prompt.ts"],
+        "requiredPatterns": ["getMessages", "loadedTurns", "filter.*loaded"],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "test-and-verify",
+      "subagent": "general",
+      "description": "Test unified impulse context management with reasoning tokens",
+      "dependencies": ["update-getmessages-to-use-impulses"],
+      "prompt": {
+        "template": "Test the unified impulse-based context management system.\n\n## Testing Strategy\n\n### 1. Unit Tests\n\nCreate tests in `test/session/impulse-context.test.ts`:\n\n```typescript\nimport { describe, test, expect } from \"bun:test\"\nimport { SessionMemory } from \"../../src/session/session-memory\"\nimport { SessionMemoryAgent } from \"../../src/session/memory-agent\"\nimport { ImpulseResolver } from \"../../src/session/impulse-resolver\"\nimport { ActivityTemplate } from \"../../src/session/activity-template\"\n\ndescribe(\"unified impulse context\", () => {\n  test(\"reasoning impulse resolves correctly\", async () => {\n    // Test that reasoning impulses can be resolved\n  })\n  \n  test(\"renegotiateContext loads all impulse types\", async () => {\n    // Test that memory agent sees turns + reasoning + context\n  })\n  \n  test(\"compaction unloads old turn impulses\", async () => {\n    // Test that old turns are unloaded during renegotiation\n  })\n  \n  test(\"getMessages filters by loaded impulses\", async () => {\n    // Test that only loaded turns appear in message history\n  })\n})\n```\n\n### 2. Integration Test\n\nCreate test in `test/integration/impulse-compaction.test.ts`:\n\n```typescript\nimport { describe, test, expect } from \"bun:test\"\n\ndescribe(\"impulse-based compaction\", () => {\n  test(\"full workflow: create messages, reasoning, compaction\", async () => {\n    // 1. Create session with reasoning model\n    // 2. Send 10 messages (some with reasoning)\n    // 3. Trigger compaction\n    // 4. Verify old turns unloaded\n    // 5. Verify reasoning impulses managed\n    // 6. Verify message history correct\n  })\n})\n```\n\n### 3. Manual Testing\n\nTest with real extended thinking model:\n\n```bash\n# Start session with o1 model\nopencode chat --model openai:o1-mini\n\n# Send messages that trigger reasoning\n# Fill up context window\n# Observe compaction behavior\n# Check that reasoning tokens are tracked\n```\n\n### 4. Verify Token Accounting\n\nAdd logging to verify tokens are tracked correctly:\n\n```typescript\n// In renegotiateContext\nlog.info(\"token accounting\", {\n  totalImpulses: allImpulses.length,\n  loadedImpulses: allImpulses.filter(i => i.loaded).length,\n  turnTokens: turnImpulses.filter(i => i.loaded).reduce((s, i) => s + (i.tokenCount || 0), 0),\n  reasoningTokens: reasoningImpulses.filter(i => i.loaded).reduce((s, i) => s + (i.tokenCount || 0), 0),\n  contextTokens: contextImpulses.filter(i => i.loaded).reduce((s, i) => s + (i.tokenCount || 0), 0),\n  totalTokens: currentTokens,\n})\n```\n\n## Acceptance Criteria\n\n- [ ] Unit tests pass\n- [ ] Integration test passes\n- [ ] Manual testing confirms expected behavior\n- [ ] Token accounting verified in logs\n- [ ] No regressions in existing tests\n- [ ] Documentation updated if needed",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["test/session/impulse-context.test.ts"],
+        "requiredPatterns": ["describe", "test", "expect"],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          },
+          {
+            "name": "tests",
+            "command": "{{testCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": ["{{typecheckCommand}}"],
+    "postChecks": ["{{typecheckCommand}}", "{{testCommand}}"],
+    "qualityGates": [
+      {
+        "name": "typecheck",
+        "command": "{{typecheckCommand}}",
+        "required": true
+      },
+      {
+        "name": "tests",
+        "command": "{{testCommand}}",
+        "required": true
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

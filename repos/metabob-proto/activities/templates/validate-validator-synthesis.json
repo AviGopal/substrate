@@ -1,0 +1,163 @@
+{
+  "name": "Validate Validator Synthesis",
+  "version": 1,
+  "description": "Meta-validation: Validates that the validator synthesis system works correctly by testing it with known intents and verifying the generated validators",
+  "category": "tool",
+  "contextRequirements": [
+    {
+      "key": "validatorSystem",
+      "hint": "Provide access to validator-synthesis.ts, validator-storage.ts, validator-registry.ts, and validator-learning.ts modules",
+      "impulseTypes": ["file", "component"],
+      "required": true,
+      "budgetRange": [3000, 6000]
+    },
+    {
+      "key": "projectCommands",
+      "hint": "Detect project-specific commands using ProjectLanguageDetector: testCommand = await ProjectLanguageDetector.detectTestCommand(cwd), typecheckCommand = await ProjectLanguageDetector.detectTypecheckCommand(cwd) || 'echo skipping typecheck'",
+      "impulseTypes": ["memo"],
+      "required": true,
+      "budgetRange": [100, 200]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "create-test-intent",
+      "subagent": "general",
+      "description": "Create sample intent with known acceptance criteria",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create test intents for validating the validator synthesis system:\n\n**Objective**: Create 3 test intents with clear, verifiable acceptance criteria that should produce specific validators.\n\n**Test Intent 1: File Creation**\n```typescript\nconst testIntent1 = {\n  goal: \"Create a new user authentication module\",\n  acceptanceCriteria: [\n    \"File src/auth/user-auth.ts should exist\",\n    \"File should contain class UserAuth\",\n    \"File should export UserAuth class\"\n  ],\n  constraints: [\n    \"Should not use deprecated crypto functions\",\n    \"Should not store passwords in plaintext\"\n  ],\n  assumptions: [\n    \"Node.js crypto module is available\"\n  ],\n  invariants: [\n    \"All exported functions must be typed\"\n  ]\n}\n```\n\n**Expected Validators for Intent 1**:\n- Existence validator: Check src/auth/user-auth.ts exists\n- Pattern validator: Check for \"class UserAuth\"\n- Pattern validator: Check for \"export.*UserAuth\"\n- Pattern validator (negative): Check for NO \"crypto.createCipher\" (deprecated)\n- Pattern validator (negative): Check for NO plaintext password storage\n\n**Test Intent 2: API Endpoint**\n```typescript\nconst testIntent2 = {\n  goal: \"Add REST API endpoint for user login\",\n  acceptanceCriteria: [\n    \"POST /api/auth/login endpoint should exist\",\n    \"Endpoint should accept email and password\",\n    \"Endpoint should return JWT token on success\"\n  ],\n  constraints: [\n    \"Must not log passwords\",\n    \"Must use rate limiting\"\n  ],\n  assumptions: [\n    \"Express.js framework is used\"\n  ],\n  invariants: [\n    \"All endpoints must have error handling\"\n  ]\n}\n```\n\n**Expected Validators for Intent 2**:\n- Pattern validator: Check for POST route definition\n- Pattern validator: Check for email/password parameters\n- Pattern validator: Check for JWT token generation\n- Pattern validator (negative): No password in logs\n- Pattern validator: Rate limiting middleware present\n\n**Test Intent 3: Property Invariant**\n```typescript\nconst testIntent3 = {\n  goal: \"Implement token counter with monotonic increase\",\n  acceptanceCriteria: [\n    \"TokenCounter class should track token count\",\n    \"Counter should increment on each token\"\n  ],\n  constraints: [\n    \"Counter must never decrease\"\n  ],\n  assumptions: [],\n  invariants: [\n    \"Token count must be monotonically increasing\",\n    \"Token count must be non-negative\"\n  ]\n}\n```\n\n**Expected Validators for Intent 3**:\n- Existence validator: TokenCounter class exists\n- Property validator: Count is monotonic (never decreases)\n- Property validator: Count is non-negative\n\n**Output Format**:\n```json\n{\n  \"testIntents\": [\n    { \"id\": \"test1\", \"intent\": {...}, \"expectedValidatorTypes\": [\"existence\", \"pattern\", ...] },\n    { \"id\": \"test2\", \"intent\": {...}, \"expectedValidatorTypes\": [...] },\n    { \"id\": \"test3\", \"intent\": {...}, \"expectedValidatorTypes\": [...] }\n  ]\n}\n```\n\n**Success Criteria**:\n- ✅ 3 test intents created\n- ✅ Each intent has clear acceptance criteria\n- ✅ Expected validator types identified\n- ✅ Coverage of all validator types (existence, pattern, command, property, integration)",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "synthesize-validators",
+      "subagent": "general",
+      "description": "Call ValidatorSynthesis.synthesizeValidators() with test intents",
+      "dependencies": ["create-test-intent"],
+      "prompt": {
+        "template": "Execute validator synthesis for each test intent:\n\n**Code to Execute**:\n```typescript\nimport { ValidatorSynthesis } from './validator-synthesis'\nimport { Activity } from './activity'\n\nfor (const testCase of testIntents) {\n  // Mock components based on intent\n  const components = extractComponentsFromIntent(testCase.intent)\n  \n  // Synthesize validators\n  const result = await ValidatorSynthesis.synthesizeValidators(\n    testCase.intent,\n    components,\n    `test_${testCase.id}`\n  )\n  \n  // Store results\n  testCase.actualValidators = result.validators\n  testCase.synthesisError = result.error\n}\n```\n\n**Component Extraction**:\nFor each test intent, infer components based on acceptance criteria:\n- \"File X should exist\" → component: { path: X, type: \"file\", created: true }\n- \"Class Y\" → component: { path: inferred, type: \"class\", name: Y, created: true }\n- \"Endpoint Z\" → component: { path: inferred, type: \"file\", created: false }\n\n**Validation**:\n- Synthesis should complete without errors\n- Each intent should produce validators\n- Validator count should be > 0\n\n**Output Format**:\n```json\n{\n  \"synthesisResults\": [\n    {\n      \"testId\": \"test1\",\n      \"validatorCount\": 5,\n      \"validators\": [...],\n      \"error\": null\n    }\n  ]\n}\n```\n\n**Success Criteria**:\n- ✅ All 3 intents synthesized successfully\n- ✅ No synthesis errors\n- ✅ Each intent produced validators\n- ✅ Total validators >= 10 (across all intents)",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/validator-synthesis.ts"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "verify-validator-structure",
+      "subagent": "general",
+      "description": "Check validators match acceptance criteria",
+      "dependencies": ["synthesize-validators"],
+      "prompt": {
+        "template": "Verify synthesized validators match expected structure:\n\n**Verification Checks**:\n\n1. **Validator Schema Compliance**:\n   - Each validator has required fields: id, description, type, input, expectedBehavior, synthesizedAt, sourceIntent, priority\n   - Type is one of: existence, pattern, command, property, integration\n   - Priority is one of: critical, high, medium, low\n\n2. **Intent Coverage**:\n   - For each acceptance criterion, at least one validator exists\n   - Each constraint has a corresponding validator (usually negative pattern check)\n   - Each invariant has a property or pattern validator\n\n3. **Validator Type Distribution**:\n   - Test 1 (file creation): Should have existence validators\n   - Test 2 (API endpoint): Should have pattern validators\n   - Test 3 (invariants): Should have property validators\n\n4. **Source Intent Tracking**:\n   - Each validator's sourceIntent field references the original intent part\n   - Format: \"acceptanceCriterion: ...\" or \"constraint: ...\" or \"invariant: ...\"\n\n**Verification Matrix**:\n```\nTest 1 (File Creation):\n- ✅ Existence validator for file\n- ✅ Pattern validator for class name\n- ✅ Pattern validator for export\n- ✅ Negative pattern validator for deprecated crypto\n- ✅ Negative pattern validator for plaintext passwords\n\nTest 2 (API Endpoint):\n- ✅ Pattern validator for POST route\n- ✅ Pattern validator for parameters\n- ✅ Pattern validator for JWT\n- ✅ Negative pattern validator for password logging\n- ✅ Pattern validator for rate limiting\n\nTest 3 (Invariants):\n- ✅ Existence validator for class\n- ✅ Property validator for monotonic increase\n- ✅ Property validator for non-negative\n```\n\n**Output Format**:\n```json\n{\n  \"verificationResults\": {\n    \"schemaCompliance\": true,\n    \"intentCoverage\": 0.95,\n    \"typeDistribution\": {\n      \"existence\": 3,\n      \"pattern\": 8,\n      \"property\": 3,\n      \"command\": 0,\n      \"integration\": 1\n    },\n    \"sourceIntentTracking\": true,\n    \"failures\": []\n  }\n}\n```\n\n**Success Criteria**:\n- ✅ Schema compliance: 100%\n- ✅ Intent coverage: >= 90%\n- ✅ All validator types represented\n- ✅ Source intent tracking working",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "execute-validators",
+      "subagent": "general",
+      "description": "Run validators against sample code",
+      "dependencies": ["verify-validator-structure"],
+      "prompt": {
+        "template": "Execute synthesized validators against sample implementations:\n\n**Test Setup**:\nCreate sample code files that:\n1. Match some acceptance criteria (should pass validators)\n2. Violate some constraints (should fail validators)\n3. Test edge cases\n\n**Sample Code for Test 1**:\n```typescript\n// src/auth/user-auth.ts (good implementation)\nexport class UserAuth {\n  // Uses modern crypto, no plaintext passwords\n  async hashPassword(password: string): Promise<string> {\n    const crypto = await import('crypto')\n    return crypto.scrypt(password, 'salt', 64).toString('hex')\n  }\n}\n```\n\n**Execution via ValidatorRegistry**:\n```typescript\nimport { ValidatorRegistry } from './validator-registry'\n\nconst results = await ValidatorRegistry.batchExecute(testCase.actualValidators)\n\n// Expected results:\n// - Existence validators: PASS (file exists)\n// - Pattern validators (class, export): PASS (patterns found)\n// - Negative pattern validators: PASS (deprecated crypto NOT found)\n```\n\n**Test Cases**:\n1. **Good implementation**: All validators should pass\n2. **Bad implementation** (deprecated crypto): Constraint validators should fail\n3. **Missing file**: Existence validators should fail\n4. **Missing patterns**: Pattern validators should fail\n\n**Output Format**:\n```json\n{\n  \"executionResults\": [\n    {\n      \"testId\": \"test1_good\",\n      \"totalValidators\": 5,\n      \"passed\": 5,\n      \"failed\": 0,\n      \"criticalFailures\": 0\n    },\n    {\n      \"testId\": \"test1_bad_crypto\",\n      \"totalValidators\": 5,\n      \"passed\": 4,\n      \"failed\": 1,\n      \"criticalFailures\": 0,\n      \"failedValidators\": [\"deprecated_crypto_constraint\"]\n    }\n  ]\n}\n```\n\n**Success Criteria**:\n- ✅ Good implementations pass all validators\n- ✅ Bad implementations fail appropriate validators\n- ✅ Constraint validators catch violations\n- ✅ No false positives or false negatives",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["src/session/validator-registry.ts"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "validate-results",
+      "subagent": "general",
+      "description": "Verify validators correctly detect success/failure",
+      "dependencies": ["execute-validators"],
+      "prompt": {
+        "template": "Final validation: Verify the validator system works end-to-end:\n\n**Validation Matrix**:\n\n```\n┌─────────────────┬──────────────┬────────────┬──────────┐\n│ Test Case       │ Expected     │ Actual     │ Status   │\n├─────────────────┼──────────────┼────────────┼──────────┤\n│ Good impl       │ All pass     │ All pass   │ ✅ PASS  │\n│ Bad crypto      │ Constraint   │ Constraint │ ✅ PASS  │\n│                 │ fails        │ fails      │          │\n│ Missing file    │ Existence    │ Existence  │ ✅ PASS  │\n│                 │ fails        │ fails      │          │\n│ Missing pattern │ Pattern fails│ Pattern    │ ✅ PASS  │\n│                 │              │ fails      │          │\n└─────────────────┴──────────────┴────────────┴──────────┘\n```\n\n**System Checks**:\n\n1. **Synthesis Quality**:\n   - ✅ All test intents produced validators\n   - ✅ Validators cover all acceptance criteria\n   - ✅ Constraints have negative checks\n   - ✅ Invariants have property checks\n\n2. **Execution Quality**:\n   - ✅ Validators execute without errors\n   - ✅ True positives detected (violations caught)\n   - ✅ True negatives detected (good code passes)\n   - ✅ No false positives (good code doesn't fail)\n   - ✅ No false negatives (bad code doesn't pass)\n\n3. **Integration Quality**:\n   - ✅ ValidatorSynthesis works\n   - ✅ ValidatorStorage works\n   - ✅ ValidatorRegistry works\n   - ✅ ValidatorLearning ready (metrics can be tracked)\n\n**Final Report**:\n```json\n{\n  \"validatorSystemStatus\": \"OPERATIONAL\",\n  \"testsRun\": 12,\n  \"testsPassed\": 12,\n  \"testsFailed\": 0,\n  \"components\": {\n    \"synthesis\": \"✅ WORKING\",\n    \"storage\": \"✅ WORKING\",\n    \"registry\": \"✅ WORKING\",\n    \"learning\": \"✅ READY\"\n  },\n  \"coverage\": {\n    \"validatorTypes\": [\"existence\", \"pattern\", \"command\", \"property\", \"integration\"],\n    \"intentTypes\": [\"acceptanceCriteria\", \"constraints\", \"invariants\"],\n    \"executionModes\": [\"pass\", \"fail\", \"edge-cases\"]\n  },\n  \"recommendations\": [\n    \"System is ready for production use\",\n    \"Begin tracking validator effectiveness metrics\",\n    \"Consider adding more validator type examples\"\n  ]\n}\n```\n\n**Success Criteria**:\n- ✅ All test cases pass\n- ✅ All system components operational\n- ✅ No critical issues found\n- ✅ System ready for self-validating activities",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "{{typecheckCommand}}",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": ["{{typecheckCommand}}"],
+    "postChecks": ["{{typecheckCommand}}"],
+    "qualityGates": [
+      {
+        "name": "typecheck",
+        "command": "{{typecheckCommand}}",
+        "required": true
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}

@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package metabob.auth;
+
+option go_package = "github.com/metabobproject/metabob-proto/gen/go/metabob/auth";
+
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Organization - Multi-tenant organization management
+// =============================================================================
+//
+// SurrealDB Table: organizations
+// Indexes: org_id (unique)
+//
+// =============================================================================
+
+message Organization {
+  string org_id = 1;
+  string name = 2;
+  optional string stripe_customer_id = 3;
+  repeated string api_keys = 4;
+  int32 seat_limit = 5;
+  int32 seat_usage = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  map<string, string> metadata = 9;
+}
+
+// =============================================================================
+// User - Organization member
+// =============================================================================
+//
+// SurrealDB Table: users
+// Indexes: user_id (unique), org_id + email (unique), org_id
+//
+// =============================================================================
+
+message User {
+  string user_id = 1;
+  string org_id = 2;
+  string email = 3;
+  string name = 4;
+  string password_hash = 5;
+  string role = 6;  // member, admin, owner
+  google.protobuf.Timestamp created_at = 7;
+  optional google.protobuf.Timestamp last_login_at = 8;
+  map<string, string> metadata = 9;
+}
+
+// =============================================================================
+// ApiKey - Authentication credentials
+// =============================================================================
+//
+// SurrealDB Table: api_keys
+// Indexes: key_id (unique), key_hash (unique), org_id, user_id (unique)
+//
+// =============================================================================
+
+message ApiKey {
+  string key_id = 1;
+  string org_id = 2;
+  string key_hash = 3;
+  string user_id = 4;
+  repeated string scopes = 5;
+  google.protobuf.Timestamp created_at = 6;
+  optional google.protobuf.Timestamp last_used_at = 7;
+  optional google.protobuf.Timestamp expires_at = 8;
+  bool is_active = 9;
+}
+
+// =============================================================================
+// Project - Code project within an organization
+// =============================================================================
+//
+// SurrealDB Table: projects
+// Indexes: project_id (unique), org_id + project_id (unique), org_id
+//
+// =============================================================================
+
+message Project {
+  string project_id = 1;
+  string org_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+  map<string, string> metadata = 4;
+  optional ProjectStats stats = 5;
+}
+
+message ProjectStats {
+  int32 total_files = 1;
+  int32 total_problems = 2;
+  int32 problems_fixed = 3;
+  google.protobuf.Timestamp last_scan_at = 4;
+}
+
+// =============================================================================
+// Subscription - Billing subscription
+// =============================================================================
+//
+// SurrealDB Table: subscriptions
+// Indexes: sub_id (unique), org_id (unique)
+//
+// =============================================================================
+
+message Subscription {
+  string sub_id = 1;
+  string org_id = 2;
+  optional string stripe_subscription_id = 3;
+  optional string stripe_customer_id = 4;
+  string plan = 5;        // free, pro, enterprise
+  string status = 6;      // active, canceled, past_due
+  int32 seat_limit = 7;
+  google.protobuf.Timestamp current_period_start = 8;
+  google.protobuf.Timestamp current_period_end = 9;
+  bool cancel_at_period_end = 10;
+  map<string, string> metadata = 11;
+}
+
+// =============================================================================
+// AuditLog - Security and compliance audit trail
+// =============================================================================
+//
+// SurrealDB Table: audit_logs
+// Indexes: log_id (unique), org_id, timestamp, action
+//
+// =============================================================================
+
+message AuditLog {
+  string log_id = 1;
+  string org_id = 2;
+  optional string user_id = 3;
+  string action = 4;          // create, update, delete, login, etc.
+  string resource_type = 5;   // user, project, api_key, etc.
+  string resource_id = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  optional string ip_address = 8;
+  optional string user_agent = 9;
+  map<string, string> details = 10;
+}

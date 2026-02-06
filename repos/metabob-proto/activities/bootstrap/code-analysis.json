@@ -1,0 +1,74 @@
+{
+  "variant_id": "code-analysis-ea5828a0",
+  "activity_id": "code-analysis",
+  "variant_name": "v1-baseline",
+  "version": 1,
+  "description": "Analyze codebase for issues, patterns, and improvement opportunities",
+  "task_steps": [
+    {
+      "step_id": "identify-scope",
+      "title": "Identify Analysis Scope",
+      "description": "Determine which files or directories to analyze based on user input or recent changes",
+      "tools": [
+        "file_search",
+        "git_status"
+      ],
+      "guidance": [
+        "If no specific target provided, focus on recently modified files",
+        "Check for files with high complexity or known problem areas"
+      ]
+    },
+    {
+      "step_id": "run-analysis",
+      "title": "Run Code Analysis",
+      "description": "Execute static analysis tools to identify potential issues",
+      "tools": [
+        "metabob_analyze",
+        "read_file"
+      ],
+      "guidance": [
+        "Look for security vulnerabilities, code smells, and anti-patterns",
+        "Check for duplicate code and overly complex functions",
+        "Identify missing error handling"
+      ]
+    },
+    {
+      "step_id": "prioritize-findings",
+      "title": "Prioritize Findings",
+      "description": "Rank issues by severity and impact",
+      "tools": [],
+      "guidance": [
+        "Security issues take highest priority",
+        "Consider blast radius - how much code is affected",
+        "Factor in fix complexity vs impact"
+      ]
+    },
+    {
+      "step_id": "report-results",
+      "title": "Report Analysis Results",
+      "description": "Present findings with actionable recommendations",
+      "tools": [],
+      "guidance": [
+        "Group findings by category",
+        "Provide clear fix suggestions for each issue",
+        "Estimate effort required for remediation"
+      ]
+    }
+  ],
+  "variables": {
+    "target_path": "",
+    "analysis_depth": "standard",
+    "include_suggestions": true
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 15000,
+  "expected_duration_ms": 120000,
+  "expected_cost": 0.15,
+  "expected_quality_score": 0.8,
+  "status": "active",
+  "content_hash": "ea5828a0acd40e0b",
+  "parent_hash": null,
+  "lineage": [],
+  "evolution_type": "root",
+  "evolution_note": "Bootstrap seed"
+}

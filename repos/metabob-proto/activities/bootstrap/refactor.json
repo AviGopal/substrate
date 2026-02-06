@@ -1,0 +1,81 @@
+{
+  "variant_id": "refactor-b52f93ba",
+  "activity_id": "refactor",
+  "variant_name": "v1-baseline",
+  "version": 1,
+  "description": "Refactor code to improve quality without changing behavior",
+  "task_steps": [
+    {
+      "step_id": "identify-target",
+      "title": "Identify Refactoring Target",
+      "description": "Determine what code needs refactoring and why",
+      "tools": [
+        "read_file",
+        "metabob_analyze"
+      ],
+      "guidance": [
+        "Look for code smells: duplication, long functions, deep nesting",
+        "Check complexity metrics",
+        "Identify unclear or confusing code"
+      ]
+    },
+    {
+      "step_id": "plan-refactor",
+      "title": "Plan Refactoring",
+      "description": "Design the target state and migration path",
+      "tools": [
+        "read_file"
+      ],
+      "guidance": [
+        "Define clear goals for the refactoring",
+        "Plan incremental steps to minimize risk",
+        "Identify tests that will verify behavior preservation"
+      ]
+    },
+    {
+      "step_id": "execute-refactor",
+      "title": "Execute Refactoring",
+      "description": "Apply refactoring transformations",
+      "tools": [
+        "edit_file",
+        "create_file",
+        "delete_file"
+      ],
+      "guidance": [
+        "Make one logical change at a time",
+        "Run tests frequently",
+        "Keep commits atomic"
+      ]
+    },
+    {
+      "step_id": "verify-behavior",
+      "title": "Verify Behavior Preserved",
+      "description": "Confirm refactoring didn't change functionality",
+      "tools": [
+        "run_terminal",
+        "read_file"
+      ],
+      "guidance": [
+        "Run full test suite",
+        "Check for any behavioral changes",
+        "Review for unintended side effects"
+      ]
+    }
+  ],
+  "variables": {
+    "target_code": "",
+    "refactor_type": "",
+    "preserve_interface": true
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 20000,
+  "expected_duration_ms": 240000,
+  "expected_cost": 0.3,
+  "expected_quality_score": 0.85,
+  "status": "active",
+  "content_hash": "b52f93bafa6963dd",
+  "parent_hash": null,
+  "lineage": [],
+  "evolution_type": "root",
+  "evolution_note": "Bootstrap seed"
+}

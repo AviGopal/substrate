@@ -1,0 +1,228 @@
+syntax = "proto3";
+
+package metabob.activity;
+
+option go_package = "github.com/metabobproject/metabob-proto/gen/go/metabob/activity";
+
+import "google/protobuf/timestamp.proto";
+import "metabob/common/types.proto";
+
+// =============================================================================
+// Activity - Base activity definition (parent of variants)
+// =============================================================================
+//
+// SurrealDB Table: activities
+// Indexes: activity_id (unique), org_id + project_id, category, status
+//
+// =============================================================================
+
+message Activity {
+  // Identity
+  string activity_id = 1;
+  string name = 2;
+  string description = 3;
+  
+  // Classification
+  metabob.common.ActivityCategory category = 4;
+  repeated string tags = 5;
+  
+  // Scope
+  string org_id = 6;
+  string project_id = 7;
+  
+  // Technical context
+  string primary_language = 8;
+  optional string framework = 9;
+  repeated string tech_stack = 10;
+  
+  // Intent matching
+  repeated string intent_keywords = 11;
+  repeated string intent_patterns = 12;
+  
+  // Authorship
+  optional string author_id = 13;
+  string source = 14;  // manual, learned, composed
+  
+  // Composition
+  bool is_composed = 15;
+  repeated string composed_activity_ids = 16;
+  
+  // Aggregate metrics (from all variant executions)
+  int32 execution_count = 17;
+  double success_rate = 18;
+  int32 avg_duration_ms = 19;
+  double avg_cost = 20;
+  metabob.common.TokenUsage avg_tokens = 21;
+  
+  // Status
+  metabob.common.EntityStatus status = 22;
+  google.protobuf.Timestamp created_at = 23;
+  google.protobuf.Timestamp updated_at = 24;
+}
+
+// =============================================================================
+// ActivitySelection - Record of user selecting an activity
+// =============================================================================
+//
+// SurrealDB Table: activity_selections
+// Indexes: selection_id (unique), impression_id, execution_id, variant_id
+//
+// =============================================================================
+
+message ActivitySelection {
+  string selection_id = 1;
+  string impression_id = 2;
+  string consumer_id = 3;
+  string variant_id = 4;
+  string activity_id = 5;
+  
+  // Selection context
+  int32 time_to_decision_ms = 6;
+  int32 competing_options = 7;
+  string execution_id = 8;
+  
+  // Outcome (filled after execution)
+  bool converted = 9;
+  optional double conversion_quality = 10;
+  
+  // Timestamps
+  google.protobuf.Timestamp selected_at = 11;
+  optional google.protobuf.Timestamp execution_completed_at = 12;
+}
+
+// =============================================================================
+// ActivityConversion - Successful execution outcome
+// =============================================================================
+//
+// SurrealDB Table: activity_conversions
+// Indexes: conversion_id (unique), selection_id, execution_id, variant_id
+//
+// =============================================================================
+
+message ActivityConversion {
+  string conversion_id = 1;
+  string selection_id = 2;
+  string execution_id = 3;
+  string consumer_id = 4;
+  string variant_id = 5;
+  string activity_id = 6;
+  
+  // Outcome
+  bool success = 7;
+  int32 duration_ms = 8;
+  double cost = 9;
+  metabob.common.TokenUsage tokens_used = 10;
+  
+  // Quality metrics
+  double quality_score = 11;
+  double correctness_score = 12;
+  double speed_score = 13;
+  double efficiency_score = 14;
+  
+  // Performance vs expectations
+  int32 duration_delta_ms = 15;
+  double cost_delta = 16;
+  
+  google.protobuf.Timestamp converted_at = 17;
+}
+
+// =============================================================================
+// ActivityExecution - Full execution record
+// =============================================================================
+//
+// SurrealDB Table: activity_executions
+// Indexes: execution_id (unique), activity_id, variant_id, org_id + project_id, selection_id, timestamp
+//
+// =============================================================================
+
+message ActivityExecution {
+  // Identity & Links
+  string execution_id = 1;
+  string activity_id = 2;
+  string variant_id = 3;
+  string org_id = 4;
+  string project_id = 5;
+  string user_id = 6;
+  string project_hash = 7;
+  
+  // Recommendation links (optional)
+  optional string impression_id = 8;
+  optional string selection_id = 9;
+  optional string conversion_id = 10;
+  
+  // Timing
+  double timestamp = 11;  // Unix timestamp
+  int32 duration = 12;    // milliseconds
+  
+  // Outcome
+  bool success = 13;
+  optional string failure_reason = 14;
+  
+  // Cost
+  double total_cost = 15;
+  metabob.common.TokenUsage total_tokens = 16;
+  
+  // Quality metrics
+  map<string, double> quality_scores = 17;
+  double correctness_score = 18;
+  
+  // Detailed execution data
+  repeated TaskExecution tasks = 19;
+  map<string, string> environment = 20;
+  map<string, string> patterns = 21;
+  map<string, string> metabob = 22;
+  
+  google.protobuf.Timestamp created_at = 23;
+}
+
+message TaskExecution {
+  string task_id = 1;
+  string status = 2;
+  string output = 3;
+  int32 duration_ms = 4;
+  metabob.common.TokenUsage tokens = 5;
+  metabob.common.Cost cost = 6;
+}
+
+// =============================================================================
+// ActivityExperiment - A/B test configuration
+// =============================================================================
+//
+// SurrealDB Table: activity_experiments
+// Indexes: experiment_id (unique), activity_id, status
+//
+// =============================================================================
+
+message ActivityExperiment {
+  string experiment_id = 1;
+  string activity_id = 2;
+  string name = 3;
+  
+  // Variants being tested
+  string control_variant_id = 4;
+  repeated string treatment_variant_ids = 5;
+  
+  // Traffic allocation {variant_id: percentage}
+  map<string, double> traffic_allocation = 6;
+  
+  // Hypothesis
+  string hypothesis = 7;
+  
+  // Success criteria
+  string primary_metric = 8;  // ctr, conversion_rate, quality_score, expected_value
+  int32 minimum_sample_size = 9;
+  double significance_level = 10;
+  
+  // Status
+  string status = 11;  // draft, running, completed, paused
+  
+  // Results (filled after completion)
+  optional string winner_variant_id = 12;
+  optional double improvement_percentage = 13;
+  optional double statistical_significance = 14;
+  
+  // Timestamps
+  google.protobuf.Timestamp created_at = 15;
+  optional google.protobuf.Timestamp started_at = 16;
+  optional google.protobuf.Timestamp completed_at = 17;
+}
