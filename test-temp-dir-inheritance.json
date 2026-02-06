@@ -1,0 +1,70 @@
+{
+  "id": "test-temp-dir-inheritance",
+  "name": "Test Temporary Directory Inheritance",
+  "version": 1,
+  "category": "test",
+  "description": "Test that subagents inherit working directory from lifecycle hooks",
+  "tasks": [
+    {
+      "id": "write-file",
+      "subagent": "general",
+      "description": "Write a test file in the temporary directory",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file named 'test-inheritance.txt' with the content 'hello from task 1'. Use the Write tool to create this file in the current working directory.",
+        "maxTokens": 2000
+      },
+      "validation": {
+        "requiredFiles": ["test-inheritance.txt"]
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-file",
+      "subagent": "general",
+      "description": "Verify the file exists and can be read",
+      "dependencies": ["write-file"],
+      "prompt": {
+        "template": "List all .txt files in the current working directory and read the contents of 'test-inheritance.txt'. Confirm the file exists and contains 'hello from task 1'.",
+        "maxTokens": 2000
+      },
+      "validation": {},
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "write-second-file",
+      "subagent": "general",
+      "description": "Write a second file to confirm persistence",
+      "dependencies": ["verify-file"],
+      "prompt": {
+        "template": "Create a file named 'test-inheritance-2.txt' with content 'hello from task 3'. Then list all .txt files to confirm both files exist.",
+        "maxTokens": 2000
+      },
+      "validation": {
+        "requiredFiles": ["test-inheritance-2.txt"]
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "hooks": {
+    "preActivity": {
+      "workingDirectory": {
+        "type": "temporary",
+        "prefix": "test-wd-inherit-",
+        "cleanup": "always"
+      }
+    },
+    "postActivity": {
+      "cleanup": true
+    }
+  }
+}
