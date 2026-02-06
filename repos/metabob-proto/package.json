@@ -1,0 +1,35 @@
+{
+  "name": "@metabob/proto",
+  "version": "0.1.0",
+  "description": "Protocol Buffer definitions for the Metabob ecosystem",
+  "main": "gen/typescript/index.ts",
+  "types": "gen/typescript/index.d.ts",
+  "scripts": {
+    "generate": "./scripts/generate.sh",
+    "generate:python": "protoc --python_out=gen/python --pyi_out=gen/python --proto_path=proto proto/metabob/**/*.proto",
+    "lint": "../buf lint",
+    "format": "../buf format -w",
+    "breaking": "../buf breaking --against '.git#branch=main'",
+    "clean": "rm -rf gen/"
+  },
+  "keywords": [
+    "protobuf",
+    "metabob",
+    "activity-system",
+    "types"
+  ],
+  "author": "Metabob",
+  "license": "PROPRIETARY",
+  "devDependencies": {
+    "@bufbuild/buf": "^1.47.2",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "long": "^5.2.3"
+  },
+  "files": [
+    "gen/typescript/**/*",
+    "gen/python/**/*",
+    "proto/**/*.proto"
+  ]
+}

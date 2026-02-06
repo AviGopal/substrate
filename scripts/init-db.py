@@ -46,7 +46,9 @@ def execute_query(client: httpx.Client, query: str, config: dict) -> list:
         headers={"Accept": "application/json", "Content-Type": "text/plain"},
     )
     if response.status_code != 200:
-        print(f"Query failed: {response.status_code} - {response.text}", file=sys.stderr)
+        print(
+            f"Query failed: {response.status_code} - {response.text}", file=sys.stderr
+        )
         return []
     return response.json()
 
@@ -54,7 +56,7 @@ def execute_query(client: httpx.Client, query: str, config: dict) -> list:
 def wait_for_db(config: dict, max_retries: int = 30) -> bool:
     """Wait for SurrealDB to be ready."""
     print(f"Waiting for SurrealDB at {config['url']}...")
-    
+
     for i in range(max_retries):
         try:
             response = httpx.get(f"{config['url']}/health", timeout=5)
@@ -63,11 +65,11 @@ def wait_for_db(config: dict, max_retries: int = 30) -> bool:
                 return True
         except Exception:
             pass
-        
+
         time.sleep(1)
         if i % 5 == 0 and i > 0:
             print(f"  Still waiting... ({i}/{max_retries})")
-    
+
     print("SurrealDB did not become ready in time", file=sys.stderr)
     return False
 
@@ -77,32 +79,35 @@ def generate_schema_from_proto(config: dict) -> str:
     # Find metabob-proto directory
     script_dir = Path(__file__).parent
     proto_dir = script_dir.parent / "repos" / "metabob-proto"
-    
+
     # Also check Docker mount path
     if not proto_dir.exists():
         proto_dir = Path("/proto")
-    
+
     if not proto_dir.exists():
         print("  Proto directory not found, using fallback schema", file=sys.stderr)
         return get_fallback_schema(config)
-    
+
     generator_script = proto_dir / "scripts" / "generate_surreal_schema.py"
-    
+
     if generator_script.exists():
         try:
             result = subprocess.run(
                 [
                     sys.executable,
                     str(generator_script),
-                    "--proto-dir", str(proto_dir / "proto"),
-                    "--namespace", config["namespace"],
-                    "--database", config["database"],
+                    "--proto-dir",
+                    str(proto_dir / "proto"),
+                    "--namespace",
+                    config["namespace"],
+                    "--database",
+                    config["database"],
                 ],
                 capture_output=True,
                 text=True,
                 timeout=30,
             )
-            
+
             if result.returncode == 0 and result.stdout.strip():
                 print("  Schema generated from proto definitions")
                 return result.stdout
@@ -110,7 +115,7 @@ def generate_schema_from_proto(config: dict) -> str:
                 print(f"  Generator warning: {result.stderr}", file=sys.stderr)
         except Exception as e:
             print(f"  Generator error: {e}", file=sys.stderr)
-    
+
     return get_fallback_schema(config)
 
 
@@ -118,7 +123,7 @@ def get_fallback_schema(config: dict) -> str:
     """Fallback schema if proto generation fails."""
     ns = config["namespace"]
     db = config["database"]
-    
+
     return f"""
 USE NS {ns} DB {db};
 
@@ -227,13 +232,13 @@ DEFINE INDEX session_id_idx ON sessions FIELDS session_id UNIQUE;
 def init_schema(client: httpx.Client, config: dict):
     """Initialize database schema from proto definitions."""
     print(f"Initializing schema for {config['namespace']}.{config['database']}...")
-    
+
     schema = generate_schema_from_proto(config)
     results = execute_query(client, schema, config)
-    
+
     success_count = sum(1 for r in results if r.get("status") == "OK")
     print(f"  Schema initialized: {success_count} statements executed")
-    
+
     return success_count > 0
 
 
@@ -241,47 +246,47 @@ def seed_bootstrap_activities(client: httpx.Client, config: dict):
     """Seed bootstrap activities and built-in templates from metabob-proto."""
     ns = config["namespace"]
     db = config["database"]
-    
+
     # Look for metabob-proto
     script_dir = Path(__file__).parent
     proto_dir = script_dir.parent / "repos" / "metabob-proto"
-    
+
     # Also check Docker mount path
     if not proto_dir.exists():
         proto_dir = Path("/proto")
-    
+
     if not proto_dir.exists():
         print("  metabob-proto not found, skipping seed")
         return 0
-    
+
     total_created = 0
-    
+
     # Seed bootstrap activities (foundational)
     bootstrap_dir = proto_dir / "activities" / "bootstrap"
     if bootstrap_dir.exists():
         print(f"Seeding bootstrap activities from {bootstrap_dir}...")
-    
+
     created = 0
     skipped = 0
-    
+
     for json_file in bootstrap_dir.glob("*.json"):
         try:
             with open(json_file) as f:
                 template = json.load(f)
-            
+
             variant_id = template.get("variant_id", "")
             if not variant_id:
                 continue
-            
+
             # Check if exists
             check_query = f"USE NS {ns} DB {db}; SELECT variant_id FROM activity_variants WHERE variant_id = '{variant_id}' LIMIT 1;"
             results = execute_query(client, check_query, config)
-            
+
             if len(results) > 1 and results[1].get("result"):
                 print(f"  Skipped: {variant_id} (exists)")
                 skipped += 1
                 continue
-            
+
             # Convert to genealogy format if needed
             genealogy = {
                 "content_hash": template.get("content_hash", ""),
@@ -290,14 +295,20 @@ def seed_bootstrap_activities(client: httpx.Client, config: dict):
                 "evolution_type": template.get("evolution_type", "root"),
                 "evolution_note": template.get("evolution_note", ""),
             }
-            
+
             # Build CREATE query
             fields = []
             for key, value in template.items():
                 # Skip genealogy fields - they go in the genealogy object
-                if key in ("content_hash", "parent_hash", "lineage", "evolution_type", "evolution_note"):
+                if key in (
+                    "content_hash",
+                    "parent_hash",
+                    "lineage",
+                    "evolution_type",
+                    "evolution_note",
+                ):
                     continue
-                    
+
                 if value is None:
                     fields.append(f"{key} = NULL")
                 elif isinstance(value, str):
@@ -308,58 +319,67 @@ def seed_bootstrap_activities(client: httpx.Client, config: dict):
                 elif isinstance(value, (int, float)):
                     fields.append(f"{key} = {value}")
                 elif isinstance(value, (list, dict)):
-                    fields.append(f"{key} = {json.dumps(value)}")
-            
-            # Add genealogy object
-            fields.append(f"genealogy = {json.dumps(genealogy)}")
-            
+                    # FIX: Properly escape JSON string for SQL
+                    escaped_json = (
+                        json.dumps(value).replace("\\", "\\\\").replace('"', '\\"')
+                    )
+                    fields.append(f'{key} = "{escaped_json}"')
+
+            # Add genealogy object (also needs proper escaping)
+            escaped_genealogy = (
+                json.dumps(genealogy).replace("\\", "\\\\").replace('"', '\\"')
+            )
+            fields.append(f'genealogy = "{escaped_genealogy}"')
+
             create_query = f"USE NS {ns} DB {db}; CREATE activity_variants SET {', '.join(fields)};"
             results = execute_query(client, create_query, config)
-            
+
             if len(results) > 1 and results[1].get("status") == "OK":
                 print(f"  Created: {variant_id}")
                 created += 1
             else:
                 print(f"  Failed: {variant_id}", file=sys.stderr)
-        
+
         except Exception as e:
             print(f"  Error with {json_file.name}: {e}", file=sys.stderr)
-    
+
         print(f"  Bootstrap seed complete: {created} created, {skipped} skipped")
         total_created += created
     else:
         print(f"  Bootstrap directory not found: {bootstrap_dir}")
-    
+
     # Seed built-in templates (complete templates)
     templates_dir = proto_dir / "activities" / "templates"
     if templates_dir.exists():
         print(f"\nSeeding built-in templates from {templates_dir}...")
-        
+
         template_created = 0
         template_skipped = 0
-        
+
         for json_file in templates_dir.glob("*.json"):
             try:
                 with open(json_file) as f:
                     template = json.load(f)
-                
+
                 # Generate variant_id if not present
-                activity_id = template.get("id") or template.get("name", "").lower().replace(" ", "-")
+                activity_id = template.get("id") or template.get(
+                    "name", ""
+                ).lower().replace(" ", "-")
                 if not activity_id:
                     continue
-                
+
                 # Use activity_id as variant_id for built-in templates
                 variant_id = f"{activity_id}-builtin"
-                
+
                 # Check if exists
                 check_query = f"USE NS {ns} DB {db}; SELECT variant_id FROM activity_variants WHERE variant_id = '{variant_id}' LIMIT 1;"
                 results = execute_query(client, check_query, config)
-                
+
                 if len(results) > 1 and results[1].get("result"):
                     print(f"  Skipped: {variant_id} (exists)")
                     template_skipped += 1
                     continue
-                
+
                 # Build CREATE query with proper fields
                 create_data = {
                     "variant_id": variant_id,
@@ -373,34 +393,40 @@ def seed_bootstrap_activities(client: httpx.Client, config: dict):
                     "evolution_type": "root",
                     "genealogy": {},
                 }
-                
+
                 fields = []
                 for key, value in create_data.items():
                     if isinstance(value, str):
                         escaped = value.replace("\\", "\\\\").replace('"', '\\"')
                         fields.append(f'{key} = "{escaped}"')
                     elif isinstance(value, (list, dict)):
-                        fields.append(f"{key} = {json.dumps(value)}")
+                        # FIX: Properly escape JSON string for SQL
+                        escaped_json = (
+                            json.dumps(value).replace("\\", "\\\\").replace('"', '\\"')
+                        )
+                        fields.append(f'{key} = "{escaped_json}"')
                     else:
                         fields.append(f"{key} = {value}")
-                
+
                 create_query = f"USE NS {ns} DB {db}; CREATE activity_variants SET {', '.join(fields)};"
                 results = execute_query(client, create_query, config)
-                
+
                 if len(results) > 1 and results[1].get("status") == "OK":
                     print(f"  Created: {variant_id}")
                     template_created += 1
                 else:
                     print(f"  Failed: {variant_id}", file=sys.stderr)
-            
+
             except Exception as e:
                 print(f"  Error with {json_file.name}: {e}", file=sys.stderr)
-        
-        print(f"  Built-in templates seed complete: {template_created} created, {template_skipped} skipped")
+
+        print(
+            f"  Built-in templates seed complete: {template_created} created, {template_skipped} skipped"
+        )
         total_created += template_created
     else:
         print(f"  Templates directory not found: {templates_dir}")
-    
+
     print(f"\n  Total seed complete: {total_created} created")
     return total_created
 
@@ -409,37 +435,37 @@ def verify_db(client: httpx.Client, config: dict):
     """Verify database state."""
     ns = config["namespace"]
     db = config["database"]
-    
+
     print("Verifying database state...")
-    
+
     # Count activity variants
     query = f"USE NS {ns} DB {db}; SELECT count() FROM activity_variants GROUP ALL;"
     results = execute_query(client, query, config)
-    
+
     count = 0
     if len(results) > 1 and results[1].get("result"):
         result = results[1]["result"]
         if isinstance(result, list) and len(result) > 0:
             count = result[0].get("count", 0)
-    
+
     print(f"  Activity variants: {count}")
-    
+
     # List active variants
     query = f"USE NS {ns} DB {db}; SELECT variant_id, activity_id, status FROM activity_variants WHERE status = 'active' LIMIT 10;"
     results = execute_query(client, query, config)
-    
+
     if len(results) > 1 and results[1].get("result"):
         active = results[1]["result"]
         print(f"  Active variants: {len(active)}")
         for v in active[:5]:
             print(f"    - {v.get('variant_id')}: {v.get('activity_id')}")
-    
+
     return count > 0
 
 
 def main():
     config = get_config()
-    
+
     print("=" * 60)
     print("Database Initialization")
     print("=" * 60)
@@ -448,24 +474,24 @@ def main():
     print(f"Database: {config['database']}")
     print(f"Schema Source: metabob-proto/proto/")
     print()
-    
+
     if not wait_for_db(config):
         sys.exit(1)
-    
+
     with httpx.Client(timeout=30) as client:
         # Initialize schema from proto definitions
         if not init_schema(client, config):
             print("Schema initialization failed", file=sys.stderr)
             sys.exit(1)
-        
+
         # Seed bootstrap activities
         seed_bootstrap_activities(client, config)
-        
+
         # Verify
         if not verify_db(client, config):
             print("Database verification failed", file=sys.stderr)
             sys.exit(1)
-    
+
     print()
     print("=" * 60)
     print("Database initialization complete!")

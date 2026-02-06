@@ -1,0 +1,25 @@
+version: v2
+# Code generation configuration for metabob-proto
+# Using local protoc with plugins
+
+inputs:
+  - directory: proto
+
+plugins:
+  # TypeScript generation using local ts-proto
+  - local: protoc-gen-ts_proto
+    out: gen/typescript
+    opt:
+      - esModuleInterop=true
+      - forceLong=long
+      - useOptionals=messages
+      - useDate=true
+      - stringEnums=true
+      - outputClientImpl=false
+      - outputServices=false
+    
+  # Python generation using standard protoc
+  - local: python
+    out: gen/python
+    opt:
+      - pyi_out=gen/python

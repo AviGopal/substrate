@@ -4,9 +4,11 @@ package metabob.activity;
 
 option go_package = "github.com/metabobproject/metabob-proto/gen/go/metabob/activity";
 
-import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "metabob/common/types.proto";
+import "metabob/activity/execution.proto";
+import "metabob/activity/optimization.proto";
+import "metabob/activity/admin.proto";
 
 // =============================================================================
 // Activity Variant - A/B testable implementation of an activity
@@ -77,6 +79,16 @@ message TaskStep {
   
   // Complexity tier for model selection
   TaskComplexity complexity = 12;
+  
+  // ==========================================================================
+  // Execution Configuration (Task-level)
+  // ==========================================================================
+  
+  // Task-level execution config (where to run, tool requirements, etc.)
+  TaskExecutionConfig execution_config = 20;
+  
+  // Impulse references (data flow tracking for context dependencies)
+  repeated ImpulseReference impulse_refs = 21;
 }
 
 // TaskPrompt - Prompt configuration for task execution
@@ -109,13 +121,6 @@ message TaskValidation {
   repeated ValidationCommand commands = 4;
 }
 
-// ValidationCommand - A command to run for validation
-message ValidationCommand {
-  string name = 1;
-  string command = 2;
-  bool required = 3;
-}
-
 // TaskRetry - Retry configuration for failed tasks
 message TaskRetry {
   // Maximum retry attempts (default: 3)
@@ -141,18 +146,6 @@ message TaskMetrics {
   
   // Common failure reasons
   repeated string common_failures = 4;
-}
-
-// TaskTools - Tool configuration for task
-message TaskTools {
-  // Tools the task must have available
-  repeated string required = 1;
-  
-  // Tools that may be helpful
-  repeated string optional = 2;
-  
-  // Tools that should not be used
-  repeated string disabled = 3;
 }
 
 // TaskComplexity - Complexity tier for model selection
@@ -241,6 +234,32 @@ message ActivityVariant {
   metabob.common.EntityStatus status = 14;
   
   google.protobuf.Timestamp created_at = 15;
+  
+  // ==========================================================================
+  // Application-Specific Extensions
+  // ==========================================================================
+  
+  // OpenCode execution configuration
+  ExecutionConfig execution_config = 20;
+  
+  // A/B testing and optimization configuration
+  OptimizationConfig optimization_config = 21;
+  
+  // Administrative configuration (authoring, validation, deployment)
+  AdminConfig admin_config = 22;
+  
+  // ==========================================================================
+  // Additional Fields from Audit
+  // ==========================================================================
+  
+  // Composition configuration (how this activity relates to others)
+  CompositionConfig composition = 23;
+  
+  // Learning system configuration
+  LearningConfig learning = 24;
+  
+  // Expected outcomes for validation
+  repeated ExpectedOutcome expected_outcomes = 25;
 }
 
 // =============================================================================
@@ -294,4 +313,129 @@ message VariantPerformanceMetrics {
   // ==========================================================================
   
   google.protobuf.Timestamp last_updated = 15;
+}
+
+// =============================================================================
+// Composition Configuration - Activity relationships and reusability
+// =============================================================================
+//
+// Defines how this activity can be composed with others and provides
+// usage examples for discoverability.
+//
+// Example:
+// {
+//   "standalone": true,
+//   "composedWith": ["test-implementation", "commit-changes"],
+//   "examples": [
+//     "Fix authentication bug",
+//     "Implement user login feature",
+//     "Refactor API endpoints"
+//   ]
+// }
+//
+// =============================================================================
+
+message CompositionConfig {
+  // Whether this activity can run standalone (default: true)
+  bool standalone = 1;
+  
+  // Activity IDs this activity commonly composes with
+  // Example: ["run-tests", "create-commit", "update-docs"]
+  repeated string composes_with = 2;
+  
+  // Concrete usage examples for discoverability
+  // Example: ["Fix authentication timeout", "Add user profile endpoint"]
+  repeated string examples = 3;
+  
+  // Whether this activity is designed as a sub-activity (default: false)
+  bool is_subactivity = 4;
+  
+  // Parent activity IDs (if this is typically used as a sub-activity)
+  repeated string parent_activities = 5;
+}
+
+// =============================================================================
+// Learning Configuration - Feedback and pattern learning
+// =============================================================================
+//
+// Configures the learning system for capturing feedback and improving
+// activity performance over time.
+//
+// Example:
+// {
+//   "enabled": true,
+//   "feedbackPoints": ["after-validation", "on-failure", "on-completion"],
+//   "successPatterns": ["all tests pass", "no linting errors"],
+//   "failurePatterns": ["compilation error", "timeout"]
+// }
+//
+// =============================================================================
+
+message LearningConfig {
+  // Whether learning is enabled for this activity (default: false)
+  bool enabled = 1;
+  
+  // Points in execution where feedback should be captured
+  // Examples: "before-task", "after-task", "on-validation", "on-completion"
+  repeated string feedback_points = 2;
+  
+  // Patterns that indicate success (for learning system)
+  // Example: ["tests pass", "build succeeds", "no errors"]
+  repeated string success_patterns = 3;
+  
+  // Patterns that indicate failure (for learning system)
+  // Example: ["compilation error", "test timeout", "missing file"]
+  repeated string failure_patterns = 4;
+  
+  // Whether to capture full session transcript for learning
+  bool capture_transcript = 5;
+  
+  // Whether to capture tool usage patterns for learning
+  bool capture_tool_usage = 6;
+  
+  // Minimum confidence threshold for applying learned improvements (0.0-1.0)
+  double min_confidence_threshold = 7;
+}
+
+// =============================================================================
+// Expected Outcome - Validation criteria for activity success
+// =============================================================================
+//
+// Defines expected outcomes that should result from activity execution,
+// along with verification methods and success criteria.
+//
+// Example:
+// {
+//   "description": "Bug is fixed and tests pass",
+//   "verificationMethod": "run-tests",
+//   "successCriteria": [
+//     "All unit tests pass",
+//     "Integration tests pass",
+//     "No new errors introduced"
+//   ]
+// }
+//
+// =============================================================================
+
+message ExpectedOutcome {
+  // Human-readable description of expected outcome
+  string description = 1;
+  
+  // Verification method: "manual", "automated", "run-command", "check-files"
+  string verification_method = 2;
+  
+  // Success criteria (conditions that must be met)
+  repeated string success_criteria = 3;
+  
+  // Verification command (if verification_method = "run-command")
+  optional string verification_command = 4;
+  
+  // Files that should exist or change (if verification_method = "check-files")
+  repeated string expected_files = 5;
+  
+  // Whether this outcome is required for activity success (default: true)
+  bool required = 6;
+  
+  // Weight of this outcome in overall success score (0.0-1.0)
+  double weight = 7;
 }

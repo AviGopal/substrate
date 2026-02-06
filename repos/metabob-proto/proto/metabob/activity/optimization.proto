@@ -1,0 +1,619 @@
+syntax = "proto3";
+
+package metabob.activity;
+
+option go_package = "github.com/metabobproject/metabob-proto/gen/go/metabob/activity";
+
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Optimization Configuration - A/B Testing and Multi-Armed Bandit (MAB)
+// =============================================================================
+//
+// This file defines the optimization and A/B testing configuration for
+// activity variants. It enables:
+//
+// 1. Thompson Sampling (Multi-Armed Bandit) for intelligent variant selection
+// 2. Traffic allocation rules for A/B testing
+// 3. Performance thresholds for auto-deprecation
+// 4. Auto-promotion from TESTING → ACTIVE status
+// 5. Gradual traffic ramp-up for new variants
+//
+// =============================================================================
+
+// =============================================================================
+// OptimizationConfig - Top-level configuration for activity optimization
+// =============================================================================
+//
+// Attached to an activity category (e.g., "bug-fix", "feature-impl") to
+// control how variants are selected, tested, and promoted.
+//
+// Usage:
+// - Set on activity creation/update
+// - Consulted during variant selection (Thompson Sampling)
+// - Used by background jobs for auto-promotion and deprecation
+//
+// =============================================================================
+
+message OptimizationConfig {
+  // ==========================================================================
+  // Thompson Sampling Configuration
+  // ==========================================================================
+  
+  // Multi-Armed Bandit parameters for variant selection
+  // If not set, uses system defaults (alpha=1.0, beta=1.0)
+  ThompsonSamplingConfig thompson_sampling = 1;
+  
+  // ==========================================================================
+  // Traffic Allocation
+  // ==========================================================================
+  
+  // A/B testing traffic rules (uniform, weighted, graduated)
+  // If not set, uses Thompson Sampling exclusively
+  TrafficAllocationConfig traffic_allocation = 2;
+  
+  // ==========================================================================
+  // Performance Management
+  // ==========================================================================
+  
+  // Thresholds for automatic variant deprecation
+  // If not set, manual deprecation only
+  PerformanceThresholds performance_thresholds = 3;
+  
+  // Rules for promoting TESTING → ACTIVE automatically
+  // If not set, manual promotion only
+  AutoPromotionConfig auto_promotion = 4;
+  
+  // ==========================================================================
+  // Metadata
+  // ==========================================================================
+  
+  // When this config was created/updated
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// =============================================================================
+// ThompsonSamplingConfig - Multi-Armed Bandit Parameters
+// =============================================================================
+//
+// Thompson Sampling is a Bayesian approach to the multi-armed bandit problem.
+// Each variant has a Beta distribution Beta(alpha, beta) representing our
+// belief about its success rate.
+//
+// Algorithm:
+// 1. For each variant, sample from its Beta(alpha, beta) distribution
+// 2. Select the variant with the highest sampled value
+// 3. After execution, update: alpha += 1 (success) or beta += 1 (failure)
+//
+// Defaults (recommended starting values):
+// - initial_alpha: 1.0 (uninformative prior)
+// - initial_beta: 1.0 (uninformative prior)
+// - exploration_weight: 0.1 (10% exploration traffic)
+// - min_impressions: 10 (minimum data before optimization)
+//
+// =============================================================================
+
+message ThompsonSamplingConfig {
+  // ==========================================================================
+  // Beta Distribution Priors
+  // ==========================================================================
+  
+  // Prior successes + 1 (default: 1.0 = uninformative prior)
+  //
+  // Higher values encode stronger prior belief in success.
+  // Example: initial_alpha=10.0 means "we expect ~90% success initially"
+  //
+  // Use cases:
+  // - New variant: 1.0 (no prior knowledge)
+  // - Refined variant: 5.0 (moderate confidence)
+  // - Tested pattern: 10.0 (high confidence)
+  double initial_alpha = 1;
+  
+  // Prior failures + 1 (default: 1.0 = uninformative prior)
+  //
+  // Higher values encode stronger prior belief in failure.
+  // Typically keep equal to initial_alpha for balanced exploration.
+  //
+  // Use cases:
+  // - Balanced exploration: same as initial_alpha
+  // - Conservative testing: 2× initial_alpha
+  double initial_beta = 2;
+  
+  // ==========================================================================
+  // Exploration vs. Exploitation
+  // ==========================================================================
+  
+  // Exploration traffic weight (0.0-1.0, default: 0.1)
+  //
+  // Percentage of traffic to allocate for exploration (random selection)
+  // vs. exploitation (Thompson Sampling).
+  //
+  // Values:
+  // - 0.0: Pure exploitation (always choose best variant)
+  // - 0.1: 10% exploration (recommended default)
+  // - 0.2: 20% exploration (aggressive learning)
+  // - 1.0: Pure exploration (A/B test mode)
+  double exploration_weight = 3;
+  
+  // ==========================================================================
+  // Minimum Data Requirements
+  // ==========================================================================
+  
+  // Minimum impressions before Thompson Sampling activates (default: 10)
+  //
+  // Until a variant reaches this threshold, use uniform random selection
+  // to gather initial data. This prevents premature optimization.
+  //
+  // Recommended values:
+  // - Low traffic activities: 5-10
+  // - Medium traffic: 20-50
+  // - High traffic: 100+
+  int32 min_impressions = 4;
+  
+  // Minimum impressions for a new variant before it can be selected
+  // via Thompson Sampling (default: 0 = no minimum)
+  //
+  // Forces new variants to gather baseline data before competing.
+  // Useful for preventing "cold start" bias.
+  int32 min_impressions_new_variant = 5;
+  
+  // ==========================================================================
+  // Confidence Thresholds
+  // ==========================================================================
+  
+  // Confidence level for declaring a "winner" (default: 0.95)
+  //
+  // Probability that one variant is truly better than others.
+  // Used for auto-promotion and reporting.
+  //
+  // Values:
+  // - 0.90: Low confidence (faster decisions)
+  // - 0.95: Standard confidence (recommended)
+  // - 0.99: High confidence (slower but safer)
+  double confidence_level = 6;
+}
+
+// =============================================================================
+// TrafficAllocationConfig - A/B Testing Traffic Rules
+// =============================================================================
+//
+// Controls how traffic is allocated across variants. Supports:
+//
+// 1. Uniform: Equal traffic to all variants (classic A/B test)
+// 2. Weighted: Manual traffic splits (e.g., 80/20 split)
+// 3. Graduated: Gradual ramp-up for new variants (canary deployment)
+// 4. Thompson Sampling: Intelligent allocation (default)
+//
+// =============================================================================
+
+message TrafficAllocationConfig {
+  // ==========================================================================
+  // Allocation Strategy
+  // ==========================================================================
+  
+  // Traffic allocation mode:
+  // - "thompson_sampling": Intelligent MAB-based allocation (default)
+  // - "uniform": Equal traffic to all ACTIVE variants
+  // - "weighted": Manual traffic splits (see weighted_splits)
+  // - "graduated": Gradual ramp-up schedule (see ramp_schedule)
+  string mode = 1;
+  
+  // ==========================================================================
+  // Weighted Allocation (mode = "weighted")
+  // ==========================================================================
+  
+  // Manual traffic splits by variant_id
+  // Example: {"variant-a": 0.8, "variant-b": 0.2}
+  //
+  // Weights are normalized (don't need to sum to 1.0).
+  // Variants not in map receive 0% traffic.
+  map<string, double> weighted_splits = 2;
+  
+  // ==========================================================================
+  // Graduated Rollout (mode = "graduated")
+  // ==========================================================================
+  
+  // Gradual traffic ramp-up schedule for new variants
+  // Example:
+  // - Day 1: 5% traffic
+  // - Day 3: 20% traffic
+  // - Day 7: 50% traffic
+  // - Day 14: 100% traffic (full rollout)
+  repeated TrafficRampStep ramp_schedule = 3;
+  
+  // ==========================================================================
+  // Holdout Group (for all modes)
+  // ==========================================================================
+  
+  // Percentage of traffic to hold out for control group (0.0-1.0)
+  //
+  // Holdout traffic uses the ACTIVE baseline variant (not optimized).
+  // Useful for measuring lift from optimization.
+  //
+  // Example: 0.05 = 5% holdout, 95% optimized traffic
+  double holdout_percentage = 4;
+  
+  // ==========================================================================
+  // Testing Windows
+  // ==========================================================================
+  
+  // Minimum test duration before allowing promotion (in hours)
+  // Default: 24 hours (1 day)
+  //
+  // Prevents premature promotion based on insufficient data.
+  int32 min_test_duration_hours = 5;
+  
+  // Maximum test duration before forcing a decision (in hours)
+  // Default: 168 hours (7 days)
+  //
+  // After this period, either promote or deprecate based on performance.
+  int32 max_test_duration_hours = 6;
+}
+
+// =============================================================================
+// TrafficRampStep - Graduated Rollout Schedule Entry
+// =============================================================================
+//
+// Defines a single step in a gradual traffic ramp-up schedule.
+// Used for canary deployments and safe rollouts of new variants.
+//
+// Example schedule:
+// 1. Step 1: 5% traffic for 1 day (monitor for crashes)
+// 2. Step 2: 20% traffic for 2 days (check key metrics)
+// 3. Step 3: 50% traffic for 2 days (validate at scale)
+// 4. Step 4: 100% traffic (full rollout)
+//
+// =============================================================================
+
+message TrafficRampStep {
+  // Sequential step number (1, 2, 3, ...)
+  int32 step_number = 1;
+  
+  // Target traffic percentage (0.0-1.0)
+  // Example: 0.05 = 5% traffic
+  double traffic_percentage = 2;
+  
+  // Duration of this step in hours
+  // Example: 24 = 1 day at this traffic level
+  int32 duration_hours = 3;
+  
+  // Performance gates that must pass before advancing
+  // If any gate fails, rollback to previous step
+  PerformanceGate gate = 4;
+}
+
+// =============================================================================
+// PerformanceGate - Safety Checks for Traffic Ramp-Up
+// =============================================================================
+//
+// Automated checks that must pass before advancing to the next ramp step.
+// If any check fails, rollback to the previous step (or deprecate).
+//
+// =============================================================================
+
+message PerformanceGate {
+  // Minimum success rate required (0.0-1.0)
+  // Example: 0.90 = 90% of executions must succeed
+  double min_success_rate = 1;
+  
+  // Maximum average duration (milliseconds)
+  // Example: 30000 = 30 seconds max average duration
+  int32 max_avg_duration_ms = 2;
+  
+  // Maximum average cost (USD)
+  // Example: 0.50 = $0.50 max average cost per execution
+  double max_avg_cost = 3;
+  
+  // Minimum quality score (0.0-1.0)
+  // Example: 0.80 = 80/100 minimum quality score
+  double min_quality_score = 4;
+  
+  // Minimum number of samples required to evaluate gate
+  // Example: 10 = need at least 10 executions to judge
+  int32 min_sample_size = 5;
+}
+
+// =============================================================================
+// PerformanceThresholds - Auto-Deprecation Rules
+// =============================================================================
+//
+// Defines thresholds for automatically deprecating underperforming variants.
+// Runs as a background job (e.g., every 6 hours) to maintain quality.
+//
+// Deprecation criteria (ANY of the following):
+// 1. Success rate below min_success_rate for min_sample_size executions
+// 2. Average cost above max_avg_cost for min_sample_size executions
+// 3. Quality score below min_quality_score for min_sample_size executions
+// 4. Statistically significantly worse than best variant (confidence_level)
+//
+// =============================================================================
+
+message PerformanceThresholds {
+  // ==========================================================================
+  // Absolute Thresholds
+  // ==========================================================================
+  
+  // Minimum success rate to remain ACTIVE (0.0-1.0, default: 0.70)
+  //
+  // Variants below this threshold are deprecated immediately.
+  // Example: 0.70 = must have 70%+ success rate
+  double min_success_rate = 1;
+  
+  // Maximum average cost to remain ACTIVE (USD, default: 1.00)
+  //
+  // Variants exceeding this cost are deprecated.
+  // Example: 1.00 = max $1.00 average cost per execution
+  double max_avg_cost = 2;
+  
+  // Minimum quality score to remain ACTIVE (0.0-1.0, default: 0.60)
+  //
+  // Variants below this score are deprecated.
+  // Example: 0.60 = must score at least 60/100 in quality
+  double min_quality_score = 3;
+  
+  // Maximum average duration to remain ACTIVE (milliseconds, default: 60000)
+  //
+  // Variants exceeding this duration are deprecated.
+  // Example: 60000 = max 60 seconds average execution time
+  int32 max_avg_duration_ms = 4;
+  
+  // ==========================================================================
+  // Relative Thresholds (vs. best variant)
+  // ==========================================================================
+  
+  // Maximum acceptable gap vs. best variant (default: 0.10)
+  //
+  // Deprecate if success_rate < best_variant_success_rate - relative_gap.
+  // Example: 0.10 = must be within 10 percentage points of best
+  double relative_performance_gap = 5;
+  
+  // Confidence level for statistical significance (default: 0.95)
+  //
+  // Deprecate only if we're 95% confident this variant is worse.
+  double confidence_level = 6;
+  
+  // ==========================================================================
+  // Sample Size Requirements
+  // ==========================================================================
+  
+  // Minimum executions before applying thresholds (default: 20)
+  //
+  // Prevents deprecation based on insufficient data.
+  // Variant must have at least this many executions before auto-deprecation.
+  int32 min_sample_size = 7;
+  
+  // ==========================================================================
+  // Grace Period
+  // ==========================================================================
+  
+  // Minimum age before deprecation (hours, default: 24)
+  //
+  // Protects new variants from premature deprecation.
+  // Variant must exist for at least this duration before auto-deprecation.
+  int32 min_age_hours = 8;
+}
+
+// =============================================================================
+// AutoPromotionConfig - TESTING → ACTIVE Promotion Rules
+// =============================================================================
+//
+// Defines rules for automatically promoting TESTING variants to ACTIVE.
+// Runs as a background job (e.g., every 1 hour) to graduate successful tests.
+//
+// Promotion criteria (ALL of the following):
+// 1. Success rate >= min_success_rate for min_sample_size executions
+// 2. Statistically better than current ACTIVE (or no ACTIVE exists)
+// 3. Test duration >= min_test_duration_hours
+// 4. All performance gates passed
+//
+// =============================================================================
+
+message AutoPromotionConfig {
+  // ==========================================================================
+  // Promotion Thresholds
+  // ==========================================================================
+  
+  // Minimum success rate for promotion (0.0-1.0, default: 0.80)
+  //
+  // Variant must achieve this success rate to be promoted.
+  // Example: 0.80 = must have 80%+ success rate
+  double min_success_rate = 1;
+  
+  // Minimum improvement over current ACTIVE (default: 0.05)
+  //
+  // New variant must be at least 5 percentage points better.
+  // Example: If ACTIVE has 75% success, new variant needs 80%+
+  double min_improvement = 2;
+  
+  // Confidence level for statistical significance (default: 0.95)
+  //
+  // Promote only if we're 95% confident the new variant is better.
+  double confidence_level = 3;
+  
+  // ==========================================================================
+  // Sample Size Requirements
+  // ==========================================================================
+  
+  // Minimum executions before promotion (default: 50)
+  //
+  // Variant must have at least this many successful executions.
+  int32 min_sample_size = 4;
+  
+  // Minimum test duration before promotion (hours, default: 24)
+  //
+  // Variant must be tested for at least this long.
+  // Prevents promotion based on short-term flukes.
+  int32 min_test_duration_hours = 5;
+  
+  // ==========================================================================
+  // Quality Requirements
+  // ==========================================================================
+  
+  // Minimum quality score for promotion (0.0-1.0, default: 0.75)
+  //
+  // Variant must score at least this high to be promoted.
+  // Example: 0.75 = must score 75/100 or higher
+  double min_quality_score = 6;
+  
+  // Maximum average cost for promotion (USD, optional)
+  //
+  // If set, variant must have average cost below this threshold.
+  // Example: 0.50 = max $0.50 average cost
+  double max_avg_cost = 7;
+  
+  // ==========================================================================
+  // Promotion Strategy
+  // ==========================================================================
+  
+  // What to do with the old ACTIVE variant when promoting:
+  // - "deprecate": Set old ACTIVE to DEPRECATED (default)
+  // - "archive": Set old ACTIVE to ARCHIVED (keep for reference)
+  // - "keep_testing": Demote old ACTIVE to TESTING (continue A/B test)
+  string old_active_strategy = 8;
+  
+  // Whether to require manual approval for promotion (default: false)
+  //
+  // If true, create a promotion proposal instead of auto-promoting.
+  // Useful for high-stakes activities.
+  bool require_manual_approval = 9;
+}
+
+// =============================================================================
+// PromotionProposal - Pending Promotion Awaiting Approval
+// =============================================================================
+//
+// Created when auto_promotion.require_manual_approval = true.
+// Represents a TESTING variant that meets promotion criteria but needs
+// human review before becoming ACTIVE.
+//
+// SurrealDB Table: promotion_proposals
+// Indexes: variant_id, activity_id, status
+//
+// =============================================================================
+
+message PromotionProposal {
+  // ==========================================================================
+  // Identity
+  // ==========================================================================
+  
+  // Unique proposal ID (auto-generated)
+  string proposal_id = 1;
+  
+  // Variant being proposed for promotion
+  string variant_id = 2;
+  
+  // Activity category
+  string activity_id = 3;
+  
+  // ==========================================================================
+  // Justification
+  // ==========================================================================
+  
+  // Why this variant should be promoted (auto-generated summary)
+  string justification = 4;
+  
+  // Performance metrics snapshot at proposal time
+  PromotionMetricsSnapshot metrics = 5;
+  
+  // Statistical significance test results
+  StatisticalComparison comparison = 6;
+  
+  // ==========================================================================
+  // Status & Decision
+  // ==========================================================================
+  
+  // Proposal status: "pending", "approved", "rejected"
+  string status = 7;
+  
+  // Who approved/rejected (user ID or "system")
+  string decided_by = 8;
+  
+  // When decision was made
+  google.protobuf.Timestamp decided_at = 9;
+  
+  // Reason for rejection (if status = "rejected")
+  string rejection_reason = 10;
+  
+  // ==========================================================================
+  // Timestamps
+  // ==========================================================================
+  
+  google.protobuf.Timestamp created_at = 11;
+}
+
+// =============================================================================
+// PromotionMetricsSnapshot - Performance Metrics at Proposal Time
+// =============================================================================
+
+message PromotionMetricsSnapshot {
+  // TESTING variant metrics
+  VariantMetricsSummary testing_variant = 1;
+  
+  // Current ACTIVE variant metrics (if exists)
+  VariantMetricsSummary active_variant = 2;
+  
+  // Absolute improvement
+  double success_rate_improvement = 3;
+  double cost_reduction = 4;
+  double quality_score_improvement = 5;
+}
+
+// =============================================================================
+// VariantMetricsSummary - Condensed Metrics for Comparison
+// =============================================================================
+
+message VariantMetricsSummary {
+  string variant_id = 1;
+  int32 total_executions = 2;
+  double success_rate = 3;
+  double avg_cost = 4;
+  double avg_duration_ms = 5;
+  double avg_quality_score = 6;
+}
+
+// =============================================================================
+// StatisticalComparison - A/B Test Statistical Significance
+// =============================================================================
+//
+// Results of a two-proportion z-test or Bayesian comparison between
+// two variants (typically TESTING vs ACTIVE).
+//
+// =============================================================================
+
+message StatisticalComparison {
+  // Variant A (typically current ACTIVE)
+  string variant_a_id = 1;
+  
+  // Variant B (typically TESTING candidate)
+  string variant_b_id = 2;
+  
+  // ==========================================================================
+  // Test Results
+  // ==========================================================================
+  
+  // P-value from two-proportion z-test
+  // Example: 0.03 = 3% chance difference is due to randomness
+  double p_value = 3;
+  
+  // Whether difference is statistically significant at confidence_level
+  // Example: true if p_value < 0.05 (for 95% confidence)
+  bool is_significant = 4;
+  
+  // Confidence level used (0.0-1.0)
+  // Example: 0.95 = 95% confidence level
+  double confidence_level = 5;
+  
+  // ==========================================================================
+  // Bayesian Comparison (Thompson Sampling)
+  // ==========================================================================
+  
+  // Probability that variant B is better than variant A
+  // Computed via Monte Carlo simulation of Beta distributions
+  // Example: 0.97 = 97% confident B is better than A
+  double probability_b_better = 6;
+  
+  // Expected lift (B vs A)
+  // Example: 0.05 = B is expected to be 5 percentage points better
+  double expected_lift = 7;
+}
