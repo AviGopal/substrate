@@ -1,0 +1,442 @@
+# =============================================================================
+# Devbob Multi-Agent Development Environment + Backend Services
+# =============================================================================
+# Complete self-healing development environment with:
+#   1. Metabob RPC API backend (server + redis + worker)
+#   2. Devbob agents for each codebase
+#   3. Self-healing monitoring infrastructure
+#
+# Architecture:
+#   - metabob-rpc-api-server: FastAPI backend (port 8080)
+#   - redis: Task queue and cache (port 6379)
+#   - metabob-rpc-api-worker: Celery analysis worker
+#   - devbob-rpc-api: Agent managing RPC API service (ACP: 3001)
+#   - devbob-dashboard: Agent for dashboard (ACP: 3002)
+#   - devbob-cli: Agent for CLI (ACP: 3003)
+#   - devbob-opencode: Agent for OpenCode (ACP: 3004)
+#
+# Self-Healing Pattern:
+#   - Each service has health endpoints (/health, /status)
+#   - Devbob agents monitor their services
+#   - Self-healing coordinator detects issues
+#   - Fix directives routed to appropriate agent
+#   - Cross-container coordination via MESSAGE_FOR annotations
+#
+# Ports:
+#   Backend:
+#   - metabob-rpc-api-server: 8080 (HTTP API)
+#   - redis:                  6379 (Redis)
+#
+#   Agents:
+#   - devbob-rpc-api:    3001 (ACP), 8081 (MCP)
+#   - devbob-web:        3002 (ACP), 8082 (MCP)
+#   - devbob-cli:        3003 (ACP), 8083 (MCP)
+#   - devbob-opencode:   3004 (ACP), 8084 (MCP)
+#
+# Usage:
+#   # Start everything (backend + agents)
+#   docker-compose -f configs/docker-compose.devbob.yaml --env-file .env.devbob up -d
+#
+#   # Start just backend
+#   docker-compose -f configs/docker-compose.devbob.yaml up -d metabob-rpc-api-server redis
+#
+#   # Start just agents
+#   docker-compose -f configs/docker-compose.devbob.yaml up -d devbob-rpc-api devbob-opencode
+#
+#   # View logs
+#   docker-compose -f configs/docker-compose.devbob.yaml logs -f devbob-rpc-api
+#
+#   # Test connectivity
+#   curl http://localhost:8080/status
+#   curl http://localhost:3001/config
+#
+# =============================================================================
+
+services:
+
+# =============================================================================
+# Metabob Backend Services
+# =============================================================================
+# The metabob-rpc-api backend that agents connect to for code analysis
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # Redis - Task queue and cache
+  # ---------------------------------------------------------------------------
+  redis:
+    container_name: metabob-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - metabob_redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - metabob-network
+
+  # ---------------------------------------------------------------------------
+  # Metabob RPC API Server - FastAPI backend
+  # ---------------------------------------------------------------------------
+  metabob-rpc-api-server:
+    container_name: api-server-dev
+    image: metabobapp/metabob-rpc-api:0.12.1
+    build:
+      context: ../repos/metabob-rpc-api
+      dockerfile: ./docker/Dockerfile.server
+    ports:
+      - "8080:80"
+    volumes:
+      - ../repos/metabob-rpc-api/.env.docker:/opt/app/.env
+      - ../repos/metabob-rpc-api/metrics:/opt/app/metrics
+      - metabob_api_logs:/opt/app/logs
+    environment:
+      CONFIG_PATH: /opt/app/.env
+      LOG_LEVEL: DEBUG
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - metabob-network
+      - devbob
+
+  # ---------------------------------------------------------------------------
+  # Metabob Analysis Worker - Celery worker
+  # ---------------------------------------------------------------------------
+  metabob-rpc-api-worker:
+    container_name: metabob-worker
+    image: metabobapp/metabob-rpc-api:0.12.1
+    volumes:
+      - ../repos/metabob-rpc-api/.env.docker:/opt/app/.env
+      - ../repos/metabob-rpc-api/models:/src/app/models
+      - ../repos/metabob-rpc-api/contribution_analysis:/opt/app/contribution_analysis
+      - metabob_worker_logs:/opt/app/logs
+    environment:
+      CONFIG_PATH: /opt/app/.env
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LOG_LEVEL: DEBUG
+    entrypoint:
+      ["celery", "-A", "tasks.jobs", "worker", "-l", "DEBUG", "-c", "1", "-E", "-P", "solo"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - metabob-network
+    # Uncomment if GPU is available
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           capabilities: [gpu]
+    #           count: 1
+
+# =============================================================================
+# Devbob Agent Containers
+# =============================================================================
+# Each container runs opencode in ACP mode, which automatically starts
+# metabob-cli as an MCP server for code analysis and activity tracking.
+# The devbob-rpc-api agent can also manage the backend services above.
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # Devbob Agent: metabob-rpc-api codebase
+  # This agent manages BOTH the codebase AND the backend service
+  # ---------------------------------------------------------------------------
+  devbob-rpc-api:
+    container_name: devbob-rpc-api
+    image: devbob:latest
+    build:
+      context: ..
+      dockerfile: configs/Dockerfile.devbob
+      target: devbob-base
+    ports:
+      - "3001:3001"   # OpenCode ACP
+      - "8081:8082"   # MCP Server
+      - "8091:8080"   # HTTP Bridge for RPC API Agent
+    volumes:
+      # Workspace - will be cloned from REPO_URL if not mounted
+      - devbob_rpc_api_workspace:/workspace
+      # Shared config and auth
+      - devbob_config:/config
+      - devbob_auth:/auth
+      # SSH keys for git operations (copy from ~/.ssh to configs/.ssh/)
+      - ${SSH_KEY_DIR:-~/.ssh}:/root/.ssh:ro
+      # Mount docker socket to allow service management (read-only for safety)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Agent identification
+      CODEBASE_NAME: rpc-api
+      HOSTNAME: devbob-rpc-api
+      
+      # Git repository configuration
+      REPO_URL: ${DEVBOB_RPC_API_REPO:-}
+      REPO_BRANCH: ${DEVBOB_RPC_API_BRANCH:-main}
+      REPO_CHECKOUT_MODE: ${DEVBOB_CHECKOUT_MODE:-shallow}
+      REPO_DEPTH: ${DEVBOB_REPO_DEPTH:-1}
+      
+      # Git push behavior
+      GIT_AUTO_PUSH: ${DEVBOB_AUTO_PUSH:-false}
+      GIT_PUSH_ON_EXIT: ${DEVBOB_PUSH_ON_EXIT:-true}
+      
+      # OpenCode ACP Configuration
+      ACP_PORT: "3001"
+      ACP_HOSTNAME: "0.0.0.0"
+      
+      # Metabob backend connection - points to service above
+      METABOB_API_URL: http://api-server-dev:80
+      METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-devbob-multi-agent}
+      METABOB_API_KEY: ${METABOB_API_KEY:-}
+      
+      # LLM Provider
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      
+      # Agent role and capabilities
+      AGENT_ROLE: backend-manager
+      MANAGED_SERVICES: "api-server-dev,metabob-redis,metabob-worker"
+      SERVICE_HEALTH_URL: "http://api-server-dev:80/status"
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # Wait for backend before starting  
+      WAIT_FOR_BACKEND: ${WAIT_FOR_BACKEND:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      metabob-rpc-api-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3001/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - devbob
+      - metabob-network
+
+  # ---------------------------------------------------------------------------
+  # Devbob Agent: metabob dashboard (web/frontend)
+  # ---------------------------------------------------------------------------
+  devbob-dashboard:
+    container_name: devbob-dashboard
+    image: devbob:latest
+    ports:
+      - "3002:3002"   # OpenCode ACP
+      - "8082:8082"   # MCP Server
+      - "8095:8080"   # HTTP Bridge
+      - "3030:3010"   # Local Dev Server
+      - "3040:3020"   # Cloud Dev Server
+    volumes:
+      - devbob_web_workspace:/workspace
+      - devbob_config:/config
+      - devbob_auth:/auth
+      - ${SSH_KEY_DIR:-~/.ssh}:/root/.ssh:ro
+    environment:
+      CODEBASE_NAME: dashboard
+      HOSTNAME: devbob-dashboard
+      
+      # Git repository configuration
+      REPO_URL: ${DEVBOB_WEB_REPO:-git@github.com:metabobproject/web.git}
+      REPO_BRANCH: ${DEVBOB_WEB_BRANCH:-main}
+      REPO_CHECKOUT_MODE: ${DEVBOB_CHECKOUT_MODE:-shallow}
+      REPO_DEPTH: ${DEVBOB_REPO_DEPTH:-1}
+      
+      # Git push behavior
+      GIT_AUTO_PUSH: ${DEVBOB_AUTO_PUSH:-false}
+      GIT_PUSH_ON_EXIT: ${DEVBOB_PUSH_ON_EXIT:-true}
+      
+      ACP_PORT: "3002"
+      ACP_HOSTNAME: "0.0.0.0"
+      METABOB_API_URL: http://api-server-dev:80
+      METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-devbob-multi-agent}
+      METABOB_API_KEY: ${METABOB_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      WAIT_FOR_BACKEND: ${WAIT_FOR_BACKEND:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      metabob-rpc-api-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3002/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - devbob
+      - metabob-network
+
+  # ---------------------------------------------------------------------------
+  # Devbob Agent: metabob-cli codebase
+  # ---------------------------------------------------------------------------
+  devbob-cli:
+    container_name: devbob-cli
+    image: devbob:latest
+    ports:
+      - "3003:3003"   # OpenCode ACP
+      - "8083:8082"   # MCP Server
+      - "8093:8080"   # HTTP Bridge for CLI Agent
+    volumes:
+      - devbob_cli_workspace:/workspace
+      - devbob_config:/config
+      - devbob_auth:/auth
+      - ${SSH_KEY_DIR:-~/.ssh}:/root/.ssh:ro
+    environment:
+      CODEBASE_NAME: cli
+      HOSTNAME: devbob-cli
+      
+      # Git repository configuration
+      REPO_URL: ${DEVBOB_CLI_REPO:-}
+      REPO_BRANCH: ${DEVBOB_CLI_BRANCH:-main}
+      REPO_CHECKOUT_MODE: ${DEVBOB_CHECKOUT_MODE:-shallow}
+      REPO_DEPTH: ${DEVBOB_REPO_DEPTH:-1}
+      
+      # Git push behavior
+      GIT_AUTO_PUSH: ${DEVBOB_AUTO_PUSH:-false}
+      GIT_PUSH_ON_EXIT: ${DEVBOB_PUSH_ON_EXIT:-true}
+      
+      ACP_PORT: "3003"
+      ACP_HOSTNAME: "0.0.0.0"
+      METABOB_API_URL: http://api-server-dev:80
+      METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-devbob-multi-agent}
+      METABOB_API_KEY: ${METABOB_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      WAIT_FOR_BACKEND: ${WAIT_FOR_BACKEND:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      metabob-rpc-api-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3003/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - devbob
+      - metabob-network
+
+  # ---------------------------------------------------------------------------
+  # Devbob Agent: metabob-opencode codebase
+  # ---------------------------------------------------------------------------
+  devbob-opencode:
+    container_name: devbob-opencode
+    image: devbob:latest
+    ports:
+      - "3004:3004"   # OpenCode ACP
+      - "8084:8082"   # MCP Server
+      - "8094:8080"   # HTTP Bridge for OpenCode Agent
+    volumes:
+      - devbob_opencode_workspace:/workspace
+      - devbob_config:/config
+      - devbob_auth:/auth
+      - ${SSH_KEY_DIR:-~/.ssh}:/root/.ssh:ro
+    environment:
+      CODEBASE_NAME: opencode
+      HOSTNAME: devbob-opencode
+      
+      # Git repository configuration
+      REPO_URL: ${DEVBOB_OPENCODE_REPO:-}
+      REPO_BRANCH: ${DEVBOB_OPENCODE_BRANCH:-feat/activity-execution-fixes}
+      REPO_CHECKOUT_MODE: ${DEVBOB_CHECKOUT_MODE:-shallow}
+      REPO_DEPTH: ${DEVBOB_REPO_DEPTH:-1}
+      
+      # Git push behavior
+      GIT_AUTO_PUSH: ${DEVBOB_AUTO_PUSH:-false}
+      GIT_PUSH_ON_EXIT: ${DEVBOB_PUSH_ON_EXIT:-true}
+      
+      ACP_PORT: "3004"
+      ACP_HOSTNAME: "0.0.0.0"
+      METABOB_API_URL: http://api-server-dev:80
+      METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-devbob-multi-agent}
+      METABOB_API_KEY: ${METABOB_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      WAIT_FOR_BACKEND: ${WAIT_FOR_BACKEND:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      metabob-rpc-api-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3004/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - devbob
+      - metabob-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
+volumes:
+  # Backend service volumes
+  metabob_redis_data:
+    driver: local
+  metabob_api_logs:
+    driver: local
+  metabob_worker_logs:
+    driver: local
+  
+  # Shared config and auth across all agents
+  devbob_config:
+    driver: local
+  devbob_auth:
+    driver: local
+  
+  # Per-agent workspace (includes git repo and .opencode state)
+  devbob_rpc_api_workspace:
+    driver: local
+  devbob_web_workspace:
+    driver: local
+  devbob_cli_workspace:
+    driver: local
+  devbob_opencode_workspace:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+
+networks:
+  devbob:
+    driver: bridge
+    name: devbob-network
+  metabob-network:
+    external: true
+    name: metabob-network

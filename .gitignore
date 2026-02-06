@@ -1,0 +1,75 @@
+# Environment files with secrets
+.env.devbob
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Logs
+*.log
+logs/
+memory_monitor.log
+memory_monitor_output.log
+memory_profile_output.log
+memory_tracking.log
+opencode_memory_profile.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+.pytest_cache/
+coverage/
+htmlcov/
+
+# Docker
+.docker/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+test-local.txt
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets and credentials
+*.pem
+*.key
+!*.pub

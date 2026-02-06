@@ -1,0 +1,31 @@
+{
+  "metabob": {
+    "backend_url": "${METABOB_BACKEND_URL:-http://metabob-rpc-api:8080}",
+    "api_key": "${METABOB_API_KEY:-}",
+    "project_id": "${METABOB_PROJECT_ID:-exp-repo-dev}",
+    "org_id": "${METABOB_ORG_ID:-devbob-org}",
+    "retry_strategy": "exponential-backoff",
+    "max_retries": 3,
+    "timeout_ms": 30000,
+    "batch_size": 10,
+    "storage_type": "hybrid"
+  },
+  "validation": {
+    "intent_preservation_enabled": true,
+    "quality_impact_tracking": true,
+    "performance_monitoring": true,
+    "automated_tests_enabled": true
+  },
+  "learning": {
+    "track_agent_decisions": true,
+    "record_context_effectiveness": true,
+    "analyze_template_patterns": true,
+    "enable_cross_activity_insights": true
+  },
+  "storage": {
+    "local_backup_enabled": true,
+    "compression_enabled": true,
+    "retention_days": 90,
+    "archive_after_days": 30
+  }
+}

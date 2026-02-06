@@ -1,0 +1,38 @@
+{
+  "$schema": "https://opencode.ai/schema.json",
+  "description": "Quick-fix memory configuration for devbob containers",
+  "memory": {
+    "enabled": true,
+    "monitoring": true,
+    "interval": 60,
+    "historySize": 100,
+    "thresholds": {
+      "warning": 800,
+      "critical": 1200,
+      "forceGC": 1536
+    }
+  },
+  "sessionMemory": {
+    "enabled": true,
+    "budgets": {
+      "perImpulse": 2000,
+      "perSession": 10000,
+      "total": 50000
+    },
+    "memoryManagement": {
+      "maxCacheTokens": 10000,
+      "cleanupIntervalMs": 300000,
+      "impulseMaxIdleMs": 600000,
+      "sessionMaxIdleMs": 3600000,
+      "maxImpulseCache": 500,
+      "maxSessionsTracked": 50,
+      "memoryThresholdMB": 800,
+      "forceGcThresholdMB": 1536,
+      "aggressiveCleanup": true
+    }
+  },
+  "agent": {
+    "concurrencyLimit": 4,
+    "memoryPerAgent": 300
+  }
+}

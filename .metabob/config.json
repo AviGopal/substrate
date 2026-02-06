@@ -3,9 +3,5 @@
     "api_key": "",
     "state_directory": ".metabob",
     "watch_files": true,
-    "batch_size": 5,
-    "backend": {
-        "type": "rest",
-        "api_url": "http://localhost:8080"
-    }
+    "batch_size": 5
 }

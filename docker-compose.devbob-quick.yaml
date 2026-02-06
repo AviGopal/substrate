@@ -10,16 +10,18 @@ services:
     volumes:
       - ./repos/metabob-opencode:/workspace
       - devbob_config:/config
-      - devbob_opencode_state:/workspace/.opencode
+      # Mount the devbob config file to a path the container can find
+      - ./configs/opencode.devbob.json:/config/opencode.devbob.json:ro
+      # Mount updated entrypoint script (overrides baked-in version)
+      - ./configs/devbob-entrypoint.sh:/usr/local/bin/devbob-entrypoint.sh:ro
     environment:
       CODEBASE_NAME: opencode
       ACP_PORT: "3004"
       ACP_HOSTNAME: "0.0.0.0"
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       LOG_LEVEL: INFO
       NODE_OPTIONS: "--max-old-space-size=4096"
-      # Use container-specific config (metabob-rpc-api-server:8080)
-      OPENCODE_CONFIG: /workspace/configs/opencode.devbob.json
+      # Use container-specific config mounted at /config
+      OPENCODE_CONFIG: /config/opencode.devbob.json
       # Auto-approve permissions for TUI attach mode
       OPENCODE_AUTO_APPROVE_PERMISSIONS: "true"
     mem_limit: 6g
@@ -29,4 +31,3 @@ services:
 
 volumes:
   devbob_config:
-  devbob_opencode_state:
