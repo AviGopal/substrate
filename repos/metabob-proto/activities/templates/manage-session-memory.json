@@ -6,7 +6,6 @@
   "tasks": [
     {
       "id": "analyze-intent",
-      "subagent": "memory",
       "description": "Analyze user intent and determine what context is needed",
       "dependencies": [],
       "prompt": {
@@ -43,7 +42,6 @@
     },
     {
       "id": "create-impulses",
-      "subagent": "memory",
       "description": "Create impulses from analysis (unloaded state)",
       "dependencies": [
         "analyze-intent"
@@ -66,7 +64,6 @@
     },
     {
       "id": "review-context-space",
-      "subagent": "memory",
       "description": "Review context space and decide what to load",
       "dependencies": [
         "create-impulses"
@@ -89,7 +86,6 @@
     },
     {
       "id": "optimize-if-needed",
-      "subagent": "memory",
       "description": "Compress or reorder if context is too tight",
       "dependencies": [
         "review-context-space"
@@ -112,7 +108,6 @@
     },
     {
       "id": "finalize-context",
-      "subagent": "memory",
       "description": "Final context space review and summary",
       "dependencies": [
         "optimize-if-needed"

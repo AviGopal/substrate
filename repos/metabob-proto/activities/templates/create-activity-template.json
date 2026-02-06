@@ -7,25 +7,37 @@
     {
       "key": "highQualityExamples",
       "hint": "Use search_activities({ category: \"{{category}}\", verbose: true }) to find 3 templates with highest success rates (>= 0.75 if available). If fewer than 3, search other categories. Focus on templates with 10+ executions for reliable patterns.",
-      "impulseTypes": ["toolOutput", "memo"],
+      "impulseTypes": [
+        "toolOutput",
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [5000, 8000]
+      "budgetRange": [
+        5000,
+        8000
+      ]
     },
     {
       "key": "failurePatterns",
       "hint": "Use metabob_search_codebase_issues to find annotations about template creation failures. Look for MESSAGE_FOR:all about common mistakes.",
-      "impulseTypes": ["metabobAnnotation"],
+      "impulseTypes": [
+        "metabobAnnotation"
+      ],
       "required": false,
-      "budgetRange": [2000, 4000]
+      "budgetRange": [
+        2000,
+        4000
+      ]
     }
   ],
   "tasks": [
     {
       "id": "analyze-examples",
-      "subagent": "general",
       "description": "Study example templates and extract patterns",
       "dependencies": [],
-      "impulseReferences": ["highQualityExamples"],
+      "impulseReferences": [
+        "highQualityExamples"
+      ],
       "prompt": {
         "template": "Study the provided template examples from context.\n\nFor EACH example:\n1. Identify task structure patterns\n2. Note validation strategies used\n3. Observe retry configurations\n4. Extract variable usage patterns\n5. Count tasks (note if 3-5 range)\n\nOutput (structured markdown):\n\n## Patterns Observed\n- [Pattern 1]\n- [Pattern 2]\n\n## Best Practices\n- [Practice 1]\n- [Practice 2]\n\n## Anti-Patterns to Avoid\n- [Anti-pattern 1]\n- [Anti-pattern 2]\n\nThis analysis guides your template design.",
         "maxTokens": 6000,
@@ -48,9 +60,10 @@
     },
     {
       "id": "design-task-graph",
-      "subagent": "general",
       "description": "Design task dependency graph following best practices",
-      "dependencies": ["analyze-examples"],
+      "dependencies": [
+        "analyze-examples"
+      ],
       "prompt": {
         "template": "Design the task graph for {{templateName}}.\n\n**Requirements**:\n- 3-7 tasks (prefer 3-5 for simplicity)\n- Clear dependencies (no circular)\n- Appropriate agent assignments\n- Each task atomic and testable\n\n**Output Format**:\n\n## Task Graph for {{templateName}}\n\ntask-id-1 (agent: appropriate-agent)\n  Purpose: [one sentence]\n  Validation: [what to check]\n  ↓\ntask-id-2 (agent: appropriate-agent)\n  Purpose: [one sentence]\n  Validation: [what to check]\n\n**Agent Selection Guide**:\n- general: Multi-purpose work\n- config: Schema/config changes\n- session: Prompt/message handling\n- tool: Tool implementations\n- test: Test coverage\n\n**Validation Strategy**:\nFor each task, define:\n- Required files that must exist after\n- Required patterns in code\n- Commands to run (typecheck, tests)\n\nKeep validation specific and testable.",
         "maxTokens": 6000,
@@ -74,7 +87,10 @@
           "Validation:",
           "↓"
         ],
-        "forbiddenPatterns": ["TBD", "TODO"],
+        "forbiddenPatterns": [
+          "TBD",
+          "TODO"
+        ],
         "commands": []
       },
       "retry": {
@@ -84,10 +100,13 @@
     },
     {
       "id": "write-template-json",
-      "subagent": "general",
       "description": "Convert task graph to ActivityTemplate JSON with comprehensive validation",
-      "dependencies": ["design-task-graph"],
-      "impulseReferences": ["highQualityExamples"],
+      "dependencies": [
+        "design-task-graph"
+      ],
+      "impulseReferences": [
+        "highQualityExamples"
+      ],
       "prompt": {
         "template": "Convert your task graph into ActivityTemplate JSON.\n\n**Implementation**:\n1. Create {{templateId}}.json\n2. Follow ActivityTemplate.CreateOptions schema\n3. Use patterns from examples\n4. Implement validation from graph\n5. Set maxTokens per task (8000-16000)\n6. Include retry config\n\n**Requirements**:\n- Task count: 3-7 (prefer 3-5)\n- All tasks have validation\n- All tasks have retry\n- Dependencies match graph\n\n**Self-Validation**:\n```bash\n# Run these before completing:\njq empty {{templateId}}.json\njq '.tasks | length' {{templateId}}.json  # 3-7\njq '.tasks | all(.validation)' {{templateId}}.json  # true\njq '.tasks | all(.retry)' {{templateId}}.json  # true\n```\n\nFix any issues before proceeding.",
         "maxTokens": 10000,
@@ -102,7 +121,9 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["*.json"],
+        "requiredFiles": [
+          "*.json"
+        ],
         "requiredPatterns": [
           "\"name\":",
           "\"category\":",
@@ -130,9 +151,10 @@
     },
     {
       "id": "register-template",
-      "subagent": "general",
       "description": "Register created template with Metabob backend and verify",
-      "dependencies": ["write-template-json"],
+      "dependencies": [
+        "write-template-json"
+      ],
       "prompt": {
         "template": "Register the created template file with Metabob backend.\n\n**Template File**: Look for *.json files in current directory (should be {{templateId}}.json)\n\n**Registration Steps**:\n\n1. **Find the template file**:\n   - List *.json files in current directory\n   - Should find exactly one file: {{templateId}}.json or similar\n   - If multiple files, use the one matching the template name\n\n2. **Register with register_activity_template tool**:\n   ```typescript\n   await register_activity_template({\n     file_path: \"path/to/template.json\",\n     register_with_metabob: true\n   })\n   ```\n\n3. **Verify registration succeeded**:\n   - Use search_activities tool to find the template\n   - Check that template ID matches {{templateId}}\n   - Verify template has correct name: {{templateName}}\n   - Confirm category is {{category}}\n\n**Verification Example**:\n```typescript\nconst results = await search_activities({\n  query: \"{{templateName}}\",\n  category: \"{{category}}\",\n  verbose: false\n})\n\n// Check if template found\nif (results.activities.some(a => a.id === '{{templateId}}')) {\n  console.log('✓ Template successfully registered and discoverable')\n} else {\n  throw new Error('Template registration failed - not found in search')\n}\n```\n\n**Error Handling**:\n- If register_activity_template fails: Report error clearly, fail the task\n- If verification fails: Report what was found vs expected\n- Do NOT use || true or similar to hide failures\n- Let the activity fail visibly so registration issues are caught\n\n**Success Criteria**:\n- ✓ register_activity_template returns success\n- ✓ search_activities finds the template\n- ✓ Template is executable via activity tool\n- ✓ Agent confirms registration in output",
         "maxTokens": 8000,
@@ -172,7 +194,9 @@
   ],
   "integration": {
     "preChecks": [],
-    "postChecks": ["search_activities({ verbose: false })"],
+    "postChecks": [
+      "search_activities({ verbose: false })"
+    ],
     "qualityGates": [
       {
         "name": "template-valid-json",

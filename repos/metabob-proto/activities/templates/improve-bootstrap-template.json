@@ -7,46 +7,77 @@
     {
       "key": "targetTemplate",
       "hint": "Provide the bootstrap template file to improve (e.g., templates/built-in/create-activity-template.json)",
-      "impulseTypes": ["file"],
+      "impulseTypes": [
+        "file"
+      ],
       "required": true,
-      "budgetRange": [3000, 8000]
+      "budgetRange": [
+        3000,
+        8000
+      ]
     },
     {
       "key": "allBootstrapTemplates",
       "hint": "Provide all 5 bootstrap template files for cross-template pattern analysis. Run: find templates/built-in -name '*.json' -exec cat {} \\;",
-      "impulseTypes": ["bashOutput", "file"],
+      "impulseTypes": [
+        "bashOutput",
+        "file"
+      ],
       "required": true,
-      "budgetRange": [8000, 16000]
+      "budgetRange": [
+        8000,
+        16000
+      ]
     },
     {
       "key": "templateDocumentation",
       "hint": "Provide template design documentation (AGENTS.md sections: Activity Template System, Template Structure, Prompt Space Management)",
-      "impulseTypes": ["file", "component"],
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
       "required": true,
-      "budgetRange": [4000, 8000]
+      "budgetRange": [
+        4000,
+        8000
+      ]
     },
     {
       "key": "ductileRigidityParadigm",
       "hint": "Provide the ductile rigidity paradigm definition and principles from recent conversation or design docs",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [1000, 2000]
+      "budgetRange": [
+        1000,
+        2000
+      ]
     },
     {
       "key": "executionMetrics",
       "hint": "If available, provide execution metrics for the target template (success rate, token usage, cost, duration). Run: opencode activity template show <template-id>",
-      "impulseTypes": ["bashOutput", "memo"],
+      "impulseTypes": [
+        "bashOutput",
+        "memo"
+      ],
       "required": false,
-      "budgetRange": [500, 1000]
+      "budgetRange": [
+        500,
+        1000
+      ]
     }
   ],
   "tasks": [
     {
       "id": "assess-current-state",
-      "subagent": "general",
       "description": "Analyze current template structure and identify gaps",
       "dependencies": [],
-      "impulseReferences": ["targetTemplate", "ductileRigidityParadigm", "executionMetrics"],
+      "impulseReferences": [
+        "targetTemplate",
+        "ductileRigidityParadigm",
+        "executionMetrics"
+      ],
       "agentConfig": {
         "model": "claude-sonnet-4-20250514",
         "reasoning": "Complex analysis requiring deep understanding of template patterns and paradigm principles"
@@ -75,10 +106,15 @@
     },
     {
       "id": "design-improvements",
-      "subagent": "general",
       "description": "Design specific improvements based on assessment",
-      "dependencies": ["assess-current-state"],
-      "impulseReferences": ["targetTemplate", "allBootstrapTemplates", "templateDocumentation"],
+      "dependencies": [
+        "assess-current-state"
+      ],
+      "impulseReferences": [
+        "targetTemplate",
+        "allBootstrapTemplates",
+        "templateDocumentation"
+      ],
       "agentConfig": {
         "model": "claude-sonnet-4-20250514",
         "reasoning": "High complexity design work requiring cross-template pattern analysis and architectural decisions"
@@ -114,10 +150,13 @@
     },
     {
       "id": "implement-improvements",
-      "subagent": "general",
       "description": "Implement the designed improvements to the template",
-      "dependencies": ["design-improvements"],
-      "impulseReferences": ["targetTemplate"],
+      "dependencies": [
+        "design-improvements"
+      ],
+      "impulseReferences": [
+        "targetTemplate"
+      ],
       "agentConfig": {
         "model": "claude-sonnet-4-20250514",
         "reasoning": "Complex JSON manipulation and template modification requiring precision"
@@ -137,7 +176,11 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["\"version\":", "\"tasks\":", "\"agentConfig\":"],
+        "requiredPatterns": [
+          "\"version\":",
+          "\"tasks\":",
+          "\"agentConfig\":"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -148,9 +191,10 @@
     },
     {
       "id": "validate-improvements",
-      "subagent": "general",
       "description": "Validate the improved template structure and registration",
-      "dependencies": ["implement-improvements"],
+      "dependencies": [
+        "implement-improvements"
+      ],
       "impulseReferences": [],
       "agentConfig": {
         "model": "claude-haiku-4-20250514",
@@ -176,7 +220,11 @@
         ]
       },
       "validation": {
-        "requiredPatterns": ["\"validation_results\":", "\"overall_status\":", "\"ready_for_use\":"],
+        "requiredPatterns": [
+          "\"validation_results\":",
+          "\"overall_status\":",
+          "\"ready_for_use\":"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -187,9 +235,10 @@
     },
     {
       "id": "document-improvements",
-      "subagent": "general",
       "description": "Document improvements and update template library",
-      "dependencies": ["validate-improvements"],
+      "dependencies": [
+        "validate-improvements"
+      ],
       "impulseReferences": [],
       "agentConfig": {
         "model": "claude-haiku-4-20250514",
@@ -251,8 +300,14 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["{{targetTemplatePath}}.improvements.md"],
-        "requiredPatterns": ["\"documentation_created\":", "\"template_info\":", "\"next_steps\":"],
+        "requiredFiles": [
+          "{{targetTemplatePath}}.improvements.md"
+        ],
+        "requiredPatterns": [
+          "\"documentation_created\":",
+          "\"template_info\":",
+          "\"next_steps\":"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -264,7 +319,10 @@
   ],
   "integration": {
     "preChecks": [],
-    "postChecks": ["search_activities({ verbose: true })", "cat {{targetTemplatePath}}.improvements.md"],
+    "postChecks": [
+      "search_activities({ verbose: true })",
+      "cat {{targetTemplatePath}}.improvements.md"
+    ],
     "qualityGates": [
       {
         "name": "validation",

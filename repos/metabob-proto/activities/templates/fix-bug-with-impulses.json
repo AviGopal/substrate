@@ -7,39 +7,66 @@
     {
       "key": "bugReport",
       "hint": "Bug description, error message, stack trace, or issue report",
-      "impulseTypes": ["memo", "file", "metabobIssue"],
+      "impulseTypes": [
+        "memo",
+        "file",
+        "metabobIssue"
+      ],
       "required": true,
-      "budgetRange": [1000, 3000]
+      "budgetRange": [
+        1000,
+        3000
+      ]
     },
     {
       "key": "errorContext",
       "hint": "Files, components, or code sections related to the error",
-      "impulseTypes": ["file", "component", "commit"],
+      "impulseTypes": [
+        "file",
+        "component",
+        "commit"
+      ],
       "required": true,
-      "budgetRange": [2000, 5000]
+      "budgetRange": [
+        2000,
+        5000
+      ]
     },
     {
       "key": "testCases",
       "hint": "Existing tests or test files that should be updated",
-      "impulseTypes": ["file", "component"],
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
       "required": false,
-      "budgetRange": [1000, 3000]
+      "budgetRange": [
+        1000,
+        3000
+      ]
     },
     {
       "key": "projectCommands",
       "hint": "Detect project-specific commands using ProjectLanguageDetector: testCommand = await ProjectLanguageDetector.detectTestCommand(cwd), typecheckCommand = await ProjectLanguageDetector.detectTypecheckCommand(cwd) || 'echo skipping typecheck'",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [100, 200]
+      "budgetRange": [
+        100,
+        200
+      ]
     }
   ],
   "tasks": [
     {
       "id": "analyze-bug",
-      "subagent": "general",
       "description": "Analyze bug report and understand the issue",
       "dependencies": [],
-      "impulseReferences": ["bugReport", "errorContext"],
+      "impulseReferences": [
+        "bugReport",
+        "errorContext"
+      ],
       "prompt": {
         "template": "# Task: Analyze Bug Report\n\n## Context\nYou are analyzing a bug report to understand the root cause.\n\n## Bug Report (Pattern 1: Explicit Impulse Reference)\nThe bug report is available in the impulse: {{bugReport}}\n\n**Impulse Metadata (Pattern 2: Metadata Variable Usage)**:\n- Token count: {{bugReport.tokens}} / {{bugReport.budget}}\n- Truncated: {{bugReport.truncated}}\n- Type: {{bugReport.type}}\n\n## Error Context\nRelated code is available in: {{errorContext}}\n\n**Context size**: {{errorContext.tokens}} tokens ({{errorContext.truncated}})\n\n## Truncation Handling (Pattern 3: Truncation Strategy)\n{{#if bugReport.truncated}}\n⚠️ **Note**: Bug report was truncated to fit budget. Focus on:\n1. Error message and stack trace (typically at top)\n2. Reproduction steps (if available)\n3. Expected vs actual behavior\n\nIf critical information appears cut off, request impulse expansion in your output.\n{{/if}}\n\n{{#if errorContext.truncated}}\n⚠️ **Note**: Error context was truncated. Prioritize:\n1. Function/method where error occurs\n2. Related type definitions\n3. Immediate dependencies\n{{/if}}\n\n## Your Task\nAnalyze the bug and provide:\n\n### Structured Output (Pattern 4: Expected Structure)\n```json\n{\n  \"summary\": \"Brief description of the bug\",\n  \"errorType\": \"TypeError | ReferenceError | LogicError | etc\",\n  \"location\": {\n    \"file\": \"path/to/file.ts\",\n    \"line\": 123,\n    \"function\": \"functionName\"\n  },\n  \"likelyRootCause\": \"Hypothesis about what's causing the issue\",\n  \"affectedComponents\": [\"Component1\", \"Component2\"],\n  \"needsMoreContext\": {\n    \"required\": true/false,\n    \"details\": \"What additional context would help\"\n  }\n}\n```\n\n### Analysis Details\nProvide a detailed analysis covering:\n1. **Error Understanding**: What is the error? What should happen vs what actually happens?\n2. **Code Flow**: Trace the execution path that leads to the error\n3. **Root Cause Hypothesis**: What likely causes this error?\n4. **Scope**: What components/files are affected?\n\n### Context Assessment\n{{#if bugReport.truncated}}\n- Review if critical bug details were lost in truncation\n- Specify what's missing if truncation affected understanding\n{{/if}}\n\n{{#if errorContext.truncated}}\n- Identify if key code sections were truncated\n- Request specific file regions if needed\n{{/if}}\n\n## Cross-Task Communication (Pattern 5: Sharing)\nYour structured JSON output will be available to subsequent tasks via the `analysisResult` variable. Ensure completeness.",
         "maxTokens": 8000,
@@ -47,7 +74,11 @@
         "variables": []
       },
       "validation": {
-        "requiredPatterns": ["\"summary\":", "\"errorType\":", "\"location\":"],
+        "requiredPatterns": [
+          "\"summary\":",
+          "\"errorType\":",
+          "\"location\":"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -58,10 +89,13 @@
     },
     {
       "id": "locate-root-cause",
-      "subagent": "general",
       "description": "Locate the exact root cause in code",
-      "dependencies": ["analyze-bug"],
-      "impulseReferences": ["errorContext"],
+      "dependencies": [
+        "analyze-bug"
+      ],
+      "impulseReferences": [
+        "errorContext"
+      ],
       "impulseAdjustment": {
         "beforeExecution": true,
         "prompt": "Based on analysis results, adjust errorContext impulse to focus on the identified location: {{analysisResult.location.file}} around line {{analysisResult.location.line}}. If current context is truncated, prioritize the error location."
@@ -80,7 +114,11 @@
         ]
       },
       "validation": {
-        "requiredPatterns": ["\"rootCause\":", "\"contextQuality\":", "\"fixStrategy\":"],
+        "requiredPatterns": [
+          "\"rootCause\":",
+          "\"contextQuality\":",
+          "\"fixStrategy\":"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -91,10 +129,13 @@
     },
     {
       "id": "implement-fix",
-      "subagent": "general",
       "description": "Implement the fix for the identified issue",
-      "dependencies": ["locate-root-cause"],
-      "impulseReferences": ["errorContext"],
+      "dependencies": [
+        "locate-root-cause"
+      ],
+      "impulseReferences": [
+        "errorContext"
+      ],
       "prompt": {
         "template": "# Task: Implement Fix\n\n## Root Cause Identified (Pattern 5: Using Previous Task Output)\n{{rootCause.issue}}\n\n**Location**: {{rootCause.file}}:{{rootCause.line}}\n**Strategy**: {{rootCause.fixStrategy}}\n\n## Code Context (Pattern 2: Metadata-Informed Decisions)\n{{errorContext}}\n\n**Context Stats**:\n- Tokens: {{errorContext.tokens}}/{{errorContext.budget}}\n- Truncated: {{errorContext.truncated}}\n- Type: {{errorContext.type}}\n\n## Implementation Guidelines\n\n### Structured Output (Pattern 4: Implementation Structure)\n```json\n{\n  \"changes\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"operation\": \"edit | create | delete\",\n      \"location\": \"line range or component\",\n      \"description\": \"what changed and why\"\n    }\n  ],\n  \"testing\": {\n    \"strategy\": \"how to verify the fix\",\n    \"existingTests\": \"what tests should pass\",\n    \"newTests\": \"what new tests to add\"\n  },\n  \"sideEffects\": {\n    \"affectedComponents\": [\"list of components that might be affected\"],\n    \"breakingChanges\": true/false,\n    \"requiresUpdates\": [\"other files that need updates\"]\n  }\n}\n```\n\n### Implementation Requirements\n1. **Fix the Root Cause**: Address {{rootCause.issue}} at {{rootCause.file}}:{{rootCause.line}}\n2. **Handle Related Issues**: Address items in {{rootCause.relatedIssues}} if present\n3. **Maintain Code Quality**: Follow existing patterns, add comments explaining the fix\n4. **Consider Edge Cases**: Think about similar scenarios that might have the same issue\n\n### Context Utilization (Pattern 3: Working with Truncation)\n{{#if errorContext.truncated}}\n**Note**: Context is truncated. Your fix should:\n- Focus on the identified root cause location\n- Make minimal changes to reduce risk\n- Note any assumptions due to limited context\n- Suggest additional verification steps\n{{else}}\n**Note**: Complete context available. Your fix can:\n- Address the root cause comprehensively\n- Refactor related code if beneficial\n- Apply the fix pattern to similar locations\n{{/if}}\n\n## Fix Implementation\nImplement the fix using appropriate tools (edit, write, etc.). Then provide the structured JSON output above.\n\n## For Next Task (Pattern 5: Preparing Downstream Context)\nYour `changes` array will be used by the verification task to determine what to test.",
         "maxTokens": 12000,
@@ -109,7 +150,11 @@
         ]
       },
       "validation": {
-        "requiredPatterns": ["\"changes\":", "\"testing\":", "\"sideEffects\":"],
+        "requiredPatterns": [
+          "\"changes\":",
+          "\"testing\":",
+          "\"sideEffects\":"
+        ],
         "forbiddenPatterns": [],
         "commands": [
           {
@@ -126,10 +171,13 @@
     },
     {
       "id": "verify-fix",
-      "subagent": "general",
       "description": "Verify the fix with tests",
-      "dependencies": ["implement-fix"],
-      "impulseReferences": ["testCases"],
+      "dependencies": [
+        "implement-fix"
+      ],
+      "impulseReferences": [
+        "testCases"
+      ],
       "impulseAdjustment": {
         "beforeExecution": true,
         "prompt": "Load test cases related to the changed components: {{fixChanges.changes}}. Focus on tests that cover the fixed functionality."
@@ -148,7 +196,11 @@
         ]
       },
       "validation": {
-        "requiredPatterns": ["\"verification\":", "\"testDetails\":", "\"confidence\":"],
+        "requiredPatterns": [
+          "\"verification\":",
+          "\"testDetails\":",
+          "\"confidence\":"
+        ],
         "forbiddenPatterns": [],
         "commands": [
           {
@@ -166,7 +218,10 @@
   ],
   "integration": {
     "preChecks": [],
-    "postChecks": ["{{typecheckCommand}}", "{{testCommand}}"],
+    "postChecks": [
+      "{{typecheckCommand}}",
+      "{{testCommand}}"
+    ],
     "qualityGates": [
       {
         "name": "typecheck",

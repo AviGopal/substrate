@@ -7,29 +7,43 @@
     {
       "key": "operation",
       "hint": "What git operation to perform: commit, rebase, branch-management, merge, or squash",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [200, 500]
+      "budgetRange": [
+        200,
+        500
+      ]
     },
     {
       "key": "operationContext",
       "hint": "Context for the operation: changes to commit, branch to rebase onto, branches to manage or merge",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [500, 1500]
+      "budgetRange": [
+        500,
+        1500
+      ]
     },
     {
       "key": "preferences",
       "hint": "Any preferences for the operation: commit message format, rebase strategy, merge strategy, etc.",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": false,
-      "budgetRange": [300, 800]
+      "budgetRange": [
+        300,
+        800
+      ]
     }
   ],
   "tasks": [
     {
       "id": "validate-operation",
-      "subagent": "general",
       "description": "Validate requested git operation and gather current repository state",
       "dependencies": [],
       "prompt": {
@@ -47,7 +61,11 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["valid", "operation", "repositoryState"],
+        "requiredPatterns": [
+          "valid",
+          "operation",
+          "repositoryState"
+        ],
         "forbiddenPatterns": [],
         "commands": [
           {
@@ -82,9 +100,10 @@
     },
     {
       "id": "execute-commit",
-      "subagent": "general",
       "description": "Organize and commit changes with meaningful messages",
-      "dependencies": ["validate-operation"],
+      "dependencies": [
+        "validate-operation"
+      ],
       "prompt": {
         "template": "Execute commit operation. Skip if operation is not 'commit'.\n\n**Configuration**:\n- Commit strategy: {{commitStrategy}}\n- Commit format: {{commitFormat}}\n- Max commits: {{maxCommits}}\n- Dry run: {{dryRun}}\n\n**Objective**: Create logical, well-organized commits from current changes.\n\n**Grouping Strategy**:\n\nAnalyze changed files and group them by:\n- **Purpose**: Features, fixes, tests, documentation, configuration\n- **Component**: Which subsystem or module they affect\n- **Dependencies**: Changes that must be committed together\n\nAvoid mixing unrelated changes. Each commit should tell one coherent story.\n\n**Commit Message Guidelines**:\n\nFollow {{commitFormat}} format:\n- **conventional**: `type(scope): description` (e.g., `feat(auth): add JWT validation`)\n- **simple**: Clear description of what changed and why\n\nCheck recent commits for style consistency.\n\n**Success Criteria**:\n- All changes committed (or explicitly excluded)\n- Each commit has descriptive message\n- Commits are atomic (can be reverted independently)\n- No \"WIP\" or placeholder messages\n\n**Dry Run Mode**:\nIf {{dryRun}} is true, show planned commits without executing.\n\n**Output Structure**:\n```json\n{\n  \"executed\": boolean,\n  \"dryRun\": boolean,\n  \"commitsPlanned\": number,\n  \"commitsCreated\": number,\n  \"commits\": [{\"sha\": string, \"message\": string, \"files\": string[]}],\n  \"remainingFiles\": string[]\n}\n```",
         "maxTokens": 12000,
@@ -122,8 +141,15 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["executed", "commits"],
-        "forbiddenPatterns": ["WIP", "tmp", "\\[placeholder\\]"],
+        "requiredPatterns": [
+          "executed",
+          "commits"
+        ],
+        "forbiddenPatterns": [
+          "WIP",
+          "tmp",
+          "\\[placeholder\\]"
+        ],
         "commands": []
       },
       "retry": {
@@ -151,9 +177,10 @@
     },
     {
       "id": "execute-rebase",
-      "subagent": "general",
       "description": "Rebase current branch onto target branch with conflict handling",
-      "dependencies": ["validate-operation"],
+      "dependencies": [
+        "validate-operation"
+      ],
       "prompt": {
         "template": "Execute rebase operation. Skip if operation is not 'rebase'.\n\n**Configuration**:\n- Target branch: {{targetBranch}}\n- Rebase mode: {{rebaseMode}}\n- Dry run: {{dryRun}}\n\n**Objective**: Rebase current branch onto {{targetBranch}}, handling conflicts intelligently.\n\n**Rebase Strategy**:\n\nUnderstand what rebasing does:\n- Replays your commits on top of target branch\n- Rewrites commit history (new SHAs)\n- May encounter conflicts that need resolution\n\n**Conflict Resolution Principles**:\n\nWhen conflicts occur:\n1. **Understand context**: What are both sides trying to achieve?\n2. **Simple conflicts**: Auto-resolve if changes are clearly independent\n3. **Complex conflicts**: Provide detailed analysis and recommendations\n4. **Preserve intent**: Maintain the purpose of both conflicting changes\n\n**Safety First**:\n- Stash uncommitted changes before starting\n- Verify working tree is clean\n- Provide abort option if issues arise\n- Restore stashed changes after completion\n\n**Success Criteria**:\n- Rebase completes successfully OR\n- Clear conflict analysis provided with resolution guidance\n- Working tree state is clean and consistent\n- Stashed changes restored\n\n**Dry Run Mode**:\nIf {{dryRun}} is true, analyze what would be rebased without executing.\n\n**Output Structure**:\n```json\n{\n  \"executed\": boolean,\n  \"success\": boolean,\n  \"commitsRebased\": number,\n  \"conflicts\": {\n    \"encountered\": boolean,\n    \"files\": string[],\n    \"resolved\": boolean\n  },\n  \"status\": \"completed\" | \"aborted\" | \"in-progress\"\n}\n```",
         "maxTokens": 12000,
@@ -184,7 +211,11 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["executed", "success", "targetBranch"],
+        "requiredPatterns": [
+          "executed",
+          "success",
+          "targetBranch"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -213,9 +244,10 @@
     },
     {
       "id": "execute-branch-management",
-      "subagent": "general",
       "description": "Create, delete, rename, or list branches",
-      "dependencies": ["validate-operation"],
+      "dependencies": [
+        "validate-operation"
+      ],
       "prompt": {
         "template": "Execute branch management operation. Skip if operation is not 'branch-management'.\n\n**Action**: {{branchAction}}\n**Dry run**: {{dryRun}}\n\n**Available Actions**:\n- list: Show all branches (local and remote)\n- create: Create new branch from base\n- delete: Delete branch with safety checks\n- rename: Rename branch (local and remote)\n- switch: Switch to different branch\n- prune: Remove stale remote-tracking branches\n\n**Principles**:\n\n**Safety Checks**:\n- Never delete main/master/develop without explicit confirmation\n- Verify branch is merged before deletion\n- Check for unpushed commits\n- Ensure not deleting current branch\n\n**Remote Sync**:\n- For create: Optionally push to remote with tracking\n- For delete: Remove both local and remote if needed\n- For rename: Update both local and remote references\n\n**Context Variables** (use as needed):\n- Branch name: {{branchName}}\n- Base branch: {{baseBranch}}\n- Old/new names: {{oldBranchName}}, {{newBranchName}}\n- Target: {{targetBranch}}\n\n**Success Criteria**:\n- Action completes successfully\n- Repository state is clean\n- Remote is synchronized if applicable\n- No orphaned references\n\n**Output Structure**:\n```json\n{\n  \"executed\": boolean,\n  \"action\": string,\n  \"branches\": string[],\n  \"success\": boolean\n}\n```",
         "maxTokens": 10000,
@@ -270,7 +302,11 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["executed", "action", "branches"],
+        "requiredPatterns": [
+          "executed",
+          "action",
+          "branches"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -299,9 +335,10 @@
     },
     {
       "id": "execute-merge",
-      "subagent": "general",
       "description": "Merge branches with conflict detection and resolution",
-      "dependencies": ["validate-operation"],
+      "dependencies": [
+        "validate-operation"
+      ],
       "prompt": {
         "template": "Execute merge operation. Skip if operation is not 'merge'.\n\n**Configuration**:\n- Source branch: {{sourceBranch}}\n- Merge strategy: {{mergeStrategy}}\n- Dry run: {{dryRun}}\n\n**Objective**: Merge {{sourceBranch}} into current branch, resolving conflicts intelligently.\n\n**Merge Strategy Understanding**:\n\n- **ff-only**: Fast-forward only (fails if commits exist on both branches)\n- **no-ff**: Always create merge commit (preserves branch history)\n- **squash**: Combine all commits into one (clean history)\n- **standard**: Git default (fast-forward if possible, merge commit otherwise)\n\n**Conflict Resolution Principles** (same as rebase):\n\n1. Understand both sides' intent\n2. Auto-resolve simple conflicts (whitespace, formatting)\n3. Provide detailed analysis for complex conflicts\n4. Preserve functionality from both branches\n5. Test merged result when possible\n\n**Safety First**:\n- Verify clean working tree before merge\n- Preview conflicts in dry-run mode\n- Provide clear abort option\n- Validate merge commit makes sense\n\n**Success Criteria**:\n- Merge completes successfully OR\n- Conflicts identified with resolution guidance\n- Working tree is consistent\n- Merge commit has meaningful message\n\n**Output Structure**:\n```json\n{\n  \"executed\": boolean,\n  \"success\": boolean,\n  \"conflicts\": {\n    \"encountered\": boolean,\n    \"files\": string[],\n    \"resolved\": boolean\n  },\n  \"filesChanged\": number\n}\n```",
         "maxTokens": 12000,
@@ -331,7 +368,11 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["executed", "success", "sourceBranch"],
+        "requiredPatterns": [
+          "executed",
+          "success",
+          "sourceBranch"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -360,9 +401,10 @@
     },
     {
       "id": "execute-other-operations",
-      "subagent": "general",
       "description": "Handle squash, amend, cherry-pick operations",
-      "dependencies": ["validate-operation"],
+      "dependencies": [
+        "validate-operation"
+      ],
       "prompt": {
         "template": "Execute additional git operations: squash, amend, cherry-pick.\n\n**Operation**: {{operation}}\n**Dry run**: {{dryRun}}\n\n**Operation Types**:\n\n**Squash**: Combine last N commits into one\n- Count: {{commitCount}}\n- Uses interactive rebase\n- Rewrites history (force push needed if already pushed)\n\n**Amend**: Modify the last commit\n- Add more changes or update message\n- Message: {{amendMessage}}\n- Rewrites history (force push if needed)\n\n**Cherry-pick**: Apply commits from other branches\n- Commits: {{cherryPickCommits}} (comma-separated SHAs)\n- Creates new commits with same changes\n- May encounter conflicts\n\n**Principles**:\n\n**History Rewriting**:\n- Understand that squash/amend rewrite history\n- Warn if commits have been pushed\n- Recommend force-push-with-lease over force-push\n\n**Conflict Handling**:\n- Cherry-pick may encounter conflicts\n- Resolve similar to merge/rebase\n- Provide abort option\n\n**Message Quality**:\n- Squashed commits need comprehensive message\n- Amended commits should explain the change\n- Cherry-picked commits can keep original message\n\n**Success Criteria**:\n- Operation completes successfully\n- History is clean and makes sense\n- No conflicts remain\n- Working tree is consistent\n\n**Output Structure**:\n```json\n{\n  \"executed\": boolean,\n  \"operation\": string,\n  \"success\": boolean,\n  \"details\": {\n    \"commitsBefore\": number,\n    \"commitsAfter\": number,\n    \"modified\": string[]\n  }\n}\n```",
         "maxTokens": 10000,
@@ -398,7 +440,11 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["executed", "operation", "success"],
+        "requiredPatterns": [
+          "executed",
+          "operation",
+          "success"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -427,7 +473,6 @@
     },
     {
       "id": "verify-and-summarize",
-      "subagent": "general",
       "description": "Verify operation success and provide comprehensive summary",
       "dependencies": [
         "execute-commit",
@@ -444,7 +489,12 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["operation", "success", "repositoryState", "summary"],
+        "requiredPatterns": [
+          "operation",
+          "success",
+          "repositoryState",
+          "summary"
+        ],
         "forbiddenPatterns": [],
         "commands": [
           {
@@ -479,8 +529,14 @@
     }
   ],
   "integration": {
-    "preChecks": ["git rev-parse --git-dir", "git status"],
-    "postChecks": ["git status", "git log --oneline -5"],
+    "preChecks": [
+      "git rev-parse --git-dir",
+      "git status"
+    ],
+    "postChecks": [
+      "git status",
+      "git log --oneline -5"
+    ],
     "qualityGates": [
       {
         "name": "repo-status",
@@ -613,6 +669,15 @@
   "metadata": {
     "difficulty": "medium",
     "estimated_time_minutes": 20,
-    "tags_for_search": ["infrastructure", "git", "commit", "rebase", "merge", "branch", "revision", "management"]
+    "tags_for_search": [
+      "infrastructure",
+      "git",
+      "commit",
+      "rebase",
+      "merge",
+      "branch",
+      "revision",
+      "management"
+    ]
   }
 }

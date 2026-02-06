@@ -7,15 +7,19 @@
     {
       "key": "projectCommands",
       "hint": "Detect project-specific commands using ProjectLanguageDetector: testCommand = await ProjectLanguageDetector.detectTestCommand(cwd), typecheckCommand = await ProjectLanguageDetector.detectTypecheckCommand(cwd) || 'echo skipping typecheck', buildCommand = await ProjectLanguageDetector.detectBuildCommand(cwd) || 'echo skipping build'",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [100, 200]
+      "budgetRange": [
+        100,
+        200
+      ]
     }
   ],
   "tasks": [
     {
       "id": "discover-candidates",
-      "subagent": "general",
       "description": "Identify documentation and test files that may be outdated or irrelevant",
       "dependencies": [],
       "prompt": {
@@ -44,9 +48,10 @@
     },
     {
       "id": "analyze-safety",
-      "subagent": "general",
       "description": "Analyze the safety of removing identified files",
-      "dependencies": ["discover-candidates"],
+      "dependencies": [
+        "discover-candidates"
+      ],
       "prompt": {
         "template": "Review the candidate files identified for cleanup and perform safety analysis.\n\nFor each candidate file:\n1. Check if it's referenced by other files (use grep/rg)\n2. Check if it's imported or required anywhere\n3. For test files: verify the tested code still exists\n4. For docs: check if linked from other documentation\n5. Run git log to see recent activity (active files should be kept)\n\nCategorize files as:\n- SAFE: Can be removed without impact\n- REVIEW: Needs human review before removal\n- KEEP: Should not be removed\n\nProvide detailed reasoning for each categorization.\n\nUse metabob_assess_deletion_safety if available to check for dependencies.",
         "maxTokens": 15000,
@@ -72,9 +77,10 @@
     },
     {
       "id": "cleanup-files",
-      "subagent": "general",
       "description": "Remove files marked as SAFE",
-      "dependencies": ["analyze-safety"],
+      "dependencies": [
+        "analyze-safety"
+      ],
       "prompt": {
         "template": "Remove the files that were categorized as SAFE in the previous analysis.\n\nFor each file to be removed:\n1. Verify one final time it's not referenced (grep)\n2. Remove the file using bash tool with 'rm' command\n3. Log the removal with reasoning\n\nCreate a summary of:\n- Files removed (with paths)\n- Reasoning for each removal\n- Any files moved to REVIEW category\n\nDO NOT remove files categorized as REVIEW or KEEP.\n\nIf unsure about any file, err on the side of caution and move it to REVIEW.",
         "maxTokens": 10000,
@@ -100,9 +106,10 @@
     },
     {
       "id": "verify-cleanup",
-      "subagent": "general",
       "description": "Verify that cleanup didn't break anything",
-      "dependencies": ["cleanup-files"],
+      "dependencies": [
+        "cleanup-files"
+      ],
       "prompt": {
         "template": "Verify that the file cleanup didn't break the codebase.\n\nRun the following checks:\n1. Type checking: {{typecheckCommand}}\n2. Test suite: {{testCommand}}\n3. Build process: {{buildCommand}} (if applicable)\n\nIf any checks fail:\n1. Identify which removed file caused the issue\n2. Restore the file from git: git checkout HEAD -- <file>\n3. Move that file to REVIEW category\n4. Re-run checks\n\nProvide a summary of:\n- All checks passed/failed\n- Any files that needed to be restored\n- Final status of cleanup operation",
         "maxTokens": 8000,
@@ -133,8 +140,13 @@
     }
   ],
   "integration": {
-    "preChecks": ["git status"],
-    "postChecks": ["{{typecheckCommand}}", "{{testCommand}}"],
+    "preChecks": [
+      "git status"
+    ],
+    "postChecks": [
+      "{{typecheckCommand}}",
+      "{{testCommand}}"
+    ],
     "qualityGates": [
       {
         "name": "typecheck",

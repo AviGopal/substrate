@@ -7,29 +7,45 @@
     {
       "key": "projectCommands",
       "hint": "Detect project-specific commands using ProjectLanguageDetector: testCommand = await ProjectLanguageDetector.detectTestCommand(cwd), typecheckCommand = await ProjectLanguageDetector.detectTypecheckCommand(cwd) || 'echo skipping typecheck', buildCommand = await ProjectLanguageDetector.detectBuildCommand(cwd) || 'bun run build'",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [100, 200]
+      "budgetRange": [
+        100,
+        200
+      ]
     },
     {
       "key": "buildContext",
       "hint": "Provide current build configuration: package.json scripts, build script location (script/build.ts), output directory structure, platform targets",
-      "impulseTypes": ["file", "memo"],
+      "impulseTypes": [
+        "file",
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [1000, 2000]
+      "budgetRange": [
+        1000,
+        2000
+      ]
     },
     {
       "key": "featureFiles",
       "hint": "Identify key feature entry points: CLI commands (src/cli/), ACP server (src/acp/), TUI components (src/tui/), browser tools (src/tool/playwright*)",
-      "impulseTypes": ["file", "component"],
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
       "required": true,
-      "budgetRange": [2000, 4000]
+      "budgetRange": [
+        2000,
+        4000
+      ]
     }
   ],
   "tasks": [
     {
       "id": "verify-compilation",
-      "subagent": "general",
       "description": "Verify TypeScript compilation and build script execution",
       "dependencies": [],
       "prompt": {
@@ -52,9 +68,15 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["package.json", "tsconfig.json"],
+        "requiredFiles": [
+          "package.json",
+          "tsconfig.json"
+        ],
         "requiredPatterns": [],
-        "forbiddenPatterns": ["@ts-ignore", "@ts-expect-error"],
+        "forbiddenPatterns": [
+          "@ts-ignore",
+          "@ts-expect-error"
+        ],
         "commands": [
           {
             "name": "typecheck",
@@ -75,9 +97,10 @@
     },
     {
       "id": "validate-cli-endpoints",
-      "subagent": "general",
       "description": "Validate CLI command endpoints are included in build",
-      "dependencies": ["verify-compilation"],
+      "dependencies": [
+        "verify-compilation"
+      ],
       "prompt": {
         "template": "Validate CLI endpoints are correctly included in build:\n\n1. **Check CLI entry points**:\n   - Verify bin/opencode and bin/opencode.cmd exist\n   - Check src/cli/ directory is included in build\n   - Validate command registry (src/command/) is bundled\n\n2. **Test CLI commands** (if possible without full install):\n   - Check help output: node [build-output] --help\n   - Verify command list is complete\n   - Ensure all documented commands are present\n\n3. **Validate CLI dependencies**:\n   - Check all CLI tool imports are resolved\n   - Verify CLI-specific packages are bundled\n   - Ensure platform-specific binaries are included\n\n**Success Criteria**:\n- ✅ CLI entry points exist and are executable\n- ✅ All CLI commands registered\n- ✅ CLI dependencies bundled correctly\n\n**Red Flags** 🚨:\n- 🚨 Missing CLI commands in build output\n- 🚨 Unbundled dependencies (import errors)\n- 🚨 Platform-specific issues (Windows .cmd missing)",
         "maxTokens": 10000,
@@ -85,7 +108,10 @@
         "variables": []
       },
       "validation": {
-        "requiredFiles": ["bin/opencode", "bin/opencode.cmd"],
+        "requiredFiles": [
+          "bin/opencode",
+          "bin/opencode.cmd"
+        ],
         "requiredPatterns": [],
         "forbiddenPatterns": [],
         "commands": []
@@ -97,9 +123,10 @@
     },
     {
       "id": "validate-acp-functionality",
-      "subagent": "general",
       "description": "Validate ACP server and client functionality in build",
-      "dependencies": ["verify-compilation"],
+      "dependencies": [
+        "verify-compilation"
+      ],
       "prompt": {
         "template": "Validate ACP (Agent Client Protocol) functionality in build:\n\n1. **Check ACP server components**:\n   - Verify src/acp/server.ts is included\n   - Check ACP protocol handlers are bundled\n   - Validate WebSocket/HTTP transport support\n\n2. **Check ACP client components**:\n   - Verify src/acp/client.ts is included\n   - Check Docker and SSH transport implementations\n   - Validate delegation tool (acp_delegate) is available\n\n3. **Validate ACP dependencies**:\n   - Check WebSocket libraries are bundled\n   - Verify SSH client dependencies\n   - Ensure Docker client libraries included\n\n**Success Criteria**:\n- ✅ ACP server and client modules bundled\n- ✅ All transport types supported\n- ✅ ACP tool registered and available\n\n**Common Issues**:\n- Missing native dependencies (SSH, Docker)\n- WebSocket transport not configured\n- ACP delegation tool not registered",
         "maxTokens": 10000,
@@ -119,9 +146,10 @@
     },
     {
       "id": "validate-tui-features",
-      "subagent": "general",
       "description": "Validate TUI (Terminal UI) features in build",
-      "dependencies": ["verify-compilation"],
+      "dependencies": [
+        "verify-compilation"
+      ],
       "prompt": {
         "template": "Validate TUI (Terminal UI) features in build:\n\n1. **Check TUI components**:\n   - Verify src/tui/ directory is included\n   - Check session sidebar implementation\n   - Validate impulse visualization tools\n   - Ensure memory agent UI components are bundled\n\n2. **Check TUI dependencies**:\n   - Verify terminal rendering libraries (ink, etc.)\n   - Check UI component libraries are bundled\n   - Validate keyboard input handling\n\n3. **Test TUI initialization** (if possible):\n   - Check TUI can start without errors\n   - Verify rendering doesn't crash\n   - Ensure graceful degradation on unsupported terminals\n\n**Success Criteria**:\n- ✅ All TUI components bundled\n- ✅ Terminal libraries included\n- ✅ TUI can initialize without errors\n\n**Red Flags** 🚨:\n- 🚨 Missing terminal rendering libraries\n- 🚨 TUI crashes on initialization\n- 🚨 Sidebar or visualization tools missing",
         "maxTokens": 10000,
@@ -141,9 +169,10 @@
     },
     {
       "id": "validate-browser-integration",
-      "subagent": "general",
       "description": "Validate browser automation (Playwright) integration in build",
-      "dependencies": ["verify-compilation"],
+      "dependencies": [
+        "verify-compilation"
+      ],
       "prompt": {
         "template": "Validate browser automation integration in build:\n\n1. **Check Playwright tools**:\n   - Verify src/tool/playwright*.ts files are included\n   - Check all browser automation tools registered:\n     - playwright_browser_navigate\n     - playwright_browser_click\n     - playwright_browser_snapshot\n     - playwright_browser_evaluate\n     - (and 15+ other browser tools)\n   - Validate tool registry includes all playwright tools\n\n2. **Check Playwright dependencies**:\n   - Verify playwright package is bundled or marked external\n   - Check browser binaries installation handling\n   - Validate playwright configuration\n\n3. **Validate browser tool metadata**:\n   - Check tool schemas are correct\n   - Verify parameter validation\n   - Ensure error handling for missing browsers\n\n**Success Criteria**:\n- ✅ All Playwright tools registered\n- ✅ Playwright dependencies configured\n- ✅ Browser installation instructions available\n\n**Common Issues**:\n- Playwright marked as external but not in dependencies\n- Browser tools not registered in tool registry\n- Missing browser installation prompts",
         "maxTokens": 10000,
@@ -152,7 +181,9 @@
       },
       "validation": {
         "requiredFiles": [],
-        "requiredPatterns": ["playwright_browser"],
+        "requiredPatterns": [
+          "playwright_browser"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -163,9 +194,10 @@
     },
     {
       "id": "verify-build-artifacts",
-      "subagent": "general",
       "description": "Verify build artifacts structure and completeness",
-      "dependencies": ["verify-compilation"],
+      "dependencies": [
+        "verify-compilation"
+      ],
       "prompt": {
         "template": "Verify build artifacts are complete and correct:\n\n1. **Check output directory structure**:\n   - Verify build output directory exists (dist/, build/, or similar)\n   - Check platform-specific builds are created\n   - Validate executable permissions on binaries\n\n2. **Check artifact contents**:\n   - Verify all source modules are bundled\n   - Check external dependencies are handled correctly\n   - Validate asset files are included (templates, docs, etc.)\n\n3. **Check artifact size and optimization**:\n   - Verify build size is reasonable\n   - Check for unnecessary inclusions\n   - Validate minification/optimization applied\n\n4. **Platform-specific validation**:\n   - Linux: Check ELF binary format\n   - macOS: Check Mach-O binary format  \n   - Windows: Check .exe exists\n\n**Success Criteria**:\n- ✅ Build artifacts exist in expected location\n- ✅ All required modules included\n- ✅ Platform-specific builds correct\n- ✅ Build size reasonable (<100MB typical)\n\n**Red Flags** 🚨:\n- 🚨 Build size >200MB (likely includes unnecessary files)\n- 🚨 Missing platform-specific builds\n- 🚨 Executable permissions not set",
         "maxTokens": 10000,
@@ -185,7 +217,6 @@
     },
     {
       "id": "comprehensive-testing",
-      "subagent": "general",
       "description": "Run comprehensive test suite to validate build",
       "dependencies": [
         "verify-compilation",
@@ -227,8 +258,14 @@
     }
   ],
   "integration": {
-    "preChecks": ["{{typecheckCommand}}"],
-    "postChecks": ["{{typecheckCommand}}", "{{buildCommand}}", "{{testCommand}}"],
+    "preChecks": [
+      "{{typecheckCommand}}"
+    ],
+    "postChecks": [
+      "{{typecheckCommand}}",
+      "{{buildCommand}}",
+      "{{testCommand}}"
+    ],
     "qualityGates": [
       {
         "name": "typecheck",

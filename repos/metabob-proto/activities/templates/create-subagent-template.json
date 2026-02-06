@@ -6,43 +6,68 @@
     {
       "key": "agentSpecialization",
       "hint": "Describe the agent's specialization, domain expertise, and responsibilities",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [500, 1000]
+      "budgetRange": [
+        500,
+        1000
+      ]
     },
     {
       "key": "existingAgents",
       "hint": "Provide examples of existing agent configurations. Search for agent files in common locations: .opencode/agent/, config/agents/, agents/",
-      "impulseTypes": ["file"],
+      "impulseTypes": [
+        "file"
+      ],
       "required": false,
-      "budgetRange": [1000, 2000]
+      "budgetRange": [
+        1000,
+        2000
+      ]
     },
     {
       "key": "agentConfig",
       "hint": "Share agent configuration schema and examples. Look for Agent.Info type definitions in your codebase or provide documentation links.",
-      "impulseTypes": ["file", "component"],
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
       "required": true,
-      "budgetRange": [800, 1500]
+      "budgetRange": [
+        800,
+        1500
+      ]
     },
     {
       "key": "projectPaths",
       "hint": "Provide paths: agentDir (where agent files are stored, e.g., '.opencode/agent', 'config/agents'), agentDocFile (main documentation file, e.g., 'AGENTS.md', 'README.md', 'docs/agents.md'), agentTestDir (where agent tests are stored, e.g., 'test/agent', 'tests/agents')",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [100, 300]
+      "budgetRange": [
+        100,
+        300
+      ]
     },
     {
       "key": "projectCommands",
       "hint": "Detect project-specific test command using ProjectLanguageDetector: testCommand = await ProjectLanguageDetector.detectTestCommand(cwd)",
-      "impulseTypes": ["memo"],
+      "impulseTypes": [
+        "memo"
+      ],
       "required": true,
-      "budgetRange": [100, 200]
+      "budgetRange": [
+        100,
+        200
+      ]
     }
   ],
   "tasks": [
     {
       "id": "design-subagent",
-      "subagent": "general",
       "description": "Design subagent purpose, tools, and system prompt",
       "dependencies": [],
       "prompt": {
@@ -94,9 +119,10 @@
     },
     {
       "id": "implement-subagent-file",
-      "subagent": "general",
       "description": "Create .opencode/agent/[name].md file with frontmatter and prompt",
-      "dependencies": ["design-subagent"],
+      "dependencies": [
+        "design-subagent"
+      ],
       "prompt": {
         "template": "Create or update {{agentDir}}/{{agentName}}.md file.\n\nFormat (YAML frontmatter + Markdown):\n\n```markdown\n---\nmodel: [optional model override, e.g., anthropic/claude-sonnet-4-20250514]\ndescription: [one-line description]\nmode: {{targetMode}}\ntools:\n  [toolname]: true/false\npermission:\n  edit: allow/ask/deny\n  bash:\n    \"*\": allow/ask/deny\n  webfetch: allow/ask/deny\nmetabob:\n  enabled: true/false\n  max_issues: [number]\n  min_severity: HIGH/MEDIUM/LOW\n  inject_annotations: true/false\n  auto_impact_analysis: true/false\n---\n\n# [Agent Name] Agent\n\n[Opening paragraph explaining agent's purpose]\n\n## Domain Responsibilities\n\n- [Responsibility 1]\n- [Responsibility 2]\n...\n\n## Development Patterns\n\n### Pattern 1: [Name]\n\n**Pattern**: [Description]\n\n```[language]\n[Code example]\n```\n\n**Key principles**:\n- [Principle 1]\n- [Principle 2]\n\n[More sections as needed: Testing Approaches, Best Practices, etc.]\n\n## Summary\n\n[Closing summary of agent's focus and key responsibilities]\n```\n\nUse the design from the previous task to populate all sections.\nEnsure frontmatter is valid YAML with proper indentation.\nFollow the format and style of existing agents in {{agentDir}}.",
         "maxTokens": 15000,
@@ -125,9 +151,19 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["{{agentDir}}/{{agentName}}.md"],
-        "requiredPatterns": ["---", "description:", "mode:", "# .* Agent"],
-        "forbiddenPatterns": ["TODO", "\\[placeholder\\]"],
+        "requiredFiles": [
+          "{{agentDir}}/{{agentName}}.md"
+        ],
+        "requiredPatterns": [
+          "---",
+          "description:",
+          "mode:",
+          "# .* Agent"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "\\[placeholder\\]"
+        ],
         "commands": []
       },
       "retry": {
@@ -140,9 +176,10 @@
     },
     {
       "id": "validate-frontmatter",
-      "subagent": "general",
       "description": "Validate YAML frontmatter and agent configuration",
-      "dependencies": ["implement-subagent-file"],
+      "dependencies": [
+        "implement-subagent-file"
+      ],
       "prompt": {
         "template": "Validate the frontmatter in {{agentDir}}/{{agentName}}.md.\n\nCheck:\n1. YAML frontmatter is valid (parse with a YAML parser)\n2. Required fields are present: description, mode\n3. Mode is one of: subagent, primary, all\n4. Tools object uses correct tool names (refer to tool registry or documentation)\n5. Permission structure matches Agent.Info schema (refer to provided schema)\n6. Metabob config uses valid fields and values\n7. Model string (if present) matches format: provider/model-name\n\nIf validation fails:\n- Report specific errors\n- Fix the issues\n- Retry validation\n\nOutput validation results:\n{\n  \"valid\": boolean,\n  \"errors\": string[],\n  \"warnings\": string[]\n}",
         "maxTokens": 8000,
@@ -164,9 +201,15 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["{{agentDir}}/{{agentName}}.md"],
-        "requiredPatterns": ["valid.*true"],
-        "forbiddenPatterns": ["errors.*\\[.*\\]"],
+        "requiredFiles": [
+          "{{agentDir}}/{{agentName}}.md"
+        ],
+        "requiredPatterns": [
+          "valid.*true"
+        ],
+        "forbiddenPatterns": [
+          "errors.*\\[.*\\]"
+        ],
         "commands": []
       },
       "retry": {
@@ -179,9 +222,10 @@
     },
     {
       "id": "test-agent-loading",
-      "subagent": "general",
       "description": "Test that agent loads correctly and is accessible",
-      "dependencies": ["validate-frontmatter"],
+      "dependencies": [
+        "validate-frontmatter"
+      ],
       "prompt": {
         "template": "Test that the {{agentName}} agent loads correctly.\n\nCreate {{agentTestDir}}/{{agentName}}.test.ts with:\n\n```typescript\nimport { test, expect } from \"bun:test\"\nimport { Agent } from \"../../src/agent/agent\"\nimport { Config } from \"../../src/config/config\"\nimport { Instance } from \"../../src/project/instance\"\nimport { tmpdir } from \"../util/tmpdir\"\nimport path from \"path\"\n\ntest(\"{{agentName}} agent loads from .opencode/agent/\", async () => {\n  await using tmp = await tmpdir({\n    init: async (dir) => {\n      // Copy the agent file\n      const agentContent = await Bun.file(\".opencode/agent/{{agentName}}.md\").text()\n      await Bun.write(\n        path.join(dir, \".opencode/agent/{{agentName}}.md\"),\n        agentContent\n      )\n    },\n  })\n\n  await Instance.provide({\n    directory: tmp.path,\n    fn: async () => {\n      const agent = await Agent.get(\"{{agentName}}\")\n      \n      expect(agent).toBeDefined()\n      expect(agent.name).toBe(\"{{agentName}}\")\n      expect(agent.description).toBeTruthy()\n      expect(agent.mode).toMatch(/subagent|primary|all/)\n      expect(agent.builtIn).toBe(false)\n      expect(agent.permission).toBeDefined()\n      expect(agent.tools).toBeDefined()\n    },\n  })\n})\n\ntest(\"{{agentName}} agent has valid tool configuration\", async () => {\n  await using tmp = await tmpdir({\n    init: async (dir) => {\n      const agentContent = await Bun.file(\".opencode/agent/{{agentName}}.md\").text()\n      await Bun.write(\n        path.join(dir, \".opencode/agent/{{agentName}}.md\"),\n        agentContent\n      )\n    },\n  })\n\n  await Instance.provide({\n    directory: tmp.path,\n    fn: async () => {\n      const agent = await Agent.get(\"{{agentName}}\")\n      \n      // Tools should be an object with boolean values\n      expect(typeof agent.tools).toBe(\"object\")\n      for (const [tool, enabled] of Object.entries(agent.tools)) {\n        expect(typeof enabled).toBe(\"boolean\")\n      }\n    },\n  })\n})\n\ntest(\"{{agentName}} agent appears in agent list\", async () => {\n  await using tmp = await tmpdir({\n    init: async (dir) => {\n      const agentContent = await Bun.file(\".opencode/agent/{{agentName}}.md\").text()\n      await Bun.write(\n        path.join(dir, \".opencode/agent/{{agentName}}.md\"),\n        agentContent\n      )\n    },\n  })\n\n  await Instance.provide({\n    directory: tmp.path,\n    fn: async () => {\n      const agents = await Agent.list()\n      const agent = agents.find((a) => a.name === \"{{agentName}}\")\n      \n      expect(agent).toBeDefined()\n    },\n  })\n})\n```\n\nRun the tests to verify they pass.",
         "maxTokens": 10000,
@@ -210,8 +254,13 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["{{agentTestDir}}/{{agentName}}.test.ts"],
-        "requiredPatterns": ["test\\(", "expect\\("],
+        "requiredFiles": [
+          "{{agentTestDir}}/{{agentName}}.test.ts"
+        ],
+        "requiredPatterns": [
+          "test\\(",
+          "expect\\("
+        ],
         "forbiddenPatterns": [],
         "commands": [
           {
@@ -231,9 +280,10 @@
     },
     {
       "id": "document-agent",
-      "subagent": "general",
       "description": "Add agent to documentation",
-      "dependencies": ["test-agent-loading"],
+      "dependencies": [
+        "test-agent-loading"
+      ],
       "prompt": {
         "template": "Document the new {{agentName}} agent.\n\nAdd entry to {{agentDocFile}} under \"Custom Subagents\" section (or create section if it doesn't exist):\n\n## Custom Subagents\n\nCustom subagents are defined in `{{agentDir}}` directory.\n\n### {{agentName}}\n\n**Purpose**: {{agentPurpose}}\n\n**Mode**: {{targetMode}}\n\n**Usage**:\n\n```bash\n# Use via task tool\nopencode chat \"delegate X to {{agentName}} agent\"\n\n# Use directly (if mode is primary or all)\nopencode chat --agent {{agentName}} \"your request\"\n```\n\n**Configuration**: See `{{agentDir}}/{{agentName}}.md`\n\n[Keep documentation concise and actionable]",
         "maxTokens": 6000,
@@ -275,8 +325,12 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["{{agentDocFile}}"],
-        "requiredPatterns": ["{{agentName}}"],
+        "requiredFiles": [
+          "{{agentDocFile}}"
+        ],
+        "requiredPatterns": [
+          "{{agentName}}"
+        ],
         "forbiddenPatterns": [],
         "commands": []
       },
@@ -291,7 +345,9 @@
   ],
   "integration": {
     "preChecks": [],
-    "postChecks": ["{{testCommand}}"],
+    "postChecks": [
+      "{{testCommand}}"
+    ],
     "qualityGates": [
       {
         "name": "agent-tests",
@@ -314,6 +370,10 @@
   "metadata": {
     "difficulty": "hard",
     "estimated_time_minutes": 25,
-    "tags_for_search": ["infrastructure", "create", "subagent"]
+    "tags_for_search": [
+      "infrastructure",
+      "create",
+      "subagent"
+    ]
   }
 }

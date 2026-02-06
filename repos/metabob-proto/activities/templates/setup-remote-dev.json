@@ -6,7 +6,6 @@
   "tasks": [
     {
       "id": "verify-prerequisites",
-      "subagent": "general",
       "description": "Verify prerequisites and configuration",
       "dependencies": [],
       "prompt": {
@@ -47,7 +46,9 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["opencode.json"],
+        "requiredFiles": [
+          "opencode.json"
+        ],
         "commands": []
       },
       "retry": {
@@ -57,9 +58,10 @@
     },
     {
       "id": "configure-acp",
-      "subagent": "general",
       "description": "Add ACP configuration to opencode.json",
-      "dependencies": ["verify-prerequisites"],
+      "dependencies": [
+        "verify-prerequisites"
+      ],
       "prompt": {
         "template": "Add ACP configuration to opencode.json:\n\n{{#if (eq remoteType 'acp')}}\n1. Read current opencode.json\n2. Add or update acp section:\n\n```json\n{\n  \"acp\": {\n    \"{{remoteName}}\": {\n      \"type\": \"{{acpType}}\",\n      \"transport\": \"stdio\",\n      {{#if (eq acpType 'container')}}\n      \"container\": \"{{containerName}}\",\n      \"workDir\": \"{{workDir}}\",\n      \"command\": [\"opencode\", \"acp\", \"--cwd\", \"{{workDir}}\"],\n      {{/if}}\n      {{#if (eq acpType 'local')}}\n      \"command\": {{localCommand}},\n      {{/if}}\n      \"autoStart\": {{autoStart}},\n      \"healthCheck\": {\n        \"interval\": 30000,\n        \"timeout\": 5000,\n        \"retries\": 3\n      },\n      \"reconnect\": {\n        \"enabled\": true,\n        \"maxAttempts\": 5,\n        \"backoff\": \"exponential\"\n      }\n    }\n  }\n}\n```\n\n3. Write updated opencode.json\n4. Verify JSON is valid\n{{else}}\nSkip ACP configuration (remote type is ssh)\n{{/if}}",
         "maxTokens": 8000,
@@ -110,8 +112,12 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["opencode.json"],
-        "requiredPatterns": ["\"acp\""],
+        "requiredFiles": [
+          "opencode.json"
+        ],
+        "requiredPatterns": [
+          "\"acp\""
+        ],
         "commands": [
           {
             "name": "validate-json",
@@ -127,9 +133,10 @@
     },
     {
       "id": "configure-ssh",
-      "subagent": "general",
       "description": "Add SSH remote configuration to opencode.json",
-      "dependencies": ["verify-prerequisites"],
+      "dependencies": [
+        "verify-prerequisites"
+      ],
       "prompt": {
         "template": "Add SSH remote configuration to opencode.json:\n\n{{#if (eq remoteType 'ssh')}}\n1. Read current opencode.json\n2. Add or update remote section:\n\n```json\n{\n  \"remote\": {\n    \"{{remoteName}}\": {\n      \"host\": \"{{sshHost}}\",\n      \"user\": \"{{sshUser}}\",\n      \"directory\": \"{{sshDirectory}}\",\n      \"port\": {{sshPort}},\n      \"identity\": \"{{sshKey}}\",\n      \"auto_sync\": {{autoSync}},\n      \"copy_env\": false,\n      \"environment\": {}\n    }\n  }\n}\n```\n\n3. Write updated opencode.json\n4. Verify JSON is valid\n{{else}}\nSkip SSH configuration (remote type is acp)\n{{/if}}",
         "maxTokens": 8000,
@@ -186,8 +193,12 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["opencode.json"],
-        "requiredPatterns": ["\"remote\""],
+        "requiredFiles": [
+          "opencode.json"
+        ],
+        "requiredPatterns": [
+          "\"remote\""
+        ],
         "commands": [
           {
             "name": "validate-json",
@@ -203,9 +214,11 @@
     },
     {
       "id": "test-connection",
-      "subagent": "general",
       "description": "Test the configured remote connection",
-      "dependencies": ["configure-acp", "configure-ssh"],
+      "dependencies": [
+        "configure-acp",
+        "configure-ssh"
+      ],
       "prompt": {
         "template": "Test the configured remote connection:\n\n{{#if (eq remoteType 'acp')}}\n## ACP Connection Test\n\n1. Connect to agent:\n   ```\n   acp_connect({ name: \"{{remoteName}}\" })\n   ```\n\n2. Verify connection established:\n   ```\n   acp_list_connections()\n   ```\n\n3. Test basic communication:\n   ```\n   acp_ping({ connectionName: \"{{remoteName}}\" })\n   ```\n\n4. Simple task delegation:\n   ```\n   acp_delegate_task({\n     connectionName: \"{{remoteName}}\",\n     promptText: \"Echo 'Hello from {{remoteName}}' and show current directory\",\n     reason: \"Connection test\"\n   })\n   ```\n\n5. Verify response received\n\n6. Clean up:\n   ```\n   acp_disconnect({ connectionName: \"{{remoteName}}\" })\n   ```\n{{else}}\n## SSH Connection Test\n\n1. Test basic command:\n   ```\n   remote_bash({\n     remote: \"{{remoteName}}\",\n     command: \"echo 'Hello from {{remoteName}}' && pwd\",\n     description: \"Connection test\"\n   })\n   ```\n\n2. Test file read:\n   ```\n   remote_bash({\n     remote: \"{{remoteName}}\",\n     command: \"echo 'test content' > /tmp/opencode-test.txt && cat /tmp/opencode-test.txt\",\n     description: \"Test file operations\"\n   })\n   ```\n\n3. Verify operations successful\n{{/if}}\n\nOutput test results with status indicators (✓ or ✗)",
         "maxTokens": 10000,
@@ -235,9 +248,10 @@
     },
     {
       "id": "document-setup",
-      "subagent": "general",
       "description": "Document the setup and usage",
-      "dependencies": ["test-connection"],
+      "dependencies": [
+        "test-connection"
+      ],
       "prompt": {
         "template": "Document the remote development setup:\n\n1. Create a README-REMOTE-DEV.md in the project root with:\n\n## Remote Development Setup\n\n**Remote Name:** {{remoteName}}  \n**Type:** {{remoteType}}  \n**Status:** ✅ Configured and Tested\n\n### Quick Start\n\n{{#if (eq remoteType 'acp')}}\n#### Using ACP Tools\n\n```typescript\n// Connect\nacp_connect({ name: \"{{remoteName}}\" })\n\n// Delegate task\nacp_delegate_task({\n  connectionName: \"{{remoteName}}\",\n  promptText: \"Your task here\",\n  reason: \"Why delegating\"\n})\n\n// Check status\nacp_list_connections()\n\n// Disconnect\nacp_disconnect({ connectionName: \"{{remoteName}}\" })\n```\n{{else}}\n#### Using SSH Remote Tools\n\n```typescript\n// Execute command\nremote_bash({\n  remote: \"{{remoteName}}\",\n  command: \"npm test\",\n  description: \"Run tests\"\n})\n\n// Read file\nremote_read({\n  remote: \"{{remoteName}}\",\n  filePath: \"config/app.json\"\n})\n\n// Write file\nremote_write({\n  remote: \"{{remoteName}}\",\n  filePath: \"config/feature.json\",\n  content: JSON.stringify({ enabled: true })\n})\n\n// Sync git\nremote_sync({ remote: \"{{remoteName}}\" })\n```\n{{/if}}\n\n### Configuration\n\nSee `opencode.json` for full configuration.\n\n### Documentation\n\n- [Remote Development Guide](docs/REMOTE_DEVELOPMENT_GUIDE.md)\n- [ACP Usage Guide](ACP_USAGE_GUIDE.md)\n- [ACP Configuration](docs/ACP_CONFIGURATION.md)\n\n2. Output success message with next steps",
         "maxTokens": 8000,
@@ -258,7 +272,9 @@
         ]
       },
       "validation": {
-        "requiredFiles": ["README-REMOTE-DEV.md"],
+        "requiredFiles": [
+          "README-REMOTE-DEV.md"
+        ],
         "commands": []
       },
       "retry": {
