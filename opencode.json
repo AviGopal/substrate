@@ -6,16 +6,7 @@
   "metabob": {
     "cli_path": "metabob-cli",
     "base_url": "http://localhost:8080",
-    "api_key": "",
-    "template_registration": {
-      "enabled": true,
-      "template_sources": ["./jiggle-documentation.json", "./templates/"]
-    },
-    "activity_learning": {
-      "enabled": true,
-      "capture_outcomes": true,
-      "min_confidence": 0.5
-    }
+    "api_key": ""
   },
   
   "provider": {
