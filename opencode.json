@@ -4,7 +4,6 @@
   "model": "anthropic/claude-sonnet-4-5",
   
   "metabob": {
-    "cli_path": "metabob-cli",
     "base_url": "http://localhost:8080",
     "api_key": ""
   },
@@ -39,20 +38,6 @@
   },
   
   "mcp": {
-    "metabob": {
-      "type": "local",
-      "command": [
-        "metabob-cli",
-        "mcp",
-        "--transport",
-        "stdio"
-      ],
-      "environment": {
-        "METABOB_API_URL": "http://localhost:8080",
-        "METABOB_API_KEY": ""
-      },
-      "enabled": true
-    },
     "playwright": {
       "enabled": false,
       "type": "local",
