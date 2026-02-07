@@ -1,0 +1,74 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "model": "anthropic/claude-sonnet-4-5",
+  
+  "metabob": {
+    "cli_path": "metabob-cli",
+    "base_url": "http://localhost:8080",
+    "api_key": "",
+    "template_registration": {
+      "enabled": true,
+      "template_sources": ["./jiggle-documentation.json", "./templates/"]
+    },
+    "activity_learning": {
+      "enabled": true,
+      "capture_outcomes": true,
+      "min_confidence": 0.5
+    }
+  },
+  
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      }
+    },
+    "openai": {
+      "options": {
+        "apiKey": "${OPENAI_API_KEY:-}"
+      }
+    }
+  },
+  
+  "sessionMemory": {
+    "enabled": true,
+    "budgets": {
+      "perImpulse": 2000,
+      "total": 10000
+    },
+    "maxImpulsesPerTurn": 5,
+    "memoryManagement": {
+      "maxCacheTokens": 10000,
+      "maxHistoryMessages": 100,
+      "autoCompact": true,
+      "compactThreshold": 2048,
+      "activityStateCleanup": true
+    }
+  },
+  
+  "mcp": {
+    "metabob": {
+      "type": "local",
+      "command": [
+        "metabob-cli",
+        "mcp",
+        "--transport",
+        "stdio"
+      ],
+      "environment": {
+        "METABOB_API_URL": "http://localhost:8080",
+        "METABOB_API_KEY": ""
+      },
+      "enabled": true
+    },
+    "playwright": {
+      "enabled": false,
+      "type": "local",
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ]
+    }
+  }
+}
