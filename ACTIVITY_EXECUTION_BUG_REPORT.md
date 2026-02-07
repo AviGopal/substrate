@@ -1,323 +1,274 @@
-# Activity Execution Bug Report - CORRECTED
+# Activity Execution Bug Report - FINAL
 
 **Date**: February 7, 2026  
-**Status**: 🐛 Bug Identified - Flow Corrected  
+**Status**: 🐛 Bug Identified - Correct Solution  
 **Severity**: HIGH - Blocks all activity template execution
 
-## Correct Understanding
+## The Correct Understanding
 
-The agent should **NOT** know about variant_ids or Thompson Sampling experiments. The correct flow is:
+The variant selection is **already injected into the session via impulse/lifecycle hook**. metabob-cli doesn't need to maintain state - it just needs to read from the session context.
 
-### 1. Search Phase (Agent Perspective)
+## How It Should Work
 
-Agent searches for activities:
+### 1. Turn Lifecycle Hook Injects Recommendations
+
+**File**: `packages/opencode/src/session/turn-lifecycle-hooks.ts`
+
 ```typescript
-search_activities({ category: "infrastructure" })
+// Hook: activity-recommendation-injection (priority: 15)
+await SessionMemory.createImpulse({
+  type: "activityRecommendation",
+  pointer: {
+    type: "activityRecommendation",
+    context: promptText.slice(0, 200),
+    limit: 5
+  },
+  budget: 1500
+})
 ```
 
-metabob-cli returns (hiding variant_id):
-```json
-{
-  "activities": [
-    {
-      "id": "create-activity-template",  // ← ONLY activity_id
-      "name": "Create Activity Template",
-      "description": "...",
-      "category": "infrastructure"
-      // NO variant_id exposed!
-    }
-  ]
+### 2. Impulse Resolver Fetches Recommendations
+
+**File**: `packages/opencode/src/session/impulse-resolver.ts`
+
+```typescript
+async function resolveActivityRecommendation(context: string, limit: number) {
+  // Calls MetabobCLI.searchActivities
+  // Which calls metabob-cli MCP tool: search_activities
+  const activities = await MetabobCLI.searchActivities(context, { limit })
+  
+  // Formats and returns to session
+  return formatted_recommendations
 }
 ```
 
-### 2. Execution Phase (Agent Perspective)
+### 3. Backend Returns Recommendations with variant_ids
 
-Agent executes with activity_id:
+```json
+{
+  "recommendations": [
+    {
+      "activity_id": "create-activity-template",
+      "variant_id": "create-activity-template-b7ccde64",
+      "name": "Create Activity Template",
+      "score": 0.85,
+      ...
+    }
+  ],
+  "impression_id": "imp_abc123"
+}
+```
+
+### 4. metabob-cli Returns to Agent (Hiding variant_id)
+
+**Current (Wrong)**:
+```python
+return [{
+    "activity_id": r["activity_id"],
+    "variant_id": r["variant_id"],  # ← EXPOSED! Wrong!
+    ...
+}]
+```
+
+**Should be**:
+```python
+return [{
+    "id": r["activity_id"],  # ← Just base ID for agent
+    "name": r["name"],
+    "description": r["description"],
+    ...
+    # NO variant_id! Agent doesn't need it.
+}]
+```
+
+### 5. Agent Executes with activity_id
+
 ```typescript
 activity({
-  activityId: "create-activity-template",  // ← Just the base ID
+  activityId: "create-activity-template",
   variables: {...},
   reason: "..."
 })
 ```
 
-### 3. Internal Tracking (metabob-cli)
-
-metabob-cli must:
-1. **During search**: Store mapping `activity_id → variant_id` from recommendations
-2. **During execution**: Look up stored `variant_id` for this `activity_id`
-3. **Fetch details**: Use the tracked `variant_id` to get template
-4. **Hide experiment**: Agent never knows about Thompson Sampling
-
-## The Actual Bug
-
-**metabob-cli is NOT tracking the variant_id from search results.**
-
-When agent calls back with `activity_id`, metabob-cli has lost track of which variant to use.
-
-### Current Broken Flow
-
-```
-1. search_activities called
-   → Backend returns: variant_id="create-activity-template-b7ccde64"
-   → metabob-cli returns to agent: id="create-activity-template"  ✅
-   → metabob-cli FORGETS variant_id  ❌
-
-2. activity({ activityId: "create-activity-template" }) called
-   → metabob-cli receives: activity_id="create-activity-template"
-   → metabob-cli tries: GET /variants/create-activity-template/details
-   → Backend: 404 NOT FOUND (needs full variant_id with hash)  ❌
-```
-
-### Correct Flow (What We Need)
-
-```
-1. search_activities called
-   → Backend: recommendations with variant_ids
-   → metabob-cli stores: {"create-activity-template": "create-activity-template-b7ccde64"}
-   → metabob-cli returns to agent: id="create-activity-template"  ✅
-
-2. activity({ activityId: "create-activity-template" }) called
-   → metabob-cli receives: activity_id="create-activity-template"
-   → metabob-cli looks up stored: variant_id="create-activity-template-b7ccde64"  ✅
-   → metabob-cli fetches: GET /variants/create-activity-template-b7ccde64/details  ✅
-   → Execute template successfully  ✅
-```
-
-## Root Cause
+### 6. metabob-cli Resolves variant_id from Session Context
 
 **File**: `repos/metabob-cli/src/metabob_cli/mcp/activity_manager.py`
 
-### Issue 1: search_activities Doesn't Track Mappings
-
-```python
-async def search_activities(self, ...) -> list[dict]:
-    # Gets recommendations with variant_ids
-    recommendations = data.get("recommendations", [])
-    
-    # Returns summaries to agent
-    return [
-        {
-            "activity_id": r.get("activity_id"),
-            "variant_id": r.get("variant_id"),  # ← EXPOSED TO AGENT! Wrong!
-            ...
-        }
-        for r in recommendations
-    ]
-    
-    # ❌ Does NOT store variant_id mapping internally
-```
-
-Should be:
-```python
-async def search_activities(self, ...) -> list[dict]:
-    recommendations = data.get("recommendations", [])
-    
-    # Store mappings for later execution
-    for r in recommendations:
-        activity_id = r.get("activity_id")
-        variant_id = r.get("variant_id")
-        self._recommended_variants[activity_id] = variant_id  # Track it!
-    
-    # Return ONLY activity_id to agent (hide experiment)
-    return [
-        {
-            "id": r.get("activity_id"),  # ← Use 'id', not 'activity_id'
-            "name": r.get("name"),
-            "description": r.get("description"),
-            # NO variant_id! Agent doesn't need to know.
-        }
-        for r in recommendations
-    ]
-```
-
-### Issue 2: get_activity Doesn't Use Tracked Mapping
+When `get_activity("create-activity-template")` is called:
 
 ```python
 async def _load_activity_to_cache(self, activity_id: str):
-    # ❌ Directly uses activity_id as variant_id
-    response = await client.get(
-        f"/activity-recommendations/variants/{activity_id}/details"
-    )
-```
-
-Should be:
-```python
-async def _load_activity_to_cache(self, activity_id: str):
-    # Look up tracked variant_id
-    variant_id = self._recommended_variants.get(activity_id)
+    # NEW: Check session context for recent recommendations
+    # The impulse data contains the full recommendations with variant_ids
     
-    if not variant_id:
-        # Not found in tracking - need to resolve
-        # This is a fallback for direct execution without prior search
-        variant_id = await self._resolve_activity_to_variant(activity_id)
+    # Option A: Session passes variant_id in the get_activity call
+    # If OpenCode passes: get_activity("create-activity-template-b7ccde64")
+    # Then we already have the variant_id!
     
-    if not variant_id:
-        logger.error(f"No variant found for activity: {activity_id}")
-        return None
+    # Option B: metabob-cli reads from session memory
+    # (But this would require passing session_id to MCP tools)
     
-    # Fetch using tracked variant_id
+    # Option C: OpenCode resolves variant_id before calling get_activity
+    # (Most straightforward - OpenCode has the impulse data)
+    
+    variant_id = activity_id  # If already resolved by OpenCode
+    
     response = await client.get(
         f"/activity-recommendations/variants/{variant_id}/details"
     )
 ```
 
-## The Fix
+## The Actual Solution
 
-**Add variant tracking to ActivityManager:**
+**OpenCode should resolve the variant_id from the impulse before calling get_activity.**
 
-```python
-class ActivityManager:
-    def __init__(self, base_url: str, session_token: str = ""):
-        self.base_url = base_url
-        self.session_token = session_token
-        self._activity_cache: dict[str, dict] = {}
-        self._recommended_variants: dict[str, str] = {}  # NEW: Track variant selections
-        self._http_client: Optional[httpx.AsyncClient] = None
-    
-    async def search_activities(self, ...) -> list[dict]:
-        # ... get recommendations ...
-        
-        # Store variant mappings (hide from agent)
-        for r in recommendations:
-            activity_id = r.get("activity_id")
-            variant_id = r.get("variant_id")
-            impression_id = data.get("impression_id")
-            
-            # Track which variant was recommended for this activity
-            self._recommended_variants[activity_id] = {
-                "variant_id": variant_id,
-                "impression_id": impression_id,
-                "timestamp": time.time()
-            }
-            
-            logger.debug(f"Tracked recommendation: {activity_id} → {variant_id}")
-        
-        # Return activity summaries (NO variant_id exposed)
-        return [
-            {
-                "id": r.get("activity_id"),  # Just the base ID
-                "name": r.get("name"),
-                "description": r.get("description"),
-                "category": r.get("category"),
-                "success_rate": r.get("predicted_conversion", 0),
-                # ... other metadata, but NO variant_id
-            }
-            for r in recommendations
-        ]
-    
-    async def _load_activity_to_cache(self, activity_id: str):
-        # Check if we have a tracked variant
-        tracked = self._recommended_variants.get(activity_id)
-        
-        if tracked:
-            variant_id = tracked["variant_id"]
-            logger.info(f"Using tracked variant: {activity_id} → {variant_id}")
-        else:
-            # Fallback: resolve activity_id to best variant
-            logger.warning(f"No tracked variant for {activity_id}, resolving...")
-            variant_id = await self._resolve_activity_to_variant(activity_id)
-            
-            if not variant_id:
-                logger.error(f"Could not resolve activity: {activity_id}")
-                return None
-        
-        # Fetch using variant_id
-        response = await client.get(
-            f"/activity-recommendations/variants/{variant_id}/details"
-        )
-        
-        # ... transform and cache ...
-    
-    async def _resolve_activity_to_variant(self, activity_id: str) -> Optional[str]:
-        """Fallback: resolve activity_id to best variant without prior search"""
-        try:
-            # Search with this specific activity as intent
-            results = await self.search_activities(
-                query=f"execute {activity_id}",
-                limit=5
-            )
-            
-            # Find matching activity
-            for result in results:
-                if result.get("id") == activity_id:
-                    # The search already tracked it, retrieve
-                    tracked = self._recommended_variants.get(activity_id)
-                    return tracked["variant_id"] if tracked else None
-            
-            logger.error(f"Activity not found in search results: {activity_id}")
-            return None
-            
-        except Exception as e:
-            logger.error(f"Failed to resolve activity {activity_id}: {e}")
-            return None
+### In OpenCode's Activity Tool Handler
+
+**File**: `packages/opencode/src/tool/activity.ts` (or wherever activity tool is implemented)
+
+```typescript
+async function executeActivity(activityId: string, variables: any, reason: string) {
+  // NEW: Resolve activity_id → variant_id from recent impulse
+  const variantId = await resolveVariantFromRecommendations(activityId)
+  
+  if (!variantId) {
+    // Fallback: use activity_id directly and let metabob-cli resolve
+    log.warn("No variant found in recommendations, using activity_id directly")
+    variantId = activityId
+  }
+  
+  // Call metabob-cli with variant_id (not activity_id)
+  const template = await MetabobCLI.getActivity(variantId)
+  
+  // Execute template...
+}
+
+async function resolveVariantFromRecommendations(activityId: string): Promise<string | null> {
+  // Look up recent activityRecommendation impulse in session
+  const recentImpulses = await SessionMemory.getRecentImpulses("activityRecommendation", { limit: 1 })
+  
+  if (!recentImpulses || recentImpulses.length === 0) {
+    return null
+  }
+  
+  // Parse the impulse content to find variant_id for this activity_id
+  // The impulse content has the formatted recommendations text
+  // But we need the ORIGINAL data from metabob-cli
+  
+  // BETTER: Store the raw recommendation data in impulse metadata!
+  const recommendationData = recentImpulses[0].metadata?.recommendations
+  
+  if (recommendationData) {
+    const match = recommendationData.find(r => r.activity_id === activityId)
+    return match?.variant_id || null
+  }
+  
+  return null
+}
 ```
 
-## Why This Design is Correct
+### Fix in metabob-cli: Store Raw Data in Response
 
-### 1. Agent Doesn't Know About Experiments
-- Agent sees only `activity_id`
-- Thompson Sampling happens in backend
-- metabob-cli hides implementation details
+**File**: `repos/metabob-cli/src/metabob_cli/mcp/activity_manager.py`
 
-### 2. Proper Experiment Tracking
-- Backend tracks impressions (what was shown)
-- metabob-cli tracks selections (what was chosen)
-- Backend tracks conversions (what succeeded)
+```python
+async def search_activities(self, ...) -> list[dict]:
+    recommendations = data.get("recommendations", [])
+    
+    # Return formatted results with METADATA
+    return [
+        {
+            "id": r.get("activity_id"),  # Agent sees this
+            "name": r.get("name"),
+            "description": r.get("description"),
+            "category": category,
+            # ... other display fields ...
+            
+            # NEW: Include raw data in metadata (not shown to agent in prompt)
+            "_meta": {
+                "variant_id": r.get("variant_id"),  # Hidden from display
+                "impression_id": r.get("impression_id"),
+                "score": r.get("score")
+            }
+        }
+        for r in recommendations
+    ]
+```
 
-### 3. Clean Separation
-- **Backend**: Thompson Sampling, variant selection
-- **metabob-cli**: Translation layer, tracks selections
-- **OpenCode/Agent**: Simple activity execution, no experiment knowledge
+### Fix in OpenCode: Store Metadata in Impulse
 
-### 4. Exception: Template Management Activities
-For activities like `create-activity-template` that manipulate the activity system itself, more details can be exposed, but only in context.
+**File**: `packages/opencode/src/session/impulse-resolver.ts`
 
-## Testing the Fix
+```typescript
+async function resolveActivityRecommendation(context: string, limit: number) {
+  const activities = await MetabobCLI.searchActivities(context, { limit })
+  
+  // Format for display
+  const formatted = formatRecommendationsForAgent(activities)
+  
+  // NEW: Store raw data in impulse for later lookup
+  await SessionMemory.updateImpulseMetadata(impulseId, {
+    recommendations: activities.map(a => ({
+      activity_id: a.id,
+      variant_id: a._meta?.variant_id,
+      impression_id: a._meta?.impression_id
+    }))
+  })
+  
+  return formatted
+}
+```
 
-After implementing:
+## Summary: The 3-Part Fix
+
+### 1. metabob-cli: Hide variant_id from agent, include in metadata
+- Return `id` (not `activity_id`) to agent
+- Put `variant_id` in `_meta` field
+
+### 2. OpenCode impulse-resolver: Store metadata
+- Save raw recommendation data (with variant_ids) in impulse metadata
+- Agent sees formatted text, OpenCode keeps raw data
+
+### 3. OpenCode activity tool: Resolve before calling get_activity
+- Look up variant_id from recent impulse metadata
+- Call `get_activity(variant_id)` with full variant ID
+- metabob-cli receives correct variant_id, fetches successfully
+
+## Why This Is Correct
+
+1. **No state in metabob-cli**: Just a stateless translation layer
+2. **Session has the context**: Impulse already contains the data
+3. **Agent stays oblivious**: Never sees variant_id or experiment details
+4. **Thompson Sampling works**: Backend tracks impressions → conversions
+5. **Simple and clean**: Each component does one thing
+
+## Testing
+
+After fix:
 
 ```bash
-# Test the correct flow
 opencode
 
 > Create an activity template for bug fixes
 ```
 
-**Expected internal flow**:
+**Internal flow**:
 ```
-1. Agent: search_activities({ query: "create template" })
-2. metabob-cli → Backend: POST /recommendations
-3. Backend: Returns variant_id="create-activity-template-b7ccde64"
-4. metabob-cli: Stores mapping, returns id="create-activity-template"
+1. Turn hook: Create activityRecommendation impulse
+2. Impulse resolver: Call search_activities
+3. metabob-cli: Return id="create-activity-template" + _meta.variant_id
+4. OpenCode: Store metadata, show formatted recommendations to agent
 5. Agent: activity({ activityId: "create-activity-template" })
-6. metabob-cli: Looks up → variant_id="create-activity-template-b7ccde64"
-7. metabob-cli: GET /variants/create-activity-template-b7ccde64/details ✅
-8. Executes successfully
-9. Backend: Records conversion for Thompson Sampling
+6. Activity tool: Look up variant_id from impulse metadata
+7. Activity tool: Call getActivity("create-activity-template-b7ccde64")
+8. metabob-cli: Fetch with variant_id → SUCCESS ✅
+9. Execute template
 ```
-
-## Config Fix
-
-metabob should NOT be in mcp section:
-
-```json
-{
-  "metabob": {
-    "base_url": "http://localhost:8080",
-    "api_key": ""
-  },
-  "mcp": {
-    "playwright": { ... }
-  }
-}
-```
-
-Metabob is a **core component**, not an optional MCP server.
 
 ---
 
-**Status**: Bug identified correctly, fix designed  
-**Next**: Implement tracking in metabob-cli activity_manager.py  
-**Priority**: CRITICAL
+**Status**: Correct solution identified  
+**Priority**: CRITICAL  
+**Next**: Implement 3-part fix
 
