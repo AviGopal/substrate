@@ -1,5 +1,45 @@
 # Metabob System Documentation Index
 
+**Purpose**: Central index for all system documentation  
+**Maintained by**: Documentation agent (background updates and annotations)  
+**Last Updated**: 2026-02-08
+
+---
+
+## 🔴 ACTIVE: Schema Alignment (Phase 1)
+
+### Analysis & Root Cause
+- **ALGORITHMIC_VALIDATION_STRATEGY.md** - Evidence-based validation approach
+- **ALGORITHMIC_VALIDATION_FINDINGS.md** - Validation results with external evidence
+- **SCHEMA_MISMATCH_ROOT_CAUSE.md** - Algorithmic proof of proto/backend divergence
+- **CORRECT_ARCHITECTURE_DESIGN.md** - Design intent: impulse provenance & learning
+
+### Implementation Guides
+- **COMPLETE_SOLUTION_SUMMARY.md** - 4-phase plan (10 days total)
+- **SCHEMA_MISMATCH_ACTION_PLAN.md** - Immediate fixes with code
+- **TASK_BREAKDOWN_PHASE1.md** - Detailed specs for 4 tasks (3.5 hours)
+- **DELEGATION_STRATEGY.md** - How to assign and track tasks
+
+### Observability & Validation
+- **EXECUTION_OBSERVABILITY_PROPOSAL.md** - Stage-based logging design
+- **OBSERVABILITY_SOLUTION_SUMMARY.md** - Breadcrumb system (complete)
+- **BREADCRUMB_QUICK_START.md** - Copy-paste implementation guide
+
+### Task Execution Logs (Per-Task Records)
+- **TASK_PHASE1_TASK1_LOG.md** - Proto Pydantic models → 📝 Not started
+- **TASK_PHASE1_TASK2_LOG.md** - API endpoint updates → 📝 Not started
+- **TASK_PHASE1_TASK3_LOG.md** - Migration script → 📝 Not started
+- **TASK_PHASE1_TASK4_LOG.md** - E2E validation → 📝 Not started
+
+**Task Log Purpose**: Each delegated task records its execution in detail:
+- Implementation decisions and reasoning
+- Issues encountered and solutions
+- Files modified with explanations
+- Validation results with evidence
+- Notes for documentation agent about doc issues
+
+---
+
 ## Configuration Simplification
 - **METABOB_CONFIG_SIMPLIFICATION.md** - Initial analysis of redundant config fields
 - **CONFIG_SIMPLIFICATION_COMPLETE.md** - Implementation details and before/after
