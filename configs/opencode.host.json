@@ -9,6 +9,7 @@
     "cli_path": "metabob-cli",
     "base_url": "METABOB_API_URL_PLACEHOLDER",
     "api_key": "METABOB_API_KEY_PLACEHOLDER",
+    "project_id": "exp-repo-dev",
     "auto_inject": true,
     "headless": true,
     "max_issues": 5,

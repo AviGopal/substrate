@@ -262,12 +262,12 @@ cmd_config() {
                         else
                             log_info "Testing Metabob connectivity: $metabob_url"
                             
-                            # Test with timeout
-                            if curl -s --max-time 5 "$metabob_url/status" >/dev/null 2>&1; then
+                            # Test with timeout (backend health endpoint is /)
+                            if curl -s --max-time 5 "$metabob_url/" >/dev/null 2>&1; then
                                 log_success "Metabob backend reachable at $metabob_url"
                             else
                                 log_warn "Cannot reach Metabob at $metabob_url"
-                                echo "  Backend may not be running. Start with: ./devbob backend"
+                                echo "  Backend may not be running. Start with: ./devbob backend (full mode)"
                             fi
                         fi
                     else
@@ -460,7 +460,8 @@ cmd_start() {
     log_header "Service Endpoints:"
     echo ""
     echo "  Backend Services:"
-    echo "    Metabob API:      http://localhost:8080/status"
+    echo "    Metabob API:      http://localhost:8080/"
+    echo "    API Docs:         http://localhost:8080/docs"
     echo "    SurrealDB:        http://localhost:8000"
     echo "    Redis:            redis://localhost:6379"
     echo ""
@@ -522,6 +523,18 @@ cmd_logs() {
 
 cmd_backend() {
     check_env
+    
+    # Backend services only available in full mode
+    if [ "$COMPOSE_MODE" = "quick" ]; then
+        log_error "Backend command only available in 'full' mode"
+        echo ""
+        echo "Quick mode expects backend to already be running."
+        echo "Switch to full mode:"
+        echo "  export DEVBOB_MODE=full"
+        echo "  ./devbob backend"
+        return 1
+    fi
+    
     ensure_networks
     
     log_info "Starting backend services only..."
@@ -533,7 +546,7 @@ cmd_backend() {
     
     log_success "Backend services started!"
     echo ""
-    echo "  Metabob API:  http://localhost:8080/status"
+    echo "  Metabob API:  http://localhost:8080/"
     echo "  SurrealDB:    http://localhost:8000"
     echo "  Redis:        redis://localhost:6379"
 }

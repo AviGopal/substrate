@@ -1,25 +1,6 @@
 {
-  "$schema": "https://opencode.ai/config.json",
   "share": "disabled",
   "model": "anthropic/claude-sonnet-4-5",
-  
-  "metabob": {
-    "base_url": "http://api-server-dev:8080",
-    "api_key": "",
-    "cli_path": "metabob-cli",
-    "enable_cli_mcp": true,
-    "max_issues": 5,
-    "min_severity": "MEDIUM",
-    "template_auto_registration": {
-      "behavior": "best-effort",
-      "strategy": "on-create"
-    },
-    "activity_learning": {
-      "recommendation_threshold": 0.7,
-      "min_executions_for_learning": 1
-    }
-  },
-  
   "provider": {
     "anthropic": {
       "options": {
@@ -28,11 +9,31 @@
     },
     "openai": {
       "options": {
-        "apiKey": "${OPENAI_API_KEY:-}"
+        "apiKey": ""
       }
     }
   },
-  
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": false
+    }
+  },
+  "metabob": {
+    "cli_path": "metabob-cli",
+    "api_key": "mb_Y99iQNMiycAlpkQamp0dhnU_t5e0ds0mkwDrU7g9bxs",
+    "base_url": "http://host.docker.internal:8080",
+    "state_directory": ".metabob",
+    "max_issues": 5,
+    "min_severity": "MEDIUM",
+    "cache_timeout": 300,
+    "context_budget_tokens": 10000,
+    "subagent_token_budget": 5000
+  },
   "sessionMemory": {
     "enabled": true,
     "budgets": {
@@ -45,18 +46,15 @@
       "maxHistoryMessages": 100,
       "autoCompact": true,
       "compactThreshold": 2048,
-      "activityStateCleanup": true
+      "activityStateCleanup": true,
+      "cleanupIntervalMinutes": 5,
+      "impulseMaxIdleMinutes": 10,
+      "sessionMaxIdleMinutes": 60,
+      "maxImpulseCache": 1000,
+      "maxSessionsTracked": 100,
+      "memoryThresholdMB": 1024,
+      "forceGcThresholdMB": 2048
     }
   },
-  
-  "mcp": {
-    "playwright": {
-      "enabled": false,
-      "type": "local",
-      "command": [
-        "npx",
-        "@playwright/mcp@latest"
-      ]
-    }
-  }
+  "$schema": "https://opencode.ai/config.json"
 }

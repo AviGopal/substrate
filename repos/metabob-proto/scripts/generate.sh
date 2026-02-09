@@ -30,6 +30,21 @@ protoc \
   --proto_path=proto \
   proto/metabob/**/*.proto
 
+# Generate TypeScript code
+echo "Generating TypeScript code..."
+protoc \
+  --plugin=./node_modules/.bin/protoc-gen-ts_proto \
+  --ts_proto_out=gen/typescript \
+  --ts_proto_opt=esModuleInterop=true \
+  --ts_proto_opt=forceLong=long \
+  --ts_proto_opt=useOptionals=messages \
+  --ts_proto_opt=useDate=true \
+  --ts_proto_opt=stringEnums=true \
+  --ts_proto_opt=outputClientImpl=false \
+  --ts_proto_opt=outputServices=false \
+  --proto_path=proto \
+  proto/metabob/**/*.proto
+
 # Create __init__.py files for Python package
 echo "Creating Python package structure..."
 for dir in gen/python gen/python/metabob gen/python/metabob/activity gen/python/metabob/auth gen/python/metabob/common gen/python/metabob/learning gen/python/metabob/metrics gen/python/metabob/session; do
@@ -145,3 +160,4 @@ echo ""
 echo "Generated files:"
 find gen/python -name "*.py" | wc -l | xargs echo "  Python files:"
 find gen/python -name "*.pyi" | wc -l | xargs echo "  Type stub files:"
+find gen/typescript -name "*.ts" | wc -l | xargs echo "  TypeScript files:"

@@ -6,12 +6,13 @@ services:
     container_name: devbob-opencode
     image: devbob:latest
     ports:
-      - "3004:3004"
+      - "3004:3004"  # ACP server
+      - "3100:3100"  # metabob-cli dashboard
     volumes:
       - ./repos/metabob-opencode:/workspace
       - devbob_config:/config
       # Mount the devbob config file to a path the container can find
-      - ./configs/opencode.devbob.json:/config/opencode.devbob.json:ro
+      - ./configs/opencode.devbob.json:/config/opencode.devbob.json
       # Mount updated entrypoint script (overrides baked-in version)
       - ./configs/devbob-entrypoint.sh:/usr/local/bin/devbob-entrypoint.sh:ro
     environment:
