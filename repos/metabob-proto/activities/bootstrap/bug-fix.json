@@ -48,7 +48,9 @@
           "grep"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     },
     {
       "id": "locate-source",
@@ -94,7 +96,9 @@
           "glob"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     },
     {
       "id": "implement-fix",
@@ -145,7 +149,9 @@
           "write"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     },
     {
       "id": "verify-fix",
@@ -190,7 +196,9 @@
           "read"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     }
   ],
   "variables": {

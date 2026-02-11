@@ -49,7 +49,9 @@
           "glob"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     },
     {
       "id": "design-approach",
@@ -95,7 +97,9 @@
           "glob"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     },
     {
       "id": "implement-core",
@@ -147,7 +151,9 @@
           "bash"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     },
     {
       "id": "integrate",
@@ -194,7 +200,9 @@
           "write"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     },
     {
       "id": "test-feature",
@@ -240,7 +248,9 @@
           "write"
         ],
         "disabled": []
-      }
+      },
+      "subagent": "general",
+      "impulse_refs": []
     }
   ],
   "variables": {
