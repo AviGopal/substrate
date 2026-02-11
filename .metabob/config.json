@@ -1,7 +1,7 @@
 {
-    "base_url": "http://localhost:8080",
-    "api_key": "",
-    "state_directory": ".metabob",
-    "watch_files": true,
-    "batch_size": 5
+  "base_url": "http://localhost:8080",
+  "api_key": "mb_uYl7DfW-II6w-I9rR2-94iDKn1Hdu4QLm0wbFO9ePq8",
+  "state_directory": ".metabob",
+  "watch_files": true,
+  "batch_size": 5
 }
