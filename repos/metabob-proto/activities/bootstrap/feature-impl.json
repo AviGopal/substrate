@@ -4,7 +4,18 @@
   "variant_name": "v1-baseline",
   "version": 1,
   "description": "Implement a new feature following project conventions",
-  "task_steps": [
+  "variables": {
+    "feature_name": "",
+    "feature_description": "",
+    "target_location": ""
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 25000,
+  "expected_duration_ms": 300000,
+  "expected_cost": 0.4,
+  "expected_quality_score": 0.8,
+  "status": "active",
+  "tasks": [
     {
       "id": "understand-requirements",
       "description": "Clarify what the feature should do and its acceptance criteria",
@@ -252,16 +263,5 @@
       "subagent": "general",
       "impulse_refs": []
     }
-  ],
-  "variables": {
-    "feature_name": "",
-    "feature_description": "",
-    "target_location": ""
-  },
-  "prompt_strategy": "guided",
-  "context_budget_tokens": 25000,
-  "expected_duration_ms": 300000,
-  "expected_cost": 0.4,
-  "expected_quality_score": 0.8,
-  "status": "active"
+  ]
 }

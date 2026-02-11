@@ -4,87 +4,6 @@
   "variant_name": "v1-baseline",
   "version": 1,
   "description": "Process deferred improvement tasks created from failed activity executions",
-  "task_steps": [
-    {
-      "step_id": "load-task-context",
-      "title": "Load Task Context",
-      "description": "Retrieve and analyze the boredom task details and associated debug data",
-      "tools": ["read_file"],
-      "guidance": [
-        "Load the full task context including failure reason and debug data",
-        "Review metabob annotations captured at time of failure",
-        "Understand what the original activity was trying to accomplish",
-        "Identify the specific failure point in the execution flow"
-      ]
-    },
-    {
-      "step_id": "analyze-root-cause",
-      "title": "Analyze Root Cause",
-      "description": "Determine the underlying cause of the failure using debug data",
-      "tools": ["read_file", "grep_search"],
-      "guidance": [
-        "Review the captured logs and stack trace",
-        "Analyze the execution steps to find where things went wrong",
-        "Check environment variables for configuration issues",
-        "Look for patterns that might indicate systemic problems",
-        "Consider if the failure was due to missing context, unclear guidance, or code issues"
-      ]
-    },
-    {
-      "step_id": "evaluate-suggestions",
-      "title": "Evaluate Suggested Actions",
-      "description": "Review and prioritize the automatically suggested actions",
-      "tools": [],
-      "guidance": [
-        "Assess each suggested action for feasibility and impact",
-        "Prioritize actions by confidence score and expected improvement",
-        "Consider if multiple actions should be combined",
-        "Identify any additional actions not suggested automatically",
-        "Validate that suggested file paths and targets are correct"
-      ]
-    },
-    {
-      "step_id": "implement-fix",
-      "title": "Implement the Fix",
-      "description": "Make the necessary changes to resolve the issue",
-      "tools": ["read_file", "edit_file", "create_file"],
-      "guidance": [
-        "For template-update tasks: Modify the activity template JSON",
-        "For validator-check tasks: Update validation rules to match expected behavior",
-        "For data-flow-test tasks: Fix connection or API issues",
-        "For code-robustness tasks: Add error handling and edge case coverage",
-        "For metric-calibration tasks: Update expected metrics based on actuals",
-        "For guidance-refinement tasks: Improve task guidance clarity",
-        "Document what changes were made and why"
-      ]
-    },
-    {
-      "step_id": "validate-fix",
-      "title": "Validate the Fix",
-      "description": "Ensure the fix resolves the original issue without introducing new problems",
-      "tools": ["run_terminal", "read_file"],
-      "guidance": [
-        "Run any relevant tests or validation commands",
-        "Check that the modified files have valid syntax",
-        "Verify the fix addresses the root cause identified earlier",
-        "Consider edge cases that might be affected by the change",
-        "Ensure no sensitive data was accidentally exposed"
-      ]
-    },
-    {
-      "step_id": "record-outcome",
-      "title": "Record Outcome",
-      "description": "Document the fix and record metrics for future learning",
-      "tools": [],
-      "guidance": [
-        "Complete the boredom task with success/failure status",
-        "List all changes that were applied",
-        "Note any tests that were run and their results",
-        "Add any relevant notes for future reference",
-        "If the fix revealed additional issues, create follow-up boredom tasks"
-      ]
-    }
-  ],
   "variables": {
     "task_id": "",
     "task_type": "",
@@ -117,5 +36,272 @@
       },
       "createDiagnosticImpulse": true
     }
-  }
+  },
+  "tasks": [
+    {
+      "id": "load-task-context",
+      "subagent": "general",
+      "description": "Load Task Context: Retrieve and analyze the boredom task details and associated debug data",
+      "dependencies": [],
+      "guidance": [
+        "Load the full task context including failure reason and debug data",
+        "Review metabob annotations captured at time of failure",
+        "Understand what the original activity was trying to accomplish",
+        "Identify the specific failure point in the execution flow"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Load Task Context: Retrieve and analyze the boredom task details and associated debug data",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "read_file"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "analyze-root-cause",
+      "subagent": "general",
+      "description": "Analyze Root Cause: Determine the underlying cause of the failure using debug data",
+      "dependencies": [],
+      "guidance": [
+        "Review the captured logs and stack trace",
+        "Analyze the execution steps to find where things went wrong",
+        "Check environment variables for configuration issues",
+        "Look for patterns that might indicate systemic problems",
+        "Consider if the failure was due to missing context, unclear guidance, or code issues"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Analyze Root Cause: Determine the underlying cause of the failure using debug data",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "read_file",
+          "grep_search"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "evaluate-suggestions",
+      "subagent": "general",
+      "description": "Evaluate Suggested Actions: Review and prioritize the automatically suggested actions",
+      "dependencies": [],
+      "guidance": [
+        "Assess each suggested action for feasibility and impact",
+        "Prioritize actions by confidence score and expected improvement",
+        "Consider if multiple actions should be combined",
+        "Identify any additional actions not suggested automatically",
+        "Validate that suggested file paths and targets are correct"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Evaluate Suggested Actions: Review and prioritize the automatically suggested actions",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "implement-fix",
+      "subagent": "general",
+      "description": "Implement the Fix: Make the necessary changes to resolve the issue",
+      "dependencies": [],
+      "guidance": [
+        "For template-update tasks: Modify the activity template JSON",
+        "For validator-check tasks: Update validation rules to match expected behavior",
+        "For data-flow-test tasks: Fix connection or API issues",
+        "For code-robustness tasks: Add error handling and edge case coverage",
+        "For metric-calibration tasks: Update expected metrics based on actuals",
+        "For guidance-refinement tasks: Improve task guidance clarity",
+        "Document what changes were made and why"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Implement the Fix: Make the necessary changes to resolve the issue",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "read_file",
+          "edit_file",
+          "create_file"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "validate-fix",
+      "subagent": "general",
+      "description": "Validate the Fix: Ensure the fix resolves the original issue without introducing new problems",
+      "dependencies": [],
+      "guidance": [
+        "Run any relevant tests or validation commands",
+        "Check that the modified files have valid syntax",
+        "Verify the fix addresses the root cause identified earlier",
+        "Consider edge cases that might be affected by the change",
+        "Ensure no sensitive data was accidentally exposed"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Validate the Fix: Ensure the fix resolves the original issue without introducing new problems",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "run_terminal",
+          "read_file"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "record-outcome",
+      "subagent": "general",
+      "description": "Record Outcome: Document the fix and record metrics for future learning",
+      "dependencies": [],
+      "guidance": [
+        "Complete the boredom task with success/failure status",
+        "List all changes that were applied",
+        "Note any tests that were run and their results",
+        "Add any relevant notes for future reference",
+        "If the fix revealed additional issues, create follow-up boredom tasks"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Record Outcome: Document the fix and record metrics for future learning",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [],
+        "optional": [],
+        "disabled": []
+      }
+    }
+  ]
 }

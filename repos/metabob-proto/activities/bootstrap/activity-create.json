@@ -4,63 +4,6 @@
   "variant_name": "v1-baseline",
   "version": 1,
   "description": "Create a new activity template from a successful interaction pattern",
-  "task_steps": [
-    {
-      "step_id": "identify-pattern",
-      "title": "Identify Interaction Pattern",
-      "description": "Analyze successful conversations to extract reusable patterns",
-      "tools": ["read_file", "grep_search"],
-      "guidance": [
-        "Look for recurring user intents that led to successful outcomes",
-        "Identify the key steps that made the interaction effective",
-        "Note which tools and context were most useful"
-      ]
-    },
-    {
-      "step_id": "define-scope",
-      "title": "Define Activity Scope",
-      "description": "Determine what the activity should and should not cover",
-      "tools": [],
-      "guidance": [
-        "Keep activities focused on a single goal",
-        "Avoid overlapping with existing activities",
-        "Consider edge cases and failure modes"
-      ]
-    },
-    {
-      "step_id": "design-steps",
-      "title": "Design Task Steps",
-      "description": "Break down the activity into discrete, measurable steps",
-      "tools": ["read_file"],
-      "guidance": [
-        "Each step should have a clear completion criteria",
-        "Order steps logically with dependencies",
-        "Include appropriate guidance for agent behavior"
-      ]
-    },
-    {
-      "step_id": "create-template",
-      "title": "Create Activity Template",
-      "description": "Write the activity JSON following the schema",
-      "tools": ["create_file", "read_file"],
-      "guidance": [
-        "Follow the ActivityVariant schema exactly",
-        "Set realistic cost and duration estimates",
-        "Start with status 'testing' for new activities"
-      ]
-    },
-    {
-      "step_id": "validate-template",
-      "title": "Validate Template",
-      "description": "Ensure the template is valid and complete",
-      "tools": ["run_terminal"],
-      "guidance": [
-        "Validate JSON syntax",
-        "Check all required fields are present",
-        "Verify step_ids are unique"
-      ]
-    }
-  ],
   "variables": {
     "source_pattern": "",
     "activity_name": "",
@@ -69,7 +12,7 @@
   "prompt_strategy": "guided",
   "context_budget_tokens": 15000,
   "expected_duration_ms": 180000,
-  "expected_cost": 0.20,
+  "expected_cost": 0.2,
   "expected_quality_score": 0.75,
   "status": "active",
   "hooks": {
@@ -100,5 +43,217 @@
       "createDiagnosticImpulse": true,
       "createBoredomTask": true
     }
-  }
+  },
+  "tasks": [
+    {
+      "id": "identify-pattern",
+      "subagent": "general",
+      "description": "Identify Interaction Pattern: Analyze successful conversations to extract reusable patterns",
+      "dependencies": [],
+      "guidance": [
+        "Look for recurring user intents that led to successful outcomes",
+        "Identify the key steps that made the interaction effective",
+        "Note which tools and context were most useful"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Identify Interaction Pattern: Analyze successful conversations to extract reusable patterns",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "read_file",
+          "grep_search"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "define-scope",
+      "subagent": "general",
+      "description": "Define Activity Scope: Determine what the activity should and should not cover",
+      "dependencies": [],
+      "guidance": [
+        "Keep activities focused on a single goal",
+        "Avoid overlapping with existing activities",
+        "Consider edge cases and failure modes"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Define Activity Scope: Determine what the activity should and should not cover",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "design-steps",
+      "subagent": "general",
+      "description": "Design Task Steps: Break down the activity into discrete, measurable steps",
+      "dependencies": [],
+      "guidance": [
+        "Each step should have a clear completion criteria",
+        "Order steps logically with dependencies",
+        "Include appropriate guidance for agent behavior"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Design Task Steps: Break down the activity into discrete, measurable steps",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "read_file"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "create-template",
+      "subagent": "general",
+      "description": "Create Activity Template: Write the activity JSON following the schema",
+      "dependencies": [],
+      "guidance": [
+        "Follow the ActivityVariant schema exactly",
+        "Set realistic cost and duration estimates",
+        "Start with status 'testing' for new activities"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Create Activity Template: Write the activity JSON following the schema",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "create_file",
+          "read_file"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "validate-template",
+      "subagent": "general",
+      "description": "Validate Template: Ensure the template is valid and complete",
+      "dependencies": [],
+      "guidance": [
+        "Validate JSON syntax",
+        "Check all required fields are present",
+        "Verify step_ids are unique"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Validate Template: Ensure the template is valid and complete",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [
+          "run_terminal"
+        ],
+        "optional": [],
+        "disabled": []
+      }
+    }
+  ]
 }

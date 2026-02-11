@@ -4,7 +4,18 @@
   "variant_name": "v1-baseline",
   "version": 1,
   "description": "Diagnose and fix a reported bug with proper testing",
-  "task_steps": [
+  "variables": {
+    "bug_description": "",
+    "error_message": "",
+    "affected_files": []
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 20000,
+  "expected_duration_ms": 180000,
+  "expected_cost": 0.25,
+  "expected_quality_score": 0.85,
+  "status": "active",
+  "tasks": [
     {
       "id": "understand-bug",
       "description": "Gather information about the bug from user description, logs, or error messages",
@@ -200,16 +211,5 @@
       "subagent": "general",
       "impulse_refs": []
     }
-  ],
-  "variables": {
-    "bug_description": "",
-    "error_message": "",
-    "affected_files": []
-  },
-  "prompt_strategy": "guided",
-  "context_budget_tokens": 20000,
-  "expected_duration_ms": 180000,
-  "expected_cost": 0.25,
-  "expected_quality_score": 0.85,
-  "status": "active"
+  ]
 }
