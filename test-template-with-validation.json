@@ -1,0 +1,133 @@
+{
+  "name": "test-validation-demo",
+  "description": "Template to demonstrate validation and failure handling",
+  "category": "feature",
+  "variables": {
+    "feature_name": {
+      "type": "string",
+      "required": true,
+      "description": "Name of the feature to implement"
+    },
+    "should_fail": {
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Whether to intentionally fail validation"
+    }
+  },
+  "contextRequirements": [
+    {
+      "type": "codebase_context",
+      "required": true
+    }
+  ],
+  "tasks": [
+    {
+      "id": "create-files",
+      "subagent": "general",
+      "description": "Create required files for {{feature_name}}",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create the following files for feature: {{feature_name}}\n\n1. src/{{feature_name}}.ts - Implementation file\n2. tests/{{feature_name}}.test.ts - Test file\n3. README.md - Documentation\n\nEach file must exist and contain the feature name.",
+        "max_tokens": 4000,
+        "compression_strategy": "filter",
+        "variables": ["feature_name"]
+      },
+      "validation": {
+        "required_files": [
+          "src/*.ts",
+          "tests/*.test.ts",
+          "README.md"
+        ],
+        "required_patterns": [
+          "{{feature_name}}"
+        ],
+        "forbidden_patterns": [
+          "TODO",
+          "FIXME",
+          "hack"
+        ],
+        "commands": [
+          {
+            "command": "ls src/*.ts",
+            "expected_exit_code": 0,
+            "timeout_seconds": 5
+          },
+          {
+            "command": "ls tests/*.test.ts",
+            "expected_exit_code": 0,
+            "timeout_seconds": 5
+          },
+          {
+            "command": "test -f README.md",
+            "expected_exit_code": 0,
+            "timeout_seconds": 5
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "Previous attempt failed validation. Fix the issues:\n- Ensure all required files exist\n- Remove any TODO/FIXME comments\n- Include feature name in all files"
+      }
+    },
+    {
+      "id": "run-tests",
+      "subagent": "general",
+      "description": "Run tests and ensure they pass",
+      "dependencies": ["create-files"],
+      "prompt": {
+        "template": "Run the tests for {{feature_name}}.\n\nIf should_fail={{should_fail}}, intentionally make a test fail to demonstrate failure handling.\n\nOtherwise, ensure all tests pass.",
+        "max_tokens": 4000,
+        "compression_strategy": "filter",
+        "variables": ["feature_name", "should_fail"]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "npm test -- --testPathPattern={{feature_name}}",
+            "expected_exit_code": 0,
+            "timeout_seconds": 30
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "Tests failed. Debug and fix:\n1. Check test output for errors\n2. Fix implementation bugs\n3. Re-run tests"
+      }
+    },
+    {
+      "id": "typecheck",
+      "subagent": "general",
+      "description": "Run TypeScript type checking",
+      "dependencies": ["create-files"],
+      "prompt": {
+        "template": "Run TypeScript type checking on {{feature_name}} files.",
+        "max_tokens": 2000,
+        "compression_strategy": "filter",
+        "variables": ["feature_name"]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "tsc --noEmit src/{{feature_name}}.ts",
+            "expected_exit_code": 0,
+            "timeout_seconds": 15
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "Type errors found. Fix all TypeScript errors and re-run tsc."
+      }
+    }
+  ]
+}

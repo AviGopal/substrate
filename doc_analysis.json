@@ -1,0 +1,1323 @@
+{
+  "stats": {
+    "total_files": 536,
+    "total_size": 6010511,
+    "avg_size": 11213.639925373134,
+    "recent_count": 497,
+    "medium_count": 4,
+    "stale_count": 31,
+    "obsolete_count": 4
+  },
+  "recent": [
+    {
+      "path": "./ACTIVITY_RELIABILITY_SOLUTION.md",
+      "timestamp": 1770499467,
+      "size": 18886,
+      "heading": "Activity System Reliability - Complete Solution"
+    },
+    {
+      "path": "./ACTIVITY_EXECUTION_FIX_REPORT.md",
+      "timestamp": 1770499218,
+      "size": 11356,
+      "heading": "Activity Execution System Fix - Complete Report"
+    },
+    {
+      "path": "./ALGORITHMIC_VALIDATION_STRATEGY.md",
+      "timestamp": 1770498757,
+      "size": 8645,
+      "heading": "Algorithmic Validation Strategy - Using Metabob Component Tracking"
+    },
+    {
+      "path": "./TRACEABLE_DATA_FLOW.md",
+      "timestamp": 1770498675,
+      "size": 19697,
+      "heading": "Traceable Data Flow - Using Metabob for Debugging"
+    },
+    {
+      "path": "./EMPIRICAL_VALIDATION_FRAMEWORK.md",
+      "timestamp": 1770498515,
+      "size": 9996,
+      "heading": "Empirical Validation Framework - Activity & Memory Agent System"
+    },
+    {
+      "path": "./ACTIVITY_ORCHESTRATION_FIXES.md",
+      "timestamp": 1770498289,
+      "size": 9272,
+      "heading": "Activity Orchestration - Fixes Applied"
+    },
+    {
+      "path": "./ACTIVITY_ORCHESTRATION_ISSUE.md",
+      "timestamp": 1770498104,
+      "size": 8797,
+      "heading": "Activity Orchestration Issue - Analysis"
+    },
+    {
+      "path": "./JIGGLE_ACTIVITY_READY.md",
+      "timestamp": 1770497815,
+      "size": 7960,
+      "heading": "\u2705 Jiggle Documentation Activity - READY FOR USE"
+    },
+    {
+      "path": "./JIGGLE_ACTIVITY_STATUS.md",
+      "timestamp": 1770497765,
+      "size": 14798,
+      "heading": "Jiggle Documentation Activity - Current Status & Usage Guide"
+    },
+    {
+      "path": "./test-jiggle-activity-now.md",
+      "timestamp": 1770497679,
+      "size": 2489,
+      "heading": "Testing Jiggle-Documentation Activity"
+    },
+    {
+      "path": "./MISSION_COMPLETE.md",
+      "timestamp": 1770497073,
+      "size": 16603,
+      "heading": "\ud83c\udf89 MISSION COMPLETE: Activity Execution with Thompson Sampling Learning"
+    },
+    {
+      "path": "./ACTIVITY_TOOL_INTEGRATION_VISUAL.md",
+      "timestamp": 1770496826,
+      "size": 12255,
+      "heading": "ActivityTool MCP Integration - Visual Summary"
+    },
+    {
+      "path": "./ACTIVITY_TOOL_MCP_INTEGRATION_COMPLETE.md",
+      "timestamp": 1770496744,
+      "size": 12590,
+      "heading": "ActivityTool MCP Integration - Implementation Complete"
+    },
+    {
+      "path": "./TUI_SIDEBAR_ISSUE.md",
+      "timestamp": 1770496145,
+      "size": 8913,
+      "heading": "TUI Sidebar Not Reflecting Impulse State - Investigation"
+    },
+    {
+      "path": "./ACTUAL_EXECUTION_SEQUENCE.md",
+      "timestamp": 1770495949,
+      "size": 9539,
+      "heading": "Actual Execution Sequence - From Production Logs"
+    },
+    {
+      "path": "./NEW_TOOL_BASED_SEQUENCE.md",
+      "timestamp": 1770495907,
+      "size": 8982,
+      "heading": "Tool-Based Memory Agent - Actual Execution Sequence"
+    },
+    {
+      "path": "./SESSION_COMPLETE_MCP_EXECUTION.md",
+      "timestamp": 1770444735,
+      "size": 7582,
+      "heading": "Session Complete: MCP Activity Execution Flow"
+    },
+    {
+      "path": "./FINAL_VERIFICATION_SUMMARY.md",
+      "timestamp": 1770444691,
+      "size": 9109,
+      "heading": "Final Verification Summary: Activity Execution Flow Implementation"
+    },
+    {
+      "path": "./README_MCP_EXECUTION.md",
+      "timestamp": 1770444461,
+      "size": 7350,
+      "heading": "MCP Activity Execution Implementation"
+    },
+    {
+      "path": "./MCP_METHODS_QUICK_REFERENCE.md",
+      "timestamp": 1770444356,
+      "size": 7539,
+      "heading": "MCP Activity Execution Methods - Quick Reference"
+    },
+    {
+      "path": "./TASK_COMPLETION_SUMMARY.md",
+      "timestamp": 1770444262,
+      "size": 9450,
+      "heading": "Task Completion Summary: MCP Activity Execution Flow Implementation"
+    },
+    {
+      "path": "./MCP_EXECUTION_IMPLEMENTATION_DELIVERABLE.md",
+      "timestamp": 1770444213,
+      "size": 13001,
+      "heading": "MCP Activity Execution Implementation - Deliverable Summary"
+    },
+    {
+      "path": "./repos/metabob-opencode/INTEGRATION_GUIDE_MCP_EXECUTION.md",
+      "timestamp": 1770444142,
+      "size": 11330,
+      "heading": "Integration Guide: MCP Activity Execution Flow"
+    },
+    {
+      "path": "./ACTUAL_LOG_SEQUENCE.md",
+      "timestamp": 1770444091,
+      "size": 8389,
+      "heading": "Actual Log Sequence - What's Currently Running"
+    },
+    {
+      "path": "./MCP_EXECUTION_IMPLEMENTATION_SUMMARY.md",
+      "timestamp": 1770444086,
+      "size": 7293,
+      "heading": "MCP Activity Execution Implementation Summary"
+    },
+    {
+      "path": "./SESSION_MEMORY_FINAL.md",
+      "timestamp": 1770442434,
+      "size": 8934,
+      "heading": "Session Memory Agent - Complete Implementation Summary"
+    },
+    {
+      "path": "./COMPLETE_MEMORY_AGENT_IMPLEMENTATION.md",
+      "timestamp": 1770442388,
+      "size": 17289,
+      "heading": "Complete Memory Agent Implementation - Final Summary"
+    },
+    {
+      "path": "./repos/metabob-opencode/packages/opencode/MEMORY_AGENT_IN_ACTIVITIES.md",
+      "timestamp": 1770442308,
+      "size": 10698,
+      "heading": "Memory Agent in Activities - Design Spec"
+    },
+    {
+      "path": "./REFACTORING_COMPLETE.md",
+      "timestamp": 1770442095,
+      "size": 12866,
+      "heading": "Memory Agent Refactoring - Complete"
+    },
+    {
+      "path": "./ACTIVITY_EXECUTION_FINDINGS.md",
+      "timestamp": 1770441861,
+      "size": 10838,
+      "heading": "Activity Execution Flow: Key Findings"
+    },
+    {
+      "path": "./PROPER_MEMORY_AGENT_DESIGN.md",
+      "timestamp": 1770441773,
+      "size": 10835,
+      "heading": "Proper Memory Agent Design - Tool-Based Subagent"
+    },
+    {
+      "path": "./MEMORY_AGENT_ARCHITECTURE_MISMATCH.md",
+      "timestamp": 1770441730,
+      "size": 17189,
+      "heading": "Memory Agent Architecture - The Proper Design"
+    },
+    {
+      "path": "./ACTIVITY_EXECUTION_FLOW_COMPARISON.md",
+      "timestamp": 1770441669,
+      "size": 11888,
+      "heading": "Activity Execution Flow: Proper Workflow vs OpenCode Implementation"
+    },
+    {
+      "path": "./PROMPT_NOT_LARGE.md",
+      "timestamp": 1770441615,
+      "size": 7073,
+      "heading": "The Prompt Is NOT Large - The Timeout Is Just Too Aggressive"
+    },
+    {
+      "path": "./PROMPT_SIZE_ANALYSIS.md",
+      "timestamp": 1770441579,
+      "size": 9096,
+      "heading": "Session Memory Agent Prompt Size Analysis"
+    },
+    {
+      "path": "./FINAL_SUMMARY_SESSION_MEMORY.md",
+      "timestamp": 1770441503,
+      "size": 9864,
+      "heading": "Session Memory Agent - Final Summary"
+    },
+    {
+      "path": "./TIMEOUT_FIX_APPLIED.md",
+      "timestamp": 1770441463,
+      "size": 5529,
+      "heading": "Timeout Fix Applied - Session Memory Agent Now Working"
+    },
+    {
+      "path": "./REAL_ISSUE_FOUND.md",
+      "timestamp": 1770441420,
+      "size": 8572,
+      "heading": "Session Memory Agent - REAL ISSUE FOUND"
+    },
+    {
+      "path": "./SESSION_MEMORY_DIAGNOSTIC.md",
+      "timestamp": 1770441354,
+      "size": 11263,
+      "heading": "Session Memory Agent - Diagnostic Report"
+    },
+    {
+      "path": "./DIAGNOSTIC_NO_LOGS.md",
+      "timestamp": 1770441284,
+      "size": 10434,
+      "heading": "Diagnostic: Why No Session Memory Agent Logs?"
+    },
+    {
+      "path": "./STORAGE_CACHE_EXPLANATION.md",
+      "timestamp": 1770441108,
+      "size": 15646,
+      "heading": "Storage Cache - Why \"storage cache hit\" Appears for Session Memory"
+    },
+    {
+      "path": "./QUICK_VERIFICATION.md",
+      "timestamp": 1770440819,
+      "size": 8952,
+      "heading": "Quick Verification - Is Session Memory Agent Working?"
+    },
+    {
+      "path": "./SESSION_MEMORY_VERIFICATION_GUIDE.md",
+      "timestamp": 1770440786,
+      "size": 23646,
+      "heading": "Session Memory Agent - Verification & Monitoring Guide"
+    },
+    {
+      "path": "./ACTIVITY_SYSTEM_FINAL_STATUS.md",
+      "timestamp": 1770439899,
+      "size": 9032,
+      "heading": "Activity System - Final Status Report"
+    },
+    {
+      "path": "./SESSION_MEMORY_AGENT_RESPONSIBILITIES.md",
+      "timestamp": 1770439623,
+      "size": 15119,
+      "heading": "Session Memory Agent - Complete Responsibilities"
+    },
+    {
+      "path": "./VARIANT_RESOLUTION_FIX_REPORT.md",
+      "timestamp": 1770439591,
+      "size": 7690,
+      "heading": "Activity Variant Resolution Fix - Status Report"
+    },
+    {
+      "path": "./CONTEXT_OVERFLOW_PREVENTION_IMPL.md",
+      "timestamp": 1770439566,
+      "size": 26700,
+      "heading": "Context Overflow Prevention - Implementation Guide"
+    },
+    {
+      "path": "./SESSION_MEMORY_CONTEXT_MANAGEMENT_DESIGN.md",
+      "timestamp": 1770439490,
+      "size": 28807,
+      "heading": "Session Memory Agent: Context Window Management & Learning"
+    },
+    {
+      "path": "./doc-jiggle-analysis-dated.md",
+      "timestamp": 1770436075,
+      "size": 26133,
+      "heading": "Documentation Inventory Analysis"
+    },
+    {
+      "path": "./SYMBOL_TRANSITION_MAP.md",
+      "timestamp": 1770435975,
+      "size": 20323,
+      "heading": "Session Memory Agent - Exact Symbol Transition Map"
+    },
+    {
+      "path": "./SESSION_MEMORY_FIX_SUMMARY.md",
+      "timestamp": 1770435910,
+      "size": 21407,
+      "heading": "Session Memory Agent Fix - Complete Summary"
+    },
+    {
+      "path": "./COMPLETE_FLOW_MAP.md",
+      "timestamp": 1770435843,
+      "size": 23775,
+      "heading": "Complete Session Memory Agent Flow Map"
+    },
+    {
+      "path": "./doc-percolation-plan.md",
+      "timestamp": 1770435690,
+      "size": 11794,
+      "heading": "Documentation Percolation Plan"
+    },
+    {
+      "path": "./FLOW_COMPARISON.md",
+      "timestamp": 1770435670,
+      "size": 10967,
+      "heading": "Session Memory Flow - ACTUAL vs EXPECTED"
+    },
+    {
+      "path": "./SESSION_MEMORY_FLOW_TRACE.md",
+      "timestamp": 1770435502,
+      "size": 17332,
+      "heading": "Session Memory Agent Flow - Symbol Trace"
+    },
+    {
+      "path": "./doc-jiggle-analysis.md",
+      "timestamp": 1770435441,
+      "size": 34708,
+      "heading": "Documentation Inventory Analysis"
+    },
+    {
+      "path": "./SESSION_COMPLETE_VARIANT_RESOLUTION.md",
+      "timestamp": 1770433061,
+      "size": 9334,
+      "heading": "Session Complete: Activity Variant Resolution Fix"
+    },
+    {
+      "path": "./ACTIVITY_EXECUTION_BUG_REPORT.md",
+      "timestamp": 1770432299,
+      "size": 8123,
+      "heading": "Activity Execution Bug Report - FINAL"
+    },
+    {
+      "path": "./test-activity-via-agent.md",
+      "timestamp": 1770431622,
+      "size": 4133,
+      "heading": "Activity Execution via Agent - Test Plan"
+    },
+    {
+      "path": "./ACTIVITY_EXECUTION_VERIFICATION.md",
+      "timestamp": 1770430428,
+      "size": 10719,
+      "heading": "Activity Execution Verification"
+    },
+    {
+      "path": "./.activity-test/README.md",
+      "timestamp": 1770430287,
+      "size": 246,
+      "heading": "Activity Test Directory"
+    },
+    {
+      "path": "./ACTIVITY_TEMPLATE_REGISTRATION_SUCCESS.md",
+      "timestamp": 1770430022,
+      "size": 5173,
+      "heading": "Activity Template Registration Success"
+    },
+    {
+      "path": "./RESUME_HERE.md",
+      "timestamp": 1770429505,
+      "size": 7756,
+      "heading": "\ud83d\ude80 START HERE - Next Session Guide"
+    },
+    {
+      "path": "./VERIFICATION_COMPLETE.md",
+      "timestamp": 1770429451,
+      "size": 5983,
+      "heading": "\u2705 Shared Backend Configuration - Verification Complete"
+    },
+    {
+      "path": "./UNIFIED_TRAILBLAZING_VISUAL.md",
+      "timestamp": 1770429451,
+      "size": 16353,
+      "heading": "Unified Trailblazing System - Visual Reference"
+    },
+    {
+      "path": "./UNIFIED_TRAILBLAZING_SYSTEM.md",
+      "timestamp": 1770429451,
+      "size": 7414,
+      "heading": "Unified Trailblazing Recovery System"
+    },
+    {
+      "path": "./UNIFIED_PROTO_ARCHITECTURE_VISUAL.md",
+      "timestamp": 1770429451,
+      "size": 16055,
+      "heading": "Unified Proto Architecture - Visual Summary"
+    },
+    {
+      "path": "./UNIFIED_ACTIVITY_TEMPLATE_ARCHITECTURE.md",
+      "timestamp": 1770429451,
+      "size": 29805,
+      "heading": "Unified Activity Template Architecture - Proto-First Design"
+    },
+    {
+      "path": "./test-activity-jiggle.md",
+      "timestamp": 1770429451,
+      "size": 1939,
+      "heading": "Activity System Test: Jiggle Documentation"
+    },
+    {
+      "path": "./TEST_ACTIVITY_EXECUTION.md",
+      "timestamp": 1770429451,
+      "size": 4238,
+      "heading": "Test Activity Execution Through OpenCode"
+    },
+    {
+      "path": "./TEST_ACTIVITY_EVOLUTION.md",
+      "timestamp": 1770429451,
+      "size": 1227,
+      "heading": "Activity Evolution System - Test Plan"
+    },
+    {
+      "path": "./TASK_9_TYPESCRIPT_ANALYSIS.md",
+      "timestamp": 1770429451,
+      "size": 9341,
+      "heading": "Task 9: TypeScript Generation & OpenCode Migration - Analysis"
+    },
+    {
+      "path": "./SYSTEM_INTEGRATION_COMPLETE.md",
+      "timestamp": 1770429451,
+      "size": 34749,
+      "heading": "Metabob System Integration: Complete Picture"
+    },
+    {
+      "path": "./SYSTEMATIC_RECORDING_IMPLEMENTATION.md",
+      "timestamp": 1770429451,
+      "size": 39817,
+      "heading": "Systematic Recording Implementation Plan"
+    },
+    {
+      "path": "./SURREALDB_AND_BROWSER_CHECK.md",
+      "timestamp": 1770429451,
+      "size": 7017,
+      "heading": "SurrealDB and Browser Verification"
+    },
+    {
+      "path": "./START_BACKEND.md",
+      "timestamp": 1770429451,
+      "size": 1954,
+      "heading": "Starting the Metabob RPC API Backend Server"
+    },
+    {
+      "path": "./SHARED_BACKEND_CONFIGURATION_COMPLETE.md",
+      "timestamp": 1770429451,
+      "size": 9170,
+      "heading": "Shared Backend Configuration - Complete Setup"
+    },
+    {
+      "path": "./SESSION_SUMMARY_FEB_6_EVENING.md",
+      "timestamp": 1770429451,
+      "size": 10766,
+      "heading": "Session Summary: February 6, 2026 (Evening)"
+    },
+    {
+      "path": "./SESSION_MEMORY_AGENT_EVOLUTION.md",
+      "timestamp": 1770429451,
+      "size": 24261,
+      "heading": "Session Memory Agent Evolution: From Router to Intelligence Layer"
+    },
+    {
+      "path": "./REGISTRATION_QUICK_REF.md",
+      "timestamp": 1770429451,
+      "size": 13510,
+      "heading": "Activity Registration: Quick Reference"
+    },
+    {
+      "path": "./REGISTRATION_FIX_SUMMARY.md",
+      "timestamp": 1770429451,
+      "size": 13050,
+      "heading": "Activity Registration: What's Broken & How to Fix It"
+    },
+    {
+      "path": "./RECENT_WORK_PATTERN_ANALYSIS.md",
+      "timestamp": 1770429451,
+      "size": 14349,
+      "heading": "Recent Work Pattern Analysis"
+    },
+    {
+      "path": "./READY_FOR_DEPLOYMENT.md",
+      "timestamp": 1770429451,
+      "size": 5539,
+      "heading": "Activity System Improvements: Ready for Deployment"
+    },
+    {
+      "path": "./README-JIGGLE-TEST.md",
+      "timestamp": 1770429451,
+      "size": 11220,
+      "heading": "Jiggle Documentation Activity - Test Deliverables"
+    },
+    {
+      "path": "./README-JIGGLE-ACTIVITY.md",
+      "timestamp": 1770429451,
+      "size": 8609,
+      "heading": "Jiggle Documentation Activity - Complete Package"
+    },
+    {
+      "path": "./README_IMPLEMENTATION_COMPLETE.md",
+      "timestamp": 1770429451,
+      "size": 4114,
+      "heading": "Activity System Improvements - Implementation Complete \u2705"
+    },
+    {
+      "path": "./README_ARCHITECTURE_DOCS.md",
+      "timestamp": 1770429451,
+      "size": 9139,
+      "heading": "Metabob Architecture Documentation"
+    },
+    {
+      "path": "./QUICK_ARCHITECTURE_REFERENCE.md",
+      "timestamp": 1770429451,
+      "size": 23429,
+      "heading": "Quick Architecture Reference"
+    },
+    {
+      "path": "./PROTOCOL_DERIVED_ACTIVITY_TEMPLATE.md",
+      "timestamp": 1770429451,
+      "size": 15319,
+      "heading": "Protocol-Derived Activity Template - Design & Intent"
+    },
+    {
+      "path": "./PROJECT_SETUP_COMPLETE.md",
+      "timestamp": 1770429451,
+      "size": 6726,
+      "heading": "Project Setup Complete - Shared Backend Configuration"
+    },
+    {
+      "path": "./PROJECT_ID_FIX_COMPLETE.md",
+      "timestamp": 1770429451,
+      "size": 5093,
+      "heading": "Project ID Fix - Complete"
+    },
+    {
+      "path": "./METABOB_PROTO_COMPLIANCE_CHECK.md",
+      "timestamp": 1770429451,
+      "size": 9835,
+      "heading": "metabob-proto Compliance Check"
+    },
+    {
+      "path": "./METABOB_DATAFLOW_ARCHITECTURE.md",
+      "timestamp": 1770429451,
+      "size": 49571,
+      "heading": "Metabob Data Flow Architecture"
+    },
+    {
+      "path": "./METABOB_CONFIG_SIMPLIFICATION.md",
+      "timestamp": 1770429451,
+      "size": 4678,
+      "heading": "Metabob Configuration Simplification"
+    },
+    {
+      "path": "./MCP_CONNECTIVITY_RESOLUTION.md",
+      "timestamp": 1770429451,
+      "size": 5318,
+      "heading": "MCP Connectivity Resolution"
+    },
+    {
+      "path": "./jiggle-documentation-visual.md",
+      "timestamp": 1770429451,
+      "size": 20652,
+      "heading": "Jiggle Documentation Activity - Visual Guide"
+    },
+    {
+      "path": "./JIGGLE_DOCUMENTATION_ACTIVITY.md",
+      "timestamp": 1770429451,
+      "size": 7095,
+      "heading": "Jiggle Documentation Activity"
+    },
+    {
+      "path": "./jiggle-activity-visual-summary.md",
+      "timestamp": 1770429451,
+      "size": 14617,
+      "heading": "Jiggle Documentation Activity - Visual Summary"
+    },
+    {
+      "path": "./JIGGLE_ACTIVITY_VISUAL.md",
+      "timestamp": 1770429451,
+      "size": 18253,
+      "heading": "Documentation Jiggle Activity - Visual Guide"
+    },
+    {
+      "path": "./JIGGLE_ACTIVITY_TEST_RESULTS.md",
+      "timestamp": 1770429451,
+      "size": 9318,
+      "heading": "Jiggle Documentation Activity - Test Results"
+    }
+  ],
+  "medium": [
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/surrealdb/data/README.md",
+      "timestamp": 1763375183,
+      "size": 2164,
+      "heading": "What is CBOR?"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/pymupdf-1.26.6.dist-info/README.md",
+      "timestamp": 1762954044,
+      "size": 2164,
+      "heading": "PyMuPDF"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/starlette-0.49.3.dist-info/licenses/LICENSE.md",
+      "timestamp": 1762954043,
+      "size": 1518,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/instructor/providers/README.md",
+      "timestamp": 1762954043,
+      "size": 2267,
+      "heading": "Providers Directory Structure"
+    }
+  ],
+  "stale": [
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/nnapi_supported_ops.md",
+      "timestamp": 1761516282,
+      "size": 2327,
+      "heading": "nnapi_supported_ops"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_neuralnetwork_ops.md",
+      "timestamp": 1761516282,
+      "size": 1915,
+      "heading": "coreml_supported_neuralnetwork_ops"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_mlprogram_ops.md",
+      "timestamp": 1761516282,
+      "size": 2353,
+      "heading": "coreml_supported_mlprogram_ops"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/Privacy.md",
+      "timestamp": 1761516282,
+      "size": 2469,
+      "heading": "Privacy"
+    },
+    {
+      "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/nnapi_supported_ops.md",
+      "timestamp": 1761516282,
+      "size": 2327,
+      "heading": "nnapi_supported_ops"
+    },
+    {
+      "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_neuralnetwork_ops.md",
+      "timestamp": 1761516282,
+      "size": 1915,
+      "heading": "coreml_supported_neuralnetwork_ops"
+    },
+    {
+      "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_mlprogram_ops.md",
+      "timestamp": 1761516282,
+      "size": 2353,
+      "heading": "coreml_supported_mlprogram_ops"
+    },
+    {
+      "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/Privacy.md",
+      "timestamp": 1761516282,
+      "size": 2469,
+      "heading": "Privacy"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/uvicorn-0.38.0.dist-info/licenses/LICENSE.md",
+      "timestamp": 1761423374,
+      "size": 1526,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/debugpy/_vendored/pydevd/pydevd_plugins/extensions/README.md",
+      "timestamp": 1760769173,
+      "size": 1183,
+      "heading": "README"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/numpy/random/LICENSE.md",
+      "timestamp": 1760769093,
+      "size": 3511,
+      "heading": "NCSA Open Source License"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/idna-3.11.dist-info/licenses/LICENSE.md",
+      "timestamp": 1760628883,
+      "size": 1541,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/idna-3.11.dist-info/licenses/LICENSE.md",
+      "timestamp": 1760628883,
+      "size": 1541,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/soupsieve-2.8.dist-info/licenses/LICENSE.md",
+      "timestamp": 1760628882,
+      "size": 1096,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/pitaya_smoothie/README.md",
+      "timestamp": 1756255801,
+      "size": 1542,
+      "heading": "Pitaya Smoothie"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/greative/README.md",
+      "timestamp": 1756255801,
+      "size": 1290,
+      "heading": "Greative"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/gotthard_light/README.md",
+      "timestamp": 1756255801,
+      "size": 1311,
+      "heading": "Gotthard Light"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/gotthard_dark/README.md",
+      "timestamp": 1756255801,
+      "size": 1315,
+      "heading": "Gotthard Dark"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/github_light/README.md",
+      "timestamp": 1756255801,
+      "size": 1318,
+      "heading": "Github Light"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/github_light_high_contrast/README.md",
+      "timestamp": 1756255801,
+      "size": 1374,
+      "heading": "Github Light High Contrast"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/github_light_colorblind/README.md",
+      "timestamp": 1756255801,
+      "size": 1258,
+      "heading": "Github Light Colorblind"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/github_dark/README.md",
+      "timestamp": 1756255801,
+      "size": 1315,
+      "heading": "Github Dark"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/github_dark_high_contrast/README.md",
+      "timestamp": 1756255801,
+      "size": 1371,
+      "heading": "Github Dark High Contrast"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/github_dark_colorblind/README.md",
+      "timestamp": 1756255801,
+      "size": 1351,
+      "heading": "Github Dark Colorblind"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/blinds_light/README.md",
+      "timestamp": 1756255801,
+      "size": 1310,
+      "heading": "Blinds Light"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/blinds_dark/README.md",
+      "timestamp": 1756255801,
+      "size": 1305,
+      "heading": "Blinds Dark"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/a11y_light/README.md",
+      "timestamp": 1756255801,
+      "size": 1325,
+      "heading": "A11Y Light"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/a11y_high_contrast_light/README.md",
+      "timestamp": 1756255801,
+      "size": 1491,
+      "heading": "A11Y High Contrast Light"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/a11y_high_contrast_dark/README.md",
+      "timestamp": 1756255801,
+      "size": 1262,
+      "heading": "A11Y High Contrast Dark"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/a11y_pygments/a11y_dark/README.md",
+      "timestamp": 1756255801,
+      "size": 1521,
+      "heading": "A11Y Dark"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/docstring_parser-0.17.0.dist-info/licenses/LICENSE.md",
+      "timestamp": 1756253329,
+      "size": 1084,
+      "heading": "LICENSE"
+    }
+  ],
+  "obsolete": [
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/LICENSE.md",
+      "timestamp": 1748948516,
+      "size": 1508,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/LICENSE.md",
+      "timestamp": 1748948516,
+      "size": 1518,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/LICENSE.md",
+      "timestamp": 1748948516,
+      "size": 1508,
+      "heading": "LICENSE"
+    },
+    {
+      "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/LICENSE.md",
+      "timestamp": 1748948516,
+      "size": 1518,
+      "heading": "LICENSE"
+    }
+  ],
+  "duplicates": {
+    "documentation inventory analysis": [
+      {
+        "path": "./doc-jiggle-analysis-dated.md",
+        "timestamp": 1770436075,
+        "size": 26133,
+        "heading": "Documentation Inventory Analysis"
+      },
+      {
+        "path": "./doc-jiggle-analysis.md",
+        "timestamp": 1770435441,
+        "size": 34708,
+        "heading": "Documentation Inventory Analysis"
+      }
+    ],
+    "opencode agent guidelines": [
+      {
+        "path": "./repos/metabob-opencode/packages/opencode/AGENTS.md",
+        "timestamp": 1770346567,
+        "size": 42902,
+        "heading": "opencode agent guidelines"
+      },
+      {
+        "path": "./repos/metabob-opencode/AGENTS.md",
+        "timestamp": 1769537597,
+        "size": 1768,
+        "heading": "opencode agent guidelines"
+      }
+    ],
+    "cpg inference": [
+      {
+        "path": "./repos/cpg-inference/README.md",
+        "timestamp": 1770338566,
+        "size": 10374,
+        "heading": "CPG Inference"
+      },
+      {
+        "path": "./repos/cpg-inference/cpg-inference/README.md",
+        "timestamp": 1770338566,
+        "size": 10374,
+        "heading": "CPG Inference"
+      },
+      {
+        "path": "./repos/metabob-cli/lib/docs/README.md",
+        "timestamp": 1769537638,
+        "size": 10105,
+        "heading": "CPG Inference"
+      }
+    ],
+    "cpg inference package - build and distribution guide": [
+      {
+        "path": "./repos/cpg-inference/PACKAGE_README.md",
+        "timestamp": 1770338566,
+        "size": 6579,
+        "heading": "CPG Inference Package - Build and Distribution Guide"
+      },
+      {
+        "path": "./repos/cpg-inference/cpg-inference/PACKAGE_README.md",
+        "timestamp": 1770338566,
+        "size": 6579,
+        "heading": "CPG Inference Package - Build and Distribution Guide"
+      }
+    ],
+    "cpg inference library": [
+      {
+        "path": "./repos/cpg-inference/cpg_inference/README.md",
+        "timestamp": 1770338566,
+        "size": 44346,
+        "heading": "CPG Inference Library"
+      },
+      {
+        "path": "./repos/cpg-inference/cpg-inference/cpg_inference/README.md",
+        "timestamp": 1770338566,
+        "size": 44346,
+        "heading": "CPG Inference Library"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/cpg_inference/README.md",
+        "timestamp": 1770108435,
+        "size": 44346,
+        "heading": "CPG Inference Library"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/cpg_inference/README.md",
+        "timestamp": 1769772965,
+        "size": 44346,
+        "heading": "CPG Inference Library"
+      }
+    ],
+    "changelog": [
+      {
+        "path": "./repos/cpg-inference/cpg-inference/CHANGELOG.md",
+        "timestamp": 1770338566,
+        "size": 1891,
+        "heading": "Changelog"
+      },
+      {
+        "path": "./repos/cpg-inference/CHANGELOG.md",
+        "timestamp": 1770338566,
+        "size": 1891,
+        "heading": "Changelog"
+      },
+      {
+        "path": "./repos/metabob-opencode/packages/sdk/go/CHANGELOG.md",
+        "timestamp": 1769537597,
+        "size": 12158,
+        "heading": "Changelog"
+      },
+      {
+        "path": "./repos/metabob-opencode/packages/opencode/CHANGELOG.md",
+        "timestamp": 1769537597,
+        "size": 2742,
+        "heading": "Changelog"
+      }
+    ],
+    "pytest cache directory #": [
+      {
+        "path": "./repos/metabob-cli/.pytest_cache/README.md",
+        "timestamp": 1769825902,
+        "size": 302,
+        "heading": "pytest cache directory #"
+      },
+      {
+        "path": "./repos/cpg-inference/cpg-inference/.pytest_cache/README.md",
+        "timestamp": 1769768123,
+        "size": 302,
+        "heading": "pytest cache directory #"
+      },
+      {
+        "path": "./repos/cpg-inference/.pytest_cache/README.md",
+        "timestamp": 1769539273,
+        "size": 302,
+        "heading": "pytest cache directory #"
+      }
+    ],
+    "nnapi_supported_ops": [
+      {
+        "path": "./repos/cpg-inference/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/tools/mobile_helpers/nnapi_supported_ops.md",
+        "timestamp": 1769768123,
+        "size": 2327,
+        "heading": "nnapi_supported_ops"
+      },
+      {
+        "path": "./repos/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/tools/mobile_helpers/nnapi_supported_ops.md",
+        "timestamp": 1769539273,
+        "size": 2327,
+        "heading": "nnapi_supported_ops"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/nnapi_supported_ops.md",
+        "timestamp": 1761516282,
+        "size": 2327,
+        "heading": "nnapi_supported_ops"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/nnapi_supported_ops.md",
+        "timestamp": 1761516282,
+        "size": 2327,
+        "heading": "nnapi_supported_ops"
+      }
+    ],
+    "coreml_supported_neuralnetwork_ops": [
+      {
+        "path": "./repos/cpg-inference/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_neuralnetwork_ops.md",
+        "timestamp": 1769768123,
+        "size": 1915,
+        "heading": "coreml_supported_neuralnetwork_ops"
+      },
+      {
+        "path": "./repos/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_neuralnetwork_ops.md",
+        "timestamp": 1769539273,
+        "size": 1915,
+        "heading": "coreml_supported_neuralnetwork_ops"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_neuralnetwork_ops.md",
+        "timestamp": 1761516282,
+        "size": 1915,
+        "heading": "coreml_supported_neuralnetwork_ops"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_neuralnetwork_ops.md",
+        "timestamp": 1761516282,
+        "size": 1915,
+        "heading": "coreml_supported_neuralnetwork_ops"
+      }
+    ],
+    "coreml_supported_mlprogram_ops": [
+      {
+        "path": "./repos/cpg-inference/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_mlprogram_ops.md",
+        "timestamp": 1769768123,
+        "size": 2353,
+        "heading": "coreml_supported_mlprogram_ops"
+      },
+      {
+        "path": "./repos/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_mlprogram_ops.md",
+        "timestamp": 1769539273,
+        "size": 2353,
+        "heading": "coreml_supported_mlprogram_ops"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_mlprogram_ops.md",
+        "timestamp": 1761516282,
+        "size": 2353,
+        "heading": "coreml_supported_mlprogram_ops"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/tools/mobile_helpers/coreml_supported_mlprogram_ops.md",
+        "timestamp": 1761516282,
+        "size": 2353,
+        "heading": "coreml_supported_mlprogram_ops"
+      }
+    ],
+    "privacy": [
+      {
+        "path": "./repos/cpg-inference/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/Privacy.md",
+        "timestamp": 1769768123,
+        "size": 2469,
+        "heading": "Privacy"
+      },
+      {
+        "path": "./repos/cpg-inference/.venv/lib/python3.12/site-packages/onnxruntime/Privacy.md",
+        "timestamp": 1769539273,
+        "size": 2469,
+        "heading": "Privacy"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/onnxruntime/Privacy.md",
+        "timestamp": 1761516282,
+        "size": 2469,
+        "heading": "Privacy"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/onnxruntime/Privacy.md",
+        "timestamp": 1761516282,
+        "size": 2469,
+        "heading": "Privacy"
+      }
+    ],
+    "ncsa open source license": [
+      {
+        "path": "./repos/cpg-inference/cpg-inference/.venv/lib/python3.12/site-packages/numpy/random/LICENSE.md",
+        "timestamp": 1769768123,
+        "size": 3511,
+        "heading": "NCSA Open Source License"
+      },
+      {
+        "path": "./repos/cpg-inference/.venv/lib/python3.12/site-packages/numpy/random/LICENSE.md",
+        "timestamp": 1769539273,
+        "size": 3511,
+        "heading": "NCSA Open Source License"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/numpy/random/LICENSE.md",
+        "timestamp": 1768429372,
+        "size": 3511,
+        "heading": "NCSA Open Source License"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/numpy-2.4.1.dist-info/licenses/numpy/random/LICENSE.md",
+        "timestamp": 1768429372,
+        "size": 3511,
+        "heading": "NCSA Open Source License"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/numpy/random/LICENSE.md",
+        "timestamp": 1760769093,
+        "size": 3511,
+        "heading": "NCSA Open Source License"
+      }
+    ],
+    "proto-aligned models implementation summary": [
+      {
+        "path": "./repos/metabob-rpc-api/server/models/PROTO_ALIGNMENT_SUMMARY.md",
+        "timestamp": 1769687061,
+        "size": 12602,
+        "heading": "Proto-Aligned Models Implementation Summary"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/docs/proto/PROTO_MODELS_IMPLEMENTATION.md",
+        "timestamp": 1769687061,
+        "size": 11310,
+        "heading": "Proto-Aligned Models Implementation Summary"
+      }
+    ],
+    "gemini/cursor configuration": [
+      {
+        "path": "./repos/metabob-rpc-api/.gemini/README.md",
+        "timestamp": 1769687060,
+        "size": 2156,
+        "heading": "Gemini/Cursor Configuration"
+      },
+      {
+        "path": "./repos/metabob-cli/.gemini/README.md",
+        "timestamp": 1769537638,
+        "size": 2156,
+        "heading": "Gemini/Cursor Configuration"
+      }
+    ],
+    "installation": [
+      {
+        "path": "./repos/metabob-opencode/README.md",
+        "timestamp": 1769537597,
+        "size": 3472,
+        "heading": "Installation"
+      },
+      {
+        "path": "./repos/metabob-opencode/packages/sdk/python/docs/installation.md",
+        "timestamp": 1769537597,
+        "size": 471,
+        "heading": "Installation"
+      }
+    ],
+    "opencode python sdk": [
+      {
+        "path": "./repos/metabob-opencode/packages/sdk/python/README.md",
+        "timestamp": 1769537597,
+        "size": 2237,
+        "heading": "Opencode Python SDK"
+      },
+      {
+        "path": "./repos/metabob-opencode/packages/sdk/python/docs/index.md",
+        "timestamp": 1769537597,
+        "size": 435,
+        "heading": "Opencode Python SDK"
+      }
+    ],
+    "agent": [
+      {
+        "path": "./repos/metabob-opencode/packages/opencode/.opencode/agent/session.md",
+        "timestamp": 1769537597,
+        "size": 17436,
+        "heading": "Session Agent"
+      },
+      {
+        "path": "./repos/metabob-opencode/.opencode/agent/session.md",
+        "timestamp": 1769537597,
+        "size": 53407,
+        "heading": "Session Agent"
+      }
+    ],
+    "provider agent": [
+      {
+        "path": "./repos/metabob-opencode/packages/opencode/.opencode/agent/provider.md",
+        "timestamp": 1769537597,
+        "size": 12563,
+        "heading": "Provider Agent"
+      },
+      {
+        "path": "./repos/metabob-opencode/.opencode/agent/provider.md",
+        "timestamp": 1769537597,
+        "size": 53396,
+        "heading": "Provider Agent"
+      }
+    ],
+    "file system agent": [
+      {
+        "path": "./repos/metabob-opencode/packages/opencode/.opencode/agent/filesystem.md",
+        "timestamp": 1769537597,
+        "size": 75645,
+        "heading": "File System Agent"
+      },
+      {
+        "path": "./repos/metabob-opencode/.opencode/agent/filesystem.md",
+        "timestamp": 1769537597,
+        "size": 8017,
+        "heading": "File System Agent"
+      }
+    ],
+    "config agent": [
+      {
+        "path": "./repos/metabob-opencode/packages/opencode/.opencode/agent/config.md",
+        "timestamp": 1769537597,
+        "size": 64764,
+        "heading": "Config Agent"
+      },
+      {
+        "path": "./repos/metabob-opencode/.opencode/agent/config.md",
+        "timestamp": 1769537597,
+        "size": 78653,
+        "heading": "Config Agent"
+      }
+    ],
+    "license": [
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/numpy-2.4.1.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
+        "timestamp": 1768429372,
+        "size": 1498,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/numpy-2.4.1.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
+        "timestamp": 1768429372,
+        "size": 1514,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/uvicorn-0.40.0.dist-info/licenses/LICENSE.md",
+        "timestamp": 1768429371,
+        "size": 1526,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/starlette-0.50.0.dist-info/licenses/LICENSE.md",
+        "timestamp": 1768429371,
+        "size": 1518,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/starlette-0.49.3.dist-info/licenses/LICENSE.md",
+        "timestamp": 1762954043,
+        "size": 1518,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/uvicorn-0.38.0.dist-info/licenses/LICENSE.md",
+        "timestamp": 1761423374,
+        "size": 1526,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/idna-3.11.dist-info/licenses/LICENSE.md",
+        "timestamp": 1760628883,
+        "size": 1541,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/idna-3.11.dist-info/licenses/LICENSE.md",
+        "timestamp": 1760628883,
+        "size": 1541,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/soupsieve-2.8.dist-info/licenses/LICENSE.md",
+        "timestamp": 1760628882,
+        "size": 1096,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/docstring_parser-0.17.0.dist-info/licenses/LICENSE.md",
+        "timestamp": 1756253329,
+        "size": 1084,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/LICENSE.md",
+        "timestamp": 1748948516,
+        "size": 1508,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-rpc-api/.venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/LICENSE.md",
+        "timestamp": 1748948516,
+        "size": 1518,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/LICENSE.md",
+        "timestamp": 1748948516,
+        "size": 1508,
+        "heading": "LICENSE"
+      },
+      {
+        "path": "./repos/metabob-cli/.venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/LICENSE.md",
+        "timestamp": 1748948516,
+        "size": 1518,
+        "heading": "LICENSE"
+      }
+    ]
+  }
+}

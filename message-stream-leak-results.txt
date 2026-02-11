@@ -1,0 +1,79 @@
+🧪 MessageV2.stream() Memory Leak Test\n
+Comparing OLD vs NEW behavior\n
+============================================================\n
+🔴 Testing OLD behavior (Array.fromAsync)\n
+📊 Initial State:
+   RSS: 32 MB\n
+📈 Iteration 10/50:
+   RSS: 56 MB (+24 MB)
+   Messages loaded: 50,000
+   Growth per call: 2.40 MB
+📈 Iteration 20/50:
+   RSS: 61 MB (+29 MB)
+   Messages loaded: 100,000
+   Growth per call: 1.45 MB
+📈 Iteration 30/50:
+   RSS: 61 MB (+29 MB)
+   Messages loaded: 150,000
+   Growth per call: 0.97 MB
+📈 Iteration 40/50:
+   RSS: 59 MB (+27 MB)
+   Messages loaded: 200,000
+   Growth per call: 0.68 MB
+📈 Iteration 50/50:
+   RSS: 61 MB (+29 MB)
+   Messages loaded: 250,000
+   Growth per call: 0.58 MB
+\n============================================================
+📊 OLD BEHAVIOR ANALYSIS
+============================================================
+Total calls: 50
+Messages per call: 5,000
+Total messages loaded: 250,000
+Initial RSS: 32 MB
+Final RSS: 61 MB
+Total growth: 29 MB
+Growth per call: 0.58 MB
+\nProjected growth rate: 208.80 GB/hour (at 100 calls/hour)
+\n\n✅ Testing NEW behavior (stream with limit)\n
+📊 Initial State:
+   RSS: 50 MB\n
+📈 Iteration 10/50:
+   RSS: 50 MB (+0 MB)
+   Messages loaded: 1,000
+   Growth per call: 0.00 MB
+📈 Iteration 20/50:
+   RSS: 50 MB (+0 MB)
+   Messages loaded: 2,000
+   Growth per call: 0.00 MB
+📈 Iteration 30/50:
+   RSS: 50 MB (+0 MB)
+   Messages loaded: 3,000
+   Growth per call: 0.00 MB
+📈 Iteration 40/50:
+   RSS: 50 MB (+0 MB)
+   Messages loaded: 4,000
+   Growth per call: 0.00 MB
+📈 Iteration 50/50:
+   RSS: 50 MB (+0 MB)
+   Messages loaded: 5,000
+   Growth per call: 0.00 MB
+\n============================================================
+📊 NEW BEHAVIOR ANALYSIS
+============================================================
+Total calls: 50
+Messages per call (limited): 100
+Total messages loaded: 5,000
+Initial RSS: 50 MB
+Final RSS: 50 MB
+Total growth: 0 MB
+Growth per call: 0.00 MB
+\nProjected growth rate: 0.00 GB/hour (at 100 calls/hour)
+\n\n============================================================
+📊 COMPARISON
+============================================================
+OLD behavior final RSS: 61 MB
+NEW behavior final RSS: 50 MB
+Memory saved: 11 MB
+Improvement: 18.0%
+============================================================\n

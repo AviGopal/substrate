@@ -1,190 +1,109 @@
-# Fixes Applied: SearchActivitiesTool Import Error
+# Activity System Fixes Applied
 
-## Issue
+**Date**: February 9, 2026  
+**Method**: Iterative error fixing based on actual HTTP responses
 
-```
-ReferenceError: SearchActivitiesTool is not defined
-  at all (/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/tool/registry.ts:128:7)
-```
+---
 
-## Root Cause
+## Problems Found and Fixed
 
-SearchActivitiesTool was referenced in the tool list but the import statement was commented out from a previous change.
+### Problem 1: Template Variable Format Mismatch
+**Error**: 422 Unprocessable Entity - "Input should be a valid string"
 
-## Solution Applied
+**Root Cause**: Template had variables as objects, backend expected strings
 
-**File**: `repos/metabob-opencode/packages/opencode/src/tool/registry.ts`
-
-**Fixed**: Uncommented the import statement
-
-```typescript
-import { SearchActivitiesTool } from "./search-activities"
+**Template format**:
+```json
+"variables": [{"name": "scope", "type": "string", ...}]
 ```
 
-**Added documentation**:
-```typescript
-// NOTE: Activity tools properly use metabob-cli backend via MCP
-// SearchActivitiesTool: TemplateRepository → TemplateServiceClient → MetabobAPI/metabob-cli MCP
-// ActivityTool: TemplateExecutor → TemplateRepository → MetabobAPI/metabob-cli MCP
+**Backend expected**:
+```json
+"variables": ["scope", "mode", "archiveInsteadOfDelete"]
 ```
 
-## How SearchActivitiesTool Connects to metabob-cli
+**Fix**: Converted variables from objects to strings
+- File: `fix-jiggle-template.py` 
+- Output: `jiggle-fixed.json`
+- Result: Registration succeeded (201 Created)
 
-### Data Flow
+### Problem 2: Wrong Backend Endpoint
+**Error**: 404 Not Found when fetching variant details
 
+**Root Cause**: OpenCode calling wrong endpoint
+
+**Code was calling**:
 ```
-Agent calls search_activities
-  ↓
-SearchActivitiesTool.execute()
-  ↓
-TemplateRepository.list({ category })
-  ↓
-TemplateLoader.list()
-  ↓  
-TemplateCache.get() (check 5-min cache)
-  ↓ (if miss)
-TemplateServiceClient.listTemplates()
-  ↓
-MetabobAPI.request("GET", "/activity-recommendations/variants")
-  ↓ (if fails, fallback to)
-MetabobCLI.searchActivities() via MCP
-  ↓
-metabob-cli MCP Server
-  ↓
-ActivityManager.search_activities()
-  ↓
-POST /activity-recommendations/recommendations
-  ↓
-Thompson Sampling in backend
-  ↓
-Results returned with rankings
+GET /activity-recommendations/variants/{id}/details
 ```
 
-**Key point**: SearchActivitiesTool in metabob-opencode is a wrapper that:
-1. Provides clean API for agents
-2. Handles caching (5-min TTL)
-3. Falls back between MetabobAPI (HTTP) and MetabobCLI (MCP)
-4. Formats results appropriately
-
-It **does not** reimplement the logic - it delegates to metabob-cli's backend.
-
-## Verification
-
-### Code Structure
-
-**SearchActivitiesTool** (`src/tool/search-activities.ts`):
-```typescript
-export const SearchActivitiesTool = Tool.define("search_activities", async () => {
-  return {
-    async execute(params, _ctx) {
-      // Delegates to TemplateRepository (metabob backend)
-      const templates = await TemplateRepository.list({ category: params.category })
-      // Formats for agent consumption
-      return formatResults(templates)
-    }
-  }
-})
+**Backend actually has**:
+```
+GET /v2/activities/templates/{id}
 ```
 
-**TemplateRepository** (`src/session/activity-template-repository.ts`):
-```typescript
-export async function list(options?: { category?: string }): Promise<ActivityTemplate.Schema[]> {
-  // Delegates to TemplateLoader
-  const result = await TemplateLoader.list({ category: options?.category })
-  return result.templates
-}
-```
+**Fix**: Updated metabob-api.ts line 379
+- Changed: `/activity-recommendations/variants/${variantId}/details`
+- To: `/v2/activities/templates/${variantId}`
+- Result: OpenCode rebuilt successfully
 
-**TemplateLoader** (`src/session/template-loader.ts`):
-```typescript
-export async function list(options: ListOptions = {}): Promise<ListResult> {
-  // Calls metabob backend via TemplateServiceClient
-  const result = await TemplateServiceClient.listTemplates({ category: options.category })
-  return { templates: result.templates, source: "metabob", cached: false }
-}
-```
+---
 
-**TemplateServiceClient** (`src/server/template-service-client.ts`):
-```typescript
-export async function listTemplates(options): Promise<ListTemplatesResult> {
-  // Primary: Direct HTTP API
-  const result = await MetabobAPI.request("GET", "/activity-recommendations/variants", ...)
-  
-  // Fallback: MCP tools
-  if (!result) {
-    return await MetabobCLI.listTemplates(...)
-  }
-  
-  return result
-}
-```
+## Current Status
 
-### Integration Points
+### What Works Now:
+1. Backend has 27 activities registered
+2. GET /v2/activities/templates returns list
+3. GET /v2/activities/templates/{id} returns details  
+4. Jiggle activity registered as `refactor-5fccfc17`
+5. OpenCode code path fixed to use correct endpoint
+6. OpenCode rebuilt with fix
 
-**metabob-cli MCP provides**:
-- `search_activities` MCP tool (via ActivityManager)
-- `create_activity_template` MCP tool
-- `start_activity_execution` MCP tool (for step-by-step mode)
-- `get_next_step` MCP tool
-- `report_step_result` MCP tool
+### What Still Needs Testing:
+1. Does OpenCode binary actually work with the fix?
+2. Can search_activities find the registered activities?
+3. Can activity() tool execute them?
+4. Do the tasks actually run?
 
-**metabob-opencode uses**:
-- TemplateRepository as unified interface
-- TemplateServiceClient for backend communication
-- MetabobAPI for direct HTTP (first-party)
-- MetabobCLI for MCP fallback (via metabob-cli)
+---
 
-**Key insight**: metabob-opencode doesn't need raw MCP tools exposed to agents. It wraps them in higher-level abstractions (TemplateRepository, TemplateExecutor) that provide:
-- Caching
-- Error handling
-- Format transformation
-- Clean agent API
+## Files Modified
 
-## Debug Mode Still Works
+1. **repos/metabob-opencode/packages/opencode/src/util/metabob-api.ts**
+   - Line 379: Fixed endpoint URL
 
-The fix doesn't break debug mode - it's now properly functional:
+2. **jiggle-fixed.json** (created)
+   - Template with corrected variable format
 
-```bash
-# Enable debug mode
-export OPENCODE_ACTIVITY_DEBUG=true
+3. **register-jiggle-v2.py** (created)
+   - Successfully registered activity via API
 
-# Agent now sees all tools including:
-# - debug_activity_execution
-# - activity_error_inspector  
-# - activity_replay
-# + 5 more debug tools
-```
+---
 
-## Status
+## Test Scripts Created
 
-✅ **Import error fixed**  
-✅ **SearchActivitiesTool properly imported**  
-✅ **Connects to metabob-cli backend via MCP**  
-✅ **Debug mode functional**  
-✅ **All implementation complete**
+- `test-activity-execution-flow.py` - Tests full flow
+- `check-what-registered.py` - Verifies registration
+- `test-correct-endpoint.py` - Proves correct endpoint works
+- `fix-jiggle-template.py` - Converts template format
 
-## Testing
-
-```bash
-cd repos/metabob-opencode/packages/opencode
-
-# Should compile now (only pre-existing errors remain)
-bun run typecheck src/tool/registry.ts
-
-# Test the tool works
-bun test test/tool/search-activities.test.ts
-
-# Test with debug mode
-export OPENCODE_ACTIVITY_DEBUG=true
-bun test test/tool/debug-activity-execution.test.ts
-```
+---
 
 ## Next Steps
 
-Same as before:
-1. Test functionality
-2. Sync metabob-proto to v4
-3. Deploy to staging
-4. Monitor and validate
+1. Test search_activities returns results
+2. Test activity tool can execute
+3. Verify tasks run without errors
+4. Fix any new errors that appear
 
-**All code is now functional and ready for deployment.**
+---
+
+## Evidence
+
+All fixes based on actual HTTP responses:
+- 422 error showed exact schema mismatch
+- 404 error showed endpoint doesn't exist
+- 200 success showed correct endpoint works
+- 201 created showed registration succeeded
+
+No speculation. Only responses from the actual backend.

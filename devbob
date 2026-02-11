@@ -1,55 +1,16 @@
 #!/bin/bash
 # =============================================================================
-# DevBob CLI - Convenient wrapper for DevBob operations
+# DevBob CLI - Simplified wrapper for debuggable distributed development
 # =============================================================================
-# Usage: ./devbob <command> [options]
-# =============================================================================
-# Sets up a full metabob environment including:
-#   - Backend services (redis, surreal, metabob-rpc-api-server, worker)
-#   - DevBob agent containers for each codebase
+# Architecture: Shared backend + on-demand agent containers
+# All services use host networking for maximum debuggability
 # =============================================================================
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Support multiple compose modes
-# - full: Full stack with backend services (configs/docker-compose.devbob.yaml)
-# - quick: Just devbob-opencode container (docker-compose.devbob-quick.yaml)
-# - dev: Development mode with volume mounts (docker-compose.devbob-dev.yaml)
-COMPOSE_MODE="${DEVBOB_MODE:-quick}"
-
-case "$COMPOSE_MODE" in
-    full)
-        COMPOSE_FILE="$SCRIPT_DIR/configs/docker-compose.devbob.yaml"
-        ;;
-    quick)
-        COMPOSE_FILE="$SCRIPT_DIR/docker-compose.devbob-quick.yaml"
-        ;;
-    dev)
-        COMPOSE_FILE="$SCRIPT_DIR/docker-compose.devbob-dev.yaml"
-        ;;
-    *)
-        # Default to quick if file exists, otherwise full
-        if [ -f "$SCRIPT_DIR/docker-compose.devbob-quick.yaml" ]; then
-            COMPOSE_FILE="$SCRIPT_DIR/docker-compose.devbob-quick.yaml"
-        else
-            COMPOSE_FILE="$SCRIPT_DIR/configs/docker-compose.devbob.yaml"
-        fi
-        ;;
-esac
-
-ENV_FILE="$SCRIPT_DIR/.env.devbob"
-
-# Try multiple env file locations
-if [ ! -f "$ENV_FILE" ]; then
-    if [ -f "$SCRIPT_DIR/configs/.env.devbob" ]; then
-        ENV_FILE="$SCRIPT_DIR/configs/.env.devbob"
-    elif [ -f "$SCRIPT_DIR/.env.devbob.example" ]; then
-        # Use example file as fallback
-        ENV_FILE="$SCRIPT_DIR/.env.devbob.example"
-    fi
-fi
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yaml"
+ENV_FILE="$SCRIPT_DIR/configs/.env.devbob"
 
 # Colors
 RED='\033[0;31m'
@@ -70,858 +31,530 @@ check_env() {
     if [ ! -f "$ENV_FILE" ]; then
         log_error "Configuration not found: $ENV_FILE"
         echo ""
-        echo "Run './devbob setup' to configure DevBob first."
-        echo "Or copy the example file:"
-        echo "  cp .env.devbob.example .env.devbob"
+        echo "Copy the example file and configure:"
+        echo "  cp configs/.env.devbob.example configs/.env.devbob"
+        echo "  \${EDITOR:-nano} configs/.env.devbob"
         exit 1
     fi
 }
 
-# Ensure required docker networks exist
-# Note: Docker Compose will create the networks automatically with proper labels
-# We only need to clean up orphaned networks that have incorrect labels
-ensure_networks() {
-    # Remove networks with incorrect labels (created manually, not by compose)
-    for network in metabob-network devbob-network; do
-        if docker network inspect "$network" >/dev/null 2>&1; then
-            # Check if it has the correct compose label
-            local label=$(docker network inspect "$network" --format '{{index .Labels "com.docker.compose.network"}}' 2>/dev/null)
-            if [ -z "$label" ] || [ "$label" != "$network" ]; then
-                log_info "Removing orphaned network $network (will be recreated by compose)..."
-                # Try to remove - will fail if containers are attached
-                docker network rm "$network" 2>/dev/null || true
-            fi
-        fi
-    done
-}
+#=============================================================================
+# Backend Management
+#=============================================================================
 
-# Commands
-cmd_setup() {
-    log_info "Starting interactive setup..."
-    "$SCRIPT_DIR/scripts/quick-start.sh"
-}
-
-cmd_config() {
-    local subcommand="${1:-help}"
-    shift || true
+cmd_backend() {
+    local action="${1:-start}"
+    check_env
     
-    case "$subcommand" in
-        init|setup)
-            log_info "Setting up OpenCode configurations..."
-            echo ""
-            
-            # Load environment from .env.devbob if it exists
-            if [ -f "$ENV_FILE" ]; then
-                log_info "Loading environment from: $ENV_FILE"
-                set -a  # auto-export all variables
-                source "$ENV_FILE"
-                set +a
-            else
-                log_warn "No .env.devbob found, using environment variables"
-            fi
-            
-            # Validate required variables
-            if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
-                log_error "No API key found! Set ANTHROPIC_API_KEY or OPENAI_API_KEY"
-                echo ""
-                echo "Options:"
-                echo "  1. Create .env.devbob from .env.devbob.example and set keys"
-                echo "  2. Export keys in your shell:"
-                echo "     export ANTHROPIC_API_KEY=sk-ant-..."
-                echo "     export METABOB_API_URL=http://localhost:8080"
-                return 1
-            fi
-            
-            # Setup host config
-            local force_update=false
-            if [ "$1" = "--force" ] || [ "$1" = "-f" ]; then
-                force_update=true
-            fi
-            
-            if [ ! -f "$HOME/.opencode/opencode.json" ] || [ "$force_update" = true ]; then
-                log_info "Creating host OpenCode config..."
-                mkdir -p "$HOME/.opencode"
-                
-                if [ -f "$SCRIPT_DIR/configs/opencode.host.json" ]; then
-                    # Use sed for reliable substitution
-                    sed -e "s|METABOB_API_URL_PLACEHOLDER|${METABOB_API_URL:-http://localhost:8080}|g" \
-                        -e "s|METABOB_API_KEY_PLACEHOLDER|${METABOB_API_KEY:-}|g" \
-                        -e "s|ANTHROPIC_API_KEY_PLACEHOLDER|${ANTHROPIC_API_KEY}|g" \
-                        -e "s|OPENAI_API_KEY_PLACEHOLDER|${OPENAI_API_KEY:-}|g" \
-                        "$SCRIPT_DIR/configs/opencode.host.json" > "$HOME/.opencode/opencode.json"
-                    
-                    log_success "Created $HOME/.opencode/opencode.json"
-                    
-                    # Show what was configured
-                    echo ""
-                    echo "Configuration:"
-                    echo "  Metabob URL: ${METABOB_API_URL:-http://localhost:8080}"
-                    echo "  Metabob Key: ${METABOB_API_KEY:+[configured]}${METABOB_API_KEY:-[not set]}"
-                    echo "  Anthropic Key: ${ANTHROPIC_API_KEY:+[configured]}${ANTHROPIC_API_KEY:-[not set]}"
-                    echo "  OpenAI Key: ${OPENAI_API_KEY:+[configured]}${OPENAI_API_KEY:-[not set]}"
-                else
-                    log_error "Template not found: $SCRIPT_DIR/configs/opencode.host.json"
-                    return 1
-                fi
-            else
-                log_warn "Host config already exists: $HOME/.opencode/opencode.json"
-                echo "  Use './devbob config init --force' to overwrite"
-                echo "  Use './devbob config update' to just refresh values"
-            fi
-            
-            # Setup devbob container config location
-            echo ""
-            log_info "DevBob container config: configs/opencode.devbob.json"
-            if [ -f "$SCRIPT_DIR/configs/opencode.devbob.json" ]; then
-                log_success "DevBob config ready (mounted at container startup)"
-            else
-                log_error "DevBob template not found: $SCRIPT_DIR/configs/opencode.devbob.json"
-                return 1
-            fi
-            
-            echo ""
-            log_success "Configuration setup complete!"
-            echo ""
-            echo "Next steps:"
-            echo "  1. Verify config: ./devbob config verify"
-            echo "  2. Start backend: ./devbob backend"
-            echo "  3. Start agents: ./devbob start"
-            ;;
-            
-        update|refresh)
-            log_info "Updating OpenCode configurations with current environment..."
-            echo ""
-            
-            # Load environment
-            if [ -f "$ENV_FILE" ]; then
-                log_info "Loading environment from: $ENV_FILE"
-                set -a
-                source "$ENV_FILE"
-                set +a
-            fi
-            
-            # Update host config
-            if [ -f "$SCRIPT_DIR/configs/opencode.host.json" ]; then
-                log_info "Updating host config..."
-                mkdir -p "$HOME/.opencode"
-                
-                sed -e "s|METABOB_API_URL_PLACEHOLDER|${METABOB_API_URL:-http://localhost:8080}|g" \
-                    -e "s|METABOB_API_KEY_PLACEHOLDER|${METABOB_API_KEY:-}|g" \
-                    -e "s|ANTHROPIC_API_KEY_PLACEHOLDER|${ANTHROPIC_API_KEY}|g" \
-                    -e "s|OPENAI_API_KEY_PLACEHOLDER|${OPENAI_API_KEY:-}|g" \
-                    "$SCRIPT_DIR/configs/opencode.host.json" > "$HOME/.opencode/opencode.json"
-                
-                log_success "Updated host config"
-                
-                echo ""
-                echo "Updated values:"
-                echo "  Metabob URL: ${METABOB_API_URL:-http://localhost:8080}"
-                echo "  Metabob Key: ${METABOB_API_KEY:+[configured]}${METABOB_API_KEY:-[not set]}"
-            else
-                log_error "Template not found: $SCRIPT_DIR/configs/opencode.host.json"
-                return 1
-            fi
-            
-            echo ""
-            log_info "Restart containers to apply devbob config changes"
-            ;;
-            
-        verify|test)
-            echo ""
+    case "$action" in
+        start|up)
             log_header "╔═══════════════════════════════════════════════════════════╗"
-            log_header "║         OpenCode Configuration Verification               ║"
+            log_header "║          Starting Shared Backend Services                 ║"
             log_header "╚═══════════════════════════════════════════════════════════╝"
             echo ""
             
-            local has_errors=false
+            log_info "Starting: redis, surreal, metabob-rpc-api"
+            docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile backend up -d
             
-            # Check host config exists
-            if [ ! -f "$HOME/.opencode/opencode.json" ]; then
-                log_error "Host config not found: $HOME/.opencode/opencode.json"
-                echo "  Run: ./devbob config init"
-                has_errors=true
-            else
-                log_success "Host config exists"
-                
-                # Check for placeholder values
-                if grep -q "PLACEHOLDER" "$HOME/.opencode/opencode.json"; then
-                    log_error "Config contains placeholder values (not substituted)"
-                    echo "  Run: ./devbob config update"
-                    has_errors=true
-                fi
-                
-                # Extract and test Metabob URL
-                if command -v jq >/dev/null 2>&1; then
-                    local metabob_url=$(jq -r '.metabob.base_url // empty' "$HOME/.opencode/opencode.json")
-                    local metabob_enabled=$(jq -r '.metabob.enabled // false' "$HOME/.opencode/opencode.json")
-                    
-                    if [ "$metabob_enabled" = "true" ]; then
-                        if [ -z "$metabob_url" ]; then
-                            log_error "Metabob enabled but no base_url set"
-                            has_errors=true
-                        else
-                            log_info "Testing Metabob connectivity: $metabob_url"
-                            
-                            # Test with timeout (backend health endpoint is /)
-                            if curl -s --max-time 5 "$metabob_url/" >/dev/null 2>&1; then
-                                log_success "Metabob backend reachable at $metabob_url"
-                            else
-                                log_warn "Cannot reach Metabob at $metabob_url"
-                                echo "  Backend may not be running. Start with: ./devbob backend (full mode)"
-                            fi
-                        fi
-                    else
-                        log_warn "Metabob disabled in config (activities won't have code analysis)"
-                    fi
-                    
-                    # Check API keys
-                    local anthropic_key=$(jq -r '.provider.anthropic.options.apiKey // empty' "$HOME/.opencode/opencode.json")
-                    local openai_key=$(jq -r '.provider.openai.options.apiKey // empty' "$HOME/.opencode/opencode.json")
-                    
-                    if [ -z "$anthropic_key" ] && [ -z "$openai_key" ]; then
-                        log_error "No API key configured (need ANTHROPIC_API_KEY or OPENAI_API_KEY)"
-                        has_errors=true
-                    elif [ -n "$anthropic_key" ] && [ ${#anthropic_key} -lt 20 ]; then
-                        log_error "Anthropic API key looks invalid (too short)"
-                        has_errors=true
-                    else
-                        log_success "API key configured"
-                    fi
-                    
-                    # Check MCP config
-                    local mcp_enabled=$(jq -r '.mcp.metabob.enabled // false' "$HOME/.opencode/opencode.json")
-                    if [ "$mcp_enabled" = "true" ]; then
-                        log_success "Metabob MCP enabled"
-                        
-                        # Check if metabob-cli is available
-                        if command -v metabob-cli >/dev/null 2>&1; then
-                            log_success "metabob-cli found in PATH"
-                        else
-                            log_warn "metabob-cli not in PATH (MCP may not work)"
-                            echo "  Install: npm install -g @metabob/cli"
-                        fi
-                    else
-                        log_warn "Metabob MCP disabled"
-                    fi
-                fi
-            fi
-            
-            # Check devbob config
             echo ""
-            if [ -f "$SCRIPT_DIR/configs/opencode.devbob.json" ]; then
-                log_success "DevBob container config exists"
+            log_info "Waiting for services to become healthy..."
+            sleep 5
+            
+            # Test backend health
+            if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+                log_success "Backend is healthy!"
             else
-                log_error "DevBob config not found: $SCRIPT_DIR/configs/opencode.devbob.json"
-                has_errors=true
+                log_warn "Backend may still be starting up..."
             fi
             
             echo ""
-            if [ "$has_errors" = true ]; then
-                log_error "Configuration has errors. Fix them before running activities."
-                return 1
-            else
-                log_success "All checks passed! Ready to run activities."
-                echo ""
-                echo "Try running an activity:"
-                echo "  opencode  # then use activity templates"
-            fi
+            log_header "Backend Endpoints:"
+            echo "  • Metabob API:  http://localhost:8080"
+            echo "  • API Docs:     http://localhost:8080/docs"
+            echo "  • SurrealDB:    http://localhost:8000"
+            echo "  • Redis:        redis://localhost:6379"
+            echo ""
+            echo "All agents and host connect to: http://localhost:8080"
             ;;
-            
-        show|view)
-            echo ""
-            log_header "╔═══════════════════════════════════════════════════════════╗"
-            log_header "║              OpenCode Configuration Status                ║"
-            log_header "╚═══════════════════════════════════════════════════════════╝"
-            echo ""
-            
-            echo "Host Config:"
-            if [ -f "$HOME/.opencode/opencode.json" ]; then
-                echo "  Location: $HOME/.opencode/opencode.json"
-                echo "  Status: ✅ Configured"
-                if command -v jq >/dev/null 2>&1; then
-                    echo "  Metabob: $(jq -r '.metabob.enabled // "disabled"' "$HOME/.opencode/opencode.json")"
-                    echo "  Backend: $(jq -r '.metabob.base_url // "not set"' "$HOME/.opencode/opencode.json")"
-                    echo "  MCP: $(jq -r '.mcp.metabob.enabled // "disabled"' "$HOME/.opencode/opencode.json")"
-                fi
-            else
-                echo "  Status: ❌ Not configured"
-                echo "  Run: ./devbob config init"
-            fi
-            
-            echo ""
-            echo "DevBob Container Config:"
-            if [ -f "$SCRIPT_DIR/configs/opencode.devbob.json" ]; then
-                echo "  Location: configs/opencode.devbob.json"
-                echo "  Status: ✅ Ready"
-                if command -v jq >/dev/null 2>&1; then
-                    echo "  Metabob: $(jq -r '.metabob.enabled // "disabled"' "$SCRIPT_DIR/configs/opencode.devbob.json")"
-                    echo "  Backend: $(jq -r '.metabob.base_url // "not set"' "$SCRIPT_DIR/configs/opencode.devbob.json")"
-                fi
-            else
-                echo "  Status: ❌ Not found"
-            fi
-            
-            echo ""
-            echo "Environment Variables:"
-            echo "  METABOB_API_URL: ${METABOB_API_URL:-not set}"
-            echo "  METABOB_API_KEY: ${METABOB_API_KEY:+configured}${METABOB_API_KEY:-not set}"
-            echo "  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:+configured}${ANTHROPIC_API_KEY:-not set}"
-            echo ""
+        
+        stop|down)
+            log_info "Stopping backend services..."
+            docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile backend down
+            log_success "Backend stopped"
             ;;
-            
-        edit)
-            local target="${1:-host}"
-            case "$target" in
-                host)
-                    if [ -f "$HOME/.opencode/opencode.json" ]; then
-                        ${EDITOR:-nano} "$HOME/.opencode/opencode.json"
-                    else
-                        log_error "Host config not found. Run: ./devbob config init"
-                        return 1
-                    fi
-                    ;;
-                devbob|container)
-                    if [ -f "$SCRIPT_DIR/configs/opencode.devbob.json" ]; then
-                        ${EDITOR:-nano} "$SCRIPT_DIR/configs/opencode.devbob.json"
-                    else
-                        log_error "DevBob config not found"
-                        return 1
-                    fi
-                    ;;
-                *)
-                    log_error "Unknown target: $target"
-                    echo "Use: ./devbob config edit [host|devbob]"
-                    return 1
-                    ;;
-            esac
+        
+        restart)
+            cmd_backend stop
+            sleep 2
+            cmd_backend start
             ;;
-            
-        help|*)
-            cat << 'CONFIG_HELP'
-Configuration Management:
-
-  ./devbob config init       - Initialize OpenCode configs (host + devbob)
-  ./devbob config update     - Refresh configs from environment variables
-  ./devbob config verify     - Test configuration and connectivity
-  ./devbob config show       - Display configuration status
-  ./devbob config edit host  - Edit host OpenCode config
-  ./devbob config edit devbob - Edit devbob container config
-
-Configuration Files:
-  - Host:   ~/.opencode/opencode.json (for running activities on this machine)
-  - DevBob: configs/opencode.devbob.json (for devbob containers)
-
-Both configs share the same Metabob backend for unified code analysis.
-
-Setup Workflow:
-  1. Copy .env.devbob.example to .env.devbob and set your API keys
-  2. Run: source .env.devbob (load environment)
-  3. Run: ./devbob config init (create host config)
-  4. Run: ./devbob config verify (test connectivity)
-  5. Run: ./devbob backend (start Metabob backend)
-  6. Run: ./devbob start (start devbob containers)
-
-CONFIG_HELP
+        
+        status|ps)
+            docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile backend ps
+            ;;
+        
+        logs)
+            docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile backend logs -f
+            ;;
+        
+        *)
+            log_error "Unknown action: $action"
+            echo "Usage: ./devbob backend [start|stop|restart|status|logs]"
+            exit 1
             ;;
     esac
 }
 
+#=============================================================================
+# Agent Management (Individual Containers)
+#=============================================================================
+
+cmd_agent() {
+    local action="${1:-help}"
+    shift || true
+    
+    case "$action" in
+        start)
+            local agent="${1:-help}"
+            if [ "$agent" = "help" ] || [ -z "$agent" ]; then
+                echo "Usage: ./devbob agent start <agent-name>"
+                echo ""
+                echo "Available agents:"
+                echo "  devbob-opencode    - OpenCode development (repos/metabob-opencode)"
+                echo "  devbob-rpc-api     - RPC API development (repos/metabob-rpc-api)"
+                echo "  devbob-cli         - CLI development (repos/metabob-cli)"
+                echo "  devbob-dashboard   - Dashboard development (repos/metabob-dashboard)"
+                echo "  devbob-orchestrator - Project orchestration (metabob-devbob)"
+                echo "  all                - All agents"
+                exit 0
+            fi
+            
+            check_env
+            
+            if [ "$agent" = "all" ]; then
+                log_info "Starting all agents..."
+                docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile all-agents up -d
+            else
+                log_info "Starting $agent..."
+                docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile "$agent" up -d
+            fi
+            
+            echo ""
+            log_success "Agent started: $agent"
+            echo ""
+            
+            # Show agent-specific info
+            case "$agent" in
+                devbob-opencode)
+                    echo "  ACP:  http://localhost:3004"
+                    echo "  Logs: docker logs -f devbob-opencode"
+                    echo "  Shell: docker exec -it devbob-opencode bash"
+                    ;;
+                devbob-rpc-api)
+                    echo "  ACP:  http://localhost:3001"
+                    echo "  Logs: docker logs -f devbob-rpc-api"
+                    ;;
+                devbob-cli)
+                    echo "  ACP:  http://localhost:3003"
+                    echo "  Logs: docker logs -f devbob-cli"
+                    ;;
+                devbob-dashboard)
+                    echo "  ACP:  http://localhost:3002"
+                    echo "  Logs: docker logs -f devbob-dashboard"
+                    ;;
+                devbob-orchestrator)
+                    echo "  ACP:  http://localhost:3005"
+                    echo "  Logs: docker logs -f devbob-orchestrator"
+                    ;;
+            esac
+            ;;
+        
+        stop)
+            local agent="${1:-all}"
+            check_env
+            
+            if [ "$agent" = "all" ]; then
+                log_info "Stopping all agents..."
+                docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile all-agents down
+            else
+                log_info "Stopping $agent..."
+                docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop "$agent"
+            fi
+            
+            log_success "Agent stopped: $agent"
+            ;;
+        
+        restart)
+            local agent="${1:-help}"
+            cmd_agent stop "$agent"
+            sleep 2
+            cmd_agent start "$agent"
+            ;;
+        
+        status|ps)
+            docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
+            ;;
+        
+        logs)
+            local agent="${1:-}"
+            if [ -z "$agent" ]; then
+                docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs -f
+            else
+                docker logs -f "$agent"
+            fi
+            ;;
+        
+        shell)
+            local agent="${1:-devbob-opencode}"
+            log_info "Opening shell in $agent..."
+            docker exec -it "$agent" /bin/bash
+            ;;
+        
+        list)
+            echo ""
+            log_header "Available Agents:"
+            echo ""
+            echo "  devbob-opencode     → repos/metabob-opencode  (ACP: 3004)"
+            echo "  devbob-rpc-api      → repos/metabob-rpc-api   (ACP: 3001)"
+            echo "  devbob-cli          → repos/metabob-cli       (ACP: 3003)"
+            echo "  devbob-dashboard    → repos/metabob-dashboard (ACP: 3002)"
+            echo "  devbob-orchestrator → metabob-devbob          (ACP: 3005)"
+            echo ""
+            ;;
+        
+        help|*)
+            cat << 'AGENT_HELP'
+Agent Management:
+
+  ./devbob agent start <name>   - Start specific agent container
+  ./devbob agent stop <name>    - Stop specific agent container
+  ./devbob agent restart <name> - Restart specific agent
+  ./devbob agent status         - Show all agent status
+  ./devbob agent logs [name]    - Follow agent logs (all or specific)
+  ./devbob agent shell <name>   - Open shell in agent container
+  ./devbob agent list           - List available agents
+
+Available Agents:
+  devbob-opencode               - OpenCode development agent
+  devbob-rpc-api                - RPC API development agent
+  devbob-cli                    - CLI development agent
+  devbob-dashboard              - Dashboard development agent
+  devbob-orchestrator           - Project orchestration agent
+  all                           - All agents
+
+Examples:
+  ./devbob agent start devbob-opencode
+  ./devbob agent logs devbob-opencode
+  ./devbob agent shell devbob-opencode
+  ./devbob agent start all
+
+AGENT_HELP
+            ;;
+    esac
+}
+
+#=============================================================================
+# Debugging Commands
+#=============================================================================
+
+cmd_debug() {
+    local action="${1:-help}"
+    shift || true
+    
+    case "$action" in
+        logs)
+            local container="${1:-}"
+            if [ -z "$container" ]; then
+                echo "Usage: ./devbob debug logs <container>"
+                echo ""
+                echo "Examples:"
+                echo "  ./devbob debug logs devbob-opencode"
+                echo "  ./devbob debug logs metabob-rpc-api"
+                exit 0
+            fi
+            
+            log_info "Streaming logs from $container..."
+            docker logs -f --timestamps "$container"
+            ;;
+        
+        session)
+            local agent="${1:-devbob-opencode}"
+            log_info "Querying sessions for $agent..."
+            curl -s "http://localhost:8080/sessions?agent=$agent" | jq '.' || {
+                log_error "Failed to query sessions (backend may not be running)"
+                exit 1
+            }
+            ;;
+        
+        components)
+            log_info "Querying component tracking data..."
+            curl -s "http://localhost:8080/components?project=devbob-distributed" | jq '.' || {
+                log_error "Failed to query components (backend may not be running)"
+                exit 1
+            }
+            ;;
+        
+        impulses)
+            local agent="${1:-devbob-opencode}"
+            log_info "Inspecting impulses for $agent..."
+            docker exec "$agent" cat /workspace/repos/metabob-opencode/.opencode/impulses.json 2>/dev/null | jq '.' || {
+                log_error "Failed to read impulses (agent may not be running)"
+                exit 1
+            }
+            ;;
+        
+        shell)
+            local container="${1:-devbob-opencode}"
+            log_info "Opening debug shell in $container..."
+            docker exec -it "$container" /bin/bash
+            ;;
+        
+        inspect)
+            local container="${1:-}"
+            if [ -z "$container" ]; then
+                echo "Usage: ./devbob debug inspect <container>"
+                exit 0
+            fi
+            
+            log_info "Inspecting $container..."
+            docker inspect "$container" | jq '.[0] | {
+                State: .State,
+                NetworkSettings: .NetworkSettings,
+                Mounts: .Mounts | map({Source, Destination, Mode})
+            }'
+            ;;
+        
+        health)
+            echo ""
+            log_header "System Health Check"
+            echo ""
+            
+            # Backend
+            echo "Backend Services:"
+            if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+                log_success "Metabob API: http://localhost:8080 ✓"
+            else
+                log_error "Metabob API: http://localhost:8080 ✗"
+            fi
+            
+            if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
+                log_success "SurrealDB: http://localhost:8000 ✓"
+            else
+                log_error "SurrealDB: http://localhost:8000 ✗"
+            fi
+            
+            if redis-cli ping >/dev/null 2>&1; then
+                log_success "Redis: localhost:6379 ✓"
+            else
+                log_error "Redis: localhost:6379 ✗"
+            fi
+            
+            echo ""
+            echo "Agent Containers:"
+            for agent in devbob-opencode devbob-rpc-api devbob-cli devbob-dashboard devbob-orchestrator; do
+                if docker ps --format '{{.Names}}' | grep -q "^${agent}$"; then
+                    log_success "$agent: Running ✓"
+                else
+                    log_info "$agent: Not running"
+                fi
+            done
+            
+            echo ""
+            ;;
+        
+        help|*)
+            cat << 'DEBUG_HELP'
+Debugging Tools:
+
+  ./devbob debug logs <container>     - Stream container logs with timestamps
+  ./devbob debug session [agent]      - Query agent sessions from backend
+  ./devbob debug components           - Query component tracking data
+  ./devbob debug impulses [agent]     - Inspect impulse system state
+  ./devbob debug shell <container>    - Open interactive shell
+  ./devbob debug inspect <container>  - Inspect container configuration
+  ./devbob debug health               - Check system health
+
+Examples:
+  # Watch agent logs in real-time
+  ./devbob debug logs devbob-opencode
+
+  # Check what sessions exist
+  ./devbob debug session devbob-opencode
+
+  # Inspect Metabob component tracking
+  ./devbob debug components
+
+  # See what impulses were created
+  ./devbob debug impulses devbob-opencode
+
+  # Check overall system health
+  ./devbob debug health
+
+DEBUG_HELP
+            ;;
+    esac
+}
+
+#=============================================================================
+# Quick Start Commands
+#=============================================================================
+
 cmd_start() {
     check_env
-    ensure_networks
     
-    # Default: start everything (backend + all agents)
-    local containers="$*"
-    
-    echo ""
     log_header "╔═══════════════════════════════════════════════════════════╗"
-    log_header "║           Starting Metabob DevBob Environment             ║"
+    log_header "║      Starting Distributed Development Environment         ║"
     log_header "╚═══════════════════════════════════════════════════════════╝"
     echo ""
     
-    if [ -z "$containers" ]; then
-        log_info "Starting all services (backend + agents)..."
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
-    else
-        log_info "Starting containers: $containers"
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d $containers
-    fi
-    
-    echo ""
-    log_info "Waiting for services to become healthy..."
-    sleep 5
-    
-    echo ""
-    log_success "Containers started!"
-    echo ""
-    cmd_status
-    
-    echo ""
-    log_header "Service Endpoints:"
-    echo ""
-    echo "  Backend Services:"
-    echo "    Metabob API:      http://localhost:8080/"
-    echo "    API Docs:         http://localhost:8080/docs"
-    echo "    SurrealDB:        http://localhost:8000"
-    echo "    Redis:            redis://localhost:6379"
-    echo ""
-    echo "  DevBob Agents (ACP):"
-    echo "    devbob-rpc-api:   http://localhost:3001/config"
-    echo "    devbob-dashboard: http://localhost:3002/config"
-    echo "    devbob-cli:       http://localhost:3003/config"
-    echo "    devbob-opencode:  http://localhost:3004/config"
-    echo "    devbob:           http://localhost:3005/config"
-    echo ""
-    echo "  Local Dashboards (code analysis & activity):"
-    echo "    devbob-rpc-api:   http://localhost:3010"
-    echo "    devbob-dashboard: http://localhost:3011"
-    echo "    devbob-cli:       http://localhost:3012"
-    echo "    devbob-opencode:  http://localhost:3013"
-    echo "    devbob:           http://localhost:3014"
-}
-
-cmd_stop() {
-    check_env
-    local containers="$*"
-    
-    if [ -z "$containers" ]; then
-        log_info "Stopping all containers..."
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
-    else
-        log_info "Stopping containers: $containers"
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop $containers
-    fi
-    
-    log_success "Containers stopped!"
-}
-
-cmd_restart() {
-    check_env
-    local containers="$*"
-    
-    log_info "Restarting containers: ${containers:-all}"
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart $containers
-    
-    log_success "Containers restarted!"
-}
-
-cmd_status() {
-    check_env
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
-}
-
-cmd_logs() {
-    check_env
-    local container="${1:-}"
-    
-    if [ -z "$container" ]; then
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs -f
-    else
-        docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs -f "$container"
-    fi
-}
-
-cmd_backend() {
-    check_env
-    
-    # Backend services only available in full mode
-    if [ "$COMPOSE_MODE" = "quick" ]; then
-        log_error "Backend command only available in 'full' mode"
-        echo ""
-        echo "Quick mode expects backend to already be running."
-        echo "Switch to full mode:"
-        echo "  export DEVBOB_MODE=full"
-        echo "  ./devbob backend"
-        return 1
-    fi
-    
-    ensure_networks
-    
-    log_info "Starting backend services only..."
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d redis surreal metabob-rpc-api-server metabob-rpc-api-worker
+    # Start backend first
+    log_info "Step 1/2: Starting shared backend..."
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile backend up -d
     
     echo ""
     log_info "Waiting for backend to become healthy..."
     sleep 5
     
-    log_success "Backend services started!"
+    if ! curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+        log_warn "Backend may still be initializing..."
+    fi
+    
+    # Start default agent (devbob-opencode)
     echo ""
-    echo "  Metabob API:  http://localhost:8080/"
-    echo "  SurrealDB:    http://localhost:8000"
-    echo "  Redis:        redis://localhost:6379"
+    log_info "Step 2/2: Starting devbob-opencode agent..."
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile devbob-opencode up -d
+    
+    sleep 2
+    
+    echo ""
+    log_success "Environment started!"
+    echo ""
+    cmd_status
+    
+    echo ""
+    log_header "Quick Commands:"
+    echo "  Logs:  ./devbob debug logs devbob-opencode"
+    echo "  Shell: ./devbob agent shell devbob-opencode"
+    echo "  More:  ./devbob agent start <agent-name>"
 }
 
-cmd_shell() {
+cmd_stop() {
+    log_info "Stopping all services..."
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
+    log_success "All services stopped"
+}
+
+cmd_status() {
     check_env
-    # Default to devbob-opencode in quick mode, devbob in full mode
-    local default_container="devbob-opencode"
-    if [ "$COMPOSE_MODE" = "full" ]; then
-        default_container="devbob"
-    fi
-    local container="${1:-$default_container}"
     
-    log_info "Opening shell in $container..."
-    docker exec -it "$container" /bin/bash
+    echo ""
+    log_header "Service Status:"
+    echo ""
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
 }
 
-cmd_test() {
-    check_env
-    # Default to port 3004 (devbob-opencode) in quick mode, 3005 (devbob) in full mode
-    local default_port="3004"
-    if [ "$COMPOSE_MODE" = "full" ]; then
-        default_port="3005"
-    fi
-    local port="${1:-$default_port}"
-    
-    log_info "Testing ACP on port $port..."
-    curl -s "http://localhost:$port/config" | jq . 2>/dev/null || {
-        log_error "Failed to connect to ACP on port $port"
-        log_info "Container may still be starting up, or port may be incorrect"
-        exit 1
-    }
-    log_success "ACP is responding!"
-}
-
-cmd_task() {
-    check_env
-    # Default to devbob-opencode in quick mode, devbob in full mode
-    local default_container="devbob-opencode"
-    if [ "$COMPOSE_MODE" = "full" ]; then
-        default_container="devbob"
-    fi
-    local container="${1:-$default_container}"
-    local port
-    
-    case "$container" in
-        devbob)
-            port=3005
-            ;;
-        devbob-opencode)
-            port=3004
-            ;;
-        devbob-cli)
-            port=3003
-            ;;
-        devbob-rpc-api)
-            port=3001
-            ;;
-        devbob-dashboard)
-            port=3002
-            ;;
-        *)
-            log_error "Unknown container: $container"
-            exit 1
-            ;;
-    esac
-    
-    shift
-    local prompt="$*"
-    
-    if [ -z "$prompt" ]; then
-        log_error "No task provided"
-        echo "Usage: ./devbob task [container] <task description>"
-        exit 1
-    fi
-    
-    log_info "Sending task to $container (port $port)..."
-    echo ""
-    echo "Task: $prompt"
-    echo ""
-    
-    SESSION_ID=$(curl -s -X POST "http://localhost:$port/acp/sessions" \
-        -H "Content-Type: application/json" \
-        -d "{\"prompt\": \"$prompt\"}" | jq -r .sessionId)
-    
-    if [ -z "$SESSION_ID" ] || [ "$SESSION_ID" = "null" ]; then
-        log_error "Failed to create session"
-        exit 1
-    fi
-    
-    log_success "Session created: $SESSION_ID"
-    echo ""
-    echo "Stream output with:"
-    echo "  curl http://localhost:$port/acp/sessions/$SESSION_ID/stream"
-}
-
-cmd_build() {
-    log_info "Building DevBob image..."
-    "$SCRIPT_DIR/scripts/build-devbob.sh" "$@"
-}
-
-cmd_tui() {
-    check_env
-    # Default to devbob-opencode in quick mode, devbob in full mode
-    local default_container="devbob-opencode"
-    if [ "$COMPOSE_MODE" = "full" ]; then
-        default_container="devbob"
-    fi
-    local container="${1:-$default_container}"
-    
-    log_info "Launching DevBob Agent TUI for $container..."
-    echo ""
-    echo "🤖 Starting preconfigured DevBob agent..."
-    echo "📋 This will open the OpenCode Terminal User Interface"
-    echo "💡 Use Ctrl+C to exit when done"
-    echo ""
-    
-    # Check if container is running
-    if ! docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
-        log_error "Container $container is not running"
-        echo ""
-        echo "Start it first with: ./devbob start $container"
-        exit 1
-    fi
-    
-    # Check if container is healthy
-    local health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-    if [ "$health_status" != "healthy" ] && [ "$health_status" != "none" ]; then
-        log_warn "Container $container is not healthy (status: $health_status)"
-        echo "You can still proceed, but functionality may be limited."
-        echo ""
-        read -p "Continue anyway? (y/N) " -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Aborted by user"
-            exit 0
-        fi
-        echo ""
-    fi
-    
-    # Launch TUI with proper terminal settings
-    log_info "Connecting to $container TUI..."
-    echo ""
-    echo "=========================================="
-    echo "    DevBob Agent TUI - Ready to Use!"  
-    echo "=========================================="
-    echo ""
-    
-    # Show quick help
-    echo "💡 Quick Tips:"
-    echo "   • Type commands or questions naturally"
-    echo "   • Use 'activity' to run structured workflows"  
-    echo "   • Use 'run <message>' for quick tasks"
-    echo "   • Press Ctrl+C to exit back to host"
-    echo "   • All changes auto-commit and push (if configured)"
-    echo ""
-    read -p "Press Enter to launch OpenCode TUI..." -r
-    echo ""
-    
-    # Execute OpenCode TUI inside the container with proper terminal
-    docker exec -it "$container" bash -c '
-        cd /workspace
-        
-        echo "╔═══════════════════════════════════════════════════════════╗"
-        echo "║                    🚀 DevBob Agent                        ║"  
-        echo "╚═══════════════════════════════════════════════════════════╝"
-        echo ""
-        echo "📂 Working in: $(pwd)"
-        echo "🔗 Repository: $(git remote get-url origin 2>/dev/null || echo "No remote configured")"
-        echo "🌿 Branch: $(git branch --show-current 2>/dev/null || echo "No branch")"
-        
-        # Show git status if there are changes
-        if git status --porcelain 2>/dev/null | grep -q "."; then
-            echo "📝 Status: $(git status --porcelain | wc -l) uncommitted changes"
-        else
-            echo "✅ Status: Working directory clean"
-        fi
-        
-        echo ""
-        echo "Environment:"
-        echo "• API Key: ${ANTHROPIC_API_KEY:+✅ Configured}${ANTHROPIC_API_KEY:-❌ Not set}"
-        
-        # Check if metabob is enabled
-        if [ -f ".opencode/opencode.json" ] && grep -q "\"enabled\": true" .opencode/opencode.json 2>/dev/null; then
-            echo "• Metabob: ✅ Enabled"
-        else
-            echo "• Metabob: ⚠️  Disabled (standalone mode)"  
-        fi
-        
-        echo ""
-        echo "Starting OpenCode TUI..."
-        echo "────────────────────────────────────────────────────────────"
-        echo ""
-        
-        # Set terminal title
-        echo -e "\033]0;DevBob Agent - $(hostname)\007"
-        
-        # Launch OpenCode TUI with proper error handling
-        if ! command -v opencode >/dev/null 2>&1; then
-            echo "❌ Error: OpenCode not found in PATH"
-            echo "   Path: $PATH"
-            exit 1
-        fi
-        
-        # Check if ACP server is running on port 3005
-        ACP_PORT="${ACP_PORT:-3005}"
-        if ! nc -z localhost "$ACP_PORT" 2>/dev/null; then
-            echo "⚠️  Warning: No ACP server detected on port $ACP_PORT"
-            echo "   Starting standalone TUI mode..."
-            exec opencode
-        else
-            echo "✅ Connecting to ACP server on port $ACP_PORT..."
-            # Attach to the existing ACP server
-            exec opencode attach "http://localhost:$ACP_PORT" --dir /workspace
-        fi
-    '
-    
-    # Reset terminal title after exit
-    echo -e "\033]0;Terminal\007"
-    echo ""
-    log_success "DevBob Agent TUI session ended"
-}
-
-cmd_agent() {
-    # Alias for tui command
-    cmd_tui "$@"
-}
-
-cmd_build() {
-    log_info "Building DevBob image..."
-    "$SCRIPT_DIR/scripts/build-devbob.sh" "$@"
-}
-
-cmd_mode() {
-    echo ""
-    log_header "╔═══════════════════════════════════════════════════════════╗"
-    log_header "║                  DevBob Configuration                     ║"
-    log_header "╚═══════════════════════════════════════════════════════════╝"
-    echo ""
-    echo "  Mode: $COMPOSE_MODE"
-    echo "  Compose File: $COMPOSE_FILE"
-    echo "  Env File: $ENV_FILE"
-    echo ""
-    echo "Available Modes:"
-    echo "  quick - Single devbob-opencode container (fast, minimal)"
-    echo "  full  - Complete stack with backend services"
-    echo "  dev   - Development mode with volume mounts"
-    echo ""
-    echo "Switch modes with: export DEVBOB_MODE=<mode>"
-    echo ""
-}
+#=============================================================================
+# Help
+#=============================================================================
 
 cmd_help() {
     cat << 'HELP'
 ╔═══════════════════════════════════════════════════════════╗
-║                     DevBob CLI                            ║
+║    DevBob - Debuggable Distributed Development System    ║
 ╚═══════════════════════════════════════════════════════════╝
 
-Metabob DevBob environment management.
-
-Usage: ./devbob <command> [options]
+Architecture: Shared backend + on-demand agent containers
+All services use localhost for maximum debuggability
 
 Commands:
 
-  setup                   Run interactive setup wizard
-  config <subcommand>     Manage OpenCode configurations (see below)
-  start [services...]     Start services (default: all)
-  backend                 Start only backend services (full mode only)
-  stop [services...]      Stop containers (default: all)
-  restart [services...]   Restart containers (default: all)
-  status                  Show container status
-  mode                    Show current configuration mode
-  logs [container]        Follow container logs (default: all)
-  shell [container]       Open shell in container (default: devbob-opencode)
-  tui [container]         Launch OpenCode TUI (default: devbob-opencode)
-  agent [container]       Alias for tui command
-  test [port]             Test ACP connectivity (default: 3004)
-  task [container] <msg>  Send task to container (default: devbob-opencode)
-  build [options]         Build Docker image
-  help                    Show this help
+  Quick Start:
+    start               - Start backend + devbob-opencode agent
+    stop                - Stop all services
+    status              - Show service status
 
-Config Subcommands:
+  Backend Management:
+    backend start       - Start shared backend (redis, surreal, rpc-api)
+    backend stop        - Stop backend
+    backend status      - Show backend status
+    backend logs        - Follow backend logs
 
-  config init             Initialize OpenCode configs for host and devbob
-  config update           Refresh configs from environment variables
-  config verify           Test configuration and Metabob connectivity
-  config show             Display configuration status
-  config edit host        Edit host OpenCode configuration
-  config edit devbob      Edit devbob container configuration
+  Agent Management:
+    agent start <name>  - Start specific agent container
+    agent stop <name>   - Stop agent container
+    agent restart <name> - Restart agent
+    agent status        - Show all agent status
+    agent logs [name]   - Follow agent logs
+    agent shell <name>  - Open shell in agent
+    agent list          - List available agents
 
-Modes:
+  Debugging:
+    debug logs <container>   - Stream logs with timestamps
+    debug session [agent]    - Query agent sessions
+    debug components         - Query component tracking
+    debug impulses [agent]   - Inspect impulse state
+    debug shell <container>  - Open debug shell
+    debug health             - System health check
 
-  quick (default)         - Single devbob-opencode container
-                          - Fast startup, minimal resources
-                          - Uses docker-compose.devbob-quick.yaml
-  
-  full                    - Complete stack with backend services
-                          - Uses configs/docker-compose.devbob.yaml
-                          - Includes redis, surreal, metabob-rpc-api
-  
-  dev                     - Development mode with hot-reload
-                          - Uses docker-compose.devbob-dev.yaml
-                          - Volume mounts for live code editing
+  Help:
+    help                - Show this help
 
-  Switch modes: export DEVBOB_MODE=full && ./devbob start
+Available Agents:
+  devbob-opencode       - OpenCode development (ACP: 3004)
+  devbob-rpc-api        - RPC API development (ACP: 3001)
+  devbob-cli            - CLI development (ACP: 3003)
+  devbob-dashboard      - Dashboard development (ACP: 3002)
+  devbob-orchestrator   - Project orchestration (ACP: 3005)
+
+Backend Services:
+  Metabob API:  http://localhost:8080
+  SurrealDB:    http://localhost:8000
+  Redis:        redis://localhost:6379
 
 Examples:
 
-  # Quick start (single container)
+  # Start everything
   ./devbob start
 
-  # Full stack mode
-  export DEVBOB_MODE=full
-  ./devbob start
+  # Start backend only
+  ./devbob backend start
 
-  # Show current mode
-  ./devbob mode
+  # Start specific agent
+  ./devbob agent start devbob-opencode
 
-  # Start specific containers
-  ./devbob start devbob-opencode
+  # Watch agent logs
+  ./devbob debug logs devbob-opencode
 
-  # View logs
-  ./devbob logs devbob-opencode
+  # Debug session state
+  ./devbob debug session devbob-opencode
 
-  # Open shell in container
-  ./devbob shell
-  ./devbob shell devbob-opencode
+  # Open shell in agent
+  ./devbob agent shell devbob-opencode
 
-  # Launch TUI (default: devbob-opencode)
-  ./devbob tui
-  ./devbob tui devbob-opencode
+  # Check system health
+  ./devbob debug health
 
-  # Send task via ACP
-  ./devbob task "List workspace files"
-  ./devbob task devbob-opencode "Show version"
-
-  # Test ACP connectivity
-  ./devbob test 3004
-
-  # Build devbob image
-  ./devbob build --no-cache
-
-Backend Services:
-  - redis                  (port 6379)  - Task queue + cache
-  - surreal                (port 8000)  - SurrealDB database
-  - metabob-rpc-api-server (port 8080)  - FastAPI backend API
-  - metabob-rpc-api-worker              - Celery analysis worker
-
-Quick Mode Containers (ACP):
-  - devbob-opencode   (3004) - OpenCode development agent
-
-Full Mode Containers (ACP / Dashboard UI / Dashboard API):
-  - devbob            (3005 / 3014 / 3024) - DevBob project itself
-  - devbob-rpc-api    (3001 / 3010 / 3020) - Backend + RPC API codebase
-  - devbob-dashboard  (3002 / 3011 / 3021) - Dashboard development
-  - devbob-cli        (3003 / 3012 / 3022) - CLI development
-  - devbob-opencode   (3004 / 3013 / 3023) - OpenCode development
-
-Local Dashboard (Full Mode):
-  Each agent exposes a local dashboard showing code analysis and activity.
-  Access via: http://localhost:<dashboard-ui-port>
-  Example: http://localhost:3014 for devbob container
+  # Stop everything
+  ./devbob stop
 
 Configuration:
-  - .env.devbob or configs/.env.devbob - Environment variables
-  - configs/docker-compose.devbob.yaml - Full stack orchestration
+  configs/.env.devbob              - Environment variables
+  configs/opencode.devbob.json     - Container config
+  configs/opencode.host.json       - Host config
+  docker-compose.yaml              - Service definitions
 
 Documentation:
-  - BOOTSTRAP_GUIDE.md - Comprehensive setup guide
-  - QUICK_START.md - Quick reference
+  DEBUGGABLE_ARCHITECTURE_PLAN.md  - Architecture details
+  ENVIRONMENT_STATUS.md            - Current status
+  STATUS_INDEX.md                  - Documentation index
 
 HELP
 }
 
+#=============================================================================
 # Main
+#=============================================================================
+
 main() {
     if [ $# -eq 0 ]; then
         cmd_help
@@ -932,50 +565,23 @@ main() {
     shift
     
     case "$command" in
-        setup)
-            cmd_setup "$@"
-            ;;
-        config)
-            cmd_config "$@"
-            ;;
         start)
             cmd_start "$@"
             ;;
         stop)
             cmd_stop "$@"
             ;;
-        restart)
-            cmd_restart "$@"
-            ;;
         status|ps)
             cmd_status "$@"
             ;;
-        mode|info)
-            cmd_mode "$@"
-            ;;
-        logs)
-            cmd_logs "$@"
-            ;;
-        shell|exec|bash)
-            cmd_shell "$@"
-            ;;
-        tui)
-            cmd_tui "$@"
+        backend)
+            cmd_backend "$@"
             ;;
         agent)
             cmd_agent "$@"
             ;;
-        test)
-            cmd_test "$@"
-            ;;
-        task|send)
-            cmd_task "$@"
-            ;;
-        build)
-            cmd_build "$@"
-            ;;
-        backend)
-            cmd_backend "$@"
+        debug)
+            cmd_debug "$@"
             ;;
         help|--help|-h)
             cmd_help

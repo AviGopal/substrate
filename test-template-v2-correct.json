@@ -1,0 +1,31 @@
+{
+  "name": "test-hello-world",
+  "category": "feature",
+  "description": "Simple hello world test template",
+  "task_steps": [
+    {
+      "id": "say-hello",
+      "subagent": "general",
+      "description": "Print hello world",
+      "dependencies": [],
+      "prompt": {
+        "template": "Print 'Hello {{greeting_text}}'",
+        "max_tokens": 1000
+      },
+      "validation": {
+        "required_patterns": ["Hello"]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "estimated_duration_seconds": 10
+      }
+    }
+  ],
+  "variables": {
+    "greeting_text": "World"
+  },
+  "context_requirements": []
+}

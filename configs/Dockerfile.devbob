@@ -26,6 +26,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for fast Python package management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
+WORKDIR /build
+
+# Copy metabob-proto first (dependency of metabob-cli)
+COPY repos/metabob-proto/ ./metabob-proto/
+
 WORKDIR /build/metabob-cli
 
 # Copy metabob-cli source

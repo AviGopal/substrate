@@ -466,8 +466,12 @@ init_opencode_config() {
     # Only enable Metabob if we have a valid API URL and it's not disabled
     # METABOB_DISABLE_AUTO_INJECT=true disables auto-injection but keeps MCP tools available
     # METABOB_DISABLE_MCP=true completely disables the MCP server (no tools)
+    log_info "  DEBUG: METABOB_API_URL='${METABOB_API_URL}'"
+    log_info "  DEBUG: METABOB_DISABLE_MCP='${METABOB_DISABLE_MCP:-false}'"
+    log_info "  DEBUG: METABOB_DISABLE_AUTO_INJECT='${METABOB_DISABLE_AUTO_INJECT:-false}'"
     if [ -n "${METABOB_API_URL}" ] && [ "${METABOB_API_URL}" != "disabled" ] && [ "${METABOB_API_URL}" != "" ]; then
         METABOB_ENABLED="true"
+        log_info "  DEBUG: METABOB_ENABLED=true"
         if [ "${METABOB_DISABLE_MCP:-false}" = "true" ]; then
             # Completely disable MCP - no tools available
             METABOB_AUTO_INJECT="false"
@@ -483,6 +487,7 @@ init_opencode_config() {
             METABOB_AUTO_INJECT="true"
             METABOB_MCP_ENABLED="true"
             log_info "  Metabob full integration enabled (auto-inject + MCP tools)"
+            log_info "  DEBUG: METABOB_MCP_ENABLED=true"
         fi
     else
         METABOB_ENABLED="false"
@@ -512,6 +517,7 @@ init_opencode_config() {
     if [ "${METABOB_ENABLED}" = "true" ]; then
         # Build MCP section if MCP is enabled
         local MCP_CONFIG=""
+        log_info "  DEBUG: Checking METABOB_MCP_ENABLED='${METABOB_MCP_ENABLED}'"
         if [ "${METABOB_MCP_ENABLED}" = "true" ]; then
             MCP_CONFIG=',
   "mcp": {
@@ -522,6 +528,9 @@ init_opencode_config() {
       "enabled": true
     }
   }'
+            log_info "  DEBUG: MCP_CONFIG set (length: ${#MCP_CONFIG})"
+        else
+            log_warn "  DEBUG: MCP_CONFIG not set (METABOB_MCP_ENABLED != true)"
         fi
         
         # Create config with minimal metabob settings
@@ -643,7 +652,7 @@ start_opencode() {
     
     case "$mode" in
         acp)
-            log_info "Starting OpenCode in ACP mode on port ${ACP_PORT}..."
+            log_info "Starting OpenCode in serve mode on port ${ACP_PORT}..."
             log_info "OpenCode will auto-start metabob-cli MCP server"
             
             # Start MCP bridge services if available
@@ -658,10 +667,13 @@ start_opencode() {
                 sleep 5
             fi
             
-            exec opencode acp \
+            # Use serve mode instead of acp mode to avoid stdin hang
+            # Provides same HTTP API without ACP protocol stdin waiting
+            exec opencode serve \
                 --port "${ACP_PORT}" \
                 --hostname "${ACP_HOSTNAME}" \
-                --cwd "${WORKSPACE_DIR}"
+                --log-level DEBUG \
+                --print-logs
             ;;
         serve)
             log_info "Starting OpenCode in headless server mode..."

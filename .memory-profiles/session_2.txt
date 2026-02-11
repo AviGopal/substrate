@@ -1,0 +1,14 @@
+INFO  2026-02-10T21:17:43 +8ms service=sdk-loader total=2 loaded=0 packages=[] SDK loader initialized
+INFO  2026-02-10T21:17:43 +0ms service=template-cache intervalMs=60000 cleanup started
+INFO  2026-02-10T21:17:43 +68ms service=session-memory-manager intervalMs=300000 impulseMaxIdleMs=600000 sessionMaxIdleMs=3600000 started periodic memory cleanup
+INFO  2026-02-10T21:17:43 +2ms service=turn-lifecycle name=activity-decision-reminder priority=5 totalHooks=1 hook registered
+INFO  2026-02-10T21:17:43 +0ms service=turn-lifecycle name=session-memory-preparation priority=10 totalHooks=2 hook registered
+INFO  2026-02-10T21:17:43 +0ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=3 hook registered
+INFO  2026-02-10T21:17:43 +0ms service=turn-lifecycle name=metabob-context-preparation priority=20 totalHooks=4 hook registered
+INFO  2026-02-10T21:17:43 +0ms service=turn-lifecycle name=boredom-task-suggestion priority=25 totalHooks=5 hook registered
+INFO  2026-02-10T21:17:43 +0ms service=turn-lifecycle name=post-turn-cleanup priority=100 totalHooks=6 hook registered
+INFO  2026-02-10T21:17:43 +0ms service=turn-lifecycle name=session-memory-optimization priority=110 totalHooks=7 hook registered
+INFO  2026-02-10T21:17:43 +86ms service=config path=/root/.config/opencode/config.json loading
+INFO  2026-02-10T21:17:43 +2ms service=config path=/root/.config/opencode/opencode.json loading
+INFO  2026-02-10T21:17:43 +122ms service=memory-monitor memory monitoring disabled
+INFO  2026-02-10T21:17:43 +29ms service=config path=/root/.config/opencode/opencode.jsonc loading

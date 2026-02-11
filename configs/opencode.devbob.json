@@ -6,14 +6,23 @@
       "options": {
         "apiKey": "${ANTHROPIC_API_KEY}"
       }
-    },
-    "openai": {
-      "options": {
-        "apiKey": ""
-      }
     }
   },
   "mcp": {
+    "metabob": {
+      "type": "local",
+      "command": [
+        "metabob-cli",
+        "mcp",
+        "--transport",
+        "stdio"
+      ],
+      "environment": {
+        "METABOB_API_URL": "http://api-server-dev:8080",
+        "METABOB_API_KEY": "mb_Y99iQNMiycAlpkQamp0dhnU_t5e0ds0mkwDrU7g9bxs"
+      },
+      "enabled": true
+    },
     "playwright": {
       "type": "local",
       "command": [
@@ -26,13 +35,14 @@
   "metabob": {
     "cli_path": "metabob-cli",
     "api_key": "mb_Y99iQNMiycAlpkQamp0dhnU_t5e0ds0mkwDrU7g9bxs",
-    "base_url": "http://host.docker.internal:8080",
+    "base_url": "http://api-server-dev:8080",
     "state_directory": ".metabob",
     "max_issues": 5,
     "min_severity": "MEDIUM",
     "cache_timeout": 300,
     "context_budget_tokens": 10000,
-    "subagent_token_budget": 5000
+    "subagent_token_budget": 5000,
+    "project_id": "exp-repo-dev"
   },
   "sessionMemory": {
     "enabled": true,

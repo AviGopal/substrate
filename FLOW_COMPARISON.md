@@ -1,409 +1,292 @@
-# Session Memory Flow - ACTUAL vs EXPECTED
+# Activity Execution Flow - Proven vs Broken
 
-## Critical Discovery: prepareSessionMemory() Is Never Called! 🚨
-
-### The Bug
-
-We found the root cause! The `prepareSessionMemory()` function exists but **is never invoked**.
-
-### Evidence
-
-**File**: `src/session/prompt.ts`
-
-**Line 426-428**:
-```typescript
-// NOTE: Session memory preparation is now handled exclusively via turn lifecycle hooks
-// The memory-management hook (priority 10) in turn-lifecycle-hooks.ts runs manage-session-memory activity
-// Removed duplicate prepareSessionMemory() call to prevent double execution and cost counting
-```
-
-**But** we just removed that hook because it was trying to call a non-existent template!
-
-**File**: `src/session/turn-lifecycle-hooks.ts`
-
-**Line 15-20**:
-```typescript
-/**
- * Memory Management Hook - REMOVED
- *
- * Previously tried to execute non-existent 'manage-session-memory' template.
- * Session memory preparation now happens directly in prompt.ts via SessionMemoryAgent.
- * See: prepareSessionMemory() in src/session/prompt.ts
- */
-```
-
-**The comments contradict each other!**
-
-### Verification
-
-Searched for any calls to `prepareSessionMemory()`:
-```bash
-grep "await prepareSessionMemory\(|prepareSessionMemory\(\{" prompt.ts
-# Result: No matches found
-```
-
-**The function is defined at line 2423 but NEVER called.**
+**Date**: February 9, 2026  
+**Method**: Code path replication (no LLM, only execution)  
+**Status**: ❌ ROOT CAUSE PROVEN
 
 ---
 
-## Current Actual Flow (BROKEN)
+## What We Proved
 
-```mermaid
-flowchart TD
-    A[User sends message] --> B[Prompt.prompt input]
-    B --> C[createUserMessage]
-    C --> D[TurnLifecycle.executePreTurnHooks]
-    D --> E[Activity Recommendation Hook]
-    D --> F[Metabob Context Hook]
-    D --> G[Other hooks...]
-    
-    E --> H{prepareSessionMemory?}
-    H -->|NEVER CALLED| I[Skip session memory]
-    
-    I --> J[Build prompt without hints]
-    J --> K[Main agent execution]
-    K --> L[Empty impulses created]
-    
-    style H fill:#ff6b6b,stroke:#c92a2a
-    style I fill:#ff6b6b,stroke:#c92a2a
-    style L fill:#ff6b6b,stroke:#c92a2a
+Using the EXACT code path the agent would execute:
+
+### 1. Agent Calls activity() Tool ✅
+```typescript
+// repos/metabob-opencode/packages/opencode/src/tool/activity.ts:292
+async execute(params, ctx) {
+  const template = await TemplateRepository.get(templateId, { sessionID: ctx.sessionID })
+  // ...
+}
+```
+
+### 2. TemplateRepository.get() Calls TemplateLoader.load() ✅
+```typescript
+// repos/metabob-opencode/packages/opencode/src/session/template-loader.ts:156
+export async function load(id: string, options, sessionID) {
+  // Step 3: Load from backend via direct API
+  const { MetabobAPI } = await import("../util/metabob-api")
+  const variantDetails = await MetabobAPI.getVariantDetails(resolvedId)
+  // ...
+}
+```
+
+### 3. MetabobAPI.getVariantDetails() Calls Backend ✅
+```typescript
+// Makes HTTP request:
+GET /v2/activities/variants/{variant_id}
+```
+
+### 4. Backend Query Executes ✅
+```python
+# repos/metabob-rpc-api/server/routes/v2_activities.py
+# Returns variant details from SurrealDB
 ```
 
 ---
 
-## Expected Flow (What We Implemented)
+## The Actual Error (Proven by Replication)
 
-```mermaid
-flowchart TD
-    A[User sends message] --> B[Prompt.prompt input]
-    B --> C[createUserMessage]
-    C --> D[TurnLifecycle.executePreTurnHooks]
-    
-    D --> E[Memory Management Hook priority 10]
-    E --> F[prepareSessionMemory]
-    F --> G[SessionMemoryAgent.shouldRun]
-    
-    G -->|true| H[Extract activityContextHints]
-    H --> I[Activity.getActivityForSession]
-    I -->|activityId| J[Activity.load]
-    J --> K[TemplateProvider.getMetadata]
-    K --> L[contextRequirements]
-    
-    L --> M[SessionMemoryAgent.analyzeIntent with hints]
-    M --> N[Intent with suggestedImpulses]
-    N --> O[SessionMemoryAgent.prepare with hints]
-    
-    O --> P{For each impulse}
-    P -->|high priority OR required| Q[ImpulseResolver.load]
-    P -->|other| R[Skip loading]
-    
-    Q --> S[SessionMemory.updateImpulse]
-    S --> T[Impulse has tokenCount > 0]
-    
-    T --> U[Continue to other hooks]
-    U --> V[Main agent execution]
-    V --> W[Loaded context available]
-    
-    style E fill:#51cf66,stroke:#2b8a3e
-    style M fill:#51cf66,stroke:#2b8a3e
-    style Q fill:#51cf66,stroke:#2b8a3e
-    style T fill:#51cf66,stroke:#2b8a3e
+### Test Script Output:
+```
+Step 3: List available activities
+  ✓ Found 0 activities in database
+  ⚠️  Database is empty - no activities registered
+
+This is why search_activities returns 0 results.
+The agent cannot execute activities that don't exist in the database.
 ```
 
----
-
-## The Missing Link
-
-### What Should Happen
-
-**Entry Point**: `prompt.ts::prompt()` line 371
-
-```typescript
-export async function prompt(input: PromptInput): Promise<MessageV2.WithParts> {
-  // ... create user message ...
-  
-  // Execute pre-turn lifecycle hooks
-  if (promptText) {
-    const hookContext: TurnLifecycle.TurnContext = {
-      sessionID: input.sessionID,
-      userMessageID: userMsg.info.id,
-      promptText,
-      agent,
-      timestamp: Date.now(),
-    }
-    
-    const { results, allSucceeded } = await TurnLifecycle.executePreTurnHooks(hookContext)
-    //                                      ↑
-    //                                This should call our hook
+### Registration Attempt Output:
+```
+Registering activity...
+Status: 422
+Response: {"detail":[{
+  "type": "string_type",
+  "loc": ["body","tasks",0,"prompt","variables",0],
+  "msg": "Input should be a valid string",
+  "input": {
+    "name": "scope",
+    "type": "string",
+    "required": false,
+    "description": "...",
+    "default": "entire repo"
   }
-  
-  // But there's NO hook registered to call prepareSessionMemory()!
+}]}
+```
+
+---
+
+## Root Cause: Schema Mismatch
+
+### Template Format (jiggle-documentation.json):
+```json
+{
+  "tasks": [{
+    "prompt": {
+      "variables": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": false,
+          "description": "...",
+          "default": "entire repo"
+        }
+      ]
+    }
+  }]
 }
 ```
 
-### What We Need to Add
-
-**File**: `src/session/turn-lifecycle-hooks.ts`
-
-We need to add a working hook that calls `prepareSessionMemory()` directly:
-
-```typescript
-TurnLifecycle.registerHook({
-  name: "session-memory-preparation",
-  priority: 10,
-  
-  enabled: async (ctx) => {
-    const config = await Config.get()
-    if (config.sessionMemory?.enabled === false) return false
-    if (ctx.agent.mode === "subagent") return false
-    if (ctx.promptText.length < 10) return false
-    return true
-  },
-  
-  execute: async (ctx) => {
-    // Import the prepareSessionMemory function from prompt.ts
-    const { Prompt } = await import("./prompt")
-    
-    // Call it directly (NOT through a template)
-    await Prompt.prepareSessionMemory({
-      sessionID: ctx.sessionID,
-      promptText: ctx.promptText,
-      agent: ctx.agent.name,
-    })
-    
-    return {
-      success: true,
-      modified: true,
-      duration: Date.now() - start,
-    }
-  },
-})
+### Backend Expected Format (proto_task_step.py:30-32):
+```python
+class TaskPrompt(BaseModel):
+    variables: List[str] = Field(
+        default_factory=list,
+        description="Variables referenced in template"
+    )
 ```
 
-**BUT** there's a problem: `prepareSessionMemory()` is not exported!
+**Backend expects**: `["scope", "mode", "archiveInsteadOfDelete"]`  
+**Template provides**: `[{name:"scope",...}, {name:"mode",...}, ...]`
 
 ---
 
-## Two Solutions
+## Why Activity Execution Fails
 
-### Solution 1: Export and Call via Hook (Recommended)
-
-**Why**: Maintains separation of concerns, uses lifecycle system
-
-1. Export `prepareSessionMemory()` from `prompt.ts`:
-```typescript
-export async function prepareSessionMemory(input: { ... }): Promise<void> {
-  // ... existing implementation ...
-}
+```
+1. Agent calls: activity({ activityId: "jiggle-documentation", ... })
+                    ↓
+2. TemplateRepository.get("jiggle-documentation")
+                    ↓
+3. MetabobAPI.getVariantDetails("jiggle-documentation")
+                    ↓
+4. GET /v2/activities/variants/jiggle-documentation
+                    ↓
+5. Database query: SELECT * FROM activity_variants WHERE id = "jiggle-documentation"
+                    ↓
+6. Result: []  (NO MATCHING RECORD)
+                    ↓
+7. Returns: 404 Not Found
+                    ↓
+8. TemplateLoader throws: "Template not found: jiggle-documentation"
+                    ↓
+9. ActivityTool throws: "Activity \"jiggle-documentation\" not found"
+                    ↓
+10. Agent sees: Error message
 ```
 
-2. Add hook in `turn-lifecycle-hooks.ts`:
-```typescript
-TurnLifecycle.registerHook({
-  name: "session-memory-preparation",
-  priority: 10,
-  enabled: async (ctx) => { /* ... */ },
-  execute: async (ctx) => {
-    const { prepareSessionMemory } = await import("./prompt")
-    await prepareSessionMemory({
-      sessionID: ctx.sessionID,
-      promptText: ctx.promptText,
-      agent: ctx.agent.name,
-    })
-    return { success: true, modified: true, duration: 0 }
-  },
-})
+**The activity cannot be found because it was never registered in the database.**
+
+---
+
+## Why Registration Fails
+
+```
+1. Attempt: POST /v2/activities/templates
+            Body: {jiggle template JSON}
+                ↓
+2. Pydantic validation: Check against ProtoTaskStep schema
+                ↓
+3. TaskPrompt.variables expects: List[str]
+   Template provides: List[Dict]
+                ↓
+4. Validation error: "Input should be a valid string"
+                ↓
+5. Returns: 422 Unprocessable Entity
+                ↓
+6. Registration fails
 ```
 
-### Solution 2: Direct Call in prompt() (Alternative)
+**The activity cannot be registered because the template format doesn't match the backend schema.**
 
-**Why**: Simpler, more direct control
+---
 
-In `prompt.ts::prompt()`, after line 424:
+## The Circular Problem
 
-```typescript
-// Execute pre-turn lifecycle hooks
-const { results, allSucceeded } = await TurnLifecycle.executePreTurnHooks(hookContext)
-
-// Prepare session memory (if enabled)
-try {
-  await prepareSessionMemory({
-    sessionID: input.sessionID,
-    promptText,
-    agent: agent.name,
-  })
-} catch (error) {
-  l.warn("session memory preparation failed", { error })
-  // Non-fatal, continue
-}
+```
+┌─────────────────────────────────────┐
+│  Agent needs activity in database   │
+│           to execute it             │
+└──────────────┬──────────────────────┘
+               ↓
+┌──────────────────────────────────────┐
+│  Activity cannot be registered       │
+│  because template format is wrong    │
+└──────────────┬───────────────────────┘
+               ↓
+┌──────────────────────────────────────┐
+│  Template format was created for     │
+│  OpenCode's ActivityTemplate.Schema  │
+│  which doesn't match proto schema    │
+└──────────────────────────────────────┘
 ```
 
 ---
 
-## Code Locations
+## Proof: No Green Checkmarks Work
 
-### Files Modified in Our Implementation
+### What DOESN'T Work:
+- ❌ search_activities returns 0 (database empty)
+- ❌ activity() tool throws "not found" (no data)
+- ❌ Template registration fails (schema mismatch)
+- ❌ Manual execution worked, but that's NOT the activity system
 
-1. ✅ **turn-lifecycle-hooks.ts**: Removed broken hook (lines 14-185)
-2. ✅ **prompt.ts**: Added hint extraction (lines 2457-2484)
-3. ✅ **prompt.ts**: Pass hints to analyzeIntent (line 2491)
-4. ✅ **prompt.ts**: Pass hints to prepare (line 2505)
-5. ✅ **memory-agent.ts**: Added hints parameter (line 101)
-6. ✅ **memory-agent.ts**: Enhanced system prompt (lines 185-200)
-7. ✅ **memory-agent.ts**: Updated prepare signature (line 792)
-8. ✅ **memory-agent.ts**: Prioritized loading (lines 897-910)
-9. ✅ **memory-agent.ts**: Added logging (lines 947-956)
-
-### What We're Missing
-
-❌ **The invocation!** None of our code ever runs because `prepareSessionMemory()` is never called.
+### What DOES Work (proven by replication):
+- ✅ Backend API is running
+- ✅ Code path executes correctly
+- ✅ Error messages are accurate
+- ✅ Schema validation catches the mismatch
 
 ---
 
-## Comparison Table
+## The Fix Required
 
-| Aspect | What We Implemented | What Actually Happens |
-|--------|-------------------|---------------------|
-| **Hook exists?** | No (we removed it) | No |
-| **prepareSessionMemory defined?** | Yes (we enhanced it) | Yes |
-| **prepareSessionMemory called?** | NO! | NO! |
-| **Hints extracted?** | Yes (in function) | Never runs |
-| **Hints passed?** | Yes (in function) | Never runs |
-| **Impulses loaded?** | Yes (in function) | Never runs |
-| **Result** | Code ready but dormant | Empty impulses persist |
+### Option 1: Fix Template Format
+Convert jiggle template variables from objects to strings:
 
----
-
-## The Fix We Need NOW
-
-### Step 1: Export prepareSessionMemory
-
-**File**: `src/session/prompt.ts` (line 2423)
-
-```typescript
-// Change from:
-async function prepareSessionMemory(input: { ... }): Promise<void> {
-
-// To:
-export async function prepareSessionMemory(input: { ... }): Promise<void> {
+```diff
+  "prompt": {
+-   "variables": [
+-     {"name": "scope", "type": "string", "required": false, ...}
+-   ]
++   "variables": ["scope", "mode", "archiveInsteadOfDelete"]
+  }
 ```
 
-### Step 2: Add Working Hook
+**Problem**: Loses metadata (type, required, description, default)
 
-**File**: `src/session/turn-lifecycle-hooks.ts` (after line 20)
+### Option 2: Fix Backend Schema
+Update ProtoTaskStep to accept variable objects:
 
-```typescript
-/**
- * Session Memory Preparation Hook
- *
- * Runs before every turn (priority: 10)
- * Analyzes user intent and prepares context via SessionMemoryAgent
- */
-TurnLifecycle.registerHook({
-  name: "session-memory-preparation",
-  priority: 10,
+```python
+class PromptVariable(BaseModel):
+    name: str
+    type: str
+    required: bool = False
+    description: Optional[str] = None
+    default: Optional[Any] = None
 
-  enabled: async (ctx) => {
-    const config = await Config.get()
-    
-    // Disabled in config?
-    if (config.sessionMemory?.enabled === false) {
-      return false
-    }
-
-    // Skip for subagents - only run for main agent modes
-    if (ctx.agent.mode === "subagent") {
-      return false
-    }
-
-    // Skip for very short messages (likely acknowledgments)
-    if (ctx.promptText.length < 10) {
-      return false
-    }
-
-    return true
-  },
-
-  execute: async (ctx) => {
-    const start = Date.now()
-
-    try {
-      const { prepareSessionMemory } = await import("./prompt")
-      
-      await prepareSessionMemory({
-        sessionID: ctx.sessionID,
-        promptText: ctx.promptText,
-        agent: ctx.agent.name,
-      })
-
-      return {
-        success: true,
-        modified: true,
-        duration: Date.now() - start,
-      }
-    } catch (error) {
-      log.error("session memory preparation failed", {
-        sessionID: ctx.sessionID,
-        error: error instanceof Error ? error.message : String(error),
-      })
-
-      return {
-        success: false,
-        modified: false,
-        duration: Date.now() - start,
-      }
-    }
-  },
-})
+class TaskPrompt(BaseModel):
+    variables: List[Union[str, PromptVariable]]
 ```
 
-### Step 3: Update Comment in prompt.ts
+**Problem**: Requires backend code changes and migration
 
-**File**: `src/session/prompt.ts` (lines 426-428)
+### Option 3: Convert at Boundaries
+Add transformation layer that converts between formats:
 
 ```typescript
-// Change from:
-// NOTE: Session memory preparation is now handled exclusively via turn lifecycle hooks
-// The memory-management hook (priority 10) in turn-lifecycle-hooks.ts runs manage-session-memory activity
-// Removed duplicate prepareSessionMemory() call to prevent double execution and cost counting
-
-// To:
-// NOTE: Session memory preparation is handled by session-memory-preparation hook
-// See: turn-lifecycle-hooks.ts (priority 10)
-// The hook calls prepareSessionMemory() which extracts activity context hints
+// Before sending to backend
+variables: template.variables.map(v => v.name || v)
 ```
+
+**Problem**: Loses validation benefits, error-prone
 
 ---
 
-## Why This Happened
+## What This Session Proved
 
-1. **Original Design**: Use template-based execution (`manage-session-memory` template)
-2. **Problem**: Template doesn't exist, hook fails silently
-3. **Refactor**: Created `prepareSessionMemory()` function with proper logic
-4. **BUG**: Forgot to wire up the invocation
-5. **Result**: All our code is ready but never executes
+### ✅ Proven Facts:
+1. Backend is running and healthy
+2. Database is empty (no activities)
+3. Registration API exists (POST /v2/activities/templates)
+4. Registration fails with 422 (schema mismatch)
+5. Schema mismatch is: `List[object]` vs `List[str]`
+6. Code path from agent → backend works correctly
+7. Error is NOT in the code, but in the data schema
+
+### ❌ Not Proven:
+1. That fixing the schema will make everything work
+2. That there aren't other schema mismatches
+3. That the activity will execute successfully after registration
+
+### 📋 Next Steps:
+1. Choose fix strategy (Option 1, 2, or 3)
+2. Implement the fix
+3. Register a simple test activity
+4. Verify search_activities returns results
+5. Verify activity() tool can execute it
+6. THEN claim success (with evidence)
 
 ---
 
-## Summary
+## Conclusion
 
-### What We Did Right ✅
+**Zero activities have executed successfully via the activity tool.**
 
-- Extracted activity context hints correctly
-- Passed hints through the entire pipeline
-- Enhanced system prompt with hints
-- Implemented prioritized loading logic
-- Added comprehensive logging
+The replication proves:
+- The code path works
+- The database is empty
+- Registration fails due to schema mismatch
+- No amount of "✅ Complete" claims change this
 
-### What We Forgot ❌
+**What's needed**: Actual schema fix + actual registration + actual execution proof.
 
-- **Actually call the function!**
-- Export `prepareSessionMemory()` 
-- Register a working hook to invoke it
+---
 
-### The Fix (2 changes)
+**Evidence Files**:
+- `test-activity-execution-flow.py` - Replicates agent code path
+- `register-jiggle-activity.py` - Attempts registration, captures error
+- Exit codes: Both return 1 (failure)
+- False positives: 0 (actual HTTP calls, actual errors)
 
-1. **Export** `prepareSessionMemory` from `prompt.ts`
-2. **Add hook** in `turn-lifecycle-hooks.ts` to call it
-
-This will activate all our implemented logic and fix the empty impulse problem.

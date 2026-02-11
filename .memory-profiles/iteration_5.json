@@ -1,0 +1,28 @@
+INFO  2026-02-10T21:16:05 +7ms service=sdk-loader total=2 loaded=0 packages=[] SDK loader initialized
+INFO  2026-02-10T21:16:05 +0ms service=template-cache intervalMs=60000 cleanup started
+INFO  2026-02-10T21:16:05 +50ms service=session-memory-manager intervalMs=300000 impulseMaxIdleMs=600000 sessionMaxIdleMs=3600000 started periodic memory cleanup
+INFO  2026-02-10T21:16:05 +2ms service=turn-lifecycle name=activity-decision-reminder priority=5 totalHooks=1 hook registered
+INFO  2026-02-10T21:16:05 +0ms service=turn-lifecycle name=session-memory-preparation priority=10 totalHooks=2 hook registered
+INFO  2026-02-10T21:16:05 +0ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=3 hook registered
+INFO  2026-02-10T21:16:05 +0ms service=turn-lifecycle name=metabob-context-preparation priority=20 totalHooks=4 hook registered
+INFO  2026-02-10T21:16:05 +0ms service=turn-lifecycle name=boredom-task-suggestion priority=25 totalHooks=5 hook registered
+INFO  2026-02-10T21:16:05 +0ms service=turn-lifecycle name=post-turn-cleanup priority=100 totalHooks=6 hook registered
+INFO  2026-02-10T21:16:05 +0ms service=turn-lifecycle name=session-memory-optimization priority=110 totalHooks=7 hook registered
+INFO  2026-02-10T21:16:05 +65ms service=config path=/root/.config/opencode/config.json loading
+INFO  2026-02-10T21:16:05 +3ms service=config path=/root/.config/opencode/opencode.json loading
+INFO  2026-02-10T21:16:05 +109ms service=memory-monitor memory monitoring disabled
+ERROR 2026-02-10T21:16:05 +6ms service=default message=Unknown arguments: format, run, /home/avi/documents/work/exp-repo/metabob-devbob/.activity-test timestamp=2026-02-10T21:16:05.247Z cli_error
+opencode agent
+
+manage agents
+
+Commands:
+  opencode agent create  create a new agent
+
+Options:
+  -h, --help        show help                                          [boolean]
+  -v, --version     show version number                                [boolean]
+      --print-logs  print logs to stderr                               [boolean]
+      --log-level   log level
+                            [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
+INFO  2026-02-10T21:16:05 +9ms service=session-memory-manager SessionMemoryManager shutdown complete
