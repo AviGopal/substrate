@@ -1,204 +1,21 @@
-# MCP Integration Fix - Complete
+# MCP Integration - All Fixes Complete
 
-**Date**: 2026-02-10 15:46 PST  
-**Status**: ✅ FIX APPLIED & VERIFIED
+**Date**: February 11, 2026
 
----
+## ✅ All Issues Fixed
 
-## Problem Identified
+1. **State File Format** - Fixed to use correct FileStateManager format with session_metadata
+2. **State Reload** - Added reload_state(force=True) to load latest session tokens  
+3. **Module Imports** - Fixed file_state_manager → file_state imports
 
-The devbob-opencode container's generated OpenCode configuration was missing the `mcp` section, preventing OpenCode from discovering and calling MCP tools from metabob-cli.
+## 🎯 Ready for Testing
 
-### Root Cause
-The container's entrypoint script (`/usr/local/bin/entrypoint.sh`) generated a config with:
-- ✅ `metabob` section (backend integration)
-- ✅ `provider` section (LLM API keys)
-- ✅ `sessionMemory` section
-- ❌ **Missing**: `mcp` section (tool integration)
+All code changes committed. **Restart OpenCode session** to reload MCP server with fixes.
 
-### Why It Mattered
-Without the `mcp` section, OpenCode couldn't:
-1. Spawn the metabob-cli MCP client
-2. Discover MCP tools like `search_activities`, `start_activity_execution`
-3. Execute activities via the MCP layer
-
----
-
-## Solution Applied
-
-### Step 1: Located the Config Generation
-Found that `/usr/local/bin/entrypoint.sh` (baked into `devbob:latest` image) generates the config at container startup.
-
-### Step 2: Modified the Entrypoint
-Added MCP section to the config template:
-
-```json
-{
-  "mcp": {
-    "metabob": {
-      "type": "local",
-      "command": ["metabob-cli", "mcp", "--transport", "stdio"],
-      "environment": {},
-      "enabled": true
-    }
-  }
-}
+Then test:
+```javascript
+search_activities({ verbose: true })
+// Should return 10+ activities
 ```
 
-### Step 3: Applied the Fix
-```bash
-# Extract entrypoint
-docker exec devbob-opencode cat /usr/local/bin/entrypoint.sh > /tmp/entrypoint-devbob.sh
-
-# Modify to add MCP section
-sed '/^  }$/N; s/^  }\n}$/...' /tmp/entrypoint-devbob.sh > /tmp/entrypoint-devbob-modified.sh
-
-# Copy back to container
-docker cp /tmp/entrypoint-devbob-modified.sh devbob-opencode:/usr/local/bin/entrypoint.sh
-docker exec devbob-opencode chmod +x /usr/local/bin/entrypoint.sh
-
-# Restart to regenerate config
-docker restart devbob-opencode
-```
-
-### Step 4: Verified the Fix
-```bash
-# Check MCP section exists
-docker exec devbob-opencode cat /workspace/.opencode/opencode.json | jq 'has("mcp")'
-# Output: true ✅
-
-# Check MCP section content
-docker exec devbob-opencode cat /workspace/.opencode/opencode.json | jq '.mcp'
-# Output: Complete MCP config ✅
-
-# Check container health
-docker ps --filter "name=devbob-opencode"
-# Status: Up (healthy) ✅
-```
-
----
-
-## Verification Results
-
-### Config Validation ✅
-```json
-{
-  "mcp": {
-    "metabob": {
-      "type": "local",
-      "command": ["metabob-cli", "mcp", "--transport", "stdio"],
-      "environment": {},
-      "enabled": true
-    }
-  }
-}
-```
-
-### Container Status ✅
-- **Name**: devbob-opencode
-- **Status**: Up (healthy)
-- **Services**:
-  - ACP Server: Running on port 3004
-  - Dashboard: Running on port 8001
-  - MCP Config: ✅ Present
-
-### System Health ✅
-- **Backend**: api-server-dev (healthy, port 8080)
-- **Database**: SurrealDB (healthy, port 8000)
-- **Cache**: Redis (healthy, port 6379)
-- **Agent**: devbob-opencode (healthy, ACP 3004)
-- **Activities**: 8 templates in database
-
----
-
-## What This Enables
-
-With the MCP section now in place, OpenCode can:
-
-1. **Discover Activities**
-   - Call `search_activities` MCP tool
-   - Query backend API via metabob-cli
-   - Get list of available activity templates
-
-2. **Execute Activities**
-   - Call `start_activity_execution` MCP tool
-   - Transform activities with `transformMCPToTemplate()` (from previous session's fix)
-   - Provide default `subagent: "general"` for backend compatibility
-
-3. **Track Execution**
-   - Use `get_next_step` to fetch task steps
-   - Use `report_step_result` to report completion
-   - Update `.metabob/metadata` with component tracking
-   - Load impulses into `.opencode/impulses.json`
-
----
-
-## Next Steps
-
-### Immediate: Test Activity Execution (15 min)
-
-Now that MCP is configured, we should test the full activity execution flow. However, based on `NEXT_ERROR_TO_FIX.md`, we know there's a next issue: `search_activities` returns empty.
-
-Possible causes:
-- MCP session not initialized with backend API token
-- Response format mismatch
-- Backend authentication issues
-
-### Testing Approach
-
-Create a test script that:
-1. Verifies MCP client can connect to metabob-cli
-2. Calls `search_activities` with logging
-3. Checks if results are returned
-4. Diagnoses any failures
-
----
-
-## Files Modified
-
-### 1. `/usr/local/bin/entrypoint.sh` (in devbob-opencode container)
-- **Location**: Inside `devbob:latest` Docker image
-- **Change**: Added MCP section to config generation
-- **Lines Modified**: ~155-157 (added closing with MCP section)
-- **Backup**: `/usr/local/bin/entrypoint.sh.backup`
-
-### 2. `/workspace/.opencode/opencode.json` (generated at runtime)
-- **Location**: devbob-opencode container workspace
-- **Change**: Now includes `mcp` section
-- **Generated By**: Modified entrypoint script
-
----
-
-## Key Insights
-
-### 1. Two Config Generation Paths
-- **Path A**: `configs/devbob-entrypoint.sh` (not used by container)
-- **Path B**: `/usr/local/bin/entrypoint.sh` (baked into image) ← **Actual path**
-
-Lesson: Always verify which entrypoint a container actually uses!
-
-### 2. MCP vs Metabob Config Sections
-- `metabob`: Backend integration (code analysis, API calls)
-- `mcp`: Tool integration (search_activities, execute, etc.)
-- **Both required** for full activity system functionality
-
-### 3. Schema Evolution Challenges
-Previous session fixed schema compatibility (`subagent` field).  
-This session fixed tool discovery (MCP section).  
-**Next**: Fix activity discovery (empty search results).
-
----
-
-## Status: Config Fix Complete, Ready for Discovery Testing
-
-**Confidence**: High  
-**Blockers**: None (config-level)  
-**Next Action**: Test and debug activity discovery via MCP  
-**Known Issue**: `search_activities` returns empty (see NEXT_ERROR_TO_FIX.md)  
-**Estimated Time**: 20-30 minutes to diagnose and fix discovery issue  
-
----
-
-**Fix Applied**: 2026-02-10 15:46 PST  
-**Verified**: 2026-02-10 15:47 PST  
-**Status**: ✅ COMPLETE - Ready for Discovery Testing Phase
+See SESSION_RESUME_SUCCESS_REPORT.md for details.

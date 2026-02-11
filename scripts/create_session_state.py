@@ -48,17 +48,27 @@ def write_state_file(session_data):
     session_token = session_data["metadata"]["session_token"]
     session_id = session_data["session_id"]
     project_id = session_data["project_id"]
+    created_at = session_data["created_at"]
 
     # Create state directory if it doesn't exist
     STATE_DIR.mkdir(parents=True, exist_ok=True)
 
-    # FileStateManager expects JSON with session_token field
+    # FileStateManager expects session_metadata nested structure
+    # Based on file_state.py line 985-991
+    from datetime import datetime
+
     state_content = {
-        "session_token": session_token,
-        "session_id": session_id,
-        "project_id": project_id,
-        "files": {},  # Empty files dict
-        "results": {},  # Empty results dict
+        "version": 1,
+        "session_metadata": {
+            "session_token": session_token,
+            "session_id": session_id,
+            "project_id": project_id,
+            "created_at": created_at,
+            "last_updated": datetime.now().isoformat(),
+            "format_version": "4.0",
+        },
+        "file_states": {},  # FileStateManager expects file_states not files
+        "results": {},
     }
 
     print(f"Writing state to: {STATE_FILE}")
