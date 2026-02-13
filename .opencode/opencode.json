@@ -20,6 +20,16 @@
         "METABOB_EXCLUDE_PATHS": "**/tests/**,**/perf-repos/**,**/__pycache__/**,**/.git/**,**/node_modules/**,**/venv/**,**/.venv/**,**/dist/**,**/build/**,**/.next/**,**/.metabob/**",
         "METABOB_WATCH_FILES": "false"
       }
+    },
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ],
+      "enabled": true,
+      "timeout": 60000
     }
   },
   "metabob": {
