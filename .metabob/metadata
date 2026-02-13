@@ -1,9 +1,9 @@
 {
-  "session_id": "test-org-v2:metabob-devbob:9d66bb30-2c35-4913-9fc7-ef0b9d0d0fcf",
+  "session_id": "62a4d853-4673-4450-b17e-4521f96e5c0e:exp-repo-dev:58585444-766c-42ad-a5d3-59594199bedf",
   "session_token": "c2Vzc2lv...",
   "state_file": ".metabob/state",
-  "created_at": "2026-02-09T15:01:35.373759",
-  "last_updated": "2026-02-09T15:11:19.634640",
+  "created_at": "2026-02-11T23:41:07.817607Z",
+  "last_updated": "2026-02-11T23:42:47.775195",
   "format_version": "4.0",
   "interrupted": false,
   "clean_shutdown": true,
@@ -16,8 +16,8 @@
     "state_file_exists": true,
     "session_file_exists": true,
     "was_interrupted": false,
-    "state_file_age": 0.27376317977905273
+    "state_file_age": 19.96383833885193
   },
-  "timestamp": 1770678687.571911,
-  "timestamp_iso": "2026-02-09 15:11:27"
+  "timestamp": 1770882189.29961,
+  "timestamp_iso": "2026-02-11 23:43:09"
 }

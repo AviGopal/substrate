@@ -1,0 +1,148 @@
+{
+  "name": "Persistence Verification Test",
+  "description": "Test template to verify that activity-create actually persists templates to the backend database via MetabobCLI.createActivityTemplate",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "verify-backend-connection",
+      "subagent": "general",
+      "description": "Verify connection to Metabob backend API",
+      "dependencies": [],
+      "prompt": {
+        "template": "Verify that the Metabob backend is accessible.\n\n**Steps**:\n1. Check if METABOB_API_URL environment variable is set (default: http://localhost:8080)\n2. Make a test request to the backend API health endpoint\n3. Report connection status\n\n**Expected Output**:\n```\n✓ Backend URL: http://localhost:8080\n✓ Backend status: healthy\n✓ Ready for template persistence test\n```",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "Backend URL:",
+          "Backend status:"
+        ],
+        "forbiddenPatterns": ["error", "failed", "unreachable"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-template-persistence",
+      "subagent": "general",
+      "description": "Test that a simple template can be created and persisted",
+      "dependencies": ["verify-backend-connection"],
+      "prompt": {
+        "template": "Test template persistence by creating a minimal test template.\n\n**Create a test template object**:\n```javascript\nconst testTemplate = {\n  name: 'Persistence Test Sample',\n  description: 'Minimal template for persistence verification',\n  category: 'infrastructure',\n  tasks: [\n    {\n      id: 'hello-world',\n      description: 'Print hello world',\n      subagent: 'general',\n      prompt: {\n        template: 'Print: Hello, persistence test!',\n        variables: [],\n        maxTokens: 100\n      },\n      validation: {\n        requiredFiles: [],\n        requiredPatterns: [],\n        forbiddenPatterns: [],\n        commands: []\n      },\n      retry: {\n        maxAttempts: 1,\n        strategy: 'simple'\n      }\n    }\n  ]\n}\n```\n\n**Persist using register_activity_template tool**:\n1. Write the test template to a temporary JSON file\n2. Call register_activity_template with the file path\n3. Check the result for success/failure\n4. Report the returned templateId\n\n**Expected Output**:\n```\n✓ Template file created\n✓ Calling register_activity_template tool\n✓ Template registered successfully\n✓ Template ID: infrastructure-{{hash}}\n✓ Persistence verified: template was written to backend database\n```",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "Template",
+          "registered",
+          "Template ID:"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "verify-template-discoverable",
+      "subagent": "general",
+      "description": "Verify the created template is discoverable via search_activities",
+      "dependencies": ["test-template-persistence"],
+      "prompt": {
+        "template": "Verify the persisted template is discoverable.\n\n**Use search_activities tool**:\n```\nsearch_activities({\n  category: 'infrastructure',\n  query: 'Persistence Test Sample',\n  verbose: true\n})\n```\n\n**Verification Checklist**:\n- ✓ Template appears in search results\n- ✓ Template ID matches what was returned from register_activity_template\n- ✓ Template metadata (name, description, category) is correct\n- ✓ Template has the expected task structure\n\n**Expected Output**:\n```\n✓ Template found via search_activities\n✓ Template ID: infrastructure-{{hash}}\n✓ Name: Persistence Test Sample\n✓ Category: infrastructure\n✓ Tasks: 1\n✓ PERSISTENCE VERIFICATION COMPLETE: Templates are successfully written to backend database\n```",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "Template found",
+          "Template ID:",
+          "PERSISTENCE VERIFICATION COMPLETE"
+        ],
+        "forbiddenPatterns": ["not found", "error"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": ["search_activities({ category: 'infrastructure', verbose: false })"],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 2000,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "examples": [
+      {
+        "name": "Verify Template Persistence",
+        "description": "Run the persistence verification test to confirm templates are persisted to backend",
+        "sequence": [
+          {
+            "template": "persistence-verification-test",
+            "variables": {},
+            "reason": "Verify that activity templates are actually persisted to the backend database"
+          }
+        ],
+        "outcome": "Confirmation that register_activity_template tool successfully persists templates to the backend database and they are discoverable via search_activities"
+      }
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": [
+      {
+        "taskId": "verify-backend-connection",
+        "metrics": {
+          "connection_time_ms": "Time to connect to backend (number)",
+          "backend_status": "Backend health status (string)"
+        },
+        "improvementHints": {
+          "backend_accessible": "Was the backend accessible? (boolean)"
+        }
+      },
+      {
+        "taskId": "test-template-persistence",
+        "metrics": {
+          "persistence_time_ms": "Time to persist template (number)",
+          "template_id_returned": "Template ID was returned (boolean)"
+        },
+        "improvementHints": {
+          "persistence_successful": "Was the template successfully persisted? (boolean)"
+        }
+      },
+      {
+        "taskId": "verify-template-discoverable",
+        "metrics": {
+          "search_time_ms": "Time to search for template (number)",
+          "template_found": "Template was found in search (boolean)"
+        },
+        "improvementHints": {
+          "fully_verified": "Was the template discoverable and correct? (boolean)"
+        }
+      }
+    ]
+  }
+}

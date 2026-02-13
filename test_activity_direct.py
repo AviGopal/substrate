@@ -1,77 +1,71 @@
-#!/usr/bin/env python3
-"""
-Test activity execution flow directly via backend API
-"""
-import requests
-import json
+import asyncio
+import httpx
 
-API_URL = "http://localhost:8080"
-
-print("=" * 60)
-print("Testing Activity Execution Flow")
-print("=" * 60)
-print()
-
-# Step 1: Search for available activities
-print("1. Searching for available activities...")
-try:
-    response = requests.get(f"{API_URL}/activities", params={"limit": 5})
+async def test_activity():
+    session_token = "c2Vzc2lvbnM6NjJhNGQ4NTMtNDY3My00NDUwLWIxN2UtNDUyMWY5NmU1YzBlOmV4cC1yZXBvLWRldjo1ODU4NTQ0NC03NjZjLTQyYWQtYTVkMy01OTU5NDE5OWJlZGY="
     
-    if response.status_code == 401:
-        print("   ⚠️  Authorization required")
-        print("   Creating test session...")
+    async with httpx.AsyncClient() as client:
+        # Test 1: List templates
+        print("=== Test 1: List Templates ===")
+        response = await client.get(
+            "http://localhost:8080/v2/activities/templates",
+            headers={"Authorization": f"Bearer {session_token}"}
+        )
+        templates = response.json()
+        print(f"Found {len(templates.get('templates', []))} templates")
         
-        # Create a test session
-        session_resp = requests.post(
-            f"{API_URL}/sessions",
-            json={
-                "project_id": "test-project",
-                "codebase_name": "metabob-devbob",
-                "username": "test-user"
-            }
+        # Find Activity Create template
+        activity_create = None
+        for t in templates.get('templates', []):
+            if t.get('variant_name') == 'Activity Create' and len(t.get('task_steps', [])) > 0:
+                activity_create = t
+                break
+        
+        if activity_create:
+            print(f"\nFound Activity Create: {activity_create['variant_id']}")
+            print(f"Tasks: {len(activity_create['task_steps'])}")
+        else:
+            print("\nActivity Create template not found or has no tasks!")
+            return
+        
+        # Test 2: Start execution
+        print("\n=== Test 2: Start Activity Execution ===")
+        execution_id = f"test-exec-{asyncio.get_event_loop().time()}"
+        
+        start_payload = {
+            "template_id": activity_create['variant_id'],
+            "variables": {
+                "activity_name": "Test Activity",
+                "activity_description": "A test activity to validate execution",
+                "category": "test"
+            },
+            "session_id": "test-session",
+            "execution_id": execution_id
+        }
+        
+        response = await client.post(
+            "http://localhost:8080/v2/activities/record/start",
+            headers={"Authorization": f"Bearer {session_token}"},
+            json=start_payload
         )
         
-        if session_resp.status_code == 200:
-            session_data = session_resp.json()
-            print(f"   ✓ Session created: {session_data.get('session_id', 'N/A')[:20]}...")
+        print(f"Start response: {response.status_code}")
+        if response.status_code == 200:
+            result = response.json()
+            print(f"Execution started: {result.get('execution_id')}")
             
-            # Try activities endpoint again with session
-            # Note: May need to extract and use auth token from session
-            print("   Note: Session-based auth may require additional token extraction")
+            # Test 3: Get next step
+            print("\n=== Test 3: Get Next Step ===")
+            response = await client.get(
+                f"http://localhost:8080/v2/activities/record/next-step/{execution_id}",
+                headers={"Authorization": f"Bearer {session_token}"}
+            )
+            print(f"Next step response: {response.status_code}")
+            if response.status_code == 200:
+                step = response.json()
+                print(f"Next step: {step}")
         else:
-            print(f"   ✗ Session creation failed: {session_resp.status_code}")
-            print(f"   Response: {session_resp.text[:200]}")
-    elif response.status_code == 200:
-        activities = response.json()
-        print(f"   ✓ Found {len(activities.get('activities', []))} activities")
-        
-        for activity in activities.get('activities', [])[:3]:
-            print(f"      - {activity.get('variant_id')} ({activity.get('activity_id')})")
-    else:
-        print(f"   ✗ Request failed: {response.status_code}")
-        print(f"   Response: {response.text[:200]}")
-        
-except Exception as e:
-    print(f"   ✗ Error: {e}")
+            print(f"Error: {response.text}")
 
-print()
-
-# Step 2: Check activity recommendation endpoint
-print("2. Checking activity recommendation system...")
-try:
-    response = requests.get(f"{API_URL}/activity-recommendations/health")
-    
-    if response.status_code == 200:
-        health = response.json()
-        print(f"   ✓ Recommendation system: {health}")
-    else:
-        print(f"   ⚠️  Health check returned: {response.status_code}")
-        
-except Exception as e:
-    print(f"   ✗ Error: {e}")
-
-print()
-print("=" * 60)
-print("Test complete!")
-print("=" * 60)
-
+if __name__ == "__main__":
+    asyncio.run(test_activity())

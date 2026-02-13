@@ -1,0 +1,8 @@
+{
+  "activity_id": "infrastructure-86af0790",
+  "variables": {
+    "description": "validation test run",
+    "auto_execute": false
+  },
+  "reason": "Validation script testing"
+}

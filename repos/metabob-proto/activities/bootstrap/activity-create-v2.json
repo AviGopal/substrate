@@ -1,0 +1,390 @@
+{
+  "variant_id": "activity-create-v2",
+  "activity_id": "activity-create",
+  "variant_name": "v2-self-validating",
+  "version": 2,
+  "description": "Create, validate, test, and register activity templates with self-healing via trailblazing",
+  "variables": {
+    "source_pattern": {
+      "type": "string",
+      "required": false,
+      "description": "Description of the successful interaction pattern to formalize"
+    },
+    "activity_name": {
+      "type": "string",
+      "required": true,
+      "description": "Name for the new activity (e.g., 'Deploy to Production')"
+    },
+    "activity_id": {
+      "type": "string",
+      "required": true,
+      "description": "ID for the new activity (e.g., 'deploy-production-v1')"
+    },
+    "target_category": {
+      "type": "string",
+      "required": true,
+      "description": "Category: feature-impl, bug-fix, refactor, infrastructure, or tool"
+    },
+    "test_variables": {
+      "type": "object",
+      "required": false,
+      "description": "Test variables to validate the template execution"
+    }
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 20000,
+  "expected_duration_ms": 300000,
+  "expected_cost": 0.35,
+  "expected_quality_score": 0.85,
+  "status": "active",
+  "hooks": {
+    "preActivity": {
+      "workingDirectory": {
+        "type": "temporary",
+        "prefix": "template-create-",
+        "cleanup": "onSuccess",
+        "preserve": ["*.json", "*.md"]
+      },
+      "environment": {
+        "TEMPLATE_CREATION_MODE": "isolated",
+        "METABOB_ACTIVITY_TYPE": "template-creation",
+        "ENABLE_TRAILBLAZING": "true"
+      }
+    },
+    "postActivity": {
+      "extractFiles": {
+        "pattern": "**/*.json",
+        "destination": "./created-templates",
+        "action": "copy"
+      },
+      "extractFiles_summary": {
+        "pattern": "**/TEMPLATE_SUMMARY.md",
+        "destination": "./created-templates",
+        "action": "copy"
+      },
+      "createSummary": true,
+      "captureMetrics": {
+        "validation_attempts": true,
+        "test_execution_results": true,
+        "registration_status": true
+      }
+    },
+    "onError": {
+      "captureEnvironment": true,
+      "captureLogs": {
+        "tail": 300
+      },
+      "createDiagnosticImpulse": true,
+      "enableTrailblazing": true,
+      "maxRecoveryAttempts": 3
+    }
+  },
+  "task_steps": [
+    {
+      "id": "identify-pattern",
+      "subagent": "general",
+      "description": "Identify Interaction Pattern: Analyze successful conversations to extract reusable patterns",
+      "dependencies": [],
+      "guidance": [
+        "Look for recurring user intents that led to successful outcomes",
+        "Identify the key steps that made the interaction effective",
+        "Note which tools and context were most useful",
+        "Consider what made this pattern successful vs. similar patterns"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "You are creating a new activity template based on a successful interaction pattern.\n\nSource Pattern: {{source_pattern}}\n\nAnalyze this pattern and identify:\n1. What user need/intent does this address?\n2. What are the key steps that made it successful?\n3. What tools and context were essential?\n4. What edge cases should the activity handle?\n5. How is this different from existing activities?\n\nCreate a detailed analysis in PATTERN_ANALYSIS.md",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": ["source_pattern"]
+      },
+      "validation": {
+        "postChecks": {
+          "requiredFiles": ["PATTERN_ANALYSIS.md"],
+          "requiredPatterns": [
+            "User need:",
+            "Key steps:",
+            "Essential tools:"
+          ]
+        }
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": "The pattern analysis is incomplete. Review the source pattern again and ensure you address: user need, key steps, essential tools, edge cases, and differentiation from existing activities."
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read"],
+        "optional": ["grep", "glob"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "define-scope",
+      "subagent": "general",
+      "description": "Define Activity Scope: Determine what the activity should and should not cover",
+      "dependencies": ["identify-pattern"],
+      "guidance": [
+        "Keep activities focused on a single goal",
+        "Avoid overlapping with existing activities",
+        "Consider edge cases and failure modes",
+        "Define clear success criteria"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Based on the pattern analysis in PATTERN_ANALYSIS.md, define the scope for activity: {{activity_name}}\n\nCreate SCOPE_DEFINITION.md with:\n\n1. **In Scope**: What this activity WILL do\n2. **Out of Scope**: What this activity will NOT do\n3. **Success Criteria**: How to tell if the activity succeeded\n4. **Failure Modes**: Common ways this could fail\n5. **Prerequisites**: What must exist before running\n6. **Side Effects**: What changes this activity makes\n\nBe specific and measurable.",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": ["activity_name"]
+      },
+      "validation": {
+        "postChecks": {
+          "requiredFiles": ["SCOPE_DEFINITION.md"],
+          "requiredPatterns": [
+            "In Scope:",
+            "Out of Scope:",
+            "Success Criteria:",
+            "Failure Modes:"
+          ]
+        }
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read"],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "design-steps",
+      "subagent": "general",
+      "description": "Design Task Steps: Break down the activity into discrete, measurable steps with dependencies",
+      "dependencies": ["define-scope"],
+      "guidance": [
+        "Each step should have a clear completion criteria",
+        "Order steps logically with dependencies",
+        "Include appropriate guidance for agent behavior",
+        "Specify required tools for each step",
+        "Add validation checks to catch failures early"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Design the task steps for activity: {{activity_name}}\n\nBased on SCOPE_DEFINITION.md, create STEP_DESIGN.md with:\n\nFor each step:\n1. **Step ID**: Unique identifier (e.g., 'setup-environment')\n2. **Description**: Clear, action-oriented description\n3. **Dependencies**: Which steps must complete first\n4. **Required Tools**: Tools this step needs\n5. **Validation**: How to verify success\n6. **Guidance**: Tips for the agent executing this step\n\nAim for 3-7 steps. Each step should be independently testable.",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": ["activity_name"]
+      },
+      "validation": {
+        "postChecks": {
+          "requiredFiles": ["STEP_DESIGN.md"],
+          "requiredPatterns": [
+            "Step ID:",
+            "Description:",
+            "Required Tools:"
+          ]
+        }
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read"],
+        "optional": ["grep"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "create-template",
+      "subagent": "general",
+      "description": "Create Activity Template: Write the activity JSON following the ActivityVariant schema",
+      "dependencies": ["design-steps"],
+      "guidance": [
+        "Follow the ActivityVariant proto schema exactly",
+        "Set realistic cost and duration estimates based on step complexity",
+        "Start with status 'testing' for new activities",
+        "Include validation checks in each step",
+        "Add helpful guidance for each step",
+        "Specify tool requirements clearly"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Create the activity template JSON for: {{activity_name}}\n\nActivity ID: {{activity_id}}\nCategory: {{target_category}}\n\nUsing the designs in STEP_DESIGN.md, create {{activity_id}}.json following this structure:\n\n```json\n{\n  \"variant_id\": \"{{activity_id}}\",\n  \"activity_id\": \"{{activity_id}}\",\n  \"variant_name\": \"v1-baseline\",\n  \"version\": 1,\n  \"description\": \"...\",\n  \"variables\": { /* template variables */ },\n  \"prompt_strategy\": \"guided\",\n  \"context_budget_tokens\": 12000,\n  \"expected_duration_ms\": 120000,\n  \"expected_cost\": 0.15,\n  \"status\": \"testing\",\n  \"task_steps\": [\n    /* array of step objects from STEP_DESIGN.md */\n  ]\n}\n```\n\nIMPORTANT:\n- Use \"task_steps\" (NOT \"tasks\") - this is the proto field name\n- Each step needs: id, subagent, description, dependencies, prompt, tools, validation, retry, metrics\n- Set reasonable expected_duration_ms and expected_cost\n- Include validation.postChecks for steps that create files or make changes",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": ["activity_name", "activity_id", "target_category"]
+      },
+      "validation": {
+        "postChecks": {
+          "requiredFiles": ["{{activity_id}}.json"],
+          "commands": [
+            "jq empty {{activity_id}}.json"
+          ]
+        }
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": "The template JSON has syntax errors. Fix the JSON syntax using jq to validate."
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read", "bash"],
+        "optional": [],
+        "disabled": []
+      }
+    },
+    {
+      "id": "validate-schema",
+      "subagent": "general",
+      "description": "Validate Template Schema: Ensure template conforms to ActivityVariant schema",
+      "dependencies": ["create-template"],
+      "guidance": [
+        "Use register_activity_template with validate_only=true",
+        "If validation fails, read the error messages carefully",
+        "Common issues: missing required fields, wrong types, invalid enum values",
+        "Fix errors and re-validate until successful"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Validate the template schema for {{activity_id}}.json\n\nUse the register_activity_template tool with:\n- file_path: {{activity_id}}.json\n- validate_only: true\n\nIf validation fails:\n1. Read the validation errors carefully\n2. Fix each error in the JSON file\n3. Re-run validation\n4. Repeat until validation passes\n\nValidation must pass before proceeding to test execution.",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": ["activity_id"]
+      },
+      "validation": {
+        "postChecks": {
+          "requiredPatterns": ["✓ Validation passed", "success.*true"]
+        }
+      },
+      "retry": {
+        "max_attempts": 5,
+        "strategy": "incremental",
+        "fallback_prompt": "Schema validation is still failing. Review ALL validation errors and fix them systematically. Common fixes:\n- Add missing required fields\n- Fix type mismatches (string vs number)\n- Use correct enum values\n- Ensure arrays and objects are properly formatted"
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": ["schema_mismatch", "missing_fields", "invalid_types"]
+      },
+      "tools": {
+        "required": ["register_activity_template", "read", "edit"],
+        "optional": ["bash"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "test-execute",
+      "subagent": "general",
+      "description": "Test Execute Template: Run the template with test data to verify it executes successfully",
+      "dependencies": ["validate-schema"],
+      "guidance": [
+        "First register the template (validate_only=false)",
+        "Then execute it with test variables",
+        "Watch for errors in step execution",
+        "If test fails, fix the template and re-validate",
+        "Ensure all steps complete successfully"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Test the template by executing it with dummy data.\n\nActivity ID: {{activity_id}}\nTest Variables: {{test_variables}}\n\nSteps:\n1. Register the template: register_activity_template(file_path='{{activity_id}}.json', validate_only=false)\n2. Execute the activity: activity(activityId='{{activity_id}}', variables={{test_variables}}, reason='Test execution of newly created template')\n3. Verify all steps complete successfully\n\nIf execution fails:\n- Review the failure message\n- Fix the template\n- Re-validate schema\n- Re-test\n\nSuccess = all steps complete without errors.",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": ["activity_id", "test_variables"]
+      },
+      "validation": {
+        "postChecks": {
+          "requiredPatterns": ["✅", "Activity.*completed", "success.*true"],
+          "forbiddenPatterns": ["❌.*failed", "Error:", "Exception:"]
+        }
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "incremental",
+        "fallback_prompt": "Test execution failed. Analyze the failure:\n1. Which step failed?\n2. What was the error?\n3. Fix the template JSON\n4. Re-validate schema\n5. Re-test\n\nCommon issues:\n- Prompt template has wrong variable names\n- Tools specified don't exist\n- Dependencies are circular\n- Validation checks are too strict"
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": ["execution_error", "tool_not_found", "validation_failure"]
+      },
+      "tools": {
+        "required": ["register_activity_template", "activity", "read", "edit"],
+        "optional": ["bash"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "create-summary",
+      "subagent": "general",
+      "description": "Create Template Summary: Document the created template for future reference",
+      "dependencies": ["test-execute"],
+      "guidance": [
+        "Summarize what the template does",
+        "Document the variables it accepts",
+        "List the steps it executes",
+        "Note any special requirements or limitations",
+        "Include example usage"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Create TEMPLATE_SUMMARY.md documenting the new activity template.\n\nActivity: {{activity_name}} ({{activity_id}})\nCategory: {{target_category}}\n\nInclude:\n\n## Overview\n[What this activity does]\n\n## Variables\n[List all variables with descriptions]\n\n## Steps\n[Brief description of each step]\n\n## Usage Example\n```\nactivity({\n  activityId: '{{activity_id}}',\n  variables: { /* example */ },\n  reason: '...'\n})\n```\n\n## Success Criteria\n[How to tell if it succeeded]\n\n## Known Limitations\n[Any constraints or edge cases]\n\n## Testing\n- Schema validation: ✅ Passed\n- Test execution: ✅ Passed\n- Registration: ✅ Success",
+        "max_tokens": 6000,
+        "compression_strategy": "filter",
+        "variables": ["activity_name", "activity_id", "target_category"]
+      },
+      "validation": {
+        "postChecks": {
+          "requiredFiles": ["TEMPLATE_SUMMARY.md"],
+          "requiredPatterns": ["Overview", "Variables", "Steps", "Usage Example"]
+        }
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read"],
+        "optional": [],
+        "disabled": []
+      }
+    }
+  ]
+}
