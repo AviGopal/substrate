@@ -66,7 +66,7 @@ services:
     ports:
       - "${SURREAL_PORT:-8000}:8000"
     volumes:
-      - metabob_surreal_data:/data
+      - configs_metabob_surreal_data:/data
     command: >
       start
       --bind 0.0.0.0:8000
@@ -102,7 +102,7 @@ services:
 
   metabob-rpc-api-server:
     profiles: ["stable"]
-    container_name: api-server-stable
+    container_name: api-server-dev
     image: metabobapp/metabob-rpc-api:${API_VERSION:-0.16.12}
     build:
       context: ./repos
@@ -180,7 +180,7 @@ services:
       ACP_HOSTNAME: "0.0.0.0"
       
       # Metabob backend connection
-      METABOB_API_URL: http://api-server-stable:8080
+      METABOB_API_URL: http://api-server-dev:8080
       METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-devbob-test}
       METABOB_API_KEY: ${METABOB_API_KEY}
       
@@ -236,7 +236,7 @@ services:
       ACP_HOSTNAME: "0.0.0.0"
       
       # Backend connection
-      METABOB_API_URL: http://api-server-stable:8080
+      METABOB_API_URL: http://api-server-dev:8080
       METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-rpc-api-dev}
       METABOB_API_KEY: ${METABOB_API_KEY}
       
@@ -249,7 +249,7 @@ services:
       # Agent role - manages backend codebase AND service
       AGENT_ROLE: backend-codebase-manager
       MANAGED_SERVICES: "api-server-stable"
-      SERVICE_HEALTH_URL: "http://api-server-stable:8080/health"
+      SERVICE_HEALTH_URL: "http://api-server-dev:8080/health"
     depends_on:
       metabob-rpc-api-server:
         condition: service_healthy
@@ -287,7 +287,7 @@ services:
       ACP_PORT: "3002"
       ACP_HOSTNAME: "0.0.0.0"
       
-      METABOB_API_URL: http://api-server-stable:8080
+      METABOB_API_URL: http://api-server-dev:8080
       METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-cli-dev}
       METABOB_API_KEY: ${METABOB_API_KEY}
       
@@ -335,7 +335,7 @@ services:
       ACP_PORT: "3003"
       ACP_HOSTNAME: "0.0.0.0"
       
-      METABOB_API_URL: http://api-server-stable:8080
+      METABOB_API_URL: http://api-server-dev:8080
       METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-opencode-dev}
       METABOB_API_KEY: ${METABOB_API_KEY}
       
@@ -383,7 +383,7 @@ services:
       ACP_PORT: "3004"
       ACP_HOSTNAME: "0.0.0.0"
       
-      METABOB_API_URL: http://api-server-stable:8080
+      METABOB_API_URL: http://api-server-dev:8080
       METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-dashboard-dev}
       METABOB_API_KEY: ${METABOB_API_KEY}
       
@@ -416,7 +416,7 @@ volumes:
   # Stable backend volumes
   metabob_redis_data:
     driver: local
-  metabob_surreal_data:
+  configs_metabob_surreal_data:
     driver: local
   metabob_api_logs:
     driver: local
@@ -438,5 +438,15 @@ networks:
     driver: bridge
     name: metabob-network
   devbob-network:
-    driver: bridge
+
+# =============================================================================
+# Networks (External - Already Created)
+# =============================================================================
+
+networks:
+  metabob-network:
+    external: true
+    name: metabob-network
+  devbob-network:
+    external: true
     name: devbob-network
