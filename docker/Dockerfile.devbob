@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     build-essential \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Create workspace
@@ -56,17 +57,24 @@ RUN python3 -m venv /opt/metabob-cli/.venv && \
 COPY repos/metabob-cli/src/metabob_cli /opt/metabob-cli/.venv/lib/python3.11/site-packages/metabob_cli
 RUN echo "metabob-cli source copied to venv"
 
-# Update npm to support catalog: protocol
-RUN npm install -g npm@latest
+# Install Bun package manager (required for OpenCode)
+RUN curl -fsSL https://bun.sh/install | bash && \
+    ln -s /root/.bun/bin/bun /usr/local/bin/bun && \
+    echo "Bun installed"
 
-# Copy and build OpenCode from local repo
-COPY repos/metabob-opencode /tmp/metabob-opencode
-WORKDIR /tmp/metabob-opencode
-RUN npm install && \
-    npm run build && \
-    npm link && \
+# Copy metabob-proto and opencode to /opt (keep directory structure for relative paths)
+COPY repos/metabob-proto /opt/repos/metabob-proto
+COPY repos/metabob-opencode /opt/repos/metabob-opencode
+
+# Install OpenCode using Bun
+WORKDIR /opt/repos/metabob-opencode
+RUN bun install && \
+    # Create wrapper script to run OpenCode
+    mkdir -p /usr/local/bin && \
+    echo '#!/bin/bash' > /usr/local/bin/opencode && \
+    echo 'cd /opt/repos/metabob-opencode && bun run packages/opencode/src/index.ts "$@"' >> /usr/local/bin/opencode && \
+    chmod +x /usr/local/bin/opencode && \
     cd /workspace && \
-    rm -rf /tmp/metabob-opencode && \
     echo "OpenCode installed from local repo"
 
 # Create entrypoint script
