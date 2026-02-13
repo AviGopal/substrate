@@ -69,10 +69,10 @@ COPY repos/metabob-opencode /opt/repos/metabob-opencode
 # Install OpenCode using Bun
 WORKDIR /opt/repos/metabob-opencode
 RUN bun install && \
-    # Create wrapper script to run OpenCode
+    # Create wrapper script to run OpenCode (match dev script settings)
     mkdir -p /usr/local/bin && \
     echo '#!/bin/bash' > /usr/local/bin/opencode && \
-    echo 'cd /opt/repos/metabob-opencode && bun run packages/opencode/src/index.ts "$@"' >> /usr/local/bin/opencode && \
+    echo 'cd /opt/repos/metabob-opencode && bun run --cwd packages/opencode --conditions=browser ./src/index.ts "$@"' >> /usr/local/bin/opencode && \
     chmod +x /usr/local/bin/opencode && \
     cd /workspace && \
     echo "OpenCode installed from local repo"
