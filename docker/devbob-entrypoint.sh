@@ -57,47 +57,85 @@ else
 fi
 
 # =============================================================================
-# Configure metabob-cli
+# Configure metabob-cli (ALWAYS - container-isolated)
 # =============================================================================
 
 echo "Configuring metabob-cli..."
 
-# Create config if not exists
-if [ ! -f "/workspace/.metabob/config.json" ]; then
-    cat > /workspace/.metabob/config.json <<EOF
+# Always create config to ensure container isolation
+# This prevents conflicts with host machine configuration
+cat > /workspace/.metabob/config.json <<EOF
 {
-  "base_url": "${METABOB_API_URL:-http://api-server-stable:8080}",
+  "base_url": "${METABOB_API_URL:-http://api-server-dev:8080}",
   "api_key": "${METABOB_API_KEY:-}",
   "project_id": "${METABOB_PROJECT_ID:-devbob-test}"
 }
 EOF
-    echo "Created .metabob/config.json"
-fi
+echo "Created container-isolated metabob config"
+
+# Create empty state file (will be populated by metabob-cli on first use)
+# This ensures each container has its own session state
+cat > /workspace/.metabob/state <<EOF
+{
+  "session_metadata": {
+    "session_id": "",
+    "session_token": "",
+    "created_at": "",
+    "expires_at": "",
+    "last_refreshed": ""
+  }
+}
+EOF
+echo "Created empty state file for container"
 
 # =============================================================================
-# Configure OpenCode
+# Configure OpenCode (ALWAYS - container-isolated with MCP)
 # =============================================================================
 
 echo "Configuring OpenCode..."
 
-# Create OpenCode config
-if [ ! -f "/workspace/.opencode/opencode.json" ]; then
-    cat > /workspace/.opencode/opencode.json <<EOF
+# Always create/overwrite config to ensure:
+# 1. Container isolation (separate from host config)
+# 2. MCP server configured correctly
+# 3. Shared backend URL
+cat > /workspace/.opencode/opencode.json <<EOF
 {
-  "model": "anthropic/claude-sonnet-4-20250514",
+  "share": "disabled",
+  "model": "anthropic/claude-sonnet-4-5",
   "mcp": {
     "metabob": {
-      "command": "/opt/metabob-cli/bin/python",
+      "command": "/opt/metabob-cli/.venv/bin/python",
       "args": ["-m", "metabob_cli.mcp.server"],
       "env": {
         "METABOB_CONFIG": "/workspace/.metabob/config.json"
       }
     }
+  },
+  "metabob": {
+    "cli_path": "metabob-cli",
+    "api_key": "${METABOB_API_KEY:-}",
+    "base_url": "${METABOB_API_URL:-http://api-server-dev:8080}",
+    "state_directory": ".metabob",
+    "max_issues": 5,
+    "min_severity": "MEDIUM",
+    "cache_timeout": 300,
+    "context_budget_tokens": 10000,
+    "subagent_token_budget": 5000
+  },
+  "sessionMemory": {
+    "enabled": true,
+    "budgets": {
+      "perImpulse": 2000,
+      "total": 10000
+    },
+    "maxImpulsesPerTurn": 5
   }
 }
 EOF
-    echo "Created .opencode/opencode.json"
-fi
+echo "Created container-isolated OpenCode config with MCP"
+
+# Ensure .opencode directory is owned by the user running OpenCode
+chown -R root:root /workspace/.opencode 2>/dev/null || true
 
 # =============================================================================
 # Wait for backend health

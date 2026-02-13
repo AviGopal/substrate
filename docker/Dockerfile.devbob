@@ -38,17 +38,23 @@ RUN apt-get update && apt-get install -y \
 # Create workspace
 WORKDIR /workspace
 
-# Install metabob-cli (MCP server)
-# This will be installed from the mounted repo in devbob-dev profile
-# For clean profile, we install a stable version
-RUN python3 -m venv /opt/metabob-cli && \
-    /opt/metabob-cli/bin/pip install --upgrade pip && \
-    echo "metabob-cli will be installed from repo or pip at runtime"
+# Copy and install metabob-cli from local repo
+COPY repos/metabob-cli /tmp/metabob-cli
+RUN python3 -m venv /opt/metabob-cli/.venv && \
+    /opt/metabob-cli/.venv/bin/pip install --upgrade pip && \
+    /opt/metabob-cli/.venv/bin/pip install /tmp/metabob-cli && \
+    rm -rf /tmp/metabob-cli && \
+    echo "metabob-cli installed from local repo"
 
-# Install OpenCode globally
-# For now, we'll install from npm. In devbob-dev, it will be mounted.
-RUN npm install -g @anthropic/opencode || \
-    echo "OpenCode will be installed from repo at runtime"
+# Copy and build OpenCode from local repo
+COPY repos/metabob-opencode /tmp/metabob-opencode
+WORKDIR /tmp/metabob-opencode
+RUN npm install && \
+    npm run build && \
+    npm link && \
+    cd /workspace && \
+    rm -rf /tmp/metabob-opencode && \
+    echo "OpenCode installed from local repo"
 
 # Create entrypoint script
 COPY docker/devbob-entrypoint.sh /usr/local/bin/entrypoint.sh
