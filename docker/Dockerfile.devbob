@@ -38,13 +38,26 @@ RUN apt-get update && apt-get install -y \
 # Create workspace
 WORKDIR /workspace
 
-# Copy and install metabob-cli from local repo
-COPY repos/metabob-cli /tmp/metabob-cli
+# Copy metabob-cli directly (skip pip install to avoid Python version check)
+# Install dependencies and copy source files
 RUN python3 -m venv /opt/metabob-cli/.venv && \
     /opt/metabob-cli/.venv/bin/pip install --upgrade pip && \
-    /opt/metabob-cli/.venv/bin/pip install /tmp/metabob-cli && \
-    rm -rf /tmp/metabob-cli && \
-    echo "metabob-cli installed from local repo"
+    /opt/metabob-cli/.venv/bin/pip install \
+        anthropic \
+        mcp \
+        httpx \
+        pydantic \
+        python-dotenv \
+        surrealdb \
+        redis && \
+    echo "metabob-cli dependencies installed"
+
+# Copy metabob-cli source directly into venv
+COPY repos/metabob-cli/src/metabob_cli /opt/metabob-cli/.venv/lib/python3.11/site-packages/metabob_cli
+RUN echo "metabob-cli source copied to venv"
+
+# Update npm to support catalog: protocol
+RUN npm install -g npm@latest
 
 # Copy and build OpenCode from local repo
 COPY repos/metabob-opencode /tmp/metabob-opencode
