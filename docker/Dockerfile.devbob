@@ -1,0 +1,90 @@
+# =============================================================================
+# Devbob - OpenCode Agent in Container
+# =============================================================================
+# 
+# Multi-stage build for devbob agent containers.
+# Each container runs OpenCode with metabob-cli MCP integration.
+#
+# Build stages:
+#   1. devbob-base: Base image with OpenCode + metabob-cli
+#   2. devbob-clean: Clean testing environment (no code)
+#   3. devbob-dev: Development environment (code mounted)
+#
+# Usage:
+#   # Build base image
+#   docker build -t devbob:latest --target devbob-base -f docker/Dockerfile.devbob .
+#
+#   # Use in docker-compose with profiles
+#   docker-compose --profile devbob up
+#
+# =============================================================================
+
+# =============================================================================
+# Stage 1: Base Image
+# =============================================================================
+
+FROM node:20-slim AS devbob-base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    python3 \
+    python3-pip \
+    python3-venv \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create workspace
+WORKDIR /workspace
+
+# Install metabob-cli (MCP server)
+# This will be installed from the mounted repo in devbob-dev profile
+# For clean profile, we install a stable version
+RUN python3 -m venv /opt/metabob-cli && \
+    /opt/metabob-cli/bin/pip install --upgrade pip && \
+    echo "metabob-cli will be installed from repo or pip at runtime"
+
+# Install OpenCode globally
+# For now, we'll install from npm. In devbob-dev, it will be mounted.
+RUN npm install -g @anthropic/opencode || \
+    echo "OpenCode will be installed from repo at runtime"
+
+# Create entrypoint script
+COPY docker/devbob-entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Expose ports
+EXPOSE 3000 8082
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["opencode", "acp", "--port", "3000"]
+
+# =============================================================================
+# Stage 2: Clean Testing Environment
+# =============================================================================
+
+FROM devbob-base AS devbob-clean
+
+# No additional setup - workspace is empty
+# Activities will be executed in a pristine environment
+
+WORKDIR /workspace
+
+# =============================================================================
+# Stage 3: Development Environment
+# =============================================================================
+
+FROM devbob-base AS devbob-dev
+
+# Install development tools
+RUN apt-get update && apt-get install -y \
+    vim \
+    less \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Workspace will be mounted from host
+# Each container gets its own repo (rpc-api, cli, opencode, dashboard)
+
+WORKDIR /workspace
