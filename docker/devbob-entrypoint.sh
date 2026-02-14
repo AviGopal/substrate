@@ -104,9 +104,14 @@ cat > /workspace/.opencode/opencode.json <<EOF
   "model": "anthropic/claude-sonnet-4-5",
   "mcp": {
     "metabob": {
-      "command": "/opt/metabob-cli/.venv/bin/python",
-      "args": ["-m", "metabob_cli.mcp.server"],
-      "env": {
+      "type": "local",
+      "command": [
+        "/opt/metabob-cli/.venv/bin/python",
+        "-m",
+        "metabob_cli.mcp.server"
+      ],
+      "enabled": true,
+      "environment": {
         "METABOB_CONFIG": "/workspace/.metabob/config.json"
       }
     }
@@ -187,6 +192,12 @@ fi
 # =============================================================================
 # Start OpenCode
 # =============================================================================
+
+# OpenCode looks for config in $HOME/.config/opencode by default
+# Copy workspace config to that location so OpenCode finds it
+mkdir -p /root/.config/opencode
+cp /workspace/.opencode/opencode.json /root/.config/opencode/opencode.json
+echo "Config copied to /root/.config/opencode/"
 
 echo "========================================"
 echo "Starting OpenCode in ACP mode"

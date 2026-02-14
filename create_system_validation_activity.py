@@ -3,30 +3,33 @@
 Create a system validation activity template
 This activity will validate the entire activity system when executed
 """
+
 import asyncio
 import sys
 import json
-sys.path.insert(0, 'repos/metabob-cli/src')
+
+sys.path.insert(0, "repos/metabob-cli/src")
 
 from metabob_cli.core.config import ConfigData
 from metabob_cli.core.session_manager import SessionManager
 import httpx
+
 
 async def create_validation_activity():
     print("=" * 70)
     print("Creating System Validation Activity Template")
     print("=" * 70)
     print()
-    
+
     config = ConfigData(
-        base_url='http://localhost:8080',
-        api_key='mb_Y99iQNMiycAlpkQamp0dhnU_t5e0ds0mkwDrU7g9bxs',
-        verify_ssl=False
+        base_url="http://localhost:8080",
+        api_key="mb_test_devbob_2024",
+        verify_ssl=False,
     )
-    
+
     async with SessionManager(config) as sm:
         token = sm.file_state_manager.get_session_token()
-        
+
         # Create activity template using V2 API
         template = {
             "name": "System Validation Activity",
@@ -36,15 +39,17 @@ async def create_validation_activity():
                 "test_scope": {
                     "type": "string",
                     "description": "Scope of validation: 'api', 'cli', 'database', 'full'",
-                    "default": "full"
+                    "default": "full",
                 }
             },
-            "tasks": [
+            "task_steps": [
                 {
-                    "order": 0,
-                    "type": "agent_task",
-                    "agent_mode": "activity",
-                    "prompt_template": """Validate V2 API Endpoints
+                    "id": "validate-api-endpoints",
+                    "subagent": "general",
+                    "description": "Validate V2 API Endpoints",
+                    "dependencies": [],
+                    "prompt": {
+                        "template": """Validate V2 API Endpoints
 
 Test all V2 API endpoints and verify they return expected responses:
 
@@ -76,89 +81,38 @@ Report Results:
 
 Test scope: {{test_scope}}
 """,
-                    "validation": None,
-                    "cost_budget": 0.5
+                        "max_tokens": 8000,
+                        "compression_strategy": "filter",
+                        "variables": ["test_scope"],
+                    },
+                    "validation": {
+                        "required_files": [],
+                        "required_patterns": [],
+                        "forbidden_patterns": [],
+                        "commands": [],
+                    },
+                    "retry": {
+                        "max_attempts": 3,
+                        "strategy": "simple",
+                        "fallback_prompt": "",
+                    },
+                    "metrics": {
+                        "success_rate": 0.0,
+                        "avg_tokens": 0,
+                        "avg_duration": 0,
+                        "common_failures": [],
+                    },
+                    "impulse_refs": [],
+                    "guidance": [],
+                    "expected_actions": [],
                 },
                 {
-                    "order": 1,
-                    "type": "agent_task",
-                    "agent_mode": "activity",
-                    "prompt_template": """Validate CLI Integration
-
-Test metabob-cli methods with V2 API:
-
-1. Test search_activities()
-   - Call with query parameter
-   - Verify results returned
-   - Check result format
-
-2. Test get_activity(template_id)
-   - Retrieve template details
-   - Verify all fields present
-   - Check variables structure
-
-3. Test record_execution_start_external()
-   - Call with test data
-   - Verify API call succeeds
-   - Check execution_id returned
-
-4. Test record_execution_complete_external()
-   - Call with test metrics
-   - Verify completion recorded
-   - Check all fields persist
-
-Report Results:
-- List each method tested
-- Note any failures or exceptions
-- Confirm integration working
-- Recommend fixes for any issues
-
-Test scope: {{test_scope}}
-""",
-                    "validation": None,
-                    "cost_budget": 0.5
-                },
-                {
-                    "order": 2,
-                    "type": "agent_task",
-                    "agent_mode": "activity",
-                    "prompt_template": """Validate Database Persistence
-
-Test that execution data persists correctly:
-
-1. Create test execution via CLI
-   - Use unique execution_id
-   - Set known values (duration, cost, tokens)
-
-2. Wait for database sync (2-3 seconds)
-
-3. Query database directly
-   - SELECT from activity_executions
-   - WHERE execution_id = test_id
-
-4. Verify all fields:
-   - execution_id matches
-   - duration value correct
-   - success value correct
-   - total_cost value correct
-   - started_at timestamp present
-
-Report Results:
-- Confirm record created
-- Verify all field values
-- Note any mismatches
-- Check proto field structure
-
-Test scope: {{test_scope}}
-""",
-                    "validation": None,
-                    "cost_budget": 0.3
-                },
-                {
-                    "order": 3,
-                    "type": "agent_task",
-                    "agent_mode": "activity",
-                    "prompt_template": """Validate End-to-End Flow
+                    "id": "validate-e2e-flow",
+                    "subagent": "general",
+                    "description": "Validate End-to-End Flow",
+                    "dependencies": ["validate-database-persistence"],
+                    "prompt": {
+                        "template": """Validate End-to-End Flow
 
 Execute complete activity flow and verify:
 
@@ -178,14 +132,38 @@ Report Results:
 
 Test scope: {{test_scope}}
 """,
-                    "validation": None,
-                    "cost_budget": 0.5
+                        "max_tokens": 8000,
+                        "compression_strategy": "filter",
+                        "variables": ["test_scope"],
+                    },
+                    "validation": {
+                        "required_files": [],
+                        "required_patterns": [],
+                        "forbidden_patterns": [],
+                        "commands": [],
+                    },
+                    "retry": {
+                        "max_attempts": 3,
+                        "strategy": "simple",
+                        "fallback_prompt": "",
+                    },
+                    "metrics": {
+                        "success_rate": 0.0,
+                        "avg_tokens": 0,
+                        "avg_duration": 0,
+                        "common_failures": [],
+                    },
+                    "impulse_refs": [],
+                    "guidance": [],
+                    "expected_actions": [],
                 },
                 {
-                    "order": 4,
-                    "type": "agent_task",
-                    "agent_mode": "activity",
-                    "prompt_template": """Report Validation Summary
+                    "id": "report-validation-summary",
+                    "subagent": "general",
+                    "description": "Report Validation Summary",
+                    "dependencies": ["validate-e2e-flow"],
+                    "prompt": {
+                        "template": """Report Validation Summary
 
 Summarize all validation results:
 
@@ -217,35 +195,58 @@ Summarize all validation results:
 
 Provide actionable fixes for each issue found.
 """,
-                    "validation": {"type": "output_check", "criteria": "Summary includes pass/fail for all components"},
-                    "cost_budget": 0.3
-                }
-            ]
+                        "max_tokens": 8000,
+                        "compression_strategy": "filter",
+                        "variables": [],
+                    },
+                    "validation": {
+                        "required_files": [],
+                        "required_patterns": ["pass/fail for all components"],
+                        "forbidden_patterns": [],
+                        "commands": [],
+                    },
+                    "retry": {
+                        "max_attempts": 3,
+                        "strategy": "simple",
+                        "fallback_prompt": "",
+                    },
+                    "metrics": {
+                        "success_rate": 0.0,
+                        "avg_tokens": 0,
+                        "avg_duration": 0,
+                        "common_failures": [],
+                    },
+                    "impulse_refs": [],
+                    "guidance": [],
+                    "expected_actions": [],
+                },
+            ],
         }
-        
+
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post(
                 f"{config.base_url}/v2/activities/templates",
                 headers={"Authorization": f"Bearer {token}"},
-                json=template
+                json=template,
             )
-            
+
             if response.status_code in [200, 201]:
                 result = response.json()
                 print("✅ System Validation Activity Created!")
                 print(f"   Template ID: {result.get('variant_id')}")
                 print(f"   Name: {result.get('name')}")
-                print(f"   Tasks: {len(template['tasks'])}")
+                print(f"   Tasks: {len(template['task_steps'])}")
                 print()
                 print("This activity can be executed with:")
                 print(f"   activityId: {result.get('variant_id')}")
-                print(f"   variables: {{ \"test_scope\": \"full\" }}")
+                print(f'   variables: {{ "test_scope": "full" }}')
                 print()
-                return result.get('variant_id')
+                return result.get("variant_id")
             else:
                 print(f"❌ Failed to create template: {response.status_code}")
                 print(f"   Response: {response.text}")
                 return None
+
 
 result = asyncio.run(create_validation_activity())
 

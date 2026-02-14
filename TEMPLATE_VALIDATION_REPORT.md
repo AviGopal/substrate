@@ -1,283 +1,357 @@
 # Activity Template Validation Report
 
-## Summary
+**Date**: February 12, 2026
+**Validation Tool**: `register_activity_template` with `validate_only: true`
 
-Validated 3 activity templates in the repository against the ActivityTemplate.Schema.
+## Executive Summary
 
-**Result: All templates require updates to match the current schema.**
+Validated **3 activity template files** against the `ActivityTemplate.Schema`:
+- ❌ All 3 templates have **validation errors**
+- ❌ Templates use **informal/CreateOptions format** instead of full Schema format
+- ✅ Template structure and content are logically sound
+- ✅ Task definitions follow best practices
+
+**Root Cause**: Templates are written in the simplified `CreateOptions` format (for human authoring) but validation expects the full `Schema` format (with execution metadata).
 
 ## Validation Results
 
-### 1. example-activity-template.json ❌
-**Status:** FAILED - 18 validation errors
+### 1. example-activity-template.json
+**Location**: `/home/avi/documents/work/exp-repo/metabob-devbob/example-activity-template.json`
+**Status**: ❌ FAILED (18 validation errors)
 
-**Missing Required Fields:**
-- `id` - Template identifier
-- `version` - Version object (not number)
-- `genealogy` - Template lineage tracking
-- `executions` - Execution count
-- `successRate` - Success rate metric
-- `avgDuration` - Average duration metric
-- `avgCost` - Average cost metric
-- `avgTokens` - Token usage metrics (input/output/cache)
-- `createdAt` - Creation timestamp
-- `updatedAt` - Update timestamp
+**Key Issues**:
+- Missing required fields: `id`, `version`, `genealogy`, `executions`, `successRate`, `avgDuration`, `avgCost`, `avgTokens`, `createdAt`, `updatedAt`
+- Task-level issues: `max_attempts` vs `maxAttempts` (camelCase mismatch)
+- Missing task `metrics` field (required by Schema)
+- Uses snake_case (`max_attempts`) instead of camelCase (`maxAttempts`)
 
-**Schema Mismatches:**
-- `tasks[*].retry.max_attempts` should be `maxAttempts` (camelCase)
-- `tasks[*]` missing `metrics` object (successRate, avgTokens, avgDuration, commonFailures)
-- Uses `maxTokens` in prompt config (should be just a number field)
-
-### 2. test-template-final.json ❌
-**Status:** FAILED - 24 validation errors
-
-**Missing Required Fields:**
-- Same core fields as example-activity-template.json
-- `integration` object (preChecks, postChecks, qualityGates)
-- `metabob` configuration object
-
-**Schema Mismatches:**
-- `tasks[0].prompt.max_tokens` should be `maxTokens` (camelCase)
-- `tasks[0].prompt.compressionStrategy` is undefined (not "filter")
-- `tasks[0].prompt.variables` is undefined (should be array)
-- `tasks[0].validation.required_patterns` should be `requiredPatterns`
-- `tasks[0].validation` missing required arrays: requiredFiles, requiredPatterns, forbiddenPatterns, commands
-- `tasks[0].retry.max_attempts` should be `maxAttempts`
-- Missing task `metrics` object
-
-### 3. create-activity-template.json (built-in) ❌
-**Status:** FAILED - 23 validation errors
-
-**Key Issues:**
-- `version: 4` should be a `Version` object with structure: `{ major, minor, patch, variant, hash }`
-- Missing execution metrics: executions, successRate, avgDuration, avgCost, avgTokens
-- Missing timestamps: createdAt, updatedAt
-- Missing genealogy object
-- `contextRequirements[0].impulseTypes[0]` has invalid value "toolOutput" (not in enum)
-- `learning.feedbackPoints[*].improvementHints` is undefined (should be record)
-
-**Note:** This is the built-in template used by the system itself, so it needs updating.
-
-## Schema Requirements
-
-### Core Required Fields
-
-All templates must include:
-
-```typescript
-{
-  // Identity
-  id: string
-  name: string
-  description: string
-  category: "feature" | "bugfix" | "refactor" | "tool" | "infrastructure"
-  
-  // Version & Lineage
-  version: {
-    major: number
-    minor: number
-    patch: number
-    variant: number
-    hash: string
-  }
-  genealogy: {
-    parentId?: string
-    parentVersion?: Version
-    createdFrom: "manual" | "evolution" | "composition" | "trailblazing"
-    author: { type: "human" | "ai", identifier: string }
-    evolutionReason?: string
-  }
-  
-  // Execution Metrics
-  executions: number
-  successRate: number
-  avgDuration: number
-  avgCost: number
-  avgTokens: {
-    input: number
-    output: number
-    cache: number
-  }
-  
-  // Tasks
-  tasks: Array<{
-    id: string
-    subagent?: string  // deprecated but optional
-    description: string
-    dependencies: string[]
-    prompt: {
-      template: string
-      maxTokens: number
-      compressionStrategy: "none" | "summarize" | "filter" | "adaptive"
-      variables: Array<{
-        name: string
-        type: "string" | "number" | "boolean" | "file" | "files" | "codebase-context"
-        required: boolean
-        description: string
-        default?: unknown
-      }>
-    }
-    validation: {
-      requiredFiles: string[]
-      requiredPatterns: string[]
-      forbiddenPatterns: string[]
-      commands: Array<{
-        name: string
-        command: string
-        required: boolean
-      }>
-    }
-    retry: {
-      maxAttempts: number  // NOT max_attempts
-      strategy: "simple" | "progressive-context" | "fallback-agent" | "trailblazing"
-      fallbackPrompt?: string
-    }
-    metrics: {
-      successRate: number
-      avgTokens: number
-      avgDuration: number
-      commonFailures: string[]
-    }
-  }>
-  
-  // Integration & Configuration
-  integration: {
-    preChecks: string[]
-    postChecks: string[]
-    qualityGates: Array<{
-      name: string
-      command: string
-      required: boolean
-    }>
-  }
-  
-  metabob: {
-    enabled: boolean
-    learningMode: boolean
-    targetContextTokens: number
-    annotationStrategy: "all" | "key-components" | "failures-only"
-  }
-  
-  // Timestamps
-  createdAt: number  // Unix timestamp
-  updatedAt: number  // Unix timestamp
-  
-  // Optional but recommended
-  contextRequirements?: Array<{
-    key: string
-    hint: string
-    impulseTypes: ("memo" | "file" | "component" | "commit" | "metabobIssue" | "metabobAnnotation" | "activityOutput" | "bashOutput" | "activityRecommendation" | "custom")[]
-    required: boolean
-    budgetRange: [number, number]
-  }>
-  
-  hooks?: {
-    preActivity?: { ... }
-    postActivity?: { ... }
-    onError?: { ... }
-  }
-  
-  composition?: {
-    standalone: boolean
-    composesWith?: Array<{ templateId, relationship, description, example }>
-    examples?: Array<{ name, description, sequence, outcome }>
-  }
-  
-  learning?: {
-    enabled: boolean
-    captureStrategy: "detailed" | "summary" | "minimal"
-    feedbackPoints: Array<{
-      taskId: string
-      metrics: Record<string, string>
-      improvementHints: Record<string, string>  // NOT optional
-    }>
-  }
-}
-```
-
-### Common Mistakes
-
-1. **Snake case vs Camel case**
-   - ❌ `max_attempts`, `max_tokens`, `required_patterns`
-   - ✅ `maxAttempts`, `maxTokens`, `requiredPatterns`
-
-2. **Version as number**
-   - ❌ `version: 4`
-   - ✅ `version: { major: 1, minor: 0, patch: 0, variant: 0, hash: "..." }`
-
-3. **Missing metrics object per task**
-   - Each task needs `metrics: { successRate, avgTokens, avgDuration, commonFailures }`
-
-4. **Missing execution history**
-   - Templates need `executions`, `successRate`, `avgDuration`, `avgCost`, `avgTokens` at root level
-
-5. **Invalid impulse types**
-   - ❌ `"toolOutput"` is not valid
-   - ✅ Valid types: "memo", "file", "component", "commit", "metabobIssue", "metabobAnnotation", "activityOutput", "bashOutput", "activityRecommendation", "custom"
-
-## Recommendations
-
-### For Users Creating Templates
-
-**Use the `register_activity_template` tool with `validate_only: true`** to validate templates before registration:
-
-```typescript
-register_activity_template({
-  file_path: "./my-template.json",
-  validate_only: true
-})
-```
-
-This will show all schema violations before attempting registration.
-
-### For Template Creators
-
-1. **Start from a working example**: Use the built-in create-activity-template to generate new templates
-2. **Use CreateOptions format**: Templates can be created using the simpler `CreateOptions` schema, and the system will auto-generate:
-   - `id` (based on category and hash)
-   - `version` object
-   - `genealogy` object
-   - Execution metrics (initialized to 0)
-   - Timestamps
-
-3. **CreateOptions minimal template**:
-
-```json
-{
-  "name": "My Template",
-  "description": "What this template does",
-  "category": "feature",
-  "tasks": [
-    {
-      "id": "task-1",
-      "description": "Task description",
-      "dependencies": [],
-      "prompt": {
-        "template": "Do something",
-        "maxTokens": 8000
-      }
-    }
-  ]
-}
-```
-
-The system will automatically add all required fields when you register it.
-
-### Next Steps
-
-1. **Update existing templates** to match current schema
-2. **Fix built-in create-activity-template.json** - this is critical as it's used to create new templates
-3. **Document CreateOptions format** for easier template creation
-4. **Create migration script** to upgrade old templates to new schema
-
-## Files Requiring Updates
-
-1. `/home/avi/documents/work/exp-repo/metabob-devbob/example-activity-template.json`
-2. `/home/avi/documents/work/exp-repo/metabob-devbob/test-template-final.json`
-3. `/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/templates/built-in/create-activity-template.json`
+**What's Correct**:
+- Comprehensive task structure (4 tasks with proper dependencies)
+- Good validation patterns and quality gates
+- Excellent learning configuration with feedback points
+- Complete integration, metabob, composition, and hooks sections
+- Well-structured prompt variables
 
 ---
 
-**Generated:** February 12, 2026
-**Validator:** register_activity_template with validate_only flag
-**Schema Version:** ActivityTemplate.Schema from activity-template.ts
+### 2. test-template-final.json
+**Location**: `/home/avi/documents/work/exp-repo/metabob-devbob/test-template-final.json`
+**Status**: ❌ FAILED (24 validation errors)
+
+**Key Issues**:
+- Missing required fields: `id`, `version`, `genealogy`, `executions`, `successRate`, `avgDuration`, `avgCost`, `avgTokens`, `createdAt`, `updatedAt`
+- Incorrect `compressionStrategy` value (uses `max_tokens` instead of enum value)
+- Missing arrays: `prompt.variables`, task validation arrays
+- Task-level: `max_attempts` vs `maxAttempts`
+- Missing `integration` and `metabob` configuration objects
+- Missing task `metrics`
+
+**What's Correct**:
+- Simple, minimal structure (good for testing)
+- Uses V2 format with variables at root level
+- Has contextRequirements array
+
+---
+
+### 3. create-activity-template.json (Built-in)
+**Location**: `/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/templates/built-in/create-activity-template.json`
+**Status**: ❌ FAILED (23 validation errors)
+
+**Key Issues**:
+- Has `id` and `name` but wrong `version` type (number instead of Version object)
+- Missing: `genealogy`, `executions`, `successRate`, `avgDuration`, `avgCost`, `avgTokens`, `createdAt`, `updatedAt`
+- Task issues: missing `prompt.variables`, `retry.maxAttempts`, `metrics`
+- ContextRequirements: invalid impulse type `toolOutput` (should be from allowed enum)
+- Learning schema: `improvementHints` structure mismatch
+
+**What's Correct**:
+- Has comprehensive contextRequirements with proper hints
+- Well-structured task graph design (4 tasks)
+- Good composition examples
+- Detailed learning configuration with patterns
+- Complete hooks configuration
+
+---
+
+## Schema Analysis
+
+### Required Fields for `ActivityTemplate.Schema`
+
+**Identity Fields**:
+```typescript
+id: string                           // ✅ Only built-in template has this
+version: {                           // ❌ All templates missing
+  major: number
+  minor: number
+  patch: number
+  hash: string
+}
+genealogy: {                         // ❌ All templates missing
+  generation: number
+  parentId?: string
+  variantOf?: string
+  // ... more fields
+}
+name: string                         // ✅ All templates have
+description: string                  // ✅ All templates have
+category: enum                       // ✅ All templates have
+```
+
+**Execution Metrics** (zero-initialized for new templates):
+```typescript
+executions: number                   // ❌ All templates missing
+successRate: number                  // ❌ All templates missing
+avgDuration: number                  // ❌ All templates missing
+avgCost: number                      // ❌ All templates missing
+avgTokens: {                         // ❌ All templates missing
+  input: number
+  output: number
+  cache: number
+}
+```
+
+**Task-Level** (each task requires):
+```typescript
+tasks: [{
+  // ... other fields ...
+  retry: {
+    maxAttempts: number              // ❌ Templates use max_attempts (wrong case)
+    strategy: enum
+  }
+  metrics: {                         // ❌ All templates missing
+    successRate: number
+    avgTokens: number
+    avgDuration: number
+    commonFailures: string[]
+  }
+  prompt: {
+    variables: Array                 // ❌ Some templates missing (required even if empty)
+  }
+  validation: {
+    requiredFiles: Array             // ❌ Some templates missing (required even if empty)
+    requiredPatterns: Array          // ❌ Some templates missing (required even if empty)
+    forbiddenPatterns: Array         // ❌ Some templates missing (required even if empty)
+    commands: Array                  // ❌ Some templates missing (required even if empty)
+  }
+}]
+```
+
+**Configuration Objects**:
+```typescript
+integration: {                       // ❌ test-template-final missing
+  preChecks: string[]
+  postChecks: string[]
+  qualityGates: Array
+}
+metabob: {                           // ❌ test-template-final missing
+  enabled: boolean
+  learningMode: boolean
+  targetContextTokens: number
+  annotationStrategy: enum
+}
+```
+
+**Timestamps**:
+```typescript
+createdAt: number                    // ❌ All templates missing
+updatedAt: number                    // ❌ All templates missing
+```
+
+---
+
+## Common Issues Across All Templates
+
+### 1. Format Mismatch
+**Issue**: Templates are written in `CreateOptions` format (simplified for authoring) but validator expects `Schema` format (complete with metadata).
+
+**CreateOptions Format** (what templates use):
+- Simplified structure for human authoring
+- Omits execution metrics (auto-initialized)
+- Omits version/genealogy (auto-generated)
+- Omits timestamps (auto-added)
+- Uses defaults for optional fields
+
+**Schema Format** (what validator expects):
+- Complete structure with all metadata
+- Requires execution history fields
+- Requires version and genealogy objects
+- Requires timestamps
+- All arrays must be present (even if empty)
+
+### 2. Naming Convention Issues
+- Templates use `max_attempts` (snake_case)
+- Schema expects `maxAttempts` (camelCase)
+
+### 3. Missing Empty Arrays
+Many templates omit empty arrays, but Schema requires them:
+- `prompt.variables: []`
+- `validation.requiredFiles: []`
+- `validation.requiredPatterns: []`
+- `validation.forbiddenPatterns: []`
+- `validation.commands: []`
+
+### 4. Invalid Enum Values
+- `test-template-final.json`: Uses custom compression value instead of enum
+- `create-activity-template.json`: Uses `toolOutput` impulse type (not in enum)
+
+---
+
+## Recommendations
+
+### Option 1: Transform Templates (Recommended)
+Create a transformation function that converts `CreateOptions` to `Schema`:
+
+```typescript
+function transformToSchema(createOptions: CreateOptions): Schema {
+  return {
+    ...createOptions,
+    id: generateId(createOptions),
+    version: generateVersion(),
+    genealogy: createGenealogy(),
+    executions: 0,
+    successRate: 0,
+    avgDuration: 0,
+    avgCost: 0,
+    avgTokens: { input: 0, output: 0, cache: 0 },
+    tasks: createOptions.tasks.map(task => ({
+      ...task,
+      retry: {
+        maxAttempts: task.retry.max_attempts || 3,
+        strategy: task.retry.strategy
+      },
+      metrics: {
+        successRate: 0,
+        avgTokens: 0,
+        avgDuration: 0,
+        commonFailures: []
+      },
+      prompt: {
+        ...task.prompt,
+        variables: task.prompt.variables || []
+      },
+      validation: {
+        requiredFiles: task.validation.requiredFiles || [],
+        requiredPatterns: task.validation.requiredPatterns || [],
+        forbiddenPatterns: task.validation.forbiddenPatterns || [],
+        commands: task.validation.commands || []
+      }
+    })),
+    integration: createOptions.integration || {
+      preChecks: [],
+      postChecks: [],
+      qualityGates: []
+    },
+    metabob: createOptions.metabob || {
+      enabled: false,
+      learningMode: true,
+      targetContextTokens: 5000,
+      annotationStrategy: "key-components"
+    },
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  }
+}
+```
+
+**This is exactly what `ActivityTemplate.create()` does** (see activity-template.ts:1044-1200).
+
+### Option 2: Update Validator
+Modify `register_activity_template` to:
+1. Detect format (CreateOptions vs Schema)
+2. Transform CreateOptions → Schema before validation
+3. Validate transformed Schema
+
+### Option 3: Fix Templates Manually
+Update all template JSON files to include:
+- Execution metrics (zero-initialized)
+- Version and genealogy objects
+- Timestamps
+- All required empty arrays
+- Correct camelCase naming
+
+---
+
+## Fix Priority
+
+### HIGH PRIORITY (Blocks registration)
+1. **Naming Convention**: Change `max_attempts` → `maxAttempts`
+2. **Required Arrays**: Add empty arrays where missing
+3. **Invalid Enums**: Fix compression strategy and impulse types
+4. **Missing Config Objects**: Add `integration` and `metabob` to test-template-final.json
+
+### MEDIUM PRIORITY (Auto-generated but needed for validation)
+5. **Execution Metrics**: Add zero-initialized metrics
+6. **Version/Genealogy**: Add proper version and genealogy objects
+7. **Timestamps**: Add createdAt/updatedAt
+8. **Task Metrics**: Add metrics to each task
+
+### LOW PRIORITY (Nice to have)
+9. **Validate Learning Schema**: Fix `improvementHints` structure in create-activity-template.json
+10. **Documentation**: Add comments explaining CreateOptions vs Schema distinction
+
+---
+
+## Validation Tool Status
+
+The `register_activity_template` tool currently:
+- ✅ Correctly validates against `ActivityTemplate.Schema`
+- ✅ Provides detailed error messages with paths
+- ❌ Does NOT transform `CreateOptions` → `Schema` before validation
+- ❌ Expects fully-formed Schema format (with metadata)
+
+**Expected workflow**:
+1. Human writes template in `CreateOptions` format (simplified)
+2. Tool transforms to `Schema` format (adds metadata)
+3. Tool validates `Schema` format
+4. Tool registers with backend
+
+**Current workflow**:
+1. Human writes template in `CreateOptions` format
+2. Tool validates directly as `Schema` ❌ FAILS
+3. Registration blocked
+
+---
+
+## Next Steps
+
+1. **Immediate**: Update `register_activity_template` tool to transform CreateOptions → Schema before validation
+2. **Short-term**: Fix high-priority issues in templates (naming, arrays, enums)
+3. **Medium-term**: Document CreateOptions vs Schema distinction
+4. **Long-term**: Create template authoring guide with examples
+
+---
+
+## Template Quality Assessment
+
+Despite validation errors, the templates show good quality:
+
+**example-activity-template.json**:
+- ✅ Comprehensive example with all features
+- ✅ Excellent learning configuration
+- ✅ Complete hooks and composition
+- ✅ Good documentation patterns
+
+**test-template-final.json**:
+- ✅ Simple and focused (good for testing)
+- ✅ Minimal complexity
+- ✅ V2 format with contextRequirements
+
+**create-activity-template.json**:
+- ✅ Self-referential (creates templates)
+- ✅ Detailed contextRequirements
+- ✅ Comprehensive composition examples
+- ✅ Production-ready guidance
+
+All templates would pass validation after format transformation.
+
+---
+
+## Conclusion
+
+**Validation Status**: ❌ All 3 templates fail validation
+**Root Cause**: Format mismatch (CreateOptions vs Schema)
+**Fix Required**: Transform CreateOptions → Schema before validation
+**Template Quality**: ✅ High quality, well-structured
+**Blocking Issue**: Yes, prevents registration
+
+**Recommendation**: Update `register_activity_template` tool to handle CreateOptions format by transforming to Schema before validation, matching the behavior of `ActivityTemplate.create()`.

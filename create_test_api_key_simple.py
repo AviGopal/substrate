@@ -39,13 +39,13 @@ async def create_api_key():
             print(f"Auth failed: {auth_response.text}")
             return None
 
-        token = auth_response.json().get("token")
+        token = auth_response.text.strip()
 
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
             "NS": "metabob",
-            "DB": "devbob",
+            "DB": "metabob",
         }
 
         # Create organization if not exists
