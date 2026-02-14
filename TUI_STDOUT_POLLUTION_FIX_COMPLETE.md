@@ -10,7 +10,7 @@
 
 Successfully eliminated ALL stdout pollution from TUI components that was interfering with TUI rendering. Applied comprehensive fix across backend, session management, tool execution, and TUI components.
 
-**Total Fixes**: 50 console.log → console.error conversions
+**Total Fixes**: 52 console.log → console.error conversions
 
 ---
 
@@ -58,6 +58,13 @@ Fixed all TUI debug logging:
 - `component/dialog-session-list.tsx`: 1 statement (session count)
 - `component/prompt/index.tsx`: 2 statements (command/paste events)
 
+### Phase 3: Plugin & Config (2 fixes)
+**Commit**: `6f4f1e10`
+
+Fixed initialization and config logging:
+- `plugin/auto-approve.ts`: 1 statement (plugin initialization message)
+- `config/impulse-cache-config.ts`: 1 statement (config display function)
+
 ---
 
 ## Files Modified
@@ -94,6 +101,9 @@ packages/opencode/src/cli/cmd/tui/app.tsx
    
 3. **5c7299e3** - "fix: Redirect TUI debug logging to stderr"
    - All TUI components (13)
+
+4. **6f4f1e10** - "fix: Redirect plugin and config debug output to stderr"
+   - auto-approve.ts (1) + impulse-cache-config.ts (1)
 
 ### metabob-devbob repo
 1. **207fecc** - "docs: Document stdout pollution fix and learning outcomes"
@@ -289,7 +299,7 @@ TUI Update (stdout rendering)
 ## Impact Metrics
 
 **Before Fix**:
-- ~50 console.log statements polluting stdout
+- 52 console.log statements polluting stdout
 - TUI rendering corrupted constantly
 - Debug messages mixed with UI
 - Poor developer experience
