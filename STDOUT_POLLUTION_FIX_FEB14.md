@@ -2,7 +2,9 @@
 
 **Date**: February 14, 2026  
 **Status**: ✅ Fixed and committed  
-**Commit**: `44a662ef` (repos/metabob-opencode)
+**Commits**: 
+- `44a662ef` - tool.ts + agent-execution-tracker.ts (33 fixes)
+- `95afa61f` - prompt.ts (4 additional fixes)
 
 ---
 
@@ -44,6 +46,10 @@ Multiple components used `console.log()` for debug output:
 2. **packages/opencode/src/session/agent-execution-tracker.ts**
    - 27 console.log statements → console.error
    - Session tracking: start, tool calls, MCP communication
+
+3. **packages/opencode/src/session/prompt.ts**
+   - 4 console.log statements → console.error
+   - Session tracking initialization and agent execution startup
 
 ### Why This Works
 
@@ -206,7 +212,7 @@ Based on audit, these files also have console.log but are less critical:
 - `packages/opencode/src/tool/tool.ts` (+40 -6 lines)
 - `packages/opencode/src/session/agent-execution-tracker.ts` (+32 -24 lines)
 
-**Total Impact**: 33 console.log → console.error conversions
+**Total Impact**: 37 console.log → console.error conversions (33 initial + 4 follow-up)
 
 ---
 
