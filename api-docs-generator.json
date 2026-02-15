@@ -1,0 +1,434 @@
+{
+  "id": "api-docs-generator",
+  "name": "API Documentation Generator",
+  "description": "Comprehensive API documentation workflow with pattern analysis, OpenAPI spec generation, endpoint documentation, and validation",
+  "category": "tool",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "timestamp": 1739750400000,
+    "parent_hash": "",
+    "variant_hash": "",
+    "full_version": "1.0.0",
+    "generation": 0
+  },
+  "genealogy": {
+    "parent": null,
+    "parent_id": "",
+    "ancestors": [],
+    "children": [],
+    "variant_ids": [],
+    "variant_hash": "",
+    "created_at": 1739750400000,
+    "generation": 0,
+    "evolution": {
+      "reason": "EVOLUTION_REASON_MANUAL",
+      "improvised": false,
+      "author": "TEMPLATE_AUTHOR_HUMAN",
+      "mutations": [],
+      "improvements": []
+    }
+  },
+  "executions": 0,
+  "successRate": 0,
+  "avgDuration": 0,
+  "avgCost": 0,
+  "avgTokens": {
+    "input": 0,
+    "output": 0,
+    "cache": 0
+  },
+  "createdAt": 1739750400000,
+  "updatedAt": 1739750400000,
+  "tasks": [
+    {
+      "id": "discover-and-analyze",
+      "subagent": "general",
+      "description": "Discover API endpoints and analyze existing patterns",
+      "dependencies": [],
+      "guidance": [
+        "Search for all API route definitions",
+        "Identify routing patterns and frameworks",
+        "Extract endpoint metadata (path, method, handlers)",
+        "Check for existing documentation patterns",
+        "Analyze authentication and middleware patterns",
+        "Use Metabob to understand code structure"
+      ],
+      "prompt": {
+        "template": "Discover and analyze API endpoints in the codebase.\n\n**Your Task**: Find all API endpoints and analyze their patterns.\n\n## Step 1: Discover Endpoints\n\n### Find Routing Files\n\nSearch for common routing patterns:\n- Express: `app.get()`, `router.post()`, `app.use('/api')`\n- Fastify: `fastify.route()`, `server.get()`\n- Koa: `router.get()`, `router.post()`\n- Next.js: `pages/api/`, `app/api/`\n- NestJS: `@Controller()`, `@Get()`, `@Post()`\n\n```bash\n# Find routing files\nglob('**/routes/**/*.{ts,js}')\nglob('**/api/**/*.{ts,js}')\nglob('**/controllers/**/*.{ts,js}')\n```\n\n### Extract Endpoints\n\nFor each routing file:\n1. Read the file\n2. Identify all route definitions\n3. Extract:\n   - HTTP method (GET, POST, PUT, PATCH, DELETE)\n   - Path pattern (e.g., '/api/users/:id')\n   - Handler function name\n   - Middleware (auth, validation, etc.)\n   - Path parameters\n   - Query parameters\n   - Request body schema\n   - Response format\n\n## Step 2: Analyze Patterns\n\n### Framework Detection\n\nIdentify the web framework:\n- Check package.json dependencies\n- Analyze route definition syntax\n- Identify middleware patterns\n\n### Documentation Patterns\n\nCheck for existing documentation:\n- JSDoc comments on handlers\n- Swagger/OpenAPI specs\n- README with API docs\n- Separate API documentation files\n\n### Authentication Patterns\n\nIdentify auth mechanisms:\n- JWT tokens\n- API keys\n- OAuth\n- Session-based\n- Middleware used\n\n### Schema Validation\n\nIdentify validation approach:\n- Zod schemas\n- Joi validation\n- express-validator\n- class-validator\n- JSON Schema\n\n## Step 3: Use Metabob for Analysis\n\nSearch for related issues:\n```\nmetabob_search_codebase_issues({\n  query: \"API endpoint documentation\",\n  limit: 5\n})\n```\n\nGet context on API structure:\n```\nmetabob_list_file_components({\n  file_path: \"path/to/main/routes/file.ts\"\n})\n```\n\n## Step 4: Create Discovery Report\n\nCreate **API_DISCOVERY_REPORT.md**:\n\n```markdown\n## API Discovery Report\n\n### Framework Detection\n- Framework: [Express/Fastify/etc]\n- Version: [version]\n- Entry point: [file path]\n\n### Endpoints Found\n\nTotal endpoints: [count]\n\n#### By HTTP Method\n- GET: [count]\n- POST: [count]\n- PUT: [count]\n- PATCH: [count]\n- DELETE: [count]\n\n#### By Route Prefix\n- /api/users: [count] endpoints\n- /api/auth: [count] endpoints\n- [etc]\n\n### Endpoint Inventory\n\n#### Authentication Endpoints\n\n| Method | Path | Handler | Auth Required | Description |\n|--------|------|---------|---------------|-------------|\n| POST | /api/auth/login | authController.login | No | User login |\n| [etc] | [etc] | [etc] | [etc] | [etc] |\n\n#### User Endpoints\n\n| Method | Path | Handler | Auth Required | Description |\n|--------|------|---------|---------------|-------------|\n| GET | /api/users/:id | userController.getUser | Yes | Get user by ID |\n| [etc] | [etc] | [etc] | [etc] | [etc] |\n\n[Continue for all endpoint groups]\n\n### Authentication Patterns\n\n- Mechanism: [JWT/API Key/etc]\n- Header: [Authorization: Bearer token]\n- Middleware: [auth.middleware.ts]\n- Token validation: [how tokens are validated]\n\n### Validation Patterns\n\n- Library: [Zod/Joi/etc]\n- Location: [where schemas are defined]\n- Pattern: [how validation is applied]\n- Error handling: [how validation errors are returned]\n\n### Documentation Status\n\n- Existing docs: [Yes/No/Partial]\n- Location: [where docs are]\n- Format: [OpenAPI/Markdown/JSDoc]\n- Completeness: [percentage or description]\n\n### Response Patterns\n\n#### Success Responses\n```json\n{\n  \"success\": true,\n  \"data\": { /* resource */ }\n}\n```\n\n#### Error Responses\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"ERROR_CODE\",\n    \"message\": \"Human readable message\"\n  }\n}\n```\n\n### Recommendations\n\n1. [Documentation format to use]\n2. [Missing documentation areas]\n3. [Inconsistencies to address]\n4. [Suggested improvements]\n```\n\n**Validation**: Ensure the report contains:\n- Specific file paths (not placeholders)\n- Actual endpoint counts\n- Real examples from the codebase\n- Complete authentication and validation patterns\n- All endpoint groups documented",
+        "maxTokens": 16000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "project_path",
+            "type": "string",
+            "required": false,
+            "description": "Root path of the project (defaults to current directory)"
+          },
+          {
+            "name": "api_prefix",
+            "type": "string",
+            "required": false,
+            "description": "API route prefix to focus on (e.g., '/api', '/v1')"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["API_DISCOVERY_REPORT.md"],
+        "requiredPatterns": [
+          "## API Discovery Report",
+          "### Framework Detection",
+          "### Endpoints Found",
+          "### Endpoint Inventory",
+          "### Authentication Patterns",
+          "### Validation Patterns",
+          "### Response Patterns",
+          "### Recommendations",
+          "\\| Method \\| Path \\| Handler \\|"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[count\\]",
+          "\\[etc\\]",
+          "\\[file path\\]",
+          "\\[description\\]"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Discovery report is incomplete. Fix these issues:\n\n1. Replace all [placeholders] with actual values\n2. Provide specific file paths from the codebase\n3. Include actual endpoint counts\n4. Show real examples from the code\n5. Complete all sections\n6. Remove TODO/TBD markers\n\nUse glob and read tools to find actual routes and patterns."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "generate-openapi-spec",
+      "subagent": "general",
+      "description": "Generate OpenAPI 3.0 specification from discovered endpoints",
+      "dependencies": ["discover-and-analyze"],
+      "guidance": [
+        "Read API_DISCOVERY_REPORT.md for endpoint inventory",
+        "Generate valid OpenAPI 3.0 specification",
+        "Include schemas for request/response bodies",
+        "Document authentication mechanisms",
+        "Add examples for all endpoints",
+        "Validate OpenAPI spec format"
+      ],
+      "prompt": {
+        "template": "Generate OpenAPI 3.0 specification for the discovered API.\n\n**Your Task**: Create a complete OpenAPI spec based on API_DISCOVERY_REPORT.md\n\n## Step 1: Read Discovery Report\n\nRead API_DISCOVERY_REPORT.md to get:\n- All endpoints and methods\n- Authentication patterns\n- Request/response formats\n- Validation schemas\n- Error responses\n\n## Step 2: Create OpenAPI Structure\n\nCreate **openapi.yaml** (or openapi.json) with:\n\n```yaml\nopenapi: 3.0.3\ninfo:\n  title: [API Name]\n  description: |\n    [API description from discovery]\n    \n    ## Authentication\n    [Authentication instructions]\n  version: 1.0.0\n  contact:\n    name: [Team/Contact]\n    email: [contact email if available]\n\nservers:\n  - url: http://localhost:3000\n    description: Local development\n  - url: https://api.example.com\n    description: Production (update with actual URL)\n\ncomponents:\n  securitySchemes:\n    bearerAuth:\n      type: http\n      scheme: bearer\n      bearerFormat: JWT\n      description: JWT token obtained from /auth/login\n  \n  schemas:\n    Error:\n      type: object\n      required:\n        - success\n        - error\n      properties:\n        success:\n          type: boolean\n          example: false\n        error:\n          type: object\n          properties:\n            code:\n              type: string\n              example: \"VALIDATION_ERROR\"\n            message:\n              type: string\n              example: \"Invalid input parameters\"\n    \n    # Add schemas for each resource\n    User:\n      type: object\n      required:\n        - id\n        - email\n      properties:\n        id:\n          type: string\n          example: \"user_123\"\n        email:\n          type: string\n          format: email\n          example: \"user@example.com\"\n        name:\n          type: string\n          example: \"John Doe\"\n        createdAt:\n          type: string\n          format: date-time\n          example: \"2024-01-15T10:30:00Z\"\n    \n    # Add more schemas based on discovery\n\npaths:\n  /api/auth/login:\n    post:\n      summary: User login\n      description: Authenticate user and receive JWT token\n      operationId: authLogin\n      tags:\n        - Authentication\n      requestBody:\n        required: true\n        content:\n          application/json:\n            schema:\n              type: object\n              required:\n                - email\n                - password\n              properties:\n                email:\n                  type: string\n                  format: email\n                  example: \"user@example.com\"\n                password:\n                  type: string\n                  format: password\n                  example: \"SecurePass123!\"\n      responses:\n        '200':\n          description: Login successful\n          content:\n            application/json:\n              schema:\n                type: object\n                properties:\n                  success:\n                    type: boolean\n                    example: true\n                  data:\n                    type: object\n                    properties:\n                      token:\n                        type: string\n                        example: \"eyJhbGciOiJIUzI1NiIs...\"\n                      user:\n                        $ref: '#/components/schemas/User'\n        '400':\n          description: Invalid credentials\n          content:\n            application/json:\n              schema:\n                $ref: '#/components/schemas/Error'\n        '500':\n          description: Server error\n          content:\n            application/json:\n              schema:\n                $ref: '#/components/schemas/Error'\n  \n  /api/users/{id}:\n    get:\n      summary: Get user by ID\n      description: Retrieve a single user by their unique identifier\n      operationId: getUserById\n      tags:\n        - Users\n      security:\n        - bearerAuth: []\n      parameters:\n        - name: id\n          in: path\n          required: true\n          description: User ID\n          schema:\n            type: string\n          example: \"user_123\"\n      responses:\n        '200':\n          description: User found\n          content:\n            application/json:\n              schema:\n                type: object\n                properties:\n                  success:\n                    type: boolean\n                    example: true\n                  data:\n                    $ref: '#/components/schemas/User'\n        '404':\n          description: User not found\n          content:\n            application/json:\n              schema:\n                $ref: '#/components/schemas/Error'\n        '401':\n          description: Unauthorized\n          content:\n            application/json:\n              schema:\n                $ref: '#/components/schemas/Error'\n  \n  # Continue for all endpoints from discovery\n\ntags:\n  - name: Authentication\n    description: User authentication operations\n  - name: Users\n    description: User management operations\n  # Add more tags for endpoint groups\n```\n\n## Step 3: Validate OpenAPI Spec\n\nEnsure the spec:\n- Is valid OpenAPI 3.0 format\n- All endpoints from discovery are included\n- All schemas are referenced correctly\n- Authentication is documented\n- Examples are provided\n- Response codes are comprehensive (2xx, 4xx, 5xx)\n\n## Step 4: Create Spec Validation Report\n\nCreate **OPENAPI_VALIDATION.md**:\n\n```markdown\n## OpenAPI Specification Validation\n\n### Completeness Check\n\n- Total endpoints documented: [count]\n- Endpoints from discovery: [count]\n- Match: [Yes/No]\n\n### Schema Coverage\n\n- Schemas defined: [list]\n- All request bodies have schemas: [Yes/No]\n- All responses have schemas: [Yes/No]\n\n### Authentication\n\n- Security schemes defined: [Yes/No]\n- Protected endpoints marked: [Yes/No]\n- Auth flow documented: [Yes/No]\n\n### Examples\n\n- All endpoints have examples: [Yes/No]\n- Request examples: [count]\n- Response examples: [count]\n\n### Validation Result\n\n[PASS/FAIL]\n\n[If FAIL, list issues to fix]\n```",
+        "maxTokens": 16000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "api_name",
+            "type": "string",
+            "required": false,
+            "description": "Name of the API for OpenAPI spec title"
+          },
+          {
+            "name": "output_format",
+            "type": "string",
+            "required": false,
+            "description": "Output format: 'yaml' or 'json' (defaults to yaml)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "openapi.yaml",
+          "openapi.json",
+          "OPENAPI_VALIDATION.md"
+        ],
+        "requiredPatterns": [
+          "openapi: 3\\.0",
+          "\"openapi\": \"3\\.0\"",
+          "paths:",
+          "components:",
+          "schemas:",
+          "\\[PASS\\]"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[API Name\\]",
+          "\\[list\\]",
+          "\\[count\\]",
+          "example\\.com(?!.*description)"
+        ],
+        "commands": [
+          {
+            "name": "validate-openapi",
+            "command": "npx @apidevtools/swagger-cli validate openapi.yaml 2>/dev/null || npx @apidevtools/swagger-cli validate openapi.json 2>/dev/null || echo 'OpenAPI validation tool not available'",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "OpenAPI spec is invalid or incomplete. Fix:\n\n**Common Issues**:\n- Invalid OpenAPI 3.0 format\n- Missing endpoints from discovery report\n- Schemas not defined or referenced incorrectly\n- Missing examples\n- Placeholders not replaced ([API Name], [list], etc.)\n- Authentication not properly configured\n- Validation marked as [FAIL]\n\n**Fix Process**:\n1. Re-read API_DISCOVERY_REPORT.md\n2. Include ALL endpoints found\n3. Define schemas for all request/response bodies\n4. Add realistic examples\n5. Configure security schemes\n6. Replace all placeholders\n7. Ensure validation passes\n8. Update OPENAPI_VALIDATION.md to show [PASS]"
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "generate-endpoint-docs",
+      "subagent": "general",
+      "description": "Generate human-readable endpoint documentation with examples",
+      "dependencies": ["generate-openapi-spec"],
+      "guidance": [
+        "Create comprehensive markdown documentation",
+        "Include curl examples for all endpoints",
+        "Document request/response formats with examples",
+        "Add authentication instructions",
+        "Include error handling documentation",
+        "Provide code examples in multiple languages"
+      ],
+      "prompt": {
+        "template": "Generate comprehensive API documentation for developers.\n\n**Your Task**: Create developer-friendly API documentation based on OpenAPI spec\n\n## Step 1: Read OpenAPI Spec\n\nRead the generated OpenAPI spec (openapi.yaml or openapi.json) to get:\n- All endpoints\n- Request/response schemas\n- Authentication requirements\n- Examples\n\n## Step 2: Create Main API Documentation\n\nCreate **API_DOCUMENTATION.md**:\n\n```markdown\n# API Documentation\n\n## Overview\n\n[Brief description of the API and its purpose]\n\n## Base URL\n\n```\nLocal: http://localhost:3000\nProduction: https://api.example.com\n```\n\n## Authentication\n\n### Getting a Token\n\nAuthenticate using your credentials:\n\n```bash\ncurl -X POST http://localhost:3000/api/auth/login \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"email\": \"user@example.com\",\n    \"password\": \"your-password\"\n  }'\n```\n\nResponse:\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"user\": {\n      \"id\": \"user_123\",\n      \"email\": \"user@example.com\"\n    }\n  }\n}\n```\n\n### Using the Token\n\nInclude the token in the Authorization header:\n\n```bash\ncurl -H \"Authorization: Bearer YOUR_TOKEN\" \\\n  http://localhost:3000/api/users/123\n```\n\n## Response Format\n\n### Success Response\n\nAll successful responses follow this format:\n\n```json\n{\n  \"success\": true,\n  \"data\": {\n    // Resource data here\n  }\n}\n```\n\n### Error Response\n\nAll error responses follow this format:\n\n```json\n{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"ERROR_CODE\",\n    \"message\": \"Human readable error message\"\n  }\n}\n```\n\n### HTTP Status Codes\n\n- `200 OK` - Request succeeded\n- `201 Created` - Resource created successfully\n- `400 Bad Request` - Invalid input\n- `401 Unauthorized` - Authentication required or failed\n- `403 Forbidden` - Insufficient permissions\n- `404 Not Found` - Resource not found\n- `500 Internal Server Error` - Server error\n\n## Endpoints\n\n---\n\n## Authentication\n\n### POST /api/auth/login\n\nAuthenticate user and receive JWT token.\n\n**Authentication**: None required\n\n**Request Body**:\n\n```json\n{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePass123!\"\n}\n```\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| email | string | Yes | User email address |\n| password | string | Yes | User password |\n\n**Success Response** (200 OK):\n\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIs...\",\n    \"user\": {\n      \"id\": \"user_123\",\n      \"email\": \"user@example.com\",\n      \"name\": \"John Doe\"\n    }\n  }\n}\n```\n\n**Error Responses**:\n\n- **400 Bad Request** - Invalid credentials\n  ```json\n  {\n    \"success\": false,\n    \"error\": {\n      \"code\": \"INVALID_CREDENTIALS\",\n      \"message\": \"Email or password is incorrect\"\n    }\n  }\n  ```\n\n- **500 Internal Server Error** - Server error\n\n**Example**:\n\n```bash\ncurl -X POST http://localhost:3000/api/auth/login \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"email\": \"user@example.com\",\n    \"password\": \"SecurePass123!\"\n  }'\n```\n\n```javascript\n// JavaScript/Node.js\nconst response = await fetch('http://localhost:3000/api/auth/login', {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({\n    email: 'user@example.com',\n    password: 'SecurePass123!'\n  })\n});\n\nconst data = await response.json();\nconst token = data.data.token;\n```\n\n```python\n# Python\nimport requests\n\nresponse = requests.post(\n    'http://localhost:3000/api/auth/login',\n    json={\n        'email': 'user@example.com',\n        'password': 'SecurePass123!'\n    }\n)\n\ndata = response.json()\ntoken = data['data']['token']\n```\n\n---\n\n### POST /api/auth/logout\n\n[Continue for all authentication endpoints]\n\n---\n\n## Users\n\n### GET /api/users/:id\n\nRetrieve a user by their ID.\n\n**Authentication**: Required (Bearer token)\n\n**URL Parameters**:\n\n| Parameter | Type | Description |\n|-----------|------|-------------|\n| id | string | User ID |\n\n**Success Response** (200 OK):\n\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"user_123\",\n    \"email\": \"user@example.com\",\n    \"name\": \"John Doe\",\n    \"createdAt\": \"2024-01-15T10:30:00Z\"\n  }\n}\n```\n\n**Error Responses**:\n\n- **401 Unauthorized** - Missing or invalid token\n- **404 Not Found** - User not found\n- **500 Internal Server Error** - Server error\n\n**Example**:\n\n```bash\ncurl -X GET http://localhost:3000/api/users/user_123 \\\n  -H \"Authorization: Bearer YOUR_TOKEN\"\n```\n\n```javascript\n// JavaScript/Node.js\nconst response = await fetch('http://localhost:3000/api/users/user_123', {\n  headers: {\n    'Authorization': `Bearer ${token}`\n  }\n});\n\nconst data = await response.json();\nconst user = data.data;\n```\n\n```python\n# Python\nimport requests\n\nheaders = {'Authorization': f'Bearer {token}'}\nresponse = requests.get(\n    'http://localhost:3000/api/users/user_123',\n    headers=headers\n)\n\ndata = response.json()\nuser = data['data']\n```\n\n---\n\n### POST /api/users\n\n[Continue for all user endpoints]\n\n---\n\n## [Other Endpoint Groups]\n\n[Document all remaining endpoints following the same pattern]\n\n---\n\n## Rate Limiting\n\n[If applicable, document rate limiting]\n\n## Pagination\n\n[If applicable, document pagination format]\n\n## Webhooks\n\n[If applicable, document webhook events]\n\n## SDKs and Libraries\n\n[If available, link to SDKs]\n\n## Changelog\n\n### Version 1.0.0 (Current)\n\n- Initial API release\n- [List major features]\n```\n\n## Step 3: Create Quick Start Guide\n\nCreate **API_QUICK_START.md**:\n\n```markdown\n# API Quick Start Guide\n\n## Setup\n\n### 1. Get API Access\n\n[How to get access - signup, API key, etc.]\n\n### 2. Install HTTP Client\n\n```bash\n# Using curl (included in most systems)\ncurl --version\n\n# Or install httpie\npip install httpie\n\n# Or use Postman\n# Download from https://www.postman.com\n```\n\n### 3. Set Base URL\n\n```bash\nexport API_BASE_URL=\"http://localhost:3000\"\n```\n\n## Your First Request\n\n### Step 1: Login\n\n```bash\ncurl -X POST $API_BASE_URL/api/auth/login \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"email\": \"user@example.com\",\n    \"password\": \"password\"\n  }'\n```\n\nSave the token from the response:\n\n```bash\nexport API_TOKEN=\"eyJhbGciOiJIUzI1NiIs...\"\n```\n\n### Step 2: Make Authenticated Request\n\n```bash\ncurl -X GET $API_BASE_URL/api/users/user_123 \\\n  -H \"Authorization: Bearer $API_TOKEN\"\n```\n\n## Common Tasks\n\n### Create a Resource\n\n```bash\ncurl -X POST $API_BASE_URL/api/[resource] \\\n  -H \"Authorization: Bearer $API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"field\": \"value\"\n  }'\n```\n\n### Update a Resource\n\n```bash\ncurl -X PUT $API_BASE_URL/api/[resource]/[id] \\\n  -H \"Authorization: Bearer $API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"field\": \"new value\"\n  }'\n```\n\n### Delete a Resource\n\n```bash\ncurl -X DELETE $API_BASE_URL/api/[resource]/[id] \\\n  -H \"Authorization: Bearer $API_TOKEN\"\n```\n\n## Error Handling\n\n### Check HTTP Status\n\n```bash\ncurl -w \"\\nHTTP Status: %{http_code}\\n\" \\\n  -X GET $API_BASE_URL/api/users/user_123 \\\n  -H \"Authorization: Bearer $API_TOKEN\"\n```\n\n### Parse Error Response\n\n```bash\nresponse=$(curl -s -X GET $API_BASE_URL/api/users/invalid_id \\\n  -H \"Authorization: Bearer $API_TOKEN\")\n\necho $response | jq '.error'\n```\n\n## Next Steps\n\n1. Read full [API Documentation](./API_DOCUMENTATION.md)\n2. Explore [OpenAPI Specification](./openapi.yaml)\n3. Try the [Postman Collection](./postman_collection.json) (if available)\n```\n\n## Step 4: Validate Documentation\n\nEnsure:\n- All endpoints from OpenAPI spec are documented\n- Each endpoint has curl examples\n- Code examples in at least 2 languages\n- Error responses documented\n- Authentication clearly explained\n- No placeholders remain",
+        "maxTokens": 16000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "include_languages",
+            "type": "string",
+            "required": false,
+            "description": "Programming languages for code examples (comma-separated, e.g., 'javascript,python,go')"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "API_DOCUMENTATION.md",
+          "API_QUICK_START.md"
+        ],
+        "requiredPatterns": [
+          "# API Documentation",
+          "## Authentication",
+          "## Endpoints",
+          "curl -X",
+          "```bash",
+          "```json",
+          "## Response Format",
+          "# API Quick Start Guide",
+          "## Your First Request"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[Brief description\\]",
+          "\\[resource\\]",
+          "\\[id\\]",
+          "\\[How to\\]",
+          "YOUR_TOKEN(?!.*Authorization)"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Documentation is incomplete. Fix these issues:\n\n**Missing Content**:\n- Not all endpoints from OpenAPI spec documented\n- Missing curl examples for some endpoints\n- Placeholders not replaced ([Brief description], [resource], etc.)\n- Generic YOUR_TOKEN without context\n- Missing code examples in multiple languages\n\n**Quality Issues**:\n- Examples not realistic or runnable\n- Error responses not documented\n- Authentication flow unclear\n- Response formats not explained\n\n**Fix Process**:\n1. Read openapi.yaml/json completely\n2. Document EVERY endpoint found\n3. Add working curl examples (test if possible)\n4. Include code examples in JavaScript and Python minimum\n5. Replace all placeholders with real content\n6. Document all error responses from OpenAPI spec\n7. Make authentication instructions clear and complete\n\nEnsure docs are production-ready."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "validate-and-test",
+      "subagent": "test",
+      "description": "Validate documentation completeness and test example requests",
+      "dependencies": ["generate-endpoint-docs"],
+      "guidance": [
+        "Validate OpenAPI spec format",
+        "Check documentation completeness",
+        "Test curl examples if API is running",
+        "Verify all endpoints documented",
+        "Check for broken links",
+        "Generate validation report"
+      ],
+      "prompt": {
+        "template": "Validate the generated API documentation and test examples.\n\n**Your Task**: Ensure documentation is complete, accurate, and examples work\n\n## Step 1: OpenAPI Spec Validation\n\n### Validate Spec Format\n\nTry to validate the OpenAPI spec:\n\n```bash\n# Try swagger-cli if available\nnpx @apidevtools/swagger-cli validate openapi.yaml 2>/dev/null || \\\nnpx @apidevtools/swagger-cli validate openapi.json 2>/dev/null || \\\necho \"Swagger CLI not available, skipping automated validation\"\n```\n\n### Manual Validation\n\nCheck:\n- OpenAPI version is 3.0.x\n- All paths are defined\n- All schemas are valid\n- All $ref references exist\n- Security schemes are defined\n- Examples are present\n\n## Step 2: Documentation Completeness\n\n### Cross-Reference Check\n\nCompare OpenAPI spec with documentation:\n\n1. List all paths from openapi.yaml:\n   ```bash\n   grep \"^  /\" openapi.yaml | sort\n   ```\n\n2. List all endpoints in API_DOCUMENTATION.md:\n   ```bash\n   grep \"^### [A-Z]\\+ /\" API_DOCUMENTATION.md | sort\n   ```\n\n3. Compare the lists - they should match\n\n### Check Required Sections\n\nVerify API_DOCUMENTATION.md has:\n- [ ] Overview\n- [ ] Base URL\n- [ ] Authentication section\n- [ ] Response format explanation\n- [ ] HTTP status codes\n- [ ] All endpoint groups\n- [ ] Each endpoint has:\n  - [ ] Description\n  - [ ] Authentication requirement\n  - [ ] Request parameters/body\n  - [ ] Success response example\n  - [ ] Error response examples\n  - [ ] curl example\n  - [ ] Code examples (2+ languages)\n\n### Check Quick Start Guide\n\nVerify API_QUICK_START.md has:\n- [ ] Setup instructions\n- [ ] First request example\n- [ ] Authentication flow\n- [ ] Common tasks\n- [ ] Error handling\n- [ ] Next steps\n\n## Step 3: Test Examples (If API Running)\n\n### Check if API is Running\n\n```bash\ncurl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/health || \\\ncurl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/api || \\\necho \"API not running - skipping live tests\"\n```\n\n### Test Example Requests\n\nIf API is running, test a few example curl commands from the docs:\n\n```bash\n# Test login endpoint\necho \"Testing login endpoint...\"\nresponse=$(curl -s -w \"\\n%{http_code}\" \\\n  -X POST http://localhost:3000/api/auth/login \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"email\": \"test@example.com\",\n    \"password\": \"testpass\"\n  }')\n\nhttp_code=$(echo \"$response\" | tail -n1)\nbody=$(echo \"$response\" | head -n-1)\n\nif [ \"$http_code\" = \"200\" ] || [ \"$http_code\" = \"401\" ]; then\n  echo \"✓ Login endpoint responding\"\nelse\n  echo \"✗ Login endpoint issue: HTTP $http_code\"\nfi\n\n# Test a GET endpoint\necho \"Testing GET endpoint...\"\n# [Add similar test for a public or test endpoint]\n```\n\n**Note**: Only test if API is actually running. Don't fail if it's not.\n\n## Step 4: Generate Validation Report\n\nCreate **API_DOCS_VALIDATION_REPORT.md**:\n\n```markdown\n# API Documentation Validation Report\n\nGenerated: [date]\n\n## OpenAPI Specification\n\n### Format Validation\n- OpenAPI version: [version]\n- Validation tool result: [PASS/FAIL/SKIPPED]\n- Issues found: [count]\n\n### Content Validation\n- Total paths defined: [count]\n- Total schemas defined: [count]\n- Security schemes: [list]\n- All $ref valid: [Yes/No]\n- Examples present: [Yes/No]\n\n## Documentation Completeness\n\n### Endpoint Coverage\n- Endpoints in OpenAPI spec: [count]\n- Endpoints in documentation: [count]\n- Coverage: [percentage]%\n- Missing endpoints: [list or \"None\"]\n\n### Documentation Quality\n\n#### API_DOCUMENTATION.md\n- Overview section: [✓/✗]\n- Authentication section: [✓/✗]\n- Response format explained: [✓/✗]\n- All endpoints documented: [✓/✗]\n- Curl examples present: [✓/✗]\n- Multi-language code examples: [✓/✗]\n- Error responses documented: [✓/✗]\n\n#### API_QUICK_START.md\n- Setup instructions: [✓/✗]\n- Authentication flow: [✓/✗]\n- Example requests: [✓/✗]\n- Error handling: [✓/✗]\n\n### Example Testing\n\n- API running: [Yes/No]\n- Examples tested: [count]\n- Examples passing: [count]\n- Examples failing: [count]\n- Test results: [details or \"Skipped - API not running\"]\n\n## Issues Found\n\n### Critical Issues\n[List any critical issues, or \"None\"]\n\n### Warnings\n[List any warnings, or \"None\"]\n\n### Recommendations\n1. [Recommendation 1 or \"Documentation is complete\"]\n2. [Recommendation 2 or remove]\n\n## Validation Result\n\n**Status**: [PASS/FAIL]\n\n**Summary**: [Brief summary of validation results]\n\n### Pass Criteria\n- [✓/✗] OpenAPI spec is valid\n- [✓/✗] All endpoints documented\n- [✓/✗] All required sections present\n- [✓/✗] No placeholders remain\n- [✓/✗] Examples are complete\n\n## Next Steps\n\n[If PASS]: Documentation is ready for use.\n\n[If FAIL]: Address the issues listed above.\n```\n\n## Step 5: Final Validation\n\nEnsure:\n- Validation report shows [PASS]\n- All pass criteria are checked [✓]\n- No critical issues\n- Specific counts (not [count] placeholders)\n- Real test results (not generic)",
+        "maxTokens": 14000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "api_base_url",
+            "type": "string",
+            "required": false,
+            "description": "Base URL of running API for testing (optional)"
+          },
+          {
+            "name": "test_credentials",
+            "type": "string",
+            "required": false,
+            "description": "Test credentials for API testing in format 'email:password' (optional)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["API_DOCS_VALIDATION_REPORT.md"],
+        "requiredPatterns": [
+          "# API Documentation Validation Report",
+          "## OpenAPI Specification",
+          "## Documentation Completeness",
+          "### Endpoint Coverage",
+          "## Validation Result",
+          "\\*\\*Status\\*\\*: \\[PASS\\]",
+          "- \\[✓\\]"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[count\\]",
+          "\\[list\\]",
+          "\\[date\\]",
+          "\\*\\*Status\\*\\*: \\[FAIL\\]"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Validation report shows FAIL or is incomplete. Fix:\n\n**Common Issues**:\n- Validation status is [FAIL] - must be [PASS]\n- Missing endpoint coverage comparison\n- Placeholders remain ([count], [list], etc.)\n- Pass criteria not all checked [✓]\n- Issues not specifically described\n\n**Fix Process**:\n1. Re-read all generated docs\n2. Compare OpenAPI spec paths with documented endpoints\n3. List any missing endpoints specifically\n4. Check all required sections are present\n5. Run OpenAPI validation if tools available\n6. Update validation report with real results\n7. Ensure status is [PASS]\n8. Check all pass criteria with [✓]\n\nOnly mark [PASS] if documentation is truly complete."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "git status"
+    ],
+    "postChecks": [
+      "ls -la *.md openapi.* 2>/dev/null || echo 'Documentation files check'",
+      "wc -l API_DOCUMENTATION.md API_QUICK_START.md 2>/dev/null || echo 'Line count check'"
+    ],
+    "qualityGates": [
+      {
+        "name": "openapi-validation",
+        "command": "npx @apidevtools/swagger-cli validate openapi.yaml 2>/dev/null || npx @apidevtools/swagger-cli validate openapi.json 2>/dev/null || echo 'OpenAPI validation skipped'",
+        "required": false
+      },
+      {
+        "name": "check-docs-exist",
+        "command": "test -f API_DOCUMENTATION.md && test -f API_QUICK_START.md && test -f API_DOCS_VALIDATION_REPORT.md",
+        "required": true
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [
+      {
+        "templateId": "add-rest-endpoint",
+        "relationship": "complement",
+        "description": "Document new endpoints after implementation",
+        "example": "After adding endpoints, run api-docs-generator to update documentation"
+      }
+    ],
+    "examples": [
+      {
+        "name": "Document Express API",
+        "description": "Generate complete documentation for Express.js REST API",
+        "sequence": [
+          {
+            "template": "api-docs-generator",
+            "variables": {
+              "project_path": "./",
+              "api_prefix": "/api"
+            },
+            "reason": "Document Express API with /api prefix"
+          }
+        ],
+        "outcome": "Complete API documentation with OpenAPI spec, endpoint docs, and quick start guide"
+      }
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": [
+      {
+        "taskId": "discover-and-analyze",
+        "metrics": {
+          "endpoints_found": "Total endpoints discovered",
+          "patterns_identified": "Framework and patterns identified correctly",
+          "completeness": "Discovery report has no placeholders"
+        },
+        "improvementHints": {
+          "discovery_accuracy": "Were all endpoints found?",
+          "pattern_recognition": "Were patterns correctly identified?"
+        }
+      },
+      {
+        "taskId": "generate-openapi-spec",
+        "metrics": {
+          "spec_validity": "OpenAPI spec is valid format",
+          "schema_coverage": "All endpoints have schemas",
+          "example_quality": "All examples are realistic"
+        },
+        "improvementHints": {
+          "spec_completeness": "Does spec cover all endpoints?",
+          "validation_pass": "Does spec pass validation?"
+        }
+      },
+      {
+        "taskId": "generate-endpoint-docs",
+        "metrics": {
+          "docs_completeness": "All endpoints documented",
+          "example_count": "Number of code examples",
+          "language_coverage": "Languages covered in examples"
+        },
+        "improvementHints": {
+          "usefulness": "Are docs helpful for developers?",
+          "example_quality": "Are examples runnable and clear?"
+        }
+      },
+      {
+        "taskId": "validate-and-test",
+        "metrics": {
+          "validation_result": "PASS or FAIL status",
+          "coverage_percentage": "Percentage of endpoints documented",
+          "issues_found": "Number of issues found"
+        },
+        "improvementHints": {
+          "thoroughness": "Was validation comprehensive?",
+          "accuracy": "Were issues accurately identified?"
+        }
+      }
+    ]
+  }
+}

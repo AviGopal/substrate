@@ -1,0 +1,490 @@
+{
+  "id": "db-migration-safe",
+  "name": "Database Migration Safe",
+  "description": "Safely create and validate database migrations with rollback testing, data integrity verification, and production safety checks",
+  "category": "infrastructure",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "timestamp": 1739750400000,
+    "parent_hash": "",
+    "variant_hash": "",
+    "full_version": "1.0.0",
+    "generation": 0
+  },
+  "genealogy": {
+    "parent": null,
+    "parent_id": "",
+    "ancestors": [],
+    "children": [],
+    "variant_ids": [],
+    "variant_hash": "",
+    "created_at": 1739750400000,
+    "generation": 0,
+    "evolution": {
+      "reason": "EVOLUTION_REASON_MANUAL",
+      "improvised": false,
+      "author": "TEMPLATE_AUTHOR_HUMAN",
+      "mutations": [],
+      "improvements": []
+    }
+  },
+  "executions": 0,
+  "successRate": 0,
+  "avgDuration": 0,
+  "avgCost": 0,
+  "avgTokens": {
+    "input": 0,
+    "output": 0,
+    "cache": 0
+  },
+  "createdAt": 1739750400000,
+  "updatedAt": 1739750400000,
+  "tasks": [
+    {
+      "id": "analyze-and-design",
+      "subagent": "general",
+      "description": "Analyze existing schema, design migration, and identify safety risks",
+      "dependencies": [],
+      "guidance": [
+        "Review existing database schema and migration patterns",
+        "Analyze impact of schema changes on existing data",
+        "Identify potential data loss scenarios",
+        "Design migration with zero-downtime considerations",
+        "Plan rollback strategy for each change"
+      ],
+      "prompt": {
+        "template": "Design a safe database migration following existing patterns.\n\n**Migration Specification**:\n- Purpose: {{migration_purpose}}\n- Changes: {{schema_changes}}\n{{#if affected_tables}}\n- Affected Tables: {{affected_tables}}\n{{/if}}\n{{#if data_migration}}\n- Data Migration Required: {{data_migration}}\n{{/if}}\n\n**Your Task**: Analyze the database and create a comprehensive migration design.\n\n## Step 1: Analyze Existing Schema\n\n### Find Migration Framework\n\n1. **Search for migration files**:\n   ```bash\n   glob('**/migrations/**/*')\n   glob('**/*.migration.{ts,js,sql}')\n   glob('**/migrate/**/*')\n   ```\n\n2. **Identify framework**:\n   - Sequelize (migrations folder with timestamp files)\n   - TypeORM (migrations with @Migration decorator)\n   - Knex (migrations with exports.up/exports.down)\n   - Prisma (schema.prisma with migrations)\n   - Raw SQL (numbered .sql files)\n\n3. **Review 2-3 recent migrations** to understand:\n   - File naming convention\n   - Migration structure\n   - Rollback patterns\n   - Testing approach\n\n### Understand Current Schema\n\n1. **Find schema definition**:\n   - Read database schema files\n   - Check models/entities\n   - Review table definitions\n\n2. **For affected tables** ({{affected_tables}}), document:\n   - Current columns and types\n   - Existing constraints (FK, UNIQUE, NOT NULL)\n   - Indexes\n   - Row counts (if available)\n   - Dependencies (tables referencing this table)\n\n## Step 2: Analyze Change Impact\n\n### Data Safety Assessment\n\nFor each schema change, identify risks:\n\n**Adding Columns**:\n- ✓ Generally safe\n- ⚠️ Risk if NOT NULL without DEFAULT\n- ⚠️ Risk if UNIQUE without handling duplicates\n\n**Dropping Columns**:\n- ⚠️ HIGH RISK: Data loss\n- ⚠️ Check if column is referenced in code\n- ⚠️ Requires backup strategy\n\n**Renaming Columns**:\n- ⚠️ MEDIUM RISK: Breaking change\n- ⚠️ May require data copy\n- ⚠️ Application code must be updated simultaneously\n\n**Changing Column Types**:\n- ⚠️ HIGH RISK: Data loss potential\n- ⚠️ Requires data validation\n- ⚠️ May need data transformation\n\n**Adding Constraints**:\n- ⚠️ MEDIUM RISK: May fail on existing data\n- ⚠️ Requires data validation first\n- ⚠️ Must handle constraint violations\n\n**Dropping Constraints**:\n- ✓ Generally safe\n- ⚠️ May affect application logic\n\n### Zero-Downtime Considerations\n\nIf this is a production migration:\n\n1. **Multi-phase approach**:\n   - Phase 1: Add new nullable column\n   - Phase 2: Backfill data\n   - Phase 3: Add constraints\n   - Phase 4: Drop old column (if renaming)\n\n2. **Backward compatibility**:\n   - Can old code work with new schema?\n   - Can new code work with old schema?\n   - Is a deployment window required?\n\n## Step 3: Design Migration Files\n\n### Create Design Document\n\nCreate **MIGRATION_DESIGN.md** with:\n\n```markdown\n## Migration Design: {{migration_purpose}}\n\n### Purpose\n{{migration_purpose}}\n\n### Schema Changes\n{{schema_changes}}\n\n### Affected Tables\n{{#if affected_tables}}\n{{affected_tables}}\n{{else}}\n[List all tables affected]\n{{/if}}\n\n### Current Schema\n\n[For each affected table, document current structure]\n\n**Table: users**\n```sql\nCREATE TABLE users (\n  id INT PRIMARY KEY,\n  email VARCHAR(255) UNIQUE NOT NULL,\n  created_at TIMESTAMP DEFAULT NOW()\n);\n```\n\n### Proposed Schema\n\n[For each affected table, document new structure]\n\n**Table: users (after migration)**\n```sql\nCREATE TABLE users (\n  id INT PRIMARY KEY,\n  email VARCHAR(255) UNIQUE NOT NULL,\n  username VARCHAR(50) UNIQUE NOT NULL,  -- NEW\n  created_at TIMESTAMP DEFAULT NOW()\n);\n```\n\n### Risk Assessment\n\n**Data Loss Risks**:\n- [List any risks of data loss]\n- [For each risk, document mitigation strategy]\n\n**Breaking Changes**:\n- [List changes that may break existing code]\n- [Document required code updates]\n\n**Performance Risks**:\n- [Identify long-running operations]\n- [Estimate migration time for large tables]\n- [Plan for index creation (can be CONCURRENT)]\n\n**Constraint Violations**:\n- [List constraints that may fail on existing data]\n- [Document validation and cleanup strategy]\n\n### Migration Strategy\n\n**Approach**: [Single-phase | Multi-phase]\n\n{{#if data_migration}}\n**Data Migration Required**:\n{{data_migration}}\n\n**Data Transformation Logic**:\n```sql\n-- Example data transformation\nUPDATE users \nSET username = LOWER(SUBSTRING(email, 1, POSITION('@' IN email) - 1))\nWHERE username IS NULL;\n```\n{{/if}}\n\n**Migration Steps** (in order):\n1. [Step 1: e.g., Add username column as NULLABLE]\n2. [Step 2: e.g., Backfill username from email]\n3. [Step 3: e.g., Add UNIQUE constraint to username]\n4. [Step 4: e.g., Make username NOT NULL]\n\n**Rollback Steps** (reverse order):\n1. [Step 1 rollback: e.g., Remove NOT NULL from username]\n2. [Step 2 rollback: e.g., Remove UNIQUE constraint]\n3. [Step 3 rollback: e.g., Clear username data]\n4. [Step 4 rollback: e.g., Drop username column]\n\n### Zero-Downtime Plan\n\n{{#if affected_tables}}\n[If production migration, document multi-phase approach]\n\n**Phase 1** (Deploy X):\n- Add new columns as NULLABLE\n- Deploy code that writes to both old and new columns\n\n**Phase 2** (Backfill):\n- Run data migration script\n- Validate data integrity\n\n**Phase 3** (Deploy Y):\n- Deploy code that reads from new columns\n- Add constraints to new columns\n\n**Phase 4** (Cleanup):\n- Drop old columns\n- Remove backward compatibility code\n{{else}}\nNot applicable - development migration\n{{/if}}\n\n### Validation Checklist\n\n- [ ] Migration file follows naming convention\n- [ ] Up migration implements all changes\n- [ ] Down migration fully reverses changes\n- [ ] Data transformation logic is correct\n- [ ] Constraints validated against existing data\n- [ ] Indexes added with appropriate method (CONCURRENT if needed)\n- [ ] Migration tested on copy of production data\n- [ ] Rollback tested successfully\n- [ ] Performance impact assessed\n- [ ] Breaking changes documented\n\n### Testing Strategy\n\n**Unit Tests**:\n- [Test data transformations]\n- [Test constraint validations]\n\n**Integration Tests**:\n- [Test migration up]\n- [Test migration down]\n- [Test application code with new schema]\n\n**Manual Validation**:\n- [Verify data integrity]\n- [Check row counts before/after]\n- [Validate constraints]\n- [Test rollback]\n\n### Code Changes Required\n\n[List application code that must be updated]\n\n**Models/Entities**:\n- [File: path/to/model.ts]\n  - Add username field\n  - Update validations\n\n**API Endpoints**:\n- [File: path/to/handler.ts]\n  - Update request/response types\n  - Handle username in queries\n\n**Queries**:\n- [File: path/to/queries.ts]\n  - Update SELECT statements\n  - Update WHERE clauses\n\n### Migration Files to Create\n\n[List files to create based on framework]\n\n1. **Migration file**: `migrations/YYYYMMDDHHMMSS_{{migration_purpose}}.{ts|js|sql}`\n2. **Test file**: `migrations/__tests__/YYYYMMDDHHMMSS_{{migration_purpose}}.test.{ts|js}`\n3. **Data validation script** (if needed): `scripts/validate_migration_{{migration_purpose}}.{ts|js}`\n\n### Estimated Duration\n\n- Migration execution time: [Estimate]\n- Rollback execution time: [Estimate]\n- Testing time: [Estimate]\n```\n\n## Step 4: Validate Design\n\n**Self-Check**:\n- [ ] All affected tables documented\n- [ ] Current schema captured accurately\n- [ ] All risks identified with mitigations\n- [ ] Rollback strategy is complete\n- [ ] Zero-downtime plan if needed\n- [ ] No TODO/TBD/FIXME markers\n- [ ] Validation checklist is comprehensive\n- [ ] Testing strategy covers all scenarios\n\n**Output**: Complete MIGRATION_DESIGN.md",
+        "maxTokens": 16000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "migration_purpose",
+            "type": "string",
+            "required": true,
+            "description": "Brief description of what this migration does (e.g., 'add username field to users')"
+          },
+          {
+            "name": "schema_changes",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of schema changes (e.g., 'Add username VARCHAR(50) UNIQUE NOT NULL to users table')"
+          },
+          {
+            "name": "affected_tables",
+            "type": "string",
+            "required": false,
+            "description": "Comma-separated list of tables affected by this migration"
+          },
+          {
+            "name": "data_migration",
+            "type": "string",
+            "required": false,
+            "description": "Description of data migration/transformation needed (e.g., 'Copy email prefix to username field')"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["MIGRATION_DESIGN.md"],
+        "requiredPatterns": [
+          "## Migration Design:",
+          "### Purpose",
+          "### Schema Changes",
+          "### Current Schema",
+          "### Proposed Schema",
+          "### Risk Assessment",
+          "### Migration Strategy",
+          "### Rollback Steps",
+          "### Validation Checklist",
+          "### Testing Strategy"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[Description\\]",
+          "\\[List",
+          "\\[Step"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Migration design is incomplete. Fix the following:\n\n**Missing Information**:\n- Current schema not documented\n- Proposed schema not documented\n- Risks not identified or lack mitigations\n- Rollback steps incomplete or missing\n- Validation checklist has placeholders\n- Testing strategy is vague\n\n**Placeholders Present**:\n- Remove [List...], [Step...], [Description] placeholders\n- Provide specific table structures\n- Give concrete migration steps\n- Document actual risks and mitigations\n\n**Required Actions**:\n1. Read existing migration files to understand patterns\n2. Read schema files to document current structure\n3. Identify specific risks for this migration\n4. Write detailed rollback steps (reverse of up migration)\n5. Create comprehensive validation checklist\n6. Remove all TODO/TBD/FIXME markers\n\nEnsure design is complete and production-ready."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "implement-migration",
+      "subagent": "general",
+      "description": "Create migration files with up/down migrations and data transformations",
+      "dependencies": ["analyze-and-design"],
+      "guidance": [
+        "Follow migration framework conventions exactly",
+        "Implement all steps from design document",
+        "Create complete rollback (down migration)",
+        "Add data validation before constraints",
+        "Handle errors gracefully",
+        "Use transactions where supported"
+      ],
+      "prompt": {
+        "template": "Implement the database migration following MIGRATION_DESIGN.md.\n\n**Read Design Document First**:\n\nRead MIGRATION_DESIGN.md to understand:\n- Migration framework and file naming\n- Current and proposed schema\n- Migration steps in correct order\n- Rollback steps\n- Data transformations needed\n- Validation requirements\n\n## Step 1: Create Migration File\n\n### Determine File Location and Naming\n\nBased on the framework identified in design:\n\n**Sequelize**:\n```\nmigrations/YYYYMMDDHHMMSS-{{migration_purpose}}.js\n```\n\n**TypeORM**:\n```\nmigrations/MigrationNameYYYYMMDDHHMMSS.ts\n```\n\n**Knex**:\n```\nmigrations/YYYYMMDDHHMMSS_{{migration_purpose}}.js\n```\n\n**Prisma**:\n```\nUpdate schema.prisma, then run: npx prisma migrate dev --name {{migration_purpose}}\n```\n\n**Raw SQL**:\n```\nmigrations/001_{{migration_purpose}}.up.sql\nmigrations/001_{{migration_purpose}}.down.sql\n```\n\n### Create Migration File Structure\n\nFollow the exact pattern from existing migrations:\n\n**TypeORM Example**:\n```typescript\nimport { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';\n\nexport class AddUsernameToUsers1739750400000 implements MigrationInterface {\n  name = 'AddUsernameToUsers1739750400000';\n\n  public async up(queryRunner: QueryRunner): Promise<void> {\n    // Migration steps\n  }\n\n  public async down(queryRunner: QueryRunner): Promise<void> {\n    // Rollback steps\n  }\n}\n```\n\n**Knex Example**:\n```javascript\nexports.up = async function(knex) {\n  // Migration steps\n};\n\nexports.down = async function(knex) {\n  // Rollback steps\n};\n```\n\n## Step 2: Implement Up Migration\n\nImplement each step from MIGRATION_DESIGN.md in order:\n\n### Use Transactions (if supported)\n\n```typescript\npublic async up(queryRunner: QueryRunner): Promise<void> {\n  // Most ORMs handle transactions automatically\n  // For raw SQL, wrap in BEGIN/COMMIT\n  \n  // Migration steps\n}\n```\n\n### Add Columns\n\n```typescript\n// Step 1: Add column as NULLABLE first (safe for existing data)\nawait queryRunner.addColumn('users', new TableColumn({\n  name: 'username',\n  type: 'varchar',\n  length: '50',\n  isNullable: true,  // Start nullable\n  isUnique: false    // Add constraint later\n}));\n```\n\n### Data Transformation\n\n```typescript\n// Step 2: Backfill data\nawait queryRunner.query(`\n  UPDATE users \n  SET username = LOWER(SUBSTRING(email, 1, POSITION('@' IN email) - 1))\n  WHERE username IS NULL\n`);\n\n// Validate: Check for duplicates\nconst duplicates = await queryRunner.query(`\n  SELECT username, COUNT(*) as count\n  FROM users\n  WHERE username IS NOT NULL\n  GROUP BY username\n  HAVING COUNT(*) > 1\n`);\n\nif (duplicates.length > 0) {\n  // Handle duplicates: append number suffix\n  await queryRunner.query(`\n    UPDATE users u1\n    SET username = username || '_' || u1.id\n    WHERE EXISTS (\n      SELECT 1 FROM users u2\n      WHERE u2.username = u1.username AND u2.id < u1.id\n    )\n  `);\n}\n```\n\n### Add Constraints\n\n```typescript\n// Step 3: Add UNIQUE constraint (after deduplication)\nawait queryRunner.createIndex('users', {\n  name: 'UQ_users_username',\n  columnNames: ['username'],\n  isUnique: true\n});\n\n// Step 4: Make column NOT NULL (after backfill)\nawait queryRunner.changeColumn('users', 'username', new TableColumn({\n  name: 'username',\n  type: 'varchar',\n  length: '50',\n  isNullable: false,  // Now NOT NULL\n  isUnique: false     // Handled by index\n}));\n```\n\n### Drop Columns (if renaming)\n\n```typescript\n// Only drop after new column is fully populated and constrained\nawait queryRunner.dropColumn('users', 'old_column_name');\n```\n\n### Create Indexes\n\n```typescript\n// For PostgreSQL with large tables, use CONCURRENT\nawait queryRunner.query(`\n  CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_username \n  ON users(username)\n`);\n\n// For other databases or small tables\nawait queryRunner.createIndex('users', {\n  name: 'idx_users_username',\n  columnNames: ['username']\n});\n```\n\n## Step 3: Implement Down Migration\n\nImplement rollback in **reverse order**:\n\n```typescript\npublic async down(queryRunner: QueryRunner): Promise<void> {\n  // Reverse order of up migration\n  \n  // Step 4 rollback: Make column nullable\n  await queryRunner.changeColumn('users', 'username', new TableColumn({\n    name: 'username',\n    type: 'varchar',\n    length: '50',\n    isNullable: true,\n    isUnique: false\n  }));\n  \n  // Step 3 rollback: Drop UNIQUE constraint\n  await queryRunner.dropIndex('users', 'UQ_users_username');\n  \n  // Step 2 rollback: Clear data (optional - discuss in design)\n  await queryRunner.query(`\n    UPDATE users SET username = NULL\n  `);\n  \n  // Step 1 rollback: Drop column\n  await queryRunner.dropColumn('users', 'username');\n}\n```\n\n## Step 4: Error Handling\n\n### Add Try-Catch for Critical Sections\n\n```typescript\npublic async up(queryRunner: QueryRunner): Promise<void> {\n  try {\n    // Migration steps\n    \n    // Validate data integrity after migration\n    const invalidRows = await queryRunner.query(`\n      SELECT COUNT(*) as count FROM users WHERE username IS NULL\n    `);\n    \n    if (invalidRows[0].count > 0) {\n      throw new Error(`Migration validation failed: ${invalidRows[0].count} users have NULL username`);\n    }\n    \n  } catch (error) {\n    console.error('Migration failed:', error);\n    // Transaction will auto-rollback\n    throw error;\n  }\n}\n```\n\n## Step 5: Add Comments and Documentation\n\n```typescript\n/**\n * Migration: Add username field to users\n * \n * Changes:\n * - Adds username VARCHAR(50) UNIQUE NOT NULL to users table\n * - Backfills username from email prefix\n * - Handles duplicate usernames by appending user ID\n * \n * Safety:\n * - Starts with nullable column\n * - Validates and deduplicates before adding constraints\n * - Full rollback support\n * \n * Estimated duration: ~30 seconds for 100k rows\n */\nexport class AddUsernameToUsers1739750400000 implements MigrationInterface {\n  // Implementation\n}\n```\n\n## Step 6: Validation\n\n**Self-Check**:\n- [ ] File follows naming convention\n- [ ] All steps from design implemented\n- [ ] Down migration reverses all changes\n- [ ] Data transformations are correct\n- [ ] Duplicates handled appropriately\n- [ ] Constraints added after data validation\n- [ ] Errors handled gracefully\n- [ ] Comments explain complex logic\n- [ ] No syntax errors\n\n**Output**: Complete migration file(s)",
+        "maxTokens": 16000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "migration_purpose",
+            "type": "string",
+            "required": true,
+            "description": "Migration purpose from design"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "*.sql",
+          "migrations/**/*",
+          "*.migration.ts",
+          "*.migration.js"
+        ],
+        "requiredPatterns": [
+          "(up|exports\\.up|async up)",
+          "(down|exports\\.down|async down)",
+          "(CREATE|ALTER|ADD|DROP)"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "FIXME",
+          "console\\.log",
+          "DROP TABLE.*WITHOUT.*CASCADE",
+          "TRUNCATE"
+        ],
+        "commands": [
+          {
+            "name": "syntax-check",
+            "command": "npm run typecheck || tsc --noEmit || node -c migrations/*.js 2>/dev/null || echo 'Syntax check skipped'",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Migration implementation has issues. Fix the following:\n\n**Common Issues**:\n- Missing up or down migration\n- Down migration doesn't reverse all changes\n- Not following framework conventions\n- Syntax errors in SQL or code\n- Missing data transformation logic\n- Constraints added before data validation\n- No duplicate handling\n- Dangerous operations (DROP TABLE, TRUNCATE)\n\n**Fix Process**:\n1. Re-read MIGRATION_DESIGN.md\n2. Review existing migration files for patterns\n3. Implement all steps in correct order\n4. Add rollback for each change (reverse order)\n5. Handle duplicates and edge cases\n6. Remove forbidden patterns (console.log, TODO)\n7. Test syntax with typecheck\n\nEnsure migration is safe and complete."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "test-and-validate",
+      "subagent": "test",
+      "description": "Test migration up/down, validate data integrity, and verify rollback safety",
+      "dependencies": ["implement-migration"],
+      "guidance": [
+        "Create test database with sample data",
+        "Run migration up and validate results",
+        "Run migration down and verify full rollback",
+        "Test with edge cases and constraint violations",
+        "Verify performance on large datasets",
+        "Document validation results"
+      ],
+      "prompt": {
+        "template": "Test the database migration thoroughly and validate safety.\n\n**Read Previous Work**:\n\n1. Read MIGRATION_DESIGN.md for:\n   - Testing strategy\n   - Validation checklist\n   - Edge cases to test\n   - Expected outcomes\n\n2. Read migration file to understand:\n   - Steps in up migration\n   - Steps in down migration\n   - Data transformations\n   - Constraints added\n\n## Step 1: Set Up Test Environment\n\n### Create Test Database\n\n```bash\n# Find database setup script\nglob('**/{setup,seed,test}*.{sql,ts,js}')\n\n# Create test database (framework-specific)\n# PostgreSQL example:\ncreatdb test_migration_db\n\n# Or use framework command:\nnpm run db:test:create\n```\n\n### Seed Test Data\n\nCreate test data that covers edge cases:\n\n```sql\n-- Create test data script: test_data_{{migration_purpose}}.sql\n\n-- Normal cases\nINSERT INTO users (id, email) VALUES \n  (1, 'alice@example.com'),\n  (2, 'bob@example.com'),\n  (3, 'charlie@example.com');\n\n-- Edge cases for testing\nINSERT INTO users (id, email) VALUES \n  (4, 'duplicate@example.com'),  -- Will test duplicate handling\n  (5, 'duplicate@example.com'),  -- Duplicate email prefix\n  (6, 'a@b.c'),                   -- Very short email\n  (7, 'user+tag@example.com'),   -- Email with special chars\n  (8, 'UPPERCASE@EXAMPLE.COM');  -- Uppercase email\n\n-- Large dataset for performance testing (optional)\nINSERT INTO users (id, email)\nSELECT \n  generate_series(100, 10000) as id,\n  'user' || generate_series(100, 10000) || '@example.com' as email;\n```\n\n## Step 2: Test Migration Up\n\n### Run Migration\n\n```bash\n# Framework-specific migration command\nnpm run migrate:up\n# or\nnpx typeorm migration:run\n# or\nnpx knex migrate:latest\n# or\npsql test_migration_db < migrations/001_{{migration_purpose}}.up.sql\n```\n\n### Validate Schema Changes\n\n```sql\n-- Check column was added\nSELECT column_name, data_type, is_nullable, character_maximum_length\nFROM information_schema.columns\nWHERE table_name = 'users' AND column_name = 'username';\n-- Expected: username, varchar, NO, 50\n\n-- Check constraints\nSELECT constraint_name, constraint_type\nFROM information_schema.table_constraints\nWHERE table_name = 'users' AND constraint_name LIKE '%username%';\n-- Expected: UQ_users_username, UNIQUE\n\n-- Check indexes\nSELECT indexname, indexdef\nFROM pg_indexes\nWHERE tablename = 'users' AND indexname LIKE '%username%';\n-- Expected: index definition with username column\n```\n\n### Validate Data Integrity\n\n```sql\n-- Check all rows have username populated\nSELECT COUNT(*) as total, \n       COUNT(username) as with_username,\n       COUNT(*) - COUNT(username) as null_username\nFROM users;\n-- Expected: null_username = 0\n\n-- Check username format (should be lowercase email prefix)\nSELECT id, email, username\nFROM users\nWHERE username != LOWER(SUBSTRING(email, 1, POSITION('@' IN email) - 1))\n   OR username IS NULL;\n-- Expected: 0 rows (or only rows with duplicate handling)\n\n-- Check uniqueness\nSELECT username, COUNT(*) as count\nFROM users\nGROUP BY username\nHAVING COUNT(*) > 1;\n-- Expected: 0 rows\n\n-- Verify duplicate handling\nSELECT id, email, username\nFROM users\nWHERE email LIKE 'duplicate@example.com'\nORDER BY id;\n-- Expected: usernames should be different (e.g., 'duplicate', 'duplicate_5')\n```\n\n### Test Application Code (if updated)\n\n```bash\n# Run unit tests\nnpm test -- --grep=\"user\"\n\n# Check models work with new schema\n# Create integration test or manual verification\n```\n\n## Step 3: Test Migration Down (Rollback)\n\n### Run Rollback\n\n```bash\n# Framework-specific rollback command\nnpm run migrate:down\n# or\nnpx typeorm migration:revert\n# or\nnpx knex migrate:rollback\n# or\npsql test_migration_db < migrations/001_{{migration_purpose}}.down.sql\n```\n\n### Validate Rollback\n\n```sql\n-- Check column was removed\nSELECT column_name\nFROM information_schema.columns\nWHERE table_name = 'users' AND column_name = 'username';\n-- Expected: 0 rows\n\n-- Check constraints were removed\nSELECT constraint_name\nFROM information_schema.table_constraints\nWHERE table_name = 'users' AND constraint_name LIKE '%username%';\n-- Expected: 0 rows\n\n-- Check indexes were removed\nSELECT indexname\nFROM pg_indexes\nWHERE tablename = 'users' AND indexname LIKE '%username%';\n-- Expected: 0 rows\n\n-- Verify original data intact\nSELECT COUNT(*) as total,\n       COUNT(email) as with_email\nFROM users;\n-- Expected: Same row count as before migration, all emails present\n```\n\n## Step 4: Test Edge Cases\n\n### Test Constraint Violations\n\nIf migration adds constraints, test that they work:\n\n```sql\n-- Re-run migration up\nnpm run migrate:up\n\n-- Try to insert duplicate username (should fail)\nINSERT INTO users (email, username) VALUES ('new@example.com', 'alice');\n-- Expected: ERROR - duplicate key value violates unique constraint\n\n-- Try to insert NULL username (should fail)\nINSERT INTO users (email, username) VALUES ('new2@example.com', NULL);\n-- Expected: ERROR - null value in column \"username\" violates not-null constraint\n```\n\n### Test Performance (if large dataset)\n\n```bash\n# Measure migration time\ntime npm run migrate:up\n\n# Check if it's within expected duration from design\n# Log result in validation report\n```\n\n## Step 5: Create Validation Report\n\nCreate **MIGRATION_VALIDATION_REPORT.md**:\n\n```markdown\n## Migration Validation Report: {{migration_purpose}}\n\n**Date**: [Current date]\n**Migration File**: [Path to migration file]\n**Test Database**: [Database name/version]\n\n### Test Environment\n- Database: [PostgreSQL 14.5, MySQL 8.0, etc.]\n- Framework: [TypeORM, Knex, Raw SQL]\n- Test Data: [Number of rows]\n\n### Migration Up Tests\n\n✅ **Schema Changes Validated**\n- Column added: username VARCHAR(50) NOT NULL\n- Unique constraint added: UQ_users_username\n- Index created: idx_users_username\n\n✅ **Data Integrity Validated**\n- All rows have username populated: [X/X rows]\n- No duplicate usernames: [0 duplicates found]\n- Username format correct: [X/X rows valid]\n- Duplicate handling worked: [2 duplicates resolved]\n\n✅ **Constraints Enforced**\n- Cannot insert duplicate username: ✅ Error thrown\n- Cannot insert NULL username: ✅ Error thrown\n\n⚠️ **Performance**\n- Migration execution time: [X seconds]\n- Expected: [Y seconds]\n- Status: [Within/Exceeds expectations]\n\n### Migration Down Tests\n\n✅ **Rollback Validated**\n- Column removed: ✅ username column not found\n- Constraints removed: ✅ No username constraints\n- Indexes removed: ✅ No username indexes\n- Original data intact: ✅ [X/X rows preserved]\n\n### Edge Case Tests\n\n✅ **Duplicate Handling**\n- Test case: 2 users with same email prefix\n- Result: Usernames differentiated with ID suffix\n\n✅ **Special Characters**\n- Test case: Email with + and uppercase\n- Result: Username normalized correctly\n\n✅ **Empty Values**\n- Test case: Constraint violation attempts\n- Result: Appropriate errors thrown\n\n### Integration Tests\n\n✅ **Application Code**\n- Unit tests pass: [X/X tests]\n- Integration tests pass: [X/X tests]\n- Models work with new schema: ✅\n\n### Issues Found\n\n[List any issues discovered during testing]\n\n**Issue 1**: [Description]\n- Severity: [High/Medium/Low]\n- Resolution: [How it was fixed]\n- Status: [Fixed/Open]\n\n### Production Readiness\n\n- [ ] All tests pass\n- [ ] Rollback tested successfully\n- [ ] Performance acceptable\n- [ ] No data loss\n- [ ] Breaking changes documented\n- [ ] Code changes ready (if needed)\n- [ ] Backup strategy confirmed\n\n**Recommendation**: [READY FOR PRODUCTION / NEEDS FIXES / NOT READY]\n\n### Validation Commands\n\n```bash\n# Commands used for validation\nnpm run migrate:up\nnpm run migrate:down\nnpm test\n\n# SQL queries for verification\npsql -d test_migration_db -f validation_queries.sql\n```\n\n### Next Steps\n\n1. [Review validation report]\n2. [Fix any issues found]\n3. [Get approval for production deployment]\n4. [Schedule maintenance window if needed]\n5. [Create rollback plan]\n```\n\n## Step 6: Final Validation\n\n**Self-Check**:\n- [ ] Migration up tested successfully\n- [ ] Migration down tested successfully\n- [ ] All data integrity checks passed\n- [ ] Edge cases tested\n- [ ] Performance measured\n- [ ] Validation report complete\n- [ ] No critical issues found\n- [ ] Production readiness assessed\n\n**Output**: Complete MIGRATION_VALIDATION_REPORT.md with test results",
+        "maxTokens": 14000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "migration_purpose",
+            "type": "string",
+            "required": true,
+            "description": "Migration purpose from design"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["MIGRATION_VALIDATION_REPORT.md"],
+        "requiredPatterns": [
+          "## Migration Validation Report:",
+          "### Migration Up Tests",
+          "### Migration Down Tests",
+          "### Edge Case Tests",
+          "### Production Readiness",
+          "✅",
+          "Recommendation:"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[X/X\\]",
+          "\\[Description\\]",
+          "\\[Current date\\]"
+        ],
+        "commands": [
+          {
+            "name": "verify-report-exists",
+            "command": "test -f MIGRATION_VALIDATION_REPORT.md && grep -q 'Recommendation:' MIGRATION_VALIDATION_REPORT.md || echo 'Report incomplete'",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Migration testing is incomplete. Fix the following:\n\n**Testing Issues**:\n- Migration up not tested\n- Migration down not tested\n- Data integrity not validated\n- Edge cases not covered\n- Performance not measured\n- Validation report missing or incomplete\n\n**Report Issues**:\n- Contains placeholders [X/X], [Description], [Current date]\n- Missing test results\n- No production readiness recommendation\n- No actual validation data\n\n**Fix Process**:\n1. Set up test database with seed data\n2. Run migration up\n3. Validate schema changes with SQL queries\n4. Validate data integrity with SQL queries\n5. Run migration down\n6. Validate rollback with SQL queries\n7. Test edge cases\n8. Measure performance\n9. Create complete report with actual results\n10. Replace all placeholders with real data\n11. Provide clear production readiness recommendation\n\nEnsure all tests are executed and results documented."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "document-and-finalize",
+      "subagent": "general",
+      "description": "Update documentation, create rollback guide, and prepare deployment instructions",
+      "dependencies": ["test-and-validate"],
+      "guidance": [
+        "Document migration in changelog or migration log",
+        "Create deployment instructions",
+        "Write rollback procedure",
+        "Update schema documentation",
+        "Document breaking changes if any",
+        "Provide monitoring recommendations"
+      ],
+      "prompt": {
+        "template": "Finalize migration documentation and prepare for deployment.\n\n**Read Previous Work**:\n\n1. Read MIGRATION_DESIGN.md for:\n   - Migration purpose and changes\n   - Zero-downtime plan\n   - Code changes required\n\n2. Read MIGRATION_VALIDATION_REPORT.md for:\n   - Test results\n   - Performance metrics\n   - Issues found and fixed\n   - Production readiness status\n\n3. Read migration file to understand:\n   - Actual implementation\n   - Steps in up/down migration\n\n## Step 1: Create Migration Documentation\n\n### Update Migration Log\n\nCreate or update **MIGRATIONS.md** or **CHANGELOG.md**:\n\n```markdown\n## [Migration] {{migration_purpose}} - [Date]\n\n### Purpose\n{{migration_purpose}}\n\n### Changes\n- Added `username` column to `users` table (VARCHAR(50) UNIQUE NOT NULL)\n- Backfilled username from email prefix\n- Added unique constraint and index on username\n\n### Breaking Changes\n{{#if breaking_changes}}\n⚠️ **Breaking Changes**:\n- [List any breaking changes]\n- [Required code updates]\n- [API changes]\n{{else}}\nNo breaking changes - backward compatible\n{{/if}}\n\n### Migration Details\n- **File**: `migrations/YYYYMMDDHHMMSS_{{migration_purpose}}.ts`\n- **Estimated Duration**: [From validation report]\n- **Affected Tables**: users\n- **Data Migration**: Yes - username backfilled from email\n\n### Deployment Requirements\n{{#if code_changes}}\n- Update application code (see deployment guide)\n- Deploy code changes with/before migration\n{{else}}\n- No code changes required\n- Can run migration independently\n{{/if}}\n\n### Rollback\n- Supported: ✅ Yes\n- Rollback tested: ✅ Yes\n- Data loss on rollback: [Yes/No - see rollback guide]\n- Rollback command: `npm run migrate:down` or equivalent\n\n### Performance Impact\n- Migration execution: [X seconds for Y rows]\n- Downtime required: [Yes/No]\n- Lock duration: [If applicable]\n\n### Monitoring\n- Watch for: [Key metrics to monitor]\n- Expected behavior: [What should happen]\n- Alert on: [When to be concerned]\n```\n\n## Step 2: Create Deployment Guide\n\nCreate **MIGRATION_DEPLOYMENT_GUIDE.md**:\n\n```markdown\n## Deployment Guide: {{migration_purpose}}\n\n### Pre-Deployment Checklist\n\n- [ ] Backup database\n- [ ] Review migration file\n- [ ] Review validation report\n- [ ] Verify rollback procedure\n- [ ] Schedule maintenance window (if needed)\n- [ ] Notify stakeholders\n- [ ] Prepare monitoring dashboard\n\n### Backup Procedure\n\n**PostgreSQL**:\n```bash\npg_dump -U username -d database_name -f backup_pre_migration_$(date +%Y%m%d_%H%M%S).sql\n```\n\n**MySQL**:\n```bash\nmysqldump -u username -p database_name > backup_pre_migration_$(date +%Y%m%d_%H%M%S).sql\n```\n\n**Verify backup**:\n```bash\n# Check file size and contents\nls -lh backup_*.sql\nhead -n 50 backup_*.sql\n```\n\n### Deployment Steps\n\n{{#if zero_downtime}}\n#### Zero-Downtime Deployment\n\n**Phase 1: Run Migration**\n```bash\n# 1. Pull latest code\ngit pull origin main\n\n# 2. Install dependencies\nnpm install\n\n# 3. Run migration\nnpm run migrate:up\n# or\nnpx typeorm migration:run\n```\n\n**Phase 2: Verify Migration**\n```sql\n-- Check schema changes\nSELECT column_name, data_type, is_nullable \nFROM information_schema.columns \nWHERE table_name = 'users' AND column_name = 'username';\n\n-- Check data integrity\nSELECT COUNT(*) as total, COUNT(username) as with_username \nFROM users;\n```\n\n**Phase 3: Deploy Code Changes** (if applicable)\n```bash\n# 1. Deploy application code\n./deploy.sh production\n\n# 2. Restart services\nsystemctl restart app-service\n\n# 3. Verify health\ncurl http://localhost:3000/health\n```\n\n**Phase 4: Monitor**\n- Watch logs for errors\n- Check database performance metrics\n- Verify application functionality\n- Monitor for 15-30 minutes\n\n{{else}}\n#### Standard Deployment (Maintenance Window Required)\n\n**Step 1: Enable Maintenance Mode**\n```bash\n# Put application in maintenance mode\n./maintenance-mode.sh enable\n```\n\n**Step 2: Run Migration**\n```bash\n# Run migration\nnpm run migrate:up\n\n# Verify immediately\npsql -d database_name -c \"SELECT COUNT(*) FROM users WHERE username IS NOT NULL\"\n```\n\n**Step 3: Deploy Code** (if applicable)\n```bash\n# Deploy application\n./deploy.sh production\n```\n\n**Step 4: Test**\n```bash\n# Run smoke tests\nnpm run test:smoke\n\n# Manual verification\ncurl http://localhost:3000/api/users/1\n```\n\n**Step 5: Disable Maintenance Mode**\n```bash\n# Return to normal operation\n./maintenance-mode.sh disable\n```\n{{/if}}\n\n### Post-Deployment Validation\n\n**Immediate Checks** (within 5 minutes):\n```sql\n-- Verify row counts match\nSELECT COUNT(*) FROM users;\n\n-- Verify new column populated\nSELECT COUNT(*) as total, \n       COUNT(username) as with_username,\n       COUNT(*) - COUNT(username) as missing \nFROM users;\n-- Expected: missing = 0\n\n-- Check for constraint violations\nSELECT username, COUNT(*) \nFROM users \nGROUP BY username \nHAVING COUNT(*) > 1;\n-- Expected: 0 rows\n```\n\n**Application Tests**:\n```bash\n# Run integration tests\nnpm run test:integration\n\n# Test critical endpoints\ncurl http://api.example.com/users\ncurl http://api.example.com/users/1\n```\n\n**Monitoring** (for 1 hour):\n- Database CPU/Memory usage\n- Query performance (slow query log)\n- Application error rates\n- API response times\n- User-reported issues\n\n### Rollback Procedure\n\nSee MIGRATION_ROLLBACK_GUIDE.md\n\n**Quick Rollback**:\n```bash\n# If issues detected within first hour\nnpm run migrate:down\n\n# Restore from backup if migration can't rollback\npsql -U username -d database_name < backup_pre_migration_YYYYMMDD_HHMMSS.sql\n```\n\n### Monitoring Recommendations\n\n**Key Metrics**:\n- Query: `SELECT COUNT(*) FROM users WHERE username IS NOT NULL`\n  - Expected: 100% of users have username\n  \n- Query: `SELECT COUNT(DISTINCT username) FROM users`\n  - Expected: Equals total user count\n\n- Application errors related to user operations\n  - Expected: No increase in error rate\n\n**Alert Conditions**:\n- Migration takes longer than [2x estimated time]\n- Any user has NULL username after migration\n- Duplicate username constraint violations\n- Application error rate increases > 5%\n\n### Troubleshooting\n\n**Issue: Migration Fails**\n```bash\n# Check error message\nnpm run migrate:up 2>&1 | tee migration.log\n\n# Common causes:\n# 1. Constraint violation - check for bad data\n# 2. Permission error - check database user permissions  \n# 3. Syntax error - review migration file\n\n# If safe to retry:\nnpm run migrate:down  # Rollback partial changes\nnpm run migrate:up    # Try again\n```\n\n**Issue: Performance Degradation**\n```sql\n-- Check for missing indexes\nSELECT * FROM pg_stat_user_tables WHERE tablename = 'users';\n\n-- Check for locks\nSELECT * FROM pg_locks WHERE relation::regclass::text = 'users';\n\n-- Kill long-running queries if needed\nSELECT pg_terminate_backend(pid) \nFROM pg_stat_activity \nWHERE state = 'active' AND query LIKE '%users%';\n```\n\n**Issue: Application Errors**\n```bash\n# Check application logs\ntail -f /var/log/app/error.log | grep -i username\n\n# Check for code/schema mismatch\n# - Ensure code deployed matches migration\n# - Check model definitions\n# - Verify API serialization\n```\n\n### Success Criteria\n\n✅ Migration completed without errors\n✅ All validation queries return expected results\n✅ Application tests pass\n✅ No increase in error rates\n✅ Performance metrics normal\n✅ Monitoring stable for 1 hour\n\n### Communication Template\n\n**Pre-Deployment Email**:\n```\nSubject: [SCHEDULED] Database Migration - {{migration_purpose}}\n\nWe will be performing a database migration on [Date] at [Time].\n\nChanges:\n- [Brief description]\n\nImpact:\n- Downtime: [Yes/No - Duration if yes]\n- Breaking changes: [Yes/No - Details if yes]\n\nRollback plan: Available if issues detected\n\nQuestions: [Contact info]\n```\n\n**Post-Deployment Email**:\n```\nSubject: [COMPLETED] Database Migration - {{migration_purpose}}\n\nThe database migration has been successfully completed.\n\nResults:\n- Migration status: ✅ Success\n- Duration: [Actual time]\n- Issues: [None / See details]\n\nMonitoring: Continuing for [duration]\n\n[Any follow-up actions needed]\n```\n```\n\n## Step 3: Create Rollback Guide\n\nCreate **MIGRATION_ROLLBACK_GUIDE.md**:\n\n```markdown\n## Rollback Guide: {{migration_purpose}}\n\n### When to Rollback\n\nRollback if:\n- ⚠️ Data integrity issues detected\n- ⚠️ Application errors increase significantly\n- ⚠️ Migration fails midway\n- ⚠️ Constraint violations found\n- ⚠️ Performance degradation severe\n- ⚠️ Business logic breaks\n\n### Rollback Methods\n\n#### Method 1: Migration Down (Preferred)\n\n**When to use**: Migration completed, but need to revert changes\n\n**Steps**:\n```bash\n# 1. Run down migration\nnpm run migrate:down\n# or\nnpx typeorm migration:revert\n\n# 2. Verify rollback\npsql -d database_name -c \"SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='username'\"\n# Expected: 0 rows\n\n# 3. Restart application\nsystemctl restart app-service\n\n# 4. Verify functionality\ncurl http://localhost:3000/health\n```\n\n**Data Loss**: {{#if data_loss}}⚠️ Yes - username data will be lost{{else}}No{{/if}}\n\n**Duration**: [From testing - typically faster than up migration]\n\n#### Method 2: Restore from Backup\n\n**When to use**: Migration rollback fails or database in inconsistent state\n\n**Steps**:\n```bash\n# 1. Stop application\nsystemctl stop app-service\n\n# 2. Drop current database (⚠️ DESTRUCTIVE)\npsql -U username -c \"DROP DATABASE database_name\"\n\n# 3. Create fresh database\npsql -U username -c \"CREATE DATABASE database_name\"\n\n# 4. Restore from backup\npsql -U username -d database_name < backup_pre_migration_YYYYMMDD_HHMMSS.sql\n\n# 5. Verify restoration\npsql -d database_name -c \"SELECT COUNT(*) FROM users\"\n\n# 6. Restart application\nsystemctl start app-service\n```\n\n**Data Loss**: ⚠️ All data changes since backup\n\n**Duration**: Depends on backup size (typically 5-30 minutes)\n\n### Rollback Validation\n\n**Verify Rollback Success**:\n```sql\n-- Check column removed\nSELECT column_name \nFROM information_schema.columns \nWHERE table_name = 'users' AND column_name = 'username';\n-- Expected: 0 rows\n\n-- Check row count unchanged\nSELECT COUNT(*) FROM users;\n-- Expected: Same as before migration\n\n-- Check original data intact\nSELECT COUNT(*) as total, COUNT(email) as with_email \nFROM users;\n-- Expected: All users have email\n```\n\n**Application Tests**:\n```bash\n# Run smoke tests\nnpm run test:smoke\n\n# Test critical paths\ncurl http://api.example.com/users\n```\n\n### Post-Rollback Actions\n\n1. **Investigate Root Cause**\n   - Review error logs\n   - Analyze what went wrong\n   - Document findings\n\n2. **Fix Migration**\n   - Update migration file\n   - Re-test in staging\n   - Update validation report\n\n3. **Communication**\n   - Notify stakeholders of rollback\n   - Explain reason and next steps\n   - Provide new timeline\n\n4. **Retry Plan**\n   - Schedule new deployment\n   - Address issues found\n   - Increase monitoring\n\n### Emergency Contacts\n\n- Database Admin: [Contact]\n- On-Call Engineer: [Contact]\n- DevOps Team: [Contact]\n- Product Owner: [Contact]\n\n### Rollback Decision Matrix\n\n| Issue | Severity | Rollback? | Method |\n|-------|----------|-----------|--------|\n| Migration fails completely | High | Yes | Restore backup |\n| Partial migration success | High | Yes | Try migrate:down, fallback to backup |\n| Data integrity issues | High | Yes | Restore backup |\n| Application errors spike | High | Yes | migrate:down |\n| Performance degradation | Medium | Maybe | Investigate first, rollback if severe |\n| Minor errors | Low | No | Fix forward |\n| Constraint violations | High | Yes | migrate:down |\n\n### Testing Rollback (Before Production)\n\n```bash\n# In staging/test environment\n# 1. Run migration up\nnpm run migrate:up\n\n# 2. Verify it works\n# [validation queries]\n\n# 3. Run migration down\nnpm run migrate:down\n\n# 4. Verify rollback successful\n# [rollback validation queries]\n\n# 5. Document any issues\n```\n```\n\n## Step 4: Update Schema Documentation\n\nUpdate **docs/DATABASE_SCHEMA.md** or **schema.md**:\n\n```markdown\n### Users Table\n\n**Description**: Stores user account information\n\n**Columns**:\n\n| Column | Type | Nullable | Default | Constraints | Description |\n|--------|------|----------|---------|-------------|-------------|\n| id | INTEGER | NO | auto | PRIMARY KEY | User ID |\n| email | VARCHAR(255) | NO | - | UNIQUE | User email address |\n| username | VARCHAR(50) | NO | - | UNIQUE | Unique username (NEW) |\n| created_at | TIMESTAMP | NO | NOW() | - | Account creation time |\n| updated_at | TIMESTAMP | NO | NOW() | - | Last update time |\n\n**Indexes**:\n- `PRIMARY KEY` on `id`\n- `UNIQUE INDEX` on `email`\n- `UNIQUE INDEX` on `username` (NEW)\n\n**Changes**:\n- **[Date]**: Added `username` column (Migration: {{migration_purpose}})\n```\n\n## Step 5: Final Checklist\n\nCreate **MIGRATION_FINAL_CHECKLIST.md**:\n\n```markdown\n## Final Checklist: {{migration_purpose}}\n\n### Documentation Complete\n- [ ] MIGRATION_DESIGN.md created\n- [ ] Migration file implemented\n- [ ] MIGRATION_VALIDATION_REPORT.md complete\n- [ ] MIGRATION_DEPLOYMENT_GUIDE.md created\n- [ ] MIGRATION_ROLLBACK_GUIDE.md created\n- [ ] MIGRATIONS.md or CHANGELOG.md updated\n- [ ] Schema documentation updated\n\n### Testing Complete\n- [ ] Migration up tested\n- [ ] Migration down tested\n- [ ] Data integrity validated\n- [ ] Edge cases tested\n- [ ] Performance measured\n- [ ] Application tests pass\n\n### Production Ready\n- [ ] Backup procedure documented\n- [ ] Rollback procedure tested\n- [ ] Deployment steps clear\n- [ ] Monitoring plan in place\n- [ ] Communication prepared\n- [ ] Emergency contacts listed\n- [ ] Success criteria defined\n\n### Sign-off\n- [ ] Developer reviewed\n- [ ] Database admin reviewed\n- [ ] Team lead approved\n- [ ] Product owner notified\n\n### Deployment Scheduled\n- Date: [YYYY-MM-DD]\n- Time: [HH:MM Timezone]\n- Maintenance window: [Duration if needed]\n- On-call engineer: [Name]\n```\n\n## Step 6: Validation\n\n**Self-Check**:\n- [ ] Migration log updated\n- [ ] Deployment guide complete and clear\n- [ ] Rollback guide complete and tested\n- [ ] Schema documentation updated\n- [ ] Final checklist created\n- [ ] All guides use actual data (no placeholders)\n- [ ] Emergency contacts included\n- [ ] Success criteria defined\n- [ ] Communication templates ready\n\n**Output**: Complete documentation package for safe production deployment",
+        "maxTokens": 14000,
+        "compressionStrategy": "adaptive",
+        "variables": [
+          {
+            "name": "migration_purpose",
+            "type": "string",
+            "required": true,
+            "description": "Migration purpose from design"
+          },
+          {
+            "name": "breaking_changes",
+            "type": "string",
+            "required": false,
+            "description": "Description of breaking changes if any"
+          },
+          {
+            "name": "code_changes",
+            "type": "string",
+            "required": false,
+            "description": "Description of required code changes"
+          },
+          {
+            "name": "zero_downtime",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether zero-downtime deployment is possible"
+          },
+          {
+            "name": "data_loss",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether rollback causes data loss"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "MIGRATION_DEPLOYMENT_GUIDE.md",
+          "MIGRATION_ROLLBACK_GUIDE.md",
+          "MIGRATION_FINAL_CHECKLIST.md"
+        ],
+        "requiredPatterns": [
+          "## Deployment Guide:",
+          "## Rollback Guide:",
+          "### Pre-Deployment Checklist",
+          "### Backup Procedure",
+          "### Deployment Steps",
+          "### Post-Deployment Validation",
+          "### Rollback Procedure",
+          "### When to Rollback"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[Date\\]",
+          "\\[Time\\]",
+          "\\[Contact\\]",
+          "\\[Description\\]",
+          "YYYYMMDD_HHMMSS"
+        ],
+        "commands": [
+          {
+            "name": "verify-docs",
+            "command": "test -f MIGRATION_DEPLOYMENT_GUIDE.md && test -f MIGRATION_ROLLBACK_GUIDE.md && test -f MIGRATION_FINAL_CHECKLIST.md || echo 'Documentation incomplete'",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Documentation is incomplete. Fix the following:\n\n**Missing Documentation**:\n- Deployment guide missing or incomplete\n- Rollback guide missing or incomplete\n- Final checklist missing\n- Schema documentation not updated\n- Migration log not updated\n\n**Placeholder Issues**:\n- Contains [Date], [Time], [Contact] placeholders\n- Contains [Description], YYYYMMDD_HHMMSS placeholders\n- Missing actual backup commands\n- Missing actual validation queries\n\n**Content Issues**:\n- Deployment steps unclear or incomplete\n- Rollback procedure not detailed enough\n- No emergency contacts\n- No success criteria\n- No monitoring recommendations\n\n**Fix Process**:\n1. Read validation report for actual test results\n2. Create complete deployment guide with real commands\n3. Create detailed rollback guide with tested procedures\n4. Update schema documentation with new columns\n5. Create final checklist with all items\n6. Replace all placeholders with actual content\n7. Include emergency contacts and monitoring\n\nEnsure documentation is production-ready and complete."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "git status"
+    ],
+    "postChecks": [
+      "test -f MIGRATION_DESIGN.md || echo 'Design missing'",
+      "test -f MIGRATION_VALIDATION_REPORT.md || echo 'Validation missing'",
+      "test -f MIGRATION_DEPLOYMENT_GUIDE.md || echo 'Deployment guide missing'"
+    ],
+    "qualityGates": [
+      {
+        "name": "migration-syntax-check",
+        "command": "npm run typecheck || tsc --noEmit || node -c migrations/*.js 2>/dev/null || echo 'Syntax check skipped'",
+        "required": false
+      },
+      {
+        "name": "migration-rollback-tested",
+        "command": "grep -q 'Migration Down Tests' MIGRATION_VALIDATION_REPORT.md && grep -q '✅' MIGRATION_VALIDATION_REPORT.md || echo 'Rollback not tested'",
+        "required": true
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 4000,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [
+      {
+        "templateId": "update-models",
+        "relationship": "complement",
+        "description": "Update ORM models after schema changes",
+        "example": "After adding username column, update User model to include username field"
+      },
+      {
+        "templateId": "add-rest-endpoint",
+        "relationship": "complement",
+        "description": "Add API endpoints that use new schema",
+        "example": "After adding username, create endpoint to update username"
+      }
+    ],
+    "examples": [
+      {
+        "name": "Add Username Field",
+        "description": "Add unique username field to users table with backfill from email",
+        "sequence": [
+          {
+            "template": "db-migration-safe",
+            "variables": {
+              "migration_purpose": "add username field to users",
+              "schema_changes": "Add username VARCHAR(50) UNIQUE NOT NULL to users table",
+              "affected_tables": "users",
+              "data_migration": "Backfill username from email prefix (before @ symbol)"
+            },
+            "reason": "Add username field with safe data migration"
+          }
+        ],
+        "outcome": "Username field added with data backfilled, fully tested, and ready for production"
+      },
+      {
+        "name": "Add Timestamps to Table",
+        "description": "Add created_at and updated_at timestamps to existing table",
+        "sequence": [
+          {
+            "template": "db-migration-safe",
+            "variables": {
+              "migration_purpose": "add timestamps to products table",
+              "schema_changes": "Add created_at TIMESTAMP DEFAULT NOW() and updated_at TIMESTAMP DEFAULT NOW() to products table",
+              "affected_tables": "products",
+              "data_migration": "Set created_at and updated_at to NOW() for existing rows"
+            },
+            "reason": "Add audit timestamps to products"
+          }
+        ],
+        "outcome": "Timestamp columns added with defaults, existing rows backfilled"
+      }
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": [
+      {
+        "taskId": "analyze-and-design",
+        "metrics": {
+          "design_completeness": "All sections complete without placeholders",
+          "risk_assessment": "All risks identified with mitigations",
+          "rollback_strategy": "Complete rollback steps documented"
+        },
+        "improvementHints": {
+          "thoroughness": "Were all risks identified and addressed?",
+          "clarity": "Was the design clear enough to implement from?"
+        }
+      },
+      {
+        "taskId": "implement-migration",
+        "metrics": {
+          "framework_adherence": "Follows migration framework patterns",
+          "safety_measures": "Includes data validation and error handling",
+          "rollback_completeness": "Down migration fully reverses up migration"
+        },
+        "improvementHints": {
+          "safety": "Was the migration implemented safely?",
+          "completeness": "Does rollback fully reverse all changes?"
+        }
+      },
+      {
+        "taskId": "test-and-validate",
+        "metrics": {
+          "test_coverage": "Up, down, and edge cases all tested",
+          "validation_depth": "Data integrity thoroughly validated",
+          "report_completeness": "Report contains actual test results"
+        },
+        "improvementHints": {
+          "thoroughness": "Were all test scenarios executed?",
+          "documentation": "Are results clearly documented with evidence?"
+        }
+      },
+      {
+        "taskId": "document-and-finalize",
+        "metrics": {
+          "documentation_completeness": "All required guides created",
+          "clarity": "Deployment and rollback procedures are clear",
+          "production_readiness": "All checklists complete"
+        },
+        "improvementHints": {
+          "usefulness": "Can someone else deploy using these guides?",
+          "safety": "Is the rollback procedure clear and tested?"
+        }
+      }
+    ]
+  }
+}
