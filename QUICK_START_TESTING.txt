@@ -1,0 +1,143 @@
+╔═══════════════════════════════════════════════════════════════════════╗
+║           AGENT BEHAVIOR TESTING - QUICK REFERENCE                    ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+STATUS: ✅ READY FOR TESTING (All systems operational)
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ IMMEDIATE ACTION: Run First Test (5 minutes)                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+  ./scripts/trace-agent-behavior.sh devbob-clean minimal
+
+  This will:
+  • Execute activity-create-v2 with minimal test case
+  • Capture breadcrumbs, tool calls, decisions, validation
+  • Generate analysis report automatically
+  • Extract created template (if successful)
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ REVIEW RESULTS                                                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+  # Find latest result
+  LATEST=$(ls -td validation-results/agent-behavior/*/ | head -1)
+  
+  # Read analysis
+  cat "${LATEST}ANALYSIS.md"
+  
+  # Check created template
+  cat "${LATEST}created-template.json" | jq .
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ FULL TEST SUITE (30 minutes)                                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+  # Run all 3 test cases
+  for case in minimal complex vague; do
+    ./scripts/trace-agent-behavior.sh devbob-clean $case
+  done
+
+  # Generate comparison
+  ./scripts/compare-agent-behavior.sh validation-results/agent-behavior
+
+  # Review
+  cat validation-results/agent-behavior/COMPARISON_*.md
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ TEST CASES                                                            │
+└─────────────────────────────────────────────────────────────────────┘
+
+  minimal  → Simple hello world (baseline functionality)
+  complex  → Multi-step backup workflow (coordination test)
+  vague    → Ambiguous pattern (ambiguity handling test)
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ WHAT GETS CAPTURED                                                    │
+└─────────────────────────────────────────────────────────────────────┘
+
+  ✓ Decision Points    - Agent reasoning at each step
+  ✓ Stage Transitions  - Breadcrumb timeline (ENTER/EXIT)
+  ✓ Tool Calls         - search_activities, register, activity
+  ✓ Validation Events  - Schema checks and results
+  ✓ Errors             - Failure modes and recovery
+  ✓ Created Template   - Generated artifact analysis
+  ✓ Performance        - Time per step, total duration
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ KEY FILES                                                             │
+└─────────────────────────────────────────────────────────────────────┘
+
+  📄 AGENT_BEHAVIOR_TESTING_READY.md
+     → Complete status and infrastructure summary
+
+  📄 ACTIVITY_CREATE_TESTING_QUICK_START.md
+     → Step-by-step execution guide
+
+  📄 ACTIVITY_CREATE_TESTING_PLAN_WITH_TRACING.md
+     → Comprehensive testing strategy
+
+  🔧 scripts/trace-agent-behavior.sh
+     → Agent behavior tracer (main tool)
+
+  🔧 scripts/compare-agent-behavior.sh
+     → Comparative analysis generator
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ INFRASTRUCTURE STATUS                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+
+  Container:  🟢 devbob-clean running and healthy
+  Backend:    🟢 api-server-dev accessible (8080/8082)
+  OpenCode:   🟢 Installed with breadcrumb support
+  Templates:  🟢 activity-create-v2 available
+  Tracing:    🟢 Breadcrumb system operational
+  Scripts:    🟢 Executable and tested
+  Workspace:  🟢 Sterile (empty except configs)
+
+  NO BLOCKERS - Ready for immediate execution
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ ANALYSIS WORKFLOW                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+  1. Run tests (3 test cases)
+  2. Review individual ANALYSIS.md files
+  3. Generate COMPARISON report
+  4. Extract success/failure patterns
+  5. Document design requirements
+  6. Implement create-activity-template-v3
+  7. Test and iterate
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ SUCCESS CRITERIA                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+  Testing Phase:
+  ☐ Execute 3+ test cases
+  ☐ Collect behavioral data
+  ☐ Document 20+ observations
+  ☐ Identify 5+ improvements
+
+  New Template:
+  ☐ Works in sterile environments
+  ☐ Handles vague input gracefully
+  ☐ >80% success rate
+  ☐ <10 min execution time
+  ☐ Self-contained (no source dependencies)
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ NEXT SESSION RESUME                                                   │
+└─────────────────────────────────────────────────────────────────────┘
+
+  Read this file for instant context, then:
+
+  ./scripts/trace-agent-behavior.sh devbob-clean minimal
+
+  All documentation in current directory with clear filenames.
+  All infrastructure validated and operational.
+  Just run the test and begin analysis.
+
+╔═══════════════════════════════════════════════════════════════════════╗
+║  Ready for testing - No blockers - Execute now                        ║
+╚═══════════════════════════════════════════════════════════════════════╝

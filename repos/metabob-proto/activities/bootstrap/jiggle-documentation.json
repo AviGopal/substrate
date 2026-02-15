@@ -5,6 +5,7 @@
   "version": 1,
   "description": "Systematically sort documentation by date updated, percolate later details backwards, and delete obsolete docs",
   "category": "refactor",
+  "prompt_strategy": "guided",
   "contextRequirements": [
     {
       "key": "documentationFiles",

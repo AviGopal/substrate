@@ -1,0 +1,406 @@
+{
+  "variant_id": "add-rest-endpoint-v1",
+  "activity_id": "add-rest-endpoint",
+  "variant_name": "v1-baseline",
+  "version": 1,
+  "description": "Add a new REST API endpoint with schema validation, handler implementation, comprehensive tests, and documentation",
+  "category": "feature",
+  "variables": {
+    "endpoint_path": {
+      "type": "string",
+      "required": true,
+      "description": "HTTP path for the endpoint (e.g., '/api/users/:id')"
+    },
+    "http_method": {
+      "type": "string",
+      "required": true,
+      "description": "HTTP method (GET, POST, PUT, PATCH, DELETE)"
+    },
+    "endpoint_description": {
+      "type": "string",
+      "required": true,
+      "description": "What this endpoint does and its business purpose"
+    },
+    "request_schema": {
+      "type": "object",
+      "required": false,
+      "description": "Expected request body/query parameters schema (JSON)"
+    },
+    "response_schema": {
+      "type": "object",
+      "required": false,
+      "description": "Expected response schema (JSON)"
+    }
+  },
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 15000,
+  "expected_duration_ms": 180000,
+  "expected_cost": 0.20,
+  "expected_quality_score": 0.85,
+  "status": "active",
+  "hooks": {
+    "preActivity": {
+      "environment": {
+        "ENDPOINT_CREATION_MODE": "true"
+      }
+    },
+    "postActivity": {
+      "createSummary": true,
+      "cleanup": false
+    },
+    "onError": {
+      "captureEnvironment": true,
+      "captureLogs": {
+        "tail": 50
+      },
+      "createDiagnosticImpulse": true,
+      "cleanup": false
+    }
+  },
+  "contextRequirements": [
+    {
+      "key": "existingEndpoints",
+      "hint": "Search for similar endpoint implementations using glob('**/*route*.{ts,js}') and grep('router\\.(get|post|put|delete)'). Review 2-3 existing endpoints to understand patterns.",
+      "impulseTypes": ["file", "toolOutput"],
+      "required": true,
+      "budgetRange": [3000, 5000]
+    },
+    {
+      "key": "schemaPatterns",
+      "hint": "Find schema validation patterns (Zod, Joi, etc.) using grep('schema|validate|z\\.object'). Include 1-2 examples.",
+      "impulseTypes": ["file"],
+      "required": false,
+      "budgetRange": [2000, 3000]
+    },
+    {
+      "key": "testPatterns",
+      "hint": "Find API test examples using glob('**/*.test.{ts,js}') with patterns matching request/response testing.",
+      "impulseTypes": ["file"],
+      "required": true,
+      "budgetRange": [2000, 4000]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "analyze-and-design",
+      "subagent": "general",
+      "description": "Analyze codebase patterns and design endpoint structure",
+      "dependencies": [],
+      "guidance": [
+        "Review existing endpoint implementations to understand patterns",
+        "Identify routing file locations and conventions",
+        "Determine schema validation approach (Zod, Joi, etc.)",
+        "Plan file structure and dependencies",
+        "Design request/response flow with error handling"
+      ],
+      "impulse_refs": ["existingEndpoints", "schemaPatterns"],
+      "prompt": {
+        "template": "Design a new REST endpoint based on existing codebase patterns.\n\n**Endpoint Specification**:\n- Path: {{endpoint_path}}\n- Method: {{http_method}}\n- Purpose: {{endpoint_description}}\n{{#if request_schema}}- Request Schema: {{request_schema}}{{/if}}\n{{#if response_schema}}- Response Schema: {{response_schema}}{{/if}}\n\n**Your Task**:\n\n1. **Review Existing Patterns** (from existingEndpoints context)\n   - What routing framework is used? (Express, Fastify, etc.)\n   - Where are routes defined? (file paths)\n   - What's the handler structure pattern?\n   - How is authentication/authorization handled?\n   - What error handling patterns exist?\n\n2. **Design Endpoint Structure**\n   - Which file(s) will contain the new route?\n   - What middleware is needed?\n   - What schema validation approach? (review schemaPatterns)\n   - What database/service calls are needed?\n   - What error responses should be returned?\n\n3. **Plan Implementation**\n   - Files to create or modify\n   - Dependencies between components\n   - Validation requirements\n   - Test scenarios to cover\n\n**Output**: Create ENDPOINT_DESIGN.md with:\n\n## Endpoint Design: {{http_method}} {{endpoint_path}}\n\n### Purpose\n{{endpoint_description}}\n\n### File Structure\n- Route definition: `path/to/routes.ts`\n- Handler: `path/to/handler.ts` (if separate)\n- Schema: `path/to/schema.ts` (if separate)\n- Tests: `path/to/endpoint.test.ts`\n\n### Request Flow\n1. Request validation (schema)\n2. Authentication/authorization (if needed)\n3. Business logic\n4. Response formatting\n5. Error handling\n\n### Schema Design\n```typescript\n// Request schema\n// Response schema\n```\n\n### Implementation Checklist\n- [ ] Add route definition\n- [ ] Implement handler\n- [ ] Add schema validation\n- [ ] Add error handling\n- [ ] Write tests",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": ["endpoint_path", "http_method", "endpoint_description", "request_schema", "response_schema"]
+      },
+      "validation": {
+        "required_files": ["ENDPOINT_DESIGN.md"],
+        "required_patterns": [
+          "## Endpoint Design:",
+          "### Purpose",
+          "### File Structure",
+          "### Request Flow",
+          "### Implementation Checklist"
+        ],
+        "forbidden_patterns": ["TODO", "TBD", "FIXME"],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "The design is incomplete. Review the existingEndpoints context again and ensure you specify: file locations, routing patterns, schema validation approach, request flow, and implementation checklist."
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read"],
+        "optional": ["grep", "glob"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "implement-endpoint",
+      "subagent": "general",
+      "description": "Implement the endpoint handler with schema validation and error handling",
+      "dependencies": ["analyze-and-design"],
+      "guidance": [
+        "Follow patterns from existing endpoints",
+        "Add comprehensive schema validation",
+        "Implement proper error handling with appropriate HTTP status codes",
+        "Use TypeScript types consistently",
+        "Add JSDoc comments for complex logic",
+        "Follow REST conventions (idempotency, status codes, etc.)"
+      ],
+      "impulse_refs": ["existingEndpoints", "schemaPatterns"],
+      "prompt": {
+        "template": "Implement the {{http_method}} {{endpoint_path}} endpoint based on ENDPOINT_DESIGN.md.\n\n**Implementation Requirements**:\n\n1. **Route Definition**\n   - Add route to appropriate router file\n   - Use consistent naming conventions\n   - Apply necessary middleware\n\n2. **Schema Validation**\n   - Define request schema (body, query, params)\n   - Define response schema\n   - Add validation middleware/decorator\n\n3. **Handler Implementation**\n   - Parse and validate input\n   - Implement business logic\n   - Handle errors gracefully\n   - Return appropriate status codes:\n     * 200/201 for success\n     * 400 for validation errors\n     * 401/403 for auth errors\n     * 404 for not found\n     * 500 for server errors\n\n4. **Code Quality**\n   - Use TypeScript types (no `any`)\n   - Add JSDoc comments\n   - Follow existing code style\n   - Remove debug logging (console.log)\n\n**Success Criteria**:\n- Route is registered and accessible\n- Request validation works\n- Response matches schema\n- Error handling is comprehensive\n- Code follows project conventions",
+        "max_tokens": 16000,
+        "compression_strategy": "filter",
+        "variables": ["endpoint_path", "http_method"]
+      },
+      "validation": {
+        "required_files": ["*.ts", "*.js"],
+        "required_patterns": [
+          "router\\.(get|post|put|patch|delete)",
+          "schema|validate|z\\.object"
+        ],
+        "forbidden_patterns": ["console.log", "any", "TODO", "FIXME"],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "npm run typecheck || tsc --noEmit || echo 'No typecheck script found'",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context",
+        "fallback_prompt": "Implementation has issues. Review the validation errors, check existing patterns again, and fix: missing route registration, schema validation, error handling, or type errors."
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read", "edit"],
+        "optional": ["bash", "grep", "glob"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "write-tests",
+      "subagent": "test",
+      "description": "Write comprehensive tests for the endpoint covering success and error cases",
+      "dependencies": ["implement-endpoint"],
+      "guidance": [
+        "Test happy path with valid inputs",
+        "Test validation failures (invalid inputs)",
+        "Test authentication/authorization if applicable",
+        "Test error responses (404, 500, etc.)",
+        "Test edge cases (empty data, special characters, etc.)",
+        "Use existing test patterns and utilities",
+        "Ensure tests are independent and can run in isolation"
+      ],
+      "impulse_refs": ["testPatterns"],
+      "prompt": {
+        "template": "Write comprehensive tests for {{http_method}} {{endpoint_path}}.\n\n**Test Coverage Requirements**:\n\n1. **Happy Path Tests**\n   - Valid request returns success (200/201)\n   - Response matches expected schema\n   - Data is correctly processed\n\n2. **Validation Tests**\n   - Missing required fields → 400\n   - Invalid data types → 400\n   - Out-of-range values → 400\n   - Invalid formats → 400\n\n3. **Error Handling Tests**\n   - Resource not found → 404\n   - Unauthorized access → 401\n   - Forbidden access → 403\n   - Server errors → 500\n\n4. **Edge Cases**\n   - Empty request body (if applicable)\n   - Special characters in input\n   - Boundary values\n   - Concurrent requests (if relevant)\n\n**Test Structure** (follow testPatterns context):\n```typescript\ndescribe('{{http_method}} {{endpoint_path}}', () => {\n  describe('Success cases', () => {\n    it('should return 200 with valid request', async () => {\n      // test\n    });\n  });\n  \n  describe('Validation errors', () => {\n    it('should return 400 for missing required fields', async () => {\n      // test\n    });\n  });\n  \n  describe('Error handling', () => {\n    it('should return 404 when resource not found', async () => {\n      // test\n    });\n  });\n});\n```\n\n**Requirements**:\n- Use existing test utilities and helpers\n- Mock external dependencies\n- Test actual HTTP responses (status, headers, body)\n- No skipped tests (no it.skip or describe.skip)\n- Tests must pass",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": ["endpoint_path", "http_method"]
+      },
+      "validation": {
+        "required_files": ["*.test.ts", "*.test.js", "*.spec.ts", "*.spec.js"],
+        "required_patterns": [
+          "describe\\(",
+          "it\\(",
+          "expect\\("
+        ],
+        "forbidden_patterns": ["it\\.skip", "describe\\.skip", "TODO", "FIXME"],
+        "commands": [
+          {
+            "name": "run-tests",
+            "command": "npm test -- --testPathPattern='.*endpoint.*' || npm test || echo 'Tests not run - check test command'",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context",
+        "fallback_prompt": "Tests are incomplete or failing. Review the testPatterns context, ensure all test scenarios are covered (happy path, validation, errors, edge cases), and fix any test failures."
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read"],
+        "optional": ["bash", "edit"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "document-endpoint",
+      "subagent": "docs",
+      "description": "Document the endpoint with usage examples and API reference",
+      "dependencies": ["implement-endpoint"],
+      "guidance": [
+        "Create or update API documentation",
+        "Include clear usage examples",
+        "Document request/response schemas",
+        "Explain authentication requirements",
+        "List possible error responses",
+        "Add code examples in multiple formats if applicable"
+      ],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "Document the {{http_method}} {{endpoint_path}} endpoint.\n\n**Documentation Requirements**:\n\n1. **Overview**\n   - What the endpoint does\n   - When to use it\n   - Authentication requirements\n\n2. **Request Format**\n   - HTTP method and path\n   - Headers required\n   - Path parameters (if any)\n   - Query parameters (if any)\n   - Request body schema (if applicable)\n\n3. **Response Format**\n   - Success response (status code, schema)\n   - Error responses (status codes, formats)\n\n4. **Examples**\n   - curl example\n   - Code example (JavaScript/TypeScript)\n   - Example response\n\n5. **Error Codes**\n   - List all possible status codes\n   - Explain what each means\n\n**Output**: Update API documentation (README.md, API.md, or docs/ folder)\n\n## {{http_method}} {{endpoint_path}}\n\n### Description\n{{endpoint_description}}\n\n### Request\n```\n{{http_method}} {{endpoint_path}}\nContent-Type: application/json\n```\n\n**Body:**\n```json\n// request schema example\n```\n\n### Response\n**Success (200/201):**\n```json\n// response schema example\n```\n\n**Errors:**\n- `400 Bad Request` - Invalid input\n- `401 Unauthorized` - Authentication required\n- `404 Not Found` - Resource not found\n- `500 Internal Server Error` - Server error\n\n### Example\n```bash\ncurl -X {{http_method}} http://localhost:3000{{endpoint_path}} \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"example\": \"data\"}'\n```\n\n```typescript\n// Code example\n```",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": ["endpoint_path", "http_method", "endpoint_description"]
+      },
+      "validation": {
+        "required_files": ["*.md"],
+        "required_patterns": [
+          "### Description",
+          "### Request",
+          "### Response",
+          "### Example"
+        ],
+        "forbidden_patterns": ["TODO", "TBD", "[WIP]"],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "Documentation is incomplete. Include all required sections: Description, Request format with schema, Response format with examples, Error codes, and complete examples (curl and code)."
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": ["write", "read", "edit"],
+        "optional": ["glob"],
+        "disabled": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "git status"
+    ],
+    "postChecks": [
+      "npm run typecheck || tsc --noEmit || echo 'Skipping typecheck'",
+      "npm test || echo 'Skipping tests'"
+    ],
+    "qualityGates": [
+      {
+        "name": "no-syntax-errors",
+        "command": "node -c *.js 2>/dev/null || tsc --noEmit *.ts 2>/dev/null || echo 'Syntax check skipped'",
+        "required": false
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": ["add-database-migration", "add-integration-tests"],
+    "examples": [
+      {
+        "name": "Add User Profile Endpoint",
+        "description": "Create GET endpoint to retrieve user profile data",
+        "sequence": [
+          {
+            "template": "add-rest-endpoint-v1",
+            "variables": {
+              "endpoint_path": "/api/users/:id/profile",
+              "http_method": "GET",
+              "endpoint_description": "Retrieve user profile information including name, email, avatar, and preferences"
+            },
+            "reason": "Add user profile retrieval endpoint with validation and tests"
+          }
+        ],
+        "outcome": "Endpoint implemented with tests and documentation"
+      },
+      {
+        "name": "Add Create Resource Endpoint",
+        "description": "Create POST endpoint to create a new resource",
+        "sequence": [
+          {
+            "template": "add-rest-endpoint-v1",
+            "variables": {
+              "endpoint_path": "/api/projects",
+              "http_method": "POST",
+              "endpoint_description": "Create a new project with name, description, and initial settings",
+              "request_schema": {
+                "name": "string (required, max 100 chars)",
+                "description": "string (optional, max 500 chars)",
+                "settings": "object (optional)"
+              },
+              "response_schema": {
+                "id": "string",
+                "name": "string",
+                "description": "string",
+                "settings": "object",
+                "createdAt": "ISO date string"
+              }
+            },
+            "reason": "Add project creation endpoint with schema validation"
+          }
+        ],
+        "outcome": "POST endpoint with validation, tests, and docs"
+      }
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": [
+      {
+        "taskId": "analyze-and-design",
+        "metrics": {
+          "patterns_identified": "Number of existing patterns reviewed",
+          "design_completeness": "Percentage of checklist items specified"
+        },
+        "improvementHints": {
+          "pattern_adherence": "Did the design follow existing conventions?"
+        }
+      },
+      {
+        "taskId": "implement-endpoint",
+        "metrics": {
+          "files_created": "Number of new files created",
+          "files_modified": "Number of existing files modified",
+          "lines_added": "Total lines of code added"
+        },
+        "improvementHints": {
+          "code_quality": "Was implementation clean and maintainable?",
+          "error_handling": "Was error handling comprehensive?"
+        }
+      },
+      {
+        "taskId": "write-tests",
+        "metrics": {
+          "test_count": "Number of test cases written",
+          "coverage_paths": "Number of code paths covered"
+        },
+        "improvementHints": {
+          "edge_cases": "Were edge cases adequately covered?"
+        }
+      },
+      {
+        "taskId": "document-endpoint",
+        "metrics": {
+          "documentation_completeness": "Percentage of required sections present"
+        },
+        "improvementHints": {
+          "example_quality": "Were examples clear and runnable?"
+        }
+      }
+    ]
+  }
+}

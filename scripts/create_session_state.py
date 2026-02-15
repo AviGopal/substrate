@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 
 # Configuration
-API_KEY = "mb_uYl7DfW-II6w-I9rR2-94iDKn1Hdu4QLm0wbFO9ePq8"
+API_KEY = "mb_nH7j21NRXWRaqWyHq4ntSuwiRxARrhFnsR2J7i7vb-E"
 BASE_URL = "http://localhost:8080"
 PROJECT_ID = "exp-repo-dev"
 STATE_DIR = Path(__file__).parent.parent / ".metabob"

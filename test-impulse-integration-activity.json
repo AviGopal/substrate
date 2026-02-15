@@ -1,0 +1,149 @@
+{
+  "id": "test-impulse-integration",
+  "name": "Test Impulse Integration",
+  "version": 1,
+  "description": "Test activity to verify impulse loading and persistence through activity hooks",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "design-requirements",
+      "hint": "Design requirements or specifications for the feature being implemented",
+      "impulseTypes": ["memo", "file"],
+      "required": false,
+      "budgetRange": [1000, 3000]
+    },
+    {
+      "key": "api-spec",
+      "hint": "API specification or interface contract",
+      "impulseTypes": ["memo", "file"],
+      "required": false,
+      "budgetRange": [1000, 2000]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "verify-loaded-impulses",
+      "subagent": "general",
+      "description": "Verify that impulses were loaded from session memory",
+      "dependencies": [],
+      "impulseReferences": ["design-requirements", "api-spec"],
+      "prompt": {
+        "template": "**Task: Verify Impulse Loading**\n\nThis is a test activity to verify that impulses are properly loaded from session memory.\n\n**Check the following**:\n\n1. Were impulses loaded from the session?\n2. Can you access the 'design-requirements' impulse?\n3. Can you access the 'api-spec' impulse?\n\n**Create a test output file** at `/tmp/impulse-test-verification.txt` with the following format:\n\n```\nImpulse Loading Test Results\n=============================\n\nTimestamp: [current timestamp]\n\nImpulses Loaded:\n- design-requirements: [yes/no] - [content preview or 'not found']\n- api-spec: [yes/no] - [content preview or 'not found']\n\nTest Status: [PASS/FAIL]\nNotes: [any observations]\n```\n\n**Important**: Use the bash tool to create the file. The content should reflect whether you can actually access the impulse context that was supposedly loaded.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "check": "file",
+        "error": "Test verification file not created",
+        "requiredFiles": ["/tmp/impulse-test-verification.txt"],
+        "requiredPatterns": [
+          "Impulse Loading Test Results",
+          "Test Status:"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-new-impulse",
+      "subagent": "general",
+      "description": "Create a new impulse to test persistence",
+      "dependencies": ["verify-loaded-impulses"],
+      "prompt": {
+        "template": "**Task: Create New Impulse for Persistence**\n\nCreate a test impulse that will be persisted back to session memory.\n\n**Steps**:\n\n1. Create a file at `/tmp/implementation-notes.txt` with test content:\n   ```\n   Implementation Notes for Test Activity\n   ======================================\n   \n   Test timestamp: [current timestamp]\n   \n   This impulse was created during activity execution and should be\n   persisted back to session memory via the postActivity hook.\n   \n   Context from loaded impulses:\n   - [Summarize what you learned from design-requirements if available]\n   - [Summarize what you learned from api-spec if available]\n   \n   This tests the complete impulse lifecycle:\n   1. Load impulses from session (preActivity)\n   2. Process them during execution\n   3. Create new impulse\n   4. Persist new impulse back to session (postActivity)\n   ```\n\n2. Create the impulse using the appropriate tool/API if available\n\n3. Mark the impulse ID as 'implementation-notes' so it will be picked up by persistImpulses hook\n\n**Note**: The postActivity hook is configured to persist this impulse back to session memory.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "check": "file",
+        "error": "Implementation notes file not created",
+        "requiredFiles": ["/tmp/implementation-notes.txt"],
+        "requiredPatterns": [
+          "Implementation Notes",
+          "Test timestamp:"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "report-results",
+      "subagent": "general",
+      "description": "Create final test report",
+      "dependencies": ["create-new-impulse"],
+      "prompt": {
+        "template": "**Task: Create Final Test Report**\n\nCreate a comprehensive test report at `/tmp/impulse-integration-test-report.md`:\n\n```markdown\n# Impulse Integration Test Report\n\n**Date**: [timestamp]\n**Activity ID**: test-impulse-integration\n\n## Test Objectives\n\n1. Verify impulses can be loaded from session memory (preActivity hook)\n2. Verify impulses are accessible during task execution\n3. Verify new impulses can be created during execution\n4. Verify new impulses are persisted back to session memory (postActivity hook)\n\n## Test Results\n\n### Phase 1: Impulse Loading (preActivity)\n- **design-requirements**: [loaded/not loaded]\n- **api-spec**: [loaded/not loaded]\n- **Status**: [PASS/FAIL]\n\n### Phase 2: Impulse Usage (during execution)\n- **Task 1 - verify-loaded-impulses**: [PASS/FAIL]\n- **Task 2 - create-new-impulse**: [PASS/FAIL]\n- **Status**: [PASS/FAIL]\n\n### Phase 3: Impulse Persistence (postActivity)\n- **implementation-notes**: [will be persisted by postActivity hook]\n- **Status**: [pending postActivity execution]\n\n## Summary\n\n[Overall assessment of the impulse integration]\n\n## Files Created\n\n- /tmp/impulse-test-verification.txt\n- /tmp/implementation-notes.txt\n- /tmp/impulse-integration-test-report.md\n\n## Next Steps\n\n1. Verify postActivity hook executed successfully\n2. Check session memory contains 'implementation-notes' impulse\n3. Verify impulse scope is set to 'session'\n```\n\nUse bash tool to create this file.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "check": "file",
+        "error": "Test report not created",
+        "requiredFiles": ["/tmp/impulse-integration-test-report.md"],
+        "requiredPatterns": [
+          "# Impulse Integration Test Report",
+          "## Test Results",
+          "## Summary"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": [
+      {
+        "name": "verify-test-files-created",
+        "command": "test -f /tmp/impulse-test-verification.txt && test -f /tmp/implementation-notes.txt && test -f /tmp/impulse-integration-test-report.md && echo 'All test files created' || echo 'Missing test files'",
+        "required": true
+      }
+    ]
+  },
+  "hooks": {
+    "preActivity": {
+      "loadImpulses": ["design-requirements", "api-spec"],
+      "workingDirectory": {
+        "type": "temporary",
+        "prefix": "impulse-test-",
+        "cleanup": "onSuccess"
+      },
+      "environment": {
+        "IMPULSE_TEST_MODE": "true"
+      }
+    },
+    "postActivity": {
+      "persistImpulses": ["implementation-notes"],
+      "cleanup": false,
+      "createSummary": true
+    },
+    "onError": {
+      "captureEnvironment": true,
+      "captureLogs": {
+        "tail": 30
+      },
+      "cleanup": false
+    }
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": []
+  }
+}

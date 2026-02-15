@@ -1,0 +1,10 @@
+{
+  "test_case": "minimal",
+  "pattern": "Simple hello world activity that prints a message and exits successfully",
+  "activity_name": "Hello World",
+  "activity_id": "hello-world-traced",
+  "category": "infrastructure",
+  "test_variables": {"message":"Hello from tracing!"},
+  "timestamp": "20260214_015649",
+  "container": "devbob-clean"
+}

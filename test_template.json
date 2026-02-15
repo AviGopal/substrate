@@ -1,0 +1,45 @@
+{
+  "name": "Test Task Steps Bug",
+  "description": "Testing if task_steps persists",
+  "category": "test",
+  "task_steps": [
+    {
+      "id": "step-1",
+      "description": "First test step",
+      "subagent": "general",
+      "dependencies": [],
+      "prompt": {
+        "template": "Test prompt",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "check": "none"
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "step-2",
+      "description": "Second test step",
+      "subagent": "general",
+      "dependencies": ["step-1"],
+      "prompt": {
+        "template": "Test prompt 2",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "check": "none"
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "context_requirements": [],
+  "variables": {}
+}

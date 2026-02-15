@@ -19,7 +19,7 @@ from typing import Dict, Any, List
 # Configuration
 API_URL = os.environ.get("METABOB_API_URL", "http://localhost:8080")
 API_KEY = os.environ.get(
-    "METABOB_API_KEY", "mb_TfdRc58VlhLzio5jebyESJnTplTiDHlAiQtPB0JdOrQ"
+    "METABOB_API_KEY", "mb_nH7j21NRXWRaqWyHq4ntSuwiRxARrhFnsR2J7i7vb-E"
 )
 PROJECT_ID = os.environ.get("METABOB_PROJECT_ID", "exp-repo-dev")
 
@@ -90,7 +90,7 @@ def convert_bootstrap_to_v2(template: Dict[str, Any]) -> Dict[str, Any]:
         "category": category,  # REQUIRED
         "description": description,
         "version": template.get("version", 1),
-        "tasks": tasks,  # Use migrated 'tasks' field
+        "task_steps": tasks,  # API expects 'task_steps' not 'tasks'
         # "variables": {},  # Omit for now - causes validation errors
         "prompt_strategy": template.get("prompt_strategy", "guided"),
         "context_budget_tokens": template.get("context_budget_tokens", 25000),

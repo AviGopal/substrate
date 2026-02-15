@@ -1,0 +1,179 @@
+{
+  "timestamp": "2026-02-14T09:02:12.167Z",
+  "summary": {
+    "total": 28,
+    "passed": 28,
+    "failed": 0,
+    "successRate": 100
+  },
+  "results": [
+    {
+      "phase": "File: memory-agent.ts",
+      "passed": true,
+      "details": "Found at repos/metabob-opencode/packages/opencode/src/session/memory-agent.ts",
+      "timestamp": 1771059732163
+    },
+    {
+      "phase": "File: session-memory.ts",
+      "passed": true,
+      "details": "Found at repos/metabob-opencode/packages/opencode/src/session/session-memory.ts",
+      "timestamp": 1771059732163
+    },
+    {
+      "phase": "File: context.ts",
+      "passed": true,
+      "details": "Found at repos/metabob-opencode/packages/opencode/src/session/context.ts",
+      "timestamp": 1771059732163
+    },
+    {
+      "phase": "File: compaction.ts",
+      "passed": true,
+      "details": "Found at repos/metabob-opencode/packages/opencode/src/session/compaction.ts",
+      "timestamp": 1771059732163
+    },
+    {
+      "phase": "File: turn-lifecycle.ts",
+      "passed": true,
+      "details": "Found at repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle.ts",
+      "timestamp": 1771059732163
+    },
+    {
+      "phase": "File: turn-lifecycle-hooks.ts",
+      "passed": true,
+      "details": "Found at repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+      "timestamp": 1771059732163
+    },
+    {
+      "phase": "File: system.ts",
+      "passed": true,
+      "details": "Found at repos/metabob-opencode/packages/opencode/src/session/system.ts",
+      "timestamp": 1771059732163
+    },
+    {
+      "phase": "Hook: metabob-context-preparation",
+      "passed": true,
+      "details": "Found with priority 20",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Hook: session-memory-optimization",
+      "passed": true,
+      "details": "Found with priority 110",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Impulse Types",
+      "passed": true,
+      "details": "All 5 impulse types found in context preparation",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Component Annotation",
+      "passed": true,
+      "details": "Found in post-turn hook",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Memory Agent: analyzeIntent",
+      "passed": true,
+      "details": "Function exported",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Memory Agent: Intent Schema",
+      "passed": true,
+      "details": "Zod schema defined",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Memory Agent: Suggested Impulses",
+      "passed": true,
+      "details": "Schema includes impulse suggestions",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Memory Agent: Intent Types",
+      "passed": true,
+      "details": "All 5 intent types defined",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "Memory Agent: Configuration",
+      "passed": true,
+      "details": "Default config defined",
+      "timestamp": 1771059732164
+    },
+    {
+      "phase": "SessionContext: trackFileModification",
+      "passed": true,
+      "details": "Method found",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "SessionContext: getModifiedFiles",
+      "passed": true,
+      "details": "Method found",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "SessionContext: getActiveFiles",
+      "passed": true,
+      "details": "Method found",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "SessionContext: In-Memory Storage",
+      "passed": true,
+      "details": "Using Map for tracking",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "Compaction: isOverflow",
+      "passed": true,
+      "details": "Function exported",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "Compaction: PRUNE_MINIMUM",
+      "passed": true,
+      "details": "Set to 20000",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "Compaction: PRUNE_PROTECT",
+      "passed": true,
+      "details": "Set to 40000",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "Compaction: prune",
+      "passed": true,
+      "details": "Function exported",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "Compaction: run",
+      "passed": true,
+      "details": "Main compaction function found",
+      "timestamp": 1771059732165
+    },
+    {
+      "phase": "Documentation: ACTIVITY_SYSTEM_DATA_CUSTODY_CHAIN.md",
+      "passed": true,
+      "details": "Exists (37KB)",
+      "timestamp": 1771059732166
+    },
+    {
+      "phase": "Documentation: ACTIVITY_DATA_FLOW_VISUAL.md",
+      "passed": true,
+      "details": "Exists (39KB)",
+      "timestamp": 1771059732166
+    },
+    {
+      "phase": "Documentation: DATA_FLOW_QUICK_REFERENCE.md",
+      "passed": true,
+      "details": "Exists (11KB)",
+      "timestamp": 1771059732166
+    }
+  ]
+}

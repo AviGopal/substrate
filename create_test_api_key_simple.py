@@ -39,7 +39,7 @@ async def create_api_key():
             print(f"Auth failed: {auth_response.text}")
             return None
 
-        token = auth_response.text.strip()
+        token = auth_response.text.strip().strip('"')
 
         headers = {
             "Authorization": f"Bearer {token}",
