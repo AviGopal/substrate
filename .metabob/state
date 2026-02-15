@@ -1,11 +1,11 @@
 {
   "version": 1,
   "session_metadata": {
-    "session_token": "c2Vzc2lvbnM6b3JnOmRldjpleHAtcmVwby1kZXY6MTQ3NWRiOWEtNmY0MS00YjkzLWE4N2UtMWIzN2Y5Y2NiYTEx",
-    "session_id": "org:dev:exp-repo-dev:1475db9a-6f41-4b93-a87e-1b37f9ccba11",
+    "session_token": "c2Vzc2lvbnM6YjRmZTY4NjAtNTU0My00M2ZkLTkwYzAtM2I1NzA0YmQ0ZWJhOmJvb3RzdHJhcC1vcmc6Ym9vdHN0cmFwLXVzZXI=",
+    "session_id": "anonymous:default:b4fe6860-5543-43fd-90c0-3b5704bd4eba",
     "project_id": "exp-repo-dev",
-    "created_at": "2026-02-15T07:14:11.727096Z",
-    "last_updated": "2026-02-14T23:14:11.729437",
+    "created_at": "2026-02-15T08:45:39.708571Z",
+    "last_updated": "2026-02-15T00:45:39.711097",
     "format_version": "4.0"
   },
   "file_states": {},
