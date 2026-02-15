@@ -131,9 +131,14 @@ def convert_task_to_proto_format(task: dict) -> dict:
             {"impulse_id": ref, "priority": "MEDIUM", "required": False}
         )
 
+    # Handle both "id" (new schema) and "task_id" (old schema) fields
+    task_id = task.get("id") or task.get("task_id")
+    if not task_id:
+        raise ValueError(f"Task missing 'id' or 'task_id' field: {task}")
+
     # Build ProtoTaskStep
     return {
-        "id": task.get("id"),
+        "id": task_id,
         "subagent": task.get("subagent"),
         "description": task.get("description", ""),
         "dependencies": task.get("dependencies", []),
@@ -147,8 +152,8 @@ def convert_task_to_proto_format(task: dict) -> dict:
             "avg_duration": 0,
             "common_failures": [],
         },
-        "guidance": [],
-        "expected_actions": [],
+        "guidance": task.get("guidance", []),
+        "expected_actions": task.get("expected_actions", []),
     }
 
 
@@ -178,6 +183,29 @@ def convert_context_requirements(requirements: list) -> list:
     return converted
 
 
+def collect_variables_from_tasks(tasks: list) -> dict:
+    """
+    Collect all unique variables from task prompts.
+
+    Returns dict mapping variable names to their definitions.
+    Example: {"templateName": {"type": "string", "required": true}}
+    """
+    variables = {}
+    for task in tasks:
+        prompt = task.get("prompt", {})
+        task_vars = prompt.get("variables", [])
+        for var in task_vars:
+            name = var.get("name")
+            if name and name not in variables:
+                # Store first occurrence of variable definition
+                variables[name] = {
+                    "type": var.get("type", "string"),
+                    "required": var.get("required", False),
+                    "description": var.get("description", ""),
+                }
+    return variables
+
+
 def convert_to_backend_format(opencode_template: dict) -> dict:
     """Convert full OpenCode template to backend TemplateCreateRequest format."""
 
@@ -191,12 +219,15 @@ def convert_to_backend_format(opencode_template: dict) -> dict:
         opencode_template.get("contextRequirements", [])
     )
 
+    # Collect variables from all task prompts
+    variables = collect_variables_from_tasks(opencode_template.get("tasks", []))
+
     # Build TemplateCreateRequest
     return {
         "name": opencode_template.get("name", ""),
         "description": opencode_template.get("description", ""),
         "category": opencode_template.get("category", "infrastructure"),
-        "variables": {},  # OpenCode doesn't have top-level variables (they're in tasks)
+        "variables": variables,  # Collected from task prompts
         "context_requirements": context_requirements,
         "task_steps": task_steps,
         "parent_id": None,
@@ -237,23 +268,29 @@ def register_template(
 
     response = requests.post(url, json=backend_template, headers=headers)
 
-    if response.status_code == 200:
-        print(f"✅ Template registered successfully")
+    if response.status_code in (200, 201):
+        print(f"✅ Template registered successfully (HTTP {response.status_code})")
         return response.json()
     else:
         print(f"❌ Registration failed: {response.status_code}")
         print(f"Response: {response.text}")
         response.raise_for_status()
+        return {}  # Never reached, but satisfies type checker
 
 
 def main():
-    # Paths
-    template_path = "repos/metabob-opencode/packages/opencode/templates/built-in/create-activity-template.json"
+    # Get template path from command line or use default
+    if len(sys.argv) > 1:
+        template_path = sys.argv[1]
+    else:
+        template_path = "repos/metabob-opencode/packages/opencode/templates/built-in/create-activity-template.json"
+
     base_url = "http://localhost:8080"
 
     print("=" * 60)
-    print("Register create-activity-template with Metabob backend")
+    print("Register Activity Template with Metabob Backend")
     print("=" * 60)
+    print(f"Template: {template_path}")
 
     # Load OpenCode template
     print(f"\n[1/4] Loading OpenCode template: {template_path}")
