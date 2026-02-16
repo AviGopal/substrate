@@ -1,0 +1,375 @@
+{
+  "id": "validate-code-quality",
+  "name": "Validate Code Quality",
+  "description": "Comprehensive code quality validation workflow using Metabob tools to search for issues, analyze impact, verify fixes, and annotate components",
+  "category": "tool",
+  "variables": {
+    "search_pattern": {
+      "type": "string",
+      "required": false,
+      "description": "Specific pattern to search for (e.g., 'SQL injection', 'memory leak', 'authentication')"
+    },
+    "file_path": {
+      "type": "string",
+      "required": false,
+      "description": "Specific file to validate (e.g., 'src/auth/login.ts')"
+    },
+    "component_name": {
+      "type": "string",
+      "required": false,
+      "description": "Specific component to validate (e.g., 'UserService.authenticate')"
+    }
+  },
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "timestamp": 1739750400000,
+    "parent_hash": "",
+    "variant_hash": "",
+    "full_version": "1.0.0",
+    "generation": 0
+  },
+  "genealogy": {
+    "parent": null,
+    "parent_id": "",
+    "ancestors": [],
+    "children": [],
+    "variant_ids": [],
+    "variant_hash": "",
+    "created_at": 1739750400000,
+    "generation": 0,
+    "evolution": {
+      "reason": "EVOLUTION_REASON_MANUAL",
+      "improvised": false,
+      "author": "TEMPLATE_AUTHOR_HUMAN",
+      "mutations": [],
+      "improvements": []
+    }
+  },
+  "executions": 0,
+  "successRate": 0,
+  "avgDuration": 0,
+  "avgCost": 0,
+  "avgTokens": {
+    "input": 0,
+    "output": 0,
+    "cache": 0
+  },
+  "createdAt": 1739750400000,
+  "updatedAt": 1739750400000,
+  "tasks": [
+    {
+      "id": "search-and-prioritize",
+      "subagent": "general",
+      "description": "Search for code quality issues and determine priorities",
+      "dependencies": [],
+      "guidance": [
+        "Use metabob_search_codebase_issues to find issues by pattern",
+        "Use metabob_get_priority_issues for AI-guided priorities",
+        "Focus on HIGH severity issues first",
+        "Document all findings with severity and location",
+        "Create prioritized fix plan based on impact"
+      ],
+      "prompt": {
+        "template": "Search and prioritize code quality issues in the codebase.\n\n{{#if search_pattern}}\n**Search Pattern**: {{search_pattern}}\n{{/if}}\n{{#if file_path}}\n**Target File**: {{file_path}}\n{{/if}}\n{{#if component_name}}\n**Target Component**: {{component_name}}\n{{/if}}\n\n## Step 1: Get Priority Issues\n\nStart by checking AI-guided priorities based on your recent work:\n\n```\nmetabob_get_priority_issues({})\n```\n\nThis returns 0-5 issues in your active work areas. If empty, proceed to search.\n\n## Step 2: Search for Issues\n\n{{#if search_pattern}}\nSearch for specific pattern:\n```\nmetabob_search_codebase_issues({\n  query: \"{{search_pattern}}\",\n  limit: 10\n})\n```\n{{else}}\n{{#if file_path}}\nSearch for issues in target file:\n```\nmetabob_search_codebase_issues({\n  query: \"issues in {{file_path}}\",\n  limit: 10\n})\n```\n{{else}}\nSearch for general quality issues:\n```\nmetabob_search_codebase_issues({\n  query: \"security vulnerabilities OR code quality issues\",\n  limit: 15\n})\n```\n{{/if}}\n{{/if}}\n\n## Step 3: Analyze Findings\n\nFor each issue found:\n\n**Categorize by Severity**:\n- HIGH: Security vulnerabilities, critical bugs, data loss risks\n- MEDIUM: Performance issues, maintainability problems, technical debt\n- LOW: Code style, minor improvements, suggestions\n\n**Analyze Impact**:\n- How many files/components affected?\n- Dependencies on this code?\n- Risk of regression?\n- Effort to fix?\n\n{{#if file_path}}\n{{#if component_name}}\n**Check Component Dependencies**:\n```\nmetabob_analyze_change_impact({\n  file_path: \"{{file_path}}\",\n  component_name: \"{{component_name}}\"\n})\n```\n\nThis shows:\n- Direct dependents\n- Transitive dependents\n- Risk assessment for changes\n{{else}}\n**List Components in File**:\n```\nmetabob_list_file_components({\n  file_path: \"{{file_path}}\"\n})\n```\n\nThen analyze impact for key components.\n{{/if}}\n{{/if}}\n\n## Step 4: Create Prioritized Plan\n\nCreate **QUALITY_VALIDATION_REPORT.md** with:\n\n```markdown\n## Code Quality Validation Report\n\n### Summary\n- Total Issues Found: [count]\n- HIGH Severity: [count]\n- MEDIUM Severity: [count]\n- LOW Severity: [count]\n\n### Priority Issues (Fix First)\n\n#### Issue 1: [Title]\n- **Severity**: HIGH/MEDIUM/LOW\n- **Location**: file.ts:line\n- **Problem**: [Description]\n- **Impact**: [Dependencies, blast radius]\n- **Fix Effort**: [Small/Medium/Large]\n- **Recommended Action**: [Specific fix approach]\n\n[Repeat for each priority issue]\n\n### Secondary Issues (Fix Opportunistically)\n\n[List lower priority issues]\n\n### Fix Plan\n\n**Phase 1: Critical Fixes** (HIGH severity)\n1. [Issue 1] - [Estimated effort]\n2. [Issue 2] - [Estimated effort]\n\n**Phase 2: Important Fixes** (MEDIUM severity)\n1. [Issue 3] - [Estimated effort]\n2. [Issue 4] - [Estimated effort]\n\n**Phase 3: Improvements** (LOW severity)\n[List as backlog]\n\n### Risk Assessment\n\n**High Risk Changes**:\n- [File/component with many dependencies]\n- [Recommendation: comprehensive testing]\n\n**Low Risk Changes**:\n- [Isolated components]\n- [Can proceed with standard testing]\n\n### Testing Strategy\n\n[How to verify fixes]\n- Unit tests for [components]\n- Integration tests for [workflows]\n- Manual testing for [UI changes]\n\n### Success Criteria\n\n- [ ] All HIGH severity issues resolved\n- [ ] No new issues introduced\n- [ ] All tests pass\n- [ ] Code reviewed\n```\n\n## Step 5: Validation\n\nEnsure report includes:\n- Specific file paths and line numbers\n- Clear severity classifications\n- Impact analysis for each issue\n- Actionable fix recommendations\n- Prioritized fix plan\n- Testing strategy\n\n**No placeholders or TODOs allowed**.",
+        "maxTokens": 12000,
+        "compressionStrategy": "adaptive",
+        "variables": ["search_pattern", "file_path", "component_name"]
+      },
+      "validation": {
+        "requiredFiles": ["QUALITY_VALIDATION_REPORT.md"],
+        "requiredPatterns": [
+          "## Code Quality Validation Report",
+          "### Summary",
+          "### Priority Issues",
+          "### Fix Plan",
+          "### Risk Assessment",
+          "### Testing Strategy",
+          "Severity.*:(.*HIGH|.*MEDIUM|.*LOW)",
+          "Location.*:"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[Description\\]",
+          "\\[count\\]",
+          "file\\.ts:line"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "The quality validation report is incomplete. Fix:\n\n**Common Issues**:\n- Generic placeholders present ([count], [Description])\n- Missing specific file paths and line numbers\n- No actual Metabob tool calls made\n- Severity not classified (HIGH/MEDIUM/LOW)\n- No impact analysis\n- Missing fix plan\n\n**Fix Process**:\n1. Actually call metabob_get_priority_issues()\n2. Actually call metabob_search_codebase_issues()\n3. Use real data from tool results\n4. Provide specific file:line locations\n5. Classify each issue by severity\n6. Analyze impact with metabob_analyze_change_impact if needed\n7. Create actionable fix plan\n8. Remove all placeholders\n\nThe report must contain real findings from Metabob tools."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "verify-and-fix",
+      "subagent": "general",
+      "description": "Verify issues and implement fixes with validation",
+      "dependencies": ["search-and-prioritize"],
+      "guidance": [
+        "Read QUALITY_VALIDATION_REPORT.md for fix plan",
+        "Fix HIGH severity issues first",
+        "Verify each fix doesn't break dependencies",
+        "Run tests after each fix",
+        "Document resolution with metabob_mark_problem_complete"
+      ],
+      "prompt": {
+        "template": "Verify and fix code quality issues from the validation report.\n\n## Step 1: Read Fix Plan\n\nRead **QUALITY_VALIDATION_REPORT.md** to understand:\n- Priority issues to fix\n- Impact analysis for each\n- Recommended fix approaches\n- Testing strategy\n\n## Step 2: Verify Issues\n\nBefore fixing, verify each issue still exists:\n\n1. **Read the affected files**\n2. **Confirm the issue** is present at reported location\n3. **Understand the context** around the issue\n4. **Check for recent changes** that might have fixed it\n\n## Step 3: Fix Issues (Priority Order)\n\n### For Each HIGH Severity Issue:\n\n**Before Fixing**:\n```\n# If fixing a specific component, check impact\nmetabob_analyze_change_impact({\n  file_path: \"path/to/file.ts\",\n  component_name: \"ComponentName\"\n})\n```\n\n**Review impact**:\n- More than 10 dependencies? → High risk, proceed carefully\n- Less than 10 dependencies? → Lower risk, but still test thoroughly\n\n**Implement Fix**:\n1. Make minimal, focused changes\n2. Follow existing code patterns\n3. Preserve API contracts if possible\n4. Add error handling where missing\n5. Fix security vulnerabilities immediately\n\n**After Fixing**:\n1. **Run tests**: `npm test` or equivalent\n2. **Run type checking**: `npm run typecheck` or `tsc --noEmit`\n3. **Run linting**: `npm run lint`\n4. **Manual verification**: Test the functionality\n\n**Document Resolution**:\n```\nmetabob_mark_problem_complete({\n  problem_id: \"[issue_id from search results]\",\n  file_path: \"path/to/file.ts\",\n  resolution_notes: \"Fixed [issue] by [specific change made]. Verified by [how you tested].\"\n})\n```\n\n### For Each MEDIUM Severity Issue:\n\nSame process as HIGH, but can be addressed after HIGH issues.\n\n### For LOW Severity Issues:\n\nDocument as technical debt if not fixed:\n- Create GitHub issue\n- Add to backlog\n- Note in QUALITY_VALIDATION_REPORT.md\n\n## Step 4: Verify No Regressions\n\n**Check for new issues**:\n```\nmetabob_search_codebase_issues({\n  query: \"issues in [files you modified]\",\n  limit: 10\n})\n```\n\n**If new issues found**:\n- Evaluate if introduced by your changes\n- Fix immediately if related to your work\n- Document if pre-existing\n\n**Check related files**:\n```\nmetabob_suggest_related_changes({\n  changed_files: [\"file1.ts\", \"file2.ts\"]\n})\n```\n\nReview suggested related files for co-change patterns.\n\n## Step 5: Update Report\n\nUpdate **QUALITY_VALIDATION_REPORT.md** with:\n\n```markdown\n## Fix Status\n\n### Completed Fixes\n\n#### [Issue 1 Title] ✓\n- **Fixed in**: [commit or PR]\n- **Resolution**: [What was done]\n- **Verification**: [How it was tested]\n- **Resolution ID**: [from metabob_mark_problem_complete]\n\n[Repeat for each fixed issue]\n\n### Remaining Issues\n\n[Any issues not yet fixed with reasons]\n\n### Verification Results\n\n- **Tests**: ✓ All passing / ✗ [failures]\n- **Type Checking**: ✓ No errors / ✗ [errors]\n- **Linting**: ✓ Clean / ✗ [warnings]\n- **New Issues**: [count] (from metabob_search_codebase_issues)\n- **Regressions**: None / [describe any]\n\n### Metabob Annotations\n\n[List of components annotated with resolution notes]\n```\n\n## Step 6: Final Validation\n\nEnsure:\n- [ ] All HIGH severity issues fixed or documented\n- [ ] All fixes have resolution notes in Metabob\n- [ ] No regressions introduced\n- [ ] All tests pass\n- [ ] Type checking clean\n- [ ] Report updated with status",
+        "maxTokens": 16000,
+        "compressionStrategy": "adaptive",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["QUALITY_VALIDATION_REPORT.md"],
+        "requiredPatterns": [
+          "## Fix Status",
+          "### Completed Fixes",
+          "### Verification Results",
+          "Resolution.*:",
+          "Verification.*:"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "FIXME",
+          "\\[What was done\\]",
+          "\\[How it was tested\\]",
+          "console\\.log",
+          "debugger"
+        ],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "npm run typecheck || tsc --noEmit || echo 'No typecheck available'",
+            "required": false
+          },
+          {
+            "name": "test",
+            "command": "npm test -- --passWithNoTests || npm test || echo 'No tests available'",
+            "required": false
+          },
+          {
+            "name": "lint",
+            "command": "npm run lint || echo 'No lint available'",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Fixes are incomplete or verification failed. Address:\n\n**Fix Issues**:\n- HIGH severity issues not fixed\n- Fixes introduced regressions\n- Tests failing after changes\n- Type errors present\n- No resolution documentation\n\n**Verification Issues**:\n- Didn't call metabob_mark_problem_complete for fixes\n- Didn't verify with metabob_search_codebase_issues\n- Report not updated with fix status\n- Placeholders still present\n\n**Fix Process**:\n1. Review failed validations\n2. Fix HIGH severity issues first\n3. Run tests after each fix\n4. Document each fix with metabob_mark_problem_complete\n5. Verify no new issues introduced\n6. Update report with real data\n7. Remove all placeholders\n\nEnsure all validations pass."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "annotate-and-document",
+      "subagent": "general",
+      "description": "Annotate fixed components and create quality summary",
+      "dependencies": ["verify-and-fix"],
+      "guidance": [
+        "Annotate 3-5 key components with design decisions",
+        "Document why issues existed and how they were fixed",
+        "Create summary of quality improvements",
+        "Include prevention recommendations",
+        "Focus annotations on WHY not WHAT"
+      ],
+      "prompt": {
+        "template": "Annotate fixed components and document quality improvements.\n\n## Step 1: Identify Key Components\n\nReview **QUALITY_VALIDATION_REPORT.md** to identify:\n- Components with critical fixes\n- Components with significant changes\n- Components with design decisions\n- Components that others depend on\n\nSelect 3-5 most important components to annotate.\n\n## Step 2: Annotate Components\n\nFor each key component, use Metabob to document:\n\n```\nmetabob_annotate_component({\n  file_path: \"path/to/file.ts\",\n  component_name: \"ComponentName\",\n  component_type: \"function\" | \"class\" | \"method\" | \"module\",\n  reason: \"Explain WHY this component exists and design decisions behind fixes.\"\n})\n```\n\n**Good annotation focuses on WHY**:\n- \"Fixed SQL injection by using parameterized queries because string concatenation allowed user input to modify query structure\"\n- \"Added input validation to prevent XSS attacks since user-generated content was rendered without sanitization\"\n- \"Refactored error handling to use Result type pattern for better type safety and explicit error flows\"\n\n**Bad annotation focuses on WHAT**:\n- \"This function handles user login\"\n- \"Fixed a bug\"\n- \"Updated code\"\n\n## Step 3: Create Quality Summary\n\nCreate **QUALITY_IMPROVEMENT_SUMMARY.md**:\n\n```markdown\n## Code Quality Improvement Summary\n\n### Overview\n\nThis validation activity identified and fixed [count] code quality issues.\n\n### Issues Fixed\n\n#### HIGH Severity\n1. **[Issue Type]** in [file:line]\n   - **Problem**: [What was wrong]\n   - **Root Cause**: [Why it existed]\n   - **Solution**: [How it was fixed]\n   - **Impact**: [Dependencies affected]\n   - **Verification**: [How tested]\n\n[Repeat for each HIGH issue]\n\n#### MEDIUM Severity\n[List medium severity fixes]\n\n### Key Changes\n\n**Security Improvements**:\n- [Specific security fixes made]\n\n**Performance Improvements**:\n- [Specific performance fixes made]\n\n**Maintainability Improvements**:\n- [Specific maintainability fixes made]\n\n### Annotated Components\n\nThe following components have been annotated with design decisions:\n\n1. **[ComponentName]** in [file.ts]\n   - Annotation: [Why annotation was added]\n   - Related fixes: [Issues fixed in this component]\n\n[Repeat for each annotation]\n\n### Testing\n\n**Tests Run**:\n- Unit tests: [status]\n- Integration tests: [status]\n- Type checking: [status]\n- Linting: [status]\n\n**Test Results**:\n- All existing tests pass: ✓ / ✗\n- New tests added: [count]\n- Test coverage: [if available]\n\n### Prevention Recommendations\n\nTo prevent similar issues in the future:\n\n1. **[Issue Category]**:\n   - Root cause: [Why issues occurred]\n   - Prevention: [Specific steps to prevent]\n   - Tools: [Linting rules, pre-commit hooks, etc.]\n\n[Repeat for each issue category]\n\n### Metrics\n\n- **Issues Found**: [total]\n- **Issues Fixed**: [count]\n- **Issues Deferred**: [count with reasons]\n- **Files Modified**: [count]\n- **Components Annotated**: [count]\n- **Tests Added**: [count]\n- **Time Spent**: [estimate]\n\n### Next Steps\n\n**Immediate**:\n- [ ] [Any critical follow-up work]\n\n**Short Term**:\n- [ ] [Important improvements]\n\n**Long Term**:\n- [ ] [Technical debt to address]\n\n### Related Resources\n\n- Validation Report: QUALITY_VALIDATION_REPORT.md\n- Metabob Annotations: [list components]\n- Related PRs: [if applicable]\n- Related Issues: [if applicable]\n```\n\n## Step 4: Validation\n\nEnsure summary includes:\n- Specific details (no placeholders)\n- Real metrics from work done\n- All HIGH severity issues documented\n- Prevention recommendations\n- Next steps\n- References to Metabob annotations\n\n**No TODO/TBD/FIXME allowed**.\n\n## Step 5: Final Check\n\nVerify:\n- [ ] 3-5 components annotated with metabob_annotate_component\n- [ ] Each annotation explains WHY (design decisions)\n- [ ] Summary document is complete\n- [ ] All metrics are real numbers\n- [ ] Prevention recommendations are actionable\n- [ ] No placeholders remain",
+        "maxTokens": 14000,
+        "compressionStrategy": "adaptive",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["QUALITY_IMPROVEMENT_SUMMARY.md"],
+        "requiredPatterns": [
+          "## Code Quality Improvement Summary",
+          "### Overview",
+          "### Issues Fixed",
+          "### Key Changes",
+          "### Annotated Components",
+          "### Testing",
+          "### Prevention Recommendations",
+          "### Metrics",
+          "### Next Steps"
+        ],
+        "forbiddenPatterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\\[count\\]",
+          "\\[What was wrong\\]",
+          "\\[How it was fixed\\]",
+          "\\[status\\]",
+          "\\[if available\\]"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context",
+        "fallbackPrompt": "Documentation is incomplete. Fix:\n\n**Annotation Issues**:\n- Less than 3 components annotated\n- Annotations don't explain WHY\n- No metabob_annotate_component calls made\n- Annotations too generic\n\n**Summary Issues**:\n- Contains placeholders\n- Metrics not filled in with real numbers\n- Prevention recommendations too generic\n- Missing specific issue details\n- No testing results\n\n**Fix Process**:\n1. Review QUALITY_VALIDATION_REPORT.md for components\n2. Call metabob_annotate_component for 3-5 key components\n3. Write WHY-focused annotations (design decisions)\n4. Fill in all metrics with real data\n5. Provide specific prevention recommendations\n6. Remove all placeholders\n7. Add real testing results\n\nEnsure documentation is complete and useful."
+      },
+      "metrics": {
+        "avgDuration": 0,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "git status"
+    ],
+    "postChecks": [
+      "npm run typecheck || tsc --noEmit || echo 'Typecheck skipped'",
+      "npm test || echo 'Tests skipped'",
+      "npm run lint || echo 'Lint skipped'"
+    ],
+    "qualityGates": [
+      {
+        "name": "no-high-severity-issues",
+        "command": "echo 'Manual verification: Check QUALITY_VALIDATION_REPORT.md for remaining HIGH severity issues'",
+        "required": true
+      },
+      {
+        "name": "tests-pass",
+        "command": "npm test || echo 'Tests not available'",
+        "required": false
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [
+      {
+        "templateId": "add-feature-complete",
+        "relationship": "complement",
+        "description": "Validate code quality after feature implementation",
+        "example": "After implementing feature, run quality validation to catch issues early"
+      },
+      {
+        "templateId": "bugfix",
+        "relationship": "prerequisite",
+        "description": "Validate code quality before fixing bugs to understand context",
+        "example": "Before fixing bug, validate quality to find related issues"
+      },
+      {
+        "templateId": "refactor",
+        "relationship": "prerequisite",
+        "description": "Validate code quality before refactoring to avoid introducing issues",
+        "example": "Before refactoring, validate quality to understand current state"
+      }
+    ],
+    "examples": [
+      {
+        "name": "Security Audit",
+        "description": "Audit codebase for security vulnerabilities",
+        "sequence": [
+          {
+            "template": "validate-code-quality",
+            "variables": {
+              "search_pattern": "security vulnerabilities OR SQL injection OR XSS OR authentication bypass"
+            },
+            "reason": "Audit codebase for security issues"
+          }
+        ],
+        "outcome": "Security vulnerabilities identified, fixed, and documented"
+      },
+      {
+        "name": "Component Quality Check",
+        "description": "Validate specific file and component quality",
+        "sequence": [
+          {
+            "template": "validate-code-quality",
+            "variables": {
+              "file_path": "src/auth/login.ts",
+              "component_name": "UserService.authenticate"
+            },
+            "reason": "Validate authentication component quality"
+          }
+        ],
+        "outcome": "Component quality issues fixed with annotations"
+      },
+      {
+        "name": "General Quality Sweep",
+        "description": "Find and fix priority issues across codebase",
+        "sequence": [
+          {
+            "template": "validate-code-quality",
+            "variables": {},
+            "reason": "General quality validation sweep"
+          }
+        ],
+        "outcome": "Priority issues identified and fixed across codebase"
+      }
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": [
+      {
+        "taskId": "search-and-prioritize",
+        "metrics": {
+          "issues_found": "Number of issues found by Metabob",
+          "severity_distribution": "HIGH/MEDIUM/LOW counts",
+          "metabob_tools_used": "Which Metabob tools were called"
+        },
+        "improvementHints": {
+          "search_effectiveness": "Did search find relevant issues?",
+          "prioritization_quality": "Was priority assessment accurate?"
+        }
+      },
+      {
+        "taskId": "verify-and-fix",
+        "metrics": {
+          "issues_fixed": "Number of issues fixed",
+          "resolutions_documented": "Number of metabob_mark_problem_complete calls",
+          "regressions": "Number of regressions introduced (should be 0)",
+          "test_results": "Pass/fail status of tests"
+        },
+        "improvementHints": {
+          "fix_quality": "Were fixes appropriate and complete?",
+          "verification_thoroughness": "Was verification comprehensive?"
+        }
+      },
+      {
+        "taskId": "annotate-and-document",
+        "metrics": {
+          "annotations_count": "Number of Metabob annotations",
+          "annotation_quality": "WHY-focused vs WHAT-focused",
+          "documentation_completeness": "All sections complete with real data"
+        },
+        "improvementHints": {
+          "annotation_usefulness": "Are annotations helpful for future developers?",
+          "prevention_quality": "Are prevention recommendations actionable?"
+        }
+      }
+    ]
+  }
+}
