@@ -5,17 +5,17 @@
 #   
 #   1. stable: Stable backend services (databases + API server)
 #      - Use for: Production-like backend with stable images
-#      - docker-compose --profile stable up
+#      - docker-compose --profile stable up -d
 #
 #   2. devbob: Single clean devbob container for testing
 #      - Use for: Testing activities in isolated environment
-#      - Empty workspace, no local code
-#      - docker-compose --profile devbob up
+#      - Requires stable profile (dependencies: redis, surreal, metabob-rpc-api-server)
+#      - docker-compose --profile stable --profile devbob up -d
 #
 #   3. devbob-dev: Multiple devbob containers with mounted codebases
 #      - Use for: Agents managing and adapting their codebases
-#      - Each agent works on its repo (rpc-api, cli, opencode, dashboard)
-#      - docker-compose --profile devbob-dev up
+#      - Requires stable profile (all agents depend on backend services)
+#      - docker-compose --profile stable --profile devbob-dev up -d
 #
 # Architecture:
 #   - Backend services (stable): Redis, SurrealDB, API Server
