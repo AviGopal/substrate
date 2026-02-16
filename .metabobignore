@@ -63,3 +63,14 @@ repos/metabob-cli/tests/
 # Logs
 **/*.log
 **/logs/
+# Exclude non-essential directories to reduce file count
+repos/*
+test-workspace/*
+.archive/*
+.validation-results/*
+.memory-profiles/*
+.activity-test/*
+.activity-test-stress/*
+validation-results/*
+*.log
+*.md

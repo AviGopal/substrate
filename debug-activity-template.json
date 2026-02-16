@@ -1,0 +1,342 @@
+{
+  "id": "debug-activity-template",
+  "name": "Debug Activity Template Execution",
+  "version": 1,
+  "description": "Systematic debugging workflow for activity templates that fail or hang - captures the methodology used to fix the Handlebars integration bug",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "failedActivity",
+      "hint": "Use search_activities({ verbose: true }) to get full details of the failing activity template. Include activity ID, task structure, and known symptoms.",
+      "impulseTypes": ["toolOutput", "memo"],
+      "required": true,
+      "budgetRange": [2000, 4000]
+    },
+    {
+      "key": "executionLogs",
+      "hint": "If available, capture execution logs, error messages, or symptoms (e.g., '0.0s failures', 'hangs at specific step'). Use bashOutput to capture recent logs.",
+      "impulseTypes": ["bashOutput", "memo"],
+      "required": false,
+      "budgetRange": [1000, 3000]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "analyze-symptoms",
+      "subagent": "general",
+      "description": "Analyze failure symptoms and form initial hypotheses",
+      "dependencies": [],
+      "impulseReferences": ["failedActivity", "executionLogs"],
+      "prompt": {
+        "template": "Analyze the failing activity template: {{activityId}}\n\n**Symptoms**:\n{{symptoms}}\n\n**Your Task**:\n1. Review activity structure from context\n2. Identify failure patterns (0.0s duration? Specific task? Silent failure?)\n3. Form 3-5 hypotheses ranked by likelihood\n4. For each hypothesis, identify how to test it\n\n**Output** (structured markdown):\n\n## Symptom Analysis\n- [Key symptom 1]\n- [Key symptom 2]\n\n## Hypotheses (Ranked)\n\n### 1. [Most Likely Hypothesis]\n**Reasoning**: [Why this is most likely]\n**Test Method**: [How to verify]\n**Expected Evidence**: [What would confirm this]\n\n### 2. [Second Hypothesis]\n...\n\n## Recommended Next Step\n[Which hypothesis to test first and why]",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Activity ID being debugged"
+          },
+          {
+            "name": "symptoms",
+            "type": "string",
+            "required": true,
+            "description": "Description of failure symptoms (e.g., '0.0s failures, no error message, appears to hang')"
+          }
+        ]
+      },
+      "validation": {
+        "check": "none",
+        "error": "Analysis validation failed",
+        "requiredPatterns": [
+          "## Symptom Analysis",
+          "## Hypotheses",
+          "## Recommended Next Step"
+        ],
+        "forbiddenPatterns": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "add-instrumentation",
+      "subagent": "general",
+      "description": "Add granular logging to isolate failure point",
+      "dependencies": ["analyze-symptoms"],
+      "prompt": {
+        "template": "Add instrumentation to isolate where {{activityId}} fails.\n\n**Strategy**: Add checkpoint logging at key execution points\n\n**Implementation**:\n1. Identify the activity execution code path (likely in `packages/opencode/src/tool/activity.ts`)\n2. Add checkpoint logging with these characteristics:\n   - Use `fs.appendFileSync` to a debug log file (survives crashes)\n   - Add `console.error` for real-time visibility\n   - Log BEFORE and AFTER each major operation\n   - Include timestamps and context\n\n**Checkpoint Pattern**:\n```typescript\n// CHECKPOINT A: [Description]\nconsole.error(`[ACTIVITY-DEBUG] CHECKPOINT A - [Context]`)\nfs.appendFileSync('./activity-debug.log', \n  `[${new Date().toISOString()}] CHECKPOINT A - [Context]\\n`)\n\n// ... operation being instrumented ...\n\n// CHECKPOINT B: [Description]\nconsole.error(`[ACTIVITY-DEBUG] CHECKPOINT B - [Context]`)\nfs.appendFileSync('./activity-debug.log',\n  `[${new Date().toISOString()}] CHECKPOINT B - [Context]\\n`)\n```\n\n**Key Areas to Instrument** (based on previous success):\n- Task initialization\n- Variable merging\n- Prompt interpolation (THIS WAS THE BREAKTHROUGH AREA)\n- Tool execution\n- Error handling\n\n**Granularity**: If area is suspect, add sub-checkpoints (B.1, B.2, B.3, etc.)\n\n**Output**: List the checkpoints you added and their locations",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Activity ID being debugged"
+          }
+        ]
+      },
+      "validation": {
+        "check": "command",
+        "error": "Instrumentation validation failed",
+        "requiredPatterns": [
+          "CHECKPOINT",
+          "fs.appendFileSync",
+          "console.error"
+        ],
+        "commands": [
+          {
+            "name": "typecheck-after-instrumentation",
+            "command": "cd repos/metabob-opencode && bun run typecheck",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "test-and-isolate",
+      "subagent": "general",
+      "description": "Run activity and analyze checkpoint logs to isolate failure",
+      "dependencies": ["add-instrumentation"],
+      "prompt": {
+        "template": "Test {{activityId}} with instrumentation and isolate the failure point.\n\n**Test Execution**:\n1. Clear previous debug log: `rm -f activity-debug.log`\n2. Execute the failing activity with minimal test variables\n3. Monitor console output for last checkpoint reached\n4. Review activity-debug.log for execution trace\n\n**Analysis**:\n- Identify LAST successful checkpoint\n- Identify FIRST missing checkpoint\n- The failure occurs BETWEEN these two points\n- Read the code between these checkpoints carefully\n\n**Output** (structured markdown):\n\n## Test Results\n**Last Successful Checkpoint**: [e.g., CHECKPOINT B.3]\n**First Missing Checkpoint**: [e.g., CHECKPOINT B.5]\n\n## Failure Location\n**Code Section**: [File and line range]\n**Operation**: [What the code is doing]\n\n## Root Cause Analysis\n**What's happening**: [Technical explanation]\n**Why it fails**: [Root cause]\n**Evidence**: [Logs, error messages, or code inspection]\n\n## Proposed Fix\n[Specific code changes needed]",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Activity ID being debugged"
+          }
+        ]
+      },
+      "validation": {
+        "check": "none",
+        "error": "Analysis validation failed",
+        "requiredPatterns": [
+          "## Test Results",
+          "## Failure Location",
+          "## Root Cause Analysis",
+          "## Proposed Fix"
+        ],
+        "forbiddenPatterns": ["TBD", "Unknown"]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "trailblazing"
+      }
+    },
+    {
+      "id": "implement-fix",
+      "subagent": "general",
+      "description": "Implement the root cause fix",
+      "dependencies": ["test-and-isolate"],
+      "prompt": {
+        "template": "Implement the fix for {{activityId}} based on root cause analysis.\n\n**Implementation**:\n1. Apply the proposed fix from previous task\n2. Add error handling if missing\n3. Run typecheck to verify no syntax errors\n4. Keep instrumentation in place for validation testing\n\n**Common Fix Patterns** (from historical debugging):\n- **Template syntax issues**: Update template compiler (e.g., add Handlebars support)\n- **Missing dependencies**: Install required packages\n- **State management**: Add reload/refresh logic\n- **Error handling**: Add try-catch with proper error propagation\n\n**Output**: Describe changes made and files modified",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Activity ID being debugged"
+          }
+        ]
+      },
+      "validation": {
+        "check": "command",
+        "error": "Fix validation failed",
+        "commands": [
+          {
+            "name": "typecheck-after-fix",
+            "command": "cd repos/metabob-opencode && bun run typecheck",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "trailblazing"
+      }
+    },
+    {
+      "id": "validate-fix",
+      "subagent": "general",
+      "description": "Validate fix with comprehensive testing",
+      "dependencies": ["implement-fix"],
+      "prompt": {
+        "template": "Validate that {{activityId}} now works correctly.\n\n**Test Strategy** (Progressive Validation):\n\n### Test 1: Simple Case (Backwards Compatibility)\n- Use simplest possible activity template\n- Verify no regression in working features\n- Expected: Quick success (< 60s)\n\n### Test 2: Primary Fix Target\n- Use the originally failing activity\n- Verify fix resolves the root cause\n- Expected: Full execution with real work\n\n### Test 3: Complex Case (Edge Cases)\n- Use complex multi-task template\n- Verify fix works in all scenarios\n- Expected: Complete execution, all tasks succeed\n\n**Success Criteria**:\n- All tests pass\n- Execution times are reasonable (not 0.0s)\n- No error messages\n- Checkpoint logs show full execution\n\n**Output** (structured markdown):\n\n## Test Results\n\n| Test | Activity | Tasks | Duration | Status | Notes |\n|------|----------|-------|----------|--------|-------|\n| 1. Simple | [id] | [n] | [time] | ✅/❌ | [notes] |\n| 2. Primary | [id] | [n] | [time] | ✅/❌ | [notes] |\n| 3. Complex | [id] | [n] | [time] | ✅/❌ | [notes] |\n\n## Validation Outcome\n[PASS or FAIL with explanation]\n\n## Impact Assessment\n- **Before Fix**: [% working, symptoms]\n- **After Fix**: [% working, improvements]",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Activity ID being debugged"
+          }
+        ]
+      },
+      "validation": {
+        "check": "none",
+        "error": "Validation failed",
+        "requiredPatterns": [
+          "## Test Results",
+          "## Validation Outcome",
+          "## Impact Assessment"
+        ],
+        "forbiddenPatterns": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "document-and-commit",
+      "subagent": "general",
+      "description": "Document the fix and commit all changes",
+      "dependencies": ["validate-fix"],
+      "prompt": {
+        "template": "Document the debugging process and commit all changes.\n\n**Documentation** (Create ACTIVITY_DEBUG_[ISSUE].md):\n1. Executive summary (root cause, solution, impact)\n2. The journey (what you tried, what worked)\n3. Technical details (code changes, test results)\n4. Lessons learned (what was misleading, key takeaway)\n\n**Commit Strategy**:\n1. **Commit 1**: The actual fix with clear message\n   - \"fix: [description of root cause and solution]\"\n   - Include test results in commit message\n2. **Commit 2**: Documentation\n   - \"docs: Document debugging process for [issue]\"\n\n**Cleanup** (Optional):\n- Consider keeping instrumentation for future debugging\n- Or document how to add it back if needed\n- Remove test artifacts\n\n**Output**: Summary of commits and documentation created",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Activity ID that was debugged"
+          }
+        ]
+      },
+      "validation": {
+        "check": "command",
+        "error": "Documentation validation failed",
+        "requiredFiles": ["ACTIVITY_DEBUG_*.md"],
+        "commands": [
+          {
+            "name": "verify-commits",
+            "command": "cd repos/metabob-opencode && git log --oneline -5",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "search_activities({ verbose: true })"
+    ],
+    "postChecks": [
+      "git log --oneline -3"
+    ],
+    "qualityGates": [
+      {
+        "name": "typecheck-passes",
+        "command": "cd repos/metabob-opencode && bun run typecheck",
+        "required": true
+      },
+      {
+        "name": "activity-works",
+        "command": "echo 'Manual verification required: Test the fixed activity'",
+        "required": false
+      }
+    ]
+  },
+  "hooks": {
+    "preActivity": {
+      "workingDirectory": {
+        "type": "current",
+        "preserveGitState": true
+      },
+      "environment": {
+        "ACTIVITY_DEBUG_MODE": "true"
+      }
+    },
+    "postActivity": {
+      "cleanup": false,
+      "createSummary": true
+    }
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [],
+    "examples": [
+      {
+        "name": "Debug Activity Template Execution Failure",
+        "description": "Use this when an activity template fails with mysterious symptoms (0.0s duration, hangs, silent failures)",
+        "sequence": [
+          {
+            "template": "debug-activity-template",
+            "variables": {
+              "activityId": "feature-fdb6afae",
+              "symptoms": "Activities fail immediately with 0.0s duration, no error messages shown, appears like deadlock or hang"
+            },
+            "reason": "Debug and fix activity template execution failures using systematic instrumentation and root cause analysis"
+          }
+        ],
+        "outcome": "Root cause identified, fix implemented and validated, comprehensive documentation created, all changes committed"
+      }
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": [
+      {
+        "taskId": "analyze-symptoms",
+        "metrics": {
+          "hypotheses_count": "Number of hypotheses formed (number)",
+          "accuracy_of_top_hypothesis": "Was top hypothesis correct? (boolean)"
+        }
+      },
+      {
+        "taskId": "test-and-isolate",
+        "metrics": {
+          "checkpoints_to_isolation": "How many checkpoints to find failure? (number)",
+          "isolation_accuracy": "Correctly identified failure location? (boolean)"
+        }
+      },
+      {
+        "taskId": "validate-fix",
+        "metrics": {
+          "tests_passed": "Number of validation tests passed (number)",
+          "regression_detected": "Any regressions found? (boolean)"
+        }
+      }
+    ],
+    "patterns": {
+      "successPatterns": [
+        "Granular checkpoint logging isolates failure quickly",
+        "Testing multiple complexity levels catches regressions",
+        "Progressive validation (simple → primary → complex) builds confidence",
+        "Keeping instrumentation aids future debugging"
+      ],
+      "failurePatterns": [
+        "Assuming complex causes without testing simple explanations",
+        "Removing instrumentation too early (before validation)",
+        "Testing only the fix target without backwards compatibility checks"
+      ]
+    }
+  }
+}

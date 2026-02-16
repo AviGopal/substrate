@@ -1,23 +1,23 @@
 {
-  "session_id": "c2Vzc2lvbnM6YW5vbnltb3VzOmRlZmF1bHQ6NzU3MGYzN2YtZTE0ZS00Y2QzLTlmODAtMTJjYTk4NTJhYjhl",
+  "session_id": "org:dev:exp-repo-dev:8269f54b-a4fb-4fe7-8004-1dd2539f01ad",
   "session_token": "c2Vzc2lv...",
   "state_file": ".metabob/state",
-  "created_at": "2026-02-15T07:22:16.127223Z",
-  "last_updated": "2026-02-14T23:45:52.834770",
+  "created_at": "2026-02-16T00:53:13.530526Z",
+  "last_updated": "2026-02-15T19:24:28.052495",
   "format_version": "4.0",
   "interrupted": false,
   "clean_shutdown": true,
   "created_new": false,
   "resumed": false,
-  "api_key_provided": false,
+  "api_key_provided": true,
   "keepalive_interval": 300,
   "resumption": {
     "can_resume": true,
     "state_file_exists": true,
     "session_file_exists": true,
     "was_interrupted": false,
-    "state_file_age": 0.391279935836792
+    "state_file_age": 2.104904890060425
   },
-  "timestamp": 1771141554.877574,
-  "timestamp_iso": "2026-02-14 23:45:54"
+  "timestamp": 1771212270.180693,
+  "timestamp_iso": "2026-02-15 19:24:30"
 }

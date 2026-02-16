@@ -1,5 +1,7 @@
 {
-  "api_key": "mb_nH7j21NRXWRaqWyHq4ntSuwiRxARrhFnsR2J7i7vb-E",
   "base_url": "http://localhost:8080",
-  "project_root": "/home/avi/documents/work/exp-repo/metabob-devbob"
+  "api_key": "c2Vzc2lvbnM6YjRmZTY4NjAtNTU0My00M2ZkLTkwYzAtM2I1NzA0YmQ0ZWJhOmJvb3RzdHJhcC1vcmc6Ym9vdHN0cmFwLXVzZXI=",
+  "state_directory": ".metabob",
+  "include_paths": [],
+  "exclude_paths": []
 }
