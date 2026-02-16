@@ -38,7 +38,35 @@
   "expected_cost": 0.25,
   "expected_quality_score": 0.88,
   "status": "active",
-  "task_steps": [
+  "context_requirements": [
+    {
+      "key": "api-context",
+      "hint": "Existing API structure and patterns",
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
+      "budgetRange": [
+        3000,
+        6000
+      ],
+      "required": true
+    },
+    {
+      "key": "endpoint-spec",
+      "hint": "API specification and requirements",
+      "impulseTypes": [
+        "memo",
+        "file"
+      ],
+      "budgetRange": [
+        1000,
+        2000
+      ],
+      "required": true
+    }
+  ],
+  "tasks": [
     {
       "id": "analyze-existing-patterns",
       "subagent": "general",
@@ -241,7 +269,7 @@
       ],
       "impulse_refs": [],
       "prompt": {
-        "template": "Write comprehensive tests for the new endpoint.\n\nEndpoint: {{method}} {{path}}\n\nBased on test patterns in ENDPOINT_ANALYSIS.md, create tests covering:\n\n1. **Happy Path**:\n   - Valid request \u2192 200/201 response\n   - Response matches expected schema\n\n2. **Validation Failures**:\n   - Missing required fields \u2192 400\n   - Invalid data types \u2192 400\n   - Invalid values \u2192 400\n\n3. **Error Cases**:\n   - Resource not found \u2192 404\n   - Server errors \u2192 500\n\n4. **Auth** (if applicable):\n   - No auth token \u2192 401\n   - Invalid token \u2192 403\n\n5. **Edge Cases**:\n   - Empty body\n   - Extra fields\n   - Boundary values\n\nCreate test file(s) following project conventions. Document in TESTS.md:\n- Test file location\n- Number of test cases\n- Coverage areas\n- How to run tests",
+        "template": "Write comprehensive tests for the new endpoint.\n\nEndpoint: {{method}} {{path}}\n\nBased on test patterns in ENDPOINT_ANALYSIS.md, create tests covering:\n\n1. **Happy Path**:\n   - Valid request → 200/201 response\n   - Response matches expected schema\n\n2. **Validation Failures**:\n   - Missing required fields → 400\n   - Invalid data types → 400\n   - Invalid values → 400\n\n3. **Error Cases**:\n   - Resource not found → 404\n   - Server errors → 500\n\n4. **Auth** (if applicable):\n   - No auth token → 401\n   - Invalid token → 403\n\n5. **Edge Cases**:\n   - Empty body\n   - Extra fields\n   - Boundary values\n\nCreate test file(s) following project conventions. Document in TESTS.md:\n- Test file location\n- Number of test cases\n- Coverage areas\n- How to run tests",
         "max_tokens": 8000,
         "compression_strategy": "filter",
         "variables": [
@@ -311,11 +339,11 @@
         ],
         "required_patterns": [
           "passed",
-          "\u2713"
+          "✓"
         ],
         "forbidden_patterns": [
           "failed",
-          "\u274c",
+          "❌",
           "Error:"
         ],
         "commands": []
@@ -397,34 +425,6 @@
         ],
         "disabled": []
       }
-    }
-  ],
-  "context_requirements": [
-    {
-      "key": "api-context",
-      "hint": "Existing API structure and patterns",
-      "impulseTypes": [
-        "file",
-        "component"
-      ],
-      "budgetRange": [
-        3000,
-        6000
-      ],
-      "required": true
-    },
-    {
-      "key": "endpoint-spec",
-      "hint": "API specification and requirements",
-      "impulseTypes": [
-        "memo",
-        "file"
-      ],
-      "budgetRange": [
-        1000,
-        2000
-      ],
-      "required": true
     }
   ]
 }

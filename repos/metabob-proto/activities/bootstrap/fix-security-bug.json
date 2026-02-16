@@ -31,10 +31,10 @@
   "prompt_strategy": "guided",
   "context_budget_tokens": 18000,
   "expected_duration_ms": 240000,
-  "expected_cost": 0.30,
+  "expected_cost": 0.3,
   "expected_quality_score": 0.92,
   "status": "active",
-  "task_steps": [
+  "tasks": [
     {
       "id": "search-similar-issues",
       "subagent": "tool",
@@ -51,10 +51,16 @@
         "template": "Search for similar security issues in the codebase.\n\nVulnerability Type: {{vulnerability_type}}\nAffected File: {{affected_file}}\nSeverity: {{severity}}\n\nUse metabob_search_codebase_issues to find:\n1. Similar {{vulnerability_type}} issues\n2. Other HIGH severity security issues\n3. Previously resolved similar vulnerabilities\n\nCreate RELATED_ISSUES.md documenting:\n- List of similar issues found\n- Whether they are still open or resolved\n- How resolved issues were fixed (learn from past solutions)\n- Pattern identification (is this systemic?)\n- Other files that might have the same vulnerability",
         "max_tokens": 8000,
         "compression_strategy": "filter",
-        "variables": ["vulnerability_type", "affected_file", "severity"]
+        "variables": [
+          "vulnerability_type",
+          "affected_file",
+          "severity"
+        ]
       },
       "validation": {
-        "required_files": ["RELATED_ISSUES.md"],
+        "required_files": [
+          "RELATED_ISSUES.md"
+        ],
         "required_patterns": [
           "Similar issues:",
           "Pattern:"
@@ -74,8 +80,14 @@
         "common_failures": []
       },
       "tools": {
-        "required": ["write"],
-        "optional": ["metabob_search_codebase_issues", "grep", "read"],
+        "required": [
+          "write"
+        ],
+        "optional": [
+          "metabob_search_codebase_issues",
+          "grep",
+          "read"
+        ],
         "disabled": []
       }
     },
@@ -83,7 +95,9 @@
       "id": "analyze-root-cause",
       "subagent": "general",
       "description": "Analyze the vulnerability to understand the root cause",
-      "dependencies": ["search-similar-issues"],
+      "dependencies": [
+        "search-similar-issues"
+      ],
       "guidance": [
         "Read the affected file and component carefully",
         "Understand why the vulnerability exists",
@@ -96,10 +110,16 @@
         "template": "Analyze the security vulnerability to understand the root cause.\n\nVulnerability: {{vulnerability_type}}\nLocation: {{affected_file}}{{#if affected_component}}::{{affected_component}}{{/if}}\n\nPerform deep analysis:\n\n1. **Read the Code**: Carefully examine the affected file and component\n\n2. **Identify Attack Vector**:\n   - How can an attacker exploit this?\n   - What input triggers the vulnerability?\n   - What are the preconditions?\n\n3. **Root Cause Analysis**:\n   - Why does this vulnerability exist?\n   - Was input validation missing?\n   - Was sanitization incorrect?\n   - Is there a logic flaw?\n\n4. **Impact Assessment**:\n   - What data is at risk?\n   - Can this lead to privilege escalation?\n   - Is remote code execution possible?\n   - What's the blast radius?\n\n5. **Prevention Analysis**:\n   - Why wasn't this caught earlier?\n   - What defensive measures were missing?\n   - How can we prevent similar issues?\n\nCreate ROOT_CAUSE_ANALYSIS.md with:\n- Detailed explanation of the vulnerability\n- Attack vector description\n- Root cause (the WHY)\n- Impact assessment\n- References to similar issues (from RELATED_ISSUES.md)",
         "max_tokens": 10000,
         "compression_strategy": "filter",
-        "variables": ["vulnerability_type", "affected_file", "affected_component"]
+        "variables": [
+          "vulnerability_type",
+          "affected_file",
+          "affected_component"
+        ]
       },
       "validation": {
-        "required_files": ["ROOT_CAUSE_ANALYSIS.md"],
+        "required_files": [
+          "ROOT_CAUSE_ANALYSIS.md"
+        ],
         "required_patterns": [
           "Attack vector:",
           "Root cause:",
@@ -120,8 +140,14 @@
         "common_failures": []
       },
       "tools": {
-        "required": ["read", "write"],
-        "optional": ["grep", "metabob_list_file_components"],
+        "required": [
+          "read",
+          "write"
+        ],
+        "optional": [
+          "grep",
+          "metabob_list_file_components"
+        ],
         "disabled": []
       }
     },
@@ -129,7 +155,9 @@
       "id": "implement-fix",
       "subagent": "general",
       "description": "Implement the security fix following best practices",
-      "dependencies": ["analyze-root-cause"],
+      "dependencies": [
+        "analyze-root-cause"
+      ],
       "guidance": [
         "Fix the immediate vulnerability",
         "Follow security best practices for the vulnerability type",
@@ -144,10 +172,16 @@
         "template": "Implement the security fix based on ROOT_CAUSE_ANALYSIS.md.\n\nVulnerability: {{vulnerability_type}}\nLocation: {{affected_file}}{{#if affected_component}}::{{affected_component}}{{/if}}\n\n**Fix Guidelines by Type**:\n\n**SQL Injection**:\n- Use parameterized queries/prepared statements\n- Never concatenate user input into SQL\n- Use ORM safely\n\n**XSS**:\n- Escape output based on context (HTML, JavaScript, URL)\n- Use framework's escaping functions\n- Set Content-Security-Policy headers\n\n**CSRF**:\n- Add CSRF tokens to forms\n- Verify tokens on submission\n- Use SameSite cookie attribute\n\n**Auth Bypass**:\n- Add proper authentication checks\n- Verify permissions/authorization\n- Don't trust client-side validation\n\n**General**:\n- Validate ALL user input\n- Whitelist > Blacklist\n- Principle of least privilege\n- Fail securely (deny by default)\n\nImplement the fix in {{affected_file}}. Then create FIX_IMPLEMENTATION.md documenting:\n- Exact changes made (line numbers)\n- Why this fix is secure\n- Best practices followed\n- Any additional hardening applied",
         "max_tokens": 12000,
         "compression_strategy": "filter",
-        "variables": ["vulnerability_type", "affected_file", "affected_component"]
+        "variables": [
+          "vulnerability_type",
+          "affected_file",
+          "affected_component"
+        ]
       },
       "validation": {
-        "required_files": ["FIX_IMPLEMENTATION.md"],
+        "required_files": [
+          "FIX_IMPLEMENTATION.md"
+        ],
         "required_patterns": [
           "Changes made:",
           "Security measures:"
@@ -168,11 +202,20 @@
         "success_rate": 0,
         "avg_tokens": 0,
         "avg_duration": 0,
-        "common_failures": ["incomplete_fix", "breaks_functionality"]
+        "common_failures": [
+          "incomplete_fix",
+          "breaks_functionality"
+        ]
       },
       "tools": {
-        "required": ["read", "edit", "write"],
-        "optional": ["bash"],
+        "required": [
+          "read",
+          "edit",
+          "write"
+        ],
+        "optional": [
+          "bash"
+        ],
         "disabled": []
       }
     },
@@ -180,7 +223,9 @@
       "id": "check-for-similar-vulnerabilities",
       "subagent": "general",
       "description": "Check if similar code patterns exist elsewhere that need fixing",
-      "dependencies": ["implement-fix"],
+      "dependencies": [
+        "implement-fix"
+      ],
       "guidance": [
         "Search for similar vulnerable patterns",
         "Use grep to find similar code structures",
@@ -192,10 +237,14 @@
         "template": "Search for similar vulnerable patterns elsewhere in the codebase.\n\nBased on the fix in {{affected_file}}, search for:\n1. Similar code patterns that might have the same vulnerability\n2. Other files that use the same vulnerable approach\n3. Copy-pasted code that needs the same fix\n\nFrom RELATED_ISSUES.md, check files flagged as potentially vulnerable.\n\nFor each similar instance found:\n- Verify if it's actually vulnerable\n- Apply the same fix if needed\n- Document in SYSTEMIC_FIXES.md\n\nCreate SYSTEMIC_FIXES.md listing:\n- Other files/components checked\n- Additional fixes applied\n- Confirmation that pattern is eliminated\n- Any remaining instances (if false positives)",
         "max_tokens": 8000,
         "compression_strategy": "filter",
-        "variables": ["affected_file"]
+        "variables": [
+          "affected_file"
+        ]
       },
       "validation": {
-        "required_files": ["SYSTEMIC_FIXES.md"],
+        "required_files": [
+          "SYSTEMIC_FIXES.md"
+        ],
         "required_patterns": [
           "Files checked:",
           "Additional fixes:"
@@ -215,8 +264,15 @@
         "common_failures": []
       },
       "tools": {
-        "required": ["grep", "read", "edit", "write"],
-        "optional": ["glob"],
+        "required": [
+          "grep",
+          "read",
+          "edit",
+          "write"
+        ],
+        "optional": [
+          "glob"
+        ],
         "disabled": []
       }
     },
@@ -224,7 +280,9 @@
       "id": "write-security-tests",
       "subagent": "general",
       "description": "Write tests that verify the vulnerability is fixed and prevent regression",
-      "dependencies": ["check-for-similar-vulnerabilities"],
+      "dependencies": [
+        "check-for-similar-vulnerabilities"
+      ],
       "guidance": [
         "Write a test that would have caught this vulnerability",
         "Test attack vectors (malicious input)",
@@ -237,10 +295,15 @@
         "template": "Write comprehensive security tests for the fix.\n\nVulnerability: {{vulnerability_type}}\nFixed in: {{affected_file}}\n\n**Test Requirements**:\n\n1. **Attack Vector Test**: Test that would have failed before the fix\n   - Simulate the attack\n   - Verify it's now blocked\n   - Assert appropriate error handling\n\n2. **Regression Test**: Ensure vulnerability doesn't come back\n   - Test various attack payloads\n   - Test edge cases\n   - Test boundary conditions\n\n3. **Functionality Test**: Verify legitimate use still works\n   - Test valid inputs\n   - Verify expected behavior\n   - Ensure no false positives\n\n4. **Security Headers/Config Tests** (if applicable):\n   - Verify security headers are set\n   - Check configuration is secure\n\nCreate test file(s) following project conventions. Document in SECURITY_TESTS.md:\n- Test file location(s)\n- Test cases added (attack, regression, functionality)\n- How to run security tests\n- Expected results",
         "max_tokens": 10000,
         "compression_strategy": "filter",
-        "variables": ["vulnerability_type", "affected_file"]
+        "variables": [
+          "vulnerability_type",
+          "affected_file"
+        ]
       },
       "validation": {
-        "required_files": ["SECURITY_TESTS.md"],
+        "required_files": [
+          "SECURITY_TESTS.md"
+        ],
         "required_patterns": [
           "Test file:",
           "Attack vector test"
@@ -257,10 +320,15 @@
         "success_rate": 0,
         "avg_tokens": 0,
         "avg_duration": 0,
-        "common_failures": ["incomplete_tests"]
+        "common_failures": [
+          "incomplete_tests"
+        ]
       },
       "tools": {
-        "required": ["write", "read"],
+        "required": [
+          "write",
+          "read"
+        ],
         "optional": [],
         "disabled": []
       }
@@ -269,7 +337,9 @@
       "id": "run-security-tests",
       "subagent": "general",
       "description": "Execute security tests and verify the fix works",
-      "dependencies": ["write-security-tests"],
+      "dependencies": [
+        "write-security-tests"
+      ],
       "guidance": [
         "Run the security tests",
         "Verify attack vectors are blocked",
@@ -285,7 +355,9 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["TEST_RESULTS.md"],
+        "required_files": [
+          "TEST_RESULTS.md"
+        ],
         "required_patterns": [
           "passed",
           "Attack vectors blocked",
@@ -307,10 +379,17 @@
         "success_rate": 0,
         "avg_tokens": 0,
         "avg_duration": 0,
-        "common_failures": ["test_failure"]
+        "common_failures": [
+          "test_failure"
+        ]
       },
       "tools": {
-        "required": ["bash", "read", "write", "edit"],
+        "required": [
+          "bash",
+          "read",
+          "write",
+          "edit"
+        ],
         "optional": [],
         "disabled": []
       }
@@ -319,7 +398,9 @@
       "id": "document-and-annotate",
       "subagent": "general",
       "description": "Document the fix and add preventive measures",
-      "dependencies": ["run-security-tests"],
+      "dependencies": [
+        "run-security-tests"
+      ],
       "guidance": [
         "Use metabob_annotate_component to document the fix",
         "Add comments explaining the security measures",
@@ -332,10 +413,15 @@
         "template": "Document the security fix comprehensively.\n\n1. **Metabob Annotation**: Use metabob_annotate_component on {{affected_file}}{{#if affected_component}}::{{affected_component}}{{/if}}\n   - Document what vulnerability was fixed\n   - Explain the security measures applied\n   - Note the root cause\n   - Reference related fixes in other files\n\n2. **Code Comments**: Add inline comments explaining:\n   - Why security measures are in place\n   - What attacks are prevented\n   - How the validation/sanitization works\n\n3. **Security Documentation**: Update project security docs with:\n   - Vulnerability description\n   - How it was fixed\n   - Testing approach\n   - Prevention measures for future\n\n4. **Prevention Recommendations**:\n   - Suggest linting rules\n   - Propose security checklist items\n   - Recommend security training topics\n\nCreate SECURITY_FIX_SUMMARY.md with:\n- Complete fix summary\n- Files modified\n- Tests added\n- Prevention measures\n- Metabob annotation summary\n- Recommendations for preventing similar issues",
         "max_tokens": 8000,
         "compression_strategy": "filter",
-        "variables": ["affected_file", "affected_component"]
+        "variables": [
+          "affected_file",
+          "affected_component"
+        ]
       },
       "validation": {
-        "required_files": ["SECURITY_FIX_SUMMARY.md"],
+        "required_files": [
+          "SECURITY_FIX_SUMMARY.md"
+        ],
         "required_patterns": [
           "Fix summary:",
           "Prevention measures:",
@@ -356,8 +442,15 @@
         "common_failures": []
       },
       "tools": {
-        "required": ["write", "read", "edit"],
-        "optional": ["metabob_annotate_component", "metabob_mark_problem_complete"],
+        "required": [
+          "write",
+          "read",
+          "edit"
+        ],
+        "optional": [
+          "metabob_annotate_component",
+          "metabob_mark_problem_complete"
+        ],
         "disabled": []
       }
     }
