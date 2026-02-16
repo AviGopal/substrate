@@ -164,6 +164,55 @@ export async function isRemoteSessionAlive(
 
 ## Testing Results
 
+### Unit Tests: ✅ All Passed (7/7)
+**Test File**: `packages/opencode/test/session/remote-session.test.ts`  
+**Commit**: `737885c1`  
+**Execution Time**: 454ms  
+**Assertions**: 25 expect() calls
+
+**Test Coverage**:
+1. ✅ **Create remoteSession impulse with correct structure**
+   - Validates impulse type, pointer structure, metadata initialization
+   - Verifies status starts as "initializing"
+
+2. ✅ **Track status lifecycle: initializing → processing → completed**
+   - Tests multi-step status transitions
+   - Validates metadata updates (lastMessage, responseText, toolCalls)
+   - Verifies duration calculation on completion
+
+3. ✅ **Query active remote sessions**
+   - Creates multiple impulses (active + completed)
+   - Validates `getActiveRemoteSessions()` filters correctly
+   - Confirms only active sessions returned
+
+4. ✅ **Check if specific remote session is alive**
+   - Tests `isRemoteSessionAlive()` helper
+   - Validates alive status for active sessions
+   - Confirms dead status after completion
+
+5. ✅ **Get specific remote session by remoteSessionId**
+   - Tests `getRemoteSession()` lookup
+   - Validates correct impulse returned
+   - Verifies metadata integrity
+
+6. ✅ **Handle metadata updates with all tracking fields**
+   - Simulates full execution lifecycle
+   - Tests 4-step status progression with tool calls
+   - Validates duration, toolCalls array, responseText
+
+7. ✅ **Handle failed remote sessions**
+   - Tests failed status transition
+   - Validates error message capture
+   - Confirms failed sessions not in active list
+
+**Test Output**: 
+```
+7 pass
+0 fail
+25 expect() calls
+Ran 7 tests across 1 file. [454.00ms]
+```
+
 ### End-to-End Test: ✅ All Passed
 **Test File**: `test-acp-delegation-phase4a.ts`
 
@@ -325,27 +374,36 @@ if (session?.pointer.type === "remoteSession") {
 ## Testing Checklist
 
 - ✅ TypeScript compilation passes
-- ✅ Unit tests pass (end-to-end test)
+- ✅ Unit tests pass (7/7 tests, 25 assertions)
+- ✅ End-to-end test passes (27 assertions)
 - ✅ All lifecycle states tested (initializing → processing → completed/failed)
 - ✅ Query helpers tested (getActiveRemoteSessions, getRemoteSession, isRemoteSessionAlive)
 - ✅ Metadata structure validated
 - ✅ Throttling behavior verified (500ms updates)
 - ✅ Terminal state updates (no throttling for completed/failed)
 - ✅ Error handling verified (update failures don't crash delegation)
+- ✅ Test file integrated into test suite (packages/opencode/test/session/)
 
 ---
 
 ## Commits
 
+### Implementation Commit
+**Commit**: `dd18571d`
 ```bash
-# View changes
-git diff --stat
+# Implementation files:
+packages/opencode/src/session/activity-template.ts |   8 ++
+packages/opencode/src/session/session-memory.ts    |  62 ++++++++
+packages/opencode/src/tool/acp-delegate.ts         | 157 +++++++++++++++++++++
+3 files changed, 227 insertions(+)
+```
 
-# Files modified:
-#  packages/opencode/src/session/activity-template.ts |   8 ++
-#  packages/opencode/src/session/session-memory.ts    |  62 ++++++++
-#  packages/opencode/src/tool/acp-delegate.ts         | 157 +++++++++++++++++++++
-#  3 files changed, 227 insertions(+)
+### Unit Test Commit
+**Commit**: `737885c1`
+```bash
+# Test file:
+packages/opencode/test/session/remote-session.test.ts | 499 +++++++++++++++++++++
+1 file changed, 499 insertions(+)
 ```
 
 ---
@@ -381,5 +439,6 @@ Phase 4A successfully implements **remote session impulse tracking** for ACP del
 ---
 
 **Author**: Activity Mode Agent  
-**Testing**: End-to-end test passed (27 assertions)  
-**Documentation**: Complete with examples and design decisions
+**Testing**: ✅ Unit tests (7 tests, 25 assertions), ✅ E2E tests (27 assertions)  
+**Documentation**: Complete with examples and design decisions  
+**Commits**: `dd18571d` (implementation), `737885c1` (unit tests)

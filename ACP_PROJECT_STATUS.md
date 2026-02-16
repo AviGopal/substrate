@@ -1,13 +1,14 @@
 # ACP Remote Session Impulse Tracking - Project Status
 
-## Current Status: Phase 3 Complete ✅
+## Current Status: Phase 4A Complete ✅
 
 **Last Updated**: February 16, 2026  
-**Active Branch**: `feat/acp-phase3-bidirectional-resolution` (opencode)  
+**Active Branch**: `feat/acp-delegation-improvements` (opencode)  
 **Commits**: 
 - Phase 1: 06afe3ea (implementation)
 - Phase 2: 30c29be (tests & docs)
 - Phase 3: cdab20de (bidirectional resolution)
+- Phase 4A: dd18571d (implementation), 737885c1 (unit tests)
 
 ---
 
@@ -34,9 +35,16 @@ Phase 3: Bidirectional Resolution [COMPLETE] ✅
 ├─ Documentation: ACP_PHASE3_COMPLETE.md
 └─ Committed: Feb 16, 2026 (cdab20de)
 
-Phase 4: Live Progress Updates [PLANNED] 📋
+Phase 4A: Impulse Tracking with Query Helpers [COMPLETE] ✅
+├─ Implementation: 3 files, 227 lines added
+├─ Testing: 7/7 unit tests + E2E tests passing
+├─ Features: remoteSession impulse type, lifecycle tracking, query helpers
+├─ Documentation: ACP_PHASE4A_COMPLETE.md
+└─ Committed: Feb 16, 2026 (dd18571d, 737885c1)
+
+Phase 4B: Live Progress Updates [PLANNED] 📋
 ├─ Estimated: 2-3 days
-└─ Features: Real-time streaming, progress bars
+└─ Features: Real-time streaming, progress bars, WebSocket updates
 
 Phase 5: Memory Agent Integration [PLANNED] 📋
 ├─ Estimated: 2-3 days
