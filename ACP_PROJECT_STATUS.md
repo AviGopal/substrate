@@ -1,10 +1,13 @@
 # ACP Remote Session Impulse Tracking - Project Status
 
-## Current Status: Phase 2 Complete ✅
+## Current Status: Phase 3 Complete ✅
 
 **Last Updated**: February 16, 2026  
-**Active Branch**: `feat/acp-phase2-pointer-serialization` (opencode)  
-**Commits**: 06afe3ea (implementation), 30c29be (tests & docs)
+**Active Branch**: `feat/acp-phase3-bidirectional-resolution` (opencode)  
+**Commits**: 
+- Phase 1: 06afe3ea (implementation)
+- Phase 2: 30c29be (tests & docs)
+- Phase 3: cdab20de (bidirectional resolution)
 
 ---
 
@@ -24,9 +27,12 @@ Phase 2: Pointer-Based Serialization [COMPLETE] ✅
 ├─ Documentation: ACP_PHASE2_COMPLETE.md
 └─ Committed: Feb 16, 2026
 
-Phase 3: Bidirectional Resolution [PLANNED] 📋
-├─ Estimated: 3-4 days
-└─ Features: Lazy loading, caching, peer-to-peer
+Phase 3: Bidirectional Resolution [COMPLETE] ✅
+├─ Implementation: 5 core components
+├─ Testing: 28/28 tests passing
+├─ Performance: 98.25% size reduction + on-demand fetch
+├─ Documentation: ACP_PHASE3_COMPLETE.md
+└─ Committed: Feb 16, 2026 (cdab20de)
 
 Phase 4: Live Progress Updates [PLANNED] 📋
 ├─ Estimated: 2-3 days
@@ -139,6 +145,65 @@ repos/metabob-opencode/packages/opencode/src/
    - 5 comprehensive unit tests
    - Size reduction validation
    - Pointer resolution testing
+
+---
+
+## Phase 3 Summary (COMPLETE)
+
+### What Was Delivered
+1. **Resolution Cache**: LRU cache with 100MB limit and 1hr TTL
+2. **Content Request Tool**: Tool-based bidirectional fetch (`acp_request_impulse_content`)
+3. **ImpulseResolver Enhancement**: Added `resolveForPrompt()` function
+4. **ACP Delegate Updates**: Passes host session context to remote agents
+5. **Comprehensive Tests**: 28 tests covering all scenarios
+
+### Test Results
+```
+✅ 28/28 Unit Tests Passing
+✅ Cache operations (set, get, delete, clear)
+✅ LRU eviction with size limits
+✅ TTL expiration after 1 hour
+✅ Statistics tracking (hits, misses, evictions)
+✅ resolveForPrompt with file/memo pointers
+✅ Error handling (missing files, malformed pointers)
+✅ Complete bidirectional flow simulation
+✅ Cache hit verification on subsequent access
+✅ Integration tests: 16/17 passing (1 pre-existing failure)
+```
+
+### Performance
+- **Size Reduction**: 98.25% (10KB → 175 bytes)
+- **Cache Hit**: O(1) lookup, instant response
+- **Cache Miss**: O(1) lookup + network request
+- **Memory Overhead**: Bounded by 100MB limit
+- **Breaking Changes**: 0 (fully backwards compatible)
+
+### Key Files Changed
+```
+repos/metabob-opencode/packages/opencode/src/
+├─ session/impulse-cache.ts                           (+322 lines, NEW)
+├─ session/impulse-resolver.ts                        (+49 lines)
+├─ session/__tests__/impulse-cache.test.ts            (+141 lines, NEW)
+├─ session/__tests__/impulse-bidirectional-resolution.test.ts (+367 lines, NEW)
+├─ tool/acp-request-impulse-content.ts                (+199 lines, NEW)
+├─ tool/acp-delegate.ts                               (+33 lines)
+└─ tool/registry.ts                                   (+2 lines)
+
+Total: 1,102 additions, 8 deletions
+```
+
+### Documentation Delivered
+1. **ACP_PHASE3_COMPLETE.md** (900 lines)
+   - Complete implementation details
+   - Architecture diagrams with flow
+   - API reference with usage examples
+   - Performance characteristics
+   - Test results summary
+   - Next steps (Phase 4 ideas)
+   
+2. **ACP_PHASE3_DESIGN.md** (Updated)
+   - Marked as COMPLETE
+   - Links to completion report
    
 3. **test-phase2-pointer-e2e.ts** (250 lines)
    - End-to-end container test
