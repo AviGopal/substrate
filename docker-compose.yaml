@@ -149,7 +149,7 @@ services:
     profiles: ["stable"]
     container_name: metabob-celery-worker
     image: metabobapp/metabob-rpc-api:${API_VERSION:-0.16.12}
-    command: ["celery-worker", "--concurrency", "${CELERY_WORKERS:-4}"]
+    command: ["celery", "-A", "tasks.jobs", "worker", "-l", "INFO", "-c", "4", "-E", "-P", "solo"]
     environment:
       CONFIG_PATH: /opt/app/.env
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
