@@ -211,5 +211,47 @@
       "subagent": "general",
       "impulse_refs": []
     }
+  ],
+  "context_requirements": [
+    {
+      "key": "bug-context",
+      "hint": "Bug report, error logs, and reproduction steps",
+      "impulseTypes": [
+        "memo",
+        "bashOutput",
+        "file"
+      ],
+      "budgetRange": [
+        2000,
+        4000
+      ],
+      "required": true
+    },
+    {
+      "key": "affected-code",
+      "hint": "Files and components related to the bug",
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
+      "budgetRange": [
+        4000,
+        8000
+      ],
+      "required": true
+    },
+    {
+      "key": "similar-fixes",
+      "hint": "Historical bug fixes and patterns",
+      "impulseTypes": [
+        "memo",
+        "component"
+      ],
+      "budgetRange": [
+        1000,
+        2000
+      ],
+      "required": false
+    }
   ]
 }

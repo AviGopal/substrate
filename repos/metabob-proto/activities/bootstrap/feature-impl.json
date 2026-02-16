@@ -263,5 +263,47 @@
       "subagent": "general",
       "impulse_refs": []
     }
+  ],
+  "context_requirements": [
+    {
+      "key": "codebase-patterns",
+      "hint": "Existing code patterns and similar features for reference",
+      "impulseTypes": [
+        "file",
+        "component",
+        "bashOutput"
+      ],
+      "budgetRange": [
+        5000,
+        10000
+      ],
+      "required": true
+    },
+    {
+      "key": "project-conventions",
+      "hint": "Project coding standards and conventions documentation",
+      "impulseTypes": [
+        "file",
+        "memo"
+      ],
+      "budgetRange": [
+        2000,
+        4000
+      ],
+      "required": false
+    },
+    {
+      "key": "dependency-context",
+      "hint": "Related components and dependencies",
+      "impulseTypes": [
+        "component",
+        "file"
+      ],
+      "budgetRange": [
+        3000,
+        6000
+      ],
+      "required": false
+    }
   ]
 }

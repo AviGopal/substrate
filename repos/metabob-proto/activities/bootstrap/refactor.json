@@ -188,5 +188,46 @@
         "disabled": []
       }
     }
+  ],
+  "context_requirements": [
+    {
+      "key": "target-code",
+      "hint": "Code to be refactored with current structure",
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
+      "budgetRange": [
+        5000,
+        10000
+      ],
+      "required": true
+    },
+    {
+      "key": "usage-patterns",
+      "hint": "How the code is currently used (dependents)",
+      "impulseTypes": [
+        "component",
+        "bashOutput"
+      ],
+      "budgetRange": [
+        2000,
+        4000
+      ],
+      "required": true
+    },
+    {
+      "key": "test-coverage",
+      "hint": "Existing tests for the refactored code",
+      "impulseTypes": [
+        "file",
+        "bashOutput"
+      ],
+      "budgetRange": [
+        2000,
+        4000
+      ],
+      "required": false
+    }
   ]
 }

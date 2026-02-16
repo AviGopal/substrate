@@ -56,10 +56,16 @@
         "template": "You are adding a new REST endpoint:\n\nMethod: {{method}}\nPath: {{path}}\nDescription: {{description}}\n\nFirst, analyze the existing codebase to understand conventions:\n\n1. **Find Existing Endpoints**: Search for similar endpoints\n2. **Routing Framework**: Identify Express, FastAPI, etc.\n3. **Validation Pattern**: Find how request validation is done\n4. **Error Handling**: See how errors are handled and formatted\n5. **Test Location**: Find where API tests live\n6. **Auth Pattern**: Check if endpoints require authentication\n\nUse search tools to find examples. Create ENDPOINT_ANALYSIS.md documenting:\n- Framework and routing pattern\n- Validation approach\n- Error handling convention\n- Test file location and pattern\n- Authentication requirements\n- Similar endpoints to use as reference",
         "max_tokens": 8000,
         "compression_strategy": "filter",
-        "variables": ["method", "path", "description"]
+        "variables": [
+          "method",
+          "path",
+          "description"
+        ]
       },
       "validation": {
-        "required_files": ["ENDPOINT_ANALYSIS.md"],
+        "required_files": [
+          "ENDPOINT_ANALYSIS.md"
+        ],
         "required_patterns": [
           "Framework:",
           "Validation:",
@@ -80,8 +86,15 @@
         "common_failures": []
       },
       "tools": {
-        "required": ["grep", "glob", "read"],
-        "optional": ["metabob_search_codebase_issues", "metabob_list_file_components"],
+        "required": [
+          "grep",
+          "glob",
+          "read"
+        ],
+        "optional": [
+          "metabob_search_codebase_issues",
+          "metabob_list_file_components"
+        ],
         "disabled": []
       }
     },
@@ -89,7 +102,9 @@
       "id": "check-change-impact",
       "subagent": "tool",
       "description": "Use Metabob to analyze change impact on dependent components",
-      "dependencies": ["analyze-existing-patterns"],
+      "dependencies": [
+        "analyze-existing-patterns"
+      ],
       "guidance": [
         "Use metabob_analyze_change_impact to check dependencies",
         "Identify files that import the routing module",
@@ -104,7 +119,9 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["CHANGE_IMPACT.md"],
+        "required_files": [
+          "CHANGE_IMPACT.md"
+        ],
         "required_patterns": [
           "Dependencies:",
           "Risk:"
@@ -124,8 +141,15 @@
         "common_failures": []
       },
       "tools": {
-        "required": ["read", "write"],
-        "optional": ["metabob_analyze_change_impact", "metabob_suggest_related_changes", "metabob_search_codebase_issues"],
+        "required": [
+          "read",
+          "write"
+        ],
+        "optional": [
+          "metabob_analyze_change_impact",
+          "metabob_suggest_related_changes",
+          "metabob_search_codebase_issues"
+        ],
         "disabled": []
       }
     },
@@ -133,7 +157,9 @@
       "id": "implement-endpoint",
       "subagent": "general",
       "description": "Implement the endpoint with validation, error handling, and proper types",
-      "dependencies": ["check-change-impact"],
+      "dependencies": [
+        "check-change-impact"
+      ],
       "guidance": [
         "Follow the patterns identified in ENDPOINT_ANALYSIS.md",
         "Add request validation using the project's validation library",
@@ -147,10 +173,18 @@
         "template": "Implement the REST endpoint following codebase conventions.\n\nEndpoint Spec:\n- Method: {{method}}\n- Path: {{path}}\n- Description: {{description}}\n{{#if request_schema}}\n- Request Schema: {{request_schema}}\n{{/if}}\n{{#if response_schema}}\n- Response Schema: {{response_schema}}\n{{/if}}\n\nUsing patterns from ENDPOINT_ANALYSIS.md:\n\n1. **Add Route**: Create the route handler in the appropriate file\n2. **Validation**: Add request validation (body, params, query)\n3. **Implementation**: Write the business logic\n4. **Error Handling**: Handle common errors with proper status codes\n   - 400: Bad Request (validation failure)\n   - 404: Not Found\n   - 500: Internal Server Error\n5. **Types**: Add proper TypeScript/Python types\n6. **Documentation**: Add JSDoc or docstring\n\nCreate or modify the necessary files. Document changes in IMPLEMENTATION.md listing:\n- Files created/modified\n- Route definition\n- Validation rules applied\n- Error cases handled",
         "max_tokens": 10000,
         "compression_strategy": "filter",
-        "variables": ["method", "path", "description", "request_schema", "response_schema"]
+        "variables": [
+          "method",
+          "path",
+          "description",
+          "request_schema",
+          "response_schema"
+        ]
       },
       "validation": {
-        "required_files": ["IMPLEMENTATION.md"],
+        "required_files": [
+          "IMPLEMENTATION.md"
+        ],
         "required_patterns": [
           "Route definition:",
           "Validation:"
@@ -171,11 +205,22 @@
         "success_rate": 0,
         "avg_tokens": 0,
         "avg_duration": 0,
-        "common_failures": ["syntax_error", "type_error", "validation_error"]
+        "common_failures": [
+          "syntax_error",
+          "type_error",
+          "validation_error"
+        ]
       },
       "tools": {
-        "required": ["read", "edit", "write"],
-        "optional": ["bash", "glob"],
+        "required": [
+          "read",
+          "edit",
+          "write"
+        ],
+        "optional": [
+          "bash",
+          "glob"
+        ],
         "disabled": []
       }
     },
@@ -183,7 +228,9 @@
       "id": "write-tests",
       "subagent": "general",
       "description": "Write unit and integration tests for the endpoint",
-      "dependencies": ["implement-endpoint"],
+      "dependencies": [
+        "implement-endpoint"
+      ],
       "guidance": [
         "Follow the test patterns found in ENDPOINT_ANALYSIS.md",
         "Test happy path (successful requests)",
@@ -194,13 +241,18 @@
       ],
       "impulse_refs": [],
       "prompt": {
-        "template": "Write comprehensive tests for the new endpoint.\n\nEndpoint: {{method}} {{path}}\n\nBased on test patterns in ENDPOINT_ANALYSIS.md, create tests covering:\n\n1. **Happy Path**:\n   - Valid request → 200/201 response\n   - Response matches expected schema\n\n2. **Validation Failures**:\n   - Missing required fields → 400\n   - Invalid data types → 400\n   - Invalid values → 400\n\n3. **Error Cases**:\n   - Resource not found → 404\n   - Server errors → 500\n\n4. **Auth** (if applicable):\n   - No auth token → 401\n   - Invalid token → 403\n\n5. **Edge Cases**:\n   - Empty body\n   - Extra fields\n   - Boundary values\n\nCreate test file(s) following project conventions. Document in TESTS.md:\n- Test file location\n- Number of test cases\n- Coverage areas\n- How to run tests",
+        "template": "Write comprehensive tests for the new endpoint.\n\nEndpoint: {{method}} {{path}}\n\nBased on test patterns in ENDPOINT_ANALYSIS.md, create tests covering:\n\n1. **Happy Path**:\n   - Valid request \u2192 200/201 response\n   - Response matches expected schema\n\n2. **Validation Failures**:\n   - Missing required fields \u2192 400\n   - Invalid data types \u2192 400\n   - Invalid values \u2192 400\n\n3. **Error Cases**:\n   - Resource not found \u2192 404\n   - Server errors \u2192 500\n\n4. **Auth** (if applicable):\n   - No auth token \u2192 401\n   - Invalid token \u2192 403\n\n5. **Edge Cases**:\n   - Empty body\n   - Extra fields\n   - Boundary values\n\nCreate test file(s) following project conventions. Document in TESTS.md:\n- Test file location\n- Number of test cases\n- Coverage areas\n- How to run tests",
         "max_tokens": 8000,
         "compression_strategy": "filter",
-        "variables": ["method", "path"]
+        "variables": [
+          "method",
+          "path"
+        ]
       },
       "validation": {
-        "required_files": ["TESTS.md"],
+        "required_files": [
+          "TESTS.md"
+        ],
         "required_patterns": [
           "Test file:",
           "test cases"
@@ -217,11 +269,19 @@
         "success_rate": 0,
         "avg_tokens": 0,
         "avg_duration": 0,
-        "common_failures": ["import_error", "syntax_error"]
+        "common_failures": [
+          "import_error",
+          "syntax_error"
+        ]
       },
       "tools": {
-        "required": ["write", "read"],
-        "optional": ["bash"],
+        "required": [
+          "write",
+          "read"
+        ],
+        "optional": [
+          "bash"
+        ],
         "disabled": []
       }
     },
@@ -229,7 +289,9 @@
       "id": "run-tests",
       "subagent": "general",
       "description": "Execute tests and verify they pass",
-      "dependencies": ["write-tests"],
+      "dependencies": [
+        "write-tests"
+      ],
       "guidance": [
         "Run the test suite using project's test command",
         "If tests fail, analyze failures and fix",
@@ -244,14 +306,16 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["TEST_RESULTS.md"],
+        "required_files": [
+          "TEST_RESULTS.md"
+        ],
         "required_patterns": [
           "passed",
-          "✓"
+          "\u2713"
         ],
         "forbidden_patterns": [
           "failed",
-          "❌",
+          "\u274c",
           "Error:"
         ],
         "commands": []
@@ -265,10 +329,17 @@
         "success_rate": 0,
         "avg_tokens": 0,
         "avg_duration": 0,
-        "common_failures": ["test_failure", "validation_mismatch"]
+        "common_failures": [
+          "test_failure",
+          "validation_mismatch"
+        ]
       },
       "tools": {
-        "required": ["bash", "read", "edit"],
+        "required": [
+          "bash",
+          "read",
+          "edit"
+        ],
         "optional": [],
         "disabled": []
       }
@@ -277,7 +348,9 @@
       "id": "document-endpoint",
       "subagent": "general",
       "description": "Add API documentation and annotate component in Metabob",
-      "dependencies": ["run-tests"],
+      "dependencies": [
+        "run-tests"
+      ],
       "guidance": [
         "Update API documentation (OpenAPI, README, etc.)",
         "Use metabob_annotate_component to document design decisions",
@@ -292,7 +365,9 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["ENDPOINT_DOCUMENTATION.md"],
+        "required_files": [
+          "ENDPOINT_DOCUMENTATION.md"
+        ],
         "required_patterns": [
           "Documentation updated",
           "Example"
@@ -312,10 +387,44 @@
         "common_failures": []
       },
       "tools": {
-        "required": ["write", "read", "edit"],
-        "optional": ["metabob_annotate_component"],
+        "required": [
+          "write",
+          "read",
+          "edit"
+        ],
+        "optional": [
+          "metabob_annotate_component"
+        ],
         "disabled": []
       }
+    }
+  ],
+  "context_requirements": [
+    {
+      "key": "api-context",
+      "hint": "Existing API structure and patterns",
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
+      "budgetRange": [
+        3000,
+        6000
+      ],
+      "required": true
+    },
+    {
+      "key": "endpoint-spec",
+      "hint": "API specification and requirements",
+      "impulseTypes": [
+        "memo",
+        "file"
+      ],
+      "budgetRange": [
+        1000,
+        2000
+      ],
+      "required": true
     }
   ]
 }
