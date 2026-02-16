@@ -1,0 +1,50 @@
+{
+  "bug-fix-93374d0f": [
+    {
+      "severity": "LOW",
+      "category": "Missing Variable Docs",
+      "description": "First task requires variables ['bug_description', 'error_message'] but template-level variables is empty",
+      "fix": "Document required variables at template level"
+    }
+  ],
+  "feature-impl-c4b2e8ee": [
+    {
+      "severity": "LOW",
+      "category": "Missing Variable Docs",
+      "description": "First task requires variables ['feature_name', 'feature_description', 'target_location'] but template-level variables is empty",
+      "fix": "Document required variables at template level"
+    }
+  ],
+  "add-rest-endpoint-97b69d8d": [
+    {
+      "severity": "LOW",
+      "category": "Missing Variable Docs",
+      "description": "First task requires variables ['method', 'path', 'description'] but template-level variables is empty",
+      "fix": "Document required variables at template level"
+    }
+  ],
+  "activity-create-29e9d6c5": [
+    {
+      "severity": "LOW",
+      "category": "Missing Variable Docs",
+      "description": "First task requires variables ['source_pattern'] but template-level variables is empty",
+      "fix": "Document required variables at template level"
+    }
+  ],
+  "other-119bea12": [
+    {
+      "severity": "LOW",
+      "category": "Missing Variable Docs",
+      "description": "First task requires variables ['template_name', 'category'] but template-level variables is empty",
+      "fix": "Document required variables at template level"
+    }
+  ],
+  "other-e4a773cf": [
+    {
+      "severity": "LOW",
+      "category": "Missing Variable Docs",
+      "description": "First task requires variables ['template_name', 'category'] but template-level variables is empty",
+      "fix": "Document required variables at template level"
+    }
+  ]
+}

@@ -1,0 +1,891 @@
+{
+  "activity_id": "refactor-component-complete",
+  "name": "Refactor Component Complete",
+  "description": "Comprehensive component refactoring with impact analysis, implementation, testing, and documentation",
+  "category": "refactor",
+  "task_steps": [
+    {
+      "id": "analyze-impact",
+      "task_id": "analyze-impact",
+      "subagent": "general",
+      "description": "Analyze refactoring scope, dependencies, and potential impact using Metabob",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the impact of refactoring {{component_name}} in {{file_path}}.\n\n**Refactoring Goal**:\n{{refactoring_goal}}\n\n{{#if refactoring_reason}}\n**Reason for Refactoring**:\n{{refactoring_reason}}\n{{/if}}\n\n---\n\n## Your Task\n\n### 1. Analyze Change Impact\n\nUse `metabob_analyze_change_impact` to understand dependencies:\n\n```typescript\nmetabob_analyze_change_impact({\n  file_path: \"{{file_path}}\",\n  component_name: \"{{component_name}}\"\n})\n```\n\n**What to look for**:\n- Direct dependents (files that import/use this component)\n- Transitive dependents (files that depend on dependents)\n- Total impact radius\n- Critical dependencies (core functionality, widely used components)\n\n**Risk Assessment**:\n- Low risk: 0-5 direct dependents\n- Medium risk: 6-15 direct dependents\n- High risk: 16+ direct dependents or 50+ transitive dependents\n- Critical: Core infrastructure components\n\n### 2. Search for Existing Issues\n\nUse `metabob_search_codebase_issues` to find problems in the component:\n\n```typescript\nmetabob_search_codebase_issues({\n  query: \"{{component_name}} {{file_path}}\",\n  limit: 10\n})\n```\n\n**Look for**:\n- Code quality issues (complexity, duplication, anti-patterns)\n- Performance issues\n- Security vulnerabilities\n- Maintainability concerns\n- Previously reported bugs\n\n**Prioritize issues**:\n- Fix HIGH severity issues during refactoring\n- Fix MEDIUM issues opportunistically\n- Note LOW issues for future work\n\n### 3. Review Current Implementation\n\n**Read the component**:\n- Understand current architecture\n- Identify pain points (complexity, coupling, duplication)\n- Review function signatures and public API\n- Check for design patterns used\n- Note TypeScript types and interfaces\n\n**Check annotations**:\n- Use `metabob_list_file_components` to see what's been documented\n- Review existing annotations for design intent\n- Understand why the code exists in its current form\n\n### 4. Predict Related Files (Cochange Analysis)\n\n**IMPORTANT**: Use `metabob_suggest_related_changes` to predict which files might need changes alongside this refactoring:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"{{file_path}}\"],\n  top_k: 10  // Refactors often affect more files than features/bugs\n})\n```\n\n**Why This Matters**:\n- Refactoring often requires updating dependent files\n- Identify files that change together historically\n- Prevent missed updates that could break functionality\n- **Store predictions for accuracy measurement later**\n\n**What to document**:\n- List all predicted files (by file path)\n- Note recommendation priority (High/Medium/Low)\n- Explain why each file might need changes\n- These predictions will be compared to actual changes in the final task\n\n**Activity Learning**: These predictions help the system learn which file patterns co-occur during refactoring, improving future refactoring planning.\n\n### 5. Plan Refactoring Approach\n\n**Define scope**:\n- What will change? (structure, API, implementation)\n- What will stay the same? (public API, behavior)\n- How to maintain backward compatibility?\n\n**Break down changes**:\n- Identify independent sub-refactorings\n- Order changes from safest to riskiest\n- Plan incremental steps\n\n**Risk mitigation**:\n- How to test each change?\n- Which dependents need updates?\n- What could break?\n\n### 6. Document Your Analysis\n\nCreate **REFACTORING_PLAN.md**:\n\n```markdown\n## Refactoring Plan: {{component_name}}\n\n### Component Overview\n**File**: `{{file_path}}`\n**Component**: `{{component_name}}`\n**Goal**: {{refactoring_goal}}\n\n### Impact Analysis\n\n**Dependency Summary** (from metabob_analyze_change_impact):\n- Direct dependents: X files\n- Transitive dependents: Y files\n- Risk level: [Low|Medium|High|Critical]\n\n**Dependent Files**:\n1. `path/to/dependent1.ts` - [Brief description of usage]\n2. `path/to/dependent2.ts` - [Brief description of usage]\n[... list all critical dependents]\n\n**Impact Assessment**:\n[Explain what will break if changes aren't careful]\n\n### Predicted Cochanges (from metabob_suggest_related_changes)\n\n**Files likely to need changes**:\n1. `path/to/related1.ts` - [Why: e.g., uses refactored API, historically changes together]\n2. `path/to/related2.ts` - [Why: e.g., similar pattern, integration point]\n[... list all predicted files with reasoning]\n\n**Prediction Summary**:\n- Total predicted files: X\n- High priority: Y files\n- Medium priority: Z files\n\n**Activity Learning Note**: These predictions will be compared to actual changes in the final task to measure cochange accuracy and improve future refactoring planning.\n\n### Existing Issues (from metabob_search_codebase_issues)\n\n**HIGH Priority**:\n- Issue #1: [Description] - MUST fix during refactoring\n\n**MEDIUM Priority**:\n- Issue #2: [Description] - Fix if touched\n\n**LOW Priority**:\n- Issue #3: [Description] - Note for future\n\n### Current Implementation Analysis\n\n**Strengths**:\n- [What works well]\n\n**Pain Points**:\n- [What's problematic: complexity, coupling, duplication, etc.]\n\n**Public API**:\n```typescript\n// Current function signatures / class interface\nexport function currentAPI(...): ReturnType { ... }\n```\n\n### Refactoring Strategy\n\n**Approach**: [Extract method | Extract class | Simplify logic | Reduce coupling | etc.]\n\n**Changes**:\n1. **Phase 1**: [First set of changes]\n   - Files affected: [...]\n   - Risk: Low/Medium/High\n   - Testing strategy: [...]\n\n2. **Phase 2**: [Second set of changes]\n   - Files affected: [...]\n   - Risk: Low/Medium/High\n   - Testing strategy: [...]\n\n[... continue for all phases]\n\n**Backward Compatibility**:\n- API changes: [None | Additive only | Breaking changes]\n- Migration path: [How dependents will update]\n- Deprecation strategy: [If applicable]\n\n### Testing Strategy\n\n**Unit Tests**:\n- Test existing behavior (regression prevention)\n- Test new/refactored behavior\n- Test edge cases\n\n**Integration Tests**:\n- Test dependent components still work\n- Test end-to-end flows\n\n**Manual Testing**:\n- [Specific scenarios to verify manually]\n\n### Success Criteria\n\n- [ ] All existing tests pass\n- [ ] New tests cover refactored code\n- [ ] No TypeScript errors\n- [ ] All dependents still work correctly\n- [ ] Code quality improved (reduced complexity, better structure)\n- [ ] HIGH priority Metabob issues resolved\n- [ ] Documentation updated\n\n### Risk Mitigation\n\n**If things break**:\n1. [Rollback strategy]\n2. [Debug approach]\n3. [Who to notify]\n\n**Monitoring**:\n- [What to watch after deployment]\n\n---\n\n**Reviewers**: Tag this section with notes for code reviewers\n\n**Dependencies**: List any blocked work or prerequisites\n```\n\n**Validation**:\n- All sections must be complete with specifics (no \"TBD\" or \"TODO\")\n- Dependency count must be specific numbers from Metabob\n- Risk level must be clearly stated\n- Testing strategy must be concrete\n",
+        "variables": [
+          {
+            "name": "file_path",
+            "type": "string",
+            "required": true,
+            "description": "Path to the file containing the component to refactor"
+          },
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the function, class, or component to refactor"
+          },
+          {
+            "name": "refactoring_goal",
+            "type": "string",
+            "required": true,
+            "description": "What you want to achieve with this refactoring (e.g., 'Reduce complexity', 'Extract reusable logic', 'Improve type safety')"
+          },
+          {
+            "name": "refactoring_reason",
+            "type": "string",
+            "required": false,
+            "description": "Why this refactoring is needed (e.g., 'Hard to test', 'Frequent bugs', 'Performance issues')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "REFACTORING_PLAN.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Refactoring Plan:",
+            "description": ""
+          },
+          {
+            "pattern": "### Impact Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "Direct dependents:",
+            "description": ""
+          },
+          {
+            "pattern": "Risk level:",
+            "description": ""
+          },
+          {
+            "pattern": "### Predicted Cochanges",
+            "description": ""
+          },
+          {
+            "pattern": "### Refactoring Strategy",
+            "description": ""
+          },
+          {
+            "pattern": "### Testing Strategy",
+            "description": ""
+          },
+          {
+            "pattern": "### Success Criteria",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "path/to/",
+            "description": ""
+          },
+          {
+            "pattern": "PLACEHOLDER",
+            "description": ""
+          },
+          {
+            "pattern": "\\[\\.\\.\\.]",
+            "description": ""
+          },
+          {
+            "pattern": "X files",
+            "description": ""
+          },
+          {
+            "pattern": "Y files",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "implement-refactoring",
+      "task_id": "implement-refactoring",
+      "subagent": "general",
+      "description": "Implement refactoring following the plan with incremental, testable changes",
+      "dependencies": [
+        "analyze-impact"
+      ],
+      "prompt": {
+        "template": "Implement the refactoring of {{component_name}} following REFACTORING_PLAN.md.\n\n**First, read REFACTORING_PLAN.md** to understand:\n- Impact analysis and risk level\n- Dependent components\n- Existing issues to fix\n- Refactoring strategy and phases\n- Testing requirements\n\n---\n\n## Implementation Guidelines\n\n### 1. Incremental Refactoring\n\n**DO**:\n- Follow the phases outlined in REFACTORING_PLAN.md\n- Make one logical change at a time\n- Keep tests passing at each step\n- Commit after each working phase (if git available)\n- Verify TypeScript types remain correct\n\n**DON'T**:\n- Make large, sweeping changes all at once\n- Break public API without migration path\n- Remove tests (even if refactoring changes implementation)\n- Introduce `any` types or reduce type safety\n\n### 2. Code Quality Standards\n\n**Complexity Reduction**:\n- Extract complex logic into smaller functions\n- Use early returns to reduce nesting\n- Replace complex conditionals with descriptive functions\n- Aim for cyclomatic complexity < 10 per function\n\n**Coupling Reduction**:\n- Use dependency injection\n- Define clear interfaces\n- Minimize direct dependencies\n- Use composition over inheritance\n\n**Duplication Elimination**:\n- Extract repeated logic into shared utilities\n- Use generics for type-safe reuse\n- Create reusable abstractions\n\n**Type Safety**:\n- Use TypeScript types correctly (no `any`)\n- Prefer interfaces over `object` or `Record<string, any>`\n- Use union types and discriminated unions\n- Add generic constraints where appropriate\n\n### 3. Common Refactoring Patterns\n\n#### Extract Function\n```typescript\n// Before: Complex function\nfunction processUser(user: User) {\n  // 50 lines of complex logic\n  if (user.age > 18 && user.verified && !user.suspended) {\n    // ...\n  }\n}\n\n// After: Extracted helpers\nfunction processUser(user: User) {\n  if (!isEligibleUser(user)) {\n    throw new Error('User not eligible');\n  }\n  \n  const profile = buildUserProfile(user);\n  const permissions = calculatePermissions(user);\n  return createUserContext(profile, permissions);\n}\n\nfunction isEligibleUser(user: User): boolean {\n  return user.age > 18 && user.verified && !user.suspended;\n}\n```\n\n#### Extract Class\n```typescript\n// Before: God object\nclass UserManager {\n  // 500 lines doing everything\n}\n\n// After: Single responsibility\nclass UserValidator { ... }\nclass UserRepository { ... }\nclass UserNotifier { ... }\n\nclass UserManager {\n  constructor(\n    private validator: UserValidator,\n    private repository: UserRepository,\n    private notifier: UserNotifier\n  ) {}\n}\n```\n\n#### Replace Conditional with Polymorphism\n```typescript\n// Before: Switch statement\nfunction processPayment(payment: Payment) {\n  switch (payment.type) {\n    case 'credit': /* ... */; break;\n    case 'debit': /* ... */; break;\n    case 'paypal': /* ... */; break;\n  }\n}\n\n// After: Polymorphic strategy\ninterface PaymentProcessor {\n  process(payment: Payment): Result;\n}\n\nclass CreditCardProcessor implements PaymentProcessor { ... }\nclass DebitCardProcessor implements PaymentProcessor { ... }\nclass PayPalProcessor implements PaymentProcessor { ... }\n\nconst processors: Record<PaymentType, PaymentProcessor> = {\n  credit: new CreditCardProcessor(),\n  debit: new DebitCardProcessor(),\n  paypal: new PayPalProcessor(),\n};\n\nfunction processPayment(payment: Payment) {\n  return processors[payment.type].process(payment);\n}\n```\n\n### 4. Maintain Backward Compatibility\n\n**Additive Changes** (preferred):\n- Add new functions/methods alongside old ones\n- Use default parameters for new arguments\n- Deprecate old APIs with clear migration path\n\n**Breaking Changes** (if necessary):\n- Document breaking changes clearly\n- Provide migration guide\n- Update all dependents in the same PR\n- Add deprecation warnings before removing\n\n### 5. Fix Metabob Issues\n\n**From REFACTORING_PLAN.md, address**:\n- All HIGH priority issues\n- MEDIUM priority issues if touching that code\n- Document fixes with inline comments\n\n**After fixing issues**:\n- Use `metabob_mark_problem_complete` for each resolved issue\n- Use `metabob_annotate_component` to document the refactored component\n\n### 6. Continuous Verification\n\n**After each phase**:\n1. Run `npm run typecheck` (or `tsc --noEmit`) - MUST pass\n2. Run existing tests - MUST pass\n3. Verify dependent files still import correctly\n4. Check for console errors in dev environment\n\n### 7. Documentation\n\nCreate **REFACTORING_IMPLEMENTATION.md**:\n\n```markdown\n## Refactoring Implementation\n\n### Changes Made\n\n#### Phase 1: [Phase name]\n**Files modified**:\n- `path/to/file1.ts` - [What changed]\n- `path/to/file2.ts` - [What changed]\n\n**Summary**: [What was accomplished]\n\n**Verification**:\n- [ ] TypeScript compiles\n- [ ] Tests pass\n- [ ] Dependents work\n\n#### Phase 2: [Phase name]\n[... repeat for each phase]\n\n### Metabob Issues Resolved\n\n1. **Issue ID**: issue_xxx\n   - **Severity**: HIGH\n   - **Description**: [Issue description]\n   - **Resolution**: [How it was fixed]\n   - **File**: `path/to/file.ts`\n\n[... repeat for each issue]\n\n### API Changes\n\n**Backward compatible changes**:\n- Added: `newFunction()` - [Description]\n- Enhanced: `existingFunction()` now accepts optional parameter X\n\n**Breaking changes** (if any):\n- Removed: `oldFunction()` - Use `newFunction()` instead\n- Renamed: `foo()` → `bar()` - [Migration guide]\n\n**Deprecations**:\n- `legacyMethod()` - Use `modernMethod()` instead. Will be removed in v2.0.\n\n### Code Quality Improvements\n\n**Before**:\n- Cyclomatic complexity: [number]\n- Lines of code: [number]\n- Test coverage: [number]%\n\n**After**:\n- Cyclomatic complexity: [number] (↓ X%)\n- Lines of code: [number] (↓/↑ X)\n- Test coverage: [number]% (↑ X%)\n\n**Specific improvements**:\n- Extracted X helper functions\n- Reduced nesting from Y to Z levels\n- Eliminated N lines of duplication\n- Improved type safety with [specific changes]\n\n### Testing Updates\n\n**Existing tests**:\n- All X existing tests still pass ✓\n- Updated Y tests for API changes\n\n**New tests** (will be added in next task):\n- [List tests to be added]\n\n### Dependent Updates\n\n**Files updated to use new API**:\n1. `path/to/dependent1.ts` - [Changes made]\n2. `path/to/dependent2.ts` - [Changes made]\n\n**Files unchanged** (backward compatible):\n- `path/to/file.ts` - Still works with old API\n\n### Verification Checklist\n\n- [ ] All phases completed\n- [ ] TypeScript compiles with no errors\n- [ ] All existing tests pass\n- [ ] All HIGH priority issues resolved\n- [ ] Dependents updated and working\n- [ ] Code complexity reduced\n- [ ] No `any` types introduced\n- [ ] Public API changes documented\n- [ ] Metabob annotations added\n```\n\n**Success Criteria**:\n- REFACTORING_IMPLEMENTATION.md exists and is complete\n- All HIGH priority Metabob issues from REFACTORING_PLAN.md are resolved\n- TypeScript compiles with no errors\n- All existing tests pass\n- Code quality metrics improved\n",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Component name"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "REFACTORING_IMPLEMENTATION.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Refactoring Implementation",
+            "description": ""
+          },
+          {
+            "pattern": "### Changes Made",
+            "description": ""
+          },
+          {
+            "pattern": "### Code Quality Improvements",
+            "description": ""
+          },
+          {
+            "pattern": "### Verification Checklist",
+            "description": ""
+          },
+          {
+            "pattern": "- \\[x\\]",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "console\\.log\\(",
+            "description": ""
+          },
+          {
+            "pattern": "\\bany\\b(?! types| in)",
+            "description": ""
+          },
+          {
+            "pattern": "TODO(?! in test)",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "HACK",
+            "description": ""
+          },
+          {
+            "pattern": "PLACEHOLDER",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm run typecheck || tsc --noEmit || echo 'Typecheck not available'",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "npm test -- --passWithNoTests || npm test || echo 'Tests not available'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 4,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "test-and-validate",
+      "task_id": "test-and-validate",
+      "subagent": "test",
+      "description": "Write comprehensive tests for refactored component and validate all dependents",
+      "dependencies": [
+        "implement-refactoring"
+      ],
+      "prompt": {
+        "template": "Write comprehensive tests for the refactored {{component_name}} and validate the refactoring.\n\n**Read these documents**:\n1. REFACTORING_PLAN.md - Understand the refactoring goals\n2. REFACTORING_IMPLEMENTATION.md - Understand what changed\n\n---\n\n## Part 1: Test Coverage\n\n### 1. Regression Tests\n\n**Purpose**: Ensure existing behavior still works\n\n```typescript\ndescribe('{{component_name}} - Regression Tests', () => {\n  describe('Existing functionality', () => {\n    it('should maintain behavior for [scenario 1]', () => {\n      // Test that old functionality still works\n      // These tests should have existed before refactoring\n      // Now verify they still pass\n    });\n    \n    it('should handle [scenario 2] as before', () => {\n      // More regression tests\n    });\n  });\n});\n```\n\n### 2. New Behavior Tests\n\n**If refactoring added new functionality**:\n\n```typescript\n  describe('New functionality', () => {\n    it('should [new behavior 1]', () => {\n      // Test new capabilities added during refactoring\n    });\n    \n    it('should [new behavior 2]', () => {\n      // Test improvements\n    });\n  });\n```\n\n### 3. Edge Cases and Error Handling\n\n```typescript\n  describe('Edge cases', () => {\n    it('should handle null/undefined inputs', () => {\n      // Test defensive code added during refactoring\n    });\n    \n    it('should handle empty/invalid inputs', () => {\n      // Test validation\n    });\n    \n    it('should throw appropriate errors for invalid states', () => {\n      // Test error handling\n    });\n  });\n```\n\n### 4. Integration Tests for Dependents\n\n**Test that dependent components still work**:\n\n```typescript\ndescribe('{{component_name}} - Integration Tests', () => {\n  describe('Integration with Dependent1', () => {\n    it('should work with Dependent1 as expected', () => {\n      // Test a key dependent component\n      // Verify the integration still works after refactoring\n    });\n  });\n  \n  describe('Integration with Dependent2', () => {\n    it('should work with Dependent2 as expected', () => {\n      // Test another critical dependent\n    });\n  });\n});\n```\n\n### 5. Performance Tests (if applicable)\n\n**If refactoring improved performance**:\n\n```typescript\n  describe('Performance', () => {\n    it('should complete operation within acceptable time', () => {\n      const start = Date.now();\n      // Execute refactored code\n      const duration = Date.now() - start;\n      expect(duration).toBeLessThan(100); // or appropriate threshold\n    });\n  });\n```\n\n## Part 2: Validation\n\n### 1. Run Full Test Suite\n\n**Execute**:\n```bash\nnpm test\n# or\nnpm run test:coverage\n```\n\n**Requirements**:\n- All tests must pass ✓\n- No skipped tests (it.skip, xit)\n- Coverage should improve or stay same\n- No timeout errors\n\n### 2. TypeScript Validation\n\n**Execute**:\n```bash\nnpm run typecheck\n# or\ntsc --noEmit\n```\n\n**Requirements**:\n- Zero TypeScript errors\n- No `any` types (or justify if necessary)\n- Proper type inference\n\n### 3. Code Quality Metrics\n\n**Check improvements** (if tools available):\n```bash\nnpm run lint\n# Check complexity, duplication, etc.\n```\n\n### 4. Dependent Validation\n\n**From REFACTORING_PLAN.md, verify**:\n- All listed dependents still import correctly\n- No runtime errors in dependent code\n- Integration points work as expected\n\n## Part 3: Documentation\n\nCreate **TEST_VALIDATION_REPORT.md**:\n\n```markdown\n## Test & Validation Report\n\n### Test Summary\n\n**Total tests**: X\n- Existing tests: Y (all passing ✓)\n- New regression tests: Z\n- New behavior tests: N\n- Integration tests: M\n\n**Test results**: All X tests passing ✓\n\n**Coverage**:\n- Before refactoring: X%\n- After refactoring: Y%\n- Change: ↑/↓ Z%\n\n### Test Details\n\n#### Regression Tests Added\n1. **Test**: `should handle [scenario]`\n   - **Purpose**: Ensure existing behavior for [use case]\n   - **Status**: ✓ Passing\n\n[... list key new tests]\n\n#### Integration Tests\n1. **Dependent**: `path/to/dependent1.ts`\n   - **Test**: [Integration test description]\n   - **Status**: ✓ Passing\n\n[... list integration tests]\n\n### TypeScript Validation\n\n**Command**: `npm run typecheck`\n**Result**: ✓ No errors\n\n**Type safety improvements**:\n- Replaced X `any` types with proper types\n- Added Y new interfaces/types\n- Improved type inference in Z locations\n\n### Code Quality Validation\n\n**Linting**: `npm run lint`\n**Result**: ✓ No errors (or list warnings)\n\n**Complexity Analysis**:\n| Metric | Before | After | Change |\n|--------|--------|-------|--------|\n| Cyclomatic Complexity | X | Y | ↓ Z% |\n| Lines of Code | X | Y | ↓/↑ Z |\n| Function Count | X | Y | ↑ Z |\n| Max Function Length | X | Y | ↓ Z |\n\n**Code Quality Improvements**:\n- ✓ Reduced complexity\n- ✓ Improved readability\n- ✓ Better separation of concerns\n- ✓ Eliminated duplication\n\n### Dependent Validation\n\n**Dependents verified** (from REFACTORING_PLAN.md):\n1. ✓ `path/to/dependent1.ts` - Works correctly\n2. ✓ `path/to/dependent2.ts` - Works correctly\n[... list all critical dependents]\n\n**Integration points tested**:\n- ✓ Imports resolve correctly\n- ✓ Function calls work as expected\n- ✓ Data flows correctly\n- ✓ No runtime errors\n\n### Edge Cases Covered\n\n- ✓ Null/undefined handling\n- ✓ Empty input handling\n- ✓ Invalid input validation\n- ✓ Boundary values\n- ✓ Error scenarios\n- ✓ Async edge cases (if applicable)\n\n### Regression Prevention\n\n**Tests that prevent regressions**:\n1. [Test name] - Ensures [behavior] doesn't break\n2. [Test name] - Ensures [edge case] is handled\n[... list key regression tests]\n\n### Manual Testing Performed\n\n**Scenarios tested manually** (if applicable):\n1. [Scenario 1] - ✓ Works as expected\n2. [Scenario 2] - ✓ Works as expected\n\n### Issues Found and Resolved\n\n**During testing**:\n1. [Issue description] - Fixed by [solution]\n2. [Issue description] - Fixed by [solution]\n\n**Or**: No issues found during testing ✓\n\n### Validation Checklist\n\n- [ ] All existing tests pass\n- [ ] New regression tests added\n- [ ] Integration tests pass\n- [ ] TypeScript compiles with no errors\n- [ ] Linting passes\n- [ ] Code complexity reduced\n- [ ] All dependents validated\n- [ ] Edge cases covered\n- [ ] Test coverage maintained/improved\n- [ ] No performance regressions\n- [ ] Manual testing completed (if applicable)\n\n### Conclusion\n\n**Refactoring validated successfully** ✓\n\n**Key achievements**:\n- [Improvement 1]\n- [Improvement 2]\n- [Improvement 3]\n\n**Confidence level**: [High/Medium/Low] - [Reasoning]\n\n**Ready for**: [Merge/Review/Production]\n```\n\n**Success Criteria**:\n- TEST_VALIDATION_REPORT.md exists and is complete\n- All tests passing (100%)\n- TypeScript compiles with no errors\n- All dependents validated\n- Code quality metrics improved\n- Validation checklist fully checked\n",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Component name"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "*.test.ts",
+          "*.test.js",
+          "*.spec.ts",
+          "*.spec.js",
+          "TEST_VALIDATION_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "describe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "it\\(",
+            "description": ""
+          },
+          {
+            "pattern": "expect\\(",
+            "description": ""
+          },
+          {
+            "pattern": "## Test & Validation Report",
+            "description": ""
+          },
+          {
+            "pattern": "### Test Summary",
+            "description": ""
+          },
+          {
+            "pattern": "✓",
+            "description": ""
+          },
+          {
+            "pattern": "### Validation Checklist",
+            "description": ""
+          },
+          {
+            "pattern": "- \\[x\\]",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "it\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "describe\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "xit\\(",
+            "description": ""
+          },
+          {
+            "pattern": "xdescribe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "TODO in test",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "\\[ \\]",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm test -- --passWithNoTests || npm test || echo 'Tests not executed'",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "npm run typecheck || tsc --noEmit || echo 'Typecheck not available'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "document-and-annotate",
+      "task_id": "document-and-annotate",
+      "subagent": "general",
+      "description": "Document refactoring with Metabob annotations and create comprehensive summary",
+      "dependencies": [
+        "test-and-validate"
+      ],
+      "prompt": {
+        "template": "Document the refactoring of {{component_name}} comprehensively.\n\n**Read all previous documents**:\n1. REFACTORING_PLAN.md - Original plan and impact analysis\n2. REFACTORING_IMPLEMENTATION.md - Implementation details\n3. TEST_VALIDATION_REPORT.md - Test results and validation\n\n---\n\n## Part 1: Metabob Annotations\n\n### 1. Annotate Refactored Component\n\nUse `metabob_annotate_component` on the refactored component:\n\n```typescript\nmetabob_annotate_component({\n  file_path: \"{{file_path}}\",\n  component_name: \"{{component_name}}\",\n  component_type: \"function\", // or \"class\" or \"method\"\n  reason: \"Refactored to [what was improved]. Key changes: [list main changes]. Design decisions: [explain architectural choices]. Handles [edge cases].\"\n})\n```\n\n**Annotation guidelines**:\n- Explain WHAT was refactored (structure, logic, API)\n- Explain WHY it was refactored (complexity, coupling, performance)\n- Document design decisions made during refactoring\n- Note important patterns or architectural choices\n- Explain any non-obvious implementations\n\n### 2. Mark Resolved Issues\n\nFor each Metabob issue fixed (from REFACTORING_IMPLEMENTATION.md):\n\n```typescript\nmetabob_mark_problem_complete({\n  problem_id: \"issue_xxx\",\n  file_path: \"{{file_path}}\",\n  resolution_notes: \"Resolved during refactoring. [Explain how the refactoring fixed this issue].\"\n})\n```\n\n### 3. Find Related Changes\n\nUse `metabob_suggest_related_changes` to find co-change patterns:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"{{file_path}}\", /* other modified files */]\n})\n```\n\n**Purpose**: Identify files that often change together with the refactored component.\nThese may need updates or reviews to ensure consistency.\n\n---\n\n## Part 2: Check Related Files and Cochange Accuracy\n\n### 1. Compare Predictions to Reality\n\n**Review predictions from REFACTORING_PLAN.md** (\"Predicted Cochanges\" section):\n- Which files were predicted to need changes?\n- How many files were predicted?\n\n**Identify actual changes**:\n```bash\ngit diff --name-only HEAD\n# OR if not committed yet:\ngit status --short\n```\n\n**Calculate cochange accuracy**:\n```\nAccuracy = (Number of correctly predicted files) / (Total predicted files)\n\nExample:\n- Predicted: 8 files\n- Actually changed: 10 files  \n- Correctly predicted: 6 files\n- Accuracy: 6/8 = 75%\n```\n\n### 2. Run Cochange Analysis on Actual Changes\n\nNow run `metabob_suggest_related_changes` on ALL files you actually modified:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\n    \"{{file_path}}\",\n    \"path/to/dependent1.ts\",\n    \"path/to/test-file.test.ts\"\n    // ... all files you modified\n  ],\n  top_k: 10\n})\n```\n\n**Purpose**: \n- Find files we might have missed\n- Verify no related files need updates\n- Identify patterns for future refactorings\n\n### 3. Document Findings\n\n**What to note**:\n- Which predictions were correct (files we did change)\n- Which predictions were incorrect (files we didn't need to change)\n- Which files we changed that weren't predicted (missed predictions)\n- Any high-priority related files that still need review\n\n---\n\n## Part 3: Annotate Key Components\n\n### Annotate Refactored Component\n\nUse `metabob_annotate_component` for 3-5 key components:\n\n```typescript\nmetabob_annotate_component({\n  file_path: \"{{file_path}}\",\n  component_name: \"{{component_name}}\",\n  component_type: \"function\", // or \"class\" or \"method\"\n  reason: \"Refactored to [what was improved]. Key changes: [list main changes]. Design decisions: [explain architectural choices]. Handles [edge cases].\"\n})\n```\n\n**Focus on**:\n- Main refactored component\n- New abstractions created\n- Components with non-obvious design decisions\n\n---\n\n## Part 4: Create Summary Document\n\n### Create REFACTORING_SUMMARY.md\n\n```markdown\n## Refactoring Summary: {{component_name}}\n\n### Overview\n\n**Component**: `{{component_name}}`\n**File**: `{{file_path}}`\n**Date**: [Date]\n**Refactoring Goal**: {{refactoring_goal}}\n**Reason**: {{refactoring_reason}}\n\n### Impact Scope\n\n**Files changed**: X files\n- Primary: `{{file_path}}`\n- Dependents updated: Y files\n- Tests updated: Z files\n\n**Dependency impact** (from REFACTORING_PLAN.md):\n- Direct dependents: X\n- Transitive dependents: Y\n- Risk level: [Low/Medium/High/Critical]\n\n### Related Files Analysis\n\n**Cochange Prediction Accuracy**:\n- Predicted files: X\n- Actually changed files: Y\n- Correctly predicted: Z\n- **Cochange accuracy: Z/X = AA%**\n\n**Correctly Predicted** (files we changed that were predicted):\n1. `path/to/file1.ts` - ✓ Prediction correct\n2. `path/to/file2.ts` - ✓ Prediction correct\n\n**Missed Predictions** (files we changed but didn't predict):\n1. `path/to/unexpected1.ts` - Why we had to change it: [explanation]\n2. `path/to/unexpected2.ts` - Why we had to change it: [explanation]\n\n**False Positives** (predicted but didn't need to change):\n1. `path/to/not-needed1.ts` - Why it wasn't needed: [explanation]\n\n**Additional Related Files** (from final cochange analysis):\n- Files that may need future updates: [list if any]\n- High-priority files to review: [list if any]\n\n**Activity Learning Note**: This cochange accuracy data helps improve future refactoring planning by learning which file patterns reliably co-occur.\n\n### Changes Summary\n\n#### Architecture Changes\n[High-level description of structural changes]\n\n**Before**:\n```typescript\n// Simplified version of old implementation\n[Show key parts of old structure]\n```\n\n**After**:\n```typescript\n// Simplified version of new implementation\n[Show key parts of new structure]\n```\n\n#### Key Improvements\n\n1. **[Improvement 1]**: [Description]\n   - **Benefit**: [Why this matters]\n   - **Implementation**: [How it was done]\n\n2. **[Improvement 2]**: [Description]\n   - **Benefit**: [Why this matters]\n   - **Implementation**: [How it was done]\n\n[... continue for all major improvements]\n\n### Code Quality Improvements\n\n**Metrics** (from TEST_VALIDATION_REPORT.md):\n| Metric | Before | After | Improvement |\n|--------|--------|-------|-------------|\n| Cyclomatic Complexity | X | Y | ↓ Z% |\n| Lines of Code | X | Y | ↓ Z |\n| Function Count | X | Y | ↑ Z |\n| Test Coverage | X% | Y% | ↑ Z% |\n\n**Qualitative improvements**:\n- ✓ Reduced complexity\n- ✓ Improved readability\n- ✓ Better separation of concerns\n- ✓ Enhanced type safety\n- ✓ Eliminated duplication\n- ✓ Improved testability\n\n### API Changes\n\n#### Backward Compatible Changes\n- Added: [New functions/methods with descriptions]\n- Enhanced: [Existing functions with new capabilities]\n- Deprecated: [Old APIs with migration path]\n\n#### Breaking Changes (if any)\n\n**Change 1**: [Description]\n- **Before**: `oldAPI(params)`\n- **After**: `newAPI(params)`\n- **Migration**: [How to update code]\n- **Reason**: [Why this breaking change was necessary]\n\n[... list all breaking changes]\n\n### Issues Resolved\n\n**Metabob issues fixed** (from REFACTORING_IMPLEMENTATION.md):\n\n1. **Issue ID**: issue_xxx\n   - **Severity**: HIGH\n   - **Description**: [Issue]\n   - **Resolution**: [How refactoring fixed it]\n\n[... list all resolved issues]\n\n### Design Decisions\n\n**Key architectural choices made during refactoring**:\n\n1. **Decision**: [Choice made, e.g., \"Use Strategy pattern\"]\n   - **Rationale**: [Why this choice]\n   - **Alternatives considered**: [Other options and why not chosen]\n   - **Trade-offs**: [What was gained/lost]\n\n2. **Decision**: [Another choice]\n   - **Rationale**: [Why]\n   - **Alternatives considered**: [Others]\n   - **Trade-offs**: [Pros/cons]\n\n[... document all important decisions]\n\n### Testing\n\n**Test coverage** (from TEST_VALIDATION_REPORT.md):\n- Regression tests: X tests\n- Integration tests: Y tests\n- Edge case tests: Z tests\n- **Total**: N tests, all passing ✓\n\n**Validation**:\n- ✓ All existing tests pass\n- ✓ All dependents validated\n- ✓ TypeScript compiles with no errors\n- ✓ Code quality metrics improved\n\n### Related Changes Needed\n\n**From metabob_suggest_related_changes**:\n\nFiles that often change with `{{file_path}}`:\n1. `path/to/related1.ts` - [Review needed: Yes/No] - [Reason]\n2. `path/to/related2.ts` - [Review needed: Yes/No] - [Reason]\n\n**Action items**:\n- [ ] Review related file 1 for consistency\n- [ ] Update related file 2 if needed\n- [ ] Check documentation for related features\n\n### Migration Guide (if API changed)\n\n**For developers using {{component_name}}**:\n\n#### Quick Migration\n\n```typescript\n// Before\nimport { oldFunction } from './component';\nconst result = oldFunction(params);\n\n// After\nimport { newFunction } from './component';\nconst result = newFunction(params);\n```\n\n#### Detailed Migration Steps\n\n1. **Step 1**: [Instruction]\n   ```typescript\n   // Example\n   ```\n\n2. **Step 2**: [Instruction]\n   ```typescript\n   // Example\n   ```\n\n[... provide complete migration path]\n\n#### Deprecation Timeline (if applicable)\n\n- **Now**: Old API deprecated, warnings issued\n- **v2.0**: Old API removed\n- **Migration period**: [Duration]\n\n### Lessons Learned\n\n**What worked well**:\n1. [Success 1]\n2. [Success 2]\n\n**Challenges faced**:\n1. [Challenge 1] - [How it was overcome]\n2. [Challenge 2] - [How it was overcome]\n\n**Insights for future refactorings**:\n1. [Insight 1]\n2. [Insight 2]\n3. [Insight 3]\n\n### Recommendations\n\n**Follow-up work**:\n1. [Recommendation 1] - [Priority: High/Medium/Low]\n2. [Recommendation 2] - [Priority: High/Medium/Low]\n\n**Preventive measures**:\n1. [How to prevent similar issues in future]\n2. [Process improvements]\n3. [Tool or pattern recommendations]\n\n### Conclusion\n\n**Refactoring completed successfully** ✓\n\n**Key achievements**:\n- [Achievement 1]\n- [Achievement 2]\n- [Achievement 3]\n\n**Impact**:\n- Code quality: [Improved/Significantly improved]\n- Maintainability: [Improved/Significantly improved]\n- Performance: [Unchanged/Improved/Significantly improved]\n- Developer experience: [Improved/Significantly improved]\n\n**Status**: Ready for [Merge/Review/Production]\n\n---\n\n**Reviewed by**: [To be filled]\n**Approved by**: [To be filled]\n```\n\n---\n\n## Part 3: Update Related Documentation\n\n**If public API changed**:\n- Update API documentation\n- Update README if component is key feature\n- Update CHANGELOG with version bump\n- Update migration guides\n\n**If architecture changed**:\n- Update architecture diagrams\n- Update developer onboarding docs\n- Update code examples\n\n---\n\n**Success Criteria**:\n- REFACTORING_SUMMARY.md exists and is complete\n- All Metabob annotations added\n- Migration guide provided (if API changed)\n- Related changes identified and documented\n- All documentation sections complete and specific\n- Lessons learned are insightful and actionable\n",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Component name"
+          },
+          {
+            "name": "file_path",
+            "type": "string",
+            "required": true,
+            "description": "File path"
+          },
+          {
+            "name": "refactoring_goal",
+            "type": "string",
+            "required": true,
+            "description": "Refactoring goal"
+          },
+          {
+            "name": "refactoring_reason",
+            "type": "string",
+            "required": false,
+            "description": "Refactoring reason"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "REFACTORING_SUMMARY.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Refactoring Summary:",
+            "description": ""
+          },
+          {
+            "pattern": "### Related Files Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "Cochange accuracy:",
+            "description": ""
+          },
+          {
+            "pattern": "### Changes Summary",
+            "description": ""
+          },
+          {
+            "pattern": "### Code Quality Improvements",
+            "description": ""
+          },
+          {
+            "pattern": "### Design Decisions",
+            "description": ""
+          },
+          {
+            "pattern": "### Lessons Learned",
+            "description": ""
+          },
+          {
+            "pattern": "✓",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "PLACEHOLDER",
+            "description": ""
+          },
+          {
+            "pattern": "\\[description\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[explanation\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[To be filled\\]",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "analyze-impact",
+      "task_id": "analyze-impact",
+      "subagent": "general",
+      "description": "Analyze refactoring scope, dependencies, and potential impact using Metabob",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the impact of refactoring {{component_name}} in {{file_path}}.\n\n**Refactoring Goal**:\n{{refactoring_goal}}\n\n{{#if refactoring_reason}}\n**Reason for Refactoring**:\n{{refactoring_reason}}\n{{/if}}\n\n---\n\n## Your Task\n\n### 1. Analyze Change Impact\n\nUse `metabob_analyze_change_impact` to understand dependencies:\n\n```typescript\nmetabob_analyze_change_impact({\n  file_path: \"{{file_path}}\",\n  component_name: \"{{component_name}}\"\n})\n```\n\n**What to look for**:\n- Direct dependents (files that import/use this component)\n- Transitive dependents (files that depend on dependents)\n- Total impact radius\n- Critical dependencies (core functionality, widely used components)\n\n**Risk Assessment**:\n- Low risk: 0-5 direct dependents\n- Medium risk: 6-15 direct dependents\n- High risk: 16+ direct dependents or 50+ transitive dependents\n- Critical: Core infrastructure components\n\n### 2. Search for Existing Issues\n\nUse `metabob_search_codebase_issues` to find problems in the component:\n\n```typescript\nmetabob_search_codebase_issues({\n  query: \"{{component_name}} {{file_path}}\",\n  limit: 10\n})\n```\n\n**Look for**:\n- Code quality issues (complexity, duplication, anti-patterns)\n- Performance issues\n- Security vulnerabilities\n- Maintainability concerns\n- Previously reported bugs\n\n**Prioritize issues**:\n- Fix HIGH severity issues during refactoring\n- Fix MEDIUM issues opportunistically\n- Note LOW issues for future work\n\n### 3. Review Current Implementation\n\n**Read the component**:\n- Understand current architecture\n- Identify pain points (complexity, coupling, duplication)\n- Review function signatures and public API\n- Check for design patterns used\n- Note TypeScript types and interfaces\n\n**Check annotations**:\n- Use `metabob_list_file_components` to see what's been documented\n- Review existing annotations for design intent\n- Understand why the code exists in its current form\n\n### 4. Predict Related Files (Cochange Analysis)\n\n**IMPORTANT**: Use `metabob_suggest_related_changes` to predict which files might need changes alongside this refactoring:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"{{file_path}}\"],\n  top_k: 10  // Refactors often affect more files than features/bugs\n})\n```\n\n**Why This Matters**:\n- Refactoring often requires updating dependent files\n- Identify files that change together historically\n- Prevent missed updates that could break functionality\n- **Store predictions for accuracy measurement later**\n\n**What to document**:\n- List all predicted files (by file path)\n- Note recommendation priority (High/Medium/Low)\n- Explain why each file might need changes\n- These predictions will be compared to actual changes in the final task\n\n**Activity Learning**: These predictions help the system learn which file patterns co-occur during refactoring, improving future refactoring planning.\n\n### 5. Plan Refactoring Approach\n\n**Define scope**:\n- What will change? (structure, API, implementation)\n- What will stay the same? (public API, behavior)\n- How to maintain backward compatibility?\n\n**Break down changes**:\n- Identify independent sub-refactorings\n- Order changes from safest to riskiest\n- Plan incremental steps\n\n**Risk mitigation**:\n- How to test each change?\n- Which dependents need updates?\n- What could break?\n\n### 6. Document Your Analysis\n\nCreate **REFACTORING_PLAN.md**:\n\n```markdown\n## Refactoring Plan: {{component_name}}\n\n### Component Overview\n**File**: `{{file_path}}`\n**Component**: `{{component_name}}`\n**Goal**: {{refactoring_goal}}\n\n### Impact Analysis\n\n**Dependency Summary** (from metabob_analyze_change_impact):\n- Direct dependents: X files\n- Transitive dependents: Y files\n- Risk level: [Low|Medium|High|Critical]\n\n**Dependent Files**:\n1. `path/to/dependent1.ts` - [Brief description of usage]\n2. `path/to/dependent2.ts` - [Brief description of usage]\n[... list all critical dependents]\n\n**Impact Assessment**:\n[Explain what will break if changes aren't careful]\n\n### Predicted Cochanges (from metabob_suggest_related_changes)\n\n**Files likely to need changes**:\n1. `path/to/related1.ts` - [Why: e.g., uses refactored API, historically changes together]\n2. `path/to/related2.ts` - [Why: e.g., similar pattern, integration point]\n[... list all predicted files with reasoning]\n\n**Prediction Summary**:\n- Total predicted files: X\n- High priority: Y files\n- Medium priority: Z files\n\n**Activity Learning Note**: These predictions will be compared to actual changes in the final task to measure cochange accuracy and improve future refactoring planning.\n\n### Existing Issues (from metabob_search_codebase_issues)\n\n**HIGH Priority**:\n- Issue #1: [Description] - MUST fix during refactoring\n\n**MEDIUM Priority**:\n- Issue #2: [Description] - Fix if touched\n\n**LOW Priority**:\n- Issue #3: [Description] - Note for future\n\n### Current Implementation Analysis\n\n**Strengths**:\n- [What works well]\n\n**Pain Points**:\n- [What's problematic: complexity, coupling, duplication, etc.]\n\n**Public API**:\n```typescript\n// Current function signatures / class interface\nexport function currentAPI(...): ReturnType { ... }\n```\n\n### Refactoring Strategy\n\n**Approach**: [Extract method | Extract class | Simplify logic | Reduce coupling | etc.]\n\n**Changes**:\n1. **Phase 1**: [First set of changes]\n   - Files affected: [...]\n   - Risk: Low/Medium/High\n   - Testing strategy: [...]\n\n2. **Phase 2**: [Second set of changes]\n   - Files affected: [...]\n   - Risk: Low/Medium/High\n   - Testing strategy: [...]\n\n[... continue for all phases]\n\n**Backward Compatibility**:\n- API changes: [None | Additive only | Breaking changes]\n- Migration path: [How dependents will update]\n- Deprecation strategy: [If applicable]\n\n### Testing Strategy\n\n**Unit Tests**:\n- Test existing behavior (regression prevention)\n- Test new/refactored behavior\n- Test edge cases\n\n**Integration Tests**:\n- Test dependent components still work\n- Test end-to-end flows\n\n**Manual Testing**:\n- [Specific scenarios to verify manually]\n\n### Success Criteria\n\n- [ ] All existing tests pass\n- [ ] New tests cover refactored code\n- [ ] No TypeScript errors\n- [ ] All dependents still work correctly\n- [ ] Code quality improved (reduced complexity, better structure)\n- [ ] HIGH priority Metabob issues resolved\n- [ ] Documentation updated\n\n### Risk Mitigation\n\n**If things break**:\n1. [Rollback strategy]\n2. [Debug approach]\n3. [Who to notify]\n\n**Monitoring**:\n- [What to watch after deployment]\n\n---\n\n**Reviewers**: Tag this section with notes for code reviewers\n\n**Dependencies**: List any blocked work or prerequisites\n```\n\n**Validation**:\n- All sections must be complete with specifics (no \"TBD\" or \"TODO\")\n- Dependency count must be specific numbers from Metabob\n- Risk level must be clearly stated\n- Testing strategy must be concrete\n",
+        "variables": [
+          {
+            "name": "file_path",
+            "type": "string",
+            "required": true,
+            "description": "Path to the file containing the component to refactor"
+          },
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the function, class, or component to refactor"
+          },
+          {
+            "name": "refactoring_goal",
+            "type": "string",
+            "required": true,
+            "description": "What you want to achieve with this refactoring (e.g., 'Reduce complexity', 'Extract reusable logic', 'Improve type safety')"
+          },
+          {
+            "name": "refactoring_reason",
+            "type": "string",
+            "required": false,
+            "description": "Why this refactoring is needed (e.g., 'Hard to test', 'Frequent bugs', 'Performance issues')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "REFACTORING_PLAN.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Refactoring Plan:",
+            "description": ""
+          },
+          {
+            "pattern": "### Impact Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "Direct dependents:",
+            "description": ""
+          },
+          {
+            "pattern": "Risk level:",
+            "description": ""
+          },
+          {
+            "pattern": "### Predicted Cochanges",
+            "description": ""
+          },
+          {
+            "pattern": "### Refactoring Strategy",
+            "description": ""
+          },
+          {
+            "pattern": "### Testing Strategy",
+            "description": ""
+          },
+          {
+            "pattern": "### Success Criteria",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "path/to/",
+            "description": ""
+          },
+          {
+            "pattern": "PLACEHOLDER",
+            "description": ""
+          },
+          {
+            "pattern": "\\[\\.\\.\\.]",
+            "description": ""
+          },
+          {
+            "pattern": "X files",
+            "description": ""
+          },
+          {
+            "pattern": "Y files",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "implement-refactoring",
+      "task_id": "implement-refactoring",
+      "subagent": "general",
+      "description": "Implement refactoring following the plan with incremental, testable changes",
+      "dependencies": [
+        "analyze-impact"
+      ],
+      "prompt": {
+        "template": "Implement the refactoring of {{component_name}} following REFACTORING_PLAN.md.\n\n**First, read REFACTORING_PLAN.md** to understand:\n- Impact analysis and risk level\n- Dependent components\n- Existing issues to fix\n- Refactoring strategy and phases\n- Testing requirements\n\n---\n\n## Implementation Guidelines\n\n### 1. Incremental Refactoring\n\n**DO**:\n- Follow the phases outlined in REFACTORING_PLAN.md\n- Make one logical change at a time\n- Keep tests passing at each step\n- Commit after each working phase (if git available)\n- Verify TypeScript types remain correct\n\n**DON'T**:\n- Make large, sweeping changes all at once\n- Break public API without migration path\n- Remove tests (even if refactoring changes implementation)\n- Introduce `any` types or reduce type safety\n\n### 2. Code Quality Standards\n\n**Complexity Reduction**:\n- Extract complex logic into smaller functions\n- Use early returns to reduce nesting\n- Replace complex conditionals with descriptive functions\n- Aim for cyclomatic complexity < 10 per function\n\n**Coupling Reduction**:\n- Use dependency injection\n- Define clear interfaces\n- Minimize direct dependencies\n- Use composition over inheritance\n\n**Duplication Elimination**:\n- Extract repeated logic into shared utilities\n- Use generics for type-safe reuse\n- Create reusable abstractions\n\n**Type Safety**:\n- Use TypeScript types correctly (no `any`)\n- Prefer interfaces over `object` or `Record<string, any>`\n- Use union types and discriminated unions\n- Add generic constraints where appropriate\n\n### 3. Common Refactoring Patterns\n\n#### Extract Function\n```typescript\n// Before: Complex function\nfunction processUser(user: User) {\n  // 50 lines of complex logic\n  if (user.age > 18 && user.verified && !user.suspended) {\n    // ...\n  }\n}\n\n// After: Extracted helpers\nfunction processUser(user: User) {\n  if (!isEligibleUser(user)) {\n    throw new Error('User not eligible');\n  }\n  \n  const profile = buildUserProfile(user);\n  const permissions = calculatePermissions(user);\n  return createUserContext(profile, permissions);\n}\n\nfunction isEligibleUser(user: User): boolean {\n  return user.age > 18 && user.verified && !user.suspended;\n}\n```\n\n#### Extract Class\n```typescript\n// Before: God object\nclass UserManager {\n  // 500 lines doing everything\n}\n\n// After: Single responsibility\nclass UserValidator { ... }\nclass UserRepository { ... }\nclass UserNotifier { ... }\n\nclass UserManager {\n  constructor(\n    private validator: UserValidator,\n    private repository: UserRepository,\n    private notifier: UserNotifier\n  ) {}\n}\n```\n\n#### Replace Conditional with Polymorphism\n```typescript\n// Before: Switch statement\nfunction processPayment(payment: Payment) {\n  switch (payment.type) {\n    case 'credit': /* ... */; break;\n    case 'debit': /* ... */; break;\n    case 'paypal': /* ... */; break;\n  }\n}\n\n// After: Polymorphic strategy\ninterface PaymentProcessor {\n  process(payment: Payment): Result;\n}\n\nclass CreditCardProcessor implements PaymentProcessor { ... }\nclass DebitCardProcessor implements PaymentProcessor { ... }\nclass PayPalProcessor implements PaymentProcessor { ... }\n\nconst processors: Record<PaymentType, PaymentProcessor> = {\n  credit: new CreditCardProcessor(),\n  debit: new DebitCardProcessor(),\n  paypal: new PayPalProcessor(),\n};\n\nfunction processPayment(payment: Payment) {\n  return processors[payment.type].process(payment);\n}\n```\n\n### 4. Maintain Backward Compatibility\n\n**Additive Changes** (preferred):\n- Add new functions/methods alongside old ones\n- Use default parameters for new arguments\n- Deprecate old APIs with clear migration path\n\n**Breaking Changes** (if necessary):\n- Document breaking changes clearly\n- Provide migration guide\n- Update all dependents in the same PR\n- Add deprecation warnings before removing\n\n### 5. Fix Metabob Issues\n\n**From REFACTORING_PLAN.md, address**:\n- All HIGH priority issues\n- MEDIUM priority issues if touching that code\n- Document fixes with inline comments\n\n**After fixing issues**:\n- Use `metabob_mark_problem_complete` for each resolved issue\n- Use `metabob_annotate_component` to document the refactored component\n\n### 6. Continuous Verification\n\n**After each phase**:\n1. Run `npm run typecheck` (or `tsc --noEmit`) - MUST pass\n2. Run existing tests - MUST pass\n3. Verify dependent files still import correctly\n4. Check for console errors in dev environment\n\n### 7. Documentation\n\nCreate **REFACTORING_IMPLEMENTATION.md**:\n\n```markdown\n## Refactoring Implementation\n\n### Changes Made\n\n#### Phase 1: [Phase name]\n**Files modified**:\n- `path/to/file1.ts` - [What changed]\n- `path/to/file2.ts` - [What changed]\n\n**Summary**: [What was accomplished]\n\n**Verification**:\n- [ ] TypeScript compiles\n- [ ] Tests pass\n- [ ] Dependents work\n\n#### Phase 2: [Phase name]\n[... repeat for each phase]\n\n### Metabob Issues Resolved\n\n1. **Issue ID**: issue_xxx\n   - **Severity**: HIGH\n   - **Description**: [Issue description]\n   - **Resolution**: [How it was fixed]\n   - **File**: `path/to/file.ts`\n\n[... repeat for each issue]\n\n### API Changes\n\n**Backward compatible changes**:\n- Added: `newFunction()` - [Description]\n- Enhanced: `existingFunction()` now accepts optional parameter X\n\n**Breaking changes** (if any):\n- Removed: `oldFunction()` - Use `newFunction()` instead\n- Renamed: `foo()` → `bar()` - [Migration guide]\n\n**Deprecations**:\n- `legacyMethod()` - Use `modernMethod()` instead. Will be removed in v2.0.\n\n### Code Quality Improvements\n\n**Before**:\n- Cyclomatic complexity: [number]\n- Lines of code: [number]\n- Test coverage: [number]%\n\n**After**:\n- Cyclomatic complexity: [number] (↓ X%)\n- Lines of code: [number] (↓/↑ X)\n- Test coverage: [number]% (↑ X%)\n\n**Specific improvements**:\n- Extracted X helper functions\n- Reduced nesting from Y to Z levels\n- Eliminated N lines of duplication\n- Improved type safety with [specific changes]\n\n### Testing Updates\n\n**Existing tests**:\n- All X existing tests still pass ✓\n- Updated Y tests for API changes\n\n**New tests** (will be added in next task):\n- [List tests to be added]\n\n### Dependent Updates\n\n**Files updated to use new API**:\n1. `path/to/dependent1.ts` - [Changes made]\n2. `path/to/dependent2.ts` - [Changes made]\n\n**Files unchanged** (backward compatible):\n- `path/to/file.ts` - Still works with old API\n\n### Verification Checklist\n\n- [ ] All phases completed\n- [ ] TypeScript compiles with no errors\n- [ ] All existing tests pass\n- [ ] All HIGH priority issues resolved\n- [ ] Dependents updated and working\n- [ ] Code complexity reduced\n- [ ] No `any` types introduced\n- [ ] Public API changes documented\n- [ ] Metabob annotations added\n```\n\n**Success Criteria**:\n- REFACTORING_IMPLEMENTATION.md exists and is complete\n- All HIGH priority Metabob issues from REFACTORING_PLAN.md are resolved\n- TypeScript compiles with no errors\n- All existing tests pass\n- Code quality metrics improved\n",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Component name"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "REFACTORING_IMPLEMENTATION.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Refactoring Implementation",
+            "description": ""
+          },
+          {
+            "pattern": "### Changes Made",
+            "description": ""
+          },
+          {
+            "pattern": "### Code Quality Improvements",
+            "description": ""
+          },
+          {
+            "pattern": "### Verification Checklist",
+            "description": ""
+          },
+          {
+            "pattern": "- \\[x\\]",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "console\\.log\\(",
+            "description": ""
+          },
+          {
+            "pattern": "\\bany\\b(?! types| in)",
+            "description": ""
+          },
+          {
+            "pattern": "TODO(?! in test)",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "HACK",
+            "description": ""
+          },
+          {
+            "pattern": "PLACEHOLDER",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm run typecheck || tsc --noEmit || echo 'Typecheck not available'",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "npm test -- --passWithNoTests || npm test || echo 'Tests not available'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 4,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "test-and-validate",
+      "task_id": "test-and-validate",
+      "subagent": "test",
+      "description": "Write comprehensive tests for refactored component and validate all dependents",
+      "dependencies": [
+        "implement-refactoring"
+      ],
+      "prompt": {
+        "template": "Write comprehensive tests for the refactored {{component_name}} and validate the refactoring.\n\n**Read these documents**:\n1. REFACTORING_PLAN.md - Understand the refactoring goals\n2. REFACTORING_IMPLEMENTATION.md - Understand what changed\n\n---\n\n## Part 1: Test Coverage\n\n### 1. Regression Tests\n\n**Purpose**: Ensure existing behavior still works\n\n```typescript\ndescribe('{{component_name}} - Regression Tests', () => {\n  describe('Existing functionality', () => {\n    it('should maintain behavior for [scenario 1]', () => {\n      // Test that old functionality still works\n      // These tests should have existed before refactoring\n      // Now verify they still pass\n    });\n    \n    it('should handle [scenario 2] as before', () => {\n      // More regression tests\n    });\n  });\n});\n```\n\n### 2. New Behavior Tests\n\n**If refactoring added new functionality**:\n\n```typescript\n  describe('New functionality', () => {\n    it('should [new behavior 1]', () => {\n      // Test new capabilities added during refactoring\n    });\n    \n    it('should [new behavior 2]', () => {\n      // Test improvements\n    });\n  });\n```\n\n### 3. Edge Cases and Error Handling\n\n```typescript\n  describe('Edge cases', () => {\n    it('should handle null/undefined inputs', () => {\n      // Test defensive code added during refactoring\n    });\n    \n    it('should handle empty/invalid inputs', () => {\n      // Test validation\n    });\n    \n    it('should throw appropriate errors for invalid states', () => {\n      // Test error handling\n    });\n  });\n```\n\n### 4. Integration Tests for Dependents\n\n**Test that dependent components still work**:\n\n```typescript\ndescribe('{{component_name}} - Integration Tests', () => {\n  describe('Integration with Dependent1', () => {\n    it('should work with Dependent1 as expected', () => {\n      // Test a key dependent component\n      // Verify the integration still works after refactoring\n    });\n  });\n  \n  describe('Integration with Dependent2', () => {\n    it('should work with Dependent2 as expected', () => {\n      // Test another critical dependent\n    });\n  });\n});\n```\n\n### 5. Performance Tests (if applicable)\n\n**If refactoring improved performance**:\n\n```typescript\n  describe('Performance', () => {\n    it('should complete operation within acceptable time', () => {\n      const start = Date.now();\n      // Execute refactored code\n      const duration = Date.now() - start;\n      expect(duration).toBeLessThan(100); // or appropriate threshold\n    });\n  });\n```\n\n## Part 2: Validation\n\n### 1. Run Full Test Suite\n\n**Execute**:\n```bash\nnpm test\n# or\nnpm run test:coverage\n```\n\n**Requirements**:\n- All tests must pass ✓\n- No skipped tests (it.skip, xit)\n- Coverage should improve or stay same\n- No timeout errors\n\n### 2. TypeScript Validation\n\n**Execute**:\n```bash\nnpm run typecheck\n# or\ntsc --noEmit\n```\n\n**Requirements**:\n- Zero TypeScript errors\n- No `any` types (or justify if necessary)\n- Proper type inference\n\n### 3. Code Quality Metrics\n\n**Check improvements** (if tools available):\n```bash\nnpm run lint\n# Check complexity, duplication, etc.\n```\n\n### 4. Dependent Validation\n\n**From REFACTORING_PLAN.md, verify**:\n- All listed dependents still import correctly\n- No runtime errors in dependent code\n- Integration points work as expected\n\n## Part 3: Documentation\n\nCreate **TEST_VALIDATION_REPORT.md**:\n\n```markdown\n## Test & Validation Report\n\n### Test Summary\n\n**Total tests**: X\n- Existing tests: Y (all passing ✓)\n- New regression tests: Z\n- New behavior tests: N\n- Integration tests: M\n\n**Test results**: All X tests passing ✓\n\n**Coverage**:\n- Before refactoring: X%\n- After refactoring: Y%\n- Change: ↑/↓ Z%\n\n### Test Details\n\n#### Regression Tests Added\n1. **Test**: `should handle [scenario]`\n   - **Purpose**: Ensure existing behavior for [use case]\n   - **Status**: ✓ Passing\n\n[... list key new tests]\n\n#### Integration Tests\n1. **Dependent**: `path/to/dependent1.ts`\n   - **Test**: [Integration test description]\n   - **Status**: ✓ Passing\n\n[... list integration tests]\n\n### TypeScript Validation\n\n**Command**: `npm run typecheck`\n**Result**: ✓ No errors\n\n**Type safety improvements**:\n- Replaced X `any` types with proper types\n- Added Y new interfaces/types\n- Improved type inference in Z locations\n\n### Code Quality Validation\n\n**Linting**: `npm run lint`\n**Result**: ✓ No errors (or list warnings)\n\n**Complexity Analysis**:\n| Metric | Before | After | Change |\n|--------|--------|-------|--------|\n| Cyclomatic Complexity | X | Y | ↓ Z% |\n| Lines of Code | X | Y | ↓/↑ Z |\n| Function Count | X | Y | ↑ Z |\n| Max Function Length | X | Y | ↓ Z |\n\n**Code Quality Improvements**:\n- ✓ Reduced complexity\n- ✓ Improved readability\n- ✓ Better separation of concerns\n- ✓ Eliminated duplication\n\n### Dependent Validation\n\n**Dependents verified** (from REFACTORING_PLAN.md):\n1. ✓ `path/to/dependent1.ts` - Works correctly\n2. ✓ `path/to/dependent2.ts` - Works correctly\n[... list all critical dependents]\n\n**Integration points tested**:\n- ✓ Imports resolve correctly\n- ✓ Function calls work as expected\n- ✓ Data flows correctly\n- ✓ No runtime errors\n\n### Edge Cases Covered\n\n- ✓ Null/undefined handling\n- ✓ Empty input handling\n- ✓ Invalid input validation\n- ✓ Boundary values\n- ✓ Error scenarios\n- ✓ Async edge cases (if applicable)\n\n### Regression Prevention\n\n**Tests that prevent regressions**:\n1. [Test name] - Ensures [behavior] doesn't break\n2. [Test name] - Ensures [edge case] is handled\n[... list key regression tests]\n\n### Manual Testing Performed\n\n**Scenarios tested manually** (if applicable):\n1. [Scenario 1] - ✓ Works as expected\n2. [Scenario 2] - ✓ Works as expected\n\n### Issues Found and Resolved\n\n**During testing**:\n1. [Issue description] - Fixed by [solution]\n2. [Issue description] - Fixed by [solution]\n\n**Or**: No issues found during testing ✓\n\n### Validation Checklist\n\n- [ ] All existing tests pass\n- [ ] New regression tests added\n- [ ] Integration tests pass\n- [ ] TypeScript compiles with no errors\n- [ ] Linting passes\n- [ ] Code complexity reduced\n- [ ] All dependents validated\n- [ ] Edge cases covered\n- [ ] Test coverage maintained/improved\n- [ ] No performance regressions\n- [ ] Manual testing completed (if applicable)\n\n### Conclusion\n\n**Refactoring validated successfully** ✓\n\n**Key achievements**:\n- [Improvement 1]\n- [Improvement 2]\n- [Improvement 3]\n\n**Confidence level**: [High/Medium/Low] - [Reasoning]\n\n**Ready for**: [Merge/Review/Production]\n```\n\n**Success Criteria**:\n- TEST_VALIDATION_REPORT.md exists and is complete\n- All tests passing (100%)\n- TypeScript compiles with no errors\n- All dependents validated\n- Code quality metrics improved\n- Validation checklist fully checked\n",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Component name"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "*.test.ts",
+          "*.test.js",
+          "*.spec.ts",
+          "*.spec.js",
+          "TEST_VALIDATION_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "describe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "it\\(",
+            "description": ""
+          },
+          {
+            "pattern": "expect\\(",
+            "description": ""
+          },
+          {
+            "pattern": "## Test & Validation Report",
+            "description": ""
+          },
+          {
+            "pattern": "### Test Summary",
+            "description": ""
+          },
+          {
+            "pattern": "✓",
+            "description": ""
+          },
+          {
+            "pattern": "### Validation Checklist",
+            "description": ""
+          },
+          {
+            "pattern": "- \\[x\\]",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "it\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "describe\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "xit\\(",
+            "description": ""
+          },
+          {
+            "pattern": "xdescribe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "TODO in test",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "\\[ \\]",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm test -- --passWithNoTests || npm test || echo 'Tests not executed'",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "npm run typecheck || tsc --noEmit || echo 'Typecheck not available'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "document-and-annotate",
+      "task_id": "document-and-annotate",
+      "subagent": "general",
+      "description": "Document refactoring with Metabob annotations and create comprehensive summary",
+      "dependencies": [
+        "test-and-validate"
+      ],
+      "prompt": {
+        "template": "Document the refactoring of {{component_name}} comprehensively.\n\n**Read all previous documents**:\n1. REFACTORING_PLAN.md - Original plan and impact analysis\n2. REFACTORING_IMPLEMENTATION.md - Implementation details\n3. TEST_VALIDATION_REPORT.md - Test results and validation\n\n---\n\n## Part 1: Metabob Annotations\n\n### 1. Annotate Refactored Component\n\nUse `metabob_annotate_component` on the refactored component:\n\n```typescript\nmetabob_annotate_component({\n  file_path: \"{{file_path}}\",\n  component_name: \"{{component_name}}\",\n  component_type: \"function\", // or \"class\" or \"method\"\n  reason: \"Refactored to [what was improved]. Key changes: [list main changes]. Design decisions: [explain architectural choices]. Handles [edge cases].\"\n})\n```\n\n**Annotation guidelines**:\n- Explain WHAT was refactored (structure, logic, API)\n- Explain WHY it was refactored (complexity, coupling, performance)\n- Document design decisions made during refactoring\n- Note important patterns or architectural choices\n- Explain any non-obvious implementations\n\n### 2. Mark Resolved Issues\n\nFor each Metabob issue fixed (from REFACTORING_IMPLEMENTATION.md):\n\n```typescript\nmetabob_mark_problem_complete({\n  problem_id: \"issue_xxx\",\n  file_path: \"{{file_path}}\",\n  resolution_notes: \"Resolved during refactoring. [Explain how the refactoring fixed this issue].\"\n})\n```\n\n### 3. Find Related Changes\n\nUse `metabob_suggest_related_changes` to find co-change patterns:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"{{file_path}}\", /* other modified files */]\n})\n```\n\n**Purpose**: Identify files that often change together with the refactored component.\nThese may need updates or reviews to ensure consistency.\n\n---\n\n## Part 2: Check Related Files and Cochange Accuracy\n\n### 1. Compare Predictions to Reality\n\n**Review predictions from REFACTORING_PLAN.md** (\"Predicted Cochanges\" section):\n- Which files were predicted to need changes?\n- How many files were predicted?\n\n**Identify actual changes**:\n```bash\ngit diff --name-only HEAD\n# OR if not committed yet:\ngit status --short\n```\n\n**Calculate cochange accuracy**:\n```\nAccuracy = (Number of correctly predicted files) / (Total predicted files)\n\nExample:\n- Predicted: 8 files\n- Actually changed: 10 files  \n- Correctly predicted: 6 files\n- Accuracy: 6/8 = 75%\n```\n\n### 2. Run Cochange Analysis on Actual Changes\n\nNow run `metabob_suggest_related_changes` on ALL files you actually modified:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\n    \"{{file_path}}\",\n    \"path/to/dependent1.ts\",\n    \"path/to/test-file.test.ts\"\n    // ... all files you modified\n  ],\n  top_k: 10\n})\n```\n\n**Purpose**: \n- Find files we might have missed\n- Verify no related files need updates\n- Identify patterns for future refactorings\n\n### 3. Document Findings\n\n**What to note**:\n- Which predictions were correct (files we did change)\n- Which predictions were incorrect (files we didn't need to change)\n- Which files we changed that weren't predicted (missed predictions)\n- Any high-priority related files that still need review\n\n---\n\n## Part 3: Annotate Key Components\n\n### Annotate Refactored Component\n\nUse `metabob_annotate_component` for 3-5 key components:\n\n```typescript\nmetabob_annotate_component({\n  file_path: \"{{file_path}}\",\n  component_name: \"{{component_name}}\",\n  component_type: \"function\", // or \"class\" or \"method\"\n  reason: \"Refactored to [what was improved]. Key changes: [list main changes]. Design decisions: [explain architectural choices]. Handles [edge cases].\"\n})\n```\n\n**Focus on**:\n- Main refactored component\n- New abstractions created\n- Components with non-obvious design decisions\n\n---\n\n## Part 4: Create Summary Document\n\n### Create REFACTORING_SUMMARY.md\n\n```markdown\n## Refactoring Summary: {{component_name}}\n\n### Overview\n\n**Component**: `{{component_name}}`\n**File**: `{{file_path}}`\n**Date**: [Date]\n**Refactoring Goal**: {{refactoring_goal}}\n**Reason**: {{refactoring_reason}}\n\n### Impact Scope\n\n**Files changed**: X files\n- Primary: `{{file_path}}`\n- Dependents updated: Y files\n- Tests updated: Z files\n\n**Dependency impact** (from REFACTORING_PLAN.md):\n- Direct dependents: X\n- Transitive dependents: Y\n- Risk level: [Low/Medium/High/Critical]\n\n### Related Files Analysis\n\n**Cochange Prediction Accuracy**:\n- Predicted files: X\n- Actually changed files: Y\n- Correctly predicted: Z\n- **Cochange accuracy: Z/X = AA%**\n\n**Correctly Predicted** (files we changed that were predicted):\n1. `path/to/file1.ts` - ✓ Prediction correct\n2. `path/to/file2.ts` - ✓ Prediction correct\n\n**Missed Predictions** (files we changed but didn't predict):\n1. `path/to/unexpected1.ts` - Why we had to change it: [explanation]\n2. `path/to/unexpected2.ts` - Why we had to change it: [explanation]\n\n**False Positives** (predicted but didn't need to change):\n1. `path/to/not-needed1.ts` - Why it wasn't needed: [explanation]\n\n**Additional Related Files** (from final cochange analysis):\n- Files that may need future updates: [list if any]\n- High-priority files to review: [list if any]\n\n**Activity Learning Note**: This cochange accuracy data helps improve future refactoring planning by learning which file patterns reliably co-occur.\n\n### Changes Summary\n\n#### Architecture Changes\n[High-level description of structural changes]\n\n**Before**:\n```typescript\n// Simplified version of old implementation\n[Show key parts of old structure]\n```\n\n**After**:\n```typescript\n// Simplified version of new implementation\n[Show key parts of new structure]\n```\n\n#### Key Improvements\n\n1. **[Improvement 1]**: [Description]\n   - **Benefit**: [Why this matters]\n   - **Implementation**: [How it was done]\n\n2. **[Improvement 2]**: [Description]\n   - **Benefit**: [Why this matters]\n   - **Implementation**: [How it was done]\n\n[... continue for all major improvements]\n\n### Code Quality Improvements\n\n**Metrics** (from TEST_VALIDATION_REPORT.md):\n| Metric | Before | After | Improvement |\n|--------|--------|-------|-------------|\n| Cyclomatic Complexity | X | Y | ↓ Z% |\n| Lines of Code | X | Y | ↓ Z |\n| Function Count | X | Y | ↑ Z |\n| Test Coverage | X% | Y% | ↑ Z% |\n\n**Qualitative improvements**:\n- ✓ Reduced complexity\n- ✓ Improved readability\n- ✓ Better separation of concerns\n- ✓ Enhanced type safety\n- ✓ Eliminated duplication\n- ✓ Improved testability\n\n### API Changes\n\n#### Backward Compatible Changes\n- Added: [New functions/methods with descriptions]\n- Enhanced: [Existing functions with new capabilities]\n- Deprecated: [Old APIs with migration path]\n\n#### Breaking Changes (if any)\n\n**Change 1**: [Description]\n- **Before**: `oldAPI(params)`\n- **After**: `newAPI(params)`\n- **Migration**: [How to update code]\n- **Reason**: [Why this breaking change was necessary]\n\n[... list all breaking changes]\n\n### Issues Resolved\n\n**Metabob issues fixed** (from REFACTORING_IMPLEMENTATION.md):\n\n1. **Issue ID**: issue_xxx\n   - **Severity**: HIGH\n   - **Description**: [Issue]\n   - **Resolution**: [How refactoring fixed it]\n\n[... list all resolved issues]\n\n### Design Decisions\n\n**Key architectural choices made during refactoring**:\n\n1. **Decision**: [Choice made, e.g., \"Use Strategy pattern\"]\n   - **Rationale**: [Why this choice]\n   - **Alternatives considered**: [Other options and why not chosen]\n   - **Trade-offs**: [What was gained/lost]\n\n2. **Decision**: [Another choice]\n   - **Rationale**: [Why]\n   - **Alternatives considered**: [Others]\n   - **Trade-offs**: [Pros/cons]\n\n[... document all important decisions]\n\n### Testing\n\n**Test coverage** (from TEST_VALIDATION_REPORT.md):\n- Regression tests: X tests\n- Integration tests: Y tests\n- Edge case tests: Z tests\n- **Total**: N tests, all passing ✓\n\n**Validation**:\n- ✓ All existing tests pass\n- ✓ All dependents validated\n- ✓ TypeScript compiles with no errors\n- ✓ Code quality metrics improved\n\n### Related Changes Needed\n\n**From metabob_suggest_related_changes**:\n\nFiles that often change with `{{file_path}}`:\n1. `path/to/related1.ts` - [Review needed: Yes/No] - [Reason]\n2. `path/to/related2.ts` - [Review needed: Yes/No] - [Reason]\n\n**Action items**:\n- [ ] Review related file 1 for consistency\n- [ ] Update related file 2 if needed\n- [ ] Check documentation for related features\n\n### Migration Guide (if API changed)\n\n**For developers using {{component_name}}**:\n\n#### Quick Migration\n\n```typescript\n// Before\nimport { oldFunction } from './component';\nconst result = oldFunction(params);\n\n// After\nimport { newFunction } from './component';\nconst result = newFunction(params);\n```\n\n#### Detailed Migration Steps\n\n1. **Step 1**: [Instruction]\n   ```typescript\n   // Example\n   ```\n\n2. **Step 2**: [Instruction]\n   ```typescript\n   // Example\n   ```\n\n[... provide complete migration path]\n\n#### Deprecation Timeline (if applicable)\n\n- **Now**: Old API deprecated, warnings issued\n- **v2.0**: Old API removed\n- **Migration period**: [Duration]\n\n### Lessons Learned\n\n**What worked well**:\n1. [Success 1]\n2. [Success 2]\n\n**Challenges faced**:\n1. [Challenge 1] - [How it was overcome]\n2. [Challenge 2] - [How it was overcome]\n\n**Insights for future refactorings**:\n1. [Insight 1]\n2. [Insight 2]\n3. [Insight 3]\n\n### Recommendations\n\n**Follow-up work**:\n1. [Recommendation 1] - [Priority: High/Medium/Low]\n2. [Recommendation 2] - [Priority: High/Medium/Low]\n\n**Preventive measures**:\n1. [How to prevent similar issues in future]\n2. [Process improvements]\n3. [Tool or pattern recommendations]\n\n### Conclusion\n\n**Refactoring completed successfully** ✓\n\n**Key achievements**:\n- [Achievement 1]\n- [Achievement 2]\n- [Achievement 3]\n\n**Impact**:\n- Code quality: [Improved/Significantly improved]\n- Maintainability: [Improved/Significantly improved]\n- Performance: [Unchanged/Improved/Significantly improved]\n- Developer experience: [Improved/Significantly improved]\n\n**Status**: Ready for [Merge/Review/Production]\n\n---\n\n**Reviewed by**: [To be filled]\n**Approved by**: [To be filled]\n```\n\n---\n\n## Part 3: Update Related Documentation\n\n**If public API changed**:\n- Update API documentation\n- Update README if component is key feature\n- Update CHANGELOG with version bump\n- Update migration guides\n\n**If architecture changed**:\n- Update architecture diagrams\n- Update developer onboarding docs\n- Update code examples\n\n---\n\n**Success Criteria**:\n- REFACTORING_SUMMARY.md exists and is complete\n- All Metabob annotations added\n- Migration guide provided (if API changed)\n- Related changes identified and documented\n- All documentation sections complete and specific\n- Lessons learned are insightful and actionable\n",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Component name"
+          },
+          {
+            "name": "file_path",
+            "type": "string",
+            "required": true,
+            "description": "File path"
+          },
+          {
+            "name": "refactoring_goal",
+            "type": "string",
+            "required": true,
+            "description": "Refactoring goal"
+          },
+          {
+            "name": "refactoring_reason",
+            "type": "string",
+            "required": false,
+            "description": "Refactoring reason"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "REFACTORING_SUMMARY.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Refactoring Summary:",
+            "description": ""
+          },
+          {
+            "pattern": "### Related Files Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "Cochange accuracy:",
+            "description": ""
+          },
+          {
+            "pattern": "### Changes Summary",
+            "description": ""
+          },
+          {
+            "pattern": "### Code Quality Improvements",
+            "description": ""
+          },
+          {
+            "pattern": "### Design Decisions",
+            "description": ""
+          },
+          {
+            "pattern": "### Lessons Learned",
+            "description": ""
+          },
+          {
+            "pattern": "✓",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "PLACEHOLDER",
+            "description": ""
+          },
+          {
+            "pattern": "\\[description\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[explanation\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[To be filled\\]",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-16T10:35:23.072Z",
+  "metadata": {}
+}

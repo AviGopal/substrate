@@ -1,0 +1,304 @@
+{
+  "activity_id": "improve-bootstrap-template-ductile-rigidity",
+  "name": "Improve Bootstrap Template (Ductile Rigidity)",
+  "description": "Systematically enhance bootstrap templates to exemplify ductile rigidity: strong foundations with flexible execution, model complexity tuning, and composition patterns",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "task_id": "assess-current-state",
+      "subagent": "activity",
+      "description": "Analyze current template structure and identify gaps",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Assess Bootstrap Template Against Ductile Rigidity Paradigm\n\n## Target Template\n{{targetTemplate}}\n\n**Metadata**: {{targetTemplate.tokens}} tokens, truncated: {{targetTemplate.truncated}}\n\n## Ductile Rigidity Paradigm\n{{ductileRigidityParadigm}}\n\nThe paradigm emphasizes:\n- **Strong foundations**: Clear structure, comprehensive validation, robust error handling\n- **Flexible execution**: Adaptive prompts, progressive context, graceful degradation\n- **Model awareness**: Right model for right complexity (Sonnet for reasoning, Haiku for execution)\n- **Composition**: Templates that reference/build upon other templates\n- **Learning**: Metrics-driven optimization and pattern extraction\n\n## Current Execution Metrics (if available)\n{{#if executionMetrics}}\n{{executionMetrics}}\n\n**Performance indicators**:\n- Success rate: Key indicator of robustness\n- Token usage: Efficiency of prompt design\n- Cost/Duration: Model selection appropriateness\n{{else}}\nNo execution metrics available. Assessment will be structural only.\n{{/if}}\n\n## Your Task: Comprehensive Assessment\n\nAnalyze the template across 7 dimensions of ductile rigidity:\n\n### Structured Output\n```json\n{\n  \"templateInfo\": {\n    \"name\": \"template name\",\n    \"version\": 1,\n    \"category\": \"infrastructure|feature|bugfix|etc\",\n    \"currentTaskCount\": 0,\n    \"estimatedComplexity\": \"low|medium|high\"\n  },\n  \"assessment\": {\n    \"1_foundationalStructure\": {\n      \"score\": \"1-10\",\n      \"strengths\": [\"what's well-structured\"],\n      \"gaps\": [\"missing structural elements\"],\n      \"recommendations\": [\"specific improvements\"]\n    },\n    \"2_promptDesign\": {\n      \"score\": \"1-10\",\n      \"strengths\": [\"effective prompt patterns\"],\n      \"gaps\": [\"unclear instructions, missing examples, weak variable usage\"],\n      \"recommendations\": [\"prompt enhancements\"]\n    },\n    \"3_modelComplexity\": {\n      \"score\": \"1-10\",\n      \"currentModels\": [\"which models used per task\"],\n      \"taskComplexityAnalysis\": [\n        {\n          \"taskId\": \"task-1\",\n          \"complexity\": \"low|medium|high\",\n          \"reasoning\": \"why this complexity\",\n          \"recommendedModel\": \"claude-sonnet-4|claude-haiku-4\",\n          \"currentModel\": \"current or 'default'\"\n        }\n      ],\n      \"gaps\": [\"tasks using wrong model tier\"],\n      \"recommendations\": [\"model assignment improvements\"]\n    },\n    \"4_validation\": {\n      \"score\": \"1-10\",\n      \"strengths\": [\"existing validation rules\"],\n      \"gaps\": [\"missing validations, weak checks\"],\n      \"recommendations\": [\"validation enhancements\"]\n    },\n    \"5_errorHandling\": {\n      \"score\": \"1-10\",\n      \"strengths\": [\"retry strategies, fallbacks\"],\n      \"gaps\": [\"missing error scenarios\"],\n      \"recommendations\": [\"error handling improvements\"]\n    },\n    \"6_composition\": {\n      \"score\": \"1-10\",\n      \"strengths\": [\"existing composition patterns\"],\n      \"gaps\": [\"missing template references, no reuse\"],\n      \"compositionOpportunities\": [\n        {\n          \"description\": \"what could be composed\",\n          \"targetTemplates\": [\"templates to reference\"],\n          \"benefit\": \"why compose\"\n        }\n      ],\n      \"recommendations\": [\"composition enhancements\"]\n    },\n    \"7_learningMetrics\": {\n      \"score\": \"1-10\",\n      \"currentMetrics\": \"summary of execution metrics if available\",\n      \"gaps\": [\"missing metric collection points\"],\n      \"recommendations\": [\"metric improvements\"]\n    }\n  },\n  \"overallScore\": \"1-10 (average of 7 dimensions)\",\n  \"priority\": \"high|medium|low (based on how critical this template is)\",\n  \"estimatedImprovementEffort\": \"low|medium|high\",\n  \"keyInsights\": [\n    \"Most critical findings\",\n    \"Biggest opportunities\",\n    \"Bootstrap-specific considerations\"\n  ]\n}\n```\n\n### Analysis Guidelines\n\n**1. Foundational Structure**\n- Clear task breakdown with meaningful IDs\n- Proper dependency graph (linear, diamond, fork, star patterns)\n- Comprehensive contextRequirements\n- Well-defined variables with descriptions\n\n**2. Prompt Design**\n- Clear instructions with examples\n- Effective variable interpolation\n- Structured output expectations (JSON schemas)\n- Truncation handling patterns\n- Progressive context strategies\n\n**3. Model Complexity (CRITICAL for bootstrap templates)**\nFor each task, assess:\n- **Low complexity** (Haiku-appropriate): Mechanical execution, clear patterns, well-defined transformations\n  - Examples: File writing, simple validation, template copying\n  - Signs: < 200 lines of code, single-file changes, no ambiguity\n- **Medium complexity** (Sonnet-appropriate): Pattern matching, multi-file coordination, some decision-making\n  - Examples: Code generation with examples, test creation, documentation updates\n  - Signs: 200-500 lines, 2-4 files, some creative decisions\n- **High complexity** (Sonnet-required): Deep reasoning, architectural decisions, novel problem-solving\n  - Examples: Template design, pattern extraction, system optimization\n  - Signs: > 500 lines, 5+ files, significant creativity/reasoning\n\n**4. Validation**\n- File existence checks\n- Pattern matching (required/forbidden)\n- Command execution (typecheck, test, lint)\n- Quality gates\n\n**5. Error Handling**\n- Retry strategies (simple, progressive-context, fallback-agent)\n- Max attempts appropriate for task complexity\n- Graceful degradation paths\n\n**6. Composition**\n- Does template reference other templates?\n- Could tasks be extracted as separate templates?\n- Are there reusable patterns across bootstrap templates?\n- Bootstrap-specific: Should this template use/be-used-by other bootstrap templates?\n\n**7. Learning Metrics**\n- Metabob integration configuration\n- Success rate tracking potential\n- Token budget optimization opportunities\n\n### Bootstrap Template Considerations\n\nThese templates are **foundational** - they create the system that creates other templates:\n- **Self-referential**: Some bootstrap templates create/improve themselves\n- **Exemplary**: Must demonstrate best practices for all future templates\n- **Minimal dependencies**: Should work even with partial system state\n- **Clear patterns**: Should be obvious reference implementations\n\n### Output Requirements\n\n1. **Complete JSON structure** as specified above\n2. **Specific recommendations** - not generic advice\n3. **Prioritized gaps** - focus on highest-impact improvements\n4. **Model complexity analysis** - must assign recommended models per task\n5. **Composition opportunities** - identify reuse patterns\n\nYour assessment will guide the improvement implementation in subsequent tasks.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"templateInfo\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"assessment\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"overallScore\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"3_modelComplexity\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"6_composition\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "design-improvements",
+      "subagent": "activity",
+      "description": "Design specific improvements based on assessment",
+      "dependencies": [
+        "assess-current-state"
+      ],
+      "prompt": {
+        "template": "# Task: Design Template Improvements\n\n## Assessment Results\n{{assessment}}\n\n**Overall Score**: {{assessment.overallScore}}/10\n**Priority**: {{assessment.priority}}\n**Key Issues**: {{assessment.keyInsights}}\n\n## Target Template\n{{targetTemplate}}\n\n## All Bootstrap Templates (for pattern analysis)\n{{allBootstrapTemplates}}\n\n**Available templates**: 5 bootstrap templates for cross-reference\n**Truncation**: {{allBootstrapTemplates.truncated}}\n\n## Template Documentation\n{{templateDocumentation}}\n\n## Your Task: Design Comprehensive Improvements\n\nBased on the assessment, design specific improvements across all 7 dimensions.\n\n### Structured Output\n```json\n{\n  \"improvements\": {\n    \"1_foundationalStructure\": {\n      \"changes\": [\n        {\n          \"type\": \"add_task|modify_task|remove_task|reorder_tasks|add_context_requirement\",\n          \"target\": \"what to change\",\n          \"description\": \"what to change\",\n          \"implementation\": \"how to implement (specific JSON changes)\",\n          \"impact\": \"why this matters\"\n        }\n      ]\n    },\n    \"2_promptDesign\": {\n      \"changes\": [\n        {\n          \"taskId\": \"task-1\",\n          \"promptEnhancements\": [\n            {\n              \"section\": \"instructions|examples|validation|output_structure\",\n              \"current\": \"current state (if modifying)\",\n              \"improved\": \"improved version\",\n              \"reasoning\": \"why this is better\"\n            }\n          ]\n        }\n      ]\n    },\n    \"3_modelComplexity\": {\n      \"changes\": [\n        {\n          \"taskId\": \"task-1\",\n          \"complexity\": \"low|medium|high\",\n          \"recommendedModel\": \"claude-sonnet-4-20250514|claude-haiku-4-20250514\",\n          \"agentConfig\": {\n            \"model\": \"model name\",\n            \"reasoning\": \"why this model for this task\"\n          },\n          \"expectedImprovement\": \"cost reduction, faster execution, better quality, etc.\"\n        }\n      ],\n      \"estimatedCostImpact\": \"how model changes affect overall template cost\"\n    },\n    \"4_validation\": {\n      \"changes\": [\n        {\n          \"taskId\": \"task-1\",\n          \"validationAdditions\": {\n            \"requiredFiles\": [\"files that must exist\"],\n            \"requiredPatterns\": [\"patterns that must be present\"],\n            \"forbiddenPatterns\": [\"patterns that must not be present\"],\n            \"commands\": [\n              {\n                \"name\": \"validation name\",\n                \"command\": \"command to run\",\n                \"required\": true\n              }\n            ]\n          }\n        }\n      ]\n    },\n    \"5_errorHandling\": {\n      \"changes\": [\n        {\n          \"taskId\": \"task-1\",\n          \"retryStrategy\": {\n            \"current\": \"current strategy\",\n            \"improved\": \"simple|progressive-context|fallback-agent\",\n            \"maxAttempts\": 2,\n            \"reasoning\": \"why this strategy\"\n          },\n          \"gracefulDegradation\": \"how to handle partial failures\"\n        }\n      ]\n    },\n    \"6_composition\": {\n      \"changes\": [\n        {\n          \"compositionType\": \"use_existing_template|extract_reusable_task|reference_bootstrap_template\",\n          \"description\": \"what to compose\",\n          \"implementation\": {\n            \"approach\": \"how to implement composition\",\n            \"templateReferences\": [\"templates to reference\"],\n            \"benefits\": \"why compose this way\"\n          },\n          \"example\": \"concrete example of composition pattern\"\n        }\n      ]\n    },\n    \"7_learningMetrics\": {\n      \"changes\": [\n        {\n          \"metabobConfig\": {\n            \"enabled\": true,\n            \"learningMode\": true,\n            \"targetContextTokens\": 5000,\n            \"annotationStrategy\": \"key-components\"\n          },\n          \"metricCollectionPoints\": [\"where to collect metrics\"],\n          \"optimizationOpportunities\": [\"how metrics will drive improvements\"]\n        }\n      ]\n    }\n  },\n  \"implementation_plan\": {\n    \"priority_order\": [\n      \"dimension to implement first\",\n      \"dimension to implement second\",\n      \"etc\"\n    ],\n    \"reasoning\": \"why this order\",\n    \"dependencies\": \"what depends on what\"\n  },\n  \"expected_outcomes\": {\n    \"qualityImprovement\": \"how template quality improves\",\n    \"executionEfficiency\": \"performance/cost improvements\",\n    \"maintainability\": \"how template becomes easier to maintain\",\n    \"exemplaryValue\": \"how template becomes better reference for future templates\"\n  }\n}\n```\n\n### Design Guidelines\n\n**1. Foundational Structure**\n- Ensure task breakdown is atomic and logical\n- Add missing contextRequirements\n- Improve variable definitions (descriptions, defaults, validation)\n- Optimize task dependencies\n\n**2. Prompt Design**\n- Add concrete examples (not just instructions)\n- Include structured output schemas (JSON format)\n- Add truncation handling for impulses\n- Include success criteria and validation steps\n- Reference impulse metadata ({{impulse.tokens}}, {{impulse.truncated}})\n\n**3. Model Complexity** (CRITICAL)\nFor each task, specify:\n```json\n\"agentConfig\": {\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"reasoning\": \"Complex architectural decisions requiring deep reasoning\"\n}\n```\nOR\n```json\n\"agentConfig\": {\n  \"model\": \"claude-haiku-4-20250514\",\n  \"reasoning\": \"Mechanical file writing with clear template - Haiku is sufficient\"\n}\n```\n\n**Model Selection Criteria**:\n- **Haiku**: Mechanical, well-defined, < 200 lines, single file\n- **Sonnet**: Reasoning, decisions, > 200 lines, multi-file, novel problems\n\n**4. Validation**\n- Add file existence checks for all created files\n- Add pattern validation for critical content\n- Add command validation (typecheck, test) where appropriate\n- Ensure quality gates are comprehensive\n\n**5. Error Handling**\n- Use \"progressive-context\" for complex reasoning tasks\n- Use \"simple\" for mechanical execution tasks\n- Use \"fallback-agent\" for cross-domain coordination\n- Set maxAttempts based on task complexity (1-3)\n\n**6. Composition** (Bootstrap-Specific)\nBootstrap templates should demonstrate:\n- **Self-reference**: create-activity-template uses itself\n- **Cross-reference**: git-revision-management used by other templates\n- **Extraction**: Common patterns extracted to separate templates\n- **Inheritance**: Templates building on other templates\n\nExamples:\n- \"create-activity-template\" could use \"git-revision-management\" for branch handling\n- \"improve-bootstrap-template\" (this template) could use \"refine-activity-template\" patterns\n- Common validation logic extracted to reusable template\n\n**7. Learning Metrics**\n- Enable Metabob for all bootstrap templates\n- Set appropriate targetContextTokens based on template complexity\n- Use \"key-components\" annotation strategy\n- Enable learningMode for continuous improvement\n\n### Bootstrap Template Excellence Criteria\n\nYour design must ensure the template is:\n1. **Self-documenting**: Clear enough to serve as reference\n2. **Robust**: Handles edge cases and failures gracefully\n3. **Efficient**: Uses appropriate models for task complexity\n4. **Composable**: Demonstrates reuse patterns\n5. **Learning**: Collects metrics for continuous improvement\n6. **Exemplary**: Shows best practices for all 7 dimensions\n\n### Cross-Template Pattern Analysis\n\nAnalyze the 5 bootstrap templates for:\n- Common task patterns (can these be extracted?)\n- Shared validation logic (can this be reused?)\n- Similar prompt structures (can these be standardized?)\n- Complementary functionality (can these compose?)\n\n### Output Requirements\n\n1. **Complete JSON structure** as specified\n2. **Specific implementations** - not abstract suggestions\n3. **Model assignments** - every task must have model recommendation\n4. **Composition examples** - concrete patterns with code\n5. **Implementation plan** - clear execution order\n\nYour design will be implemented in the next task.",
+        "variables": [
+          {
+            "name": "assessment",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from assess-current-state task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 24000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"improvements\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"3_modelComplexity\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"6_composition\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"implementation_plan\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"expected_outcomes\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-improvements",
+      "subagent": "activity",
+      "description": "Implement the designed improvements to the template",
+      "dependencies": [
+        "design-improvements"
+      ],
+      "prompt": {
+        "template": "# Task: Implement Template Improvements\n\n## Design Specification\n{{improvementDesign}}\n\n**Implementation Order**: {{improvementDesign.implementation_plan.priority_order}}\n\n## Target Template (Current State)\n{{targetTemplate}}\n\n## Your Task: Implement All Improvements\n\nImplement the improvements following the design specification.\n\n### Implementation Requirements\n\n**1. Preserve Template Identity**\n- Keep name, version, description, category\n- Increment version by 1 (this is a significant improvement)\n- Update description if improvements warrant it\n\n**2. Implement Structural Changes**\nFor each change in improvements.1_foundationalStructure:\n- Add/modify/remove tasks as specified\n- Update task IDs, dependencies, subagents\n- Add contextRequirements\n- Update variables\n\n**3. Enhance Prompts**\nFor each change in improvements.2_promptDesign:\n- Update prompt templates with enhancements\n- Add structured output schemas\n- Include truncation handling\n- Add examples and success criteria\n\n**4. Add Model Specifications** (CRITICAL)\nFor each change in improvements.3_modelComplexity:\n```json\n{\n  \"taskId\": \"task-1\",\n  \"agentConfig\": {\n    \"model\": \"claude-sonnet-4-20250514\",\n    \"reasoning\": \"Detailed explanation of why this model\"\n  }\n}\n```\n\nAdd agentConfig to EVERY task that needs non-default model.\n\n**5. Strengthen Validation**\nFor each change in improvements.4_validation:\n- Add requiredFiles, requiredPatterns, forbiddenPatterns\n- Add command validations\n- Update quality gates\n\n**6. Improve Error Handling**\nFor each change in improvements.5_errorHandling:\n- Update retry strategies\n- Adjust maxAttempts\n- Add fallback logic where needed\n\n**7. Add Composition**\nFor each change in improvements.6_composition:\n- Add template references where appropriate\n- Document composition patterns in description\n- Add variables for composed templates\n\n**8. Configure Learning**\nFor changes in improvements.7_learningMetrics:\n- Update metabob configuration\n- Set appropriate targetContextTokens\n- Enable learningMode\n\n### Output Format\n\n**Primary Output**: Complete improved template JSON\n\nWrite the complete template to the same file, preserving the filename but incrementing the version number in the JSON.\n\n**Secondary Output**: Change summary JSON\n```json\n{\n  \"changes_implemented\": {\n    \"version\": {\n      \"old\": 1,\n      \"new\": 2\n    },\n    \"structure\": [\n      \"added task X\",\n      \"modified task Y\",\n      \"reordered task Z\"\n    ],\n    \"prompts\": [\n      \"enhanced task-1 prompt with examples\",\n      \"added structured output to task-2\"\n    ],\n    \"models\": [\n      \"task-1: claude-sonnet-4 (reasoning required)\",\n      \"task-2: claude-haiku-4 (mechanical execution)\"\n    ],\n    \"validation\": [\n      \"added file checks to task-1\",\n      \"added typecheck to task-3\"\n    ],\n    \"errorHandling\": [\n      \"changed task-1 to progressive-context\",\n      \"increased task-2 maxAttempts to 3\"\n    ],\n    \"composition\": [\n      \"added reference to git-revision-management\",\n      \"extracted common validation to separate template\"\n    ],\n    \"metrics\": [\n      \"enabled Metabob learning mode\",\n      \"set targetContextTokens to 5000\"\n    ]\n  },\n  \"expected_improvements\": {\n    \"quality\": \"{{improvementDesign.expected_outcomes.qualityImprovement}}\",\n    \"efficiency\": \"{{improvementDesign.expected_outcomes.executionEfficiency}}\",\n    \"maintainability\": \"{{improvementDesign.expected_outcomes.maintainability}}\",\n    \"exemplaryValue\": \"{{improvementDesign.expected_outcomes.exemplaryValue}}\"\n  },\n  \"verification_needed\": [\n    \"what needs to be tested\",\n    \"what needs to be verified\"\n  ]\n}\n```\n\n### Implementation Steps\n\n1. **Read current template** - Load the existing template JSON\n2. **Apply changes sequentially** - Follow implementation_plan.priority_order\n3. **Validate JSON structure** - Ensure valid ActivityTemplate schema\n4. **Write improved template** - Save to same file\n5. **Generate change summary** - Document what changed\n\n### Quality Checks\n\n- [ ] All tasks have clear IDs and descriptions\n- [ ] Dependencies are correct (no cycles)\n- [ ] All variables are defined and described\n- [ ] Model complexity assignments are present for complex tasks\n- [ ] Validation rules are comprehensive\n- [ ] Retry strategies match task complexity\n- [ ] Metabob configuration is complete\n- [ ] JSON is valid and properly formatted\n\n### Bootstrap Template Verification\n\nEnsure the improved template:\n- [ ] Can create/improve itself if self-referential\n- [ ] Demonstrates best practices clearly\n- [ ] Has minimal external dependencies\n- [ ] Works with partial system state\n- [ ] Serves as excellent reference example\n\nImplement all improvements and generate both outputs.",
+        "variables": [
+          {
+            "name": "improvementDesign",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from design-improvements task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 20000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"version\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"tasks\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"agentConfig\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "validate-improvements",
+      "subagent": "test",
+      "description": "Validate the improved template structure and registration",
+      "dependencies": [
+        "implement-improvements"
+      ],
+      "prompt": {
+        "template": "# Task: Validate Improved Template\n\n## Changes Implemented\n{{changesSummary}}\n\n## Your Task: Comprehensive Validation\n\nValidate that the improved template is structurally correct and functionally sound.\n\n### Validation Checklist\n\n**1. JSON Structure Validation**\n```bash\n# Validate JSON syntax\nnode -e \"JSON.parse(require('fs').readFileSync('{{targetTemplatePath}}', 'utf8'))\"\n```\n\n**2. Schema Validation**\nCheck that template conforms to ActivityTemplate schema:\n- [ ] Has required fields: name, version, description, category, tasks\n- [ ] All tasks have: id, subagent, description, dependencies, prompt\n- [ ] All prompts have: template, maxTokens, compressionStrategy, variables\n- [ ] All variables have: name, type, required, description\n- [ ] contextRequirements are well-formed\n- [ ] metabob config is complete\n\n**3. Model Complexity Validation**\nVerify model assignments:\n- [ ] Complex tasks (reasoning, design) have Sonnet\n- [ ] Simple tasks (mechanical, execution) have Haiku\n- [ ] All agentConfig blocks have \"model\" and \"reasoning\" fields\n\n**4. Composition Validation**\nCheck composition patterns:\n- [ ] Template references are valid\n- [ ] Composed templates exist\n- [ ] Variables for composition are defined\n\n**5. Validation Rules**\nVerify validation configuration:\n- [ ] File patterns use proper variable interpolation\n- [ ] Commands use project-agnostic variables ({{testCommand}}, {{typecheckCommand}})\n- [ ] Quality gates are comprehensive\n\n**6. Functional Validation**\nTest template registration:\n```bash\n# Register the improved template\nregister_activity_template({\n  file_path: \"{{targetTemplatePath}}\",\n  register_with_metabob: true\n})\n\n# Verify registration\nsearch_activities({ verbose: true })\n```\n\n### Structured Output\n```json\n{\n  \"validation_results\": {\n    \"json_structure\": {\n      \"valid\": true/false,\n      \"errors\": [\"any JSON errors\"]\n    },\n    \"schema_compliance\": {\n      \"valid\": true/false,\n      \"missing_fields\": [\"any missing required fields\"],\n      \"malformed_sections\": [\"any malformed sections\"]\n    },\n    \"model_assignments\": {\n      \"valid\": true/false,\n      \"tasks_with_models\": [\n        {\n          \"taskId\": \"task-1\",\n          \"model\": \"claude-sonnet-4\",\n          \"appropriate\": true/false,\n          \"reasoning\": \"why appropriate or not\"\n        }\n      ],\n      \"tasks_missing_models\": [\"tasks that should have agentConfig but don't\"]\n    },\n    \"composition\": {\n      \"valid\": true/false,\n      \"patterns_found\": [\"composition patterns identified\"],\n      \"issues\": [\"any composition issues\"]\n    },\n    \"validation_rules\": {\n      \"valid\": true/false,\n      \"comprehensive\": true/false,\n      \"issues\": [\"any validation issues\"]\n    },\n    \"registration\": {\n      \"successful\": true/false,\n      \"template_id\": \"registered template ID\",\n      \"version\": \"registered version\",\n      \"errors\": [\"any registration errors\"]\n    }\n  },\n  \"overall_status\": \"pass|fail\",\n  \"critical_issues\": [\"issues that must be fixed\"],\n  \"recommendations\": [\"suggestions for further improvement\"],\n  \"ready_for_use\": true/false\n}\n```\n\n### Validation Steps\n\n1. **Parse JSON** - Ensure syntax is valid\n2. **Check schema** - Verify all required fields\n3. **Validate models** - Check agentConfig assignments\n4. **Test composition** - Verify template references\n5. **Check validation rules** - Ensure comprehensive\n6. **Register template** - Test registration workflow\n7. **Search verification** - Confirm template appears\n\n### Success Criteria\n\n- [ ] JSON is syntactically valid\n- [ ] Schema is complete and correct\n- [ ] Model assignments are appropriate\n- [ ] Composition patterns are valid\n- [ ] Validation rules are comprehensive\n- [ ] Template registers successfully\n- [ ] Template appears in search results\n\n### Output Requirements\n\n1. **Complete validation JSON** as specified\n2. **Clear pass/fail status** for each validation area\n3. **Specific errors** if validation fails\n4. **Recommendations** for further improvement\n\nIf validation fails, document the issues clearly so they can be fixed.",
+        "variables": [
+          {
+            "name": "changesSummary",
+            "type": "string",
+            "required": true,
+            "description": "JSON change summary from implement-improvements task"
+          },
+          {
+            "name": "targetTemplatePath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the improved template file"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"validation_results\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"overall_status\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"ready_for_use\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "document-improvements",
+      "subagent": "activity",
+      "description": "Document improvements and update template library",
+      "dependencies": [
+        "validate-improvements"
+      ],
+      "prompt": {
+        "template": "# Task: Document Template Improvements\n\n## Validation Results\n{{validationResults}}\n\n## Changes Summary\n{{changesSummary}}\n\n## Your Task: Generate Documentation\n\nDocument the improvements for future reference and template library updates.\n\n### Documentation Outputs\n\n**1. Improvement Summary (Markdown)**\n\nCreate: `{{targetTemplatePath}}.improvements.md`\n\n```markdown\n# Bootstrap Template Improvement: {{templateName}}\n\n**Date**: {{currentDate}}\n**Version**: {{oldVersion}} → {{newVersion}}\n**Status**: {{validationResults.overall_status}}\n\n## Summary\n\n[Brief summary of what was improved and why]\n\n## Changes Implemented\n\n### Foundational Structure\n{{#each changesSummary.changes_implemented.structure}}\n- {{this}}\n{{/each}}\n\n### Prompt Design\n{{#each changesSummary.changes_implemented.prompts}}\n- {{this}}\n{{/each}}\n\n### Model Complexity\n{{#each changesSummary.changes_implemented.models}}\n- {{this}}\n{{/each}}\n\n### Validation\n{{#each changesSummary.changes_implemented.validation}}\n- {{this}}\n{{/each}}\n\n### Error Handling\n{{#each changesSummary.changes_implemented.errorHandling}}\n- {{this}}\n{{/each}}\n\n### Composition\n{{#each changesSummary.changes_implemented.composition}}\n- {{this}}\n{{/each}}\n\n### Learning Metrics\n{{#each changesSummary.changes_implemented.metrics}}\n- {{this}}\n{{/each}}\n\n## Expected Improvements\n\n- **Quality**: {{changesSummary.expected_improvements.quality}}\n- **Efficiency**: {{changesSummary.expected_improvements.efficiency}}\n- **Maintainability**: {{changesSummary.expected_improvements.maintainability}}\n- **Exemplary Value**: {{changesSummary.expected_improvements.exemplaryValue}}\n\n## Validation Results\n\n- **JSON Structure**: {{validationResults.validation_results.json_structure.valid}}\n- **Schema Compliance**: {{validationResults.validation_results.schema_compliance.valid}}\n- **Model Assignments**: {{validationResults.validation_results.model_assignments.valid}}\n- **Composition**: {{validationResults.validation_results.composition.valid}}\n- **Registration**: {{validationResults.validation_results.registration.successful}}\n\n## Critical Issues\n\n{{#if validationResults.critical_issues}}\n{{#each validationResults.critical_issues}}\n- ⚠️ {{this}}\n{{/each}}\n{{else}}\n✅ No critical issues\n{{/if}}\n\n## Recommendations\n\n{{#each validationResults.recommendations}}\n- {{this}}\n{{/each}}\n\n## Ready for Use\n\n{{#if validationResults.ready_for_use}}\n✅ Template is ready for production use\n{{else}}\n⚠️ Template needs additional work before use\n{{/if}}\n\n## Ductile Rigidity Compliance\n\nThis improved template now exemplifies:\n- ✅ Strong foundations (clear structure, validation, error handling)\n- ✅ Flexible execution (adaptive prompts, progressive context)\n- ✅ Model awareness (appropriate models per task complexity)\n- ✅ Composition (reusable patterns, template references)\n- ✅ Learning (metrics collection, continuous improvement)\n```\n\n**2. Template Library Update**\n\nIf template is in built-in library, update the library documentation:\n\n```markdown\n### {{templateName}} (v{{newVersion}})\n\n**Category**: {{category}}\n**Improved**: {{currentDate}}\n**Ductile Rigidity**: ✅ Exemplary\n\n{{description}}\n\n**Key Features**:\n- Model-aware execution (Sonnet for reasoning, Haiku for execution)\n- Composition patterns (references: {{composedTemplates}})\n- Comprehensive validation\n- Progressive error handling\n- Metrics-driven optimization\n\n**Usage**:\n```typescript\nawait activity({\n  templateId: \"{{templateId}}\",\n  variables: { /* template-specific variables */ }\n})\n```\n\n**Improvements in v{{newVersion}}**:\n{{#each changesSummary.changes_implemented}}\n- {{this}}\n{{/each}}\n```\n\n**3. Structured Output**\n```json\n{\n  \"documentation_created\": {\n    \"improvement_summary\": \"{{targetTemplatePath}}.improvements.md\",\n    \"library_update\": \"templates/README.md (if applicable)\"\n  },\n  \"template_info\": {\n    \"name\": \"{{templateName}}\",\n    \"id\": \"{{templateId}}\",\n    \"version\": {{newVersion}},\n    \"category\": \"{{category}}\",\n    \"ductile_rigidity_compliant\": true,\n    \"ready_for_use\": {{validationResults.ready_for_use}}\n  },\n  \"next_steps\": [\n    \"Test template execution with sample inputs\",\n    \"Monitor execution metrics after deployment\",\n    \"Apply similar improvements to other bootstrap templates\",\n    \"Update template library documentation\"\n  ]\n}\n```\n\n### Documentation Requirements\n\n1. **Clear and concise** - Focus on what changed and why\n2. **Structured format** - Use consistent markdown formatting\n3. **Actionable** - Include next steps and recommendations\n4. **Complete** - Cover all 7 dimensions of improvement\n\n### Output\n\n1. Write improvement summary to `.improvements.md` file\n2. Generate library update documentation\n3. Output structured JSON with next steps\n\nYour documentation will help maintain the bootstrap template library and guide future improvements.",
+        "variables": [
+          {
+            "name": "validationResults",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from validate-improvements task"
+          },
+          {
+            "name": "changesSummary",
+            "type": "string",
+            "required": true,
+            "description": "JSON change summary from implement-improvements task"
+          },
+          {
+            "name": "targetTemplatePath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the improved template file"
+          },
+          {
+            "name": "templateName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the template being improved"
+          },
+          {
+            "name": "templateId",
+            "type": "string",
+            "required": true,
+            "description": "ID of the template being improved"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": true,
+            "description": "Template category"
+          },
+          {
+            "name": "oldVersion",
+            "type": "number",
+            "required": true,
+            "description": "Previous version number"
+          },
+          {
+            "name": "newVersion",
+            "type": "number",
+            "required": true,
+            "description": "New version number"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{targetTemplatePath}}.improvements.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "\"documentation_created\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"template_info\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"next_steps\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-16T10:00:52.608Z",
+  "metadata": {}
+}

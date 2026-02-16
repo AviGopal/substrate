@@ -1,437 +1,563 @@
-# REST Endpoint Analysis for /api/demo/health
+# REST Endpoint Analysis: GET /api/users/:id
 
-## Executive Summary
-
-This document analyzes the existing REST endpoint patterns in the metabob-rpc-api codebase to inform the implementation of a new health check endpoint at `/api/demo/health`.
-
-**Target Endpoint:**
-- Method: GET
-- Path: `/api/demo/health`
-- Description: Simple health check endpoint that returns system status
+**Date**: 2026-02-15  
+**Purpose**: Document existing codebase conventions for implementing a new user profile endpoint
 
 ---
 
 ## 1. Framework and Routing Pattern
 
 ### Framework
-**FastAPI** - Modern Python web framework with automatic API documentation and type validation
+**FastAPI** (Python) - Modern async web framework with automatic OpenAPI documentation
 
-### Routing Architecture
-- **Router-based modular design**: Each feature area has its own router file in `repos/metabob-rpc-api/server/routes/`
-- **Main app registration**: Routers are registered in `server/app.py` (line 70-120)
-- **APIRouter pattern**: Each route file defines a router with prefix and tags
+**Evidence**:
+- `repos/metabob-rpc-api/requirements.txt` includes FastAPI
+- All route files use `from fastapi import APIRouter`
+- Routes use FastAPI decorators: `@router.get()`, `@router.post()`, etc.
 
-### Example Pattern
+### Routing Structure
 ```python
-# File: server/routes/health.py
 from fastapi import APIRouter
-from server.models.response import HealthGetResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/v2/activities", tags=["activities-v2"])
 
-@router.get("/api/health", response_model=HealthGetResponse)
-async def api_health():
-    return HealthGetResponse(
-        status="ok", 
-        timestamp=datetime.utcnow().isoformat(), 
-        version=__version__
-    )
+@router.get("/templates/{template_id}")
+async def get_template(...):
+    """Endpoint implementation"""
 ```
 
-### V2 API Pattern (New Standard)
-```python
-# File: server/routes/v2_session.py
-router = APIRouter(prefix="/v2/session", tags=["session-v2"])
+**Location**: `repos/metabob-rpc-api/server/routes/`
 
-@router.post("")
-async def create_session(...):
-    # Implementation
-```
-
-**Key Finding:** The V2 API pattern uses prefixed routers for clean path hierarchy.
+**Pattern**:
+- Each route file creates an `APIRouter` with a prefix
+- Routes are async functions with type hints
+- Path parameters use `{param}` syntax in decorator
+- Route functions are registered with `@router.<method>()` decorators
 
 ---
 
-## 2. Validation Approach
+## 2. Validation Pattern
 
-### Request Validation
-- **Pydantic models** for request body validation
-- **Type hints** for automatic validation (FastAPI feature)
-- **Optional parameters** using `Optional[Type]` and `= None`
-- **Field validation** using `pydantic.Field()` for descriptions and constraints
+### Request/Response Models
+**Pydantic** models for validation and serialization
 
-### Response Validation
-- **Response models** using `response_model` parameter in decorator
-- **Pydantic BaseModel** classes define response structure
-- **Type safety** enforced at runtime by FastAPI
-
-### Example
+**Example from** `auth.py:2261-2316`:
 ```python
-# Response model definition
-class HealthGetResponse(BaseModel):
-    status: str
-    timestamp: str
-    version: str
+from pydantic import BaseModel, Field, field_validator
+from fastapi import Path, Query, Body
+
+# Response model
+class UserResponse(BaseModel):
+    user_id: str
+    org_id: str
+    email: str
+    role: str
+    created_at: datetime
+    last_login_at: Optional[datetime]
+    metadata: dict = Field(default_factory=dict)
 
 # Endpoint with validation
-@router.get("/api/health", response_model=HealthGetResponse)
-async def api_health():
-    return HealthGetResponse(
-        status="ok",
-        timestamp=datetime.utcnow().isoformat(),
-        version=__version__
-    )
+@router.get("/orgs/{org_id}/users/{user_id}", response_model=UserResponse)
+async def get_user(
+    user_id: str = Path(..., description="User ID"),
+    org_id: str = Path(..., description="Organization ID"),
+    ...
+) -> UserResponse:
+    """Get user details"""
 ```
 
-**Key Finding:** Pydantic models provide automatic validation, serialization, and API documentation.
+**Validation Features**:
+- `Field()` for default values and descriptions
+- `Path(...)` for required path parameters with descriptions
+- `Query()` for query parameters with defaults
+- `Body()` for request body validation
+- `field_validator` for custom validation logic
+- `response_model` in decorator for automatic serialization
+
+**Key Pattern**: Type hints + Pydantic = automatic validation and OpenAPI docs
 
 ---
 
 ## 3. Error Handling Convention
 
-### HTTP Exception Pattern
+### Standard Error Pattern
+**HTTPException** with appropriate status codes and detail messages
+
+**Examples from** `auth.py`:
+
 ```python
 from fastapi import HTTPException
 
-# Standard error raising
-raise HTTPException(
-    status_code=401,
-    detail="Authentication required"
-)
-```
+# 404 - Not Found
+if not user:
+    raise HTTPException(
+        status_code=404, 
+        detail="User not found"
+    )
 
-### Global Exception Handler
-- Registered in `server/app.py:68`
-- Custom handler at `server/utils/error_handlers.py`
-- Ensures consistent error response format
+# 401 - Unauthorized
+if not credentials:
+    raise HTTPException(
+        status_code=401,
+        detail="Authentication required. Provide Authorization: Bearer <token>"
+    )
 
-### Common Status Codes
-- `200`: Success
-- `401`: Unauthorized (missing/invalid auth)
-- `404`: Not found
-- `405`: Method not allowed
-- `500`: Internal server error
-- `504`: Timeout
+# 403 - Forbidden
+if user.org_id != org_id:
+    raise HTTPException(
+        status_code=403,
+        detail="User doesn't have access to this organization"
+    )
 
-### Error Response Pattern
-```python
+# 400 - Bad Request
+if not validate_input(data):
+    raise HTTPException(
+        status_code=400,
+        detail="Invalid input data"
+    )
+
+# 500 - Internal Server Error (with logging)
 try:
-    # Operation
-    return success_response
-except HTTPException:
-    raise  # Re-raise HTTP exceptions
+    result = await operation()
 except Exception as e:
     logger.error(f"Operation failed: {e}")
-    raise HTTPException(status_code=500, detail="Operation failed")
+    raise HTTPException(
+        status_code=500,
+        detail=f"Failed to complete operation: {str(e)}"
+    )
 ```
 
-**Key Finding:** Use HTTPException for all errors, with specific status codes and descriptive detail messages.
+**Error Codes Used**:
+- `401` - Authentication required/invalid
+- `403` - Forbidden (lacks permission)
+- `404` - Resource not found
+- `400` - Bad request/validation error
+- `422` - Unprocessable entity (Pydantic validation)
+- `500` - Internal server error
+- `501` - Not implemented
+
+**Pattern**: Raise HTTPException early, let FastAPI handle serialization
 
 ---
 
 ## 4. Test Location and Pattern
 
 ### Test Structure
-```
-repos/metabob-rpc-api/tests/routes/
-├── conftest.py              # Shared fixtures
-├── test_routes_health.py    # Health endpoint tests
-├── test_v2_session.py       # V2 session tests
-└── ...
-```
+**Location**: `repos/metabob-rpc-api/tests/routes/`
 
-### Test Pattern (Haiku Principle)
+**Test File Naming**: `test_routes_<module>.py`  
+Example: `test_routes_auth.py` for `routes/auth.py`
+
+### Test Pattern (from `test_routes_auth.py`):
+
 ```python
-"""
-Purpose: Verify health endpoint is accessible
-Methodology: GET / → Assert 200 status
-Validity: 200 status proves endpoint is working
-"""
-def test_health_endpoint_returns_200(client):
-    response = client.get("/")
+import pytest
+from unittest.mock import patch, AsyncMock
+
+def test_get_user_success(route_client, mock_auth_session):
+    """Test successful user retrieval"""
+    # Arrange
+    user_id = "user_123"
+    org_id = "org_456"
+    
+    # Act
+    response = route_client.get(
+        f"/auth/orgs/{org_id}/users/{user_id}",
+        headers={"Authorization": f"Bearer {mock_auth_session['token']}"}
+    )
+    
+    # Assert
     assert response.status_code == 200
+    data = response.json()
+    assert data["user_id"] == user_id
+    assert "email" in data
+
+def test_get_user_not_found(route_client, mock_auth_session):
+    """Test 404 when user doesn't exist"""
+    response = route_client.get(
+        "/auth/orgs/org_123/users/nonexistent",
+        headers={"Authorization": f"Bearer {mock_auth_session['token']}"}
+    )
+    
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+def test_get_user_unauthorized(route_client):
+    """Test 401 without authentication"""
+    response = route_client.get("/auth/orgs/org_123/users/user_123")
+    
+    assert response.status_code == 401
 ```
 
-### Test Fixtures
-- `client` fixture: FastAPI TestClient for making requests
-- `route_test_controller`: Mock controller for dependencies
-- Defined in `tests/routes/conftest.py`
-
-### Test Categories
-1. **Success cases**: Verify correct behavior
-2. **Method validation**: Test rejected HTTP methods (POST, PUT, DELETE)
-3. **Header handling**: Test Content-Type, Accept headers
-4. **Edge cases**: Query params, invalid inputs
-5. **Response validation**: Verify response structure and content
-
-### Example Test Suite Structure
-```python
-def test_endpoint_returns_200(client):
-    """Basic success test"""
-    
-def test_endpoint_returns_correct_data(client):
-    """Data validation test"""
-    
-def test_endpoint_rejects_post(client):
-    """Method validation test"""
-```
-
-**Key Finding:** Use descriptive test names with Haiku-style docstrings explaining Purpose, Methodology, and Validity.
+**Test Patterns**:
+- Use `route_client` fixture (TestClient from FastAPI)
+- Test success cases (200, 201)
+- Test validation errors (400, 422)
+- Test authentication (401)
+- Test authorization (403)
+- Test not found (404)
+- Use helper functions for setup (register_user, login_user)
+- Mock external dependencies (database, Redis)
 
 ---
 
 ## 5. Authentication Requirements
 
-### Authentication Patterns
+### Authentication Flow
+**Bearer Token** (session-based) with two-tier architecture
 
-#### Public Endpoints (No Auth)
-- Health checks: `/`, `/health`, `/api/health`
-- No authentication required
-- No Bearer token or API key needed
+**Pattern from** `v2_session.py:100-143`:
 
-#### API Key Auth (V2 Session Creation)
 ```python
-@router.post("/v2/session")
-async def create_session(
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    ...
-):
-    # Validates API key, creates session
-```
-
-#### Bearer Token Auth (Most Endpoints)
-```python
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 SESSION_TOKEN = HTTPBearer(description="Session Token", auto_error=False)
 
-@router.get("/v2/activities")
-async def list_activities(
+async def get_session_from_token(
+    request: Request,
+    redis: StrictRedis,
+    credentials: HTTPAuthorizationCredentials,
+) -> SessionData:
+    """Authenticate request via session token"""
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Provide Authorization: Bearer <token>"
+        )
+    
+    session = await fetch_session_model(credentials.credentials, redis)
+    if not session:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired session token"
+        )
+    
+    return session
+```
+
+**Usage in Endpoints**:
+
+```python
+from fastapi import Depends
+
+async def require_auth(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Security(SESSION_TOKEN),
     redis: StrictRedis = Depends(get_redis_connection),
+) -> SessionData:
+    """Dependency that enforces authentication"""
+    return await get_session_from_token(request, redis, credentials)
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    session: SessionData = Depends(require_auth),
+    db: SurrealDBClient = Depends(get_surreal_connection),
+) -> UserResponse:
+    """Protected endpoint - requires authentication"""
+```
+
+**Auth Dependency Functions**:
+- `require_auth` - Basic authentication (returns SessionData)
+- `require_org_access` - Verifies org access (returns tuple[org_id, session])
+- `require_org_admin` - Requires admin role
+
+**Key Components**:
+1. **API Key → Session**: Client calls `POST /v2/session` with API key
+2. **Session Token**: Backend returns JWT/token for subsequent requests
+3. **Bearer Auth**: All protected endpoints use `Authorization: Bearer <token>`
+4. **Redis Sessions**: Session data stored in Redis with expiration
+
+---
+
+## 6. Similar Endpoints for Reference
+
+### Best Reference: GET user by ID
+**File**: `repos/metabob-rpc-api/server/routes/auth.py:2261-2316`
+
+```python
+@router.get("/orgs/{org_id}/users/{user_id}", response_model=UserResponse)
+async def get_user(
+    user_id: str = Path(..., description="User ID"),
+    org_id_session: tuple[str, SessionData] = Depends(require_org_access),
+    redis: StrictRedis = Depends(get_redis_connection),
+    db: "SurrealDBClient" = Depends(get_surreal_connection),
+) -> UserResponse:
+    """Get user details.
+    
+    Args:
+        user_id: User ID
+        org_id_session: Tuple of (org_id, session) from dependency
+        redis: Redis connection
+        db: SurrealDB connection
+        
+    Returns:
+        UserResponse: User details
+        
+    Raises:
+        HTTPException: 501 if auth_db not yet implemented
+        HTTPException: 404 if user not found
+    """
+    org_id, session = org_id_session
+    logger.info(f"Get user {user_id} from organization {org_id}")
+    
+    # Check if implementation is available
+    if get_user_by_id is None:
+        raise HTTPException(
+            status_code=501, 
+            detail="User management not yet implemented"
+        )
+    
+    try:
+        # Fetch user from database
+        user = await get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify user belongs to organization (authorization)
+        if user.org_id != org_id:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Return validated response
+        return UserResponse(
+            user_id=user.user_id,
+            org_id=user.org_id,
+            email=user.email,
+            role=user.role,
+            created_at=user.created_at,
+            last_login_at=user.last_login_at,
+            metadata=user.metadata,
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get user error: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to get user: {str(e)}"
+        )
+```
+
+**Why This is the Best Reference**:
+1. ✅ GET endpoint with path parameter (`:id`)
+2. ✅ Returns single resource (not a list)
+3. ✅ Requires authentication
+4. ✅ Validates resource exists (404 handling)
+5. ✅ Authorization check (org membership)
+6. ✅ Proper error handling with logging
+7. ✅ Type-safe with Pydantic models
+8. ✅ Async database operations
+9. ✅ Comprehensive docstring
+
+### Other Reference Endpoints
+
+**GET with query parameters**:
+- `v2_activities.py:513` - `GET /templates` with pagination
+  ```python
+  @router.get("/templates")
+  async def list_templates(
+      limit: int = Query(10, ge=1, le=100),
+      offset: int = Query(0, ge=0),
+      ...
+  )
+  ```
+
+**Simple GET (no auth)**:
+- `health.py:10` - `GET /health` for health checks
+  ```python
+  @router.get("/health")
+  async def health_check() -> dict:
+      return {"status": "healthy"}
+  ```
+
+---
+
+## 7. Implementation Checklist for GET /api/users/:id
+
+Based on codebase conventions:
+
+### Route Definition
+- [ ] Create route in appropriate file (e.g., `routes/users.py` or add to `routes/auth.py`)
+- [ ] Use `@router.get("/users/{user_id}")` decorator
+- [ ] Add to existing router or create new `APIRouter(prefix="/api", tags=["users"])`
+
+### Request/Response Models
+- [ ] Define `UserProfileResponse` Pydantic model
+- [ ] Use `Field()` for descriptions and defaults
+- [ ] Include all required user fields (id, email, name, etc.)
+
+### Authentication
+- [ ] Add `session: SessionData = Depends(require_auth)` parameter
+- [ ] Or use `require_org_access` if org-scoped
+
+### Validation
+- [ ] Use `user_id: str = Path(..., description="User ID")`
+- [ ] Validate ID format if needed (field_validator)
+
+### Database
+- [ ] Add `db: SurrealDBClient = Depends(get_surreal_connection)`
+- [ ] Create/use `get_user_by_id(db, user_id)` function
+
+### Error Handling
+- [ ] 401 if not authenticated (handled by dependency)
+- [ ] 404 if user not found
+- [ ] 403 if user lacks permission (if org-scoped)
+- [ ] 500 with logging for unexpected errors
+- [ ] Try-except block with re-raise pattern
+
+### Logging
+- [ ] Import logger: `logger = logging.getLogger(__name__)`
+- [ ] Log entry: `logger.info(f"Get user profile {user_id}")`
+- [ ] Log errors: `logger.error(f"Error: {e}")`
+
+### Testing
+- [ ] Create `test_users.py` in `tests/routes/`
+- [ ] Test success (200)
+- [ ] Test not found (404)
+- [ ] Test unauthorized (401)
+- [ ] Test forbidden if applicable (403)
+- [ ] Mock database and Redis
+
+### Documentation
+- [ ] Add comprehensive docstring with Args/Returns/Raises
+- [ ] FastAPI will auto-generate OpenAPI docs from decorators
+
+---
+
+## 8. Database Layer Pattern
+
+### Database Operations
+**SurrealDB** with async client
+
+**Pattern**:
+```python
+from server.utils.surreal_client import SurrealDBClient, get_surreal_connection
+from fastapi import Depends
+
+@router.get("/users/{user_id}")
+async def get_user_profile(
+    user_id: str = Path(...),
+    db: SurrealDBClient = Depends(get_surreal_connection),
 ):
-    session = await get_session_from_token(request, redis, credentials)
-    # Use session data
+    # Query database
+    query = "SELECT * FROM users WHERE id = $user_id"
+    result = await db.query(query, {"user_id": user_id})
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return result[0]
 ```
 
-### Authentication Flow
-1. Client calls `POST /v2/session` with `X-API-Key` header
-2. Backend validates key, creates session, returns `session_token`
-3. Client uses `Authorization: Bearer <token>` for subsequent requests
-
-### Dependency Injection
-```python
-redis: StrictRedis = Depends(get_redis_connection)
-surreal: SurrealDBClient = Depends(get_surreal_connection)
-```
-
-**Key Finding:** Health checks are typically public endpoints. For authenticated endpoints, use FastAPI Security with Bearer tokens.
+**Database Functions** (from `server/actions/auth_db.py`):
+- Follow pattern: `async def get_user_by_id(db: SurrealDBClient, user_id: str) -> User | None`
+- Return typed objects or None
+- Let route handle HTTPException
 
 ---
 
-## 6. Similar Endpoints Reference
+## 9. Recommended File Structure
 
-### Existing Health Endpoints
-
-#### 1. Root Health Check (`server/routes/health.py:10-14`)
-```python
-@router.get("/", response_model=HealthGetResponse)
-async def health():
-    return HealthGetResponse(
-        status="ok", 
-        timestamp=datetime.utcnow().isoformat(), 
-        version=__version__
-    )
-```
-
-#### 2. Named Health Check (`server/routes/health.py:17-22`)
-```python
-@router.get("/health", response_model=HealthGetResponse)
-async def health_check():
-    """Health check endpoint for OpenCode and other clients."""
-    return HealthGetResponse(
-        status="ok", 
-        timestamp=datetime.utcnow().isoformat(), 
-        version=__version__
-    )
-```
-
-#### 3. API Health Check (`server/routes/health.py:25-29`)
-```python
-@router.get("/api/health", response_model=HealthGetResponse)
-async def api_health():
-    return HealthGetResponse(
-        status="ok", 
-        timestamp=datetime.utcnow().isoformat(), 
-        version=__version__
-    )
-```
-
-### Response Model (`server/models/response.py:16-19`)
-```python
-class HealthGetResponse(BaseModel):
-    status: str
-    timestamp: str
-    version: str
-```
-
-### Test Suite (`tests/routes/test_routes_health.py`)
-- 11 test cases covering:
-  - Status code validation
-  - Response structure
-  - Method rejection (POST, PUT, DELETE)
-  - Header handling
-  - Query parameter behavior
-
-**Key Finding:** All existing health endpoints follow identical pattern with consistent response model.
-
----
-
-## 7. Implementation Checklist
-
-### For `/api/demo/health` endpoint:
-
-- [ ] **Route file**: Create or update `server/routes/health.py`
-- [ ] **Router**: Use existing health router (no new router needed)
-- [ ] **Response model**: Use existing `HealthGetResponse` model
-- [ ] **Authentication**: None (public endpoint)
-- [ ] **HTTP method**: GET only
-- [ ] **Response fields**:
-  - `status`: "ok" (string)
-  - `timestamp`: ISO 8601 timestamp (string)
-  - `version`: Application version (string)
-- [ ] **Test file**: Add tests to `tests/routes/test_routes_health.py`
-- [ ] **Test coverage**:
-  - Status code 200
-  - Response structure
-  - Method rejection (POST, PUT, DELETE, PATCH)
-  - JSON content type
-  - Query parameter handling
-- [ ] **Registration**: Already registered in `server/app.py:70`
-
----
-
-## 8. Code Organization Summary
-
-### Directory Structure
 ```
 repos/metabob-rpc-api/
 ├── server/
-│   ├── app.py                    # Main FastAPI app, router registration
 │   ├── routes/
-│   │   ├── __init__.py           # Router exports
-│   │   ├── health.py             # Health check routes ← TARGET
-│   │   ├── v2_session.py         # V2 session API
-│   │   └── ...
-│   ├── models/
-│   │   └── response.py           # Response models (HealthGetResponse)
-│   └── utils/
-│       └── error_handlers.py     # Global exception handling
+│   │   └── auth.py (add to existing file under /me endpoint)
+│   │   OR
+│   │   └── users.py (new file if users deserve separate module)
+│   ├── actions/
+│   │   └── auth_db.py (database functions already exist here)
+│   └── models/
+│       └── auth.py (UserResponse already defined)
 └── tests/
     └── routes/
-        ├── conftest.py           # Test fixtures
-        └── test_routes_health.py # Health tests ← TARGET
+        └── test_routes_auth.py (add tests here)
+        OR
+        └── test_routes_users.py (new test file)
 ```
 
-### Import Patterns
-```python
-# Standard imports
-from datetime import datetime
-from fastapi import APIRouter, HTTPException
-
-# Internal imports
-from server import __version__
-from server.models.response import HealthGetResponse
-```
+**Recommendation**: Add to `auth.py` since user profile is authentication-related and `get_user_by_id` already exists in `auth_db.py`.
 
 ---
 
-## 9. Recommendations
+## 10. Summary
 
-### For New Endpoint Implementation
-
-1. **Extend existing health router**: Don't create a new router file
-2. **Reuse HealthGetResponse model**: Maintain consistency
-3. **Follow async pattern**: Use `async def` for all endpoints
-4. **Add comprehensive tests**: Mirror existing health test coverage
-5. **Use descriptive function names**: e.g., `demo_health_check()`
-6. **Include docstrings**: Document endpoint purpose
-7. **No authentication**: Keep it public like other health checks
-
-### Best Practices Observed
-- Type hints on all function parameters
-- Pydantic models for validation
-- Dependency injection for shared resources (Redis, DB)
-- Async/await for I/O operations
-- Comprehensive test coverage (success + edge cases)
-- Haiku-style test documentation
-
----
-
-## 10. Example Implementation
-
-Based on the analysis, here's the recommended implementation:
+### Quick Start Template
 
 ```python
-# File: server/routes/health.py (add to existing file)
+# In repos/metabob-rpc-api/server/routes/auth.py
 
-@router.get("/api/demo/health", response_model=HealthGetResponse)
-async def demo_health_check():
-    """Simple health check endpoint for demo purposes that returns system status."""
-    return HealthGetResponse(
-        status="ok",
-        timestamp=datetime.utcnow().isoformat(),
-        version=__version__
-    )
-```
-
-```python
-# File: tests/routes/test_routes_health.py (add to existing file)
-
-def test_demo_health_endpoint_returns_200(client):
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user_profile(
+    user_id: str = Path(..., description="User ID to retrieve"),
+    session: SessionData = Depends(require_auth),
+    db: SurrealDBClient = Depends(get_surreal_connection),
+) -> UserResponse:
     """
-    Purpose: Verify demo health endpoint is accessible
-    Methodology: GET /api/demo/health → Assert 200 status
-    Validity: 200 status proves endpoint is working
-    """
-    response = client.get("/api/demo/health")
-    assert response.status_code == 200
-
-def test_demo_health_endpoint_returns_correct_data(client):
-    """
-    Purpose: Verify demo health endpoint returns correct structure
-    Methodology: GET /api/demo/health → Assert response fields
-    Validity: Presence of required fields proves correct response
-    """
-    response = client.get("/api/demo/health")
-    data = response.json()
+    Retrieve user profile by ID.
     
-    assert "status" in data
-    assert "timestamp" in data
-    assert "version" in data
-    assert data["status"] == "ok"
-    assert data["version"] == __version__
-
-def test_demo_health_endpoint_rejects_post(client):
+    Requires authentication. Users can only access their own profile
+    or profiles within their organization if they have appropriate permissions.
+    
+    Args:
+        user_id: Unique user identifier
+        session: Authenticated session data
+        db: Database connection
+        
+    Returns:
+        UserResponse: User profile information
+        
+    Raises:
+        HTTPException 401: Authentication required
+        HTTPException 403: User lacks permission to access this profile
+        HTTPException 404: User not found
+        HTTPException 500: Internal server error
     """
-    Purpose: Verify demo health endpoint only accepts GET requests
-    Methodology: POST /api/demo/health → Assert 405 status
-    Validity: 405 status proves method validation works
-    """
-    response = client.post("/api/demo/health")
-    assert response.status_code == 405
+    logger.info(f"Get user profile {user_id} (requested by {session.user_id})")
+    
+    try:
+        # Fetch user from database
+        user = await get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Authorization: Can only view own profile or org members
+        if user.user_id != session.user_id and user.org_id != session.org_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to view this user profile"
+            )
+        
+        # Return validated response
+        return UserResponse(
+            user_id=user.user_id,
+            org_id=user.org_id,
+            email=user.email,
+            role=user.role,
+            created_at=user.created_at,
+            last_login_at=user.last_login_at,
+            metadata=user.metadata,
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get user profile error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve user profile: {str(e)}"
+        )
 ```
 
----
+### Key Takeaways
 
-## Summary
+1. **Framework**: FastAPI with async/await
+2. **Validation**: Pydantic models everywhere
+3. **Auth**: Bearer token via `Depends(require_auth)`
+4. **Errors**: HTTPException with specific status codes
+5. **Database**: SurrealDB via dependency injection
+6. **Testing**: Separate test files in `tests/routes/`
+7. **Logging**: Use module logger for info/error
+8. **Pattern**: Match `get_user` endpoint in `auth.py:2261`
 
-The metabob-rpc-api codebase follows FastAPI best practices with:
-- **Modular router architecture** for clean separation
-- **Pydantic validation** for type safety
-- **Consistent error handling** via HTTPException
-- **Comprehensive test coverage** with Haiku documentation
-- **Public health endpoints** that require no authentication
-- **Standard response models** for consistency
-
-The new `/api/demo/health` endpoint should follow the existing pattern in `server/routes/health.py` with matching test coverage in `tests/routes/test_routes_health.py`.
+**Next Steps**: Implement endpoint following this pattern, then create tests.

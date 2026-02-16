@@ -1,0 +1,817 @@
+{
+  "activity_id": "add-feature-complete",
+  "name": "Add Feature Complete",
+  "description": "Complete feature implementation workflow with design, implementation, testing, and quality validation using Metabob integration",
+  "category": "feature",
+  "task_steps": [
+    {
+      "id": "design-feature",
+      "task_id": "design-feature",
+      "subagent": "general",
+      "description": "Analyze codebase patterns and design feature architecture",
+      "dependencies": [],
+      "prompt": {
+        "template": "Design a new feature following existing codebase patterns.\n\n**Feature Specification**:\n- Name: {{feature_name}}\n- Description: {{feature_description}}\n{{#if requirements}}\n- Requirements: {{requirements}}\n{{/if}}\n{{#if acceptance_criteria}}\n- Acceptance Criteria: {{acceptance_criteria}}\n{{/if}}\n\n**Your Task**:\n\n## Step 1: Analyze Existing Patterns\n\nUse Metabob tools to understand the codebase:\n\n1. **Search for similar features**:\n   ```\n   metabob_search_codebase_issues({\n     query: \"similar to {{feature_name}}\",\n     limit: 5\n   })\n   ```\n\n2. **Check for existing issues in related areas**:\n   ```\n   metabob_get_priority_issues({})\n   ```\n\n3. **Review existing implementations**:\n   - Use glob to find relevant files\n   - Read 2-3 similar feature implementations\n   - Note patterns: naming, structure, error handling\n\n## Step 2: Design Feature Architecture\n\nCreate a comprehensive design document.\n\n**File Structure**:\n- Identify where feature code should live\n- List all files to create or modify\n- Plan directory structure if needed\n\n**Components**:\n- Core functionality modules\n- Data models/schemas\n- API interfaces (if applicable)\n- Configuration (if needed)\n- Tests\n\n**Dependencies**:\n- External libraries needed\n- Internal modules to use\n- Analyze change impact for modified files\n\n**Error Handling**:\n- Identify error scenarios\n- Plan error messages and recovery\n- Define validation rules\n\n## Step 3: Predict Related Files\n\nUse `metabob_suggest_related_changes` to predict which files may need changes:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"path/to/feature/area.ts\"],\n  top_k: 8\n})\n```\n\n**Why this matters**:\n- New features often require changes in related files (tests, configs, docs)\n- Identifies dependencies that need updating\n- Helps avoid incomplete implementations that break existing functionality\n- Enables learning: system improves by comparing predictions vs actual changes\n\n**Store predictions**: Document the predicted cochanges in FEATURE_DESIGN.md for later comparison.\n\n## Step 4: Create Design Document\n\nCreate **FEATURE_DESIGN.md** with:\n\n```markdown\n## Feature Design: {{feature_name}}\n\n### Overview\n{{feature_description}}\n\n### Requirements\n{{#if requirements}}\n{{requirements}}\n{{else}}\n- [List functional requirements]\n- [List non-functional requirements]\n{{/if}}\n\n### Acceptance Criteria\n{{#if acceptance_criteria}}\n{{acceptance_criteria}}\n{{else}}\n- [List measurable acceptance criteria]\n{{/if}}\n\n### Existing Patterns Found\n- Pattern 1: [Description and example file]\n- Pattern 2: [Description and example file]\n- Naming conventions: [Describe]\n- Error handling approach: [Describe]\n\n\n\n### Predicted Cochanges\n\n**Files likely to need changes** (from metabob_suggest_related_changes):\n1. `path/to/file1.ts` - [reason: dependency, similar pattern, related functionality, etc.]\n2. `path/to/file2.ts` - [reason]\n3. `path/to/file3.ts` - [reason]\n\n**Priority files** (high severity issues): [list files with HIGH issues if any]\n\n**Note**: These predictions will be compared with actual changes to improve future predictions.\n\n### Architecture\n\n#### File Structure\n```\npath/to/feature/\n  ├── index.ts           # Main entry point\n  ├── types.ts           # Type definitions\n  ├── implementation.ts  # Core logic\n  ├── utils.ts           # Helper functions\n  └── __tests__/\n      └── feature.test.ts\n```\n\n#### Components\n1. **Component Name** (`file.ts`)\n   - Purpose: [What it does]\n   - Public API: [Functions/classes]\n   - Dependencies: [What it uses]\n\n2. **Component Name** (`file.ts`)\n   - Purpose: [What it does]\n   - Public API: [Functions/classes]\n   - Dependencies: [What it uses]\n\n#### Data Flow\n```\n[Input] → [Validation] → [Processing] → [Output]\n          ↓\n      [Error Handling]\n```\n\n#### Error Scenarios\n- Scenario 1: [Description] → [Error type]\n- Scenario 2: [Description] → [Error type]\n- Scenario 3: [Description] → [Error type]\n\n### Change Impact Analysis\n\nFiles to modify:\n- `path/to/file1.ts`: [Why and what changes]\n- `path/to/file2.ts`: [Why and what changes]\n\n**Impact Check**: Run metabob_analyze_change_impact for each file\n\n### Testing Strategy\n\n#### Unit Tests\n- Test 1: [What to test]\n- Test 2: [What to test]\n- Test 3: [What to test]\n\n#### Integration Tests\n- Test 1: [What to test]\n- Test 2: [What to test]\n\n#### Edge Cases\n- Case 1: [Description]\n- Case 2: [Description]\n\n### Implementation Checklist\n- [ ] Create file structure\n- [ ] Implement core functionality\n- [ ] Add type definitions\n- [ ] Implement error handling\n- [ ] Add input validation\n- [ ] Write unit tests\n- [ ] Write integration tests\n- [ ] Add documentation\n- [ ] Update related files\n- [ ] Run quality checks\n```\n\n## Step 4: Validate Design\n\nBefore completing:\n- Ensure all sections are filled with specifics (no placeholders)\n- Verify file paths are accurate\n- Confirm patterns match existing code\n- Check that error scenarios are comprehensive\n\n**Success Criteria**:\n- Design document is complete and specific\n- No TODO/TBD/FIXME markers\n- No placeholder paths like 'path/to/'\n- All patterns validated against actual code\n- Change impact analyzed for modified files",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature to implement"
+          },
+          {
+            "name": "feature_description",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of what the feature does and its purpose"
+          },
+          {
+            "name": "requirements",
+            "type": "string",
+            "required": false,
+            "description": "Functional and non-functional requirements"
+          },
+          {
+            "name": "acceptance_criteria",
+            "type": "string",
+            "required": false,
+            "description": "Measurable criteria for feature completion"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "FEATURE_DESIGN.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Feature Design:",
+            "description": ""
+          },
+          {
+            "pattern": "### Overview",
+            "description": ""
+          },
+          {
+            "pattern": "### Requirements",
+            "description": ""
+          },
+          {
+            "pattern": "### Acceptance Criteria",
+            "description": ""
+          },
+          {
+            "pattern": "### Existing Patterns Found",
+            "description": ""
+          },
+          {
+            "pattern": "### Predicted Cochanges",
+            "description": ""
+          },
+          {
+            "pattern": "### Architecture",
+            "description": ""
+          },
+          {
+            "pattern": "### File Structure",
+            "description": ""
+          },
+          {
+            "pattern": "### Components",
+            "description": ""
+          },
+          {
+            "pattern": "### Data Flow",
+            "description": ""
+          },
+          {
+            "pattern": "### Error Scenarios",
+            "description": ""
+          },
+          {
+            "pattern": "### Change Impact Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "### Testing Strategy",
+            "description": ""
+          },
+          {
+            "pattern": "### Implementation Checklist",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "path/to/",
+            "description": ""
+          },
+          {
+            "pattern": "\\[Description\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[What it does\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[List",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "implement-feature",
+      "task_id": "implement-feature",
+      "subagent": "general",
+      "description": "Implement feature following the design with proper types and error handling",
+      "dependencies": [
+        "design-feature"
+      ],
+      "prompt": {
+        "template": "Implement the {{feature_name}} feature following FEATURE_DESIGN.md.\n\n**Read the Design Document First**:\n\nRead FEATURE_DESIGN.md to understand:\n- File structure to create\n- Components to implement\n- Data flow and processing\n- Error scenarios to handle\n- Existing patterns to follow\n\n**Implementation Steps**:\n\n## Step 1: Check for Quality Issues\n\nBefore implementing, search for similar quality issues:\n```\nmetabob_search_codebase_issues({\n  query: \"{{feature_name}} quality issues\",\n  limit: 5\n})\n```\n\nLearn from existing issues to avoid similar problems.\n\n## Step 2: Analyze Change Impact\n\nFor each file you'll modify (from design):\n```\nmetabob_analyze_change_impact({\n  file_path: \"path/to/file.ts\",\n  component_name: \"ComponentName\"\n})\n```\n\nUnderstand dependencies before making changes.\n\n## Step 3: Implement Core Functionality\n\n**File Structure**:\n- Create all files from design document\n- Follow exact directory structure\n- Use consistent naming conventions\n\n**Type Definitions**:\n- Define interfaces for data structures\n- Use TypeScript types (never use `any`)\n- Add type guards where needed\n- Export public types\n\n**Core Logic**:\n- Implement each component from design\n- Follow data flow diagram\n- Handle all error scenarios\n- Validate inputs\n- Format outputs\n\n**Error Handling**:\n- Implement all error scenarios from design\n- Use appropriate error types\n- Provide helpful error messages\n- Handle edge cases gracefully\n\n## Step 4: Code Quality\n\n**Documentation**:\n- Add JSDoc comments for:\n  * Public functions\n  * Public classes\n  * Complex algorithms\n  * Error conditions\n\n**Best Practices**:\n- No `console.log` statements (use proper logging)\n- No hardcoded values (use constants)\n- No dead code\n- Follow DRY principle\n- Keep functions focused (single responsibility)\n\n**TypeScript**:\n- No type assertions unless absolutely necessary\n- Use strict null checks\n- Prefer const over let\n- Use functional patterns where appropriate\n\n## Step 5: Integration\n\n**Update Related Files**:\n- Modify files listed in Change Impact Analysis\n- Update exports in index files\n- Add feature to configuration if needed\n- Update type definitions\n\n**Verify Integration**:\n- Check imports/exports are correct\n- Ensure no circular dependencies\n- Run TypeScript compiler\n\n## Step 6: Quality Validation\n\nRun quality checks:\n```bash\n# TypeScript compilation\nnpm run typecheck || tsc --noEmit || echo 'Typecheck not available'\n\n# Linting (if available)\nnpm run lint || echo 'Linting not available'\n```\n\n**Success Criteria**:\n- All files from design are created\n- Implementation matches design architecture\n- All error scenarios are handled\n- No TypeScript errors\n- No `any` types\n- No `console.log` statements\n- All public APIs have JSDoc comments\n- Code follows existing patterns",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "*.ts",
+          "*.js",
+          "*.tsx",
+          "*.jsx"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "export",
+            "description": ""
+          },
+          {
+            "pattern": "(interface|type|class|function)",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "console\\.log",
+            "description": ""
+          },
+          {
+            "pattern": "\\bany\\b",
+            "description": ""
+          },
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "debugger",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm run typecheck || tsc --noEmit || echo 'No typecheck available'",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "npm run lint || echo 'No lint available'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "test-feature",
+      "task_id": "test-feature",
+      "subagent": "test",
+      "description": "Write comprehensive unit and integration tests for the feature",
+      "dependencies": [
+        "implement-feature"
+      ],
+      "prompt": {
+        "template": "Write comprehensive tests for {{feature_name}} feature.\n\n**Read Design and Implementation**:\n\n1. Read FEATURE_DESIGN.md for:\n   - Testing strategy\n   - Error scenarios\n   - Edge cases\n   - Acceptance criteria\n\n2. Review implementation files to understand:\n   - Public APIs to test\n   - Internal logic flow\n   - Error handling\n\n**Test Implementation**:\n\n## Step 1: Analyze Existing Test Patterns\n\nFind similar tests:\n```bash\nglob('**/*.test.{ts,js,tsx,jsx}')\n```\n\nReview 2-3 test files to understand:\n- Test framework (Jest, Mocha, Vitest, etc.)\n- Assertion library\n- Mock patterns\n- Test structure\n- Helper utilities\n\n## Step 2: Create Test File Structure\n\nFollow existing patterns:\n```typescript\nimport { describe, it, expect, beforeEach, afterEach } from 'test-framework';\nimport { FeatureName } from '../feature';\n\ndescribe('{{feature_name}}', () => {\n  // Setup and teardown\n  beforeEach(() => {\n    // Setup test environment\n  });\n\n  afterEach(() => {\n    // Cleanup\n  });\n\n  // Test groups\n});\n```\n\n## Step 3: Write Unit Tests\n\n### Success Cases\n```typescript\ndescribe('Success cases', () => {\n  it('should [expected behavior] when [condition]', async () => {\n    // Arrange: Setup test data\n    const input = { /* test data */ };\n    \n    // Act: Execute function\n    const result = await featureFunction(input);\n    \n    // Assert: Verify results\n    expect(result).toBeDefined();\n    expect(result).toEqual(expectedOutput);\n    // Verify all important properties\n  });\n\n  // More success case tests\n});\n```\n\n### Error Cases\n```typescript\ndescribe('Error handling', () => {\n  it('should throw [ErrorType] when [error condition]', async () => {\n    const invalidInput = { /* bad data */ };\n    \n    await expect(\n      featureFunction(invalidInput)\n    ).rejects.toThrow(ErrorType);\n    \n    // Verify error message if applicable\n  });\n\n  // Test each error scenario from design\n});\n```\n\n### Edge Cases\n```typescript\ndescribe('Edge cases', () => {\n  it('should handle empty input', async () => { /* ... */ });\n  it('should handle null values', async () => { /* ... */ });\n  it('should handle undefined values', async () => { /* ... */ });\n  it('should handle boundary values', async () => { /* ... */ });\n  it('should handle special characters', async () => { /* ... */ });\n  it('should handle concurrent calls', async () => { /* ... */ });\n});\n```\n\n## Step 4: Write Integration Tests (if applicable)\n\n```typescript\ndescribe('Integration tests', () => {\n  it('should work with [dependency]', async () => {\n    // Test interaction with real dependencies\n    // Or use integration test mocks\n  });\n\n  it('should maintain state correctly', async () => {\n    // Test stateful interactions\n  });\n});\n```\n\n## Step 5: Test Coverage Requirements\n\n**Required Coverage**:\n- ✅ All public functions/methods\n- ✅ All error scenarios from design\n- ✅ All edge cases from design\n- ✅ All branches (if/else, switch)\n- ✅ All acceptance criteria\n\n**Mocking Strategy**:\n- Mock external APIs\n- Mock database calls\n- Mock file system operations\n- Use dependency injection for testability\n\n## Step 6: Run Tests\n\n```bash\n# Run tests\nnpm test -- --testPathPattern='feature' || npm test || echo 'Tests not run'\n\n# Check coverage (if available)\nnpm run test:coverage || echo 'Coverage not available'\n```\n\n**Success Criteria**:\n- All tests pass\n- No skipped tests (no it.skip, describe.skip)\n- All success paths tested\n- All error scenarios tested\n- All edge cases tested\n- Tests follow existing patterns\n- Proper mocking of dependencies\n- Clear test descriptions\n- Good assertions (not just toBeDefined())",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "*.test.ts",
+          "*.test.js",
+          "*.spec.ts",
+          "*.spec.js",
+          "*.test.tsx",
+          "*.test.jsx"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "describe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "it\\(",
+            "description": ""
+          },
+          {
+            "pattern": "expect\\(",
+            "description": ""
+          },
+          {
+            "pattern": "Success cases",
+            "description": ""
+          },
+          {
+            "pattern": "Error",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "it\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "describe\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "xit\\(",
+            "description": ""
+          },
+          {
+            "pattern": "xdescribe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm test -- --passWithNoTests || npm test || echo 'Tests not executed'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "document-and-annotate",
+      "task_id": "document-and-annotate",
+      "subagent": "general",
+      "description": "Create documentation and annotate components with Metabob",
+      "dependencies": [
+        "test-feature"
+      ],
+      "prompt": {
+        "template": "Document {{feature_name}} and annotate with Metabob.\n\n## Part 1: Create Documentation\n\n### Step 1: Determine Documentation Location\n\nCheck existing docs:\n- README.md in feature directory\n- docs/ folder\n- API.md or FEATURES.md\n- Inline JSDoc comments\n\nFollow existing documentation patterns.\n\n### Step 2: Write Feature Documentation\n\nCreate or update documentation with:\n\n```markdown\n# {{feature_name}}\n\n## Overview\n\n[Clear description of what the feature does and why it exists]\n\n## Installation\n\n```bash\n# If installation steps needed\nnpm install <package>\n```\n\n## Usage\n\n### Basic Example\n\n```typescript\nimport { FeatureName } from './feature';\n\n// Simple usage example\nconst result = await featureName({\n  // Example parameters\n});\n\nconsole.log(result);\n```\n\n### Advanced Examples\n\n```typescript\n// Example 1: [Scenario]\n// [Code example]\n\n// Example 2: [Scenario]\n// [Code example]\n```\n\n## API Reference\n\n### `functionName(params): ReturnType`\n\n[Description of what it does]\n\n**Parameters**:\n- `param1` (type): [Description]\n- `param2` (type, optional): [Description]\n\n**Returns**:\n- `ReturnType`: [Description]\n\n**Throws**:\n- `ErrorType`: [When this error occurs]\n\n**Example**:\n```typescript\n// Example code\n```\n\n### [Other API functions]\n\n[Document all public APIs]\n\n## Error Handling\n\nThe feature can throw the following errors:\n\n- **ErrorType1**: [Description and how to handle]\n- **ErrorType2**: [Description and how to handle]\n\n## Configuration\n\n[If feature has configuration options]\n\n```typescript\nconst config = {\n  option1: 'value',\n  option2: 123\n};\n```\n\n## Testing\n\n[How to test the feature]\n\n```bash\nnpm test -- feature.test.ts\n```\n\n## Migration Guide\n\n[If this changes existing APIs]\n\n### Before\n```typescript\n// Old way\n```\n\n### After\n```typescript\n// New way\n```\n\n## Design Decisions\n\n[Document key design decisions and rationale]\n\n- **Decision 1**: [What and why]\n- **Decision 2**: [What and why]\n\n## Performance Considerations\n\n[Any performance characteristics users should know]\n\n## Known Limitations\n\n[Any limitations or edge cases]\n\n## See Also\n\n- [Related features or docs]\n```\n\n### Step 3: Update Project Documentation\n\nUpdate main README.md or FEATURES.md:\n- Add feature to features list\n- Link to detailed documentation\n- Update table of contents\n\n## Part 2: Metabob Annotations\n\n### Step 1: Identify Key Components\n\nFrom implementation, identify:\n- Main entry point functions\n- Core classes\n- Complex algorithms\n- Error handling logic\n- Integration points\n\n### Step 2: Annotate Components\n\nFor each key component, use Metabob:\n\n```typescript\nmetabob_annotate_component({\n  file_path: \"path/to/file.ts\",\n  component_name: \"ComponentName\",\n  component_type: \"function\" | \"class\" | \"method\",\n  reason: \"Explain WHY this component exists and key design decisions\"\n})\n```\n\n**Annotation Guidelines**:\n- Focus on WHY, not WHAT (code shows what)\n- Explain design decisions\n- Document non-obvious choices\n- Describe integration points\n- Note performance considerations\n- Mention future considerations\n\n**Example Annotations**:\n\n```typescript\n// Main feature entry point\nmetabob_annotate_component({\n  file_path: \"src/feature/index.ts\",\n  component_name: \"featureMain\",\n  component_type: \"function\",\n  reason: \"Main entry point for {{feature_name}}. Uses async/await pattern to match existing codebase style. Validates input first to fail fast. Implements retry logic because external API calls can be flaky.\"\n})\n\n// Core processing logic\nmetabob_annotate_component({\n  file_path: \"src/feature/processor.ts\",\n  component_name: \"processData\",\n  component_type: \"function\",\n  reason: \"Core processing algorithm. Uses Map for O(1) lookups instead of array iteration for performance with large datasets. Handles edge case of empty input by returning default value rather than throwing.\"\n})\n\n// Error handler\nmetabob_annotate_component({\n  file_path: \"src/feature/errors.ts\",\n  component_name: \"FeatureError\",\n  component_type: \"class\",\n  reason: \"Custom error class for feature-specific errors. Extends base Error to maintain stack traces. Includes error codes for programmatic error handling by consumers.\"\n})\n```\n\n### Step 3: Check for Related Changes\n\nFind related files that might need updates:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"path/to/feature/file1.ts\", \"path/to/feature/file2.ts\"]\n})\n```\n\nReview suggestions and update documentation if needed.\n\n## Part 3: Quality Summary\n\nCreate **FEATURE_SUMMARY.md** with:\n\n```markdown\n## Feature Implementation Summary: {{feature_name}}\n\n### Implementation Status\n- ✅ Design completed\n- ✅ Implementation completed\n- ✅ Tests completed\n- ✅ Documentation completed\n- ✅ Metabob annotations completed\n\n### Files Created/Modified\n- `path/to/file1.ts` - [Purpose]\n- `path/to/file2.ts` - [Purpose]\n- `path/to/tests.test.ts` - [Test coverage]\n- `docs/feature.md` - [Documentation]\n\n### Test Coverage\n- Success cases: [count] tests\n- Error cases: [count] tests\n- Edge cases: [count] tests\n- **Total**: [count] tests, all passing ✅\n\n### Quality Checks\n- ✅ TypeScript compilation passes\n- ✅ All tests pass\n- ✅ No forbidden patterns (console.log, any, TODO)\n- ✅ Key components annotated with Metabob\n- ✅ Documentation complete\n\n### Key Design Decisions\n1. [Decision and rationale]\n2. [Decision and rationale]\n3. [Decision and rationale]\n\n### Usage Example\n```typescript\n// Quick usage example\n```\n\n### Next Steps (if any)\n- [Future enhancements]\n- [Related work]\n```\n\n**Success Criteria**:\n- Complete API documentation with examples\n- All public APIs documented\n- Usage examples are runnable\n- Key components annotated with Metabob\n- Design decisions documented\n- Summary document created\n- No TODO/TBD placeholders\n\n## Part 2: Check Related Files and Cochange Accuracy\n\n### 1. Check Related Files\n\nUse `metabob_suggest_related_changes` to verify related files were properly updated:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"all\", \"files\", \"you\", \"created\", \"or\", \"modified.ts\"],\n  top_k: 8\n})\n```\n\n**Compare predictions vs actual**:\n- Review predicted cochanges from FEATURE_DESIGN.md\n- Which predicted files did we actually change? (cochange accuracy)\n- Which predicted files did we NOT change? (should we review them?)\n- Did we change files that were NOT predicted? (why?)\n\n**Review high-priority suggestions**:\n- If related files have HIGH severity issues, consider if they need updating for consistency\n- If related files share similar patterns, verify the feature integrates properly\n- Document any additional files that should be reviewed or updated in follow-up\n\n### 2. Calculate Cochange Accuracy\n\nCompare predicted vs actual:\n- Predicted files (from FEATURE_DESIGN.md): [count]\n- Actually modified/created files: [count]\n- Correct predictions: [count matching]\n- Cochange accuracy: X/Y (percentage)\n\n**Learning note**: This data helps the system improve future predictions.\n\n\n## Part 3: Annotate Key Components\n\n### Step 3: Annotate Components with Metabob\n\nUse `metabob_annotate_component` to document **WHY** key components exist:\n\nAnnotate 3-5 key components:\n```typescript\nmetabob_annotate_component({\n  file_path: \"path/to/feature/file.ts\",\n  component_name: \"FeatureClassName\",\n  component_type: \"class\",  // or \"function\", \"method\"\n  reason: \"Created {{feature_name}} to [purpose]. Chose [approach] over [alternative] because [reasoning]. Key constraints: [list constraints].\"\n})\n```\n\n**Focus on WHY, not WHAT**:\n- ❌ \"Created UserValidator class\" (obvious from code)\n- ✅ \"Created UserValidator class to centralize validation logic. Previously validation was scattered across 5 files causing inconsistencies. Chose class-based approach for state management of validation rules.\"\n\n**What to annotate**:\n- Core feature classes/functions\n- Complex algorithms or logic\n- Design pattern implementations\n- Components with non-obvious trade-offs\n- Integration points with existing code\n\n## Part 4: Create Summary Document\n\n### Step 4: Create FEATURE_SUMMARY.md\n\nCreate **FEATURE_SUMMARY.md** with:\n\n```markdown\n## Feature Summary: {{feature_name}}\n\n### What Was Implemented\n\n**Feature**: {{feature_name}}\n\n**Description**: [Brief description of what the feature does]\n\n**Files Created**:\n- `path/to/file1.ts` - [Purpose]\n- `path/to/file2.ts` - [Purpose]\n- `path/to/file.test.ts` - [Purpose]\n\n**Files Modified**:\n- `path/to/existing/file.ts` - [What changed and why]\n\n### Related Files Analysis\n\n**Predicted Cochanges** (from FEATURE_DESIGN.md):\n- Files predicted to change: [list from FEATURE_DESIGN.md]\n- Files actually changed: [list from git diff or created files]\n- Cochange accuracy: X/Y predictions correct (Z%)\n\n**Related Files Checked** (from metabob_suggest_related_changes):\n- Files reviewed for integration: [list]\n- High-priority files (with critical issues): [list if any]\n- Action taken: [Updated for integration / Verified compatibility / Noted for future work]\n\n**Insights**:\n[What did we learn from the cochange analysis? Were predictions accurate? Did we miss any related files that needed updating?]\n\n### Testing\n\n**Test Coverage**:\n- Unit tests: [number] tests\n- Integration tests: [number] tests\n- Edge cases covered: [list key edge cases]\n\n**Test Results**: ✅ All tests passing\n\n### Quality\n\n**Metabob Annotations**: [number] key components annotated\n\n**Code Quality**:\n- ✅ TypeScript compilation: No errors\n- ✅ Linting: Passed\n- ✅ No forbidden patterns (console.log, any, TODO)\n\n### Documentation\n\n**Documentation Created**:\n- [Link or path to main documentation]\n- API reference included\n- Usage examples provided\n\n### Acceptance Criteria Status\n\n{{#if acceptance_criteria}}\nCheck against original criteria:\n{{acceptance_criteria}}\n\n**Status**: ✅ All criteria met / ⚠️ Partial / ❌ Not met\n{{else}}\n- [ ] Criterion 1\n- [ ] Criterion 2\n- [ ] Criterion 3\n{{/if}}\n\n### Design Decisions\n\n**Key Decisions**:\n1. [Decision 1]: [Why this choice]\n2. [Decision 2]: [Why this choice]\n3. [Decision 3]: [Why this choice]\n\n### Next Steps\n\n**Immediate**:\n- [ ] Merge feature\n- [ ] Deploy to [environment]\n- [ ] Monitor for issues\n\n**Future Enhancements**:\n- [Enhancement 1]\n- [Enhancement 2]\n\n### Lessons Learned\n\n**What Went Well**:\n- [Success 1]\n- [Success 2]\n\n**What Could Be Improved**:\n- [Improvement 1]\n- [Improvement 2]\n\n**Cochange Prediction Accuracy**: [X%]\n- Helps system learn which files typically change together\n- Future similar features will have better predictions\n```\n\n## Completion Checklist\n\nBefore marking complete, verify:\n- [ ] All code implemented per FEATURE_DESIGN.md\n- [ ] All tests passing\n- [ ] Documentation complete with examples\n- [ ] 3-5 key components annotated with Metabob\n- [ ] Related files checked and accuracy calculated\n- [ ] FEATURE_SUMMARY.md created\n- [ ] No TODO/FIXME/console.log in code\n- [ ] TypeScript compilation clean\n",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "*.md",
+          "FEATURE_SUMMARY.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Overview",
+            "description": ""
+          },
+          {
+            "pattern": "## Usage",
+            "description": ""
+          },
+          {
+            "pattern": "## API Reference",
+            "description": ""
+          },
+          {
+            "pattern": "Example",
+            "description": ""
+          },
+          {
+            "pattern": "```",
+            "description": ""
+          },
+          {
+            "pattern": "## Feature Summary:",
+            "description": ""
+          },
+          {
+            "pattern": "### Related Files Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "Cochange accuracy:",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "\\[Description\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[What it does\\]",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "design-feature",
+      "task_id": "design-feature",
+      "subagent": "general",
+      "description": "Analyze codebase patterns and design feature architecture",
+      "dependencies": [],
+      "prompt": {
+        "template": "Design a new feature following existing codebase patterns.\n\n**Feature Specification**:\n- Name: {{feature_name}}\n- Description: {{feature_description}}\n{{#if requirements}}\n- Requirements: {{requirements}}\n{{/if}}\n{{#if acceptance_criteria}}\n- Acceptance Criteria: {{acceptance_criteria}}\n{{/if}}\n\n**Your Task**:\n\n## Step 1: Analyze Existing Patterns\n\nUse Metabob tools to understand the codebase:\n\n1. **Search for similar features**:\n   ```\n   metabob_search_codebase_issues({\n     query: \"similar to {{feature_name}}\",\n     limit: 5\n   })\n   ```\n\n2. **Check for existing issues in related areas**:\n   ```\n   metabob_get_priority_issues({})\n   ```\n\n3. **Review existing implementations**:\n   - Use glob to find relevant files\n   - Read 2-3 similar feature implementations\n   - Note patterns: naming, structure, error handling\n\n## Step 2: Design Feature Architecture\n\nCreate a comprehensive design document.\n\n**File Structure**:\n- Identify where feature code should live\n- List all files to create or modify\n- Plan directory structure if needed\n\n**Components**:\n- Core functionality modules\n- Data models/schemas\n- API interfaces (if applicable)\n- Configuration (if needed)\n- Tests\n\n**Dependencies**:\n- External libraries needed\n- Internal modules to use\n- Analyze change impact for modified files\n\n**Error Handling**:\n- Identify error scenarios\n- Plan error messages and recovery\n- Define validation rules\n\n## Step 3: Predict Related Files\n\nUse `metabob_suggest_related_changes` to predict which files may need changes:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"path/to/feature/area.ts\"],\n  top_k: 8\n})\n```\n\n**Why this matters**:\n- New features often require changes in related files (tests, configs, docs)\n- Identifies dependencies that need updating\n- Helps avoid incomplete implementations that break existing functionality\n- Enables learning: system improves by comparing predictions vs actual changes\n\n**Store predictions**: Document the predicted cochanges in FEATURE_DESIGN.md for later comparison.\n\n## Step 4: Create Design Document\n\nCreate **FEATURE_DESIGN.md** with:\n\n```markdown\n## Feature Design: {{feature_name}}\n\n### Overview\n{{feature_description}}\n\n### Requirements\n{{#if requirements}}\n{{requirements}}\n{{else}}\n- [List functional requirements]\n- [List non-functional requirements]\n{{/if}}\n\n### Acceptance Criteria\n{{#if acceptance_criteria}}\n{{acceptance_criteria}}\n{{else}}\n- [List measurable acceptance criteria]\n{{/if}}\n\n### Existing Patterns Found\n- Pattern 1: [Description and example file]\n- Pattern 2: [Description and example file]\n- Naming conventions: [Describe]\n- Error handling approach: [Describe]\n\n\n\n### Predicted Cochanges\n\n**Files likely to need changes** (from metabob_suggest_related_changes):\n1. `path/to/file1.ts` - [reason: dependency, similar pattern, related functionality, etc.]\n2. `path/to/file2.ts` - [reason]\n3. `path/to/file3.ts` - [reason]\n\n**Priority files** (high severity issues): [list files with HIGH issues if any]\n\n**Note**: These predictions will be compared with actual changes to improve future predictions.\n\n### Architecture\n\n#### File Structure\n```\npath/to/feature/\n  ├── index.ts           # Main entry point\n  ├── types.ts           # Type definitions\n  ├── implementation.ts  # Core logic\n  ├── utils.ts           # Helper functions\n  └── __tests__/\n      └── feature.test.ts\n```\n\n#### Components\n1. **Component Name** (`file.ts`)\n   - Purpose: [What it does]\n   - Public API: [Functions/classes]\n   - Dependencies: [What it uses]\n\n2. **Component Name** (`file.ts`)\n   - Purpose: [What it does]\n   - Public API: [Functions/classes]\n   - Dependencies: [What it uses]\n\n#### Data Flow\n```\n[Input] → [Validation] → [Processing] → [Output]\n          ↓\n      [Error Handling]\n```\n\n#### Error Scenarios\n- Scenario 1: [Description] → [Error type]\n- Scenario 2: [Description] → [Error type]\n- Scenario 3: [Description] → [Error type]\n\n### Change Impact Analysis\n\nFiles to modify:\n- `path/to/file1.ts`: [Why and what changes]\n- `path/to/file2.ts`: [Why and what changes]\n\n**Impact Check**: Run metabob_analyze_change_impact for each file\n\n### Testing Strategy\n\n#### Unit Tests\n- Test 1: [What to test]\n- Test 2: [What to test]\n- Test 3: [What to test]\n\n#### Integration Tests\n- Test 1: [What to test]\n- Test 2: [What to test]\n\n#### Edge Cases\n- Case 1: [Description]\n- Case 2: [Description]\n\n### Implementation Checklist\n- [ ] Create file structure\n- [ ] Implement core functionality\n- [ ] Add type definitions\n- [ ] Implement error handling\n- [ ] Add input validation\n- [ ] Write unit tests\n- [ ] Write integration tests\n- [ ] Add documentation\n- [ ] Update related files\n- [ ] Run quality checks\n```\n\n## Step 4: Validate Design\n\nBefore completing:\n- Ensure all sections are filled with specifics (no placeholders)\n- Verify file paths are accurate\n- Confirm patterns match existing code\n- Check that error scenarios are comprehensive\n\n**Success Criteria**:\n- Design document is complete and specific\n- No TODO/TBD/FIXME markers\n- No placeholder paths like 'path/to/'\n- All patterns validated against actual code\n- Change impact analyzed for modified files",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature to implement"
+          },
+          {
+            "name": "feature_description",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of what the feature does and its purpose"
+          },
+          {
+            "name": "requirements",
+            "type": "string",
+            "required": false,
+            "description": "Functional and non-functional requirements"
+          },
+          {
+            "name": "acceptance_criteria",
+            "type": "string",
+            "required": false,
+            "description": "Measurable criteria for feature completion"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "FEATURE_DESIGN.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Feature Design:",
+            "description": ""
+          },
+          {
+            "pattern": "### Overview",
+            "description": ""
+          },
+          {
+            "pattern": "### Requirements",
+            "description": ""
+          },
+          {
+            "pattern": "### Acceptance Criteria",
+            "description": ""
+          },
+          {
+            "pattern": "### Existing Patterns Found",
+            "description": ""
+          },
+          {
+            "pattern": "### Predicted Cochanges",
+            "description": ""
+          },
+          {
+            "pattern": "### Architecture",
+            "description": ""
+          },
+          {
+            "pattern": "### File Structure",
+            "description": ""
+          },
+          {
+            "pattern": "### Components",
+            "description": ""
+          },
+          {
+            "pattern": "### Data Flow",
+            "description": ""
+          },
+          {
+            "pattern": "### Error Scenarios",
+            "description": ""
+          },
+          {
+            "pattern": "### Change Impact Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "### Testing Strategy",
+            "description": ""
+          },
+          {
+            "pattern": "### Implementation Checklist",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "path/to/",
+            "description": ""
+          },
+          {
+            "pattern": "\\[Description\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[What it does\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[List",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "implement-feature",
+      "task_id": "implement-feature",
+      "subagent": "general",
+      "description": "Implement feature following the design with proper types and error handling",
+      "dependencies": [
+        "design-feature"
+      ],
+      "prompt": {
+        "template": "Implement the {{feature_name}} feature following FEATURE_DESIGN.md.\n\n**Read the Design Document First**:\n\nRead FEATURE_DESIGN.md to understand:\n- File structure to create\n- Components to implement\n- Data flow and processing\n- Error scenarios to handle\n- Existing patterns to follow\n\n**Implementation Steps**:\n\n## Step 1: Check for Quality Issues\n\nBefore implementing, search for similar quality issues:\n```\nmetabob_search_codebase_issues({\n  query: \"{{feature_name}} quality issues\",\n  limit: 5\n})\n```\n\nLearn from existing issues to avoid similar problems.\n\n## Step 2: Analyze Change Impact\n\nFor each file you'll modify (from design):\n```\nmetabob_analyze_change_impact({\n  file_path: \"path/to/file.ts\",\n  component_name: \"ComponentName\"\n})\n```\n\nUnderstand dependencies before making changes.\n\n## Step 3: Implement Core Functionality\n\n**File Structure**:\n- Create all files from design document\n- Follow exact directory structure\n- Use consistent naming conventions\n\n**Type Definitions**:\n- Define interfaces for data structures\n- Use TypeScript types (never use `any`)\n- Add type guards where needed\n- Export public types\n\n**Core Logic**:\n- Implement each component from design\n- Follow data flow diagram\n- Handle all error scenarios\n- Validate inputs\n- Format outputs\n\n**Error Handling**:\n- Implement all error scenarios from design\n- Use appropriate error types\n- Provide helpful error messages\n- Handle edge cases gracefully\n\n## Step 4: Code Quality\n\n**Documentation**:\n- Add JSDoc comments for:\n  * Public functions\n  * Public classes\n  * Complex algorithms\n  * Error conditions\n\n**Best Practices**:\n- No `console.log` statements (use proper logging)\n- No hardcoded values (use constants)\n- No dead code\n- Follow DRY principle\n- Keep functions focused (single responsibility)\n\n**TypeScript**:\n- No type assertions unless absolutely necessary\n- Use strict null checks\n- Prefer const over let\n- Use functional patterns where appropriate\n\n## Step 5: Integration\n\n**Update Related Files**:\n- Modify files listed in Change Impact Analysis\n- Update exports in index files\n- Add feature to configuration if needed\n- Update type definitions\n\n**Verify Integration**:\n- Check imports/exports are correct\n- Ensure no circular dependencies\n- Run TypeScript compiler\n\n## Step 6: Quality Validation\n\nRun quality checks:\n```bash\n# TypeScript compilation\nnpm run typecheck || tsc --noEmit || echo 'Typecheck not available'\n\n# Linting (if available)\nnpm run lint || echo 'Linting not available'\n```\n\n**Success Criteria**:\n- All files from design are created\n- Implementation matches design architecture\n- All error scenarios are handled\n- No TypeScript errors\n- No `any` types\n- No `console.log` statements\n- All public APIs have JSDoc comments\n- Code follows existing patterns",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "*.ts",
+          "*.js",
+          "*.tsx",
+          "*.jsx"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "export",
+            "description": ""
+          },
+          {
+            "pattern": "(interface|type|class|function)",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "console\\.log",
+            "description": ""
+          },
+          {
+            "pattern": "\\bany\\b",
+            "description": ""
+          },
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "debugger",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm run typecheck || tsc --noEmit || echo 'No typecheck available'",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "npm run lint || echo 'No lint available'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "test-feature",
+      "task_id": "test-feature",
+      "subagent": "test",
+      "description": "Write comprehensive unit and integration tests for the feature",
+      "dependencies": [
+        "implement-feature"
+      ],
+      "prompt": {
+        "template": "Write comprehensive tests for {{feature_name}} feature.\n\n**Read Design and Implementation**:\n\n1. Read FEATURE_DESIGN.md for:\n   - Testing strategy\n   - Error scenarios\n   - Edge cases\n   - Acceptance criteria\n\n2. Review implementation files to understand:\n   - Public APIs to test\n   - Internal logic flow\n   - Error handling\n\n**Test Implementation**:\n\n## Step 1: Analyze Existing Test Patterns\n\nFind similar tests:\n```bash\nglob('**/*.test.{ts,js,tsx,jsx}')\n```\n\nReview 2-3 test files to understand:\n- Test framework (Jest, Mocha, Vitest, etc.)\n- Assertion library\n- Mock patterns\n- Test structure\n- Helper utilities\n\n## Step 2: Create Test File Structure\n\nFollow existing patterns:\n```typescript\nimport { describe, it, expect, beforeEach, afterEach } from 'test-framework';\nimport { FeatureName } from '../feature';\n\ndescribe('{{feature_name}}', () => {\n  // Setup and teardown\n  beforeEach(() => {\n    // Setup test environment\n  });\n\n  afterEach(() => {\n    // Cleanup\n  });\n\n  // Test groups\n});\n```\n\n## Step 3: Write Unit Tests\n\n### Success Cases\n```typescript\ndescribe('Success cases', () => {\n  it('should [expected behavior] when [condition]', async () => {\n    // Arrange: Setup test data\n    const input = { /* test data */ };\n    \n    // Act: Execute function\n    const result = await featureFunction(input);\n    \n    // Assert: Verify results\n    expect(result).toBeDefined();\n    expect(result).toEqual(expectedOutput);\n    // Verify all important properties\n  });\n\n  // More success case tests\n});\n```\n\n### Error Cases\n```typescript\ndescribe('Error handling', () => {\n  it('should throw [ErrorType] when [error condition]', async () => {\n    const invalidInput = { /* bad data */ };\n    \n    await expect(\n      featureFunction(invalidInput)\n    ).rejects.toThrow(ErrorType);\n    \n    // Verify error message if applicable\n  });\n\n  // Test each error scenario from design\n});\n```\n\n### Edge Cases\n```typescript\ndescribe('Edge cases', () => {\n  it('should handle empty input', async () => { /* ... */ });\n  it('should handle null values', async () => { /* ... */ });\n  it('should handle undefined values', async () => { /* ... */ });\n  it('should handle boundary values', async () => { /* ... */ });\n  it('should handle special characters', async () => { /* ... */ });\n  it('should handle concurrent calls', async () => { /* ... */ });\n});\n```\n\n## Step 4: Write Integration Tests (if applicable)\n\n```typescript\ndescribe('Integration tests', () => {\n  it('should work with [dependency]', async () => {\n    // Test interaction with real dependencies\n    // Or use integration test mocks\n  });\n\n  it('should maintain state correctly', async () => {\n    // Test stateful interactions\n  });\n});\n```\n\n## Step 5: Test Coverage Requirements\n\n**Required Coverage**:\n- ✅ All public functions/methods\n- ✅ All error scenarios from design\n- ✅ All edge cases from design\n- ✅ All branches (if/else, switch)\n- ✅ All acceptance criteria\n\n**Mocking Strategy**:\n- Mock external APIs\n- Mock database calls\n- Mock file system operations\n- Use dependency injection for testability\n\n## Step 6: Run Tests\n\n```bash\n# Run tests\nnpm test -- --testPathPattern='feature' || npm test || echo 'Tests not run'\n\n# Check coverage (if available)\nnpm run test:coverage || echo 'Coverage not available'\n```\n\n**Success Criteria**:\n- All tests pass\n- No skipped tests (no it.skip, describe.skip)\n- All success paths tested\n- All error scenarios tested\n- All edge cases tested\n- Tests follow existing patterns\n- Proper mocking of dependencies\n- Clear test descriptions\n- Good assertions (not just toBeDefined())",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "*.test.ts",
+          "*.test.js",
+          "*.spec.ts",
+          "*.spec.js",
+          "*.test.tsx",
+          "*.test.jsx"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "describe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "it\\(",
+            "description": ""
+          },
+          {
+            "pattern": "expect\\(",
+            "description": ""
+          },
+          {
+            "pattern": "Success cases",
+            "description": ""
+          },
+          {
+            "pattern": "Error",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "it\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "describe\\.skip",
+            "description": ""
+          },
+          {
+            "pattern": "xit\\(",
+            "description": ""
+          },
+          {
+            "pattern": "xdescribe\\(",
+            "description": ""
+          },
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "npm test -- --passWithNoTests || npm test || echo 'Tests not executed'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "id": "document-and-annotate",
+      "task_id": "document-and-annotate",
+      "subagent": "general",
+      "description": "Create documentation and annotate components with Metabob",
+      "dependencies": [
+        "test-feature"
+      ],
+      "prompt": {
+        "template": "Document {{feature_name}} and annotate with Metabob.\n\n## Part 1: Create Documentation\n\n### Step 1: Determine Documentation Location\n\nCheck existing docs:\n- README.md in feature directory\n- docs/ folder\n- API.md or FEATURES.md\n- Inline JSDoc comments\n\nFollow existing documentation patterns.\n\n### Step 2: Write Feature Documentation\n\nCreate or update documentation with:\n\n```markdown\n# {{feature_name}}\n\n## Overview\n\n[Clear description of what the feature does and why it exists]\n\n## Installation\n\n```bash\n# If installation steps needed\nnpm install <package>\n```\n\n## Usage\n\n### Basic Example\n\n```typescript\nimport { FeatureName } from './feature';\n\n// Simple usage example\nconst result = await featureName({\n  // Example parameters\n});\n\nconsole.log(result);\n```\n\n### Advanced Examples\n\n```typescript\n// Example 1: [Scenario]\n// [Code example]\n\n// Example 2: [Scenario]\n// [Code example]\n```\n\n## API Reference\n\n### `functionName(params): ReturnType`\n\n[Description of what it does]\n\n**Parameters**:\n- `param1` (type): [Description]\n- `param2` (type, optional): [Description]\n\n**Returns**:\n- `ReturnType`: [Description]\n\n**Throws**:\n- `ErrorType`: [When this error occurs]\n\n**Example**:\n```typescript\n// Example code\n```\n\n### [Other API functions]\n\n[Document all public APIs]\n\n## Error Handling\n\nThe feature can throw the following errors:\n\n- **ErrorType1**: [Description and how to handle]\n- **ErrorType2**: [Description and how to handle]\n\n## Configuration\n\n[If feature has configuration options]\n\n```typescript\nconst config = {\n  option1: 'value',\n  option2: 123\n};\n```\n\n## Testing\n\n[How to test the feature]\n\n```bash\nnpm test -- feature.test.ts\n```\n\n## Migration Guide\n\n[If this changes existing APIs]\n\n### Before\n```typescript\n// Old way\n```\n\n### After\n```typescript\n// New way\n```\n\n## Design Decisions\n\n[Document key design decisions and rationale]\n\n- **Decision 1**: [What and why]\n- **Decision 2**: [What and why]\n\n## Performance Considerations\n\n[Any performance characteristics users should know]\n\n## Known Limitations\n\n[Any limitations or edge cases]\n\n## See Also\n\n- [Related features or docs]\n```\n\n### Step 3: Update Project Documentation\n\nUpdate main README.md or FEATURES.md:\n- Add feature to features list\n- Link to detailed documentation\n- Update table of contents\n\n## Part 2: Metabob Annotations\n\n### Step 1: Identify Key Components\n\nFrom implementation, identify:\n- Main entry point functions\n- Core classes\n- Complex algorithms\n- Error handling logic\n- Integration points\n\n### Step 2: Annotate Components\n\nFor each key component, use Metabob:\n\n```typescript\nmetabob_annotate_component({\n  file_path: \"path/to/file.ts\",\n  component_name: \"ComponentName\",\n  component_type: \"function\" | \"class\" | \"method\",\n  reason: \"Explain WHY this component exists and key design decisions\"\n})\n```\n\n**Annotation Guidelines**:\n- Focus on WHY, not WHAT (code shows what)\n- Explain design decisions\n- Document non-obvious choices\n- Describe integration points\n- Note performance considerations\n- Mention future considerations\n\n**Example Annotations**:\n\n```typescript\n// Main feature entry point\nmetabob_annotate_component({\n  file_path: \"src/feature/index.ts\",\n  component_name: \"featureMain\",\n  component_type: \"function\",\n  reason: \"Main entry point for {{feature_name}}. Uses async/await pattern to match existing codebase style. Validates input first to fail fast. Implements retry logic because external API calls can be flaky.\"\n})\n\n// Core processing logic\nmetabob_annotate_component({\n  file_path: \"src/feature/processor.ts\",\n  component_name: \"processData\",\n  component_type: \"function\",\n  reason: \"Core processing algorithm. Uses Map for O(1) lookups instead of array iteration for performance with large datasets. Handles edge case of empty input by returning default value rather than throwing.\"\n})\n\n// Error handler\nmetabob_annotate_component({\n  file_path: \"src/feature/errors.ts\",\n  component_name: \"FeatureError\",\n  component_type: \"class\",\n  reason: \"Custom error class for feature-specific errors. Extends base Error to maintain stack traces. Includes error codes for programmatic error handling by consumers.\"\n})\n```\n\n### Step 3: Check for Related Changes\n\nFind related files that might need updates:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"path/to/feature/file1.ts\", \"path/to/feature/file2.ts\"]\n})\n```\n\nReview suggestions and update documentation if needed.\n\n## Part 3: Quality Summary\n\nCreate **FEATURE_SUMMARY.md** with:\n\n```markdown\n## Feature Implementation Summary: {{feature_name}}\n\n### Implementation Status\n- ✅ Design completed\n- ✅ Implementation completed\n- ✅ Tests completed\n- ✅ Documentation completed\n- ✅ Metabob annotations completed\n\n### Files Created/Modified\n- `path/to/file1.ts` - [Purpose]\n- `path/to/file2.ts` - [Purpose]\n- `path/to/tests.test.ts` - [Test coverage]\n- `docs/feature.md` - [Documentation]\n\n### Test Coverage\n- Success cases: [count] tests\n- Error cases: [count] tests\n- Edge cases: [count] tests\n- **Total**: [count] tests, all passing ✅\n\n### Quality Checks\n- ✅ TypeScript compilation passes\n- ✅ All tests pass\n- ✅ No forbidden patterns (console.log, any, TODO)\n- ✅ Key components annotated with Metabob\n- ✅ Documentation complete\n\n### Key Design Decisions\n1. [Decision and rationale]\n2. [Decision and rationale]\n3. [Decision and rationale]\n\n### Usage Example\n```typescript\n// Quick usage example\n```\n\n### Next Steps (if any)\n- [Future enhancements]\n- [Related work]\n```\n\n**Success Criteria**:\n- Complete API documentation with examples\n- All public APIs documented\n- Usage examples are runnable\n- Key components annotated with Metabob\n- Design decisions documented\n- Summary document created\n- No TODO/TBD placeholders\n\n## Part 2: Check Related Files and Cochange Accuracy\n\n### 1. Check Related Files\n\nUse `metabob_suggest_related_changes` to verify related files were properly updated:\n\n```typescript\nmetabob_suggest_related_changes({\n  changed_files: [\"all\", \"files\", \"you\", \"created\", \"or\", \"modified.ts\"],\n  top_k: 8\n})\n```\n\n**Compare predictions vs actual**:\n- Review predicted cochanges from FEATURE_DESIGN.md\n- Which predicted files did we actually change? (cochange accuracy)\n- Which predicted files did we NOT change? (should we review them?)\n- Did we change files that were NOT predicted? (why?)\n\n**Review high-priority suggestions**:\n- If related files have HIGH severity issues, consider if they need updating for consistency\n- If related files share similar patterns, verify the feature integrates properly\n- Document any additional files that should be reviewed or updated in follow-up\n\n### 2. Calculate Cochange Accuracy\n\nCompare predicted vs actual:\n- Predicted files (from FEATURE_DESIGN.md): [count]\n- Actually modified/created files: [count]\n- Correct predictions: [count matching]\n- Cochange accuracy: X/Y (percentage)\n\n**Learning note**: This data helps the system improve future predictions.\n\n\n## Part 3: Annotate Key Components\n\n### Step 3: Annotate Components with Metabob\n\nUse `metabob_annotate_component` to document **WHY** key components exist:\n\nAnnotate 3-5 key components:\n```typescript\nmetabob_annotate_component({\n  file_path: \"path/to/feature/file.ts\",\n  component_name: \"FeatureClassName\",\n  component_type: \"class\",  // or \"function\", \"method\"\n  reason: \"Created {{feature_name}} to [purpose]. Chose [approach] over [alternative] because [reasoning]. Key constraints: [list constraints].\"\n})\n```\n\n**Focus on WHY, not WHAT**:\n- ❌ \"Created UserValidator class\" (obvious from code)\n- ✅ \"Created UserValidator class to centralize validation logic. Previously validation was scattered across 5 files causing inconsistencies. Chose class-based approach for state management of validation rules.\"\n\n**What to annotate**:\n- Core feature classes/functions\n- Complex algorithms or logic\n- Design pattern implementations\n- Components with non-obvious trade-offs\n- Integration points with existing code\n\n## Part 4: Create Summary Document\n\n### Step 4: Create FEATURE_SUMMARY.md\n\nCreate **FEATURE_SUMMARY.md** with:\n\n```markdown\n## Feature Summary: {{feature_name}}\n\n### What Was Implemented\n\n**Feature**: {{feature_name}}\n\n**Description**: [Brief description of what the feature does]\n\n**Files Created**:\n- `path/to/file1.ts` - [Purpose]\n- `path/to/file2.ts` - [Purpose]\n- `path/to/file.test.ts` - [Purpose]\n\n**Files Modified**:\n- `path/to/existing/file.ts` - [What changed and why]\n\n### Related Files Analysis\n\n**Predicted Cochanges** (from FEATURE_DESIGN.md):\n- Files predicted to change: [list from FEATURE_DESIGN.md]\n- Files actually changed: [list from git diff or created files]\n- Cochange accuracy: X/Y predictions correct (Z%)\n\n**Related Files Checked** (from metabob_suggest_related_changes):\n- Files reviewed for integration: [list]\n- High-priority files (with critical issues): [list if any]\n- Action taken: [Updated for integration / Verified compatibility / Noted for future work]\n\n**Insights**:\n[What did we learn from the cochange analysis? Were predictions accurate? Did we miss any related files that needed updating?]\n\n### Testing\n\n**Test Coverage**:\n- Unit tests: [number] tests\n- Integration tests: [number] tests\n- Edge cases covered: [list key edge cases]\n\n**Test Results**: ✅ All tests passing\n\n### Quality\n\n**Metabob Annotations**: [number] key components annotated\n\n**Code Quality**:\n- ✅ TypeScript compilation: No errors\n- ✅ Linting: Passed\n- ✅ No forbidden patterns (console.log, any, TODO)\n\n### Documentation\n\n**Documentation Created**:\n- [Link or path to main documentation]\n- API reference included\n- Usage examples provided\n\n### Acceptance Criteria Status\n\n{{#if acceptance_criteria}}\nCheck against original criteria:\n{{acceptance_criteria}}\n\n**Status**: ✅ All criteria met / ⚠️ Partial / ❌ Not met\n{{else}}\n- [ ] Criterion 1\n- [ ] Criterion 2\n- [ ] Criterion 3\n{{/if}}\n\n### Design Decisions\n\n**Key Decisions**:\n1. [Decision 1]: [Why this choice]\n2. [Decision 2]: [Why this choice]\n3. [Decision 3]: [Why this choice]\n\n### Next Steps\n\n**Immediate**:\n- [ ] Merge feature\n- [ ] Deploy to [environment]\n- [ ] Monitor for issues\n\n**Future Enhancements**:\n- [Enhancement 1]\n- [Enhancement 2]\n\n### Lessons Learned\n\n**What Went Well**:\n- [Success 1]\n- [Success 2]\n\n**What Could Be Improved**:\n- [Improvement 1]\n- [Improvement 2]\n\n**Cochange Prediction Accuracy**: [X%]\n- Helps system learn which files typically change together\n- Future similar features will have better predictions\n```\n\n## Completion Checklist\n\nBefore marking complete, verify:\n- [ ] All code implemented per FEATURE_DESIGN.md\n- [ ] All tests passing\n- [ ] Documentation complete with examples\n- [ ] 3-5 key components annotated with Metabob\n- [ ] Related files checked and accuracy calculated\n- [ ] FEATURE_SUMMARY.md created\n- [ ] No TODO/FIXME/console.log in code\n- [ ] TypeScript compilation clean\n",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "adaptive"
+      },
+      "validation": {
+        "required_files": [
+          "*.md",
+          "FEATURE_SUMMARY.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Overview",
+            "description": ""
+          },
+          {
+            "pattern": "## Usage",
+            "description": ""
+          },
+          {
+            "pattern": "## API Reference",
+            "description": ""
+          },
+          {
+            "pattern": "Example",
+            "description": ""
+          },
+          {
+            "pattern": "```",
+            "description": ""
+          },
+          {
+            "pattern": "## Feature Summary:",
+            "description": ""
+          },
+          {
+            "pattern": "### Related Files Analysis",
+            "description": ""
+          },
+          {
+            "pattern": "Cochange accuracy:",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "TBD",
+            "description": ""
+          },
+          {
+            "pattern": "FIXME",
+            "description": ""
+          },
+          {
+            "pattern": "\\[Description\\]",
+            "description": ""
+          },
+          {
+            "pattern": "\\[What it does\\]",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-16T10:35:23.069Z",
+  "metadata": {}
+}

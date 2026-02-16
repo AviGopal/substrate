@@ -1,0 +1,272 @@
+{
+  "id": "add-unit-tests",
+  "name": "Add Unit Tests",
+  "description": "Add comprehensive unit tests for a single existing function with 85-90% first-attempt success rate. Validates prerequisites, analyzes function code paths, designs test scenarios covering success/edge/error cases, implements tests with proper mocking, executes tests with iterative fixes, and commits with documentation.",
+  "category": "feature",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "timestamp": 1739577600000,
+    "parent_hash": "",
+    "variant_hash": "",
+    "full_version": "1.0.0",
+    "generation": 0
+  },
+  "genealogy": {
+    "parent": null,
+    "parent_id": "",
+    "ancestors": [],
+    "children": [],
+    "variant_ids": [],
+    "variant_hash": "",
+    "created_at": 1739577600000,
+    "generation": 0,
+    "evolution": {
+      "reason": "EVOLUTION_REASON_MANUAL",
+      "improvised": false,
+      "author": "TEMPLATE_AUTHOR_HUMAN",
+      "mutations": [],
+      "improvements": []
+    }
+  },
+  "executions": 0,
+  "successRate": 0,
+  "avgDuration": 300000,
+  "avgCost": 0.25,
+  "avgTokens": {
+    "input": 0,
+    "output": 0,
+    "cache": 0
+  },
+  "createdAt": 1739577600000,
+  "updatedAt": 1739577600000,
+  "tasks": [
+    {
+      "id": "validate-and-analyze",
+      "subagent": "general",
+      "description": "Validate that all prerequisites are met (function exists, test framework available) and perform comprehensive analysis of the target function including its signature, dependencies, code paths, and existing test patterns.",
+      "dependencies": [],
+      "guidance": [
+        "Verify file exists and function is present",
+        "Detect test framework from package.json or config files",
+        "Analyze function signature, parameters, and return type",
+        "Identify external dependencies and code paths",
+        "Review existing test patterns in the codebase"
+      ],
+      "prompt": {
+        "template": "# Task: Validate Prerequisites and Analyze Function\n\nYou are analyzing the function `{{function_name}}` in file `{{file_path}}` to prepare for creating unit tests.\n\n## Your Responsibilities\n\n1. **Validate Prerequisites**:\n   - Verify file exists at `{{file_path}}`\n   - Search for function `{{function_name}}` in the file\n   - Check if git repository exists (`git rev-parse --git-dir`)\n   - Detect test framework from package.json or config files\n   - Verify test command works\n\n2. **Analyze Function**:\n   - Extract full function signature\n   - Identify if function is async (returns Promise)\n   - List all parameters with types (if available)\n   - Detect return type\n   - Find external dependencies (imports, DB calls, API calls)\n   - Count code branches (if/switch/try-catch/ternaries)\n   - Identify error handling patterns (throws/rejects/returns null)\n   - Assess complexity: simple, medium, or complex\n\n3. **Learn Existing Test Patterns**:\n   - Search for similar test files in the codebase\n   - Identify mock strategy (jest.mock, vi.mock, manual mocks)\n   - Detect test structure (describe/it vs test())\n   - Note test file location convention\n\n4. **Check Code Quality** (optional):\n   - Use metabob_list_file_components to verify function exists\n   - Use metabob_search_codebase_issues to find HIGH severity issues in target function\n\n## Framework Detection Priority\n\n{{#if (eq test_framework \"auto\")}}\n1. Check package.json dependencies for: \"jest\", \"vitest\", \"mocha\"\n2. Look for config files: jest.config.js, vitest.config.ts, .mocharc.json\n3. Check package.json test script: `\"test\": \"jest\"` indicates Jest\n4. If multiple found, prefer most recently used\n5. Default to \"unknown\" if detection fails (DON'T GUESS)\n{{else}}\nUser specified framework: {{test_framework}}\nVerify this framework is installed and configured.\n{{/if}}\n\n## Error Handling\n\n- **Function Not Found**: Search broader with `rg \"{{function_name}}\"` across codebase\n- **Framework Not Found**: Report available frameworks, ask user to specify\n- **Test Command Fails**: Suggest installation commands\n\n## Output Format\n\nProvide structured JSON outputs:\n\n```json\n{\n  \"validation_status\": {\n    \"all_checks_passed\": true,\n    \"checks\": {\n      \"file_exists\": true,\n      \"function_found\": true,\n      \"git_repo\": true,\n      \"test_framework\": true\n    }\n  },\n  \"function_analysis\": {\n    \"exists\": true,\n    \"name\": \"{{function_name}}\",\n    \"signature\": \"function signature here\",\n    \"is_async\": false,\n    \"parameters\": [],\n    \"return_type\": \"string\",\n    \"dependencies\": [],\n    \"branches\": 3,\n    \"complexity\": \"medium\"\n  },\n  \"test_framework\": {\n    \"name\": \"jest\",\n    \"version\": \"29.0.0\",\n    \"test_command\": \"npm test\",\n    \"config_file\": \"jest.config.js\"\n  },\n  \"existing_patterns\": {\n    \"test_file_location\": \"co-located\",\n    \"mock_strategy\": \"jest.mock\",\n    \"test_structure\": \"describe/it\"\n  }\n}\n```",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "function_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the function to test"
+          },
+          {
+            "name": "file_path",
+            "type": "string",
+            "required": true,
+            "description": "Relative path to file containing the function"
+          },
+          {
+            "name": "test_framework",
+            "type": "string",
+            "required": false,
+            "description": "Test framework to use: 'jest', 'vitest', 'mocha', or 'auto' for auto-detection"
+          },
+          {
+            "name": "coverage_goal",
+            "type": "string",
+            "required": false,
+            "description": "Coverage level: 'basic' (5-7 tests), 'standard' (8-12 tests), 'comprehensive' (12-20 tests)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "avgDuration": 10000,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "design-test-scenarios",
+      "subagent": "general",
+      "description": "Create a comprehensive test plan covering success cases, edge cases, and error cases based on the function analysis. Document each test scenario with arrange-act-assert breakdown and mocking strategy.",
+      "dependencies": ["validate-and-analyze"],
+      "guidance": [
+        "Design success cases covering happy path scenarios",
+        "Design edge cases with empty/boundary/unusual inputs",
+        "Design error cases for exceptions and failures",
+        "Define mock strategy for all dependencies",
+        "Use behavior-focused test naming conventions"
+      ],
+      "prompt": {
+        "template": "# Task: Design Test Scenarios\n\nYou are creating a comprehensive test plan for function `{{function_name}}`.\n\n## Context from Previous Step\n\nFunction Analysis:\n```json\n{{json function_analysis}}\n```\n\nTest Framework:\n```json\n{{json test_framework}}\n```\n\nExisting Patterns:\n```json\n{{json existing_patterns}}\n```\n\n## Your Responsibilities\n\n1. **Design Success Cases** (minimum 2):\n   - Happy path with most common valid inputs\n   - Alternative success scenarios\n   - Boundary success cases (valid inputs at edge of range)\n\n2. **Design Edge Cases** (minimum 3):\n   - Empty inputs: \"\", [], {}, null, undefined\n   - Boundary values: 0, -1, MAX_INT, empty array\n   - Special characters: Unicode, emoji\n   - Type variations: \"0\" vs 0, \"true\" vs true\n   - Unusual but valid inputs: very long strings, large numbers\n\n3. **Design Error Cases** (minimum 1 if function can error):\n   - Thrown exceptions\n   - Rejected promises (for async functions)\n   - Error return values (null/undefined/false on error)\n\n4. **Define Mock Strategy**:\n   - For each dependency in `function_analysis.dependencies`\n   - Specify mock type: jest.mock, vi.mock, manual\n   - Define mock behavior for success/error scenarios\n\n## Coverage Goal\n\n{{#if (eq coverage_goal \"basic\")}}\nTarget: 5-7 tests (2 success, 3 edge, 1 error)\n{{else if (eq coverage_goal \"comprehensive\")}}\nTarget: 12-20 tests (4 success, 8 edge, 4 error)\n{{else}}\nTarget: 8-12 tests (3 success, 5 edge, 2 error)\n{{/if}}\n\n## Output Format\n\nProvide test_plan JSON with all scenarios documented.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "avgDuration": 20000,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "implement-tests",
+      "subagent": "general",
+      "description": "Generate the test file with all planned test scenarios implemented using the detected test framework syntax, including proper imports, mocks, setup/teardown, and assertions.",
+      "dependencies": ["validate-and-analyze", "design-test-scenarios"],
+      "guidance": [
+        "Determine test file location following project conventions",
+        "Generate test file with proper imports and framework setup",
+        "Implement all test cases from test plan",
+        "Configure mocks according to mock strategy",
+        "Verify no syntax errors in generated code"
+      ],
+      "prompt": {
+        "template": "# Task: Implement Tests\n\nYou are generating test code for function `{{function_name}}` based on the test plan.\n\n## Context from Previous Steps\n\nTest Plan:\n```json\n{{json test_plan}}\n```\n\nTest Framework:\n```json\n{{json test_framework}}\n```\n\nFunction Analysis:\n```json\n{{json function_analysis}}\n```\n\n## Your Responsibilities\n\n1. **Determine Test File Location**\n2. **Generate Test File with proper imports, mocks, and test cases**\n3. **Verify syntax correctness**\n\n## Output Format\n\nProvide test_file JSON with path and test count.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "avgDuration": 60000,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "execute-and-validate",
+      "subagent": "general",
+      "description": "Run the test suite to verify all tests pass, analyze test output for failures or errors, and iteratively fix any issues until 100% pass rate is achieved (up to 3 retry attempts).",
+      "dependencies": ["implement-tests"],
+      "guidance": [
+        "Execute tests using detected test framework",
+        "Analyze test results and extract failure details",
+        "Fix failures iteratively (assertions, types, imports, mocks)",
+        "Verify all tests pass with no skipped tests",
+        "Validate coverage if available"
+      ],
+      "prompt": {
+        "template": "# Task: Execute and Validate Tests\n\nYou are running and validating tests for function `{{function_name}}`.\n\n## Context from Previous Steps\n\nTest File:\n```json\n{{json test_file}}\n```\n\nTest Framework:\n```json\n{{json test_framework}}\n```\n\n## Your Responsibilities\n\n1. **Execute Tests**\n2. **Analyze Results**\n3. **Fix Failures** (up to 3 retry attempts)\n4. **Verify 100% pass rate**\n\n## Output Format\n\nProvide test_results JSON with pass/fail status.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "avgDuration": 180000,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    },
+    {
+      "id": "commit-and-document",
+      "subagent": "general",
+      "description": "Create a git commit with the test file changes, write a descriptive commit message, and optionally annotate the test file with Metabob documenting the test strategy.",
+      "dependencies": ["execute-and-validate"],
+      "guidance": [
+        "Validate only test file is modified, not source file",
+        "Stage test file and create commit with descriptive message",
+        "Handle pre-commit hooks (linting, formatting)",
+        "Document test strategy with Metabob if appropriate",
+        "Mark quality issues as addressed if applicable"
+      ],
+      "prompt": {
+        "template": "# Task: Commit and Document\n\nYou are committing the test file and documenting the test strategy.\n\n## Context from Previous Steps\n\nTest File:\n```json\n{{json test_file}}\n```\n\nTest Results:\n```json\n{{json test_results}}\n```\n\nFunction Name: `{{function_name}}`\nFile Path: `{{file_path}}`\n\n## Your Responsibilities\n\n1. **Pre-Commit Validation**\n2. **Create Git Commit** with descriptive message\n3. **Handle Pre-Commit Hooks**\n4. **Document with Metabob** (optional)\n\n## Output Format\n\nProvide commit_result JSON with success status and commit hash.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "avgDuration": 10000,
+        "avgTokens": 0,
+        "successRate": 0,
+        "executions": 0,
+        "commonFailures": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": ["git status"],
+    "postChecks": ["npm run typecheck || echo 'Skipped'"],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [],
+    "examples": []
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": []
+  }
+}

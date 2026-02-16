@@ -1,9 +1,19 @@
 {
-  "id": "security-audit-complete",
+  "variant_id": "security-audit-complete-v1",
+  "activity_id": "security-audit-complete",
+  "variant_name": "v1-comprehensive",
+  "version": 1,
   "name": "Security Audit Complete",
   "description": "Comprehensive security audit workflow with vulnerability analysis, risk assessment, remediation, testing, and security documentation",
   "category": "bugfix",
-  "version": {
+  "variables": {},
+  "prompt_strategy": "guided",
+  "context_budget_tokens": 20000,
+  "expected_duration_ms": 600000,
+  "expected_cost": 1.5,
+  "expected_quality_score": 0.9,
+  "status": "active",
+  "old_version_field": {
     "major": 1,
     "minor": 0,
     "patch": 0,

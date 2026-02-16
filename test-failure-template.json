@@ -1,0 +1,44 @@
+{
+  "name": "Test Failure Activity 1771285947",
+  "description": "Simple activity designed to fail for testing debug template",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "failing-task",
+      "subagent": "general",
+      "description": "Task that will fail validation",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called test-output.txt with the content 'Hello World'",
+        "maxTokens": 2000,
+        "compressionStrategy": "none",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["nonexistent-file-that-will-never-exist.txt"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 1000,
+    "annotationStrategy": "failures-only"
+  },
+  "hooks": {
+    "preActivity": {
+      "workingDirectory": {
+        "type": "temporary",
+        "prefix": "test-failure-",
+        "cleanup": "always"
+      }
+    }
+  }
+}

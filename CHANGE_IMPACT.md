@@ -1,678 +1,532 @@
-# Change Impact Analysis: Adding /api/demo/health Endpoint
+# Change Impact Analysis: Adding GET /api/users/:id Endpoint
 
-**Date:** 2026-02-15  
-**Target File:** `repos/metabob-rpc-api/server/routes/health.py`  
-**Change Type:** Feature Addition (New Route)  
-**Risk Level:** ✅ LOW
+**Date**: 2026-02-15  
+**Target File**: `repos/metabob-rpc-api/server/routes/auth.py`  
+**Analysis Method**: Manual inspection + dependency review  
+**Risk Assessment**: **LOW** ✅
 
 ---
 
 ## Executive Summary
 
-Adding the `/api/demo/health` endpoint to the health router is a **LOW RISK** change with minimal impact. The change involves adding a single route to an existing, stable router with no dependencies on external services or complex business logic.
+Adding the new `GET /api/users/{user_id}` endpoint to the auth routing file has **minimal impact** with **no conflicts detected**. The endpoint fits naturally into the existing authentication module structure.
 
-**Key Findings:**
-- ✅ No path conflicts detected
-- ✅ No breaking changes to existing endpoints
-- ✅ No middleware modifications required
-- ✅ Isolated change with minimal touch points
-- ✅ Follows established patterns
-
----
-
-## 1. Direct Impact: Files That Will Be Modified
-
-### Primary File
-- **`repos/metabob-rpc-api/server/routes/health.py`**
-  - **Change:** Add new route handler `demo_health_check()` for `/api/demo/health`
-  - **Lines affected:** +5-7 lines (new function)
-  - **Complexity:** Low (identical pattern to existing health endpoints)
-
-### Test File
-- **`repos/metabob-rpc-api/tests/routes/test_routes_health.py`**
-  - **Change:** Add 3-5 test cases for new endpoint
-  - **Lines affected:** +30-50 lines (new tests)
-  - **Complexity:** Low (copy existing test patterns)
-
-### No Changes Required
-- ❌ `server/app.py` - health_router already registered (line 70)
-- ❌ `server/routes/__init__.py` - health_router already exported
-- ❌ `server/models/response.py` - HealthGetResponse already exists
-- ❌ Middleware files - no authentication/tracking changes needed
+**Key Findings**:
+- ✅ No path conflicts with existing endpoints
+- ✅ All required dependencies already in place
+- ✅ Follows established patterns in the codebase
+- ✅ Minimal changes to existing code (pure addition)
+- ⚠️ Will need corresponding test additions
 
 ---
 
-## 2. Dependency Analysis
+## 1. Target File Analysis
 
-### Files That Import health.py
+### File: `repos/metabob-rpc-api/server/routes/auth.py`
 
-#### 1. **`server/app.py`** (line 70)
-```python
-app.include_router(routes.health_router)
+**Current State**:
+- **Size**: 4,249 lines
+- **Router Prefix**: `/auth`
+- **Module Purpose**: Authentication and organization management
+- **Existing User Endpoints**:
+  - `GET /auth/me` - Get current authenticated user
+  - `GET /auth/orgs/{org_id}/users` - List users in organization
+  - `GET /auth/orgs/{org_id}/users/{user_id}` - Get specific user (org-scoped)
+  - `GET /auth/orgs/{org_id}/users/{user_id}/stats` - User statistics
+  - `PATCH /auth/orgs/{org_id}/users/{user_id}` - Update user
+  - `DELETE /auth/orgs/{org_id}/users/{user_id}` - Delete user
+
+**Import Status**: All required dependencies are already imported ✅
+- ✅ `get_user_by_id` from `server.actions.auth_db`
+- ✅ `UserResponse` from `server.models.auth`
+- ✅ `require_auth` dependency function
+- ✅ `HTTPException` for error handling
+- ✅ FastAPI decorators and validators
+- ✅ Database connection dependencies
+
+---
+
+## 2. Path Conflict Analysis
+
+### Proposed Endpoint
 ```
-- **Impact:** None (router registration already exists)
-- **Risk:** None
-
-#### 2. **`server/routes/__init__.py`** (line 18)
-```python
-from .health import router as health_router
+GET /auth/users/{user_id}
 ```
-- **Impact:** None (export already exists)
-- **Risk:** None
 
-#### 3. **`tests/fixtures/test_controller.py`**
-- **Impact:** None (test fixtures don't need modification)
-- **Risk:** None
-
-### Files That Import HealthGetResponse
-
-- `server/routes/health.py` - Already uses it
-- `server/models/response.py` - Defines it
-
-**Impact:** None (reusing existing response model)
-
----
-
-## 3. Path Conflict Analysis
-
-### Existing Health Endpoints
-
-| Path | Method | Function | Status |
-|------|--------|----------|--------|
-| `/` | GET | `health()` | Active |
-| `/health` | GET | `health_check()` | Active |
-| `/api/health` | GET | `api_health()` | Active |
-| **`/api/demo/health`** | **GET** | **`demo_health_check()`** | **NEW** |
+**Full URL**: `http://api/auth/users/{user_id}`
 
 ### Conflict Check Results
 
-✅ **No conflicts detected**
+| Existing Path | Conflict? | Notes |
+|--------------|-----------|-------|
+| `GET /auth/me` | ❌ No | Different path pattern |
+| `GET /auth/orgs/{org_id}/users` | ❌ No | Different path (list endpoint) |
+| `GET /auth/orgs/{org_id}/users/{user_id}` | ❌ No | Different path (org-scoped) |
 
-- `/api/demo/health` is a unique path
-- No existing routes under `/api/demo/*` namespace
-- No prefix collision with other routers
-- No overlapping path parameters
+**Analysis**:
+- ✅ **No conflicts detected** - The new endpoint uses a distinct path pattern
+- The new endpoint is **simpler** than existing ones (no org_id required)
+- FastAPI routing will correctly differentiate based on path structure
+- Path parameters are unique: `/users/{user_id}` vs `/orgs/{org_id}/users/{user_id}`
 
-### Router Prefix Analysis
+### Path Differentiation
 
-```python
-# Health router has NO prefix (routes use full paths)
-router = APIRouter()
-
-# V2 routers use prefixes
-v2_session_router = APIRouter(prefix="/v2/session")
-v2_activities_router = APIRouter(prefix="/v2/activities")
+```
+NEW:      /auth/users/{user_id}              ← Simple, user-scoped
+EXISTING: /auth/orgs/{org_id}/users/{user_id} ← Complex, org-scoped
 ```
 
-**Finding:** Health router does not use prefix pattern, so new route needs full path specification: `@router.get("/api/demo/health")`
+These are **distinct routes** with different authorization semantics:
+- New endpoint: User can access their own profile or org members (simpler auth)
+- Existing endpoint: Explicitly requires org_id in path (stricter scoping)
 
 ---
 
-## 4. Middleware Impact
+## 3. Dependency Analysis
 
-### Active Middleware (from `server/app.py`)
+### Direct Dependencies (Already Available)
 
-1. **CORSMiddleware**
-   - **Impact:** None (applies to all endpoints automatically)
-   - **Configuration:** Allow all origins/methods/headers
-   - **Action Required:** None
+1. **Authentication Middleware** ✅
+   - Location: `auth.py:233-249`
+   - Function: `require_auth()`
+   - Status: Ready to use
+   - Usage: ~25 times in auth.py
 
-2. **LocalMetricsMiddleware** (`server/utils/middlewares.py`)
-   - **Impact:** None (health endpoints not tracked)
-   - **Current Behavior:** Uses `match path` statement that defaults to `pass` for unknown paths
-   - **Action Required:** None (health check tracking not needed)
+2. **Database Functions** ✅
+   - Location: `server/actions/auth_db.py`
+   - Function: `get_user_by_id(db, user_id)`
+   - Status: Already imported (line 58)
+   - Returns: `User` object or `None`
 
-### Middleware Path Matching
+3. **Response Models** ✅
+   - Location: `server/models/auth.py`
+   - Model: `UserResponse`
+   - Status: Already imported (line 150)
+   - Fields: user_id, org_id, email, role, created_at, last_login_at, metadata
 
+4. **Database Connection** ✅
+   - Dependency: `get_surreal_connection()`
+   - Type: `SurrealDBClient`
+   - Status: Already imported (line 135)
+
+5. **Logging** ✅
+   - Logger: `getLogger(__name__)`
+   - Status: Available throughout module
+
+### Reverse Dependencies (Files That Import auth.py)
+
+**Search Results**: The following files import from `server.routes.auth`:
+1. `server/routes/events.py` - Event tracking (no impact)
+2. `server/routes/activities.py` - Activity management (no impact)
+3. `server/routes/costs.py` - Cost tracking (no impact)
+4. `server/routes/boredom_tasks.py` - Task management (no impact)
+5. `server/routes/priorities.py` - Priority management (no impact)
+
+**Impact Assessment**: ❌ **No impact**
+- These files import utility functions or models
+- Adding a new endpoint does not affect existing exports
+- No breaking changes to the module interface
+
+### Application-Level Dependencies
+
+**Router Registration**: `server/app.py:75`
 ```python
-# LocalMetricsMiddleware (line 140-171)
-match path:
-    case "/session": ...
-    case "/submit" | "/analysis" | "/repository/submit": ...
-    case "/explain": ...
-    case "/recommend": ...
-    case _:
-        pass  # ← New endpoint will hit this (no tracking)
+app.include_router(routes.auth_router)
 ```
 
-**Finding:** New endpoint will pass through all middleware without triggering custom logic, which is correct for health checks.
+**Impact**: ❌ **No changes required**
+- Router is already registered
+- New endpoint will be automatically included
+- No app.py modifications needed
 
 ---
 
-## 5. Co-Change Pattern Analysis
+## 4. Co-Change Pattern Analysis
 
-### Historical Changes to health.py
+### Similar Changes in Project History
 
-```bash
-9c8ca1b feat(activity-learning): Add impulse_registry and impulse_usage tables
-89b6a7e Enhance health endpoint with status and timestamp, add UserProfile models
-60dc8d9 Enhance health endpoint with status and timestamp, add UserProfile models
-da60adc feat(project): basic functionality, tests, inital configuration
+Based on the existing endpoint patterns in `auth.py`, when user-related endpoints were added, the following files were typically modified together:
+
+#### Pattern 1: Add User Endpoint
+```
+CHANGED FILES:
+1. server/routes/auth.py           ← Add endpoint
+2. tests/routes/test_routes_auth.py ← Add tests
+3. (Optional) server/models/auth.py ← If new models needed
 ```
 
-**Pattern Identified:** When health.py changed (89b6a7e, 60dc8d9), the response model was enhanced from 1 field to 3 fields:
-- Old: `{"version": "0.16.0"}`
-- New: `{"status": "ok", "timestamp": "2026-02-15T10:30:00Z", "version": "0.16.0"}`
+**Confidence**: HIGH (based on existing user endpoints)
 
-### Test Discrepancy Found ⚠️
-
-**Issue:** Test file expects only `version` field (line 57):
-```python
-assert len(data) == 1, "Response should only contain version field"
+#### Pattern 2: Add Database Function
+```
+CHANGED FILES (if db function missing):
+1. server/actions/auth_db.py        ← Add db function
+2. server/routes/auth.py            ← Use new function
+3. tests/routes/test_routes_auth.py ← Test integration
 ```
 
-But implementation returns 3 fields:
+**Status**: ✅ Not needed - `get_user_by_id` already exists
+
+### Recommended Co-Changes
+
+Based on codebase conventions:
+
+1. **REQUIRED**: `tests/routes/test_routes_auth.py`
+   - Add test cases for new endpoint
+   - Test scenarios: success (200), not found (404), unauthorized (401), forbidden (403)
+   - Estimated: 50-100 lines of test code
+
+2. **OPTIONAL**: Documentation
+   - FastAPI auto-generates OpenAPI docs from endpoint
+   - No manual documentation updates required
+   - Swagger UI will automatically include new endpoint
+
+---
+
+## 5. Middleware and Type Dependencies
+
+### Middleware Stack
+
+The new endpoint will inherit the following middleware (no changes needed):
+
+1. **CORS Middleware** - Already configured in `app.py`
+2. **LocalMetricsMiddleware** - Tracks request metrics
+3. **Error Handler** - HTTPException handler registered
+4. **Authentication** - Via `require_auth` dependency
+
+### Type Dependencies
+
+**Pydantic Models**:
+- ✅ `UserResponse` - Already defined in `server/models/auth.py`
+- ✅ `SessionData` - Already defined in `server/models/auth.py`
+
+**Type Hints**:
+- All required types are imported via `TYPE_CHECKING` block
+- SurrealDBClient type is available
+
+---
+
+## 6. Potential Issues and Mitigation
+
+### Issue 1: Authorization Logic
+
+**Risk**: MEDIUM  
+**Description**: The endpoint needs clear authorization rules
+
+**Current Behavior** (in existing `/orgs/{org_id}/users/{user_id}`):
 ```python
-return HealthGetResponse(
-    status="ok", 
-    timestamp=datetime.utcnow().isoformat(), 
-    version=__version__
-)
+# Verify user belongs to organization
+if user.org_id != org_id:
+    raise HTTPException(status_code=404, detail="User not found")
 ```
 
-**Action Required:** 
-- Fix existing tests before adding new endpoint
-- Update `test_health_endpoint_returns_only_version()` to expect 3 fields
-- Update `test_health_endpoint_returns_version()` to check all 3 fields
-
-### Related Files That Change Together
-
-Based on historical commits and code structure:
-
-| File | Relationship | Co-Change Likelihood |
-|------|--------------|---------------------|
-| `server/routes/health.py` | Primary file | 100% |
-| `tests/routes/test_routes_health.py` | Test coverage | 100% |
-| `server/models/response.py` | Response model | 0% (model exists) |
-| `server/app.py` | Router registration | 0% (already registered) |
-
-**Recommendation:** Only modify health.py and test file.
-
----
-
-## 6. Authentication & Authorization
-
-### Current Health Endpoint Auth Status
-
-All health endpoints are **PUBLIC** (no authentication required):
-
+**Recommended Authorization for New Endpoint**:
 ```python
-# No HTTPBearer dependency
-# No session validation
-# No API key check
-```
-
-### New Endpoint Auth Requirement
-
-**Recommended:** Keep `/api/demo/health` as public endpoint
-
-**Rationale:**
-- Consistent with existing health endpoints
-- Health checks used by monitoring/load balancers
-- No sensitive data exposed
-- Standard practice for health endpoints
-
-**If authentication needed later:**
-```python
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Security
-
-SESSION_TOKEN = HTTPBearer(auto_error=False)
-
-@router.get("/api/demo/health", response_model=HealthGetResponse)
-async def demo_health_check(
-    credentials: HTTPAuthorizationCredentials = Security(SESSION_TOKEN)
-):
-    # Validate credentials if present
-    ...
-```
-
----
-
-## 7. Type Safety & Validation
-
-### Current Implementation
-
-```python
-class HealthGetResponse(BaseModel):
-    status: str        # No validation constraints
-    timestamp: str     # String format (ISO 8601)
-    version: str       # From __version__
-```
-
-### Potential Improvements (Optional)
-
-```python
-from pydantic import Field
-from typing import Literal
-
-class HealthGetResponse(BaseModel):
-    status: Literal["ok", "degraded", "down"]  # Enum constraint
-    timestamp: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}T.*Z?$")
-    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
-```
-
-**Decision:** Not needed for this change (out of scope)
-
----
-
-## 8. Testing Strategy
-
-### Required Test Coverage
-
-Based on existing test patterns in `test_routes_health.py`:
-
-#### Success Cases
-1. ✅ `test_demo_health_endpoint_returns_200` - Status code validation
-2. ✅ `test_demo_health_endpoint_returns_correct_data` - Response structure
-3. ✅ `test_demo_health_endpoint_returns_json_object` - JSON format
-
-#### HTTP Method Validation
-4. ✅ `test_demo_health_endpoint_rejects_post` - POST returns 405
-5. ✅ `test_demo_health_endpoint_rejects_put` - PUT returns 405
-6. ✅ `test_demo_health_endpoint_rejects_delete` - DELETE returns 405
-
-#### Header & Edge Cases
-7. ✅ `test_demo_health_endpoint_accepts_json_header` - Accept header
-8. ✅ `test_demo_health_endpoint_returns_json_content_type` - Content-Type
-9. ✅ `test_demo_health_endpoint_ignores_query_parameters` - Query params
-
-**Total:** 9 test cases minimum
-
-### Test Fixtures Required
-
-From `tests/routes/conftest.py`:
-- `client` - FastAPI TestClient (already exists)
-
-**No new fixtures needed.**
-
----
-
-## 9. Documentation Impact
-
-### API Documentation
-
-FastAPI automatically generates OpenAPI docs at:
-- `/docs` (Swagger UI)
-- `/redoc` (ReDoc)
-
-**Impact:** New endpoint will appear automatically with:
-- Path: `/api/demo/health`
-- Method: GET
-- Response Schema: HealthGetResponse
-- Docstring: Function docstring becomes description
-
-**Action Required:** Add descriptive docstring to `demo_health_check()`:
-
-```python
-@router.get("/api/demo/health", response_model=HealthGetResponse)
-async def demo_health_check():
-    """
-    Simple health check endpoint for demo purposes that returns system status.
-    
-    Returns:
-        HealthGetResponse: Status, timestamp, and version information
-    """
-```
-
-### Client Documentation
-
-**Files to update (if they exist):**
-- README.md (API endpoints section)
-- ENDPOINTS.md (endpoint catalog)
-- OpenAPI spec exports
-
-**Action:** Check for documentation files after implementation.
-
----
-
-## 10. Rollback Plan
-
-### Risk Assessment: LOW
-
-**Reason:** New route only, no modifications to existing code.
-
-### Rollback Strategy
-
-1. **If endpoint causes issues:**
-   ```python
-   # Simply comment out the new function
-   # @router.get("/api/demo/health", response_model=HealthGetResponse)
-   # async def demo_health_check():
-   #     ...
-   ```
-
-2. **If tests fail:**
-   - Remove new test cases
-   - Keep existing tests intact
-
-3. **No database migrations required** - Stateless endpoint
-
-4. **No config changes required** - No new env vars
-
-### Rollback Time Estimate: < 5 minutes
-
----
-
-## 11. Performance Impact
-
-### Endpoint Performance Profile
-
-**Expected latency:** < 5ms
-
-**Reasoning:**
-- No database queries
-- No external API calls
-- No complex computation
-- Pure data construction
-
-```python
-return HealthGetResponse(
-    status="ok",                              # Constant string
-    timestamp=datetime.utcnow().isoformat(), # ~1μs
-    version=__version__                       # Constant lookup
-)
-```
-
-### Load Testing Not Required
-
-**Rationale:**
-- Identical to existing health endpoints
-- Already tested in production
-- No resource-intensive operations
-
----
-
-## 12. Security Considerations
-
-### Threat Model
-
-| Threat | Risk Level | Mitigation |
-|--------|-----------|------------|
-| Information disclosure | LOW | Only exposes version (already public) |
-| DDoS amplification | LOW | Simple response, no database load |
-| Path traversal | NONE | Static path, no parameters |
-| Injection attacks | NONE | No user input processed |
-| Authentication bypass | N/A | Public endpoint by design |
-
-### Security Recommendations
-
-✅ **No security concerns identified**
-
-**Best practices already followed:**
-- No sensitive data in response
-- No user input processing
-- Stateless operation
-- Fast response time (DDoS resistant)
-
----
-
-## 13. Monitoring & Observability
-
-### Metrics to Track (Optional)
-
-If endpoint usage monitoring desired:
-
-```python
-# Add to LocalMetricsMiddleware
-case "/api/demo/health":
-    record_event(self.redis, "anonymous", "demo_health_check")
-```
-
-**Decision:** Not needed (health checks typically not metered)
-
-### Logging
-
-Current implementation has no logging.
-
-**Optional enhancement:**
-```python
-import logging
-
-logger = logging.getLogger(__name__)
-
-@router.get("/api/demo/health", response_model=HealthGetResponse)
-async def demo_health_check():
-    logger.debug("Demo health check requested")
-    return HealthGetResponse(...)
-```
-
-**Decision:** Not needed for MVP (can add if debugging required)
-
----
-
-## 14. Related Changes Needed
-
-### Required Changes (Must Do)
-
-1. ✅ Add route handler to `server/routes/health.py`
-2. ✅ Add test cases to `tests/routes/test_routes_health.py`
-3. ⚠️ Fix existing broken test: `test_health_endpoint_returns_only_version`
-
-### Optional Changes (Should Do)
-
-4. 📝 Update ENDPOINT_ANALYSIS.md with implementation results
-5. 📝 Add endpoint to API documentation (if docs exist)
-
-### Not Required (Won't Do)
-
-- ❌ Modify `server/app.py`
-- ❌ Modify `server/routes/__init__.py`
-- ❌ Create new response models
-- ❌ Add middleware logic
-- ❌ Add authentication
-- ❌ Create database migrations
-
----
-
-## 15. Implementation Checklist
-
-### Pre-Implementation
-
-- [x] Analyze existing code structure
-- [x] Check for path conflicts
-- [x] Review dependency chain
-- [x] Identify co-change patterns
-- [x] Assess security risks
-- [ ] **FIX EXISTING BROKEN TEST** (test_health_endpoint_returns_only_version)
-
-### Implementation
-
-- [ ] Add `demo_health_check()` function to health.py
-- [ ] Add comprehensive docstring
-- [ ] Run linter/formatter (black, ruff)
-
-### Testing
-
-- [ ] Add 9 test cases to test_routes_health.py
-- [ ] Run test suite: `pytest tests/routes/test_routes_health.py`
-- [ ] Verify all tests pass
-- [ ] Check test coverage: `pytest --cov=server/routes/health`
-
-### Verification
-
-- [ ] Start dev server: `uvicorn server.app:app --reload`
-- [ ] Manual test: `curl http://localhost:8000/api/demo/health`
-- [ ] Verify OpenAPI docs: http://localhost:8000/docs
-- [ ] Check response format matches HealthGetResponse
-
-### Documentation
-
-- [ ] Update ENDPOINT_ANALYSIS.md with actual implementation
-- [ ] Create CHANGE_IMPACT.md (this document) ✓
-- [ ] Update any API catalogs or README files
-
-### Deployment
-
-- [ ] Create feature branch
-- [ ] Commit changes with descriptive message
-- [ ] Create pull request
-- [ ] Code review
-- [ ] Merge to main
-
----
-
-## 16. Risk Summary
-
-### Risk Matrix
-
-| Risk Category | Level | Notes |
-|--------------|-------|-------|
-| Breaking Changes | 🟢 NONE | No modifications to existing endpoints |
-| Dependency Impact | 🟢 NONE | No new dependencies introduced |
-| Security | 🟢 LOW | Public endpoint, no sensitive data |
-| Performance | 🟢 NONE | Lightweight operation |
-| Testing Complexity | 🟢 LOW | Simple test patterns exist |
-| Rollback Difficulty | 🟢 VERY LOW | Single file change |
-| Documentation Debt | 🟡 LOW | Optional docs to update |
-
-**Overall Risk Assessment: 🟢 LOW**
-
----
-
-## 17. Recommendations
-
-### Immediate Actions
-
-1. **Fix existing test bug first**
-   - `test_health_endpoint_returns_only_version` expects 1 field but gets 3
-   - Update assertion: `assert len(data) == 3`
-   - Add field presence checks
-
-2. **Implement new endpoint**
-   - Follow exact pattern of `api_health()` function
-   - Use identical response structure
-
-3. **Add comprehensive tests**
-   - Copy test patterns from existing health tests
-   - Ensure 100% coverage
-
-### Future Considerations
-
-- **Health Check Enhancement**: Consider adding service dependency checks (Redis, DB)
-  ```python
-  @router.get("/api/demo/health/detailed")
-  async def detailed_health_check(redis=Depends(get_redis), db=Depends(get_db)):
-      return {
-          "status": "ok",
-          "services": {
-              "redis": check_redis(redis),
-              "database": check_db(db)
-          }
-      }
-  ```
-
-- **Response Model Evolution**: Consider versioned health responses if requirements grow
-
----
-
-## 18. Approval & Sign-off
-
-### Change Approved By
-
-- [ ] Tech Lead Review
-- [ ] Security Review (N/A - low risk)
-- [ ] QA Sign-off
-
-### Deployment Plan
-
-- **Target Environment:** Development → Staging → Production
-- **Deployment Window:** Anytime (non-breaking change)
-- **Rollback Plan:** Comment out route function
-- **Monitoring:** Standard application monitoring sufficient
-
----
-
-## Appendix A: Code Snippets
-
-### Proposed Implementation
-
-```python
-# File: repos/metabob-rpc-api/server/routes/health.py
-
-@router.get("/api/demo/health", response_model=HealthGetResponse)
-async def demo_health_check():
-    """
-    Simple health check endpoint for demo purposes that returns system status.
-    
-    This endpoint is used to verify the API is accessible and operational.
-    Returns basic health information including status, timestamp, and version.
-    
-    Returns:
-        HealthGetResponse: System health information
-            - status: "ok" if system is operational
-            - timestamp: Current UTC timestamp in ISO 8601 format
-            - version: Application version number
-    """
-    return HealthGetResponse(
-        status="ok",
-        timestamp=datetime.utcnow().isoformat(),
-        version=__version__
+# Allow access if:
+# 1. User is requesting their own profile, OR
+# 2. User is in the same organization as the target user
+
+if user.user_id != session.user_id and user.org_id != session.org_id:
+    raise HTTPException(
+        status_code=403,
+        detail="Not authorized to view this user profile"
     )
 ```
 
-### Example Test
+**Mitigation**: Follow the pattern from `auth.py:2316-2319` (existing get_user endpoint)
+
+### Issue 2: Database Availability
+
+**Risk**: LOW  
+**Description**: `get_user_by_id` might return `None`
+
+**Current Handling Pattern**:
+```python
+if get_user_by_id is None:
+    raise HTTPException(status_code=501, detail="User management not yet implemented")
+```
+
+**Mitigation**: Use the same pattern (already established in codebase)
+
+### Issue 3: Performance
+
+**Risk**: LOW  
+**Description**: Single user lookup by ID (fast operation)
+
+**Query Pattern**: `SELECT * FROM users WHERE id = $user_id`
+- Indexed lookup (primary key)
+- Expected response time: <50ms
+- No pagination required (single record)
+
+**Mitigation**: None needed - this is an efficient operation
+
+---
+
+## 7. Testing Impact
+
+### Required Test Additions
+
+**File**: `tests/routes/test_routes_auth.py`
+
+**Test Cases to Add**:
+
+1. ✅ **Test Success (200)**
+   ```python
+   def test_get_user_profile_success(route_client, mock_auth_session)
+   ```
+   - Request own profile
+   - Verify response structure
+   - Check all fields present
+
+2. ✅ **Test Not Found (404)**
+   ```python
+   def test_get_user_profile_not_found(route_client, mock_auth_session)
+   ```
+   - Request non-existent user
+   - Verify 404 status
+   - Check error message
+
+3. ✅ **Test Unauthorized (401)**
+   ```python
+   def test_get_user_profile_unauthorized(route_client)
+   ```
+   - Request without auth token
+   - Verify 401 status
+
+4. ✅ **Test Forbidden (403)**
+   ```python
+   def test_get_user_profile_forbidden(route_client, mock_auth_session)
+   ```
+   - Request user from different org
+   - Verify 403 status
+
+5. ✅ **Test Org Member Access**
+   ```python
+   def test_get_user_profile_org_member(route_client, mock_auth_session)
+   ```
+   - Request profile of user in same org
+   - Verify 200 status
+
+**Estimated Effort**: 1-2 hours (following existing test patterns)
+
+### Test Fixtures Available
+
+✅ `route_client` - TestClient for FastAPI  
+✅ `mock_auth_session` - Authenticated session fixture  
+✅ Database mocking patterns - Already established
+
+---
+
+## 8. Risk Assessment
+
+### Overall Risk: **LOW** ✅
+
+| Category | Risk Level | Justification |
+|----------|------------|---------------|
+| **Path Conflicts** | LOW | No overlapping routes detected |
+| **Dependencies** | LOW | All dependencies already in place |
+| **Breaking Changes** | NONE | Pure addition, no modifications |
+| **Database Impact** | LOW | Simple indexed lookup |
+| **Testing** | LOW | Clear test patterns to follow |
+| **Authorization** | MEDIUM | Needs careful auth logic |
+| **Performance** | LOW | Efficient single-record query |
+
+### Risk Mitigation Checklist
+
+- ✅ Verify no path conflicts (DONE - no conflicts)
+- ✅ Check dependency availability (DONE - all available)
+- ⚠️ Implement proper authorization logic (REQUIRED)
+- ⚠️ Add comprehensive tests (REQUIRED)
+- ✅ Follow existing error handling patterns (pattern documented)
+- ✅ Use existing response models (UserResponse available)
+
+---
+
+## 9. Related Changes Needed
+
+### Changes Required
+
+1. **PRIMARY**: `repos/metabob-rpc-api/server/routes/auth.py`
+   - Add new endpoint function (50-80 lines)
+   - Location: After `GET /me` endpoint (around line 300)
+   - Pattern: Copy from existing `get_user` at line 2278
+
+2. **REQUIRED**: `repos/metabob-rpc-api/tests/routes/test_routes_auth.py`
+   - Add 5 test cases (80-120 lines)
+   - Location: End of file or grouped with user tests
+   - Pattern: Copy from existing user tests
+
+### Changes NOT Required
+
+- ❌ `server/actions/auth_db.py` - Function exists
+- ❌ `server/models/auth.py` - Model exists
+- ❌ `server/app.py` - Router already registered
+- ❌ `server/utils/dependencies.py` - Auth dependencies exist
+- ❌ Database migrations - No schema changes
+- ❌ Configuration files - No new settings
+
+---
+
+## 10. Implementation Checklist
+
+### Pre-Implementation
+
+- [x] Verify no path conflicts
+- [x] Confirm dependencies available
+- [x] Review authorization requirements
+- [x] Identify test patterns
+- [x] Document change impact
+
+### Implementation Phase
+
+- [ ] Add endpoint to `auth.py`
+- [ ] Implement authorization logic
+- [ ] Add error handling
+- [ ] Add logging statements
+- [ ] Follow existing code style
+
+### Testing Phase
+
+- [ ] Add unit tests (5 test cases)
+- [ ] Test with mock database
+- [ ] Test authentication scenarios
+- [ ] Test authorization scenarios
+- [ ] Verify response structure
+
+### Validation Phase
+
+- [ ] Run existing test suite (ensure no regressions)
+- [ ] Test manually with Swagger UI
+- [ ] Verify OpenAPI docs generated correctly
+- [ ] Check logging output
+- [ ] Performance test (optional)
+
+---
+
+## 11. Timeline Estimate
+
+| Phase | Estimated Time | Confidence |
+|-------|---------------|------------|
+| Implementation | 30-45 minutes | High |
+| Testing | 1-2 hours | High |
+| Manual Validation | 15-30 minutes | High |
+| **TOTAL** | **2-3 hours** | **High** |
+
+**Factors**:
+- ✅ Clear patterns to follow
+- ✅ All dependencies available
+- ✅ Well-documented requirements
+- ⚠️ Authorization logic needs careful thought
+
+---
+
+## 12. Rollback Plan
+
+**Risk**: Minimal (pure addition)
+
+**Rollback Steps** (if needed):
+1. Remove endpoint function from `auth.py`
+2. Remove test cases from `test_routes_auth.py`
+3. Restart API service
+
+**Impact of Rollback**: 
+- No database changes to revert
+- No configuration changes to undo
+- No dependencies to downgrade
+- Clients calling new endpoint will get 404 (graceful degradation)
+
+---
+
+## 13. Success Criteria
+
+### Functional Requirements
+- ✅ Endpoint returns 200 with valid user data
+- ✅ Returns 404 for non-existent users
+- ✅ Returns 401 without authentication
+- ✅ Returns 403 for unauthorized access
+- ✅ Follows authorization rules (self + org members)
+
+### Non-Functional Requirements
+- ✅ Response time < 100ms (95th percentile)
+- ✅ All tests pass (100% coverage for new code)
+- ✅ OpenAPI docs auto-generated
+- ✅ Consistent with existing endpoints
+- ✅ Proper logging (info + error levels)
+
+### Quality Requirements
+- ✅ Code follows existing patterns
+- ✅ Type hints complete
+- ✅ Error handling comprehensive
+- ✅ Docstring format matches existing
+- ✅ No linting errors
+
+---
+
+## 14. Conclusion
+
+**RECOMMENDATION**: ✅ **PROCEED WITH IMPLEMENTATION**
+
+The change impact analysis shows that adding the `GET /api/users/{user_id}` endpoint is a **low-risk addition** with **no significant blockers**.
+
+**Key Strengths**:
+- All dependencies already in place
+- No path conflicts detected
+- Clear patterns to follow
+- Minimal testing overhead
+- No breaking changes
+
+**Key Considerations**:
+- Authorization logic needs careful implementation
+- Test coverage should match existing endpoints
+- Follow established error handling patterns
+
+**Next Step**: Implement the endpoint following the template in ENDPOINT_ANALYSIS.md Section 10.
+
+---
+
+## Appendix A: Relevant Code Locations
+
+### Endpoint Implementation Reference
+- **Pattern**: `auth.py:2261-2316` (existing get_user endpoint)
+- **Auth Dependency**: `auth.py:233-249` (require_auth function)
+- **Response Model**: `server/models/auth.py:UserResponse`
+
+### Database Layer
+- **Function**: `server/actions/auth_db.py:get_user_by_id()`
+- **Connection**: `server/utils/surreal_client.py:get_surreal_connection()`
+
+### Testing
+- **Test File**: `tests/routes/test_routes_auth.py`
+- **Test Patterns**: Search for `test_get_user_` in test file
+
+### Application Configuration
+- **Router Registration**: `server/app.py:75`
+- **Router Definition**: `auth.py:153` (router with /auth prefix)
+
+---
+
+## Appendix B: Example Test Structure
 
 ```python
-# File: repos/metabob-rpc-api/tests/routes/test_routes_health.py
-
-def test_demo_health_endpoint_returns_200(client):
-    """
-    Purpose: Verify demo health endpoint is accessible
-    Methodology: GET /api/demo/health → Assert 200 status
-    Validity: 200 status proves endpoint is working
-    """
-    response = client.get("/api/demo/health")
-    assert response.status_code == 200
-
-
-def test_demo_health_endpoint_returns_correct_data(client):
-    """
-    Purpose: Verify demo health endpoint returns correct structure
-    Methodology: GET /api/demo/health → Assert response fields
-    Validity: Presence of required fields proves correct response
-    """
-    response = client.get("/api/demo/health")
-    data = response.json()
+def test_get_user_profile_success(route_client, mock_auth_session):
+    """Test successful user profile retrieval"""
+    user_id = mock_auth_session["user_id"]
     
-    assert "status" in data
-    assert "timestamp" in data
-    assert "version" in data
-    assert data["status"] == "ok"
-    assert data["version"] == __version__
+    response = route_client.get(
+        f"/auth/users/{user_id}",
+        headers={"Authorization": f"Bearer {mock_auth_session['token']}"}
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["user_id"] == user_id
+    assert "email" in data
+    assert "org_id" in data
+    assert "role" in data
 ```
 
 ---
 
-## Appendix B: Related Files Reference
-
-### Files Analyzed
-
-- ✅ `repos/metabob-rpc-api/server/routes/health.py` - Primary target
-- ✅ `repos/metabob-rpc-api/server/app.py` - Router registration
-- ✅ `repos/metabob-rpc-api/server/routes/__init__.py` - Router exports
-- ✅ `repos/metabob-rpc-api/server/models/response.py` - Response models
-- ✅ `repos/metabob-rpc-api/server/utils/middlewares.py` - Middleware logic
-- ✅ `repos/metabob-rpc-api/tests/routes/test_routes_health.py` - Test suite
-- ✅ `ENDPOINT_ANALYSIS.md` - Requirements document
-
-### Git History
-
-```bash
-# Recent changes to health.py
-89b6a7e - Enhance health endpoint with status and timestamp
-60dc8d9 - Enhance health endpoint with status and timestamp  
-da60adc - feat(project): basic functionality, tests, initial configuration
-```
-
----
-
-## Conclusion
-
-Adding the `/api/demo/health` endpoint is a **low-risk, low-impact change** that follows established patterns. The primary risk is a pre-existing test bug that should be fixed first. No breaking changes, no new dependencies, and straightforward rollback if needed.
-
-**Estimated Implementation Time:** 30-45 minutes  
-**Estimated Testing Time:** 15-20 minutes  
-**Total Time to Production:** 1-2 hours including review
-
-**APPROVED FOR IMPLEMENTATION** ✅
+**Generated**: 2026-02-15  
+**Analysis Confidence**: HIGH  
+**Recommendation**: PROCEED ✅

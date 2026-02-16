@@ -1,0 +1,73 @@
+{
+  "activity_id": "test-failure-activity-1771285947",
+  "name": "Test Failure Activity 1771285947",
+  "description": "Simple activity designed to fail for testing debug template",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "failing-task",
+      "task_id": "failing-task",
+      "subagent": "general",
+      "description": "Task that will fail validation",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called test-output.txt with the content 'Hello World'",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [
+          "nonexistent-file-that-will-never-exist.txt"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "failing-task",
+      "task_id": "failing-task",
+      "subagent": "general",
+      "description": "Task that will fail validation",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called test-output.txt with the content 'Hello World'",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [
+          "nonexistent-file-that-will-never-exist.txt"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-16T23:52:35.063Z",
+  "metadata": {}
+}
