@@ -42,18 +42,31 @@ mkdir -p /config
 
 echo "Setting up metabob-cli..."
 
+# Install cpg-inference if not already installed (runtime installation)
+if ! /opt/metabob-cli/.venv/bin/python -c "import cpg_inference" 2>/dev/null; then
+    echo "Installing cpg-inference (required by MCP server)..."
+    if [ -d "/opt/repos/cpg-inference" ]; then
+        /opt/metabob-cli/.venv/bin/pip install /opt/repos/cpg-inference --quiet
+        echo "cpg-inference installed successfully"
+    else
+        echo "WARNING: cpg-inference not found at /opt/repos/cpg-inference"
+        echo "MCP server may fail to start"
+    fi
+else
+    echo "cpg-inference already installed"
+fi
+
 # Check if metabob-cli is mounted (devbob-dev profile)
 if [ -d "/workspace/src/metabob_cli" ]; then
     echo "Found mounted metabob-cli repo, installing in development mode"
     cd /workspace
-    /opt/metabob-cli/bin/pip install -e . --quiet
+    /opt/metabob-cli/.venv/bin/pip install -e . --quiet
 elif [ -f "/workspace/pyproject.toml" ] && grep -q "metabob-cli" /workspace/pyproject.toml; then
     echo "Found metabob-cli in mounted workspace, installing"
     cd /workspace
-    /opt/metabob-cli/bin/pip install -e . --quiet
+    /opt/metabob-cli/.venv/bin/pip install -e . --quiet
 else
-    echo "Using stable metabob-cli from pip"
-    /opt/metabob-cli/bin/pip install metabob-cli --quiet || echo "metabob-cli not available from pip"
+    echo "Using stable metabob-cli from venv (pre-installed)"
 fi
 
 # =============================================================================

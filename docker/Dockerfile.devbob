@@ -50,8 +50,23 @@ RUN python3 -m venv /opt/metabob-cli/.venv && \
         pydantic \
         python-dotenv \
         surrealdb \
-        redis && \
+        redis \
+        tabulate \
+        fastapi \
+        uvicorn \
+        click \
+        rich \
+        aiofiles \
+        watchdog \
+        thefuzz \
+        aiohttp \
+        certifi \
+        websockets \
+        requests && \
     echo "metabob-cli dependencies installed"
+
+# Note: cpg-inference will be mounted as a volume and installed at runtime
+# This avoids Docker build timeout issues with large dependency trees
 
 # Copy metabob-cli source directly into venv
 COPY repos/metabob-cli/src/metabob_cli /opt/metabob-cli/.venv/lib/python3.11/site-packages/metabob_cli

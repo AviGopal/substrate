@@ -200,6 +200,8 @@ services:
     volumes:
       # Empty workspace - clean environment
       - devbob_clean_workspace:/workspace
+      # Mount cpg-inference for runtime installation
+      - ./repos/cpg-inference:/opt/repos/cpg-inference:ro
       # No repo mounting - isolated environment
     environment:
       CODEBASE_NAME: clean-test
