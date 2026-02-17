@@ -39,9 +39,16 @@ def get_token() -> str:
     with open(state_path, "r") as f:
         state = json.load(f)
 
+    # Try to get token from session_metadata (new format)
     token = state.get("session_metadata", {}).get("session_token")
+
+    # Fall back to old format if needed
+    if not token:
+        token = state.get("token")
+
     if not token:
         print("❌ No session_token in state file")
+        print(f"State file structure: {list(state.keys())}")
         sys.exit(1)
 
     return token
