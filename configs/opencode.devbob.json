@@ -18,7 +18,7 @@
         "stdio"
       ],
       "environment": {
-        "METABOB_API_URL": "http://api-server-dev:8080",
+        "METABOB_API_URL": "http://host.docker.internal:8080",
         "METABOB_API_KEY": "mb_Y99iQNMiycAlpkQamp0dhnU_t5e0ds0mkwDrU7g9bxs"
       },
       "enabled": true
