@@ -1,0 +1,82 @@
+{
+  "name": "Test Simple Activity",
+  "description": "A deliberately simple activity to test the self-healing workflow",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "create-file",
+      "subagent": "general",
+      "description": "Create a simple JSON file with some data",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called {{outputFile}} with the following JSON content:\n\n```json\n{\n  \"message\": \"Hello from test activity\",\n  \"timestamp\": \"{{timestamp}}\",\n  \"status\": \"success\"\n}\n```\n\nMake sure the file is created in the current working directory.",
+        "max_tokens": 2000,
+        "compression_strategy": "filter",
+        "variables": [
+          {
+            "name": "outputFile",
+            "type": "string",
+            "required": true,
+            "description": "Name of the output file to create"
+          },
+          {
+            "name": "timestamp",
+            "type": "string",
+            "required": false,
+            "description": "Timestamp to include in the file"
+          }
+        ]
+      },
+      "validation": {
+        "required_files": ["{{outputFile}}"],
+        "required_patterns": ["message", "status"],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      },
+      "tools": {
+        "required": ["write"],
+        "optional": ["bash"],
+        "disabled": []
+      }
+    },
+    {
+      "id": "verify-file",
+      "subagent": "general",
+      "description": "Verify the file was created correctly",
+      "dependencies": ["create-file"],
+      "prompt": {
+        "template": "Read the file {{outputFile}} and verify it contains:\n1. A 'message' field\n2. A 'timestamp' field\n3. A 'status' field set to 'success'\n\nIf all checks pass, create a verification report in VERIFICATION.md with the results.",
+        "max_tokens": 2000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": ["VERIFICATION.md"],
+        "required_patterns": ["PASS", "verified"],
+        "forbidden_patterns": ["FAIL"],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      },
+      "tools": {
+        "required": ["read", "write"],
+        "optional": [],
+        "disabled": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false
+  }
+}
