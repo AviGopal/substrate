@@ -1,0 +1,74 @@
+{
+  "id": "add-feature-v2",
+  "name": "Add Feature (No Conditionals)",
+  "description": "Simplified feature implementation workflow without Handlebars conditionals - production ready",
+  "category": "feature",
+  "tasks": [
+    {
+      "id": "design-and-implement",
+      "subagent": "general",
+      "description": "Design and implement the feature",
+      "dependencies": [],
+      "tools": {
+        "required": [],
+        "optional": [],
+        "disabled": []
+      },
+      "prompt": {
+        "template": "Implement a new feature following existing codebase patterns.\n\n**Feature Specification**:\n- Name: {{feature_name}}\n- Description: {{feature_description}}\n- Requirements: {{requirements}}\n- Acceptance Criteria: {{acceptance_criteria}}\n\nNote: If requirements or acceptance criteria are not provided above, infer them from the feature description.\n\n---\n\n## Your Task\n\n### Step 1: Analyze Existing Patterns (5-10 minutes)\n\nUnderstand the codebase before implementing:\n\n1. **Search for similar features**:\n   - Use glob/grep to find similar code\n   - Read 2-3 similar implementations\n   - Note patterns: naming, structure, error handling, testing\n\n2. **Check file structure**:\n   - Identify where the feature code should live\n   - Follow existing directory conventions\n   - List files you'll create or modify\n\n3. **Review existing patterns**:\n   - How are similar features tested?\n   - What error handling patterns are used?\n   - What naming conventions exist?\n\n### Step 2: Implement the Feature (15-30 minutes)\n\n**Create the necessary files**:\n- Follow existing directory structure\n- Use consistent naming conventions\n- Create implementation files\n- Create test files\n\n**Implementation guidelines**:\n- Follow existing code style\n- Add proper error handling\n- Include input validation\n- Add helpful error messages\n- Use TypeScript types (if TypeScript project)\n- Add JSDoc comments for public APIs\n- Keep functions focused and single-purpose\n\n**Code quality**:\n- No console.log (use proper logging)\n- No hardcoded values (use constants/config)\n- No TODO/FIXME in committed code\n- Follow DRY principle\n- Handle edge cases\n\n### Step 3: Add Tests (10-20 minutes)\n\n**Test coverage should include**:\n- Happy path tests\n- Error case tests\n- Edge case tests\n- Integration tests (if applicable)\n\nFollow existing test patterns in the codebase.\n\n### Step 4: Verify Quality (5 minutes)\n\n**Check your implementation**:\n- Run tests: `npm test` or equivalent\n- Run type checking: `npm run typecheck` or `tsc --noEmit`\n- Run linter: `npm run lint` or equivalent\n- Verify files are in correct locations\n- Check that code follows existing patterns\n\n### Step 5: Document (5 minutes)\n\nCreate **FEATURE_IMPLEMENTATION.md** with:\n\n```markdown\n# Feature: {{feature_name}}\n\n## What Was Implemented\n[Brief description of what was built]\n\n## Files Created/Modified\n- `path/to/file1.ts` - [purpose]\n- `path/to/file2.ts` - [purpose]\n- `path/to/test.spec.ts` - [purpose]\n\n## How to Use\n[Basic usage example or API documentation]\n\n## Testing\n[How to run tests for this feature]\n\n## Notes\n[Any important notes, gotchas, or future improvements]\n```\n\n---\n\n## Success Criteria\n\nYour implementation is complete when:\n- ✅ Feature works as described\n- ✅ Tests are written and passing\n- ✅ Code follows existing patterns\n- ✅ No type errors (for TypeScript projects)\n- ✅ Documentation is created\n- ✅ Error handling is in place\n\n---\n\n**Important**: Focus on working, tested code that follows existing patterns. Quality over quantity.",
+        "maxTokens": 16000,
+        "compressionStrategy": "none",
+        "variables": [
+          {
+            "name": "feature_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature to implement"
+          },
+          {
+            "name": "feature_description",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of what the feature does and its purpose"
+          },
+          {
+            "name": "requirements",
+            "type": "string",
+            "required": false,
+            "description": "Functional and non-functional requirements (leave empty if not applicable)"
+          },
+          {
+            "name": "acceptance_criteria",
+            "type": "string",
+            "required": false,
+            "description": "Measurable criteria for feature completion (leave empty if not applicable)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "FEATURE_IMPLEMENTATION.md"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "contextRequirements": [],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 3000,
+    "annotationStrategy": "failures-only"
+  }
+}

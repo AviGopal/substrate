@@ -1,0 +1,47 @@
+{
+  "id": "ultra-simple-test",
+  "name": "Ultra Simple Test",
+  "description": "Ultra minimal test activity",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "simple-task",
+      "subagent": "general",
+      "description": "Create a simple file",
+      "dependencies": [],
+      "tools": {
+        "required": [],
+        "optional": [],
+        "disabled": []
+      },
+      "prompt": {
+        "template": "Create a file called TEST.md with the content 'Activity executed successfully'.",
+        "maxTokens": 2000,
+        "compressionStrategy": "none",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["TEST.md"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "contextRequirements": [],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 1000,
+    "annotationStrategy": "failures-only"
+  }
+}

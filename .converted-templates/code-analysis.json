@@ -1,0 +1,126 @@
+{
+  "name": "v1-baseline",
+  "description": "Analyze codebase for issues, patterns, and improvement opportunities",
+  "category": "feature",
+  "variables": {
+    "target_path": {
+      "type": "",
+      "required": true,
+      "description": "Variable: target_path"
+    },
+    "analysis_depth": {
+      "type": "standard",
+      "required": true,
+      "description": "Variable: analysis_depth"
+    },
+    "include_suggestions": {
+      "type": "True",
+      "required": true,
+      "description": "Variable: include_suggestions"
+    }
+  },
+  "context_requirements": [],
+  "task_steps": [
+    {
+      "id": "identify-scope",
+      "order": 0,
+      "subagent": "general",
+      "description": "Identify Analysis Scope: Determine which files or directories to analyze based on user input or recent changes",
+      "dependencies": [],
+      "prompt": {
+        "template": "Identify Analysis Scope: Determine which files or directories to analyze based on user input or recent changes",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "run-analysis",
+      "order": 1,
+      "subagent": "general",
+      "description": "Run Code Analysis: Execute static analysis tools to identify potential issues",
+      "dependencies": [],
+      "prompt": {
+        "template": "Run Code Analysis: Execute static analysis tools to identify potential issues",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "prioritize-findings",
+      "order": 2,
+      "subagent": "general",
+      "description": "Prioritize Findings: Rank issues by severity and impact",
+      "dependencies": [],
+      "prompt": {
+        "template": "Prioritize Findings: Rank issues by severity and impact",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "report-results",
+      "order": 3,
+      "subagent": "general",
+      "description": "Report Analysis Results: Present findings with actionable recommendations",
+      "dependencies": [],
+      "prompt": {
+        "template": "Report Analysis Results: Present findings with actionable recommendations",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    }
+  ],
+  "_original_activity_id": "code-analysis"
+}

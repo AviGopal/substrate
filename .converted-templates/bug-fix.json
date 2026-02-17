@@ -1,0 +1,145 @@
+{
+  "name": "v1-baseline",
+  "description": "Diagnose and fix a reported bug with proper testing",
+  "category": "feature",
+  "variables": {
+    "bug_description": {
+      "type": "",
+      "required": true,
+      "description": "Variable: bug_description"
+    },
+    "error_message": {
+      "type": "",
+      "required": true,
+      "description": "Variable: error_message"
+    },
+    "affected_files": {
+      "type": "[]",
+      "required": true,
+      "description": "Variable: affected_files"
+    }
+  },
+  "context_requirements": [],
+  "task_steps": [
+    {
+      "id": "understand-bug",
+      "order": 0,
+      "subagent": "general",
+      "description": "Gather information about the bug from user description, logs, or error messages",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are investigating a bug. Your task is to understand the bug thoroughly before attempting to fix it.\n\n## Bug Information\n{{bug_description}}\n\n## Error Message (if any)\n{{error_message}}\n\n## Instructions\n1. Analyze the bug description and any error messages\n2. If the description is vague, identify what clarifying questions would help\n3. Look for related error logs or stack traces in the codebase\n4. Identify the steps to reproduce the bug\n5. Document your findings clearly\n\n## Output\nProvide a summary of:\n- What the bug is\n- How to reproduce it\n- Any related error messages or logs found\n- Areas of the codebase likely involved",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": [
+          "bug_description",
+          "error_message"
+        ]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "locate-source",
+      "order": 1,
+      "subagent": "general",
+      "description": "Find the code responsible for the bug",
+      "dependencies": [
+        "understand-bug"
+      ],
+      "prompt": {
+        "template": "Based on the bug analysis from the previous step, locate the source code responsible for the bug.\n\n## Bug Summary\n{{previous_step_output}}\n\n## Instructions\n1. Start from error messages or stack traces if available\n2. Trace the execution path that leads to the bug\n3. Look for recent changes that might have introduced the bug\n4. Identify the specific file(s) and line(s) where the bug originates\n\n## Output\nProvide:\n- The specific file(s) containing the bug\n- The relevant code section(s)\n- Your analysis of why this code causes the bug\n- The root cause (not just symptoms)",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": [
+          "previous_step_output"
+        ]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "implement-fix",
+      "order": 2,
+      "subagent": "general",
+      "description": "Write code to fix the bug with minimal side effects",
+      "dependencies": [
+        "locate-source"
+      ],
+      "prompt": {
+        "template": "Implement a fix for the identified bug.\n\n## Bug Location\n{{previous_step_output}}\n\n## Instructions\n1. Fix the root cause, not just the symptoms\n2. Keep changes minimal and focused on the bug\n3. Ensure the fix doesn't introduce new issues\n4. Add comments explaining the fix if not immediately obvious\n\n## Output\nMake the necessary code changes to fix the bug. After making changes, provide:\n- A summary of what was changed\n- Why this fix addresses the root cause\n- Any potential side effects to watch for",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": [
+          "previous_step_output"
+        ]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [
+          "TODO",
+          "FIXME",
+          "HACK"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "verify-fix",
+      "order": 3,
+      "subagent": "general",
+      "description": "Test that the fix works and doesn't break other functionality",
+      "dependencies": [
+        "implement-fix"
+      ],
+      "prompt": {
+        "template": "Verify that the bug fix works correctly and doesn't introduce regressions.\n\n## Fix Summary\n{{previous_step_output}}\n\n## Instructions\n1. Run existing tests to check for regressions\n2. Manually verify the original bug is fixed\n3. Test edge cases related to the fix\n4. Ensure no new warnings or errors were introduced\n\n## Output\nProvide verification results:\n- Test results (pass/fail)\n- Confirmation the original bug is fixed\n- Any edge cases tested\n- Overall assessment of the fix quality",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": [
+          "previous_step_output"
+        ]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    }
+  ],
+  "_original_activity_id": "bug-fix"
+}

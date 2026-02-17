@@ -1,0 +1,257 @@
+{
+  "activity_id": "organize-documentation",
+  "name": "Organize Documentation V2",
+  "description": "Clean up session documentation, archive historical files, and create stateless representation of current codebase functionality with in-flight changes",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "analyze-documentation",
+      "task_id": "analyze-documentation",
+      "subagent": "general",
+      "description": "Analyze existing documentation files and categorize them by type and status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze all markdown documentation files in the repository root and categorize them.\n\n**Target Directory**: Repository root (.)\n\n---\n\n## Your Task\n\n### 1. Discover All Documentation Files\n\nFind all `.md` files in the target directory:\n\n```bash\nfind . -maxdepth 1 -name \"*.md\" -type f | sort\n```\n\n### 2. Categorize Documentation\n\nGroup files into these categories:\n\n#### A. **Session Documentation** (Archive)\nFiles documenting work sessions, temporary status, and historical context:\n- `*_SUMMARY.md` - Session summaries\n- `*_STATUS.md` - Point-in-time status reports  \n- `*_COMPLETE.md` - Completion reports\n- `SESSION_*.md` - Session-specific docs\n- `*_FEB*.md` - Date-stamped session docs\n\n#### B. **Reference Documentation** (Keep & Update)\nOngoing reference materials that should be maintained:\n- `*_GUIDE.md` - How-to guides\n- `*_QUICK_START.md` - Quick start guides\n- `*_REFERENCE.md` - Reference documentation\n- `*_ARCHITECTURE.md` - Architecture diagrams\n- `*_INTEGRATION.md` - Integration guides\n\n#### C. **Analysis Documentation** (Archive or Integrate)\nTechnical analysis and design documents:\n- `*_ANALYSIS.md` - Technical analysis\n- `*_DESIGN.md` - Design documents\n- `*_PLAN.md` - Planning documents\n- `*_INVESTIGATION.md` - Investigation reports\n\n#### D. **Project Status** (Consolidate)\nCurrent project state and roadmaps:\n- `*_PROJECT_STATUS.md` - Project status\n- `*_ROADMAP.md` - Roadmaps\n- `*_NEXT_STEPS.md` - Next steps\n\n#### E. **Testing & Validation** (Archive or Keep)\nTest results and validation reports:\n- `*_TEST*.md` - Test results\n- `*_VALIDATION*.md` - Validation reports\n- `*_VERIFICATION*.md` - Verification results\n\n### 3. Identify In-Flight Work\n\nScan documentation for indicators of in-flight changes:\n- Uncommitted changes mentioned\n- \"WIP\" or \"TODO\" sections\n- \"Next steps\" or \"Future work\" sections\n- References to incomplete features\n- Migration plans in progress\n\n### 4. Analyze Content Quality\n\nFor each file, assess:\n- **Currency**: Is information still relevant?\n- **Completeness**: Is work documented as finished?\n- **Integration**: Should content be merged elsewhere?\n- **Duplication**: Does content overlap with other files?\n\n### 5. Create Analysis Report\n\nCreate `DOCUMENTATION_ANALYSIS.md` with:\n\n```markdown\n# Documentation Analysis Report\n\n**Date**: 2026-02-17 (use today's date)\n**Target**: .\n**Total Files**: [count]\n\n## Summary Statistics\n\n- Session Documentation: [count] files\n- Reference Documentation: [count] files\n- Analysis Documentation: [count] files\n- Project Status: [count] files\n- Testing & Validation: [count] files\n\n## Categorization\n\n### Session Documentation (Archive)\n[List files with brief description]\n\n### Reference Documentation (Keep & Update)\n[List files with currency assessment]\n\n### Analysis Documentation (Archive or Integrate)\n[List files with integration recommendations]\n\n### Project Status (Consolidate)\n[List files with consolidation plan]\n\n### Testing & Validation (Archive or Keep)\n[List files with retention decision]\n\n## In-Flight Work Identified\n\n[List incomplete work items found in documentation]\n\n## Recommendations\n\n### Files to Archive\n[List with rationale]\n\n### Files to Update\n[List with required updates]\n\n### Files to Consolidate\n[List with consolidation strategy]\n\n### Files to Delete\n[List with justification]\n```\n\n---\n\n## Success Criteria\n\n- All `.md` files discovered and categorized\n- Clear rationale for each categorization decision\n- In-flight work identified and documented\n- Actionable recommendations for each file\n- No guesswork - base decisions on file content",
+        "variables": [
+          {
+            "name": "target_directory",
+            "type": "string",
+            "required": false,
+            "description": "Directory to analyze (defaults to repository root)",
+            "default": "."
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "archive-historical-docs",
+      "task_id": "archive-historical-docs",
+      "subagent": "general",
+      "description": "Move session documentation and completed work reports to archive directory",
+      "dependencies": [
+        "analyze-documentation"
+      ],
+      "prompt": {
+        "template": "Archive historical documentation based on DOCUMENTATION_ANALYSIS.md recommendations.\n\n**Read**: DOCUMENTATION_ANALYSIS.md\n\n---\n\n## Your Task\n\n### 1. Create Archive Structure\n\nCreate organized archive directory:\n\n```bash\nmkdir -p .archive/sessions/2026-02-16\nmkdir -p .archive/analysis\nmkdir -p .archive/testing\nmkdir -p .archive/designs\n```\n\n### 2. Archive Session Documentation\n\nMove session-specific files to `.archive/sessions/YYYY-MM-DD/`:\n\n**Files to archive**:\n- Session summaries (`*_SUMMARY.md`)\n- Status reports (`*_STATUS.md`)\n- Completion reports (`*_COMPLETE.md`)\n- Date-stamped docs (`*_FEB16.md`)\n\n**Preserve**:\n- File timestamps\n- File permissions\n- Alphabetical organization\n\n```bash\n# Example\nmv SESSION_SUMMARY_FEB16.md .archive/sessions/2026-02-16/\n```\n\n### 3. Archive Analysis Documents\n\nMove technical analysis to `.archive/analysis/`:\n\n**Files to archive**:\n- One-time analyses (`*_ANALYSIS.md`)\n- Completed investigations (`*_INVESTIGATION.md`)\n- Historical designs (`*_DESIGN.md`)\n\n**Keep in root**:\n- Living architecture docs\n- Active design references\n\n### 4. Archive Test Results\n\nMove test results to `.archive/testing/`:\n\n**Files to archive**:\n- Test reports (`*_TEST_RESULTS.md`)\n- Validation reports (`*_VALIDATION*.md`)\n- Verification results (`*_VERIFICATION*.md`)\n\n**Keep in root**:\n- Active test plans\n- Current validation strategies\n\n### 5. Update References\n\nIf any kept files reference archived files, update paths:\n\n```markdown\n# Before\nSee SESSION_SUMMARY_FEB16.md for details\n\n# After  \nSee .archive/sessions/2026-02-16/SESSION_SUMMARY_FEB16.md for details\n```\n\n### 6. Create Archive Index\n\nCreate `.archive/README.md`:\n\n```markdown\n# Documentation Archive\n\n**Purpose**: Historical documentation from development sessions\n**Organization**: By date and category\n\n## Structure\n\n- `sessions/YYYY-MM-DD/` - Session summaries and status reports\n- `analysis/` - Technical analysis and investigations\n- `testing/` - Test results and validation reports\n- `designs/` - Historical design documents\n\n## Recent Archives\n\n### 2026-02-16\n- [count] session documents\n- [List key documents]\n\n## Search Tips\n\n```bash\n# Find all files mentioning a topic\ngrep -r \"topic\" .archive/\n\n# Find files by date\nfind .archive/sessions/2026-02-16 -type f\n```\n```\n\n### 7. Create Archive Report\n\nCreate `ARCHIVE_REPORT.md` documenting:\n\n```markdown\n# Documentation Archive Report\n\n**Date**: 2026-02-17 (use today's date)\n**Files Archived**: [count]\n**Archive Location**: .archive/\n\n## Files Moved\n\n### Session Documentation ([count] files)\n[List with destination]\n\n### Analysis Documentation ([count] files)\n[List with destination]\n\n### Testing Documentation ([count] files)\n[List with destination]\n\n## Files Remaining in Root\n[List with rationale]\n\n## Reference Updates\n[List files with updated paths]\n```\n\n---\n\n## Success Criteria\n\n- All recommended files archived\n- Archive structure created and documented\n- No broken references in kept files\n- Archive index created\n- Original files removed from root",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -d .archive && test -f .archive/README.md",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-codebase-state-snapshot",
+      "task_id": "create-codebase-state-snapshot",
+      "subagent": "general",
+      "description": "Create stateless representation of current codebase functionality and capabilities",
+      "dependencies": [
+        "archive-historical-docs"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive, stateless snapshot of current codebase functionality.\n\n---\n\n## Your Task\n\n### 1. Analyze Repository Structure\n\n**Discover components**:\n- List all repositories (`repos/*/`)\n- Identify key directories and their purposes\n- Map service relationships\n\n```bash\n# Repository structure\nls -la repos/\n\n# Service discovery\nfind repos/ -name \"package.json\" -o -name \"pyproject.toml\" -o -name \"Cargo.toml\"\n```\n\n### 2. Document Core Capabilities\n\nFor each major component, document:\n\n**A. Purpose**: What does it do?\n**B. Key Features**: Major capabilities\n**C. Technologies**: Stack and dependencies\n**D. Integration Points**: How it connects to other components\n**E. Recent Commits**: Last 3 commits for context\n\n```bash\n# Example: metabob-opencode\ncd repos/metabob-opencode\ngit log --oneline -3\ncat package.json | jq '.scripts'\n```\n\n### 3. Identify In-Flight Changes\n\nScan for uncommitted work across all repositories:\n\n```bash\nfor repo in repos/*/; do\n  echo \"=== $repo ===\"\n  cd \"$repo\"\n  git status --short\n  git diff --stat\n  cd -\ndone\n```\n\n**Document**:\n- Modified files\n- Purpose of changes\n- Completion status\n- Dependencies between changes\n\n### 4. Map Activity Templates\n\nList all available activity templates:\n\n```bash\nfind .metabob/activities/ -name \"*.json\" | sort\n```\n\n**For each template, document**:\n- ID and name\n- Purpose and use case\n- Success rate (if available)\n- Status (stable, experimental, deprecated)\n\n### 5. Document Integration Architecture\n\nCreate architecture diagram showing:\n\n```\n┌─────────────────────────────────────────────────────┐\n│                  Component Map                       │\n├─────────────────────────────────────────────────────┤\n│  CLI ──→ MCP ──→ Backend ──→ Database              │\n│   ↓       ↓        ↓           ↓                    │\n│  Tools  Agents  Templates  Learning Loop            │\n└─────────────────────────────────────────────────────┘\n```\n\n**Include**:\n- Data flow between components\n- API endpoints and protocols\n- Storage mechanisms\n- External dependencies\n\n### 6. Create CODEBASE_STATE.md\n\nCreate comprehensive state snapshot:\n\n```markdown\n# Codebase State Snapshot\n\n**Generated**: 2026-02-17\n**Purpose**: Stateless representation of current functionality\n**Version**: Auto-detected from commits\n\n---\n\n## Executive Summary\n\n[High-level overview of what the codebase does and current state]\n\n## Repository Structure\n\n### metabob-opencode\n**Purpose**: [Description]\n**Status**: [Stable/Active Development]\n**Key Features**:\n- Feature 1\n- Feature 2\n\n**Recent Changes**:\n- [commit] Description\n- [commit] Description\n- [commit] Description\n\n**Integration Points**:\n- Connects to: metabob-rpc-api via REST\n- Provides: Activity execution framework\n\n### metabob-rpc-api\n[Similar structure]\n\n### metabob-cli\n[Similar structure]\n\n### metabob-dashboard\n[Similar structure]\n\n## Core Capabilities\n\n### 1. Activity System\n**Description**: [What it does]\n**Components**: [List]\n**Status**: [Operational/In Development]\n**Templates Available**: [Count and list]\n\n### 2. Metabob Integration\n**Description**: [What it does]\n**Components**: [List]\n**Status**: [Operational/In Development]\n**Features**:\n- Code quality analysis\n- Cochange prediction\n- Component annotations\n\n### 3. Learning Loop\n**Description**: [What it does]\n**Components**: [List]\n**Status**: [Operational/In Development]\n**Capabilities**:\n- Activity outcome tracking\n- Template evolution\n- Distributed feedback\n\n## Activity Template Catalog\n\n### Production Templates\n- `fix-bug-complete`: [Purpose, status]\n- `add-feature-complete`: [Purpose, status]\n- `refactor-component-complete`: [Purpose, status]\n\n### Experimental Templates\n- [List with status]\n\n## In-Flight Changes\n\n### Uncommitted Work\n\n#### metabob-opencode\n- [File]: [Purpose] - [Status]\n\n#### metabob-rpc-api\n- [File]: [Purpose] - [Status]\n\n### Planned Work\n[From documentation analysis]\n\n### Blocked Work\n[If any]\n\n## Integration Architecture\n\n```\n[ASCII diagram of component relationships]\n```\n\n### Data Flow\n1. User request → CLI\n2. CLI → MCP server\n3. MCP → Activity execution\n4. Activity → Backend API\n5. Backend → Database\n6. Results → Dashboard\n\n### API Endpoints\n\n#### MCP Server (port 8002)\n- `POST /execute` - Execute activity\n- `GET /templates` - List templates\n- [List all]\n\n#### Backend API (port 8080)\n- `POST /v2/activities/execute` - Execute activity\n- `GET /v2/activities/templates` - List templates\n- [List all]\n\n## Technology Stack\n\n### Frontend\n- React, TypeScript\n- [List key libraries]\n\n### Backend  \n- Python, FastAPI\n- SurrealDB\n- [List key libraries]\n\n### CLI\n- Python, Click\n- [List key libraries]\n\n## Recent Milestones\n\n[From commit history and documentation]\n\n## Known Issues\n\n[From uncommitted work and documentation]\n\n## Next Steps\n\n[Derived from in-flight work analysis]\n\n---\n\n**Maintenance**: This document should be regenerated after major changes\n**Tooling**: Use `organize-documentation-v1` activity to refresh\n```\n\n---\n\n## Success Criteria\n\n- Comprehensive state snapshot created\n- All repositories documented\n- In-flight work clearly identified\n- Architecture diagram included\n- Activity templates cataloged\n- No outdated or speculative information",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "update-reference-documentation",
+      "task_id": "update-reference-documentation",
+      "subagent": "general",
+      "description": "Update or consolidate reference documentation to align with current codebase state",
+      "dependencies": [
+        "create-codebase-state-snapshot"
+      ],
+      "prompt": {
+        "template": "Update reference documentation based on codebase state analysis.\n\n**Read**:\n- DOCUMENTATION_ANALYSIS.md\n- CODEBASE_STATE.md\n\n---\n\n## Your Task\n\n### 1. Identify Reference Documents\n\nFrom DOCUMENTATION_ANALYSIS.md, find documents marked \"Keep & Update\":\n- `*_GUIDE.md`\n- `*_QUICK_START.md`\n- `*_REFERENCE.md`\n- `*_ARCHITECTURE.md`\n\n### 2. Update Each Reference Document\n\nFor each document:\n\n**A. Verify Currency**\n- Check if content matches current codebase state\n- Identify outdated information\n- Note missing recent features\n\n**B. Update Content**\n- Fix outdated references\n- Add new features/capabilities\n- Remove deprecated information\n- Update code examples\n\n**C. Add Metadata**\nAdd header to each updated document:\n\n```markdown\n---\n**Last Updated**: 2026-02-17\n**Status**: Current\n**Maintained By**: Activity System\n**Related**: CODEBASE_STATE.md\n---\n```\n\n### 3. Consolidate Duplicate Content\n\nIf multiple documents cover same topic:\n\n**Strategy**:\n- Choose canonical document (most complete)\n- Merge content from others\n- Add redirect notes to removed files\n- Update references\n\n**Example redirect**:\n```markdown\n# [Old Document Title]\n\n**⚠️ This document has been consolidated**\n\nSee: [NEW_DOCUMENT.md](./NEW_DOCUMENT.md) for current information.\n\n**Archived**: .archive/[old-location]\n```\n\n### 4. Create Documentation Index\n\nCreate `DOCUMENTATION_INDEX.md`:\n\n```markdown\n# Documentation Index\n\n**Last Updated**: 2026-02-17\n**Purpose**: Central index of all active documentation\n\n## Quick Start Guides\n\n- [Activity System Quick Start](ACTIVITY_SYSTEM_QUICK_START.md) - Get started with activities\n- [Cochange Learning Guide](COCHANGE_LEARNING_GUIDE.md) - Use cochange predictions\n- [Development Setup](DEVELOPMENT_SETUP.md) - Set up local environment\n\n## Architecture Documentation\n\n- [System Architecture](ARCHITECTURE.md) - High-level system design\n- [Integration Architecture](INTEGRATION_ARCHITECTURE.md) - Component interactions\n- [Data Flow](DATA_FLOW.md) - Data movement through system\n\n## Reference Documentation\n\n- [API Reference](API_REFERENCE.md) - All API endpoints\n- [Activity Template Reference](ACTIVITY_TEMPLATE_REFERENCE.md) - Template schema\n- [MCP Tools Reference](MCP_TOOLS_REFERENCE.md) - Available tools\n\n## Current State\n\n- [Codebase State Snapshot](CODEBASE_STATE.md) - Current functionality and in-flight work\n- [Recent Changes](RECENT_CHANGES.md) - Last 30 days of significant changes\n\n## Historical Documentation\n\nSee [.archive/README.md](.archive/README.md) for archived documentation.\n\n## Maintenance\n\nDocumentation is kept current through:\n- Automatic updates via `organize-documentation-v1` activity\n- Manual updates after major changes\n- Regular reviews (monthly)\n\n**To refresh documentation**:\n```bash\nopencode activity execute --template organize-documentation-v1\n```\n```\n\n### 5. Verify Cross-References\n\nCheck all kept documents for:\n- Links to archived files (update paths)\n- Links to consolidated files (update to canonical version)\n- Broken links (fix or remove)\n\n```bash\n# Find all markdown links\ngrep -r \"\\[.*\\](.*)\" *.md\n\n# Check if linked files exist\nfor link in $(grep -oh \"\\[.*\\](.*\\.md)\" *.md | sed 's/.*](\\(.*\\))/\\1/'); do\n  if [ ! -f \"$link\" ]; then\n    echo \"Broken link: $link\"\n  fi\ndone\n```\n\n### 6. Create Update Report\n\nCreate `DOCUMENTATION_UPDATE_REPORT.md`:\n\n```markdown\n# Documentation Update Report\n\n**Date**: 2026-02-17 (use today's date)\n\n## Documents Updated\n\n### Updated ([count] files)\n[List with changes made]\n\n### Consolidated ([count] files)\n[List with consolidation details]\n\n### Verified Current ([count] files)\n[List files verified as current]\n\n## Cross-Reference Updates\n[List updated links]\n\n## Index Created\n- DOCUMENTATION_INDEX.md - Central documentation hub\n\n## Recommendations\n\n### Documents Needing Attention\n[List if any]\n\n### Future Maintenance\n[Suggestions for keeping docs current]\n```\n\n---\n\n## Success Criteria\n\n- All reference documents reviewed and updated\n- Outdated content removed or updated  \n- Duplicate content consolidated\n- Documentation index created\n- All cross-references verified\n- No broken links",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "analyze-documentation",
+      "task_id": "analyze-documentation",
+      "subagent": "general",
+      "description": "Analyze existing documentation files and categorize them by type and status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze all markdown documentation files in the repository root and categorize them.\n\n**Target Directory**: Repository root (.)\n\n---\n\n## Your Task\n\n### 1. Discover All Documentation Files\n\nFind all `.md` files in the target directory:\n\n```bash\nfind . -maxdepth 1 -name \"*.md\" -type f | sort\n```\n\n### 2. Categorize Documentation\n\nGroup files into these categories:\n\n#### A. **Session Documentation** (Archive)\nFiles documenting work sessions, temporary status, and historical context:\n- `*_SUMMARY.md` - Session summaries\n- `*_STATUS.md` - Point-in-time status reports  \n- `*_COMPLETE.md` - Completion reports\n- `SESSION_*.md` - Session-specific docs\n- `*_FEB*.md` - Date-stamped session docs\n\n#### B. **Reference Documentation** (Keep & Update)\nOngoing reference materials that should be maintained:\n- `*_GUIDE.md` - How-to guides\n- `*_QUICK_START.md` - Quick start guides\n- `*_REFERENCE.md` - Reference documentation\n- `*_ARCHITECTURE.md` - Architecture diagrams\n- `*_INTEGRATION.md` - Integration guides\n\n#### C. **Analysis Documentation** (Archive or Integrate)\nTechnical analysis and design documents:\n- `*_ANALYSIS.md` - Technical analysis\n- `*_DESIGN.md` - Design documents\n- `*_PLAN.md` - Planning documents\n- `*_INVESTIGATION.md` - Investigation reports\n\n#### D. **Project Status** (Consolidate)\nCurrent project state and roadmaps:\n- `*_PROJECT_STATUS.md` - Project status\n- `*_ROADMAP.md` - Roadmaps\n- `*_NEXT_STEPS.md` - Next steps\n\n#### E. **Testing & Validation** (Archive or Keep)\nTest results and validation reports:\n- `*_TEST*.md` - Test results\n- `*_VALIDATION*.md` - Validation reports\n- `*_VERIFICATION*.md` - Verification results\n\n### 3. Identify In-Flight Work\n\nScan documentation for indicators of in-flight changes:\n- Uncommitted changes mentioned\n- \"WIP\" or \"TODO\" sections\n- \"Next steps\" or \"Future work\" sections\n- References to incomplete features\n- Migration plans in progress\n\n### 4. Analyze Content Quality\n\nFor each file, assess:\n- **Currency**: Is information still relevant?\n- **Completeness**: Is work documented as finished?\n- **Integration**: Should content be merged elsewhere?\n- **Duplication**: Does content overlap with other files?\n\n### 5. Create Analysis Report\n\nCreate `DOCUMENTATION_ANALYSIS.md` with:\n\n```markdown\n# Documentation Analysis Report\n\n**Date**: 2026-02-17 (use today's date)\n**Target**: .\n**Total Files**: [count]\n\n## Summary Statistics\n\n- Session Documentation: [count] files\n- Reference Documentation: [count] files\n- Analysis Documentation: [count] files\n- Project Status: [count] files\n- Testing & Validation: [count] files\n\n## Categorization\n\n### Session Documentation (Archive)\n[List files with brief description]\n\n### Reference Documentation (Keep & Update)\n[List files with currency assessment]\n\n### Analysis Documentation (Archive or Integrate)\n[List files with integration recommendations]\n\n### Project Status (Consolidate)\n[List files with consolidation plan]\n\n### Testing & Validation (Archive or Keep)\n[List files with retention decision]\n\n## In-Flight Work Identified\n\n[List incomplete work items found in documentation]\n\n## Recommendations\n\n### Files to Archive\n[List with rationale]\n\n### Files to Update\n[List with required updates]\n\n### Files to Consolidate\n[List with consolidation strategy]\n\n### Files to Delete\n[List with justification]\n```\n\n---\n\n## Success Criteria\n\n- All `.md` files discovered and categorized\n- Clear rationale for each categorization decision\n- In-flight work identified and documented\n- Actionable recommendations for each file\n- No guesswork - base decisions on file content",
+        "variables": [
+          {
+            "name": "target_directory",
+            "type": "string",
+            "required": false,
+            "description": "Directory to analyze (defaults to repository root)",
+            "default": "."
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "archive-historical-docs",
+      "task_id": "archive-historical-docs",
+      "subagent": "general",
+      "description": "Move session documentation and completed work reports to archive directory",
+      "dependencies": [
+        "analyze-documentation"
+      ],
+      "prompt": {
+        "template": "Archive historical documentation based on DOCUMENTATION_ANALYSIS.md recommendations.\n\n**Read**: DOCUMENTATION_ANALYSIS.md\n\n---\n\n## Your Task\n\n### 1. Create Archive Structure\n\nCreate organized archive directory:\n\n```bash\nmkdir -p .archive/sessions/2026-02-16\nmkdir -p .archive/analysis\nmkdir -p .archive/testing\nmkdir -p .archive/designs\n```\n\n### 2. Archive Session Documentation\n\nMove session-specific files to `.archive/sessions/YYYY-MM-DD/`:\n\n**Files to archive**:\n- Session summaries (`*_SUMMARY.md`)\n- Status reports (`*_STATUS.md`)\n- Completion reports (`*_COMPLETE.md`)\n- Date-stamped docs (`*_FEB16.md`)\n\n**Preserve**:\n- File timestamps\n- File permissions\n- Alphabetical organization\n\n```bash\n# Example\nmv SESSION_SUMMARY_FEB16.md .archive/sessions/2026-02-16/\n```\n\n### 3. Archive Analysis Documents\n\nMove technical analysis to `.archive/analysis/`:\n\n**Files to archive**:\n- One-time analyses (`*_ANALYSIS.md`)\n- Completed investigations (`*_INVESTIGATION.md`)\n- Historical designs (`*_DESIGN.md`)\n\n**Keep in root**:\n- Living architecture docs\n- Active design references\n\n### 4. Archive Test Results\n\nMove test results to `.archive/testing/`:\n\n**Files to archive**:\n- Test reports (`*_TEST_RESULTS.md`)\n- Validation reports (`*_VALIDATION*.md`)\n- Verification results (`*_VERIFICATION*.md`)\n\n**Keep in root**:\n- Active test plans\n- Current validation strategies\n\n### 5. Update References\n\nIf any kept files reference archived files, update paths:\n\n```markdown\n# Before\nSee SESSION_SUMMARY_FEB16.md for details\n\n# After  \nSee .archive/sessions/2026-02-16/SESSION_SUMMARY_FEB16.md for details\n```\n\n### 6. Create Archive Index\n\nCreate `.archive/README.md`:\n\n```markdown\n# Documentation Archive\n\n**Purpose**: Historical documentation from development sessions\n**Organization**: By date and category\n\n## Structure\n\n- `sessions/YYYY-MM-DD/` - Session summaries and status reports\n- `analysis/` - Technical analysis and investigations\n- `testing/` - Test results and validation reports\n- `designs/` - Historical design documents\n\n## Recent Archives\n\n### 2026-02-16\n- [count] session documents\n- [List key documents]\n\n## Search Tips\n\n```bash\n# Find all files mentioning a topic\ngrep -r \"topic\" .archive/\n\n# Find files by date\nfind .archive/sessions/2026-02-16 -type f\n```\n```\n\n### 7. Create Archive Report\n\nCreate `ARCHIVE_REPORT.md` documenting:\n\n```markdown\n# Documentation Archive Report\n\n**Date**: 2026-02-17 (use today's date)\n**Files Archived**: [count]\n**Archive Location**: .archive/\n\n## Files Moved\n\n### Session Documentation ([count] files)\n[List with destination]\n\n### Analysis Documentation ([count] files)\n[List with destination]\n\n### Testing Documentation ([count] files)\n[List with destination]\n\n## Files Remaining in Root\n[List with rationale]\n\n## Reference Updates\n[List files with updated paths]\n```\n\n---\n\n## Success Criteria\n\n- All recommended files archived\n- Archive structure created and documented\n- No broken references in kept files\n- Archive index created\n- Original files removed from root",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -d .archive && test -f .archive/README.md",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-codebase-state-snapshot",
+      "task_id": "create-codebase-state-snapshot",
+      "subagent": "general",
+      "description": "Create stateless representation of current codebase functionality and capabilities",
+      "dependencies": [
+        "archive-historical-docs"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive, stateless snapshot of current codebase functionality.\n\n---\n\n## Your Task\n\n### 1. Analyze Repository Structure\n\n**Discover components**:\n- List all repositories (`repos/*/`)\n- Identify key directories and their purposes\n- Map service relationships\n\n```bash\n# Repository structure\nls -la repos/\n\n# Service discovery\nfind repos/ -name \"package.json\" -o -name \"pyproject.toml\" -o -name \"Cargo.toml\"\n```\n\n### 2. Document Core Capabilities\n\nFor each major component, document:\n\n**A. Purpose**: What does it do?\n**B. Key Features**: Major capabilities\n**C. Technologies**: Stack and dependencies\n**D. Integration Points**: How it connects to other components\n**E. Recent Commits**: Last 3 commits for context\n\n```bash\n# Example: metabob-opencode\ncd repos/metabob-opencode\ngit log --oneline -3\ncat package.json | jq '.scripts'\n```\n\n### 3. Identify In-Flight Changes\n\nScan for uncommitted work across all repositories:\n\n```bash\nfor repo in repos/*/; do\n  echo \"=== $repo ===\"\n  cd \"$repo\"\n  git status --short\n  git diff --stat\n  cd -\ndone\n```\n\n**Document**:\n- Modified files\n- Purpose of changes\n- Completion status\n- Dependencies between changes\n\n### 4. Map Activity Templates\n\nList all available activity templates:\n\n```bash\nfind .metabob/activities/ -name \"*.json\" | sort\n```\n\n**For each template, document**:\n- ID and name\n- Purpose and use case\n- Success rate (if available)\n- Status (stable, experimental, deprecated)\n\n### 5. Document Integration Architecture\n\nCreate architecture diagram showing:\n\n```\n┌─────────────────────────────────────────────────────┐\n│                  Component Map                       │\n├─────────────────────────────────────────────────────┤\n│  CLI ──→ MCP ──→ Backend ──→ Database              │\n│   ↓       ↓        ↓           ↓                    │\n│  Tools  Agents  Templates  Learning Loop            │\n└─────────────────────────────────────────────────────┘\n```\n\n**Include**:\n- Data flow between components\n- API endpoints and protocols\n- Storage mechanisms\n- External dependencies\n\n### 6. Create CODEBASE_STATE.md\n\nCreate comprehensive state snapshot:\n\n```markdown\n# Codebase State Snapshot\n\n**Generated**: 2026-02-17\n**Purpose**: Stateless representation of current functionality\n**Version**: Auto-detected from commits\n\n---\n\n## Executive Summary\n\n[High-level overview of what the codebase does and current state]\n\n## Repository Structure\n\n### metabob-opencode\n**Purpose**: [Description]\n**Status**: [Stable/Active Development]\n**Key Features**:\n- Feature 1\n- Feature 2\n\n**Recent Changes**:\n- [commit] Description\n- [commit] Description\n- [commit] Description\n\n**Integration Points**:\n- Connects to: metabob-rpc-api via REST\n- Provides: Activity execution framework\n\n### metabob-rpc-api\n[Similar structure]\n\n### metabob-cli\n[Similar structure]\n\n### metabob-dashboard\n[Similar structure]\n\n## Core Capabilities\n\n### 1. Activity System\n**Description**: [What it does]\n**Components**: [List]\n**Status**: [Operational/In Development]\n**Templates Available**: [Count and list]\n\n### 2. Metabob Integration\n**Description**: [What it does]\n**Components**: [List]\n**Status**: [Operational/In Development]\n**Features**:\n- Code quality analysis\n- Cochange prediction\n- Component annotations\n\n### 3. Learning Loop\n**Description**: [What it does]\n**Components**: [List]\n**Status**: [Operational/In Development]\n**Capabilities**:\n- Activity outcome tracking\n- Template evolution\n- Distributed feedback\n\n## Activity Template Catalog\n\n### Production Templates\n- `fix-bug-complete`: [Purpose, status]\n- `add-feature-complete`: [Purpose, status]\n- `refactor-component-complete`: [Purpose, status]\n\n### Experimental Templates\n- [List with status]\n\n## In-Flight Changes\n\n### Uncommitted Work\n\n#### metabob-opencode\n- [File]: [Purpose] - [Status]\n\n#### metabob-rpc-api\n- [File]: [Purpose] - [Status]\n\n### Planned Work\n[From documentation analysis]\n\n### Blocked Work\n[If any]\n\n## Integration Architecture\n\n```\n[ASCII diagram of component relationships]\n```\n\n### Data Flow\n1. User request → CLI\n2. CLI → MCP server\n3. MCP → Activity execution\n4. Activity → Backend API\n5. Backend → Database\n6. Results → Dashboard\n\n### API Endpoints\n\n#### MCP Server (port 8002)\n- `POST /execute` - Execute activity\n- `GET /templates` - List templates\n- [List all]\n\n#### Backend API (port 8080)\n- `POST /v2/activities/execute` - Execute activity\n- `GET /v2/activities/templates` - List templates\n- [List all]\n\n## Technology Stack\n\n### Frontend\n- React, TypeScript\n- [List key libraries]\n\n### Backend  \n- Python, FastAPI\n- SurrealDB\n- [List key libraries]\n\n### CLI\n- Python, Click\n- [List key libraries]\n\n## Recent Milestones\n\n[From commit history and documentation]\n\n## Known Issues\n\n[From uncommitted work and documentation]\n\n## Next Steps\n\n[Derived from in-flight work analysis]\n\n---\n\n**Maintenance**: This document should be regenerated after major changes\n**Tooling**: Use `organize-documentation-v1` activity to refresh\n```\n\n---\n\n## Success Criteria\n\n- Comprehensive state snapshot created\n- All repositories documented\n- In-flight work clearly identified\n- Architecture diagram included\n- Activity templates cataloged\n- No outdated or speculative information",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "update-reference-documentation",
+      "task_id": "update-reference-documentation",
+      "subagent": "general",
+      "description": "Update or consolidate reference documentation to align with current codebase state",
+      "dependencies": [
+        "create-codebase-state-snapshot"
+      ],
+      "prompt": {
+        "template": "Update reference documentation based on codebase state analysis.\n\n**Read**:\n- DOCUMENTATION_ANALYSIS.md\n- CODEBASE_STATE.md\n\n---\n\n## Your Task\n\n### 1. Identify Reference Documents\n\nFrom DOCUMENTATION_ANALYSIS.md, find documents marked \"Keep & Update\":\n- `*_GUIDE.md`\n- `*_QUICK_START.md`\n- `*_REFERENCE.md`\n- `*_ARCHITECTURE.md`\n\n### 2. Update Each Reference Document\n\nFor each document:\n\n**A. Verify Currency**\n- Check if content matches current codebase state\n- Identify outdated information\n- Note missing recent features\n\n**B. Update Content**\n- Fix outdated references\n- Add new features/capabilities\n- Remove deprecated information\n- Update code examples\n\n**C. Add Metadata**\nAdd header to each updated document:\n\n```markdown\n---\n**Last Updated**: 2026-02-17\n**Status**: Current\n**Maintained By**: Activity System\n**Related**: CODEBASE_STATE.md\n---\n```\n\n### 3. Consolidate Duplicate Content\n\nIf multiple documents cover same topic:\n\n**Strategy**:\n- Choose canonical document (most complete)\n- Merge content from others\n- Add redirect notes to removed files\n- Update references\n\n**Example redirect**:\n```markdown\n# [Old Document Title]\n\n**⚠️ This document has been consolidated**\n\nSee: [NEW_DOCUMENT.md](./NEW_DOCUMENT.md) for current information.\n\n**Archived**: .archive/[old-location]\n```\n\n### 4. Create Documentation Index\n\nCreate `DOCUMENTATION_INDEX.md`:\n\n```markdown\n# Documentation Index\n\n**Last Updated**: 2026-02-17\n**Purpose**: Central index of all active documentation\n\n## Quick Start Guides\n\n- [Activity System Quick Start](ACTIVITY_SYSTEM_QUICK_START.md) - Get started with activities\n- [Cochange Learning Guide](COCHANGE_LEARNING_GUIDE.md) - Use cochange predictions\n- [Development Setup](DEVELOPMENT_SETUP.md) - Set up local environment\n\n## Architecture Documentation\n\n- [System Architecture](ARCHITECTURE.md) - High-level system design\n- [Integration Architecture](INTEGRATION_ARCHITECTURE.md) - Component interactions\n- [Data Flow](DATA_FLOW.md) - Data movement through system\n\n## Reference Documentation\n\n- [API Reference](API_REFERENCE.md) - All API endpoints\n- [Activity Template Reference](ACTIVITY_TEMPLATE_REFERENCE.md) - Template schema\n- [MCP Tools Reference](MCP_TOOLS_REFERENCE.md) - Available tools\n\n## Current State\n\n- [Codebase State Snapshot](CODEBASE_STATE.md) - Current functionality and in-flight work\n- [Recent Changes](RECENT_CHANGES.md) - Last 30 days of significant changes\n\n## Historical Documentation\n\nSee [.archive/README.md](.archive/README.md) for archived documentation.\n\n## Maintenance\n\nDocumentation is kept current through:\n- Automatic updates via `organize-documentation-v1` activity\n- Manual updates after major changes\n- Regular reviews (monthly)\n\n**To refresh documentation**:\n```bash\nopencode activity execute --template organize-documentation-v1\n```\n```\n\n### 5. Verify Cross-References\n\nCheck all kept documents for:\n- Links to archived files (update paths)\n- Links to consolidated files (update to canonical version)\n- Broken links (fix or remove)\n\n```bash\n# Find all markdown links\ngrep -r \"\\[.*\\](.*)\" *.md\n\n# Check if linked files exist\nfor link in $(grep -oh \"\\[.*\\](.*\\.md)\" *.md | sed 's/.*](\\(.*\\))/\\1/'); do\n  if [ ! -f \"$link\" ]; then\n    echo \"Broken link: $link\"\n  fi\ndone\n```\n\n### 6. Create Update Report\n\nCreate `DOCUMENTATION_UPDATE_REPORT.md`:\n\n```markdown\n# Documentation Update Report\n\n**Date**: 2026-02-17 (use today's date)\n\n## Documents Updated\n\n### Updated ([count] files)\n[List with changes made]\n\n### Consolidated ([count] files)\n[List with consolidation details]\n\n### Verified Current ([count] files)\n[List files verified as current]\n\n## Cross-Reference Updates\n[List updated links]\n\n## Index Created\n- DOCUMENTATION_INDEX.md - Central documentation hub\n\n## Recommendations\n\n### Documents Needing Attention\n[List if any]\n\n### Future Maintenance\n[Suggestions for keeping docs current]\n```\n\n---\n\n## Success Criteria\n\n- All reference documents reviewed and updated\n- Outdated content removed or updated  \n- Duplicate content consolidated\n- Documentation index created\n- All cross-references verified\n- No broken links",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-17T18:10:32.904Z",
+  "metadata": {}
+}

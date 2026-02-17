@@ -1,0 +1,177 @@
+{
+  "name": "v1-baseline",
+  "description": "Process deferred improvement tasks created from failed activity executions",
+  "category": "feature",
+  "activity_id": "boredom-task-processor",
+  "variables": {
+    "task_id": {
+      "type": "",
+      "required": true,
+      "description": "Variable: task_id"
+    },
+    "task_type": {
+      "type": "",
+      "required": true,
+      "description": "Variable: task_type"
+    },
+    "source_template_id": {
+      "type": "",
+      "required": true,
+      "description": "Variable: source_template_id"
+    }
+  },
+  "context_requirements": [],
+  "task_steps": [
+    {
+      "id": "load-task-context",
+      "order": 0,
+      "subagent": "general",
+      "description": "Load Task Context: Retrieve and analyze the boredom task details and associated debug data",
+      "dependencies": [],
+      "prompt": {
+        "template": "Load Task Context: Retrieve and analyze the boredom task details and associated debug data",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "analyze-root-cause",
+      "order": 1,
+      "subagent": "general",
+      "description": "Analyze Root Cause: Determine the underlying cause of the failure using debug data",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze Root Cause: Determine the underlying cause of the failure using debug data",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "evaluate-suggestions",
+      "order": 2,
+      "subagent": "general",
+      "description": "Evaluate Suggested Actions: Review and prioritize the automatically suggested actions",
+      "dependencies": [],
+      "prompt": {
+        "template": "Evaluate Suggested Actions: Review and prioritize the automatically suggested actions",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "implement-fix",
+      "order": 3,
+      "subagent": "general",
+      "description": "Implement the Fix: Make the necessary changes to resolve the issue",
+      "dependencies": [],
+      "prompt": {
+        "template": "Implement the Fix: Make the necessary changes to resolve the issue",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "validate-fix",
+      "order": 4,
+      "subagent": "general",
+      "description": "Validate the Fix: Ensure the fix resolves the original issue without introducing new problems",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate the Fix: Ensure the fix resolves the original issue without introducing new problems",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "record-outcome",
+      "order": 5,
+      "subagent": "general",
+      "description": "Record Outcome: Document the fix and record metrics for future learning",
+      "dependencies": [],
+      "prompt": {
+        "template": "Record Outcome: Document the fix and record metrics for future learning",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    }
+  ],
+  "_original_activity_id": "boredom-task-processor"
+}

@@ -1,0 +1,61 @@
+{
+  "name": "Test Impulse Tracking",
+  "description": "Simple test activity to validate impulse tracking end-to-end",
+  "category": "test",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Echo test message to verify activity execution",
+      "dependencies": [],
+      "prompt": {
+        "template": "Please respond with: 'Impulse tracking test successful. Activity ID: {{activityId}}'",
+        "maxTokens": 500,
+        "compressionStrategy": "none",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Activity execution ID for tracking"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "none"
+      }
+    }
+  ],
+  "contextRequirements": [
+    {
+      "type": "codebaseSearch",
+      "query": "impulse tracking test",
+      "minResults": 0,
+      "maxResults": 2,
+      "maxTokens": 500
+    },
+    {
+      "type": "recentWork",
+      "fileCount": 2,
+      "maxTokens": 500
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 1000,
+    "annotationStrategy": "none"
+  }
+}

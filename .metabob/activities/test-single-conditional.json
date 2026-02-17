@@ -1,0 +1,107 @@
+{
+  "activity_id": "test-single-conditional",
+  "name": "Test Single Conditional",
+  "description": "Test with ONE simple Handlebars conditional",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "single-conditional-task",
+      "task_id": "single-conditional-task",
+      "subagent": "general",
+      "description": "Create file with one conditional",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create {{filename}} with:\n{{title}}\n{{#if notes}}{{notes}}{{/if}}",
+        "variables": [
+          {
+            "name": "filename",
+            "type": "string",
+            "required": true,
+            "description": "Filename"
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true,
+            "description": "Title"
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "required": false,
+            "description": "Optional notes"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "single-conditional-task",
+      "task_id": "single-conditional-task",
+      "subagent": "general",
+      "description": "Create file with one conditional",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create {{filename}} with:\n{{title}}\n{{#if notes}}{{notes}}{{/if}}",
+        "variables": [
+          {
+            "name": "filename",
+            "type": "string",
+            "required": true,
+            "description": "Filename"
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true,
+            "description": "Title"
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "required": false,
+            "description": "Optional notes"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-17T18:10:51.178Z",
+  "metadata": {}
+}

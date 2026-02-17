@@ -1,0 +1,123 @@
+{
+  "activity_id": "add-comprehensive-tests",
+  "name": "Add Comprehensive Tests",
+  "description": "Add comprehensive test coverage for existing code - production ready",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "write-tests",
+      "task_id": "write-tests",
+      "subagent": "general",
+      "description": "Analyze code and write comprehensive tests",
+      "dependencies": [],
+      "prompt": {
+        "template": "Add comprehensive test coverage for existing code.\n\n**Test Target**:\n- Component: {{component_name}}\n- Files: {{target_files}}\n- Test Framework: {{test_framework}}\n- Coverage Goal: {{coverage_goal}}\n\nNote: If test framework not specified, detect from existing tests. If coverage goal not specified, aim for 80%+ coverage of critical paths.\n\n---\n\n## Your Task\n\n### Step 1: Analyze the Code (10-15 minutes)\n\n**Understand what to test**:\n- Read all files for {{component_name}}\n- Identify public APIs (functions, classes, methods)\n- Identify internal logic that needs testing\n- Note edge cases and error conditions\n- Check for existing tests\n\n**Map out test scenarios**:\n- Happy path scenarios (normal usage)\n- Error scenarios (invalid input, failures)\n- Edge cases (boundaries, empty, null, undefined)\n- Integration points (dependencies, side effects)\n\n**Review existing tests**:\n- Use glob to find test files (`*.test.ts`, `*.spec.ts`, etc.)\n- Read existing test patterns\n- Note test framework and conventions\n- Identify gaps in coverage\n\n### Step 2: Plan Test Coverage (10 minutes)\n\n**Create test outline** in TEST_PLAN.md:\n```markdown\n# Test Plan: {{component_name}}\n\n## Code Being Tested\n- Files: [list files]\n- Public APIs: [list functions/methods]\n- Key behaviors: [what the code does]\n\n## Test Scenarios\n\n### Happy Path Tests\n1. [Scenario 1 description]\n2. [Scenario 2 description]\n\n### Error Handling Tests\n1. [Error scenario 1]\n2. [Error scenario 2]\n\n### Edge Case Tests\n1. [Edge case 1]\n2. [Edge case 2]\n\n### Integration Tests\n1. [Integration scenario 1] (if applicable)\n\n## Coverage Goals\n- Target: {{coverage_goal}} or 80%+\n- Focus: Critical paths and error handling\n```\n\n### Step 3: Write Tests (30-60 minutes)\n\n**Follow existing patterns**:\n- Use the same test framework as other tests\n- Follow the same file naming (`component.test.ts`)\n- Use the same assertion library\n- Match the existing test structure\n\n**Test structure best practices**:\n```typescript\ndescribe('ComponentName', () => {\n  describe('methodName', () => {\n    it('should handle normal case', () => {\n      // Arrange: Set up test data\n      // Act: Call the function\n      // Assert: Verify results\n    })\n    \n    it('should handle error case', () => {\n      // Test error handling\n    })\n    \n    it('should handle edge case', () => {\n      // Test boundaries\n    })\n  })\n})\n```\n\n**What to test**:\n- **Functionality**: Does it do what it's supposed to?\n- **Input validation**: Does it handle invalid input?\n- **Error handling**: Does it fail gracefully?\n- **Edge cases**: Does it handle boundaries correctly?\n- **Side effects**: Does it update state correctly?\n- **Integration**: Does it work with dependencies?\n\n**Test quality guidelines**:\n- One assertion per test (when possible)\n- Clear test names (describe what is being tested)\n- Independent tests (no shared state)\n- Fast tests (mock slow dependencies)\n- Deterministic tests (no randomness, no time dependencies)\n- Clear arrange-act-assert structure\n\n**Coverage priorities**:\n1. Critical business logic (must work)\n2. Error handling (must fail safely)\n3. Edge cases (prevent bugs)\n4. Happy paths (verify normal usage)\n5. Integration points (ensure compatibility)\n\n### Step 4: Handle Dependencies (10-20 minutes)\n\n**Mocking and stubbing**:\n- Mock external dependencies (APIs, databases, file system)\n- Stub time-dependent functions (Date.now, setTimeout)\n- Use test fixtures for complex data\n- Keep mocks simple and maintainable\n\n**Test data**:\n- Use realistic but simple test data\n- Create fixtures for reusable test data\n- Avoid hardcoding values (use constants)\n- Generate data when appropriate\n\n### Step 5: Run and Verify Tests (10 minutes)\n\n**Run the tests**:\n```bash\nnpm test [test-file]\n# or\nbun test [test-file]\n# or framework-specific command\n```\n\n**Verify coverage** (if available):\n```bash\nnpm run test:coverage\n# or\nbun test --coverage\n```\n\n**Ensure all tests pass**:\n- All new tests passing\n- All existing tests still passing\n- No test warnings or errors\n- Coverage meets goal\n\n### Step 6: Document Tests (5-10 minutes)\n\nUpdate TEST_PLAN.md with results:\n```markdown\n## Tests Implemented\n\n**Test Files Created/Updated**:\n- `path/to/component.test.ts` - [X tests]\n\n**Coverage Achieved**:\n- Lines: [X%]\n- Branches: [X%]\n- Functions: [X%]\n\n**Test Counts**:\n- Happy path: [X tests]\n- Error handling: [X tests]\n- Edge cases: [X tests]\n- Integration: [X tests]\n- **Total**: [X tests]\n\n**How to Run**:\n```bash\nnpm test path/to/component.test.ts\n```\n\n**Coverage Gaps** (if any):\n- [Area not yet covered and why]\n```\n\n---\n\n## Success Criteria\n\nTest implementation is complete when:\n- ✅ All planned test scenarios implemented\n- ✅ All tests passing\n- ✅ Coverage goal met ({{coverage_goal}} or 80%+)\n- ✅ Tests follow existing patterns\n- ✅ Tests are maintainable and clear\n- ✅ Critical paths covered\n- ✅ Error handling tested\n\n---\n\n**Important**: Good tests prevent regressions, document behavior, and enable confident refactoring. Write tests you'd want to maintain.",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of component/module to test"
+          },
+          {
+            "name": "target_files",
+            "type": "string",
+            "required": true,
+            "description": "Files to test (comma-separated paths)"
+          },
+          {
+            "name": "test_framework",
+            "type": "string",
+            "required": false,
+            "description": "Test framework (jest, vitest, bun:test, etc.) - will detect if not specified"
+          },
+          {
+            "name": "coverage_goal",
+            "type": "string",
+            "required": false,
+            "description": "Coverage goal percentage (e.g., '80%') - defaults to 80%+ critical paths"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [
+          "TEST_PLAN.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "write-tests",
+      "task_id": "write-tests",
+      "subagent": "general",
+      "description": "Analyze code and write comprehensive tests",
+      "dependencies": [],
+      "prompt": {
+        "template": "Add comprehensive test coverage for existing code.\n\n**Test Target**:\n- Component: {{component_name}}\n- Files: {{target_files}}\n- Test Framework: {{test_framework}}\n- Coverage Goal: {{coverage_goal}}\n\nNote: If test framework not specified, detect from existing tests. If coverage goal not specified, aim for 80%+ coverage of critical paths.\n\n---\n\n## Your Task\n\n### Step 1: Analyze the Code (10-15 minutes)\n\n**Understand what to test**:\n- Read all files for {{component_name}}\n- Identify public APIs (functions, classes, methods)\n- Identify internal logic that needs testing\n- Note edge cases and error conditions\n- Check for existing tests\n\n**Map out test scenarios**:\n- Happy path scenarios (normal usage)\n- Error scenarios (invalid input, failures)\n- Edge cases (boundaries, empty, null, undefined)\n- Integration points (dependencies, side effects)\n\n**Review existing tests**:\n- Use glob to find test files (`*.test.ts`, `*.spec.ts`, etc.)\n- Read existing test patterns\n- Note test framework and conventions\n- Identify gaps in coverage\n\n### Step 2: Plan Test Coverage (10 minutes)\n\n**Create test outline** in TEST_PLAN.md:\n```markdown\n# Test Plan: {{component_name}}\n\n## Code Being Tested\n- Files: [list files]\n- Public APIs: [list functions/methods]\n- Key behaviors: [what the code does]\n\n## Test Scenarios\n\n### Happy Path Tests\n1. [Scenario 1 description]\n2. [Scenario 2 description]\n\n### Error Handling Tests\n1. [Error scenario 1]\n2. [Error scenario 2]\n\n### Edge Case Tests\n1. [Edge case 1]\n2. [Edge case 2]\n\n### Integration Tests\n1. [Integration scenario 1] (if applicable)\n\n## Coverage Goals\n- Target: {{coverage_goal}} or 80%+\n- Focus: Critical paths and error handling\n```\n\n### Step 3: Write Tests (30-60 minutes)\n\n**Follow existing patterns**:\n- Use the same test framework as other tests\n- Follow the same file naming (`component.test.ts`)\n- Use the same assertion library\n- Match the existing test structure\n\n**Test structure best practices**:\n```typescript\ndescribe('ComponentName', () => {\n  describe('methodName', () => {\n    it('should handle normal case', () => {\n      // Arrange: Set up test data\n      // Act: Call the function\n      // Assert: Verify results\n    })\n    \n    it('should handle error case', () => {\n      // Test error handling\n    })\n    \n    it('should handle edge case', () => {\n      // Test boundaries\n    })\n  })\n})\n```\n\n**What to test**:\n- **Functionality**: Does it do what it's supposed to?\n- **Input validation**: Does it handle invalid input?\n- **Error handling**: Does it fail gracefully?\n- **Edge cases**: Does it handle boundaries correctly?\n- **Side effects**: Does it update state correctly?\n- **Integration**: Does it work with dependencies?\n\n**Test quality guidelines**:\n- One assertion per test (when possible)\n- Clear test names (describe what is being tested)\n- Independent tests (no shared state)\n- Fast tests (mock slow dependencies)\n- Deterministic tests (no randomness, no time dependencies)\n- Clear arrange-act-assert structure\n\n**Coverage priorities**:\n1. Critical business logic (must work)\n2. Error handling (must fail safely)\n3. Edge cases (prevent bugs)\n4. Happy paths (verify normal usage)\n5. Integration points (ensure compatibility)\n\n### Step 4: Handle Dependencies (10-20 minutes)\n\n**Mocking and stubbing**:\n- Mock external dependencies (APIs, databases, file system)\n- Stub time-dependent functions (Date.now, setTimeout)\n- Use test fixtures for complex data\n- Keep mocks simple and maintainable\n\n**Test data**:\n- Use realistic but simple test data\n- Create fixtures for reusable test data\n- Avoid hardcoding values (use constants)\n- Generate data when appropriate\n\n### Step 5: Run and Verify Tests (10 minutes)\n\n**Run the tests**:\n```bash\nnpm test [test-file]\n# or\nbun test [test-file]\n# or framework-specific command\n```\n\n**Verify coverage** (if available):\n```bash\nnpm run test:coverage\n# or\nbun test --coverage\n```\n\n**Ensure all tests pass**:\n- All new tests passing\n- All existing tests still passing\n- No test warnings or errors\n- Coverage meets goal\n\n### Step 6: Document Tests (5-10 minutes)\n\nUpdate TEST_PLAN.md with results:\n```markdown\n## Tests Implemented\n\n**Test Files Created/Updated**:\n- `path/to/component.test.ts` - [X tests]\n\n**Coverage Achieved**:\n- Lines: [X%]\n- Branches: [X%]\n- Functions: [X%]\n\n**Test Counts**:\n- Happy path: [X tests]\n- Error handling: [X tests]\n- Edge cases: [X tests]\n- Integration: [X tests]\n- **Total**: [X tests]\n\n**How to Run**:\n```bash\nnpm test path/to/component.test.ts\n```\n\n**Coverage Gaps** (if any):\n- [Area not yet covered and why]\n```\n\n---\n\n## Success Criteria\n\nTest implementation is complete when:\n- ✅ All planned test scenarios implemented\n- ✅ All tests passing\n- ✅ Coverage goal met ({{coverage_goal}} or 80%+)\n- ✅ Tests follow existing patterns\n- ✅ Tests are maintainable and clear\n- ✅ Critical paths covered\n- ✅ Error handling tested\n\n---\n\n**Important**: Good tests prevent regressions, document behavior, and enable confident refactoring. Write tests you'd want to maintain.",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of component/module to test"
+          },
+          {
+            "name": "target_files",
+            "type": "string",
+            "required": true,
+            "description": "Files to test (comma-separated paths)"
+          },
+          {
+            "name": "test_framework",
+            "type": "string",
+            "required": false,
+            "description": "Test framework (jest, vitest, bun:test, etc.) - will detect if not specified"
+          },
+          {
+            "name": "coverage_goal",
+            "type": "string",
+            "required": false,
+            "description": "Coverage goal percentage (e.g., '80%') - defaults to 80%+ critical paths"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [
+          "TEST_PLAN.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-17T18:57:37.293Z",
+  "metadata": {}
+}
