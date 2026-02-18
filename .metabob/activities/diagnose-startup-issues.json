@@ -5,7 +5,6 @@
   "category": "bugfix",
   "task_steps": [
     {
-      "id": "task-1-gather-diagnostics",
       "task_id": "task-1-gather-diagnostics",
       "subagent": "general",
       "description": "Gather diagnostic information about startup performance and configuration",
@@ -59,7 +58,6 @@
       }
     },
     {
-      "id": "task-2-analyze-issues",
       "task_id": "task-2-analyze-issues",
       "subagent": "general",
       "description": "Analyze diagnostic data to identify root causes and prioritize fixes",
@@ -110,7 +108,6 @@
       }
     },
     {
-      "id": "task-3-fix-startup-performance",
       "task_id": "task-3-fix-startup-performance",
       "subagent": "general",
       "description": "Implement fixes for startup performance bottlenecks",
@@ -180,7 +177,6 @@
       }
     },
     {
-      "id": "task-4-clarify-configuration",
       "task_id": "task-4-clarify-configuration",
       "subagent": "config",
       "description": "Improve configuration clarity, documentation, and validation",
@@ -255,7 +251,6 @@
       }
     },
     {
-      "id": "task-5-fix-dev-build-parity",
       "task_id": "task-5-fix-dev-build-parity",
       "subagent": "general",
       "description": "Fix differences between dev and build modes to ensure parity",
@@ -318,7 +313,6 @@
       }
     },
     {
-      "id": "task-6-verify-and-document",
       "task_id": "task-6-verify-and-document",
       "subagent": "general",
       "description": "Verify all fixes, run comprehensive tests, and document changes",
@@ -418,7 +412,6 @@
   ],
   "tasks": [
     {
-      "id": "task-1-gather-diagnostics",
       "task_id": "task-1-gather-diagnostics",
       "subagent": "general",
       "description": "Gather diagnostic information about startup performance and configuration",
@@ -472,7 +465,6 @@
       }
     },
     {
-      "id": "task-2-analyze-issues",
       "task_id": "task-2-analyze-issues",
       "subagent": "general",
       "description": "Analyze diagnostic data to identify root causes and prioritize fixes",
@@ -523,7 +515,6 @@
       }
     },
     {
-      "id": "task-3-fix-startup-performance",
       "task_id": "task-3-fix-startup-performance",
       "subagent": "general",
       "description": "Implement fixes for startup performance bottlenecks",
@@ -593,7 +584,6 @@
       }
     },
     {
-      "id": "task-4-clarify-configuration",
       "task_id": "task-4-clarify-configuration",
       "subagent": "config",
       "description": "Improve configuration clarity, documentation, and validation",
@@ -668,7 +658,6 @@
       }
     },
     {
-      "id": "task-5-fix-dev-build-parity",
       "task_id": "task-5-fix-dev-build-parity",
       "subagent": "general",
       "description": "Fix differences between dev and build modes to ensure parity",
@@ -731,7 +720,6 @@
       }
     },
     {
-      "id": "task-6-verify-and-document",
       "task_id": "task-6-verify-and-document",
       "subagent": "general",
       "description": "Verify all fixes, run comprehensive tests, and document changes",
@@ -836,6 +824,6 @@
     "avg_cost": 0
   },
   "author": null,
-  "created_at": "2026-02-18T02:36:29.486Z",
+  "created_at": "2026-02-18T03:39:02.486Z",
   "metadata": {}
 }

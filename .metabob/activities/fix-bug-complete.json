@@ -5,7 +5,6 @@
   "category": "bugfix",
   "task_steps": [
     {
-      "id": "analyze-and-locate",
       "task_id": "analyze-and-locate",
       "subagent": "general",
       "description": "Analyze bug report, search for similar issues, and locate the root cause",
@@ -103,7 +102,6 @@
       }
     },
     {
-      "id": "implement-fix",
       "task_id": "implement-fix",
       "subagent": "general",
       "description": "Implement the bug fix addressing the root cause with minimal changes",
@@ -183,7 +181,6 @@
       }
     },
     {
-      "id": "test-fix",
       "task_id": "test-fix",
       "subagent": "test",
       "description": "Write regression tests and verify the fix works without breaking functionality",
@@ -271,7 +268,6 @@
       }
     },
     {
-      "id": "document-and-close",
       "task_id": "document-and-close",
       "subagent": "general",
       "description": "Document the fix with Metabob annotations and create a fix summary",
@@ -360,7 +356,6 @@
   ],
   "tasks": [
     {
-      "id": "analyze-and-locate",
       "task_id": "analyze-and-locate",
       "subagent": "general",
       "description": "Analyze bug report, search for similar issues, and locate the root cause",
@@ -458,7 +453,6 @@
       }
     },
     {
-      "id": "implement-fix",
       "task_id": "implement-fix",
       "subagent": "general",
       "description": "Implement the bug fix addressing the root cause with minimal changes",
@@ -538,7 +532,6 @@
       }
     },
     {
-      "id": "test-fix",
       "task_id": "test-fix",
       "subagent": "test",
       "description": "Write regression tests and verify the fix works without breaking functionality",
@@ -626,7 +619,6 @@
       }
     },
     {
-      "id": "document-and-close",
       "task_id": "document-and-close",
       "subagent": "general",
       "description": "Document the fix with Metabob annotations and create a fix summary",
@@ -720,6 +712,6 @@
     "avg_cost": 0
   },
   "author": null,
-  "created_at": "2026-02-16T10:35:23.061Z",
+  "created_at": "2026-02-18T12:17:34.361Z",
   "metadata": {}
 }
