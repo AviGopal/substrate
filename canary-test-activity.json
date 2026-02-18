@@ -1,0 +1,122 @@
+{
+  "name": "Canary Test Activity",
+  "category": "infrastructure",
+  "description": "Safe experimentation workflow: test activity in container, capture knowledge, demonstrate repeatability, then optionally adopt to host with rollback",
+  
+  "variables": [
+    {
+      "name": "activityId",
+      "type": "string",
+      "required": true,
+      "description": "Activity template ID to test in canary"
+    },
+    {
+      "name": "activityVariables",
+      "type": "object",
+      "required": true,
+      "description": "Variables to pass to the activity being tested"
+    },
+    {
+      "name": "containerName",
+      "type": "string",
+      "required": false,
+      "default": "devbob-opencode",
+      "description": "Container to use for testing (default: devbob-opencode)"
+    },
+    {
+      "name": "adoptToHost",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "If true, adopt to host after successful demonstration (default: false)"
+    }
+  ],
+  
+  "tasks": [
+    {
+      "id": "experiment",
+      "subagent": "general",
+      "description": "Experiment: Execute activity in fresh container",
+      "dependencies": [],
+      "prompt": {
+        "template": "PHASE 1: EXPERIMENT IN CANARY\n\n**Goal**: Test {{activityId}} in isolated container environment\n\n**Steps**:\n\n1. Ensure container is fresh:\n   ```bash\n   ./devbob agent stop {{containerName}} 2>/dev/null || true\n   ./devbob agent start {{containerName}}\n   ```\n\n2. Execute activity in container:\n   ```bash\n   docker exec -i {{containerName}} bash -c \"\n     cd /workspace && \n     opencode activity execute {{activityId}} \\\n       --variables '{{json activityVariables}}' \\\n       --reason 'Canary experiment'\n   \"\n   ```\n\n3. Capture exit code and output to determine success/failure\n\n4. If successful, copy artifacts:\n   ```bash\n   mkdir -p ./canary-artifacts/experiment-{{activityId}}-$(date +%s)\n   docker cp {{containerName}}:/workspace/. ./canary-artifacts/experiment-{{activityId}}-$(date +%s)/\n   ```\n\n5. Stop container:\n   ```bash\n   ./devbob agent stop {{containerName}}\n   ```\n\n**Output**: Store experiment directory path for next task",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "commands": [
+          {
+            "command": "test -d ./canary-artifacts/experiment-*",
+            "expectedPattern": "."
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    
+    {
+      "id": "capture-knowledge",
+      "subagent": "general",
+      "description": "Capture: Document what was learned from experiment",
+      "dependencies": ["experiment"],
+      "prompt": {
+        "template": "PHASE 2: CAPTURE KNOWLEDGE\n\n**Goal**: Document HOW the experiment succeeded (or why it failed)\n\n**Input**: Review experiment artifacts from previous task\n\n**Create**: `CANARY_KNOWLEDGE_{{activityId}}.md`\n\n**Content Structure**:\n\n```markdown\n# Canary Knowledge: {{activityId}}\n\n## Status\n- Experiment: SUCCESS/FAILURE\n- Date: {{date}}\n- Container: {{containerName}}\n\n## What Was Built\n[List files created, features added, changes made]\n\n## How It Was Built\n\n### Prerequisites\n[System requirements, dependencies]\n\n### Execution Steps\n1. [Step 1 with exact commands]\n2. [Step 2 with exact commands]\n3. ...\n\n### Key Decisions\n[Why we chose this approach, tradeoffs considered]\n\n## Why It Worked (or Failed)\n[Root cause of success/failure]\n\n## Validation\n- Tests run: [list]\n- Files created: [list]\n- Expected behavior: [description]\n\n## Failure Modes\n[What could go wrong, how to detect, how to recover]\n\n## Artifacts\n- Experiment directory: [path]\n- Files: [list key files]\n```\n\n**Quality Check**: Knowledge document must be detailed enough for someone else to repeat the process",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": [
+          "CANARY_KNOWLEDGE_{{activityId}}.md"
+        ]
+      }
+    },
+    
+    {
+      "id": "demonstrate",
+      "subagent": "general",
+      "description": "Demonstrate: Repeat activity in fresh container to prove repeatability",
+      "dependencies": ["capture-knowledge"],
+      "prompt": {
+        "template": "PHASE 3: DEMONSTRATE REPEATABILITY\n\n**Goal**: Prove we can repeat the success using captured knowledge\n\n**Critical**: This must work WITHOUT manual intervention\n\n**Steps**:\n\n1. Start FRESH container (destroy previous state):\n   ```bash\n   ./devbob agent stop {{containerName}}\n   sleep 2\n   ./devbob agent start {{containerName}}\n   ```\n\n2. Execute SAME activity with SAME variables:\n   ```bash\n   docker exec -i {{containerName}} bash -c \"\n     cd /workspace && \n     opencode activity execute {{activityId}} \\\n       --variables '{{json activityVariables}}' \\\n       --reason 'Canary demonstration'\n   \"\n   ```\n\n3. Copy artifacts:\n   ```bash\n   mkdir -p ./canary-artifacts/demonstration-{{activityId}}-$(date +%s)\n   docker cp {{containerName}}:/workspace/. ./canary-artifacts/demonstration-{{activityId}}-$(date +%s)/\n   ```\n\n4. Compare with experiment:\n   ```bash\n   diff -r ./canary-artifacts/experiment-{{activityId}}-*/ ./canary-artifacts/demonstration-{{activityId}}-*/\n   ```\n\n5. Stop container:\n   ```bash\n   ./devbob agent stop {{containerName}}\n   ```\n\n**Success Criteria**:\n- Activity executes successfully\n- Key artifacts match experiment (some timestamps/IDs may differ)\n- Core functionality is identical\n\n**Update** `CANARY_KNOWLEDGE_{{activityId}}.md` with:\n- Demonstration: SUCCESS/FAILURE\n- Date: {{date}}\n- Differences found: [list]\n- Confidence: HIGH/MEDIUM/LOW",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "commands": [
+          {
+            "command": "test -d ./canary-artifacts/demonstration-*",
+            "expectedPattern": "."
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": "adopt-to-host",
+      "subagent": "general",
+      "description": "Adopt: Deploy to host with rollback (if adoptToHost=true)",
+      "dependencies": ["demonstrate"],
+      "prompt": {
+        "template": "PHASE 4: ADOPT TO HOST (Conditional)\n\n**Condition**: Only execute if {{adoptToHost}} is true\n\n{{#if adoptToHost}}\n\n**Goal**: Deploy validated change to host with rollback capability\n\n**Pre-flight Check**:\n1. Verify knowledge document shows:\n   - Experiment: SUCCESS\n   - Demonstration: SUCCESS\n   - Confidence: HIGH\n\nIf NOT all SUCCESS → ABORT and report\n\n**Steps**:\n\n1. Create rollback branch:\n   ```bash\n   ROLLBACK_BRANCH=\"canary-rollback-{{activityId}}-$(date +%s)\"\n   git checkout -b \"$ROLLBACK_BRANCH\"\n   git add -A\n   git commit -m \"Rollback point before adopting {{activityId}}\" || true\n   git checkout -\n   ```\n\n2. Execute activity ON HOST (not in container):\n   ```bash\n   opencode activity execute {{activityId}} \\\n     --variables '{{json activityVariables}}' \\\n     --reason 'Adopt from canary to host'\n   ```\n\n3. Validate deployment:\n   - Run tests\n   - Check files created\n   - Verify no regressions\n\n4. If validation FAILS:\n   ```bash\n   echo \"VALIDATION FAILED - ROLLING BACK\"\n   git checkout \"$ROLLBACK_BRANCH\"\n   git checkout -b recovery-from-{{activityId}}\n   ```\n\n5. If validation SUCCEEDS:\n   - Update `CANARY_KNOWLEDGE_{{activityId}}.md` with:\n     - Adopted to host: YES\n     - Date: {{date}}\n     - Rollback branch: $ROLLBACK_BRANCH\n     - Status: PRODUCTION\n\n{{else}}\n\n**Skipped**: adoptToHost is false\n\nTo adopt later, run:\n```bash\nopencode activity execute canary-test-activity \\\n  --variables '{\n    \"activityId\": \"{{activityId}}\",\n    \"activityVariables\": {{json activityVariables}},\n    \"adoptToHost\": true\n  }'\n```\n\n{{/if}}",
+        "maxTokens": 8000
+      }
+    },
+    
+    {
+      "id": "summary",
+      "subagent": "general",
+      "description": "Summary: Report canary results",
+      "dependencies": ["adopt-to-host"],
+      "prompt": {
+        "template": "CANARY TEST SUMMARY\n\n**Activity**: {{activityId}}\n**Variables**: {{json activityVariables}}\n**Container**: {{containerName}}\n\n**Results**:\n\n1. **Experiment**: Review experiment output\n   - Success: YES/NO\n   - Artifacts: [path]\n\n2. **Knowledge**: Review CANARY_KNOWLEDGE_{{activityId}}.md\n   - Documented: YES/NO\n   - Completeness: HIGH/MEDIUM/LOW\n\n3. **Demonstration**: Review demonstration output\n   - Success: YES/NO\n   - Matches experiment: YES/NO/PARTIAL\n   - Confidence: HIGH/MEDIUM/LOW\n\n4. **Adoption**: {{#if adoptToHost}}EXECUTED{{else}}SKIPPED{{/if}}\n   {{#if adoptToHost}}\n   - Deployed to host: YES/NO\n   - Validation: PASS/FAIL\n   - Rollback available: YES\n   {{/if}}\n\n**Conclusion**:\n- Safe to use: YES/NO\n- Repeatable: YES/NO\n- Knowledge captured: YES/NO\n- Production ready: YES/NO\n\n**Next Steps**:\n{{#if adoptToHost}}\n- Monitor production for issues\n- Rollback branch: [name]\n{{else}}\n- Review knowledge document\n- When ready, adopt to host\n- Or iterate based on learnings\n{{/if}}",
+        "maxTokens": 4000
+      }
+    }
+  ],
+  
+  "metadata": {
+    "author": "system",
+    "version": "1.0.0",
+    "tags": ["canary", "testing", "safety", "knowledge-capture", "repeatability"]
+  }
+}
