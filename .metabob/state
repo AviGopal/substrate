@@ -1,8 +1,8 @@
 {
-  "version": 299,
+  "version": 305,
   "session_metadata": {
     "created_at": "2026-02-17T15:38:19.763115",
-    "last_updated": "2026-02-17T17:55:36.221858",
+    "last_updated": "2026-02-17T18:03:14.160369",
     "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
     "format_version": "4.0",
     "interrupted": false,
@@ -13,11 +13,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-acp-phase4a-simple.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-acp-phase4a-simple.ts",
       "last_modified": 1771286143.1789303,
-      "last_submitted": null,
+      "last_submitted": 1771380056.951783,
       "size": 10009,
       "checksum": "b0dc9c81bfe9a5d0d82350abffcf6d1bfa87b5ea04a6d2abfbff235e4bd98dd6",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9a44a407-1e9a-431e-8bf8-b00f2909ce3c"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/internal/apijson/encoder.go": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/internal/apijson/encoder.go",
@@ -67,11 +67,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-cli-activity-execution.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-cli-activity-execution.sh",
       "last_modified": 1771286143.1779304,
-      "last_submitted": null,
+      "last_submitted": 1771380131.943111,
       "size": 2364,
       "checksum": "1d9c9a6bb0e98cce122e61df0701b9d8ff98f509b4c22304054ad88156b74a9b",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "866fd922-cdda-4d5b-ad73-313d3c3f11cc"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/path_test.go": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/path_test.go",
@@ -3406,11 +3406,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/register-template-with-tool.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/register-template-with-tool.ts",
       "last_modified": 1771286143.1779304,
-      "last_submitted": null,
+      "last_submitted": 1771380131.943113,
       "size": 1299,
       "checksum": "174c2b42d51a998b6c045ddf530d9bb7965e1d29c5ee839e2b1d57cb6ef848dc",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "866fd922-cdda-4d5b-ad73-313d3c3f11cc"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/template-author-enum-regression.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/template-author-enum-regression.test.ts",
@@ -3730,11 +3730,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/check_db_templates.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/check_db_templates.py",
       "last_modified": 1771286143.1779304,
-      "last_submitted": null,
+      "last_submitted": 1771380193.101777,
       "size": 7480,
       "checksum": "176b8a0dc5ecb119d1736ab9d4a2f45d42da0d2a41646b22577528003ed6d5be",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "64309dc8-149f-4797-a8fa-fbf70b09b044"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/app/src/routes/api/enterprise.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/app/src/routes/api/enterprise.ts",
@@ -4189,11 +4189,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/query_production_db.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/query_production_db.py",
       "last_modified": 1771286143.1779304,
-      "last_submitted": null,
+      "last_submitted": 1771380193.101785,
       "size": 7508,
       "checksum": "c0580450952f1d9a4d5e6d6bd88e089cd7c1cd1c34c877c2f9b4e4f1eb43e673",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "64309dc8-149f-4797-a8fa-fbf70b09b044"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/setup-dev.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/setup-dev.sh",
@@ -4558,11 +4558,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-get.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-get.ts",
       "last_modified": 1771286143.1789303,
-      "last_submitted": null,
+      "last_submitted": 1771380056.951786,
       "size": 1728,
       "checksum": "2799f5f77e6a7e355de89dec7624308d1a6ba7f82c90d0adb1db00bf6a30ec1c",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9a44a407-1e9a-431e-8bf8-b00f2909ce3c"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/long-running-session-memory-regression.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/long-running-session-memory-regression.test.ts",
@@ -6106,11 +6106,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-tool-integration.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-tool-integration.ts",
       "last_modified": 1771286143.1789303,
-      "last_submitted": null,
+      "last_submitted": 1771380056.951788,
       "size": 2938,
       "checksum": "2506f25e8022299e70c881f471473ea07ab7c5d7b61c39193708f4f6fb76b145",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9a44a407-1e9a-431e-8bf8-b00f2909ce3c"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-activity-workflow.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-activity-workflow.sh",
@@ -6610,11 +6610,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-direct-activity-execution.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-direct-activity-execution.sh",
       "last_modified": 1771286143.1798773,
-      "last_submitted": null,
+      "last_submitted": 1771380054.680581,
       "size": 501,
       "checksum": "8d7fbca38168da95c755000fcf8b59cf091af530fd1fb15d8cffe178037136cf",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "32feafd7-cdc5-401a-bbd5-fa25311e006b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/utils/__init__.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/utils/__init__.py",
@@ -7672,11 +7672,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/verify-task-reporting-integration.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/verify-task-reporting-integration.sh",
       "last_modified": 1771286143.1779304,
-      "last_submitted": null,
+      "last_submitted": 1771380193.101787,
       "size": 2976,
       "checksum": "4a10e0b233c53796bfc86a60e851b0d9a27d6413c09476459f65add45a4d01a0",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "64309dc8-149f-4797-a8fa-fbf70b09b044"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/function/src/api.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/function/src/api.ts",
@@ -7770,12 +7770,12 @@
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity.ts",
-      "last_modified": 1771378971.0120595,
-      "last_submitted": 1771379022.820853,
-      "size": 29001,
-      "checksum": "4f56c2b92462e3ad8e24d3bf0671e83ab7ea40571e3e46101fb8181d25a021c3",
+      "last_modified": 1771379932.5010247,
+      "last_submitted": 1771380054.680574,
+      "size": 30271,
+      "checksum": "316a88a6d046d3ee2d28fd60baafc977aa8a77707de8a0937cb0c4bd68eb4bfd",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": "7e11fe72-d60e-4203-b1d1-3a8d9f87ff4f"
+      "job_id": "32feafd7-cdc5-401a-bbd5-fa25311e006b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_activity_create.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_activity_create.py",
@@ -7906,11 +7906,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-helmfile-fix.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-helmfile-fix.sh",
       "last_modified": 1771286143.1798773,
-      "last_submitted": null,
+      "last_submitted": 1771380054.680582,
       "size": 5579,
       "checksum": "9efebb32428761a36313016860d2a76548053e8d5517bcee729d7c8512c90e53",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "32feafd7-cdc5-401a-bbd5-fa25311e006b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/models/activity_recommendation.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/models/activity_recommendation.py",
@@ -9778,11 +9778,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/migrate_template_to_metabob_db.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/migrate_template_to_metabob_db.py",
       "last_modified": 1771286143.1779304,
-      "last_submitted": null,
+      "last_submitted": 1771380193.101789,
       "size": 4480,
       "checksum": "9b100f9333bb4bf4835eacb89c2b4e80d57d7da48c6e265cf1aacd25f1f1e2b7",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "64309dc8-149f-4797-a8fa-fbf70b09b044"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/models/jobs.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/models/jobs.py",
@@ -10048,11 +10048,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/analyze-context-flow-logs.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/analyze-context-flow-logs.sh",
       "last_modified": 1771286143.1779304,
-      "last_submitted": null,
+      "last_submitted": 1771380193.10179,
       "size": 1418,
       "checksum": "660e45f0b2581cf3523e701abd463a3be79cb33aeb53e8fecd8701a67ffe1f2c",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "64309dc8-149f-4797-a8fa-fbf70b09b044"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/ProjectsSummary.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/ProjectsSummary.js",
@@ -15781,11 +15781,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-learning/src/auth.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-learning/src/auth.ts",
       "last_modified": 1771286143.1798773,
-      "last_submitted": null,
+      "last_submitted": 1771380054.680583,
       "size": 480,
       "checksum": "3d08256b124d557bc526ef2f9d58ab80915aee2af49dc5db67d74649d48695c1",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "32feafd7-cdc5-401a-bbd5-fa25311e006b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/python/metabob/metrics/events_pb2.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/python/metabob/metrics/events_pb2.py",
@@ -15853,11 +15853,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-template-direct.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-template-direct.ts",
       "last_modified": 1771286143.1798773,
-      "last_submitted": null,
+      "last_submitted": 1771380056.951775,
       "size": 4644,
       "checksum": "d063afb11149df8925430a1c911a23bf3276ce88fdca2fb7d00f8ebb3e5fc26d",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9a44a407-1e9a-431e-8bf8-b00f2909ce3c"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/cpg-inference/cpg_inference/cpg/parsers/ruby.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/cpg-inference/cpg_inference/cpg/parsers/ruby.py",
@@ -16123,11 +16123,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-integration.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-integration.ts",
       "last_modified": 1771286143.1789303,
-      "last_submitted": null,
+      "last_submitted": 1771380056.95179,
       "size": 2930,
       "checksum": "8f37b61c5af8eda054a70362257671f9593cc88b091e808f7eb3280cbdfdc513",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9a44a407-1e9a-431e-8bf8-b00f2909ce3c"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/error.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/error.py",
@@ -16636,11 +16636,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-execution-with-cochange.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-execution-with-cochange.ts",
       "last_modified": 1771286143.1789303,
-      "last_submitted": null,
+      "last_submitted": 1771380131.943099,
       "size": 12329,
       "checksum": "3add627eacc4d31f887354dd397aa39b9b824c39ab0a0c58fd17bfa4641dcdd8",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "866fd922-cdda-4d5b-ad73-313d3c3f11cc"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/recommend.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/recommend.py",
@@ -17590,11 +17590,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/comparison-test.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/comparison-test.js",
       "last_modified": 1771286143.1799304,
-      "last_submitted": null,
+      "last_submitted": 1771380054.680579,
       "size": 1162,
       "checksum": "56d53d290ee1496715bd85434a2915bf1afb14da771bd1f22c8b617772c870c2",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "32feafd7-cdc5-401a-bbd5-fa25311e006b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts",
@@ -18472,11 +18472,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-execution-simulation.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-execution-simulation.ts",
       "last_modified": 1771286143.1789303,
-      "last_submitted": null,
+      "last_submitted": 1771380131.943107,
       "size": 2250,
       "checksum": "88f5f010b4f4c912e17c98fe52c48e00120b96629a57c9e029ccea40fa4557bc",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "866fd922-cdda-4d5b-ad73-313d3c3f11cc"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/ProblemsTrendChart.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/ProblemsTrendChart.js",
@@ -19471,11 +19471,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-backend-template-discovery.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-backend-template-discovery.ts",
       "last_modified": 1771286143.1789303,
-      "last_submitted": null,
+      "last_submitted": 1771380131.943109,
       "size": 5752,
       "checksum": "0c40b2c0dded7ab9795b9a775e39de05dd1e97ed98cd8d525a5d5282d9989854",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "866fd922-cdda-4d5b-ad73-313d3c3f11cc"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/src/model.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/src/model.ts",
@@ -25179,7 +25179,6 @@
         "timestamp": "2026-02-17T17:43:38.681546"
       }
     },
-    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify_backend_simple.py": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_quick.py": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_e2e.py": {},
@@ -25284,7 +25283,229 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-step-reporting.sh": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-template-loading.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-list-return-value.ts": {},
-    "/home/avi/documents/work/exp-repo/metabob-devbob/test-trace-infrastructure.py": {}
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-trace-infrastructure.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/comparison-test.js": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-direct-activity-execution.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-helmfile-fix.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-learning/src/auth.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-template-direct.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-acp-phase4a-simple.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-get.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-tool-integration.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-cochange-integration.ts": {
+      "3ed34004-ee6e-4338-9f5b-c6425a55bcd1": {
+        "id": "3ed34004-ee6e-4338-9f5b-c6425a55bcd1",
+        "line": 15,
+        "column": 0,
+        "severity": "CRITICAL",
+        "message": "Unsanitized command execution with execSync.",
+        "rule": "Security issues",
+        "suggestion": null,
+        "category": "Security issues",
+        "description": "The use of `execSync` with a command string that includes user-provided input can lead to command injection vulnerabilities. If any part of the command string is derived from user input, an attacker could inject malicious commands that the system would execute. This poses a critical security risk, as it could allow unauthorized access or damage to the system.",
+        "start_line": 15,
+        "end_line": 19,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:02:05.378071"
+      },
+      "7d629507-5cb4-4b93-a995-bd014a8ba4c5": {
+        "id": "7d629507-5cb4-4b93-a995-bd014a8ba4c5",
+        "line": 41,
+        "column": 0,
+        "severity": "CRITICAL",
+        "message": "Potential command injection in execSync usage.",
+        "rule": "Security issues",
+        "suggestion": null,
+        "category": "Security issues",
+        "description": "The `execSync` function is used to execute shell commands, and if any part of the `activityCmd` string is influenced by external input, it could lead to command injection. This is a critical security vulnerability as it allows attackers to execute arbitrary commands on the server, potentially leading to data breaches or system compromise. Proper input validation and sanitization are necessary to mitigate this risk.",
+        "start_line": 41,
+        "end_line": 46,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:02:05.378082"
+      },
+      "10c50550-8b95-4b03-81d7-5f1b861c03cc": {
+        "id": "10c50550-8b95-4b03-81d7-5f1b861c03cc",
+        "line": 81,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Incomplete error handling in activity execution.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The error handling block for the activity execution only logs the error message and standard error output but does not provide any recovery or retry mechanism. This could lead to the application terminating unexpectedly without attempting to resolve transient issues, impacting the reliability and availability of the service. Implementing a more robust error handling strategy, such as retries or fallbacks, would improve resilience.",
+        "start_line": 81,
+        "end_line": 88,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:02:05.378088"
+      },
+      "b7e708e1-f630-4add-888a-d44368061519": {
+        "id": "b7e708e1-f630-4add-888a-d44368061519",
+        "line": 56,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Missing file existence checks before content operations.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The code checks for the existence of files `BUG_ANALYSIS.md` and `BUG_FIX_SUMMARY.md` before reading their contents, but it does not handle the case where the files might be deleted or become inaccessible between the check and the read operation. This could lead to runtime errors if the files are not available when `readFileSync` is called. Adding try-catch blocks around file operations would prevent potential crashes due to file access issues.",
+        "start_line": 56,
+        "end_line": 77,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:02:05.378093"
+      },
+      "72893a1a-e094-4dea-8e47-e1379b1e78ce": {
+        "id": "72893a1a-e094-4dea-8e47-e1379b1e78ce",
+        "line": 43,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Hardcoded directory path in execSync command.",
+        "rule": "Design issues",
+        "suggestion": null,
+        "category": "Design issues",
+        "description": "The use of a hardcoded directory path in the `execSync` command limits the flexibility and portability of the script. If the directory structure changes or if the script needs to be run in a different environment, the hardcoded path will cause failures. Refactoring the code to use configuration files or environment variables for directory paths would enhance maintainability and adaptability.",
+        "start_line": 43,
+        "end_line": 44,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:02:05.378099"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-execution-with-cochange.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-execution-simulation.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-backend-template-discovery.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-cli-activity-execution.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/register-template-with-tool.ts": {
+      "7b2c71bf-9c19-4719-810d-c282a09164a9": {
+        "id": "7b2c71bf-9c19-4719-810d-c282a09164a9",
+        "line": 18,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Await inside non-async function may cause unhandled promise rejection.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The `await` keyword is used within the `Instance.provide` function, which is not marked as `async`. This can lead to unhandled promise rejections if the promise is rejected, as the function will not properly handle asynchronous operations. This oversight can cause the application to crash or behave unpredictably if the promise fails.",
+        "start_line": 18,
+        "end_line": 43,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:03:12.108282"
+      },
+      "0cc8ac7c-fe85-4757-adbb-982b2a4784f9": {
+        "id": "0cc8ac7c-fe85-4757-adbb-982b2a4784f9",
+        "line": 34,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "AbortController signal not properly managed.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `AbortController` is instantiated, but its signal is not managed or used effectively to handle cancellation scenarios. Without proper handling, the operation cannot be aborted as intended, potentially leading to resource leaks or unresponsive behavior if the operation needs to be canceled. This can degrade performance and lead to poor user experience in scenarios where cancellation is necessary.",
+        "start_line": 34,
+        "end_line": 35,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:03:12.108301"
+      },
+      "27aa4b71-7c68-4960-bc29-34c2177a58dc": {
+        "id": "27aa4b71-7c68-4960-bc29-34c2177a58dc",
+        "line": 35,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Empty metadata function lacks implementation.",
+        "rule": "Design issues",
+        "suggestion": null,
+        "category": "Design issues",
+        "description": "The `metadata` function is defined but lacks any implementation, which suggests either incomplete code or a placeholder that was not properly filled. This can lead to confusion and maintenance challenges, as future developers may not understand the intended purpose or may overlook necessary functionality that should be implemented. It also indicates potential missing functionality that could be critical for the operation of the tool.",
+        "start_line": 35,
+        "end_line": 36,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:03:12.108314"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/check_db_templates.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/query_production_db.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/verify-task-reporting-integration.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/migrate_template_to_metabob_db.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/analyze-context-flow-logs.sh": {}
   },
   "resolutions": {},
   "annotations": {},
@@ -25915,20 +26136,58 @@
     },
     "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9": {
       "job_id": "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T18:00:53.109777",
+      "updated_at": "2026-02-17T18:00:56.074803",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "32feafd7-cdc5-401a-bbd5-fa25311e006b": {
+      "job_id": "32feafd7-cdc5-401a-bbd5-fa25311e006b",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T18:02:08.579631",
+      "updated_at": "2026-02-17T18:02:11.338936",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "9a44a407-1e9a-431e-8bf8-b00f2909ce3c": {
+      "job_id": "9a44a407-1e9a-431e-8bf8-b00f2909ce3c",
       "file_paths": [
-        "test-step-impulse-reporting.sh",
-        "test-step-reporting.sh",
-        "test-template-loading.ts",
-        "test-list-return-value.ts",
-        "test-trace-infrastructure.py"
+        "test-cochange-template-direct.ts",
+        "test-acp-phase4a-simple.ts",
+        "test-activity-get.ts",
+        "test-activity-tool-integration.ts",
+        "test-cochange-integration.ts"
+      ],
+      "status": "complete",
+      "created_at": "2026-02-17T18:00:56.814478",
+      "updated_at": "2026-02-17T18:02:05.377688",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "866fd922-cdda-4d5b-ad73-313d3c3f11cc": {
+      "job_id": "866fd922-cdda-4d5b-ad73-313d3c3f11cc",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T18:03:12.555199",
+      "updated_at": "2026-02-17T18:03:14.148094",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "64309dc8-149f-4797-a8fa-fbf70b09b044": {
+      "job_id": "64309dc8-149f-4797-a8fa-fbf70b09b044",
+      "file_paths": [
+        "scripts/check_db_templates.py",
+        "scripts/query_production_db.py",
+        "scripts/verify-task-reporting-integration.sh",
+        "scripts/migrate_template_to_metabob_db.py",
+        "scripts/analyze-context-flow-logs.sh"
       ],
       "status": "pending",
-      "created_at": "2026-02-17T17:55:36.067877",
-      "updated_at": "2026-02-17T17:55:36.067889",
+      "created_at": "2026-02-17T18:03:12.995299",
+      "updated_at": "2026-02-17T18:03:12.995312",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
     }
   },
   "pending_jobs": [
-    "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9"
+    "64309dc8-149f-4797-a8fa-fbf70b09b044"
   ]
 }
