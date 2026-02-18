@@ -1,8 +1,8 @@
 {
-  "version": 326,
+  "version": 332,
   "session_metadata": {
     "created_at": "2026-02-17T15:38:19.763115",
-    "last_updated": "2026-02-17T18:50:29.373142",
+    "last_updated": "2026-02-17T18:56:57.601613",
     "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
     "format_version": "4.0",
     "interrupted": false,
@@ -220,11 +220,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/datamodels.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/datamodels.py",
       "last_modified": 1771382990.0797756,
-      "last_submitted": null,
+      "last_submitted": 1771383134.849395,
       "size": 3567,
       "checksum": "e32e5cc45d8d290fb86d44410643598f6a3718e895f2c2c921aa270b6081c201",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db388809-5518-4810-853a-e08bda923fc2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_timing_detailed.mjs": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_timing_detailed.mjs",
@@ -5017,11 +5017,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/__init__.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/__init__.py",
       "last_modified": 1771382990.0777755,
-      "last_submitted": null,
+      "last_submitted": 1771383417.572871,
       "size": 666,
       "checksum": "32517cb1421d851bb5031c8cbb3236c3a8d8f346be295f7c31c0001b364f2319",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db8c8984-2458-499f-a45a-18e9a2f7343f"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/migrations/0031_outgoing_outlaw_kid.sql": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/migrations/0031_outgoing_outlaw_kid.sql",
@@ -5404,11 +5404,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/utils/middlewares.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/utils/middlewares.py",
       "last_modified": 1771382990.0777755,
-      "last_submitted": null,
+      "last_submitted": 1771383417.572872,
       "size": 5928,
       "checksum": "64b8921c557b484fa299f57fd7784b0eb1d46bb2a8f4b7678e203d3f73389f52",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db8c8984-2458-499f-a45a-18e9a2f7343f"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/pages/AnalysisView/components/ProblemFilterPanel.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/pages/AnalysisView/components/ProblemFilterPanel.js",
@@ -5521,11 +5521,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/metrics.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/metrics.py",
       "last_modified": 1771382990.0777755,
-      "last_submitted": null,
+      "last_submitted": 1771383417.572873,
       "size": 2106,
       "checksum": "dd67a8ab1d59b29d5e5b71ba224a8b30abed6ec2d6c96e0c9b6fa5be4fd824b9",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db8c8984-2458-499f-a45a-18e9a2f7343f"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/controls/TextArea.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/controls/TextArea.js",
@@ -6844,11 +6844,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/contribution_analysis.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/contribution_analysis.py",
       "last_modified": 1771382990.0787754,
-      "last_submitted": null,
+      "last_submitted": 1771383230.179427,
       "size": 50470,
       "checksum": "7bb0425544a55cc8ba5819bb955a86d3fdac168399ae06b62d70b782b35c981b",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "e3c2888d-4ece-4697-8088-7a7f10eccf34"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/cpg-inference/cpg-inference/cpg_inference/index_manager.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/cpg-inference/cpg-inference/cpg_inference/index_manager.py",
@@ -8806,11 +8806,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/analysis.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/analysis.py",
       "last_modified": 1771382990.0787754,
-      "last_submitted": null,
+      "last_submitted": 1771383230.179432,
       "size": 8144,
       "checksum": "8ce542004171830a4ed29aef33e24706340b89d6371ec4453d674eb039c3ddd3",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "e3c2888d-4ece-4697-8088-7a7f10eccf34"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/fix_cli_session.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/fix_cli_session.py",
@@ -12262,11 +12262,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/explain.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/explain.py",
       "last_modified": 1771382990.0787754,
-      "last_submitted": null,
+      "last_submitted": 1771383230.179434,
       "size": 6178,
       "checksum": "66b63a9d890aabd4be8a6ad91ebbddb6c035f278d4df7b6eb542f7bb8154239a",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "e3c2888d-4ece-4697-8088-7a7f10eccf34"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-cli/src/metabob_cli/core/file_state.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-cli/src/metabob_cli/core/file_state.py",
@@ -12577,11 +12577,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability_utils/helper.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability_utils/helper.py",
       "last_modified": 1771382990.0787754,
-      "last_submitted": null,
+      "last_submitted": 1771383230.179435,
       "size": 4749,
       "checksum": "fbbee1d99d71d37ed7baf5c4a3d945b2c9acea114c4fe51dcc37ddb6a7dbd895",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "e3c2888d-4ece-4697-8088-7a7f10eccf34"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/python/metabob/activity/optimization_pb2.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/python/metabob/activity/optimization_pb2.py",
@@ -12649,11 +12649,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/handlers.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/handlers.py",
       "last_modified": 1771382990.0797756,
-      "last_submitted": null,
+      "last_submitted": 1771383134.849401,
       "size": 5328,
       "checksum": "cb6466e22ce0e20abd825e7b15bb7973dfca06e40ca50cd96ddcbdbd62e1effd",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db388809-5518-4810-853a-e08bda923fc2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/template-variable-validation-bug.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/template-variable-validation-bug.test.ts",
@@ -14836,11 +14836,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/process.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/process.py",
       "last_modified": 1771382990.0787754,
-      "last_submitted": null,
+      "last_submitted": 1771383230.179436,
       "size": 8607,
       "checksum": "9a521169fdc11ccad21a73abefac70bd11bd94e2a0f9eb3e7ecfacbf1051dd2f",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "e3c2888d-4ece-4697-8088-7a7f10eccf34"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/server/impulse-endpoint.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/server/impulse-endpoint.test.ts",
@@ -15061,11 +15061,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability.py",
       "last_modified": 1771382990.0787754,
-      "last_submitted": null,
+      "last_submitted": 1771383417.572864,
       "size": 15760,
       "checksum": "d2b5390bd48b47571e5d176c0a69d38deb812ae18e62fac7f83a4a308145073b",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db8c8984-2458-499f-a45a-18e9a2f7343f"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/compaction.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/compaction.ts",
@@ -15232,11 +15232,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/db.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/db.py",
       "last_modified": 1771382990.0797756,
-      "last_submitted": null,
+      "last_submitted": 1771383134.849402,
       "size": 910,
       "checksum": "9c7c195eefaadab81c69f6600f0d646d571f63ce8f3c527785e77b9c5ce63e47",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db388809-5518-4810-853a-e08bda923fc2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/event_installation_updated_properties.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/event_installation_updated_properties.py",
@@ -15628,11 +15628,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/recommend.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/recommend.py",
       "last_modified": 1771382990.0797756,
-      "last_submitted": null,
+      "last_submitted": 1771383134.849403,
       "size": 5883,
       "checksum": "13f187c8774efac6c1a607bd528b1b18ed164bcf59239b30da7314aeb6a667fb",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db388809-5518-4810-853a-e08bda923fc2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-search-activities-source.mjs": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-search-activities-source.mjs",
@@ -15655,11 +15655,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability_utils/chunk.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability_utils/chunk.py",
       "last_modified": 1771382990.0787754,
-      "last_submitted": null,
+      "last_submitted": 1771383417.572869,
       "size": 3966,
       "checksum": "2958969b0e0a080fc1e400a70820cc669da4ed0c75dbae1ae4d4eab189f98892",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db8c8984-2458-499f-a45a-18e9a2f7343f"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/project/ProjectMetrics/components/PinnedIssuesList.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/project/ProjectMetrics/components/PinnedIssuesList.js",
@@ -18022,11 +18022,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/model_adapters/base.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/model_adapters/base.py",
       "last_modified": 1771382990.0797756,
-      "last_submitted": null,
+      "last_submitted": 1771383134.849405,
       "size": 5741,
       "checksum": "fa82fd2ff830f669d44a3acf105b04133dbdca18e538127e377a01877fad5462",
-      "session_id": null,
-      "job_id": null
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
+      "job_id": "db388809-5518-4810-853a-e08bda923fc2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/src/util/memo.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/src/util/memo.ts",
@@ -22931,7 +22931,98 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/models/response.py": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/model_adapters/generation.py": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/model_adapters/detection.py": {},
-    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/test_adapter.py": {}
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/test_adapter.py": {
+      "87c44b47-27c5-4fee-9fdf-087db394a82d": {
+        "id": "87c44b47-27c5-4fee-9fdf-087db394a82d",
+        "line": 4,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Hardcoded paths may cause deployment failures.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The code uses hardcoded paths for the model and tokenizer files, which can lead to deployment failures if the files are not present at the specified locations in different environments. This approach lacks flexibility and can cause the application to crash if the paths are incorrect or the files are missing. Using environment variables or configuration files to manage file paths would improve portability and reliability.",
+        "start_line": 4,
+        "end_line": 8,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:52:12.565752"
+      },
+      "fdc12a7a-f8c8-4b8a-a76f-34cddddcfa78": {
+        "id": "fdc12a7a-f8c8-4b8a-a76f-34cddddcfa78",
+        "line": 9,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Potential misuse of classification method.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `classification` method is invoked on an instance of `DetectionLlamaAdapter`, which suggests a potential misuse of the adapter's intended functionality. If `DetectionLlamaAdapter` is not designed to handle classification tasks, this could lead to incorrect results or runtime errors. Ensuring that the adapter is used for its intended purpose is crucial for maintaining correct application behavior.",
+        "start_line": 9,
+        "end_line": 16,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:52:12.565763"
+      },
+      "756dc269-a515-4149-be1f-e6210a494fd7": {
+        "id": "756dc269-a515-4149-be1f-e6210a494fd7",
+        "line": 11,
+        "column": 0,
+        "severity": "CRITICAL",
+        "message": "Insecure handling of file data in memory.",
+        "rule": "Security issues",
+        "suggestion": null,
+        "category": "Security issues",
+        "description": "The code directly includes file data in memory, which can be a security risk if sensitive information is inadvertently exposed or logged. This practice can lead to data leaks, especially if the data is not properly sanitized or if logging mechanisms capture this information. Implementing secure data handling practices, such as encrypting sensitive data and ensuring it is not logged, is essential to protect against data breaches.",
+        "start_line": 11,
+        "end_line": 13,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T18:52:12.565769"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/datamodels.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/handlers.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/db.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/recommend.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/model_adapters/base.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/contribution_analysis.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/analysis.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/explain.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability_utils/helper.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/process.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/maintainability_utils/chunk.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/__init__.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/utils/middlewares.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/metrics.py": {}
   },
   "resolutions": {},
   "annotations": {},
@@ -23711,13 +23802,49 @@
         "repos/metabob-rpc-api/tasks/utils/model_adapters/detection.py",
         "repos/metabob-rpc-api/test_adapter.py"
       ],
-      "status": "pending",
+      "status": "complete",
       "created_at": "2026-02-17T18:50:29.248271",
-      "updated_at": "2026-02-17T18:50:29.248283",
+      "updated_at": "2026-02-17T18:52:12.565201",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "db388809-5518-4810-853a-e08bda923fc2": {
+      "job_id": "db388809-5518-4810-853a-e08bda923fc2",
+      "file_paths": [
+        "repos/metabob-rpc-api/tasks/utils/datamodels.py",
+        "repos/metabob-rpc-api/tasks/utils/handlers.py",
+        "repos/metabob-rpc-api/tasks/utils/db.py",
+        "repos/metabob-rpc-api/tasks/jobs/recommend.py",
+        "repos/metabob-rpc-api/tasks/utils/model_adapters/base.py"
+      ],
+      "status": "complete",
+      "created_at": "2026-02-17T18:52:14.752805",
+      "updated_at": "2026-02-17T18:53:43.277194",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "e3c2888d-4ece-4697-8088-7a7f10eccf34": {
+      "job_id": "e3c2888d-4ece-4697-8088-7a7f10eccf34",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T18:56:55.335179",
+      "updated_at": "2026-02-17T18:56:56.945934",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "db8c8984-2458-499f-a45a-18e9a2f7343f": {
+      "job_id": "db8c8984-2458-499f-a45a-18e9a2f7343f",
+      "file_paths": [
+        "repos/metabob-rpc-api/tasks/jobs/maintainability.py",
+        "repos/metabob-rpc-api/tasks/jobs/maintainability_utils/chunk.py",
+        "repos/metabob-rpc-api/server/routes/__init__.py",
+        "repos/metabob-rpc-api/server/utils/middlewares.py",
+        "repos/metabob-rpc-api/server/routes/metrics.py"
+      ],
+      "status": "pending",
+      "created_at": "2026-02-17T18:56:57.481908",
+      "updated_at": "2026-02-17T18:56:57.481921",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
     }
   },
   "pending_jobs": [
-    "40bfdd0d-a147-4611-bf6e-385855aa69c2"
+    "db8c8984-2458-499f-a45a-18e9a2f7343f"
   ]
 }
