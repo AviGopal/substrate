@@ -1,8 +1,8 @@
 {
-  "version": 268,
+  "version": 282,
   "session_metadata": {
     "created_at": "2026-02-17T15:38:19.763115",
-    "last_updated": "2026-02-17T17:33:03.852908",
+    "last_updated": "2026-02-17T17:40:36.183774",
     "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
     "format_version": "4.0",
     "interrupted": false,
@@ -103,11 +103,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/acp/agent.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/acp/agent.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378712.04213,
       "size": 26755,
       "checksum": "4523911ffc804ca9366c0d2ee0ed36158403846246bef87e3108cf77785c5a24",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "5363e860-2dc4-4bdb-868e-dc090493db67"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/project/ProjectMetrics/components/CategoryIssueChart.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/project/ProjectMetrics/components/CategoryIssueChart.js",
@@ -777,12 +777,12 @@
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/tool/activity.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
-      "last_modified": 1771378252.1499393,
-      "last_submitted": 1771378301.038732,
-      "size": 67219,
-      "checksum": "156fc07cd91e2d882d6ae7f367b45be60a23ca24b4f20cca07b67a7f9c2f5cc7",
+      "last_modified": 1771378774.3347073,
+      "last_submitted": 1771378836.127603,
+      "size": 68955,
+      "checksum": "e75ef667fc55f705c988e698426c0737e404c74d376b0c15b82b3db7e95cc1b2",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": "a81f8ef5-dd38-4608-ae1a-2784c7b64632"
+      "job_id": "555710ce-2d03-4fa0-ac35-1cd97967d2fa"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/cloud/pages/Projects/components/ProjectStats.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/cloud/pages/Projects/components/ProjectStats.js",
@@ -1363,11 +1363,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/config/schemas/metabob.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/config/schemas/metabob.ts",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378596.400961,
       "size": 7905,
       "checksum": "ef7efb593573f07c782a8390d5354051e854766770e52c93892f777549f6e516",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "2c6717ec-5bf5-4854-874d-f7fe057165e6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/event_session_compacted_properties.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/event_session_compacted_properties.py",
@@ -2002,11 +2002,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/provider/sdk-loader.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/provider/sdk-loader.ts",
       "last_modified": 1771286343.9417717,
-      "last_submitted": null,
+      "last_submitted": 1771378509.262046,
       "size": 2787,
       "checksum": "d3c96830978fff81ef57abe3ebb224ec0ac16c10790ab8a6e9c470117fab3ac1",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7eb5af35-16a5-4377-8b94-30096ddec2d6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/migrate_to_production_backend.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/migrate_to_production_backend.py",
@@ -2227,11 +2227,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/app.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/app.tsx",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378712.042131,
       "size": 16086,
       "checksum": "5af5d1fac5dab323afc2e9c9bf819b93e489285b9e58a03b13f18622b346a4cd",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "5363e860-2dc4-4bdb-868e-dc090493db67"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/model_adapters/prompt_templates.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/utils/model_adapters/prompt_templates.py",
@@ -3244,20 +3244,20 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/remote/context.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/remote/context.ts",
       "last_modified": 1771286343.9427717,
-      "last_submitted": null,
+      "last_submitted": 1771378445.884133,
       "size": 1811,
       "checksum": "d8a52ee02b1c118f3e8a802b9faff59bf85ed519de27332622ff7cdf5c14c758",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "0d6d39bd-318e-49da-84ff-066e5932b0d4"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/plugin/index.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/plugin/index.ts",
       "last_modified": 1771286343.9417717,
-      "last_submitted": null,
+      "last_submitted": 1771378509.262055,
       "size": 3221,
       "checksum": "7825ad150ba3b4ca123db93ef468653391720c71b00ab0db77b461c9835d058d",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7eb5af35-16a5-4377-8b94-30096ddec2d6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/pages/LocalAnalysisView/components/CodePanel.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/pages/LocalAnalysisView/components/CodePanel.js",
@@ -3649,11 +3649,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378596.400964,
       "size": 34508,
       "checksum": "3f136bb1426060d655957bb3729789b9bcf4f366e0053408fdabb8e8c38b32f6",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "2c6717ec-5bf5-4854-874d-f7fe057165e6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/template-definition.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/template-definition.test.ts",
@@ -3955,11 +3955,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/provider/provider.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/provider/provider.ts",
       "last_modified": 1771286343.9417717,
-      "last_submitted": null,
+      "last_submitted": 1771378509.262058,
       "size": 27100,
       "checksum": "2524824fca2ee26291d33679076950a59035815a9b8fab4d4ea120f57a7811d7",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7eb5af35-16a5-4377-8b94-30096ddec2d6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/python/metabob/learning/consumer_pb2.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/python/metabob/learning/consumer_pb2.py",
@@ -4153,11 +4153,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/activity.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/activity.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378771.853606,
       "size": 50438,
       "checksum": "1f196f800dabc2654b91dd881199a1b32fc89234cd9c2cbccbdc7f0b57721922",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "161f57a3-f804-454f-ad91-de92a67aebf0"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/debug/file.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/debug/file.ts",
@@ -4954,11 +4954,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sync.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sync.tsx",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378596.400966,
       "size": 11400,
       "checksum": "dfc52adc458b00445e879c1f05633a4596444a34fccb19d2422311660e7404b6",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "2c6717ec-5bf5-4854-874d-f7fe057165e6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/generation.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/generation.py",
@@ -5107,11 +5107,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/error.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/error.ts",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378596.400968,
       "size": 1232,
       "checksum": "6b4f05f4e98413418602329ad6f665d810f9788d27137ee8e7f1bd20d18756a6",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "2c6717ec-5bf5-4854-874d-f7fe057165e6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/mocks/api/githubHandler.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/mocks/api/githubHandler.js",
@@ -5773,20 +5773,20 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/util/clipboard.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/util/clipboard.ts",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378654.357019,
       "size": 4514,
       "checksum": "d577083a1e03441991e304b723946449a5756e836c30c3439e0fec5c0fe26ee0",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "65c990ec-0a9b-4711-9f65-e1b8ce552551"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378654.357026,
       "size": 26012,
       "checksum": "b5ec6914105fb78296842addb81f91ea316a30bab227556548fb5a258510b4d3",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "65c990ec-0a9b-4711-9f65-e1b8ce552551"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/integration/activity-session-isolation.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/integration/activity-session-isolation.test.ts",
@@ -6979,11 +6979,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/component/dialog-session-list.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/component/dialog-session-list.tsx",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378771.853609,
       "size": 2766,
       "checksum": "57552a180080735dd0bbf21cb77632727c55eb8085b23a7b17cf14add25e9b68",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "161f57a3-f804-454f-ad91-de92a67aebf0"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/fix_template_table.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/fix_template_table.py",
@@ -9463,11 +9463,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/reset.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/reset.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378771.853611,
       "size": 13281,
       "checksum": "e13b5c66c9136ab2ab2ff3ef46f905138218816771168988770d3c70d811a1a8",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "161f57a3-f804-454f-ad91-de92a67aebf0"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/config_mode.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/config_mode.py",
@@ -9643,11 +9643,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/index.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/index.tsx",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378654.357027,
       "size": 51105,
       "checksum": "6630160186f4feddbfa5b4836c8df5bb6fb1dfc7fa8b530551f1873f1f3b0b04",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "65c990ec-0a9b-4711-9f65-e1b8ce552551"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/bootstrap.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/bootstrap.ts",
@@ -10111,11 +10111,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/scripts/demo-impulse-sidebar.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/scripts/demo-impulse-sidebar.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378771.853613,
       "size": 6181,
       "checksum": "8969fc1d02b8a2a07244d4c161b39621375ca07d28afbfc36cf3765fc3ec8184",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "161f57a3-f804-454f-ad91-de92a67aebf0"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/fix_activity_create_template_v2.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/fix_activity_create_template_v2.py",
@@ -10219,11 +10219,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/project/bootstrap.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/project/bootstrap.ts",
       "last_modified": 1771286343.9417717,
-      "last_submitted": null,
+      "last_submitted": 1771378509.262061,
       "size": 1077,
       "checksum": "92ff9ba15e80bc2982780bd467b8e06cf4c58a9a86c52690397b118d49653165",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7eb5af35-16a5-4377-8b94-30096ddec2d6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/project/BranchComparison/BranchComparison.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/project/BranchComparison/BranchComparison.js",
@@ -10642,11 +10642,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/metabob.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/metabob.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378836.127609,
       "size": 14227,
       "checksum": "5c9bbbe5a5b2a3b010b03a6d17346d97a23032367a36a59b829e1ecbf3e3017c",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "555710ce-2d03-4fa0-ac35-1cd97967d2fa"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/config_provider_additional_property_models_additional_property_options.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/config_provider_additional_property_models_additional_property_options.py",
@@ -11002,11 +11002,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/agent/agent.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378836.12761,
       "size": 22913,
       "checksum": "70fd903469563f5e74b77b674729a958387bfcd9569e009746b8dfa4752f9e72",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "555710ce-2d03-4fa0-ac35-1cd97967d2fa"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/mail/sst-env.d.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/mail/sst-env.d.ts",
@@ -12649,11 +12649,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/file/ripgrep.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/file/ripgrep.ts",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378654.357028,
       "size": 10991,
       "checksum": "00eb9790bc80d7e0db6fe3fdb86db013e0f1fefcc9c67503c0379299d4e71966",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "65c990ec-0a9b-4711-9f65-e1b8ce552551"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_1_direct_api.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_1_direct_api.py",
@@ -13864,11 +13864,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sdk.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sdk.tsx",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378654.35703,
       "size": 1450,
       "checksum": "7f895005a9856f636039517792fde054328e6bae781438ece51aff56246915c7",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "65c990ec-0a9b-4711-9f65-e1b8ce552551"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_enrichment_sample.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_enrichment_sample.py",
@@ -13936,11 +13936,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/scripts/test-impulse-display.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/scripts/test-impulse-display.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378836.127611,
       "size": 2245,
       "checksum": "b2246818b3f2063818761886848c2578129c4bed89fa79bbe13718dc2333171d",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "555710ce-2d03-4fa0-ac35-1cd97967d2fa"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/aliases.go": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/aliases.go",
@@ -14269,11 +14269,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/plugin/metabob-ui.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/plugin/metabob-ui.ts",
       "last_modified": 1771286343.9417717,
-      "last_submitted": null,
+      "last_submitted": 1771378509.262063,
       "size": 8468,
       "checksum": "4981b2cf75b6c1cc524677c684beb1e3277886c58440a0948ec72fc6bff5fb12",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7eb5af35-16a5-4377-8b94-30096ddec2d6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/tool/activity-replay.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/tool/activity-replay.test.ts",
@@ -15178,11 +15178,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/mcp/index.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/mcp/index.ts",
       "last_modified": 1771286343.9417717,
-      "last_submitted": null,
+      "last_submitted": 1771378596.400947,
       "size": 9118,
       "checksum": "98f677aa0a40e82cd4b50578716d15b80ef5b424e5075b176b1d02aab26acd84",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "2c6717ec-5bf5-4854-874d-f7fe057165e6"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/tool/signature.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/tool/signature.test.ts",
@@ -15250,11 +15250,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/acp/session.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/acp/session.ts",
       "last_modified": 1771286343.939772,
-      "last_submitted": null,
+      "last_submitted": 1771378836.127612,
       "size": 1924,
       "checksum": "2fe0a88de1f653cdecf4ed46d2c5300dad709feb200a1bb8032890dc27a9cc5a",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "555710ce-2d03-4fa0-ac35-1cd97967d2fa"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/tool/lsp-hover.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/tool/lsp-hover.ts",
@@ -15286,11 +15286,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/server/server.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/server/server.ts",
       "last_modified": 1771286343.9427717,
-      "last_submitted": null,
+      "last_submitted": 1771378445.884134,
       "size": 58389,
       "checksum": "87a7490c99b82ee291f95a6c4441da2c9ff8889fe66b419403c126cc0550cd06",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "0d6d39bd-318e-49da-84ff-066e5932b0d4"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/docker/start-worker.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/docker/start-worker.sh",
@@ -16537,11 +16537,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/index.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/index.ts",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378712.042121,
       "size": 5877,
       "checksum": "f29a785355a2094e33de97631ec058982ca8bdc0e27a5bee66e2c997180e1c59",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "5363e860-2dc4-4bdb-868e-dc090493db67"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/activity-complete.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/activity-complete.test.ts",
@@ -17077,11 +17077,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/route.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/route.tsx",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378712.042127,
       "size": 953,
       "checksum": "8fa3eef31d5bc0dfb3433af7725afb016904c8d00b4048c7e8f3d8d4c142fc14",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "5363e860-2dc4-4bdb-868e-dc090493db67"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/activity-composition.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/activity-composition.test.ts",
@@ -17374,11 +17374,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/config/config.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/config/config.ts",
       "last_modified": 1771286343.9407718,
-      "last_submitted": null,
+      "last_submitted": 1771378712.042129,
       "size": 49133,
       "checksum": "b18443086b4455e996f5ae11ad9b3a03fdd902df1b081005da109d7a2f74e3c7",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "5363e860-2dc4-4bdb-868e-dc090493db67"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/shared/EmptyState.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/components/shared/EmptyState.js",
@@ -17428,11 +17428,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/__tests__/impulse-bidirectional-resolution.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/__tests__/impulse-bidirectional-resolution.test.ts",
       "last_modified": 1771286343.9437718,
-      "last_submitted": null,
+      "last_submitted": 1771378445.884132,
       "size": 11905,
       "checksum": "aa50420d5cb5a4fc7589f03e88a23421a70485a96f865b44a083c94b2bb2a5b4",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "0d6d39bd-318e-49da-84ff-066e5932b0d4"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/file/fzf.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/file/fzf.ts",
@@ -18004,11 +18004,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts",
       "last_modified": 1771286343.9443526,
-      "last_submitted": null,
+      "last_submitted": 1771378445.884126,
       "size": 10192,
       "checksum": "63e59523891d643e098d1d1da8d209689575c305de7fff055d3b1577b8672870",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "0d6d39bd-318e-49da-84ff-066e5932b0d4"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/app/src/routes/workspace/[id]/model-section.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/app/src/routes/workspace/[id]/model-section.tsx",
@@ -18409,11 +18409,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
       "last_modified": 1771286343.9427717,
-      "last_submitted": null,
+      "last_submitted": 1771378445.884135,
       "size": 14345,
       "checksum": "2753ac8e09fd8fc3c38539435e1f5c1a19224ffe45f79112f80847f29fa47f3c",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "0d6d39bd-318e-49da-84ff-066e5932b0d4"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/typescript/metabob/auth/organization.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/typescript/metabob/auth/organization.ts",
@@ -23843,7 +23843,6 @@
         "timestamp": "2026-02-17T17:31:39.444373"
       }
     },
-    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/tool/activity.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/impulse-formatter.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/compaction.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/memory-agent.ts": {},
@@ -23978,7 +23977,823 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity-template.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/__tests__/impulse-cache.test.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity-schema-adapter.ts": {},
-    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts": {}
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts": {
+      "718a1abb-a34e-46b4-ba18-76672f101bb8": {
+        "id": "718a1abb-a34e-46b4-ba18-76672f101bb8",
+        "line": 129,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Improper error handling in get function.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `get` function catches all errors and logs them as \"template not found,\" which can be misleading. This approach does not differentiate between a genuine \"not found\" scenario and other potential errors like network issues or server errors. This could lead to incorrect assumptions about the state of the system and hinder debugging efforts.",
+        "start_line": 129,
+        "end_line": 132,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:34:04.660064"
+      },
+      "b5d7f29a-2aaf-4786-8911-0631c85b711a": {
+        "id": "b5d7f29a-2aaf-4786-8911-0631c85b711a",
+        "line": 282,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Incomplete error handling in sync function.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `sync` function logs a warning when a template fails to sync but does not propagate the error or handle it further. This could result in silent failures where the caller is unaware of the incomplete sync operation, potentially leading to data inconsistency between backends. Proper error handling should be implemented to ensure that failures are communicated and addressed appropriately.",
+        "start_line": 282,
+        "end_line": 285,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:34:04.660082"
+      },
+      "6526e94c-1425-4580-b7e4-8df4a5eaba31": {
+        "id": "6526e94c-1425-4580-b7e4-8df4a5eaba31",
+        "line": 161,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Redundant backend handling in save function.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `save` function redundantly checks for combinations of backends and defaults to \"auto\" in multiple cases. This redundancy increases code complexity and maintenance overhead without providing additional functionality. Simplifying the logic to handle \"all\" and specific backends separately would improve readability and maintainability.",
+        "start_line": 161,
+        "end_line": 173,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:34:04.660093"
+      },
+      "4264957c-e168-4f4b-b811-9ace5ae874e2": {
+        "id": "4264957c-e168-4f4b-b811-9ace5ae874e2",
+        "line": 200,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Redundant backend handling in remove function.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "Similar to the `save` function, the `remove` function contains redundant logic for handling backend combinations, defaulting to \"auto\" in multiple scenarios. This unnecessary complexity can lead to maintenance challenges and potential errors in future modifications. Streamlining the logic to handle \"all\" and specific backends distinctly would enhance code clarity.",
+        "start_line": 200,
+        "end_line": 212,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:34:04.660103"
+      },
+      "4590cad1-139b-46f9-95a0-347c5935b9c0": {
+        "id": "4590cad1-139b-46f9-95a0-347c5935b9c0",
+        "line": 296,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Lack of error handling in getCacheStats function.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The `getCacheStats` function directly returns the result of `TemplateCache.getStats()` without any error handling. If `getStats()` encounters an error, it could lead to unhandled exceptions and potential application crashes. Implementing error handling would ensure robustness and prevent runtime failures.",
+        "start_line": 296,
+        "end_line": 299,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:34:04.660112"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/__tests__/impulse-bidirectional-resolution.test.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/remote/context.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/server/server.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts": {
+      "262fff02-9592-4c2f-af1b-194406e78c44": {
+        "id": "262fff02-9592-4c2f-af1b-194406e78c44",
+        "line": 144,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Incorrect error handling in connection status update.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `checkConnection` function updates the `connectionStatus` object with an error message when an exception occurs, but it does not set the `connected` field to `false` explicitly. This could lead to a situation where the `connected` status remains `true` despite an error, causing subsequent operations to proceed under the false assumption that the connection is available. This can result in failed operations and inconsistent application behavior.",
+        "start_line": 144,
+        "end_line": 156,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:35:05.683982"
+      },
+      "f3fbad94-ce73-4c2b-b670-1042b0dfdcbf": {
+        "id": "f3fbad94-ce73-4c2b-b670-1042b0dfdcbf",
+        "line": 192,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Potential undefined return in map function.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "In the `searchTemplates` function, the `map` function used on `summaries` can return `undefined` if the `id` is not found, which is then filtered out later. However, this approach can lead to unnecessary processing and potential errors if the filtering logic changes or is removed. Ensuring that only valid `id` values are processed initially would improve the robustness and maintainability of the code.",
+        "start_line": 192,
+        "end_line": 200,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:35:05.683993"
+      },
+      "b47ee1d8-4273-402e-981a-b5fec2657ec2": {
+        "id": "b47ee1d8-4273-402e-981a-b5fec2657ec2",
+        "line": 390,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Pagination not implemented in listTemplates function.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `listTemplates` function does not implement pagination, as indicated by the comment on line 407. This can lead to performance issues when dealing with large datasets, as all results are fetched and processed at once. Implementing pagination would improve performance and user experience by allowing the client to request data in manageable chunks.",
+        "start_line": 390,
+        "end_line": 410,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:35:05.684001"
+      },
+      "07f48c90-e7be-495f-96d0-a545872e6f17": {
+        "id": "07f48c90-e7be-495f-96d0-a545872e6f17",
+        "line": 472,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Incomplete delete operation fallback handling.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `deleteTemplate` function attempts to use `MetabobCLI.removeActivityTemplate` but falls back to a warning if the function is not implemented. This fallback does not provide a mechanism to handle the absence of the delete functionality, potentially leaving templates undeleted without notifying the user or providing alternative actions. This can lead to data inconsistency and user confusion.",
+        "start_line": 472,
+        "end_line": 496,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:35:05.684007"
+      },
+      "4e9e59d6-cf18-4412-8010-d2cfaa7e19fb": {
+        "id": "4e9e59d6-cf18-4412-8010-d2cfaa7e19fb",
+        "line": 421,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Inefficient recommendation scoring mechanism.",
+        "rule": "Algorithmic issues",
+        "suggestion": null,
+        "category": "Algorithmic issues",
+        "description": "The `getRecommendations` function uses the `successRate` as the sole scoring mechanism for recommendations. This simplistic approach may not provide the most relevant recommendations, as it does not consider other factors such as user preferences or contextual relevance. Enhancing the scoring algorithm to incorporate multiple factors would improve the quality and relevance of recommendations.",
+        "start_line": 421,
+        "end_line": 448,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:35:05.684012"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/provider/sdk-loader.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/plugin/index.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/provider/provider.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/project/bootstrap.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/plugin/metabob-ui.ts": {
+      "5a2511ea-0b82-4dc9-9bb1-6c7401373253": {
+        "id": "5a2511ea-0b82-4dc9-9bb1-6c7401373253",
+        "line": 60,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Potential null reference when accessing lastMessage.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The code assumes that the `messages` array will always contain elements, but if `Session.messages({ sessionID })` returns an empty array, accessing `messages[messages.length - 1]` will result in `undefined`. This could lead to a null reference error when trying to access `lastMessage.info.role`. Adding a check to ensure `messages` is not empty before accessing its last element would prevent this issue.",
+        "start_line": 60,
+        "end_line": 62,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:36:35.645667"
+      },
+      "e381a537-2665-414f-9e20-808577ba7b73": {
+        "id": "e381a537-2665-414f-9e20-808577ba7b73",
+        "line": 178,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Incorrect handling of mcpResult content type.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The code checks if `mcpResult.content` is an array, but it does not handle cases where `mcpResult` is `null` or `undefined`, which would cause a runtime error. The condition should be updated to first check if `mcpResult` is truthy before accessing its `content` property. This would prevent potential crashes when `mcpResult` is not properly initialized.",
+        "start_line": 178,
+        "end_line": 181,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:36:35.645681"
+      },
+      "b77fcd7a-d265-4202-a7ff-00748b20173c": {
+        "id": "b77fcd7a-d265-4202-a7ff-00748b20173c",
+        "line": 195,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "JSON parsing without error handling.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The code attempts to parse `textContent` as JSON without adequate error handling, which could lead to unhandled exceptions if `textContent` is not valid JSON. Although there is a catch block, it only returns `null` without logging or handling the error, which could make debugging difficult. Adding logging or more descriptive error handling would improve maintainability and debugging.",
+        "start_line": 195,
+        "end_line": 198,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:36:35.645688"
+      },
+      "6f640219-a925-42d4-8ee0-6a67ccfef43d": {
+        "id": "6f640219-a925-42d4-8ee0-6a67ccfef43d",
+        "line": 148,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Potential memory leak with activeMetabobCalls map.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The `activeMetabobCalls` map is used to track active tool calls but relies on explicit deletion of entries. If the `tool.execute.after` event is not triggered for some reason, entries may not be removed, leading to a memory leak. Implementing a timeout or periodic cleanup mechanism could prevent this issue by ensuring that stale entries are eventually removed.",
+        "start_line": 148,
+        "end_line": 149,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:36:35.645694"
+      },
+      "446916db-f75e-4eb6-baa5-689e1337a747": {
+        "id": "446916db-f75e-4eb6-baa5-689e1337a747",
+        "line": 91,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Error logging lacks stack trace information.",
+        "rule": "Design issues",
+        "suggestion": null,
+        "category": "Design issues",
+        "description": "When logging errors in the catch block, only the error message is logged without the stack trace, which can be crucial for diagnosing issues. Including the stack trace in the log would provide more context and aid in debugging. This can be achieved by logging `error.stack` if `error` is an instance of `Error`.",
+        "start_line": 91,
+        "end_line": 93,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:36:35.645699"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/mcp/index.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/config/schemas/metabob.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sync.tsx": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/error.ts": {
+      "f9b570b2-fc07-44c1-8efe-5adc22b2ec9e": {
+        "id": "f9b570b2-fc07-44c1-8efe-5adc22b2ec9e",
+        "line": 6,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Unhandled error types in FormatError function.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The `FormatError` function does not handle cases where the input does not match any of the specified error types. This could lead to unexpected behavior or silent failures if an unknown error type is passed to the function. It is crucial to handle all possible inputs, either by providing a default error message or by logging the unhandled error for further investigation.",
+        "start_line": 6,
+        "end_line": 28,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:37:33.331673"
+      },
+      "6fc43a60-15b8-4c87-a2df-90890cf70696": {
+        "id": "6fc43a60-15b8-4c87-a2df-90890cf70696",
+        "line": 26,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Empty string return for UI.CancelledError.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "Returning an empty string for `UI.CancelledError` might not be the best approach as it provides no context or information about the error. This could lead to confusion or misinterpretation of the error state by the calling code. A more informative message or a specific handling mechanism should be implemented to ensure clarity and proper error management.",
+        "start_line": 26,
+        "end_line": 27,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:37:33.331684"
+      },
+      "dfe3ead7-5b04-481b-bc61-9f5105b5f159": {
+        "id": "dfe3ead7-5b04-481b-bc61-9f5105b5f159",
+        "line": 23,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Potential runtime error with undefined input.data.issues.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The code attempts to map over `input.data.issues` without checking if it is defined, which could lead to a runtime error if `issues` is undefined. This could cause the application to crash unexpectedly when processing certain error inputs. Adding a check to ensure `issues` is defined before mapping over it would prevent such runtime errors.",
+        "start_line": 23,
+        "end_line": 24,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:37:33.331691"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/util/clipboard.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/index.tsx": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/file/ripgrep.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sdk.tsx": {
+      "f62c9288-95a0-4181-ba2f-bb37979ce83e": {
+        "id": "f62c9288-95a0-4181-ba2f-bb37979ce83e",
+        "line": 13,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Ignored TypeScript error on request timeout.",
+        "rule": "Security issues",
+        "suggestion": null,
+        "category": "Security issues",
+        "description": "The code uses `// @ts-ignore` to bypass a TypeScript error when setting `req.timeout = false`. This could lead to security vulnerabilities if the request timeout is not properly handled, potentially allowing for denial-of-service attacks or hanging requests. Ignoring TypeScript errors can mask underlying issues that should be addressed to ensure robust and secure code.",
+        "start_line": 13,
+        "end_line": 17,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:38:31.263933"
+      },
+      "656af4bf-4ec1-4049-80c0-427077cf0491": {
+        "id": "656af4bf-4ec1-4049-80c0-427077cf0491",
+        "line": 24,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Potential unhandled promise rejection in event subscription.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The `sdk.event.subscribe()` call returns a promise, but there is no error handling for promise rejections. If the subscription fails, it could lead to unhandled promise rejections, which may crash the application or lead to unexpected behavior. Proper error handling should be implemented to ensure the application remains stable and can recover from such failures.",
+        "start_line": 24,
+        "end_line": 40,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:38:31.263952"
+      },
+      "e3e11bce-122f-4d8d-b778-13e51a8e3cc0": {
+        "id": "e3e11bce-122f-4d8d-b778-13e51a8e3cc0",
+        "line": 41,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Potential resource leak without proper cleanup.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The `onCleanup` function calls `abort.abort()`, but there is no guarantee that all resources associated with the SDK client are properly released. If the SDK client maintains open connections or other resources, failing to clean them up could lead to resource leaks, degrading performance over time. Ensuring comprehensive cleanup is crucial for maintaining application performance and stability.",
+        "start_line": 41,
+        "end_line": 44,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:38:31.263963"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/index.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/route.tsx": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/config/config.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/acp/agent.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/app.tsx": {
+      "378e4791-dc89-4655-8e8d-2d8f298aaa94": {
+        "id": "378e4791-dc89-4655-8e8d-2d8f298aaa94",
+        "line": 82,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Raw mode set without proper cleanup on promise rejection.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The code sets the terminal to raw mode but does not handle the case where the promise is rejected or an error occurs before the cleanup function is called. This can leave the terminal in an unusable state, affecting user interaction and potentially requiring a terminal restart. Proper error handling should ensure that `cleanup()` is called in all scenarios to reset the terminal state.",
+        "start_line": 82,
+        "end_line": 85,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:39:30.898457"
+      },
+      "4d3d93a5-29fb-4d9d-b3ef-2aefd6170a6c": {
+        "id": "4d3d93a5-29fb-4d9d-b3ef-2aefd6170a6c",
+        "line": 86,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Timeout may resolve promise prematurely.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The timeout set for 1000 milliseconds may resolve the promise with \"dark\" before the terminal has a chance to respond with the actual background color. This can lead to incorrect UI theming, affecting user experience and potentially causing visual inconsistencies. A more robust mechanism should be implemented to ensure the terminal response is awaited adequately.",
+        "start_line": 86,
+        "end_line": 90,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:39:30.898466"
+      },
+      "4a8987c7-b0d3-4f27-af21-490886216aae": {
+        "id": "4a8987c7-b0d3-4f27-af21-490886216aae",
+        "line": 351,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Event handler may trigger undefined command.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The event handler for `TuiEvent.CommandExecute` triggers a command using `command.trigger(evt.properties.command)` without verifying if the command exists or is valid. This can lead to runtime errors if an undefined or malformed command is executed, potentially causing application crashes or unexpected behavior. Validation should be added to ensure only valid commands are executed.",
+        "start_line": 351,
+        "end_line": 354,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:39:30.898471"
+      },
+      "597b7ae2-c7f5-468f-a897-7610f3477af6": {
+        "id": "597b7ae2-c7f5-468f-a897-7610f3477af6",
+        "line": 365,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Potential navigation to undefined route.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "When a session is deleted, the code navigates to the \"home\" route without checking if the route exists or is valid. If the \"home\" route is undefined or improperly configured, this could lead to navigation errors or application crashes. A check should be added to ensure the target route is valid before attempting navigation.",
+        "start_line": 365,
+        "end_line": 372,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:39:30.898476"
+      },
+      "3eec0770-ccef-4fb4-b9fe-e55c3ceaa808": {
+        "id": "3eec0770-ccef-4fb4-b9fe-e55c3ceaa808",
+        "line": 493,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Clipboard copy without user confirmation.",
+        "rule": "Security issues",
+        "suggestion": null,
+        "category": "Security issues",
+        "description": "The `copyIssueURL` function copies a URL to the clipboard without explicit user confirmation, which could be exploited for clipboard hijacking attacks. This behavior can lead to security vulnerabilities where malicious URLs could be copied without user consent. Implementing a user confirmation step before copying to the clipboard can mitigate this risk.",
+        "start_line": 493,
+        "end_line": 497,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:39:30.898481"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/activity.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/component/dialog-session-list.tsx": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/reset.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/scripts/demo-impulse-sidebar.ts": {
+      "69ea4af3-51ff-4f6d-ace3-84d7539b2287": {
+        "id": "69ea4af3-51ff-4f6d-ace3-84d7539b2287",
+        "line": 12,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Unhandled promise rejection in asynchronous function.",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The asynchronous function provided to `Instance.provide` does not have any error handling for promise rejections. If any of the awaited promises within this function (such as `Session.create`, `SessionMemory.addImpulse`, or `SystemPrompt.environment`) are rejected, it will result in an unhandled promise rejection, potentially causing the application to crash or behave unpredictably. Proper error handling should be implemented to catch and manage these rejections gracefully.",
+        "start_line": 12,
+        "end_line": 147,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:40:33.814637"
+      },
+      "ff78fbf1-ece6-43d1-8610-76cd03938934": {
+        "id": "ff78fbf1-ece6-43d1-8610-76cd03938934",
+        "line": 53,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Missing null check for potential undefined value.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The code excerpt in the impulse content indicates a missing null check for `output.stdout.value`, which can lead to a `TypeError` if `output.stdout` is undefined. This logic flaw can cause the application to crash when the code is executed, as it attempts to access a property of an undefined object. Implementing a null check before accessing `output.stdout.value` would prevent this runtime error.",
+        "start_line": 53,
+        "end_line": 54,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:40:33.814648"
+      },
+      "9e7d1d52-801b-4368-a3b7-6f95f23be4e2": {
+        "id": "9e7d1d52-801b-4368-a3b7-6f95f23be4e2",
+        "line": 84,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Incorrect token count for unloaded impulse.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The impulse with ID \"low-priority-docs\" is marked as not loaded (`loaded: false`), yet its `tokenCount` is set to 0. This inconsistency could lead to incorrect calculations or assumptions about the impulse's state, as unloaded impulses should not have a token count. Ensuring that `tokenCount` is only set for loaded impulses would maintain consistency and prevent potential logic errors.",
+        "start_line": 84,
+        "end_line": 86,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:40:33.814655"
+      },
+      "15c6deee-6aac-420a-b520-4158f9f09f28": {
+        "id": "15c6deee-6aac-420a-b520-4158f9f09f28",
+        "line": 110,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Incorrect logic for low priority impulse check.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The logic for checking the presence of low priority impulses in the system prompt is inverted, as indicated by the console output logic (`${hasLowPriority ? \"\u2717\" : \"\u2713\"}`). This could lead to misleading information being logged, suggesting that low priority impulses are present when they are not, or vice versa. Correcting the logic to accurately reflect the presence of low priority impulses will ensure accurate logging and debugging.",
+        "start_line": 110,
+        "end_line": 119,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:40:33.814661"
+      },
+      "974fd8df-6577-4f63-abe8-35f6996da7a8": {
+        "id": "974fd8df-6577-4f63-abe8-35f6996da7a8",
+        "line": 121,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Potential division by zero in token utilization calculation.",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The calculation of token utilization percentage (`(totalTokens / totalBudget) * 100`) does not account for the possibility of `totalBudget` being zero, which would result in a division by zero error. This could cause the application to crash or produce incorrect results if no impulses are loaded. Adding a check to ensure `totalBudget` is greater than zero before performing the division would prevent this issue.",
+        "start_line": 121,
+        "end_line": 128,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:40:33.814666"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/tool/activity.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/metabob.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/agent/agent.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/scripts/test-impulse-display.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/acp/session.ts": {}
   },
   "resolutions": {},
   "annotations": {},
@@ -24442,13 +25257,99 @@
         "repos/metabob-opencode/packages/opencode/src/session/activity-schema-adapter.ts",
         "repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts"
       ],
-      "status": "pending",
+      "status": "complete",
       "created_at": "2026-02-17T17:33:03.730090",
-      "updated_at": "2026-02-17T17:33:03.730101",
+      "updated_at": "2026-02-17T17:34:04.658094",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "0d6d39bd-318e-49da-84ff-066e5932b0d4": {
+      "job_id": "0d6d39bd-318e-49da-84ff-066e5932b0d4",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T17:35:05.712552",
+      "updated_at": "2026-02-17T17:35:08.304910",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "7eb5af35-16a5-4377-8b94-30096ddec2d6": {
+      "job_id": "7eb5af35-16a5-4377-8b94-30096ddec2d6",
+      "file_paths": [
+        "repos/metabob-opencode/packages/opencode/src/provider/sdk-loader.ts",
+        "repos/metabob-opencode/packages/opencode/src/plugin/index.ts",
+        "repos/metabob-opencode/packages/opencode/src/provider/provider.ts",
+        "repos/metabob-opencode/packages/opencode/src/project/bootstrap.ts",
+        "repos/metabob-opencode/packages/opencode/src/plugin/metabob-ui.ts"
+      ],
+      "status": "complete",
+      "created_at": "2026-02-17T17:35:09.161624",
+      "updated_at": "2026-02-17T17:36:35.644666",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "2c6717ec-5bf5-4854-874d-f7fe057165e6": {
+      "job_id": "2c6717ec-5bf5-4854-874d-f7fe057165e6",
+      "file_paths": [
+        "repos/metabob-opencode/packages/opencode/src/mcp/index.ts",
+        "repos/metabob-opencode/packages/opencode/src/config/schemas/metabob.ts",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sync.tsx",
+        "repos/metabob-opencode/packages/opencode/src/cli/error.ts"
+      ],
+      "status": "complete",
+      "created_at": "2026-02-17T17:36:36.308752",
+      "updated_at": "2026-02-17T17:37:33.330817",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "65c990ec-0a9b-4711-9f65-e1b8ce552551": {
+      "job_id": "65c990ec-0a9b-4711-9f65-e1b8ce552551",
+      "file_paths": [
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/util/clipboard.ts",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/index.tsx",
+        "repos/metabob-opencode/packages/opencode/src/file/ripgrep.ts",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/sdk.tsx"
+      ],
+      "status": "complete",
+      "created_at": "2026-02-17T17:37:34.235014",
+      "updated_at": "2026-02-17T17:38:31.262736",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "5363e860-2dc4-4bdb-868e-dc090493db67": {
+      "job_id": "5363e860-2dc4-4bdb-868e-dc090493db67",
+      "file_paths": [
+        "repos/metabob-opencode/packages/opencode/src/index.ts",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/route.tsx",
+        "repos/metabob-opencode/packages/opencode/src/config/config.ts",
+        "repos/metabob-opencode/packages/opencode/src/acp/agent.ts",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/app.tsx"
+      ],
+      "status": "complete",
+      "created_at": "2026-02-17T17:38:31.917485",
+      "updated_at": "2026-02-17T17:39:30.897813",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "161f57a3-f804-454f-ad91-de92a67aebf0": {
+      "job_id": "161f57a3-f804-454f-ad91-de92a67aebf0",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T17:40:33.840080",
+      "updated_at": "2026-02-17T17:40:36.166155",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "555710ce-2d03-4fa0-ac35-1cd97967d2fa": {
+      "job_id": "555710ce-2d03-4fa0-ac35-1cd97967d2fa",
+      "file_paths": [
+        "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/metabob.ts",
+        "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
+        "repos/metabob-opencode/packages/opencode/scripts/test-impulse-display.ts",
+        "repos/metabob-opencode/packages/opencode/src/acp/session.ts"
+      ],
+      "status": "pending",
+      "created_at": "2026-02-17T17:40:36.023446",
+      "updated_at": "2026-02-17T17:40:36.023456",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
     }
   },
   "pending_jobs": [
-    "39e4caae-abad-484a-9219-fd5f72666530"
+    "555710ce-2d03-4fa0-ac35-1cd97967d2fa"
   ]
 }
