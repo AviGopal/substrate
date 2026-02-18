@@ -1,8 +1,8 @@
 {
-  "version": 291,
+  "version": 299,
   "session_metadata": {
     "created_at": "2026-02-17T15:38:19.763115",
-    "last_updated": "2026-02-17T17:45:11.084551",
+    "last_updated": "2026-02-17T17:55:36.221858",
     "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
     "format_version": "4.0",
     "interrupted": false,
@@ -2713,11 +2713,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-template-loading-direct.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-template-loading-direct.ts",
       "last_modified": 1771286143.1799304,
-      "last_submitted": null,
+      "last_submitted": 1771379641.026325,
       "size": 1267,
       "checksum": "be5a36bd2a11a5d01101ff07c9899ea2f263b26b84c90df19c6083448ffa09ca",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7c1fb676-47a7-4212-b856-35bc0003c08b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/analyze_docs.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/analyze_docs.py",
@@ -4468,11 +4468,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-step-impulse-reporting.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-step-impulse-reporting.sh",
       "last_modified": 1771286143.1799304,
-      "last_submitted": null,
+      "last_submitted": 1771379736.190936,
       "size": 5083,
       "checksum": "85ad68f4e8e59c97744381b77f8d0fdad0f593bd6090faf7593eb5a039b71e4f",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/debug/scrap.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/debug/scrap.ts",
@@ -5179,11 +5179,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_e2e.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_e2e.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379346.512103,
       "size": 7829,
       "checksum": "5959cd8b08ab797e10138e4f3f4512be520d1a83e9ddff2ce52721a4df31ccef",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "b322b861-8451-4ed8-9f68-e1fc019e02a2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/desktop/src/ui/file-icon.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/desktop/src/ui/file-icon.tsx",
@@ -7042,11 +7042,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-step-reporting.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-step-reporting.sh",
       "last_modified": 1771286143.1799304,
-      "last_submitted": null,
+      "last_submitted": 1771379736.190941,
       "size": 2459,
       "checksum": "2f54882bb673d4c50c6e065370ba026e77f455b609a693bd40317a6f41cf4f0d",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-impulse-persistence-simple.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-impulse-persistence-simple.py",
@@ -7195,11 +7195,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/test.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/test.js",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379346.512109,
       "size": 288,
       "checksum": "83b6d5bc57cef4f363231614c3cd94ea6cb894359906ad0fd1039cb06e7cb64c",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "b322b861-8451-4ed8-9f68-e1fc019e02a2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run_self_improvement_cycle.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run_self_improvement_cycle.sh",
@@ -7546,11 +7546,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_mcp_connection.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_mcp_connection.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379346.51211,
       "size": 5791,
       "checksum": "734e0d22c29f5b2e1e42812d136acf7207786764ed79e8e1b6ff3522ae2bcc3c",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "b322b861-8451-4ed8-9f68-e1fc019e02a2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-mcp-activity-direct.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-mcp-activity-direct.py",
@@ -7726,11 +7726,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_fixes.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_fixes.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379346.512111,
       "size": 11427,
       "checksum": "da5dbe68b41f9d6d4a1056af3f290fe5d33c0416a4bafa1e3d7095ef00a3ed73",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "b322b861-8451-4ed8-9f68-e1fc019e02a2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/cpg-inference/cpg-inference/examples/graph_queries_example.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/cpg-inference/cpg-inference/examples/graph_queries_example.py",
@@ -8671,11 +8671,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-template-loading.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-template-loading.ts",
       "last_modified": 1771286143.1799304,
-      "last_submitted": null,
+      "last_submitted": 1771379736.190943,
       "size": 1044,
       "checksum": "c07758f28d18f5af5337e96f479be817fcaf353395fcbb4d23202429704d9daf",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-cli-mcp-session-start.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/test-cli-mcp-session-start.py",
@@ -9544,11 +9544,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_activity_execution_simple.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_activity_execution_simple.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379346.512112,
       "size": 6562,
       "checksum": "0d8c41cbf84943025247c3207a6b97467da444dce66823ed011137aba3e73960",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "b322b861-8451-4ed8-9f68-e1fc019e02a2"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/ui/src/components/code.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/ui/src/components/code.tsx",
@@ -10147,11 +10147,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_self_sustaining_validation.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_self_sustaining_validation.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379510.641681,
       "size": 6838,
       "checksum": "edfc7f5ce6fa9bacf990726b309e35120e3c18247355cb859c0ae03b5a942a68",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "6be1dfcc-0a35-4054-a10b-8b02238d7566"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/assets/icons/CheckboxUnchecked.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/assets/icons/CheckboxUnchecked.js",
@@ -10444,11 +10444,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-list-return-value.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-list-return-value.ts",
       "last_modified": 1771286143.1799304,
-      "last_submitted": null,
+      "last_submitted": 1771379736.190944,
       "size": 947,
       "checksum": "2c665e67d81af0052c7b70e5056bfdec17d04476e7b17266cfd649d91cb678ca",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/actions/init_activity_schema.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/actions/init_activity_schema.py",
@@ -10507,11 +10507,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_sample.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_sample.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379510.641689,
       "size": 267,
       "checksum": "d95dc9fb8b7b7d22af0b9225c3d188c0b259517e3c67e5b4f58fcdfc7ddb2dbd",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "6be1dfcc-0a35-4054-a10b-8b02238d7566"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/typescript/metabob/activity/variant.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-proto/gen/typescript/metabob/activity/variant.ts",
@@ -10561,11 +10561,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_requirements_runtime.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_requirements_runtime.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379510.641692,
       "size": 5478,
       "checksum": "a169e1e41fd7094100cd9caa14c4ccf1fa8a1e2af1d99c0cab4a9ce53519936c",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "6be1dfcc-0a35-4054-a10b-8b02238d7566"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/verify-setup.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/verify-setup.sh",
@@ -11155,11 +11155,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/sample-original.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/sample-original.js",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379510.641694,
       "size": 221,
       "checksum": "4dfabad13761162f06004b9bcd32fc3ef13c3a05ce2f2271999fc7fec8aa3016",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "6be1dfcc-0a35-4054-a10b-8b02238d7566"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/cpg_analysis.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/tasks/jobs/cpg_analysis.py",
@@ -11794,11 +11794,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_requirements_flow.mjs": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_requirements_flow.mjs",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379510.641696,
       "size": 4661,
       "checksum": "ea1489be4801d72a5f6c018751e13d7ff93c1f91b655c2e79b1f4a2d03441cbd",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "6be1dfcc-0a35-4054-a10b-8b02238d7566"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/webhooks.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-rpc-api/server/routes/webhooks.py",
@@ -15340,11 +15340,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_preservation_unit.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_preservation_unit.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379641.026316,
       "size": 9113,
       "checksum": "697a7b1b7688c4672ff55558986c79bb6cb5e462a10652db62e0c1520399cf41",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7c1fb676-47a7-4212-b856-35bc0003c08b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/config_experimental_hook_session_completed_item.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/config_experimental_hook_session_completed_item.py",
@@ -15592,11 +15592,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-trace-infrastructure.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-trace-infrastructure.py",
       "last_modified": 1771286143.1799304,
-      "last_submitted": null,
+      "last_submitted": 1771379736.190945,
       "size": 5530,
       "checksum": "9b10e91674be4c3c39d444a52175fa726e17e93e9b4afff22c6b868d055c118d",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/src/schema/auth.sql.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/console/core/src/schema/auth.sql.ts",
@@ -15880,11 +15880,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_flow_e2e.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_flow_e2e.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379641.026322,
       "size": 10894,
       "checksum": "35c752c13525ab2f9708940dcc0e2075e52fff1bd7430cf7d3c541ebdd371313",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7c1fb676-47a7-4212-b856-35bc0003c08b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/pages/LocalAnalysisView/index.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/pages/LocalAnalysisView/index.js",
@@ -16762,11 +16762,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_flow_direct.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_flow_direct.py",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379641.026323,
       "size": 4132,
       "checksum": "83d445ff3f4567170bd93adc38449f1596ed6abef0458dab63be6ef70da99241",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7c1fb676-47a7-4212-b856-35bc0003c08b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/util/context.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/util/context.ts",
@@ -17581,11 +17581,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/sample.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/sample.js",
       "last_modified": 1771286143.1805148,
-      "last_submitted": null,
+      "last_submitted": 1771379641.026324,
       "size": 171,
       "checksum": "91e671857ec5fa791d5eaefd091d7d8169f598ce23f749289200c0c408ade118",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd",
-      "job_id": null
+      "job_id": "7c1fb676-47a7-4212-b856-35bc0003c08b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/comparison-test.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/comparison-test.js",
@@ -25188,7 +25188,103 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify_backend_integration.py": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify-step-impulse-data.py": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify-surrealdb-config.sh": {},
-    "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_fix_validation.py": {}
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_fix_validation.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_e2e.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/test.js": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_mcp_connection.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_fixes.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_activity_execution_simple.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_self_sustaining_validation.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_sample.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_requirements_runtime.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/sample-original.js": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_requirements_flow.mjs": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_preservation_unit.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_impulse_flow_e2e.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test_context_flow_direct.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-workspace/behavior-test/sample.js": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-template-loading-direct.ts": {
+      "078e3fa7-74ca-467b-8a00-5031768a6541": {
+        "id": "078e3fa7-74ca-467b-8a00-5031768a6541",
+        "line": 12,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Potential undefined return from TemplateRepository.get()",
+        "rule": "Logic issues",
+        "suggestion": null,
+        "category": "Logic issues",
+        "description": "The call to `TemplateRepository.get()` may return `undefined`, as indicated by the check on line 14. If `undefined` is returned, it suggests that the template-loader is blocking local storage access, which could lead to incorrect assumptions about the availability of templates. This logic issue could result in unexpected behavior or failures in the application if not properly handled.",
+        "start_line": 12,
+        "end_line": 13,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:55:32.777555"
+      },
+      "f1030747-2b00-43aa-8878-853f1e8f7361": {
+        "id": "f1030747-2b00-43aa-8878-853f1e8f7361",
+        "line": 26,
+        "column": 0,
+        "severity": "HIGH",
+        "message": "Incomplete error handling in catch block",
+        "rule": "Runtime issues",
+        "suggestion": null,
+        "category": "Runtime issues",
+        "description": "The catch block logs the error message and stack trace but does not implement any recovery or mitigation strategy. This could lead to unhandled exceptions propagating through the system, potentially causing application crashes or inconsistent states. Proper error handling should include steps to recover from or mitigate the impact of the error to ensure application stability.",
+        "start_line": 26,
+        "end_line": 32,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:55:32.777566"
+      },
+      "bf2acc65-9186-4fe0-9be1-ce5e62ad1549": {
+        "id": "bf2acc65-9186-4fe0-9be1-ce5e62ad1549",
+        "line": 4,
+        "column": 0,
+        "severity": "MEDIUM",
+        "message": "Hardcoded import path may cause maintainability issues",
+        "rule": "Structural issues",
+        "suggestion": null,
+        "category": "Structural issues",
+        "description": "The import statement uses a hardcoded path to the `TemplateRepository` module, which can lead to maintainability issues if the directory structure changes. This tight coupling to a specific file path makes the codebase fragile and harder to refactor or reorganize. Using a more flexible module resolution strategy or configuration can improve maintainability and reduce technical debt.",
+        "start_line": 4,
+        "end_line": 5,
+        "start_column": 0,
+        "end_column": 0,
+        "annotations": {
+          "similar": {
+            "similar_code_chunks": []
+          },
+          "downstream": {
+            "downstream_effects": []
+          }
+        },
+        "confidence_score": null,
+        "timestamp": "2026-02-17T17:55:32.777572"
+      }
+    },
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-step-impulse-reporting.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-step-reporting.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-template-loading.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-list-return-value.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/test-trace-infrastructure.py": {}
   },
   "resolutions": {},
   "annotations": {},
@@ -25782,13 +25878,57 @@
         "verify-surrealdb-config.sh",
         "test_impulse_fix_validation.py"
       ],
-      "status": "pending",
+      "status": "complete",
       "created_at": "2026-02-17T17:45:09.604641",
-      "updated_at": "2026-02-17T17:45:09.604649",
+      "updated_at": "2026-02-17T17:49:05.137925",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "b322b861-8451-4ed8-9f68-e1fc019e02a2": {
+      "job_id": "b322b861-8451-4ed8-9f68-e1fc019e02a2",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T17:51:49.901142",
+      "updated_at": "2026-02-17T17:51:52.037848",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "6be1dfcc-0a35-4054-a10b-8b02238d7566": {
+      "job_id": "6be1dfcc-0a35-4054-a10b-8b02238d7566",
+      "file_paths": [
+        "test_self_sustaining_validation.py",
+        "test_sample.py",
+        "test_context_requirements_runtime.py",
+        "test-workspace/behavior-test/sample-original.js",
+        "test_context_requirements_flow.mjs"
+      ],
+      "status": "complete",
+      "created_at": "2026-02-17T17:51:50.510747",
+      "updated_at": "2026-02-17T17:53:58.978663",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "7c1fb676-47a7-4212-b856-35bc0003c08b": {
+      "job_id": "7c1fb676-47a7-4212-b856-35bc0003c08b",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-17T17:55:32.871100",
+      "updated_at": "2026-02-17T17:55:35.446976",
+      "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
+    },
+    "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9": {
+      "job_id": "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9",
+      "file_paths": [
+        "test-step-impulse-reporting.sh",
+        "test-step-reporting.sh",
+        "test-template-loading.ts",
+        "test-list-return-value.ts",
+        "test-trace-infrastructure.py"
+      ],
+      "status": "pending",
+      "created_at": "2026-02-17T17:55:36.067877",
+      "updated_at": "2026-02-17T17:55:36.067889",
       "session_id": "org_metabob:default:ad6b8f61-e0a8-41de-bbd5-c2b5d3e6c5fd"
     }
   },
   "pending_jobs": [
-    "fb177d63-4c13-4b7b-bf74-41cd23afc983"
+    "9dbaf434-d2b4-4b0f-a304-f4f6a61fbec9"
   ]
 }
