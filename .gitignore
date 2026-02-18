@@ -73,3 +73,5 @@ test-local.txt
 *.pem
 *.key
 !*.pub
+test-workspace/dummy-project/
+test-workspace/refactor-test/
