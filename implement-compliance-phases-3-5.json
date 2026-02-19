@@ -1,0 +1,118 @@
+{
+  "name": "Implement Agent Compliance Enforcement Phases 3-5",
+  "description": "Complete Phase 3 (template validation with requiredToolCalls/forbiddenPatterns), Phase 4 (annotation coverage in correctness checks), and Phase 5 (comprehensive testing) of the Agent Compliance Enforcement system",
+  "category": "feature",
+  "tasks": [
+    {
+      "id": "implement-phase-3-validation",
+      "subagent": "general",
+      "description": "Extend template schema to support requiredToolCalls and forbiddenPatterns, implement validation logic",
+      "dependencies": [],
+      "prompt": {
+        "template": "Implement Phase 3: Template Validation Enhancement\n\n**Context**: Phases 1-2 of Agent Compliance Enforcement are complete:\n- Phase 1: Automatic annotation capture (activity.ts post-hook)\n- Phase 2: Markdown file detection (write.ts with isMarkdownFile/isAllowedMarkdownFile helpers)\n\n**Your Task**: Implement template-level validation to enforce tool call requirements.\n\n**Steps**:\n\n1. **Extend Template Schema**:\n   - Find the ActivityTemplate schema definition (likely in src/schema or src/types)\n   - Add two new optional fields to task validation:\n     - `requiredToolCalls`: string[] - Array of tool names that MUST be called\n     - `forbiddenPatterns`: string[] - Array of regex patterns that MUST NOT appear in outputs\n   \n2. **Implement Validation Logic**:\n   - Find task executor/validator (likely in src/session or src/activity)\n   - After task completes, check:\n     - Were all requiredToolCalls invoked?\n     - Do any outputs match forbiddenPatterns?\n   - If validation fails, provide clear error with guidance\n\n3. **Add Retry Mechanism**:\n   - When validation fails, include in error message:\n     - Which required tools were not called\n     - Which forbidden patterns were found\n     - Guidance on how to fix\n   - Allow task retry with enhanced prompt\n\n4. **Update Example Template**:\n   - Modify add-feature-complete or fix-bug-complete template\n   - Add requiredToolCalls: [\"metabob_annotate_component\"]\n   - Add forbiddenPatterns: [\"TODO\", \"FIXME\", \"console.log\"]\n\n**Files to Modify**:\n- Template schema (add fields)\n- Task validator (implement checks)\n- At least one existing template (demonstrate usage)\n\n**Success Criteria**:\n- TypeScript compiles without errors\n- Schema includes new validation fields\n- Validator checks and reports violations\n- Example template uses new fields\n\n**Output**: Commit your changes with clear message explaining what was added.",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "cd repos/metabob-opencode && bun run typecheck",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "implement-phase-4-correctness",
+      "subagent": "general",
+      "description": "Add annotation coverage and markdown file detection to correctness verdict computation",
+      "dependencies": ["implement-phase-3-validation"],
+      "prompt": {
+        "template": "Implement Phase 4: Correctness Enhancement\n\n**Context**: Phase 3 template validation is now complete. We need to enhance the correctness verdict system to detect missing annotations and improper markdown files.\n\n**Your Task**: Add annotation coverage checks to activity correctness computation.\n\n**Steps**:\n\n1. **Find Correctness Module**:\n   - Locate `activity-correctness.ts` in repos/metabob-opencode/packages/opencode/src/session/\n   - Review existing verdict computation logic\n\n2. **Add Annotation Coverage Check**:\n   - After activity completes, check:\n     - How many files were changed? (from git diff)\n     - How many annotations were created? (from metabob API or annotation tool calls)\n     - Calculate coverage: annotations / files_changed\n   - If coverage < 0.5 (less than half of changed files have annotations):\n     - Add WARNING to correctness issues\n     - Lower confidence score\n\n3. **Add Markdown File Detection**:\n   - Check if any .md files were created (excluding allowed ones)\n   - If non-allowed markdown files exist:\n     - Add WARNING to correctness issues\n     - Suggest using annotations instead\n\n4. **Update Correctness Verdict**:\n   - Add two new issue types:\n     - \"low-annotation-coverage\" (warning)\n     - \"documentation-file-created\" (warning)\n   - Update confidence calculation to factor in these issues\n\n**Files to Modify**:\n- `repos/metabob-opencode/packages/opencode/src/session/activity-correctness.ts`\n\n**Success Criteria**:\n- TypeScript compiles without errors\n- Correctness verdict includes annotation coverage\n- Warnings appear for low coverage\n- Warnings appear for markdown files\n\n**Output**: Commit your changes with clear message.",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "cd repos/metabob-opencode && bun run typecheck",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "implement-phase-5-testing",
+      "subagent": "general",
+      "description": "Create comprehensive test that validates automatic annotation capture, markdown warnings, and compliance enforcement",
+      "dependencies": ["implement-phase-4-correctness"],
+      "prompt": {
+        "template": "Implement Phase 5: Comprehensive Testing\n\n**Context**: Phases 3-4 are complete. Now we need end-to-end testing to verify the entire compliance system works.\n\n**Your Task**: Create a test activity that intentionally violates compliance rules, then verify automatic correction works.\n\n**Steps**:\n\n1. **Create Test Activity Template**:\n   - Name: `test-agent-compliance-enforcement`\n   - Make it intentionally do the wrong things:\n     - Change files but don't call annotation tool\n     - Try to create a markdown file\n     - Skip required validation\n\n2. **Run Test Activity**:\n   - Execute the test activity\n   - Capture the results\n\n3. **Verify Automatic Corrections**:\n   - Check that Phase 1 kicked in: annotations were created automatically\n   - Check that Phase 2 kicked in: markdown file warning appeared\n   - Check that Phase 4 kicked in: correctness verdict shows warnings\n\n4. **Create Test Report**:\n   - Document what was tested\n   - Show before/after for each phase\n   - Confirm all phases working together\n\n**Files to Create**:\n- Test activity template JSON\n- Test execution script\n- Test results documentation\n\n**Success Criteria**:\n- Test activity runs successfully\n- Automatic annotation capture works\n- Markdown warnings appear\n- Correctness verdict reflects compliance\n\n**Output**: Commit test files and results with clear message.",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "commit-and-document",
+      "subagent": "general",
+      "description": "Create organized commits for phases 3-5 and update documentation",
+      "dependencies": ["implement-phase-5-testing"],
+      "prompt": {
+        "template": "Finalize Agent Compliance Enforcement Implementation\n\n**Context**: Phases 3-5 are implemented and tested. Time to commit and document.\n\n**Your Task**: Create clean commits and update documentation.\n\n**Steps**:\n\n1. **Organize Commits** (if not already done in previous tasks):\n   - Commit 1: Phase 3 (template validation)\n   - Commit 2: Phase 4 (correctness enhancement)\n   - Commit 3: Phase 5 (testing)\n   - Each commit should have clear message explaining WHY\n\n2. **Update AGENT_COMPLIANCE_ENFORCEMENT_DESIGN.md**:\n   - Mark Phases 3-5 as COMPLETE\n   - Add implementation notes\n   - Document any deviations from design\n\n3. **Create Summary Document**:\n   - What was implemented\n   - How to use the new features\n   - Examples of compliance enforcement in action\n\n**Success Criteria**:\n- All changes committed\n- Documentation updated\n- Clear summary of work\n\n**Output**: Final commit with documentation updates.",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}
