@@ -1,185 +1,226 @@
-# Live Data Flow Validation
+# Live Data Flow Validation - Test 2
 
-## Problem Identified
+## Test Objective
+Explicitly ask agent to use `activity` tool to execute `create-activity-template`
 
-Previous validation tests (`test-impulse-working.sh`, `test-activity-template-flow.sh`, `test-variant-system-flow.sh`) had a critical flaw:
+## Result: Partial Success ⚠️
 
-**They manually inserted data into SurrealDB and then queried it back.**
+### What Happened
 
-This proved "we can write to database" but NOT that the actual production code paths work.
+**Agent attempted to use the activity tool** ✅
+- Found templates via search_activities
+- Identified create-activity-template exists
+- Tried to execute it with activity() tool
 
-## Real Data Flow
+**Activity execution failed** ❌
+- Error: Context negotiation failure
+- Template has `contextRequirements` 
+- Memory agent negotiation didn't work
+- Activity failed silently after 18ms
 
-The actual production data flow is:
+**Agent adapted** ✅
+- Recognized the failure
+- Fell back to direct creation
+- Fixed create-activity-template validation errors
+- Created fix-type-errors template manually
+- Registered both templates successfully
 
+## Key Discoveries
+
+### 1. Activity Tool Is Being Called!
 ```
-OpenCode Tool
-    ↓
-MCP Client (metabob-cli)
-    ↓
-ActivityManager (production code)
-    ↓
-Backend API (metabob-rpc-api)
-    ↓
-Database (SurrealDB/Redis)
+[94m[1m| [0m[90m activity  [0m✗ Create Activity Template
 ```
+The agent IS trying to use the activity tool when explicitly asked. This is progress!
 
-## Live Test Script
-
-`verify-live-data-flow-simple.py` validates the REAL production code path:
-
-### What It Does
-
-1. **Verifies backend is running** (`http://localhost:8080/health`)
-
-2. **Ensures test template exists** via Backend API:
-   - GET `/v2/activities/templates` to check
-   - POST `/v2/activities/templates` to create if missing
-
-3. **Executes activity via production MCP code**:
-   - `ActivityManager.start_execution()` → Backend POST `/v2/activities/record/start`
-   - `ActivityManager.get_next_step()` → Backend GET `/v2/activities/templates/{id}`
-   - `ActivityManager.report_step_result()` → Backend POST `/v2/activities/executions/{id}/tasks`
-   - `ActivityManager.get_next_step()` (completion check) → Backend POST `/v2/activities/executions`
-
-4. **Verifies data in backend**:
-   - GET `/v2/activities/templates/test-hello-world/stats`
-   - Confirms `total_executions > 0`
-
-### Key Insight
-
-This test triggers **REAL production code**, not manual database inserts. It validates that:
-
-✅ MCP tools actually call backend API  
-✅ Backend API actually writes to database  
-✅ Data actually flows through the system  
-
-## Code Paths Validated
-
-### ActivityManager (MCP Layer)
-
-**File**: `repos/metabob-cli/src/metabob_cli/mcp/activity_manager.py`
-
-- **Line 703-711**: `start_execution()` calls `POST /v2/activities/record/start`
-- **Line 762**: `get_next_step()` calls `GET /v2/activities/templates/{id}`
-- **Line 936**: `report_step_result()` calls `POST /v2/activities/executions/{id}/tasks`
-- **Line 1549**: `_record_outcome()` calls `POST /v2/activities/executions`
-
-### Backend API (Server Layer)
-
-**File**: `repos/metabob-rpc-api/server/routes/activity.py`
-
-- **Line 237**: `POST /executions` - Records execution results
-- **Line 80**: `GET /templates/{id}` - Fetches template details
-- **Line 281**: `GET /templates/{id}/stats` - Returns execution statistics
-
-**File**: `repos/metabob-rpc-api/server/routes/activity_metrics_router.py`
-
-- **Line 19**: `POST /api/activity-execution` - Records execution metrics
-- **Line 71**: `GET /api/template/{id}/metrics` - Returns aggregated metrics
-
-## Running the Test
-
-### Prerequisites
-
-1. **Start Backend API**:
-   ```bash
-   cd repos/metabob-rpc-api
-   poetry run uvicorn server.main:app --reload
-   ```
-
-2. **Ensure SurrealDB is running** (if using SurrealDB backend)
-
-3. **Ensure Redis is running** (current MVP uses Redis)
-
-### Execute Test
-
-```bash
-./verify-live-data-flow-simple.py
-```
-
-### Expected Output
-
-```
-[INFO] ============================================================
-[INFO] Live Data Flow Test - Production Code Path
-[INFO] ============================================================
-[INFO] ✓ Backend API is running
-[INFO] ✓ Test template exists: test-hello-world-a1b2c3d4
-[INFO] Step 3: Executing activity via production MCP ActivityManager...
-[INFO] Trace ID: a1b2c3d4
-[INFO] Session ID: test_session_a1b2c3d4
-[INFO]   3a. Starting execution (MCP → Backend POST /v2/activities/record/start)...
-[INFO]   ✓ Execution started: exec_abc123def456
-[INFO]   3b. Getting next step (MCP → Backend GET /v2/activities/templates/...)...
-[INFO]   ✓ Got step: task-1
-[INFO]   3c. Reporting step result (MCP → Backend POST /v2/activities/executions/{id}/tasks)...
-[INFO]   ✓ Step result reported
-[INFO]   3d. Checking completion (MCP → Backend POST /v2/activities/executions)...
-[INFO]   ✓ Activity completed successfully
-[INFO] Step 4: Verifying data reached backend...
-[INFO]   Backend stats retrieved:
-[INFO]     Total executions: 5
-[INFO]     Success rate: 100.00%
-[INFO] ✓ DATA SUCCESSFULLY FLOWED THROUGH PRODUCTION CODE!
-[INFO]   OpenCode → MCP → Backend API → Database ✓
-[INFO] ============================================================
-[INFO] LIVE DATA FLOW TEST: PASSED ✓
-[INFO] Production code path validated: MCP → Backend → Database
-[INFO] ============================================================
-```
-
-## Validation Checklist
-
-- [x] Test calls production MCP code (not manual inserts)
-- [x] MCP code calls real backend API endpoints
-- [x] Backend API writes to actual database
-- [x] Data retrieval confirms persistence
-- [x] Full integration path validated
-
-## Difference from Previous Tests
-
-| Aspect | Previous Tests | Live Test |
-|--------|---------------|-----------|
-| **Data insertion** | Manual SQL INSERT | Production MCP code |
-| **API calls** | None (direct DB) | Real HTTP requests |
-| **Code path** | Test script only | Full production stack |
-| **Validation** | Can write to DB | Actual integration works |
-
-## Next Steps
-
-Once this test passes:
-
-1. **Extend to impulse system**: Test impulse creation through production code
-2. **Extend to activity variants**: Test variant creation and selection
-3. **Add tracing**: Add unique `trace_id` to track data flow through logs
-4. **Automate**: Add to CI/CD pipeline as integration test
-
-## Test Template Used
-
-The test uses a minimal template:
-
+### 2. Context Negotiation Failure
 ```json
 {
-  "activity_id": "test-hello-world",
-  "variant_name": "Test Hello World",
-  "description": "Simple test activity for data flow validation",
-  "category": "testing",
-  "task_steps": [
-    {
-      "id": "task-1",
-      "subagent": "general",
-      "description": "Echo test message",
-      "prompt": {
-        "template": "Echo: {{message}}",
-        "variables": [
-          {"name": "message", "type": "string", "required": true}
-        ]
-      },
-      "validation": {"type": "none"}
-    }
-  ]
+  "status": "failed",
+  "duration": 18,  // Failed in 18ms - too fast, no actual work
+  "impulses": {},  // No impulses loaded!
 }
 ```
 
-This minimizes external dependencies while testing the full data flow.
+**Root cause**: Templates with `contextRequirements` require memory agent to negotiate context. This negotiation is failing.
+
+### 3. Agent Shows Adaptive Behavior
+When activity failed, agent:
+1. Diagnosed the problem (validation errors in template)
+2. Fixed the errors
+3. Fell back to direct creation
+4. Still achieved the goal
+
+## The Missing Piece: Context Negotiation
+
+### What Should Happen
+```
+User: "Use activity X"
+  ↓
+Activity Engine: "This needs context: projectCommands, exampleTemplates"
+  ↓
+Memory Agent: Negotiates impulses
+  ↓
+Impulses Loaded: {projectCommands: {...}, exampleTemplates: {...}}
+  ↓
+Activity Executes: With full context
+```
+
+### What's Happening
+```
+User: "Use activity X"
+  ↓
+Activity Engine: "This needs context: projectCommands, exampleTemplates"
+  ↓
+Memory Agent: ???  (Negotiation fails silently)
+  ↓
+Activity Fails: No context loaded, duration 18ms
+```
+
+## Measurements
+
+### Template Usage
+- **Direct creation**: 2/2 (100%)
+- **Activity usage**: 0/2 (0%)
+  - Attempted: 2/2
+  - Succeeded: 0/2
+  - Reason: Context negotiation failure
+
+### Success Rates
+- **Goal achievement**: 2/2 (100%) - Templates created
+- **Intended path**: 0/2 (0%) - Activity tool failed
+- **Fallback path**: 2/2 (100%) - Direct creation worked
+
+### Functional State Changes
+- Templates created: 2 (add-logging, fix-type-errors)
+- Templates fixed: 1 (create-activity-template validation errors)
+- Templates registered: 3 total
+- Backend: Updated successfully
+
+## Root Cause Analysis
+
+### Why Context Negotiation Fails
+
+**Hypothesis 1**: Memory agent not initialized
+- Activity starts but memory agent doesn't
+- No negotiation session created
+- Impulses never loaded
+
+**Hypothesis 2**: Context requirements malformed
+- Schema mismatch between requirements and impulses
+- Memory agent can't understand what to load
+- Fails silently instead of erroring
+
+**Hypothesis 3**: Timing issue
+- Activity fails too fast (18ms)
+- Memory agent negotiation not awaited
+- Race condition between activity start and context load
+
+**Hypothesis 4**: Missing integration
+- Activity system and memory agent not properly connected
+- Negotiation hook not registered
+- Context loading pathway broken
+
+## Evidence
+
+### Activity Record
+```json
+{
+  "status": "failed",
+  "duration": 18,      // Too fast - no real work
+  "impulses": {},       // Empty! Should have projectCommands, exampleTemplates
+  "prompts": [],        // No prompts executed
+  "agentsUsed": [],     // No agents involved
+  "sessionIDs": []      // No sessions created
+}
+```
+
+This shows activity initialized but never executed tasks.
+
+### Search Results Working
+```
+search_activities → Found 12+ templates
+```
+Discovery works. Recommendation injection works. The break is at execution.
+
+## What This Means
+
+### For Learning Loop
+We have data:
+- Activity tool is being called (instructional → functional bridge exists)
+- Context negotiation is the blocker
+- Need to measure: Why does negotiation fail?
+
+### For Template Creation
+Current state:
+- Direct creation: Reliable, working
+- Activity creation: Blocked by context negotiation
+- Functional outcome: Same (templates get created)
+- Process reliability: Direct creation is more reliable (100% vs 0%)
+
+### For Self-Improvement
+The learning loop is partially working:
+1. ✅ Measurement: We know activity() was called and failed
+2. ✅ Comparison: Direct (100%) vs Activity (0%)
+3. ❌ Feedback: Can't improve create-activity-template without executions
+4. ❌ Evolution: Blocked until context negotiation fixed
+
+## Next Steps
+
+### Immediate (Fix Context Negotiation)
+1. Find where memory agent negotiation happens
+2. Add logging to see where it fails
+3. Test simple template without contextRequirements
+4. Fix negotiation pathway
+
+### Short-term (Template Simplification)
+5. Create create-activity-template variant WITHOUT contextRequirements
+6. Test if that works
+7. If yes → context negotiation is the blocker
+8. If no → deeper activity execution issue
+
+### Long-term (Proper Integration)
+9. Ensure memory agent hooks into activity execution
+10. Add negotiation timeout/retry logic
+11. Improve error messages (silent failure is bad)
+12. Measure negotiation success rate
+
+## Adaptive Agent Behavior (Notable)
+
+Agent showed intelligent adaptation:
+```
+Try activity() → Failed
+  ↓
+Diagnose: Validation errors in template
+  ↓
+Fix: Correct the template JSON
+  ↓
+Try again: Still fails (context negotiation)
+  ↓
+Adapt: Fall back to direct creation
+  ↓
+Success: Goal achieved
+```
+
+This demonstrates:
+- Error recovery
+- Problem diagnosis
+- Approach flexibility
+- Goal persistence
+
+**This is good!** Agent doesn't get stuck. But we want activity templates to work.
+
+## Conclusion
+
+**Progress**: ✅ Agent tries to use activities when asked
+**Blocker**: ❌ Context negotiation failing
+**Adaptation**: ✅ Agent works around failures
+**Goal**: 🎯 Fix context negotiation so activities can execute
+
+The instructional → functional bridge exists. The proven transitions (activity templates) exist. The connection between them (context negotiation) is broken.
+
+---
+
+**Status**: Context negotiation is the critical blocker
+**Next**: Debug memory agent negotiation pathway
+**Goal**: Get activity templates executing with proper context

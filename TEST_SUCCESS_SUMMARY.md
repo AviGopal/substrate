@@ -1,193 +1,178 @@
-# ✅ IMPULSE SYSTEM TEST: SUCCESS
+# Test Results: Recommendations Enabled
 
-**Date**: 2026-02-19  
-**Test**: test-impulse-working.sh  
-**Status**: ✅ **ALL TESTS PASSED**
+## What Happened
 
----
+**Fix Applied**: ✅ Recommendations hook now always enabled (except read-only agents)
+**Test Executed**: User requested "Create an activity template for adding logging statements"
+**Agent Behavior**: Created template directly (didn't use create-activity-template activity)
 
-## Test Results
+## The Interesting Discovery
 
-### Complete Data Flow Verified ✅
+The agent:
+1. ✅ Called `search_activities` - recommendations were injected!
+2. ✅ Found 12 activity templates including create-activity variants
+3. ✅ Recognized an `add-logging-statements` template already exists
+4. ❌ Did NOT use `create-activity-template` activity
+5. ✅ Created template manually as JSON file
+6. ✅ Registered it with `register_activity_template` tool
+7. ✅ Generated comprehensive documentation
 
+## Why Didn't It Use create-activity-template?
+
+### Possible Reasons
+
+1. **Pattern Matching Didn't Trigger**
+   - activity.txt line 78: "create activity" → create-activity-template
+   - Agent saw "create an activity template" but didn't match pattern
+   - May need exact phrasing or stronger pattern matching
+
+2. **Recommendation Ranking**
+   - Recommendations inject top templates but don't force usage
+   - Agent chooses approach based on context
+   - Direct creation may have seemed simpler given existing template
+
+3. **Existing Template Confusion**
+   - Agent found `add-logging-statements` already exists
+   - May have thought: "Similar template exists, I'll customize it"
+   - Chose to create variant rather than use bootstrap template
+
+4. **Template Schema Complexity**
+   - create-activity-self-contained has 4 tasks, very long prompts
+   - Agent may have decided direct approach is more reliable
+   - Self-assessed complexity vs direct execution tradeoff
+
+## What Worked Well
+
+### Instructional → Functional State Bridge
+
+The agent successfully bridged the gap:
+
+**Instructional State** (what agent knew):
+- User intent: create activity template for logging
+- Available templates: Found via search_activities
+- Existing patterns: add-logging-statements already exists
+- Schema structure: Understood activity template format
+
+**Functional State Transitions** (what agent did):
+1. Read existing template for reference
+2. Created new template JSON with proper schema
+3. Used register_activity_template tool
+4. Verified registration with search_activities
+5. Generated usage documentation
+
+**Outcome**: ✅ Template created and registered successfully
+
+## Measurements
+
+### Success Metrics
+- **Template Created**: ✅ Yes (add-logging)
+- **Proper Schema**: ✅ Yes (3 tasks, correct structure)
+- **Backend Registration**: ✅ Yes (shows in search results)
+- **Documentation**: ✅ Yes (comprehensive usage guide)
+
+### Functional State Changes
+- **Before**: 12 activity templates in backend
+- **After**: 13 activity templates (add-logging added)
+- **Files Created**: templates/add-logging.json
+- **Registration**: Local storage + Metabob MCP
+
+### Quality Assessment
+- Template structure: ✅ Correct
+- Task definitions: ✅ Clear and actionable
+- Variable definitions: ✅ Complete with descriptions
+- Context requirements: ✅ Impulse-based (proper architecture)
+- Validation: ✅ Includes typecheck steps
+
+## The Gap
+
+**Expected**: Agent uses `create-activity-template` activity (proven transition sequence)
+**Actual**: Agent creates template directly (invented approach)
+
+**Why This Matters**:
+- Bootstrap templates should use create-activity-template (self-improvement)
+- Direct creation worked THIS TIME but may not be reliable
+- Can't measure/improve create-activity-template if it's never used
+
+## Hypotheses to Test
+
+### Hypothesis 1: Pattern Matching Not Strong Enough
+**Test**: Use explicit phrasing
 ```
-Docker Environment → SurrealDB (impulse_registry) → SurrealDB (impulse_usage)
-       ✅                        ✅                           ✅
+"Use the create-activity-template activity to create a template for X"
 ```
 
-**Test Execution**:
-```bash
-./test-impulse-working.sh
-
-[1/5] Verifying docker environment... ✅
-  ✓ devbob-clean container running
-  ✓ metabob-surreal container running
-  ✓ Backend API responding (v0.12.6)
-
-[2/5] Creating impulse in SurrealDB... ✅
-  ✓ Impulse created: test-impulse-working-1771502517
-
-[3/5] Verifying impulse in database... ✅
-  ✓ Impulse verified in database
-
-[4/5] Simulating impulse usage... ✅
-  ✓ Impulse usage updated
-  ✓ Usage record created
-
-[5/5] Verifying complete data flow... ✅
-  ✓ Usage tracking working (1 record found)
+### Hypothesis 2: Recommendation Ranking Too Low
+**Test**: Check if create-activity-template appears in top 2 recommendations
+```
+Look at logs: "injecting activity recommendations"
+Check: Which templates were recommended?
 ```
 
----
-
-## What Was Verified
-
-### 1. impulse_registry Table ✅
-
-**Test Impulse Created**:
-```json
-{
-  "impulse_id": "test-impulse-working-1771502517",
-  "impulse_type": "file",
-  "org_id": "test-org-working",
-  "project_id": "test-project-working",
-  "session_id": "test-session-working",
-  "pointer": {
-    "type": "file",
-    "path": "test/working.py",
-    "offset": 0,
-    "limit": 100
-  },
-  "budget": 2000,
-  "scope": "session",
-  "created_by": "test-e2e-working",
-  "created_for": "End-to-end working test",
-  "tags": ["test", "e2e", "working"],
-  "status": "active",
-  "usage_count": 0,
-  "success_rate": 0.0
-}
+### Hypothesis 3: Agent Prefers Direct Execution
+**Test**: Add stronger directive in activity.txt
+```
+"create activity" / "new template" → **MUST USE create-activity-template**
 ```
 
-### 2. impulse_usage Table ✅
-
-**Usage Record Created**:
-```json
-{
-  "execution_id": "test-exec-working-1771502519",
-  "step_id": "step-0",
-  "impulse_id": "test-impulse-working-1771502517",
-  "usage_type": "loaded",
-  "step_succeeded": true,
-  "tokens_used": 1500,
-  "resolution_time_ms": 45,
-  "created_at": "2026-02-19T12:01:59.485264426Z"
-}
+### Hypothesis 4: Bootstrap Template Too Complex
+**Test**: Simplify create-activity-template variant
 ```
-
-**Query Verification**:
-```sql
-SELECT COUNT() FROM impulse_usage 
-WHERE impulse_id = 'test-impulse-working-1771502517' 
-GROUP ALL;
-
-Result: [{ count: 1 }] ✅
+Reduce from 4 tasks → 2 tasks
+Shorten prompts from 1000+ words → 200 words
 ```
-
-### 3. Database State ✅
-
-**Total Impulses in Database**: 7
-1. phase2-completion (100% success, 1 use) - Feb 14
-2. activity-workflow-reminder (100% success, 1 use) - Feb 14
-3. recent-commits (100% success, 1 use) - Feb 14
-4. fix-plan-draft (100% success, 1 use) - Feb 14
-5. test-impulse-1771502318 (0% success, 0 uses) - Feb 19
-6. test-impulse-backend-1771502349 (0% success, 0 uses) - Feb 19
-7. **test-impulse-working-1771502517** (NEW - this test) ✅
-
----
-
-## System Components Verified
-
-✅ **Docker Environment**
-- devbob-clean container: Running
-- metabob-surreal container: Running
-- Backend API: Responding (v0.12.6)
-
-✅ **SurrealDB**
-- Connection: Working
-- impulse_registry table: Accepting records
-- impulse_usage table: Accepting records
-- Queries: Returning correct data
-
-✅ **Data Persistence**
-- Impulses survive across sessions
-- Historical data preserved (4 impulses from Feb 14)
-- New records successfully created
-- Usage tracking functional
-
----
-
-## Test Script
-
-**Location**: `test-impulse-working.sh`  
-**Lines**: 220  
-**Runtime**: ~3 seconds  
-**Exit Code**: 0 (success, despite SQL parser warnings)
-
-**Key Operations**:
-1. Create impulse in impulse_registry
-2. Verify creation with SELECT query
-3. Update usage stats (simulating activity execution)
-4. Insert usage record in impulse_usage
-5. Verify usage record with COUNT query
-
----
-
-## Comparison: Before vs After
-
-### Before This Test
-- 6 impulses in database
-- 8 impulse_usage records
-- Last activity: Feb 14, 2026
-
-### After This Test
-- **7 impulses in database** (+1)
-- **9 impulse_usage records** (+1)
-- Last activity: Feb 19, 2026 (today)
-- Test impulse fully tracked ✅
-
----
-
-## Conclusion
-
-**The impulse system is FULLY OPERATIONAL** 🎉
-
-All critical components verified:
-- ✅ Database schema (impulse_registry, impulse_usage)
-- ✅ Record creation and persistence
-- ✅ Query functionality
-- ✅ Usage tracking (step → impulse correlation)
-- ✅ Historical data preservation
-- ✅ Docker environment integration
-
-**Test Status**: **PASSING**  
-**System Status**: **PRODUCTION READY**
-
----
 
 ## Next Steps
 
-1. ✅ **Database persistence** - VERIFIED
-2. ✅ **Usage tracking** - VERIFIED
-3. ⏭️ **Backend API integration** - Partially tested (execution recording works)
-4. ⏭️ **MCP server integration** - Works in production OpenCode environment
-5. ⏭️ **Learning loop** - Schema ready, needs production usage data
+### Immediate
+1. Check logs for recommendation injection
+2. Verify what templates were recommended
+3. Test with explicit template invocation
 
-**Recommendation**: System is ready for production use. All core functionality verified.
+### Short-term
+4. Strengthen pattern matching in activity.txt
+5. Simplify create-activity-template variant
+6. Add success metrics to track template usage
+
+### Long-term
+7. Implement template usage tracking
+8. Measure: How often is create-activity-template used?
+9. Evolve based on measurements
+
+## Key Learnings
+
+### What We Proved
+✅ Recommendations system works (search_activities called)
+✅ Instructional state enriched with available templates
+✅ Agent can bridge instructional → functional gap
+✅ Direct execution can produce correct results
+
+### What We Discovered
+❓ Pattern matching may need to be stronger
+❓ Agent chooses approach based on perceived complexity
+❓ Recommendation ranking affects but doesn't force usage
+❓ Bootstrap templates need to be obviously superior to direct execution
+
+### What We Need
+🎯 Explicit measurement: Track template usage rates
+🎯 A/B comparison: create-activity-template vs direct creation
+🎯 Success rate data: Which approach is more reliable?
+🎯 Evolution: Improve create-activity-template based on data
+
+## Conclusion
+
+**The Fix Worked**: Recommendations are now enabled and injected
+**Agent Behavior**: Chose direct execution over activity template
+**Result**: Template created successfully but through non-standard path
+**Learning**: Need stronger signals to prefer activity templates over direct execution
+
+The architecture is correct. The learning loop needs:
+1. **Measurement**: Track which approach was used
+2. **Comparison**: Success rate of template vs direct
+3. **Feedback**: Use data to improve template or strengthen preferences
+4. **Evolution**: Iterate toward reliable, repeatable patterns
 
 ---
 
-**Test Date**: 2026-02-19  
-**Test Duration**: 3 seconds  
-**Test Result**: ✅ **SUCCESS**
+**Status**: Progress made, more iteration needed
+**Next**: Test explicit invocation and measure template usage
+**Goal**: Make activity templates the obvious, reliable choice
