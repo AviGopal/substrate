@@ -1,336 +1,333 @@
-# Activity Requirements: implement-agent-compliance-enforcement
+# Activity Requirements: Refactor OpenCode Template Loading to Use MCP Only
 
 ## Overview
 
-Complete the Agent Compliance Enforcement system (Phases 3-5) to ensure agents consistently follow best practices for documentation and annotations. Phases 1-2 (automatic annotation capture and markdown file warnings) are already implemented. This activity implements template-level enforcement with `requiredToolCalls`, enhances correctness checks to validate annotation coverage, and adds comprehensive end-to-end testing.
+This activity refactors the OpenCode template loading architecture to eliminate local filesystem template storage and enforce the MCP Gateway pattern. Currently, OpenCode has 17 templates (~4,642 lines) in `templates/built-in/` that duplicate templates stored in metabob-proto and served via metabob-cli's MCP. This refactoring consolidates template management to a single source of truth: the MCP gateway.
 
-**Context**: The design document at `AGENT_COMPLIANCE_ENFORCEMENT_DESIGN.md` describes a multi-layer enforcement strategy. We need to complete the remaining 3 phases to provide robust guarantees that agents document their work properly.
+**Architecture Change**:
+```
+BEFORE:
+  opencode/templates/built-in/ (17 templates, duplicated)
+    ↓
+  BootstrapTemplates.registerAll() → local storage
+    ↓
+  TemplateLibrary.initialize() → loads from filesystem
+    ↓
+  TemplateLoader queries local storage first
+
+AFTER:
+  metabob-proto/activities/bootstrap/ (4 templates, authoritative)
+    ↓
+  metabob-cli MCP startup → registers with MCP
+    ↓
+  TemplateLoader queries MCP exclusively
+    ↓
+  Bootstrap templates available via MCP (no local duplication)
+```
+
+**Key Principle**: OpenCode should NEVER load templates directly from filesystem except during initial bootstrap registration at metabob-cli startup. All subsequent queries flow through MCP.
 
 ## Workflow Steps
 
-1. **Extend Template Validation Schema** (Dependencies: none)
-   - Add `requiredToolCalls` field to ValidationSchema in activity-template.ts
-   - Add `forbiddenPatterns` field for blocking markdown file creation
-   - Add `minCalls` parameter to specify minimum tool call count
-   - Update TypeScript types and Zod schemas
+1. **Audit Current Template Loading Flow** (Dependencies: none)
+   - Map all code paths that load templates from `templates/built-in/`
+   - Identify which components call `ActivityTemplate.load()`, `.list()`, `.save()`
+   - Document bootstrap template registration flow in `BootstrapTemplates`
+   - Verify metabob-proto bootstrap templates (4 files) match BOOTSTRAP_TEMPLATES set in template-loader.ts
 
-2. **Implement Task Validation Logic** (Dependencies: Step 1)
-   - Create validation function `validateTaskExecution()` in task executor
-   - Check if required tools were called during task execution
-   - Check for forbidden patterns (e.g., markdown file writes)
-   - Return structured ValidationResult with violations array
+2. **Update BootstrapTemplates to Register with MCP** (Dependencies: Step 1)
+   - Modify `bootstrap-templates.ts::registerAll()` to register via TemplateServiceClient (MCP)
+   - Remove calls to `ActivityTemplate.save()` (local storage)
+   - Add MCP registration call: `TemplateServiceClient.registerTemplate({ template })`
+   - Keep bootstrap template loading from metabob-proto (read-only, no local save)
+   - Update error handling to distinguish MCP failures vs local failures
 
-3. **Add Retry with Guidance** (Dependencies: Step 2)
-   - Implement retry loop in task executor with validation
-   - Generate guidance messages from validation violations
-   - Inject guidance as system message for retry attempts
-   - Respect maxAttempts from retry configuration
+3. **Remove templates/built-in/ Directory** (Dependencies: Step 2)
+   - Delete `packages/opencode/templates/built-in/` directory (17 template files)
+   - Update `.gitignore` if needed
+   - Remove template bundling from build scripts (if any reference `templates/built-in/`)
+   - Verify dist/ builds don't include removed templates
 
-4. **Enhance Correctness Verdict** (Dependencies: none - parallel with 1-3)
-   - Add annotation coverage check to `computeCorrectnessVerdict()`
-   - Add markdown file detection check
-   - Calculate confidence penalties for missing annotations
-   - Add new issue categories: "missing-annotations", "documentation-misplacement"
+4. **Update TemplateLibrary.initialize()** (Dependencies: Step 2, Step 3)
+   - Remove filesystem template loading from `loadAllBuiltInTemplates()`
+   - Change `initialize()` to only sync from MCP (not load from JSON files)
+   - Update `installBuiltInTemplates()` to query MCP instead of reading JSON files
+   - Remove `loadTemplatesFromCategory()` calls to filesystem
+   - Keep Metabob registration logic (templates flow: MCP → cache → optional local backup)
 
-5. **Create End-to-End Tests** (Dependencies: Steps 1-4)
-   - Test template with requiredToolCalls enforcement
-   - Test forbidden patterns blocking
-   - Test retry with guidance on validation failure
-   - Test correctness verdict with annotation checks
-   - Test complete flow: validation failure → retry → success
+5. **Update TemplateLoader Fallback Logic** (Dependencies: Step 4)
+   - Ensure `TemplateLoader.load()` queries MCP first, falls back to local storage only for cached templates
+   - Update BOOTSTRAP_TEMPLATES set to match actual IDs from metabob-proto: `["create-activity-self-contained", "debug-activity-self-contained", "evolve-activity-self-contained", "manage-session-memory"]`
+   - Remove hardcoded paths to `templates/built-in/` in comments/logs
+   - Update `TemplateLoader.list()` to prefer MCP, fallback to local storage only if MCP unavailable
 
-6. **Update Existing Templates** (Dependencies: Steps 1-3)
-   - Add requiredToolCalls to key templates (add-feature-complete, fix-bug-complete)
-   - Add forbiddenPatterns for markdown files where appropriate
-   - Test updated templates with enforcement
+6. **Verify MCP Template Registration Flow** (Dependencies: Step 5)
+   - Test that metabob-cli MCP server registers bootstrap templates on startup
+   - Verify `TemplateServiceClient` queries return bootstrap templates
+   - Confirm `search_activities` tool returns all templates via MCP
+   - Validate template caching works correctly (TemplateCache)
 
-7. **Documentation and Validation** (Dependencies: Steps 1-6)
-   - Update template authoring guide with new validation fields
-   - Create migration guide for existing templates
-   - Run validation suite to ensure no regressions
-   - Document configuration options in opencode.json
+7. **Update Documentation and Tests** (Dependencies: Step 6)
+   - Update architecture documentation (MCP_GATEWAY_ARCHITECTURE.md)
+   - Add notes to TEMPLATE_MANAGEMENT_ARCHITECTURE.md about MCP-only loading
+   - Update tests that reference `templates/built-in/` paths
+   - Add test for bootstrap template registration via MCP
+   - Document bootstrap template source of truth: metabob-proto/activities/bootstrap/
 
 ## Input Variables
 
 | Variable | Type | Required | Default | Description |
 |----------|------|----------|---------|-------------|
-| None | - | - | - | This activity operates on the existing codebase and doesn't require runtime variables |
-
-**Note**: This activity is self-contained and modifies the compliance enforcement infrastructure. It doesn't need dynamic inputs.
+| workingDirectory | string | no | . | Root directory of metabob-devbob repo |
+| verifyMcpConnection | boolean | no | true | Test MCP connectivity before making changes |
+| skipTestUpdates | boolean | no | false | Skip updating test files (faster, but less safe) |
+| backupTemplates | boolean | no | true | Create backup of templates/built-in/ before deletion |
 
 ## Expected Outputs
 
-### Files Created/Modified:
-1. **repos/metabob-opencode/packages/opencode/src/session/activity-template.ts**
-   - Extended ValidationSchema with requiredToolCalls and forbiddenPatterns
-
-2. **repos/metabob-opencode/packages/opencode/src/session/task-executor.ts** (or relevant file)
-   - New `validateTaskExecution()` function
-   - Enhanced task execution loop with validation
-   - Retry logic with guidance injection
-
-3. **repos/metabob-opencode/packages/opencode/src/session/activity-correctness.ts**
-   - Enhanced `computeCorrectnessVerdict()` with annotation checks
-
-4. **repos/metabob-opencode/packages/opencode/test/session/activity-compliance-enforcement.test.ts**
-   - Comprehensive E2E tests for all enforcement features
-
-5. **repos/metabob-opencode/packages/opencode/test/session/activity-correctness-annotations.test.ts**
-   - Specific tests for annotation coverage in correctness checks
-
-6. **Template files** (e.g., add-feature-complete.json, fix-bug-complete.json)
-   - Updated with requiredToolCalls and forbiddenPatterns
-
-7. **Documentation**
-   - Updated template authoring guide
-   - Migration guide for template authors
-
-### Validation Reports:
-- Test results showing all enforcement mechanisms working
-- Template validation confirming schema compliance
-- E2E test coverage report
-
-### State Changes:
-- Template system now enforces tool call requirements
-- Correctness checks now validate annotation coverage
-- Failed validations trigger automatic retry with guidance
+- **Deleted**: `repos/metabob-opencode/packages/opencode/templates/built-in/` directory (17 files, ~4,642 lines)
+- **Modified Files**:
+  - `repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts` - Remove local storage save, add MCP registration
+  - `repos/metabob-opencode/packages/opencode/src/session/template-library.ts` - Remove filesystem loading
+  - `repos/metabob-opencode/packages/opencode/src/session/template-loader.ts` - Update BOOTSTRAP_TEMPLATES set, remove filesystem fallback paths
+  - Architecture docs: `MCP_GATEWAY_ARCHITECTURE.md`, `TEMPLATE_MANAGEMENT_ARCHITECTURE.md`
+- **Report**: Summary of changes with before/after code snippets
+- **State Changes**: 
+  - Bootstrap templates now registered with MCP on metabob-cli startup (not local storage)
+  - All template queries flow through MCP (no filesystem reads except bootstrap source files)
+  - Single source of truth: metabob-proto/activities/bootstrap/
 
 ## Validation Criteria
 
-### Per-Step Validation:
+### Per-Step:
 
-#### Step 1: Template Schema Extension
-- **Files exist**: activity-template.ts modified
-- **Patterns present**: 
-  - `requiredToolCalls` field in ValidationSchema
-  - `forbiddenPatterns` field in ValidationSchema
-  - Zod schema definitions for new fields
-- **Commands pass**: `npm run type-check` in opencode package
+**Step 1 (Audit)**:
+- File `TEMPLATE_LOADING_AUDIT.md` created with:
+  - List of all components that call `ActivityTemplate.load/list/save`
+  - Bootstrap template IDs from metabob-proto
+  - Current vs. expected BOOTSTRAP_TEMPLATES set
+  - Diagram of current loading flow
 
-#### Step 2: Task Validation Logic
-- **Files exist**: task executor file modified
-- **Patterns present**:
-  - `function validateTaskExecution()`
-  - `interface ValidationResult`
-  - `countToolCalls()` utility function
-  - `findToolCallsMatchingPattern()` utility
-- **Commands pass**: TypeScript compilation succeeds
-- **Unit tests**: Basic validation logic tests pass
+**Step 2 (Update BootstrapTemplates)**:
+- `bootstrap-templates.ts::registerAll()` no longer calls `ActivityTemplate.save()`
+- Calls `TemplateServiceClient.registerTemplate()` for each bootstrap template
+- Error handling differentiates MCP vs local failures
+- Logs indicate "registering with MCP" instead of "saving to local storage"
 
-#### Step 3: Retry with Guidance
-- **Patterns present**:
-  - Retry loop in task executor
-  - `generateGuidanceFromViolations()` function
-  - System message injection for retries
-- **Commands pass**: Task execution with retries works
-- **Unit tests**: Retry behavior tests pass
+**Step 3 (Remove Directory)**:
+- Directory `templates/built-in/` does not exist
+- Backup created at `.archive/templates-built-in-backup-YYYYMMDD/` (if backupTemplates=true)
+- No references to deleted templates in build scripts
 
-#### Step 4: Correctness Enhancement
-- **Files exist**: activity-correctness.ts modified
-- **Patterns present**:
-  - Annotation coverage check in `computeCorrectnessVerdict()`
-  - Markdown file detection logic
-  - New issue categories in CorrectnessIssue
-- **Commands pass**: Correctness tests pass
-- **Unit tests**: New correctness checks validated
+**Step 4 (Update TemplateLibrary)**:
+- `loadAllBuiltInTemplates()` removed or modified to not read filesystem
+- `initialize()` calls `TemplateServiceClient.listTemplates()` instead of filesystem operations
+- No `fs.readdir()` calls to `templates/built-in/`
 
-#### Step 5: E2E Tests
-- **Files exist**: 
-  - activity-compliance-enforcement.test.ts
-  - activity-correctness-annotations.test.ts
-- **Patterns present**:
-  - Test cases for requiredToolCalls enforcement
-  - Test cases for forbidden patterns
-  - Test cases for retry with guidance
-  - Test cases for annotation coverage checks
-- **Commands pass**: `npm test` with all new tests passing
-- **Coverage**: All new code paths covered
+**Step 5 (Update TemplateLoader)**:
+- BOOTSTRAP_TEMPLATES set matches: `["create-activity-self-contained", "debug-activity-self-contained", "evolve-activity-self-contained", "manage-session-memory"]`
+- Comments updated to reflect MCP-first architecture
+- No hardcoded paths to `templates/built-in/`
 
-#### Step 6: Template Updates
-- **Files modified**: Key template JSON files updated
-- **Patterns present**: requiredToolCalls and forbiddenPatterns in templates
-- **Commands pass**: Template validation succeeds
-- **Manual test**: Execute updated template and verify enforcement
+**Step 6 (Verify MCP Flow)**:
+- `bun test` passes (or test updates documented if skipped)
+- Manual test: `search_activities({ verbose: true })` returns 4+ templates
+- Logs show templates loaded from MCP, not filesystem
 
-#### Step 7: Documentation
-- **Files exist**: 
-  - Updated template authoring guide
-  - Migration guide document
-- **Patterns present**:
-  - requiredToolCalls examples
-  - forbiddenPatterns examples
-  - Configuration options documented
-- **Review**: Documentation is clear and complete
+**Step 7 (Documentation)**:
+- Architecture docs mention "MCP-only template loading"
+- Bootstrap template source documented: `metabob-proto/activities/bootstrap/`
 
 ### Final Validation:
 
-#### Critical Success Criteria:
-1. **Files exist**:
-   - All modified source files compile
-   - All new test files present and passing
-   - Documentation files created
+**Files Exist**:
+- `REQUIREMENTS.md` (this file)
+- `repos/metabob-proto/activities/bootstrap/` (4 template JSON files)
+- `repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts` (modified)
+- `repos/metabob-opencode/packages/opencode/src/session/template-library.ts` (modified)
+- `repos/metabob-opencode/packages/opencode/src/session/template-loader.ts` (modified)
 
-2. **Patterns present**:
-   - Template schema has requiredToolCalls validation
-   - Task executor validates tool calls and retries
-   - Correctness checks validate annotations
-   - E2E tests cover all scenarios
+**Files/Directories NOT Exist**:
+- `repos/metabob-opencode/packages/opencode/templates/built-in/` (deleted)
+- `repos/metabob-opencode/packages/opencode/dist/*/templates/built-in/` (not bundled)
 
-3. **Patterns absent**:
-   - No TypeScript compilation errors
-   - No test failures
-   - No TODO/FIXME comments in production code
-   - No console.log debugging statements
+**Patterns Present** (grep checks):
+- `bootstrap-templates.ts` contains `TemplateServiceClient.registerTemplate` (MCP registration)
+- `template-loader.ts` contains correct bootstrap IDs: `create-activity-self-contained`, `debug-activity-self-contained`, `evolve-activity-self-contained`, `manage-session-memory`
+- Architecture docs mention "MCP Gateway" and "template loading via MCP"
 
-4. **Commands pass**:
-   ```bash
-   cd repos/metabob-opencode/packages/opencode
-   npm run type-check
-   npm test -- activity-compliance
-   npm test -- activity-correctness-annotations
-   ```
+**Patterns Absent** (no matches):
+- No `ActivityTemplate.save()` calls in `bootstrap-templates.ts::registerAll()`
+- No `fs.readdir()` calls to `templates/built-in/` in `template-library.ts`
+- No references to deleted template files in source code (exclude archives, docs)
 
-5. **Integration test**:
-   - Create test template with requiredToolCalls
-   - Execute template and verify validation enforces requirements
-   - Verify retry with guidance on validation failure
-   - Verify correctness verdict includes annotation checks
+**Commands Pass**:
+```bash
+# Verify directory deleted
+test ! -d repos/metabob-opencode/packages/opencode/templates/built-in/
+
+# Verify bootstrap templates exist in proto
+test -f repos/metabob-proto/activities/bootstrap/create-activity-self-contained.json
+test -f repos/metabob-proto/activities/bootstrap/debug-activity-self-contained.json
+test -f repos/metabob-proto/activities/bootstrap/evolve-activity-self-contained.json
+test -f repos/metabob-proto/activities/bootstrap/manage-session-memory.json
+
+# Verify MCP registration in bootstrap
+grep -q "TemplateServiceClient.registerTemplate" repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts
+
+# Verify no local save in bootstrap
+! grep -q "ActivityTemplate.save" repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts
+
+# Verify correct bootstrap IDs
+grep -q '"create-activity-self-contained"' repos/metabob-opencode/packages/opencode/src/session/template-loader.ts
+grep -q '"debug-activity-self-contained"' repos/metabob-opencode/packages/opencode/src/session/template-loader.ts
+grep -q '"evolve-activity-self-contained"' repos/metabob-opencode/packages/opencode/src/session/template-loader.ts
+grep -q '"manage-session-memory"' repos/metabob-opencode/packages/opencode/src/session/template-loader.ts
+```
 
 ## Error Handling
 
-### Common Failures and Solutions:
+**Common Failures and Solutions**:
 
-1. **Schema validation fails after extending ValidationSchema**
-   - **Cause**: Existing templates don't match new schema
-   - **Solution**: Make new fields optional with defaults
-   - **Retry**: No - fix schema design
-   - **Debug**: Check Zod schema definitions for backward compatibility
+1. **MCP Gateway Unavailable**
+   - **Symptom**: `TemplateServiceClient.registerTemplate()` fails with connection error
+   - **Solution**: Graceful degradation - log warning, bootstrap templates unavailable until MCP starts
+   - **Recovery**: Retry registration on next MCP connection (don't block startup)
+   - **Strategy**: best-effort registration (don't throw errors)
 
-2. **Task validation breaks existing templates**
-   - **Cause**: Validation too strict, fails on legitimate cases
-   - **Solution**: Add configuration to enable/disable strict validation
-   - **Retry**: No - adjust validation logic
-   - **Debug**: Review validation violations from existing templates
+2. **Bootstrap Templates Missing from metabob-proto**
+   - **Symptom**: `BootstrapTemplates.loadAll()` fails to find JSON files
+   - **Solution**: Hard error - bootstrap templates are critical for system operation
+   - **Recovery**: Check metabob-proto submodule is initialized (`git submodule update --init`)
+   - **Strategy**: Fail fast with clear error message
 
-3. **Retry loop causes infinite retries**
-   - **Cause**: Guidance doesn't help agent pass validation
-   - **Solution**: Respect maxAttempts, improve guidance messages
-   - **Retry**: No - fix retry termination logic
-   - **Debug**: Log retry attempts and validation results
+3. **Template ID Mismatch**
+   - **Symptom**: BOOTSTRAP_TEMPLATES set doesn't match actual bootstrap template IDs in metabob-proto
+   - **Solution**: Update BOOTSTRAP_TEMPLATES set in template-loader.ts to match proto files
+   - **Recovery**: Run Step 1 audit to identify mismatch
+   - **Strategy**: Automated validation in Step 6
 
-4. **Correctness checks too sensitive**
-   - **Cause**: False positives on missing annotations
-   - **Solution**: Add heuristics to detect legitimate cases (e.g., read-only tasks)
-   - **Retry**: No - refine correctness logic
-   - **Debug**: Analyze activities flagged incorrectly
+4. **Tests Fail After Directory Deletion**
+   - **Symptom**: Tests reference `templates/built-in/` paths that no longer exist
+   - **Solution**: Update test fixtures to use MCP mocks or metabob-proto paths
+   - **Recovery**: Run tests with `skipTestUpdates=false` to identify failures
+   - **Strategy**: Fix tests in Step 7, or document known test gaps
 
-5. **E2E tests flaky or slow**
-   - **Cause**: Tests depend on external services or timing
-   - **Solution**: Use mocks, increase timeouts where needed
-   - **Retry**: Yes - test infrastructure issue
-   - **Debug**: Run tests individually to isolate failures
+5. **Build Scripts Bundle Deleted Templates**
+   - **Symptom**: Build process tries to copy `templates/built-in/` to dist/
+   - **Solution**: Remove bundling logic from build scripts
+   - **Recovery**: Grep build scripts for `templates/built-in` references
+   - **Strategy**: Check in Step 3 validation
 
-6. **TypeScript compilation errors in template types**
-   - **Cause**: Type inference breaks with new schema fields
-   - **Solution**: Add explicit type annotations where needed
-   - **Retry**: No - fix types
-   - **Debug**: Check TypeScript error messages for inference issues
+6. **Caching Issues**
+   - **Symptom**: Old templates cached locally, not reflecting MCP updates
+   - **Solution**: Clear template cache (`TemplateCache.invalidate()` for affected IDs)
+   - **Recovery**: Add cache invalidation to bootstrap registration flow
+   - **Strategy**: Verify cache behavior in Step 6
 
 ## Agent Assignment
 
-This activity requires coordinated work across multiple files and systems. Recommended agent assignments:
+- **Step 1**: general - File analysis, code search, documentation
+- **Step 2**: general - TypeScript refactoring, MCP client integration
+- **Step 3**: general - File deletion, backup creation, validation
+- **Step 4**: general - TypeScript refactoring, removing filesystem operations
+- **Step 5**: general - TypeScript refactoring, updating constants
+- **Step 6**: test - Integration testing, MCP connectivity verification
+- **Step 7**: docs - Documentation updates, test updates
 
-- **Step 1** (Schema Extension): `config` agent
-  - Specializes in schema/configuration changes
-  - Has experience with Zod schemas and TypeScript types
-  
-- **Step 2** (Validation Logic): `general` agent
-  - Core logic implementation
-  - Message parsing and tool call counting
-  
-- **Step 3** (Retry with Guidance): `general` agent
-  - Control flow implementation
-  - Session message injection
-  
-- **Step 4** (Correctness Enhancement): `general` agent
-  - Algorithm enhancement
-  - Heuristics and confidence scoring
-  
-- **Step 5** (E2E Tests): `test` agent
-  - Specializes in comprehensive test coverage
-  - E2E test scenarios and assertions
-  
-- **Step 6** (Template Updates): `config` agent
-  - JSON template modifications
-  - Template validation
-  
-- **Step 7** (Documentation): `docs` agent
-  - Technical writing
-  - Examples and migration guides
+## Additional Context
 
-## Implementation Notes
+### Current Architecture Issues
 
-### Design Decisions:
+1. **Duplication**: 17 templates in `opencode/templates/built-in/` duplicate templates in metabob-proto
+2. **Inconsistency**: Templates can drift between filesystem and MCP
+3. **Violation of MCP Gateway**: OpenCode loads templates from filesystem, bypassing MCP
+4. **Bootstrap Confusion**: BOOTSTRAP_TEMPLATES set in template-loader.ts has 3 IDs (`create-activity-template`, `create-subagent`, `debug-activity`), but metabob-proto has 4 different templates
 
-1. **Make new validation fields optional**: Ensures backward compatibility with existing templates. Templates can opt-in to enforcement.
+### MCP Gateway Pattern (from MCP_GATEWAY_ARCHITECTURE.md)
 
-2. **Validation happens post-execution**: Allows agent to complete work first, then validates. Alternative would be real-time validation, but that's more complex.
+**Rules**:
+1. OpenCode should ONLY communicate via MCP
+2. metabob-cli is the ONLY component that calls backend HTTP API
+3. NO direct HTTP calls from OpenCode to backend
+4. NO direct filesystem reads for runtime data (templates, configs served via backend)
 
-3. **Retry with guidance vs. fail fast**: We retry to give agents a chance to self-correct. Max 3 attempts prevents infinite loops.
+**Template Flow**:
+```
+metabob-proto (source files, read-only)
+  ↓
+metabob-cli MCP startup (registers with backend)
+  ↓
+OpenCode queries via MCP (metabob_search_activities tool)
+  ↓
+TemplateCache (local cache for performance)
+  ↓
+Activity execution (uses cached templates)
+```
 
-4. **Correctness confidence scoring**: Uses multiplicative penalties (0.1x - 0.9x) rather than additive. This ensures multiple issues compound appropriately.
+### Bootstrap Templates
 
-5. **Annotation coverage heuristic**: Compare files changed vs. annotations created. Simple but effective. Could be enhanced with file type filtering (ignore test files, etc.).
+Bootstrap templates are the minimal set needed for cold start (no network connectivity). After this refactoring:
 
-### Testing Strategy:
+- **Source**: `metabob-proto/activities/bootstrap/` (4 JSON files)
+- **Registration**: metabob-cli registers with MCP on startup
+- **Loading**: OpenCode queries via `TemplateServiceClient` (MCP)
+- **Caching**: TemplateCache stores results locally (ephemeral)
+- **No Local Storage**: OpenCode never writes templates to `~/.metabob/activities/` (that's metabob-cli's job)
 
-1. **Unit tests**: Each function tested in isolation
-2. **Integration tests**: Validation + retry flow tested together
-3. **E2E tests**: Full template execution with enforcement
-4. **Regression tests**: Existing templates still work
-5. **Manual testing**: Run updated templates in real scenarios
+**Current Bootstrap Templates** (metabob-proto):
+1. `create-activity-self-contained.json` - Create new activity templates
+2. `debug-activity-self-contained.json` - Debug failed activities
+3. `evolve-activity-self-contained.json` - Improve existing templates
+4. `manage-session-memory.json` - Session memory management
 
-### Configuration Philosophy:
+### Success Criteria
 
-- **Strict mode off by default**: Don't break existing workflows
-- **Opt-in enforcement**: Templates explicitly request validation
-- **Configurable in opencode.json**: Global settings for validation strictness
+After this refactoring:
+- ✅ OpenCode binary size reduced by ~4,642 lines (no bundled templates)
+- ✅ Single source of truth: metabob-proto/activities/bootstrap/
+- ✅ MCP Gateway pattern enforced (no filesystem template loading)
+- ✅ Bootstrap templates available via MCP (no duplication)
+- ✅ Template updates flow: metabob-proto → metabob-cli → MCP → OpenCode (one-way)
+- ✅ Clear separation: metabob-proto owns templates, metabob-cli serves them, OpenCode consumes them
 
-### Success Metrics:
+### Related Files
 
-- All tests pass (100% of new tests)
-- No regressions (100% of existing tests still pass)
-- At least 2 templates updated with enforcement
-- Documentation complete and reviewed
-- End-to-end flow demonstrated working
+**OpenCode (to modify)**:
+- `packages/opencode/src/session/bootstrap-templates.ts` - Bootstrap template registration
+- `packages/opencode/src/session/template-library.ts` - Template initialization
+- `packages/opencode/src/session/template-loader.ts` - Template loading logic
+- `packages/opencode/src/server/template-service-client.ts` - MCP client (verify usage)
 
-## References
+**Metabob-proto (source of truth)**:
+- `activities/bootstrap/*.json` - Bootstrap template definitions (4 files)
 
-- **Design Document**: `AGENT_COMPLIANCE_ENFORCEMENT_DESIGN.md`
-- **Existing Implementation**: 
-  - Phase 1-2: `repos/metabob-opencode/packages/opencode/src/session/activity-complete.ts`
-  - Correctness checks: `repos/metabob-opencode/packages/opencode/src/session/activity-correctness.ts`
-  - Template schema: `repos/metabob-opencode/packages/opencode/src/session/activity-template.ts`
-- **Test Examples**:
-  - `repos/metabob-opencode/packages/opencode/test/session/activity-agent-validation.test.ts`
-  - `repos/metabob-opencode/packages/opencode/test/session/activity-validation-enhanced.test.ts`
+**Metabob-cli (MCP server)**:
+- `src/metabob_cli/mcp/activity_templates.py` - Template storage and retrieval for MCP
+- `src/metabob_cli/mcp/activity_template_tools.py` - MCP tool implementations
 
-## Risk Assessment
+**Architecture Docs (to update)**:
+- `MCP_GATEWAY_ARCHITECTURE.md` - MCP Gateway pattern documentation
+- `TEMPLATE_MANAGEMENT_ARCHITECTURE.md` - Template lifecycle documentation
 
-### High Risk:
-- Breaking existing templates with schema changes
-- Validation too strict causing false failures
+### Constraints
 
-### Medium Risk:
-- Retry logic not converging (too many attempts)
-- Correctness heuristics missing legitimate cases
+1. **Backward Compatibility**: Existing activities using templates should continue working (templates still available via MCP)
+2. **Cold Start**: Bootstrap templates must be available even if MCP connection fails (read from metabob-proto, register when MCP connects)
+3. **Performance**: Template caching (TemplateCache) must continue working (no performance regression)
+4. **Testing**: MCP integration tests should cover bootstrap template registration
+5. **Documentation**: Clear migration guide for developers expecting filesystem templates
 
-### Low Risk:
-- Documentation incomplete
-- Test coverage gaps
+### Risk Mitigation
 
-### Mitigation:
-- Make all new fields optional with sensible defaults
-- Add configuration flags to disable strict validation
-- Extensive testing with existing templates
-- Gradual rollout: test in development before production
+**High Risk**:
+- Breaking bootstrap template loading (system won't start) → Test thoroughly in Step 6
+- MCP registration failures (templates unavailable) → Graceful degradation in Step 2
+
+**Medium Risk**:
+- Test failures due to hardcoded paths → Update tests in Step 7
+- Build script breakage → Verify in Step 3
+
+**Low Risk**:
+- Documentation gaps → Update in Step 7
+- Cache invalidation issues → Verify in Step 6

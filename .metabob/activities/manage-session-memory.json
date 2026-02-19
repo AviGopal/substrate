@@ -1,0 +1,289 @@
+{
+  "activity_id": "manage-session-memory",
+  "name": "Manage Session Memory",
+  "description": "Pre-turn memory management: analyze user intent, create impulses, load context, prioritize, compress. Runs before main agent to prepare optimal context.",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "analyze-intent",
+      "subagent": "memory",
+      "description": "Analyze user intent and determine what context is needed",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the user's message and determine what context to prepare.\n\n## User Message\n\n{{userMessage}}\n\n## Your Task\n\n1. **Classify intent**: code_fix, feature_request, question, refactor, exploration, other\n2. **Identify needs**: What files, errors, history, or Metabob context might help?\n3. **Suggest impulses**: Specific impulses to create (unloaded state)\n\n## Available Impulse Types\n\n- **file**: Source code files (provide exact path)\n- **component**: Specific functions/classes (file + component name)\n- **metabobPriorityIssues**: Code quality issues in affected area\n- **metabobAnnotation**: Design decisions for components\n- **metabobChangeImpact**: Dependency analysis for changes\n- **conversationHistory**: Recent conversation turns\n- **bashOutput**: Dynamic shell commands (logs, find, git)\n- **memo**: Short notes or error messages\n\n## Output Format\n\nRespond with structured JSON:\n\n```json\n{\n  \"intentType\": \"code_fix\",\n  \"confidence\": 0.9,\n  \"reasoning\": \"User reports TypeError, mentions file path, wants fix\",\n  \"suggestedImpulses\": [\n    {\n      \"id\": \"error-file\",\n      \"type\": \"file\",\n      \"pointer\": { \"type\": \"file\", \"path\": \"src/tool/bash.ts\" },\n      \"budget\": 2000,\n      \"priority\": \"high\",\n      \"reason\": \"Contains the error\"\n    },\n    {\n      \"id\": \"metabob-issues\",\n      \"type\": \"metabobPriorityIssues\",\n      \"pointer\": { \"type\": \"metabobPriorityIssues\", \"query\": { \"affectedArea\": \"tool execution\" } },\n      \"budget\": 3000,\n      \"priority\": \"high\",\n      \"reason\": \"Check for known issues in this area\"\n    }\n  ]\n}\n```\n\n## Guidelines\n\n- Be conservative: only suggest clearly needed impulses\n- Validate file paths exist before suggesting\n- For trivial messages (\"hi\", \"thanks\"), suggest empty array\n- Total suggested budget should be < 15000 tokens",
+        "variables": [
+          {
+            "name": "userMessage",
+            "type": "string",
+            "required": true,
+            "description": "The user's message to analyze"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-impulses",
+      "subagent": "memory",
+      "description": "Create impulses from analysis (unloaded state)",
+      "dependencies": [
+        "analyze-intent"
+      ],
+      "prompt": {
+        "template": "Create impulses based on the intent analysis.\n\n## Intent Analysis Results\n\n{{analyzeIntentOutput}}\n\n## Your Task\n\n1. For each suggested impulse, call `impulse_create` tool\n2. Create impulses in **unloaded state** (don't load yet)\n3. Validate file paths before creating file impulses\n4. Add metadata with source and reasoning\n\n## Example\n\n```typescript\nimpulse_create({\n  id: \"error-file\",\n  pointer: { type: \"file\", path: \"src/tool/bash.ts\" },\n  budget: 2000,\n  priority: \"high\",\n  metadata: {\n    source: \"intent-analysis\",\n    intentType: \"code_fix\",\n    reason: \"Contains the error\"\n  }\n})\n```\n\n## Guidelines\n\n- Validate file paths exist (skip if missing)\n- Don't load impulses yet (loaded: false)\n- Add descriptive metadata for debugging\n- Log each impulse creation",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "review-context-space",
+      "subagent": "memory",
+      "description": "Review context space and decide what to load",
+      "dependencies": [
+        "create-impulses"
+      ],
+      "prompt": {
+        "template": "Review the context space and decide which impulses to load.\n\n## Your Task\n\n1. Call `memory_context_view` to see current context space\n2. Analyze token budget and utilization\n3. Decide which impulses to load based on:\n   - Priority (high first)\n   - Relevance to user's message\n   - Available token budget\n4. Load selected impulses with `impulse_load`\n\n## Loading Strategy\n\n- Start with HIGH priority impulses\n- Load MEDIUM priority if budget allows\n- Skip LOW priority unless plenty of budget\n- Target 60-70% context utilization\n- Reserve 30-40% for agent response\n\n## Example Decision Process\n\n```\nContext Space: 20000 tokens available\nTarget: 12000-14000 tokens for context\n\nHIGH priority:\n  - metabob-priority-issues (3000 tokens) → LOAD\n  - error-file (2000 tokens) → LOAD\n\nMEDIUM priority:\n  - conversation-history (2000 tokens) → LOAD\n  - related-tests (3000 tokens) → LOAD\n\nTotal: 10000 tokens (50% utilization) → Good!\n\nLOW priority:\n  - old-context (5000 tokens) → SKIP (not needed)\n```\n\n## Guidelines\n\n- Don't exceed 70% utilization\n- Log loading decisions\n- Handle loading errors gracefully",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "optimize-if-needed",
+      "subagent": "memory",
+      "description": "Compress or reorder if context is too tight",
+      "dependencies": [
+        "review-context-space"
+      ],
+      "prompt": {
+        "template": "Optimize context if utilization is too high.\n\n## Your Task\n\n1. Check current utilization with `memory_budget`\n2. If > 75%, apply optimizations:\n   - Unload LOW priority impulses\n   - Compress MEDIUM priority with `memory_compress`\n   - Reorder priorities with `memory_reorder`\n3. Re-check utilization\n4. Repeat if still > 75%\n\n## Compression Strategy\n\n```typescript\n// For large file impulses\nmemory_compress({\n  impulseId: \"large-file\",\n  strategy: \"extract-key-sections\",\n  targetTokens: 1500  // Reduce from 3000\n})\n\n// For conversation history\nmemory_compress({\n  impulseId: \"conversation-history\",\n  strategy: \"summarize\",\n  targetTokens: 1000\n})\n```\n\n## Reordering Strategy\n\n```typescript\nmemory_reorder({\n  reordering: [\n    {\n      impulseId: \"old-context\",\n      newPriority: \"low\",\n      reason: \"Not relevant to current task\"\n    }\n  ]\n})\n```\n\n## Guidelines\n\n- Target 60-70% after optimization\n- Preserve HIGH priority impulses\n- Log all optimizations\n- Don't compress critical context",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "finalize-context",
+      "subagent": "memory",
+      "description": "Final context space review and summary",
+      "dependencies": [
+        "optimize-if-needed"
+      ],
+      "prompt": {
+        "template": "Review final context space and summarize preparation.\n\n## Your Task\n\n1. Call `memory_context_view({ includeDetails: true })`\n2. Call `memory_budget` for final stats\n3. Summarize what context is prepared:\n   - Impulses loaded\n   - Token utilization\n   - Any optimizations applied\n4. Confirm context is ready for main agent\n\n## Output Format\n\n```\nSession Memory Prepared\n\nLoaded Impulses:\n  HIGH:\n    ✓ metabob-priority-issues (2100/3000 tokens)\n    ✓ error-file (1850/2000 tokens)\n  MEDIUM:\n    ✓ conversation-history (1200/2000 tokens)\n\nUtilization: 5150/20000 tokens (25.8%)\nStatus: READY\nOptimizations: None needed\n```\n\n## Guidelines\n\n- Clear, concise summary\n- Confirm readiness\n- Log final state",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "analyze-intent",
+      "subagent": "memory",
+      "description": "Analyze user intent and determine what context is needed",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the user's message and determine what context to prepare.\n\n## User Message\n\n{{userMessage}}\n\n## Your Task\n\n1. **Classify intent**: code_fix, feature_request, question, refactor, exploration, other\n2. **Identify needs**: What files, errors, history, or Metabob context might help?\n3. **Suggest impulses**: Specific impulses to create (unloaded state)\n\n## Available Impulse Types\n\n- **file**: Source code files (provide exact path)\n- **component**: Specific functions/classes (file + component name)\n- **metabobPriorityIssues**: Code quality issues in affected area\n- **metabobAnnotation**: Design decisions for components\n- **metabobChangeImpact**: Dependency analysis for changes\n- **conversationHistory**: Recent conversation turns\n- **bashOutput**: Dynamic shell commands (logs, find, git)\n- **memo**: Short notes or error messages\n\n## Output Format\n\nRespond with structured JSON:\n\n```json\n{\n  \"intentType\": \"code_fix\",\n  \"confidence\": 0.9,\n  \"reasoning\": \"User reports TypeError, mentions file path, wants fix\",\n  \"suggestedImpulses\": [\n    {\n      \"id\": \"error-file\",\n      \"type\": \"file\",\n      \"pointer\": { \"type\": \"file\", \"path\": \"src/tool/bash.ts\" },\n      \"budget\": 2000,\n      \"priority\": \"high\",\n      \"reason\": \"Contains the error\"\n    },\n    {\n      \"id\": \"metabob-issues\",\n      \"type\": \"metabobPriorityIssues\",\n      \"pointer\": { \"type\": \"metabobPriorityIssues\", \"query\": { \"affectedArea\": \"tool execution\" } },\n      \"budget\": 3000,\n      \"priority\": \"high\",\n      \"reason\": \"Check for known issues in this area\"\n    }\n  ]\n}\n```\n\n## Guidelines\n\n- Be conservative: only suggest clearly needed impulses\n- Validate file paths exist before suggesting\n- For trivial messages (\"hi\", \"thanks\"), suggest empty array\n- Total suggested budget should be < 15000 tokens",
+        "variables": [
+          {
+            "name": "userMessage",
+            "type": "string",
+            "required": true,
+            "description": "The user's message to analyze"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-impulses",
+      "subagent": "memory",
+      "description": "Create impulses from analysis (unloaded state)",
+      "dependencies": [
+        "analyze-intent"
+      ],
+      "prompt": {
+        "template": "Create impulses based on the intent analysis.\n\n## Intent Analysis Results\n\n{{analyzeIntentOutput}}\n\n## Your Task\n\n1. For each suggested impulse, call `impulse_create` tool\n2. Create impulses in **unloaded state** (don't load yet)\n3. Validate file paths before creating file impulses\n4. Add metadata with source and reasoning\n\n## Example\n\n```typescript\nimpulse_create({\n  id: \"error-file\",\n  pointer: { type: \"file\", path: \"src/tool/bash.ts\" },\n  budget: 2000,\n  priority: \"high\",\n  metadata: {\n    source: \"intent-analysis\",\n    intentType: \"code_fix\",\n    reason: \"Contains the error\"\n  }\n})\n```\n\n## Guidelines\n\n- Validate file paths exist (skip if missing)\n- Don't load impulses yet (loaded: false)\n- Add descriptive metadata for debugging\n- Log each impulse creation",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "review-context-space",
+      "subagent": "memory",
+      "description": "Review context space and decide what to load",
+      "dependencies": [
+        "create-impulses"
+      ],
+      "prompt": {
+        "template": "Review the context space and decide which impulses to load.\n\n## Your Task\n\n1. Call `memory_context_view` to see current context space\n2. Analyze token budget and utilization\n3. Decide which impulses to load based on:\n   - Priority (high first)\n   - Relevance to user's message\n   - Available token budget\n4. Load selected impulses with `impulse_load`\n\n## Loading Strategy\n\n- Start with HIGH priority impulses\n- Load MEDIUM priority if budget allows\n- Skip LOW priority unless plenty of budget\n- Target 60-70% context utilization\n- Reserve 30-40% for agent response\n\n## Example Decision Process\n\n```\nContext Space: 20000 tokens available\nTarget: 12000-14000 tokens for context\n\nHIGH priority:\n  - metabob-priority-issues (3000 tokens) → LOAD\n  - error-file (2000 tokens) → LOAD\n\nMEDIUM priority:\n  - conversation-history (2000 tokens) → LOAD\n  - related-tests (3000 tokens) → LOAD\n\nTotal: 10000 tokens (50% utilization) → Good!\n\nLOW priority:\n  - old-context (5000 tokens) → SKIP (not needed)\n```\n\n## Guidelines\n\n- Don't exceed 70% utilization\n- Log loading decisions\n- Handle loading errors gracefully",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "optimize-if-needed",
+      "subagent": "memory",
+      "description": "Compress or reorder if context is too tight",
+      "dependencies": [
+        "review-context-space"
+      ],
+      "prompt": {
+        "template": "Optimize context if utilization is too high.\n\n## Your Task\n\n1. Check current utilization with `memory_budget`\n2. If > 75%, apply optimizations:\n   - Unload LOW priority impulses\n   - Compress MEDIUM priority with `memory_compress`\n   - Reorder priorities with `memory_reorder`\n3. Re-check utilization\n4. Repeat if still > 75%\n\n## Compression Strategy\n\n```typescript\n// For large file impulses\nmemory_compress({\n  impulseId: \"large-file\",\n  strategy: \"extract-key-sections\",\n  targetTokens: 1500  // Reduce from 3000\n})\n\n// For conversation history\nmemory_compress({\n  impulseId: \"conversation-history\",\n  strategy: \"summarize\",\n  targetTokens: 1000\n})\n```\n\n## Reordering Strategy\n\n```typescript\nmemory_reorder({\n  reordering: [\n    {\n      impulseId: \"old-context\",\n      newPriority: \"low\",\n      reason: \"Not relevant to current task\"\n    }\n  ]\n})\n```\n\n## Guidelines\n\n- Target 60-70% after optimization\n- Preserve HIGH priority impulses\n- Log all optimizations\n- Don't compress critical context",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "finalize-context",
+      "subagent": "memory",
+      "description": "Final context space review and summary",
+      "dependencies": [
+        "optimize-if-needed"
+      ],
+      "prompt": {
+        "template": "Review final context space and summarize preparation.\n\n## Your Task\n\n1. Call `memory_context_view({ includeDetails: true })`\n2. Call `memory_budget` for final stats\n3. Summarize what context is prepared:\n   - Impulses loaded\n   - Token utilization\n   - Any optimizations applied\n4. Confirm context is ready for main agent\n\n## Output Format\n\n```\nSession Memory Prepared\n\nLoaded Impulses:\n  HIGH:\n    ✓ metabob-priority-issues (2100/3000 tokens)\n    ✓ error-file (1850/2000 tokens)\n  MEDIUM:\n    ✓ conversation-history (1200/2000 tokens)\n\nUtilization: 5150/20000 tokens (25.8%)\nStatus: READY\nOptimizations: None needed\n```\n\n## Guidelines\n\n- Clear, concise summary\n- Confirm readiness\n- Log final state",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T12:46:34.259Z",
+  "metadata": {}
+}

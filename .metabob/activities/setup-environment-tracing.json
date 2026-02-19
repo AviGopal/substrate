@@ -1,0 +1,315 @@
+{
+  "activity_id": "setup-environment-tracing",
+  "name": "Setup Environment Tracing",
+  "description": "Configure comprehensive environment tracing for data flow validation, execution monitoring, and log collection across the application stack (backend, MCP, containers, database)",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "task-1-verify-infrastructure",
+      "subagent": "general",
+      "description": "Verify infrastructure components (backend API, database, containers) are running and accessible",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Verify Infrastructure Components\n\n## Objective\nVerify that all required infrastructure components are running and accessible before setting up tracing.\n\n## Verification Steps\n\n1. **Check Backend API Health**:\n```bash\ncurl -s {{backendUrl}}/health || echo \"Backend not accessible\"\ncurl -s {{backendUrl}}/ | jq '.' 2>/dev/null || echo \"Backend health check failed\"\n```\n\n2. **Verify Docker Containers**:\n```bash\necho \"Checking containers...\"\n{{#each containerNames}}\nif docker ps --format '{{{{.Names}}' | grep -q \"^{{this}}$\"; then\n  echo \"✓ {{this}} is running\"\nelse\n  echo \"✗ {{this}} is NOT running\"\nfi\n{{/each}}\n```\n\n3. **Check Database Connectivity** (if SurrealDB):\n```bash\nif docker ps | grep -q surreal; then\n  echo \"✓ SurrealDB container is running\"\nelse\n  echo \"⚠️  SurrealDB container not found (may be using Redis)\"\nfi\n```\n\n4. **Check Redis** (if using Redis backend):\n```bash\nif docker ps | grep -q redis; then\n  echo \"✓ Redis container is running\"\nelse\n  echo \"⚠️  Redis container not found\"\nfi\n```\n\n5. **Generate Infrastructure Status Report** in `{{traceDirectory}}/infrastructure-status.md`:\n```markdown\n# Infrastructure Status Report\n**Timestamp**: {{timestamp}}\n**Backend URL**: {{backendUrl}}\n**Project ID**: {{projectId}}\n\n## Component Status\n\n### Backend API\n- URL: {{backendUrl}}\n- Health: [PASS/FAIL]\n- Response time: [ms]\n\n### Docker Containers\n{{#each containerNames}}\n- {{this}}: [RUNNING/NOT FOUND]\n{{/each}}\n\n### Database\n- Type: [SurrealDB/Redis/Unknown]\n- Status: [RUNNING/NOT FOUND]\n\n## Ready for Tracing\n[YES/NO - list any missing components]\n```\n\n## Output Requirements\n- File: `{{traceDirectory}}/infrastructure-status.md`\n- Clear status for each component (PASS/FAIL)\n- Lists all missing or failed components\n- Determines if environment is ready for tracing",
+        "variables": [
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": false,
+            "description": "Backend API URL to check",
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "projectId",
+            "type": "string",
+            "required": false,
+            "description": "Project ID for filtering",
+            "default": "exp-repo-dev"
+          },
+          {
+            "name": "traceDirectory",
+            "type": "string",
+            "required": false,
+            "description": "Directory for trace output",
+            "default": "./.trace-output"
+          },
+          {
+            "name": "containerNames",
+            "type": "array",
+            "required": false,
+            "description": "Container names to check",
+            "default": ["api-server-dev", "devbob-opencode", "devbob-rpc-api", "devbob-cli"]
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "infrastructure-status.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Infrastructure Status",
+            "description": "Report title"
+          },
+          {
+            "pattern": "Backend API|Component Status",
+            "description": "Status sections"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2-configure-trace-collection",
+      "subagent": "general",
+      "description": "Set up trace collection infrastructure (directories, trace IDs, structured logging)",
+      "dependencies": ["task-1-verify-infrastructure"],
+      "prompt": {
+        "template": "# Task: Configure Trace Collection Infrastructure\n\n## Objective\nCreate directories, generate trace IDs, and configure structured logging for comprehensive tracing.\n\n## Setup Steps\n\n1. **Create Trace Directory Structure**:\n```bash\nmkdir -p {{traceDirectory}}\nmkdir -p {{traceDirectory}}/logs\nmkdir -p {{traceDirectory}}/traces\nmkdir -p {{traceDirectory}}/reports\nmkdir -p {{traceDirectory}}/data-flow\n\necho \"Trace directories created at: {{traceDirectory}}\"\n```\n\n2. **Generate Unique Trace ID**:\n```bash\nTRACE_ID=\"trace-$(date +%Y%m%d-%H%M%S)-$(openssl rand -hex 4)\"\necho \"$TRACE_ID\" > {{traceDirectory}}/current-trace-id.txt\necho \"Generated trace ID: $TRACE_ID\"\n```\n\n3. **Configure Logging**:\nCreate `{{traceDirectory}}/trace-config.json`:\n```json\n{\n  \"trace_id\": \"<TRACE_ID>\",\n  \"backend_url\": \"{{backendUrl}}\",\n  \"project_id\": \"{{projectId}}\",\n  \"trace_duration_seconds\": {{traceDuration}},\n  \"containers_to_trace\": {{containerNames}},\n  \"log_filters\": [\n    \"metabob\",\n    \"project.*id\",\n    \"authentication\",\n    \"error\",\n    \"warning\",\n    \"mcp\",\n    \"opencode\",\n    \"backend\",\n    \"activity\",\n    \"{{projectId}}\"\n  ],\n  \"output_locations\": {\n    \"logs\": \"{{traceDirectory}}/logs\",\n    \"traces\": \"{{traceDirectory}}/traces\",\n    \"reports\": \"{{traceDirectory}}/reports\",\n    \"data_flow\": \"{{traceDirectory}}/data-flow\"\n  }\n}\n```\n\n4. **Create Environment File**:\nCreate `{{traceDirectory}}/.env.trace` for trace scripts:\n```bash\nTRACE_ID=<TRACE_ID>\nBACKEND_URL={{backendUrl}}\nPROJECT_ID={{projectId}}\nTRACE_DIR={{traceDirectory}}\nTRACE_DURATION={{traceDuration}}\n```\n\n5. **Generate Setup Report** in `{{traceDirectory}}/setup-report.md`:\n```markdown\n# Trace Collection Setup Report\n**Timestamp**: <timestamp>\n**Trace ID**: <TRACE_ID>\n\n## Configuration\n- Backend URL: {{backendUrl}}\n- Project ID: {{projectId}}\n- Trace Duration: {{traceDuration}}s\n- Output Directory: {{traceDirectory}}\n\n## Directory Structure\n```\n{{traceDirectory}}/\n  ├── logs/           # Container and service logs\n  ├── traces/         # Execution traces (JSON)\n  ├── reports/        # Analysis reports\n  ├── data-flow/      # Data flow validation results\n  ├── trace-config.json\n  └── .env.trace\n```\n\n## Containers Configured for Tracing\n{{#each containerNames}}\n- {{this}}\n{{/each}}\n\n## Log Filters Applied\n- metabob, project_id, authentication\n- error, warning, failed\n- mcp, opencode, backend\n- activity, {{projectId}}\n\n## Next Steps\n1. Deploy trace scripts\n2. Start trace collection\n3. Validate data flow\n4. Generate trace reports\n```\n\n## Output Requirements\n- Created: `{{traceDirectory}}/` with all subdirectories\n- Created: `{{traceDirectory}}/trace-config.json`\n- Created: `{{traceDirectory}}/.env.trace`\n- Created: `{{traceDirectory}}/setup-report.md`\n- Trace ID generated and saved",
+        "variables": [
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": false,
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "projectId",
+            "type": "string",
+            "required": false,
+            "default": "exp-repo-dev"
+          },
+          {
+            "name": "traceDirectory",
+            "type": "string",
+            "required": false,
+            "default": "./.trace-output"
+          },
+          {
+            "name": "traceDuration",
+            "type": "number",
+            "required": false,
+            "default": 60
+          },
+          {
+            "name": "containerNames",
+            "type": "array",
+            "required": false,
+            "default": ["api-server-dev", "devbob-opencode", "devbob-rpc-api", "devbob-cli"]
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "setup-report.md",
+          "trace-config.json"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Trace ID|trace-\\d+",
+            "description": "Trace ID present"
+          },
+          {
+            "pattern": "Directory Structure",
+            "description": "Setup documented"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-3-install-trace-scripts",
+      "subagent": "general",
+      "description": "Deploy trace scripts (trace_activity_execution.py, trace-agent-behavior.sh, trace-backend-connectivity.sh)",
+      "dependencies": ["task-2-configure-trace-collection"],
+      "prompt": {
+        "template": "# Task: Install and Configure Trace Scripts\n\n## Objective\nDeploy the existing trace scripts and configure them for the current trace session.\n\n## Installation Steps\n\n1. **Verify Trace Scripts Exist**:\n```bash\nls -lh trace_activity_execution.py\nls -lh scripts/trace-agent-behavior.sh\nls -lh scripts/trace-backend-connectivity.sh\n```\n\n2. **Copy Scripts to Trace Directory**:\n```bash\ncp trace_activity_execution.py {{traceDirectory}}/\ncp scripts/trace-agent-behavior.sh {{traceDirectory}}/\ncp scripts/trace-backend-connectivity.sh {{traceDirectory}}/\n\nchmod +x {{traceDirectory}}/*.sh\nchmod +x {{traceDirectory}}/*.py\n\necho \"Scripts copied and made executable\"\n```\n\n3. **Create Wrapper Script** `{{traceDirectory}}/start-tracing.sh`:\n```bash\n#!/bin/bash\n# Unified trace starter script\n\nset -euo pipefail\n\n# Load trace configuration\nsource {{traceDirectory}}/.env.trace\n\necho \"========================================\"\necho \"Starting Comprehensive Tracing\"\necho \"========================================\"\necho \"Trace ID: $TRACE_ID\"\necho \"Backend: $BACKEND_URL\"\necho \"Project: $PROJECT_ID\"\necho \"Duration: $TRACE_DURATION seconds\"\necho \"\"\n\n# Start backend connectivity tracing\necho \"[1/3] Starting backend connectivity trace...\"\n{{traceDirectory}}/trace-backend-connectivity.sh $TRACE_DURATION > {{traceDirectory}}/logs/backend-trace.log 2>&1 &\nBACKEND_PID=$!\n\necho \"[2/3] Backend trace started (PID: $BACKEND_PID)\"\necho \"\"\n\n# Start activity execution tracing (if needed)\necho \"[3/3] Activity execution trace available via:\"\necho \"  python3 {{traceDirectory}}/trace_activity_execution.py > {{traceDirectory}}/traces/activity-trace.jsonl\"\necho \"\"\n\necho \"Tracing started. Logs in: {{traceDirectory}}/logs/\"\necho \"Press Ctrl+C to stop tracing\"\necho \"\"\n\n# Wait for duration or Ctrl+C\nif [ \"$TRACE_DURATION\" -gt 0 ]; then\n  sleep $TRACE_DURATION\n  kill $BACKEND_PID 2>/dev/null || true\n  echo \"Tracing complete!\"\nelse\n  wait $BACKEND_PID\nfi\n```\n\n4. **Create Stop Script** `{{traceDirectory}}/stop-tracing.sh`:\n```bash\n#!/bin/bash\necho \"Stopping all trace processes...\"\npkill -f \"trace-backend-connectivity.sh\" || true\npkill -f \"trace-agent-behavior.sh\" || true\necho \"Tracing stopped.\"\n```\n\n5. **Make Scripts Executable**:\n```bash\nchmod +x {{traceDirectory}}/start-tracing.sh\nchmod +x {{traceDirectory}}/stop-tracing.sh\n```\n\n6. **Generate Installation Report** in `{{traceDirectory}}/reports/scripts-installed.md`:\n```markdown\n# Trace Scripts Installation Report\n**Timestamp**: <timestamp>\n\n## Installed Scripts\n\n### Core Trace Scripts\n- ✓ trace_activity_execution.py - Traces activity execution flow with structured JSON logging\n- ✓ trace-agent-behavior.sh - Captures agent decision points and breadcrumbs\n- ✓ trace-backend-connectivity.sh - Monitors backend API connectivity and logs\n\n### Wrapper Scripts\n- ✓ start-tracing.sh - Unified script to start all tracing\n- ✓ stop-tracing.sh - Stops all trace processes\n\n## Usage\n\n### Start Tracing\n```bash\ncd {{traceDirectory}}\n./start-tracing.sh\n```\n\n### Trace Activity Execution\n```bash\npython3 {{traceDirectory}}/trace_activity_execution.py > {{traceDirectory}}/traces/activity-trace.jsonl\n```\n\n### Trace Agent Behavior (in container)\n```bash\n./trace-agent-behavior.sh <container-name> <test-case>\n```\n\n### Stop Tracing\n```bash\n./stop-tracing.sh\n```\n\n## Output Locations\n- Backend logs: `{{traceDirectory}}/logs/backend-trace.log`\n- Activity traces: `{{traceDirectory}}/traces/activity-trace.jsonl`\n- Agent behavior: `{{traceDirectory}}/logs/<container>-behavior.log`\n\n## Configuration\nAll scripts use: `{{traceDirectory}}/.env.trace`\n```\n\n## Output Requirements\n- Scripts copied to {{traceDirectory}}/\n- start-tracing.sh created and executable\n- stop-tracing.sh created and executable\n- Installation report generated\n- All scripts are executable (chmod +x)",
+        "variables": [
+          {
+            "name": "traceDirectory",
+            "type": "string",
+            "required": false,
+            "default": "./.trace-output"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "scripts-installed.md",
+          "start-tracing.sh",
+          "stop-tracing.sh"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Installed Scripts|trace_activity_execution",
+            "description": "Installation documented"
+          },
+          {
+            "pattern": "Usage|start-tracing",
+            "description": "Usage instructions present"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -x {{traceDirectory}}/start-tracing.sh",
+            "description": "start-tracing.sh is executable"
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4-validate-data-flow",
+      "subagent": "general",
+      "description": "Run live data flow validation to ensure tracing captures production code paths",
+      "dependencies": ["task-3-install-trace-scripts"],
+      "prompt": {
+        "template": "# Task: Validate Data Flow Through Production Code\n\n## Objective\nRun live validation to ensure that tracing captures data flowing through actual production code paths (not manual database inserts).\n\n## Validation Steps\n\n1. **Check if Validation Script Exists**:\n```bash\nif [ -f verify-live-data-flow-simple.py ]; then\n  echo \"✓ Found verify-live-data-flow-simple.py\"\nelse\n  echo \"⚠️  Validation script not found, will create minimal test\"\nfi\n```\n\n2. **Run Live Data Flow Validation**:\n```bash\necho \"Starting live data flow validation...\"\necho \"Backend: {{backendUrl}}\"\necho \"\"\n\n# Run the validation with output capture\nif [ -f verify-live-data-flow-simple.py ]; then\n  python3 verify-live-data-flow-simple.py 2>&1 | tee {{traceDirectory}}/data-flow/validation-output.log\nelse\n  # Fallback: minimal curl test\n  echo \"Running minimal backend validation...\"\n  \n  # Test backend health\n  echo \"[1/3] Testing backend health...\"\n  curl -s {{backendUrl}}/health > {{traceDirectory}}/data-flow/health-check.json\n  \n  if grep -q '\"status\".*\"ok\"' {{traceDirectory}}/data-flow/health-check.json; then\n    echo \"✓ Backend health check passed\"\n  else\n    echo \"✗ Backend health check failed\"\n    exit 1\n  fi\n  \n  # Test template listing\n  echo \"[2/3] Testing template listing...\"\n  curl -s {{backendUrl}}/v2/activities/templates > {{traceDirectory}}/data-flow/templates-list.json\n  \n  TEMPLATE_COUNT=$(cat {{traceDirectory}}/data-flow/templates-list.json | grep -o '\"activity_id\"' | wc -l)\n  echo \"✓ Found $TEMPLATE_COUNT templates\"\n  \n  # Test activity metrics endpoint\n  echo \"[3/3] Testing activity metrics...\"\n  curl -s {{backendUrl}}/v2/activities/metrics > {{traceDirectory}}/data-flow/metrics.json\n  \n  echo \"✓ Metrics endpoint accessible\"\n  echo \"\" \n  echo \"✅ Minimal validation passed\"\nfi\n```\n\n3. **Analyze Validation Results**:\n```bash\nif [ -f {{traceDirectory}}/data-flow/validation-output.log ]; then\n  if grep -q \"PASSED\" {{traceDirectory}}/data-flow/validation-output.log; then\n    echo \"✅ Live data flow validation PASSED\"\n    VALIDATION_STATUS=\"PASSED\"\n  elif grep -q \"FAILED\" {{traceDirectory}}/data-flow/validation-output.log; then\n    echo \"❌ Live data flow validation FAILED\"\n    VALIDATION_STATUS=\"FAILED\"\n  else\n    echo \"⚠️  Validation status unclear\"\n    VALIDATION_STATUS=\"UNCLEAR\"\n  fi\nelse\n  VALIDATION_STATUS=\"MINIMAL_PASSED\"\nfi\n```\n\n4. **Generate Data Flow Report** in `{{traceDirectory}}/reports/data-flow-validation.md`:\n```markdown\n# Data Flow Validation Report\n**Timestamp**: <timestamp>\n**Backend**: {{backendUrl}}\n**Validation Status**: <VALIDATION_STATUS>\n\n## Test Results\n\n### Production Code Path Validation\n\n[PASSED/FAILED/MINIMAL]\n\n### Code Paths Tested\n\n1. **OpenCode → MCP → Backend → Database**\n   - Status: [✓ Working / ✗ Failed]\n   - Evidence: [logs/traces]\n\n2. **Activity Execution Flow**\n   - ActivityManager.start_execution() → Backend POST /v2/activities/record/start\n   - ActivityManager.get_next_step() → Backend GET /v2/activities/templates/:id\n   - ActivityManager.report_step_result() → Backend POST /v2/activities/executions/:id/tasks\n   - Status: [✓ Working / ✗ Failed]\n\n3. **Backend API Endpoints**\n   - Health check: [✓/✗]\n   - Template listing: [✓/✗]\n   - Metrics endpoint: [✓/✗]\n\n## Validation Checklist\n\n- [ ] Backend accessible and healthy\n- [ ] MCP tools call real backend API\n- [ ] Backend writes to database\n- [ ] Data persists correctly\n- [ ] Full integration path validated\n\n## Issues Found\n\n[List any issues or failures]\n\n## Recommendations\n\n[Based on validation results]\n\n## Evidence Files\n\n- Validation output: `{{traceDirectory}}/data-flow/validation-output.log`\n- Health check: `{{traceDirectory}}/data-flow/health-check.json`\n- Templates list: `{{traceDirectory}}/data-flow/templates-list.json`\n- Metrics: `{{traceDirectory}}/data-flow/metrics.json`\n```\n\n## Output Requirements\n- Validation executed (full or minimal)\n- Results captured in {{traceDirectory}}/data-flow/\n- Data flow report generated\n- PASSED/FAILED status determined\n- Evidence files saved",
+        "variables": [
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": false,
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "traceDirectory",
+            "type": "string",
+            "required": false,
+            "default": "./.trace-output"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "data-flow-validation.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Validation Status|PASSED|FAILED|MINIMAL",
+            "description": "Validation result present"
+          },
+          {
+            "pattern": "Code Paths|Backend API",
+            "description": "Test sections present"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "task-5-generate-trace-report",
+      "subagent": "general",
+      "description": "Generate comprehensive trace report with usage examples and documentation",
+      "dependencies": ["task-4-validate-data-flow"],
+      "prompt": {
+        "template": "# Task: Generate Comprehensive Trace Report\n\n## Objective\nCreate a comprehensive report documenting the tracing setup, what's being traced, and how to use the tracing system.\n\n## Report Generation\n\nCreate `{{traceDirectory}}/TRACING_GUIDE.md`:\n\n```markdown\n# Environment Tracing Guide\n**Generated**: <timestamp>\n**Trace ID**: <from current-trace-id.txt>\n**Status**: READY\n\n## Overview\n\nThis directory contains a complete tracing infrastructure for monitoring data flow through the application stack:\n- Backend API (metabob-rpc-api)\n- MCP layer (metabob-cli)\n- OpenCode client\n- Docker containers\n- Database operations\n\n## Directory Structure\n\n```\n{{traceDirectory}}/\n├── logs/                     # Log files from traced components\n│   ├── backend-trace.log    # Backend connectivity logs\n│   └── <container>.log      # Per-container logs\n├── traces/                   # Structured execution traces\n│   └── activity-trace.jsonl # Activity execution trace (JSON lines)\n├── reports/                  # Analysis reports\n│   ├── scripts-installed.md\n│   └── data-flow-validation.md\n├── data-flow/               # Data flow validation results\n│   ├── validation-output.log\n│   ├── health-check.json\n│   └── templates-list.json\n├── trace-config.json        # Trace configuration\n├── .env.trace               # Environment variables\n├── start-tracing.sh         # Start trace collection\n├── stop-tracing.sh          # Stop trace collection\n└── TRACING_GUIDE.md         # This file\n```\n\n## Quick Start\n\n### 1. Start Tracing\n\n```bash\ncd {{traceDirectory}}\n./start-tracing.sh\n```\n\nThis starts:\n- Backend connectivity monitoring\n- Container log collection\n- Structured trace capture\n\n### 2. Trace Activity Execution\n\nWhile tracing is running, trace a specific activity execution:\n\n```bash\npython3 {{traceDirectory}}/trace_activity_execution.py > {{traceDirectory}}/traces/activity-trace.jsonl\n```\n\nThis captures:\n- Execution start/end\n- Step-by-step progress\n- API calls (with timing)\n- Success/failure status\n\n### 3. Monitor Live Logs\n\n```bash\n# Watch backend trace\ntail -f {{traceDirectory}}/logs/backend-trace.log\n\n# Watch activity trace (structured JSON)\ntail -f {{traceDirectory}}/traces/activity-trace.jsonl | jq '.'\n```\n\n### 4. Stop Tracing\n\n```bash\n./stop-tracing.sh\n```\n\n## What Gets Traced\n\n### Backend API\n- Health checks\n- Authentication events\n- Project ID usage\n- Error and warning logs\n- MCP tool calls\n- Activity execution\n\n### Containers\n{{#each containerNames}}\n- **{{this}}**: Service logs filtered for metabob/opencode/mcp events\n{{/each}}\n\n### Data Flow\n- OpenCode tool calls\n- MCP client → Backend API\n- Backend API → Database\n- Database operations\n- Response payloads\n\n### Activity Execution\n- start_execution() calls\n- get_next_step() calls\n- report_step_result() calls\n- Execution completion\n- Cost and token usage\n\n## Analyzing Traces\n\n### Find Specific Events\n\n```bash\n# Find all errors\ngrep -i \"error\" {{traceDirectory}}/logs/*.log\n\n# Find project-specific events\ngrep \"{{projectId}}\" {{traceDirectory}}/logs/*.log\n\n# Find activity executions\ngrep \"execution_started\" {{traceDirectory}}/traces/activity-trace.jsonl | jq '.'\n\n# Find MCP calls\ngrep -i \"mcp\" {{traceDirectory}}/logs/*.log\n```\n\n### Trace Specific Request\n\nEach trace has a unique ID in `current-trace-id.txt`. Use it to filter:\n\n```bash\nTRACE_ID=$(cat {{traceDirectory}}/current-trace-id.txt)\ngrep \"$TRACE_ID\" {{traceDirectory}}/logs/*.log\n```\n\n### Generate Timeline\n\nFor activity traces (JSONL format):\n\n```bash\ncat {{traceDirectory}}/traces/activity-trace.jsonl | jq -r '[.timestamp, .event, .duration_ms] | @tsv' | column -t\n```\n\n## Validation Reports\n\nCheck these files for validation results:\n\n1. **Infrastructure Status**: `infrastructure-status.md`\n   - Component health\n   - Readiness check\n\n2. **Data Flow Validation**: `reports/data-flow-validation.md`\n   - Production code path verification\n   - Backend connectivity\n   - Database persistence\n\n3. **Scripts Installation**: `reports/scripts-installed.md`\n   - Installed trace scripts\n   - Usage instructions\n\n## Configuration\n\n### Trace Configuration (`trace-config.json`)\n\n```json\n{\n  \"trace_id\": \"<unique-id>\",\n  \"backend_url\": \"{{backendUrl}}\",\n  \"project_id\": \"{{projectId}}\",\n  \"trace_duration_seconds\": {{traceDuration}},\n  \"containers_to_trace\": [...],\n  \"log_filters\": [...],\n  \"output_locations\": {...}\n}\n```\n\n### Environment Variables (`.env.trace`)\n\n```bash\nTRACE_ID=<unique-id>\nBACKEND_URL={{backendUrl}}\nPROJECT_ID={{projectId}}\nTRACE_DIR={{traceDirectory}}\nTRACE_DURATION={{traceDuration}}\n```\n\n## Troubleshooting\n\n### Backend Not Accessible\n\n```bash\ncurl {{backendUrl}}/health\n# Should return: {\"status\": \"ok\", ...}\n```\n\nCheck `infrastructure-status.md` for component status.\n\n### No Logs Captured\n\nVerify containers are running:\n```bash\ndocker ps --format '{{{{.Names}}'\n```\n\nCheck trace-backend-connectivity.sh is running:\n```bash\nps aux | grep trace-backend\n```\n\n### Activity Trace Empty\n\nEnsure session token exists:\n```bash\ncat .metabob/state\n```\n\nCheck backend connectivity in `logs/backend-trace.log`.\n\n## Example: Tracing a Feature Implementation\n\n### Scenario\nYou're implementing a new feature and want to trace the entire flow.\n\n### Steps\n\n1. **Start Tracing**:\n   ```bash\n   cd {{traceDirectory}}\n   ./start-tracing.sh\n   ```\n\n2. **Execute Your Work**:\n   ```bash\n   # In another terminal\n   cd /path/to/project\n   opencode \"implement user authentication\"\n   ```\n\n3. **Monitor Progress**:\n   ```bash\n   # Watch activity execution\n   tail -f {{traceDirectory}}/traces/activity-trace.jsonl | jq '.'\n   \n   # Watch backend logs\n   tail -f {{traceDirectory}}/logs/backend-trace.log | grep authentication\n   ```\n\n4. **Stop and Analyze**:\n   ```bash\n   ./stop-tracing.sh\n   \n   # Review execution timeline\n   cat traces/activity-trace.jsonl | jq -r '[.timestamp, .event, .duration_ms] | @tsv'\n   \n   # Check for errors\n   grep -i \"error\" logs/*.log\n   ```\n\n## Best Practices\n\n1. **Always validate first**: Check `data-flow-validation.md` before tracing\n2. **Use unique trace IDs**: Each trace session gets a unique ID\n3. **Filter appropriately**: Use grep/jq to find relevant events\n4. **Save important traces**: Copy trace files before starting new traces\n5. **Check validation**: Review `infrastructure-status.md` if issues occur\n\n## Trace Output Formats\n\n### Structured JSON (activity-trace.jsonl)\n\n```json\n{\n  \"trace_id\": \"abc123\",\n  \"event\": \"execution_started\",\n  \"timestamp\": \"2026-02-19T...\",\n  \"execution_id\": \"exec_xyz\",\n  \"status\": \"running\",\n  \"duration_ms\": 145.2\n}\n```\n\n### Logs (backend-trace.log)\n\n```\n2026-02-19 10:30:45 [BACKEND-API] INFO: POST /v2/activities/record/start\n2026-02-19 10:30:45 [BACKEND-API] INFO: project_id=exp-repo-dev\n```\n\n## Related Documentation\n\n- `LIVE_DATA_FLOW_VALIDATION.md` - Understanding data flow validation\n- `MCP_GATEWAY_ARCHITECTURE.md` - Architecture overview\n- `trace_activity_execution.py` - Activity trace script source\n- `scripts/trace-backend-connectivity.sh` - Backend trace script\n\n## Support\n\nIf tracing isn't working:\n\n1. Check infrastructure status: `cat infrastructure-status.md`\n2. Verify data flow: `cat reports/data-flow-validation.md`\n3. Review setup: `cat setup-report.md`\n4. Check script installation: `cat reports/scripts-installed.md`\n\n---\n\n**Trace ID**: <TRACE_ID>  \n**Ready**: YES  \n**Start tracing**: `./start-tracing.sh`\n```\n\n## Output Requirements\n- File: `{{traceDirectory}}/TRACING_GUIDE.md`\n- Complete usage documentation\n- Examples for common scenarios\n- Troubleshooting section\n- Quick start guide\n- Analysis techniques",
+        "variables": [
+          {
+            "name": "traceDirectory",
+            "type": "string",
+            "required": false,
+            "default": "./.trace-output"
+          },
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": false,
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "projectId",
+            "type": "string",
+            "required": false,
+            "default": "exp-repo-dev"
+          },
+          {
+            "name": "traceDuration",
+            "type": "number",
+            "required": false,
+            "default": 60
+          },
+          {
+            "name": "containerNames",
+            "type": "array",
+            "required": false,
+            "default": ["api-server-dev", "devbob-opencode", "devbob-rpc-api", "devbob-cli"]
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "TRACING_GUIDE.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Environment Tracing Guide|Quick Start",
+            "description": "Guide structure"
+          },
+          {
+            "pattern": "start-tracing.sh|What Gets Traced",
+            "description": "Usage instructions"
+          },
+          {
+            "pattern": "Example|Troubleshooting",
+            "description": "Help sections"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T12:00:00.000Z",
+  "metadata": {}
+}

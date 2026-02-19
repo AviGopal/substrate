@@ -14,9 +14,9 @@
       "enabled": true,
       "timeout": 30000,
       "environment": {
-        "METABOB_API_URL": "https://ide.metabob.com",
-        "METABOB_PROJECT_ID": "default",
-        "METABOB_API_KEY": "mb_ZFHainw-YiH7OTgJ4X9HBtXUz7YxtGxFQohkXOW3HB4",
+        "METABOB_API_URL": "http://localhost:8080",
+        "METABOB_PROJECT_ID": "devbob-local",
+        "METABOB_API_KEY": "local-dev-key",
         "METABOB_EXCLUDE_PATHS": "**/tests/**,**/perf-repos/**,**/__pycache__/**,**/.git/**,**/node_modules/**,**/venv/**,**/.venv/**,**/dist/**,**/build/**,**/.next/**,**/.metabob/**",
         "METABOB_WATCH_FILES": "false"
       }
@@ -34,8 +34,8 @@
   },
   "metabob": {
     "cli_path": "metabob-cli",
-    "base_url": "https://ide.metabob.com",
-    "api_key": "mb_ZFHainw-YiH7OTgJ4X9HBtXUz7YxtGxFQohkXOW3HB4",
+    "base_url": "http://localhost:8080",
+    "api_key": "local-dev-key",
     "template_registration": {
       "auto_register": true,
       "default_category": "feature"
@@ -54,6 +54,15 @@
     "openai": {}
   },
   "sessionMemory": {
-    "enabled": true
+    "enabled": true,
+    "analysis": {
+      "provider": "anthropic",
+      "model": "claude-4-5-haiku",
+      "timeout": 3000
+    },
+    "budgets": {
+      "perImpulse": 2000
+    },
+    "maxImpulsesPerTurn": 5
   }
 }

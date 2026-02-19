@@ -105,8 +105,8 @@ services:
     container_name: api-server-dev
     image: metabobapp/metabob-rpc-api:${API_VERSION:-0.16.12}
     build:
-      context: ./repos
-      dockerfile: ./metabob-rpc-api/docker/Dockerfile.server
+      context: ./repos/metabob-rpc-api
+      dockerfile: ./docker/Dockerfile.server
       tags:
         - "metabobapp/metabob-rpc-api:${API_VERSION:-0.16.12}"
     command: ["start_server", "--host", "0.0.0.0", "--port", "8080", "--workers", "${API_WORKERS:-4}"]
