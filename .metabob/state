@@ -1,8 +1,8 @@
 {
-  "version": 253,
+  "version": 255,
   "session_metadata": {
     "created_at": "2026-02-19T01:52:43.149659",
-    "last_updated": "2026-02-19T02:34:48.868942",
+    "last_updated": "2026-02-19T02:36:18.338295",
     "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae",
     "format_version": "4.0",
     "interrupted": false,
@@ -4180,11 +4180,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/watch-backend.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/watch-backend.sh",
       "last_modified": 1771382344.519523,
-      "last_submitted": null,
+      "last_submitted": 1771497227.870282,
       "size": 191,
       "checksum": "e75588762369254a92416f54dfd133a1683c7a0046ab54e00803912ade8a950c",
       "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae",
-      "job_id": null
+      "job_id": "bef5b76b-0b29-4958-a2da-e648f12bad2b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/QUICK_SETUP_COMMANDS.sh": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/QUICK_SETUP_COMMANDS.sh",
@@ -6520,11 +6520,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify_backend_integration.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/verify_backend_integration.py",
       "last_modified": 1771382344.519523,
-      "last_submitted": null,
+      "last_submitted": 1771497227.870288,
       "size": 6636,
       "checksum": "a78225a043e567bd34235c5e49159315b295e8422bef06cb35f036f6388649e8",
       "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae",
-      "job_id": null
+      "job_id": "bef5b76b-0b29-4958-a2da-e648f12bad2b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-tool-direct.mjs": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/test-activity-tool-direct.mjs",
@@ -8707,11 +8707,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify_template_discoverable.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/verify_template_discoverable.ts",
       "last_modified": 1771382344.519523,
-      "last_submitted": null,
+      "last_submitted": 1771497227.870289,
       "size": 3043,
       "checksum": "9ce8759eab6925193c924cdec72e3248d9f7f1915b6355684fa506c1d8889d74",
       "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae",
-      "job_id": null
+      "job_id": "bef5b76b-0b29-4958-a2da-e648f12bad2b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/assets/icons/Repo.js": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/src/assets/icons/Repo.js",
@@ -12217,11 +12217,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify_persistence_final.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/verify_persistence_final.ts",
       "last_modified": 1771382344.519523,
-      "last_submitted": null,
+      "last_submitted": 1771497227.870291,
       "size": 3078,
       "checksum": "46a5e707f193f37fe76a065c787e0197a42e6cfeda844c5a46f505006874e032",
       "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae",
-      "job_id": null
+      "job_id": "bef5b76b-0b29-4958-a2da-e648f12bad2b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/event_session_compacted.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/event_session_compacted.py",
@@ -15565,11 +15565,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify_impulse_tracking_e2e.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/verify_impulse_tracking_e2e.py",
       "last_modified": 1771382344.519523,
-      "last_submitted": null,
+      "last_submitted": 1771497227.870292,
       "size": 10502,
       "checksum": "c9a8f6ff1682c0df3eb94acc1e569e056f47fc0f31913d242caf3406fc81ef1b",
       "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae",
-      "job_id": null
+      "job_id": "bef5b76b-0b29-4958-a2da-e648f12bad2b"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/acp/acp-bugs-would-fail.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/acp/acp-bugs-would-fail.test.ts",
@@ -21825,7 +21825,12 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/activity-correctness.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/__tests__/impulse-cache.test.ts": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/util/clipboard.ts": {},
-    "/home/avi/documents/work/exp-repo/metabob-devbob/verify_backend_simple.py": {}
+    "/home/avi/documents/work/exp-repo/metabob-devbob/verify_backend_simple.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/watch-backend.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/verify_backend_integration.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/verify_template_discoverable.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/verify_persistence_final.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/verify_impulse_tracking_e2e.py": {}
   },
   "resolutions": {},
   "annotations": {},
@@ -22319,19 +22324,27 @@
       "file_paths": [],
       "status": "complete",
       "created_at": "2026-02-19T02:33:43.363552",
-      "updated_at": "2026-02-19T02:34:48.858941",
+      "updated_at": "2026-02-19T02:36:06.993418",
       "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae"
     },
     "bef5b76b-0b29-4958-a2da-e648f12bad2b": {
       "job_id": "bef5b76b-0b29-4958-a2da-e648f12bad2b",
       "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-19T02:33:50.424758",
+      "updated_at": "2026-02-19T02:36:18.326422",
+      "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae"
+    },
+    "7a5e33c0-5c7d-4e70-8c15-f45c4bba4cc8": {
+      "job_id": "7a5e33c0-5c7d-4e70-8c15-f45c4bba4cc8",
+      "file_paths": [],
       "status": "running",
-      "created_at": "2026-02-19T02:33:51.251622",
-      "updated_at": "2026-02-19T02:33:51.251632",
+      "created_at": "2026-02-19T02:36:17.958001",
+      "updated_at": "2026-02-19T02:36:17.958011",
       "session_id": "org_metabob:default:3127c72d-14e8-455d-afce-ddb8a6b0fbae"
     }
   },
   "pending_jobs": [
-    "bef5b76b-0b29-4958-a2da-e648f12bad2b"
+    "7a5e33c0-5c7d-4e70-8c15-f45c4bba4cc8"
   ]
 }
