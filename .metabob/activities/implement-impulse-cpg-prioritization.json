@@ -1,0 +1,231 @@
+{
+  "activity_id": "implement-impulse-cpg-prioritization",
+  "name": "Implement Impulse CPG Prioritization",
+  "description": "Add CPG impact scoring to impulse resolution to prioritize high-impact components in context",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "analyze-impulse-resolver",
+      "subagent": "general",
+      "description": "Analyze impulse-resolver.ts to understand scoring and prioritization logic",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the file `repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts` to understand:\n\n1. How impulses are currently scored and prioritized\n2. Where scoring logic is located (function names, line numbers)\n3. How to access file paths from impulse pointers\n4. Integration points with metabob utility\n5. Existing caching mechanisms\n\nProvide:\n- Current scoring algorithm details\n- Where to add CPG impact boost (exact function and line)\n- Data structures for impulse pointers (file, component types)\n- How to integrate metabob.analyzeChangeImpact() calls\n- Sample code for CPG impact scoring",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-cpg-scoring",
+      "subagent": "general",
+      "description": "Implement CPG impact scoring in impulse resolution",
+      "dependencies": [
+        "analyze-impulse-resolver"
+      ],
+      "prompt": {
+        "template": "Implement CPG impact scoring in `repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts`:\n\n**Requirements:**\n1. Add CPG impact boost to impulse scoring logic\n2. Check impulse pointer type: file or component\n3. Extract file paths from pointer\n4. Call `metabob.analyzeChangeImpact(file, null, 2)` for each file\n5. Normalize impact score: `Math.min(direct_dependents / 100.0, 1.0)`\n6. Boost score by impact: `score += impactScore * 0.5` (max +0.5)\n7. Add graceful degradation with try/catch if metabob unavailable\n8. Add logging: `log.debug('CPG impact boost for {file}: +{boost}')`\n9. Consider caching CPG impact results (optional, if performance needed)\n\n**Implementation Pattern:**\n```typescript\nasync function scoreImpulseWithCPG(impulse: Impulse): Promise<number> {\n  let score = calculateBaseScore(impulse) // Existing logic\n  \n  // NEW: CPG impact boost\n  if (impulse.pointer.type === 'file' || impulse.pointer.type === 'component') {\n    const files = extractFilesFromPointer(impulse.pointer)\n    \n    for (const file of files) {\n      try {\n        const impactResult = await metabob.analyzeChangeImpact(file, null, 2)\n        const impactScore = Math.min(impactResult.direct_dependents / 100.0, 1.0)\n        const boost = impactScore * 0.5\n        score += boost\n        \n        log.debug(`CPG impact boost for ${file}: +${boost.toFixed(2)}`)\n      } catch (error) {\n        // Graceful degradation\n        log.debug(`CPG impact unavailable for ${file}: ${error}`)\n      }\n    }\n  }\n  \n  return score\n}\n```\n\n**Helper Function:**\n```typescript\nfunction extractFilesFromPointer(pointer: ImpulsePointer): string[] {\n  if (pointer.type === 'file') {\n    return [pointer.filePath]\n  } else if (pointer.type === 'component') {\n    return [pointer.filePath] // Component has file path\n  }\n  return []\n}\n```\n\nImplement carefully, maintain backward compatibility, ensure graceful degradation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "add-tests",
+      "subagent": "general",
+      "description": "Add unit and integration tests for CPG impulse scoring",
+      "dependencies": [
+        "implement-cpg-scoring"
+      ],
+      "prompt": {
+        "template": "Create comprehensive tests for CPG impulse prioritization:\n\n**Unit Tests** (create or update test file):\n1. Test CPG impact boost added correctly to score\n2. Test with mocked `metabob.analyzeChangeImpact()` returning various impact scores\n3. Test high-impact files get higher scores than low-impact\n4. Test graceful degradation when metabob unavailable (throws error)\n5. Test no CPG boost for non-file/component pointer types\n6. Test `extractFilesFromPointer()` helper for various pointer types\n\n**Integration Test:**\nFull impulse resolution showing:\n- Multiple impulses with different CPG impacts\n- High-impact impulse prioritized over low-impact\n- Logging shows CPG impact boosts\n- System works without CPG (graceful degradation)\n\n**Mock Data:**\n```typescript\nconst highImpactResult = { direct_dependents: 50, transitive_dependents: 200 }\nconst lowImpactResult = { direct_dependents: 5, transitive_dependents: 10 }\n\n// High impact should boost score by ~0.5\n// Low impact should boost score by ~0.05\n```\n\nUse existing test infrastructure and patterns from the codebase.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "commit-changes",
+      "subagent": "general",
+      "description": "Commit the CPG impulse prioritization implementation",
+      "dependencies": [
+        "add-tests"
+      ],
+      "prompt": {
+        "template": "Review all changes and create a well-structured commit:\n\n**Commit Message Format:**\n```\nfeat(impulse): Add CPG impact scoring for prioritization\n\nImplement CPG impact boost in impulse resolution:\n- Query metabob.analyzeChangeImpact() for file/component impulses\n- Normalize impact score (direct_dependents / 100)\n- Boost score by up to +0.5 based on CPG impact\n- Add extractFilesFromPointer() helper\n- Graceful degradation if metabob unavailable\n- Debug logging for CPG impact boosts\n\nBenefit: High-impact components prioritized in context selection,\nimproving context budget utilization and reducing issues in critical paths.\n\nTests:\n- Unit tests for CPG scoring with mocked metabob calls\n- Integration test verifying high-impact prioritization\n- Graceful degradation test\n\nPart of CPG Quick Win #2 implementation.\n```\n\n**Files to commit:**\n- repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts\n- repos/metabob-opencode/packages/opencode/src/session/__tests__/impulse-cpg-prioritization.test.ts (or similar)\n- Any updated type definitions\n\nRun final checks:\n1. All tests pass\n2. No TypeScript errors\n3. Linting passes\n4. Code formatted correctly",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "analyze-impulse-resolver",
+      "subagent": "general",
+      "description": "Analyze impulse-resolver.ts to understand scoring and prioritization logic",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the file `repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts` to understand:\n\n1. How impulses are currently scored and prioritized\n2. Where scoring logic is located (function names, line numbers)\n3. How to access file paths from impulse pointers\n4. Integration points with metabob utility\n5. Existing caching mechanisms\n\nProvide:\n- Current scoring algorithm details\n- Where to add CPG impact boost (exact function and line)\n- Data structures for impulse pointers (file, component types)\n- How to integrate metabob.analyzeChangeImpact() calls\n- Sample code for CPG impact scoring",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-cpg-scoring",
+      "subagent": "general",
+      "description": "Implement CPG impact scoring in impulse resolution",
+      "dependencies": [
+        "analyze-impulse-resolver"
+      ],
+      "prompt": {
+        "template": "Implement CPG impact scoring in `repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts`:\n\n**Requirements:**\n1. Add CPG impact boost to impulse scoring logic\n2. Check impulse pointer type: file or component\n3. Extract file paths from pointer\n4. Call `metabob.analyzeChangeImpact(file, null, 2)` for each file\n5. Normalize impact score: `Math.min(direct_dependents / 100.0, 1.0)`\n6. Boost score by impact: `score += impactScore * 0.5` (max +0.5)\n7. Add graceful degradation with try/catch if metabob unavailable\n8. Add logging: `log.debug('CPG impact boost for {file}: +{boost}')`\n9. Consider caching CPG impact results (optional, if performance needed)\n\n**Implementation Pattern:**\n```typescript\nasync function scoreImpulseWithCPG(impulse: Impulse): Promise<number> {\n  let score = calculateBaseScore(impulse) // Existing logic\n  \n  // NEW: CPG impact boost\n  if (impulse.pointer.type === 'file' || impulse.pointer.type === 'component') {\n    const files = extractFilesFromPointer(impulse.pointer)\n    \n    for (const file of files) {\n      try {\n        const impactResult = await metabob.analyzeChangeImpact(file, null, 2)\n        const impactScore = Math.min(impactResult.direct_dependents / 100.0, 1.0)\n        const boost = impactScore * 0.5\n        score += boost\n        \n        log.debug(`CPG impact boost for ${file}: +${boost.toFixed(2)}`)\n      } catch (error) {\n        // Graceful degradation\n        log.debug(`CPG impact unavailable for ${file}: ${error}`)\n      }\n    }\n  }\n  \n  return score\n}\n```\n\n**Helper Function:**\n```typescript\nfunction extractFilesFromPointer(pointer: ImpulsePointer): string[] {\n  if (pointer.type === 'file') {\n    return [pointer.filePath]\n  } else if (pointer.type === 'component') {\n    return [pointer.filePath] // Component has file path\n  }\n  return []\n}\n```\n\nImplement carefully, maintain backward compatibility, ensure graceful degradation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "add-tests",
+      "subagent": "general",
+      "description": "Add unit and integration tests for CPG impulse scoring",
+      "dependencies": [
+        "implement-cpg-scoring"
+      ],
+      "prompt": {
+        "template": "Create comprehensive tests for CPG impulse prioritization:\n\n**Unit Tests** (create or update test file):\n1. Test CPG impact boost added correctly to score\n2. Test with mocked `metabob.analyzeChangeImpact()` returning various impact scores\n3. Test high-impact files get higher scores than low-impact\n4. Test graceful degradation when metabob unavailable (throws error)\n5. Test no CPG boost for non-file/component pointer types\n6. Test `extractFilesFromPointer()` helper for various pointer types\n\n**Integration Test:**\nFull impulse resolution showing:\n- Multiple impulses with different CPG impacts\n- High-impact impulse prioritized over low-impact\n- Logging shows CPG impact boosts\n- System works without CPG (graceful degradation)\n\n**Mock Data:**\n```typescript\nconst highImpactResult = { direct_dependents: 50, transitive_dependents: 200 }\nconst lowImpactResult = { direct_dependents: 5, transitive_dependents: 10 }\n\n// High impact should boost score by ~0.5\n// Low impact should boost score by ~0.05\n```\n\nUse existing test infrastructure and patterns from the codebase.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "commit-changes",
+      "subagent": "general",
+      "description": "Commit the CPG impulse prioritization implementation",
+      "dependencies": [
+        "add-tests"
+      ],
+      "prompt": {
+        "template": "Review all changes and create a well-structured commit:\n\n**Commit Message Format:**\n```\nfeat(impulse): Add CPG impact scoring for prioritization\n\nImplement CPG impact boost in impulse resolution:\n- Query metabob.analyzeChangeImpact() for file/component impulses\n- Normalize impact score (direct_dependents / 100)\n- Boost score by up to +0.5 based on CPG impact\n- Add extractFilesFromPointer() helper\n- Graceful degradation if metabob unavailable\n- Debug logging for CPG impact boosts\n\nBenefit: High-impact components prioritized in context selection,\nimproving context budget utilization and reducing issues in critical paths.\n\nTests:\n- Unit tests for CPG scoring with mocked metabob calls\n- Integration test verifying high-impact prioritization\n- Graceful degradation test\n\nPart of CPG Quick Win #2 implementation.\n```\n\n**Files to commit:**\n- repos/metabob-opencode/packages/opencode/src/session/impulse-resolver.ts\n- repos/metabob-opencode/packages/opencode/src/session/__tests__/impulse-cpg-prioritization.test.ts (or similar)\n- Any updated type definitions\n\nRun final checks:\n1. All tests pass\n2. No TypeScript errors\n3. Linting passes\n4. Code formatted correctly",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T13:27:25.134Z",
+  "metadata": {}
+}
