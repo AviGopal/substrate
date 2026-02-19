@@ -1,5 +1,5 @@
 {
-  "name": "Hello World With Context",
+  "name": "Hello World With Context V2",
   "description": "Test activity with contextRequirements to isolate context negotiation issue",
   "category": "infrastructure",
   "contextRequirements": [
