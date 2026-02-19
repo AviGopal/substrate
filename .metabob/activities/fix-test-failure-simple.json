@@ -1,0 +1,221 @@
+{
+  "activity_id": "fix-test-failure-simple",
+  "name": "Fix Test Failure (Simple)",
+  "description": "Lightweight test fix workflow - analyze test failure, fix the issue, verify tests pass. No heavy documentation requirements.",
+  "category": "bugfix",
+  "task_steps": [
+    {
+      "task_id": "analyze-test-failure",
+      "subagent": "general",
+      "description": "Analyze the test failure and understand what's expected vs actual",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the test failure and understand the root cause.\n\n**Test Failure**:\n{{test_failure_description}}\n\n{{#if error_message}}\n**Error Output**:\n```\n{{error_message}}\n```\n{{/if}}\n\n{{#if test_file}}\n**Test File**: {{test_file}}\n{{/if}}\n\n{{#if affected_files}}\n**Suspected Files**: {{affected_files}}\n{{/if}}\n\n---\n\n## Your Task\n\n### 1. Read the Test File\n\nUse the Read tool to read the test file and understand:\n- What is the test trying to verify?\n- What is the expected behavior?\n- What is the actual behavior (from error)?n- At what line does it fail?\n\n### 2. Understand the Failure\n\n**Key Questions**:\n- Is this a test bug (test expectations wrong)?\n- Is this an implementation bug (code behavior wrong)?\n- Is this a misunderstanding (test and code disagree on spec)?\n\n**Common Patterns**:\n- Assertion mismatch: Expected X, got Y\n- Timeout: Operation took too long\n- Missing mock: Test needs setup\n- Changed API: Test uses old interface\n\n### 3. Locate the Problem\n\n**If implementation bug**:\n- Read the source files being tested\n- Trace the code path that the test exercises\n- Find where actual behavior diverges from expected\n\n**If test bug**:\n- Check if test expectations are outdated\n- See if other tests pass with same code\n- Verify if behavior changed intentionally\n\n### 4. Determine Fix Strategy\n\n**Output Format**: Plain text explanation covering:\n1. What the test is checking\n2. Why it's failing (root cause)\n3. What needs to change (test or code)\n4. Where to make the change (files and functions)\n\n**Example**:\n```\nThe test expects SessionMemoryAgent.prepare() to preserve high-priority\nimpulses during timeout scenarios, but the current implementation unloads\nALL impulses that aren't re-suggested.\n\nRoot cause: The unload logic doesn't check for timeout/fallback conditions.\n\nFix: Add timeout detection (type='other' && confidence<0.6) and skip\nunloading high-priority impulses in those cases.\n\nFiles: packages/opencode/src/session/memory-agent.ts, function prepare()\n```",
+        "variables": [
+          {
+            "name": "test_failure_description",
+            "type": "string",
+            "required": true,
+            "description": "Description of the test failure"
+          },
+          {
+            "name": "error_message",
+            "type": "string",
+            "required": false,
+            "description": "Test error output"
+          },
+          {
+            "name": "test_file",
+            "type": "string",
+            "required": false,
+            "description": "Path to the test file"
+          },
+          {
+            "name": "affected_files",
+            "type": "string",
+            "required": false,
+            "description": "Files that may need changes"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-fix",
+      "subagent": "general",
+      "description": "Implement the fix (either update test or fix code)",
+      "dependencies": [
+        "analyze-test-failure"
+      ],
+      "prompt": {
+        "template": "Implement the fix based on your analysis.\n\n**Analysis from previous step**: Review the output from analyze-test-failure.\n\n---\n\n## Implementation\n\n### 1. Read the Files\n\nUse Read tool to read the files you need to modify.\n\n### 2. Make the Fix\n\n**If fixing implementation**:\n- Make minimal changes to fix the root cause\n- Add comments explaining the fix\n- Consider edge cases\n\n**If fixing test**:\n- Update test expectations to match current behavior\n- Add comment explaining why expectations changed\n- Check if other tests need similar updates\n\n### 3. Use Edit Tool\n\nUse the Edit tool to make your changes:\n- Provide exact oldString and newString\n- Make one logical change at a time\n- Verify indentation matches\n\n### Example:\n```typescript\nedit({\n  filePath: \"src/foo.ts\",\n  oldString: \"if (existing.loaded && !suggestedIds.has(existing.id)) {\",\n  newString: \"if (existing.loaded && !suggestedIds.has(existing.id)) {\\n    if (isTimeout && existing.priority === 'high') continue;\"\n})\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-fix",
+      "subagent": "general",
+      "description": "Run the tests to verify the fix works",
+      "dependencies": [
+        "implement-fix"
+      ],
+      "prompt": {
+        "template": "Verify that your fix works by running the tests.\n\n---\n\n## Verification\n\n### 1. Run the Failing Test\n\nUse the Bash tool to run the specific test file:\n\n{{#if test_file}}\n```bash\nbun test {{test_file}}\n```\n{{else}}\n```bash\nbun test\n```\n{{/if}}\n\n### 2. Check Results\n\n**Success**: All tests pass\n- Confirm the specific test that was failing now passes\n- Check no other tests broke\n- Output summary: \"✅ All tests passing\"\n\n**Failure**: Tests still fail\n- Read the error message\n- Understand what's still wrong\n- Suggest what else needs to be fixed\n- Output: \"❌ Tests still failing: [reason]\"\n\n### 3. Summary\n\n**Output format**:\n```\nTest Results:\n- Test file: [path]\n- Status: [passing/failing]\n- Tests run: X\n- Tests passed: Y\n- Tests failed: Z\n\n{{#if passing}}\n✅ Fix successful!\n{{else}}\n❌ Fix incomplete: [explanation]\n{{/if}}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "analyze-test-failure",
+      "subagent": "general",
+      "description": "Analyze the test failure and understand what's expected vs actual",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the test failure and understand the root cause.\n\n**Test Failure**:\n{{test_failure_description}}\n\n{{#if error_message}}\n**Error Output**:\n```\n{{error_message}}\n```\n{{/if}}\n\n{{#if test_file}}\n**Test File**: {{test_file}}\n{{/if}}\n\n{{#if affected_files}}\n**Suspected Files**: {{affected_files}}\n{{/if}}\n\n---\n\n## Your Task\n\n### 1. Read the Test File\n\nUse the Read tool to read the test file and understand:\n- What is the test trying to verify?\n- What is the expected behavior?\n- What is the actual behavior (from error)?n- At what line does it fail?\n\n### 2. Understand the Failure\n\n**Key Questions**:\n- Is this a test bug (test expectations wrong)?\n- Is this an implementation bug (code behavior wrong)?\n- Is this a misunderstanding (test and code disagree on spec)?\n\n**Common Patterns**:\n- Assertion mismatch: Expected X, got Y\n- Timeout: Operation took too long\n- Missing mock: Test needs setup\n- Changed API: Test uses old interface\n\n### 3. Locate the Problem\n\n**If implementation bug**:\n- Read the source files being tested\n- Trace the code path that the test exercises\n- Find where actual behavior diverges from expected\n\n**If test bug**:\n- Check if test expectations are outdated\n- See if other tests pass with same code\n- Verify if behavior changed intentionally\n\n### 4. Determine Fix Strategy\n\n**Output Format**: Plain text explanation covering:\n1. What the test is checking\n2. Why it's failing (root cause)\n3. What needs to change (test or code)\n4. Where to make the change (files and functions)\n\n**Example**:\n```\nThe test expects SessionMemoryAgent.prepare() to preserve high-priority\nimpulses during timeout scenarios, but the current implementation unloads\nALL impulses that aren't re-suggested.\n\nRoot cause: The unload logic doesn't check for timeout/fallback conditions.\n\nFix: Add timeout detection (type='other' && confidence<0.6) and skip\nunloading high-priority impulses in those cases.\n\nFiles: packages/opencode/src/session/memory-agent.ts, function prepare()\n```",
+        "variables": [
+          {
+            "name": "test_failure_description",
+            "type": "string",
+            "required": true,
+            "description": "Description of the test failure"
+          },
+          {
+            "name": "error_message",
+            "type": "string",
+            "required": false,
+            "description": "Test error output"
+          },
+          {
+            "name": "test_file",
+            "type": "string",
+            "required": false,
+            "description": "Path to the test file"
+          },
+          {
+            "name": "affected_files",
+            "type": "string",
+            "required": false,
+            "description": "Files that may need changes"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-fix",
+      "subagent": "general",
+      "description": "Implement the fix (either update test or fix code)",
+      "dependencies": [
+        "analyze-test-failure"
+      ],
+      "prompt": {
+        "template": "Implement the fix based on your analysis.\n\n**Analysis from previous step**: Review the output from analyze-test-failure.\n\n---\n\n## Implementation\n\n### 1. Read the Files\n\nUse Read tool to read the files you need to modify.\n\n### 2. Make the Fix\n\n**If fixing implementation**:\n- Make minimal changes to fix the root cause\n- Add comments explaining the fix\n- Consider edge cases\n\n**If fixing test**:\n- Update test expectations to match current behavior\n- Add comment explaining why expectations changed\n- Check if other tests need similar updates\n\n### 3. Use Edit Tool\n\nUse the Edit tool to make your changes:\n- Provide exact oldString and newString\n- Make one logical change at a time\n- Verify indentation matches\n\n### Example:\n```typescript\nedit({\n  filePath: \"src/foo.ts\",\n  oldString: \"if (existing.loaded && !suggestedIds.has(existing.id)) {\",\n  newString: \"if (existing.loaded && !suggestedIds.has(existing.id)) {\\n    if (isTimeout && existing.priority === 'high') continue;\"\n})\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 14000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-fix",
+      "subagent": "general",
+      "description": "Run the tests to verify the fix works",
+      "dependencies": [
+        "implement-fix"
+      ],
+      "prompt": {
+        "template": "Verify that your fix works by running the tests.\n\n---\n\n## Verification\n\n### 1. Run the Failing Test\n\nUse the Bash tool to run the specific test file:\n\n{{#if test_file}}\n```bash\nbun test {{test_file}}\n```\n{{else}}\n```bash\nbun test\n```\n{{/if}}\n\n### 2. Check Results\n\n**Success**: All tests pass\n- Confirm the specific test that was failing now passes\n- Check no other tests broke\n- Output summary: \"✅ All tests passing\"\n\n**Failure**: Tests still fail\n- Read the error message\n- Understand what's still wrong\n- Suggest what else needs to be fixed\n- Output: \"❌ Tests still failing: [reason]\"\n\n### 3. Summary\n\n**Output format**:\n```\nTest Results:\n- Test file: [path]\n- Status: [passing/failing]\n- Tests run: X\n- Tests passed: Y\n- Tests failed: Z\n\n{{#if passing}}\n✅ Fix successful!\n{{else}}\n❌ Fix incomplete: [explanation]\n{{/if}}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-18T12:39:58.123Z",
+  "metadata": {}
+}
