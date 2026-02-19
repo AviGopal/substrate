@@ -1,0 +1,51 @@
+{
+  "name": "Hello Context Test",
+  "description": "Test activity with contextRequirements after fix",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "greeting",
+      "hint": "Provide a greeting message to include in the output",
+      "impulseTypes": ["memo"],
+      "required": true,
+      "budgetRange": [100, 500]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "write-hello",
+      "subagent": "general",
+      "description": "Write hello world message with context to file",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write a hello world message to /tmp/hello-context-{{testId}}.txt\n\nThe message should include:\n1. The greeting from context: {{greeting}}\n2. A message from: {{name}}\n\nUse the write tool to create the file.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Unique test identifier"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true,
+            "description": "Name to include in message"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/hello-context-{{testId}}.txt"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ]
+}
