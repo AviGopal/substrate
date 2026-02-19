@@ -1,0 +1,40 @@
+{
+  "name": "Test Backend Sync",
+  "description": "Simple test template to verify backend synchronization is working after applying the fix",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "test-task",
+      "subagent": "general",
+      "description": "Simple test task that echoes a message",
+      "dependencies": [],
+      "prompt": {
+        "template": "Echo a test message to verify this template works.\n\nMessage: Backend sync is working!\n\nJust output the message.",
+        "maxTokens": 1000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 1000,
+    "annotationStrategy": "key-components"
+  }
+}
