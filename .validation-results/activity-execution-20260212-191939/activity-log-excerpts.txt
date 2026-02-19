@@ -1,2 +1,0 @@
-INFO  2026-02-12T19:10:40 +1ms service=turn-lifecycle name=activity-decision-reminder priority=5 totalHooks=1 hook registered
-INFO  2026-02-12T19:10:40 +0ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=3 hook registered
