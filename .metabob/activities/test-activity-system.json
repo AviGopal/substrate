@@ -1,0 +1,142 @@
+{
+  "activity_id": "test-activity-system",
+  "name": "Test Activity System",
+  "description": "Simple test activity to validate the activity execution system works correctly",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "task_id": "create-test-file",
+      "subagent": "general",
+      "description": "Create a test file with timestamp to verify write operations work",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a test file to validate the activity system is working.\n\n**Task**: Write a file at `/tmp/activity-test-{{timestamp}}.txt` with the following content:\n\n```\nActivity System Test\n====================\nTimestamp: {{timestamp}}\nTest Message: {{testMessage}}\nStatus: SUCCESS\n\nThis file was created by the test-activity-system activity.\n```\n\n**Verification**:\n1. Create the directory if it doesn't exist\n2. Write the file with the exact content above\n3. Verify the file was created successfully\n4. Report the full path of the created file\n\n**Use the `write` tool to create the file.**",
+        "variables": [
+          {
+            "name": "timestamp",
+            "type": "string",
+            "required": false,
+            "description": "Timestamp for the test file (defaults to current time)",
+            "default": "{{NOW}}"
+          },
+          {
+            "name": "testMessage",
+            "type": "string",
+            "required": false,
+            "description": "Custom test message to include",
+            "default": "Hello from activity system!"
+          }
+        ],
+        "max_tokens": 4000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/activity-test-*.txt"
+        ],
+        "required_patterns": [
+          "Activity System Test",
+          "Status: SUCCESS"
+        ],
+        "forbidden_patterns": [
+          "ERROR",
+          "FAILED"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-and-report",
+      "subagent": "general",
+      "description": "Verify the test file exists and report success",
+      "dependencies": ["create-test-file"],
+      "prompt": {
+        "template": "Verify the activity system test completed successfully.\n\n**Task**: \n1. Check if the test file `/tmp/activity-test-{{timestamp}}.txt` exists\n2. Read the file content to verify it contains the expected data\n3. Report the results\n\n**Expected Content**:\n- Should contain \"Activity System Test\"\n- Should contain \"Status: SUCCESS\"\n- Should contain \"{{testMessage}}\"\n\n**Report Format**:\n```\n✅ Activity System Test Results\n================================\n\nFile: /tmp/activity-test-{{timestamp}}.txt\nExists: [YES/NO]\nContent Valid: [YES/NO]\n\nTest Message Found: {{testMessage}}\n\n🎉 Activity system is working correctly!\n```\n\n**Use the `read` and `bash` tools to verify the file.**",
+        "variables": [
+          {
+            "name": "timestamp",
+            "type": "string",
+            "required": false,
+            "description": "Timestamp from the previous task",
+            "default": "{{NOW}}"
+          },
+          {
+            "name": "testMessage",
+            "type": "string",
+            "required": false,
+            "description": "Test message from the previous task",
+            "default": "Hello from activity system!"
+          }
+        ],
+        "max_tokens": 4000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          "Activity System Test Results",
+          "Activity system is working"
+        ],
+        "forbidden_patterns": [
+          "ERROR",
+          "FAILED",
+          "Exists: NO"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 3000,
+    "annotationStrategy": "none"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [],
+    "examples": [
+      {
+        "name": "Basic test",
+        "description": "Test with default values",
+        "variables": {}
+      },
+      {
+        "name": "Custom message test",
+        "description": "Test with custom message",
+        "variables": {
+          "testMessage": "Custom test message from user!"
+        }
+      }
+    ]
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "summary",
+    "feedbackPoints": []
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "metadata": {
+    "created": "2026-02-19",
+    "purpose": "Test and validate the activity execution system",
+    "test_activity": true
+  }
+}
