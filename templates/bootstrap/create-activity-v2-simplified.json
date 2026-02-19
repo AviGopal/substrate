@@ -1,0 +1,106 @@
+{
+  "name": "Create Activity Template (Simplified)",
+  "description": "Create activity templates with a streamlined workflow - gather requirements, design tasks, generate JSON, and register with backend",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "analyze-and-design",
+      "subagent": "general",
+      "description": "Analyze requirements and design the complete activity template structure in one step",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create an activity template with these specifications:\n\n**Template Information**:\n- Name: {{templateName}}\n- Description: {{templateDescription}}\n- Category: {{category}}\n- Template ID: {{templateId}}\n\n**Your Task**: Design the complete template structure including tasks, variables, and validation.\n\n**Design a workflow with 3-5 tasks that**:\n1. Break down the workflow into atomic, sequential steps\n2. Define clear dependencies (form a DAG - no circular dependencies)\n3. Assign appropriate subagents (general, config, tool, test, docs)\n4. Set reasonable token budgets (4000-8000 per task)\n5. Define validation criteria (files, patterns, commands)\n\n**Key Principles**:\n- Each task does ONE thing\n- Tasks have clear success criteria\n- Variable names are descriptive and use camelCase\n- Prompts are clear and actionable (200-400 words max)\n- No git-related validation (templates must be repo-agnostic)\n\n**Output**: Write a complete analysis to `/tmp/activity-template-{{templateId}}/DESIGN.md` with:\n\n```markdown\n# Activity Template Design: {{templateName}}\n\n## Purpose\n[What this template does and why it's useful]\n\n## Workflow Steps\n1. **task-id-1**: Description (dependencies: none)\n2. **task-id-2**: Description (dependencies: task-id-1)\n...\n\n## Variables\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| var1 | string | yes | - | What it's for |\n\n## Validation Strategy\n- Required files: [list]\n- Required patterns: [what must appear in output]\n- Forbidden patterns: [what must NOT appear]\n- Commands: [validation commands to run]\n\n## Task Prompts (Draft)\n### Task 1: task-id-1\n[Clear, actionable prompt for the agent - 200 words max]\n\n### Task 2: task-id-2\n[Clear, actionable prompt for the agent - 200 words max]\n...\n```\n\n**Important**: Keep prompts concise and focused. Long prompts (>500 words) reduce success rates.",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": [
+          {
+            "name": "templateName",
+            "type": "string",
+            "required": true,
+            "description": "Human-readable template name (e.g., 'Add Feature with Tests')"
+          },
+          {
+            "name": "templateDescription",
+            "type": "string",
+            "required": true,
+            "description": "One-sentence description of what this template does"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": true,
+            "description": "Template category: feature, bugfix, refactor, tool, or infrastructure"
+          },
+          {
+            "name": "templateId",
+            "type": "string",
+            "required": false,
+            "description": "Kebab-case template ID (auto-generated if not provided)",
+            "default": "{{templateName}}"
+          }
+        ]
+      },
+      "validation": {
+        "required_files": ["/tmp/activity-template-{{templateId}}/DESIGN.md"],
+        "required_patterns": ["## Purpose", "## Workflow Steps", "## Variables"],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-template-json",
+      "subagent": "general",
+      "description": "Generate valid ActivityTemplate JSON from the design document",
+      "dependencies": ["analyze-and-design"],
+      "prompt": {
+        "template": "Generate the activity template JSON file from the design document.\n\n**Input**: Read `/tmp/activity-template-{{templateId}}/DESIGN.md`\n\n**Output**: Create `/tmp/activity-template-{{templateId}}/template.json`\n\n**Required Structure**:\n```json\n{\n  \"name\": \"Template Name\",\n  \"description\": \"One-sentence description\",\n  \"category\": \"feature|bugfix|refactor|tool|infrastructure\",\n  \"task_steps\": [\n    {\n      \"id\": \"task-1\",\n      \"subagent\": \"general\",\n      \"description\": \"What this task does\",\n      \"dependencies\": [],\n      \"prompt\": {\n        \"template\": \"Clear instructions. Use {{variables}} for interpolation.\",\n        \"max_tokens\": 8000,\n        \"compression_strategy\": \"filter\",\n        \"variables\": [{\"name\": \"varName\", \"type\": \"string\", \"required\": true, \"description\": \"What it's for\"}]\n      },\n      \"validation\": {\n        \"required_files\": [],\n        \"required_patterns\": [],\n        \"forbidden_patterns\": [\"TODO\", \"FIXME\"],\n        \"commands\": []\n      },\n      \"retry\": {\"max_attempts\": 2, \"strategy\": \"simple\"}\n    }\n  ],\n  \"variables\": {},\n  \"context_requirements\": []\n}\n```\n\n**Critical Rules**:\n1. NO git-related validation (no \"git status\", \"git diff\", etc.)\n2. Task prompts must be 200-400 words (not 1000+)\n3. Variables use camelCase\n4. Task IDs use kebab-case\n5. Dependencies must form a DAG (no circles)\n6. Validation patterns must be specific and testable\n\n**Validation**: After writing, validate JSON syntax:\n```bash\ncat /tmp/activity-template-{{templateId}}/template.json | jq empty\n```",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": ["/tmp/activity-template-{{templateId}}/template.json"],
+        "required_patterns": ["\"name\":", "\"category\":", "\"task_steps\":"],
+        "forbidden_patterns": ["\"preChecks\"", "git status", "git diff"],
+        "commands": [
+          {
+            "command": "cat /tmp/activity-template-{{templateId}}/template.json | jq empty",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "register-template",
+      "subagent": "general",
+      "description": "Register the template with the backend and create success documentation",
+      "dependencies": ["generate-template-json"],
+      "prompt": {
+        "template": "Register the template with the backend and document success.\n\n**Input**: Read `/tmp/activity-template-{{templateId}}/template.json`\n\n**Steps**:\n\n1. **Validate JSON one more time**:\n   ```bash\n   cat /tmp/activity-template-{{templateId}}/template.json | jq -e '.name, .category, .task_steps' > /dev/null\n   ```\n\n2. **Register with Backend**:\n   Use the `register_activity_template` tool with these parameters:\n   - `file_path`: \"/tmp/activity-template-{{templateId}}/template.json\"\n   - `register_with_metabob`: true\n\n   The tool will:\n   - Generate a variant_id from the name and content hash\n   - Register to local storage (~/.local/share/opencode/storage/activity-template/)\n   - Register to metabob-rpc-api backend (if available)\n\n3. **Verify Registration**:\n   After registration, verify the template is stored:\n   ```bash\n   # Check backend (if accessible)\n   curl -sf http://api-server-dev:8080/v2/activities/templates | jq -r '.templates[].variant_id' | grep -i \"{{templateId}}\"\n   ```\n\n4. **Create Success Document**:\n   Write `/tmp/activity-template-{{templateId}}/SUCCESS.md`:\n   ```markdown\n   # ✅ Template Created: {{templateName}}\n\n   **Template ID**: {{templateId}}\n   **Category**: {{category}}\n   **Status**: Registered with backend\n\n   ## Usage\n\n   ```bash\n   opencode run --prompt \"Use {{templateId}} to...\"\n   ```\n\n   ## Next Steps\n\n   1. Test the template with sample inputs\n   2. Track execution metrics (aim for 80%+ success rate)\n   3. After 5+ successful executions, promote to metabob-proto:\n      ```bash\n      ./promote-template-to-proto.sh <variant-id>\n      ```\n   ```\n\n**Output**: SUCCESS.md with confirmation that template is registered and ready to use.",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": ["/tmp/activity-template-{{templateId}}/SUCCESS.md"],
+        "required_patterns": ["✅ Template Created", "Template ID", "## Usage"],
+        "forbidden_patterns": ["❌", "ERROR", "FAILED"],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "variables": {},
+  "context_requirements": []
+}
