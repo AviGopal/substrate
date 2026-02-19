@@ -234,9 +234,10 @@ async def main():
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{BACKEND_URL}/health", timeout=5.0)
+            response = await client.get(f"{BACKEND_URL}/", timeout=5.0)
             response.raise_for_status()
-            print(f"✓ Backend API healthy: {BACKEND_URL}")
+            data = response.json()
+            print(f"✓ Backend API healthy: {BACKEND_URL} (v{data.get('version')})")
     except Exception as e:
         print(f"✗ Backend API not available: {e}")
         return 1
