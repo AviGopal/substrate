@@ -22,9 +22,24 @@ Then run this test:
 import requests
 import json
 import sys
+import os
 from typing import Dict, Any
 
-BACKEND_URL = "http://localhost:8080"
+BACKEND_URL = "http://localhost:8081"
+
+# Load API key
+API_KEY = os.environ.get("METABOB_API_KEY")
+if not API_KEY:
+    try:
+        with open(".test_api_key_working", "r") as f:
+            API_KEY = f.read().strip()
+    except FileNotFoundError:
+        print(
+            "❌ No API key found. Set METABOB_API_KEY or create .test_api_key_working"
+        )
+        sys.exit(1)
+
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
 
 def print_section(title: str):
@@ -102,7 +117,7 @@ def test_create_template() -> str:
                 },
             },
         ],
-        "variables": {"featureName": "test-feature"},
+        "variables": {},
         "context_requirements": [],
     }
 
@@ -130,7 +145,9 @@ def test_get_template(variant_id: str):
     """Test 2: Fetch template by ID"""
     print_section("Test 2: Get Template by ID")
 
-    response = requests.get(f"{BACKEND_URL}/v2/activities/templates/{variant_id}")
+    response = requests.get(
+        f"{BACKEND_URL}/v2/activities/templates/{variant_id}"
+    )
 
     if response.status_code != 200:
         print(f"❌ Failed: {response.status_code}")
@@ -149,7 +166,9 @@ def test_list_templates():
     """Test 3: List all templates"""
     print_section("Test 3: List All Templates")
 
-    response = requests.get(f"{BACKEND_URL}/v2/activities/templates?limit=10")
+    response = requests.get(
+        f"{BACKEND_URL}/v2/activities/templates?limit=10"
+    )
 
     if response.status_code != 200:
         print(f"❌ Failed: {response.status_code}")
@@ -273,6 +292,7 @@ def test_record_execution(variant_id: str):
                 "cost": 0.01 + (i * 0.001),
                 "duration_ms": 4000 + (i * 100),
             },
+            headers=HEADERS,
         )
 
     print(f"   Recorded 5 additional executions (4 success, 1 failure)")
@@ -282,7 +302,9 @@ def test_get_stats(variant_id: str):
     """Test 6: Get template statistics"""
     print_section("Test 6: Get Template Statistics")
 
-    response = requests.get(f"{BACKEND_URL}/v2/activities/templates/{variant_id}/stats")
+    response = requests.get(
+        f"{BACKEND_URL}/v2/activities/templates/{variant_id}/stats"
+    )
 
     if response.status_code != 200:
         print(f"❌ Failed: {response.status_code}")
