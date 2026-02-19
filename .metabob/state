@@ -1,8 +1,8 @@
 {
-  "version": 80,
+  "version": 82,
   "session_metadata": {
     "created_at": "2026-02-18T18:30:10.794462",
-    "last_updated": "2026-02-18T19:14:35.255996",
+    "last_updated": "2026-02-18T19:22:25.173050",
     "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b",
     "session_token": "c2Vzc2lvbnM6b3JnX21ldGFib2I6ZGVmYXVsdDoyY2M4MmE3NS1jZjY1LTRiMDUtYTE0Zi1jMjJlODAxNWM4NWI=",
     "format_version": "4.0",
@@ -3451,11 +3451,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/validate-with-breadcrumbs.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/validate-with-breadcrumbs.ts",
       "last_modified": 1771382344.511523,
-      "last_submitted": null,
+      "last_submitted": 1771471345.150838,
       "size": 7283,
       "checksum": "afb05b1cab463320aa396a4d6e192405fee73e770fb3159ff03fb71415fd9b8e",
       "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b",
-      "job_id": null
+      "job_id": "7f404484-5c49-49b7-9529-079cb55475ab"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/tool_state_running_time.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/python/src/opencode_ai/models/tool_state_running_time.py",
@@ -5215,11 +5215,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_e2e.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_e2e.py",
       "last_modified": 1771382344.511523,
-      "last_submitted": null,
+      "last_submitted": 1771471345.150843,
       "size": 7897,
       "checksum": "4738fbf08bfa97e880afe3d05ead3b42ba5a93f88468416f2709b1abfff55a2b",
       "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b",
-      "job_id": null
+      "job_id": "7f404484-5c49-49b7-9529-079cb55475ab"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/theme.tsx": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/context/theme.tsx",
@@ -5449,11 +5449,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/validate-impulse-hooks.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/validate-impulse-hooks.ts",
       "last_modified": 1771382344.511523,
-      "last_submitted": null,
+      "last_submitted": 1771471345.150844,
       "size": 4493,
       "checksum": "8c958772285cb261a550e96f213b23e425cd8d14b5592c291009007b51d54df9",
       "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b",
-      "job_id": null
+      "job_id": "7f404484-5c49-49b7-9529-079cb55475ab"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/internal/apijson/field.go": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/sdk/go/internal/apijson/field.go",
@@ -11308,11 +11308,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/validate-data-flow-live.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/validate-data-flow-live.ts",
       "last_modified": 1771382344.511523,
-      "last_submitted": null,
+      "last_submitted": 1771471345.150845,
       "size": 15020,
       "checksum": "838f4bd8c7e7bfef719a2286e04f58af6b592f16df7f260faa87b7c33191ce6b",
       "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b",
-      "job_id": null
+      "job_id": "7f404484-5c49-49b7-9529-079cb55475ab"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/global/index.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/global/index.ts",
@@ -13072,11 +13072,11 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_quick.py": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_quick.py",
       "last_modified": 1771382344.511523,
-      "last_submitted": null,
+      "last_submitted": 1771471345.150847,
       "size": 6964,
       "checksum": "5ff0b37e7f5a44d8ea16dfa7a06a17f9cb1f2b73769521081b8d9a13120f32b0",
       "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b",
-      "job_id": null
+      "job_id": "7f404484-5c49-49b7-9529-079cb55475ab"
     },
     "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/activity-composition.test.ts": {
       "path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/test/session/activity-composition.test.ts",
@@ -21851,7 +21851,12 @@
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify-surrealdb-config.sh": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify-deduplication-deployment.sh": {},
     "/home/avi/documents/work/exp-repo/metabob-devbob/verify-template-fix.ts": {},
-    "/home/avi/documents/work/exp-repo/metabob-devbob/verify-evidence-collection.sh": {}
+    "/home/avi/documents/work/exp-repo/metabob-devbob/verify-evidence-collection.sh": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/validate-with-breadcrumbs.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_e2e.py": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/validate-impulse-hooks.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/validate-data-flow-live.ts": {},
+    "/home/avi/documents/work/exp-repo/metabob-devbob/validate_impulse_fix_quick.py": {}
   },
   "resolutions": {},
   "annotations": {},
@@ -22336,20 +22341,28 @@
     },
     "16e2bea3-d146-493d-8e45-46e50e00d289": {
       "job_id": "16e2bea3-d146-493d-8e45-46e50e00d289",
+      "file_paths": [],
+      "status": "complete",
+      "created_at": "2026-02-18T19:22:21.496198",
+      "updated_at": "2026-02-18T19:22:24.212046",
+      "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b"
+    },
+    "7f404484-5c49-49b7-9529-079cb55475ab": {
+      "job_id": "7f404484-5c49-49b7-9529-079cb55475ab",
       "file_paths": [
-        "verify-step-impulse-data.py",
-        "verify-surrealdb-config.sh",
-        "verify-deduplication-deployment.sh",
-        "verify-template-fix.ts",
-        "verify-evidence-collection.sh"
+        "validate-with-breadcrumbs.ts",
+        "validate_impulse_fix_e2e.py",
+        "validate-impulse-hooks.ts",
+        "validate-data-flow-live.ts",
+        "validate_impulse_fix_quick.py"
       ],
       "status": "pending",
-      "created_at": "2026-02-18T19:14:34.656336",
-      "updated_at": "2026-02-18T19:14:34.656354",
+      "created_at": "2026-02-18T19:22:25.072992",
+      "updated_at": "2026-02-18T19:22:25.073002",
       "session_id": "org_metabob:default:2cc82a75-cf65-4b05-a14f-c22e8015c85b"
     }
   },
   "pending_jobs": [
-    "16e2bea3-d146-493d-8e45-46e50e00d289"
+    "7f404484-5c49-49b7-9529-079cb55475ab"
   ]
 }
