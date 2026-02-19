@@ -21,28 +21,17 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 15000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_FILES_DISCOVERED.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Version Definition Files",
-            "description": ""
-          },
-          {
-            "pattern": "Current Versions",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -72,28 +61,17 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 12000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_CONSISTENCY_AUDIT.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Summary",
-            "description": ""
-          },
-          {
-            "pattern": "PASS|FAIL",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "progressive-context"
       }
     },
@@ -123,28 +101,17 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 15000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_SYNC_REPORT.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Target Version",
-            "description": ""
-          },
-          {
-            "pattern": "Files Updated",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -174,35 +141,23 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 12000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_VERIFICATION.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Status.*PASS|FAIL",
-            "description": ""
-          },
-          {
-            "pattern": "Verification Results",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     }
   ],
   "tasks": [
     {
-      "id": "task-1-discover-version-files",
       "task_id": "task-1-discover-version-files",
       "subagent": "general",
       "description": "Discover all version-related files in the repository",
@@ -219,28 +174,17 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 15000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_FILES_DISCOVERED.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Version Definition Files",
-            "description": ""
-          },
-          {
-            "pattern": "Current Versions",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -270,31 +214,19 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 12000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_CONSISTENCY_AUDIT.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Summary",
-            "description": ""
-          },
-          {
-            "pattern": "PASS|FAIL",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "progressive-context"
-      },
-      "id": "task-2-audit-version-consistency"
+      }
     },
     {
       "task_id": "task-3-synchronize-versions",
@@ -322,31 +254,19 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 15000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_SYNC_REPORT.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Target Version",
-            "description": ""
-          },
-          {
-            "pattern": "Files Updated",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
-      },
-      "id": "task-3-synchronize-versions"
+      }
     },
     {
       "task_id": "task-4-verify-synchronization",
@@ -374,31 +294,19 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 12000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "VERSION_VERIFICATION.md"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "Status.*PASS|FAIL",
-            "description": ""
-          },
-          {
-            "pattern": "Verification Results",
-            "description": ""
-          }
-        ],
+        "required_files": [],
+        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
-      },
-      "id": "task-4-verify-synchronization"
+      }
     }
   ],
   "estimated_metrics": {
@@ -407,7 +315,7 @@
     "avg_duration_ms": 0,
     "avg_cost": 0
   },
-  "author": "AGENT",
-  "created_at": "2026-02-19T10:50:00.000Z",
+  "author": null,
+  "created_at": "2026-02-19T10:48:13.355Z",
   "metadata": {}
 }
