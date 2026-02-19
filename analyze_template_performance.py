@@ -105,14 +105,29 @@ def load_storage_data(storage_path: Path):
                     started_at = data.get("startedAt")
                     completed_at = data.get("completedAt")
 
-                    # Task analysis
-                    tasks = data.get("tasks", [])
-                    task_count = len(tasks)
-                    failed_tasks = sum(1 for t in tasks if t.get("status") == "failed")
+                    # Task analysis from executionEvidence
+                    execution_evidence = data.get("executionEvidence", {})
+                    sessions_spawned = execution_evidence.get("sessionsSpawned", [])
+                    task_count = len(sessions_spawned)
+
+                    # Count successful tasks (sessions that completed without errors)
+                    # Note: We don't have explicit task status, so we infer from session completion
+                    # A more sophisticated approach would check correctnessVerdict
+                    successful_tasks = task_count  # Assume success if session spawned
+
+                    # Check correctnessVerdict for more accurate success measurement
+                    correctness = data.get("correctnessVerdict", {})
+                    if correctness.get("computed"):
+                        # If verdict is incorrect, mark all tasks as potentially problematic
+                        verdict = correctness.get("verdict", "")
+                        if verdict == "incorrect":
+                            # Use confidence to estimate success rate
+                            confidence = correctness.get("confidence", 0.0)
+                            successful_tasks = int(task_count * confidence)
+
+                    failed_tasks = task_count - successful_tasks
                     success_rate = (
-                        (task_count - failed_tasks) / task_count
-                        if task_count > 0
-                        else 0.0
+                        successful_tasks / task_count if task_count > 0 else 0.0
                     )
 
                     executions.append(
