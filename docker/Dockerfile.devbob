@@ -1,46 +1,25 @@
 # =============================================================================
-# Devbob - OpenCode Agent in Container
+# Dockerfile for DevBob - Multi-stage build with named targets
 # =============================================================================
-# 
-# Multi-stage build for devbob agent containers.
-# Each container runs OpenCode with metabob-cli MCP integration.
-#
-# Build stages:
-#   1. devbob-base: Base image with OpenCode + metabob-cli
-#   2. devbob-clean: Clean testing environment (no code)
-#   3. devbob-dev: Development environment (code mounted)
-#
-# Usage:
-#   # Build base image
-#   docker build -t devbob:latest --target devbob-base -f docker/Dockerfile.devbob .
-#
-#   # Use in docker-compose with profiles
-#   docker-compose --profile devbob up
-#
+# Build targets:
+#   - metabob-cli-builder: Build metabob-cli and dependencies
+#   - opencode-builder: Build opencode standalone binary
+#   - runtime (default): Lightweight production image with both binaries
 # =============================================================================
 
 # =============================================================================
-# Stage 1: Base Image
+# Target: metabob-cli-builder - Build metabob-cli
 # =============================================================================
+FROM python:3.11-slim AS metabob-cli-builder
 
-FROM node:20-slim AS devbob-base
-
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
     git \
-    python3 \
-    python3-pip \
-    python3-venv \
-    build-essential \
-    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Create workspace
-WORKDIR /workspace
+WORKDIR /build/metabob-cli
+COPY repos/metabob-cli .
 
-# Copy metabob-cli directly (skip pip install to avoid Python version check)
-# Install dependencies and copy source files
+# Build metabob-cli with all dependencies in a venv
 RUN python3 -m venv /opt/metabob-cli/.venv && \
     /opt/metabob-cli/.venv/bin/pip install --upgrade pip && \
     /opt/metabob-cli/.venv/bin/pip install \
@@ -58,75 +37,95 @@ RUN python3 -m venv /opt/metabob-cli/.venv && \
         rich \
         aiofiles \
         watchdog \
-        thefuzz \
-        aiohttp \
-        certifi \
-        websockets \
-        requests && \
-    echo "metabob-cli dependencies installed"
-
-# Note: cpg-inference will be mounted as a volume and installed at runtime
-# This avoids Docker build timeout issues with large dependency trees
-
-# Copy metabob-cli source directly into venv
-COPY repos/metabob-cli/src/metabob_cli /opt/metabob-cli/.venv/lib/python3.11/site-packages/metabob_cli
-RUN echo "metabob-cli source copied to venv"
-
-# Install Bun package manager (required for OpenCode)
-RUN curl -fsSL https://bun.sh/install | bash && \
-    ln -s /root/.bun/bin/bun /usr/local/bin/bun && \
-    echo "Bun installed"
-
-# Copy metabob-proto and opencode to /opt (keep directory structure for relative paths)
-COPY repos/metabob-proto /opt/repos/metabob-proto
-COPY repos/metabob-opencode /opt/repos/metabob-opencode
-
-# Install OpenCode using Bun
-WORKDIR /opt/repos/metabob-opencode
-RUN bun install && \
-    # Create wrapper script to run OpenCode (match dev script settings)
-    mkdir -p /usr/local/bin && \
-    echo '#!/bin/bash' > /usr/local/bin/opencode && \
-    echo 'cd /opt/repos/metabob-opencode && bun run --cwd packages/opencode --conditions=browser ./src/index.ts "$@"' >> /usr/local/bin/opencode && \
-    chmod +x /usr/local/bin/opencode && \
-    cd /workspace && \
-    echo "OpenCode installed from local repo"
-
-# Create entrypoint script
-COPY docker/devbob-entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Expose ports
-EXPOSE 3000 8082
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["opencode", "acp", "--port", "3000"]
+        tree-sitter \
+        tree-sitter-python \
+        tree-sitter-javascript
 
 # =============================================================================
-# Stage 2: Clean Testing Environment
+# Target: opencode-builder - Build OpenCode standalone binary
 # =============================================================================
+FROM oven/bun:1.1.45-debian AS opencode-builder
 
-FROM devbob-base AS devbob-clean
-
-# No additional setup - workspace is empty
-# Activities will be executed in a pristine environment
-
-WORKDIR /workspace
-
-# =============================================================================
-# Stage 3: Development Environment
-# =============================================================================
-
-FROM devbob-base AS devbob-dev
-
-# Install development tools
 RUN apt-get update && apt-get install -y \
-    vim \
-    less \
-    jq \
+    git \
+    curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Workspace will be mounted from host
-# Each container gets its own repo (rpc-api, cli, opencode, dashboard)
+WORKDIR /build
 
+# Copy entire workspace (needed for bun workspace catalog resolution)
+COPY repos/metabob-proto ./repos/metabob-proto
+COPY repos/metabob-opencode ./repos/metabob-opencode
+
+# Build standalone binary
+WORKDIR /build/repos/metabob-opencode
+RUN bun install && \
+    cd packages/opencode && \
+    bun run build --single && \
+    echo "OpenCode binary built:" && \
+    ls -lh dist/opencode-linux-x64/bin/opencode
+
+# =============================================================================
+# Target: runtime (default) - Lightweight production image
+# =============================================================================
+FROM debian:12-slim AS runtime
+
+# Install only minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    git \
+    python3 \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create workspace
 WORKDIR /workspace
+
+# Copy metabob-cli venv from builder
+COPY --from=metabob-cli-builder /opt/metabob-cli/.venv /opt/metabob-cli/.venv
+
+# Copy OpenCode standalone binary from builder
+COPY --from=opencode-builder /build/repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode /usr/local/bin/opencode
+COPY --from=opencode-builder /build/repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/templates /opt/opencode/templates
+
+# Make opencode binary executable
+RUN chmod +x /usr/local/bin/opencode
+
+# Add metabob-cli to PATH
+ENV PATH="/opt/metabob-cli/.venv/bin:$PATH"
+
+# Create entrypoint script
+RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
+    echo 'cd /workspace' >> /usr/local/bin/entrypoint.sh && \
+    echo 'exec opencode "$@"' >> /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
+
+# Expose ports
+EXPOSE 3000 8080 8082
+
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Default command: run server
+CMD ["serve", "--hostname", "0.0.0.0", "--port", "8080"]
+
+# =============================================================================
+# Build Instructions:
+#
+# Build production image (default target):
+#   docker build -f docker/Dockerfile.devbob -t metabobapp/devbob:v1.0.1 .
+#
+# Build specific target:
+#   docker build -f docker/Dockerfile.devbob --target metabob-cli-builder -t metabob-cli:latest .
+#   docker build -f docker/Dockerfile.devbob --target opencode-builder -t opencode-builder:latest .
+#
+# Test the binary:
+#   docker run --rm metabobapp/devbob:v1.0.1 --help
+#
+# Production image contains:
+#   - OpenCode standalone binary (NO bun, NO source code)
+#   - Metabob CLI venv (NO pip, only runtime packages)
+#   - Minimal Debian base (NO build tools)
+# =============================================================================

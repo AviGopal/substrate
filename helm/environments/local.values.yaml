@@ -1,0 +1,25 @@
+environmentName: local
+domain: localhost
+
+# Image versions
+imageVersions:
+  rpcApi: "0.12.6"
+  devbob: "1.0.64"
+  dashboard: "2.2.11"
+
+# Database configurations
+redis:
+  enabled: true
+  auth:
+    enabled: false
+
+surrealdb:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 1Gi
+
+# Feature flags
+features:
+  enableMetrics: true
+  enableMCP: true
