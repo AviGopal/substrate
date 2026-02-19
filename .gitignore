@@ -75,3 +75,10 @@ test-local.txt
 !*.pub
 test-workspace/dummy-project/
 test-workspace/refactor-test/
+
+# Metabob state files (stateful, should not be committed)
+.metabob/state
+.metabob/.metabob/cpg_cache.db
+.metabob/.metabob/cpg_cache.db-journal
+.metabob/.metabob/*.db
+.metabob/.metabob/*.db-journal
