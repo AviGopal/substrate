@@ -1,0 +1,473 @@
+{
+  "activity_id": "validate-architecture-compliance",
+  "name": "Validate Architecture Compliance",
+  "description": "Systematically validate that the MCP Gateway Architecture is properly enforced (no direct backend calls from opencode)",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "task-1-scan-direct-api-calls",
+      "subagent": "general",
+      "description": "Search codebase for direct metabob-rpc-api calls in metabob-opencode",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Scan for Direct RPC API References\n\n## Objective\nSearch the metabob-opencode codebase for any direct calls to metabob-rpc-api that violate the MCP Gateway Architecture.\n\n## Search Patterns\n\nLook for these CRITICAL violations:\n1. **Direct HTTP calls**: `fetch.*rpc-api`, `axios.*rpc-api`, `http.*metabob-rpc`\n2. **Database connections**: `DB_CONNECTION`, `import.*pg`, `import.*mysql2`, `import.*surreal`\n3. **RPC client imports**: `import.*rpc-api`, `import.*RPCClient`, `import.*TemplateRegistry`\n\n## Actions\n\n1. Search opencode packages:\n```bash\ncd {{opencodePath}}\ngrep -r \"fetch.*rpc-api\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"axios.*rpc-api\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"http.*metabob-rpc\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"DB_CONNECTION\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"from.*metabob-rpc-api\" . --include=\"*.ts\" --include=\"*.js\"\n```\n\n2. Check for database imports:\n```bash\ngrep -r \"import.*\\bpg\\b\" . --include=\"*.ts\"\ngrep -r \"import.*mysql2\" . --include=\"*.ts\"\ngrep -r \"import.*surreal\" . --include=\"*.ts\"\n```\n\n3. Generate findings report in `VIOLATIONS_SCAN.md`:\n```markdown\n# Direct API Call Violations\n\n## CRITICAL Findings\n[List each violation with file path, line number, and code snippet]\n\n## WARNING Findings\n[List suspicious patterns]\n\n## Summary\n- Total CRITICAL violations: X\n- Total WARNING patterns: Y\n- Files affected: [list]\n```\n\n## Output Requirements\n- File: `VIOLATIONS_SCAN.md`\n- Each finding categorized as CRITICAL or WARNING\n- Includes file paths and line numbers\n- Code snippets showing violations",
+        "variables": [
+          {
+            "name": "opencodePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-opencode repository",
+            "default": "repos/metabob-opencode"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "VIOLATIONS_SCAN.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "CRITICAL",
+            "description": ""
+          },
+          {
+            "pattern": "Summary",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2-verify-mcp-usage",
+      "subagent": "general",
+      "description": "Confirm that all backend operations use MCP tools",
+      "dependencies": [
+        "task-1-scan-direct-api-calls"
+      ],
+      "prompt": {
+        "template": "# Task: Verify MCP Tool Usage\n\n## Objective\nConfirm that metabob-opencode uses MCP tools for ALL backend communication.\n\n## Verification Steps\n\n1. **Find Template-Related Code**:\n```bash\ncd {{opencodePath}}\nfind packages/opencode/src -name \"*template*\" -o -name \"*activity*\"\n```\n\n2. **Check TemplateRepository Implementation**:\n- Read `template-repository.ts` or similar files\n- Verify it uses MCP calls:\n  - `metabob_search_activities`\n  - `metabob_get_activity_template`\n  - `metabob_register_activity_template`\n  - `metabob_post_activity_result`\n- Flag any direct HTTP clients or database connections\n\n3. **Check Activity Execution**:\n- Read `activity.ts` or similar\n- Verify metrics reporting uses MCP (if implemented)\n- Check for any direct backend communication\n\n4. **Generate MCP Usage Report** in `MCP_USAGE_REPORT.md`:\n```markdown\n# MCP Tool Usage Report\n\n## Compliant Code\n- File: template-repository.ts\n  - Uses: metabob_search_activities ✅\n  - Uses: metabob_get_activity_template ✅\n\n## Violations Found\n[List any non-MCP backend communication]\n\n## Recommendations\n[What needs to be changed]\n```\n\n## Output Requirements\n- File: `MCP_USAGE_REPORT.md`\n- Lists all MCP tool calls found\n- Flags non-MCP backend communication\n- Provides recommendations",
+        "variables": [
+          {
+            "name": "opencodePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-opencode repository",
+            "default": "repos/metabob-opencode"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "MCP_USAGE_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "MCP Tool",
+            "description": ""
+          },
+          {
+            "pattern": "Compliant",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "task-3-check-dependencies",
+      "subagent": "general",
+      "description": "Analyze import dependencies to detect violations",
+      "dependencies": [
+        "task-2-verify-mcp-usage"
+      ],
+      "prompt": {
+        "template": "# Task: Check Dependency Graph\n\n## Objective\nAnalyze import statements to detect architectural violations in the dependency graph.\n\n## Analysis Steps\n\n1. **Parse Imports in OpenCode**:\n```bash\ncd {{opencodePath}}\ngrep -rh \"^import\" packages/opencode/src --include=\"*.ts\" | sort | uniq\n```\n\n2. **Check for Violation Patterns**:\n- Imports from `metabob-rpc-api`: CRITICAL\n- Database client imports (`pg`, `mysql2`, `surreal`): CRITICAL\n- Direct HTTP clients (`axios`, `node-fetch`) without MCP wrapper: WARNING\n\n3. **Check package.json Dependencies**:\n```bash\ncat {{opencodePath}}/packages/opencode/package.json | grep -A 20 '\"dependencies\"'\n```\n\n4. **Generate Dependency Report** in `DEPENDENCY_ANALYSIS.md`:\n```markdown\n# Dependency Graph Analysis\n\n## Import Violations\n\n### CRITICAL\n[Direct imports from metabob-rpc-api or database clients]\n\n### WARNING\n[HTTP clients, suspicious imports]\n\n## package.json Analysis\n- Unexpected dependencies: [list]\n- Missing dependencies: [list]\n- Recommended changes: [list]\n\n## Dependency Graph Visualization\n```\nmetabob-opencode\n  ├─ MCP Client (✅ GOOD)\n  ├─ metabob-cli via MCP (✅ GOOD)\n  └─ metabob-rpc-api (❌ VIOLATION - if found)\n```\n\n## Recommendations\n[Steps to fix violations]\n```\n\n## Output Requirements\n- File: `DEPENDENCY_ANALYSIS.md`\n- Categorizes violations (CRITICAL/WARNING)\n- Includes import paths and source files\n- Provides actionable recommendations",
+        "variables": [
+          {
+            "name": "opencodePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-opencode repository",
+            "default": "repos/metabob-opencode"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "DEPENDENCY_ANALYSIS.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Import Violations",
+            "description": ""
+          },
+          {
+            "pattern": "Dependency Graph",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4-validate-gateway",
+      "subagent": "general",
+      "description": "Verify metabob-cli properly implements MCP gateway pattern",
+      "dependencies": [
+        "task-3-check-dependencies"
+      ],
+      "prompt": {
+        "template": "# Task: Validate MCP Gateway Implementation\n\n## Objective\nVerify that metabob-cli correctly implements the MCP gateway pattern (forwarding only, no business logic).\n\n## Verification Steps\n\n1. **Check Gateway Tool Files**:\n```bash\ncd {{cliPath}}\nls -la src/metabob_cli/mcp/*_tools.py\n```\n\n2. **Verify activity_template_tools.py**:\n- Read the file\n- Check for proper MCP tool definitions\n- Verify tools forward to backend (rpc_client usage)\n- Ensure NO business logic (just forwarding)\n- Check error handling and retry logic\n\n3. **Check Tool Registration**:\n- Find MCP server initialization\n- Verify all tools are registered\n- Check tool descriptions match functionality\n\n4. **Generate Gateway Report** in `GATEWAY_VALIDATION.md`:\n```markdown\n# MCP Gateway Validation\n\n## Gateway Tools Inventory\n\n### activity_template_tools.py\n- Tool: metabob_search_activities\n  - Forwards to: GET /api/activities ✅\n  - Business logic: None ✅\n  - Error handling: Proper ✅\n\n- Tool: metabob_get_activity_template\n  - Forwards to: GET /api/templates/:id ✅\n  - Business logic: None ✅\n  - Error handling: Proper ✅\n\n[Continue for all tools]\n\n## Issues Found\n[List any business logic in gateway tools]\n\n## Recommendations\n[How to fix issues]\n```\n\n## Success Criteria\n- All gateway tools forward to backend\n- No business logic in gateway tools\n- Proper error handling exists\n- All tools registered correctly",
+        "variables": [
+          {
+            "name": "cliPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-cli repository",
+            "default": "repos/metabob-cli"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "GATEWAY_VALIDATION.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Gateway Tools",
+            "description": ""
+          },
+          {
+            "pattern": "Forwards to",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "task-5-generate-report",
+      "subagent": "general",
+      "description": "Create comprehensive compliance report",
+      "dependencies": [
+        "task-4-validate-gateway"
+      ],
+      "prompt": {
+        "template": "# Task: Generate Compliance Report\n\n## Objective\nAggregate all findings into a comprehensive compliance report with actionable recommendations.\n\n## Report Structure\n\nCreate `{{outputPath}}` with:\n\n```markdown\n# Architecture Compliance Report\n**Generated**: [date]\n**Status**: PASS/FAIL\n\n## Executive Summary\n- Total CRITICAL violations: X\n- Total WARNING patterns: Y\n- Compliance status: [PASS if 0 critical, FAIL otherwise]\n- Estimated fix effort: [hours/days]\n\n## Detailed Findings\n\n### 1. Direct API Calls (CRITICAL)\n[From VIOLATIONS_SCAN.md]\n\n### 2. MCP Tool Usage\n[From MCP_USAGE_REPORT.md]\n\n### 3. Dependency Graph\n[From DEPENDENCY_ANALYSIS.md]\n\n### 4. Gateway Implementation\n[From GATEWAY_VALIDATION.md]\n\n## Priority Action Items\n\n### HIGH Priority (Fix Immediately)\n1. [CRITICAL violation 1]\n   - File: path/to/file.ts:123\n   - Issue: Direct fetch to RPC API\n   - Fix: Replace with MCP tool call\n   - Effort: 1 hour\n\n### MEDIUM Priority (Fix Soon)\n[WARNING patterns]\n\n### LOW Priority (Nice to Have)\n[Minor improvements]\n\n## Fix Implementation Guide\n\n### Example: Replace Direct API Call\n```typescript\n// BEFORE (VIOLATION)\nawait fetch('http://rpc-api/api/templates')\n\n// AFTER (COMPLIANT)\nawait mcpClient.callTool('metabob_search_activities', {})\n```\n\n## Verification Steps\nAfter fixes:\n1. Re-run this validation activity\n2. Verify 0 CRITICAL violations\n3. Run integration tests\n4. Update architecture documentation\n\n## References\n- MCP_GATEWAY_ARCHITECTURE.md\n- ARCHITECTURE_REDESIGN_SUMMARY.md\n```\n\n## Output Requirements\n- File: `{{outputPath}}`\n- Clear PASS/FAIL status\n- Actionable fix instructions\n- Priority-ranked recommendations\n- Estimated effort for each fix",
+        "variables": [
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Where to write final report",
+            "default": "ARCHITECTURE_COMPLIANCE_REPORT.md"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "ARCHITECTURE_COMPLIANCE_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Action Items",
+            "description": ""
+          },
+          {
+            "pattern": "PASS|FAIL",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task-1-scan-direct-api-calls",
+      "subagent": "general",
+      "description": "Search codebase for direct metabob-rpc-api calls in metabob-opencode",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Scan for Direct RPC API References\n\n## Objective\nSearch the metabob-opencode codebase for any direct calls to metabob-rpc-api that violate the MCP Gateway Architecture.\n\n## Search Patterns\n\nLook for these CRITICAL violations:\n1. **Direct HTTP calls**: `fetch.*rpc-api`, `axios.*rpc-api`, `http.*metabob-rpc`\n2. **Database connections**: `DB_CONNECTION`, `import.*pg`, `import.*mysql2`, `import.*surreal`\n3. **RPC client imports**: `import.*rpc-api`, `import.*RPCClient`, `import.*TemplateRegistry`\n\n## Actions\n\n1. Search opencode packages:\n```bash\ncd {{opencodePath}}\ngrep -r \"fetch.*rpc-api\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"axios.*rpc-api\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"http.*metabob-rpc\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"DB_CONNECTION\" . --include=\"*.ts\" --include=\"*.js\"\ngrep -r \"from.*metabob-rpc-api\" . --include=\"*.ts\" --include=\"*.js\"\n```\n\n2. Check for database imports:\n```bash\ngrep -r \"import.*\\bpg\\b\" . --include=\"*.ts\"\ngrep -r \"import.*mysql2\" . --include=\"*.ts\"\ngrep -r \"import.*surreal\" . --include=\"*.ts\"\n```\n\n3. Generate findings report in `VIOLATIONS_SCAN.md`:\n```markdown\n# Direct API Call Violations\n\n## CRITICAL Findings\n[List each violation with file path, line number, and code snippet]\n\n## WARNING Findings\n[List suspicious patterns]\n\n## Summary\n- Total CRITICAL violations: X\n- Total WARNING patterns: Y\n- Files affected: [list]\n```\n\n## Output Requirements\n- File: `VIOLATIONS_SCAN.md`\n- Each finding categorized as CRITICAL or WARNING\n- Includes file paths and line numbers\n- Code snippets showing violations",
+        "variables": [
+          {
+            "name": "opencodePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-opencode repository",
+            "default": "repos/metabob-opencode"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "VIOLATIONS_SCAN.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "CRITICAL",
+            "description": ""
+          },
+          {
+            "pattern": "Summary",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2-verify-mcp-usage",
+      "subagent": "general",
+      "description": "Confirm that all backend operations use MCP tools",
+      "dependencies": [
+        "task-1-scan-direct-api-calls"
+      ],
+      "prompt": {
+        "template": "# Task: Verify MCP Tool Usage\n\n## Objective\nConfirm that metabob-opencode uses MCP tools for ALL backend communication.\n\n## Verification Steps\n\n1. **Find Template-Related Code**:\n```bash\ncd {{opencodePath}}\nfind packages/opencode/src -name \"*template*\" -o -name \"*activity*\"\n```\n\n2. **Check TemplateRepository Implementation**:\n- Read `template-repository.ts` or similar files\n- Verify it uses MCP calls:\n  - `metabob_search_activities`\n  - `metabob_get_activity_template`\n  - `metabob_register_activity_template`\n  - `metabob_post_activity_result`\n- Flag any direct HTTP clients or database connections\n\n3. **Check Activity Execution**:\n- Read `activity.ts` or similar\n- Verify metrics reporting uses MCP (if implemented)\n- Check for any direct backend communication\n\n4. **Generate MCP Usage Report** in `MCP_USAGE_REPORT.md`:\n```markdown\n# MCP Tool Usage Report\n\n## Compliant Code\n- File: template-repository.ts\n  - Uses: metabob_search_activities ✅\n  - Uses: metabob_get_activity_template ✅\n\n## Violations Found\n[List any non-MCP backend communication]\n\n## Recommendations\n[What needs to be changed]\n```\n\n## Output Requirements\n- File: `MCP_USAGE_REPORT.md`\n- Lists all MCP tool calls found\n- Flags non-MCP backend communication\n- Provides recommendations",
+        "variables": [
+          {
+            "name": "opencodePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-opencode repository",
+            "default": "repos/metabob-opencode"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "MCP_USAGE_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "MCP Tool",
+            "description": ""
+          },
+          {
+            "pattern": "Compliant",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "task-3-check-dependencies",
+      "subagent": "general",
+      "description": "Analyze import dependencies to detect violations",
+      "dependencies": [
+        "task-2-verify-mcp-usage"
+      ],
+      "prompt": {
+        "template": "# Task: Check Dependency Graph\n\n## Objective\nAnalyze import statements to detect architectural violations in the dependency graph.\n\n## Analysis Steps\n\n1. **Parse Imports in OpenCode**:\n```bash\ncd {{opencodePath}}\ngrep -rh \"^import\" packages/opencode/src --include=\"*.ts\" | sort | uniq\n```\n\n2. **Check for Violation Patterns**:\n- Imports from `metabob-rpc-api`: CRITICAL\n- Database client imports (`pg`, `mysql2`, `surreal`): CRITICAL\n- Direct HTTP clients (`axios`, `node-fetch`) without MCP wrapper: WARNING\n\n3. **Check package.json Dependencies**:\n```bash\ncat {{opencodePath}}/packages/opencode/package.json | grep -A 20 '\"dependencies\"'\n```\n\n4. **Generate Dependency Report** in `DEPENDENCY_ANALYSIS.md`:\n```markdown\n# Dependency Graph Analysis\n\n## Import Violations\n\n### CRITICAL\n[Direct imports from metabob-rpc-api or database clients]\n\n### WARNING\n[HTTP clients, suspicious imports]\n\n## package.json Analysis\n- Unexpected dependencies: [list]\n- Missing dependencies: [list]\n- Recommended changes: [list]\n\n## Dependency Graph Visualization\n```\nmetabob-opencode\n  ├─ MCP Client (✅ GOOD)\n  ├─ metabob-cli via MCP (✅ GOOD)\n  └─ metabob-rpc-api (❌ VIOLATION - if found)\n```\n\n## Recommendations\n[Steps to fix violations]\n```\n\n## Output Requirements\n- File: `DEPENDENCY_ANALYSIS.md`\n- Categorizes violations (CRITICAL/WARNING)\n- Includes import paths and source files\n- Provides actionable recommendations",
+        "variables": [
+          {
+            "name": "opencodePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-opencode repository",
+            "default": "repos/metabob-opencode"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "DEPENDENCY_ANALYSIS.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Import Violations",
+            "description": ""
+          },
+          {
+            "pattern": "Dependency Graph",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4-validate-gateway",
+      "subagent": "general",
+      "description": "Verify metabob-cli properly implements MCP gateway pattern",
+      "dependencies": [
+        "task-3-check-dependencies"
+      ],
+      "prompt": {
+        "template": "# Task: Validate MCP Gateway Implementation\n\n## Objective\nVerify that metabob-cli correctly implements the MCP gateway pattern (forwarding only, no business logic).\n\n## Verification Steps\n\n1. **Check Gateway Tool Files**:\n```bash\ncd {{cliPath}}\nls -la src/metabob_cli/mcp/*_tools.py\n```\n\n2. **Verify activity_template_tools.py**:\n- Read the file\n- Check for proper MCP tool definitions\n- Verify tools forward to backend (rpc_client usage)\n- Ensure NO business logic (just forwarding)\n- Check error handling and retry logic\n\n3. **Check Tool Registration**:\n- Find MCP server initialization\n- Verify all tools are registered\n- Check tool descriptions match functionality\n\n4. **Generate Gateway Report** in `GATEWAY_VALIDATION.md`:\n```markdown\n# MCP Gateway Validation\n\n## Gateway Tools Inventory\n\n### activity_template_tools.py\n- Tool: metabob_search_activities\n  - Forwards to: GET /api/activities ✅\n  - Business logic: None ✅\n  - Error handling: Proper ✅\n\n- Tool: metabob_get_activity_template\n  - Forwards to: GET /api/templates/:id ✅\n  - Business logic: None ✅\n  - Error handling: Proper ✅\n\n[Continue for all tools]\n\n## Issues Found\n[List any business logic in gateway tools]\n\n## Recommendations\n[How to fix issues]\n```\n\n## Success Criteria\n- All gateway tools forward to backend\n- No business logic in gateway tools\n- Proper error handling exists\n- All tools registered correctly",
+        "variables": [
+          {
+            "name": "cliPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to metabob-cli repository",
+            "default": "repos/metabob-cli"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "GATEWAY_VALIDATION.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Gateway Tools",
+            "description": ""
+          },
+          {
+            "pattern": "Forwards to",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "task-5-generate-report",
+      "subagent": "general",
+      "description": "Create comprehensive compliance report",
+      "dependencies": [
+        "task-4-validate-gateway"
+      ],
+      "prompt": {
+        "template": "# Task: Generate Compliance Report\n\n## Objective\nAggregate all findings into a comprehensive compliance report with actionable recommendations.\n\n## Report Structure\n\nCreate `{{outputPath}}` with:\n\n```markdown\n# Architecture Compliance Report\n**Generated**: [date]\n**Status**: PASS/FAIL\n\n## Executive Summary\n- Total CRITICAL violations: X\n- Total WARNING patterns: Y\n- Compliance status: [PASS if 0 critical, FAIL otherwise]\n- Estimated fix effort: [hours/days]\n\n## Detailed Findings\n\n### 1. Direct API Calls (CRITICAL)\n[From VIOLATIONS_SCAN.md]\n\n### 2. MCP Tool Usage\n[From MCP_USAGE_REPORT.md]\n\n### 3. Dependency Graph\n[From DEPENDENCY_ANALYSIS.md]\n\n### 4. Gateway Implementation\n[From GATEWAY_VALIDATION.md]\n\n## Priority Action Items\n\n### HIGH Priority (Fix Immediately)\n1. [CRITICAL violation 1]\n   - File: path/to/file.ts:123\n   - Issue: Direct fetch to RPC API\n   - Fix: Replace with MCP tool call\n   - Effort: 1 hour\n\n### MEDIUM Priority (Fix Soon)\n[WARNING patterns]\n\n### LOW Priority (Nice to Have)\n[Minor improvements]\n\n## Fix Implementation Guide\n\n### Example: Replace Direct API Call\n```typescript\n// BEFORE (VIOLATION)\nawait fetch('http://rpc-api/api/templates')\n\n// AFTER (COMPLIANT)\nawait mcpClient.callTool('metabob_search_activities', {})\n```\n\n## Verification Steps\nAfter fixes:\n1. Re-run this validation activity\n2. Verify 0 CRITICAL violations\n3. Run integration tests\n4. Update architecture documentation\n\n## References\n- MCP_GATEWAY_ARCHITECTURE.md\n- ARCHITECTURE_REDESIGN_SUMMARY.md\n```\n\n## Output Requirements\n- File: `{{outputPath}}`\n- Clear PASS/FAIL status\n- Actionable fix instructions\n- Priority-ranked recommendations\n- Estimated effort for each fix",
+        "variables": [
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Where to write final report",
+            "default": "ARCHITECTURE_COMPLIANCE_REPORT.md"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "ARCHITECTURE_COMPLIANCE_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Action Items",
+            "description": ""
+          },
+          {
+            "pattern": "PASS|FAIL",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T03:20:48.632Z",
+  "metadata": {}
+}
