@@ -1,0 +1,349 @@
+{
+  "activity_id": "validate-cli-activity-orchestration",
+  "name": "Validate CLI Activity Orchestration",
+  "description": "Validate that metabob-cli correctly orchestrates activity execution with incremental step delivery and state management",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "test-mcp-tool-availability",
+      "subagent": "activity",
+      "description": "Verify MCP tools are exposed by CLI",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Test MCP Tool Availability\n\n## CLI Path\n{{cliPath}}\n\n## Your Task\nVerify that the CLI exposes the expected MCP tools for activity orchestration.\n\n### Step 1: List MCP Tools\nCheck which tools the CLI exposes:\n\n```bash\ncd {{cliPath}}\ngrep '@mcp.tool' src/metabob_cli/mcp/*.py | grep -E '(start_activity|get_next_step|report_step|enter_trailblazing)'\n```\n\n### Step 2: Check Tool Definitions\nVerify each orchestration tool exists:\n\n```bash\n# Check for start_activity_execution\ngrep -A 20 'def start_activity_execution' src/metabob_cli/mcp/tools.py\n\n# Check for get_next_step\ngrep -A 20 'def get_next_step' src/metabob_cli/mcp/tools.py\n\n# Check for report_step_result\ngrep -A 20 'def report_step_result' src/metabob_cli/mcp/tools.py\n\n# Check for enter_trailblazing\ngrep -A 20 'def enter_trailblazing' src/metabob_cli/mcp/activity_manager.py\n```\n\n### Step 3: Verify Tool Parameters\nCheck that tools have the correct parameter schemas:\n\n- `start_activity_execution`: template_id, variables, reason\n- `get_next_step`: execution_id\n- `report_step_result`: execution_id, result (success, cost, duration, tokens)\n- `enter_trailblazing`: execution_id, failure_context\n\n## Output Format\n```json\n{\n  \"toolAvailability\": {\n    \"start_activity_execution\": true/false,\n    \"get_next_step\": true/false,\n    \"report_step_result\": true/false,\n    \"enter_trailblazing\": true/false,\n    \"totalMCPTools\": 30\n  },\n  \"toolDefinitions\": {\n    \"parametersCorrect\": true/false,\n    \"returnTypesCorrect\": true/false\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- All 4 orchestration tools found\n- Tool parameters match expected schemas\n- Total MCP tools count >= 30",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-execution-state-management",
+      "subagent": "activity",
+      "description": "Test ActivityExecution state lifecycle",
+      "dependencies": [
+        "test-mcp-tool-availability"
+      ],
+      "prompt": {
+        "template": "# Task: Test Execution State Management\n\n## CLI Path\n{{cliPath}}\n\n## Your Task\nCreate a test script to validate ActivityExecution state management.\n\n### Test Script\nCreate `test_execution_state.py`:\n\n```python\nimport asyncio\nimport sys\nsys.path.insert(0, '{{cliPath}}/src')\n\nfrom metabob_cli.mcp.activity_manager import ActivityManager\n\nasync def test_execution_state():\n    \"\"\"Test ActivityExecution state lifecycle.\"\"\"\n    print(\"\\n=== Testing ActivityExecution State Management ===\")\n    \n    mgr = ActivityManager()\n    \n    # Step 1: Start execution\n    print(\"\\n1. Starting activity execution...\")\n    execution = await mgr.start_activity_execution({\n        \"template_id\": \"simple-test-template\",\n        \"variables\": {\"testParam\": \"value\"},\n        \"reason\": \"State management validation\"\n    })\n    \n    assert execution[\"state\"] == \"running\", f\"Expected state 'running', got {execution['state']}\"\n    assert execution[\"current_step_index\"] == 0, f\"Expected step 0, got {execution['current_step_index']}\"\n    execution_id = execution[\"id\"]\n    print(f\"✅ Execution started: {execution_id}\")\n    print(f\"   State: {execution['state']}\")\n    print(f\"   Current step: {execution['current_step_index']}\")\n    \n    # Step 2: Get first step\n    print(\"\\n2. Getting first step...\")\n    step = await mgr.get_next_step(execution_id)\n    assert step is not None, \"Expected step, got None\"\n    assert \"task\" in step, \"Step missing 'task' field\"\n    print(f\"✅ Got step: {step['task']['id']}\")\n    print(f\"   Description: {step['task']['description']}\")\n    \n    # Step 3: Report step success\n    print(\"\\n3. Reporting step success...\")\n    result = await mgr.report_step_result(execution_id, {\n        \"success\": True,\n        \"cost\": 0.01,\n        \"duration\": 5000,\n        \"tokens\": {\"input\": 1000, \"output\": 500, \"cache\": 0}\n    })\n    assert result[\"current_step_index\"] == 1, f\"Expected step 1, got {result['current_step_index']}\"\n    print(f\"✅ Step reported, advanced to step {result['current_step_index']}\")\n    \n    # Step 4: Get second step\n    print(\"\\n4. Getting second step...\")\n    step2 = await mgr.get_next_step(execution_id)\n    if step2:\n        print(f\"✅ Got step: {step2['task']['id']}\")\n        \n        # Report second step\n        await mgr.report_step_result(execution_id, {\n            \"success\": True,\n            \"cost\": 0.01,\n            \"duration\": 4000,\n            \"tokens\": {\"input\": 800, \"output\": 400, \"cache\": 0}\n        })\n    else:\n        print(\"✅ No more steps (activity complete)\")\n    \n    # Step 5: Verify final state\n    print(\"\\n5. Checking final state...\")\n    final_state = await mgr.get_execution_state(execution_id)\n    print(f\"   Final state: {final_state['state']}\")\n    print(f\"   Steps completed: {len(final_state.get('step_results', []))}\")\n    \n    print(\"\\n=== ✅ All State Management Tests Passed ===\")\n    return {\n        \"passed\": True,\n        \"execution_id\": execution_id,\n        \"steps_completed\": len(final_state.get('step_results', [])),\n        \"final_state\": final_state['state']\n    }\n\nif __name__ == \"__main__\":\n    result = asyncio.run(test_execution_state())\n    print(f\"\\nResult: {result}\")\n```\n\n### Run Test\n```bash\ncd {{cliPath}}\npython test_execution_state.py\n```\n\n## Output Format\n```json\n{\n  \"testScript\": {\n    \"created\": true/false,\n    \"path\": \"test_execution_state.py\"\n  },\n  \"execution\": {\n    \"passed\": true/false,\n    \"stepsCompleted\": 2,\n    \"stateTransitions\": [\"running\", \"done\"],\n    \"stepIndexAdvanced\": true\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Test script runs without errors\n- State starts as \"running\"\n- current_step_index advances on report_step_result\n- Steps delivered incrementally (one at a time)\n- Final state is \"done\" or \"validating\"",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{cliPath}} && python test_execution_state.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-incremental-step-delivery",
+      "subagent": "activity",
+      "description": "Verify that CLI delivers steps one at a time",
+      "dependencies": [
+        "test-execution-state-management"
+      ],
+      "prompt": {
+        "template": "# Task: Test Incremental Step Delivery\n\n## Previous Test Result\n{{stateTestOutput}}\n\n## Your Task\nVerify that the CLI delivers steps incrementally and doesn't expose the full template upfront.\n\n### Test Approach\n1. Start an activity with 3+ tasks\n2. Call get_next_step repeatedly\n3. Verify each call returns ONLY the current step (not all steps)\n4. Verify step index increments correctly\n\n### Test Script\nCreate `test_incremental_delivery.py`:\n\n```python\nimport asyncio\nimport sys\nsys.path.insert(0, '{{cliPath}}/src')\n\nfrom metabob_cli.mcp.activity_manager import ActivityManager\n\nasync def test_incremental_delivery():\n    print(\"\\n=== Testing Incremental Step Delivery ===\")\n    \n    mgr = ActivityManager()\n    \n    # Start multi-task activity\n    execution = await mgr.start_activity_execution({\n        \"template_id\": \"add-feature-complete\",  # Has 3+ tasks\n        \"variables\": {\n            \"feature_name\": \"test\",\n            \"feature_description\": \"test feature\"\n        },\n        \"reason\": \"Test incremental delivery\"\n    })\n    \n    execution_id = execution[\"id\"]\n    steps_seen = []\n    \n    # Get steps one by one\n    for i in range(3):\n        print(f\"\\n{i+1}. Requesting step {i}...\")\n        step = await mgr.get_next_step(execution_id)\n        \n        if not step:\n            print(f\"   No more steps at index {i}\")\n            break\n        \n        # Verify we get exactly ONE step\n        assert \"task\" in step, \"Step missing 'task' field\"\n        task_id = step[\"task\"][\"id\"]\n        steps_seen.append(task_id)\n        \n        print(f\"   ✅ Got step: {task_id}\")\n        print(f\"   Description: {step['task']['description']}\")\n        \n        # Verify step doesn't contain future steps\n        assert \"tasks\" not in step, \"Step should not contain full task list\"\n        assert \"nextSteps\" not in step, \"Step should not preview future steps\"\n        \n        # Report step completion to advance\n        await mgr.report_step_result(execution_id, {\n            \"success\": True,\n            \"cost\": 0.01,\n            \"duration\": 3000\n        })\n    \n    print(f\"\\n✅ Incremental Delivery Validated\")\n    print(f\"   Steps seen: {steps_seen}\")\n    print(f\"   Each call returned exactly 1 step\")\n    \n    return {\n        \"passed\": True,\n        \"steps_delivered\": len(steps_seen),\n        \"incremental\": True,\n        \"no_lookahead\": True\n    }\n\nif __name__ == \"__main__\":\n    result = asyncio.run(test_incremental_delivery())\n    print(f\"\\nResult: {result}\")\n```\n\n### Run Test\n```bash\ncd {{cliPath}}\npython test_incremental_delivery.py\n```\n\n## Output Format\n```json\n{\n  \"incrementalDelivery\": {\n    \"verified\": true/false,\n    \"stepsDelivered\": 3,\n    \"oneAtATime\": true,\n    \"noLookahead\": true\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Each get_next_step call returns exactly 1 step\n- Steps don't contain full template or future steps\n- Steps delivered in correct order\n- Agent can't \"skip ahead\" to see future tasks",
+        "variables": [
+          {
+            "name": "stateTestOutput",
+            "type": "string",
+            "required": true,
+            "description": "Output from test-execution-state-management"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{cliPath}} && python test_incremental_delivery.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-trailblazing",
+      "subagent": "activity",
+      "description": "Test trailblazing mode for failure recovery",
+      "dependencies": [
+        "test-incremental-step-delivery"
+      ],
+      "prompt": {
+        "template": "# Task: Test Trailblazing Mode\n\n## Your Task\nTest that trailblazing mode generates dynamic fix steps when validation fails.\n\n### Test Script\nCreate `test_trailblazing.py`:\n\n```python\nimport asyncio\nimport sys\nsys.path.insert(0, '{{cliPath}}/src')\n\nfrom metabob_cli.mcp.activity_manager import ActivityManager\n\nasync def test_trailblazing():\n    print(\"\\n=== Testing Trailblazing Mode ===\")\n    \n    mgr = ActivityManager()\n    \n    # Start execution with trailblazing enabled\n    execution = await mgr.start_activity_execution({\n        \"template_id\": \"simple-test-template\",\n        \"variables\": {\"testParam\": \"value\"},\n        \"reason\": \"Test trailblazing\",\n        \"trailblazing\": {\n            \"enabled\": True,\n            \"maxCostPerTask\": 0.5,\n            \"maxTotalCost\": 2.0,\n            \"maxRecoveryAttempts\": 2\n        }\n    })\n    \n    execution_id = execution[\"id\"]\n    print(f\"✅ Execution started with trailblazing enabled\")\n    \n    # Get first step\n    step = await mgr.get_next_step(execution_id)\n    print(f\"   Step: {step['task']['id']}\")\n    \n    # Report validation failure\n    print(\"\\n Simulating validation failure...\")\n    await mgr.report_step_result(execution_id, {\n        \"success\": False,\n        \"cost\": 0.01,\n        \"duration\": 3000,\n        \"error\": \"Validation failed: required file missing\"\n    })\n    \n    # Enter trailblazing mode\n    print(\"\\n Entering trailblazing mode...\")\n    trailblaze_result = await mgr.enter_trailblazing(execution_id, {\n        \"error\": \"Validation failed: required file missing\",\n        \"validationOutput\": \"File test.txt not found\"\n    })\n    \n    assert trailblaze_result[\"mode\"] == \"trailblazing\", \"Should enter trailblazing mode\"\n    assert \"fixStep\" in trailblaze_result, \"Should generate fix step\"\n    \n    print(f\"✅ Trailblazing activated\")\n    print(f\"   Fix step generated: {trailblaze_result.get('fixStep', {}).get('description', 'N/A')}\")\n    \n    return {\n        \"passed\": True,\n        \"trailblazingActivated\": True,\n        \"fixStepGenerated\": \"fixStep\" in trailblaze_result\n    }\n\nif __name__ == \"__main__\":\n    result = asyncio.run(test_trailblazing())\n    print(f\"\\nResult: {result}\")\n```\n\n### Run Test\n```bash\ncd {{cliPath}}\npython test_trailblazing.py\n```\n\n## Output Format\n```json\n{\n  \"trailblazing\": {\n    \"activated\": true/false,\n    \"fixStepGenerated\": true/false,\n    \"recoveryAttempts\": 1\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Trailblazing mode activates on failure\n- Fix steps generated dynamically\n- Recovery attempts tracked\n- Budget limits enforced",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "cleanup-test-scripts",
+      "subagent": "activity",
+      "description": "Clean up test scripts",
+      "dependencies": [
+        "test-trailblazing"
+      ],
+      "prompt": {
+        "template": "# Task: Cleanup Test Scripts\n\n## Your Task\nRemove test scripts created during validation.\n\n```bash\ncd {{cliPath}}\nrm -f test_execution_state.py test_incremental_delivery.py test_trailblazing.py\n```\n\n## Output\n```json\n{\n  \"cleanup\": {\n    \"scriptsRemoved\": 3\n  }\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "test-mcp-tool-availability",
+      "subagent": "activity",
+      "description": "Verify MCP tools are exposed by CLI",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Test MCP Tool Availability\n\n## CLI Path\n{{cliPath}}\n\n## Your Task\nVerify that the CLI exposes the expected MCP tools for activity orchestration.\n\n### Step 1: List MCP Tools\nCheck which tools the CLI exposes:\n\n```bash\ncd {{cliPath}}\ngrep '@mcp.tool' src/metabob_cli/mcp/*.py | grep -E '(start_activity|get_next_step|report_step|enter_trailblazing)'\n```\n\n### Step 2: Check Tool Definitions\nVerify each orchestration tool exists:\n\n```bash\n# Check for start_activity_execution\ngrep -A 20 'def start_activity_execution' src/metabob_cli/mcp/tools.py\n\n# Check for get_next_step\ngrep -A 20 'def get_next_step' src/metabob_cli/mcp/tools.py\n\n# Check for report_step_result\ngrep -A 20 'def report_step_result' src/metabob_cli/mcp/tools.py\n\n# Check for enter_trailblazing\ngrep -A 20 'def enter_trailblazing' src/metabob_cli/mcp/activity_manager.py\n```\n\n### Step 3: Verify Tool Parameters\nCheck that tools have the correct parameter schemas:\n\n- `start_activity_execution`: template_id, variables, reason\n- `get_next_step`: execution_id\n- `report_step_result`: execution_id, result (success, cost, duration, tokens)\n- `enter_trailblazing`: execution_id, failure_context\n\n## Output Format\n```json\n{\n  \"toolAvailability\": {\n    \"start_activity_execution\": true/false,\n    \"get_next_step\": true/false,\n    \"report_step_result\": true/false,\n    \"enter_trailblazing\": true/false,\n    \"totalMCPTools\": 30\n  },\n  \"toolDefinitions\": {\n    \"parametersCorrect\": true/false,\n    \"returnTypesCorrect\": true/false\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- All 4 orchestration tools found\n- Tool parameters match expected schemas\n- Total MCP tools count >= 30",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-execution-state-management",
+      "subagent": "activity",
+      "description": "Test ActivityExecution state lifecycle",
+      "dependencies": [
+        "test-mcp-tool-availability"
+      ],
+      "prompt": {
+        "template": "# Task: Test Execution State Management\n\n## CLI Path\n{{cliPath}}\n\n## Your Task\nCreate a test script to validate ActivityExecution state management.\n\n### Test Script\nCreate `test_execution_state.py`:\n\n```python\nimport asyncio\nimport sys\nsys.path.insert(0, '{{cliPath}}/src')\n\nfrom metabob_cli.mcp.activity_manager import ActivityManager\n\nasync def test_execution_state():\n    \"\"\"Test ActivityExecution state lifecycle.\"\"\"\n    print(\"\\n=== Testing ActivityExecution State Management ===\")\n    \n    mgr = ActivityManager()\n    \n    # Step 1: Start execution\n    print(\"\\n1. Starting activity execution...\")\n    execution = await mgr.start_activity_execution({\n        \"template_id\": \"simple-test-template\",\n        \"variables\": {\"testParam\": \"value\"},\n        \"reason\": \"State management validation\"\n    })\n    \n    assert execution[\"state\"] == \"running\", f\"Expected state 'running', got {execution['state']}\"\n    assert execution[\"current_step_index\"] == 0, f\"Expected step 0, got {execution['current_step_index']}\"\n    execution_id = execution[\"id\"]\n    print(f\"✅ Execution started: {execution_id}\")\n    print(f\"   State: {execution['state']}\")\n    print(f\"   Current step: {execution['current_step_index']}\")\n    \n    # Step 2: Get first step\n    print(\"\\n2. Getting first step...\")\n    step = await mgr.get_next_step(execution_id)\n    assert step is not None, \"Expected step, got None\"\n    assert \"task\" in step, \"Step missing 'task' field\"\n    print(f\"✅ Got step: {step['task']['id']}\")\n    print(f\"   Description: {step['task']['description']}\")\n    \n    # Step 3: Report step success\n    print(\"\\n3. Reporting step success...\")\n    result = await mgr.report_step_result(execution_id, {\n        \"success\": True,\n        \"cost\": 0.01,\n        \"duration\": 5000,\n        \"tokens\": {\"input\": 1000, \"output\": 500, \"cache\": 0}\n    })\n    assert result[\"current_step_index\"] == 1, f\"Expected step 1, got {result['current_step_index']}\"\n    print(f\"✅ Step reported, advanced to step {result['current_step_index']}\")\n    \n    # Step 4: Get second step\n    print(\"\\n4. Getting second step...\")\n    step2 = await mgr.get_next_step(execution_id)\n    if step2:\n        print(f\"✅ Got step: {step2['task']['id']}\")\n        \n        # Report second step\n        await mgr.report_step_result(execution_id, {\n            \"success\": True,\n            \"cost\": 0.01,\n            \"duration\": 4000,\n            \"tokens\": {\"input\": 800, \"output\": 400, \"cache\": 0}\n        })\n    else:\n        print(\"✅ No more steps (activity complete)\")\n    \n    # Step 5: Verify final state\n    print(\"\\n5. Checking final state...\")\n    final_state = await mgr.get_execution_state(execution_id)\n    print(f\"   Final state: {final_state['state']}\")\n    print(f\"   Steps completed: {len(final_state.get('step_results', []))}\")\n    \n    print(\"\\n=== ✅ All State Management Tests Passed ===\")\n    return {\n        \"passed\": True,\n        \"execution_id\": execution_id,\n        \"steps_completed\": len(final_state.get('step_results', [])),\n        \"final_state\": final_state['state']\n    }\n\nif __name__ == \"__main__\":\n    result = asyncio.run(test_execution_state())\n    print(f\"\\nResult: {result}\")\n```\n\n### Run Test\n```bash\ncd {{cliPath}}\npython test_execution_state.py\n```\n\n## Output Format\n```json\n{\n  \"testScript\": {\n    \"created\": true/false,\n    \"path\": \"test_execution_state.py\"\n  },\n  \"execution\": {\n    \"passed\": true/false,\n    \"stepsCompleted\": 2,\n    \"stateTransitions\": [\"running\", \"done\"],\n    \"stepIndexAdvanced\": true\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Test script runs without errors\n- State starts as \"running\"\n- current_step_index advances on report_step_result\n- Steps delivered incrementally (one at a time)\n- Final state is \"done\" or \"validating\"",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{cliPath}} && python test_execution_state.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-incremental-step-delivery",
+      "subagent": "activity",
+      "description": "Verify that CLI delivers steps one at a time",
+      "dependencies": [
+        "test-execution-state-management"
+      ],
+      "prompt": {
+        "template": "# Task: Test Incremental Step Delivery\n\n## Previous Test Result\n{{stateTestOutput}}\n\n## Your Task\nVerify that the CLI delivers steps incrementally and doesn't expose the full template upfront.\n\n### Test Approach\n1. Start an activity with 3+ tasks\n2. Call get_next_step repeatedly\n3. Verify each call returns ONLY the current step (not all steps)\n4. Verify step index increments correctly\n\n### Test Script\nCreate `test_incremental_delivery.py`:\n\n```python\nimport asyncio\nimport sys\nsys.path.insert(0, '{{cliPath}}/src')\n\nfrom metabob_cli.mcp.activity_manager import ActivityManager\n\nasync def test_incremental_delivery():\n    print(\"\\n=== Testing Incremental Step Delivery ===\")\n    \n    mgr = ActivityManager()\n    \n    # Start multi-task activity\n    execution = await mgr.start_activity_execution({\n        \"template_id\": \"add-feature-complete\",  # Has 3+ tasks\n        \"variables\": {\n            \"feature_name\": \"test\",\n            \"feature_description\": \"test feature\"\n        },\n        \"reason\": \"Test incremental delivery\"\n    })\n    \n    execution_id = execution[\"id\"]\n    steps_seen = []\n    \n    # Get steps one by one\n    for i in range(3):\n        print(f\"\\n{i+1}. Requesting step {i}...\")\n        step = await mgr.get_next_step(execution_id)\n        \n        if not step:\n            print(f\"   No more steps at index {i}\")\n            break\n        \n        # Verify we get exactly ONE step\n        assert \"task\" in step, \"Step missing 'task' field\"\n        task_id = step[\"task\"][\"id\"]\n        steps_seen.append(task_id)\n        \n        print(f\"   ✅ Got step: {task_id}\")\n        print(f\"   Description: {step['task']['description']}\")\n        \n        # Verify step doesn't contain future steps\n        assert \"tasks\" not in step, \"Step should not contain full task list\"\n        assert \"nextSteps\" not in step, \"Step should not preview future steps\"\n        \n        # Report step completion to advance\n        await mgr.report_step_result(execution_id, {\n            \"success\": True,\n            \"cost\": 0.01,\n            \"duration\": 3000\n        })\n    \n    print(f\"\\n✅ Incremental Delivery Validated\")\n    print(f\"   Steps seen: {steps_seen}\")\n    print(f\"   Each call returned exactly 1 step\")\n    \n    return {\n        \"passed\": True,\n        \"steps_delivered\": len(steps_seen),\n        \"incremental\": True,\n        \"no_lookahead\": True\n    }\n\nif __name__ == \"__main__\":\n    result = asyncio.run(test_incremental_delivery())\n    print(f\"\\nResult: {result}\")\n```\n\n### Run Test\n```bash\ncd {{cliPath}}\npython test_incremental_delivery.py\n```\n\n## Output Format\n```json\n{\n  \"incrementalDelivery\": {\n    \"verified\": true/false,\n    \"stepsDelivered\": 3,\n    \"oneAtATime\": true,\n    \"noLookahead\": true\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Each get_next_step call returns exactly 1 step\n- Steps don't contain full template or future steps\n- Steps delivered in correct order\n- Agent can't \"skip ahead\" to see future tasks",
+        "variables": [
+          {
+            "name": "stateTestOutput",
+            "type": "string",
+            "required": true,
+            "description": "Output from test-execution-state-management"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{cliPath}} && python test_incremental_delivery.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-trailblazing",
+      "subagent": "activity",
+      "description": "Test trailblazing mode for failure recovery",
+      "dependencies": [
+        "test-incremental-step-delivery"
+      ],
+      "prompt": {
+        "template": "# Task: Test Trailblazing Mode\n\n## Your Task\nTest that trailblazing mode generates dynamic fix steps when validation fails.\n\n### Test Script\nCreate `test_trailblazing.py`:\n\n```python\nimport asyncio\nimport sys\nsys.path.insert(0, '{{cliPath}}/src')\n\nfrom metabob_cli.mcp.activity_manager import ActivityManager\n\nasync def test_trailblazing():\n    print(\"\\n=== Testing Trailblazing Mode ===\")\n    \n    mgr = ActivityManager()\n    \n    # Start execution with trailblazing enabled\n    execution = await mgr.start_activity_execution({\n        \"template_id\": \"simple-test-template\",\n        \"variables\": {\"testParam\": \"value\"},\n        \"reason\": \"Test trailblazing\",\n        \"trailblazing\": {\n            \"enabled\": True,\n            \"maxCostPerTask\": 0.5,\n            \"maxTotalCost\": 2.0,\n            \"maxRecoveryAttempts\": 2\n        }\n    })\n    \n    execution_id = execution[\"id\"]\n    print(f\"✅ Execution started with trailblazing enabled\")\n    \n    # Get first step\n    step = await mgr.get_next_step(execution_id)\n    print(f\"   Step: {step['task']['id']}\")\n    \n    # Report validation failure\n    print(\"\\n Simulating validation failure...\")\n    await mgr.report_step_result(execution_id, {\n        \"success\": False,\n        \"cost\": 0.01,\n        \"duration\": 3000,\n        \"error\": \"Validation failed: required file missing\"\n    })\n    \n    # Enter trailblazing mode\n    print(\"\\n Entering trailblazing mode...\")\n    trailblaze_result = await mgr.enter_trailblazing(execution_id, {\n        \"error\": \"Validation failed: required file missing\",\n        \"validationOutput\": \"File test.txt not found\"\n    })\n    \n    assert trailblaze_result[\"mode\"] == \"trailblazing\", \"Should enter trailblazing mode\"\n    assert \"fixStep\" in trailblaze_result, \"Should generate fix step\"\n    \n    print(f\"✅ Trailblazing activated\")\n    print(f\"   Fix step generated: {trailblaze_result.get('fixStep', {}).get('description', 'N/A')}\")\n    \n    return {\n        \"passed\": True,\n        \"trailblazingActivated\": True,\n        \"fixStepGenerated\": \"fixStep\" in trailblaze_result\n    }\n\nif __name__ == \"__main__\":\n    result = asyncio.run(test_trailblazing())\n    print(f\"\\nResult: {result}\")\n```\n\n### Run Test\n```bash\ncd {{cliPath}}\npython test_trailblazing.py\n```\n\n## Output Format\n```json\n{\n  \"trailblazing\": {\n    \"activated\": true/false,\n    \"fixStepGenerated\": true/false,\n    \"recoveryAttempts\": 1\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Trailblazing mode activates on failure\n- Fix steps generated dynamically\n- Recovery attempts tracked\n- Budget limits enforced",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "cleanup-test-scripts",
+      "subagent": "activity",
+      "description": "Clean up test scripts",
+      "dependencies": [
+        "test-trailblazing"
+      ],
+      "prompt": {
+        "template": "# Task: Cleanup Test Scripts\n\n## Your Task\nRemove test scripts created during validation.\n\n```bash\ncd {{cliPath}}\nrm -f test_execution_state.py test_incremental_delivery.py test_trailblazing.py\n```\n\n## Output\n```json\n{\n  \"cleanup\": {\n    \"scriptsRemoved\": 3\n  }\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T02:58:02.007Z",
+  "metadata": {}
+}

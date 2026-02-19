@@ -2,6 +2,12 @@
 """
 Analyze activity template performance from local storage.
 Generates improvement gradients for stable/candidate A/B testing system.
+
+Phase 2.3: A/B Testing Metrics Aggregation
+- Detects stable templates with candidates (via candidateIds field)
+- Aggregates metrics per variant (stable vs candidates)
+- Statistical comparison (chi-square test, sample size validation)
+- Recommendation engine (PROMOTE / KEEP_TESTING / PRUNE)
 """
 
 import json
@@ -9,8 +15,9 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from datetime import datetime
+import math
 
 
 @dataclass
