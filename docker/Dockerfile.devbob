@@ -60,6 +60,11 @@ COPY repos/metabob-opencode ./repos/metabob-opencode
 
 # Build standalone binary
 WORKDIR /build/repos/metabob-opencode
+
+# Copy workspace root package.json with catalog definitions
+COPY repos/metabob-opencode/package.json ./package.json
+COPY repos/metabob-opencode/bunfig.toml ./bunfig.toml
+
 RUN bun install && \
     cd packages/opencode && \
     bun run build --single && \
