@@ -36,13 +36,12 @@
             "description": "Detailed explanation of the workflow this template automates",
             "default": "{{templateDescription}}"
           },
-          {
-            "name": "templateId",
-            "type": "string",
-            "required": false,
-            "description": "Kebab-case template ID (defaults to kebab-case of templateName)",
-            "default": "{{templateId}}"
-          }
+  {
+    "name": "templateId",
+    "type": "string",
+    "required": true,
+    "description": "Kebab-case template ID (e.g., 'add-rest-endpoint', 'deploy-application')"
+  }
         ]
       },
       "context_rules": {
