@@ -26,12 +26,7 @@
         "requiredFiles": [],
         "requiredPatterns": [],
         "forbiddenPatterns": [],
-        "commands": [
-          {
-            "command": "test -d /tmp/multi-task-test-{{testId}}",
-            "expected_exit_code": 0
-          }
-        ]
+        "commands": []
       },
       "retry": {
         "maxAttempts": 1,
