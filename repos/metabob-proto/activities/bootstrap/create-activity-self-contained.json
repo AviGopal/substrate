@@ -5,7 +5,6 @@
   "category": "infrastructure",
   "tasks": [
     {
-      "task_id": "gather-requirements",
       "subagent": "general",
       "description": "Extract and clarify requirements from user input to ensure complete understanding",
       "dependencies": [],
@@ -74,10 +73,10 @@
       "retry": {
         "max_attempts": 2,
         "strategy": "simple"
-      }
+      },
+      "id": "gather-requirements"
     },
     {
-      "task_id": "design-task-graph",
       "subagent": "general",
       "description": "Design task breakdown with proper dependencies forming a directed acyclic graph (DAG)",
       "dependencies": [
@@ -115,10 +114,10 @@
       "retry": {
         "max_attempts": 2,
         "strategy": "simple"
-      }
+      },
+      "id": "design-task-graph"
     },
     {
-      "task_id": "write-template-json",
       "subagent": "general",
       "description": "Generate valid ActivityTemplate.Schema JSON following the exact structure",
       "dependencies": [
@@ -170,10 +169,10 @@
       "retry": {
         "max_attempts": 3,
         "strategy": "simple"
-      }
+      },
+      "id": "write-template-json"
     },
     {
-      "task_id": "register-with-backend",
       "subagent": "general",
       "description": "Register the template directly with metabob-cli backend via MCP, creating usage documentation",
       "dependencies": [
@@ -228,7 +227,8 @@
       "retry": {
         "max_attempts": 2,
         "strategy": "simple"
-      }
+      },
+      "id": "register-with-backend"
     }
   ],
   "estimated_metrics": {
