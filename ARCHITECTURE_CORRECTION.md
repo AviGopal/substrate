@@ -1,274 +1,268 @@
-# Architecture Correction: Backend vs Local Cache
+# Session Memory Agent Lifecycle Hook - Architecture Correction
 
-**Date**: 2026-02-19  
-**Status**: ⚠️ CRITICAL CORRECTION
+## The Real Problem
 
-## The Mistake
+After deep investigation, I found the root cause:
 
-In previous documentation (BACKEND_FIRST_TEMPLATE_ARCHITECTURE.md, etc.), I incorrectly identified:
+### Problem 1: TemplateExecutor is for CLI, Not Lifecycle Hooks
 
-```
-❌ WRONG: ~/.metabob/activities/ = "Backend storage"
-❌ WRONG: metabob-cli = "Backend"
-```
+The lifecycle hook is calling `TemplateExecutor.execute()` which:
+- **Line 108**: Passes `parentSessionID: undefined` to `executeTasks()`
+- Was designed for **CLI execution** (standalone activities)
+- Does NOT work in parent/child session model
+- Activities created have `callingSessionId: null`
 
-## The Correct Architecture
+### Problem 2: SessionMemoryAgent.gatherContext() Not Working
 
-```
-✅ CORRECT: metabob-rpc-api (api-server-dev) = Backend (source of truth)
-✅ CORRECT: metabob-cli = Client that queries the API  
-✅ CORRECT: ~/.metabob/activities/ = Local cache (NOT backend)
-```
+You're right - `SessionMemoryAgent.gatherContext()` doesn't work because:
+- It's meant for activity tool's contextRequirements
+- NOT designed as standalone lifecycle hook
+- Requires activity session context to function
 
-### Actual Data Flow
+### The Correct Architecture: Activities Run in Child Sessions
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    CORRECT ARCHITECTURE                      │
-└─────────────────────────────────────────────────────────────┘
-
-1. BACKEND (Source of Truth):
-   ┌──────────────────────────────────────┐
-   │  metabob-rpc-api (api-server-dev)    │
-   │  - Container: api-server-dev:8080    │
-   │  - Proto-based API (v2)              │
-   │  - Stores activity variants          │
-   │  - Serves to all clients             │
-   └──────────┬───────────────────────────┘
-              │
-              ▼
-2. CLIENT (Queries Backend):
-   ┌──────────────────────────────────────┐
-   │  metabob-cli                         │
-   │  - ActivityManager class             │
-   │  - Connects to API via HTTP          │
-   │  - Authenticates with session token  │
-   │  - Queries: GET /v2/activities       │
-   └──────────┬───────────────────────────┘
-              │
-              ▼
-3. LOCAL CACHE (Optional Performance Layer):
-   ┌──────────────────────────────────────┐
-   │  ~/.metabob/activities/*.json        │
-   │  - Local JSON files                  │
-   │  - NOT the source of truth           │
-   │  - May be stale or missing           │
-   │  - Should be synced from API         │
-   └──────────────────────────────────────┘
-```
-
-## What I Got Wrong
-
-### Documentation Issues
-
-1. **BACKEND_FIRST_TEMPLATE_ARCHITECTURE.md**
-   - Incorrectly said: "metabob-cli Backend Storage: `~/.metabob/activities/`"
-   - Should say: "metabob-rpc-api Backend API: `http://api-server-dev:8080/v2/activities`"
-
-2. **CREATE_ACTIVITY_TEMPLATE_IMPROVEMENTS.md**
-   - Incorrectly said: "Backend: metabob-cli MCP"
-   - Should say: "Backend: metabob-rpc-api (queried via metabob-cli)"
-
-3. **TEMPLATE_CREATION_NO_GIT_STATE_SUMMARY.md**
-   - Incorrectly said: "Template stored in backend (`~/.metabob/activities/`)"
-   - Should say: "Template stored in backend (metabob-rpc-api) and cached locally"
-
-4. **ACTIVITY_SYSTEM_TEST_SUCCESS.md**
-   - Incorrectly identified "Backend storage: `/root/.metabob/activities/`"
-   - Should identify "Local cache: `/root/.metabob/activities/`"
-
-### Code Understanding Issues
-
-I was looking at `activity_templates.py` which manages LOCAL cache, not the backend API.
-
-The actual backend interaction is in `activity_manager.py`:
-```python
-class ActivityManager:
-    """
-    Manages activity specifications and executions.
-    
-    All activity specs come through this manager via the backend API.
-    """
-    
-    def __init__(self, base_url: str, session_token: str = ""):
-        self.base_url = base_url.rstrip("/")  # http://api-server-dev:8080
-```
-
-## How It Actually Works
-
-### Template Registration (Correct Flow)
-
-```
-1. Agent creates template definition
-2. Calls metabob_register_activity_template MCP tool
-3. Tool sends to metabob-cli ActivityManager
-4. ActivityManager posts to metabob-rpc-API:
-   POST /v2/activities/variants
-   {
-     "activity_id": "my-template",
-     "task_steps": [...],
-     ...
-   }
-5. API stores in database (source of truth)
-6. Optional: Local cache updated at ~/.metabob/activities/
-```
-
-### Template Discovery (Correct Flow)
-
-```
-1. Agent calls search_activities
-2. OpenCode queries metabob-cli MCP
-3. metabob-cli ActivityManager queries API:
-   GET /v2/activities?category=infrastructure
-4. API returns variants from database
-5. Optional: Results cached locally
-6. Results returned to agent
-```
-
-### Template Execution (Correct Flow)
-
-```
-1. Agent calls activity tool with templateId
-2. Activity executor queries metabob-cli
-3. ActivityManager fetches from API:
-   GET /v2/activities/variants/{variant_id}
-4. API returns full activity spec
-5. Executor runs tasks
-6. Results reported back to API:
-   POST /v2/activities/executions/{execution_id}/results
-```
-
-## Environment Configuration
-
-### devbob-clean Container
-
-```bash
-$ docker exec devbob-clean env | grep METABOB
-METABOB_API_URL=http://api-server-dev:8080
-METABOB_PROJECT_ID=devbob-test
-METABOB_API_KEY=mb_devbob_test_simple_2026_v2
-```
-
-**Correct Understanding**:
-- `METABOB_API_URL` = Backend API server (source of truth)
-- metabob-cli connects to THIS URL for all activity operations
-- Local `.metabob/` directories are just cache
-
-### API Server Container
-
-```bash
-$ docker ps --filter name=api-server-dev
-api-server-dev: Up 9 hours (healthy)
-```
-
-**This is the actual backend** that should be storing activity templates.
-
-## What Needs to be Fixed
-
-### 1. Documentation
-
-All previous docs need clarification:
-- Replace "backend storage" with "local cache" when referring to `.metabob/`
-- Replace "metabob-cli backend" with "metabob-rpc-api backend"
-- Add clear distinction between:
-  - **Backend**: metabob-rpc-api (API server, database, source of truth)
-  - **Client**: metabob-cli (queries backend, manages local cache)
-  - **Cache**: `~/.metabob/activities/` (optional, may be stale)
-
-### 2. Template Registration Flow
-
-The `metabob_register_activity_template` MCP tool should:
-1. Accept template JSON
-2. POST to metabob-rpc-api: `/v2/activities/variants`
-3. NOT just write to local `.metabob/activities/` files
-4. Optionally update local cache after successful API registration
-
-### 3. Testing Approach
-
-The previous test (ACTIVITY_SYSTEM_TEST_SUCCESS.md) was incomplete:
-- ✅ Proved file isolation works (/tmp)
-- ✅ Proved git independence works (no git repo)
-- ❌ Did NOT prove backend integration (just used local cache)
-- ❌ Did NOT test cross-container template sharing via API
-
-### 4. Hook Implementation
-
-The hooks need to sync with **metabob-rpc-api**, not just local cache:
+From `Session.createForActivity()` and the activity tool (line 485-706):
 
 ```typescript
-// CORRECT: Query backend API
-async function syncTemplatesFromBackend() {
-  const apiUrl = config.get('metabob.api_url'); // http://api-server-dev:8080
-  const templates = await fetch(`${apiUrl}/v2/activities?project_id=${projectId}`);
-  // Update local cache for performance
-  await cacheTemplatesLocally(templates);
-}
+// Activity tool creates CHILD session
+const activitySession = await Session.createForActivity({
+  title: `Activity: ${template.name}`,
+  callingSessionID: ctx.sessionID,  // Parent session!
+  activityId: activity.id,
+})
 
-// WRONG: Only read from local cache
-async function syncTemplatesFromBackend() {
-  const templates = await readdir('~/.metabob/activities/'); // ❌ NOT backend!
+// Execute template IN THE CHILD SESSION
+const result = await executeTemplate(
+  template,
+  activity,
+  params.variables,
+  sessionID,  // Child session ID
+  ctx.abort,
+  parentModel,
+  {
+    parentSessionID: ctx.sessionID,  // Parent session for context
+  }
+)
+```
+
+**This is the right pattern**: 
+- Main session → spawns child activity session → executes tasks → returns to main session
+- Enables activity composition (activities calling activities)
+- Child sessions are tracked and measurable
+
+## Why Activities Are Stuck in "setup"
+
+The lifecycle hook code:
+```typescript
+const result = await TemplateExecutor.execute({
+  templateId: "manage-session-memory",
+  variables: { userMessage: ctx.promptText },
+  reason: `...`,
+  parentSessionID: ctx.sessionID,  // ❌ This parameter doesn't exist!
+})
+```
+
+`TemplateExecutor.execute()` signature:
+```typescript
+export const ExecutionOptions = z.object({
+  templateId: z.string(),
+  variables: z.record(z.string(), z.unknown()),
+  branch: z.string().optional(),
+  dryRun: z.boolean().optional(),
+  callingSessionId: z.string().optional(),  // ← Should use this
+  reason: z.string().optional(),
+})
+```
+
+The lifecycle hook passes `parentSessionID` but the executor expects `callingSessionId`! And even if fixed, `TemplateExecutor` is the wrong execution path.
+
+## The Right Fix: Use Activity Tool's Execution Path
+
+The lifecycle hook should use the **same execution path as the activity tool**, not TemplateExecutor:
+
+### Step 1: Extract Activity Execution Logic
+
+The activity tool (line 485-950) has the correct execution flow. We need to expose it for lifecycle hooks:
+
+```typescript
+// In activity.ts - new export for lifecycle hooks
+export async function executeActivityInline(
+  templateId: string,
+  variables: Record<string, unknown>,
+  parentSessionID: string,
+  reason: string,
+  parentMessageID: string
+): Promise<{
+  impulses: Record<string, any>
+  success: boolean
+}> {
+  // Load template
+  const template = await TemplateRepository.get(templateId)
+  
+  // Create child session (JUST LIKE ACTIVITY TOOL DOES)
+  const activitySession = await Session.createForActivity({
+    title: `Lifecycle: ${template.name}`,
+    callingSessionID: parentSessionID,
+    activityId: "",  // Will be set after activity creation
+  })
+  
+  // Create activity tracking
+  const activity = await Activity.create({
+    directory: process.cwd(),
+    branch: "lifecycle-hook",
+    baseCommit: "HEAD",
+    title: template.name,
+  })
+  
+  activity.templateId = template.id
+  activity.variables = variables
+  activity.reason = reason
+  activity.callingSessionId = parentSessionID  // ✅ Set parent!
+  activity.status = "executing"
+  
+  // Update session with activity ID
+  await Session.update(activitySession.id, (draft) => {
+    draft.activityId = activity.id
+  })
+  
+  await Activity.save(activity)
+  
+  // Execute tasks IN CHILD SESSION (like activity tool)
+  const result = await executeTemplate(
+    template,
+    activity,
+    variables,
+    activitySession.id,  // Child session
+    AbortSignal.timeout(30000),
+    await Provider.defaultModel(),
+    {
+      onStatusUpdate: () => {}, // No UI updates for lifecycle
+      parentSessionID: parentSessionID,
+    }
+  )
+  
+  // Mark activity complete
+  activity.status = result.success ? "done" : "failed"
+  activity.completedAt = Date.now()
+  await Activity.save(activity)
+  
+  // Return impulses created in activity session
+  return {
+    impulses: activity.impulses || {},
+    success: result.success,
+  }
 }
 ```
 
-## Correct Next Steps
+### Step 2: Lifecycle Hook Calls Inline Execution
 
-### 1. Verify API Server
+```typescript
+// turn-lifecycle-hooks.ts memory-management hook
+execute: async (ctx) => {
+  const { executeActivityInline } = await import("../tool/activity")
+  const { SessionMemory } = await import("./session-memory")
+  
+  // Execute activity in child session (CORRECT PATTERN)
+  const result = await executeActivityInline(
+    "manage-session-memory",
+    { userMessage: ctx.promptText },
+    ctx.sessionID,  // Parent session
+    `Prepare context for: "${ctx.promptText.slice(0, 100)}..."`,
+    ctx.messageID
+  )
+  
+  // Transfer impulses from activity to PARENT SESSION
+  for (const [id, impulse] of Object.entries(result.impulses)) {
+    await SessionMemory.addImpulse(ctx.sessionID, impulse)
+  }
+  
+  return { success: result.success, modified: true }
+}
+```
+
+## Why This Preserves Your Principles
+
+✅ **Uses activity templates**: `manage-session-memory` template executes fully
+✅ **Child session model**: Activity runs in child session, not parent
+✅ **Enables composition**: Activities can call other activities (same pattern)
+✅ **Measurable**: All activity metrics tracked (execution count, success rate, cost)
+✅ **Learnable**: Backend receives full activity execution data
+✅ **Shareable**: Template shared via MCP, works across environments
+✅ **No session proliferation**: Child sessions are properly tracked and closed
+
+## Key Architectural Points
+
+1. **Activities ALWAYS run in child sessions**
+   - This enables composition (activities calling activities)
+   - Provides isolation and context management
+   - Allows proper metrics tracking
+
+2. **Lifecycle hooks use same execution path**
+   - Not TemplateExecutor (CLI path)
+   - Not SessionMemoryAgent.gatherContext() (too narrow)
+   - Same as activity tool (proven working pattern)
+
+3. **Impulse transfer is explicit**
+   - Activity creates impulses in its session
+   - Lifecycle hook transfers to parent session
+   - Clear data flow, measurable at each step
+
+4. **Session hierarchy**:
+   ```
+   Main session (user interaction)
+     ↓
+   Before-turn hook (lifecycle)
+     ↓
+   Activity child session (manage-session-memory)
+     ↓
+   Memory agent tasks execute
+     ↓
+   Impulses created in activity session
+     ↓
+   Hook transfers impulses to main session
+     ↓
+   Main agent sees impulses in context
+   ```
+
+## Testing After Fix
 
 ```bash
-# Check API server is running
-docker ps --filter name=api-server
+# 1. Verify child session created but closed properly
+find ~/.local/share/opencode/storage/session -name "*.json" \
+  -exec jq -r 'select(.activityId != null) | .id' {} \; | wc -l
+# Should show activity sessions exist
 
-# Check if it has activities endpoint
-# (need to use proper tool, curl not available in container)
+# 2. Verify impulses in PARENT session
+SESSION_ID=$(ls -td ~/.local/share/opencode/storage/session/*/ | head -1 | xargs basename)
+cat ~/.local/share/opencode/storage/session-memory/${SESSION_ID}.json | jq '.impulses | length'
+# Should be > 0
+
+# 3. Verify activities complete (not stuck in setup)
+find ~/.local/share/opencode/storage/activity -name "*.json" \
+  -exec grep -l "manage-session-memory" {} \; | \
+  xargs jq -r '.status' | sort | uniq -c
+# Should show "done" or "failed", NOT "setup"
+
+# 4. Verify parent session ID is set
+find ~/.local/share/opencode/storage/activity -name "*.json" \
+  -exec grep -l "manage-session-memory" {} \; | head -1 | \
+  xargs jq '.callingSessionId'
+# Should show parent session ID, NOT null
 ```
 
-### 2. Test Backend Integration
+## Implementation Summary
 
-Need to test that:
-1. Template registration actually hits metabob-rpc-api
-2. Template discovery queries metabob-rpc-api
-3. Templates can be shared across containers via API
-4. Local cache is secondary to API
+**What to fix**:
+1. Create `executeActivityInline()` in `activity.ts`
+2. Update lifecycle hook to call `executeActivityInline()`
+3. Transfer impulses from activity session to parent session
 
-### 3. Update MCP Tools
+**What NOT to change**:
+- ❌ Don't remove child session creation (it's correct!)
+- ❌ Don't use TemplateExecutor (it's for CLI)
+- ❌ Don't call SessionMemoryAgent.gatherContext() directly (wrong abstraction)
 
-Verify `metabob_register_activity_template` actually posts to API:
-```python
-# Check: repos/metabob-cli/src/metabob_cli/mcp/activity_manager.py
-# Should have:
-async def register_template(self, template: dict) -> str:
-    # POST to API, not just write to local file
-    response = await client.post(
-        f"{self.base_url}/v2/activities/variants",
-        json=template
-    )
-```
+**The pattern**:
+- Lifecycle hook → executeActivityInline() → child session → execute tasks → transfer impulses → parent session
 
-### 4. Correct Documentation
-
-Create updated versions of:
-- BACKEND_FIRST_TEMPLATE_ARCHITECTURE.md (with API as backend)
-- Activity system test (proving API integration, not just local cache)
-- Implementation guide (showing correct registration flow)
-
-## Summary
-
-**The Key Mistake**: Treating local JSON cache as "backend storage"
-
-**The Reality**: 
-- metabob-rpc-api (api-server-dev:8080) = Backend
-- metabob-cli = Client
-- ~/.metabob/activities/ = Local cache
-
-**Impact**: 
-- Previous tests only validated local file operations
-- Did not prove backend-first architecture
-- Templates are not actually shared across containers unless API is used
-
-**Next Actions**:
-1. Verify api-server-dev has activities API
-2. Test template registration to API
-3. Test template discovery from API
-4. Test cross-container sharing via API
-5. Update all documentation with correct architecture
-
+This preserves activity-based architecture while making lifecycle hooks work correctly!
