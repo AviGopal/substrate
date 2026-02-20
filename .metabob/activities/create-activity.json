@@ -40,9 +40,8 @@
           {
             "name": "templateId",
             "type": "string",
-            "required": false,
-            "description": "Kebab-case template ID (defaults to kebab-case of templateName)",
-            "default": "{{templateId}}"
+            "required": true,
+            "description": "Kebab-case template ID (e.g., 'add-rest-endpoint', 'deploy-application')"
           }
         ]
       },
@@ -322,9 +321,8 @@
           {
             "name": "templateId",
             "type": "string",
-            "required": false,
-            "description": "Kebab-case template ID (defaults to kebab-case of templateName)",
-            "default": "{{templateId}}"
+            "required": true,
+            "description": "Kebab-case template ID (e.g., 'add-rest-endpoint', 'deploy-application')"
           }
         ]
       },
@@ -574,6 +572,6 @@
     "avg_cost": 0
   },
   "author": null,
-  "created_at": "2026-02-20T18:27:27.743Z",
+  "created_at": "2026-02-20T18:34:32.626Z",
   "metadata": {}
 }
