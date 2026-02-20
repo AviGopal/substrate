@@ -1,0 +1,208 @@
+{
+  "name": "Add Feature Complete",
+  "version": 1,
+  "description": "Complete feature implementation workflow: plan, implement, test, commit, and annotate. Suitable for any feature type (API endpoints, UI components, utilities, etc.)",
+  "category": "feature",
+  "contextRequirements": [
+    {
+      "key": "existingPatterns",
+      "hint": "Provide existing code examples showing similar patterns to follow for consistency",
+      "impulseTypes": ["file", "component"],
+      "required": false,
+      "budgetRange": [1500, 3000]
+    },
+    {
+      "key": "relatedCode",
+      "hint": "Share related code files that will interact with this feature",
+      "impulseTypes": ["file"],
+      "required": false,
+      "budgetRange": [1000, 2500]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "plan-feature",
+      "subagent": "general",
+      "description": "Analyze requirements and create implementation plan",
+      "dependencies": [],
+      "prompt": {
+        "template": "Plan the implementation for this feature:\n\n**Feature**: {{featureName}}\n**Description**: {{featureDescription}}\n\n## Your Task\n\n1. **Understand Requirements**:\n   - What is the feature supposed to do?\n   - Who will use it and how?\n   - What are the inputs and outputs?\n\n2. **Analyze Context**:\n   - What existing code/patterns should we follow?\n   - What dependencies or integrations are needed?\n   - What edge cases should we handle?\n\n3. **Create Implementation Plan**:\n   - What files need to be created or modified?\n   - What is the step-by-step implementation approach?\n   - What tests are needed?\n\n4. **Write Plan Document**:\n   Create a file at /tmp/feature-plan-{{featureId}}.md with:\n   ```markdown\n   # Feature Implementation Plan: {{featureName}}\n\n   ## Requirements\n   [Clear description of what we're building]\n\n   ## Files to Modify/Create\n   - file1.ts: What changes\n   - file2.ts: What changes\n\n   ## Implementation Steps\n   1. Step one\n   2. Step two\n   ...\n\n   ## Test Cases\n   - Test case 1\n   - Test case 2\n   ...\n\n   ## Edge Cases\n   - Edge case 1\n   - Edge case 2\n   ```\n\n## Guidelines\n\n- Be specific about file paths and function names\n- Consider error handling and edge cases\n- Follow existing code patterns\n- Plan for both happy path and error cases",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature to implement"
+          },
+          {
+            "name": "featureDescription",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of what the feature should do"
+          },
+          {
+            "name": "featureId",
+            "type": "string",
+            "required": false,
+            "description": "Unique identifier for this feature (defaults to kebab-case of featureName)",
+            "default": "{{featureId}}"
+          }
+        ]
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/feature-plan-{{featureId}}.md"
+        ],
+        "required_patterns": [
+          "## Requirements",
+          "## Files to Modify/Create",
+          "## Implementation Steps",
+          "## Test Cases"
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "implement-feature",
+      "subagent": "general",
+      "description": "Implement the feature according to the plan",
+      "dependencies": ["plan-feature"],
+      "prompt": {
+        "template": "Implement the feature based on the plan in /tmp/feature-plan-{{featureId}}.md\n\n## Your Task\n\n1. **Read the Plan**: Review /tmp/feature-plan-{{featureId}}.md carefully\n\n2. **Implement Each Step**:\n   - Follow the implementation steps in order\n   - Create or modify files as specified\n   - Follow existing code patterns and conventions\n   - Add proper error handling\n   - Include logging where appropriate\n\n3. **Code Quality**:\n   - Write clean, readable code\n   - Add comments for complex logic\n   - Follow naming conventions\n   - Handle edge cases identified in plan\n\n4. **Create Summary**:\n   After implementation, create /tmp/feature-implementation-{{featureId}}.md:\n   ```markdown\n   # Implementation Summary: {{featureName}}\n\n   ## Files Changed\n   - file1.ts: What was changed\n   - file2.ts: What was changed\n\n   ## Key Decisions\n   - Decision 1 and rationale\n   - Decision 2 and rationale\n\n   ## Next Steps\n   - Ready for testing\n   ```\n\n## Guidelines\n\n- Don't skip error handling\n- Follow the plan but adapt if you discover issues\n- Document any deviations from the plan\n- Use existing utilities/helpers where possible",
+        "max_tokens": 14000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/feature-implementation-{{featureId}}.md"
+        ],
+        "required_patterns": [
+          "## Files Changed",
+          "## Key Decisions"
+        ],
+        "forbidden_patterns": [
+          "TODO",
+          "FIXME",
+          "console.log",
+          "@ts-ignore",
+          "any"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "write-tests",
+      "subagent": "general",
+      "description": "Write comprehensive tests for the feature",
+      "dependencies": ["implement-feature"],
+      "prompt": {
+        "template": "Write tests for the feature based on the test cases in /tmp/feature-plan-{{featureId}}.md\n\n## Your Task\n\n1. **Review Test Cases**: Read the test cases from the plan\n\n2. **Write Tests**:\n   - Happy path tests (feature works as expected)\n   - Error case tests (proper error handling)\n   - Edge case tests (boundary conditions)\n   - Integration tests if needed\n\n3. **Test Structure**:\n   - Use existing test framework and patterns\n   - Clear test names describing what's being tested\n   - Arrange-Act-Assert pattern\n   - Independent tests (no shared state)\n\n4. **Run Tests**:\n   - Run the test suite\n   - Fix any failures\n   - Ensure all tests pass\n\n5. **Create Test Summary**:\n   Create /tmp/feature-tests-{{featureId}}.md:\n   ```markdown\n   # Test Summary: {{featureName}}\n\n   ## Tests Written\n   - Test 1: Description\n   - Test 2: Description\n   ...\n\n   ## Test Results\n   ✅ X tests passing\n   ❌ Y tests failing (if any)\n\n   ## Coverage\n   - Happy path: Covered\n   - Error cases: Covered\n   - Edge cases: Covered\n   ```\n\n## Guidelines\n\n- Write tests that will catch regressions\n- Test both success and failure scenarios\n- Make tests easy to understand\n- Run tests before considering done",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/feature-tests-{{featureId}}.md"
+        ],
+        "required_patterns": [
+          "## Tests Written",
+          "## Test Results",
+          "✅"
+        ],
+        "forbidden_patterns": [
+          "❌.*failing"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-quality",
+      "subagent": "general",
+      "description": "Run quality checks and fix any HIGH severity issues",
+      "dependencies": ["write-tests"],
+      "prompt": {
+        "template": "Verify code quality and fix any critical issues.\n\n## Your Task\n\n1. **Run Type Checking** (if applicable):\n   - Run type checker (tsc, mypy, etc.)\n   - Fix any type errors\n\n2. **Check for Metabob Issues**:\n   - Use `metabob_search_codebase_issues` to find issues in changed files\n   - Review HIGH severity issues\n   - Fix critical problems\n\n3. **Run Full Test Suite**:\n   - Ensure all tests still pass\n   - Check that feature tests are included\n\n4. **Create Quality Report**:\n   Create /tmp/feature-quality-{{featureId}}.md:\n   ```markdown\n   # Quality Report: {{featureName}}\n\n   ## Type Checking\n   ✅ Pass / ❌ Fail: Details\n\n   ## Metabob Analysis\n   - HIGH issues: X (all fixed)\n   - MEDIUM issues: Y (reviewed)\n   - LOW issues: Z (acceptable)\n\n   ## Test Results\n   ✅ All tests passing (X total)\n\n   ## Status\n   Ready for commit\n   ```\n\n## Guidelines\n\n- Fix ALL HIGH severity issues\n- Review MEDIUM issues (fix if quick)\n- Don't worry about LOW severity issues\n- Ensure tests pass before proceeding",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/feature-quality-{{featureId}}.md"
+        ],
+        "required_patterns": [
+          "## Status",
+          "Ready for commit"
+        ],
+        "forbidden_patterns": [
+          "❌.*Fail"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "commit-and-annotate",
+      "subagent": "general",
+      "description": "Commit changes and annotate key components",
+      "dependencies": ["verify-quality"],
+      "prompt": {
+        "template": "Commit the feature and document key design decisions.\n\n## Your Task\n\n1. **Review All Changes**:\n   - Use `git status` to see changed files\n   - Use `git diff` to review changes\n\n2. **Create Organized Commits**:\n   - Group related changes into logical commits\n   - Write clear commit messages explaining WHY\n   - Format: \"feat: {{featureName}} - what and why\"\n\n3. **Annotate Key Components** (3-5 components max):\n   For each major component added/changed, use `metabob_annotate_component`:\n   - component_name: The function/class name\n   - component_type: function, class, method, module, or file\n   - reason: WHY this component exists, design decisions, alternatives considered\n\n   Example:\n   ```typescript\n   metabob_annotate_component({\n     file_path: \"src/feature.ts\",\n     component_name: \"processFeature\",\n     component_type: \"function\",\n     reason: \"Processes feature input with validation. Chose sync approach over async because operations are CPU-bound. Validates before processing to fail fast.\"\n   })\n   ```\n\n4. **Create Completion Summary**:\n   Create /tmp/feature-complete-{{featureId}}.md:\n   ```markdown\n   # Feature Complete: {{featureName}}\n\n   ## Commits\n   - commit 1: Description\n   - commit 2: Description\n\n   ## Annotations\n   - component 1: Why it exists\n   - component 2: Why it exists\n\n   ## Deliverables\n   ✅ Feature implemented\n   ✅ Tests passing\n   ✅ Quality verified\n   ✅ Changes committed\n   ✅ Key decisions documented\n   ```\n\n## Guidelines\n\n- Commit messages explain WHY, not just WHAT\n- Annotate only key components (3-5 max)\n- Focus annotations on design decisions and alternatives\n- Don't annotate trivial helpers",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/feature-complete-{{featureId}}.md"
+        ],
+        "required_patterns": [
+          "## Deliverables",
+          "✅ Feature implemented",
+          "✅ Tests passing",
+          "✅ Changes committed"
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "id": "add-feature-complete",
+  "variant_id": "add-feature-complete",
+  "activity_id": "add-feature-complete"
+}
