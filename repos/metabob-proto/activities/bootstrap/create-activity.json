@@ -1,7 +1,7 @@
 {
-  "activity_id": "create-activity-self-contained",
-  "name": "Create Activity Template (Self-Contained)",
-  "description": "Create activity templates without requiring example files or specific project structure - fully self-contained and repository-agnostic. Registers template directly to backend without local file dependencies.",
+  "activity_id": "create-activity",
+  "name": "Create Activity Template",
+  "description": "Create new activity templates to automate workflows",
   "category": "infrastructure",
   "tasks": [
     {
@@ -179,7 +179,7 @@
         "write-template-json"
       ],
       "prompt": {
-        "template": "Register the generated activity template with the backend and create documentation.\n\n**Input**: Read `/tmp/activity-template-{{templateId}}/{{templateId}}.json`\n\n**CRITICAL WORKFLOW**:\n\n1. **Validate Template** (same checks as before):\n   ```bash\n   # Check JSON syntax\n   cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq empty\n   \n   # Check required fields\n   cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq -e '.name, .category, .tasks' > /dev/null\n   \n   # Verify no git checks (CRITICAL)\n   ! cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq -r '.integration.preChecks[]' | grep -q git\n   ```\n\n2. **Register with Backend** using metabob_register_activity_template MCP tool:\n   - Read the JSON file content\n   - Parse it as a JavaScript object\n   - Call metabob_register_activity_template with the template object\n   - This will register it to metabob-cli backend (~/.metabob/activities/)\n\n**EXAMPLE Registration Code**:\n```javascript\n// Read template JSON\nconst fs = require('fs');\nconst templatePath = '/tmp/activity-template-{{templateId}}/{{templateId}}.json';\nconst templateJson = fs.readFileSync(templatePath, 'utf8');\nconst templateObj = JSON.parse(templateJson);\n\n// Register via MCP tool (this will be done by OpenCode's tool system)\n// The tool metabob_register_activity_template expects the template object\n```\n\nAfter successful registration, create `/tmp/activity-template-{{templateId}}/SUCCESS.md` with:\n\n```markdown\n# Activity Template Created: {{templateName}}\n\n\u2705 Template ID: `{{templateId}}`  \n\u2705 Category: {{category}}  \n\u2705 Tasks: [count] tasks  \n\u2705 Status: Registered with backend\n\u2705 Location: Backend storage (metabob-cli)\n\n## Registration Details\n\n- **Backend**: metabob-cli MCP\n- **Storage**: ~/.metabob/activities/{{templateId}}.json\n- **Registered**: [timestamp]\n\n## Template Structure\n\n### Tasks\n1. **task-id-1**: Description\n2. **task-id-2**: Description\n...\n\n### Variables\n| Variable | Type | Required | Default | Description |\n|----------|------|----------|---------|-------------|\n| var1 | string | yes | - | Purpose |\n| var2 | number | no | 10 | Purpose |\n\n## Usage\n\n### Via Activity Tool\n```typescript\nactivity({\n  templateId: \"{{templateId}}\",\n  variables: {\n    var1: \"value1\",\n    var2: 20\n  },\n  reason: \"Why this activity is being executed\"\n})\n```\n\n### Via CLI\n```bash\nopencode activity \\\n  --template {{templateId}} \\\n  --variables '{\"var1\": \"value1\", \"var2\": 20}' \\\n  --reason \"Execution reason\"\n```\n\n## Next Steps\n\n1. Test the template with a simple execution\n2. Monitor execution metrics for optimization\n3. Update template based on learnings\n\n## Template Files (Temporary)\n\n**Note**: Template source files are in /tmp and will be cleaned up. The template is now permanently stored in the backend.\n\n- Requirements: `/tmp/activity-template-{{templateId}}/REQUIREMENTS.md`\n- Task Graph: `/tmp/activity-template-{{templateId}}/TASK_GRAPH.md`\n- Template JSON: `/tmp/activity-template-{{templateId}}/{{templateId}}.json`\n- This file: `/tmp/activity-template-{{templateId}}/SUCCESS.md`\n```\n\n**Now perform these actions**:\n1. Validate the template JSON\n2. Read the template content\n3. Call metabob_register_activity_template with the template object\n4. Create SUCCESS.md documenting the registration\n5. Report completion with template ID",
+        "template": "Register the generated activity template using MCP tools.\n\n**Input**: Read `/tmp/activity-template-{{templateId}}/{{templateId}}.json`\n\n**CRITICAL - Use MCP Tools Only**:\n- \u2705 Use `register_activity_template` MCP tool\n- \u274c DO NOT use curl or direct API calls\n- \u274c DO NOT try to move files manually\n- \u2705 MCP handles authentication and storage\n\n**Registration Steps**:\n\n1. **Validate Template JSON**:\n   ```bash\n   # Check JSON is valid\n   cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq empty\n   \n   # Verify required fields exist\n   cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq -e '.name, .category, .tasks'\n   ```\n\n2. **Register via MCP Tool**:\n   Use the `register_activity_template` tool with:\n   - file_path: `/tmp/activity-template-{{templateId}}/{{templateId}}.json`\n   - register_with_metabob: true (default)\n   \n   The tool will:\n   - Validate the template schema\n   - Generate template ID from name\n   - Save to local storage\n   - Register with metabob backend via MCP\n\n3. **Create Success Documentation**:\n   After registration succeeds, create `/tmp/activity-template-{{templateId}}/SUCCESS.md`:\n\n```markdown\n# Activity Template Created: {{templateName}}\n\n\u2705 Template ID: `{{templateId}}`  \n\u2705 Category: {{category}}  \n\u2705 Status: Registered\n\n## Usage\n\n```typescript\nactivity({\n  templateId: \"{{templateId}}\",\n  variables: { /* your variables */ },\n  reason: \"Why executing this activity\"\n})\n```\n\n## Template Location\n- Local storage: ~/.local/share/opencode/storage/activity-template/\n- Backend: Registered via MCP\n\n## Next Steps\n1. Test template with simple execution\n2. Monitor metrics\n3. Improve based on learnings\n```\n\n**Remember**: Always use MCP tools (register_activity_template), never direct file operations or API calls.",
         "variables": []
       },
       "context_rules": {
@@ -228,7 +228,17 @@
         "max_attempts": 2,
         "strategy": "simple"
       },
-      "id": "register-with-backend"
+      "id": "register-with-backend",
+      "tools": {
+        "required": [
+          "register_activity_template",
+          "bash",
+          "write",
+          "read"
+        ],
+        "optional": [],
+        "disabled": []
+      }
     }
   ],
   "estimated_metrics": {
@@ -242,5 +252,6 @@
   "metadata": {},
   "contextRequirements": [],
   "version": 2,
-  "variant_id": "create-activity-self-contained"
+  "variant_id": "create-activity",
+  "id": "create-activity"
 }
