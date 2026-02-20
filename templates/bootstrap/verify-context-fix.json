@@ -1,0 +1,45 @@
+{
+  "name": "Verify Context Fix Final",
+  "description": "Final verification after nullish coalescing fix",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "verificationMessage",
+      "hint": "Message to verify context works",
+      "impulseTypes": ["memo"],
+      "required": true,
+      "budgetRange": [100, 500]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "verify",
+      "subagent": "general",
+      "description": "Verify context is loaded",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write verification message to /tmp/verify-{{testId}}.txt\n\nContext message: {{verificationMessage}}\nUser provided: {{testId}}",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test ID"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ]
+}
