@@ -45,5 +45,7 @@
   ],
   "variables": {},
   "version": 1,
-  "contextRequirements": []
+  "contextRequirements": [],
+  "variant_id": "hello-world-minimal",
+  "activity_id": "hello-world-minimal"
 }
