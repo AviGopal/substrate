@@ -227,27 +227,30 @@ def get_session_variant_affinity(
 def select_variant_for_session(
     redis: StrictRedis,
     session_id: str,
-    template_id: str
+    template_id: str,
+    ignore_affinity: bool = False  # NEW: Allow override
 ) -> str:
     """
     Select variant for session, considering affinity.
     
     Algorithm:
-    1. Check session affinity first
+    1. Check session affinity first (unless ignore_affinity=True)
     2. If affinity exists → return affinity variant
     3. If no affinity → Thompson Sampling
     
     This ensures:
     - Session that created variant uses it immediately
     - Other sessions discover it through learning
+    - Sessions can override affinity if needed (e.g., experimentation)
     """
-    # Check affinity first
-    affinity_variant = get_session_variant_affinity(redis, session_id, template_id)
-    if affinity_variant:
-        logger.info(f"Using affinity variant: {affinity_variant} for session {session_id}")
-        return affinity_variant
+    # Check affinity first (unless explicitly ignored)
+    if not ignore_affinity:
+        affinity_variant = get_session_variant_affinity(redis, session_id, template_id)
+        if affinity_variant:
+            logger.info(f"Using affinity variant: {affinity_variant} for session {session_id}")
+            return affinity_variant
     
-    # No affinity → Thompson Sampling
+    # No affinity (or ignored) → Thompson Sampling
     template_pattern = f"activity:template:{template_id}-*"
     variant_keys = redis.keys(template_pattern)
     
@@ -360,6 +363,69 @@ async def get_session_affinities(
     return {
         "session_id": session_id,
         "affinities": affinities
+    }
+
+
+@router.post("/sessions/{session_id}/templates/select", status_code=200)
+async def select_template_for_session(
+    session_id: str,
+    selection_request: Dict[str, Any],
+    redis: StrictRedis = Depends(get_redis_connection),
+) -> Dict[str, Any]:
+    """
+    Select variant for session, considering affinity.
+    
+    This is THE selection API. Clients should NOT implement their own logic.
+    Backend owns ALL selection logic (affinity + Thompson Sampling).
+    
+    Request Body:
+    {
+      "template_id": "add-feature-complete",
+      "ignore_affinity": false  # Optional, default false
+    }
+    
+    Returns:
+    {
+      "template_id": "add-feature-complete",
+      "variant_id": "add-feature-complete-e5f6g7h8",
+      "selected_via": "affinity",  # or "thompson_sampling"
+      "variant": {
+        "activity_id": "add-feature-complete",
+        "variant_id": "add-feature-complete-e5f6g7h8",
+        "name": "Add Feature Complete",
+        "description": "...",
+        "task_steps": [...],
+        ...
+      }
+    }
+    """
+    template_id = selection_request["template_id"]
+    ignore_affinity = selection_request.get("ignore_affinity", False)
+    
+    # Delegate to select_variant_for_session (centralized logic)
+    variant_id = select_variant_for_session(
+        redis, 
+        session_id, 
+        template_id,
+        ignore_affinity=ignore_affinity
+    )
+    
+    # Load variant details
+    variant_json = redis.get(f"activity:template:{variant_id}")
+    if not variant_json:
+        raise HTTPException(status_code=404, detail=f"Variant not found: {variant_id}")
+    
+    variant = json.loads(variant_json)
+    
+    # Determine how variant was selected
+    affinity_variant = get_session_variant_affinity(redis, session_id, template_id)
+    selected_via = "affinity" if (affinity_variant == variant_id and not ignore_affinity) else "thompson_sampling"
+    
+    return {
+        "template_id": template_id,
+        "variant_id": variant_id,
+        "selected_via": selected_via,
+        "variant": variant,
     }
 ```
 
@@ -592,7 +658,9 @@ if (trailblazingEnabled && options?.trailblazingOptions) {
 }
 ```
 
-#### D. Template Selector Integration
+#### D. Template Selector Integration (UPDATED: Backend Selection API)
+
+**Architecture Decision**: Backend owns ALL selection logic (affinity + Thompson Sampling)
 
 ```typescript
 // repos/metabob-opencode/packages/opencode/src/session/template-selector.ts
@@ -600,50 +668,39 @@ if (trailblazingEnabled && options?.trailblazingOptions) {
 export async function select(
   templateId: string,
   backend?: TemplateRepository.Backend,
-  sessionId?: string,  // NEW: Session ID for affinity check
+  sessionId?: string,  // NEW: Session ID for backend selection
 ): Promise<SelectionResult> {
   log.debug("select ENTRY", { templateId, backend, sessionId })
   
-  // NEW: Check session affinity first
-  if (sessionId) {
+  // NEW: Delegate to backend for selection (backend owns selection logic)
+  if (sessionId && backend === "metabob") {
     try {
-      const affinities = await Metabob.getSessionVariantAffinities(sessionId)
-      const affinityVariantId = affinities[templateId]
+      const response = await Metabob.selectVariantForSession({
+        sessionId,
+        templateId,
+      })
       
-      if (affinityVariantId) {
-        log.info("using session affinity variant", {
-          sessionId,
-          templateId,
-          affinityVariantId,
-        })
-        
-        // Load affinity variant
-        const affinityTemplate = await TemplateRepository.get(affinityVariantId, backend)
-        if (affinityTemplate) {
-          recordSelection({
-            requestedId: templateId,
-            selectedId: affinityVariantId,
-            variant: "candidate",
-            fallback: false,
-            timestamp: Date.now(),
-          })
-          
-          return {
-            template: affinityTemplate,
-            selectedId: affinityVariantId,
-            variant: "candidate",
-            fallback: false,
-          }
-        } else {
-          log.warn("affinity variant not found, falling back to normal selection", {
-            sessionId,
-            templateId,
-            affinityVariantId,
-          })
-        }
+      log.info("backend selected variant", {
+        variantId: response.variant_id,
+        selectedVia: response.selected_via,  // "affinity" or "thompson_sampling"
+      })
+      
+      recordSelection({
+        requestedId: templateId,
+        selectedId: response.variant_id,
+        variant: "candidate",
+        fallback: false,
+        timestamp: Date.now(),
+      })
+      
+      return {
+        template: response.variant,
+        selectedId: response.variant_id,
+        variant: "candidate",
+        fallback: false,
       }
     } catch (error) {
-      log.warn("failed to check session affinity, falling back to normal selection", {
+      log.warn("backend selection failed, falling back to local selection", {
         sessionId,
         templateId,
         error,
@@ -651,7 +708,56 @@ export async function select(
     }
   }
   
-  // ... existing selection logic (Thompson Sampling) ...
+  // Fall back to local selection (no backend or backend unavailable)
+  // ... existing selection logic (local Thompson Sampling) ...
+}
+```
+
+```typescript
+// repos/metabob-opencode/packages/opencode/src/util/metabob.ts
+
+export namespace Metabob {
+  /**
+   * Select variant for session (delegates to backend)
+   * 
+   * Backend handles:
+   * 1. Check session affinity
+   * 2. Return affinity variant if exists
+   * 3. Fall back to Thompson Sampling if no affinity
+   */
+  export async function selectVariantForSession(params: {
+    sessionId: string
+    templateId: string
+    ignoreAffinity?: boolean  // Optional: Force Thompson Sampling
+  }): Promise<{
+    template_id: string
+    variant_id: string
+    selected_via: "affinity" | "thompson_sampling"
+    variant: ActivityTemplate.Schema
+  }> {
+    const { sessionId, templateId, ignoreAffinity } = params
+    
+    log.info("selecting variant for session", {
+      sessionId,
+      templateId,
+      ignoreAffinity,
+    })
+    
+    const response = await client.post(
+      `/v2/activities/sessions/${sessionId}/templates/select`,
+      {
+        template_id: templateId,
+        ignore_affinity: ignoreAffinity || false,
+      }
+    )
+    
+    log.info("variant selected by backend", {
+      variantId: response.data.variant_id,
+      selectedVia: response.data.selected_via,
+    })
+    
+    return response.data
+  }
 }
 ```
 
