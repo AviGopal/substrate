@@ -1,0 +1,241 @@
+{
+  "activity_id": "test-multi-task",
+  "name": "Test Multi Task",
+  "description": "Simple 3-task activity to test orchestration",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "task-1",
+      "subagent": "general",
+      "description": "Create directory",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a directory at /tmp/multi-task-test-{{testId}}/ using mkdir -p",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test identifier"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2",
+      "subagent": "general",
+      "description": "Create first file",
+      "dependencies": [
+        "task-1"
+      ],
+      "prompt": {
+        "template": "Create a file at /tmp/multi-task-test-{{testId}}/file1.txt with content: Task 2 completed",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test identifier"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/multi-task-test-{{testId}}/file1.txt"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Task 2 completed",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-3",
+      "subagent": "general",
+      "description": "Create second file",
+      "dependencies": [
+        "task-2"
+      ],
+      "prompt": {
+        "template": "Create a file at /tmp/multi-task-test-{{testId}}/file2.txt with content: Task 3 completed",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test identifier"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/multi-task-test-{{testId}}/file2.txt"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Task 3 completed",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task-1",
+      "subagent": "general",
+      "description": "Create directory",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a directory at /tmp/multi-task-test-{{testId}}/ using mkdir -p",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test identifier"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2",
+      "subagent": "general",
+      "description": "Create first file",
+      "dependencies": [
+        "task-1"
+      ],
+      "prompt": {
+        "template": "Create a file at /tmp/multi-task-test-{{testId}}/file1.txt with content: Task 2 completed",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test identifier"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/multi-task-test-{{testId}}/file1.txt"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Task 2 completed",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-3",
+      "subagent": "general",
+      "description": "Create second file",
+      "dependencies": [
+        "task-2"
+      ],
+      "prompt": {
+        "template": "Create a file at /tmp/multi-task-test-{{testId}}/file2.txt with content: Task 3 completed",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test identifier"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/multi-task-test-{{testId}}/file2.txt"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Task 3 completed",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-20T10:17:58.312Z",
+  "metadata": {}
+}
