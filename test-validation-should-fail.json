@@ -1,0 +1,33 @@
+{
+  "name": "Test Validation Should Fail",
+  "description": "Test that validation throws error for missing patterns",
+  "category": "infrastructure",
+  "version": "1.0.0",
+  "tasks": [
+    {
+      "id": "validate-existing-file",
+      "description": "Validate pre-existing incomplete file",
+      "subagent": "general",
+      "dependencies": [],
+      "prompt": {
+        "template": "Just echo 'Checking file'. The validation will happen after this.",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/validation-test-manual-fail.md"],
+        "requiredPatterns": [
+          "## Required Section 1",
+          "## Required Section 2"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ]
+}
