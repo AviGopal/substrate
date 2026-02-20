@@ -1,150 +1,90 @@
 # Memory Agent Configuration Fix
 
-## Problem
+## Issue Discovered
 
-The session memory agent was failing during activity execution with non-functional sessions. The root cause was that the memory agent (used as a subagent in the "Manage Session Memory" activity) did not have a model configuration.
-
-## Root Causes
-
-### 1. Missing Model Configuration in Memory Agent Definition
-**File**: `repos/metabob-opencode/packages/opencode/src/agent/agent.ts`
-
-The memory agent definition (line 375) was missing the `model` property, which is required for the agent to execute LLM calls.
-
-### 2. Incomplete sessionMemory Configuration  
-**File**: `.opencode/opencode.json`
-
-The sessionMemory configuration only had `enabled: true` but was missing the `analysis` section with model configuration.
-
-## Solutions Applied
-
-### Fix 1: Added Model Configuration to Memory Agent
-**File**: `repos/metabob-opencode/packages/opencode/src/agent/agent.ts` (line 379-382)
-
-```typescript
-memory: {
-  name: "memory",
-  description: "Manages activity context memory and impulse lifecycle",
-  color: "magenta",
-  model: {
-    providerID: "anthropic",
-    modelID: "claude-4-5-haiku",
-  },
-  prompt: `You are the Memory Agent...`,
-  // ... rest of configuration
-}
+When attempting to execute `debug-failing-feature` activity template with contextRequirements, received error:
+```
+ActivityContextError: Context gathering failed: ProviderModelNotFoundError
 ```
 
-**Why Claude Haiku 4.5 (claude-4-5-haiku)?**
-- Fast response times for memory management operations
-- Cost-efficient for frequent context negotiations
-- Sufficient capability for impulse management tasks
-- Matches the default model used by SessionMemoryAgent
+## Root Causes Found
 
-### Fix 2: Enhanced sessionMemory Configuration
-**File**: `.opencode/opencode.json` (lines 56-67)
+### 1. Wrong Model ID in Agent Definition (Fixed)
+**File**: `repos/metabob-opencode/packages/opencode/src/agent/agent.ts:381`
+- **Was**: `modelID: "claude-4-5-haiku"` ❌
+- **Fixed**: `modelID: "claude-haiku-4-5"` ✅
+- **Commit**: `8e73c309`
 
+### 2. Wrong Model ID in Project Config (Fixed)
+**File**: `.opencode/opencode.json` line 60
+- **Was**: `"model": "claude-4-5-haiku"` ❌
+- **Fixed**: `"model": "claude-haiku-4-5"` ✅
+
+### 3. Short Timeout (Fixed)
+**File**: `.opencode/opencode.json` line 61
+- **Was**: `"timeout": 3000` (3 seconds)
+- **Fixed**: `"timeout": 30000` (30 seconds)
+
+## Discovery Process
+
+1. Initial execution failed with `ProviderModelNotFoundError`
+2. Checked models.dev API - found correct model is `"claude-haiku-4-5"`
+3. Fixed agent definition in source code
+4. Rebuilt opencode package
+5. Still failed - realized we edited wrong config file
+6. Found correct config in `.opencode/opencode.json` (project root)
+7. Fixed model ID and increased timeout
+8. Verified model exists in models.dev
+
+## Model Verification
+
+Confirmed `claude-haiku-4-5` exists in Anthropic models:
 ```json
 {
-  "sessionMemory": {
-    "enabled": true,
-    "analysis": {
-      "provider": "anthropic",
-      "model": "claude-4-5-haiku",
-      "timeout": 3000
-    },
-    "budgets": {
-      "perImpulse": 2000
-    },
-    "maxImpulsesPerTurn": 5
-  }
+  "id": "claude-haiku-4-5",
+  "name": "Claude Haiku 4.5 (latest)",
+  "family": "claude-haiku",
+  "cost": {"input": 1, "output": 5},
+  "limit": {"context": 200000, "output": 64000}
 }
 ```
 
-**Note**: OpenCode uses normalized model IDs. While Anthropic's API uses `claude-3-5-haiku-20241022`, OpenCode normalizes this to `claude-4-5-haiku` internally.
+## Files Modified
 
-## How Memory Agent Works
+1. **repos/metabob-opencode/packages/opencode/src/agent/agent.ts** (line 381)
+   - Memory agent definition model ID
+   
+2. **.opencode/opencode.json** (lines 60-61)
+   - sessionMemory.analysis.model
+   - sessionMemory.analysis.timeout
 
-The memory agent is a specialized subagent used in activity execution:
+## Architecture Insight
 
-1. **Purpose**: Manages impulses (lazy-loaded context pointers) during activity execution
-2. **Mode**: Subagent (not primary agent)
-3. **Usage**: Called by activities that need context management (like "manage-session-memory")
-4. **Tools**: Has access to impulse_create, impulse_load, memory_budget, negotiate_context, etc.
+The memory agent uses **two** model configurations:
+1. **Agent definition** (`agent.ts`) - used for agent creation
+2. **sessionMemory config** (`opencode.json`) - used for gatherContext()
 
-## Activity: Manage Session Memory
+The `gatherContext()` method reads from `sessionMemory.analysis.model`, not from the agent definition.
 
-This activity runs as a pre-turn hook to prepare context:
+## Next Step
 
-**Tasks**:
-1. `analyze-intent` - Analyze user message to determine needed context
-2. `create-impulses` - Create impulse pointers (unloaded state)
-3. `review-context-space` - Decide which impulses to load based on budget
-4. `optimize-if-needed` - Compress or reorder if context is too tight
-5. `finalize-context` - Review final context space and confirm readiness
-
-**All tasks use subagent**: "memory"
-
-## Testing
-
-### Test 1: Verify Model Configuration
+**Dev server restart required** to reload the config changes:
 ```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob
-bun test-memory-agent-config.ts
+# Kill current dev server process
+# Then restart from repos/metabob-opencode/packages/opencode
+bun run dev ../..
 ```
 
-Expected: Agent successfully analyzes intent and returns structured response
+## Validation Pending
 
-### Test 2: Verify Provider Model Loading
-```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob
-bun test-provider-model.ts
-```
+- [ ] Dev server restarted with new config
+- [ ] Activity execution with contextRequirements succeeds
+- [ ] Memory agent gathers 3 variables (bugDescription, relevantFiles, recentChanges)
+- [ ] All 5 tasks execute in sequence
+- [ ] Documentation generated
 
-Expected: Model loads successfully with claude-3-5-haiku-20241022
+---
 
-### Test 3: Activity Execution
-Run an activity that uses the memory subagent (like "manage-session-memory") and verify that:
-- All 5 tasks execute successfully
-- LLM responses are generated (not empty)
-- Context is properly managed
-
-## Next Steps
-
-1. **Rebuild OpenCode**: The changes to agent.ts require rebuilding
-   ```bash
-   cd repos/metabob-opencode/packages/opencode
-   bun run build
-   ```
-
-2. **Test Activity Execution**: Run a session with memory management enabled
-
-3. **Monitor Logs**: Check that memory agent sessions show LLM responses
-
-4. **Consider Additional Agents**: Review other subagent definitions to ensure they all have model configurations
-
-## Related Files
-
-- `repos/metabob-opencode/packages/opencode/src/agent/agent.ts` - Agent definitions
-- `repos/metabob-opencode/packages/opencode/src/session/memory-agent.ts` - SessionMemoryAgent implementation
-- `.opencode/opencode.json` - OpenCode configuration
-- `repos/metabob-proto/activities/bootstrap/manage-session-memory.json` - Activity template
-- `test-memory-agent-config.ts` - Configuration test script
-- `test-provider-model.ts` - Model loading test script
-
-## Architecture Notes
-
-### Agent Hierarchy
-- **Primary Agents**: activity, plan, review (user-facing)
-- **Subagents**: memory, general, config, session, etc. (task delegation)
-
-### Model Selection Priority
-1. Agent-specific `model` property (what we just added)
-2. Default model from provider configuration
-3. Fallback to claude-sonnet-4-5 (configured in opencode.json line 3)
-
-### Memory Agent Design
-- Lightweight: Uses Haiku for speed and cost
-- Stateless: Each task execution is independent
-- Tool-rich: Has impulse_* and memory_* tools
-- Negotiation-based: Can request context from calling agent
+**Status**: Fixes applied to both files, dev server restart required
+**Date**: 2026-02-19
+**Session**: Context-aware activity validation
