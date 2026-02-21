@@ -3,7 +3,7 @@
 **Vision:** OpenCode agents that improve themselves and their environment when idle, using aggregated execution metrics to identify high-value improvement opportunities.
 
 **Date:** 2026-02-21  
-**Status:** Design Phase  
+**Status:** Phase 1 Complete (Metrics Enhancement) - Phase 2 In Design  
 
 ---
 
@@ -706,3 +706,103 @@ export class BoredomManager {
 **Status:** Ready to implement  
 **Confidence:** High (building on proven patterns)  
 **Impact:** Transformational (self-improving systems)
+
+---
+
+## Phase 1: COMPLETE ✅ (2026-02-21)
+
+### Implementation Summary
+
+**Goal:** Enhance activity execution metrics storage to support boredom system decision-making.
+
+**Components Implemented:**
+
+1. **Frontend Failure Capture** (`repos/metabob-opencode/packages/opencode/src/session/activity.ts`)
+   - Added `getFailureDetails()` helper to extract failure information from activity state
+   - Modified `Activity.fail()` to capture failure_reason, failed_task_id, error_type
+   - Categorizes errors: validation | timeout | tool_error | exception
+
+2. **Type Definitions** (`repos/metabob-opencode/packages/opencode/src/session/template-metrics.ts`)
+   - Extended `ActivityExecutionData` with optional failure fields
+   - Extended `TemplateMetrics` with boredom system fields:
+     * improvement_gradient (0.0-1.0 quality score)
+     * performance_trends (improving/stable/degrading per metric)
+     * failure_patterns (array of failure details)
+     * last_execution (most recent execution snapshot)
+
+3. **Backend Storage & Calculation** (`repos/metabob-cli/src/metabob_cli/mcp/activity_templates.py`)
+   - Added `categorize_trend()` helper for performance trend analysis
+   - Enhanced `update_metrics()` with:
+     * Recent executions tracking (rolling window of 5)
+     * Performance trends calculation (requires 3+ executions)
+     * Failure patterns aggregation (max 10 unique patterns)
+     * Last execution tracking
+     * Improvement gradient calculation (weighted composite)
+   - Updated `list_templates()` to return improvement_gradient for prioritization
+
+4. **Documentation** (`docs/data-flows/activity-execution-metrics-storage-flow.md`)
+   - Version bump to v2
+   - Added comprehensive enhancement section
+   - Updated transformations catalog with new calculations
+   - Updated architectural boundaries to reflect new data flow
+
+**Metrics Stored (v2 Schema):**
+
+```json
+{
+  "estimated_metrics": {
+    "execution_count": 5,
+    "success_count": 3,
+    "success_rate": 0.6,
+    "avg_duration_ms": 45000,
+    "avg_cost": 0.23,
+    "improvement_gradient": 0.652,
+    "performance_trends": {
+      "duration": "improving",
+      "cost": "stable",
+      "success_rate": "degrading"
+    },
+    "failure_patterns": [
+      {
+        "task_id": "task-2",
+        "error_type": "validation",
+        "error_message": "Schema validation failed",
+        "count": 2,
+        "last_seen": "2026-02-21T10:30:00Z"
+      }
+    ],
+    "last_execution": {
+      "timestamp": "2026-02-21T10:30:00Z",
+      "success": false,
+      "duration": 42000,
+      "cost": 0.21,
+      "error": "Validation failed"
+    }
+  }
+}
+```
+
+**Key Calculations:**
+
+- **Improvement Gradient**: `0.5 * success_rate + 0.25 * cost_score + 0.25 * duration_score`
+  * Cost normalized against $1.00 baseline
+  * Duration normalized against 300000ms (5min) baseline
+  * Requires 3+ executions for reliable calculation
+
+- **Performance Trends**: Compare recent 5 vs overall average, ±10% thresholds
+  * "improving" = recent_avg < overall_avg by >10%
+  * "degrading" = recent_avg > overall_avg by >10%
+  * "stable" = within ±10%
+
+**Validation:**
+- ✅ TypeScript type check: Clean
+- ✅ Python syntax check: Clean
+- ✅ Backend tests: 8 passed
+- ✅ Backward compatibility: All fields optional
+
+**Ready for Phase 2:**
+- Metrics storage layer complete
+- Query interface ready (improvement_gradient in list response)
+- Data quality sufficient for decision-making
+- No breaking changes to existing systems
+

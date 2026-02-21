@@ -1,66 +1,16 @@
 # Activity Execution Metrics Storage - Data Flow Documentation
 
-**Version**: v2 (2026-02-21)  
-**Previous Versions**: [v1](./activity-execution-metrics-storage-flow-v1.md)
-
 ## Overview
 
-This document provides a comprehensive analysis of how execution metrics (cost, duration, tokens, failure patterns, performance trends) flow from activity completion through to backend database storage.
+This document provides a comprehensive analysis of how execution metrics (cost, duration, tokens) flow from activity completion through to backend database storage.
 
-**Status**: ✅ **ENHANCED** - Boredom activity system fields added (Phase 1 complete)
+**Status**: ✅ **FIXED** - Tool name and schema aligned, backend storage operational
 
-**Last Updated**: 2026-02-21 (Enhanced with failure analysis, performance trends, improvement gradient)
+**Last Updated**: 2026-02-20 (Fixed by propagate-change-through-flow)
 
 ---
 
 ## Recent Changes
-
-### 2026-02-21: Enhancement - Boredom Activity System Fields (Phase 1)
-
-**Change Type:** addField
-
-**Purpose:** Enable the boredom activity system to automatically identify templates that need improvement, prioritize debugging efforts, and optimize itself during idle time.
-
-**New Fields Added:**
-- `failure_patterns` - Array tracking last 10 unique failures by task/error
-- `performance_trends` - Object with "improving/stable/degrading" trends for duration, cost, success_rate
-- `improvement_gradient` - Number (0.0-1.0) composite quality score
-- `last_execution` - Object with most recent execution details
-
-**Components Modified:**
-1. **repos/metabob-opencode/packages/opencode/src/session/template-metrics.ts**
-   - Added failure fields to `ActivityExecutionData` interface (failure_reason, failed_task_id, error_type)
-   - Added boredom fields to `TemplateMetrics` interface
-
-2. **repos/metabob-opencode/packages/opencode/src/session/activity.ts**
-   - Added `getFailureDetails()` helper function to extract failure information
-   - Modified `fail()` to capture and send failure details
-
-3. **repos/metabob-cli/src/metabob_cli/mcp/activity_templates.py**
-   - Added `categorize_trend()` helper for performance trend calculation
-   - Enhanced `update_metrics()` with:
-     * Recent executions tracking (rolling window of 5)
-     * Performance trends calculation (requires 3+ executions)
-     * Failure patterns aggregation (max 10 patterns)
-     * Last execution tracking
-     * Improvement gradient calculation (weighted composite score)
-   - Updated `list_templates()` to include improvement_gradient
-
-**Impact:**
-- ✅ **Transformation Impact**: New calculations in backend (1-2ms overhead)
-- ✅ **Boundary Impact**: MCP protocol passes optional fields (backward compatible)
-- ✅ **Storage Impact**: ~2KB additional storage per template
-- ✅ **Test Impact**: All existing tests pass, backward compatible
-
-**Migration Notes:**
-- No migration needed - all fields optional
-- Old JSON files readable (missing fields default to empty)
-- Old clients ignore new fields
-- Gradual field population as new activities execute
-
-**See Full Details:** [Enhancement for Boredom Activity System (Phase 1)](#enhancement-for-boredom-activity-system-phase-1) section below
-
----
 
 ### 2026-02-20: Critical Bug Fix - Tool Name and Schema Mismatch
 
@@ -162,13 +112,6 @@ graph TD
 - 🟡 Yellow: Fallback/Degradation
 - 🟢 Green: Success/Exit Points
 - 🟠 Orange: Integration Boundaries
-
-**⚠️ Note (v2 Enhancement):** The diagram above shows the core flow. As of v2 (2026-02-21), additional data now flows through this pipeline:
-- **Failure Analysis**: `Activity.fail()` → `getFailureDetails()` → adds `failure_reason`, `failed_task_id`, `error_type` to ActivityExecutionData
-- **Enhanced Storage**: `update_metrics()` calculates and stores `failure_patterns`, `performance_trends`, `improvement_gradient`, `last_execution`
-- **Query Enhancement**: `list_templates()` returns `improvement_gradient` for boredom system prioritization
-
-The data flow structure remains unchanged; only the data content is enriched. See [Enhancement for Boredom Activity System](#enhancement-for-boredom-activity-system-phase-1) for details.
 
 ---
 
@@ -490,36 +433,6 @@ The local path uses a different, correctly-named MCP tool and was implemented in
    - Formula: `new_avg = old_avg + (new_value - old_avg) / (count + 1)`
    - Why: O(1) space, no history storage needed
 
-**v2 Enhancements (2026-02-21):**
-
-6. **Failure Detail Extraction** (frontend):
-   - Input: `Activity.Info` with failed status and prompt history
-   - Output: `{failure_reason, failed_task_id, error_type}`
-   - Why: Enable systematic failure analysis
-   - Location: `Activity.getFailureDetails()` → added to `ActivityExecutionData`
-
-7. **Performance Trend Calculation** (backend):
-   - Input: Recent 5 executions + overall averages
-   - Output: `{duration: "improving", cost: "stable", success_rate: "degrading"}`
-   - Formula: `((recent_avg - overall_avg) / overall_avg) * 100` with ±10% thresholds
-   - Why: Track template health over time
-   - Location: `categorize_trend()` → stored in `performance_trends`
-
-8. **Improvement Gradient Calculation** (backend):
-   - Input: `success_rate`, `avg_cost`, `avg_duration`, `execution_count`
-   - Output: Single 0.0-1.0 quality score
-   - Formula: `0.5 * success_score + 0.25 * cost_score + 0.25 * duration_score`
-   - Normalization: Cost against $1.00, duration against 300000ms (5min)
-   - Why: Single metric for boredom system prioritization
-   - Location: `update_metrics()` → stored in `improvement_gradient`
-
-9. **Failure Pattern Aggregation** (backend):
-   - Input: Stream of failure events with task_id and error details
-   - Output: Array of unique patterns with counts
-   - Logic: Match by task_id, increment count, update last_seen, keep last 10
-   - Why: Identify systematic issues vs random failures
-   - Location: `update_metrics()` → stored in `failure_patterns`
-
 ### Validations
 
 **Frontend**:
@@ -540,25 +453,21 @@ The local path uses a different, correctly-named MCP tool and was implemented in
 1. **Module Boundary**: `Activity` → `TemplateMetricsClient`
    - Coupling: Medium (internal TypeScript)
    - Resilience: Good (direct function call)
-   - **v2 Enhancement**: `Activity.fail()` now calls `getFailureDetails()` before reporting
 
 2. **Service Boundary**: Frontend → Backend (MCP)
    - Coupling: Loose (tool name string)
    - Resilience: Good (graceful degradation)
-   - ~~**Issue**: Tool name mismatch breaks integration~~ ✅ **FIXED**
-   - **v2 Enhancement**: MCP protocol now passes optional failure fields (backward compatible)
+   - **Issue**: Tool name mismatch breaks integration
 
 3. **Language Boundary**: TypeScript → Python
    - Coupling: Very loose (JSON serialization)
    - Resilience: Fair (no type safety)
-   - ~~**Issue**: Schema mismatch (flat vs nested)~~ ✅ **FIXED**
-   - **v2 Enhancement**: New optional fields added to both sides (failure_reason, failed_task_id, error_type)
+   - **Issue**: Schema mismatch (flat vs nested)
 
 4. **Repository Boundary**: `metabob-opencode` ↔ `metabob-cli`
    - Coupling: Very loose (separate repos)
    - Resilience: Good (independent deployment)
    - **Issue**: No contract testing
-   - **v2 Enhancement**: New fields flow through boundary transparently (optional on both sides)
 
 5. **Storage Boundary**: Backend → File System
    - Coupling: Loose (JSON files)
