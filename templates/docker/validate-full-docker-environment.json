@@ -1,0 +1,159 @@
+{
+  "name": "Validate Full Docker Environment",
+  "description": "Orchestrator activity to validate all Docker containers (devbob, API server, Redis, SurrealDB) and generate comprehensive environment report",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "check-docker-status",
+      "subagent": "general",
+      "description": "Check Docker daemon and docker-compose status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check Docker environment status:\n\n1. Run: docker --version\n2. Run: docker-compose --version\n3. Run: docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'\n4. Report:\n   - Docker version\n   - Docker Compose version\n   - All running containers\n   - Container count\n   - Any issues\n\nProvide Docker environment overview.",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "validate-devbob-container",
+      "subagent": "general",
+      "description": "Run devbob-clean container validation activity",
+      "dependencies": [
+        "check-docker-status"
+      ],
+      "prompt": {
+        "template": "Execute devbob-clean container validation:\n\n1. Register the validation activity:\n   - File: templates/docker/validate-devbob-container.json\n   - Use register_activity_template tool\n\n2. Execute the activity:\n   - Use activity tool with templateId: \"validate-devbob-container\"\n   - Pass empty variables: {}\n   - Reason: \"Validate devbob-clean container as part of full environment validation\"\n\n3. Review the results from test-results/devbob-container-validation.md\n\n4. Report:\n   - Activity execution status\n   - Validation result (PASS/WARNING/FAIL)\n   - Key findings\n   - Any critical issues\n\nProvide devbob validation summary.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [
+          "test-results/devbob-container-validation.md"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "validate-api-server-container",
+      "subagent": "general",
+      "description": "Run API server container validation activity",
+      "dependencies": [
+        "check-docker-status"
+      ],
+      "prompt": {
+        "template": "Execute API server container validation:\n\n1. Register the validation activity:\n   - File: templates/docker/validate-api-server-container.json\n   - Use register_activity_template tool\n\n2. Execute the activity:\n   - Use activity tool with templateId: \"validate-api-server-container\"\n   - Pass empty variables: {}\n   - Reason: \"Validate API server container as part of full environment validation\"\n\n3. Review the results from test-results/api-server-container-validation.md\n\n4. Report:\n   - Activity execution status\n   - Validation result (PASS/WARNING/FAIL)\n   - Key findings\n   - Any critical issues\n\nProvide API server validation summary.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [
+          "test-results/api-server-container-validation.md"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "validate-redis-container",
+      "subagent": "general",
+      "description": "Run Redis container validation activity",
+      "dependencies": [
+        "check-docker-status"
+      ],
+      "prompt": {
+        "template": "Execute Redis container validation:\n\n1. Register the validation activity:\n   - File: templates/docker/validate-redis-container.json\n   - Use register_activity_template tool\n\n2. Execute the activity:\n   - Use activity tool with templateId: \"validate-redis-container\"\n   - Pass empty variables: {}\n   - Reason: \"Validate Redis container as part of full environment validation\"\n\n3. Review the results from test-results/redis-container-validation.md\n\n4. Report:\n   - Activity execution status\n   - Validation result (PASS/WARNING/FAIL)\n   - Key findings\n   - Any critical issues\n\nProvide Redis validation summary.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [
+          "test-results/redis-container-validation.md"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "validate-surrealdb-container",
+      "subagent": "general",
+      "description": "Run SurrealDB container validation activity",
+      "dependencies": [
+        "check-docker-status"
+      ],
+      "prompt": {
+        "template": "Execute SurrealDB container validation:\n\n1. Register the validation activity:\n   - File: templates/docker/validate-surreal-container.json\n   - Use register_activity_template tool\n\n2. Execute the activity:\n   - Use activity tool with templateId: \"validate-surreal-container\"\n   - Pass empty variables: {}\n   - Reason: \"Validate SurrealDB container as part of full environment validation\"\n\n3. Review the results from test-results/surrealdb-container-validation.md\n\n4. Report:\n   - Activity execution status\n   - Validation result (PASS/WARNING/FAIL)\n   - Key findings\n   - Any critical issues\n\nProvide SurrealDB validation summary.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [
+          "test-results/surrealdb-container-validation.md"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-comprehensive-report",
+      "subagent": "general",
+      "description": "Generate comprehensive environment validation report",
+      "dependencies": [
+        "validate-devbob-container",
+        "validate-api-server-container",
+        "validate-redis-container",
+        "validate-surrealdb-container"
+      ],
+      "prompt": {
+        "template": "Generate comprehensive Docker environment validation report:\n\n1. Read all validation reports:\n   - test-results/devbob-container-validation.md\n   - test-results/api-server-container-validation.md\n   - test-results/redis-container-validation.md\n   - test-results/surrealdb-container-validation.md\n\n2. Aggregate results:\n   - Count PASS/WARNING/FAIL for each container\n   - Identify critical issues across all containers\n   - Identify common patterns\n   - List all recommendations\n\n3. Create comprehensive report with:\n   - Executive Summary (overall PASS/WARNING/FAIL)\n   - Per-Container Status Table\n   - Critical Issues Section\n   - Network Connectivity Matrix\n   - Recommendations by Priority\n   - Next Steps\n\n4. Save report to: test-results/docker-environment-validation-full.md\n\nProvide overall environment assessment.",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [
+          "test-results/docker-environment-validation-full.md"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "docker ps",
+      "test -d templates/docker"
+    ],
+    "postChecks": [
+      "test -f test-results/docker-environment-validation-full.md"
+    ],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}
