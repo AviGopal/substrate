@@ -1,0 +1,129 @@
+{
+  "name": "Examine Learning Loop Configuration",
+  "description": "Comprehensive examination of the activity template learning loop: database state, metrics collection, boredom system configuration, and data flow validation",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "map-learning-loop-architecture",
+      "subagent": "general",
+      "description": "Map the current learning loop architecture and components",
+      "dependencies": [],
+      "prompt": {
+        "template": "Map the complete learning loop architecture:\n\n## 1. Identify All Components\n\nSearch for and document each component:\n\n```bash\n# Phase 1: Metrics Enhancement (metabob-cli)\ncd repos/metabob-cli\nfind . -name \"*.py\" | xargs grep -l \"improvement_gradient\\|performance_trends\\|failure_patterns\" | head -10\n\n# Phase 2: Boredom API (metabob-cli)\nfind . -name \"*.py\" | xargs grep -l \"fetch_boredom_activities\\|boredom.*api\" | head -10\n\n# Phase 3: BoredomManager (metabob-opencode)\ncd ../metabob-opencode\nfind packages/opencode/src/session -name \"*.ts\" | xargs grep -l \"BoredomManager\\|boredom\" | head -10\n\n# Metrics Client (metabob-opencode)\nfind packages/opencode/src/session -name \"*metrics*.ts\"\ncat packages/opencode/src/session/template-metrics.ts | head -100\n```\n\n## 2. Map Data Flow\n\nIdentify the complete flow:\n1. Activity execution → metrics collection\n2. Metrics storage → where and how?\n3. Metrics retrieval → boredom API\n4. Activity selection → BoredomManager\n5. Feedback loop → does it update metrics?\n\n## 3. Configuration Files\n\nFind all configuration:\n```bash\ncd ../..\ngrep -r \"learning\\|metrics\\|boredom\" opencode.json 2>/dev/null || echo \"No opencode.json config\"\ngrep -r \"SURREAL\\|DATABASE\" .env* 2>/dev/null | head -10\n```\n\n## 4. Document Architecture\n\nCreate markdown diagram:\n```\n┌─────────────────┐\n│ Activity Exec   │\n└────────┬────────┘\n         │ metrics\n         ↓\n┌─────────────────┐\n│ Storage Layer   │  ← Where? SurrealDB? Files?\n└────────┬────────┘\n         │ query\n         ↓\n┌─────────────────┐\n│ Boredom API     │\n└────────┬────────┘\n         │ fetch\n         ↓\n┌─────────────────┐\n│ BoredomManager  │\n└────────┬────────┘\n         │ execute\n         ↓\n┌─────────────────┐\n│ Activity Exec   │  ← Loop!\n└─────────────────┘\n```\n\nReport:\n- All components found\n- Data flow diagram\n- Configuration locations\n- Any missing pieces",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "examine-database-configuration",
+      "subagent": "general",
+      "description": "Examine SurrealDB configuration and connection details",
+      "dependencies": ["map-learning-loop-architecture"],
+      "prompt": {
+        "template": "Examine the database configuration:\n\n## 1. SurrealDB Container Status\n\n```bash\ndocker ps --filter name=surreal --format 'Name: {{.Names}}\\nStatus: {{.Status}}\\nPorts: {{.Ports}}'\ndocker logs metabob-surreal --tail 30 2>&1 | grep -i \"started\\|ready\\|error\"\n```\n\n## 2. Database Connection Details\n\n```bash\n# Check environment variables\ndocker exec metabob-surreal env | grep -i surreal\n\n# Check API server connection to SurrealDB\ndocker exec api-server-dev env | grep -i \"surreal\\|database\\|db_\"\n\n# Check if opencode has DB config\ncd repos/metabob-opencode\ngrep -r \"surreal\\|database\" packages/opencode/src/session/template-metrics*.ts | head -20\n```\n\n## 3. Database Schema\n\nTry to query via API server (which has auth):\n```bash\n# Check if API server has endpoints for metrics\ncurl -s http://localhost:8080/docs 2>&1 | grep -i \"metrics\\|activity\\|template\" | head -20\ncurl -s http://localhost:8080/openapi.json 2>&1 | python3 -m json.tool | grep -A 5 \"activity\\|metrics\" | head -50\n```\n\n## 4. Alternative: Check Local Storage\n\n```bash\n# Check if metrics are stored locally\nfind ~/.local/share/opencode -name \"*metrics*\" -o -name \"*activity*\" | head -20\nfind ~/.metabob -name \"*metrics*\" -o -name \"*execution*\" | head -20\n```\n\n## 5. Redis Check (Alternative Storage)\n\n```bash\n# Check if Redis has activity data\ndocker exec metabob-redis redis-cli KEYS \"*activity*\" 2>&1 | head -20\ndocker exec metabob-redis redis-cli KEYS \"*metrics*\" 2>&1 | head -20\ndocker exec metabob-redis redis-cli KEYS \"*template*\" 2>&1 | head -20\n```\n\nReport:\n- Database connection configured? (Yes/No)\n- Storage backend identified: [SurrealDB/Redis/Files/Unknown]\n- Schema accessible? (Yes/No)\n- Connection credentials available? (Yes/No/Not Needed)\n- Alternative storage found? (specify)",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "query-activity-execution-data",
+      "subagent": "general",
+      "description": "Query and examine actual activity execution data",
+      "dependencies": ["examine-database-configuration"],
+      "prompt": {
+        "template": "Query activity execution data from all possible sources:\n\n## 1. Local Activity Storage\n\n```bash\n# Check .metabob/activities for execution history\ncd .metabob/activities\nls -lh *.json | head -20\n\n# Check for execution metadata\nfor f in *.json; do\n  echo \"\\n=== $f ===\"\n  cat \"$f\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print('Executions:', d.get('estimated_metrics', {}).get('execution_count', 'N/A'), '| Success Rate:', d.get('estimated_metrics', {}).get('success_rate', 'N/A'))\"\ndone\n```\n\n## 2. Check opencode Local Storage\n\n```bash\n# Activity execution logs\nfind ~/.local/share/opencode -name \"*activity*\" -type f | head -10\nfind ~/.local/share/opencode/storage -type f | head -20\n\n# Check for metrics files\nfind ~/.local/share/opencode -name \"*metrics*\" -o -name \"*execution*\" | xargs ls -lh 2>/dev/null | head -20\n```\n\n## 3. Query Via API (if available)\n\n```bash\n# Try common endpoints\nfor endpoint in \"/api/activities\" \"/api/metrics\" \"/api/templates\" \"/activities\" \"/metrics\"; do\n  echo \"\\n=== Testing: $endpoint ===\"\n  curl -s http://localhost:8080$endpoint 2>&1 | head -30\ndone\n```\n\n## 4. Check Logs for Execution Records\n\n```bash\n# OpenCode logs\ngrep -i \"activity.*executed\\|execution.*complete\\|metrics\" ~/.local/share/opencode/log/dev.log 2>/dev/null | tail -20\n\n# API server logs\ndocker logs api-server-dev --tail 100 2>&1 | grep -i \"activity\\|execution\\|metrics\" | tail -20\n```\n\n## 5. Parse Recent Activity Outputs\n\n```bash\n# Check for recently executed activities\nls -lt test-results/ | head -10\n\n# Count our own executions\necho \"\\nRecent activity executions from git:\"\ngit log --oneline --since=\"3 days ago\" | grep -i \"activity\\|phase\"\n```\n\nReport:\n- Where execution data is stored\n- Sample execution records (sanitized)\n- Execution count for known activities\n- Metrics being tracked\n- Data format and schema",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-metrics-collection",
+      "subagent": "general",
+      "description": "Verify that metrics are being collected from activity executions",
+      "dependencies": ["query-activity-execution-data"],
+      "prompt": {
+        "template": "Verify metrics collection is working:\n\n## 1. Check Template Metrics Client\n\n```bash\ncd repos/metabob-opencode\n\n# Find where metrics are sent after execution\ngrep -A 20 \"reportActivityExecution\\|sendMetrics\\|postExecution\" packages/opencode/src/session/template-metrics*.ts\n\n# Check if it's actually called\ngrep -r \"reportActivityExecution\\|sendMetrics\" packages/opencode/src/session/*.ts | grep -v \"test\" | head -20\n```\n\n## 2. Check Activity Tool Integration\n\n```bash\n# Check if activity tool reports metrics\ngrep -A 30 \"activity completed\\|execution complete\" packages/opencode/src/tool/activity.ts | head -50\n\n# Look for metrics reporting\ngrep -B 5 -A 10 \"metrics\\|duration\\|cost\\|tokens\" packages/opencode/src/tool/activity.ts | head -50\n```\n\n## 3. Test Metrics Collection\n\nCheck our recent activity execution:\n```bash\n# The validate-and-fix activity we just ran\ncd ../../..\necho \"Last activity execution details:\"\ncat test-results/docker-environment-validation-report.md | grep -A 10 \"Activity Template Testing Results\"\n\n# Check if metrics were reported\ngrep -i \"metrics.*report\\|execution.*data\" test-results/*.md | head -20\n```\n\n## 4. Check Boredom API Integration\n\n```bash\ncd repos/metabob-cli\n\n# Find the boredom API implementation\nfind . -type f -name \"*.py\" -exec grep -l \"def.*fetch_boredom\" {} \\;\n\n# Check what it queries\nfind . -type f -name \"*.py\" -exec grep -B 5 -A 20 \"def.*fetch_boredom\" {} \\; | head -100\n```\n\n## 5. Verify End-to-End Flow\n\n```bash\n# Can BoredomManager access metrics?\ncd ../metabob-opencode\ngrep -A 20 \"fetchBoredomActivities\\|fetch.*activities\" packages/opencode/src/session/boredom-manager.ts\n```\n\nReport:\n- Are metrics collected after execution? (Yes/No/Unknown)\n- Where are they sent/stored?\n- Is the flow connected end-to-end?\n- Any gaps in the integration?\n- Sample data flow trace",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "validate-expectations",
+      "subagent": "general",
+      "description": "Validate that learning loop meets expected behavior",
+      "dependencies": ["verify-metrics-collection"],
+      "prompt": {
+        "template": "Validate the learning loop against expected behavior:\n\n## Expected Behavior (from Design)\n\n1. **Activity Execution** → collects metrics (duration, cost, success, tokens)\n2. **Metrics Storage** → persisted to database/storage\n3. **Boredom API** → queries metrics, calculates improvement_gradient\n4. **BoredomManager** → fetches low-quality templates when idle\n5. **Feedback Loop** → re-execution updates metrics\n\n## Validation Tests\n\n### Test 1: Metrics Collection\n```bash\n# Check if validate-and-fix execution recorded metrics\ncd ../..\necho \"Expected: Duration=658s, Cost=\\$1.05, Success=true, Tokens=327751+2758\"\ngrep -A 5 \"Total Duration\\|Total Cost\\|Tokens\" test-results/docker-environment-validation-report.md\n```\n\n### Test 2: Storage Persistence\n```bash\n# Check if data persisted anywhere\necho \"\\nChecking for persisted execution data:\"\nfind .metabob -name \"*validate-and-fix*\" -o -name \"*execution*\" | head -10\nfind ~/.local/share/opencode -name \"*validate-and-fix*\" | head -10\n```\n\n### Test 3: Boredom API Functionality\n```bash\n# Check if boredom API can be called\ncd repos/metabob-cli\npython3 << 'EOF'\ntry:\n    import sys\n    sys.path.insert(0, 'src')\n    # Try to import the function\n    print(\"Attempting to import boredom API...\")\n    # Check if function exists\n    import os\n    for root, dirs, files in os.walk('src'):\n        for f in files:\n            if f.endswith('.py'):\n                with open(os.path.join(root, f)) as fp:\n                    content = fp.read()\n                    if 'fetch_boredom_activities' in content:\n                        print(f\"Found in: {os.path.join(root, f)}\")\nexcept Exception as e:\n    print(f\"Error: {e}\")\nEOF\n```\n\n### Test 4: BoredomManager Integration\n```bash\ncd ../metabob-opencode\n\n# Check if BoredomManager can call boredom API\ngrep -A 10 \"fetch.*boredom\\|boredom.*api\" packages/opencode/src/session/boredom-manager.ts | head -30\n```\n\n### Test 5: End-to-End Simulation\n```bash\ncd ../..\n\n# Check Phase 3 test results\necho \"\\nPhase 3 boredom system test results:\"\ncat test-results/boredom-system-test-report.md 2>/dev/null | grep -A 20 \"API Integration\" | head -30\n```\n\n## Gap Analysis\n\nFor each expected behavior:\n- ✓ Working as expected\n- ⚠️ Partially working\n- ✗ Not working\n- ? Cannot verify\n\n## Generate Report\n\nCreate comprehensive report: test-results/learning-loop-validation-report.md\n\nInclude:\n1. **Architecture Map** - All components and data flow\n2. **Database Status** - Configuration and accessibility\n3. **Metrics Collection** - Working? Where stored?\n4. **API Integration** - Functional? Tested?\n5. **BoredomManager** - Connected? Can fetch activities?\n6. **Gaps Identified** - What's missing or broken?\n7. **Recommendations** - What to fix/improve?\n8. **Next Steps** - Concrete actions\n\nFormat as actionable report with clear status indicators.",
+        "maxTokens": 20000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["test-results/learning-loop-validation-report.md"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "docker ps --filter name=surreal",
+      "test -d repos/metabob-opencode",
+      "test -d repos/metabob-cli"
+    ],
+    "postChecks": [
+      "test -f test-results/learning-loop-validation-report.md"
+    ],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 10000,
+    "annotationStrategy": "key-components"
+  }
+}
