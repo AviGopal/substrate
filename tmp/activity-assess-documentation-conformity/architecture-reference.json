@@ -1,0 +1,221 @@
+{
+  "paradigm": {
+    "functional_state": {
+      "definition": "The actual environment/data we're operating on - the mutable state being transformed",
+      "examples": [
+        "Codebase (files, git commits, branches)",
+        "File system (directories, permissions)",
+        "Runtime environment (processes, services)",
+        "Database (tables, records)",
+        "Any data structures being manipulated"
+      ],
+      "current_implementation": "Managed via tools (read, write, edit, bash, git operations)",
+      "key_insight": "This is what we mutate - the actual 'stuff' we're changing"
+    },
+    "instructional_state": {
+      "definition": "The context/knowledge guiding operations - immutable information that informs transformations",
+      "examples": [
+        "User intent and goals",
+        "Domain knowledge (patterns, best practices)",
+        "Historical learnings (successful recipes, failure patterns)",
+        "Current context (impulses, annotations, metrics)",
+        "Requirements and constraints"
+      ],
+      "current_implementation": "Managed via impulses, SessionMemory, Activity.impulses, Metabob context",
+      "key_insight": "This is what guides decisions - the 'why' and 'how' knowledge"
+    },
+    "bridge": {
+      "definition": "The mechanism that transforms instructional state into functional state mutations",
+      "components": [
+        "LLM - Interprets instructional state and determines which mutations to perform",
+        "Activities - Structured, measured, validatable recipes for mutation sequences",
+        "Tools - Execute the actual mutations on functional state"
+      ],
+      "current_implementation": "LLM + Activity templates + Tool ecosystem",
+      "key_insight": "LLM reads context (instructional state) → decides tool calls → tools mutate data (functional state)"
+    }
+  },
+  "terminology": {
+    "correct_terms": [
+      "functional state",
+      "instructional state",
+      "state transformation",
+      "state mutation",
+      "impulses (as instructional state fragments)",
+      "activities (as transformation recipes)",
+      "tools (as mutation executors)",
+      "bridge (LLM + activities + tools)",
+      "measured behavior",
+      "validation",
+      "learning loop",
+      "variant promotion",
+      "context-aware selection"
+    ],
+    "deprecated_terms": [
+      "data state (ambiguous - use 'functional state')",
+      "context state (ambiguous - use 'instructional state')",
+      "activity state (misleading - activities don't hold state, they transform it)",
+      "session context (imprecise - use 'instructional state' or 'impulses')"
+    ],
+    "usage_patterns": {
+      "functional_state": "Refers to mutable data being operated on (codebase, database, file system). Example: 'The tool mutates functional state by writing to the file.'",
+      "instructional_state": "Refers to immutable context guiding operations (impulses, user intent, patterns). Example: 'The LLM reads instructional state to decide which files to modify.'",
+      "bridge": "Refers to the LLM + activities + tools combination. Example: 'The bridge transforms instructional state into functional state mutations.'",
+      "impulses": "Fragments of instructional state. Example: 'Impulses provide context about user requirements and existing patterns.'",
+      "activities": "Structured recipes for state transformations. Example: 'Activities define sequences of validated, measured state mutations.'",
+      "tools": "Execute mutations on functional state. Example: 'The write tool mutates functional state by creating a file.'"
+    }
+  },
+  "conformity_checklist": [
+    {
+      "id": "check-1",
+      "criterion": "Consistently uses 'functional state' to refer to mutable data (codebase, files, database)",
+      "priority": "high",
+      "common_violation": "Using ambiguous terms like 'data state' or 'application state'",
+      "correct_example": "Tools mutate functional state by modifying files",
+      "incorrect_example": "Tools modify the data state"
+    },
+    {
+      "id": "check-2",
+      "criterion": "Consistently uses 'instructional state' to refer to context/knowledge guiding operations",
+      "priority": "high",
+      "common_violation": "Using 'context' alone without clarifying it's instructional state",
+      "correct_example": "Impulses are fragments of instructional state that guide LLM decisions",
+      "incorrect_example": "Impulses provide context to the agent"
+    },
+    {
+      "id": "check-3",
+      "criterion": "Correctly positions LLM + activities + tools as the 'bridge' transforming instructional → functional state",
+      "priority": "high",
+      "common_violation": "Describing LLM as 'the agent' without clarifying its role in the paradigm",
+      "correct_example": "The bridge (LLM + activities) transforms instructional state into functional state mutations",
+      "incorrect_example": "The agent processes context and modifies code"
+    },
+    {
+      "id": "check-4",
+      "criterion": "Treats activities as transformation recipes, not data storage",
+      "priority": "high",
+      "common_violation": "Describing activities as 'storing state' or 'holding data'",
+      "correct_example": "Activities define structured sequences of state transformations with validation",
+      "incorrect_example": "Activities store execution context and state"
+    },
+    {
+      "id": "check-5",
+      "criterion": "Clearly distinguishes between impulses (instructional state fragments) and functional state",
+      "priority": "medium",
+      "common_violation": "Conflating impulse content with the data being modified",
+      "correct_example": "Impulses provide instructional state (requirements) that guide how we mutate functional state (code)",
+      "incorrect_example": "Impulses contain the state we're modifying"
+    },
+    {
+      "id": "check-6",
+      "criterion": "Emphasizes measurement and data-driven optimization over LLM reasoning",
+      "priority": "high",
+      "common_violation": "Describing optimization as 'LLM learns' rather than 'measured outcomes drive variant selection'",
+      "correct_example": "Variant promotion is based on measured success rates, not LLM reasoning",
+      "incorrect_example": "The system uses AI to learn which templates work best"
+    },
+    {
+      "id": "check-7",
+      "criterion": "Describes tools as executors of functional state mutations",
+      "priority": "medium",
+      "common_violation": "Describing tools as 'helpers' or 'utilities' without clarifying their role",
+      "correct_example": "The write tool executes a functional state mutation by creating a file",
+      "incorrect_example": "The write tool helps create files"
+    },
+    {
+      "id": "check-8",
+      "criterion": "Consistently uses 'state transformation' or 'state mutation' for operations on functional state",
+      "priority": "medium",
+      "common_violation": "Using generic terms like 'changes' or 'modifications'",
+      "correct_example": "Each task in an activity performs a state transformation on the codebase",
+      "incorrect_example": "Each task makes changes to the code"
+    },
+    {
+      "id": "check-9",
+      "criterion": "Correctly describes the learning loop as measurement → analysis → variant promotion",
+      "priority": "high",
+      "common_violation": "Omitting the measurement-driven aspect or implying LLM-driven learning",
+      "correct_example": "The learning loop analyzes measured execution outcomes to promote successful variants",
+      "incorrect_example": "The system learns from experience to improve over time"
+    },
+    {
+      "id": "check-10",
+      "criterion": "Avoids treating sessions as data storage (sessions are execution contexts, not functional state)",
+      "priority": "medium",
+      "common_violation": "Describing sessions as 'storing data' rather than 'tracking execution context'",
+      "correct_example": "Sessions track execution context (instructional state) while activities transform functional state",
+      "incorrect_example": "Sessions store the state of the codebase modifications"
+    },
+    {
+      "id": "check-11",
+      "criterion": "Correctly describes impulses as lazy-loaded, budget-constrained instructional state",
+      "priority": "medium",
+      "common_violation": "Describing impulses as 'always loaded' or ignoring budget constraints",
+      "correct_example": "Impulses are lazy-loaded instructional state fragments with token budgets",
+      "incorrect_example": "Impulses provide context that's always available to the agent"
+    },
+    {
+      "id": "check-12",
+      "criterion": "Accurately describes the separation: functional state is mutable, instructional state is immutable",
+      "priority": "high",
+      "common_violation": "Implying instructional state changes during execution",
+      "correct_example": "Instructional state (impulses, requirements) remains immutable while functional state (codebase) is mutated",
+      "incorrect_example": "As the agent works, the context evolves and the codebase changes"
+    },
+    {
+      "id": "check-13",
+      "criterion": "Correctly identifies what's already implemented vs what's missing (optimization loop)",
+      "priority": "high",
+      "common_violation": "Claiming the learning loop is fully implemented or missing core components",
+      "correct_example": "We have measurements and variant creation, but automatic variant promotion based on measured outcomes is missing",
+      "incorrect_example": "The system automatically learns and improves templates over time"
+    }
+  ],
+  "common_misalignments": [
+    "Treating activities as data storage rather than transformation recipes",
+    "Conflating instructional state (context) with functional state (data being modified)",
+    "Describing sessions as 'storing state' instead of 'tracking execution context'",
+    "Using ambiguous terms like 'context' without clarifying if it's instructional state",
+    "Implying LLM 'learns' rather than 'executes measured recipes'",
+    "Omitting the measurement-driven aspect of the learning loop",
+    "Describing tools as 'utilities' rather than 'functional state mutation executors'",
+    "Claiming optimization is LLM-driven rather than data-driven",
+    "Mixing terminology between 'data state', 'application state', and 'functional state'",
+    "Treating impulses as mutable or as functional state",
+    "Describing the bridge as just 'the LLM' rather than 'LLM + activities + tools'",
+    "Conflating variant creation (reactive, already exists) with variant promotion (proactive, missing)"
+  ],
+  "key_architectural_principles": [
+    "Functional state = mutable data we operate on (codebase, database, file system)",
+    "Instructional state = immutable context guiding operations (impulses, requirements, patterns)",
+    "Bridge = LLM + activities + tools (transforms instructional → functional)",
+    "Activities are measured, validatable recipes for state transformations",
+    "Optimization is data-driven (measured outcomes), not reasoning-driven (LLM inference)",
+    "Tools execute mutations, LLM decides which mutations, activities structure sequences",
+    "Impulses are lazy-loaded, budget-constrained fragments of instructional state",
+    "Sessions track execution context (instructional state), not functional state",
+    "Learning loop: measure outcomes → analyze patterns → promote successful variants",
+    "Separation of concerns: functional state (mutable) vs instructional state (immutable)"
+  ],
+  "validation_queries": {
+    "functional_state_usage": "Search for 'functional state' - should refer to codebase/data being mutated",
+    "instructional_state_usage": "Search for 'instructional state' - should refer to context/knowledge guiding operations",
+    "activity_description": "Search for 'activity' - should describe transformation recipes, not data storage",
+    "tool_description": "Search for 'tool' - should describe mutation executors, not generic utilities",
+    "learning_loop": "Search for 'learning' or 'optimization' - should emphasize measurement-driven, not LLM reasoning",
+    "bridge_description": "Search for 'LLM' or 'bridge' - should describe LLM + activities + tools as transformation mechanism",
+    "impulse_description": "Search for 'impulse' - should describe as instructional state fragments, not functional state",
+    "session_description": "Search for 'session' - should describe execution context, not data storage"
+  },
+  "metadata": {
+    "created_from": [
+      "FUNCTIONAL_STATE_TRANSFORMATION_PARADIGM.md",
+      "INSTRUCTIONAL_TO_FUNCTIONAL_STATE_BRIDGE.md",
+      "CONTEXT_ARCHITECTURE_QUICK_REFERENCE.md"
+    ],
+    "paradigm_version": "1.0",
+    "last_updated": "2026-02-20",
+    "status": "Phase 1 (explicit state separation) - learning loop incomplete"
+  }
+}
