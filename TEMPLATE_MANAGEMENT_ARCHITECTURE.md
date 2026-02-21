@@ -142,7 +142,7 @@
 ### **Key Benefits**
 
 ✅ **No destructive updates** - Old template still available  
-✅ **Automatic A/B testing** - System learns which works  
+✅ **Automatic A/B testing** - Variant promotion is based on measured success rates, not LLM reasoning  
 ✅ **Gradual migration** - Not "big bang" switch  
 ✅ **Rollback implicit** - Bad variants fade out naturally  
 ✅ **No human approval needed** - Metrics decide  

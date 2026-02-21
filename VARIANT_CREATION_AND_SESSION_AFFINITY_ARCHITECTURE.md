@@ -864,7 +864,7 @@ Result:
 
 ### 2. Global Learning Preserved
 ✅ Other sessions still use Thompson Sampling
-✅ System learns which variant is globally better
+✅ Variant promotion is based on measured success rates, not LLM reasoning
 ✅ Bad variants get naturally filtered out
 
 ### 3. Natural Workflow

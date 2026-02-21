@@ -401,7 +401,7 @@ metabob-opencode → metabob-cli → metabob-rpc-api
 
 ## Flow 5: Metrics and Learning (Thompson Sampling)
 
-**Scenario**: System learns which template variants perform better
+**Scenario**: Variant promotion is based on measured success rates, not LLM reasoning
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
