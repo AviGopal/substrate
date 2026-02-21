@@ -1,0 +1,47 @@
+{
+  "name": "run-tests-in-docker",
+  "description": "Run test suites in Docker Compose environment with devbob containers, validating setup, executing tests, and collecting results",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "verify-docker-setup",
+      "subagent": "general",
+      "description": "Verify Docker Compose setup and required services",
+      "dependencies": [],
+      "prompt": {
+        "template": "Verify the Docker Compose environment is ready for testing:\n\nProfile: {{profile}}\n\n1. Check docker-compose.yaml configuration\n2. Verify environment variables\n3. Check service health status\n4. Verify test prerequisites exist\n\nReport setup status and readiness.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "profile",
+            "type": "string",
+            "required": true,
+            "description": "Docker Compose profile: stable | devbob | devbob-dev"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["docker-compose.yaml"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}
