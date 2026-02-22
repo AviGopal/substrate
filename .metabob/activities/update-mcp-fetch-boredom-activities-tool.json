@@ -1,0 +1,357 @@
+{
+  "activity_id": "update-mcp-fetch-boredom-activities-tool",
+  "name": "Update MCP Fetch Boredom Activities Tool",
+  "description": "Update metabob_fetch_boredom_activities MCP tool to proxy to Learning Loop API instead of in-memory storage. Phase 2.2 of Learning Loop implementation - migrate from temporary in-memory storage to persistent SurrealDB via GET /api/v1/learning-loop/boredom-activities.",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "locate-and-analyze-tool",
+      "subagent": "general",
+      "description": "Locate metabob_fetch_boredom_activities MCP tool, analyze current in-memory implementation, and verify Learning Loop API endpoint specification",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are updating the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Your Task**: Locate and analyze the current implementation.\n\n## Step 1: Locate the Tool Definition\n\nSearch the codebase for `metabob_fetch_boredom_activities`. Common locations:\n- `src/mcp/tools/`\n- `src/tools/`\n- `mcp/`\n- Files matching `*metabob*.ts`, `*metabob*.py`\n\nOnce found, read the file and identify:\n1. The tool definition/function\n2. Current in-memory storage implementation (look for `Map`, `cache`, `learningLoopStore`)\n3. Input parameters\n4. Return format/type\n5. Any existing documentation\n\n## Step 2: Document Current Implementation\n\nCreate a summary document with:\n- **File path**: Where the tool is defined\n- **Current implementation**: How it currently fetches data (in-memory storage pattern)\n- **Data structure**: What data structure is used (Map, array, etc.)\n- **Return format**: What the tool currently returns\n- **Parameters**: What parameters the tool accepts\n\n## Step 3: Verify API Endpoint\n\nSearch for the Learning Loop API endpoint definition:\n- Look for `GET /api/v1/learning-loop/boredom-activities`\n- Check in backend API route files (e.g., `routes/learning-loop.ts`, `routes/learning-loop.py`)\n- Common locations: `server/routes/`, `api/routes/`, `backend/routes/`\n\nDocument:\n- **Endpoint path**: Full path\n- **Query parameters**: What parameters the API accepts (limit, min_attempts, category, etc.)\n- **Response format**: JSON schema of the response\n- **Error responses**: What error codes/messages the API returns\n\n## Validation\n\nBefore completing, verify:\n- [ ] Tool definition file path identified and documented\n- [ ] Current implementation clearly understood and documented\n- [ ] API endpoint exists and is documented\n- [ ] Response format matches tool's expected return type (or note discrepancies)\n- [ ] File contains `metabob_fetch_boredom_activities` function\n\n## Output\n\nProvide a clear summary including:\n1. Tool file path: `path/to/tool/file`\n2. Current implementation summary (2-3 sentences)\n3. API endpoint verification (confirmed exists or not found)\n4. Any discrepancies between current return format and API response format\n5. Recommended HTTP client to use (based on project dependencies)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "update-tool-implementation",
+      "subagent": "general",
+      "description": "Replace in-memory storage with HTTP GET request to Learning Loop API, implement error handling, and update documentation",
+      "dependencies": [
+        "locate-and-analyze-tool"
+      ],
+      "prompt": {
+        "template": "You are updating the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Context from Previous Task**: You have located the tool and analyzed its current implementation.\n\n**Your Task**: Update the implementation to use HTTP GET requests instead of in-memory storage.\n\n## Step 1: Identify HTTP Client\n\nFirst, determine which HTTP client the project uses:\n- Check `package.json` or `requirements.txt` for: axios, fetch, node-fetch, httpx, requests\n- Look for existing API calls in the codebase to see the pattern\n- Common patterns:\n  - TypeScript/Node: `axios`, `fetch`, or custom wrapper\n  - Python: `httpx`, `requests`, or `aiohttp`\n\nIf no HTTP client is installed, install one that matches the project's tech stack.\n\n## Step 2: Update the Tool Implementation\n\nReplace the in-memory storage logic with an HTTP GET request:\n\n**Before** (in-memory pattern):\n```typescript\nconst activities = learningLoopStore.get('activities') || [];\nreturn activities.filter(/* ... */);\n```\n\n**After** (HTTP proxy pattern):\n```typescript\ntry {\n  const response = await httpClient.get('/api/v1/learning-loop/boredom-activities', {\n    params: { /* query params */ },\n    timeout: {{http_timeout_ms}}\n  });\n  return response.data;\n} catch (error) {\n  if (error.response) {\n    // API error\n    throw new Error(`API error: ${error.response.status} - ${error.response.data.message}`);\n  } else if (error.request) {\n    // Network error\n    throw new Error('Network error: Unable to reach Learning Loop API');\n  } else {\n    // Other error\n    throw new Error(`Request failed: ${error.message}`);\n  }\n}\n```\n\n## Step 3: Handle Query Parameters\n\nMap tool parameters to API query parameters:\n- `limit` → `?limit=N`\n- `min_attempts` → `?min_attempts=N`\n- `category` → `?category=feature`\n- `success_rate_threshold` → `?success_rate_threshold=0.5`\n\nUse proper URL encoding for query parameters.\n\n## Step 4: Implement Error Handling\n\n1. **Network Errors**: Catch connection failures, timeouts\n2. **HTTP 4xx Errors**: Handle client errors (bad request, not found)\n3. **HTTP 5xx Errors**: Handle server errors with informative messages\n4. **Timeout Handling**: Use timeout of {{http_timeout_ms}}ms\n5. **Response Parsing**: Handle JSON parsing errors\n\n## Step 5: Remove In-Memory Storage References\n\nDelete or comment out:\n- `learningLoopStore` references\n- `Map` or cache access\n- Any in-memory data structures\n- Unused imports related to storage\n\n## Step 6: Update Documentation\n\nUpdate the tool's inline documentation:\n- Description: \"Fetches boredom activities from Learning Loop API\"\n- Note that it proxies to the backend API\n- Document query parameters\n- Document error responses\n- Update examples if present\n\n## Validation\n\nBefore completing, verify:\n- [ ] HTTP client properly imported and configured\n- [ ] GET request to `/api/v1/learning-loop/boredom-activities` implemented\n- [ ] Query parameters properly constructed and passed\n- [ ] try/catch block wraps HTTP request\n- [ ] Network errors, 4xx, and 5xx errors handled with informative messages\n- [ ] Timeout configured ({{http_timeout_ms}}ms)\n- [ ] No references to `learningLoopStore`, `Map`, or `cache` remain\n- [ ] No unused imports from old implementation\n- [ ] No hardcoded API URLs (use config/environment variables)\n- [ ] No `TODO` or `FIXME` comments related to migration\n- [ ] Tool description and parameter documentation updated\n\n## Output\n\nProvide a summary of changes:\n1. HTTP client used: (e.g., axios, fetch)\n2. Lines changed: (approximate count)\n3. Query parameters supported: (list)\n4. Error handling added: (brief description)\n5. In-memory references removed: (count or \"all removed\")",
+        "variables": [
+          {
+            "name": "http_timeout_ms",
+            "type": "number",
+            "required": false,
+            "description": "HTTP request timeout in milliseconds",
+            "default": "30000"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-compilation",
+      "subagent": "general",
+      "description": "Run TypeScript compilation and type checking to ensure no build errors. Fix any compilation issues.",
+      "dependencies": [
+        "update-tool-implementation"
+      ],
+      "prompt": {
+        "template": "You have updated the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Your Task**: Verify the code compiles without errors and fix any issues.\n\n## Step 1: Run Build Command\n\nTry the following build commands (based on project setup):\n- `npm run build`\n- `bun run build`\n- `npm run typecheck`\n- `bun run typecheck`\n- `tsc --noEmit`\n- `pyright` (if Python)\n- `mypy` (if Python)\n\nRun whichever commands exist in the project.\n\n## Step 2: Analyze Errors\n\nIf compilation fails, analyze the errors:\n\n**Common TypeScript Errors**:\n1. **Type mismatches**: API response type doesn't match expected type\n   - Solution: Update return type or add type assertions\n2. **Missing imports**: HTTP client not imported\n   - Solution: Add proper import statement\n3. **Unused variables**: Old in-memory storage variables remain\n   - Solution: Remove unused variables and imports\n4. **Config type errors**: API URL config has wrong type\n   - Solution: Update config access pattern\n\n**Common Python Errors**:\n1. **Import errors**: HTTP client not imported\n   - Solution: Add proper import statement\n2. **Type hints**: Return type doesn't match actual return\n   - Solution: Update type hints\n3. **Async/await**: Missing await on HTTP call\n   - Solution: Add await keyword\n\n## Step 3: Fix Compilation Issues\n\nFor each error:\n1. Read the error message carefully\n2. Locate the file and line number\n3. Fix the issue\n4. Re-run the build command\n5. Repeat until no errors remain\n\n## Step 4: Verify Success\n\nOnce compilation succeeds:\n- Run the build command again to confirm\n- Check that the tool file is included in the build output\n- Verify no warnings about the modified file\n\n## Validation\n\nBefore completing, verify:\n- [ ] Build command exits with code 0 (success)\n- [ ] No TypeScript/type checking errors in output\n- [ ] No warnings about the modified tool file\n- [ ] Tool file compiles successfully\n\n## Output\n\nProvide:\n1. Build command used: (e.g., \"npm run build\")\n2. Build result: (success or failure)\n3. Errors fixed: (count and brief description of each)\n4. Final status: (\"Compilation successful\" or \"Still has errors\")",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "npm run build || bun run build || npm run typecheck || bun run typecheck || tsc --noEmit || echo 'No build command found'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-tool-integration",
+      "subagent": "general",
+      "description": "Test the updated tool with various inputs, verify it returns expected format, handles errors correctly. Create/update tests if include_tests is true.",
+      "dependencies": [
+        "verify-compilation"
+      ],
+      "prompt": {
+        "template": "You have successfully compiled the updated `metabob_fetch_boredom_activities` MCP tool.\n\n**Your Task**: Test the tool to ensure it works correctly with the Learning Loop API.\n\n## Step 1: Manual Integration Test\n\nTest the tool manually (if possible):\n\n**Option A: Direct function call** (if tool can be imported):\n```typescript\nimport { metabob_fetch_boredom_activities } from './path/to/tool';\nconst result = await metabob_fetch_boredom_activities({ limit: 5 });\nconsole.log('Result:', result);\n```\n\n**Option B: MCP server test** (if MCP server can be started):\n- Start the MCP server\n- Call the tool via MCP protocol\n- Verify response format\n\n**Test Cases**:\n1. **Basic call**: No parameters → should return all activities\n2. **With limit**: `{ limit: 5 }` → should return max 5 activities\n3. **With filters**: `{ category: 'feature', min_attempts: 3 }` → should filter results\n4. **Empty results**: Filters that match nothing → should return empty array\n5. **Invalid parameters**: Wrong types → should handle gracefully\n\n## Step 2: Test Error Handling\n\nTest error scenarios:\n\n1. **Network Error**: If backend is not running\n   - Expected: Informative error message about network connectivity\n2. **API Error (404)**: If endpoint doesn't exist\n   - Expected: Error message with status code\n3. **API Error (500)**: If backend returns server error\n   - Expected: Error message with status code and description\n4. **Timeout**: If request takes too long\n   - Expected: Timeout error with helpful message\n\n## Step 3: Create/Update Tests (if include_tests={{include_tests}})\n\n{{#if include_tests}}\nCreate or update test files:\n\n**Test file location**: Near the tool file or in `__tests__/` directory\n\n**Test structure**:\n```typescript\ndescribe('metabob_fetch_boredom_activities', () => {\n  it('should fetch activities from API', async () => {\n    // Mock HTTP client\n    const result = await metabob_fetch_boredom_activities();\n    expect(result).toBeDefined();\n    expect(Array.isArray(result.activities)).toBe(true);\n  });\n\n  it('should handle network errors', async () => {\n    // Mock network failure\n    await expect(metabob_fetch_boredom_activities()).rejects.toThrow('Network error');\n  });\n\n  it('should handle API errors', async () => {\n    // Mock API error response\n    await expect(metabob_fetch_boredom_activities()).rejects.toThrow('API error');\n  });\n\n  it('should pass query parameters', async () => {\n    // Mock and verify query params\n    const result = await metabob_fetch_boredom_activities({ limit: 5 });\n    // Verify HTTP client was called with correct params\n  });\n});\n```\n\nRun the tests:\n- `npm test`\n- `bun test`\n- `pytest` (if Python)\n{{/if}}\n\n## Step 4: Verify Expected Response Format\n\nCheck that the tool returns data matching this format:\n```json\n{\n  \"activities\": [\n    {\n      \"template_id\": \"string\",\n      \"name\": \"string\",\n      \"category\": \"string\",\n      \"success_rate\": 0.75,\n      \"execution_count\": 10,\n      \"last_executed\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"count\": 1\n}\n```\n\nIf format differs from API response:\n- Update the tool to transform API response to expected format\n- Or update consumers to handle new format (if backward compatibility not required)\n\n## Validation\n\nBefore completing, verify:\n- [ ] Tool can be called successfully with valid parameters\n- [ ] Returns data in expected format\n- [ ] Error handling works (network errors, API errors)\n- [ ] Edge cases tested (empty results, invalid parameters)\n- [ ] Query parameters are properly passed to API\n{{#if include_tests}}\n- [ ] Test file created or updated\n- [ ] All tests pass\n{{/if}}\n\n## Output\n\nProvide a test report:\n1. Manual tests performed: (list test cases)\n2. Results: (pass/fail for each)\n3. Error handling verified: (list scenarios tested)\n4. {{#if include_tests}}Tests created: (file path and test count){{/if}}\n5. Final status: (\"All tests passed\" or \"Issues found\")",
+        "variables": [
+          {
+            "name": "include_tests",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to create/update test files for the tool",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "npm test || bun test || pytest || echo 'No test command found'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-change-report",
+      "subagent": "general",
+      "description": "Generate summary report of all changes: files modified, dependencies added, query parameters supported, error handling improvements, and migration completion status",
+      "dependencies": [
+        "test-tool-integration"
+      ],
+      "prompt": {
+        "template": "You have successfully updated the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Your Task**: Generate a comprehensive change report summarizing the migration.\n\n## Report Structure\n\n### 1. Migration Summary\n\n**Status**: ✅ Complete\n\n**Migration Type**: In-memory storage → HTTP API proxy\n\n**API Endpoint**: `GET /api/v1/learning-loop/boredom-activities`\n\n### 2. Files Modified\n\nList all files changed:\n- **File**: `path/to/tool/file`\n  - **Lines changed**: ~X lines\n  - **Changes**: Replaced in-memory storage with HTTP GET request\n\n### 3. Dependencies Added\n\nList new dependencies:\n- **HTTP Client**: (e.g., axios, fetch)\n- **Version**: (if applicable)\n- **Configuration**: (environment variables, config files)\n\n### 4. Implementation Details\n\n**Query Parameters Supported**:\n- `limit`: Maximum number of activities to return\n- `min_attempts`: Filter by minimum execution attempts\n- `category`: Filter by activity category\n- `success_rate_threshold`: Filter by success rate\n\n**Error Handling**:\n- ✅ Network errors (connection failures, timeouts)\n- ✅ HTTP 4xx errors (client errors)\n- ✅ HTTP 5xx errors (server errors)\n- ✅ Timeout handling ({{http_timeout_ms}}ms)\n- ✅ JSON parsing errors\n\n**Timeout Configuration**: {{http_timeout_ms}}ms\n\n### 5. In-Memory Storage Removal\n\n**References Removed**:\n- `learningLoopStore` calls\n- `Map` or cache access\n- Unused storage imports\n- (List specific references removed)\n\n### 6. Validation Results\n\n**Compilation**: ✅ Success\n- Command used: (e.g., npm run build)\n- No type errors\n\n**Testing**: ✅ Success\n- Manual integration tests: X passed\n- Error handling tests: X passed\n{{#if include_tests}}\n- Unit tests: X passed\n{{/if}}\n\n### 7. Backward Compatibility\n\n**Breaking Changes**: (None / List any)\n\n**Migration Notes**: (Any notes for users of this tool)\n\n### 8. Next Steps\n\n- [ ] Review code changes\n- [ ] Deploy backend API if not already running\n- [ ] Update documentation if tool has external docs\n- [ ] Monitor tool usage for issues\n\n## Output Format\n\nGenerate the report in markdown format with clear sections and checkboxes. Include specific details from the implementation (actual file paths, line counts, etc.).\n\nSave the report to a file named `MCP_FETCH_BOREDOM_ACTIVITIES_MIGRATION_REPORT.md` in the project root or docs directory.",
+        "variables": [
+          {
+            "name": "http_timeout_ms",
+            "type": "number",
+            "required": false,
+            "description": "HTTP request timeout in milliseconds",
+            "default": "30000"
+          },
+          {
+            "name": "include_tests",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether tests were created/updated",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "locate-and-analyze-tool",
+      "subagent": "general",
+      "description": "Locate metabob_fetch_boredom_activities MCP tool, analyze current in-memory implementation, and verify Learning Loop API endpoint specification",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are updating the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Your Task**: Locate and analyze the current implementation.\n\n## Step 1: Locate the Tool Definition\n\nSearch the codebase for `metabob_fetch_boredom_activities`. Common locations:\n- `src/mcp/tools/`\n- `src/tools/`\n- `mcp/`\n- Files matching `*metabob*.ts`, `*metabob*.py`\n\nOnce found, read the file and identify:\n1. The tool definition/function\n2. Current in-memory storage implementation (look for `Map`, `cache`, `learningLoopStore`)\n3. Input parameters\n4. Return format/type\n5. Any existing documentation\n\n## Step 2: Document Current Implementation\n\nCreate a summary document with:\n- **File path**: Where the tool is defined\n- **Current implementation**: How it currently fetches data (in-memory storage pattern)\n- **Data structure**: What data structure is used (Map, array, etc.)\n- **Return format**: What the tool currently returns\n- **Parameters**: What parameters the tool accepts\n\n## Step 3: Verify API Endpoint\n\nSearch for the Learning Loop API endpoint definition:\n- Look for `GET /api/v1/learning-loop/boredom-activities`\n- Check in backend API route files (e.g., `routes/learning-loop.ts`, `routes/learning-loop.py`)\n- Common locations: `server/routes/`, `api/routes/`, `backend/routes/`\n\nDocument:\n- **Endpoint path**: Full path\n- **Query parameters**: What parameters the API accepts (limit, min_attempts, category, etc.)\n- **Response format**: JSON schema of the response\n- **Error responses**: What error codes/messages the API returns\n\n## Validation\n\nBefore completing, verify:\n- [ ] Tool definition file path identified and documented\n- [ ] Current implementation clearly understood and documented\n- [ ] API endpoint exists and is documented\n- [ ] Response format matches tool's expected return type (or note discrepancies)\n- [ ] File contains `metabob_fetch_boredom_activities` function\n\n## Output\n\nProvide a clear summary including:\n1. Tool file path: `path/to/tool/file`\n2. Current implementation summary (2-3 sentences)\n3. API endpoint verification (confirmed exists or not found)\n4. Any discrepancies between current return format and API response format\n5. Recommended HTTP client to use (based on project dependencies)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "update-tool-implementation",
+      "subagent": "general",
+      "description": "Replace in-memory storage with HTTP GET request to Learning Loop API, implement error handling, and update documentation",
+      "dependencies": [
+        "locate-and-analyze-tool"
+      ],
+      "prompt": {
+        "template": "You are updating the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Context from Previous Task**: You have located the tool and analyzed its current implementation.\n\n**Your Task**: Update the implementation to use HTTP GET requests instead of in-memory storage.\n\n## Step 1: Identify HTTP Client\n\nFirst, determine which HTTP client the project uses:\n- Check `package.json` or `requirements.txt` for: axios, fetch, node-fetch, httpx, requests\n- Look for existing API calls in the codebase to see the pattern\n- Common patterns:\n  - TypeScript/Node: `axios`, `fetch`, or custom wrapper\n  - Python: `httpx`, `requests`, or `aiohttp`\n\nIf no HTTP client is installed, install one that matches the project's tech stack.\n\n## Step 2: Update the Tool Implementation\n\nReplace the in-memory storage logic with an HTTP GET request:\n\n**Before** (in-memory pattern):\n```typescript\nconst activities = learningLoopStore.get('activities') || [];\nreturn activities.filter(/* ... */);\n```\n\n**After** (HTTP proxy pattern):\n```typescript\ntry {\n  const response = await httpClient.get('/api/v1/learning-loop/boredom-activities', {\n    params: { /* query params */ },\n    timeout: {{http_timeout_ms}}\n  });\n  return response.data;\n} catch (error) {\n  if (error.response) {\n    // API error\n    throw new Error(`API error: ${error.response.status} - ${error.response.data.message}`);\n  } else if (error.request) {\n    // Network error\n    throw new Error('Network error: Unable to reach Learning Loop API');\n  } else {\n    // Other error\n    throw new Error(`Request failed: ${error.message}`);\n  }\n}\n```\n\n## Step 3: Handle Query Parameters\n\nMap tool parameters to API query parameters:\n- `limit` → `?limit=N`\n- `min_attempts` → `?min_attempts=N`\n- `category` → `?category=feature`\n- `success_rate_threshold` → `?success_rate_threshold=0.5`\n\nUse proper URL encoding for query parameters.\n\n## Step 4: Implement Error Handling\n\n1. **Network Errors**: Catch connection failures, timeouts\n2. **HTTP 4xx Errors**: Handle client errors (bad request, not found)\n3. **HTTP 5xx Errors**: Handle server errors with informative messages\n4. **Timeout Handling**: Use timeout of {{http_timeout_ms}}ms\n5. **Response Parsing**: Handle JSON parsing errors\n\n## Step 5: Remove In-Memory Storage References\n\nDelete or comment out:\n- `learningLoopStore` references\n- `Map` or cache access\n- Any in-memory data structures\n- Unused imports related to storage\n\n## Step 6: Update Documentation\n\nUpdate the tool's inline documentation:\n- Description: \"Fetches boredom activities from Learning Loop API\"\n- Note that it proxies to the backend API\n- Document query parameters\n- Document error responses\n- Update examples if present\n\n## Validation\n\nBefore completing, verify:\n- [ ] HTTP client properly imported and configured\n- [ ] GET request to `/api/v1/learning-loop/boredom-activities` implemented\n- [ ] Query parameters properly constructed and passed\n- [ ] try/catch block wraps HTTP request\n- [ ] Network errors, 4xx, and 5xx errors handled with informative messages\n- [ ] Timeout configured ({{http_timeout_ms}}ms)\n- [ ] No references to `learningLoopStore`, `Map`, or `cache` remain\n- [ ] No unused imports from old implementation\n- [ ] No hardcoded API URLs (use config/environment variables)\n- [ ] No `TODO` or `FIXME` comments related to migration\n- [ ] Tool description and parameter documentation updated\n\n## Output\n\nProvide a summary of changes:\n1. HTTP client used: (e.g., axios, fetch)\n2. Lines changed: (approximate count)\n3. Query parameters supported: (list)\n4. Error handling added: (brief description)\n5. In-memory references removed: (count or \"all removed\")",
+        "variables": [
+          {
+            "name": "http_timeout_ms",
+            "type": "number",
+            "required": false,
+            "description": "HTTP request timeout in milliseconds",
+            "default": "30000"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-compilation",
+      "subagent": "general",
+      "description": "Run TypeScript compilation and type checking to ensure no build errors. Fix any compilation issues.",
+      "dependencies": [
+        "update-tool-implementation"
+      ],
+      "prompt": {
+        "template": "You have updated the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Your Task**: Verify the code compiles without errors and fix any issues.\n\n## Step 1: Run Build Command\n\nTry the following build commands (based on project setup):\n- `npm run build`\n- `bun run build`\n- `npm run typecheck`\n- `bun run typecheck`\n- `tsc --noEmit`\n- `pyright` (if Python)\n- `mypy` (if Python)\n\nRun whichever commands exist in the project.\n\n## Step 2: Analyze Errors\n\nIf compilation fails, analyze the errors:\n\n**Common TypeScript Errors**:\n1. **Type mismatches**: API response type doesn't match expected type\n   - Solution: Update return type or add type assertions\n2. **Missing imports**: HTTP client not imported\n   - Solution: Add proper import statement\n3. **Unused variables**: Old in-memory storage variables remain\n   - Solution: Remove unused variables and imports\n4. **Config type errors**: API URL config has wrong type\n   - Solution: Update config access pattern\n\n**Common Python Errors**:\n1. **Import errors**: HTTP client not imported\n   - Solution: Add proper import statement\n2. **Type hints**: Return type doesn't match actual return\n   - Solution: Update type hints\n3. **Async/await**: Missing await on HTTP call\n   - Solution: Add await keyword\n\n## Step 3: Fix Compilation Issues\n\nFor each error:\n1. Read the error message carefully\n2. Locate the file and line number\n3. Fix the issue\n4. Re-run the build command\n5. Repeat until no errors remain\n\n## Step 4: Verify Success\n\nOnce compilation succeeds:\n- Run the build command again to confirm\n- Check that the tool file is included in the build output\n- Verify no warnings about the modified file\n\n## Validation\n\nBefore completing, verify:\n- [ ] Build command exits with code 0 (success)\n- [ ] No TypeScript/type checking errors in output\n- [ ] No warnings about the modified tool file\n- [ ] Tool file compiles successfully\n\n## Output\n\nProvide:\n1. Build command used: (e.g., \"npm run build\")\n2. Build result: (success or failure)\n3. Errors fixed: (count and brief description of each)\n4. Final status: (\"Compilation successful\" or \"Still has errors\")",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "npm run build || bun run build || npm run typecheck || bun run typecheck || tsc --noEmit || echo 'No build command found'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-tool-integration",
+      "subagent": "general",
+      "description": "Test the updated tool with various inputs, verify it returns expected format, handles errors correctly. Create/update tests if include_tests is true.",
+      "dependencies": [
+        "verify-compilation"
+      ],
+      "prompt": {
+        "template": "You have successfully compiled the updated `metabob_fetch_boredom_activities` MCP tool.\n\n**Your Task**: Test the tool to ensure it works correctly with the Learning Loop API.\n\n## Step 1: Manual Integration Test\n\nTest the tool manually (if possible):\n\n**Option A: Direct function call** (if tool can be imported):\n```typescript\nimport { metabob_fetch_boredom_activities } from './path/to/tool';\nconst result = await metabob_fetch_boredom_activities({ limit: 5 });\nconsole.log('Result:', result);\n```\n\n**Option B: MCP server test** (if MCP server can be started):\n- Start the MCP server\n- Call the tool via MCP protocol\n- Verify response format\n\n**Test Cases**:\n1. **Basic call**: No parameters → should return all activities\n2. **With limit**: `{ limit: 5 }` → should return max 5 activities\n3. **With filters**: `{ category: 'feature', min_attempts: 3 }` → should filter results\n4. **Empty results**: Filters that match nothing → should return empty array\n5. **Invalid parameters**: Wrong types → should handle gracefully\n\n## Step 2: Test Error Handling\n\nTest error scenarios:\n\n1. **Network Error**: If backend is not running\n   - Expected: Informative error message about network connectivity\n2. **API Error (404)**: If endpoint doesn't exist\n   - Expected: Error message with status code\n3. **API Error (500)**: If backend returns server error\n   - Expected: Error message with status code and description\n4. **Timeout**: If request takes too long\n   - Expected: Timeout error with helpful message\n\n## Step 3: Create/Update Tests (if include_tests={{include_tests}})\n\n{{#if include_tests}}\nCreate or update test files:\n\n**Test file location**: Near the tool file or in `__tests__/` directory\n\n**Test structure**:\n```typescript\ndescribe('metabob_fetch_boredom_activities', () => {\n  it('should fetch activities from API', async () => {\n    // Mock HTTP client\n    const result = await metabob_fetch_boredom_activities();\n    expect(result).toBeDefined();\n    expect(Array.isArray(result.activities)).toBe(true);\n  });\n\n  it('should handle network errors', async () => {\n    // Mock network failure\n    await expect(metabob_fetch_boredom_activities()).rejects.toThrow('Network error');\n  });\n\n  it('should handle API errors', async () => {\n    // Mock API error response\n    await expect(metabob_fetch_boredom_activities()).rejects.toThrow('API error');\n  });\n\n  it('should pass query parameters', async () => {\n    // Mock and verify query params\n    const result = await metabob_fetch_boredom_activities({ limit: 5 });\n    // Verify HTTP client was called with correct params\n  });\n});\n```\n\nRun the tests:\n- `npm test`\n- `bun test`\n- `pytest` (if Python)\n{{/if}}\n\n## Step 4: Verify Expected Response Format\n\nCheck that the tool returns data matching this format:\n```json\n{\n  \"activities\": [\n    {\n      \"template_id\": \"string\",\n      \"name\": \"string\",\n      \"category\": \"string\",\n      \"success_rate\": 0.75,\n      \"execution_count\": 10,\n      \"last_executed\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"count\": 1\n}\n```\n\nIf format differs from API response:\n- Update the tool to transform API response to expected format\n- Or update consumers to handle new format (if backward compatibility not required)\n\n## Validation\n\nBefore completing, verify:\n- [ ] Tool can be called successfully with valid parameters\n- [ ] Returns data in expected format\n- [ ] Error handling works (network errors, API errors)\n- [ ] Edge cases tested (empty results, invalid parameters)\n- [ ] Query parameters are properly passed to API\n{{#if include_tests}}\n- [ ] Test file created or updated\n- [ ] All tests pass\n{{/if}}\n\n## Output\n\nProvide a test report:\n1. Manual tests performed: (list test cases)\n2. Results: (pass/fail for each)\n3. Error handling verified: (list scenarios tested)\n4. {{#if include_tests}}Tests created: (file path and test count){{/if}}\n5. Final status: (\"All tests passed\" or \"Issues found\")",
+        "variables": [
+          {
+            "name": "include_tests",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to create/update test files for the tool",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "npm test || bun test || pytest || echo 'No test command found'",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-change-report",
+      "subagent": "general",
+      "description": "Generate summary report of all changes: files modified, dependencies added, query parameters supported, error handling improvements, and migration completion status",
+      "dependencies": [
+        "test-tool-integration"
+      ],
+      "prompt": {
+        "template": "You have successfully updated the `metabob_fetch_boredom_activities` MCP tool to proxy to the Learning Loop API.\n\n**Your Task**: Generate a comprehensive change report summarizing the migration.\n\n## Report Structure\n\n### 1. Migration Summary\n\n**Status**: ✅ Complete\n\n**Migration Type**: In-memory storage → HTTP API proxy\n\n**API Endpoint**: `GET /api/v1/learning-loop/boredom-activities`\n\n### 2. Files Modified\n\nList all files changed:\n- **File**: `path/to/tool/file`\n  - **Lines changed**: ~X lines\n  - **Changes**: Replaced in-memory storage with HTTP GET request\n\n### 3. Dependencies Added\n\nList new dependencies:\n- **HTTP Client**: (e.g., axios, fetch)\n- **Version**: (if applicable)\n- **Configuration**: (environment variables, config files)\n\n### 4. Implementation Details\n\n**Query Parameters Supported**:\n- `limit`: Maximum number of activities to return\n- `min_attempts`: Filter by minimum execution attempts\n- `category`: Filter by activity category\n- `success_rate_threshold`: Filter by success rate\n\n**Error Handling**:\n- ✅ Network errors (connection failures, timeouts)\n- ✅ HTTP 4xx errors (client errors)\n- ✅ HTTP 5xx errors (server errors)\n- ✅ Timeout handling ({{http_timeout_ms}}ms)\n- ✅ JSON parsing errors\n\n**Timeout Configuration**: {{http_timeout_ms}}ms\n\n### 5. In-Memory Storage Removal\n\n**References Removed**:\n- `learningLoopStore` calls\n- `Map` or cache access\n- Unused storage imports\n- (List specific references removed)\n\n### 6. Validation Results\n\n**Compilation**: ✅ Success\n- Command used: (e.g., npm run build)\n- No type errors\n\n**Testing**: ✅ Success\n- Manual integration tests: X passed\n- Error handling tests: X passed\n{{#if include_tests}}\n- Unit tests: X passed\n{{/if}}\n\n### 7. Backward Compatibility\n\n**Breaking Changes**: (None / List any)\n\n**Migration Notes**: (Any notes for users of this tool)\n\n### 8. Next Steps\n\n- [ ] Review code changes\n- [ ] Deploy backend API if not already running\n- [ ] Update documentation if tool has external docs\n- [ ] Monitor tool usage for issues\n\n## Output Format\n\nGenerate the report in markdown format with clear sections and checkboxes. Include specific details from the implementation (actual file paths, line counts, etc.).\n\nSave the report to a file named `MCP_FETCH_BOREDOM_ACTIVITIES_MIGRATION_REPORT.md` in the project root or docs directory.",
+        "variables": [
+          {
+            "name": "http_timeout_ms",
+            "type": "number",
+            "required": false,
+            "description": "HTTP request timeout in milliseconds",
+            "default": "30000"
+          },
+          {
+            "name": "include_tests",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether tests were created/updated",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-22T03:42:35.359Z",
+  "metadata": {}
+}
