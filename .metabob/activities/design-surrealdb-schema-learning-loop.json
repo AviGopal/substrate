@@ -1,0 +1,381 @@
+{
+  "activity_id": "design-surrealdb-schema-learning-loop",
+  "name": "design-surrealdb-schema-learning-loop",
+  "description": "Design comprehensive SurrealDB schema for activity template learning loop: activity_execution, template_metrics, failure_patterns tables with indexes, relationships, and aggregation queries",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "analyze-current-system",
+      "subagent": "general",
+      "description": "Analyze existing Redis-based metrics storage and activity execution tracking to understand current data model, access patterns, and metrics being tracked",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are analyzing the current OpenCode activity execution tracking system to design a replacement SurrealDB schema.\n\n**Your Task**: Analyze the existing Redis-based metrics storage and activity execution tracking.\n\n**What to Find**:\n1. Search for ActivityResult, ExecutionMetrics, or similar types that define what metrics are currently tracked\n2. Find Redis usage in activity tracking code (look for Redis clients, key patterns, data structures)\n3. Identify current query patterns and access requirements\n4. Document what metrics are captured: tokens (input/output/cache), cost, duration, success/failure, timestamps, etc.\n\n**Key Areas to Investigate**:\n- `src/activity/` - Activity execution logic\n- Type definitions for ActivityResult, ExecutionMetrics, TemplateMetrics\n- Redis client usage and key patterns\n- Template learning and recommendation code\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/current_system_analysis.md` with:\n- Current data model (what's stored in Redis)\n- Metrics being tracked (list all fields)\n- Query patterns (how data is accessed)\n- Access patterns (read vs write patterns)\n- Pain points or limitations in current system\n\n**Success Criteria**:\n- Found and documented ActivityResult or ExecutionMetrics type definition\n- Identified Redis usage patterns\n- Listed at least 5 metric fields currently tracked\n- Documented query patterns for template selection and learning\n\n**Search Strategy**:\n1. Use Grep to find ActivityResult, ExecutionMetrics, Redis client usage\n2. Use Read to examine relevant files\n3. Document findings in analysis file\n\nStart your analysis now.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "design-schema-tables-and-relationships",
+      "subagent": "general",
+      "description": "Design complete SurrealDB schema including tables (activity_execution, template_metrics, failure_patterns), fields with types/constraints, relationships (1:N template→executions), and indexes for common queries",
+      "dependencies": [
+        "analyze-current-system"
+      ],
+      "prompt": {
+        "template": "You are designing the SurrealDB schema for the activity template learning loop.\n\n**Context**: You have analyzed the current system in the previous task. Read `/tmp/activity-template-design-surrealdb-schema-learning-loop/current_system_analysis.md` to understand what needs to be captured.\n\n**Your Task**: Design a complete SurrealDB schema with three core tables and their relationships.\n\n**Schema Requirements**:\n\n**Table 1: activity_execution**\n- Purpose: Record every activity execution with detailed metrics\n- Fields (minimum):\n  - id (primary key, thing)\n  - activity_id (string)\n  - template_id (string) - links to template_metrics\n  - started_at (datetime)\n  - completed_at (datetime, optional)\n  - duration_ms (int)\n  - success (bool)\n  - tokens_input (int)\n  - tokens_output (int)\n  - tokens_cache (int)\n  - cost_usd (decimal)\n  - error_message (string, optional)\n  - created_at (datetime)\n- Indexes: template_id, started_at, success, composite(template_id + started_at)\n\n**Table 2: template_metrics**\n- Purpose: Aggregated metrics per template for learning and recommendation\n- Fields (minimum):\n  - id (primary key, thing)\n  - template_id (string, unique)\n  - total_executions (int)\n  - successful_executions (int)\n  - failed_executions (int)\n  - success_rate (decimal)\n  - avg_duration_ms (int)\n  - avg_cost_usd (decimal)\n  - avg_tokens_total (int)\n  - last_executed_at (datetime)\n  - created_at (datetime)\n  - updated_at (datetime)\n- Indexes: template_id (unique), success_rate, last_executed_at\n\n**Table 3: failure_patterns**\n- Purpose: Track common failure modes for debugging and improvement\n- Fields (minimum):\n  - id (primary key, thing)\n  - execution_id (string) - links to activity_execution\n  - template_id (string)\n  - error_type (string)\n  - error_message (string)\n  - frequency (int) - how many times this pattern occurred\n  - first_seen (datetime)\n  - last_seen (datetime)\n  - created_at (datetime)\n- Indexes: template_id, error_type, composite(template_id + error_type)\n\n**Relationships**:\n- template_metrics → activity_execution (1:N) via template_id\n- activity_execution → failure_patterns (1:N) via execution_id\n\n**Variables**:\n- Schema version: {{schema_version}}\n- Include sample data: {{include_sample_data}}\n- Redis compatibility mode: {{redis_compat_mode}}\n- Enable analytics views: {{enable_analytics_views}}\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/schema.surql` with:\n1. Header comment with schema version and purpose\n2. All three table definitions with DEFINE TABLE\n3. All field definitions with DEFINE FIELD and type constraints\n4. All indexes with DEFINE INDEX\n5. Relationship definitions (if using RELATE)\n6. If {{enable_analytics_views}} is true, add pre-computed views\n7. If {{include_sample_data}} is true, include INSERT statements with sample data\n8. Comments explaining design decisions\n\n**SurrealDB Syntax Guide**:\n```surql\n-- Table definition\nDEFINE TABLE activity_execution SCHEMAFULL;\n\n-- Field with type\nDEFINE FIELD activity_id ON activity_execution TYPE string;\nDEFINE FIELD duration_ms ON activity_execution TYPE int;\nDEFINE FIELD cost_usd ON activity_execution TYPE decimal;\nDEFINE FIELD started_at ON activity_execution TYPE datetime;\nDEFINE FIELD success ON activity_execution TYPE bool;\n\n-- Index\nDEFINE INDEX idx_template_id ON activity_execution FIELDS template_id;\nDEFINE INDEX idx_template_time ON activity_execution FIELDS template_id, started_at;\n```\n\n**Validation**:\n- Use proper SurrealDB types: string, int, decimal, datetime, bool\n- Include at least 3 indexes (one per table minimum)\n- Use SCHEMAFULL for strict typing\n- No TODO or FIXME comments\n- Valid SurrealDB syntax\n\nCreate the schema.surql file now.",
+        "variables": [
+          {
+            "name": "schema_version",
+            "type": "string",
+            "required": false,
+            "description": "Schema version identifier for migration tracking",
+            "default": "1.0.0"
+          },
+          {
+            "name": "include_sample_data",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to include sample data for testing",
+            "default": "false"
+          },
+          {
+            "name": "redis_compat_mode",
+            "type": "boolean",
+            "required": false,
+            "description": "Include compatibility layer for gradual migration",
+            "default": "true"
+          },
+          {
+            "name": "enable_analytics_views",
+            "type": "boolean",
+            "required": false,
+            "description": "Create pre-computed views for common analytics queries",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /tmp/activity-template-design-surrealdb-schema-learning-loop && test $(grep -E 'DEFINE (TABLE|INDEX|FIELD)' schema.surql | wc -l) -gt 15",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd /tmp/activity-template-design-surrealdb-schema-learning-loop && test $(grep -c 'DEFINE TABLE' schema.surql) -ge 3",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-aggregation-queries",
+      "subagent": "general",
+      "description": "Write SurrealDB queries for calculating success rates, average costs, duration trends, failure pattern frequency, and template recommendation with scoring",
+      "dependencies": [
+        "design-schema-tables-and-relationships"
+      ],
+      "prompt": {
+        "template": "You are creating SurrealDB queries for the activity template learning loop.\n\n**Context**: The schema has been designed in `/tmp/activity-template-design-surrealdb-schema-learning-loop/schema.surql`. Read it to understand the table structure.\n\n**Your Task**: Write common aggregation and analytics queries that will be used for template learning and recommendation.\n\n**Required Queries**:\n\n**Query 1: Calculate Template Success Rate**\n- Purpose: Get success rate for a specific template\n- Input: template_id\n- Output: success_rate, total_executions, successful_executions, failed_executions\n- Logic: (successful_executions / total_executions) * 100\n\n**Query 2: Calculate Average Cost and Duration by Template**\n- Purpose: Get performance metrics per template\n- Input: template_id, optional time_range\n- Output: avg_duration_ms, avg_cost_usd, avg_tokens_total, execution_count\n- Logic: AVG aggregation on activity_execution records\n\n**Query 3: Find Failure Pattern Frequency**\n- Purpose: Identify most common failure modes\n- Input: optional template_id, optional time_range\n- Output: error_type, error_message, frequency, template_id, last_seen\n- Logic: GROUP BY error_type, ORDER BY frequency DESC\n\n**Query 4: Template Recommendation with Scoring**\n- Purpose: Recommend best templates based on success rate and recency\n- Input: category, min_executions (filter out templates with too few runs)\n- Output: template_id, score, success_rate, avg_cost_usd, last_executed_at\n- Logic: Score = (success_rate * 0.6) + (recency_score * 0.4)\n  - recency_score = 100 if executed in last 7 days, decaying with age\n  - Only include templates with >= min_executions\n\n**Query 5: Trend Analysis - Success Rate Over Time**\n- Purpose: Track if template quality is improving or degrading\n- Input: template_id, time_window (e.g., last 30 days)\n- Output: date, success_rate, execution_count\n- Logic: GROUP BY date, calculate daily success rate\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/queries.surql` with:\n1. Header comment explaining query purpose\n2. All 5 queries with descriptive comments\n3. Parameterized queries (use $template_id, $time_range, etc.)\n4. Example usage comments showing how to call each query\n5. Queries must reference tables from schema.surql\n6. Valid SurrealDB syntax\n\n**SurrealDB Query Syntax Guide**:\n```surql\n-- Simple aggregation\nSELECT \n  template_id,\n  math::mean(duration_ms) AS avg_duration,\n  math::mean(cost_usd) AS avg_cost,\n  count() AS total_executions\nFROM activity_execution\nWHERE template_id = $template_id\nGROUP BY template_id;\n\n-- With time filtering\nSELECT * FROM activity_execution\nWHERE template_id = $template_id\n  AND started_at > time::now() - 7d\nORDER BY started_at DESC;\n\n-- Success rate calculation\nSELECT \n  template_id,\n  count() AS total,\n  math::sum(success) AS successful,\n  (math::sum(success) / count()) * 100 AS success_rate\nFROM activity_execution\nWHERE template_id = $template_id\nGROUP BY template_id;\n```\n\n**Validation**:\n- At least 5 SELECT queries\n- Each query has a comment explaining its purpose\n- Queries use proper SurrealDB functions (math::mean, math::sum, count, time::now)\n- Parameterized with $variable syntax\n- No TODO or FIXME comments\n\nCreate the queries.surql file now.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /tmp/activity-template-design-surrealdb-schema-learning-loop && test $(grep -c 'SELECT' queries.surql) -ge 4",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "document-migration-strategy",
+      "subagent": "general",
+      "description": "Outline comprehensive migration strategy from Redis to SurrealDB including dual-write approach, data validation, rollback plan, timeline, and checkpoints",
+      "dependencies": [
+        "design-schema-tables-and-relationships"
+      ],
+      "prompt": {
+        "template": "You are documenting the migration strategy from Redis to SurrealDB for the activity template learning loop.\n\n**Context**: \n- Current system uses Redis (analyzed in current_system_analysis.md)\n- New SurrealDB schema is defined in schema.surql\n- This is Phase 1.1 (design), followed by Phase 1.2 (implementation), Phase 1.3 (migration), Phase 1.4 (cutover)\n\n**Your Task**: Create a comprehensive, low-risk migration plan that ensures no data loss.\n\n**Migration Plan Structure**:\n\n**1. Overview**\n- Current state: Redis-based metrics\n- Target state: SurrealDB as single source of truth\n- Risk level: Medium (production data, learning system)\n- Migration approach: Dual-write with validation\n\n**2. Dual-Write Strategy**\n- Phase: During implementation and testing\n- Approach: Write to both Redis AND SurrealDB simultaneously\n- Duration: Minimum 2 weeks to build confidence\n- Benefits:\n  - No data loss\n  - Can compare results between systems\n  - Easy rollback if issues found\n- Implementation:\n  - Modify activity execution tracking to write to both systems\n  - Log any write failures\n  - Monitor for discrepancies\n\n**3. Data Validation Strategy**\n- Continuous validation during dual-write period\n- Compare metrics between Redis and SurrealDB:\n  - Success rates per template\n  - Average costs and durations\n  - Execution counts\n- Automated validation checks:\n  - Daily comparison script\n  - Alert if metrics differ by > 5%\n  - Manual review for discrepancies\n- Success criteria:\n  - 99% agreement between systems for 1 week\n  - No write failures in SurrealDB\n  - Query performance acceptable\n\n**4. Rollback Plan**\n- Rollback triggers:\n  - SurrealDB write failures > 1% of attempts\n  - Data discrepancies > 5% between systems\n  - Query performance degradation > 2x slower\n  - Critical bugs in learning algorithm\n- Rollback procedure:\n  1. Disable SurrealDB writes (keep Redis only)\n  2. Investigate root cause\n  3. Fix issues\n  4. Resume dual-write after fix validated\n- Rollback impact: Minimal (Redis remains operational)\n\n**5. Migration Timeline**\n- **Week 1-2 (Phase 1.2)**: Implement SurrealDB client and dual-write\n  - Code changes\n  - Unit tests\n  - Integration tests\n  - Go/No-Go: All tests pass, code reviewed\n\n- **Week 3-4 (Phase 1.3)**: Dual-write in staging\n  - Deploy to staging environment\n  - Run both systems in parallel\n  - Monitor metrics and performance\n  - Validate data consistency daily\n  - Go/No-Go: 99% agreement, no critical issues\n\n- **Week 5 (Phase 1.3 cont)**: Historical data migration\n  - Export historical data from Redis\n  - Import into SurrealDB\n  - Validate historical metrics\n  - Go/No-Go: Historical data matches\n\n- **Week 6-7 (Phase 1.4)**: Dual-write in production\n  - Deploy to production\n  - Continue writing to both systems\n  - Monitor closely for 2 weeks\n  - Go/No-Go: 99% agreement, performance acceptable\n\n- **Week 8 (Phase 1.4 cont)**: Cutover to SurrealDB\n  - Disable Redis writes\n  - SurrealDB becomes single source of truth\n  - Monitor for 1 week\n  - Go/No-Go: No regressions, learning system operational\n\n- **Week 9+**: Deprecate Redis\n  - Keep Redis read-only for 2 weeks as backup\n  - Remove Redis dependencies\n  - Decommission Redis instance\n\n**6. Risk Assessment and Mitigation**\n- **Risk**: Data loss during migration\n  - Mitigation: Dual-write ensures both systems have data\n- **Risk**: Performance degradation\n  - Mitigation: Load testing before production deployment\n- **Risk**: Learning algorithm breaks with new schema\n  - Mitigation: Extensive testing in staging with real data\n- **Risk**: SurrealDB operational issues\n  - Mitigation: Easy rollback to Redis, monitoring, on-call support\n\n**7. Success Metrics**\n- Zero data loss\n- 99%+ agreement between systems\n- Query performance < 100ms for common queries\n- Learning algorithm produces same recommendations\n- No production incidents\n\n**8. Monitoring and Alerts**\n- Dual-write success rate\n- Data consistency checks\n- Query performance metrics\n- Error rates\n- SurrealDB disk usage and performance\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/MIGRATION_PLAN.md` with all sections above.\n\n**Validation**:\n- Contains dual-write approach\n- Contains data validation strategy with specific criteria\n- Contains rollback plan with specific triggers\n- Contains timeline with at least 3 phases (dual-write, validation, cutover)\n- Mentions Redis → SurrealDB migration explicitly\n- No TODO or FIXME comments\n\nCreate the MIGRATION_PLAN.md file now.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-schema-documentation",
+      "subagent": "general",
+      "description": "Create comprehensive schema documentation including table descriptions, field explanations, relationship diagrams, usage examples, integration notes, and design decisions summary",
+      "dependencies": [
+        "design-schema-tables-and-relationships",
+        "create-aggregation-queries",
+        "document-migration-strategy"
+      ],
+      "prompt": {
+        "template": "You are creating comprehensive documentation for the SurrealDB schema.\n\n**Context**: Read these files to understand the complete design:\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/schema.surql` - Schema definition\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/queries.surql` - Common queries\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/MIGRATION_PLAN.md` - Migration strategy\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/current_system_analysis.md` - Current system analysis\n\n**Your Task**: Create developer-friendly documentation that explains the schema design and how to use it.\n\n**Documentation Structure**:\n\n**1. Overview**\n- Purpose: Activity template learning loop data storage\n- Technology: SurrealDB\n- Schema version: {{schema_version}}\n- Status: Phase 1.1 (Design Complete)\n- Next steps: Phase 1.2 (Implementation)\n\n**2. Schema Architecture**\n- High-level design: Three core tables\n- Data flow: activity execution → metrics aggregation → learning\n- Key design decisions:\n  - Why SurrealDB over Redis\n  - Why these specific tables\n  - Why these relationships\n  - Why these indexes\n\n**3. Table Definitions**\n\nFor each table (activity_execution, template_metrics, failure_patterns):\n\n**Table: [name]**\n- Purpose: What this table stores and why\n- Primary use cases: When/how this table is queried\n- Fields:\n  - `field_name` (type) - Description and constraints\n  - [repeat for all fields]\n- Indexes:\n  - `index_name` on [fields] - Why this index exists\n- Relationships:\n  - Links to [other tables] via [field]\n- Example record:\n  ```json\n  {\n    \"field\": \"value\",\n    ...\n  }\n  ```\n\n**4. Relationships**\n- template_metrics (1) → activity_execution (N)\n  - How: template_id foreign key\n  - Why: Track all executions per template\n- activity_execution (1) → failure_patterns (N)\n  - How: execution_id foreign key\n  - Why: Link failures to specific executions\n- Diagram:\n  ```\n  template_metrics (1:N) activity_execution (1:N) failure_patterns\n  ```\n\n**5. Index Strategy**\n- Why these indexes were chosen\n- Query patterns they optimize:\n  - Template lookup: idx_template_id\n  - Time-range queries: idx_template_time\n  - Success filtering: idx_success\n  - Failure analysis: idx_error_type\n- Performance expectations: < 100ms for common queries\n\n**6. Common Operations**\n\n**Operation: Record Activity Execution**\n```surql\nINSERT INTO activity_execution {\n  activity_id: $activity_id,\n  template_id: $template_id,\n  started_at: time::now(),\n  completed_at: time::now(),\n  duration_ms: $duration,\n  success: true,\n  tokens_input: $input_tokens,\n  tokens_output: $output_tokens,\n  tokens_cache: $cache_tokens,\n  cost_usd: $cost,\n  created_at: time::now()\n};\n```\n\n**Operation: Update Template Metrics**\n```surql\nUPDATE template_metrics SET\n  total_executions += 1,\n  successful_executions += $success,\n  success_rate = (successful_executions / total_executions) * 100,\n  last_executed_at = time::now()\nWHERE template_id = $template_id;\n```\n\n**Operation: Query Template Performance**\n[Include examples from queries.surql]\n\n**7. Integration with OpenCode**\n- Where to use this schema: Activity execution tracking\n- Integration points:\n  - ActivityExecutor: Record executions\n  - TemplateLibrary: Query metrics for recommendation\n  - Learning system: Analyze patterns\n- Code changes needed (Phase 1.2):\n  - SurrealDB client initialization\n  - Write execution metrics\n  - Query template metrics\n  - Dual-write to Redis during migration\n\n**8. Usage Examples**\n\n**Example 1: Find Best Template for a Task**\n[Show query with explanation]\n\n**Example 2: Analyze Failure Patterns**\n[Show query with explanation]\n\n**Example 3: Track Template Performance Over Time**\n[Show query with explanation]\n\n**9. Design Decisions Summary**\n- Decision: Use SurrealDB instead of Redis\n  - Reason: Better query capabilities, relationships, schema enforcement\n- Decision: Three separate tables\n  - Reason: Normalize data, optimize different query patterns\n- Decision: Decimal type for costs\n  - Reason: Precise financial calculations\n- Decision: Datetime for timestamps\n  - Reason: Time-based queries and sorting\n- Decision: Indexes on template_id and time\n  - Reason: Most common query pattern (metrics per template over time)\n\n**10. Future Extensibility**\n- Phase 2: Advanced analytics\n  - Add tables: execution_steps, template_comparisons\n  - Add views: daily_metrics, monthly_trends\n- Phase 3: Machine learning\n  - Add tables: prediction_models, training_data\n  - Feature vectors for recommendation\n- Schema evolution:\n  - Use schema_version for migrations\n  - Add fields without breaking changes\n  - Use optional fields for new features\n\n**11. Performance Considerations**\n- Expected scale:\n  - ~1000 activity executions per day\n  - ~100 unique templates\n  - Query load: moderate (recommendation queries every few minutes)\n- Optimization strategies:\n  - Indexes on common query patterns\n  - Pre-computed metrics in template_metrics\n  - Archiving old executions after 90 days\n- Monitoring:\n  - Query performance\n  - Index usage\n  - Disk space\n\n**12. References**\n- Schema file: schema.surql\n- Queries file: queries.surql\n- Migration plan: MIGRATION_PLAN.md\n- SurrealDB documentation: https://surrealdb.com/docs\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/SCHEMA_DOCS.md` with all sections above.\n\n**Validation**:\n- Documents all 3 core tables with field-level descriptions\n- Includes usage examples for common operations\n- Explains index strategy\n- Mentions integration with OpenCode activity system\n- Includes design decisions summary\n- No TODO or FIXME comments\n\nCreate the SCHEMA_DOCS.md file now.",
+        "variables": [
+          {
+            "name": "schema_version",
+            "type": "string",
+            "required": false,
+            "description": "Schema version identifier for migration tracking",
+            "default": "1.0.0"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "analyze-current-system",
+      "subagent": "general",
+      "description": "Analyze existing Redis-based metrics storage and activity execution tracking to understand current data model, access patterns, and metrics being tracked",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are analyzing the current OpenCode activity execution tracking system to design a replacement SurrealDB schema.\n\n**Your Task**: Analyze the existing Redis-based metrics storage and activity execution tracking.\n\n**What to Find**:\n1. Search for ActivityResult, ExecutionMetrics, or similar types that define what metrics are currently tracked\n2. Find Redis usage in activity tracking code (look for Redis clients, key patterns, data structures)\n3. Identify current query patterns and access requirements\n4. Document what metrics are captured: tokens (input/output/cache), cost, duration, success/failure, timestamps, etc.\n\n**Key Areas to Investigate**:\n- `src/activity/` - Activity execution logic\n- Type definitions for ActivityResult, ExecutionMetrics, TemplateMetrics\n- Redis client usage and key patterns\n- Template learning and recommendation code\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/current_system_analysis.md` with:\n- Current data model (what's stored in Redis)\n- Metrics being tracked (list all fields)\n- Query patterns (how data is accessed)\n- Access patterns (read vs write patterns)\n- Pain points or limitations in current system\n\n**Success Criteria**:\n- Found and documented ActivityResult or ExecutionMetrics type definition\n- Identified Redis usage patterns\n- Listed at least 5 metric fields currently tracked\n- Documented query patterns for template selection and learning\n\n**Search Strategy**:\n1. Use Grep to find ActivityResult, ExecutionMetrics, Redis client usage\n2. Use Read to examine relevant files\n3. Document findings in analysis file\n\nStart your analysis now.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "design-schema-tables-and-relationships",
+      "subagent": "general",
+      "description": "Design complete SurrealDB schema including tables (activity_execution, template_metrics, failure_patterns), fields with types/constraints, relationships (1:N template→executions), and indexes for common queries",
+      "dependencies": [
+        "analyze-current-system"
+      ],
+      "prompt": {
+        "template": "You are designing the SurrealDB schema for the activity template learning loop.\n\n**Context**: You have analyzed the current system in the previous task. Read `/tmp/activity-template-design-surrealdb-schema-learning-loop/current_system_analysis.md` to understand what needs to be captured.\n\n**Your Task**: Design a complete SurrealDB schema with three core tables and their relationships.\n\n**Schema Requirements**:\n\n**Table 1: activity_execution**\n- Purpose: Record every activity execution with detailed metrics\n- Fields (minimum):\n  - id (primary key, thing)\n  - activity_id (string)\n  - template_id (string) - links to template_metrics\n  - started_at (datetime)\n  - completed_at (datetime, optional)\n  - duration_ms (int)\n  - success (bool)\n  - tokens_input (int)\n  - tokens_output (int)\n  - tokens_cache (int)\n  - cost_usd (decimal)\n  - error_message (string, optional)\n  - created_at (datetime)\n- Indexes: template_id, started_at, success, composite(template_id + started_at)\n\n**Table 2: template_metrics**\n- Purpose: Aggregated metrics per template for learning and recommendation\n- Fields (minimum):\n  - id (primary key, thing)\n  - template_id (string, unique)\n  - total_executions (int)\n  - successful_executions (int)\n  - failed_executions (int)\n  - success_rate (decimal)\n  - avg_duration_ms (int)\n  - avg_cost_usd (decimal)\n  - avg_tokens_total (int)\n  - last_executed_at (datetime)\n  - created_at (datetime)\n  - updated_at (datetime)\n- Indexes: template_id (unique), success_rate, last_executed_at\n\n**Table 3: failure_patterns**\n- Purpose: Track common failure modes for debugging and improvement\n- Fields (minimum):\n  - id (primary key, thing)\n  - execution_id (string) - links to activity_execution\n  - template_id (string)\n  - error_type (string)\n  - error_message (string)\n  - frequency (int) - how many times this pattern occurred\n  - first_seen (datetime)\n  - last_seen (datetime)\n  - created_at (datetime)\n- Indexes: template_id, error_type, composite(template_id + error_type)\n\n**Relationships**:\n- template_metrics → activity_execution (1:N) via template_id\n- activity_execution → failure_patterns (1:N) via execution_id\n\n**Variables**:\n- Schema version: {{schema_version}}\n- Include sample data: {{include_sample_data}}\n- Redis compatibility mode: {{redis_compat_mode}}\n- Enable analytics views: {{enable_analytics_views}}\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/schema.surql` with:\n1. Header comment with schema version and purpose\n2. All three table definitions with DEFINE TABLE\n3. All field definitions with DEFINE FIELD and type constraints\n4. All indexes with DEFINE INDEX\n5. Relationship definitions (if using RELATE)\n6. If {{enable_analytics_views}} is true, add pre-computed views\n7. If {{include_sample_data}} is true, include INSERT statements with sample data\n8. Comments explaining design decisions\n\n**SurrealDB Syntax Guide**:\n```surql\n-- Table definition\nDEFINE TABLE activity_execution SCHEMAFULL;\n\n-- Field with type\nDEFINE FIELD activity_id ON activity_execution TYPE string;\nDEFINE FIELD duration_ms ON activity_execution TYPE int;\nDEFINE FIELD cost_usd ON activity_execution TYPE decimal;\nDEFINE FIELD started_at ON activity_execution TYPE datetime;\nDEFINE FIELD success ON activity_execution TYPE bool;\n\n-- Index\nDEFINE INDEX idx_template_id ON activity_execution FIELDS template_id;\nDEFINE INDEX idx_template_time ON activity_execution FIELDS template_id, started_at;\n```\n\n**Validation**:\n- Use proper SurrealDB types: string, int, decimal, datetime, bool\n- Include at least 3 indexes (one per table minimum)\n- Use SCHEMAFULL for strict typing\n- No TODO or FIXME comments\n- Valid SurrealDB syntax\n\nCreate the schema.surql file now.",
+        "variables": [
+          {
+            "name": "schema_version",
+            "type": "string",
+            "required": false,
+            "description": "Schema version identifier for migration tracking",
+            "default": "1.0.0"
+          },
+          {
+            "name": "include_sample_data",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to include sample data for testing",
+            "default": "false"
+          },
+          {
+            "name": "redis_compat_mode",
+            "type": "boolean",
+            "required": false,
+            "description": "Include compatibility layer for gradual migration",
+            "default": "true"
+          },
+          {
+            "name": "enable_analytics_views",
+            "type": "boolean",
+            "required": false,
+            "description": "Create pre-computed views for common analytics queries",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /tmp/activity-template-design-surrealdb-schema-learning-loop && test $(grep -E 'DEFINE (TABLE|INDEX|FIELD)' schema.surql | wc -l) -gt 15",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd /tmp/activity-template-design-surrealdb-schema-learning-loop && test $(grep -c 'DEFINE TABLE' schema.surql) -ge 3",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-aggregation-queries",
+      "subagent": "general",
+      "description": "Write SurrealDB queries for calculating success rates, average costs, duration trends, failure pattern frequency, and template recommendation with scoring",
+      "dependencies": [
+        "design-schema-tables-and-relationships"
+      ],
+      "prompt": {
+        "template": "You are creating SurrealDB queries for the activity template learning loop.\n\n**Context**: The schema has been designed in `/tmp/activity-template-design-surrealdb-schema-learning-loop/schema.surql`. Read it to understand the table structure.\n\n**Your Task**: Write common aggregation and analytics queries that will be used for template learning and recommendation.\n\n**Required Queries**:\n\n**Query 1: Calculate Template Success Rate**\n- Purpose: Get success rate for a specific template\n- Input: template_id\n- Output: success_rate, total_executions, successful_executions, failed_executions\n- Logic: (successful_executions / total_executions) * 100\n\n**Query 2: Calculate Average Cost and Duration by Template**\n- Purpose: Get performance metrics per template\n- Input: template_id, optional time_range\n- Output: avg_duration_ms, avg_cost_usd, avg_tokens_total, execution_count\n- Logic: AVG aggregation on activity_execution records\n\n**Query 3: Find Failure Pattern Frequency**\n- Purpose: Identify most common failure modes\n- Input: optional template_id, optional time_range\n- Output: error_type, error_message, frequency, template_id, last_seen\n- Logic: GROUP BY error_type, ORDER BY frequency DESC\n\n**Query 4: Template Recommendation with Scoring**\n- Purpose: Recommend best templates based on success rate and recency\n- Input: category, min_executions (filter out templates with too few runs)\n- Output: template_id, score, success_rate, avg_cost_usd, last_executed_at\n- Logic: Score = (success_rate * 0.6) + (recency_score * 0.4)\n  - recency_score = 100 if executed in last 7 days, decaying with age\n  - Only include templates with >= min_executions\n\n**Query 5: Trend Analysis - Success Rate Over Time**\n- Purpose: Track if template quality is improving or degrading\n- Input: template_id, time_window (e.g., last 30 days)\n- Output: date, success_rate, execution_count\n- Logic: GROUP BY date, calculate daily success rate\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/queries.surql` with:\n1. Header comment explaining query purpose\n2. All 5 queries with descriptive comments\n3. Parameterized queries (use $template_id, $time_range, etc.)\n4. Example usage comments showing how to call each query\n5. Queries must reference tables from schema.surql\n6. Valid SurrealDB syntax\n\n**SurrealDB Query Syntax Guide**:\n```surql\n-- Simple aggregation\nSELECT \n  template_id,\n  math::mean(duration_ms) AS avg_duration,\n  math::mean(cost_usd) AS avg_cost,\n  count() AS total_executions\nFROM activity_execution\nWHERE template_id = $template_id\nGROUP BY template_id;\n\n-- With time filtering\nSELECT * FROM activity_execution\nWHERE template_id = $template_id\n  AND started_at > time::now() - 7d\nORDER BY started_at DESC;\n\n-- Success rate calculation\nSELECT \n  template_id,\n  count() AS total,\n  math::sum(success) AS successful,\n  (math::sum(success) / count()) * 100 AS success_rate\nFROM activity_execution\nWHERE template_id = $template_id\nGROUP BY template_id;\n```\n\n**Validation**:\n- At least 5 SELECT queries\n- Each query has a comment explaining its purpose\n- Queries use proper SurrealDB functions (math::mean, math::sum, count, time::now)\n- Parameterized with $variable syntax\n- No TODO or FIXME comments\n\nCreate the queries.surql file now.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /tmp/activity-template-design-surrealdb-schema-learning-loop && test $(grep -c 'SELECT' queries.surql) -ge 4",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "document-migration-strategy",
+      "subagent": "general",
+      "description": "Outline comprehensive migration strategy from Redis to SurrealDB including dual-write approach, data validation, rollback plan, timeline, and checkpoints",
+      "dependencies": [
+        "design-schema-tables-and-relationships"
+      ],
+      "prompt": {
+        "template": "You are documenting the migration strategy from Redis to SurrealDB for the activity template learning loop.\n\n**Context**: \n- Current system uses Redis (analyzed in current_system_analysis.md)\n- New SurrealDB schema is defined in schema.surql\n- This is Phase 1.1 (design), followed by Phase 1.2 (implementation), Phase 1.3 (migration), Phase 1.4 (cutover)\n\n**Your Task**: Create a comprehensive, low-risk migration plan that ensures no data loss.\n\n**Migration Plan Structure**:\n\n**1. Overview**\n- Current state: Redis-based metrics\n- Target state: SurrealDB as single source of truth\n- Risk level: Medium (production data, learning system)\n- Migration approach: Dual-write with validation\n\n**2. Dual-Write Strategy**\n- Phase: During implementation and testing\n- Approach: Write to both Redis AND SurrealDB simultaneously\n- Duration: Minimum 2 weeks to build confidence\n- Benefits:\n  - No data loss\n  - Can compare results between systems\n  - Easy rollback if issues found\n- Implementation:\n  - Modify activity execution tracking to write to both systems\n  - Log any write failures\n  - Monitor for discrepancies\n\n**3. Data Validation Strategy**\n- Continuous validation during dual-write period\n- Compare metrics between Redis and SurrealDB:\n  - Success rates per template\n  - Average costs and durations\n  - Execution counts\n- Automated validation checks:\n  - Daily comparison script\n  - Alert if metrics differ by > 5%\n  - Manual review for discrepancies\n- Success criteria:\n  - 99% agreement between systems for 1 week\n  - No write failures in SurrealDB\n  - Query performance acceptable\n\n**4. Rollback Plan**\n- Rollback triggers:\n  - SurrealDB write failures > 1% of attempts\n  - Data discrepancies > 5% between systems\n  - Query performance degradation > 2x slower\n  - Critical bugs in learning algorithm\n- Rollback procedure:\n  1. Disable SurrealDB writes (keep Redis only)\n  2. Investigate root cause\n  3. Fix issues\n  4. Resume dual-write after fix validated\n- Rollback impact: Minimal (Redis remains operational)\n\n**5. Migration Timeline**\n- **Week 1-2 (Phase 1.2)**: Implement SurrealDB client and dual-write\n  - Code changes\n  - Unit tests\n  - Integration tests\n  - Go/No-Go: All tests pass, code reviewed\n\n- **Week 3-4 (Phase 1.3)**: Dual-write in staging\n  - Deploy to staging environment\n  - Run both systems in parallel\n  - Monitor metrics and performance\n  - Validate data consistency daily\n  - Go/No-Go: 99% agreement, no critical issues\n\n- **Week 5 (Phase 1.3 cont)**: Historical data migration\n  - Export historical data from Redis\n  - Import into SurrealDB\n  - Validate historical metrics\n  - Go/No-Go: Historical data matches\n\n- **Week 6-7 (Phase 1.4)**: Dual-write in production\n  - Deploy to production\n  - Continue writing to both systems\n  - Monitor closely for 2 weeks\n  - Go/No-Go: 99% agreement, performance acceptable\n\n- **Week 8 (Phase 1.4 cont)**: Cutover to SurrealDB\n  - Disable Redis writes\n  - SurrealDB becomes single source of truth\n  - Monitor for 1 week\n  - Go/No-Go: No regressions, learning system operational\n\n- **Week 9+**: Deprecate Redis\n  - Keep Redis read-only for 2 weeks as backup\n  - Remove Redis dependencies\n  - Decommission Redis instance\n\n**6. Risk Assessment and Mitigation**\n- **Risk**: Data loss during migration\n  - Mitigation: Dual-write ensures both systems have data\n- **Risk**: Performance degradation\n  - Mitigation: Load testing before production deployment\n- **Risk**: Learning algorithm breaks with new schema\n  - Mitigation: Extensive testing in staging with real data\n- **Risk**: SurrealDB operational issues\n  - Mitigation: Easy rollback to Redis, monitoring, on-call support\n\n**7. Success Metrics**\n- Zero data loss\n- 99%+ agreement between systems\n- Query performance < 100ms for common queries\n- Learning algorithm produces same recommendations\n- No production incidents\n\n**8. Monitoring and Alerts**\n- Dual-write success rate\n- Data consistency checks\n- Query performance metrics\n- Error rates\n- SurrealDB disk usage and performance\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/MIGRATION_PLAN.md` with all sections above.\n\n**Validation**:\n- Contains dual-write approach\n- Contains data validation strategy with specific criteria\n- Contains rollback plan with specific triggers\n- Contains timeline with at least 3 phases (dual-write, validation, cutover)\n- Mentions Redis → SurrealDB migration explicitly\n- No TODO or FIXME comments\n\nCreate the MIGRATION_PLAN.md file now.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-schema-documentation",
+      "subagent": "general",
+      "description": "Create comprehensive schema documentation including table descriptions, field explanations, relationship diagrams, usage examples, integration notes, and design decisions summary",
+      "dependencies": [
+        "design-schema-tables-and-relationships",
+        "create-aggregation-queries",
+        "document-migration-strategy"
+      ],
+      "prompt": {
+        "template": "You are creating comprehensive documentation for the SurrealDB schema.\n\n**Context**: Read these files to understand the complete design:\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/schema.surql` - Schema definition\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/queries.surql` - Common queries\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/MIGRATION_PLAN.md` - Migration strategy\n- `/tmp/activity-template-design-surrealdb-schema-learning-loop/current_system_analysis.md` - Current system analysis\n\n**Your Task**: Create developer-friendly documentation that explains the schema design and how to use it.\n\n**Documentation Structure**:\n\n**1. Overview**\n- Purpose: Activity template learning loop data storage\n- Technology: SurrealDB\n- Schema version: {{schema_version}}\n- Status: Phase 1.1 (Design Complete)\n- Next steps: Phase 1.2 (Implementation)\n\n**2. Schema Architecture**\n- High-level design: Three core tables\n- Data flow: activity execution → metrics aggregation → learning\n- Key design decisions:\n  - Why SurrealDB over Redis\n  - Why these specific tables\n  - Why these relationships\n  - Why these indexes\n\n**3. Table Definitions**\n\nFor each table (activity_execution, template_metrics, failure_patterns):\n\n**Table: [name]**\n- Purpose: What this table stores and why\n- Primary use cases: When/how this table is queried\n- Fields:\n  - `field_name` (type) - Description and constraints\n  - [repeat for all fields]\n- Indexes:\n  - `index_name` on [fields] - Why this index exists\n- Relationships:\n  - Links to [other tables] via [field]\n- Example record:\n  ```json\n  {\n    \"field\": \"value\",\n    ...\n  }\n  ```\n\n**4. Relationships**\n- template_metrics (1) → activity_execution (N)\n  - How: template_id foreign key\n  - Why: Track all executions per template\n- activity_execution (1) → failure_patterns (N)\n  - How: execution_id foreign key\n  - Why: Link failures to specific executions\n- Diagram:\n  ```\n  template_metrics (1:N) activity_execution (1:N) failure_patterns\n  ```\n\n**5. Index Strategy**\n- Why these indexes were chosen\n- Query patterns they optimize:\n  - Template lookup: idx_template_id\n  - Time-range queries: idx_template_time\n  - Success filtering: idx_success\n  - Failure analysis: idx_error_type\n- Performance expectations: < 100ms for common queries\n\n**6. Common Operations**\n\n**Operation: Record Activity Execution**\n```surql\nINSERT INTO activity_execution {\n  activity_id: $activity_id,\n  template_id: $template_id,\n  started_at: time::now(),\n  completed_at: time::now(),\n  duration_ms: $duration,\n  success: true,\n  tokens_input: $input_tokens,\n  tokens_output: $output_tokens,\n  tokens_cache: $cache_tokens,\n  cost_usd: $cost,\n  created_at: time::now()\n};\n```\n\n**Operation: Update Template Metrics**\n```surql\nUPDATE template_metrics SET\n  total_executions += 1,\n  successful_executions += $success,\n  success_rate = (successful_executions / total_executions) * 100,\n  last_executed_at = time::now()\nWHERE template_id = $template_id;\n```\n\n**Operation: Query Template Performance**\n[Include examples from queries.surql]\n\n**7. Integration with OpenCode**\n- Where to use this schema: Activity execution tracking\n- Integration points:\n  - ActivityExecutor: Record executions\n  - TemplateLibrary: Query metrics for recommendation\n  - Learning system: Analyze patterns\n- Code changes needed (Phase 1.2):\n  - SurrealDB client initialization\n  - Write execution metrics\n  - Query template metrics\n  - Dual-write to Redis during migration\n\n**8. Usage Examples**\n\n**Example 1: Find Best Template for a Task**\n[Show query with explanation]\n\n**Example 2: Analyze Failure Patterns**\n[Show query with explanation]\n\n**Example 3: Track Template Performance Over Time**\n[Show query with explanation]\n\n**9. Design Decisions Summary**\n- Decision: Use SurrealDB instead of Redis\n  - Reason: Better query capabilities, relationships, schema enforcement\n- Decision: Three separate tables\n  - Reason: Normalize data, optimize different query patterns\n- Decision: Decimal type for costs\n  - Reason: Precise financial calculations\n- Decision: Datetime for timestamps\n  - Reason: Time-based queries and sorting\n- Decision: Indexes on template_id and time\n  - Reason: Most common query pattern (metrics per template over time)\n\n**10. Future Extensibility**\n- Phase 2: Advanced analytics\n  - Add tables: execution_steps, template_comparisons\n  - Add views: daily_metrics, monthly_trends\n- Phase 3: Machine learning\n  - Add tables: prediction_models, training_data\n  - Feature vectors for recommendation\n- Schema evolution:\n  - Use schema_version for migrations\n  - Add fields without breaking changes\n  - Use optional fields for new features\n\n**11. Performance Considerations**\n- Expected scale:\n  - ~1000 activity executions per day\n  - ~100 unique templates\n  - Query load: moderate (recommendation queries every few minutes)\n- Optimization strategies:\n  - Indexes on common query patterns\n  - Pre-computed metrics in template_metrics\n  - Archiving old executions after 90 days\n- Monitoring:\n  - Query performance\n  - Index usage\n  - Disk space\n\n**12. References**\n- Schema file: schema.surql\n- Queries file: queries.surql\n- Migration plan: MIGRATION_PLAN.md\n- SurrealDB documentation: https://surrealdb.com/docs\n\n**Output Requirements**:\nCreate `/tmp/activity-template-design-surrealdb-schema-learning-loop/SCHEMA_DOCS.md` with all sections above.\n\n**Validation**:\n- Documents all 3 core tables with field-level descriptions\n- Includes usage examples for common operations\n- Explains index strategy\n- Mentions integration with OpenCode activity system\n- Includes design decisions summary\n- No TODO or FIXME comments\n\nCreate the SCHEMA_DOCS.md file now.",
+        "variables": [
+          {
+            "name": "schema_version",
+            "type": "string",
+            "required": false,
+            "description": "Schema version identifier for migration tracking",
+            "default": "1.0.0"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-22T00:42:44.083Z",
+  "metadata": {}
+}
