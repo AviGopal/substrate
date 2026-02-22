@@ -1,0 +1,233 @@
+{
+  "activity_id": "implement-boredom-execution-opencode",
+  "name": "Implement Boredom Execution OpenCode",
+  "description": "Complete BoredomManager.executeBoredomActivity() in metabob-opencode: load template, create activity, execute in background, monitor for user return, cancel if needed. Integrates with existing idle detection and MCP-based template fetching.",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "add-abort-signal-support",
+      "subagent": "general",
+      "description": "Add abortSignal parameter to executeActivityInline() and pass it through the execution chain",
+      "dependencies": [],
+      "prompt": {
+        "template": "Add abort signal support to the `executeActivityInline()` function in `repos/metabob-opencode/packages/opencode/src/tool/activity.ts`.\n\n## Objective\n\nEnable graceful cancellation of activity execution by adding an optional `abortSignal` parameter that can be checked during execution.\n\n## Implementation Steps\n\n1. **Add Parameter to Function Signature**\n   - Locate the `executeActivityInline()` function (around line 1048)\n   - Add `abortSignal?: AbortSignal` as the last parameter\n   - Update JSDoc to document the new parameter\n\n2. **Update Return Type**\n   - Add `cancelled?: boolean` to the return type object\n   - This field should be `true` if execution was aborted\n\n3. **Add Abort Check Before Execution**\n   - At the start of the function, check if `abortSignal?.aborted` is true\n   - If aborted, return immediately with:\n     ```typescript\n     {\n       impulses: {},\n       success: false,\n       activityId: activity.id,\n       cancelled: true\n     }\n     ```\n   - Log a warning: \"Activity execution aborted before start\"\n\n4. **Pass Signal Through Execution Chain**\n   - Find the call to `executeTemplate()`\n   - Pass the `abortSignal` parameter through to that function\n   - If `executeTemplate()` doesn't accept abort signal yet, add it there too\n\n5. **Add Periodic Abort Checks**\n   - In the task execution loop, periodically check `abortSignal?.aborted`\n   - If aborted during execution, throw an error: \"Activity cancelled by abort signal\"\n   - Ensure this error is caught and handled gracefully\n\n6. **Handle Abort in Error Cases**\n   - In try-catch blocks, check if error is due to abort signal\n   - If so, set `cancelled: true` in the return value\n   - Log appropriately: \"Activity execution cancelled\"\n\n## Validation Requirements\n\n- TypeScript must compile without errors\n- Function signature includes `abortSignal?: AbortSignal` parameter\n- Return type includes `cancelled?: boolean` field\n- Pattern found in code: `if (abortSignal?.aborted)`\n- All logging uses `Log.create()` (no console.log)\n- No TODO or FIXME comments\n- Backward compatible (existing callers don't need to change)\n\n## Key Patterns to Implement\n\n```typescript\n// Function signature update\nexport async function executeActivityInline(\n  templateId: string,\n  variables: Record<string, unknown>,\n  parentSessionID: string,\n  reason: string,\n  parentMessageID: string,\n  abortSignal?: AbortSignal  // NEW\n): Promise<{\n  impulses: Record<string, ActivityTemplate.Impulse.Schema>\n  success: boolean\n  activityId: string\n  cancelled?: boolean  // NEW\n}>\n\n// Early abort check\nif (abortSignal?.aborted) {\n  l.warn(\"Activity execution aborted before start\", { \n    templateId, \n    parentSessionID \n  })\n  return {\n    impulses: {},\n    success: false,\n    activityId: activity.id,\n    cancelled: true\n  }\n}\n\n// During execution check\nif (abortSignal?.aborted) {\n  throw new Error(\"Activity cancelled by abort signal\")\n}\n```\n\n## Context Files\n\n- Modify: `repos/metabob-opencode/packages/opencode/src/tool/activity.ts`\n- Reference: Standard library AbortSignal/AbortController types\n\nComplete this task with clean, type-safe implementation that enables graceful cancellation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-execute-boredom-activity",
+      "subagent": "general",
+      "description": "Complete the executeBoredomActivity() method in BoredomManager with template loading, activity creation, execution, and result reporting",
+      "dependencies": [
+        "add-abort-signal-support"
+      ],
+      "prompt": {
+        "template": "Complete the `executeBoredomActivity()` method in `repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts`.\n\n## Objective\n\nImplement the full autonomous execution logic that loads templates, creates activities, executes them in the background with abort support, and reports results to the backend.\n\n## Implementation Steps\n\n### 1. Load Template\n\n```typescript\nconst l = Log.create(\"BoredomManager.executeBoredomActivity\")\nconst startTime = Date.now()\n\ntry {\n  l.info(\"Loading template for boredom activity\", {\n    template_id: boredomActivity.template_id,\n    activity_type: boredomActivity.activity_type\n  })\n  \n  const template = await TemplateRepository.get(boredomActivity.template_id)\n  if (!template) {\n    l.warn(\"Template not found, skipping boredom activity\", {\n      template_id: boredomActivity.template_id\n    })\n    return\n  }\n```\n\n### 2. Extract Variables from Metrics\n\n```typescript\nconst variables = {\n  success_rate: boredomActivity.metrics.success_rate,\n  avg_cost: boredomActivity.metrics.avg_cost,\n  avg_duration_ms: boredomActivity.metrics.avg_duration_ms,\n  execution_count: boredomActivity.metrics.execution_count,\n  failure_patterns: JSON.stringify(boredomActivity.metrics.failure_patterns),\n  performance_trends: JSON.stringify(boredomActivity.metrics.performance_trends),\n  last_execution: JSON.stringify(boredomActivity.metrics.last_execution)\n}\n```\n\n### 3. Create AbortController\n\n```typescript\nconst abortController = new AbortController()\n```\n\n### 4. Create Activity Instance\n\n```typescript\nconst activity = await Activity.create({\n  directory: process.cwd(),\n  branch: \"boredom-activity\",\n  baseCommit: \"HEAD\",\n  title: `[BOREDOM] ${template.name}`\n})\n\nactivity.templateId = template.id\nactivity.variables = variables\nactivity.reason = boredomActivity.reason\nawait Activity.save(activity)\n```\n\n### 5. Store Controller for Cancellation\n\n```typescript\nmanager.currentActivity = {\n  activityId: activity.id,\n  abortController: abortController\n}\n\nl.info(\"Starting boredom activity execution\", {\n  activityId: activity.id,\n  templateId: template.id,\n  priority: boredomActivity.priority\n})\n```\n\n### 6. Execute with Abort Signal\n\n```typescript\nconst result = await executeActivityInline(\n  template.id,\n  variables,\n  manager.sessionID,\n  `[BOREDOM] ${boredomActivity.reason}`,\n  \"boredom-manager\",\n  abortController.signal\n)\n\nconst duration = Date.now() - startTime\n```\n\n### 7. Report Results to Backend\n\n```typescript\ntry {\n  await MCP.callTool(\"metabob_post_activity_result\", {\n    activity_id: result.activityId,\n    template_id: template.id,\n    success: result.success,\n    duration: duration,\n    cost: activity.stats?.cost?.total || 0,\n    tokens: {\n      input: activity.stats?.tokens?.input || 0,\n      output: activity.stats?.tokens?.output || 0,\n      cache: activity.stats?.tokens?.cache?.read || 0\n    },\n    cancelled: result.cancelled || false\n  })\n  \n  l.info(\"Boredom activity results reported to backend\", {\n    activityId: result.activityId,\n    success: result.success,\n    cancelled: result.cancelled\n  })\n} catch (reportError) {\n  l.error(\"Failed to report boredom activity results\", {\n    error: reportError,\n    activityId: result.activityId\n  })\n  // Don't throw - continue monitoring\n}\n```\n\n### 8. Error Handling and Cleanup\n\n```typescript\n  } catch (error) {\n    l.error(\"Boredom activity execution failed\", {\n      error,\n      template_id: boredomActivity.template_id\n    })\n    // Don't throw - continue monitoring\n  } finally {\n    manager.currentActivity = undefined\n    manager.isExecutingBoredomActivity = false\n  }\n}\n```\n\n## Validation Requirements\n\n- TypeScript compiles without errors\n- Method contains all required patterns:\n  - `const template = await TemplateRepository.get(boredomActivity.template_id)`\n  - `const abortController = new AbortController()`\n  - `manager.currentActivity = { activityId, abortController }`\n  - `await executeActivityInline(..., abortController.signal)`\n  - `await MCP.callTool(\"metabob_post_activity_result\", ...)`\n- Error handling for template not found\n- Proper cleanup in finally block\n- Uses Log.create() for all logging (no console.log)\n- No TODO or FIXME comments\n- All 8 implementation steps completed\n\n## Context Files\n\n- Modify: `repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts`\n- Reference: `repos/metabob-opencode/packages/opencode/src/tool/activity.ts` (modified in previous task)\n- Reference: `repos/metabob-opencode/packages/opencode/src/activity/template-repository.ts`\n- Reference: `repos/metabob-opencode/packages/opencode/src/activity/activity.ts`\n\nComplete this implementation with comprehensive error handling and graceful degradation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-compilation-and-types",
+      "subagent": "general",
+      "description": "Run TypeScript compilation to verify all changes compile successfully and type definitions are correct",
+      "dependencies": [
+        "implement-execute-boredom-activity"
+      ],
+      "prompt": {
+        "template": "Verify that all code changes compile successfully.\n\n## Objective\n\nRun TypeScript compilation to ensure:\n1. All changes are type-safe\n2. No compilation errors introduced\n3. Generated type definitions are correct\n\n## Steps\n\n1. **Run Build Command**\n   ```bash\n   cd repos/metabob-opencode && bun run build\n   ```\n\n2. **Check Exit Code**\n   - Exit code 0 = success\n   - Any other code = failure\n\n3. **Analyze Output**\n   - No TypeScript errors should appear\n   - No warnings related to modified files:\n     - `src/tool/activity.ts`\n     - `src/session/boredom-manager.ts`\n   - Generated .d.ts files should include new signatures\n\n4. **If Compilation Fails**\n   - Identify the error location (file:line)\n   - Determine which task introduced the issue\n   - Provide specific error details:\n     - Is it a type mismatch?\n     - Is it a missing import?\n     - Is it an incorrect return type?\n   - Recommend specific fixes\n   - If fixable, apply fix and re-run build\n\n## Validation Requirements\n\n- Build exits with code 0\n- No TypeScript errors in output\n- No warnings related to modified files\n- Generated type definitions are correct\n\n## Error Handling\n\nIf build fails:\n1. Report the exact error message\n2. Identify which file and line has the issue\n3. Suggest the likely cause (based on previous tasks)\n4. Provide a fix recommendation\n5. If possible, apply the fix and re-run\n\n## Context\n\nThis task validates the work from previous tasks:\n- Task 1: Added `abortSignal` parameter to `executeActivityInline()`\n- Task 2: Implemented `executeBoredomActivity()` method\n\nBoth should compile cleanly with no type errors.\n\nComplete this verification and report any issues found.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "manual-integration-test",
+      "subagent": "general",
+      "description": "Create comprehensive test documentation and validate the implementation is ready for manual testing",
+      "dependencies": [
+        "verify-compilation-and-types"
+      ],
+      "prompt": {
+        "template": "Create comprehensive test documentation for manual validation of the boredom execution implementation.\n\n## Objective\n\nProvide clear instructions for manual testing and validation of the BoredomManager execution logic.\n\n## Deliverables\n\n### 1. Test Procedure Document\n\nCreate a detailed test procedure in markdown format covering:\n\n**Prerequisites**\n- OpenCode CLI installed and built\n- Backend MCP server running (if testing MCP integration)\n- Test template available in repository\n\n**Test Steps**\n1. Start test session:\n   ```bash\n   cd repos/metabob-opencode\n   bun run test-boredom-idle-detection.ts\n   ```\n\n2. Verify idle detection (wait 5 minutes or reduce threshold)\n   - Expected log: \"Session is idle, fetching boredom activities\"\n   - Verify MCP call to `metabob_fetch_boredom_activities`\n\n3. Verify activity execution\n   - Expected log: \"Starting boredom activity execution\"\n   - Expected log: \"Loading template for boredom activity\"\n   - Verify template loads successfully\n\n4. Simulate user return\n   - Send test message to session\n   - Or call `SessionPrompt.createUserMessage()`\n\n5. Verify cancellation\n   - Expected log: \"User activity detected, aborting boredom activity\"\n   - Verify abort signal triggered\n   - Confirm activity exits within 10 seconds\n   - Expected log: \"Activity cancelled by abort signal\"\n\n6. Verify result reporting\n   - Expected log: \"Boredom activity results reported to backend\"\n   - Verify MCP call to `metabob_post_activity_result`\n   - Confirm cancellation status included\n\n**Expected Log Patterns**\n\nSuccess path:\n```\n[INFO] BoredomManager.checkIdleAndExecute: Session is idle\n[INFO] BoredomManager.executeBoredomActivity: Loading template\n[INFO] BoredomManager.executeBoredomActivity: Starting boredom activity execution\n[INFO] Activity.executeActivityInline: executing activity inline\n[INFO] BoredomManager.trackActivity: User activity detected, aborting\n[INFO] BoredomManager.executeBoredomActivity: Boredom activity results reported\n```\n\nError path (template not found):\n```\n[WARN] BoredomManager.executeBoredomActivity: Template not found, skipping\n```\n\nError path (MCP failure):\n```\n[ERROR] BoredomManager.executeBoredomActivity: Failed to report results\n```\n\n### 2. Success Criteria Checklist\n\nCreate a checklist mapping all validation criteria:\n\n- [ ] Idle detection works after 5 min\n- [ ] Boredom activity fetched from backend\n- [ ] Template loaded successfully\n- [ ] Activity execution starts\n- [ ] User return triggers cancellation\n- [ ] Activity exits within 10 seconds\n- [ ] Results reported to backend\n- [ ] Manager state cleaned up\n- [ ] No crashes or unhandled errors\n\n### 3. Debugging Guide\n\nProvide troubleshooting for common issues:\n\n**Template not found**\n- Check template exists: `TemplateRepository.list()`\n- Verify template_id matches backend response\n- Ensure template is registered locally\n\n**MCP call fails**\n- Check MCP server is running\n- Verify network connectivity\n- Check server logs for errors\n- Validate MCP client configuration\n\n**Cancellation doesn't work**\n- Verify abort signal passed to executeActivityInline\n- Check executeTemplate respects abort signal\n- Look for hung tasks or blocking operations\n- Check for missing abort checks in task execution\n\n**Activity execution hangs**\n- Check for infinite loops\n- Verify all async operations are awaited\n- Look for blocking operations\n- Check task timeout configurations\n\n## Output Format\n\nProvide the test documentation as structured output that can be:\n1. Copy-pasted into a TEST_PROCEDURE.md file\n2. Used as a manual testing checklist\n3. Referenced for debugging issues\n\n## Validation Requirements\n\n- Test procedure document is complete and detailed\n- All success criteria mapped to test steps\n- Debugging guide covers common issues\n- Log patterns documented for verification\n- Ready for manual testing by developer\n\n## Context Files to Review\n\n- `test-boredom-idle-detection.ts` (existing test file)\n- `repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts` (implementation)\n- `repos/metabob-opencode/packages/opencode/src/tool/activity.ts` (abort signal support)\n\nComplete this documentation to enable thorough manual testing.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "add-abort-signal-support",
+      "subagent": "general",
+      "description": "Add abortSignal parameter to executeActivityInline() and pass it through the execution chain",
+      "dependencies": [],
+      "prompt": {
+        "template": "Add abort signal support to the `executeActivityInline()` function in `repos/metabob-opencode/packages/opencode/src/tool/activity.ts`.\n\n## Objective\n\nEnable graceful cancellation of activity execution by adding an optional `abortSignal` parameter that can be checked during execution.\n\n## Implementation Steps\n\n1. **Add Parameter to Function Signature**\n   - Locate the `executeActivityInline()` function (around line 1048)\n   - Add `abortSignal?: AbortSignal` as the last parameter\n   - Update JSDoc to document the new parameter\n\n2. **Update Return Type**\n   - Add `cancelled?: boolean` to the return type object\n   - This field should be `true` if execution was aborted\n\n3. **Add Abort Check Before Execution**\n   - At the start of the function, check if `abortSignal?.aborted` is true\n   - If aborted, return immediately with:\n     ```typescript\n     {\n       impulses: {},\n       success: false,\n       activityId: activity.id,\n       cancelled: true\n     }\n     ```\n   - Log a warning: \"Activity execution aborted before start\"\n\n4. **Pass Signal Through Execution Chain**\n   - Find the call to `executeTemplate()`\n   - Pass the `abortSignal` parameter through to that function\n   - If `executeTemplate()` doesn't accept abort signal yet, add it there too\n\n5. **Add Periodic Abort Checks**\n   - In the task execution loop, periodically check `abortSignal?.aborted`\n   - If aborted during execution, throw an error: \"Activity cancelled by abort signal\"\n   - Ensure this error is caught and handled gracefully\n\n6. **Handle Abort in Error Cases**\n   - In try-catch blocks, check if error is due to abort signal\n   - If so, set `cancelled: true` in the return value\n   - Log appropriately: \"Activity execution cancelled\"\n\n## Validation Requirements\n\n- TypeScript must compile without errors\n- Function signature includes `abortSignal?: AbortSignal` parameter\n- Return type includes `cancelled?: boolean` field\n- Pattern found in code: `if (abortSignal?.aborted)`\n- All logging uses `Log.create()` (no console.log)\n- No TODO or FIXME comments\n- Backward compatible (existing callers don't need to change)\n\n## Key Patterns to Implement\n\n```typescript\n// Function signature update\nexport async function executeActivityInline(\n  templateId: string,\n  variables: Record<string, unknown>,\n  parentSessionID: string,\n  reason: string,\n  parentMessageID: string,\n  abortSignal?: AbortSignal  // NEW\n): Promise<{\n  impulses: Record<string, ActivityTemplate.Impulse.Schema>\n  success: boolean\n  activityId: string\n  cancelled?: boolean  // NEW\n}>\n\n// Early abort check\nif (abortSignal?.aborted) {\n  l.warn(\"Activity execution aborted before start\", { \n    templateId, \n    parentSessionID \n  })\n  return {\n    impulses: {},\n    success: false,\n    activityId: activity.id,\n    cancelled: true\n  }\n}\n\n// During execution check\nif (abortSignal?.aborted) {\n  throw new Error(\"Activity cancelled by abort signal\")\n}\n```\n\n## Context Files\n\n- Modify: `repos/metabob-opencode/packages/opencode/src/tool/activity.ts`\n- Reference: Standard library AbortSignal/AbortController types\n\nComplete this task with clean, type-safe implementation that enables graceful cancellation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-execute-boredom-activity",
+      "subagent": "general",
+      "description": "Complete the executeBoredomActivity() method in BoredomManager with template loading, activity creation, execution, and result reporting",
+      "dependencies": [
+        "add-abort-signal-support"
+      ],
+      "prompt": {
+        "template": "Complete the `executeBoredomActivity()` method in `repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts`.\n\n## Objective\n\nImplement the full autonomous execution logic that loads templates, creates activities, executes them in the background with abort support, and reports results to the backend.\n\n## Implementation Steps\n\n### 1. Load Template\n\n```typescript\nconst l = Log.create(\"BoredomManager.executeBoredomActivity\")\nconst startTime = Date.now()\n\ntry {\n  l.info(\"Loading template for boredom activity\", {\n    template_id: boredomActivity.template_id,\n    activity_type: boredomActivity.activity_type\n  })\n  \n  const template = await TemplateRepository.get(boredomActivity.template_id)\n  if (!template) {\n    l.warn(\"Template not found, skipping boredom activity\", {\n      template_id: boredomActivity.template_id\n    })\n    return\n  }\n```\n\n### 2. Extract Variables from Metrics\n\n```typescript\nconst variables = {\n  success_rate: boredomActivity.metrics.success_rate,\n  avg_cost: boredomActivity.metrics.avg_cost,\n  avg_duration_ms: boredomActivity.metrics.avg_duration_ms,\n  execution_count: boredomActivity.metrics.execution_count,\n  failure_patterns: JSON.stringify(boredomActivity.metrics.failure_patterns),\n  performance_trends: JSON.stringify(boredomActivity.metrics.performance_trends),\n  last_execution: JSON.stringify(boredomActivity.metrics.last_execution)\n}\n```\n\n### 3. Create AbortController\n\n```typescript\nconst abortController = new AbortController()\n```\n\n### 4. Create Activity Instance\n\n```typescript\nconst activity = await Activity.create({\n  directory: process.cwd(),\n  branch: \"boredom-activity\",\n  baseCommit: \"HEAD\",\n  title: `[BOREDOM] ${template.name}`\n})\n\nactivity.templateId = template.id\nactivity.variables = variables\nactivity.reason = boredomActivity.reason\nawait Activity.save(activity)\n```\n\n### 5. Store Controller for Cancellation\n\n```typescript\nmanager.currentActivity = {\n  activityId: activity.id,\n  abortController: abortController\n}\n\nl.info(\"Starting boredom activity execution\", {\n  activityId: activity.id,\n  templateId: template.id,\n  priority: boredomActivity.priority\n})\n```\n\n### 6. Execute with Abort Signal\n\n```typescript\nconst result = await executeActivityInline(\n  template.id,\n  variables,\n  manager.sessionID,\n  `[BOREDOM] ${boredomActivity.reason}`,\n  \"boredom-manager\",\n  abortController.signal\n)\n\nconst duration = Date.now() - startTime\n```\n\n### 7. Report Results to Backend\n\n```typescript\ntry {\n  await MCP.callTool(\"metabob_post_activity_result\", {\n    activity_id: result.activityId,\n    template_id: template.id,\n    success: result.success,\n    duration: duration,\n    cost: activity.stats?.cost?.total || 0,\n    tokens: {\n      input: activity.stats?.tokens?.input || 0,\n      output: activity.stats?.tokens?.output || 0,\n      cache: activity.stats?.tokens?.cache?.read || 0\n    },\n    cancelled: result.cancelled || false\n  })\n  \n  l.info(\"Boredom activity results reported to backend\", {\n    activityId: result.activityId,\n    success: result.success,\n    cancelled: result.cancelled\n  })\n} catch (reportError) {\n  l.error(\"Failed to report boredom activity results\", {\n    error: reportError,\n    activityId: result.activityId\n  })\n  // Don't throw - continue monitoring\n}\n```\n\n### 8. Error Handling and Cleanup\n\n```typescript\n  } catch (error) {\n    l.error(\"Boredom activity execution failed\", {\n      error,\n      template_id: boredomActivity.template_id\n    })\n    // Don't throw - continue monitoring\n  } finally {\n    manager.currentActivity = undefined\n    manager.isExecutingBoredomActivity = false\n  }\n}\n```\n\n## Validation Requirements\n\n- TypeScript compiles without errors\n- Method contains all required patterns:\n  - `const template = await TemplateRepository.get(boredomActivity.template_id)`\n  - `const abortController = new AbortController()`\n  - `manager.currentActivity = { activityId, abortController }`\n  - `await executeActivityInline(..., abortController.signal)`\n  - `await MCP.callTool(\"metabob_post_activity_result\", ...)`\n- Error handling for template not found\n- Proper cleanup in finally block\n- Uses Log.create() for all logging (no console.log)\n- No TODO or FIXME comments\n- All 8 implementation steps completed\n\n## Context Files\n\n- Modify: `repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts`\n- Reference: `repos/metabob-opencode/packages/opencode/src/tool/activity.ts` (modified in previous task)\n- Reference: `repos/metabob-opencode/packages/opencode/src/activity/template-repository.ts`\n- Reference: `repos/metabob-opencode/packages/opencode/src/activity/activity.ts`\n\nComplete this implementation with comprehensive error handling and graceful degradation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-compilation-and-types",
+      "subagent": "general",
+      "description": "Run TypeScript compilation to verify all changes compile successfully and type definitions are correct",
+      "dependencies": [
+        "implement-execute-boredom-activity"
+      ],
+      "prompt": {
+        "template": "Verify that all code changes compile successfully.\n\n## Objective\n\nRun TypeScript compilation to ensure:\n1. All changes are type-safe\n2. No compilation errors introduced\n3. Generated type definitions are correct\n\n## Steps\n\n1. **Run Build Command**\n   ```bash\n   cd repos/metabob-opencode && bun run build\n   ```\n\n2. **Check Exit Code**\n   - Exit code 0 = success\n   - Any other code = failure\n\n3. **Analyze Output**\n   - No TypeScript errors should appear\n   - No warnings related to modified files:\n     - `src/tool/activity.ts`\n     - `src/session/boredom-manager.ts`\n   - Generated .d.ts files should include new signatures\n\n4. **If Compilation Fails**\n   - Identify the error location (file:line)\n   - Determine which task introduced the issue\n   - Provide specific error details:\n     - Is it a type mismatch?\n     - Is it a missing import?\n     - Is it an incorrect return type?\n   - Recommend specific fixes\n   - If fixable, apply fix and re-run build\n\n## Validation Requirements\n\n- Build exits with code 0\n- No TypeScript errors in output\n- No warnings related to modified files\n- Generated type definitions are correct\n\n## Error Handling\n\nIf build fails:\n1. Report the exact error message\n2. Identify which file and line has the issue\n3. Suggest the likely cause (based on previous tasks)\n4. Provide a fix recommendation\n5. If possible, apply the fix and re-run\n\n## Context\n\nThis task validates the work from previous tasks:\n- Task 1: Added `abortSignal` parameter to `executeActivityInline()`\n- Task 2: Implemented `executeBoredomActivity()` method\n\nBoth should compile cleanly with no type errors.\n\nComplete this verification and report any issues found.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "manual-integration-test",
+      "subagent": "general",
+      "description": "Create comprehensive test documentation and validate the implementation is ready for manual testing",
+      "dependencies": [
+        "verify-compilation-and-types"
+      ],
+      "prompt": {
+        "template": "Create comprehensive test documentation for manual validation of the boredom execution implementation.\n\n## Objective\n\nProvide clear instructions for manual testing and validation of the BoredomManager execution logic.\n\n## Deliverables\n\n### 1. Test Procedure Document\n\nCreate a detailed test procedure in markdown format covering:\n\n**Prerequisites**\n- OpenCode CLI installed and built\n- Backend MCP server running (if testing MCP integration)\n- Test template available in repository\n\n**Test Steps**\n1. Start test session:\n   ```bash\n   cd repos/metabob-opencode\n   bun run test-boredom-idle-detection.ts\n   ```\n\n2. Verify idle detection (wait 5 minutes or reduce threshold)\n   - Expected log: \"Session is idle, fetching boredom activities\"\n   - Verify MCP call to `metabob_fetch_boredom_activities`\n\n3. Verify activity execution\n   - Expected log: \"Starting boredom activity execution\"\n   - Expected log: \"Loading template for boredom activity\"\n   - Verify template loads successfully\n\n4. Simulate user return\n   - Send test message to session\n   - Or call `SessionPrompt.createUserMessage()`\n\n5. Verify cancellation\n   - Expected log: \"User activity detected, aborting boredom activity\"\n   - Verify abort signal triggered\n   - Confirm activity exits within 10 seconds\n   - Expected log: \"Activity cancelled by abort signal\"\n\n6. Verify result reporting\n   - Expected log: \"Boredom activity results reported to backend\"\n   - Verify MCP call to `metabob_post_activity_result`\n   - Confirm cancellation status included\n\n**Expected Log Patterns**\n\nSuccess path:\n```\n[INFO] BoredomManager.checkIdleAndExecute: Session is idle\n[INFO] BoredomManager.executeBoredomActivity: Loading template\n[INFO] BoredomManager.executeBoredomActivity: Starting boredom activity execution\n[INFO] Activity.executeActivityInline: executing activity inline\n[INFO] BoredomManager.trackActivity: User activity detected, aborting\n[INFO] BoredomManager.executeBoredomActivity: Boredom activity results reported\n```\n\nError path (template not found):\n```\n[WARN] BoredomManager.executeBoredomActivity: Template not found, skipping\n```\n\nError path (MCP failure):\n```\n[ERROR] BoredomManager.executeBoredomActivity: Failed to report results\n```\n\n### 2. Success Criteria Checklist\n\nCreate a checklist mapping all validation criteria:\n\n- [ ] Idle detection works after 5 min\n- [ ] Boredom activity fetched from backend\n- [ ] Template loaded successfully\n- [ ] Activity execution starts\n- [ ] User return triggers cancellation\n- [ ] Activity exits within 10 seconds\n- [ ] Results reported to backend\n- [ ] Manager state cleaned up\n- [ ] No crashes or unhandled errors\n\n### 3. Debugging Guide\n\nProvide troubleshooting for common issues:\n\n**Template not found**\n- Check template exists: `TemplateRepository.list()`\n- Verify template_id matches backend response\n- Ensure template is registered locally\n\n**MCP call fails**\n- Check MCP server is running\n- Verify network connectivity\n- Check server logs for errors\n- Validate MCP client configuration\n\n**Cancellation doesn't work**\n- Verify abort signal passed to executeActivityInline\n- Check executeTemplate respects abort signal\n- Look for hung tasks or blocking operations\n- Check for missing abort checks in task execution\n\n**Activity execution hangs**\n- Check for infinite loops\n- Verify all async operations are awaited\n- Look for blocking operations\n- Check task timeout configurations\n\n## Output Format\n\nProvide the test documentation as structured output that can be:\n1. Copy-pasted into a TEST_PROCEDURE.md file\n2. Used as a manual testing checklist\n3. Referenced for debugging issues\n\n## Validation Requirements\n\n- Test procedure document is complete and detailed\n- All success criteria mapped to test steps\n- Debugging guide covers common issues\n- Log patterns documented for verification\n- Ready for manual testing by developer\n\n## Context Files to Review\n\n- `test-boredom-idle-detection.ts` (existing test file)\n- `repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts` (implementation)\n- `repos/metabob-opencode/packages/opencode/src/tool/activity.ts` (abort signal support)\n\nComplete this documentation to enable thorough manual testing.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-22T02:41:27.622Z",
+  "metadata": {}
+}
