@@ -1,0 +1,667 @@
+{
+  "activity_id": "implement-learning-loop-api-endpoints",
+  "name": "implement-learning-loop-api-endpoints",
+  "description": "Create FastAPI endpoints for learning loop in metabob-rpc-api: POST/GET executions, GET metrics, GET boredom activities, GET failure patterns. Includes router, business logic layer, and integration with existing CRUD operations.",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "create-foundation-files",
+      "subagent": "general",
+      "description": "Create router skeleton (routes/learning_loop.py) and actions skeleton (actions/learning_loop.py) with imports, basic structure, and stub functions for all 6 endpoints",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are implementing Phase 1.3 of the learning loop system - creating FastAPI REST endpoints that expose the SurrealDB CRUD operations built in Phase 1.2.\n\n## Your Task\n\nCreate skeleton files for the learning loop router and actions layer:\n\n1. **Router file**: `{{rpc_api_path}}/server/routes/learning_loop.py`\n2. **Actions file**: `{{rpc_api_path}}/server/actions/learning_loop.py`\n\n## Reference Files for Patterns\n\n**Copy structure from these existing files**:\n- `{{rpc_api_path}}/server/routes/activity.py` - Router pattern with FastAPI decorators\n- `{{rpc_api_path}}/server/actions/activity.py` - Business logic layer pattern\n- `{{rpc_api_path}}/server/routes/metrics.py` - Read-only endpoint examples\n\n## Router File Requirements\n\n### Imports\n```python\nfrom fastapi import APIRouter, Depends, HTTPException, Query\nfrom fastapi.security import HTTPBearer\nfrom pydantic import BaseModel, Field\nfrom typing import Optional, List, Dict, Any\nfrom datetime import datetime\nimport logging\n\nfrom server.actions import learning_loop\nfrom server.utils.dependencies import get_surreal_client\n```\n\n### Router Configuration\n```python\nrouter = APIRouter(\n    prefix=\"{{router_prefix}}\",\n    tags=[\"learning-loop\"]\n)\n\nsecurity = HTTPBearer(auto_error=False)  # Optional auth for development\nlogger = logging.getLogger(__name__)\n```\n\n### 6 Endpoint Stubs (use `raise NotImplementedError()` for now)\n\n1. **POST /executions** - Record activity execution\n```python\n@router.post(\"/executions\")\nasync def record_execution(\n    data: ExecutionCreateRequest,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Record activity execution result and update metrics.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n2. **GET /executions/{execution_id}** - Fetch specific execution\n```python\n@router.get(\"/executions/{execution_id}\")\nasync def get_execution(\n    execution_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get execution by ID.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n3. **GET /executions** - Query executions with filters\n```python\n@router.get(\"/executions\")\nasync def list_executions(\n    template_id: Optional[str] = Query(None),\n    success: Optional[bool] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    offset: int = Query(0, ge=0),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"List executions with optional filters.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n4. **GET /executions/recent** - Get recent executions\n```python\n@router.get(\"/executions/recent\")\nasync def get_recent_executions(\n    hours: int = Query(24, ge=1, le=168),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get recent executions within time window.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n5. **GET /templates/{template_id}/metrics** - Get template metrics\n```python\n@router.get(\"/templates/{template_id}/metrics\")\nasync def get_template_metrics(\n    template_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get aggregated metrics for template.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n6. **GET /boredom-activities** - Get templates needing improvement\n```python\n@router.get(\"/boredom-activities\")\nasync def get_boredom_activities(\n    threshold: float = Query({{boredom_threshold}}, ge=0.0, le=1.0),\n    limit: int = Query(5, ge=1, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get templates with low improvement_gradient (for BoredomManager).\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n7. **GET /templates/{template_id}/failures** - Get failure patterns\n```python\n@router.get(\"/templates/{template_id}/failures\")\nasync def get_template_failures(\n    template_id: str,\n    error_type: Optional[str] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get failure patterns for template.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n### Pydantic Models\n\nDefine request/response models at the top of the file:\n\n```python\nclass TokenUsage(BaseModel):\n    input: int\n    output: int\n    cache: int = 0\n\nclass ExecutionCreateRequest(BaseModel):\n    activity_id: str\n    template_id: str\n    started_at: datetime\n    duration_ms: int = Field(ge=0)\n    success: bool\n    tokens: TokenUsage\n    cost_usd: float = Field(ge=0)\n    error_message: Optional[str] = None\n    error_type: Optional[str] = None\n    failed_task_id: Optional[str] = None\n\nclass ExecutionResponse(BaseModel):\n    execution_id: str\n    activity_id: str\n    template_id: str\n    created_at: datetime\n    success: bool\n    metrics_updated: bool\n```\n\n## Actions File Requirements\n\n### Imports\n```python\nimport logging\nfrom typing import Optional, List, Dict, Any\nfrom datetime import datetime, timedelta\n\nfrom server.db.operations import (\n    insert_execution,\n    get_execution,\n    get_executions_by_template,\n    get_recent_executions,\n    get_metrics,\n    update_metrics_after_execution,\n    get_boredom_candidates,\n    record_failure,\n    get_failure_patterns\n)\n\nlogger = logging.getLogger(__name__)\n```\n\n### 6 Function Stubs\n\nCreate stub functions matching each endpoint:\n\n```python\nasync def create_execution(db, execution_data: Dict[str, Any]) -> Dict[str, Any]:\n    \"\"\"Business logic for recording execution.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_execution(db, execution_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Business logic for fetching execution by ID.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def query_executions(db, filters: Dict[str, Any]) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for querying executions.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_recent_executions(db, hours: int, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for fetching recent executions.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_template_metrics(db, template_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Business logic for fetching template metrics.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_boredom_activities(db, threshold: float, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for fetching boredom candidates.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_failure_patterns(db, template_id: str, error_type: Optional[str], limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for fetching failure patterns.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n```\n\n## Validation\n\nAfter creating both files:\n\n1. **Syntax check**:\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n2. **Verify structure**:\n- Both files exist\n- Router has all 6 endpoint decorators\n- Actions has all 6 function stubs\n- All imports present\n- Pydantic models defined\n\n## Success Criteria\n\n- ✅ Router file created (~100-150 lines)\n- ✅ Actions file created (~80-100 lines)\n- ✅ All 6 endpoints stubbed out\n- ✅ Pydantic models defined\n- ✅ Imports correct\n- ✅ Python syntax valid\n- ✅ Logging configured\n- ✅ Ready for implementation in next tasks\n\n**Note**: This task creates the foundation. Subsequent tasks will implement each endpoint.",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "router_prefix",
+            "type": "string",
+            "required": false,
+            "description": "API route prefix for learning loop endpoints",
+            "default": "/api/v1/learning-loop"
+          },
+          {
+            "name": "enable_auth",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable HTTPBearer authentication",
+            "default": "false"
+          },
+          {
+            "name": "boredom_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Default improvement_gradient threshold for boredom detection",
+            "default": "0.5"
+          },
+          {
+            "name": "default_limit",
+            "type": "number",
+            "required": false,
+            "description": "Default pagination limit",
+            "default": "20"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-post-executions-endpoint",
+      "subagent": "general",
+      "description": "Implement POST /executions endpoint in both router and actions layer - the most complex endpoint that records execution results, updates metrics, and tracks failures",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement the POST /executions endpoint - the most critical endpoint that records activity execution results and updates the learning loop.\n\n## Your Task\n\nReplace the stub implementation in:\n1. `{{rpc_api_path}}/server/routes/learning_loop.py` - Route handler\n2. `{{rpc_api_path}}/server/actions/learning_loop.py` - Business logic\n\n## Endpoint Specification\n\n**POST /api/v1/learning-loop/executions**\n\n**Purpose**: Record activity execution, update incremental metrics, track failures\n\n**Request Body** (ExecutionCreateRequest):\n```json\n{\n  \"activity_id\": \"act_abc123\",\n  \"template_id\": \"add-rest-endpoint\",\n  \"started_at\": \"2026-02-21T12:00:00Z\",\n  \"duration_ms\": 45000,\n  \"success\": true,\n  \"tokens\": {\n    \"input\": 10000,\n    \"output\": 2500,\n    \"cache\": 500\n  },\n  \"cost_usd\": 0.0234,\n  \"error_message\": null,\n  \"error_type\": null,\n  \"failed_task_id\": null\n}\n```\n\n**Response** (ExecutionResponse):\n```json\n{\n  \"execution_id\": \"exec_xyz789\",\n  \"activity_id\": \"act_abc123\",\n  \"template_id\": \"add-rest-endpoint\",\n  \"created_at\": \"2026-02-21T12:01:00Z\",\n  \"success\": true,\n  \"metrics_updated\": true\n}\n```\n\n## Router Implementation\n\nReplace the stub in `routes/learning_loop.py`:\n\n```python\n@router.post(\"/executions\")\nasync def record_execution(\n    data: ExecutionCreateRequest,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Record activity execution result and update metrics.\"\"\"\n    try:\n        logger.info(f\"Recording execution for template {data.template_id}\")\n        \n        # Call business logic\n        result = await learning_loop.create_execution(\n            db,\n            data.model_dump()\n        )\n        \n        return result\n    \n    except ValueError as e:\n        logger.error(f\"Validation error: {e}\")\n        raise HTTPException(status_code=400, detail=str(e))\n    \n    except Exception as e:\n        logger.error(f\"Error recording execution: {e}\", exc_info=True)\n        raise HTTPException(status_code=500, detail=\"Failed to record execution\")\n```\n\n## Actions Implementation\n\nReplace the stub in `actions/learning_loop.py`:\n\n```python\nasync def create_execution(db, execution_data: Dict[str, Any]) -> Dict[str, Any]:\n    \"\"\"Record execution, update metrics, track failures.\"\"\"\n    \n    try:\n        # 1. Insert execution record\n        logger.info(f\"Inserting execution for template {execution_data['template_id']}\")\n        execution_result = await insert_execution(db, execution_data)\n        \n        if not execution_result or 'id' not in execution_result:\n            raise ValueError(\"Failed to insert execution record\")\n        \n        execution_id = execution_result['id']\n        \n        # 2. Update template metrics (incremental aggregation)\n        logger.info(f\"Updating metrics for template {execution_data['template_id']}\")\n        metrics_updated = await update_metrics_after_execution(\n            db,\n            execution_data['template_id'],\n            {\n                'success': execution_data['success'],\n                'duration_ms': execution_data['duration_ms'],\n                'cost_usd': execution_data['cost_usd'],\n                'tokens': execution_data['tokens']\n            }\n        )\n        \n        # 3. If failed, record failure pattern\n        if not execution_data['success'] and execution_data.get('error_message'):\n            logger.info(f\"Recording failure pattern for template {execution_data['template_id']}\")\n            try:\n                await record_failure(\n                    db,\n                    execution_data['template_id'],\n                    execution_id,\n                    execution_data.get('error_type', 'unknown'),\n                    execution_data['error_message'],\n                    execution_data.get('failed_task_id')\n                )\n            except Exception as e:\n                # Don't fail the request if failure tracking fails\n                logger.error(f\"Failed to record failure pattern: {e}\")\n        \n        # 4. Return response\n        return {\n            'execution_id': execution_id,\n            'activity_id': execution_data['activity_id'],\n            'template_id': execution_data['template_id'],\n            'created_at': execution_data['started_at'],\n            'success': execution_data['success'],\n            'metrics_updated': metrics_updated is not None\n        }\n    \n    except Exception as e:\n        logger.error(f\"Error in create_execution: {e}\", exc_info=True)\n        raise\n```\n\n## Error Handling Requirements\n\n1. **Validation errors** (400):\n   - Missing required fields\n   - Invalid data types\n   - Constraint violations\n\n2. **Database errors** (500):\n   - Connection failures\n   - Query failures\n   - Unexpected exceptions\n\n3. **Logging**:\n   - Log all operations\n   - Log errors with full traceback\n   - Include template_id in all logs\n\n## Validation\n\nAfter implementation:\n\n1. **Pattern checks**:\n```bash\ngrep -q \"insert_execution(\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"update_metrics_after_execution(\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"record_failure(\" {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n2. **Syntax check**:\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ POST endpoint fully implemented (no stubs)\n- ✅ Calls `insert_execution()` to store record\n- ✅ Calls `update_metrics_after_execution()` for aggregation\n- ✅ Calls `record_failure()` for failed executions\n- ✅ Error handling for 400/500 responses\n- ✅ Comprehensive logging\n- ✅ Returns structured response\n- ✅ Ready for Phase 2 MCP integration",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-get-executions-endpoints",
+      "subagent": "general",
+      "description": "Implement 3 GET endpoints for querying executions: /executions/{id}, /executions (with filters), /executions/recent",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement three GET endpoints for querying activity executions.\n\n## Your Task\n\nReplace stub implementations for:\n1. GET /executions/{execution_id} - Fetch by ID\n2. GET /executions - Query with filters\n3. GET /executions/recent - Time-based query\n\n## Endpoint 1: GET /executions/{execution_id}\n\n**Router implementation**:\n```python\n@router.get(\"/executions/{execution_id}\")\nasync def get_execution(\n    execution_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get execution by ID.\"\"\"\n    try:\n        result = await learning_loop.fetch_execution(db, execution_id)\n        \n        if not result:\n            raise HTTPException(status_code=404, detail=f\"Execution {execution_id} not found\")\n        \n        return result\n    \n    except HTTPException:\n        raise\n    except Exception as e:\n        logger.error(f\"Error fetching execution {execution_id}: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch execution\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_execution(db, execution_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Fetch execution by ID.\"\"\"\n    try:\n        result = await get_execution(db, execution_id)\n        return result\n    except Exception as e:\n        logger.error(f\"Error fetching execution: {e}\")\n        raise\n```\n\n## Endpoint 2: GET /executions\n\n**Router implementation**:\n```python\n@router.get(\"/executions\")\nasync def list_executions(\n    template_id: Optional[str] = Query(None),\n    success: Optional[bool] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    offset: int = Query(0, ge=0),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"List executions with optional filters.\"\"\"\n    try:\n        filters = {\n            'template_id': template_id,\n            'success': success,\n            'limit': limit,\n            'offset': offset\n        }\n        \n        results = await learning_loop.query_executions(db, filters)\n        return {'executions': results, 'count': len(results)}\n    \n    except Exception as e:\n        logger.error(f\"Error listing executions: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to list executions\")\n```\n\n**Actions implementation**:\n```python\nasync def query_executions(db, filters: Dict[str, Any]) -> List[Dict[str, Any]]:\n    \"\"\"Query executions with filters.\"\"\"\n    try:\n        template_id = filters.get('template_id')\n        limit = filters.get('limit', {{default_limit}})\n        \n        if template_id:\n            # Query by template\n            results = await get_executions_by_template(db, template_id, limit)\n        else:\n            # Get recent executions\n            results = await get_recent_executions(db, hours=24, limit=limit)\n        \n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error querying executions: {e}\")\n        raise\n```\n\n## Endpoint 3: GET /executions/recent\n\n**Router implementation**:\n```python\n@router.get(\"/executions/recent\")\nasync def get_recent_executions_route(\n    hours: int = Query(24, ge=1, le=168),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get recent executions within time window.\"\"\"\n    try:\n        results = await learning_loop.fetch_recent_executions(db, hours, limit)\n        return {'executions': results, 'hours': hours, 'count': len(results)}\n    \n    except Exception as e:\n        logger.error(f\"Error fetching recent executions: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch recent executions\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_recent_executions(db, hours: int, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Fetch recent executions.\"\"\"\n    try:\n        results = await get_recent_executions(db, hours, limit)\n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error fetching recent executions: {e}\")\n        raise\n```\n\n## Key Points\n\n1. **404 vs empty list**:\n   - GET /{id}: Return 404 if not found\n   - GET /list: Return empty array (200) if no results\n\n2. **Pagination**:\n   - Use Query() validators for limit/offset\n   - Enforce max_limit to prevent abuse\n\n3. **Error handling**:\n   - Catch and log all exceptions\n   - Return 500 for database errors\n   - Preserve HTTPException for 404s\n\n## Validation\n\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_execution(db, execution_id)\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_executions_by_template\" {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ Three GET endpoints implemented\n- ✅ 404 for missing execution by ID\n- ✅ Empty array for no results in list endpoints\n- ✅ Pagination logic working\n- ✅ Query parameter validation\n- ✅ Error handling and logging",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "default_limit",
+            "type": "number",
+            "required": false,
+            "description": "Default pagination limit",
+            "default": "20"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-get-metrics-endpoints",
+      "subagent": "general",
+      "description": "Implement 2 GET endpoints for template metrics: /templates/{id}/metrics and /boredom-activities",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement two GET endpoints for template metrics - including the critical boredom endpoint for Phase 2 integration.\n\n## Your Task\n\nReplace stub implementations for:\n1. GET /templates/{template_id}/metrics - Aggregated metrics\n2. GET /boredom-activities - Templates needing improvement (for BoredomManager)\n\n## Endpoint 1: GET /templates/{template_id}/metrics\n\n**Router implementation**:\n```python\n@router.get(\"/templates/{template_id}/metrics\")\nasync def get_template_metrics(\n    template_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get aggregated metrics for template.\"\"\"\n    try:\n        result = await learning_loop.fetch_template_metrics(db, template_id)\n        \n        if not result:\n            raise HTTPException(status_code=404, detail=f\"Metrics not found for template {template_id}\")\n        \n        return result\n    \n    except HTTPException:\n        raise\n    except Exception as e:\n        logger.error(f\"Error fetching metrics for {template_id}: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch metrics\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_template_metrics(db, template_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Fetch template metrics.\"\"\"\n    try:\n        result = await get_metrics(db, template_id)\n        return result\n    except Exception as e:\n        logger.error(f\"Error fetching metrics: {e}\")\n        raise\n```\n\n## Endpoint 2: GET /boredom-activities (CRITICAL for Phase 2)\n\nThis endpoint is used by BoredomManager in Phase 2 to identify templates that need improvement.\n\n**Router implementation**:\n```python\n@router.get(\"/boredom-activities\")\nasync def get_boredom_activities(\n    threshold: float = Query({{boredom_threshold}}, ge=0.0, le=1.0),\n    limit: int = Query(5, ge=1, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get templates with low improvement_gradient (for BoredomManager).\"\"\"\n    try:\n        logger.info(f\"Fetching boredom activities with threshold={threshold}, limit={limit}\")\n        \n        results = await learning_loop.fetch_boredom_activities(db, threshold, limit)\n        \n        return {\n            'templates': results,\n            'threshold': threshold,\n            'count': len(results)\n        }\n    \n    except Exception as e:\n        logger.error(f\"Error fetching boredom activities: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch boredom activities\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_boredom_activities(db, threshold: float, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Fetch templates needing improvement (low improvement_gradient).\"\"\"\n    try:\n        results = await get_boredom_candidates(db, threshold, limit)\n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error fetching boredom candidates: {e}\")\n        raise\n```\n\n## Response Schema\n\n**Metrics Response**:\n```json\n{\n  \"template_id\": \"add-rest-endpoint\",\n  \"total_executions\": 42,\n  \"success_rate\": 0.857,\n  \"avg_cost_usd\": 0.023,\n  \"avg_duration_ms\": 45000,\n  \"thompson_alpha\": 36.0,\n  \"thompson_beta\": 6.0,\n  \"improvement_gradient\": 0.123,\n  \"status\": \"active\",\n  \"last_executed_at\": \"2026-02-21T12:00:00Z\"\n}\n```\n\n**Boredom Activities Response**:\n```json\n{\n  \"templates\": [\n    {\n      \"template_id\": \"fix-typescript-error\",\n      \"improvement_gradient\": 0.023,\n      \"success_rate\": 0.5,\n      \"total_executions\": 10\n    }\n  ],\n  \"threshold\": 0.5,\n  \"count\": 1\n}\n```\n\n## Key Points\n\n1. **Boredom threshold**:\n   - Default: {{boredom_threshold}} (0.5)\n   - Lower gradient = needs more improvement\n   - Used by BoredomManager for autonomous learning\n\n2. **404 vs empty list**:\n   - Metrics endpoint: 404 if template not found\n   - Boredom endpoint: Empty array if no candidates\n\n3. **Phase 2 integration**:\n   - Boredom endpoint is called by `metabob_fetch_boredom_activities` MCP tool\n   - Must return fast (< 1s) for responsive UI\n\n## Validation\n\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_boredom_candidates\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_metrics(db, template_id)\" {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ Two GET endpoints implemented\n- ✅ Metrics endpoint returns 404 for missing template\n- ✅ Boredom endpoint returns empty array if no candidates\n- ✅ Query parameter validation working\n- ✅ Calls `get_metrics()` operation\n- ✅ Calls `get_boredom_candidates()` operation\n- ✅ Ready for Phase 2 BoredomManager integration",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "boredom_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Default improvement_gradient threshold for boredom detection",
+            "default": "0.5"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-get-failures-endpoint",
+      "subagent": "general",
+      "description": "Implement GET /templates/{id}/failures endpoint for querying failure patterns",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement the GET /templates/{template_id}/failures endpoint for querying failure patterns.\n\n## Your Task\n\nReplace stub implementation for:\n- GET /templates/{template_id}/failures - Failure pattern analysis\n\n## Endpoint Implementation\n\n**Router implementation**:\n```python\n@router.get(\"/templates/{template_id}/failures\")\nasync def get_template_failures(\n    template_id: str,\n    error_type: Optional[str] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get failure patterns for template.\"\"\"\n    try:\n        logger.info(f\"Fetching failures for template {template_id}, error_type={error_type}\")\n        \n        results = await learning_loop.fetch_failure_patterns(\n            db,\n            template_id,\n            error_type,\n            limit\n        )\n        \n        return {\n            'patterns': results,\n            'template_id': template_id,\n            'error_type': error_type,\n            'count': len(results)\n        }\n    \n    except Exception as e:\n        logger.error(f\"Error fetching failures for {template_id}: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch failure patterns\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_failure_patterns(\n    db,\n    template_id: str,\n    error_type: Optional[str],\n    limit: int\n) -> List[Dict[str, Any]]:\n    \"\"\"Fetch failure patterns for template.\"\"\"\n    try:\n        results = await get_failure_patterns(\n            db,\n            template_id,\n            error_type,\n            limit\n        )\n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error fetching failure patterns: {e}\")\n        raise\n```\n\n## Response Schema\n\n```json\n{\n  \"patterns\": [\n    {\n      \"pattern_id\": \"pat_abc123\",\n      \"error_type\": \"validation\",\n      \"normalized_message\": \"Type mismatch in parameter X\",\n      \"frequency\": 5,\n      \"first_seen\": \"2026-02-15T10:00:00Z\",\n      \"last_seen\": \"2026-02-21T12:00:00Z\",\n      \"example_executions\": [\n        \"exec_1\",\n        \"exec_2\"\n      ]\n    }\n  ],\n  \"template_id\": \"add-rest-endpoint\",\n  \"error_type\": \"validation\",\n  \"count\": 1\n}\n```\n\n## Key Points\n\n1. **Optional error_type filter**:\n   - If provided, filter by specific error type\n   - If null, return all error types\n\n2. **Empty results**:\n   - Return empty array (not 404) if no failures\n   - This is a legitimate state (no failures = good!)\n\n3. **Sorting**:\n   - Results sorted by frequency (most common first)\n   - Handled by `get_failure_patterns()` operation\n\n4. **Use cases**:\n   - Debugging template issues\n   - Identifying common failure patterns\n   - Phase 2 template improvement suggestions\n\n## Validation\n\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_failure_patterns\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"@router.get(\\\"/templates/{template_id}/failures\\\")\" {{rpc_api_path}}/server/routes/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ GET endpoint implemented\n- ✅ Path parameter for template_id\n- ✅ Optional error_type query filter\n- ✅ Limit parameter with validation\n- ✅ Empty array for no failures\n- ✅ Calls `get_failure_patterns()` operation\n- ✅ Error handling and logging",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "default_limit",
+            "type": "number",
+            "required": false,
+            "description": "Default pagination limit",
+            "default": "20"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "integrate-and-validate",
+      "subagent": "general",
+      "description": "Register router in app.py, export in __init__.py, verify all imports, run syntax checks, and validate OpenAPI docs generation",
+      "dependencies": [
+        "implement-post-executions-endpoint",
+        "implement-get-executions-endpoints",
+        "implement-get-metrics-endpoints",
+        "implement-get-failures-endpoint"
+      ],
+      "prompt": {
+        "template": "Final integration task: Register the learning loop router and validate the complete implementation.\n\n## Your Task\n\n1. Register router in `{{rpc_api_path}}/server/app.py`\n2. Export router in `{{rpc_api_path}}/server/routes/__init__.py`\n3. Run validation checks\n4. Verify no forbidden patterns\n\n## Step 1: Register Router in app.py\n\nAdd the learning loop router to the FastAPI app. Find the section where other routers are registered and add:\n\n```python\n# Import at top of file\nfrom server.routes import learning_loop_router\n\n# Register with app (add near other router registrations)\napp.include_router(learning_loop_router)\n```\n\n**Note**: The exact location depends on existing structure. Look for other `app.include_router()` calls.\n\n## Step 2: Export Router in routes/__init__.py\n\nAdd to `{{rpc_api_path}}/server/routes/__init__.py`:\n\n```python\nfrom .learning_loop import router as learning_loop_router\n\n__all__ = [\n    # ... existing exports ...\n    'learning_loop_router',\n]\n```\n\n## Step 3: Validation Checks\n\nRun these commands:\n\n```bash\n# Syntax validation\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/app.py\npython -m py_compile {{rpc_api_path}}/server/routes/__init__.py\n\n# Import validation\ncd {{rpc_api_path}} && python -c \"from server.routes import learning_loop_router; print('Router import: OK')\"\ncd {{rpc_api_path}} && python -c \"from server.actions import learning_loop; print('Actions import: OK')\"\n\n# Type check (optional, ignore errors)\nmypy {{rpc_api_path}}/server/routes/learning_loop.py --ignore-missing-imports || echo \"Type check complete (warnings ok)\"\n```\n\n## Step 4: Pattern Validation\n\nVerify required patterns exist:\n\n```bash\ncd {{rpc_api_path}}\n\n# Check router registration\ngrep -q \"app.include_router.*learning_loop_router\" server/app.py && echo \"✅ Router registered\"\n\n# Check router export\ngrep -q \"learning_loop_router\" server/routes/__init__.py && echo \"✅ Router exported\"\n\n# Check all 6 endpoints implemented\ngrep -c \"@router.post\\|@router.get\" server/routes/learning_loop.py | grep -q \"7\" && echo \"✅ All endpoints implemented\"\n\n# Check no stubs remain\n! grep -q \"raise NotImplementedError\" server/routes/learning_loop.py && echo \"✅ No stubs in router\"\n! grep -q \"raise NotImplementedError\" server/actions/learning_loop.py && echo \"✅ No stubs in actions\"\n\n# Check forbidden patterns absent\n! grep -q 'db.query(\"SELECT' server/routes/learning_loop.py && echo \"✅ No direct queries in router\"\n! grep -q 'db.query(\"SELECT' server/actions/learning_loop.py && echo \"✅ No direct queries in actions\"\n```\n\n## Success Criteria\n\nAll checks must pass:\n\n- ✅ Router registered in app.py\n- ✅ Router exported in routes/__init__.py\n- ✅ Python syntax valid (all files)\n- ✅ Imports work\n- ✅ All 6 endpoints implemented (no stubs)\n- ✅ No forbidden patterns (direct queries, hardcoded creds)\n- ✅ Error handling present\n- ✅ Logging present\n\n## Summary Report\n\nAfter validation, provide a summary:\n\n```\n✅ Phase 1.3 Complete: Learning Loop API Endpoints\n\nFiles created:\n- server/routes/learning_loop.py (~XXX lines)\n- server/actions/learning_loop.py (~XXX lines)\n\nFiles modified:\n- server/app.py (router registration)\n- server/routes/__init__.py (router export)\n\nEndpoints implemented:\n1. POST /api/v1/learning-loop/executions\n2. GET /api/v1/learning-loop/executions/{id}\n3. GET /api/v1/learning-loop/executions\n4. GET /api/v1/learning-loop/executions/recent\n5. GET /api/v1/learning-loop/templates/{id}/metrics\n6. GET /api/v1/learning-loop/boredom-activities\n7. GET /api/v1/learning-loop/templates/{id}/failures\n\nValidation: All checks passed ✅\n\nNext steps:\n- Phase 2: Implement MCP tools that call these endpoints\n- Test with SurrealDB running\n- Verify OpenAPI docs at /docs\n```\n\n## Troubleshooting\n\nIf validation fails:\n\n1. **Import errors**: Check file paths and module structure\n2. **Syntax errors**: Review Python syntax in modified files\n3. **Pattern missing**: Verify router registration and export\n4. **Forbidden pattern**: Remove direct database queries or hardcoded credentials",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/app.py",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd {{rpc_api_path}} && python -c 'from server.routes import learning_loop_router'",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd {{rpc_api_path}} && python -c 'from server.actions import learning_loop'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "create-foundation-files",
+      "subagent": "general",
+      "description": "Create router skeleton (routes/learning_loop.py) and actions skeleton (actions/learning_loop.py) with imports, basic structure, and stub functions for all 6 endpoints",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are implementing Phase 1.3 of the learning loop system - creating FastAPI REST endpoints that expose the SurrealDB CRUD operations built in Phase 1.2.\n\n## Your Task\n\nCreate skeleton files for the learning loop router and actions layer:\n\n1. **Router file**: `{{rpc_api_path}}/server/routes/learning_loop.py`\n2. **Actions file**: `{{rpc_api_path}}/server/actions/learning_loop.py`\n\n## Reference Files for Patterns\n\n**Copy structure from these existing files**:\n- `{{rpc_api_path}}/server/routes/activity.py` - Router pattern with FastAPI decorators\n- `{{rpc_api_path}}/server/actions/activity.py` - Business logic layer pattern\n- `{{rpc_api_path}}/server/routes/metrics.py` - Read-only endpoint examples\n\n## Router File Requirements\n\n### Imports\n```python\nfrom fastapi import APIRouter, Depends, HTTPException, Query\nfrom fastapi.security import HTTPBearer\nfrom pydantic import BaseModel, Field\nfrom typing import Optional, List, Dict, Any\nfrom datetime import datetime\nimport logging\n\nfrom server.actions import learning_loop\nfrom server.utils.dependencies import get_surreal_client\n```\n\n### Router Configuration\n```python\nrouter = APIRouter(\n    prefix=\"{{router_prefix}}\",\n    tags=[\"learning-loop\"]\n)\n\nsecurity = HTTPBearer(auto_error=False)  # Optional auth for development\nlogger = logging.getLogger(__name__)\n```\n\n### 6 Endpoint Stubs (use `raise NotImplementedError()` for now)\n\n1. **POST /executions** - Record activity execution\n```python\n@router.post(\"/executions\")\nasync def record_execution(\n    data: ExecutionCreateRequest,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Record activity execution result and update metrics.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n2. **GET /executions/{execution_id}** - Fetch specific execution\n```python\n@router.get(\"/executions/{execution_id}\")\nasync def get_execution(\n    execution_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get execution by ID.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n3. **GET /executions** - Query executions with filters\n```python\n@router.get(\"/executions\")\nasync def list_executions(\n    template_id: Optional[str] = Query(None),\n    success: Optional[bool] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    offset: int = Query(0, ge=0),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"List executions with optional filters.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n4. **GET /executions/recent** - Get recent executions\n```python\n@router.get(\"/executions/recent\")\nasync def get_recent_executions(\n    hours: int = Query(24, ge=1, le=168),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get recent executions within time window.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n5. **GET /templates/{template_id}/metrics** - Get template metrics\n```python\n@router.get(\"/templates/{template_id}/metrics\")\nasync def get_template_metrics(\n    template_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get aggregated metrics for template.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n6. **GET /boredom-activities** - Get templates needing improvement\n```python\n@router.get(\"/boredom-activities\")\nasync def get_boredom_activities(\n    threshold: float = Query({{boredom_threshold}}, ge=0.0, le=1.0),\n    limit: int = Query(5, ge=1, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get templates with low improvement_gradient (for BoredomManager).\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n7. **GET /templates/{template_id}/failures** - Get failure patterns\n```python\n@router.get(\"/templates/{template_id}/failures\")\nasync def get_template_failures(\n    template_id: str,\n    error_type: Optional[str] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get failure patterns for template.\"\"\"\n    raise NotImplementedError(\"Will implement in next task\")\n```\n\n### Pydantic Models\n\nDefine request/response models at the top of the file:\n\n```python\nclass TokenUsage(BaseModel):\n    input: int\n    output: int\n    cache: int = 0\n\nclass ExecutionCreateRequest(BaseModel):\n    activity_id: str\n    template_id: str\n    started_at: datetime\n    duration_ms: int = Field(ge=0)\n    success: bool\n    tokens: TokenUsage\n    cost_usd: float = Field(ge=0)\n    error_message: Optional[str] = None\n    error_type: Optional[str] = None\n    failed_task_id: Optional[str] = None\n\nclass ExecutionResponse(BaseModel):\n    execution_id: str\n    activity_id: str\n    template_id: str\n    created_at: datetime\n    success: bool\n    metrics_updated: bool\n```\n\n## Actions File Requirements\n\n### Imports\n```python\nimport logging\nfrom typing import Optional, List, Dict, Any\nfrom datetime import datetime, timedelta\n\nfrom server.db.operations import (\n    insert_execution,\n    get_execution,\n    get_executions_by_template,\n    get_recent_executions,\n    get_metrics,\n    update_metrics_after_execution,\n    get_boredom_candidates,\n    record_failure,\n    get_failure_patterns\n)\n\nlogger = logging.getLogger(__name__)\n```\n\n### 6 Function Stubs\n\nCreate stub functions matching each endpoint:\n\n```python\nasync def create_execution(db, execution_data: Dict[str, Any]) -> Dict[str, Any]:\n    \"\"\"Business logic for recording execution.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_execution(db, execution_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Business logic for fetching execution by ID.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def query_executions(db, filters: Dict[str, Any]) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for querying executions.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_recent_executions(db, hours: int, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for fetching recent executions.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_template_metrics(db, template_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Business logic for fetching template metrics.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_boredom_activities(db, threshold: float, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for fetching boredom candidates.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n\nasync def fetch_failure_patterns(db, template_id: str, error_type: Optional[str], limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Business logic for fetching failure patterns.\"\"\"\n    # TODO: Implement in next task\n    raise NotImplementedError()\n```\n\n## Validation\n\nAfter creating both files:\n\n1. **Syntax check**:\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n2. **Verify structure**:\n- Both files exist\n- Router has all 6 endpoint decorators\n- Actions has all 6 function stubs\n- All imports present\n- Pydantic models defined\n\n## Success Criteria\n\n- ✅ Router file created (~100-150 lines)\n- ✅ Actions file created (~80-100 lines)\n- ✅ All 6 endpoints stubbed out\n- ✅ Pydantic models defined\n- ✅ Imports correct\n- ✅ Python syntax valid\n- ✅ Logging configured\n- ✅ Ready for implementation in next tasks\n\n**Note**: This task creates the foundation. Subsequent tasks will implement each endpoint.",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "router_prefix",
+            "type": "string",
+            "required": false,
+            "description": "API route prefix for learning loop endpoints",
+            "default": "/api/v1/learning-loop"
+          },
+          {
+            "name": "enable_auth",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable HTTPBearer authentication",
+            "default": "false"
+          },
+          {
+            "name": "boredom_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Default improvement_gradient threshold for boredom detection",
+            "default": "0.5"
+          },
+          {
+            "name": "default_limit",
+            "type": "number",
+            "required": false,
+            "description": "Default pagination limit",
+            "default": "20"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-post-executions-endpoint",
+      "subagent": "general",
+      "description": "Implement POST /executions endpoint in both router and actions layer - the most complex endpoint that records execution results, updates metrics, and tracks failures",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement the POST /executions endpoint - the most critical endpoint that records activity execution results and updates the learning loop.\n\n## Your Task\n\nReplace the stub implementation in:\n1. `{{rpc_api_path}}/server/routes/learning_loop.py` - Route handler\n2. `{{rpc_api_path}}/server/actions/learning_loop.py` - Business logic\n\n## Endpoint Specification\n\n**POST /api/v1/learning-loop/executions**\n\n**Purpose**: Record activity execution, update incremental metrics, track failures\n\n**Request Body** (ExecutionCreateRequest):\n```json\n{\n  \"activity_id\": \"act_abc123\",\n  \"template_id\": \"add-rest-endpoint\",\n  \"started_at\": \"2026-02-21T12:00:00Z\",\n  \"duration_ms\": 45000,\n  \"success\": true,\n  \"tokens\": {\n    \"input\": 10000,\n    \"output\": 2500,\n    \"cache\": 500\n  },\n  \"cost_usd\": 0.0234,\n  \"error_message\": null,\n  \"error_type\": null,\n  \"failed_task_id\": null\n}\n```\n\n**Response** (ExecutionResponse):\n```json\n{\n  \"execution_id\": \"exec_xyz789\",\n  \"activity_id\": \"act_abc123\",\n  \"template_id\": \"add-rest-endpoint\",\n  \"created_at\": \"2026-02-21T12:01:00Z\",\n  \"success\": true,\n  \"metrics_updated\": true\n}\n```\n\n## Router Implementation\n\nReplace the stub in `routes/learning_loop.py`:\n\n```python\n@router.post(\"/executions\")\nasync def record_execution(\n    data: ExecutionCreateRequest,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Record activity execution result and update metrics.\"\"\"\n    try:\n        logger.info(f\"Recording execution for template {data.template_id}\")\n        \n        # Call business logic\n        result = await learning_loop.create_execution(\n            db,\n            data.model_dump()\n        )\n        \n        return result\n    \n    except ValueError as e:\n        logger.error(f\"Validation error: {e}\")\n        raise HTTPException(status_code=400, detail=str(e))\n    \n    except Exception as e:\n        logger.error(f\"Error recording execution: {e}\", exc_info=True)\n        raise HTTPException(status_code=500, detail=\"Failed to record execution\")\n```\n\n## Actions Implementation\n\nReplace the stub in `actions/learning_loop.py`:\n\n```python\nasync def create_execution(db, execution_data: Dict[str, Any]) -> Dict[str, Any]:\n    \"\"\"Record execution, update metrics, track failures.\"\"\"\n    \n    try:\n        # 1. Insert execution record\n        logger.info(f\"Inserting execution for template {execution_data['template_id']}\")\n        execution_result = await insert_execution(db, execution_data)\n        \n        if not execution_result or 'id' not in execution_result:\n            raise ValueError(\"Failed to insert execution record\")\n        \n        execution_id = execution_result['id']\n        \n        # 2. Update template metrics (incremental aggregation)\n        logger.info(f\"Updating metrics for template {execution_data['template_id']}\")\n        metrics_updated = await update_metrics_after_execution(\n            db,\n            execution_data['template_id'],\n            {\n                'success': execution_data['success'],\n                'duration_ms': execution_data['duration_ms'],\n                'cost_usd': execution_data['cost_usd'],\n                'tokens': execution_data['tokens']\n            }\n        )\n        \n        # 3. If failed, record failure pattern\n        if not execution_data['success'] and execution_data.get('error_message'):\n            logger.info(f\"Recording failure pattern for template {execution_data['template_id']}\")\n            try:\n                await record_failure(\n                    db,\n                    execution_data['template_id'],\n                    execution_id,\n                    execution_data.get('error_type', 'unknown'),\n                    execution_data['error_message'],\n                    execution_data.get('failed_task_id')\n                )\n            except Exception as e:\n                # Don't fail the request if failure tracking fails\n                logger.error(f\"Failed to record failure pattern: {e}\")\n        \n        # 4. Return response\n        return {\n            'execution_id': execution_id,\n            'activity_id': execution_data['activity_id'],\n            'template_id': execution_data['template_id'],\n            'created_at': execution_data['started_at'],\n            'success': execution_data['success'],\n            'metrics_updated': metrics_updated is not None\n        }\n    \n    except Exception as e:\n        logger.error(f\"Error in create_execution: {e}\", exc_info=True)\n        raise\n```\n\n## Error Handling Requirements\n\n1. **Validation errors** (400):\n   - Missing required fields\n   - Invalid data types\n   - Constraint violations\n\n2. **Database errors** (500):\n   - Connection failures\n   - Query failures\n   - Unexpected exceptions\n\n3. **Logging**:\n   - Log all operations\n   - Log errors with full traceback\n   - Include template_id in all logs\n\n## Validation\n\nAfter implementation:\n\n1. **Pattern checks**:\n```bash\ngrep -q \"insert_execution(\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"update_metrics_after_execution(\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"record_failure(\" {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n2. **Syntax check**:\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ POST endpoint fully implemented (no stubs)\n- ✅ Calls `insert_execution()` to store record\n- ✅ Calls `update_metrics_after_execution()` for aggregation\n- ✅ Calls `record_failure()` for failed executions\n- ✅ Error handling for 400/500 responses\n- ✅ Comprehensive logging\n- ✅ Returns structured response\n- ✅ Ready for Phase 2 MCP integration",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-get-executions-endpoints",
+      "subagent": "general",
+      "description": "Implement 3 GET endpoints for querying executions: /executions/{id}, /executions (with filters), /executions/recent",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement three GET endpoints for querying activity executions.\n\n## Your Task\n\nReplace stub implementations for:\n1. GET /executions/{execution_id} - Fetch by ID\n2. GET /executions - Query with filters\n3. GET /executions/recent - Time-based query\n\n## Endpoint 1: GET /executions/{execution_id}\n\n**Router implementation**:\n```python\n@router.get(\"/executions/{execution_id}\")\nasync def get_execution(\n    execution_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get execution by ID.\"\"\"\n    try:\n        result = await learning_loop.fetch_execution(db, execution_id)\n        \n        if not result:\n            raise HTTPException(status_code=404, detail=f\"Execution {execution_id} not found\")\n        \n        return result\n    \n    except HTTPException:\n        raise\n    except Exception as e:\n        logger.error(f\"Error fetching execution {execution_id}: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch execution\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_execution(db, execution_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Fetch execution by ID.\"\"\"\n    try:\n        result = await get_execution(db, execution_id)\n        return result\n    except Exception as e:\n        logger.error(f\"Error fetching execution: {e}\")\n        raise\n```\n\n## Endpoint 2: GET /executions\n\n**Router implementation**:\n```python\n@router.get(\"/executions\")\nasync def list_executions(\n    template_id: Optional[str] = Query(None),\n    success: Optional[bool] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    offset: int = Query(0, ge=0),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"List executions with optional filters.\"\"\"\n    try:\n        filters = {\n            'template_id': template_id,\n            'success': success,\n            'limit': limit,\n            'offset': offset\n        }\n        \n        results = await learning_loop.query_executions(db, filters)\n        return {'executions': results, 'count': len(results)}\n    \n    except Exception as e:\n        logger.error(f\"Error listing executions: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to list executions\")\n```\n\n**Actions implementation**:\n```python\nasync def query_executions(db, filters: Dict[str, Any]) -> List[Dict[str, Any]]:\n    \"\"\"Query executions with filters.\"\"\"\n    try:\n        template_id = filters.get('template_id')\n        limit = filters.get('limit', {{default_limit}})\n        \n        if template_id:\n            # Query by template\n            results = await get_executions_by_template(db, template_id, limit)\n        else:\n            # Get recent executions\n            results = await get_recent_executions(db, hours=24, limit=limit)\n        \n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error querying executions: {e}\")\n        raise\n```\n\n## Endpoint 3: GET /executions/recent\n\n**Router implementation**:\n```python\n@router.get(\"/executions/recent\")\nasync def get_recent_executions_route(\n    hours: int = Query(24, ge=1, le=168),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get recent executions within time window.\"\"\"\n    try:\n        results = await learning_loop.fetch_recent_executions(db, hours, limit)\n        return {'executions': results, 'hours': hours, 'count': len(results)}\n    \n    except Exception as e:\n        logger.error(f\"Error fetching recent executions: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch recent executions\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_recent_executions(db, hours: int, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Fetch recent executions.\"\"\"\n    try:\n        results = await get_recent_executions(db, hours, limit)\n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error fetching recent executions: {e}\")\n        raise\n```\n\n## Key Points\n\n1. **404 vs empty list**:\n   - GET /{id}: Return 404 if not found\n   - GET /list: Return empty array (200) if no results\n\n2. **Pagination**:\n   - Use Query() validators for limit/offset\n   - Enforce max_limit to prevent abuse\n\n3. **Error handling**:\n   - Catch and log all exceptions\n   - Return 500 for database errors\n   - Preserve HTTPException for 404s\n\n## Validation\n\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_execution(db, execution_id)\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_executions_by_template\" {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ Three GET endpoints implemented\n- ✅ 404 for missing execution by ID\n- ✅ Empty array for no results in list endpoints\n- ✅ Pagination logic working\n- ✅ Query parameter validation\n- ✅ Error handling and logging",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "default_limit",
+            "type": "number",
+            "required": false,
+            "description": "Default pagination limit",
+            "default": "20"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-get-metrics-endpoints",
+      "subagent": "general",
+      "description": "Implement 2 GET endpoints for template metrics: /templates/{id}/metrics and /boredom-activities",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement two GET endpoints for template metrics - including the critical boredom endpoint for Phase 2 integration.\n\n## Your Task\n\nReplace stub implementations for:\n1. GET /templates/{template_id}/metrics - Aggregated metrics\n2. GET /boredom-activities - Templates needing improvement (for BoredomManager)\n\n## Endpoint 1: GET /templates/{template_id}/metrics\n\n**Router implementation**:\n```python\n@router.get(\"/templates/{template_id}/metrics\")\nasync def get_template_metrics(\n    template_id: str,\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get aggregated metrics for template.\"\"\"\n    try:\n        result = await learning_loop.fetch_template_metrics(db, template_id)\n        \n        if not result:\n            raise HTTPException(status_code=404, detail=f\"Metrics not found for template {template_id}\")\n        \n        return result\n    \n    except HTTPException:\n        raise\n    except Exception as e:\n        logger.error(f\"Error fetching metrics for {template_id}: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch metrics\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_template_metrics(db, template_id: str) -> Optional[Dict[str, Any]]:\n    \"\"\"Fetch template metrics.\"\"\"\n    try:\n        result = await get_metrics(db, template_id)\n        return result\n    except Exception as e:\n        logger.error(f\"Error fetching metrics: {e}\")\n        raise\n```\n\n## Endpoint 2: GET /boredom-activities (CRITICAL for Phase 2)\n\nThis endpoint is used by BoredomManager in Phase 2 to identify templates that need improvement.\n\n**Router implementation**:\n```python\n@router.get(\"/boredom-activities\")\nasync def get_boredom_activities(\n    threshold: float = Query({{boredom_threshold}}, ge=0.0, le=1.0),\n    limit: int = Query(5, ge=1, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get templates with low improvement_gradient (for BoredomManager).\"\"\"\n    try:\n        logger.info(f\"Fetching boredom activities with threshold={threshold}, limit={limit}\")\n        \n        results = await learning_loop.fetch_boredom_activities(db, threshold, limit)\n        \n        return {\n            'templates': results,\n            'threshold': threshold,\n            'count': len(results)\n        }\n    \n    except Exception as e:\n        logger.error(f\"Error fetching boredom activities: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch boredom activities\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_boredom_activities(db, threshold: float, limit: int) -> List[Dict[str, Any]]:\n    \"\"\"Fetch templates needing improvement (low improvement_gradient).\"\"\"\n    try:\n        results = await get_boredom_candidates(db, threshold, limit)\n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error fetching boredom candidates: {e}\")\n        raise\n```\n\n## Response Schema\n\n**Metrics Response**:\n```json\n{\n  \"template_id\": \"add-rest-endpoint\",\n  \"total_executions\": 42,\n  \"success_rate\": 0.857,\n  \"avg_cost_usd\": 0.023,\n  \"avg_duration_ms\": 45000,\n  \"thompson_alpha\": 36.0,\n  \"thompson_beta\": 6.0,\n  \"improvement_gradient\": 0.123,\n  \"status\": \"active\",\n  \"last_executed_at\": \"2026-02-21T12:00:00Z\"\n}\n```\n\n**Boredom Activities Response**:\n```json\n{\n  \"templates\": [\n    {\n      \"template_id\": \"fix-typescript-error\",\n      \"improvement_gradient\": 0.023,\n      \"success_rate\": 0.5,\n      \"total_executions\": 10\n    }\n  ],\n  \"threshold\": 0.5,\n  \"count\": 1\n}\n```\n\n## Key Points\n\n1. **Boredom threshold**:\n   - Default: {{boredom_threshold}} (0.5)\n   - Lower gradient = needs more improvement\n   - Used by BoredomManager for autonomous learning\n\n2. **404 vs empty list**:\n   - Metrics endpoint: 404 if template not found\n   - Boredom endpoint: Empty array if no candidates\n\n3. **Phase 2 integration**:\n   - Boredom endpoint is called by `metabob_fetch_boredom_activities` MCP tool\n   - Must return fast (< 1s) for responsive UI\n\n## Validation\n\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_boredom_candidates\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_metrics(db, template_id)\" {{rpc_api_path}}/server/actions/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ Two GET endpoints implemented\n- ✅ Metrics endpoint returns 404 for missing template\n- ✅ Boredom endpoint returns empty array if no candidates\n- ✅ Query parameter validation working\n- ✅ Calls `get_metrics()` operation\n- ✅ Calls `get_boredom_candidates()` operation\n- ✅ Ready for Phase 2 BoredomManager integration",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "boredom_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Default improvement_gradient threshold for boredom detection",
+            "default": "0.5"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-get-failures-endpoint",
+      "subagent": "general",
+      "description": "Implement GET /templates/{id}/failures endpoint for querying failure patterns",
+      "dependencies": [
+        "create-foundation-files"
+      ],
+      "prompt": {
+        "template": "Implement the GET /templates/{template_id}/failures endpoint for querying failure patterns.\n\n## Your Task\n\nReplace stub implementation for:\n- GET /templates/{template_id}/failures - Failure pattern analysis\n\n## Endpoint Implementation\n\n**Router implementation**:\n```python\n@router.get(\"/templates/{template_id}/failures\")\nasync def get_template_failures(\n    template_id: str,\n    error_type: Optional[str] = Query(None),\n    limit: int = Query({{default_limit}}, le={{max_limit}}),\n    db = Depends(get_surreal_client)\n):\n    \"\"\"Get failure patterns for template.\"\"\"\n    try:\n        logger.info(f\"Fetching failures for template {template_id}, error_type={error_type}\")\n        \n        results = await learning_loop.fetch_failure_patterns(\n            db,\n            template_id,\n            error_type,\n            limit\n        )\n        \n        return {\n            'patterns': results,\n            'template_id': template_id,\n            'error_type': error_type,\n            'count': len(results)\n        }\n    \n    except Exception as e:\n        logger.error(f\"Error fetching failures for {template_id}: {e}\")\n        raise HTTPException(status_code=500, detail=\"Failed to fetch failure patterns\")\n```\n\n**Actions implementation**:\n```python\nasync def fetch_failure_patterns(\n    db,\n    template_id: str,\n    error_type: Optional[str],\n    limit: int\n) -> List[Dict[str, Any]]:\n    \"\"\"Fetch failure patterns for template.\"\"\"\n    try:\n        results = await get_failure_patterns(\n            db,\n            template_id,\n            error_type,\n            limit\n        )\n        return results or []\n    \n    except Exception as e:\n        logger.error(f\"Error fetching failure patterns: {e}\")\n        raise\n```\n\n## Response Schema\n\n```json\n{\n  \"patterns\": [\n    {\n      \"pattern_id\": \"pat_abc123\",\n      \"error_type\": \"validation\",\n      \"normalized_message\": \"Type mismatch in parameter X\",\n      \"frequency\": 5,\n      \"first_seen\": \"2026-02-15T10:00:00Z\",\n      \"last_seen\": \"2026-02-21T12:00:00Z\",\n      \"example_executions\": [\n        \"exec_1\",\n        \"exec_2\"\n      ]\n    }\n  ],\n  \"template_id\": \"add-rest-endpoint\",\n  \"error_type\": \"validation\",\n  \"count\": 1\n}\n```\n\n## Key Points\n\n1. **Optional error_type filter**:\n   - If provided, filter by specific error type\n   - If null, return all error types\n\n2. **Empty results**:\n   - Return empty array (not 404) if no failures\n   - This is a legitimate state (no failures = good!)\n\n3. **Sorting**:\n   - Results sorted by frequency (most common first)\n   - Handled by `get_failure_patterns()` operation\n\n4. **Use cases**:\n   - Debugging template issues\n   - Identifying common failure patterns\n   - Phase 2 template improvement suggestions\n\n## Validation\n\n```bash\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"get_failure_patterns\" {{rpc_api_path}}/server/actions/learning_loop.py\ngrep -q \"@router.get(\\\"/templates/{template_id}/failures\\\")\" {{rpc_api_path}}/server/routes/learning_loop.py\n```\n\n## Success Criteria\n\n- ✅ GET endpoint implemented\n- ✅ Path parameter for template_id\n- ✅ Optional error_type query filter\n- ✅ Limit parameter with validation\n- ✅ Empty array for no failures\n- ✅ Calls `get_failure_patterns()` operation\n- ✅ Error handling and logging",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          },
+          {
+            "name": "default_limit",
+            "type": "number",
+            "required": false,
+            "description": "Default pagination limit",
+            "default": "20"
+          },
+          {
+            "name": "max_limit",
+            "type": "number",
+            "required": false,
+            "description": "Maximum pagination limit",
+            "default": "100"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "integrate-and-validate",
+      "subagent": "general",
+      "description": "Register router in app.py, export in __init__.py, verify all imports, run syntax checks, and validate OpenAPI docs generation",
+      "dependencies": [
+        "implement-post-executions-endpoint",
+        "implement-get-executions-endpoints",
+        "implement-get-metrics-endpoints",
+        "implement-get-failures-endpoint"
+      ],
+      "prompt": {
+        "template": "Final integration task: Register the learning loop router and validate the complete implementation.\n\n## Your Task\n\n1. Register router in `{{rpc_api_path}}/server/app.py`\n2. Export router in `{{rpc_api_path}}/server/routes/__init__.py`\n3. Run validation checks\n4. Verify no forbidden patterns\n\n## Step 1: Register Router in app.py\n\nAdd the learning loop router to the FastAPI app. Find the section where other routers are registered and add:\n\n```python\n# Import at top of file\nfrom server.routes import learning_loop_router\n\n# Register with app (add near other router registrations)\napp.include_router(learning_loop_router)\n```\n\n**Note**: The exact location depends on existing structure. Look for other `app.include_router()` calls.\n\n## Step 2: Export Router in routes/__init__.py\n\nAdd to `{{rpc_api_path}}/server/routes/__init__.py`:\n\n```python\nfrom .learning_loop import router as learning_loop_router\n\n__all__ = [\n    # ... existing exports ...\n    'learning_loop_router',\n]\n```\n\n## Step 3: Validation Checks\n\nRun these commands:\n\n```bash\n# Syntax validation\npython -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py\npython -m py_compile {{rpc_api_path}}/server/app.py\npython -m py_compile {{rpc_api_path}}/server/routes/__init__.py\n\n# Import validation\ncd {{rpc_api_path}} && python -c \"from server.routes import learning_loop_router; print('Router import: OK')\"\ncd {{rpc_api_path}} && python -c \"from server.actions import learning_loop; print('Actions import: OK')\"\n\n# Type check (optional, ignore errors)\nmypy {{rpc_api_path}}/server/routes/learning_loop.py --ignore-missing-imports || echo \"Type check complete (warnings ok)\"\n```\n\n## Step 4: Pattern Validation\n\nVerify required patterns exist:\n\n```bash\ncd {{rpc_api_path}}\n\n# Check router registration\ngrep -q \"app.include_router.*learning_loop_router\" server/app.py && echo \"✅ Router registered\"\n\n# Check router export\ngrep -q \"learning_loop_router\" server/routes/__init__.py && echo \"✅ Router exported\"\n\n# Check all 6 endpoints implemented\ngrep -c \"@router.post\\|@router.get\" server/routes/learning_loop.py | grep -q \"7\" && echo \"✅ All endpoints implemented\"\n\n# Check no stubs remain\n! grep -q \"raise NotImplementedError\" server/routes/learning_loop.py && echo \"✅ No stubs in router\"\n! grep -q \"raise NotImplementedError\" server/actions/learning_loop.py && echo \"✅ No stubs in actions\"\n\n# Check forbidden patterns absent\n! grep -q 'db.query(\"SELECT' server/routes/learning_loop.py && echo \"✅ No direct queries in router\"\n! grep -q 'db.query(\"SELECT' server/actions/learning_loop.py && echo \"✅ No direct queries in actions\"\n```\n\n## Success Criteria\n\nAll checks must pass:\n\n- ✅ Router registered in app.py\n- ✅ Router exported in routes/__init__.py\n- ✅ Python syntax valid (all files)\n- ✅ Imports work\n- ✅ All 6 endpoints implemented (no stubs)\n- ✅ No forbidden patterns (direct queries, hardcoded creds)\n- ✅ Error handling present\n- ✅ Logging present\n\n## Summary Report\n\nAfter validation, provide a summary:\n\n```\n✅ Phase 1.3 Complete: Learning Loop API Endpoints\n\nFiles created:\n- server/routes/learning_loop.py (~XXX lines)\n- server/actions/learning_loop.py (~XXX lines)\n\nFiles modified:\n- server/app.py (router registration)\n- server/routes/__init__.py (router export)\n\nEndpoints implemented:\n1. POST /api/v1/learning-loop/executions\n2. GET /api/v1/learning-loop/executions/{id}\n3. GET /api/v1/learning-loop/executions\n4. GET /api/v1/learning-loop/executions/recent\n5. GET /api/v1/learning-loop/templates/{id}/metrics\n6. GET /api/v1/learning-loop/boredom-activities\n7. GET /api/v1/learning-loop/templates/{id}/failures\n\nValidation: All checks passed ✅\n\nNext steps:\n- Phase 2: Implement MCP tools that call these endpoints\n- Test with SurrealDB running\n- Verify OpenAPI docs at /docs\n```\n\n## Troubleshooting\n\nIf validation fails:\n\n1. **Import errors**: Check file paths and module structure\n2. **Syntax errors**: Review Python syntax in modified files\n3. **Pattern missing**: Verify router registration and export\n4. **Forbidden pattern**: Remove direct database queries or hardcoded credentials",
+        "variables": [
+          {
+            "name": "rpc_api_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to rpc-api submodule",
+            "default": "repos/metabob-rpc-api"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python -m py_compile {{rpc_api_path}}/server/routes/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/actions/learning_loop.py && python -m py_compile {{rpc_api_path}}/server/app.py",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd {{rpc_api_path}} && python -c 'from server.routes import learning_loop_router'",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd {{rpc_api_path}} && python -c 'from server.actions import learning_loop'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-22T02:10:43.307Z",
+  "metadata": {}
+}
