@@ -1,0 +1,575 @@
+{
+  "activity_id": "test-learning-loop-end-to-end",
+  "name": "test-learning-loop-end-to-end",
+  "description": "End-to-end testing of complete learning loop: execute activity → verify metrics in SurrealDB → simulate idle → verify boredom activity triggers → verify metrics update. Tests full flow across opencode → MCP → cli → rpc-api → SurrealDB.",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "setup-and-execute-test-activity",
+      "subagent": "test",
+      "description": "Initialize test environment (create output directory, verify SurrealDB connection), execute test activity via MCP, capture execution ID and initial metrics",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are testing Phase 5 of the learning loop implementation: end-to-end validation across all architectural boundaries.\n\n**Your task**: Set up the test environment and execute a test activity to establish baseline metrics.\n\n## Step 1: Initialize Test Environment\n\n1. Create output directory at `{{output_dir}}`\n2. Verify SurrealDB connection to `{{surrealdb_host}}`:\n   - Namespace: `{{surrealdb_namespace}}`\n   - Database: `{{surrealdb_database}}`\n   - Test connection with a simple query (e.g., `INFO FOR DB;`)\n3. Log connection status to `{{output_dir}}/setup.log`\n\n## Step 2: Execute Test Activity\n\n1. Execute activity template: `{{test_activity_template}}`\n2. Pass variables: `{{test_activity_variables}}` (JSON string)\n3. Capture the activity execution ID\n4. Wait for activity to complete\n5. Log execution details to `{{output_dir}}/activity-execution-log.json` including:\n   - Execution ID\n   - Template ID\n   - Start timestamp\n   - End timestamp\n   - Success status\n   - Any error messages\n\n## Success Criteria\n\n- Output directory created and accessible\n- SurrealDB connection successful (no connection errors)\n- Test activity executed successfully\n- Execution ID captured and logged\n- All log files created with valid JSON\n\n## Error Handling\n\n- **SurrealDB connection failure**: Retry 3 times with exponential backoff (1s, 2s, 4s)\n- **Activity execution failure**: Do NOT retry - log detailed error and fail task\n- Collect diagnostic information:\n  - Connection strings and network status\n  - Activity execution logs\n  - Error messages and stack traces\n\n**Output the execution ID and confirm all setup completed successfully.**",
+        "variables": [
+          {
+            "name": "test_activity_template",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for test activity to execute",
+            "default": "run-tests-in-docker"
+          },
+          {
+            "name": "test_activity_variables",
+            "type": "string",
+            "required": false,
+            "description": "JSON string of variables for test activity",
+            "default": "{}"
+          },
+          {
+            "name": "surrealdb_host",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection host",
+            "default": "localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace",
+            "default": "test"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "test"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-execution-metrics-in-database",
+      "subagent": "test",
+      "description": "Query SurrealDB to verify activity_execution record was persisted with correct schema (template_id, duration, cost, tokens, success status), validate timestamps and metric ranges",
+      "dependencies": [
+        "setup-and-execute-test-activity"
+      ],
+      "prompt": {
+        "template": "You are validating Phase 2 of the learning loop: metrics persistence through the full stack (opencode → MCP → RPC API → SurrealDB).\n\n**Your task**: Verify that the test activity execution metrics were correctly persisted in SurrealDB.\n\n## Step 1: Read Execution Log\n\n1. Read `{{output_dir}}/activity-execution-log.json`\n2. Extract the execution ID\n3. Extract the expected template ID and timestamps\n\n## Step 2: Query SurrealDB\n\n1. Connect to SurrealDB at `{{surrealdb_host}}`\n2. Use namespace `{{surrealdb_namespace}}` and database `{{surrealdb_database}}`\n3. Query for the `activity_execution` record matching the execution ID\n4. Log the query and response to `{{output_dir}}/surrealdb-queries.log`\n\nExample query:\n```sql\nSELECT * FROM activity_execution WHERE id = $execution_id;\n```\n\n## Step 3: Validate Record Schema\n\nVerify the record contains all required fields:\n- `template_id`: Should match `{{test_activity_template}}`\n- `duration`: Number > 0 (milliseconds)\n- `cost`: Number > 0 (dollars)\n- `tokens`: Object with `input`, `output`, `cache` fields, all > 0\n- `success`: Boolean (should be true for successful execution)\n- `timestamp`: Valid ISO timestamp (not in future, not epoch zero)\n\n## Step 4: Validate Metric Ranges\n\n- Duration should be reasonable (e.g., > 100ms, < 1 hour)\n- Cost should be non-zero and reasonable (e.g., < $10 for test activity)\n- Tokens should be positive integers\n- Timestamp should be within last hour\n\n## Step 5: Retry Logic for Eventual Consistency\n\nIf record not found:\n- Wait 1 second and retry query\n- Retry up to 10 times (total 10 seconds)\n- This handles eventual consistency in distributed systems\n\n## Success Criteria\n\n- Record found in SurrealDB\n- All required fields present\n- No null or undefined values in critical fields\n- Timestamps are valid\n- Metrics are within expected ranges\n- Query log created with full details\n\n**Output a summary of the validated metrics and confirm persistence successful.**",
+        "variables": [
+          {
+            "name": "test_activity_template",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for test activity (for validation)",
+            "default": "run-tests-in-docker"
+          },
+          {
+            "name": "surrealdb_host",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection host",
+            "default": "localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace",
+            "default": "test"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "test"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "simulate-idle-and-verify-boredom-trigger",
+      "subagent": "test",
+      "description": "Wait for idle timeout or trigger idle detection manually, verify boredom activity was triggered and executed, capture boredom activity execution ID",
+      "dependencies": [
+        "verify-execution-metrics-in-database"
+      ],
+      "prompt": {
+        "template": "You are testing Phase 3 of the learning loop: idle detection and boredom activity triggering.\n\n**Your task**: Simulate an idle state and verify that the boredom activity is triggered automatically.\n\n## Step 1: Simulate Idle State\n\nOption A - Wait for idle timeout:\n1. Wait for `{{idle_timeout_seconds}}` seconds\n2. Monitor for idle detection in system logs\n\nOption B - Trigger idle manually:\n1. If available, call an API or send a signal to trigger idle detection\n2. This is faster than waiting for timeout\n\n## Step 2: Detect Boredom Activity Trigger\n\nMonitor for boredom activity execution:\n1. Check system logs for boredom activity start\n2. Check MCP gateway logs for boredom activity tool calls\n3. Query activity execution records for new activity with type \"boredom\" or similar\n4. Capture the boredom activity execution ID\n\n## Step 3: Wait for Boredom Activity Completion\n\n1. Monitor boredom activity execution\n2. Wait for completion (or timeout after reasonable duration)\n3. Log execution details to `{{output_dir}}/boredom-activity-log.json` including:\n   - Execution ID\n   - Template ID or activity type\n   - Start timestamp\n   - End timestamp\n   - Success status\n\n## Step 4: Retry Logic\n\nIf boredom activity not triggered within expected time:\n- Extend timeout by {{idle_timeout_seconds}} seconds\n- Retry once\n- If still not triggered, collect diagnostic information:\n  - Idle detection configuration\n  - Boredom manager status\n  - System activity logs\n\n## Success Criteria\n\n- Idle state detected after timeout\n- Boredom activity triggered and executed\n- Boredom activity ID captured\n- Activity type contains \"boredom\" or \"idle\"\n- Boredom activity log created\n- No timeout errors or hang conditions\n\n**Output the boredom activity execution ID and confirm triggering successful.**",
+        "variables": [
+          {
+            "name": "idle_timeout_seconds",
+            "type": "number",
+            "required": false,
+            "description": "Seconds to wait before triggering idle state",
+            "default": "10"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-boredom-metrics-persisted",
+      "subagent": "test",
+      "description": "Query SurrealDB to verify boredom activity metrics were recorded, validate that boredom activity timestamp is after test activity timestamp, verify complete metric schema",
+      "dependencies": [
+        "simulate-idle-and-verify-boredom-trigger"
+      ],
+      "prompt": {
+        "template": "You are validating Phase 4 of the learning loop: boredom activity metrics persistence.\n\n**Your task**: Verify that the boredom activity execution metrics were correctly persisted in SurrealDB and complete the learning loop.\n\n## Step 1: Read Boredom Activity Log\n\n1. Read `{{output_dir}}/boredom-activity-log.json`\n2. Extract the boredom activity execution ID\n3. Extract the expected timestamp\n\n## Step 2: Query SurrealDB\n\n1. Connect to SurrealDB at `{{surrealdb_host}}`\n2. Use namespace `{{surrealdb_namespace}}` and database `{{surrealdb_database}}`\n3. Query for the `activity_execution` record matching the boredom activity execution ID\n4. Append the query and response to `{{output_dir}}/surrealdb-queries.log`\n\n## Step 3: Validate Boredom Metrics Schema\n\nVerify the record contains:\n- `template_id` or activity type indicating boredom activity\n- `duration`: Number > 0\n- `cost`: Number > 0\n- `tokens`: Object with valid fields\n- `success`: Boolean\n- `timestamp`: Valid ISO timestamp\n\n## Step 4: Validate Temporal Ordering\n\n1. Read `{{output_dir}}/activity-execution-log.json` for test activity timestamp\n2. Compare timestamps:\n   - Boredom activity timestamp > Test activity timestamp\n   - Time difference should be approximately {{idle_timeout_seconds}} seconds + boredom execution duration\n3. This validates the learning loop sequence: test activity → idle → boredom activity\n\n## Step 5: Retry Logic for Eventual Consistency\n\nIf record not found:\n- Wait 1 second and retry query\n- Retry up to 10 times (total 10 seconds)\n- This handles eventual consistency\n\n## Step 6: Optional - Verify Cochange Metrics\n\nIf `{{verify_cochange}}` is true:\n- Query for cochange metrics related to both activities\n- Verify cochange relationships were recorded\n\n## Success Criteria\n\n- Boredom activity record found in SurrealDB\n- All required fields present\n- Temporal ordering validated (boredom after test activity)\n- Metric schema matches expected format\n- Query log updated with full details\n\n**Output a summary confirming the learning loop is complete end-to-end.**",
+        "variables": [
+          {
+            "name": "surrealdb_host",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection host",
+            "default": "localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace",
+            "default": "test"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "test"
+          },
+          {
+            "name": "idle_timeout_seconds",
+            "type": "number",
+            "required": false,
+            "description": "Idle timeout for validation context",
+            "default": "10"
+          },
+          {
+            "name": "verify_cochange",
+            "type": "boolean",
+            "required": false,
+            "description": "Also verify cochange metrics are collected",
+            "default": "false"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-end-to-end-report",
+      "subagent": "test",
+      "description": "Aggregate all test results, create comprehensive test execution report with pass/fail status for each phase, validate all required files exist, verify complete data flow tracing",
+      "dependencies": [
+        "verify-boredom-metrics-persisted"
+      ],
+      "prompt": {
+        "template": "You are completing Phase 5 of the learning loop validation: end-to-end report generation.\n\n**Your task**: Aggregate all test results and create a comprehensive report validating the complete learning loop.\n\n## Step 1: Validate All Required Files Exist\n\nCheck that all output files were created:\n1. `{{output_dir}}/setup.log`\n2. `{{output_dir}}/activity-execution-log.json`\n3. `{{output_dir}}/surrealdb-queries.log`\n4. `{{output_dir}}/boredom-activity-log.json`\n\nIf any file is missing, note this as a failure.\n\n## Step 2: Read and Parse All Log Files\n\n1. Parse each JSON log file\n2. Extract key data points:\n   - Test activity execution ID and metrics\n   - Test activity database record\n   - Boredom activity execution ID and metrics\n   - Boredom activity database record\n   - All timestamps\n\n## Step 3: Validate Each Phase\n\nCreate pass/fail status for each phase:\n\n**Phase 1: Test Activity Execution**\n- ✅ Pass: Activity executed, ID captured, no errors\n- ❌ Fail: Activity failed, timeout, or missing ID\n\n**Phase 2: Execution Metrics Persistence**\n- ✅ Pass: Record found in SurrealDB, schema valid, metrics reasonable\n- ❌ Fail: Record not found, schema invalid, or null values\n\n**Phase 3: Idle Detection and Boredom Trigger**\n- ✅ Pass: Idle detected, boredom activity triggered and completed\n- ❌ Fail: Boredom not triggered, timeout, or execution failed\n\n**Phase 4: Boredom Metrics Persistence**\n- ✅ Pass: Record found, schema valid, temporal ordering correct\n- ❌ Fail: Record not found, schema invalid, or ordering wrong\n\n**Phase 5: End-to-End Data Flow**\n- ✅ Pass: Complete data flow traced from execution to persistence for both activities\n- ❌ Fail: Gaps in data flow, missing components, or architectural boundary failures\n\n## Step 4: Check for Forbidden Patterns\n\nScan all log files for forbidden patterns:\n- Database connection errors\n- Null or undefined critical metrics\n- Missing execution IDs\n- Timestamp anomalies (future dates, epoch zero)\n- Missing records\n\n## Step 5: Generate Report JSON\n\nCreate `{{output_dir}}/test-execution-report.json` with structure:\n\n```json\n{\n  \"test_run_timestamp\": \"ISO timestamp\",\n  \"overall_status\": \"PASS\" or \"FAIL\",\n  \"phases\": {\n    \"phase_1_test_activity_execution\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"execution_id\": \"...\",\n      \"details\": \"...\"\n    },\n    \"phase_2_execution_metrics_persistence\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"record_found\": true/false,\n      \"schema_valid\": true/false,\n      \"details\": \"...\"\n    },\n    \"phase_3_idle_boredom_trigger\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"boredom_execution_id\": \"...\",\n      \"details\": \"...\"\n    },\n    \"phase_4_boredom_metrics_persistence\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"record_found\": true/false,\n      \"temporal_ordering_valid\": true/false,\n      \"details\": \"...\"\n    },\n    \"phase_5_end_to_end_data_flow\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"data_flow_complete\": true/false,\n      \"details\": \"...\"\n    }\n  },\n  \"metrics_summary\": {\n    \"test_activity\": {\n      \"template_id\": \"...\",\n      \"duration\": 0,\n      \"cost\": 0,\n      \"tokens\": {...}\n    },\n    \"boredom_activity\": {\n      \"template_id\": \"...\",\n      \"duration\": 0,\n      \"cost\": 0,\n      \"tokens\": {...}\n    }\n  },\n  \"forbidden_patterns_found\": [],\n  \"recommendations\": [\"List any issues or improvements\"]\n}\n```\n\n## Step 6: Output Summary\n\nProvide a human-readable summary:\n- Overall test result (PASS/FAIL)\n- Pass/fail status for each phase\n- Total execution time\n- Key metrics\n- Any issues or recommendations\n\n## Success Criteria\n\n- Report file created\n- All phases validated\n- Pass/fail status for each phase\n- All required output files validated\n- No forbidden patterns found\n- Complete data flow confirmed\n\n**Output the final report summary and overall test result.**",
+        "variables": [
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python3 -m json.tool {{output_dir}}/test-execution-report.json > /dev/null",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "setup-and-execute-test-activity",
+      "subagent": "test",
+      "description": "Initialize test environment (create output directory, verify SurrealDB connection), execute test activity via MCP, capture execution ID and initial metrics",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are testing Phase 5 of the learning loop implementation: end-to-end validation across all architectural boundaries.\n\n**Your task**: Set up the test environment and execute a test activity to establish baseline metrics.\n\n## Step 1: Initialize Test Environment\n\n1. Create output directory at `{{output_dir}}`\n2. Verify SurrealDB connection to `{{surrealdb_host}}`:\n   - Namespace: `{{surrealdb_namespace}}`\n   - Database: `{{surrealdb_database}}`\n   - Test connection with a simple query (e.g., `INFO FOR DB;`)\n3. Log connection status to `{{output_dir}}/setup.log`\n\n## Step 2: Execute Test Activity\n\n1. Execute activity template: `{{test_activity_template}}`\n2. Pass variables: `{{test_activity_variables}}` (JSON string)\n3. Capture the activity execution ID\n4. Wait for activity to complete\n5. Log execution details to `{{output_dir}}/activity-execution-log.json` including:\n   - Execution ID\n   - Template ID\n   - Start timestamp\n   - End timestamp\n   - Success status\n   - Any error messages\n\n## Success Criteria\n\n- Output directory created and accessible\n- SurrealDB connection successful (no connection errors)\n- Test activity executed successfully\n- Execution ID captured and logged\n- All log files created with valid JSON\n\n## Error Handling\n\n- **SurrealDB connection failure**: Retry 3 times with exponential backoff (1s, 2s, 4s)\n- **Activity execution failure**: Do NOT retry - log detailed error and fail task\n- Collect diagnostic information:\n  - Connection strings and network status\n  - Activity execution logs\n  - Error messages and stack traces\n\n**Output the execution ID and confirm all setup completed successfully.**",
+        "variables": [
+          {
+            "name": "test_activity_template",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for test activity to execute",
+            "default": "run-tests-in-docker"
+          },
+          {
+            "name": "test_activity_variables",
+            "type": "string",
+            "required": false,
+            "description": "JSON string of variables for test activity",
+            "default": "{}"
+          },
+          {
+            "name": "surrealdb_host",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection host",
+            "default": "localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace",
+            "default": "test"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "test"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-execution-metrics-in-database",
+      "subagent": "test",
+      "description": "Query SurrealDB to verify activity_execution record was persisted with correct schema (template_id, duration, cost, tokens, success status), validate timestamps and metric ranges",
+      "dependencies": [
+        "setup-and-execute-test-activity"
+      ],
+      "prompt": {
+        "template": "You are validating Phase 2 of the learning loop: metrics persistence through the full stack (opencode → MCP → RPC API → SurrealDB).\n\n**Your task**: Verify that the test activity execution metrics were correctly persisted in SurrealDB.\n\n## Step 1: Read Execution Log\n\n1. Read `{{output_dir}}/activity-execution-log.json`\n2. Extract the execution ID\n3. Extract the expected template ID and timestamps\n\n## Step 2: Query SurrealDB\n\n1. Connect to SurrealDB at `{{surrealdb_host}}`\n2. Use namespace `{{surrealdb_namespace}}` and database `{{surrealdb_database}}`\n3. Query for the `activity_execution` record matching the execution ID\n4. Log the query and response to `{{output_dir}}/surrealdb-queries.log`\n\nExample query:\n```sql\nSELECT * FROM activity_execution WHERE id = $execution_id;\n```\n\n## Step 3: Validate Record Schema\n\nVerify the record contains all required fields:\n- `template_id`: Should match `{{test_activity_template}}`\n- `duration`: Number > 0 (milliseconds)\n- `cost`: Number > 0 (dollars)\n- `tokens`: Object with `input`, `output`, `cache` fields, all > 0\n- `success`: Boolean (should be true for successful execution)\n- `timestamp`: Valid ISO timestamp (not in future, not epoch zero)\n\n## Step 4: Validate Metric Ranges\n\n- Duration should be reasonable (e.g., > 100ms, < 1 hour)\n- Cost should be non-zero and reasonable (e.g., < $10 for test activity)\n- Tokens should be positive integers\n- Timestamp should be within last hour\n\n## Step 5: Retry Logic for Eventual Consistency\n\nIf record not found:\n- Wait 1 second and retry query\n- Retry up to 10 times (total 10 seconds)\n- This handles eventual consistency in distributed systems\n\n## Success Criteria\n\n- Record found in SurrealDB\n- All required fields present\n- No null or undefined values in critical fields\n- Timestamps are valid\n- Metrics are within expected ranges\n- Query log created with full details\n\n**Output a summary of the validated metrics and confirm persistence successful.**",
+        "variables": [
+          {
+            "name": "test_activity_template",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for test activity (for validation)",
+            "default": "run-tests-in-docker"
+          },
+          {
+            "name": "surrealdb_host",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection host",
+            "default": "localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace",
+            "default": "test"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "test"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "simulate-idle-and-verify-boredom-trigger",
+      "subagent": "test",
+      "description": "Wait for idle timeout or trigger idle detection manually, verify boredom activity was triggered and executed, capture boredom activity execution ID",
+      "dependencies": [
+        "verify-execution-metrics-in-database"
+      ],
+      "prompt": {
+        "template": "You are testing Phase 3 of the learning loop: idle detection and boredom activity triggering.\n\n**Your task**: Simulate an idle state and verify that the boredom activity is triggered automatically.\n\n## Step 1: Simulate Idle State\n\nOption A - Wait for idle timeout:\n1. Wait for `{{idle_timeout_seconds}}` seconds\n2. Monitor for idle detection in system logs\n\nOption B - Trigger idle manually:\n1. If available, call an API or send a signal to trigger idle detection\n2. This is faster than waiting for timeout\n\n## Step 2: Detect Boredom Activity Trigger\n\nMonitor for boredom activity execution:\n1. Check system logs for boredom activity start\n2. Check MCP gateway logs for boredom activity tool calls\n3. Query activity execution records for new activity with type \"boredom\" or similar\n4. Capture the boredom activity execution ID\n\n## Step 3: Wait for Boredom Activity Completion\n\n1. Monitor boredom activity execution\n2. Wait for completion (or timeout after reasonable duration)\n3. Log execution details to `{{output_dir}}/boredom-activity-log.json` including:\n   - Execution ID\n   - Template ID or activity type\n   - Start timestamp\n   - End timestamp\n   - Success status\n\n## Step 4: Retry Logic\n\nIf boredom activity not triggered within expected time:\n- Extend timeout by {{idle_timeout_seconds}} seconds\n- Retry once\n- If still not triggered, collect diagnostic information:\n  - Idle detection configuration\n  - Boredom manager status\n  - System activity logs\n\n## Success Criteria\n\n- Idle state detected after timeout\n- Boredom activity triggered and executed\n- Boredom activity ID captured\n- Activity type contains \"boredom\" or \"idle\"\n- Boredom activity log created\n- No timeout errors or hang conditions\n\n**Output the boredom activity execution ID and confirm triggering successful.**",
+        "variables": [
+          {
+            "name": "idle_timeout_seconds",
+            "type": "number",
+            "required": false,
+            "description": "Seconds to wait before triggering idle state",
+            "default": "10"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-boredom-metrics-persisted",
+      "subagent": "test",
+      "description": "Query SurrealDB to verify boredom activity metrics were recorded, validate that boredom activity timestamp is after test activity timestamp, verify complete metric schema",
+      "dependencies": [
+        "simulate-idle-and-verify-boredom-trigger"
+      ],
+      "prompt": {
+        "template": "You are validating Phase 4 of the learning loop: boredom activity metrics persistence.\n\n**Your task**: Verify that the boredom activity execution metrics were correctly persisted in SurrealDB and complete the learning loop.\n\n## Step 1: Read Boredom Activity Log\n\n1. Read `{{output_dir}}/boredom-activity-log.json`\n2. Extract the boredom activity execution ID\n3. Extract the expected timestamp\n\n## Step 2: Query SurrealDB\n\n1. Connect to SurrealDB at `{{surrealdb_host}}`\n2. Use namespace `{{surrealdb_namespace}}` and database `{{surrealdb_database}}`\n3. Query for the `activity_execution` record matching the boredom activity execution ID\n4. Append the query and response to `{{output_dir}}/surrealdb-queries.log`\n\n## Step 3: Validate Boredom Metrics Schema\n\nVerify the record contains:\n- `template_id` or activity type indicating boredom activity\n- `duration`: Number > 0\n- `cost`: Number > 0\n- `tokens`: Object with valid fields\n- `success`: Boolean\n- `timestamp`: Valid ISO timestamp\n\n## Step 4: Validate Temporal Ordering\n\n1. Read `{{output_dir}}/activity-execution-log.json` for test activity timestamp\n2. Compare timestamps:\n   - Boredom activity timestamp > Test activity timestamp\n   - Time difference should be approximately {{idle_timeout_seconds}} seconds + boredom execution duration\n3. This validates the learning loop sequence: test activity → idle → boredom activity\n\n## Step 5: Retry Logic for Eventual Consistency\n\nIf record not found:\n- Wait 1 second and retry query\n- Retry up to 10 times (total 10 seconds)\n- This handles eventual consistency\n\n## Step 6: Optional - Verify Cochange Metrics\n\nIf `{{verify_cochange}}` is true:\n- Query for cochange metrics related to both activities\n- Verify cochange relationships were recorded\n\n## Success Criteria\n\n- Boredom activity record found in SurrealDB\n- All required fields present\n- Temporal ordering validated (boredom after test activity)\n- Metric schema matches expected format\n- Query log updated with full details\n\n**Output a summary confirming the learning loop is complete end-to-end.**",
+        "variables": [
+          {
+            "name": "surrealdb_host",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection host",
+            "default": "localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace",
+            "default": "test"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "test"
+          },
+          {
+            "name": "idle_timeout_seconds",
+            "type": "number",
+            "required": false,
+            "description": "Idle timeout for validation context",
+            "default": "10"
+          },
+          {
+            "name": "verify_cochange",
+            "type": "boolean",
+            "required": false,
+            "description": "Also verify cochange metrics are collected",
+            "default": "false"
+          },
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-end-to-end-report",
+      "subagent": "test",
+      "description": "Aggregate all test results, create comprehensive test execution report with pass/fail status for each phase, validate all required files exist, verify complete data flow tracing",
+      "dependencies": [
+        "verify-boredom-metrics-persisted"
+      ],
+      "prompt": {
+        "template": "You are completing Phase 5 of the learning loop validation: end-to-end report generation.\n\n**Your task**: Aggregate all test results and create a comprehensive report validating the complete learning loop.\n\n## Step 1: Validate All Required Files Exist\n\nCheck that all output files were created:\n1. `{{output_dir}}/setup.log`\n2. `{{output_dir}}/activity-execution-log.json`\n3. `{{output_dir}}/surrealdb-queries.log`\n4. `{{output_dir}}/boredom-activity-log.json`\n\nIf any file is missing, note this as a failure.\n\n## Step 2: Read and Parse All Log Files\n\n1. Parse each JSON log file\n2. Extract key data points:\n   - Test activity execution ID and metrics\n   - Test activity database record\n   - Boredom activity execution ID and metrics\n   - Boredom activity database record\n   - All timestamps\n\n## Step 3: Validate Each Phase\n\nCreate pass/fail status for each phase:\n\n**Phase 1: Test Activity Execution**\n- ✅ Pass: Activity executed, ID captured, no errors\n- ❌ Fail: Activity failed, timeout, or missing ID\n\n**Phase 2: Execution Metrics Persistence**\n- ✅ Pass: Record found in SurrealDB, schema valid, metrics reasonable\n- ❌ Fail: Record not found, schema invalid, or null values\n\n**Phase 3: Idle Detection and Boredom Trigger**\n- ✅ Pass: Idle detected, boredom activity triggered and completed\n- ❌ Fail: Boredom not triggered, timeout, or execution failed\n\n**Phase 4: Boredom Metrics Persistence**\n- ✅ Pass: Record found, schema valid, temporal ordering correct\n- ❌ Fail: Record not found, schema invalid, or ordering wrong\n\n**Phase 5: End-to-End Data Flow**\n- ✅ Pass: Complete data flow traced from execution to persistence for both activities\n- ❌ Fail: Gaps in data flow, missing components, or architectural boundary failures\n\n## Step 4: Check for Forbidden Patterns\n\nScan all log files for forbidden patterns:\n- Database connection errors\n- Null or undefined critical metrics\n- Missing execution IDs\n- Timestamp anomalies (future dates, epoch zero)\n- Missing records\n\n## Step 5: Generate Report JSON\n\nCreate `{{output_dir}}/test-execution-report.json` with structure:\n\n```json\n{\n  \"test_run_timestamp\": \"ISO timestamp\",\n  \"overall_status\": \"PASS\" or \"FAIL\",\n  \"phases\": {\n    \"phase_1_test_activity_execution\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"execution_id\": \"...\",\n      \"details\": \"...\"\n    },\n    \"phase_2_execution_metrics_persistence\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"record_found\": true/false,\n      \"schema_valid\": true/false,\n      \"details\": \"...\"\n    },\n    \"phase_3_idle_boredom_trigger\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"boredom_execution_id\": \"...\",\n      \"details\": \"...\"\n    },\n    \"phase_4_boredom_metrics_persistence\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"record_found\": true/false,\n      \"temporal_ordering_valid\": true/false,\n      \"details\": \"...\"\n    },\n    \"phase_5_end_to_end_data_flow\": {\n      \"status\": \"PASS\" or \"FAIL\",\n      \"data_flow_complete\": true/false,\n      \"details\": \"...\"\n    }\n  },\n  \"metrics_summary\": {\n    \"test_activity\": {\n      \"template_id\": \"...\",\n      \"duration\": 0,\n      \"cost\": 0,\n      \"tokens\": {...}\n    },\n    \"boredom_activity\": {\n      \"template_id\": \"...\",\n      \"duration\": 0,\n      \"cost\": 0,\n      \"tokens\": {...}\n    }\n  },\n  \"forbidden_patterns_found\": [],\n  \"recommendations\": [\"List any issues or improvements\"]\n}\n```\n\n## Step 6: Output Summary\n\nProvide a human-readable summary:\n- Overall test result (PASS/FAIL)\n- Pass/fail status for each phase\n- Total execution time\n- Key metrics\n- Any issues or recommendations\n\n## Success Criteria\n\n- Report file created\n- All phases validated\n- Pass/fail status for each phase\n- All required output files validated\n- No forbidden patterns found\n- Complete data flow confirmed\n\n**Output the final report summary and overall test result.**",
+        "variables": [
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Directory for test output files",
+            "default": "/tmp/learning-loop-e2e-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python3 -m json.tool {{output_dir}}/test-execution-report.json > /dev/null",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-22T03:07:02.062Z",
+  "metadata": {}
+}
