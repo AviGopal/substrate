@@ -1,0 +1,129 @@
+{
+  "id": "generate-mcp-adapter",
+  "name": "Generate MCP Adapter",
+  "category": "infrastructure",
+  "description": "Generate MCP gateway code from plugin specification. Creates MCP server with tool definitions, protocol translation, configuration, and tests. Supports TypeScript and Python.",
+  "tasks": [
+    {
+      "id": "load-specification",
+      "subagent": "general",
+      "description": "Load plugin specification impulse and validate it",
+      "prompt": {
+        "template": "Load the plugin specification impulse.\n\n**Your Task**: Load and validate specification\n\n**Steps**:\n\n1. Load impulse: {{specificationImpulseId}}\n2. Validate it has required fields:\n   - metadata\n   - capabilities\n   - apis\n   - integration.mcpToolSuggestions\n3. Extract key information for adapter generation\n\n**Output**:\nCreate `SPECIFICATION_LOADED.md`:\n\n```markdown\n# Specification Loaded\n\n**Plugin**: [name]\n**Type**: [type]\n**Language**: [language]\n\n## Capabilities to Implement\n\n[List of capabilities]\n\n## MCP Tools to Generate\n\n[List of suggested MCP tool names]\n\n## Integration Requirements\n\n- Backend integration: [yes/no]\n- State management: [stateless/stateful]\n- Authentication: [type]\n\n## Generation Parameters\n\n- Target language: {{targetLanguage}}\n- Transport: stdio (default for MCP)\n- Package name: [suggested]\n```",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["SPECIFICATION_LOADED.md"]
+      }
+    },
+    {
+      "id": "generate-mcp-tools",
+      "subagent": "general",
+      "description": "Generate MCP tool definitions and schemas",
+      "dependencies": ["load-specification"],
+      "prompt": {
+        "template": "Generate MCP tool definitions from the specification.\n\n**Input**: Plugin specification (loaded impulse)\n**Target Language**: {{targetLanguage}}\n\n**Your Task**: Generate tool definitions\n\n**For TypeScript**:\n\nCreate `src/tools.ts`:\n\n```typescript\nimport { z } from \"zod\"\nimport { Tool } from \"@modelcontextprotocol/sdk/types.js\"\n\n// Generate one tool per API/capability\nexport const Tools: Tool[] = [\n  {\n    name: \"[plugin]_[action]\",\n    description: \"[Description from specification]\",\n    inputSchema: {\n      type: \"object\" as const,\n      properties: {\n        // From specification parameters\n      },\n      required: [/* required params */]\n    }\n  }\n  // ... more tools\n]\n\n// Type-safe parameter schemas\nexport const ToolSchemas = {\n  [toolName]: z.object({\n    // Zod schema for validation\n  })\n}\n```\n\n**For Python**:\n\nCreate `src/tools.py`:\n\n```python\nfrom mcp.server import Tool\nfrom pydantic import BaseModel, Field\nfrom typing import Optional, List, Dict, Any\n\n# Parameter models\nclass ToolNameParams(BaseModel):\n    \"\"\"Parameters for tool_name\"\"\"\n    param1: str = Field(..., description=\"Param description\")\n    param2: Optional[int] = Field(None, description=\"Optional param\")\n\n# Tool definitions\nTOOLS = [\n    Tool(\n        name=\"[plugin]_[action]\",\n        description=\"[Description from specification]\",\n        parameters=ToolNameParams\n    )\n    # ... more tools\n]\n```\n\n**Guidelines**:\n\n1. **Naming convention**: `[plugin]_[action]`\n   - Example: `github_create_issue`, `slack_send_message`\n   - Use snake_case for consistency\n\n2. **One tool per capability/API**:\n   - Map each API endpoint or capability to one tool\n   - Group related parameters together\n\n3. **Type safety**:\n   - Use Zod (TypeScript) or Pydantic (Python)\n   - Include descriptions for all parameters\n   - Mark optional vs required correctly\n\n4. **Return types**:\n   - Document expected return type in tool description\n   - Use structured responses (objects, not strings)\n\n**Output**: Tool definition file in target language",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["src/tools.ts", "src/tools.py"],
+        "requiredPatterns": [
+          {
+            "file": "src/tools.*",
+            "pattern": "name.*:.*\"\\w+_\\w+\"",
+            "description": "Tool names must follow plugin_action convention"
+          }
+        ]
+      }
+    },
+    {
+      "id": "generate-adapter-implementation",
+      "subagent": "general",
+      "description": "Generate MCP server implementation with protocol translation",
+      "dependencies": ["generate-mcp-tools"],
+      "prompt": {
+        "template": "Generate the MCP server implementation.\n\n**Input**: \n- Plugin specification\n- Generated tool definitions\n\n**Target Language**: {{targetLanguage}}\n\n**Your Task**: Implement MCP server with protocol translation\n\n**For TypeScript**:\n\nCreate `src/server.ts`:\n\n```typescript\nimport { Server } from \"@modelcontextprotocol/sdk/server/index.js\"\nimport { StdioServerTransport } from \"@modelcontextprotocol/sdk/server/stdio.js\"\nimport {\n  CallToolRequestSchema,\n  ListToolsRequestSchema,\n} from \"@modelcontextprotocol/sdk/types.js\"\nimport { Tools, ToolSchemas } from \"./tools.js\"\nimport { PluginClient } from \"./client.js\" // HTTP/API client\n\nconst server = new Server(\n  {\n    name: \"[plugin]-adapter\",\n    version: \"0.1.0\",\n  },\n  {\n    capabilities: {\n      tools: {},\n    },\n  }\n)\n\n// Initialize plugin client\nconst client = new PluginClient({\n  baseUrl: process.env.PLUGIN_BASE_URL || \"[default]\",\n  apiKey: process.env.PLUGIN_API_KEY,\n  timeout: parseInt(process.env.PLUGIN_TIMEOUT || \"30000\"),\n})\n\n// List tools handler\nserver.setRequestHandler(ListToolsRequestSchema, async () => ({\n  tools: Tools,\n}))\n\n// Call tool handler\nserver.setRequestHandler(CallToolRequestSchema, async (request) => {\n  const { name, arguments: args } = request.params\n  \n  // Validate parameters\n  const schema = ToolSchemas[name]\n  if (!schema) {\n    throw new Error(`Unknown tool: ${name}`)\n  }\n  \n  const validatedArgs = schema.parse(args)\n  \n  // Route to appropriate handler\n  switch (name) {\n    case \"[plugin]_[action]\":\n      return await handle_action(validatedArgs)\n    // ... more cases\n    default:\n      throw new Error(`Unimplemented tool: ${name}`)\n  }\n})\n\n// Tool implementations\nasync function handle_action(params: any) {\n  try {\n    // Call plugin API/functionality\n    const result = await client.performAction(params)\n    \n    return {\n      content: [\n        {\n          type: \"text\",\n          text: JSON.stringify(result, null, 2),\n        },\n      ],\n    }\n  } catch (error) {\n    return {\n      content: [\n        {\n          type: \"text\",\n          text: `Error: ${error.message}`,\n        },\n      ],\n      isError: true,\n    }\n  }\n}\n\n// Start server\nasync function main() {\n  const transport = new StdioServerTransport()\n  await server.connect(transport)\n  console.error(\"[plugin] MCP adapter running on stdio\")\n}\n\nmain().catch(console.error)\n```\n\n**For Python**:\n\nCreate `src/server.py`:\n\n```python\nimport asyncio\nimport os\nfrom mcp.server import Server\nfrom mcp.server.stdio import stdio_server\nfrom .tools import TOOLS, ToolNameParams\nfrom .client import PluginClient\n\napp = Server(\"[plugin]-adapter\")\n\n# Initialize plugin client\nclient = PluginClient(\n    base_url=os.getenv(\"PLUGIN_BASE_URL\", \"[default]\"),\n    api_key=os.getenv(\"PLUGIN_API_KEY\"),\n    timeout=int(os.getenv(\"PLUGIN_TIMEOUT\", \"30\")),\n)\n\n@app.list_tools()\nasync def list_tools() -> list:\n    return TOOLS\n\n@app.call_tool()\nasync def call_tool(name: str, arguments: dict):\n    \"\"\"Route tool calls to appropriate handlers\"\"\"\n    \n    if name == \"[plugin]_[action]\":\n        params = ToolNameParams(**arguments)\n        return await handle_action(params)\n    # ... more cases\n    else:\n        raise ValueError(f\"Unknown tool: {name}\")\n\n# Tool implementations\nasync def handle_action(params: ToolNameParams) -> dict:\n    \"\"\"Handle [action] tool call\"\"\"\n    try:\n        result = await client.perform_action(\n            param1=params.param1,\n            param2=params.param2,\n        )\n        return {\n            \"content\": [\n                {\n                    \"type\": \"text\",\n                    \"text\": str(result),\n                }\n            ]\n        }\n    except Exception as e:\n        return {\n            \"content\": [\n                {\n                    \"type\": \"text\",\n                    \"text\": f\"Error: {str(e)}\",\n                }\n            ],\n            \"isError\": True,\n        }\n\nasync def main():\n    async with stdio_server() as streams:\n        await app.run(\n            streams[0], streams[1],\n            app.create_initialization_options()\n        )\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**Also generate**: `src/client.[ts|py]` - HTTP/API client for calling plugin",
+        "maxTokens": 20000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["src/server.ts", "src/server.py", "src/client.ts", "src/client.py"]
+      }
+    },
+    {
+      "id": "generate-configuration",
+      "subagent": "general",
+      "description": "Generate package configuration, environment setup, and documentation",
+      "dependencies": ["generate-adapter-implementation"],
+      "prompt": {
+        "template": "Generate configuration files and documentation.\n\n**Your Task**: Create complete package setup\n\n**For TypeScript**:\n\nCreate `package.json`:\n```json\n{\n  \"name\": \"[plugin]-mcp-adapter\",\n  \"version\": \"0.1.0\",\n  \"description\": \"MCP adapter for [plugin]\",\n  \"type\": \"module\",\n  \"bin\": {\n    \"[plugin]-mcp\": \"./dist/server.js\"\n  },\n  \"scripts\": {\n    \"build\": \"tsc\",\n    \"start\": \"node dist/server.js\",\n    \"dev\": \"tsx src/server.ts\",\n    \"test\": \"vitest\"\n  },\n  \"dependencies\": {\n    \"@modelcontextprotocol/sdk\": \"^0.5.0\",\n    \"zod\": \"^3.22.0\",\n    \"[http-client]\": \"^[version]\"\n  },\n  \"devDependencies\": {\n    \"@types/node\": \"^20.0.0\",\n    \"typescript\": \"^5.3.0\",\n    \"tsx\": \"^4.7.0\",\n    \"vitest\": \"^1.0.0\"\n  }\n}\n```\n\nCreate `tsconfig.json`:\n```json\n{\n  \"compilerOptions\": {\n    \"target\": \"ES2022\",\n    \"module\": \"Node16\",\n    \"moduleResolution\": \"Node16\",\n    \"outDir\": \"./dist\",\n    \"rootDir\": \"./src\",\n    \"strict\": true,\n    \"esModuleInterop\": true,\n    \"skipLibCheck\": true\n  },\n  \"include\": [\"src/**/*\"]\n}\n```\n\n**For Python**:\n\nCreate `pyproject.toml`:\n```toml\n[project]\nname = \"[plugin]-mcp-adapter\"\nversion = \"0.1.0\"\ndescription = \"MCP adapter for [plugin]\"\nrequires-python = \">=3.10\"\ndependencies = [\n    \"mcp>=0.5.0\",\n    \"pydantic>=2.0.0\",\n    \"httpx>=0.25.0\",\n]\n\n[project.scripts]\n[plugin]-mcp = \"[plugin]_mcp.server:main\"\n\n[build-system]\nrequires = [\"hatchling\"]\nbuild-backend = \"hatchling.build\"\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n```\n\n**Environment Configuration**:\n\nCreate `.env.example`:\n```bash\n# [Plugin] MCP Adapter Configuration\n\n# Plugin API endpoint\nPLUGIN_BASE_URL=[default_url]\n\n# Authentication\nPLUGIN_API_KEY=your_api_key_here\n\n# Optional settings\nPLUGIN_TIMEOUT=30000\nPLUGIN_MAX_RETRIES=3\n```\n\n**README**:\n\nCreate `README.md`:\n```markdown\n# [Plugin] MCP Adapter\n\nMCP gateway for [plugin] - auto-generated by OpenCode activity system.\n\n## Installation\n\n[npm/pip instructions]\n\n## Configuration\n\nCopy `.env.example` to `.env` and configure:\n\n```bash\nPLUGIN_BASE_URL=...\nPLUGIN_API_KEY=...\n```\n\n## Usage\n\n### With OpenCode\n\nAdd to `opencode.json`:\n\n```json\n{\n  \"mcp\": {\n    \"[plugin]\": {\n      \"command\": \"[plugin]-mcp\",\n      \"env\": {\n        \"PLUGIN_BASE_URL\": \"...\",\n        \"PLUGIN_API_KEY\": \"...\"\n      }\n    }\n  }\n}\n```\n\n### Standalone\n\n```bash\n[plugin]-mcp\n```\n\n## Available Tools\n\n[List of generated MCP tools with descriptions]\n\n## Development\n\n[Build/test instructions]\n```",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["package.json", "pyproject.toml", "README.md", ".env.example"]
+      }
+    },
+    {
+      "id": "generate-tests",
+      "subagent": "general",
+      "description": "Generate comprehensive tests for MCP tools",
+      "dependencies": ["generate-configuration"],
+      "prompt": {
+        "template": "Generate tests for the MCP adapter.\n\n**Your Task**: Create test suite\n\n**For TypeScript** (Vitest):\n\nCreate `tests/tools.test.ts`:\n```typescript\nimport { describe, it, expect, beforeAll, vi } from \"vitest\"\nimport { Server } from \"@modelcontextprotocol/sdk/server/index.js\"\nimport { CallToolRequestSchema } from \"@modelcontextprotocol/sdk/types.js\"\nimport { ToolSchemas } from \"../src/tools.js\"\n\n// Mock plugin client\nvi.mock(\"../src/client.js\", () => ({\n  PluginClient: vi.fn(() => ({\n    performAction: vi.fn(() => Promise.resolve({ success: true }))\n  }))\n}))\n\ndescribe(\"[Plugin] MCP Tools\", () => {\n  describe(\"Tool Schemas\", () => {\n    it(\"should have valid Zod schemas for all tools\", () => {\n      for (const [name, schema] of Object.entries(ToolSchemas)) {\n        expect(schema).toBeDefined()\n        expect(schema.parse).toBeInstanceOf(Function)\n      }\n    })\n  })\n  \n  describe(\"[tool_name]\", () => {\n    it(\"should validate required parameters\", () => {\n      const validParams = { /* valid params */ }\n      expect(() => ToolSchemas.tool_name.parse(validParams)).not.toThrow()\n    })\n    \n    it(\"should reject invalid parameters\", () => {\n      const invalidParams = { /* invalid */ }\n      expect(() => ToolSchemas.tool_name.parse(invalidParams)).toThrow()\n    })\n  })\n  \n  // ... more tool tests\n})\n```\n\n**For Python** (pytest):\n\nCreate `tests/test_tools.py`:\n```python\nimport pytest\nfrom [plugin]_mcp.tools import TOOLS, ToolNameParams\nfrom [plugin]_mcp.server import call_tool\nfrom unittest.mock import AsyncMock, patch\n\n@pytest.mark.asyncio\nclass TestTools:\n    async def test_list_tools(self):\n        \"\"\"Test that all tools are defined\"\"\"\n        assert len(TOOLS) > 0\n        for tool in TOOLS:\n            assert tool.name\n            assert tool.description\n    \n    async def test_tool_name_validation(self):\n        \"\"\"Test parameter validation for tool_name\"\"\"\n        # Valid params\n        valid = ToolNameParams(param1=\"value\", param2=123)\n        assert valid.param1 == \"value\"\n        \n        # Invalid params\n        with pytest.raises(ValueError):\n            ToolNameParams(param1=None)  # Required param\n    \n    @patch(\"[plugin]_mcp.client.PluginClient.perform_action\")\n    async def test_tool_execution(self, mock_client):\n        \"\"\"Test tool execution with mocked client\"\"\"\n        mock_client.return_value = {\"success\": True}\n        \n        result = await call_tool(\n            \"[plugin]_action\",\n            {\"param1\": \"value\"}\n        )\n        \n        assert result[\"content\"][0][\"type\"] == \"text\"\n        mock_client.assert_called_once()\n```\n\n**Output**: Complete test suite",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["tests/tools.test.ts", "tests/test_tools.py"]
+      }
+    },
+    {
+      "id": "create-adapter-summary",
+      "subagent": "general",
+      "description": "Create summary documentation and next steps",
+      "dependencies": ["generate-tests"],
+      "prompt": {
+        "template": "Create final summary and next steps.\n\n**Your Task**: Document what was generated\n\n**Output**:\n\nCreate `ADAPTER_GENERATION_SUMMARY.md`:\n\n```markdown\n# MCP Adapter Generation Summary\n\n**Plugin**: [name]\n**Target Language**: {{targetLanguage}}\n**Generated**: [timestamp]\n\n## Files Generated\n\n### Core Implementation\n- `src/server.[ts|py]` - MCP server implementation\n- `src/tools.[ts|py]` - Tool definitions and schemas\n- `src/client.[ts|py]` - Plugin API client\n\n### Configuration\n- `package.json` / `pyproject.toml` - Package configuration\n- `tsconfig.json` - TypeScript configuration (if applicable)\n- `.env.example` - Environment template\n- `README.md` - Usage documentation\n\n### Tests\n- `tests/tools.test.ts` / `tests/test_tools.py` - Tool tests\n\n## MCP Tools Generated\n\n[List of tool names with descriptions]\n\n## Next Steps\n\n### 1. Install Dependencies\n\n**TypeScript**:\n```bash\nnpm install\nnpm run build\n```\n\n**Python**:\n```bash\npip install -e .\n```\n\n### 2. Configure Environment\n\n```bash\ncp .env.example .env\n# Edit .env with actual credentials\n```\n\n### 3. Test MCP Server\n\n**TypeScript**:\n```bash\nnpm test\nnpm start  # Run server\n```\n\n**Python**:\n```bash\npytest\n[plugin]-mcp  # Run server\n```\n\n### 4. Integrate with OpenCode\n\nAdd to your `opencode.json`:\n\n```json\n{\n  \"mcp\": {\n    \"[plugin]\": {\n      \"command\": \"[plugin]-mcp\",\n      \"env\": {\n        \"PLUGIN_BASE_URL\": \"...\",\n        \"PLUGIN_API_KEY\": \"...\"\n      }\n    }\n  }\n}\n```\n\n### 5. Optional: Backend Integration\n\nIf plugin needs backend state, run:\n\n```bash\nopencode activity run instrument-backend-integration \\\n  --var pluginName=\"[plugin]\" \\\n  --var mcpAdapterPath=\"./\"\n```\n\n### 6. Optional: Generate Activity Templates\n\n```bash\nopencode activity run generate-plugin-activities \\\n  --var specificationImpulseId=\"plugin-specification-[type]\"\n```\n\n## Integration Quality Checklist\n\n- [ ] All tools have valid schemas\n- [ ] All tools have error handling\n- [ ] Tests pass (npm test / pytest)\n- [ ] MCP server starts without errors\n- [ ] Environment variables documented\n- [ ] README complete\n\n## Estimated Integration Effort\n\n- **Manual adjustments needed**: [minimal/some/significant]\n- **Time to production-ready**: [hours/days]\n- **Complexity**: [low/medium/high]\n```",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["ADAPTER_GENERATION_SUMMARY.md"]
+      }
+    }
+  ],
+  "variables": [
+    {
+      "name": "specificationImpulseId",
+      "type": "string",
+      "required": true,
+      "description": "ID of impulse containing plugin specification (from analyze-plugin-capabilities)"
+    },
+    {
+      "name": "targetLanguage",
+      "type": "string",
+      "required": false,
+      "default": "typescript",
+      "description": "Generated code language: typescript | python"
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "node --version || python --version"
+    ],
+    "postChecks": [
+      "test -f README.md",
+      "test -f ADAPTER_GENERATION_SUMMARY.md",
+      "test -f src/server.* -o -f src/server.py"
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 10000,
+    "annotationStrategy": "key-components"
+  }
+}
