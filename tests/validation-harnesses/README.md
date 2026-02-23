@@ -1,127 +1,140 @@
 # Validation Harnesses
 
-This directory contains deterministic validation harnesses for enforced specifications.
+This directory contains validation harnesses for high-priority specifications. Each harness is a standalone script that can verify a specification is correctly implemented without requiring LLM inference.
 
-## Purpose
+## Dual-Write Activity Metrics Harness
 
-Validation harnesses are **historical tests** that verify specifications remain enforced over time. They:
+**File**: `dual-write-activity-metrics-harness.ts`
 
-1. **Load the component** under test
-2. **Feed test inputs** (stored as impulses)
-3. **Capture actual outputs**
-4. **Compare against expected outputs** (also stored as impulses)
-5. **Return PASS/FAIL** without LLM inference
+**Specification**: Activity execution metrics must be written to both Redis (fast cache with 7-day TTL) and SurrealDB (permanent storage) for Thompson Sampling optimization.
 
-## Structure
+### Usage
 
-Each harness follows this pattern:
-
-```
-tests/validation-harnesses/
-├── [spec-name]-harness.ts          # Main harness file
-├── [spec-name]-cases/              # Test case definitions (optional)
-│   ├── case-1.json
-│   ├── case-2.json
-│   └── case-N.json
-└── README.md                        # This file
-```
-
-## Running Harnesses
-
-### Run a specific harness:
 ```bash
-bun test tests/validation-harnesses/non-blocking-instrumentation-harness.ts
+# Run validation with activity execution
+bun run tests/validation-harnesses/dual-write-activity-metrics-harness.ts hello-world-minimal
+
+# Run validation without executing activity (validate existing data)
+bun run tests/validation-harnesses/dual-write-activity-metrics-harness.ts hello-world-minimal --skip-execution
+
+# Run with custom template
+bun run tests/validation-harnesses/dual-write-activity-metrics-harness.ts add-rest-endpoint
 ```
 
-### Run all harnesses:
+### What It Validates
+
+**Phase 1 (Current)**:
+- ✅ JSON file exists at `~/.metabob/activities/{template_id}.json`
+- ✅ JSON file has metrics (execution_count, success_rate)
+- ✅ Redis key exists (tries multiple key patterns)
+- ✅ Redis has metrics (success, duration, cost)
+- ✅ Redis has TTL (~7 days)
+
+**Phase 2 (Future)**:
+- ⏳ SurrealDB record exists in `activity_execution` table
+- ⏳ SurrealDB has complete metrics
+- ⏳ SurrealDB record is permanent (no expiry)
+
+### Pass/Fail Criteria
+
+**Phase 1 Pass Criteria**:
+- JSON file found with metrics
+- Redis key found with metrics
+- No errors
+
+**Phase 2 Pass Criteria** (not yet enforced):
+- Phase 1 criteria met
+- SurrealDB record found with metrics
+- SurrealDB record has no expiry
+
+### Output Format
+
+```
+Dual-Write Activity Metrics Validation Harness
+============================================================
+Template ID: hello-world-minimal
+Skip Execution: false
+
+Executing activity: hello-world-minimal
+Querying storage backends...
+
+============================================================
+VALIDATION RESULTS
+============================================================
+
+JSON File (Path A - MCP):
+  Found: ✓
+  Has Metrics: ✓
+  Execution Count: 5
+  Success Rate: 1.0
+
+Redis (Path B - MetabobCLI):
+  Found: ✓
+  Has Metrics: ✓
+  Has TTL: ✓
+  TTL: 6.98 days
+
+SurrealDB (Path C - Not Implemented):
+  Found: ✗
+  Has Record: ✗
+  Is Permanent: ✗
+
+Warnings:
+  ⚠ SurrealDB not implemented yet (Phase 2) - Path C (SurrealDB write) not active
+
+============================================================
+RESULT: PASS ✓
+============================================================
+```
+
+### Test Cases
+
+**Case 1: Successful Activity Execution Dual-Write**
+- Input: `{ templateId: "hello-world-minimal", skipExecution: false }`
+- Expected: JSON and Redis both have metrics, warnings about SurrealDB
+- Impulse ID: `validation-dual-write-activity-metrics-case-1`
+
+**Case 2: Validate Existing Execution**
+- Input: `{ templateId: "hello-world-minimal", skipExecution: true }`
+- Expected: JSON and Redis both have metrics from previous execution
+- Impulse ID: `validation-dual-write-activity-metrics-case-2`
+
+**Case 3: Failed Activity Execution**
+- Input: `{ templateId: "intentionally-failing-activity", skipExecution: false }`
+- Expected: Failure metrics recorded in both JSON and Redis
+- Impulse ID: `validation-dual-write-activity-metrics-case-3`
+
+### Integration with CI/CD
+
 ```bash
-bun test tests/validation-harnesses/
+# Add to CI pipeline
+bun run tests/validation-harnesses/dual-write-activity-metrics-harness.ts hello-world-minimal
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+  echo "Dual-write validation PASSED"
+else
+  echo "Dual-write validation FAILED"
+  exit 1
+fi
 ```
 
-## Available Harnesses
+### Troubleshooting
 
-### non-blocking-instrumentation-harness.ts
+**Redis not found**:
+- Check Redis is running: `redis-cli ping`
+- Check backend API is running and writing to Redis
+- Check key patterns in harness match backend implementation
 
-**Specification**: Activity instrumentation must never block execution or cause failures if backend unavailable.
+**JSON file not found**:
+- Check MCP backend is configured and running
+- Check `~/.metabob/activities/` directory exists
+- Check activity actually executed (not just planned)
 
-**Test Cases**:
-- Case 1: Backend returns 500 errors
-- Case 2: MCP client throws errors
-- Case 3: MCP client unavailable
-- Case 4: Backend timeouts
+**TTL not set**:
+- Check backend API adds `EXPIRE` command after Redis write
+- Default should be 7 days (604800 seconds)
 
-**Expected Behavior**: All cases should result in completed activity status with graceful degradation logs.
-
-### activity-state-transformation-tracking-harness.ts
-
-**Specification**: All activity executions must track complete state transformations from instructional to functional state (PHASE_2_INSTRUMENTATION_DESIGN.md commit 1091779).
-
-**Test Cases**:
-- Case 1: Hello World Minimal - Single-task activity with basic variable
-- Case 2: Multi-Task Activity - Multiple tasks to verify state tracking across tasks
-- Case 3: Backend Unavailable - Verifies non-blocking design
-
-**Expected Behavior**: 
-- POST to `/api/v1/activity-execution/content` with template_definition, variable_bindings, initial_state, reason
-- POST to `/api/v1/activity-execution/tasks` for each task with state_before
-- PATCH to `/api/v1/activity-execution/tasks/:id` after task completion with state_after, state_delta, validation_results
-- Execution continues successfully even if backend unavailable (non-blocking)
-
-### impulse-usage-tracking-harness.ts
-
-**Specification**: All task executions must track impulse loading and creation to learn optimal context strategies (commit 1091779).
-
-**Test Cases**:
-- Case 1: Activity with impulses - Verifies impulsesLoaded array is non-empty, contextRatio calculated
-- Case 2: Activity creating impulses - Verifies impulsesCreated array is populated
-- Case 3: Context ratio calculation - Verifies contextRatio = impulseTokens / totalInputTokens
-
-**Expected Behavior**:
-- `impulses_loaded`: array of impulse IDs (non-empty when impulses used)
-- `impulses_created`: array of new impulse IDs (may be empty)
-- `context_ratio`: number between 0 and 1 (context tokens / total tokens)
-- `tokens`: breakdown object with {input, output, cache} fields
-
-**Learning System Impact**: Enables tracking of impulse load frequency, token consumption, cost attribution, and context efficiency to optimize context strategies.
-
-## Creating New Harnesses
-
-When enforcing a new specification:
-
-1. Create `[spec-name]-harness.ts` file
-2. Define test cases with expected inputs/outputs
-3. Implement `runValidation(testCase)` function
-4. Store test cases as impulses (optional, for large datasets)
-5. Add Bun test integration
-6. Document in this README
-
-## Test Case Impulses
-
-Test cases can be stored as impulses for:
-- Version control of expected behaviors
-- Sharing test cases across sessions
-- Historical tracking of specification changes
-- Lazy loading of large test datasets
-
-Impulse format:
-```json
-{
-  "id": "validation-[spec-name]-case-N",
-  "type": "memo",
-  "pointer": {
-    "type": "memo",
-    "content": {
-      "input": { ... },
-      "expectedOutput": { ... }
-    }
-  },
-  "budget": 2000
-}
-```
-
-## Maintenance
-
-- Run harnesses in CI/CD pipeline before merging changes
-- Update harnesses when specifications evolve
-- Add new test cases when edge cases are discovered
-- Archive obsolete harnesses (don't delete - historical record)
+**SurrealDB warnings**:
+- Expected in Phase 1 - SurrealDB integration is Phase 2
+- Warnings don't cause test to fail
