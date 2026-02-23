@@ -73,6 +73,78 @@ The harness ensures:
 
 ---
 
+## Session Memory TUI Data Flow Harness
+
+**Purpose:** Validates that the complete data pipeline from SessionMemory storage through API endpoint to TUI display correctly transforms and displays session memory state.
+
+**Validates:**
+- ✅ Session.impulses() aggregation (impulseCount, totalBudget, usedTokens, utilization)
+- ✅ SessionState.getImpulseState() enrichment (loadedCount, unloadedCount)
+- ✅ Budget calculation correctness (totalBudget = sum of all budgets)
+- ✅ Token usage calculation (usedTokens = sum of loaded impulse tokens)
+- ✅ Utilization percentage formula ((usedTokens/totalBudget)*100 with div-by-zero protection)
+- ✅ Loaded/unloaded count derivation and invariant (loadedCount + unloadedCount = impulseCount)
+- ✅ TUI display formatting (impulses line, budget line, progress bar)
+- ✅ Color threshold logic (green <60%, yellow 60-85%, red ≥85%)
+
+### Files
+
+- `session-memory-tui-data-flow-harness.ts` - Complete validation harness with 4 test cases
+
+### Test Cases
+
+#### Case 1: Balanced Load (60% utilization)
+- **Setup:** 5 impulses (3 loaded with 100+200+300=600 tokens, 2 unloaded with 150+250=400 tokens)
+- **Expected:** totalBudget=1000, usedTokens=600, utilization=60%, loadedCount=3, unloadedCount=2
+- **Display:** "📦 Impulses: 5 (3 loaded)", "💾 Budget: 600 / 1000 (60%)", color=warning (yellow)
+
+#### Case 2: Low Utilization (10%)
+- **Setup:** 2 impulses (1 loaded with 100 tokens, 1 unloaded with 900 tokens)
+- **Expected:** totalBudget=1000, usedTokens=100, utilization=10%, loadedCount=1, unloadedCount=1
+- **Display:** "📦 Impulses: 2 (1 loaded)", "💾 Budget: 100 / 1000 (10%)", color=success (green)
+
+#### Case 3: High Utilization (85%)
+- **Setup:** 2 impulses (both loaded with 450+400=850 tokens)
+- **Expected:** totalBudget=1000, usedTokens=850, utilization=85%, loadedCount=2, unloadedCount=0
+- **Display:** "📦 Impulses: 2 (2 loaded)", "💾 Budget: 850 / 1000 (85%)", color=error (red)
+
+#### Case 4: Zero Budget Edge Case
+- **Setup:** 0 impulses
+- **Expected:** totalBudget=0, usedTokens=0, utilization=0%, loadedCount=0, unloadedCount=0
+- **Display:** "📦 Impulses: 0 (0 loaded)", "💾 Budget: 0 / 0 (0%)", color=success (green)
+
+### Running Tests
+
+```bash
+# From project root
+cd tests/validation-harnesses
+
+# Run validation harness
+npx ts-node session-memory-tui-data-flow-harness.ts
+```
+
+### Expected Output
+
+```
+✅ case-1-balanced-load: PASS
+✅ case-2-low-utilization: PASS
+✅ case-3-high-utilization: PASS
+✅ case-4-zero-budget: PASS
+
+📊 Results: 4 passed, 0 failed
+```
+
+### Integration with Specification
+
+This harness validates the implementation against:
+- `session-memory-tui-data-flow` specification
+- Data flow: SessionMemory.store → Session.impulses() → SessionState.get() → GET /session/:id/state → TUI sidebar
+- All transformation stages validated for correctness
+
+The harness ensures accurate TUI display by catching calculation errors in aggregation, percentage computation, and formatting transformations.
+
+---
+
 ## Metabob Failure Analysis Integration Harness
 
 **Purpose:** Validates that activity failures trigger automatic Metabob code quality analysis and create structured failure-analysis impulses for the learning loop.
