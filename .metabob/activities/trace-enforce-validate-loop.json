@@ -33,7 +33,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -43,7 +43,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -66,7 +66,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 20000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -76,7 +76,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -105,19 +105,17 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "tests/validation-harnesses/{{specificationName}}-harness.ts"
-        ],
+        "required_files": [],
         "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -141,7 +139,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 12000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -151,7 +149,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -174,7 +172,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -184,7 +182,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -207,7 +205,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 24000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -240,7 +238,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -250,7 +248,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     }
@@ -285,7 +283,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -295,7 +293,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -318,7 +316,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 20000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -328,7 +326,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -357,19 +355,17 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          "tests/validation-harnesses/{{specificationName}}-harness.ts"
-        ],
+        "required_files": [],
         "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -393,7 +389,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 12000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -403,7 +399,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -426,7 +422,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -436,7 +432,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -459,7 +455,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 24000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -492,7 +488,7 @@
         ]
       },
       "context_rules": {
-        "max_tokens": 16000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -502,7 +498,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     }
@@ -514,6 +510,6 @@
     "avg_cost": 0
   },
   "author": null,
-  "created_at": "2026-02-23T06:44:29.162Z",
+  "created_at": "2026-02-23T10:36:17.289Z",
   "metadata": {}
 }
