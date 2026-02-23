@@ -1,0 +1,190 @@
+{
+  "specificationName": "activity-state-transformation-tracking",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "Activity Tool Entry Point",
+      "lineNumber": 501,
+      "currentBehavior": "Validates template, creates activity record, executes tasks, saves to local storage only",
+      "desiredBehavior": "Should also capture initial state (git commit, branch, modified files, impulse IDs) and POST activity content to backend API after creation",
+      "gap": "Missing call to storeActivityContent() after Activity.create() around line 539. No HTTP client exists to make this call."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.create",
+      "lineNumber": "374-442",
+      "currentBehavior": "Creates activity record with id, status, executionEvidence, workArtifacts, stats. Saves to local storage.",
+      "desiredBehavior": "Should include initial_state capture with git_commit, git_branch, working_directory, modified_files before execution begins",
+      "gap": "No state capture functions implemented. captureInitialState() does not exist."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "Reason Enhancement",
+      "lineNumber": "541-587",
+      "currentBehavior": "Enhances reason with last 5 messages from parent session to provide context for memory agent",
+      "desiredBehavior": "Should preserve this enhancement and include it in activity content POST to backend API",
+      "gap": "Works correctly for local context but enhanced reason not persisted to backend for learning loop"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "Task Execution Loop",
+      "lineNumber": "1850-2500",
+      "currentBehavior": "Executes tasks sequentially, tracks impulse deltas, accumulates variables for task chaining, reports execution steps to MCP non-blocking",
+      "desiredBehavior": "Should also capture state before/after each task (git diff, files changed, validation results) and POST to backend API",
+      "gap": "Missing recordTaskStart() call before task execution (around line 1890) and updateTaskExecution() after completion (around line 2430). No state capture at task boundaries."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "Task Result Recording",
+      "lineNumber": "2375-2409",
+      "currentBehavior": "Extracts task output from session messages, accumulates variables using camelCase naming convention (taskId → taskIdOutput)",
+      "desiredBehavior": "Should include state_delta computation (files created/modified/deleted, git diff) and validation results in task update payload",
+      "gap": "No computeDelta() function. No state capture before/after task execution."
+    },
+    {
+      "file": "MISSING - repos/metabob-opencode/packages/opencode/src/api/activity-client.ts",
+      "component": "ActivityAPIClient",
+      "lineNumber": "N/A",
+      "currentBehavior": "Does not exist",
+      "desiredBehavior": "HTTP client with storeActivityContent(), recordTaskStart(), updateTaskExecution() methods. Should include retry logic with exponential backoff and non-blocking error handling (log warnings, don't fail execution)",
+      "gap": "Entire HTTP client implementation missing. This is the critical blocker - backend API exists but frontend never calls it."
+    },
+    {
+      "file": "MISSING - repos/metabob-opencode/packages/opencode/src/session/activity-state-capture.ts",
+      "component": "State Capture Functions",
+      "lineNumber": "N/A",
+      "currentBehavior": "Does not exist",
+      "desiredBehavior": "captureInitialState() capturing git branch/commit/dirty status, modified files, impulse IDs, working directory. captureCurrentState() for task-level snapshots. computeDelta() for state transformations (files added/modified/deleted, git diff, impulses created).",
+      "gap": "All state capture logic missing. Cannot track instructional → functional state transformation."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/util/snapshot.ts",
+      "component": "Snapshot.track and Snapshot.diff",
+      "lineNumber": "UNKNOWN",
+      "currentBehavior": "Git operations boundary exists with .nothrow() for resilience. Provides git state tracking utilities.",
+      "desiredBehavior": "Should be integrated with activity state tracking to compute git diffs at task boundaries and activity completion",
+      "gap": "Snapshot utilities exist and work correctly but not integrated with activity tracking instrumentation"
+    }
+  ],
+  "dataFlow": "Activity Tool Entry → Template Validation → Activity.create → [MISSING: captureInitialState] → [MISSING: storeActivityContent POST] → Reason Enhancement → Task Loop START → [MISSING: captureStateBeforeTask] → [MISSING: recordTaskStart POST] → Task Execution (session, tools, LLM) → [MISSING: captureStateAfterTask] → [MISSING: computeDelta] → [MISSING: updateTaskExecution PATCH] → Task Loop NEXT → Activity.save (local only) → Event Bus publish → [MISSING: recordExecution dual-write]",
+  "traceImpulseId": "trace-activity-state-transformation-tracking",
+  "status": "50% Complete - Backend API exists, frontend integration missing",
+  "criticalGaps": [
+    {
+      "priority": "P0",
+      "gap": "No HTTP client to call backend API",
+      "impact": "Learning loop 100% non-functional - activities execute but no learning data persisted to SurrealDB",
+      "blockedFeatures": ["Template evolution", "Activity replay", "Thompson Sampling learning loop", "Workflow optimization"],
+      "effort": "2-3 days",
+      "files": ["MISSING: src/api/activity-client.ts"]
+    },
+    {
+      "priority": "P0",
+      "gap": "No state capture functions implemented",
+      "impact": "Cannot track what changed during execution - initial state, git diffs, file changes unknown",
+      "blockedFeatures": ["Activity replay from known state", "State transformation analysis", "Failure diagnosis"],
+      "effort": "3-5 days",
+      "files": ["MISSING: src/session/activity-state-capture.ts"]
+    },
+    {
+      "priority": "P1",
+      "gap": "Missing instrumentation points in activity execution flow",
+      "impact": "Even if state capture existed, it wouldn't be called at the right times",
+      "blockedFeatures": ["Task-level replay", "Granular failure analysis", "Per-task learning"],
+      "effort": "1 day",
+      "files": ["src/tool/activity.ts lines 539, 1890, 2430"]
+    },
+    {
+      "priority": "P1",
+      "gap": "Race condition: activity reloaded per task but saved once at end",
+      "impact": "Concurrent executions can lose updates, task results not persisted incrementally",
+      "blockedFeatures": ["Reliable task tracking", "Crash recovery", "Incremental progress visibility"],
+      "effort": "2 hours",
+      "files": ["src/tool/activity.ts line 2430"]
+    },
+    {
+      "priority": "P2",
+      "gap": "Silent error swallowing: 38 instances of .catch(() => {})",
+      "impact": "Production issues impossible to debug - errors suppressed without logging",
+      "blockedFeatures": ["Debugging", "Error monitoring", "Reliability analysis"],
+      "effort": "1 day",
+      "files": ["Multiple files with .catch(() => {}) pattern"]
+    }
+  ],
+  "implementationPlan": {
+    "totalEffort": "9 days",
+    "phases": [
+      {
+        "name": "Phase 1: State Capture Functions",
+        "duration": "3 days",
+        "tasks": [
+          "Create activity-state-capture.ts module",
+          "Implement captureInitialState() - git branch/commit/dirty, modified files, impulse IDs, working directory",
+          "Implement captureCurrentState() - same as initial but called at different times",
+          "Implement computeDelta() - files added/modified/deleted, lines changed, git diff, impulses created",
+          "Integrate Snapshot.track() and Snapshot.diff() for git state"
+        ]
+      },
+      {
+        "name": "Phase 2: HTTP Client",
+        "duration": "2 days",
+        "tasks": [
+          "Create activity-client.ts with ActivityAPIClient class",
+          "Implement storeActivityContent() - POST /v2/activities/content",
+          "Implement recordTaskStart() - POST /v2/activities/tasks",
+          "Implement updateTaskExecution() - PATCH /v2/activities/tasks/:id",
+          "Add retry logic with exponential backoff (3 attempts, base delay 1s)",
+          "Add non-blocking error handling (log warnings, don't fail execution)"
+        ]
+      },
+      {
+        "name": "Phase 3: Instrumentation Points",
+        "duration": "1 day",
+        "tasks": [
+          "Add storeActivityContent() call after Activity.create() (activity.ts line 539)",
+          "Add recordTaskStart() call before task execution (activity.ts line 1890)",
+          "Add updateTaskExecution() call after task completion (activity.ts line 2430)",
+          "Integrate state capture at each instrumentation point",
+          "Ensure non-blocking behavior (execution continues if backend unavailable)"
+        ]
+      },
+      {
+        "name": "Phase 4: Bug Fixes",
+        "duration": "1 day",
+        "tasks": [
+          "Fix race condition: Save activity after each task (line 2430) not just at end",
+          "Replace 38 instances of .catch(() => {}) with .catch(error => log.warn('non-blocking error', { error }))",
+          "Add variable type validation in ActivityTemplate.validateVariables() (check string/number/array types)"
+        ]
+      },
+      {
+        "name": "Phase 5: Testing",
+        "duration": "2 days",
+        "tasks": [
+          "Unit tests for state capture functions (captureInitialState, computeDelta)",
+          "Integration tests for HTTP client (mock backend, test retry logic)",
+          "End-to-end test: Create activity → Execute → Verify backend has complete data",
+          "Verify replay works with captured state (can restart from known initial_state)",
+          "Verify non-blocking behavior (backend down doesn't break execution)"
+        ]
+      }
+    ]
+  },
+  "successCriteria": [
+    "Every activity execution stores complete context in SurrealDB via backend API",
+    "Every task execution tracked with state before/after (git diffs, files changed)",
+    "Initial state captured with git_commit, git_branch, working_directory, modified_files",
+    "Reason field populated with enhanced context from parent session",
+    "Task_sequence array populated with all task definitions and results",
+    "Template_definition included with complete task definitions",
+    "Variable_bindings captured with actual values provided",
+    "State transformations computable (initial → final delta)",
+    "Execution succeeds even if backend unavailable (non-blocking)",
+    "Race condition fixed (incremental saves prevent data loss)"
+  ],
+  "references": {
+    "fullTrace": "docs/data-flows/activity-state-transformation-tracking-flow.md",
+    "designDoc": "PHASE_2_INSTRUMENTATION_DESIGN.md",
+    "commitReference": "1091779 - Emphasized capturing complete state transformations"
+  }
+}

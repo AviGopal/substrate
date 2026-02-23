@@ -52,6 +52,21 @@ bun test tests/validation-harnesses/
 
 **Expected Behavior**: All cases should result in completed activity status with graceful degradation logs.
 
+### activity-state-transformation-tracking-harness.ts
+
+**Specification**: All activity executions must track complete state transformations from instructional to functional state (PHASE_2_INSTRUMENTATION_DESIGN.md commit 1091779).
+
+**Test Cases**:
+- Case 1: Hello World Minimal - Single-task activity with basic variable
+- Case 2: Multi-Task Activity - Multiple tasks to verify state tracking across tasks
+- Case 3: Backend Unavailable - Verifies non-blocking design
+
+**Expected Behavior**: 
+- POST to `/api/v1/activity-execution/content` with template_definition, variable_bindings, initial_state, reason
+- POST to `/api/v1/activity-execution/tasks` for each task with state_before
+- PATCH to `/api/v1/activity-execution/tasks/:id` after task completion with state_after, state_delta, validation_results
+- Execution continues successfully even if backend unavailable (non-blocking)
+
 ## Creating New Harnesses
 
 When enforcing a new specification:

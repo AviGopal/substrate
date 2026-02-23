@@ -1,0 +1,161 @@
+{
+  "specificationName": "activity-state-transformation-tracking",
+  "harnessFile": "tests/validation-harnesses/activity-state-transformation-tracking-harness.ts",
+  "testCasesFile": "tests/validation-harnesses/activity-state-transformation-tracking-test-cases.json",
+  "readmeFile": "tests/validation-harnesses/README.md",
+  "testCases": [
+    {
+      "impulseId": "validation-activity-state-transformation-tracking-case-1",
+      "name": "Hello World Minimal",
+      "description": "Single-task activity with basic variable to test basic state transformation tracking",
+      "input": {
+        "activityTemplate": "hello-world-minimal",
+        "variables": {
+          "message": "Hello from validation harness"
+        },
+        "reason": "Testing activity state transformation tracking instrumentation",
+        "mockBackendUrl": "http://localhost:9999"
+      },
+      "expectedOutput": {
+        "activityContentPost": {
+          "called": true,
+          "payload_fields": [
+            "activity_id (uuid string)",
+            "template_definition (object with id, name, tasks array)",
+            "variable_bindings (object matching provided variables)",
+            "initial_state (object with git_commit, git_branch, git_dirty, modified_files, impulse_ids, working_directory, timestamp)",
+            "reason (non-empty string)",
+            "timestamp (number)"
+          ]
+        },
+        "taskStartPosts": "array with one POST per task",
+        "taskUpdatePatches": "array with one PATCH per task"
+      }
+    },
+    {
+      "impulseId": "validation-activity-state-transformation-tracking-case-2",
+      "name": "Multi-Task Activity",
+      "description": "Multiple tasks to verify state tracking across task boundaries",
+      "input": {
+        "activityTemplate": "test-multi-task",
+        "variables": {
+          "param1": "value1",
+          "param2": "value2"
+        },
+        "reason": "Testing multi-task state tracking",
+        "mockBackendUrl": "http://localhost:9999"
+      },
+      "expectedOutput": {
+        "activityContentPost": {
+          "called": true,
+          "tasks_count": ">=2"
+        },
+        "taskStartPosts": "array with length >= 2",
+        "taskUpdatePatches": "array with length >= 2"
+      }
+    },
+    {
+      "impulseId": "validation-activity-state-transformation-tracking-case-3",
+      "name": "Backend Unavailable",
+      "description": "Verifies non-blocking design - execution continues when backend unavailable",
+      "input": {
+        "activityTemplate": "hello-world-minimal",
+        "variables": {
+          "message": "Testing non-blocking behavior"
+        },
+        "reason": "Verify execution continues when backend unavailable",
+        "mockBackendUrl": "http://localhost:8888"
+      },
+      "expectedOutput": {
+        "activityExecution": "succeeds despite backend being unreachable",
+        "apiCalls": "not recorded (backend down)",
+        "activityOutput": "normal completion without errors",
+        "note": "This validates non-blocking design requirement"
+      }
+    }
+  ],
+  "harnessImpulseId": "harness-activity-state-transformation-tracking",
+  "validationStrategy": {
+    "approach": "Mock backend server to intercept API calls",
+    "steps": [
+      "1. Start mock HTTP server on localhost:9999",
+      "2. Set ACTIVITY_BACKEND_URL env var to point to mock server",
+      "3. Execute activity using opencode CLI",
+      "4. Record all POST/PATCH requests to activity-execution endpoints",
+      "5. Validate payload schemas against specification",
+      "6. Return PASS/FAIL with detailed error messages"
+    ],
+    "noLlmRequired": true,
+    "deterministicOutput": true,
+    "historicalTest": true
+  },
+  "payloadValidation": {
+    "activityContentPost": {
+      "endpoint": "POST /api/v1/activity-execution/content",
+      "requiredFields": [
+        "activity_id (string, non-empty)",
+        "template_definition.id (string)",
+        "template_definition.name (string)",
+        "template_definition.tasks (array, non-empty)",
+        "variable_bindings (object, keys match provided variables)",
+        "initial_state.git_commit (string or null)",
+        "initial_state.git_branch (string or null)",
+        "initial_state.git_dirty (boolean)",
+        "initial_state.modified_files (array)",
+        "initial_state.impulse_ids (array)",
+        "initial_state.working_directory (string, non-empty)",
+        "initial_state.timestamp (number)",
+        "reason (string, non-empty)",
+        "timestamp (number)"
+      ]
+    },
+    "taskStartPost": {
+      "endpoint": "POST /api/v1/activity-execution/tasks",
+      "requiredFields": [
+        "activity_id (string)",
+        "task_id (string)",
+        "task_definition (object)",
+        "state_before.git_commit (string or null)",
+        "state_before.modified_files (array)",
+        "state_before.impulse_ids (array)",
+        "timestamp (number)"
+      ]
+    },
+    "taskUpdatePatch": {
+      "endpoint": "PATCH /api/v1/activity-execution/tasks/:id",
+      "requiredFields": [
+        "status ('completed' or 'failed')",
+        "state_after (object)",
+        "state_delta.files_added (array)",
+        "state_delta.files_modified (array)",
+        "state_delta.files_deleted (array)",
+        "state_delta.impulses_created (array)",
+        "duration_ms (number)",
+        "timestamp (number)"
+      ]
+    }
+  },
+  "usage": {
+    "standalone": "bun run tests/validation-harnesses/activity-state-transformation-tracking-harness.ts",
+    "programmatic": "import { runValidation } from './activity-state-transformation-tracking-harness.ts'",
+    "cicd": "bun test tests/validation-harnesses/activity-state-transformation-tracking-harness.ts"
+  },
+  "implementation": {
+    "linesOfCode": 650,
+    "language": "TypeScript",
+    "dependencies": ["bun"],
+    "mockServer": "Bun.serve on port 9999",
+    "testFramework": "Custom validation function with detailed error reporting"
+  },
+  "maintenanceNotes": {
+    "updateWhen": [
+      "Specification changes (PHASE_2_INSTRUMENTATION_DESIGN.md updates)",
+      "API endpoint schemas change",
+      "New required fields added to payloads",
+      "Edge cases discovered"
+    ],
+    "archiveWhen": [
+      "Specification deprecated (but keep for historical record)"
+    ]
+  }
+}
