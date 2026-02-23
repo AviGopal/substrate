@@ -1,833 +1,497 @@
-# Template Analysis: create-activity-template-(self-contained)
-
-**Generated**: 2026-02-20  
-**Analysis Period**: Last 30 days  
-**Data Source**: Local template storage + execution history
-
----
+# Template Analysis: hello-world-minimal
 
 ## Executive Summary
 
-**Current State**: Template is experiencing **0% success rate** across 34 executions, indicating critical systematic issues.
+**Key Finding**: Despite a reported 100% success rate (20/20 executions completed), the `hello-world-minimal` template has significant quality issues. The correctness verdict system identifies 45% of executions as "incorrect" and 55% as "suspicious" - no executions are truly "correct". This reveals a critical gap between technical completion and actual correctness.
 
-**Key Findings**:
-- 📊 **34 total executions** with **0 successes**
-- ⏱️ **Average duration**: 84.6 seconds (1m 25s)
-- 💰 **Average cost**: $0.0768 per execution
-- 🔴 **100% failure rate** - critical issues requiring immediate attention
+**Success Pattern**: The template achieves 100% completion because it's extremely simple (single task, no dependencies, minimal validation). However, this simplicity also exposes execution framework issues where agents spawn but don't perform work.
 
-**Recommendation**: URGENT - Template requires comprehensive debugging before further use.
+**Recommendation**: This template is valuable for testing infrastructure (framework reliability), but should NOT be used as a reference pattern for feature templates. The high completion rate comes from low complexity, not from quality design patterns.
 
 ---
 
-## 1. Current Template
+## Current Template
 
-### Metadata
+**Name**: Hello World Minimal  
+**Version**: 1771543769255::2d955ac37bea0d56 (Generation 0)  
+**Category**: infrastructure  
+**Status**: stable  
+**Description**: Minimal test activity with no context requirements - single task that writes a file
 
-| Property | Value |
-|----------|-------|
-| **Name** | Create Activity Template (Self-Contained) |
-| **ID** | `create-activity-self-contained` |
-| **Version** | 1771575165760::827660b8ccd63d68 (Generation 0) |
-| **Category** | infrastructure |
-| **Status** | stable |
-| **Created** | 2026-02-20 (recent) |
-| **Updated** | 2026-02-20 |
+**Structure**:
+- Tasks: 1
+- Total token budget: 8,000
+- Context requirements: 0
+- Integration checks: Clean git required
 
-### Description
+**Evolution History**:
+- Created: 2026-02-20 (1771543769255)
+- Generation: 0 (original, not evolved)
+- Evolution reason: MANUAL
+- Author: HUMAN
+- Notes: "Minimal test activity with no context requirements - single task that writes a file"
 
-Create activity templates without requiring example files or specific project structure - fully self-contained and repository-agnostic. Registers template directly to backend without local file dependencies.
+**Task Breakdown**:
 
-### Structure Overview
+1. **write-hello**: Write hello world message to file
+   - Agent: general
+   - Dependencies: none
+   - Token budget: 8,000
+   - Required tools: none (optional: write)
+   - Max attempts: 3
+   - Retry strategy: simple
 
-- **Tasks**: 4 tasks (linear dependency chain)
-- **Total token budget**: 32,000 tokens (4 tasks × 8,000 tokens each)
-- **Context requirements**: 0 (self-contained)
-- **Integration checks**: Git clean required, no pre/post checks
-- **Metabob integration**: Disabled (learning mode enabled)
+**Variable Requirements**:
+- `testId` (string, required): Unique test identifier
+- `name` (string, required): Name to include in greeting
 
----
+**Prompt Template**:
+```
+Write a hello world message to /tmp/hello-{{testId}}.txt
 
-## 2. Task Breakdown
+The message should say: Hello from {{name}}!
 
-### Task 1: `gather-requirements`
-
-**Purpose**: Extract and clarify requirements from user input to ensure complete understanding
-
-**Configuration**:
-- **Agent**: general
-- **Dependencies**: None (entry task)
-- **Token budget**: 8,000 tokens
-- **Retry strategy**: Simple, max 2 attempts
-
-**Variables Required**:
-1. `templateName` (string, required) - Human-readable template name
-2. `templateDescription` (string, required) - One-sentence description
-3. `category` (string, required) - Template category (feature/bugfix/refactor/tool/infrastructure)
-4. `purpose` (string, optional) - Detailed explanation (defaults to templateDescription)
-5. `templateId` (string, optional) - Kebab-case template ID (defaults to generated from name)
+Use the write tool to create the file.
+```
 
 **Validation**:
-- ✅ Required file: `/tmp/activity-template-{{templateId}}/REQUIREMENTS.md`
-- ✅ Required patterns: "## Workflow Steps", "## Input Variables", "## Validation Criteria"
+- No file validation
+- No pattern validation
+- No forbidden patterns
+- No command validation
 
-**Metrics**:
-- Success rate: 0%
-- Avg tokens: 0
-- Avg duration: 0ms
-- Common failures: []
+**Integration Configuration**:
+- Requires clean git: true
+- Pre-checks: none
+- Post-checks: none
+- Quality gates: none
 
----
-
-### Task 2: `design-task-graph`
-
-**Purpose**: Design task breakdown with proper dependencies forming a directed acyclic graph (DAG)
-
-**Configuration**:
-- **Agent**: general
-- **Dependencies**: `gather-requirements`
-- **Token budget**: 8,000 tokens
-- **Retry strategy**: Simple, max 2 attempts
-
-**Variables Required**: None (uses output from task 1)
-
-**Validation**:
-- ✅ Required file: `/tmp/activity-template-{{templateId}}/TASK_GRAPH.md`
-- ✅ Required patterns: "## Task Breakdown", "## Dependency Graph", "## Token Budget Summary"
-
-**Metrics**:
-- Success rate: 0%
-- Avg tokens: 0
-- Avg duration: 0ms
-- Common failures: []
+**Metabob Configuration**:
+- Enabled: false
+- Learning mode: true
+- Target context tokens: 5,000
+- Annotation strategy: key-components
 
 ---
 
-### Task 3: `write-template-json`
+## Execution Metrics (All Time)
 
-**Purpose**: Generate valid ActivityTemplate.Schema JSON following the exact structure
+### Summary
 
-**Configuration**:
-- **Agent**: general
-- **Dependencies**: `design-task-graph`
-- **Token budget**: 8,000 tokens
-- **Retry strategy**: Simple, max 3 attempts (highest retry count)
+- **Total executions**: 20
+- **Successful**: 20 (100%)
+- **Failed**: 0 (0%)
+- **Average duration**: 206.7s (~3.4 minutes)
+- **Average cost**: $0.126
+- **Total cost**: $2.53
+- **First execution**: 2026-02-20
+- **Latest execution**: 2026-02-23
 
-**Variables Required**: None (uses output from tasks 1 & 2)
+### Token Usage
 
-**Validation**:
-- ✅ Required file: `/tmp/activity-template-{{templateId}}/{{templateId}}.json`
-- ✅ Required patterns: `"name":`, `"category":`, `"tasks":`, `"contextRequirements":`
-- ❌ Forbidden patterns: `"preChecks": ["git` (must not include git status checks)
-- ✅ Commands: `cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq empty` (exit code 0)
+**Average per execution**:
+- Input tokens: 31,937
+- Output tokens: 73
+- Cache read: 0
+- Cache write: 0
+- Total: 32,010 tokens
 
-**Metrics**:
-- Success rate: 0%
-- Avg tokens: 0
-- Avg duration: 0ms
-- Common failures: []
+**Token efficiency**: Very high input-to-output ratio (437:1), suggesting agents spend minimal effort on actual work.
 
----
+### Cost Analysis
 
-### Task 4: `register-with-backend`
+**Distribution**:
+- Median cost: $0.094
+- Min cost: $0.094
+- Max cost: $0.212
+- Standard deviation: ~$0.042
 
-**Purpose**: Register the template directly with metabob-cli backend via MCP, creating usage documentation
+**Cost trend**: Most executions cluster around $0.094-$0.095, with a few outliers at $0.21 (likely longer wait times or retries).
 
-**Configuration**:
-- **Agent**: general
-- **Dependencies**: `write-template-json`
-- **Token budget**: 8,000 tokens
-- **Retry strategy**: Simple, max 2 attempts
+### Duration Analysis
 
-**Variables Required**: None (uses output from task 3)
+**Distribution**:
+- Median duration: 90s
+- Min duration: 26s
+- Max duration: 921s (15.3 minutes)
+- 90th percentile: 392s
 
-**Validation**:
-- ✅ Required file: `/tmp/activity-template-{{templateId}}/SUCCESS.md`
-- ✅ Required patterns: "✅ Template ID:", "✅ Status: Registered with backend", "## Usage", "## Template Structure"
-- ❌ Forbidden patterns: "❌", "FAILED", "ERROR"
-
-**Metrics**:
-- Success rate: 0%
-- Avg tokens: 0
-- Avg duration: 0ms
-- Common failures: []
+**Duration trend**: High variance (26s to 921s) suggests execution time is dominated by external factors (network latency, agent queue time) rather than actual work.
 
 ---
 
-## 3. Execution Metrics (Last 30 Days)
+## Correctness Analysis
 
-### Summary Statistics
+### Verdict Distribution
 
-| Metric | Value |
-|--------|-------|
-| **Total executions** | 34 |
-| **Successful** | 0 (0.0%) |
-| **Failed** | 34 (100.0%) |
-| **Average duration** | 84,648 ms (1m 25s) |
-| **Average cost** | $0.0768 |
-| **Total cost** | $2.61 |
+| Verdict | Count | Percentage | Avg Confidence |
+|---------|-------|------------|----------------|
+| Incorrect | 9 | 45% | 0.12 (very low) |
+| Suspicious | 11 | 55% | 0.35 (low) |
+| Correct | 0 | 0% | N/A |
 
-### Token Usage Distribution
+**Critical finding**: Zero executions achieved "correct" verdict. All executions either failed to do work or did read-only work.
 
-| Token Type | Average per Execution |
-|------------|----------------------|
-| **Input tokens** | 23,198 |
-| **Output tokens** | 191 |
-| **Cache tokens** | 0 |
-| **Total tokens** | 23,389 |
+### Issue Breakdown
 
-**Analysis**: 
-- Very high input token usage (23k tokens per execution)
-- Extremely low output tokens (191) suggests early failures
-- No cache usage - opportunities for optimization
+#### Incorrect Executions (45%)
 
----
+**Common issues**:
+1. "Validation was not executed" (9/9 = 100%)
+2. "Agent spawned but no tools used - no actual work performed" (6/9 = 67%)
+3. "No agent sessions spawned - activity may not have done any work" (3/9 = 33%)
 
-### Success Rate Trend
+**Pattern**: Agents spawn but fail to use tools. This indicates a prompt clarity or framework issue.
 
-**⚠️ CRITICAL: 0% success rate across all 34 executions**
+#### Suspicious Executions (55%)
 
-Since the template was created recently (Feb 20, 2026), all executions occurred within a short timeframe:
+**Common issues**:
+1. "Tools used but no files changed - activity may have been read-only" (11/11 = 100%)
+2. "Validation was not executed" (11/11 = 100%)
 
-```
-All executions: 0% success
-Trend: 🔴 Complete failure (no successful executions yet)
-```
+**Pattern**: Agents use tools (likely bash or read) but don't create the expected output file.
 
-**Implication**: Template has never successfully completed, indicating fundamental design or implementation issues.
+### Execution Evidence Analysis
 
----
-
-### Cost Trend
-
-```
-34 executions × $0.0768 avg = $2.61 total
-Cost per success: N/A (no successes)
-Wasted cost: $2.61 (100% failure rate)
-```
-
-**Efficiency**: Poor - spending money with zero value delivery
-
----
-
-## 4. Failure Analysis
-
-### 🚨 CRITICAL ISSUE: Zero Task-Level Metrics
-
-**Observation**: All task metrics show:
-- Success rate: 0%
-- Avg tokens: 0
-- Avg duration: 0ms
-- Common failures: []
-
-**This indicates ONE of the following**:
-
-1. **Metrics Collection Failure**: Task metrics are not being properly recorded during execution
-2. **Early Termination**: Template fails before any task begins execution
-3. **Storage Bug**: Metrics are generated but not persisted to template file
-4. **Variable Mapping Issue**: Required variables not properly interpolated, causing immediate failure
-
----
-
-### Hypothesized Failure Modes
-
-Based on template structure analysis:
-
-#### 1. Variable Interpolation Failures (HIGH LIKELIHOOD)
-
-**Evidence**:
-- Task 1 requires `templateId` variable with default `{{templateId}}`
-- Circular dependency: `templateId` defaults to `{{templateId}}` (self-reference)
-- File paths use `{{templateId}}` throughout (e.g., `/tmp/activity-template-{{templateId}}/`)
-
-**Impact**: If `templateId` is not provided explicitly, interpolation fails, blocking all file operations.
-
-**Frequency estimate**: 100% (affects all executions)
-
----
-
-#### 2. Validation Command Configuration Error (HIGH LIKELIHOOD)
-
-**Evidence from Task 3**:
-```json
-"commands": [
-  {
-    "command": "cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq empty",
-    "expected_exit_code": 0  // ← CORRECT: jq empty returns 0 for valid JSON
-  }
-]
-```
-
-**However, the OLD template had**:
-```json
-"expected_exit_code": 1  // ← WRONG: This would expect jq to FAIL
-```
-
-**Status**: This appears to be FIXED in the current version, but if old executions used the wrong value, this would cause 100% validation failures.
-
----
-
-#### 3. MCP Tool Availability (MEDIUM LIKELIHOOD)
-
-**Task 4** relies on `register_activity_template` MCP tool:
-- If MCP server not running, task 4 fails
-- If tool signature changed, calls fail
-- If authentication fails, registration fails
-
-**Frequency estimate**: 50-70% (intermittent based on environment)
-
----
-
-#### 4. Insufficient Token Budget (LOW LIKELIHOOD)
-
-**Evidence**:
-- Average output tokens: 191 (extremely low)
-- Task budget: 8,000 tokens per task
-- Ratio: Using only 2.4% of allocated output budget
-
-**Interpretation**: Tasks are failing BEFORE running out of tokens, not due to token limits.
-
----
-
-### Validation Failure Patterns (Hypothesized)
-
-Since no actual failure logs are available, based on template structure:
-
-| Pattern | Likelihood | Tasks Affected | Root Cause |
-|---------|-----------|----------------|------------|
-| "REQUIREMENTS.md not found" | High | Task 1 | Variable interpolation failure (`{{templateId}}` unresolved) |
-| "Pattern '## Workflow Steps' not found" | Medium | Task 1 | Agent produces wrong format or task times out |
-| "JSON validation failed" | High | Task 3 | Invalid JSON generated or validation command misconfigured |
-| "MCP tool not available" | Medium | Task 4 | Backend not running or tool not registered |
-| "✅ Template ID: not found in SUCCESS.md" | High | Task 4 | Registration fails or doc format wrong |
-
----
-
-## 5. Performance Benchmarks
-
-### Compared to Similar Templates
-
-**Note**: Comparison data not available from backend API. Based on template structure analysis:
-
-**Expected benchmarks for infrastructure templates**:
-- Success rate: 70-85% (typical for complex multi-task templates)
-- Duration: 2-5 minutes (typical for 4-task workflows)
-- Cost: $0.10-$0.25 (typical for infrastructure automation)
-
-**Actual performance**:
-- Success rate: **0%** (🔴 -85 percentage points vs. expected)
-- Duration: **1m 25s** (✅ Within expected range, but meaningless given 0% success)
-- Cost: **$0.077** (✅ Below expected range, suggests early termination)
-
-**Ranking**: Cannot rank without category-wide metrics, but **0% success = dead last**.
-
----
-
-## 6. Learning Data
-
-### Feedback Points
-
-**Status**: No captured feedback yet (template never succeeded)
-
-**Expected feedback collection**:
-- `template_valid`: Should capture yes/no votes
-- `prompt_clarity`: Should rate 1-10
-- `example_usefulness`: Should rate 1-10
-
-**Actual**: No data (template has not completed successfully)
-
----
-
-### Pattern Recognition
-
-**Success patterns identified**: None (no successful executions)
-
-**Failure patterns identified** (hypothesized from metrics):
-
-1. **100% failure rate**: Systematic issue, not transient errors
-2. **Low output tokens (191 avg)**: Early termination, not exhaustion
-3. **Zero task-level metrics**: Possible metrics collection bug or pre-execution failure
-4. **Consistent duration (~85s)**: Suggests timeout or consistent failure point
-
----
-
-## 7. Improvement Recommendations
-
-### 🔴 URGENT: Fix Before Further Use
-
-#### 1. **Debug Metrics Collection** (Priority: CRITICAL)
-
-**Problem**: Zero task-level metrics suggest fundamental tracking issue
-
-**Actions**:
-- Add logging to track when task metrics are recorded
-- Verify metrics are persisted to template storage
-- Test with minimal 1-task template to isolate issue
-
-**Expected impact**: Enables diagnosis of actual failure modes
-
----
-
-#### 2. **Fix Variable Interpolation** (Priority: CRITICAL)
-
-**Problem**: `templateId` variable has circular default (`{{templateId}}`)
-
-**Current**:
+**Sample execution evidence** (act_mlu3g2xu):
 ```json
 {
-  "name": "templateId",
-  "default": "{{templateId}}"  // ← Circular!
+  "sessionsSpawned": [
+    {
+      "sessionID": "ses_387c2a21effe0A7uVXXaOOPnii",
+      "taskId": "write-hello",
+      "agentType": "general",
+      "messageCount": 3,
+      "toolCallCount": 0
+    }
+  ],
+  "toolCalls": [],
+  "filesChanged": [],
+  "commitsMade": []
 }
 ```
+
+**Key observations**:
+- Agent spawns correctly (session created)
+- Agent receives messages (messageCount: 3)
+- Agent makes ZERO tool calls (toolCallCount: 0)
+- No files changed
+- No commits made
+
+**Hypothesis**: The prompt is too vague or the agent interprets it as conversational rather than actionable.
+
+---
+
+## Failure Analysis
+
+### Failure Distribution
+
+**Zero technical failures**: All 20 executions completed with status "done".
+
+**However**: 100% of executions have correctness issues:
+- 45% incorrect (no work performed)
+- 55% suspicious (wrong work performed)
+
+### Root Cause Analysis
+
+#### Issue 1: Prompt Ambiguity
+
+**Evidence**: 67% of "incorrect" executions show agents spawning but not using tools.
+
+**Root cause**: The prompt says "Use the write tool to create the file" but doesn't make it clear this is a REQUIRED action. Agents may interpret this as a suggestion.
+
+**Recommended fix**:
+```
+YOUR TASK: Create a file at /tmp/hello-{{testId}}.txt
+
+REQUIRED ACTIONS:
+1. Use the write tool to create the file
+2. Write content: "Hello from {{name}}!"
+3. Confirm file was created
+
+VALIDATION: After completing, verify the file exists and contains the correct message.
+```
+
+#### Issue 2: Missing Validation
+
+**Evidence**: 100% of executions show "Validation was not executed".
+
+**Root cause**: The template has NO validation rules. The system cannot verify correctness.
 
 **Recommended fix**:
 ```json
-{
-  "name": "templateId",
-  "required": true,  // ← Force explicit value
-  "description": "Kebab-case template ID (e.g., 'add-rest-endpoint')"
-}
-```
-
-**OR** compute default from `templateName`:
-```json
-{
-  "name": "templateId",
-  "required": false,
-  "default": "{{templateName | kebabCase}}",  // ← If supported
-  "description": "Auto-generated from templateName if not provided"
-}
-```
-
-**Expected impact**: Eliminates variable interpolation failures (estimated 100% of failures)
-
----
-
-#### 3. **Add Pre-Execution Validation** (Priority: HIGH)
-
-**Problem**: Template fails without clear error messages
-
-**Recommended**:
-- Add `preChecks` to validate required variables before execution
-- Check MCP tool availability before task 4
-- Validate write permissions to `/tmp/`
-
-**Example**:
-```json
-"integration": {
-  "preChecks": [
-    "test -w /tmp",
-    "command -v jq >/dev/null 2>&1"
+"validation": {
+  "requiredFiles": ["/tmp/hello-{{testId}}.txt"],
+  "requiredPatterns": [
+    {
+      "file": "/tmp/hello-{{testId}}.txt",
+      "pattern": "Hello from {{name}}!"
+    }
   ]
 }
 ```
 
-**Expected impact**: Catch environment issues before execution starts
+#### Issue 3: Tools Used But No Files Changed
+
+**Evidence**: 55% of executions show tool usage but no file changes.
+
+**Root cause**: Agents likely use bash/read tools to explore but don't use write tool. Suggests:
+1. Agent doesn't understand the task
+2. Agent encounters an error and gives up
+3. Agent thinks the task is informational
+
+**Recommended fix**: Add explicit validation + better task description.
 
 ---
 
-#### 4. **Reduce Token Budget for Task 1** (Priority: MEDIUM)
+## Performance Benchmarks
 
-**Problem**: Using 23k input tokens but only 191 output tokens
+### Compared to Similar Templates
 
-**Analysis**:
-- Task 1 prompt is **5,250 characters** (long)
-- Includes extensive examples and instructions
-- 8,000 token budget seems excessive for a requirements doc
+**Infrastructure category averages** (from template list):
+- Success rate: hello-world-minimal 100% vs category avg ~60%
+- Duration: hello-world-minimal 206s vs category median ~120s
+- Cost: hello-world-minimal $0.126 vs category median ~$0.15
 
-**Recommended**:
-- Reduce Task 1 budget to **4,000 tokens**
-- Reduce Task 2 budget to **4,000 tokens**
-- Keep Task 3 at **8,000 tokens** (JSON generation)
-- Keep Task 4 at **8,000 tokens** (registration)
+**Ranking**: 1st out of 13 infrastructure templates by success rate (tied with 9 others at 100%).
 
-**Total budget**: 24,000 tokens (down from 32,000)
+**However**: When correctness is considered, hello-world-minimal ranks LAST (0% correct executions).
 
-**Expected impact**: 25% cost reduction with no quality loss
+### Success Factors vs. Other Templates
+
+**Why hello-world-minimal succeeds**:
+1. ✅ Single task (no dependencies to fail)
+2. ✅ No context requirements (no missing context errors)
+3. ✅ No validation (can't fail validation)
+4. ✅ Minimal token budget (no truncation)
+5. ✅ Simple prompt (low ambiguity)
+
+**Why other templates fail**:
+1. ❌ Multi-task dependencies (cascading failures)
+2. ❌ Context requirements (missing files/components)
+3. ❌ Strict validation (false positives)
+4. ❌ Insufficient token budgets (truncation)
+5. ❌ Complex prompts (ambiguity)
+
+### Patterns to Extract
+
+**DO apply these patterns**:
+1. ✅ Keep tasks simple and focused
+2. ✅ Minimize dependencies
+3. ✅ Use clear variable names
+4. ✅ Provide sufficient token budget
+
+**DO NOT apply these patterns**:
+1. ❌ Skip validation (leads to false positives)
+2. ❌ Vague prompts (agents don't understand)
+3. ❌ No required tools (agents skip work)
+4. ❌ No quality gates (can't verify correctness)
 
 ---
 
-#### 5. **Add Execution Examples** (Priority: MEDIUM)
+## Comparison: hello-world-minimal vs. e2e-test Templates
 
-**Problem**: Template may be called incorrectly
+### Template Comparison
 
-**Recommended**: Add `examples` field to template:
+**hello-world-minimal**:
+- Executions: 20
+- Success rate: 100% (technical), 0% (correctness)
+- Avg cost: $0.126
+- Avg duration: 206s
+- Tasks: 1
+- Validation: none
+
+**e2e-test-20260219-031655** (example from context):
+- Success rate: 33% (mentioned in instructions)
+- Likely cause: Multi-task, complex validation, context requirements
+
+### Key Differences
+
+| Aspect | hello-world-minimal | e2e-test templates |
+|--------|---------------------|-------------------|
+| Complexity | Minimal (1 task) | High (multi-task) |
+| Validation | None | Strict |
+| Context | None | File/component requirements |
+| Success rate | 100% (technical) | 33% |
+| Correctness | 0% | Unknown |
+
+### Lessons for Template Design
+
+**From hello-world-minimal**:
+1. Simple templates avoid cascading failures
+2. Missing validation creates false success signals
+3. Prompt clarity matters more than complexity
+
+**From e2e-test comparison**:
+1. Validation is necessary but should be realistic
+2. Context requirements must be clear and checkable
+3. Multi-task templates need careful dependency design
+
+---
+
+## Recommendations
+
+### For Template Evolution
+
+**Priority 1: Add validation** (CRITICAL)
 ```json
-"examples": [
-  {
-    "name": "Create simple feature template",
-    "variables": {
-      "templateName": "Add REST Endpoint",
-      "templateDescription": "Add a new REST API endpoint with validation",
-      "category": "feature",
-      "templateId": "add-rest-endpoint"
+"validation": {
+  "requiredFiles": ["/tmp/hello-{{testId}}.txt"],
+  "requiredPatterns": [
+    {
+      "file": "/tmp/hello-{{testId}}.txt",
+      "pattern": "Hello from {{name}}!"
     }
-  }
-]
+  ]
+}
 ```
 
-**Expected impact**: Reduces user error in template invocation
+**Priority 2: Improve prompt clarity**
+```
+TASK: Create a greeting file
+
+REQUIRED ACTIONS:
+1. Use the write tool to create /tmp/hello-{{testId}}.txt
+2. Write the message: "Hello from {{name}}!"
+3. Verify the file was created successfully
+
+VALIDATION: The file must exist and contain exactly "Hello from {{name}}!"
+```
+
+**Priority 3: Add required tools**
+```json
+"tools": {
+  "required": ["write"],
+  "optional": [],
+  "disabled": ["bash"]
+}
+```
+
+### For Template Library
+
+**DO use hello-world-minimal for**:
+1. Testing activity framework reliability
+2. Debugging executor infrastructure
+3. Validating agent orchestration
+4. Benchmarking baseline performance
+
+**DO NOT use hello-world-minimal for**:
+1. Reference pattern for feature templates
+2. Teaching prompt design
+3. Demonstrating validation best practices
+4. Showing multi-task workflows
+
+**Better reference templates**:
+- `implement-agent-compliance-enforcement-phases-3-5`: 100% success, handles complex features
+- `test-boredom-system-in-docker`: 100% success, proper validation
+- `propagate-change-through-flow`: 100% success, refactoring patterns
+
+### For Metric Interpretation
+
+**Key insight**: Success rate ≠ correctness rate.
+
+**New metrics needed**:
+1. **Correctness rate**: Percentage of executions with "correct" verdict
+2. **Work completion rate**: Percentage with files changed or commits made
+3. **Validation execution rate**: Percentage where validation actually ran
+4. **Tool usage rate**: Percentage where agents used expected tools
+
+**Updated formula**:
+```
+True Success Rate = (Technical Success Rate) × (Correctness Rate) × (Validation Rate)
+
+hello-world-minimal:
+  = 100% × 0% × 0%
+  = 0%
+
+Ideal template:
+  = 100% × 100% × 100%
+  = 100%
+```
 
 ---
 
-### 🟡 MEDIUM PRIORITY: Optimize After Fixing Critical Issues
-
-#### 6. **Implement Caching** (Priority: MEDIUM)
-
-**Problem**: 0 cache tokens used, missing optimization opportunity
-
-**Recommended**:
-- Enable prompt caching for task prompts (they're static)
-- Cache variable interpolation results
-- Use context compression more aggressively
-
-**Expected impact**: 30-50% cost reduction for repeated executions
-
----
-
-#### 7. **Split Task 3 into Validation Subtask** (Priority: LOW)
-
-**Problem**: Task 3 does JSON generation + validation in one step
-
-**Recommended**:
-- Task 3: Generate JSON only
-- Task 3.5: Validate JSON (separate task)
-- Allows retrying validation without regenerating
-
-**Expected impact**: Better debugging, faster iteration
-
----
-
-## 8. Next Steps
-
-### Immediate Actions (Next 24 Hours)
-
-1. ✅ **Analyze execution logs** - Find actual error messages from failed executions
-2. ✅ **Fix variable interpolation** - Remove circular `templateId` default
-3. ✅ **Test with minimal case** - Execute with explicit variables
-4. ✅ **Verify metrics collection** - Confirm task metrics are recorded
-
-### Short-Term Actions (Next Week)
-
-1. Add pre-execution validation checks
-2. Reduce token budgets per recommendations
-3. Add execution examples to template
-4. Document common failure modes in template
-
-### Long-Term Actions (Next Month)
-
-1. Implement prompt caching
-2. Split complex tasks into subtasks
-3. Add automated regression tests
-4. Create template evolution pipeline
-
----
-
-## 9. Current Template JSON
+## Current Template JSON
 
 <details>
-<summary>Full template definition (click to expand)</summary>
+<summary>Full template definition</summary>
 
 ```json
 {
-  "id": "create-activity-self-contained",
+  "id": "hello-world-minimal",
   "version": {
-    "timestamp": 1771575165760,
+    "timestamp": 1771543769255,
     "parent_hash": "",
-    "variant_hash": "827660b8ccd63d68",
-    "full_version": "1771575165760::827660b8ccd63d68",
+    "variant_hash": "2d955ac37bea0d56",
+    "full_version": "1771543769255::2d955ac37bea0d56",
     "generation": 0
   },
   "genealogy": {
-    "created_at": 1771575165761,
+    "created_at": 1771543769255,
     "parent_id": "",
-    "variant_hash": "827660b8ccd63d68",
+    "variant_hash": "2d955ac37bea0d56",
     "generation": 0,
     "evolution": {
       "reason": "EVOLUTION_REASON_MANUAL",
       "improvised": false,
       "author": "TEMPLATE_AUTHOR_HUMAN",
-      "notes": "Create activity templates without requiring example files or specific project structure - fully self-contained and repository-agnostic. Registers template directly to backend without local file dependencies."
+      "notes": "Minimal test activity with no context requirements - single task that writes a file"
     },
     "variant_ids": []
   },
-  "name": "Create Activity Template (Self-Contained)",
-  "description": "Create activity templates without requiring example files or specific project structure - fully self-contained and repository-agnostic. Registers template directly to backend without local file dependencies.",
+  "name": "Hello World Minimal",
+  "description": "Minimal test activity with no context requirements - single task that writes a file",
   "category": "infrastructure",
   "status": "stable",
   "candidateIds": [],
   "allocationWeight": 1,
-  "executions": 34,
-  "successRate": 0,
-  "avgDuration": 84648.76470588235,
-  "avgCost": 0.0768661323529412,
+  "executions": 20,
+  "successRate": 1,
+  "avgDuration": 206542.6,
+  "avgCost": 0.1264803375,
   "avgTokens": {
-    "input": 23197.705882352937,
-    "output": 190.55882352941177,
+    "input": 31937.050000000003,
+    "output": 73.2,
     "cache": 0
   },
   "tasks": [
     {
-      "id": "gather-requirements",
+      "id": "write-hello",
       "subagent": "general",
-      "description": "Extract and clarify requirements from user input to ensure complete understanding",
+      "description": "Write hello world message to file",
       "dependencies": [],
-      "guidance": [],
-      "expected_actions": [],
       "tools": {
         "required": [],
         "optional": [],
         "disabled": []
       },
       "prompt": {
-        "template": "[... full prompt text ...]",
+        "template": "Write a hello world message to /tmp/hello-{{testId}}.txt\n\nThe message should say: Hello from {{name}}!\n\nUse the write tool to create the file.",
         "maxTokens": 8000,
         "compressionStrategy": "filter",
         "variables": [
           {
-            "name": "templateName",
+            "name": "testId",
             "type": "string",
             "required": true,
-            "description": "Human-readable template name (e.g., 'Add REST Endpoint', 'Deploy Application')"
+            "description": "Unique test identifier"
           },
           {
-            "name": "templateDescription",
+            "name": "name",
             "type": "string",
             "required": true,
-            "description": "One-sentence description of what this template does"
-          },
-          {
-            "name": "category",
-            "type": "string",
-            "required": true,
-            "description": "Template category: feature, bugfix, refactor, tool, or infrastructure"
-          },
-          {
-            "name": "purpose",
-            "type": "string",
-            "required": false,
-            "description": "Detailed explanation of the workflow this template automates",
-            "default": "{{templateDescription}}"
-          },
-          {
-            "name": "templateId",
-            "type": "string",
-            "required": false,
-            "description": "Kebab-case template ID (defaults to kebab-case of templateName)",
-            "default": "{{templateId}}"
+            "description": "Name to include in greeting"
           }
         ]
       },
       "validation": {
-        "requiredFiles": [
-          "/tmp/activity-template-{{templateId}}/REQUIREMENTS.md"
-        ],
-        "requiredPatterns": [
-          {
-            "pattern": "## Workflow Steps",
-            "description": ""
-          },
-          {
-            "pattern": "## Input Variables",
-            "description": ""
-          },
-          {
-            "pattern": "## Validation Criteria",
-            "description": ""
-          }
-        ],
+        "requiredFiles": [],
+        "requiredPatterns": [],
         "forbiddenPatterns": [],
         "commands": []
-      },
-      "retry": {
-        "maxAttempts": 2,
-        "strategy": "simple"
-      },
-      "metrics": {
-        "successRate": 0,
-        "avgTokens": 0,
-        "avgDuration": 0,
-        "commonFailures": []
-      }
-    },
-    {
-      "id": "design-task-graph",
-      "subagent": "general",
-      "description": "Design task breakdown with proper dependencies forming a directed acyclic graph (DAG)",
-      "dependencies": [
-        "gather-requirements"
-      ],
-      "guidance": [],
-      "expected_actions": [],
-      "tools": {
-        "required": [],
-        "optional": [],
-        "disabled": []
-      },
-      "prompt": {
-        "template": "[... full prompt text ...]",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
-        "variables": []
-      },
-      "validation": {
-        "requiredFiles": [
-          "/tmp/activity-template-{{templateId}}/TASK_GRAPH.md"
-        ],
-        "requiredPatterns": [
-          {
-            "pattern": "## Task Breakdown",
-            "description": ""
-          },
-          {
-            "pattern": "## Dependency Graph",
-            "description": ""
-          },
-          {
-            "pattern": "## Token Budget Summary",
-            "description": ""
-          }
-        ],
-        "forbiddenPatterns": [],
-        "commands": []
-      },
-      "retry": {
-        "maxAttempts": 2,
-        "strategy": "simple"
-      },
-      "metrics": {
-        "successRate": 0,
-        "avgTokens": 0,
-        "avgDuration": 0,
-        "commonFailures": []
-      }
-    },
-    {
-      "id": "write-template-json",
-      "subagent": "general",
-      "description": "Generate valid ActivityTemplate.Schema JSON following the exact structure",
-      "dependencies": [
-        "design-task-graph"
-      ],
-      "guidance": [],
-      "expected_actions": [],
-      "tools": {
-        "required": [],
-        "optional": [],
-        "disabled": []
-      },
-      "prompt": {
-        "template": "[... full prompt text ...]",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
-        "variables": []
-      },
-      "validation": {
-        "requiredFiles": [
-          "/tmp/activity-template-{{templateId}}/{{templateId}}.json"
-        ],
-        "requiredPatterns": [
-          {
-            "pattern": "\"name\":",
-            "description": ""
-          },
-          {
-            "pattern": "\"category\":",
-            "description": ""
-          },
-          {
-            "pattern": "\"tasks\":",
-            "description": ""
-          },
-          {
-            "pattern": "\"contextRequirements\":",
-            "description": ""
-          }
-        ],
-        "forbiddenPatterns": [
-          {
-            "pattern": "\"preChecks\": [\"git",
-            "description": "Must not include git status checks"
-          }
-        ],
-        "commands": [
-          {
-            "command": "cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq empty",
-            "expected_exit_code": 0
-          }
-        ]
       },
       "retry": {
         "maxAttempts": 3,
-        "strategy": "simple"
-      },
-      "metrics": {
-        "successRate": 0,
-        "avgTokens": 0,
-        "avgDuration": 0,
-        "commonFailures": []
-      }
-    },
-    {
-      "id": "register-with-backend",
-      "subagent": "general",
-      "description": "Register the template directly with metabob-cli backend via MCP, creating usage documentation",
-      "dependencies": [
-        "write-template-json"
-      ],
-      "guidance": [],
-      "expected_actions": [],
-      "tools": {
-        "required": [],
-        "optional": [],
-        "disabled": []
-      },
-      "prompt": {
-        "template": "[... full prompt text ...]",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
-        "variables": []
-      },
-      "validation": {
-        "requiredFiles": [
-          "/tmp/activity-template-{{templateId}}/SUCCESS.md"
-        ],
-        "requiredPatterns": [
-          {
-            "pattern": "✅ Template ID:",
-            "description": ""
-          },
-          {
-            "pattern": "✅ Status: Registered with backend",
-            "description": ""
-          },
-          {
-            "pattern": "## Usage",
-            "description": ""
-          },
-          {
-            "pattern": "## Template Structure",
-            "description": ""
-          }
-        ],
-        "forbiddenPatterns": [
-          {
-            "pattern": "❌",
-            "description": ""
-          },
-          {
-            "pattern": "FAILED",
-            "description": ""
-          },
-          {
-            "pattern": "ERROR",
-            "description": ""
-          }
-        ],
-        "commands": []
-      },
-      "retry": {
-        "maxAttempts": 2,
         "strategy": "simple"
       },
       "metrics": {
@@ -848,11 +512,11 @@ Since no actual failure logs are available, based on template structure:
   "metabob": {
     "enabled": false,
     "learningMode": true,
-    "targetContextTokens": 0,
+    "targetContextTokens": 5000,
     "annotationStrategy": "key-components"
   },
-  "createdAt": 1771575165761,
-  "updatedAt": 1771612665856
+  "createdAt": 1771543769255,
+  "updatedAt": 1771803167647
 }
 ```
 
@@ -860,26 +524,66 @@ Since no actual failure logs are available, based on template structure:
 
 ---
 
-## 10. Conclusion
+## Appendix: Sample Execution Records
 
-**Template Status**: 🔴 **BROKEN** - Requires immediate fixes before production use
+### Sample 1: Incorrect Execution (Agent spawned, no tools used)
 
-**Root Cause (Hypothesis)**: Variable interpolation failure due to circular `templateId` default, combined with possible validation configuration errors.
+**ID**: act_mlu3g2xu_fcc8f53bb20133f6  
+**Status**: done  
+**Duration**: 804s  
+**Cost**: $0.208  
 
-**Immediate Actions**:
-1. Fix `templateId` variable default (remove circular reference)
-2. Test with explicit variable values
-3. Verify metrics collection is working
-4. Add execution logging to capture actual error messages
+**Correctness verdict**:
+- Verdict: incorrect
+- Confidence: 0.14 (very low)
+- Issues:
+  - Agent spawned but no tools used - no actual work performed
+  - Validation was not executed
 
-**Success Criteria**:
-- First successful execution (0% → >0%)
-- Task-level metrics populated
-- Clear error messages for failures
-- Reduced cost per execution
+**Evidence**:
+- Sessions spawned: 1
+- Message count: 3
+- Tool calls: 0
+- Files changed: 0
+- Commits made: 0
 
-**Estimated Recovery Time**: 1-2 days of debugging and testing
+### Sample 2: Suspicious Execution (Tools used, no files changed)
+
+**ID**: act_mlunr5mh_d383b0966ff7a351  
+**Status**: done  
+**Duration**: 90s  
+**Cost**: $0.094  
+
+**Correctness verdict**:
+- Verdict: suspicious
+- Confidence: 0.35 (low)
+- Issues:
+  - Tools used but no files changed - activity may have been read-only
+  - Validation was not executed
+
+**Evidence**:
+- Sessions spawned: 1
+- Message count: likely 3-5
+- Tool calls: > 0
+- Files changed: 0
+- Commits made: 0
 
 ---
 
-**Next Review**: After implementing critical fixes and achieving first successful execution
+## Conclusion
+
+The `hello-world-minimal` template demonstrates a critical insight: **technical success ≠ actual success**.
+
+While this template achieves 100% completion rate, it has 0% correctness rate. This makes it valuable for infrastructure testing but unsuitable as a reference pattern for feature templates.
+
+**Key takeaways**:
+1. Validation is essential for verifying correctness
+2. Prompt clarity determines agent behavior
+3. Simple templates avoid failures but also avoid doing real work
+4. Multi-dimensional metrics (success + correctness + validation) provide true quality signals
+
+**Next steps**:
+1. Evolve hello-world-minimal with validation (create v2)
+2. Use evolved template to test correctness improvements
+3. Apply lessons to underperforming templates (e.g., e2e-test-20260219-031655)
+4. Establish "correctness rate" as primary quality metric
