@@ -128,6 +128,95 @@ DEFINE INDEX idx_variant_error ON failure_patterns FIELDS variant_id, error_type
 DEFINE INDEX idx_last_seen ON failure_patterns FIELDS last_seen;
 
 -- ============================================================================
+-- Table: task_execution
+-- Purpose: Store individual task execution details for replay and debugging
+-- ============================================================================
+
+DEFINE TABLE task_execution SCHEMAFULL;
+
+DEFINE FIELD execution_id ON task_execution TYPE string
+  COMMENT "Parent activity execution_id";
+
+DEFINE FIELD task_id ON task_execution TYPE string
+  COMMENT "Task identifier from template (e.g., 'task-1')";
+
+DEFINE FIELD task_index ON task_execution TYPE number
+  COMMENT "0-based task order in activity";
+
+DEFINE FIELD subagent ON task_execution TYPE string
+  COMMENT "Which subagent executed this task";
+
+DEFINE FIELD prompt ON task_execution TYPE string
+  COMMENT "Actual prompt sent to agent (after variable substitution)";
+
+DEFINE FIELD status ON task_execution TYPE string
+  COMMENT "pending | in_progress | completed | failed | skipped";
+
+DEFINE FIELD success ON task_execution TYPE bool
+  COMMENT "Whether task completed successfully";
+
+DEFINE FIELD started_at ON task_execution TYPE datetime
+  COMMENT "Task start timestamp";
+
+DEFINE FIELD completed_at ON task_execution TYPE option<datetime>
+  COMMENT "Task completion timestamp";
+
+DEFINE FIELD duration_ms ON task_execution TYPE number
+  COMMENT "Task execution duration";
+
+DEFINE FIELD tokens_input ON task_execution TYPE number DEFAULT 0;
+DEFINE FIELD tokens_output ON task_execution TYPE number DEFAULT 0;
+DEFINE FIELD tokens_cache ON task_execution TYPE number DEFAULT 0;
+DEFINE FIELD cost_usd ON task_execution TYPE number DEFAULT 0.0;
+
+DEFINE FIELD error_message ON task_execution TYPE option<string>
+  COMMENT "Error if task failed";
+
+DEFINE FIELD error_type ON task_execution TYPE option<string>
+  COMMENT "Error category (validation, timeout, tool_error)";
+
+DEFINE FIELD validation_result ON task_execution TYPE option<object>
+  COMMENT "Validation check results";
+
+DEFINE FIELD retry_count ON task_execution TYPE number DEFAULT 0
+  COMMENT "Number of retry attempts";
+
+DEFINE FIELD created_at ON task_execution TYPE datetime DEFAULT time::now();
+
+-- Indexes for efficient queries
+DEFINE INDEX idx_execution_id ON task_execution FIELDS execution_id;
+DEFINE INDEX idx_task_status ON task_execution FIELDS status;
+DEFINE INDEX idx_success ON task_execution FIELDS success;
+
+-- ============================================================================
+-- Table: activity_content
+-- Purpose: Store full activity template and variable bindings for replay
+-- ============================================================================
+
+DEFINE TABLE activity_content SCHEMAFULL;
+
+DEFINE FIELD execution_id ON activity_content TYPE string
+  COMMENT "Links to activity_execution.execution_id";
+
+DEFINE FIELD variant_id ON activity_content TYPE string
+  COMMENT "Template variant identifier";
+
+DEFINE FIELD template_definition ON activity_content TYPE object
+  COMMENT "Full activity template (tasks, prompts, validation, etc)";
+
+DEFINE FIELD variables ON activity_content TYPE object
+  COMMENT "Variable bindings passed to activity";
+
+DEFINE FIELD reason ON activity_content TYPE string
+  COMMENT "Why this activity was executed (from activity tool reason param)";
+
+DEFINE FIELD created_at ON activity_content TYPE datetime DEFAULT time::now();
+
+-- Indexes for efficient queries
+DEFINE INDEX idx_execution_id_unique ON activity_content FIELDS execution_id UNIQUE;
+DEFINE INDEX idx_variant_id ON activity_content FIELDS variant_id;
+
+-- ============================================================================
 -- Schema Initialization Complete
 -- ============================================================================
 
