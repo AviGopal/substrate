@@ -116,6 +116,7 @@ services:
       - ./repos/metabob-rpc-api/.env.docker:/opt/app/.env
       - ./repos/metabob-rpc-api/metrics:/opt/app/metrics
       - metabob_api_logs:/opt/app/logs
+      - ./repos/metabob-rpc-api/server:/opt/app/server:ro  # Mount source code for development
     environment:
       CONFIG_PATH: /opt/app/.env
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
