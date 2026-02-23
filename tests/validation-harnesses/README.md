@@ -67,6 +67,23 @@ bun test tests/validation-harnesses/
 - PATCH to `/api/v1/activity-execution/tasks/:id` after task completion with state_after, state_delta, validation_results
 - Execution continues successfully even if backend unavailable (non-blocking)
 
+### impulse-usage-tracking-harness.ts
+
+**Specification**: All task executions must track impulse loading and creation to learn optimal context strategies (commit 1091779).
+
+**Test Cases**:
+- Case 1: Activity with impulses - Verifies impulsesLoaded array is non-empty, contextRatio calculated
+- Case 2: Activity creating impulses - Verifies impulsesCreated array is populated
+- Case 3: Context ratio calculation - Verifies contextRatio = impulseTokens / totalInputTokens
+
+**Expected Behavior**:
+- `impulses_loaded`: array of impulse IDs (non-empty when impulses used)
+- `impulses_created`: array of new impulse IDs (may be empty)
+- `context_ratio`: number between 0 and 1 (context tokens / total tokens)
+- `tokens`: breakdown object with {input, output, cache} fields
+
+**Learning System Impact**: Enables tracking of impulse load frequency, token consumption, cost attribution, and context efficiency to optimize context strategies.
+
 ## Creating New Harnesses
 
 When enforcing a new specification:

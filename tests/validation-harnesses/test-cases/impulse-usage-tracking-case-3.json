@@ -1,0 +1,41 @@
+{
+  "testCase": "case-3-context-ratio",
+  "description": "Validates that context_ratio is calculated correctly as impulseTokens / totalInputTokens",
+  "input": {
+    "activityType": "activity-with-context-ratio-calculation",
+    "impulseTokens": 50,
+    "totalInputTokens": 200,
+    "expectedRatio": 0.25
+  },
+  "expectedOutput": {
+    "impulsesLoaded": {
+      "type": "array",
+      "minLength": 1,
+      "description": "Array of impulse IDs that were loaded"
+    },
+    "impulsesCreated": {
+      "type": "array",
+      "description": "Array of newly created impulse IDs (may be empty)"
+    },
+    "contextRatio": {
+      "type": "number",
+      "min": 0.24,
+      "max": 0.26,
+      "expectedValue": 0.25,
+      "description": "Ratio of impulse tokens to total input tokens (50/200 = 0.25)",
+      "formula": "impulseTokens / totalInputTokens"
+    },
+    "tokens": {
+      "type": "object",
+      "hasBreakdown": true,
+      "fields": ["input", "output", "cache"],
+      "description": "Token breakdown with input, output, and cache fields"
+    }
+  },
+  "validationRules": [
+    "contextRatio must equal impulseTokens / totalInputTokens",
+    "contextRatio must be between 0 and 1",
+    "contextRatio = 0.25 when 50 impulse tokens and 200 total input tokens",
+    "tokens must be an object with input, output, and cache fields"
+  ]
+}
