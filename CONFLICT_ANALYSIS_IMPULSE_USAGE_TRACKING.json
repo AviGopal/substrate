@@ -1,0 +1,195 @@
+{
+  "specificationName": "impulse-usage-tracking",
+  "analysisDate": "2026-02-23",
+  "otherSpecifications": [
+    "activity-state-transformation-tracking"
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "affectedBySpecs": [
+        "activity-state-transformation-tracking",
+        "impulse-usage-tracking"
+      ],
+      "modificationAreas": [
+        {
+          "area": "Task execution lifecycle (lines 1900-2700)",
+          "spec1Modifications": "activity-state-transformation-tracking",
+          "spec1Changes": [
+            "INSTRUMENTATION POINT 3: captureCurrentState before task (line ~1925)",
+            "INSTRUMENTATION POINT 4: recordTaskStart POST (line ~1934)",
+            "INSTRUMENTATION POINT 5: computeDelta after task (line ~2504)",
+            "INSTRUMENTATION POINT 6: updateTaskExecution PATCH (line ~2518)",
+            "INSTRUMENTATION POINT 7: updateTaskExecution on failure (line ~2658)"
+          ],
+          "spec2Modifications": "impulse-usage-tracking",
+          "spec2Changes": [
+            "Initialize usageStats for created impulses (line ~2564-2575)",
+            "Calculate context_ratio (line ~2577-2584)",
+            "Change tokens to breakdown in reportExecutionStep (line ~2587-2601)",
+            "Dual-write pattern for local usageStats.totalCost (line ~2604-2613)"
+          ],
+          "overlap": "HIGH",
+          "conflictType": "NONE",
+          "analysis": "Both specifications modify the same execution flow but at different points and for different purposes. No conflicting changes."
+        }
+      ],
+      "integrationStatus": "✅ COMPATIBLE",
+      "reason": "Both specifications instrument the activity execution flow but target different aspects: state transformation tracking vs impulse usage tracking. Changes are additive and non-conflicting."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "affectedBySpecs": [
+        "impulse-usage-tracking"
+      ],
+      "modificationAreas": [
+        {
+          "area": "reportExecutionStep function (lines 907-969)",
+          "spec1Modifications": "impulse-usage-tracking",
+          "spec1Changes": [
+            "Change tokens parameter from number to {input, output, cache}",
+            "Add contextRatio parameter",
+            "Update MCP call to send tokens breakdown and context_ratio"
+          ],
+          "overlap": "NONE",
+          "conflictType": "NONE",
+          "analysis": "Only impulse-usage-tracking modifies this component. No conflicts."
+        }
+      ],
+      "integrationStatus": "✅ COMPATIBLE",
+      "reason": "Only one specification modifies this component."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/task-execution-shared.ts",
+      "affectedBySpecs": [
+        "impulse-usage-tracking"
+      ],
+      "modificationAreas": [
+        {
+          "area": "loadImpulsesForTask function (lines 71-129)",
+          "spec1Modifications": "impulse-usage-tracking",
+          "spec1Changes": [
+            "Track usageStats (loadCount, totalTokens) after loading impulse"
+          ],
+          "overlap": "NONE",
+          "conflictType": "NONE",
+          "analysis": "Only impulse-usage-tracking modifies this component. No conflicts."
+        }
+      ],
+      "integrationStatus": "✅ COMPATIBLE",
+      "reason": "Only one specification modifies this component."
+    }
+  ],
+  "conflicts": [],
+  "potentialIssues": [
+    {
+      "type": "COORDINATION_RISK",
+      "description": "Both specifications instrument activity.ts execution flow in proximity",
+      "components": [
+        "repos/metabob-opencode/packages/opencode/src/tool/activity.ts"
+      ],
+      "risk": "LOW",
+      "mitigation": "Changes are well-separated and non-overlapping. Both use non-blocking design patterns.",
+      "status": "MITIGATED"
+    },
+    {
+      "type": "TESTING_COVERAGE",
+      "description": "Both specifications have separate validation harnesses but no integration test",
+      "components": [
+        "tests/validation-harnesses/activity-state-transformation-tracking-harness.ts",
+        "tests/validation-harnesses/impulse-usage-tracking-harness.ts"
+      ],
+      "risk": "LOW",
+      "mitigation": "Both harnesses mock backend calls independently. Real integration test recommended but not blocking.",
+      "status": "RECOMMENDED"
+    }
+  ],
+  "complementaryFeatures": [
+    {
+      "feature": "Backend Reporting",
+      "spec1": "activity-state-transformation-tracking",
+      "spec1Contribution": "Reports state transformations (files added/modified/deleted, impulses created, git diffs)",
+      "spec2": "impulse-usage-tracking",
+      "spec2Contribution": "Reports impulse usage metrics (impulses loaded/created, context_ratio, tokens breakdown)",
+      "synergy": "Both specifications send complementary data to the same backend API, enabling comprehensive activity learning"
+    },
+    {
+      "feature": "Impulse Tracking",
+      "spec1": "activity-state-transformation-tracking",
+      "spec1Contribution": "Tracks impulses_created in state delta",
+      "spec2": "impulse-usage-tracking",
+      "spec2Contribution": "Tracks impulses_loaded, impulses_created, and initializes usageStats",
+      "synergy": "Both specifications track impulse lifecycle but from different perspectives (state transformation vs usage metrics)"
+    },
+    {
+      "feature": "Non-Blocking Design",
+      "spec1": "activity-state-transformation-tracking",
+      "spec1Contribution": "Non-blocking API calls with graceful degradation",
+      "spec2": "impulse-usage-tracking",
+      "spec2Contribution": "Non-blocking reportExecutionStep with try/catch",
+      "synergy": "Both specifications follow the same design pattern, ensuring execution continues even if backend is unavailable"
+    }
+  ],
+  "architecturalAlignment": {
+    "status": "✅ ALIGNED",
+    "details": [
+      "Both specifications follow non-blocking design principles",
+      "Both specifications use the same backend API pattern (HTTP POST/PATCH)",
+      "Both specifications instrument the same execution flow without conflicts",
+      "Both specifications have validation harnesses with 100% pass rates",
+      "Both specifications enable the learning loop from different angles"
+    ]
+  },
+  "dataFlowAnalysis": {
+    "spec1Flow": "activity.ts → activity-state-capture.ts → activity-client.ts → Backend API (state transformations)",
+    "spec2Flow": "activity.ts → task-execution-shared.ts → metabob.ts → Backend API (impulse usage)",
+    "convergencePoint": "Backend API receives both state transformation data and impulse usage data",
+    "conflictRisk": "NONE - different data flows, same backend destination",
+    "integrationBenefit": "Learning system receives complete picture: WHAT changed (state) + WHAT context was used (impulses)"
+  },
+  "learningSystemImpact": {
+    "combined": [
+      "Track state transformations (files changed, impulses created)",
+      "Track impulse usage (loaded, created, context_ratio)",
+      "Enable learning optimal context strategies",
+      "Enable learning optimal state transformation patterns",
+      "Provide complete activity execution context"
+    ],
+    "synergy": "Both specifications enable complementary aspects of the learning loop. State transformations show WHAT happened, impulse usage shows WHAT context was effective."
+  },
+  "recommendations": [
+    {
+      "type": "TESTING",
+      "priority": "P1",
+      "recommendation": "Create integration test that runs an activity and verifies both state transformation data AND impulse usage data are sent to backend",
+      "reason": "While both harnesses pass independently, an integration test would verify they work together correctly"
+    },
+    {
+      "type": "MONITORING",
+      "priority": "P1",
+      "recommendation": "Add backend monitoring to verify both data streams are being ingested correctly",
+      "reason": "Backend should receive and store both state transformation data and impulse usage data for learning"
+    },
+    {
+      "type": "DOCUMENTATION",
+      "priority": "P2",
+      "recommendation": "Document how both specifications work together to enable the learning loop",
+      "reason": "Help future developers understand the complementary nature of these specifications"
+    }
+  ],
+  "conclusion": {
+    "overallStatus": "✅ NO CONFLICTS DETECTED",
+    "compatibilityRating": "100%",
+    "riskLevel": "LOW",
+    "readyForProduction": true,
+    "summary": "Both specifications (activity-state-transformation-tracking and impulse-usage-tracking) are fully compatible and complementary. They modify the same core file (activity.ts) but at different points and for different purposes. No conflicting requirements detected. Both follow non-blocking design patterns and enable the learning loop from different angles."
+  },
+  "references": {
+    "thisSpec": "impulse-usage-tracking from commit 1091779",
+    "otherSpec": "activity-state-transformation-tracking from PHASE_2_INSTRUMENTATION_DESIGN.md",
+    "traceImpulse": "trace-impulse-usage-tracking",
+    "enforcementImpulse": "enforcement-impulse-usage-tracking",
+    "validationResultsImpulse": "validation-results-impulse-usage-tracking",
+    "conflictAnalysisImpulse": "conflict-analysis-impulse-usage-tracking"
+  }
+}
