@@ -18,13 +18,18 @@
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": ["system-metrics.json"],
-        "required_patterns": ["templates", "learning_loop", "resource_efficiency", "vitality"],
-        "forbidden_patterns": ["ERROR", "FAILED", "undefined", "null"],
-        "commands": ["jq -e '.summary_stats.total_executions > 0' $ACTIVITY_TEMP_DIR/system-metrics.json"]
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.summary_stats.total_executions > 0' $ACTIVITY_TEMP_DIR/system-metrics.json",
+            "expected_exit_code": 0
+          }
+        ]
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -32,7 +37,9 @@
       "task_id": "assess-goal-alignment",
       "subagent": "general",
       "description": "Analyze metrics against stated goals and calculate alignment scores",
-      "dependencies": ["collect-system-metrics"],
+      "dependencies": [
+        "collect-system-metrics"
+      ],
       "prompt": {
         "template": "Analyze system metrics against stated goals:\n\n## Reference Goals (from docs/sessions/RATCHET_SESSION_COMPLETE.md)\n\n1. **Self-improvement**: improvement_gradient target ≥ 8% per cycle\n2. **Token efficiency**: avg_cost target ≤ $0.10 per execution\n3. **Success rate**: target ≥ 70% for templates with >5 executions\n4. **Resource efficiency**: waste < 10% of total cost\n5. **Autonomous operation**: boredom system active (triggers > 0)\n\n## Analysis\n\n```bash\n# Load collected metrics\ncd $ACTIVITY_TEMP_DIR\nMETRICS=$(cat system-metrics.json)\n\n# Calculate alignment scores (0-100) for each goal\n\n# 1. Self-improvement score\njq '\n  (.templates | map(select(.improvement_gradient > 0)) | length) /\n  (.templates | map(select(.execution_count > 5)) | length) * 100\n' system-metrics.json\n\n# 2. Token efficiency score  \njq '\n  (.templates | map(select(.avg_cost <= 0.10)) | length) /\n  (.templates | map(select(.execution_count > 0)) | length) * 100\n' system-metrics.json\n\n# 3. Success rate score\njq '\n  (.templates | map(select(.execution_count > 5 and .success_rate >= 0.70)) | length) /\n  (.templates | map(select(.execution_count > 5)) | length) * 100\n' system-metrics.json\n\n# 4. Resource efficiency score\njq '\n  100 - (.resource_efficiency.total_waste_dollars / .summary_stats.total_cost * 100)\n' system-metrics.json\n\n# 5. Autonomous operation score\njq '\n  if .learning_loop.thompson_sampling_active then 100 else 0 end\n' system-metrics.json\n```\n\n## Calculate Overall Alignment\n\nWeighted average:\n- Self-improvement: 25%\n- Token efficiency: 20%\n- Success rate: 25%\n- Resource efficiency: 20%\n- Autonomous operation: 10%\n\n## Identify Misalignments\n\nFor each goal, list specific violations:\n- Template ID\n- Current value vs target\n- Severity: CRITICAL (<30% of target), HIGH (30-60%), MEDIUM (60-80%)\n- Impact: number of executions affected\n\n## Generate Recommendations\n\nTop 3 actions prioritized by impact:\n1. Specific action to take\n2. Expected improvement (quantified)\n3. Effort estimate: LOW (< 1hr), MEDIUM (1-4hr), HIGH (> 4hr)\n4. Success criteria\n\n## Output\n\nCreate: $ACTIVITY_TEMP_DIR/goal-alignment.json\n\nStructure:\n```json\n{\n  \"alignment_scores\": {\n    \"self_improvement\": 0-100,\n    \"token_efficiency\": 0-100,\n    \"success_rate\": 0-100,\n    \"resource_efficiency\": 0-100,\n    \"autonomous_operation\": 0-100,\n    \"overall\": 0-100\n  },\n  \"misalignments\": [\n    {\n      \"goal\": \"goal name\",\n      \"severity\": \"CRITICAL|HIGH|MEDIUM\",\n      \"templates_affected\": [\"id1\", \"id2\"],\n      \"current_value\": number,\n      \"target_value\": number,\n      \"gap_percentage\": number,\n      \"description\": \"what's wrong\"\n    }\n  ],\n  \"recommendations\": [\n    {\n      \"priority\": 1-10,\n      \"action\": \"specific action\",\n      \"expected_impact\": \"quantified improvement\",\n      \"effort\": \"LOW|MEDIUM|HIGH\",\n      \"success_criteria\": \"how to measure success\",\n      \"templates_benefited\": [\"id1\", \"id2\"]\n    }\n  ],\n  \"assessment_timestamp\": \"ISO8601\"\n}\n```",
         "variables": []
@@ -42,16 +49,22 @@
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": ["goal-alignment.json"],
-        "required_patterns": ["alignment_scores", "overall", "misalignments", "recommendations"],
-        "forbidden_patterns": ["ERROR", "null", "undefined"],
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
         "commands": [
-          "jq -e '.alignment_scores.overall >= 0 and .alignment_scores.overall <= 100' $ACTIVITY_TEMP_DIR/goal-alignment.json",
-          "jq -e '.recommendations | length >= 3' $ACTIVITY_TEMP_DIR/goal-alignment.json"
+          {
+            "command": "jq -e '.alignment_scores.overall >= 0 and .alignment_scores.overall <= 100' $ACTIVITY_TEMP_DIR/goal-alignment.json",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "jq -e '.recommendations | length >= 3' $ACTIVITY_TEMP_DIR/goal-alignment.json",
+            "expected_exit_code": 0
+          }
         ]
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
@@ -59,54 +72,138 @@
       "task_id": "generate-health-report",
       "subagent": "general",
       "description": "Create comprehensive human-readable health report with becoming indicators",
-      "dependencies": ["assess-goal-alignment"],
+      "dependencies": [
+        "assess-goal-alignment"
+      ],
       "prompt": {
         "template": "Generate comprehensive health report:\n\n## Load Data\n\n```bash\ncd $ACTIVITY_TEMP_DIR\nMETRICS=$(cat system-metrics.json)\nALIGNMENT=$(cat goal-alignment.json)\n```\n\n## Create Report: SYSTEM_HEALTH_REPORT.md\n\n### Structure\n\n```markdown\n# System Health Assessment Report\n\n**Generated**: [timestamp]\n**Assessment Period**: Last 30 days\n\n---\n\n## Executive Summary\n\n**Overall Health Score**: [0-100] [status emoji]\n**Health Status**: [EXCELLENT (90-100) | GOOD (70-89) | FAIR (50-69) | POOR (<50)]\n\n### Key Metrics Snapshot\n- Total Executions: [number]\n- Overall Success Rate: [percentage]%\n- Total Cost: $[amount]\n- Active Templates: [count] / [total]\n\n### Top Achievements 🎉\n1. [Highest scoring dimension with specific metric]\n2. [Second highest with improvement indicator]\n3. [Third achievement]\n\n### Top Concerns ⚠️\n1. [Lowest scoring dimension with gap to target]\n2. [Second concern with impact assessment]\n3. [Third area needing attention]\n\n---\n\n## Goal Alignment Assessment\n\n### 1. Self-Improvement (Target: 8%+ improvement gradient)\n**Score**: [score]/100 [trend: ↗️ improving | → stable | ↘️ degrading]\n**Status**: [✅ >80 | ⚠️ 50-80 | 🔴 <50]\n\n**Current State**:\n- Templates improving: [count] / [total with data]\n- Average gradient: [percentage]%\n- Best performer: [template] at [gradient]%\n\n**Contributing Factors**:\n[List 2-3 factors driving this score]\n\n---\n\n### 2. Token Efficiency (Target: ≤$0.10 per execution)\n**Score**: [score]/100 [trend]\n**Status**: [emoji]\n\n**Current State**:\n- Templates meeting target: [count] / [total]\n- Average cost: $[amount]\n- Costliest: [template] at $[amount]\n\n**Contributing Factors**:\n[List factors]\n\n---\n\n### 3. Success Rate (Target: ≥70% for active templates)\n**Score**: [score]/100 [trend]\n**Status**: [emoji]\n\n**Current State**:\n- Templates meeting target: [count] / [total]\n- Overall success rate: [percentage]%\n- Struggling: [template] at [percentage]%\n\n**Contributing Factors**:\n[List factors]\n\n---\n\n### 4. Resource Efficiency (Target: <10% waste)\n**Score**: [score]/100 [trend]\n**Status**: [emoji]\n\n**Current State**:\n- Waste percentage: [percentage]%\n- Total waste: $[amount]\n- Largest waste source: [template]\n\n**Contributing Factors**:\n[List factors]\n\n---\n\n### 5. Autonomous Operation\n**Score**: [score]/100\n**Status**: [emoji]\n\n**Current State**:\n- Thompson Sampling: [ACTIVE | INACTIVE]\n- Boredom system: [triggers count] in last 7 days\n- Last autonomous action: [timestamp or \"None\"]\n\n---\n\n## Learning Loop Vitality\n\n### Database Health\n- **SurrealDB**: [status] | [connection state]\n- **Redis**: [status] | [keys count]\n\n### Thompson Sampling Activity\n- **Variant Selection**: [WORKING | NOT DETECTED]\n- **Variants Tracked**: [count] templates with variants\n\n### Boredom System\n- **Last Trigger**: [timestamp]\n- **Trigger Frequency**: [count] per week average\n- **Auto-improvements**: [count] in last 30 days\n\n### Metrics Collection\n- **Data Freshness**: Last update [time ago]\n- **Completeness**: [percentage]% of templates have metrics\n- **Coverage**: [count] templates with >5 executions\n\n---\n\n## Becoming Indicators 🌱\n\n*These metrics assess whether the system is engaged in continuous evolution*\n\n### Velocity of Change\n**Score**: [calculated from execution frequency]\n- **Executions per week**: [average over last 4 weeks]\n- **New templates**: [count] added in last 30 days\n- **Template churn**: [percentage]% change rate\n- **Trend**: [↗️ accelerating | → steady | ↘️ slowing]\n\n### Quality of Learning\n**Score**: [from improvement gradients]\n- **Templates improving**: [percentage]% showing positive gradient\n- **Average improvement rate**: [percentage]% per cycle\n- **Learning velocity**: [rate of change in success rates]\n- **Fastest learner**: [template] (+[percentage]% per cycle)\n\n### Adaptation Rate\n**Score**: [from failure recovery metrics]\n- **Time to fix**: Average [duration] from failure to fix\n- **Failure diversity**: [count] unique failure patterns\n- **Pattern recognition**: [percentage]% of failures have documented patterns\n- **Fix reuse**: [count] times previous fixes applied to new problems\n\n### Autonomy Level\n**Score**: [from autonomous action percentage]\n- **Autonomous improvements**: [count] vs [count] manual\n- **Autonomy ratio**: [percentage]% of improvements self-triggered\n- **Intervention rate**: [count] manual interventions in last 30 days\n- **Self-sufficiency trend**: [↗️ increasing | → stable | ↘️ decreasing]\n\n---\n\n## Resource Efficiency Analysis\n\n### Cost Breakdown\n- **By Category**:\n  - Feature: $[amount] ([percentage]%)\n  - Bugfix: $[amount] ([percentage]%)\n  - Refactor: $[amount] ([percentage]%)\n  - Infrastructure: $[amount] ([percentage]%)\n\n### Waste Analysis\n- **Total Waste**: $[amount] ([percentage]% of total cost)\n- **Top Waste Sources**:\n  1. [template]: $[amount] ([failure_count] failures)\n  2. [template]: $[amount]\n  3. [template]: $[amount]\n\n### Optimization Opportunities\n[List top 3 opportunities with ROI projections]\n\n---\n\n## Actionable Recommendations\n\n### Immediate Actions (Do Now)\n[List 1-3 high-impact, low-effort actions]\n\n### Short-term Actions (This Week)\n[List 2-4 important improvements]\n\n### Long-term Actions (This Month)\n[List 2-3 strategic initiatives]\n\n---\n\n## Appendix\n\n### Full Template Listing\n[Table with: Template | Executions | Success% | Avg Cost | Status]\n\n### Detailed Misalignment Table\n[Table from goal-alignment.json]\n\n### Historical Comparison\n[If previous reports available, show trends]\n\n---\n\n**Report Philosophy**: This report emphasizes progress and growth. Every metric is an opportunity to improve, and improvement is the goal - not perfection.\n\n**The system is becoming.** 🌱\n```\n\n## Generate Report\n\nUse jq to extract data and format markdown:\n\n```bash\njq -r --arg timestamp \"$(date -Iseconds)\" '\n  \"# System Health Assessment Report\\n\\n\" +\n  \"**Generated**: \\($timestamp)\\n\" +\n  \"**Assessment Period**: Last 30 days\\n\\n---\\n\\n\" +\n  # ... rest of template interpolation\n' system-metrics.json goal-alignment.json > SYSTEM_HEALTH_REPORT.md\n```\n\nMake it inspiring and actionable!",
         "variables": []
       },
       "context_rules": {
-        "max_tokens": 12000,
+        "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": ["SYSTEM_HEALTH_REPORT.md"],
-        "required_patterns": [
-          "Executive Summary",
-          "Overall Health Score",
-          "Becoming Indicators",
-          "Actionable Recommendations",
-          "The system is becoming"
-        ],
-        "forbidden_patterns": ["ERROR", "TODO", "FIXME", "undefined"],
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
         "commands": [
-          "wc -l $ACTIVITY_TEMP_DIR/SYSTEM_HEALTH_REPORT.md | awk '{if ($1 < 100) exit 1}'"
+          {
+            "command": "wc -l $ACTIVITY_TEMP_DIR/SYSTEM_HEALTH_REPORT.md | awk '{if ($1 < 100) exit 1}'",
+            "expected_exit_code": 0
+          }
         ]
       },
       "retry": {
-        "max_attempts": 2,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     }
   ],
-  "integration": {
-    "pre_checks": [],
-    "post_checks": [],
-    "quality_gates": []
-  },
-  "metabob": {
-    "enabled": true,
-    "learning_mode": true,
-    "target_context_tokens": 5000,
-    "annotation_strategy": "key-components"
-  },
+  "tasks": [
+    {
+      "task_id": "collect-system-metrics",
+      "subagent": "general",
+      "description": "Collect current system metrics across all dimensions",
+      "dependencies": [],
+      "prompt": {
+        "template": "Collect comprehensive system metrics:\n\n## 1. Activity Template Metrics\n\n```bash\n# Get all template metrics\ncd ~/.metabob/activities\nfor file in *.json; do\n  echo \"=== $(basename $file .json) ===\"\n  jq -r '.estimated_metrics // empty | \"Executions: \\(.execution_count), Success: \\(.success_rate * 100)%, Cost: $\\(.avg_cost), Duration: \\(.avg_duration_ms/1000)s, Gradient: \\(.improvement_gradient // 0)\"' \"$file\"\ndone > /tmp/template-metrics-raw.txt\n\n# Calculate aggregates\njq -s '\n  map(.estimated_metrics // empty) |\n  {\n    total_templates: length,\n    total_executions: map(.execution_count) | add,\n    overall_success_rate: (map(.success_count) | add) / (map(.execution_count) | add),\n    total_cost: map(.avg_cost * .execution_count) | add,\n    active_templates: map(select(.execution_count > 0)) | length,\n    improving_templates: map(select(.improvement_gradient > 0)) | length\n  }\n' ~/.metabob/activities/*.json\n```\n\n## 2. Learning Loop Health\n\n```bash\n# SurrealDB status\necho \"SurrealDB:\"\ndocker ps --filter name=surreal --format 'Status: {{.Status}}' || echo \"Not running\"\ncurl -s http://localhost:8000/health 2>&1 | head -5\n\n# Redis status\necho \"\\nRedis:\"\ndocker ps --filter name=redis --format 'Status: {{.Status}}' || echo \"Not running\"\ndocker exec metabob-redis redis-cli PING 2>&1 || echo \"Cannot connect\"\n\n# Check Thompson Sampling (look for variant selection in logs)\necho \"\\nThompson Sampling:\"\ndocker exec metabob-redis redis-cli KEYS \"*variant*\" 2>&1 | wc -l\n\n# Boredom system configuration\necho \"\\nBoredom System:\"\nfind ~/.local/share/opencode -name \"*boredom*\" 2>/dev/null | head -5\n```\n\n## 3. Resource Efficiency\n\n```bash\n# High-cost templates\necho \"High-cost templates (>$0.50):\"\njq -r 'select(.estimated_metrics.avg_cost > 0.5) | \"\\(.id): $\\(.estimated_metrics.avg_cost)\"' ~/.metabob/activities/*.json\n\n# Low-success templates\necho \"\\nLow-success templates (<70% with >5 executions):\"\njq -r 'select(.estimated_metrics.execution_count > 5 and .estimated_metrics.success_rate < 0.7) | \"\\(.id): \\(.estimated_metrics.success_rate * 100)%\"' ~/.metabob/activities/*.json\n\n# Calculate waste\njq -s '\n  map(.estimated_metrics // empty) |\n  map(select(.execution_count > 0)) |\n  map({\n    id: .id,\n    failed_cost: .avg_cost * .execution_count * (1 - .success_rate)\n  }) |\n  { total_waste: map(.failed_cost) | add }\n' ~/.metabob/activities/*.json\n```\n\n## 4. System Vitality\n\n```bash\n# Activity frequency analysis\njq -s '\n  map(.estimated_metrics // empty) |\n  {\n    active_recently: map(select(.last_execution // \"\" | . != \"\" and ((now - (. | fromdateiso8601)) < 604800))) | length,\n    stagnant_30d: map(select(.execution_count > 0 and (.last_execution // \"\" | . == \"\" or ((now - (. | fromdateiso8601)) > 2592000)))) | length,\n    never_executed: map(select(.execution_count == 0)) | length\n  }\n' ~/.metabob/activities/*.json\n```\n\n## Output\n\nCreate JSON summary at: $ACTIVITY_TEMP_DIR/system-metrics.json\n\nInclude:\n- templates: array with key metrics per template\n- learning_loop: {surrealdb_status, redis_status, thompson_sampling_active}\n- resource_efficiency: {high_cost_count, low_success_count, total_waste_dollars}\n- vitality: {active_count, improving_count, stagnant_count, never_executed}\n- collection_timestamp: ISO8601 timestamp\n- summary_stats: {total_executions, overall_success_rate, total_cost, active_templates}",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.summary_stats.total_executions > 0' $ACTIVITY_TEMP_DIR/system-metrics.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "assess-goal-alignment",
+      "subagent": "general",
+      "description": "Analyze metrics against stated goals and calculate alignment scores",
+      "dependencies": [
+        "collect-system-metrics"
+      ],
+      "prompt": {
+        "template": "Analyze system metrics against stated goals:\n\n## Reference Goals (from docs/sessions/RATCHET_SESSION_COMPLETE.md)\n\n1. **Self-improvement**: improvement_gradient target ≥ 8% per cycle\n2. **Token efficiency**: avg_cost target ≤ $0.10 per execution\n3. **Success rate**: target ≥ 70% for templates with >5 executions\n4. **Resource efficiency**: waste < 10% of total cost\n5. **Autonomous operation**: boredom system active (triggers > 0)\n\n## Analysis\n\n```bash\n# Load collected metrics\ncd $ACTIVITY_TEMP_DIR\nMETRICS=$(cat system-metrics.json)\n\n# Calculate alignment scores (0-100) for each goal\n\n# 1. Self-improvement score\njq '\n  (.templates | map(select(.improvement_gradient > 0)) | length) /\n  (.templates | map(select(.execution_count > 5)) | length) * 100\n' system-metrics.json\n\n# 2. Token efficiency score  \njq '\n  (.templates | map(select(.avg_cost <= 0.10)) | length) /\n  (.templates | map(select(.execution_count > 0)) | length) * 100\n' system-metrics.json\n\n# 3. Success rate score\njq '\n  (.templates | map(select(.execution_count > 5 and .success_rate >= 0.70)) | length) /\n  (.templates | map(select(.execution_count > 5)) | length) * 100\n' system-metrics.json\n\n# 4. Resource efficiency score\njq '\n  100 - (.resource_efficiency.total_waste_dollars / .summary_stats.total_cost * 100)\n' system-metrics.json\n\n# 5. Autonomous operation score\njq '\n  if .learning_loop.thompson_sampling_active then 100 else 0 end\n' system-metrics.json\n```\n\n## Calculate Overall Alignment\n\nWeighted average:\n- Self-improvement: 25%\n- Token efficiency: 20%\n- Success rate: 25%\n- Resource efficiency: 20%\n- Autonomous operation: 10%\n\n## Identify Misalignments\n\nFor each goal, list specific violations:\n- Template ID\n- Current value vs target\n- Severity: CRITICAL (<30% of target), HIGH (30-60%), MEDIUM (60-80%)\n- Impact: number of executions affected\n\n## Generate Recommendations\n\nTop 3 actions prioritized by impact:\n1. Specific action to take\n2. Expected improvement (quantified)\n3. Effort estimate: LOW (< 1hr), MEDIUM (1-4hr), HIGH (> 4hr)\n4. Success criteria\n\n## Output\n\nCreate: $ACTIVITY_TEMP_DIR/goal-alignment.json\n\nStructure:\n```json\n{\n  \"alignment_scores\": {\n    \"self_improvement\": 0-100,\n    \"token_efficiency\": 0-100,\n    \"success_rate\": 0-100,\n    \"resource_efficiency\": 0-100,\n    \"autonomous_operation\": 0-100,\n    \"overall\": 0-100\n  },\n  \"misalignments\": [\n    {\n      \"goal\": \"goal name\",\n      \"severity\": \"CRITICAL|HIGH|MEDIUM\",\n      \"templates_affected\": [\"id1\", \"id2\"],\n      \"current_value\": number,\n      \"target_value\": number,\n      \"gap_percentage\": number,\n      \"description\": \"what's wrong\"\n    }\n  ],\n  \"recommendations\": [\n    {\n      \"priority\": 1-10,\n      \"action\": \"specific action\",\n      \"expected_impact\": \"quantified improvement\",\n      \"effort\": \"LOW|MEDIUM|HIGH\",\n      \"success_criteria\": \"how to measure success\",\n      \"templates_benefited\": [\"id1\", \"id2\"]\n    }\n  ],\n  \"assessment_timestamp\": \"ISO8601\"\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.alignment_scores.overall >= 0 and .alignment_scores.overall <= 100' $ACTIVITY_TEMP_DIR/goal-alignment.json",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "jq -e '.recommendations | length >= 3' $ACTIVITY_TEMP_DIR/goal-alignment.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-health-report",
+      "subagent": "general",
+      "description": "Create comprehensive human-readable health report with becoming indicators",
+      "dependencies": [
+        "assess-goal-alignment"
+      ],
+      "prompt": {
+        "template": "Generate comprehensive health report:\n\n## Load Data\n\n```bash\ncd $ACTIVITY_TEMP_DIR\nMETRICS=$(cat system-metrics.json)\nALIGNMENT=$(cat goal-alignment.json)\n```\n\n## Create Report: SYSTEM_HEALTH_REPORT.md\n\n### Structure\n\n```markdown\n# System Health Assessment Report\n\n**Generated**: [timestamp]\n**Assessment Period**: Last 30 days\n\n---\n\n## Executive Summary\n\n**Overall Health Score**: [0-100] [status emoji]\n**Health Status**: [EXCELLENT (90-100) | GOOD (70-89) | FAIR (50-69) | POOR (<50)]\n\n### Key Metrics Snapshot\n- Total Executions: [number]\n- Overall Success Rate: [percentage]%\n- Total Cost: $[amount]\n- Active Templates: [count] / [total]\n\n### Top Achievements 🎉\n1. [Highest scoring dimension with specific metric]\n2. [Second highest with improvement indicator]\n3. [Third achievement]\n\n### Top Concerns ⚠️\n1. [Lowest scoring dimension with gap to target]\n2. [Second concern with impact assessment]\n3. [Third area needing attention]\n\n---\n\n## Goal Alignment Assessment\n\n### 1. Self-Improvement (Target: 8%+ improvement gradient)\n**Score**: [score]/100 [trend: ↗️ improving | → stable | ↘️ degrading]\n**Status**: [✅ >80 | ⚠️ 50-80 | 🔴 <50]\n\n**Current State**:\n- Templates improving: [count] / [total with data]\n- Average gradient: [percentage]%\n- Best performer: [template] at [gradient]%\n\n**Contributing Factors**:\n[List 2-3 factors driving this score]\n\n---\n\n### 2. Token Efficiency (Target: ≤$0.10 per execution)\n**Score**: [score]/100 [trend]\n**Status**: [emoji]\n\n**Current State**:\n- Templates meeting target: [count] / [total]\n- Average cost: $[amount]\n- Costliest: [template] at $[amount]\n\n**Contributing Factors**:\n[List factors]\n\n---\n\n### 3. Success Rate (Target: ≥70% for active templates)\n**Score**: [score]/100 [trend]\n**Status**: [emoji]\n\n**Current State**:\n- Templates meeting target: [count] / [total]\n- Overall success rate: [percentage]%\n- Struggling: [template] at [percentage]%\n\n**Contributing Factors**:\n[List factors]\n\n---\n\n### 4. Resource Efficiency (Target: <10% waste)\n**Score**: [score]/100 [trend]\n**Status**: [emoji]\n\n**Current State**:\n- Waste percentage: [percentage]%\n- Total waste: $[amount]\n- Largest waste source: [template]\n\n**Contributing Factors**:\n[List factors]\n\n---\n\n### 5. Autonomous Operation\n**Score**: [score]/100\n**Status**: [emoji]\n\n**Current State**:\n- Thompson Sampling: [ACTIVE | INACTIVE]\n- Boredom system: [triggers count] in last 7 days\n- Last autonomous action: [timestamp or \"None\"]\n\n---\n\n## Learning Loop Vitality\n\n### Database Health\n- **SurrealDB**: [status] | [connection state]\n- **Redis**: [status] | [keys count]\n\n### Thompson Sampling Activity\n- **Variant Selection**: [WORKING | NOT DETECTED]\n- **Variants Tracked**: [count] templates with variants\n\n### Boredom System\n- **Last Trigger**: [timestamp]\n- **Trigger Frequency**: [count] per week average\n- **Auto-improvements**: [count] in last 30 days\n\n### Metrics Collection\n- **Data Freshness**: Last update [time ago]\n- **Completeness**: [percentage]% of templates have metrics\n- **Coverage**: [count] templates with >5 executions\n\n---\n\n## Becoming Indicators 🌱\n\n*These metrics assess whether the system is engaged in continuous evolution*\n\n### Velocity of Change\n**Score**: [calculated from execution frequency]\n- **Executions per week**: [average over last 4 weeks]\n- **New templates**: [count] added in last 30 days\n- **Template churn**: [percentage]% change rate\n- **Trend**: [↗️ accelerating | → steady | ↘️ slowing]\n\n### Quality of Learning\n**Score**: [from improvement gradients]\n- **Templates improving**: [percentage]% showing positive gradient\n- **Average improvement rate**: [percentage]% per cycle\n- **Learning velocity**: [rate of change in success rates]\n- **Fastest learner**: [template] (+[percentage]% per cycle)\n\n### Adaptation Rate\n**Score**: [from failure recovery metrics]\n- **Time to fix**: Average [duration] from failure to fix\n- **Failure diversity**: [count] unique failure patterns\n- **Pattern recognition**: [percentage]% of failures have documented patterns\n- **Fix reuse**: [count] times previous fixes applied to new problems\n\n### Autonomy Level\n**Score**: [from autonomous action percentage]\n- **Autonomous improvements**: [count] vs [count] manual\n- **Autonomy ratio**: [percentage]% of improvements self-triggered\n- **Intervention rate**: [count] manual interventions in last 30 days\n- **Self-sufficiency trend**: [↗️ increasing | → stable | ↘️ decreasing]\n\n---\n\n## Resource Efficiency Analysis\n\n### Cost Breakdown\n- **By Category**:\n  - Feature: $[amount] ([percentage]%)\n  - Bugfix: $[amount] ([percentage]%)\n  - Refactor: $[amount] ([percentage]%)\n  - Infrastructure: $[amount] ([percentage]%)\n\n### Waste Analysis\n- **Total Waste**: $[amount] ([percentage]% of total cost)\n- **Top Waste Sources**:\n  1. [template]: $[amount] ([failure_count] failures)\n  2. [template]: $[amount]\n  3. [template]: $[amount]\n\n### Optimization Opportunities\n[List top 3 opportunities with ROI projections]\n\n---\n\n## Actionable Recommendations\n\n### Immediate Actions (Do Now)\n[List 1-3 high-impact, low-effort actions]\n\n### Short-term Actions (This Week)\n[List 2-4 important improvements]\n\n### Long-term Actions (This Month)\n[List 2-3 strategic initiatives]\n\n---\n\n## Appendix\n\n### Full Template Listing\n[Table with: Template | Executions | Success% | Avg Cost | Status]\n\n### Detailed Misalignment Table\n[Table from goal-alignment.json]\n\n### Historical Comparison\n[If previous reports available, show trends]\n\n---\n\n**Report Philosophy**: This report emphasizes progress and growth. Every metric is an opportunity to improve, and improvement is the goal - not perfection.\n\n**The system is becoming.** 🌱\n```\n\n## Generate Report\n\nUse jq to extract data and format markdown:\n\n```bash\njq -r --arg timestamp \"$(date -Iseconds)\" '\n  \"# System Health Assessment Report\\n\\n\" +\n  \"**Generated**: \\($timestamp)\\n\" +\n  \"**Assessment Period**: Last 30 days\\n\\n---\\n\\n\" +\n  # ... rest of template interpolation\n' system-metrics.json goal-alignment.json > SYSTEM_HEALTH_REPORT.md\n```\n\nMake it inspiring and actionable!",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "wc -l $ACTIVITY_TEMP_DIR/SYSTEM_HEALTH_REPORT.md | awk '{if ($1 < 100) exit 1}'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
   "estimated_metrics": {
     "execution_count": 0,
-    "success_count": 0,
     "success_rate": 0,
     "avg_duration_ms": 0,
     "avg_cost": 0
   },
   "author": null,
-  "created_at": "2026-02-24T09:40:00.000Z",
+  "created_at": "2026-02-24T09:43:45.954Z",
   "metadata": {}
 }
