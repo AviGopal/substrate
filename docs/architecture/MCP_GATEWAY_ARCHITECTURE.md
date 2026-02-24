@@ -1,5 +1,7 @@
 # MCP Gateway Architecture - Violations Analysis
 
+**Ontological Note:** This document describes how the OpenCode vessel interfaces with backend services through MCP protocol boundaries. The vessel adapts to available resources while maintaining architectural principles. See [ONTOLOGY_OF_BECOMING.md](./ONTOLOGY_OF_BECOMING.md).
+
 ## The MCP Gateway Pattern
 
 ### What It Is

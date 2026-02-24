@@ -13,6 +13,16 @@
 
 ---
 
+## Ontological Context
+
+Impulses enable data flow within the **process-of-becoming** as it manifests through vessels (like OpenCode). They represent the continuous transformation through three states:
+
+- **Vessel (Instructional)** → **Becoming (Transient)** → **Instance (Functional)**
+
+See [ONTOLOGY_OF_BECOMING.md](./ONTOLOGY_OF_BECOMING.md) for the foundational three-state model.
+
+---
+
 ## 1. The Pointer Model
 
 ### 1.1 Core Concept
@@ -96,6 +106,20 @@ export const Pointer = z.discriminatedUnion("type", [
 ```
 
 **Design Principle**: Each pointer type represents a **resolution strategy**, not a content format.
+
+---
+
+### 1.3 Impulses and the Three-State Ontology
+
+Impulses enable the **process-of-becoming** by connecting the three states:
+
+- **Vessel → Becoming**: Activity templates define which impulses to gather (instructional state)
+- **Becoming**: Impulses are resolved lazily as tasks execute (transient transformation)
+- **Instance → Vessel**: Task outcomes become new impulses for subsequent executions (learning loop)
+
+The pointer model is essential because the **becoming is continuous** - we don't cache static state, we execute fresh resolution to reflect the living, changing codebase. Each execution is a new manifestation of the becoming.
+
+**Key Principle**: Impulses are not data transfer objects - they are **resolution instructions** that ensure each instance draws from the current state of the world.
 
 ---
 

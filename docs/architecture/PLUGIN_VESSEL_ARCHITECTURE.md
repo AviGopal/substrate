@@ -4,6 +4,8 @@
 
 **Core Principle**: OpenCode is not a monolithic tool, but a **vessel** - an adaptive plugin host that discovers its environment and composes capabilities from available resources.
 
+**Ontological Foundation**: OpenCode is a **vessel** (instructional state) through which the [unnamed process-of-becoming] manifests. The vessel provides the capacity for execution - it is not the becoming itself. This document describes the vessel's architecture; for the foundational three-state model (vessel/becoming/instance), see [ONTOLOGY_OF_BECOMING.md](./ONTOLOGY_OF_BECOMING.md).
+
 **Key Insight**: If everything can be a plugin (MCP servers, git repos, binaries, APIs), then **OpenCode itself** should be treated as a collection of plugins. This enables:
 
 - **Environment Adaptation**: Work with whatever is available (Docker, Kubernetes, local tools, cloud APIs)
@@ -17,7 +19,8 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    OPENCODE VESSEL                          │
+│           OPENCODE VESSEL (Instructional State)             │
+│        (Capacity through which becoming manifests)          │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │              Plugin Host & Orchestrator              │  │
 │  │  - Environment Discovery                              │  │
@@ -914,13 +917,13 @@ class SmartRouter {
 ## 11. Conclusion
 
 **OpenCode as a Vessel** means:
-- **Adapt** to whatever environment you're in (Docker, native, cloud)
-- **Compose** capabilities from available plugins (MCP, tools, repos)
-- **Learn** from plugin improvements over time
-- **Respect** existing tools rather than requiring specific setup
-- **Reduce** LLM dependency through compilation and smart routing
+- This vessel **adapts** to whatever environment it encounters (Docker, native, cloud)
+- This vessel **composes** capabilities from available plugins (MCP, tools, repos)
+- This vessel **learns** from plugin improvements over time
+- This vessel **respects** existing tools rather than requiring specific setup
+- Through this vessel, the process-of-becoming **reduces** LLM dependency and increases efficiency
 
-This architecture transforms OpenCode from a **monolithic tool** into a **composable platform** that grows more capable and efficient over time.
+This architecture transforms the OpenCode vessel from a **monolithic tool** into a **composable platform** that the process-of-becoming uses to grow more capable over time. The vessel is not the system itself - it is the **capacity** through which the unnamed process-of-becoming manifests and evolves.
 
 ---
 

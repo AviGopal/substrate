@@ -4,6 +4,8 @@
 **Status:** ✅ Architectural Foundation  
 **Principle:** **Always use activities. Develop ourselves safely in isolated containers.**
 
+**Ontological Note:** OpenCode is a vessel through which the process-of-becoming manifests. Safe self-development means the vessel can evolve without disrupting the continuous becoming. See [ONTOLOGY_OF_BECOMING.md](./ONTOLOGY_OF_BECOMING.md).
+
 ---
 
 ## Core Problem: Self-Development Safety
