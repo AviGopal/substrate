@@ -1,0 +1,547 @@
+{
+  "activity_id": "implement-vessel-update-manager",
+  "name": "Implement Vessel Update Manager",
+  "description": "Implement VesselUpdateManager in metabob-opencode that enables containers to self-update their OpenCode and metabob-cli binaries. Includes version tracking, download, verification, installation with rollback, and comprehensive testing. Aligns with docs/DEVBOB_VESSEL_ARCHITECTURE.md Phase 1.",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "scaffold-core-module",
+      "subagent": "general",
+      "description": "Create VesselUpdateManager core module with interfaces, types, and error handling infrastructure. Read architecture document, create packages/opencode/src/vessel/update.ts with namespace, define VesselVersion/UpdateResult/UpdateOptions interfaces, implement getCurrentVersions() for reading .vessel-versions.json, add error types and validation schemas.",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are implementing the VesselUpdateManager core module for the vessel self-management architecture.\n\n## Context\n\nRead the architecture document at `docs/DEVBOB_VESSEL_ARCHITECTURE.md` (lines 186-251) to understand the vessel self-update mechanism design.\n\n## Your Task\n\n Create the core module at `{{target_file}}` with the following components:\n\n1. **Namespace**: Export `VesselUpdateManager` namespace\n2. **Interfaces**:\n   - `VesselVersion`: { name: string, version: string, checksum: string, downloadUrl: string }\n   - `UpdateResult`: { success: boolean, vessel: string, oldVersion: string, newVersion: string, error?: UpdateError }\n   - `UpdateOptions`: { force?: boolean, skipBackup?: boolean, retryCount?: number }\n   - `VersionTracking`: { current: Record<string, VesselVersion>, history: VesselUpdateRecord[] }\n   - `VesselUpdateRecord`: { vessel: string, version: string, timestamp: string, source: string, reason: string }\n3. **Error Types**:\n   - `UpdateError`: { code: string, message: string, vessel: string, version: string, context: Record<string, unknown>, timestamp: string, recoverable: boolean }\n   - Export error codes as constants (e.g., `CHECKSUM_FAILED`, `DOWNLOAD_FAILED`, etc.)\n4. **Core Function**: `getCurrentVersions(filePath?: string): Promise<VersionTracking>`\n   - Reads from `{{version_file_path}}` (default)\n   - Returns current vessel versions and history\n   - Handles missing file gracefully (return empty structure)\n   - Uses async file operations (node:fs/promises)\n\n## Implementation Requirements\n\n- Use TypeScript strict mode\n- Import from node:fs/promises, node:path, node:crypto\n- Add comprehensive JSDoc comments\n- Use existing OpenCode logger (import from appropriate location)\n- No console.log, use logger instead\n- No hardcoded paths, use config or parameters\n- All file operations must be async\n- Proper error handling with try/catch\n\n## Validation\n\nYour implementation will be validated for:\n- File exists at {{target_file}}\n- Contains: `export namespace VesselUpdateManager`\n- Contains all required interfaces\n- Contains error types and codes\n- TypeScript compiles without errors\n\n## Output\n\nCreate a well-structured TypeScript module (~200 lines) that serves as the foundation for the VesselUpdateManager implementation.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path where update.ts should be created (e.g., packages/opencode/src/vessel/update.ts)"
+          },
+          {
+            "name": "version_file_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to version tracking file",
+            "default": "/workspace/.vessel-versions.json"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-github-api-integration",
+      "subagent": "general",
+      "description": "Implement GitHub release checking and download functionality. Add checkUpdates() to query GitHub API for latest releases, parse release metadata (version, URLs, checksums), implement downloadVessel() to fetch binaries with retry logic, verify SHA256 checksums, handle rate limits and network errors. Create unit tests with mocked GitHub API.",
+      "dependencies": [
+        "scaffold-core-module"
+      ],
+      "prompt": {
+        "template": "You are implementing GitHub API integration for the VesselUpdateManager.\n\n## Your Task\n\nAdd the following functions to `{{target_file}}`:\n\n### 1. checkUpdates()\n\n```typescript\nexport async function checkUpdates(options?: { org?: string, repo?: string }): Promise<VesselVersion[]>\n```\n\n- Query GitHub API: `https://api.github.com/repos/{{github_org}}/{{github_repo}}/releases/latest`\n- Parse response to extract:\n  - Version (from tag_name)\n  - Download URLs (from assets)\n  - Checksums (from release body or checksum file)\n- Handle rate limiting (403 with X-RateLimit headers)\n  - Return graceful error with reset time\n- Handle network errors with exponential backoff\n  - 3 attempts: 2s → 4s → 8s delays\n- Return array of VesselVersion objects\n\n### 2. downloadVessel()\n\n```typescript\nexport async function downloadVessel(vessel: string, version: string, downloadUrl: string, expectedChecksum: string): Promise<string>\n```\n\n- Download binary to `/tmp/{vessel}-{version}.new`\n- Use streams for memory efficiency\n- Verify SHA256 checksum matches `expectedChecksum`\n- On checksum failure:\n  - Delete downloaded file\n  - Retry download once (may be corrupted transfer)\n  - If still fails, throw UpdateError with code `CHECKSUM_FAILED`\n- Return path to downloaded file\n- Implement retry logic with exponential backoff for network errors\n\n### 3. Unit Tests\n\nCreate `packages/opencode/src/vessel/update.test.ts` with:\n\n- Mock GitHub API responses using jest/vitest mocks\n- Test checkUpdates() with:\n  - Successful response\n  - Rate limit error (403)\n  - Network error\n  - Invalid JSON response\n- Test downloadVessel() with:\n  - Successful download with correct checksum\n  - Checksum mismatch\n  - Network failure during download\n  - Retry logic\n- Use {{test_with_mock}} to ensure deterministic tests (no real network calls)\n- Aim for ≥90% code coverage\n\n## Implementation Requirements\n\n- Use node:https or node:fetch for HTTP requests\n- Use node:crypto for SHA256 checksum calculation\n- Use node:fs/promises for file operations (streams)\n- Proper error handling with UpdateError\n- Log all operations with appropriate log levels (INFO, WARN, ERROR)\n- No console.log\n- All file operations async\n\n## Validation\n\nYour implementation will be validated for:\n- Functions exist: checkUpdates(), downloadVessel()\n- SHA256 checksum verification implemented\n- Exponential backoff for retries\n- Unit tests created and passing\n- Mocked GitHub API (no real network calls in tests)\n\n## Output\n\nAdd ~250 lines to update.ts and create update.test.ts with ~150 lines of comprehensive tests.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to update.ts file"
+          },
+          {
+            "name": "github_org",
+            "type": "string",
+            "required": false,
+            "description": "GitHub organization for releases",
+            "default": "metabob-com"
+          },
+          {
+            "name": "github_repo",
+            "type": "string",
+            "required": false,
+            "description": "GitHub repository for releases",
+            "default": "metabob-opencode"
+          },
+          {
+            "name": "test_with_mock",
+            "type": "boolean",
+            "required": false,
+            "description": "Use mock GitHub API in tests for determinism",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-installation-and-rollback",
+      "subagent": "general",
+      "description": "Implement atomic installation with rollback safety. Add updateVessel() orchestration method, implement binary backup to .prev location, add binary testing before swap, implement atomic rename for installation, add rollback() to restore from backup on failure, implement version tracking updates. Create unit tests for installation and rollback scenarios.",
+      "dependencies": [
+        "scaffold-core-module"
+      ],
+      "prompt": {
+        "template": "You are implementing atomic installation and rollback for the VesselUpdateManager.\n\n## Your Task\n\nAdd the following functions to `{{target_file}}`:\n\n### 1. updateVessel()\n\n```typescript\nexport async function updateVessel(vessel: string, version: string, newBinaryPath: string): Promise<UpdateResult>\n```\n\nOrchestration method that:\n1. Determines current binary path (e.g., `/usr/local/bin/opencode`)\n2. Backs up current binary to `{path}.prev`\n3. Tests new binary: execute `{newBinaryPath} --version` and verify exit code 0\n4. Atomic swap: `fs.rename(newBinaryPath, currentPath)` - this is atomic on same filesystem\n5. Updates version tracking via `updateVersionTracking()`\n6. On any failure, calls `rollback(vessel)` automatically\n7. Returns UpdateResult with success/failure details\n\nImplementation notes:\n- Use {{rollback_enabled}} to control automatic rollback\n- Log each step with INFO level\n- On error, log with ERROR level and include full context\n- Never leave system in partial state\n\n### 2. rollback()\n\n```typescript\nexport async function rollback(vessel: string): Promise<void>\n```\n\nRestores previous binary:\n1. Find backup path: `{currentPath}.prev`\n2. Verify backup exists\n3. Atomic restore: `fs.rename(backupPath, currentPath)`\n4. Update version tracking to reflect rollback\n5. On failure, throw critical error (manual intervention needed)\n\nImplementation notes:\n- This is last line of defense, must be extremely robust\n- Log extensively on failure\n- Include file states in error context\n\n### 3. updateVersionTracking()\n\n```typescript\nexport async function updateVersionTracking(vessel: string, version: string, source: string, reason: string): Promise<void>\n```\n\nUpdates `{{version_file_path}}`:\n1. Read existing VersionTracking (or create empty if missing)\n2. Move current version to history (if exists)\n3. Set new current version with metadata:\n   - vessel, version, timestamp (ISO 8601), source, reason\n4. Trim history to max {{max_history}} entries (oldest first)\n5. Write atomically (write to temp file, then rename)\n\n### 4. Unit Tests\n\nAdd to `packages/opencode/src/vessel/update.test.ts`:\n\n- Test updateVessel():\n  - Success: backup → test → swap → version update\n  - Failure on binary test → automatic rollback\n  - Failure on swap → automatic rollback\n- Test rollback():\n  - Successful restore from .prev\n  - Failure when .prev missing\n  - Failure during restore (simulate)\n- Test updateVersionTracking():\n  - Create new tracking file\n  - Update existing tracking\n  - History maintenance (trim to max)\n  - Atomic write operation\n\n- Mock file system operations for deterministic tests\n- Aim for ≥90% code coverage\n\n## Implementation Requirements\n\n- Use `fs.rename()` for atomic operations (same filesystem)\n- Use `child_process.execFile()` to test binary\n- All file operations async (node:fs/promises)\n- Proper error handling with try/catch and rollback\n- Log all operations with appropriate levels\n- No console.log\n- No sync file operations\n\n## Validation\n\nYour implementation will be validated for:\n- Functions exist: updateVessel(), rollback(), updateVersionTracking()\n- Backup before installation\n- Atomic rename operations\n- Binary testing before swap\n- Version tracking with history\n- Unit tests for success and failure scenarios\n\n## Output\n\nAdd ~300 lines to update.ts and ~200 lines to update.test.ts with comprehensive installation and rollback tests.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to update.ts file"
+          },
+          {
+            "name": "rollback_enabled",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable automatic rollback on failure",
+            "default": "true"
+          },
+          {
+            "name": "version_file_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to version tracking file",
+            "default": "/workspace/.vessel-versions.json"
+          },
+          {
+            "name": "max_history",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of versions to keep in history",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-integration-tests-and-docs",
+      "subagent": "test",
+      "description": "Create comprehensive integration tests and documentation. Implement end-to-end tests for full update flow (check → download → verify → install), test rollback scenarios (checksum failure, binary test failure), test version tracking across multiple updates, create integration test file with mocked GitHub API, add JSDoc comments to all public APIs, document error codes and troubleshooting, add usage examples.",
+      "dependencies": [
+        "implement-github-api-integration",
+        "implement-installation-and-rollback"
+      ],
+      "prompt": {
+        "template": "You are creating integration tests and documentation for the VesselUpdateManager.\n\n## Your Task\n\n### 1. Integration Tests\n\nCreate `packages/opencode/src/vessel/update.integration.test.ts` with end-to-end tests:\n\n**Test: Full Update Flow**\n- Mock GitHub API to return fake release data\n- Call checkUpdates() → downloadVessel() → updateVessel()\n- Verify:\n  - Binary downloaded to correct location\n  - Checksum verified\n  - Backup created at .prev location\n  - Binary tested before swap\n  - Atomic swap completed\n  - Version tracking updated with history\n- Use {{test_with_mock}} to ensure deterministic behavior\n\n**Test: Rollback on Checksum Failure**\n- Mock GitHub API\n- Mock downloadVessel() to return file with wrong checksum\n- Verify:\n  - Download fails with CHECKSUM_FAILED error\n  - No installation attempted\n  - System state unchanged\n\n**Test: Rollback on Binary Test Failure**\n- Mock GitHub API and download\n- Mock binary test (--version) to fail\n- Verify:\n  - updateVessel() detects test failure\n  - Automatic rollback() called (if {{rollback_enabled}})\n  - Previous binary restored\n  - Error logged with context\n\n**Test: Version Tracking Across Updates**\n- Perform multiple updates in sequence\n- Verify:\n  - Each update adds to history\n  - History trimmed to {{max_history}} entries\n  - Current version updated correctly\n  - Timestamps and metadata recorded\n\n**Test: Boredom Activity Integration (Dry Run)**\n- Simulate boredom manager calling updateVessel()\n- Verify:\n  - No user prompts required\n  - All errors return gracefully (no throws to caller)\n  - Logging sufficient for autonomous operation\n\n### 2. Documentation\n\n**Add JSDoc comments** to all public functions in `{{target_file}}`:\n- Summary of what function does\n- @param descriptions with types\n- @returns description\n- @throws list of error codes\n- @example usage examples\n\n**Document Error Codes** in module header comment:\n- List all error codes (CHECKSUM_FAILED, DOWNLOAD_FAILED, etc.)\n- Describe what each means\n- Suggest troubleshooting steps\n\n**Add Usage Examples** in module header comment:\n```typescript\n// Example: Check for updates\nconst updates = await VesselUpdateManager.checkUpdates();\n\n// Example: Update a vessel\nconst result = await VesselUpdateManager.updateVessel('opencode', '1.2.3', '/tmp/opencode-new');\n\n// Example: Manual rollback\nawait VesselUpdateManager.rollback('opencode');\n```\n\n## Implementation Requirements\n\n- Use testing framework consistent with rest of codebase (jest/vitest)\n- Mock all external dependencies (GitHub API, file system, child_process)\n- Tests must be deterministic (no real network calls, no real file operations)\n- Integration tests should run quickly (<5 seconds total)\n- JSDoc comments should be comprehensive and helpful\n\n## Validation\n\nYour implementation will be validated for:\n- File exists: update.integration.test.ts\n- All integration tests pass\n- Tests use mocked dependencies (no real network/filesystem)\n- JSDoc comments on all public functions\n- Error codes documented\n- Usage examples provided\n\n## Output\n\nCreate update.integration.test.ts (~250 lines) and enhance update.ts with comprehensive documentation.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to update.ts file"
+          },
+          {
+            "name": "test_with_mock",
+            "type": "boolean",
+            "required": false,
+            "description": "Use mock GitHub API in tests for determinism",
+            "default": "true"
+          },
+          {
+            "name": "rollback_enabled",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable automatic rollback on failure",
+            "default": "true"
+          },
+          {
+            "name": "max_history",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of versions to keep in history",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.integration.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "final-validation-and-quality",
+      "subagent": "test",
+      "description": "Run comprehensive validation checks to ensure all quality standards met. Execute full test suite (unit + integration), verify TypeScript compilation, run linter, check test coverage (≥90%), verify no forbidden patterns (TODO, console.log, hardcoded paths, sync operations), confirm all required files exist, validate error handling coverage, ensure all validation criteria from requirements are met.",
+      "dependencies": [
+        "create-integration-tests-and-docs"
+      ],
+      "prompt": {
+        "template": "You are performing final validation and quality checks for the VesselUpdateManager implementation.\n\n## Your Task\n\nRun comprehensive validation to ensure all quality standards are met.\n\n### 1. File Existence Checks\n\nVerify all required files exist:\n- `packages/opencode/src/vessel/update.ts`\n- `packages/opencode/src/vessel/update.test.ts`\n- `packages/opencode/src/vessel/update.integration.test.ts`\n\n### 2. Pattern Validation\n\n**Required patterns** (must be present in update.ts):\n- `export namespace VesselUpdateManager`\n- `interface VesselVersion`\n- `async function checkUpdates`\n- `async function downloadVessel`\n- `async function updateVessel`\n- `async function rollback`\n- `function getCurrentVersions`\n- `interface VersionTracking`\n\n**Forbidden patterns** (must NOT be present):\n- `TODO` - no unfinished work\n- `FIXME` - no known issues\n- `console.log` - use logger\n- `console.error` - use logger\n- `fs.readFileSync` - no sync operations\n- `fs.writeFileSync` - no sync operations\n- `fs.renameSync` - no sync operations\n- Hardcoded paths like `/usr/local/bin/opencode`\n\nUse grep/search to verify patterns. Report any violations.\n\n### 3. Command Validation\n\nRun all validation commands and verify they pass:\n\n```bash\n# TypeScript compilation\npnpm build\n\n# Unit tests\npnpm test packages/opencode/src/vessel/update.test.ts\n\n# Integration tests\npnpm test packages/opencode/src/vessel/update.integration.test.ts\n\n# Linter\npnpm lint packages/opencode/src/vessel/\n```\n\nIf any command fails, report the error details.\n\n### 4. Test Coverage Check\n\nVerify test coverage ≥90% for update.ts:\n- Run coverage tool: `pnpm test --coverage packages/opencode/src/vessel/update.test.ts`\n- Parse coverage output\n- Verify coverage ≥ 90%\n- Report coverage percentage\n\nIf coverage < 90%, identify uncovered code paths and suggest additional tests.\n\n### 5. Code Quality Checks\n\n**Error handling coverage**:\n- Verify all async functions have try/catch\n- Verify errors use UpdateError type\n- Verify rollback called on updateVessel() failures\n\n**Documentation coverage**:\n- Verify JSDoc on all public functions\n- Verify error codes documented\n- Verify usage examples provided\n\n**Best practices**:\n- All file operations are async\n- Atomic operations use fs.rename()\n- No unhandled promise rejections\n- No unjustified `any` types\n\n### 6. Integration Validation\n\n**Architecture alignment**:\n- Read `docs/DEVBOB_VESSEL_ARCHITECTURE.md` lines 186-251\n- Verify implementation matches design:\n  - Version tracking schema correct\n  - Atomic swap mechanism correct\n  - Rollback safety implemented\n  - Checksum verification present\n\n**Boredom integration readiness**:\n- No user prompts in code\n- All errors handled gracefully\n- Logging sufficient for autonomous operation\n\n## Output Format\n\nProvide a comprehensive validation report:\n\n```markdown\n# VesselUpdateManager Validation Report\n\n## File Checks\n- ✅ update.ts exists\n- ✅ update.test.ts exists\n- ✅ update.integration.test.ts exists\n\n## Pattern Validation\n- ✅ All required patterns found\n- ✅ No forbidden patterns detected\n\n## Command Validation\n- ✅ TypeScript compilation: PASSED\n- ✅ Unit tests: PASSED (X/X tests)\n- ✅ Integration tests: PASSED (X/X tests)\n- ✅ Linter: PASSED\n\n## Test Coverage\n- ✅ Coverage: XX% (≥90% required)\n\n## Code Quality\n- ✅ Error handling comprehensive\n- ✅ Documentation complete\n- ✅ Best practices followed\n\n## Integration\n- ✅ Architecture alignment verified\n- ✅ Boredom integration ready\n\n## Overall Result\n✅ ALL VALIDATION CHECKS PASSED\n\nThe VesselUpdateManager implementation meets all quality standards and is ready for use.\n```\n\nIf any check fails, report it clearly and suggest fixes.\n\n## Validation\n\nThis task succeeds only if ALL checks pass:\n- All files exist\n- All required patterns found\n- No forbidden patterns\n- All commands pass\n- Test coverage ≥90%\n- Code quality standards met\n- Architecture alignment verified",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm build",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.test.ts",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.integration.test.ts",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "pnpm lint packages/opencode/src/vessel/",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "scaffold-core-module",
+      "subagent": "general",
+      "description": "Create VesselUpdateManager core module with interfaces, types, and error handling infrastructure. Read architecture document, create packages/opencode/src/vessel/update.ts with namespace, define VesselVersion/UpdateResult/UpdateOptions interfaces, implement getCurrentVersions() for reading .vessel-versions.json, add error types and validation schemas.",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are implementing the VesselUpdateManager core module for the vessel self-management architecture.\n\n## Context\n\nRead the architecture document at `docs/DEVBOB_VESSEL_ARCHITECTURE.md` (lines 186-251) to understand the vessel self-update mechanism design.\n\n## Your Task\n\n Create the core module at `{{target_file}}` with the following components:\n\n1. **Namespace**: Export `VesselUpdateManager` namespace\n2. **Interfaces**:\n   - `VesselVersion`: { name: string, version: string, checksum: string, downloadUrl: string }\n   - `UpdateResult`: { success: boolean, vessel: string, oldVersion: string, newVersion: string, error?: UpdateError }\n   - `UpdateOptions`: { force?: boolean, skipBackup?: boolean, retryCount?: number }\n   - `VersionTracking`: { current: Record<string, VesselVersion>, history: VesselUpdateRecord[] }\n   - `VesselUpdateRecord`: { vessel: string, version: string, timestamp: string, source: string, reason: string }\n3. **Error Types**:\n   - `UpdateError`: { code: string, message: string, vessel: string, version: string, context: Record<string, unknown>, timestamp: string, recoverable: boolean }\n   - Export error codes as constants (e.g., `CHECKSUM_FAILED`, `DOWNLOAD_FAILED`, etc.)\n4. **Core Function**: `getCurrentVersions(filePath?: string): Promise<VersionTracking>`\n   - Reads from `{{version_file_path}}` (default)\n   - Returns current vessel versions and history\n   - Handles missing file gracefully (return empty structure)\n   - Uses async file operations (node:fs/promises)\n\n## Implementation Requirements\n\n- Use TypeScript strict mode\n- Import from node:fs/promises, node:path, node:crypto\n- Add comprehensive JSDoc comments\n- Use existing OpenCode logger (import from appropriate location)\n- No console.log, use logger instead\n- No hardcoded paths, use config or parameters\n- All file operations must be async\n- Proper error handling with try/catch\n\n## Validation\n\nYour implementation will be validated for:\n- File exists at {{target_file}}\n- Contains: `export namespace VesselUpdateManager`\n- Contains all required interfaces\n- Contains error types and codes\n- TypeScript compiles without errors\n\n## Output\n\nCreate a well-structured TypeScript module (~200 lines) that serves as the foundation for the VesselUpdateManager implementation.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path where update.ts should be created (e.g., packages/opencode/src/vessel/update.ts)"
+          },
+          {
+            "name": "version_file_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to version tracking file",
+            "default": "/workspace/.vessel-versions.json"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-github-api-integration",
+      "subagent": "general",
+      "description": "Implement GitHub release checking and download functionality. Add checkUpdates() to query GitHub API for latest releases, parse release metadata (version, URLs, checksums), implement downloadVessel() to fetch binaries with retry logic, verify SHA256 checksums, handle rate limits and network errors. Create unit tests with mocked GitHub API.",
+      "dependencies": [
+        "scaffold-core-module"
+      ],
+      "prompt": {
+        "template": "You are implementing GitHub API integration for the VesselUpdateManager.\n\n## Your Task\n\nAdd the following functions to `{{target_file}}`:\n\n### 1. checkUpdates()\n\n```typescript\nexport async function checkUpdates(options?: { org?: string, repo?: string }): Promise<VesselVersion[]>\n```\n\n- Query GitHub API: `https://api.github.com/repos/{{github_org}}/{{github_repo}}/releases/latest`\n- Parse response to extract:\n  - Version (from tag_name)\n  - Download URLs (from assets)\n  - Checksums (from release body or checksum file)\n- Handle rate limiting (403 with X-RateLimit headers)\n  - Return graceful error with reset time\n- Handle network errors with exponential backoff\n  - 3 attempts: 2s → 4s → 8s delays\n- Return array of VesselVersion objects\n\n### 2. downloadVessel()\n\n```typescript\nexport async function downloadVessel(vessel: string, version: string, downloadUrl: string, expectedChecksum: string): Promise<string>\n```\n\n- Download binary to `/tmp/{vessel}-{version}.new`\n- Use streams for memory efficiency\n- Verify SHA256 checksum matches `expectedChecksum`\n- On checksum failure:\n  - Delete downloaded file\n  - Retry download once (may be corrupted transfer)\n  - If still fails, throw UpdateError with code `CHECKSUM_FAILED`\n- Return path to downloaded file\n- Implement retry logic with exponential backoff for network errors\n\n### 3. Unit Tests\n\nCreate `packages/opencode/src/vessel/update.test.ts` with:\n\n- Mock GitHub API responses using jest/vitest mocks\n- Test checkUpdates() with:\n  - Successful response\n  - Rate limit error (403)\n  - Network error\n  - Invalid JSON response\n- Test downloadVessel() with:\n  - Successful download with correct checksum\n  - Checksum mismatch\n  - Network failure during download\n  - Retry logic\n- Use {{test_with_mock}} to ensure deterministic tests (no real network calls)\n- Aim for ≥90% code coverage\n\n## Implementation Requirements\n\n- Use node:https or node:fetch for HTTP requests\n- Use node:crypto for SHA256 checksum calculation\n- Use node:fs/promises for file operations (streams)\n- Proper error handling with UpdateError\n- Log all operations with appropriate log levels (INFO, WARN, ERROR)\n- No console.log\n- All file operations async\n\n## Validation\n\nYour implementation will be validated for:\n- Functions exist: checkUpdates(), downloadVessel()\n- SHA256 checksum verification implemented\n- Exponential backoff for retries\n- Unit tests created and passing\n- Mocked GitHub API (no real network calls in tests)\n\n## Output\n\nAdd ~250 lines to update.ts and create update.test.ts with ~150 lines of comprehensive tests.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to update.ts file"
+          },
+          {
+            "name": "github_org",
+            "type": "string",
+            "required": false,
+            "description": "GitHub organization for releases",
+            "default": "metabob-com"
+          },
+          {
+            "name": "github_repo",
+            "type": "string",
+            "required": false,
+            "description": "GitHub repository for releases",
+            "default": "metabob-opencode"
+          },
+          {
+            "name": "test_with_mock",
+            "type": "boolean",
+            "required": false,
+            "description": "Use mock GitHub API in tests for determinism",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-installation-and-rollback",
+      "subagent": "general",
+      "description": "Implement atomic installation with rollback safety. Add updateVessel() orchestration method, implement binary backup to .prev location, add binary testing before swap, implement atomic rename for installation, add rollback() to restore from backup on failure, implement version tracking updates. Create unit tests for installation and rollback scenarios.",
+      "dependencies": [
+        "scaffold-core-module"
+      ],
+      "prompt": {
+        "template": "You are implementing atomic installation and rollback for the VesselUpdateManager.\n\n## Your Task\n\nAdd the following functions to `{{target_file}}`:\n\n### 1. updateVessel()\n\n```typescript\nexport async function updateVessel(vessel: string, version: string, newBinaryPath: string): Promise<UpdateResult>\n```\n\nOrchestration method that:\n1. Determines current binary path (e.g., `/usr/local/bin/opencode`)\n2. Backs up current binary to `{path}.prev`\n3. Tests new binary: execute `{newBinaryPath} --version` and verify exit code 0\n4. Atomic swap: `fs.rename(newBinaryPath, currentPath)` - this is atomic on same filesystem\n5. Updates version tracking via `updateVersionTracking()`\n6. On any failure, calls `rollback(vessel)` automatically\n7. Returns UpdateResult with success/failure details\n\nImplementation notes:\n- Use {{rollback_enabled}} to control automatic rollback\n- Log each step with INFO level\n- On error, log with ERROR level and include full context\n- Never leave system in partial state\n\n### 2. rollback()\n\n```typescript\nexport async function rollback(vessel: string): Promise<void>\n```\n\nRestores previous binary:\n1. Find backup path: `{currentPath}.prev`\n2. Verify backup exists\n3. Atomic restore: `fs.rename(backupPath, currentPath)`\n4. Update version tracking to reflect rollback\n5. On failure, throw critical error (manual intervention needed)\n\nImplementation notes:\n- This is last line of defense, must be extremely robust\n- Log extensively on failure\n- Include file states in error context\n\n### 3. updateVersionTracking()\n\n```typescript\nexport async function updateVersionTracking(vessel: string, version: string, source: string, reason: string): Promise<void>\n```\n\nUpdates `{{version_file_path}}`:\n1. Read existing VersionTracking (or create empty if missing)\n2. Move current version to history (if exists)\n3. Set new current version with metadata:\n   - vessel, version, timestamp (ISO 8601), source, reason\n4. Trim history to max {{max_history}} entries (oldest first)\n5. Write atomically (write to temp file, then rename)\n\n### 4. Unit Tests\n\nAdd to `packages/opencode/src/vessel/update.test.ts`:\n\n- Test updateVessel():\n  - Success: backup → test → swap → version update\n  - Failure on binary test → automatic rollback\n  - Failure on swap → automatic rollback\n- Test rollback():\n  - Successful restore from .prev\n  - Failure when .prev missing\n  - Failure during restore (simulate)\n- Test updateVersionTracking():\n  - Create new tracking file\n  - Update existing tracking\n  - History maintenance (trim to max)\n  - Atomic write operation\n\n- Mock file system operations for deterministic tests\n- Aim for ≥90% code coverage\n\n## Implementation Requirements\n\n- Use `fs.rename()` for atomic operations (same filesystem)\n- Use `child_process.execFile()` to test binary\n- All file operations async (node:fs/promises)\n- Proper error handling with try/catch and rollback\n- Log all operations with appropriate levels\n- No console.log\n- No sync file operations\n\n## Validation\n\nYour implementation will be validated for:\n- Functions exist: updateVessel(), rollback(), updateVersionTracking()\n- Backup before installation\n- Atomic rename operations\n- Binary testing before swap\n- Version tracking with history\n- Unit tests for success and failure scenarios\n\n## Output\n\nAdd ~300 lines to update.ts and ~200 lines to update.test.ts with comprehensive installation and rollback tests.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to update.ts file"
+          },
+          {
+            "name": "rollback_enabled",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable automatic rollback on failure",
+            "default": "true"
+          },
+          {
+            "name": "version_file_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to version tracking file",
+            "default": "/workspace/.vessel-versions.json"
+          },
+          {
+            "name": "max_history",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of versions to keep in history",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-integration-tests-and-docs",
+      "subagent": "test",
+      "description": "Create comprehensive integration tests and documentation. Implement end-to-end tests for full update flow (check → download → verify → install), test rollback scenarios (checksum failure, binary test failure), test version tracking across multiple updates, create integration test file with mocked GitHub API, add JSDoc comments to all public APIs, document error codes and troubleshooting, add usage examples.",
+      "dependencies": [
+        "implement-github-api-integration",
+        "implement-installation-and-rollback"
+      ],
+      "prompt": {
+        "template": "You are creating integration tests and documentation for the VesselUpdateManager.\n\n## Your Task\n\n### 1. Integration Tests\n\nCreate `packages/opencode/src/vessel/update.integration.test.ts` with end-to-end tests:\n\n**Test: Full Update Flow**\n- Mock GitHub API to return fake release data\n- Call checkUpdates() → downloadVessel() → updateVessel()\n- Verify:\n  - Binary downloaded to correct location\n  - Checksum verified\n  - Backup created at .prev location\n  - Binary tested before swap\n  - Atomic swap completed\n  - Version tracking updated with history\n- Use {{test_with_mock}} to ensure deterministic behavior\n\n**Test: Rollback on Checksum Failure**\n- Mock GitHub API\n- Mock downloadVessel() to return file with wrong checksum\n- Verify:\n  - Download fails with CHECKSUM_FAILED error\n  - No installation attempted\n  - System state unchanged\n\n**Test: Rollback on Binary Test Failure**\n- Mock GitHub API and download\n- Mock binary test (--version) to fail\n- Verify:\n  - updateVessel() detects test failure\n  - Automatic rollback() called (if {{rollback_enabled}})\n  - Previous binary restored\n  - Error logged with context\n\n**Test: Version Tracking Across Updates**\n- Perform multiple updates in sequence\n- Verify:\n  - Each update adds to history\n  - History trimmed to {{max_history}} entries\n  - Current version updated correctly\n  - Timestamps and metadata recorded\n\n**Test: Boredom Activity Integration (Dry Run)**\n- Simulate boredom manager calling updateVessel()\n- Verify:\n  - No user prompts required\n  - All errors return gracefully (no throws to caller)\n  - Logging sufficient for autonomous operation\n\n### 2. Documentation\n\n**Add JSDoc comments** to all public functions in `{{target_file}}`:\n- Summary of what function does\n- @param descriptions with types\n- @returns description\n- @throws list of error codes\n- @example usage examples\n\n**Document Error Codes** in module header comment:\n- List all error codes (CHECKSUM_FAILED, DOWNLOAD_FAILED, etc.)\n- Describe what each means\n- Suggest troubleshooting steps\n\n**Add Usage Examples** in module header comment:\n```typescript\n// Example: Check for updates\nconst updates = await VesselUpdateManager.checkUpdates();\n\n// Example: Update a vessel\nconst result = await VesselUpdateManager.updateVessel('opencode', '1.2.3', '/tmp/opencode-new');\n\n// Example: Manual rollback\nawait VesselUpdateManager.rollback('opencode');\n```\n\n## Implementation Requirements\n\n- Use testing framework consistent with rest of codebase (jest/vitest)\n- Mock all external dependencies (GitHub API, file system, child_process)\n- Tests must be deterministic (no real network calls, no real file operations)\n- Integration tests should run quickly (<5 seconds total)\n- JSDoc comments should be comprehensive and helpful\n\n## Validation\n\nYour implementation will be validated for:\n- File exists: update.integration.test.ts\n- All integration tests pass\n- Tests use mocked dependencies (no real network/filesystem)\n- JSDoc comments on all public functions\n- Error codes documented\n- Usage examples provided\n\n## Output\n\nCreate update.integration.test.ts (~250 lines) and enhance update.ts with comprehensive documentation.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "required": true,
+            "description": "Path to update.ts file"
+          },
+          {
+            "name": "test_with_mock",
+            "type": "boolean",
+            "required": false,
+            "description": "Use mock GitHub API in tests for determinism",
+            "default": "true"
+          },
+          {
+            "name": "rollback_enabled",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable automatic rollback on failure",
+            "default": "true"
+          },
+          {
+            "name": "max_history",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of versions to keep in history",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.integration.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "final-validation-and-quality",
+      "subagent": "test",
+      "description": "Run comprehensive validation checks to ensure all quality standards met. Execute full test suite (unit + integration), verify TypeScript compilation, run linter, check test coverage (≥90%), verify no forbidden patterns (TODO, console.log, hardcoded paths, sync operations), confirm all required files exist, validate error handling coverage, ensure all validation criteria from requirements are met.",
+      "dependencies": [
+        "create-integration-tests-and-docs"
+      ],
+      "prompt": {
+        "template": "You are performing final validation and quality checks for the VesselUpdateManager implementation.\n\n## Your Task\n\nRun comprehensive validation to ensure all quality standards are met.\n\n### 1. File Existence Checks\n\nVerify all required files exist:\n- `packages/opencode/src/vessel/update.ts`\n- `packages/opencode/src/vessel/update.test.ts`\n- `packages/opencode/src/vessel/update.integration.test.ts`\n\n### 2. Pattern Validation\n\n**Required patterns** (must be present in update.ts):\n- `export namespace VesselUpdateManager`\n- `interface VesselVersion`\n- `async function checkUpdates`\n- `async function downloadVessel`\n- `async function updateVessel`\n- `async function rollback`\n- `function getCurrentVersions`\n- `interface VersionTracking`\n\n**Forbidden patterns** (must NOT be present):\n- `TODO` - no unfinished work\n- `FIXME` - no known issues\n- `console.log` - use logger\n- `console.error` - use logger\n- `fs.readFileSync` - no sync operations\n- `fs.writeFileSync` - no sync operations\n- `fs.renameSync` - no sync operations\n- Hardcoded paths like `/usr/local/bin/opencode`\n\nUse grep/search to verify patterns. Report any violations.\n\n### 3. Command Validation\n\nRun all validation commands and verify they pass:\n\n```bash\n# TypeScript compilation\npnpm build\n\n# Unit tests\npnpm test packages/opencode/src/vessel/update.test.ts\n\n# Integration tests\npnpm test packages/opencode/src/vessel/update.integration.test.ts\n\n# Linter\npnpm lint packages/opencode/src/vessel/\n```\n\nIf any command fails, report the error details.\n\n### 4. Test Coverage Check\n\nVerify test coverage ≥90% for update.ts:\n- Run coverage tool: `pnpm test --coverage packages/opencode/src/vessel/update.test.ts`\n- Parse coverage output\n- Verify coverage ≥ 90%\n- Report coverage percentage\n\nIf coverage < 90%, identify uncovered code paths and suggest additional tests.\n\n### 5. Code Quality Checks\n\n**Error handling coverage**:\n- Verify all async functions have try/catch\n- Verify errors use UpdateError type\n- Verify rollback called on updateVessel() failures\n\n**Documentation coverage**:\n- Verify JSDoc on all public functions\n- Verify error codes documented\n- Verify usage examples provided\n\n**Best practices**:\n- All file operations are async\n- Atomic operations use fs.rename()\n- No unhandled promise rejections\n- No unjustified `any` types\n\n### 6. Integration Validation\n\n**Architecture alignment**:\n- Read `docs/DEVBOB_VESSEL_ARCHITECTURE.md` lines 186-251\n- Verify implementation matches design:\n  - Version tracking schema correct\n  - Atomic swap mechanism correct\n  - Rollback safety implemented\n  - Checksum verification present\n\n**Boredom integration readiness**:\n- No user prompts in code\n- All errors handled gracefully\n- Logging sufficient for autonomous operation\n\n## Output Format\n\nProvide a comprehensive validation report:\n\n```markdown\n# VesselUpdateManager Validation Report\n\n## File Checks\n- ✅ update.ts exists\n- ✅ update.test.ts exists\n- ✅ update.integration.test.ts exists\n\n## Pattern Validation\n- ✅ All required patterns found\n- ✅ No forbidden patterns detected\n\n## Command Validation\n- ✅ TypeScript compilation: PASSED\n- ✅ Unit tests: PASSED (X/X tests)\n- ✅ Integration tests: PASSED (X/X tests)\n- ✅ Linter: PASSED\n\n## Test Coverage\n- ✅ Coverage: XX% (≥90% required)\n\n## Code Quality\n- ✅ Error handling comprehensive\n- ✅ Documentation complete\n- ✅ Best practices followed\n\n## Integration\n- ✅ Architecture alignment verified\n- ✅ Boredom integration ready\n\n## Overall Result\n✅ ALL VALIDATION CHECKS PASSED\n\nThe VesselUpdateManager implementation meets all quality standards and is ready for use.\n```\n\nIf any check fails, report it clearly and suggest fixes.\n\n## Validation\n\nThis task succeeds only if ALL checks pass:\n- All files exist\n- All required patterns found\n- No forbidden patterns\n- All commands pass\n- Test coverage ≥90%\n- Code quality standards met\n- Architecture alignment verified",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pnpm build",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.test.ts",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "pnpm test packages/opencode/src/vessel/update.integration.test.ts",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "pnpm lint packages/opencode/src/vessel/",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-24T12:52:31.199Z",
+  "metadata": {}
+}
