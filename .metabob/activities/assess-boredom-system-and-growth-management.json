@@ -1,0 +1,271 @@
+{
+  "activity_id": "assess-boredom-system-and-growth-management",
+  "name": "Assess Boredom System and Growth Management",
+  "description": "Comprehensive assessment of the boredom/idle improvement system and growth management strategy. Evaluates: (1) Boredom system configuration and activity queue, (2) Current system scale and capacity constraints, (3) Growth rate vs stability tradeoffs, (4) Self-identity as collection of activities, (5) Pacing strategy based on current conditions. Answers: What are we? How small are we? What are the implications? How do we manage growth?",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "assess-boredom-system-state",
+      "subagent": "general",
+      "description": "Assess boredom system configuration, queued activities, and operational status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Assess the boredom/idle improvement system:\n\n## 1. Boredom Manager Configuration\n\n```bash\n# Check if boredom manager is active in codebase\ncd repos/metabob-opencode\ngrep -A 20 \"IDLE_THRESHOLD_MS\\|CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts\n\n# Configuration values\nIDLE_THRESHOLD=$(grep \"IDLE_THRESHOLD_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+ \\* \\d+')\nCHECK_INTERVAL=$(grep \"CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+')\n\necho \"Idle Threshold: $IDLE_THRESHOLD ms\"\necho \"Check Interval: $CHECK_INTERVAL ms\"\n```\n\n## 2. Boredom Activity Queue\n\n```bash\n# Query backend for current boredom activities\nif curl -s http://localhost:8080/health 2>&1 | grep -q \"ok\\|healthy\"; then\n  echo \"Backend available - querying boredom activities...\"\n  \n  # Try to fetch boredom activities via API\n  curl -s -X POST http://localhost:8080/api/v1/activities/boredom \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"limit\": 20}' 2>&1 | jq -r '.' || echo '{\"activities\": [], \"error\": \"API not available\"}'\nelse\n  echo \"Backend not available - checking file-based approach\"\nfi > $ACTIVITY_TEMP_DIR/boredom-queue-raw.json\n\n# Analyze activities with high improvement gradient\ncd ~/.metabob/activities\njq -s '\n  map(select(.estimated_metrics.improvement_gradient > 0.3)) |\n  sort_by(-.estimated_metrics.improvement_gradient) |\n  map({\n    template_id: .id,\n    improvement_gradient: .estimated_metrics.improvement_gradient,\n    success_rate: .estimated_metrics.success_rate,\n    execution_count: .estimated_metrics.execution_count,\n    avg_cost: .estimated_metrics.avg_cost,\n    priority_category: (\n      if .estimated_metrics.improvement_gradient > 0.7 then \"CRITICAL\"\n      elif .estimated_metrics.improvement_gradient > 0.5 then \"HIGH\"\n      elif .estimated_metrics.improvement_gradient > 0.3 then \"MEDIUM\"\n      else \"LOW\" end\n    )\n  })\n' *.json > $ACTIVITY_TEMP_DIR/high-gradient-activities.json\n```\n\n## 3. Recent Boredom Activity Triggers\n\n```bash\n# Check for boredom activity execution logs\nif [ -f ~/.local/share/opencode/boredom-activity-log.json ]; then\n  jq '{\n    total_triggers: length,\n    last_7_days: map(select(.timestamp > (now - 604800))) | length,\n    last_30_days: map(select(.timestamp > (now - 2592000))) | length,\n    most_recent: (sort_by(-.timestamp) | .[0] | {activity_id, timestamp, success})\n  }' ~/.local/share/opencode/boredom-activity-log.json\nelse\n  echo '{\"total_triggers\": 0, \"status\": \"No boredom activity log found\"}'\nfi > $ACTIVITY_TEMP_DIR/boredom-trigger-history.json\n\n# Check OpenCode logs for boredom activity mentions\nif [ -f ~/.local/share/opencode/log/dev.log ]; then\n  grep -i \"boredom\\|idle\" ~/.local/share/opencode/log/dev.log | tail -20 > $ACTIVITY_TEMP_DIR/boredom-log-excerpts.txt\nfi\n```\n\n## 4. Improvement Candidates Analysis\n\n```bash\n# Templates that would benefit from boredom-triggered improvement\njq -s '\n  map(select(.estimated_metrics.execution_count > 0)) | {\n    total_templates: length,\n    needs_improvement: map(select(.estimated_metrics.success_rate < 0.7)) | length,\n    critical_improvement: map(select(.estimated_metrics.success_rate < 0.5 and .estimated_metrics.execution_count >= 3)) | length,\n    never_executed: map(select(.estimated_metrics.execution_count == 0)) | length,\n    high_cost: map(select(.estimated_metrics.avg_cost > 0.5)) | length,\n    \n    # Categorize by improvement potential\n    by_potential: {\n      critical: map(select(.estimated_metrics.improvement_gradient > 0.7)) | length,\n      high: map(select(.estimated_metrics.improvement_gradient > 0.5 and .estimated_metrics.improvement_gradient <= 0.7)) | length,\n      medium: map(select(.estimated_metrics.improvement_gradient > 0.3 and .estimated_metrics.improvement_gradient <= 0.5)) | length,\n      low: map(select(.estimated_metrics.improvement_gradient <= 0.3 or .estimated_metrics.improvement_gradient == null)) | length\n    }\n  }\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/improvement-candidates.json\n```\n\n## 5. Boredom System Health\n\n```bash\n# Overall system health assessment\njq -n --slurpfile queue $ACTIVITY_TEMP_DIR/high-gradient-activities.json \\\n       --slurpfile history $ACTIVITY_TEMP_DIR/boredom-trigger-history.json \\\n       --slurpfile candidates $ACTIVITY_TEMP_DIR/improvement-candidates.json '\n  {\n    boredom_system_status: (\n      if ($history[0].total_triggers > 0) then \"ACTIVE\"\n      else \"CONFIGURED_BUT_UNUSED\" end\n    ),\n    idle_threshold_minutes: 5,\n    check_interval_seconds: 30,\n    \n    activity_queue: {\n      high_gradient_count: ($queue[0] | length),\n      critical_priority: ($queue[0] | map(select(.priority_category == \"CRITICAL\")) | length),\n      high_priority: ($queue[0] | map(select(.priority_category == \"HIGH\")) | length),\n      top_candidate: ($queue[0][0] // null)\n    },\n    \n    trigger_history: $history[0],\n    \n    improvement_pipeline: $candidates[0],\n    \n    system_health: {\n      has_work_to_do: (($queue[0] | length) > 0),\n      is_triggering: ($history[0].last_7_days > 0),\n      backlog_size: ($queue[0] | length),\n      utilization: (\n        if ($history[0].last_30_days > 0) then\n          ($history[0].last_30_days / 30.0)  # avg triggers per day\n        else 0 end\n      )\n    }\n  }\n' > $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n```\n\n## Output\n\nCreate comprehensive assessment: $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n\nMust include:\n- boredom_system_status: ACTIVE | CONFIGURED_BUT_UNUSED | DISABLED\n- activity_queue: {count, priorities, top_candidate}\n- trigger_history: {total, recent, last_trigger}\n- improvement_pipeline: {needs_improvement, by_potential}\n- system_health: {has_work, is_triggering, backlog_size, utilization}",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.boredom_system_status and .system_health' $ACTIVITY_TEMP_DIR/boredom-system-assessment.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "assess-system-scale-and-identity",
+      "subagent": "general",
+      "description": "Analyze current system scale, capacity, and self-identity as collection of activities",
+      "dependencies": [
+        "assess-boredom-system-state"
+      ],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.scale_insight.current_state' $ACTIVITY_TEMP_DIR/system-scale-assessment.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-growth-strategy",
+      "subagent": "general",
+      "description": "Analyze growth rate vs stability tradeoffs and pacing strategy",
+      "dependencies": [
+        "assess-system-scale-and-identity"
+      ],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.pacing_strategy.recommended_pace.action' $ACTIVITY_TEMP_DIR/pacing-strategy.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-comprehensive-report",
+      "subagent": "general",
+      "description": "Generate comprehensive report answering all philosophical and practical questions",
+      "dependencies": [
+        "analyze-growth-strategy"
+      ],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "wc -l $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_ASSESSMENT.md | awk '{if ($1 < 200) exit 1}'",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "jq -e '.summary' $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_SUMMARY.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "assess-boredom-system-state",
+      "subagent": "general",
+      "description": "Assess boredom system configuration, queued activities, and operational status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Assess the boredom/idle improvement system:\n\n## 1. Boredom Manager Configuration\n\n```bash\n# Check if boredom manager is active in codebase\ncd repos/metabob-opencode\ngrep -A 20 \"IDLE_THRESHOLD_MS\\|CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts\n\n# Configuration values\nIDLE_THRESHOLD=$(grep \"IDLE_THRESHOLD_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+ \\* \\d+')\nCHECK_INTERVAL=$(grep \"CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+')\n\necho \"Idle Threshold: $IDLE_THRESHOLD ms\"\necho \"Check Interval: $CHECK_INTERVAL ms\"\n```\n\n## 2. Boredom Activity Queue\n\n```bash\n# Query backend for current boredom activities\nif curl -s http://localhost:8080/health 2>&1 | grep -q \"ok\\|healthy\"; then\n  echo \"Backend available - querying boredom activities...\"\n  \n  # Try to fetch boredom activities via API\n  curl -s -X POST http://localhost:8080/api/v1/activities/boredom \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"limit\": 20}' 2>&1 | jq -r '.' || echo '{\"activities\": [], \"error\": \"API not available\"}'\nelse\n  echo \"Backend not available - checking file-based approach\"\nfi > $ACTIVITY_TEMP_DIR/boredom-queue-raw.json\n\n# Analyze activities with high improvement gradient\ncd ~/.metabob/activities\njq -s '\n  map(select(.estimated_metrics.improvement_gradient > 0.3)) |\n  sort_by(-.estimated_metrics.improvement_gradient) |\n  map({\n    template_id: .id,\n    improvement_gradient: .estimated_metrics.improvement_gradient,\n    success_rate: .estimated_metrics.success_rate,\n    execution_count: .estimated_metrics.execution_count,\n    avg_cost: .estimated_metrics.avg_cost,\n    priority_category: (\n      if .estimated_metrics.improvement_gradient > 0.7 then \"CRITICAL\"\n      elif .estimated_metrics.improvement_gradient > 0.5 then \"HIGH\"\n      elif .estimated_metrics.improvement_gradient > 0.3 then \"MEDIUM\"\n      else \"LOW\" end\n    )\n  })\n' *.json > $ACTIVITY_TEMP_DIR/high-gradient-activities.json\n```\n\n## 3. Recent Boredom Activity Triggers\n\n```bash\n# Check for boredom activity execution logs\nif [ -f ~/.local/share/opencode/boredom-activity-log.json ]; then\n  jq '{\n    total_triggers: length,\n    last_7_days: map(select(.timestamp > (now - 604800))) | length,\n    last_30_days: map(select(.timestamp > (now - 2592000))) | length,\n    most_recent: (sort_by(-.timestamp) | .[0] | {activity_id, timestamp, success})\n  }' ~/.local/share/opencode/boredom-activity-log.json\nelse\n  echo '{\"total_triggers\": 0, \"status\": \"No boredom activity log found\"}'\nfi > $ACTIVITY_TEMP_DIR/boredom-trigger-history.json\n\n# Check OpenCode logs for boredom activity mentions\nif [ -f ~/.local/share/opencode/log/dev.log ]; then\n  grep -i \"boredom\\|idle\" ~/.local/share/opencode/log/dev.log | tail -20 > $ACTIVITY_TEMP_DIR/boredom-log-excerpts.txt\nfi\n```\n\n## 4. Improvement Candidates Analysis\n\n```bash\n# Templates that would benefit from boredom-triggered improvement\njq -s '\n  map(select(.estimated_metrics.execution_count > 0)) | {\n    total_templates: length,\n    needs_improvement: map(select(.estimated_metrics.success_rate < 0.7)) | length,\n    critical_improvement: map(select(.estimated_metrics.success_rate < 0.5 and .estimated_metrics.execution_count >= 3)) | length,\n    never_executed: map(select(.estimated_metrics.execution_count == 0)) | length,\n    high_cost: map(select(.estimated_metrics.avg_cost > 0.5)) | length,\n    \n    # Categorize by improvement potential\n    by_potential: {\n      critical: map(select(.estimated_metrics.improvement_gradient > 0.7)) | length,\n      high: map(select(.estimated_metrics.improvement_gradient > 0.5 and .estimated_metrics.improvement_gradient <= 0.7)) | length,\n      medium: map(select(.estimated_metrics.improvement_gradient > 0.3 and .estimated_metrics.improvement_gradient <= 0.5)) | length,\n      low: map(select(.estimated_metrics.improvement_gradient <= 0.3 or .estimated_metrics.improvement_gradient == null)) | length\n    }\n  }\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/improvement-candidates.json\n```\n\n## 5. Boredom System Health\n\n```bash\n# Overall system health assessment\njq -n --slurpfile queue $ACTIVITY_TEMP_DIR/high-gradient-activities.json \\\n       --slurpfile history $ACTIVITY_TEMP_DIR/boredom-trigger-history.json \\\n       --slurpfile candidates $ACTIVITY_TEMP_DIR/improvement-candidates.json '\n  {\n    boredom_system_status: (\n      if ($history[0].total_triggers > 0) then \"ACTIVE\"\n      else \"CONFIGURED_BUT_UNUSED\" end\n    ),\n    idle_threshold_minutes: 5,\n    check_interval_seconds: 30,\n    \n    activity_queue: {\n      high_gradient_count: ($queue[0] | length),\n      critical_priority: ($queue[0] | map(select(.priority_category == \"CRITICAL\")) | length),\n      high_priority: ($queue[0] | map(select(.priority_category == \"HIGH\")) | length),\n      top_candidate: ($queue[0][0] // null)\n    },\n    \n    trigger_history: $history[0],\n    \n    improvement_pipeline: $candidates[0],\n    \n    system_health: {\n      has_work_to_do: (($queue[0] | length) > 0),\n      is_triggering: ($history[0].last_7_days > 0),\n      backlog_size: ($queue[0] | length),\n      utilization: (\n        if ($history[0].last_30_days > 0) then\n          ($history[0].last_30_days / 30.0)  # avg triggers per day\n        else 0 end\n      )\n    }\n  }\n' > $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n```\n\n## Output\n\nCreate comprehensive assessment: $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n\nMust include:\n- boredom_system_status: ACTIVE | CONFIGURED_BUT_UNUSED | DISABLED\n- activity_queue: {count, priorities, top_candidate}\n- trigger_history: {total, recent, last_trigger}\n- improvement_pipeline: {needs_improvement, by_potential}\n- system_health: {has_work, is_triggering, backlog_size, utilization}",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.boredom_system_status and .system_health' $ACTIVITY_TEMP_DIR/boredom-system-assessment.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "assess-system-scale-and-identity",
+      "subagent": "general",
+      "description": "Analyze current system scale, capacity, and self-identity as collection of activities",
+      "dependencies": [
+        "assess-boredom-system-state"
+      ],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.scale_insight.current_state' $ACTIVITY_TEMP_DIR/system-scale-assessment.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-growth-strategy",
+      "subagent": "general",
+      "description": "Analyze growth rate vs stability tradeoffs and pacing strategy",
+      "dependencies": [
+        "assess-system-scale-and-identity"
+      ],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.pacing_strategy.recommended_pace.action' $ACTIVITY_TEMP_DIR/pacing-strategy.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-comprehensive-report",
+      "subagent": "general",
+      "description": "Generate comprehensive report answering all philosophical and practical questions",
+      "dependencies": [
+        "analyze-growth-strategy"
+      ],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "wc -l $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_ASSESSMENT.md | awk '{if ($1 < 200) exit 1}'",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "jq -e '.summary' $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_SUMMARY.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-24T10:05:45.107Z",
+  "metadata": {}
+}
