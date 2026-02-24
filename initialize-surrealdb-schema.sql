@@ -23,6 +23,12 @@ DEFINE FIELD variant_id ON activity_execution TYPE string
 DEFINE FIELD activity_id ON activity_execution TYPE string
   COMMENT "Base activity/template identifier";
 
+DEFINE FIELD template_id ON activity_execution TYPE string
+  COMMENT "Template identifier for querying executions by template";
+
+DEFINE FIELD impulses ON activity_execution TYPE option<array>
+  COMMENT "Impulses loaded during execution for correlation analysis";
+
 DEFINE FIELD success ON activity_execution TYPE bool
   COMMENT "Whether the execution succeeded";
 
@@ -53,6 +59,7 @@ DEFINE FIELD created_at ON activity_execution TYPE datetime DEFAULT time::now()
 -- Indexes for efficient queries
 DEFINE INDEX idx_variant_id ON activity_execution FIELDS variant_id;
 DEFINE INDEX idx_activity_id ON activity_execution FIELDS activity_id;
+DEFINE INDEX idx_template_id ON activity_execution FIELDS template_id;
 DEFINE INDEX idx_created_at ON activity_execution FIELDS created_at;
 DEFINE INDEX idx_success ON activity_execution FIELDS success;
 

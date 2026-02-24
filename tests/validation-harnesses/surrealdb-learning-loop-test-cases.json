@@ -1,0 +1,116 @@
+{
+  "testCases": [
+    {
+      "impulseId": "validation-surrealdb-learning-loop-case-1",
+      "name": "Persistent Storage Verification",
+      "input": {
+        "check": "docker inspect metabob-surreal | grep Mounts",
+        "expected_mount": "/data",
+        "not_allowed": "tmpfs"
+      },
+      "expectedOutput": {
+        "pass": true,
+        "mount_type": "bind or volume",
+        "destination": "/data"
+      }
+    },
+    {
+      "impulseId": "validation-surrealdb-learning-loop-case-2",
+      "name": "Authentication No 401 Errors",
+      "input": {
+        "check": "docker logs api-server-dev | tail -100 | grep '401.*Unauthorized'",
+        "surreal_readiness": "docker exec metabob-surreal /surreal isready"
+      },
+      "expectedOutput": {
+        "pass": true,
+        "error_count": 0,
+        "isready": "OK"
+      }
+    },
+    {
+      "impulseId": "validation-surrealdb-learning-loop-case-3",
+      "name": "API Server Running on Port 8080",
+      "input": {
+        "url": "http://localhost:8080/",
+        "method": "GET"
+      },
+      "expectedOutput": {
+        "pass": true,
+        "status": "ok",
+        "version_pattern": "\\d+\\.\\d+\\.\\d+"
+      }
+    },
+    {
+      "impulseId": "validation-surrealdb-learning-loop-case-4",
+      "name": "Schema Initialization Complete",
+      "input": {
+        "schema_file": "initialize-surrealdb-schema.sql",
+        "required_tables": ["activity_execution", "template_metrics", "failure_patterns", "task_execution", "activity_content"],
+        "required_fields": ["template_id ON activity_execution"],
+        "required_indexes": ["idx_template_id"]
+      },
+      "expectedOutput": {
+        "pass": true,
+        "all_tables_defined": true,
+        "template_id_field": true,
+        "template_id_index": true
+      }
+    },
+    {
+      "impulseId": "validation-surrealdb-learning-loop-case-5",
+      "name": "Dual-Write Redis and SurrealDB",
+      "input": {
+        "api_endpoint": "http://localhost:8080/api/v1/learning-loop/executions",
+        "method": "POST",
+        "payload": {
+          "activity_id": "validation_test_{{timestamp}}",
+          "template_id": "validation-template",
+          "started_at": "{{iso_timestamp}}",
+          "duration_ms": 1500,
+          "success": true,
+          "tokens_input": 150,
+          "tokens_output": 75,
+          "tokens_cache": 25,
+          "cost_usd": 0.0015
+        }
+      },
+      "expectedOutput": {
+        "pass": true,
+        "api_success": true,
+        "redis_has_data": true,
+        "redis_fields": ["template_id", "success", "cost_usd", "tokens_input"],
+        "surrealdb_queryable": true
+      }
+    },
+    {
+      "impulseId": "validation-surrealdb-learning-loop-case-6",
+      "name": "Data Persistence After Container Restart",
+      "input": {
+        "pre_restart_execution": {
+          "activity_id": "persistence_test_{{timestamp}}",
+          "template_id": "persistence-test"
+        },
+        "restart_container": "metabob-surreal",
+        "post_restart_query": "http://localhost:8080/api/v1/learning-loop/executions?hours=1"
+      },
+      "expectedOutput": {
+        "pass": true,
+        "pre_restart_write_success": true,
+        "container_restart_success": true,
+        "data_found_after_restart": true
+      }
+    }
+  ],
+  "metadata": {
+    "specification": "SurrealDB Learning Loop Integration",
+    "total_cases": 6,
+    "critical_conditions": [
+      "Persistent storage (not memory-only)",
+      "Authentication working (no 401 errors)",
+      "API server running on port 8080",
+      "Schema initialized with 5 tables and template_id field",
+      "Dual-write to both Redis and SurrealDB",
+      "Data persists after container restart"
+    ]
+  }
+}
