@@ -1,0 +1,837 @@
+{
+  "activity_id": "setup-multi-instance-coordination",
+  "name": "Setup Multi-Instance Coordination",
+  "description": "Configure infrastructure for coordinating multiple OpenCode instances using Redis distributed locks, work queues, instance registry, and Dask/Prefect integration",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "setup-redis-infrastructure",
+      "subagent": "general",
+      "description": "Configure Redis connection manager with connection pooling and verify connectivity to existing repos/platform Redis instance. Create base infrastructure that all coordination components depend on.",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are setting up the foundational Redis infrastructure for multi-instance coordination.\n\n**Context**: Multiple OpenCode instances currently compete for resources, causing git conflicts and data loss. This coordination system will transform them into collaborative workers.\n\n**Your Task**: Create Redis connection infrastructure\n\n**Configuration Variables**:\n- Redis host: {{redis_host}}\n- Redis port: {{redis_port}}\n- Redis database: {{redis_db}}\n- Redis password: {{redis_password}}\n- Lock timeout: {{lock_timeout}} seconds\n- Lock retry delay: {{lock_retry_delay}} seconds\n- Heartbeat interval: {{heartbeat_interval}} seconds\n- Heartbeat timeout: {{heartbeat_timeout}} seconds\n- Work queue name: {{work_queue_name}}\n- Instance registry key: {{instance_registry_key}}\n- Max instances: {{max_instances}}\n- Conflict strategy: {{conflict_strategy}}\n\n**Files to Create**:\n\n1. `src/coordination/redis_client.py` - Redis connection manager\n   - Create RedisConnectionManager class with connection pooling\n   - Implement connection with retry logic (3 attempts, exponential backoff)\n   - Add methods: connect(), disconnect(), ping(), get_connection()\n   - Include proper error handling and timeout management\n   - Use redis>=4.5.0 client library\n   - Example pattern:\n     ```python\n     import redis\n     from redis.connection import ConnectionPool\n     \n     class RedisConnectionManager:\n         def __init__(self, host, port, db, password=None, pool_size=10):\n             # Initialize connection pool\n             pass\n     ```\n\n2. `src/coordination/__init__.py` - Package initialization\n   - Export main classes and functions\n   - Set package version\n   - Import redis_client module\n\n3. `config/coordination.yaml` - Configuration template\n   - Include all configuration variables from template variables above\n   - Use YAML format with comments explaining each setting\n   - Include connection settings, timeouts, queue names, strategies\n\n**Implementation Requirements**:\n- Use Redis connection pooling for efficiency\n- Implement exponential backoff for connection retries (initial: 0.1s, max: 5s)\n- Maximum 3 connection attempts before failing\n- Proper timeout handling on all Redis operations\n- Log connection status and errors clearly\n- Support both authenticated and unauthenticated Redis\n- Connection pool should have configurable size (default 10)\n\n**Validation Steps**:\n1. Test Redis connection with PING command\n2. Verify connection pool is created\n3. Test set/get operations with test key\n4. Verify timeout handling works\n5. Check error handling for connection failures\n\n**Success Criteria**:\n- Redis connection succeeds and PING returns PONG\n- Can successfully set and get a test key\n- Connection pool is initialized properly\n- Configuration file contains all required variables\n- Code includes proper error handling\n- No hardcoded credentials in code\n\n**Error Handling**:\n- Redis connection failure: Retry 3 times with exponential backoff, then raise clear error\n- Invalid credentials: Immediate failure with helpful error message\n- Network timeout: Retry with appropriate timeout settings\n- Configuration missing: Fail with clear message about required config\n\n**Testing**:\nCreate basic smoke test to verify:\n- Connection establishes successfully\n- PING command works\n- Can store and retrieve data\n- Connection pool functions correctly",
+        "variables": [
+          {
+            "name": "redis_host",
+            "type": "string",
+            "required": false,
+            "description": "Redis server hostname from repos/platform",
+            "default": "localhost"
+          },
+          {
+            "name": "redis_port",
+            "type": "number",
+            "required": false,
+            "description": "Redis server port",
+            "default": "6379"
+          },
+          {
+            "name": "redis_db",
+            "type": "number",
+            "required": false,
+            "description": "Redis database number",
+            "default": "0"
+          },
+          {
+            "name": "redis_password",
+            "type": "string",
+            "required": false,
+            "description": "Redis password if authentication required",
+            "default": ""
+          },
+          {
+            "name": "lock_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Default lock timeout in seconds",
+            "default": "300"
+          },
+          {
+            "name": "lock_retry_delay",
+            "type": "number",
+            "required": false,
+            "description": "Delay between lock acquisition attempts in seconds",
+            "default": "0.1"
+          },
+          {
+            "name": "heartbeat_interval",
+            "type": "number",
+            "required": false,
+            "description": "Heartbeat interval in seconds",
+            "default": "5"
+          },
+          {
+            "name": "heartbeat_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Consider instance dead after this many seconds",
+            "default": "15"
+          },
+          {
+            "name": "work_queue_name",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for work queue",
+            "default": "opencode:activities"
+          },
+          {
+            "name": "instance_registry_key",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for instance registry",
+            "default": "opencode:instances"
+          },
+          {
+            "name": "max_instances",
+            "type": "number",
+            "required": false,
+            "description": "Maximum concurrent instances allowed",
+            "default": "10"
+          },
+          {
+            "name": "conflict_strategy",
+            "type": "string",
+            "required": false,
+            "description": "Strategy for conflicts: fail-fast, last-write-wins, merge",
+            "default": "fail-fast"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-distributed-locks",
+      "subagent": "general",
+      "description": "Create distributed lock system using Redis with timeout handling, deadlock detection, and decorator support for protecting git operations and other critical sections.",
+      "dependencies": [
+        "setup-redis-infrastructure"
+      ],
+      "prompt": {
+        "template": "You are implementing a distributed lock system to prevent concurrent access to critical sections (like git operations) across multiple OpenCode instances.\n\n**Context**: Multiple instances currently interfere with each other during git operations, causing resets and conflicts. Distributed locks will serialize access to these critical sections.\n\n**Your Task**: Implement Redis-based distributed locks with decorator support\n\n**Configuration**:\n- Lock timeout: {{lock_timeout}} seconds\n- Lock retry delay: {{lock_retry_delay}} seconds\n- Redis connection available via redis_client module from previous task\n\n**Files to Create**:\n\n1. `src/coordination/distributed_lock.py` - Lock implementation\n   - Create DistributedLock class using Redis SET NX EX pattern\n   - Implement lock acquisition with timeout and retry logic\n   - Use exponential backoff (initial: {{lock_retry_delay}}s, max: 5s, max attempts: 10)\n   - Implement lock release with ownership verification\n   - Create @distributed_lock decorator for easy use\n   - Add deadlock detection (timeout-based)\n   - Include context manager support (with statement)\n   - Generate unique lock IDs per instance/thread\n   \n   Key methods:\n   - `acquire(timeout=None, blocking=True)` - Acquire lock\n   - `release()` - Release lock (verify ownership first)\n   - `extend(additional_time)` - Extend lock timeout\n   - `locked()` - Check if lock is held\n   \n   Implementation notes:\n   - Use Redis SET key value NX EX timeout for atomic lock acquisition\n   - Store instance ID + thread ID as lock value for ownership verification\n   - Implement exponential backoff, NOT time.sleep() in loops\n   - Use uuid for lock identifiers\n   - Handle Redis connection failures gracefully\n\n2. `tests/coordination/test_distributed_lock.py` - Comprehensive unit tests\n   - Test lock acquisition and release\n   - Test that lock blocks concurrent acquisition\n   - Test timeout behavior\n   - Test decorator functionality\n   - Test context manager\n   - Test ownership verification\n   - Test exponential backoff timing\n   - Mock Redis for testing (use fakeredis or unittest.mock)\n   - Test error conditions (connection failure, etc.)\n\n**Implementation Pattern**:\n```python\nimport time\nimport uuid\nimport threading\nfrom typing import Optional\nfrom .redis_client import RedisConnectionManager\n\nclass DistributedLock:\n    def __init__(self, redis_manager: RedisConnectionManager, lock_name: str, timeout: int = 300):\n        self.redis = redis_manager\n        self.lock_name = f\"lock:{lock_name}\"\n        self.timeout = timeout\n        self.identifier = f\"{uuid.uuid4()}:{threading.get_ident()}\"\n        \n    def acquire(self, blocking=True, timeout=None):\n        # Use Redis SET NX EX for atomic lock\n        # Implement exponential backoff if blocking\n        pass\n        \n    def release(self):\n        # Verify ownership before releasing\n        # Use Lua script for atomic check-and-delete\n        pass\n        \n    def __enter__(self):\n        self.acquire()\n        return self\n        \n    def __exit__(self, exc_type, exc_val, exc_tb):\n        self.release()\n\ndef distributed_lock(lock_name: str, timeout: int = 300):\n    \"\"\"Decorator for protecting functions with distributed lock\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            # Acquire lock, call function, release lock\n            pass\n        return wrapper\n    return decorator\n```\n\n**Validation Requirements**:\n- Lock successfully blocks concurrent acquisition\n- Lock releases after timeout automatically\n- Decorator works correctly on functions\n- Context manager works correctly\n- Exponential backoff is used (verify timing)\n- No time.sleep() in acquisition loops\n- All unit tests pass\n\n**Error Handling**:\n- Lock acquisition timeout: Raise LockTimeoutError with context (who holds lock, how long)\n- Redis connection failure: Retry with backoff, then raise\n- Lock already held by same instance: Allow re-entrance or raise clear error\n- Release without acquire: Raise clear error\n\n**Testing Command**:\nRun: `pytest tests/coordination/test_distributed_lock.py -v`\n\nAll tests must pass before task completion.",
+        "variables": [
+          {
+            "name": "lock_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Default lock timeout in seconds",
+            "default": "300"
+          },
+          {
+            "name": "lock_retry_delay",
+            "type": "number",
+            "required": false,
+            "description": "Initial delay between lock acquisition attempts",
+            "default": "0.1"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_distributed_lock.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-work-queue-system",
+      "subagent": "general",
+      "description": "Implement priority-based work queue using Redis sorted sets with work claiming, lease expiration, and fair scheduling across instances.",
+      "dependencies": [
+        "setup-redis-infrastructure"
+      ],
+      "prompt": {
+        "template": "You are implementing a distributed work queue system to distribute activities across multiple OpenCode instances.\n\n**Context**: Multiple instances need to coordinate work distribution. The queue ensures fair scheduling, prevents duplicate work, and handles instance failures gracefully.\n\n**Your Task**: Create priority-based work queue with lease management\n\n**Configuration**:\n- Work queue name: {{work_queue_name}}\n- Max instances: {{max_instances}}\n- Redis connection available via redis_client module\n\n**Files to Create**:\n\n1. `src/coordination/work_queue.py` - Queue implementation\n   - Create WorkQueue class using Redis sorted sets for priority\n   - Implement enqueue with priority (lower number = higher priority)\n   - Implement claim with lease expiration (atomic operation)\n   - Implement lease renewal mechanism\n   - Implement lease expiration and reclaim\n   - Add queue monitoring (depth, oldest item age)\n   - Fair scheduling across instances (track claim counts)\n   \n   Key methods:\n   - `enqueue(item, priority=0)` - Add work item to queue\n   - `claim(instance_id, lease_time=300)` - Claim next work item\n   - `complete(item_id, instance_id)` - Mark work complete\n   - `renew_lease(item_id, instance_id, lease_time=300)` - Extend lease\n   - `get_depth()` - Get queue depth\n   - `get_metrics()` - Get queue metrics\n   \n   Implementation notes:\n   - Use Redis sorted set (ZADD) with priority as score\n   - Use separate hash for claimed items with expiration timestamps\n   - Background task to reclaim expired leases\n   - Atomic operations using Lua scripts\n   - Track per-instance claim counts for fairness\n   - Handle edge cases: empty queue, all items claimed, etc.\n\n2. `tests/coordination/test_work_queue.py` - Comprehensive unit tests\n   - Test enqueue/claim basic flow\n   - Test priority ordering\n   - Test lease expiration and reclaim\n   - Test that duplicate claims are prevented\n   - Test fair scheduling across instances\n   - Test queue metrics\n   - Test edge cases (empty queue, expired leases)\n   - Mock Redis or use fakeredis\n\n**Implementation Pattern**:\n```python\nimport time\nimport json\nfrom typing import Optional, Dict, Any\nfrom .redis_client import RedisConnectionManager\n\nclass WorkQueue:\n    def __init__(self, redis_manager: RedisConnectionManager, queue_name: str):\n        self.redis = redis_manager\n        self.queue_key = queue_name\n        self.claimed_key = f\"{queue_name}:claimed\"\n        self.metrics_key = f\"{queue_name}:metrics\"\n        \n    def enqueue(self, item: Dict[str, Any], priority: int = 0) -> str:\n        # Use ZADD with priority as score\n        # Generate unique item ID\n        # Store item data separately\n        pass\n        \n    def claim(self, instance_id: str, lease_time: int = 300) -> Optional[Dict[str, Any]]:\n        # Atomic: ZPOPMIN + HSET claimed item\n        # Use Lua script for atomicity\n        # Check fairness constraints\n        pass\n        \n    def complete(self, item_id: str, instance_id: str) -> bool:\n        # Verify ownership, remove from claimed\n        pass\n        \n    def reclaim_expired(self) -> int:\n        # Find expired leases, move back to queue\n        pass\n```\n\n**Validation Requirements**:\n- Can enqueue and claim work items\n- Priority ordering is maintained (lower = higher priority)\n- Lease expiration works correctly\n- No duplicate claims possible\n- Fair scheduling across instances\n- Queue metrics are accurate\n- All unit tests pass\n\n**Error Handling**:\n- Empty queue: Return None gracefully\n- Invalid item ID: Raise clear error\n- Lease expired: Automatic reclaim\n- Redis connection failure: Retry with backoff\n- Ownership violation: Raise clear error\n\n**Testing Command**:\nRun: `pytest tests/coordination/test_work_queue.py -v`\n\nAll tests must pass before task completion.",
+        "variables": [
+          {
+            "name": "work_queue_name",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for work queue",
+            "default": "opencode:activities"
+          },
+          {
+            "name": "max_instances",
+            "type": "number",
+            "required": false,
+            "description": "Maximum concurrent instances",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_work_queue.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "build-instance-registry",
+      "subagent": "general",
+      "description": "Create instance registration system with heartbeat monitoring, health checking, and automatic cleanup of dead instances.",
+      "dependencies": [
+        "setup-redis-infrastructure"
+      ],
+      "prompt": {
+        "template": "You are implementing an instance registry to track active OpenCode instances with heartbeat monitoring.\n\n**Context**: Multiple instances need to discover each other, monitor health, and detect failures. The registry maintains a live view of all active workers.\n\n**Your Task**: Create instance registry with heartbeat system\n\n**Configuration**:\n- Instance registry key: {{instance_registry_key}}\n- Heartbeat interval: {{heartbeat_interval}} seconds\n- Heartbeat timeout: {{heartbeat_timeout}} seconds\n- Max instances: {{max_instances}}\n- Redis connection available via redis_client module\n\n**Files to Create**:\n\n1. `src/coordination/instance_registry.py` - Registry implementation\n   - Create InstanceRegistry class using Redis hash\n   - Implement instance registration with unique ID\n   - Implement heartbeat mechanism (background thread or async task)\n   - Implement health checking and dead instance detection\n   - Implement automatic cleanup of dead instances\n   - Track instance metadata (start time, hostname, etc.)\n   - List active instances\n   \n   Key methods:\n   - `register(instance_id, metadata)` - Register new instance\n   - `unregister(instance_id)` - Unregister instance\n   - `heartbeat(instance_id)` - Update heartbeat timestamp\n   - `get_active_instances()` - List all active instances\n   - `is_alive(instance_id)` - Check if instance is alive\n   - `cleanup_dead_instances()` - Remove dead instances\n   - `start_heartbeat()` - Start background heartbeat thread\n   - `stop_heartbeat()` - Stop background heartbeat\n   \n   Implementation notes:\n   - Use Redis hash to store instance data\n   - Store: instance_id -> {last_heartbeat, metadata}\n   - Background thread updates heartbeat every {{heartbeat_interval}} seconds\n   - Instances with last_heartbeat > {{heartbeat_timeout}} seconds ago are dead\n   - Generate unique instance IDs (hostname + UUID + PID)\n   - Graceful shutdown: unregister on exit\n   - Handle thread lifecycle properly\n\n2. `tests/coordination/test_instance_registry.py` - Comprehensive unit tests\n   - Test instance registration/unregistration\n   - Test heartbeat updates timestamp\n   - Test dead instance detection\n   - Test cleanup of dead instances\n   - Test get_active_instances\n   - Test heartbeat thread lifecycle\n   - Mock time and Redis for testing\n   - Test edge cases (max instances, etc.)\n\n**Implementation Pattern**:\n```python\nimport time\nimport uuid\nimport socket\nimport os\nimport threading\nfrom typing import List, Dict, Any, Optional\nfrom .redis_client import RedisConnectionManager\n\nclass InstanceRegistry:\n    def __init__(self, redis_manager: RedisConnectionManager, registry_key: str, \n                 heartbeat_interval: int = 5, heartbeat_timeout: int = 15):\n        self.redis = redis_manager\n        self.registry_key = registry_key\n        self.heartbeat_interval = heartbeat_interval\n        self.heartbeat_timeout = heartbeat_timeout\n        self.instance_id = self._generate_instance_id()\n        self._heartbeat_thread: Optional[threading.Thread] = None\n        self._stop_heartbeat_event = threading.Event()\n        \n    def _generate_instance_id(self) -> str:\n        # hostname:pid:uuid\n        hostname = socket.gethostname()\n        pid = os.getpid()\n        unique_id = str(uuid.uuid4())[:8]\n        return f\"{hostname}:{pid}:{unique_id}\"\n        \n    def register(self, metadata: Dict[str, Any] = None) -> str:\n        # Store instance data in Redis hash\n        pass\n        \n    def heartbeat(self, instance_id: str = None) -> None:\n        # Update last_heartbeat timestamp\n        pass\n        \n    def start_heartbeat(self) -> None:\n        # Start background thread\n        pass\n        \n    def stop_heartbeat(self) -> None:\n        # Stop background thread gracefully\n        pass\n        \n    def get_active_instances(self) -> List[Dict[str, Any]]:\n        # Return instances with recent heartbeats\n        pass\n        \n    def cleanup_dead_instances(self) -> int:\n        # Remove instances with expired heartbeats\n        pass\n```\n\n**Validation Requirements**:\n- Instance registration succeeds\n- Heartbeat updates timestamp\n- Dead instances detected after timeout\n- Can list all active instances\n- Heartbeat thread runs in background\n- Graceful shutdown works\n- All unit tests pass\n\n**Error Handling**:\n- Redis connection failure: Retry heartbeat with backoff\n- Thread creation failure: Raise clear error\n- Max instances reached: Raise clear error\n- Duplicate registration: Update existing entry\n\n**Testing Command**:\nRun: `pytest tests/coordination/test_instance_registry.py -v`\n\nAll tests must pass before task completion.",
+        "variables": [
+          {
+            "name": "instance_registry_key",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for instance registry",
+            "default": "opencode:instances"
+          },
+          {
+            "name": "heartbeat_interval",
+            "type": "number",
+            "required": false,
+            "description": "Heartbeat update interval in seconds",
+            "default": "5"
+          },
+          {
+            "name": "heartbeat_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Consider instance dead after this timeout",
+            "default": "15"
+          },
+          {
+            "name": "max_instances",
+            "type": "number",
+            "required": false,
+            "description": "Maximum concurrent instances",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_instance_registry.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-state-synchronization",
+      "subagent": "general",
+      "description": "Build shared state coordination with optimistic locking, conflict detection, and resolution strategies (fail-fast, last-write-wins, merge) plus result aggregation for parallel activities.",
+      "dependencies": [
+        "implement-distributed-locks",
+        "create-work-queue-system",
+        "build-instance-registry"
+      ],
+      "prompt": {
+        "template": "You are implementing state synchronization to coordinate shared state across multiple OpenCode instances.\n\n**Context**: Multiple instances need to share state (activity results, progress, etc.) without conflicts. This system provides optimistic locking and conflict resolution.\n\n**Your Task**: Create state synchronization with conflict resolution\n\n**Configuration**:\n- Conflict strategy: {{conflict_strategy}}\n- Available modules: distributed_lock, work_queue, instance_registry\n- Redis connection available via redis_client module\n\n**Files to Create**:\n\n1. `src/coordination/state_sync.py` - State synchronization implementation\n   - Create StateSync class using Redis for shared state\n   - Implement optimistic locking with version numbers\n   - Implement conflict detection\n   - Implement three conflict resolution strategies:\n     1. fail-fast: Raise error on conflict\n     2. last-write-wins: Overwrite with latest\n     3. merge: Attempt to merge changes (for compatible updates)\n   - Implement result aggregation for parallel activities\n   - Use distributed locks for critical state updates\n   \n   Key methods:\n   - `get_state(key)` - Get state with version\n   - `set_state(key, value, expected_version=None)` - Set state with optimistic lock\n   - `update_state(key, update_fn)` - Update with function (handles retry)\n   - `aggregate_results(activity_id, instance_id, result)` - Collect results\n   - `get_aggregated_results(activity_id)` - Get all results\n   - `resolve_conflict(key, old_value, new_value, strategy)` - Apply strategy\n   \n   Implementation notes:\n   - Store state as: {key: {value, version, timestamp, instance_id}}\n   - Increment version on each update\n   - Check expected_version on set_state (optimistic locking)\n   - Use distributed locks for aggregation operations\n   - Implement merge strategy for compatible changes (e.g., appending to lists)\n   - Handle concurrent updates gracefully\n   - Log conflict events with full context\n\n2. Add tests to existing test files or create test_state_sync.py\n   - Test get/set state operations\n   - Test optimistic locking detects conflicts\n   - Test all three conflict strategies work correctly\n   - Test result aggregation\n   - Test concurrent updates with multiple simulated instances\n   - Test merge strategy with compatible/incompatible changes\n   - Mock Redis and time for testing\n\n**Implementation Pattern**:\n```python\nimport json\nimport time\nfrom typing import Any, Optional, Callable, List, Dict\nfrom enum import Enum\nfrom .redis_client import RedisConnectionManager\nfrom .distributed_lock import DistributedLock\n\nclass ConflictStrategy(Enum):\n    FAIL_FAST = \"fail-fast\"\n    LAST_WRITE_WINS = \"last-write-wins\"\n    MERGE = \"merge\"\n\nclass StateConflictError(Exception):\n    pass\n\nclass StateSync:\n    def __init__(self, redis_manager: RedisConnectionManager, \n                 default_strategy: ConflictStrategy = ConflictStrategy.FAIL_FAST):\n        self.redis = redis_manager\n        self.default_strategy = default_strategy\n        self.state_prefix = \"state:\"\n        self.results_prefix = \"results:\"\n        \n    def get_state(self, key: str) -> Optional[Dict[str, Any]]:\n        # Get state with version and metadata\n        pass\n        \n    def set_state(self, key: str, value: Any, expected_version: Optional[int] = None,\n                 strategy: Optional[ConflictStrategy] = None) -> bool:\n        # Set state with optimistic locking\n        # Check version, handle conflicts\n        pass\n        \n    def aggregate_results(self, activity_id: str, instance_id: str, result: Any) -> None:\n        # Use distributed lock to safely aggregate\n        pass\n        \n    def resolve_conflict(self, key: str, old_state: Dict, new_value: Any,\n                        strategy: ConflictStrategy) -> Any:\n        # Apply conflict resolution strategy\n        pass\n```\n\n**Validation Requirements**:\n- Can store and retrieve shared state\n- Optimistic locking detects version conflicts\n- All three conflict strategies work correctly\n- Result aggregation produces correct output\n- No race conditions in conflict detection\n- Distributed locks used for critical sections\n\n**Error Handling**:\n- Version conflict with fail-fast: Raise StateConflictError with context\n- Version conflict with last-write-wins: Log warning, apply update\n- Version conflict with merge: Attempt merge, fail if incompatible\n- Redis connection failure: Retry with backoff\n- Invalid strategy: Raise clear error\n\n**Testing**:\nAdd tests to verify conflict resolution and state synchronization work correctly.",
+        "variables": [
+          {
+            "name": "conflict_strategy",
+            "type": "string",
+            "required": false,
+            "description": "Default conflict resolution strategy",
+            "default": "fail-fast"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "integrate-orchestration-systems",
+      "subagent": "general",
+      "description": "Add coordination hooks to Dask task execution and Prefect workflow management, create wrapper tasks using distributed locks, and add monitoring integration.",
+      "dependencies": [
+        "implement-distributed-locks",
+        "create-work-queue-system",
+        "build-instance-registry"
+      ],
+      "prompt": {
+        "template": "You are integrating the coordination system with existing Dask and Prefect orchestration infrastructure.\n\n**Context**: The repos/platform directory contains existing Dask and Prefect configurations. We need to add coordination hooks so tasks/flows use distributed locks and work queues.\n\n**Your Task**: Create Dask and Prefect integration modules\n\n**Configuration**:\n- Enable Dask integration: {{enable_dask_integration}}\n- Enable Prefect integration: {{enable_prefect_integration}}\n- Available modules: distributed_lock, work_queue, instance_registry\n\n**Files to Create**:\n\n1. `src/coordination/dask_integration.py` - Dask coordination hooks\n   - Create coordinated Dask task wrapper\n   - Integrate distributed locks with Dask tasks\n   - Add work queue integration for task distribution\n   - Add instance registry awareness\n   - Create monitoring hooks for metrics collection\n   - Ensure minimal performance overhead (<20%)\n   \n   Key components:\n   - `@coordinated_task` decorator for Dask tasks\n   - `CoordinatedDaskClient` wrapper class\n   - Lock acquisition before task execution\n   - Work queue integration for task claiming\n   - Graceful degradation if coordination unavailable\n   \n   Implementation notes:\n   - Wrap existing Dask client/tasks\n   - Add coordination as middleware layer\n   - Handle Dask futures properly\n   - Monitor coordination overhead\n   - Support both single-instance and multi-instance modes\n   - Conditional integration based on {{enable_dask_integration}}\n\n2. `src/coordination/prefect_integration.py` - Prefect coordination hooks\n   - Create coordinated Prefect flow wrapper\n   - Integrate distributed locks with Prefect tasks\n   - Add work queue integration for flow distribution\n   - Add instance registry awareness\n   - Create monitoring hooks\n   - Ensure minimal performance overhead (<20%)\n   \n   Key components:\n   - `@coordinated_flow` decorator for Prefect flows\n   - `@coordinated_prefect_task` decorator for tasks\n   - Lock acquisition for critical flow sections\n   - Work queue integration\n   - Graceful degradation\n   \n   Implementation notes:\n   - Wrap existing Prefect flows/tasks\n   - Add coordination as hooks\n   - Handle Prefect state properly\n   - Monitor coordination overhead\n   - Support both modes (single/multi)\n   - Conditional integration based on {{enable_prefect_integration}}\n\n**Implementation Pattern**:\n```python\n# dask_integration.py\nimport functools\nfrom typing import Callable, Any, Optional\nfrom dask.distributed import Client\nfrom .distributed_lock import DistributedLock\nfrom .work_queue import WorkQueue\nfrom .instance_registry import InstanceRegistry\n\nclass CoordinatedDaskClient:\n    def __init__(self, dask_client: Client, coordination_enabled: bool = True):\n        self.client = dask_client\n        self.coordination_enabled = coordination_enabled\n        # Initialize coordination components\n        \n    def submit(self, func, *args, **kwargs):\n        # Wrap submission with coordination\n        pass\n\ndef coordinated_task(lock_name: Optional[str] = None, timeout: int = 300):\n    \"\"\"Decorator to add coordination to Dask tasks\"\"\"\n    def decorator(func: Callable) -> Callable:\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            # Acquire lock if specified\n            # Execute task\n            # Release lock\n            pass\n        return wrapper\n    return decorator\n\n# prefect_integration.py\nimport functools\nfrom typing import Callable, Any, Optional\nfrom prefect import flow, task\nfrom .distributed_lock import DistributedLock\nfrom .work_queue import WorkQueue\n\ndef coordinated_flow(lock_name: Optional[str] = None):\n    \"\"\"Decorator to add coordination to Prefect flows\"\"\"\n    def decorator(func: Callable) -> Callable:\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            # Coordination logic\n            pass\n        return flow(wrapper)\n    return decorator\n```\n\n**Validation Requirements**:\n- Dask tasks use coordination when enabled\n- Prefect flows use coordination when enabled\n- Wrapper tasks correctly acquire/release locks\n- Performance overhead < 20%\n- Integration handles connection failures gracefully\n- Graceful degradation when coordination unavailable\n- Conditional integration based on config flags\n\n**Error Handling**:\n- Coordination unavailable: Fall back to non-coordinated execution with warning\n- Lock acquisition failure: Retry or fail task with clear error\n- Connection failure: Retry with backoff\n- Integration disabled: Skip coordination entirely\n\n**Testing**:\nCreate basic integration tests (mock Dask/Prefect if needed) to verify hooks work correctly.",
+        "variables": [
+          {
+            "name": "enable_dask_integration",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable Dask integration",
+            "default": "true"
+          },
+          {
+            "name": "enable_prefect_integration",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable Prefect integration",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-and-document",
+      "subagent": "test",
+      "description": "Create comprehensive integration tests for multi-instance scenarios (concurrent git operations, failover, recovery), run full test suite, perform type checking/linting, and write usage documentation.",
+      "dependencies": [
+        "implement-state-synchronization",
+        "integrate-orchestration-systems"
+      ],
+      "prompt": {
+        "template": "You are validating the complete multi-instance coordination system and creating documentation.\n\n**Context**: All coordination components have been implemented. Your task is to create comprehensive integration tests, validate the complete system, and document usage.\n\n**Your Task**: Create integration tests, validate, and document\n\n**Configuration**:\n- Redis host: {{redis_host}}\n- Redis port: {{redis_port}}\n- Redis database: {{redis_db}}\n- Test mode: {{test_mode}}\n\n**Files to Create**:\n\n1. `tests/coordination/test_integration.py` - Integration tests\n   - Test complete coordination flow with multiple simulated instances\n   - Test distributed lock prevents concurrent critical sections\n   - Test work queue distributes work fairly\n   - Test instance registry tracks instances correctly\n   - Test state synchronization with all conflict strategies\n   - Test Dask integration (if available)\n   - Test Prefect integration (if available)\n   - Test failover scenarios (instance dies mid-work)\n   - Test recovery (work reclaimed after instance failure)\n   - Use pytest.mark.integration for tests requiring Redis\n   - Mock Redis if not available, or skip tests gracefully\n\n2. `tests/coordination/test_concurrent_instances.py` - Multi-instance test harness\n   - Simulate 2+ instances running concurrently\n   - Test concurrent git operations (the original problem!)\n   - Verify no git conflicts occur\n   - Verify locks serialize access properly\n   - Test work distribution across instances\n   - Measure performance overhead\n   - Support --instances flag to control instance count\n   - Report metrics (throughput, latency, conflicts)\n\n3. `docs/MULTI_INSTANCE_COORDINATION.md` - Usage documentation\n   - Overview of the coordination system\n   - Architecture diagram (text-based)\n   - Setup instructions\n   - Configuration reference (all variables)\n   - Usage examples:\n     - Starting multiple instances\n     - Using distributed locks\n     - Configuring work queues\n     - Monitoring instances\n   - Troubleshooting guide\n   - Performance considerations\n   - Future enhancements\n\n**Validation Commands to Run**:\n```bash\n# Unit tests for all components\npytest tests/coordination/test_distributed_lock.py -v\npytest tests/coordination/test_work_queue.py -v\npytest tests/coordination/test_instance_registry.py -v\n\n# Integration tests (require Redis)\npytest tests/coordination/test_integration.py -v --redis-url redis://{{redis_host}}:{{redis_port}}/{{redis_db}}\n\n# Multi-instance concurrent test\npython tests/coordination/test_concurrent_instances.py --instances 2\n\n# Type checking\nmypy src/coordination/ --ignore-missing-imports\n\n# Linting\npylint src/coordination/ --disable=missing-docstring,too-few-public-methods\n```\n\n**Success Criteria**:\n- All unit tests pass\n- Integration tests pass (with Redis available)\n- Type checking passes with no errors\n- Linting passes (or only minor warnings)\n- Multi-instance test shows:\n  - Zero git conflicts\n  - Successful work distribution\n  - Proper lock serialization\n  - Performance overhead < 20%\n- Documentation is complete and clear\n- No TODO comments in production code\n- No hardcoded credentials\n\n**Testing Strategy**:\n1. Run all unit tests first (must pass)\n2. Run integration tests with Redis (must pass or skip gracefully)\n3. Run concurrent instance test (verify no conflicts)\n4. Run type checking and linting\n5. Review all code for forbidden patterns\n6. Verify documentation completeness\n\n**Error Handling**:\n- Redis not available: Skip integration tests with clear message\n- Type errors: Fix or document why they're acceptable\n- Lint warnings: Fix or document exceptions\n- Test failures: Debug and fix, or raise clear error\n\n**Report**:\nProvide summary of:\n- Test results (pass/fail counts)\n- Type checking results\n- Linting results  \n- Performance metrics from concurrent test\n- Any issues found and resolved\n- Confirmation that system solves original git conflict problem",
+        "variables": [
+          {
+            "name": "redis_host",
+            "type": "string",
+            "required": false,
+            "description": "Redis host for testing",
+            "default": "localhost"
+          },
+          {
+            "name": "redis_port",
+            "type": "number",
+            "required": false,
+            "description": "Redis port for testing",
+            "default": "6379"
+          },
+          {
+            "name": "redis_db",
+            "type": "number",
+            "required": false,
+            "description": "Redis database for testing",
+            "default": "0"
+          },
+          {
+            "name": "test_mode",
+            "type": "boolean",
+            "required": false,
+            "description": "Run in test mode",
+            "default": "false"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_distributed_lock.py tests/coordination/test_work_queue.py tests/coordination/test_instance_registry.py -v",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "mypy src/coordination/ --ignore-missing-imports || true",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "pylint src/coordination/ --disable=missing-docstring,too-few-public-methods || true",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "setup-redis-infrastructure",
+      "subagent": "general",
+      "description": "Configure Redis connection manager with connection pooling and verify connectivity to existing repos/platform Redis instance. Create base infrastructure that all coordination components depend on.",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are setting up the foundational Redis infrastructure for multi-instance coordination.\n\n**Context**: Multiple OpenCode instances currently compete for resources, causing git conflicts and data loss. This coordination system will transform them into collaborative workers.\n\n**Your Task**: Create Redis connection infrastructure\n\n**Configuration Variables**:\n- Redis host: {{redis_host}}\n- Redis port: {{redis_port}}\n- Redis database: {{redis_db}}\n- Redis password: {{redis_password}}\n- Lock timeout: {{lock_timeout}} seconds\n- Lock retry delay: {{lock_retry_delay}} seconds\n- Heartbeat interval: {{heartbeat_interval}} seconds\n- Heartbeat timeout: {{heartbeat_timeout}} seconds\n- Work queue name: {{work_queue_name}}\n- Instance registry key: {{instance_registry_key}}\n- Max instances: {{max_instances}}\n- Conflict strategy: {{conflict_strategy}}\n\n**Files to Create**:\n\n1. `src/coordination/redis_client.py` - Redis connection manager\n   - Create RedisConnectionManager class with connection pooling\n   - Implement connection with retry logic (3 attempts, exponential backoff)\n   - Add methods: connect(), disconnect(), ping(), get_connection()\n   - Include proper error handling and timeout management\n   - Use redis>=4.5.0 client library\n   - Example pattern:\n     ```python\n     import redis\n     from redis.connection import ConnectionPool\n     \n     class RedisConnectionManager:\n         def __init__(self, host, port, db, password=None, pool_size=10):\n             # Initialize connection pool\n             pass\n     ```\n\n2. `src/coordination/__init__.py` - Package initialization\n   - Export main classes and functions\n   - Set package version\n   - Import redis_client module\n\n3. `config/coordination.yaml` - Configuration template\n   - Include all configuration variables from template variables above\n   - Use YAML format with comments explaining each setting\n   - Include connection settings, timeouts, queue names, strategies\n\n**Implementation Requirements**:\n- Use Redis connection pooling for efficiency\n- Implement exponential backoff for connection retries (initial: 0.1s, max: 5s)\n- Maximum 3 connection attempts before failing\n- Proper timeout handling on all Redis operations\n- Log connection status and errors clearly\n- Support both authenticated and unauthenticated Redis\n- Connection pool should have configurable size (default 10)\n\n**Validation Steps**:\n1. Test Redis connection with PING command\n2. Verify connection pool is created\n3. Test set/get operations with test key\n4. Verify timeout handling works\n5. Check error handling for connection failures\n\n**Success Criteria**:\n- Redis connection succeeds and PING returns PONG\n- Can successfully set and get a test key\n- Connection pool is initialized properly\n- Configuration file contains all required variables\n- Code includes proper error handling\n- No hardcoded credentials in code\n\n**Error Handling**:\n- Redis connection failure: Retry 3 times with exponential backoff, then raise clear error\n- Invalid credentials: Immediate failure with helpful error message\n- Network timeout: Retry with appropriate timeout settings\n- Configuration missing: Fail with clear message about required config\n\n**Testing**:\nCreate basic smoke test to verify:\n- Connection establishes successfully\n- PING command works\n- Can store and retrieve data\n- Connection pool functions correctly",
+        "variables": [
+          {
+            "name": "redis_host",
+            "type": "string",
+            "required": false,
+            "description": "Redis server hostname from repos/platform",
+            "default": "localhost"
+          },
+          {
+            "name": "redis_port",
+            "type": "number",
+            "required": false,
+            "description": "Redis server port",
+            "default": "6379"
+          },
+          {
+            "name": "redis_db",
+            "type": "number",
+            "required": false,
+            "description": "Redis database number",
+            "default": "0"
+          },
+          {
+            "name": "redis_password",
+            "type": "string",
+            "required": false,
+            "description": "Redis password if authentication required",
+            "default": ""
+          },
+          {
+            "name": "lock_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Default lock timeout in seconds",
+            "default": "300"
+          },
+          {
+            "name": "lock_retry_delay",
+            "type": "number",
+            "required": false,
+            "description": "Delay between lock acquisition attempts in seconds",
+            "default": "0.1"
+          },
+          {
+            "name": "heartbeat_interval",
+            "type": "number",
+            "required": false,
+            "description": "Heartbeat interval in seconds",
+            "default": "5"
+          },
+          {
+            "name": "heartbeat_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Consider instance dead after this many seconds",
+            "default": "15"
+          },
+          {
+            "name": "work_queue_name",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for work queue",
+            "default": "opencode:activities"
+          },
+          {
+            "name": "instance_registry_key",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for instance registry",
+            "default": "opencode:instances"
+          },
+          {
+            "name": "max_instances",
+            "type": "number",
+            "required": false,
+            "description": "Maximum concurrent instances allowed",
+            "default": "10"
+          },
+          {
+            "name": "conflict_strategy",
+            "type": "string",
+            "required": false,
+            "description": "Strategy for conflicts: fail-fast, last-write-wins, merge",
+            "default": "fail-fast"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-distributed-locks",
+      "subagent": "general",
+      "description": "Create distributed lock system using Redis with timeout handling, deadlock detection, and decorator support for protecting git operations and other critical sections.",
+      "dependencies": [
+        "setup-redis-infrastructure"
+      ],
+      "prompt": {
+        "template": "You are implementing a distributed lock system to prevent concurrent access to critical sections (like git operations) across multiple OpenCode instances.\n\n**Context**: Multiple instances currently interfere with each other during git operations, causing resets and conflicts. Distributed locks will serialize access to these critical sections.\n\n**Your Task**: Implement Redis-based distributed locks with decorator support\n\n**Configuration**:\n- Lock timeout: {{lock_timeout}} seconds\n- Lock retry delay: {{lock_retry_delay}} seconds\n- Redis connection available via redis_client module from previous task\n\n**Files to Create**:\n\n1. `src/coordination/distributed_lock.py` - Lock implementation\n   - Create DistributedLock class using Redis SET NX EX pattern\n   - Implement lock acquisition with timeout and retry logic\n   - Use exponential backoff (initial: {{lock_retry_delay}}s, max: 5s, max attempts: 10)\n   - Implement lock release with ownership verification\n   - Create @distributed_lock decorator for easy use\n   - Add deadlock detection (timeout-based)\n   - Include context manager support (with statement)\n   - Generate unique lock IDs per instance/thread\n   \n   Key methods:\n   - `acquire(timeout=None, blocking=True)` - Acquire lock\n   - `release()` - Release lock (verify ownership first)\n   - `extend(additional_time)` - Extend lock timeout\n   - `locked()` - Check if lock is held\n   \n   Implementation notes:\n   - Use Redis SET key value NX EX timeout for atomic lock acquisition\n   - Store instance ID + thread ID as lock value for ownership verification\n   - Implement exponential backoff, NOT time.sleep() in loops\n   - Use uuid for lock identifiers\n   - Handle Redis connection failures gracefully\n\n2. `tests/coordination/test_distributed_lock.py` - Comprehensive unit tests\n   - Test lock acquisition and release\n   - Test that lock blocks concurrent acquisition\n   - Test timeout behavior\n   - Test decorator functionality\n   - Test context manager\n   - Test ownership verification\n   - Test exponential backoff timing\n   - Mock Redis for testing (use fakeredis or unittest.mock)\n   - Test error conditions (connection failure, etc.)\n\n**Implementation Pattern**:\n```python\nimport time\nimport uuid\nimport threading\nfrom typing import Optional\nfrom .redis_client import RedisConnectionManager\n\nclass DistributedLock:\n    def __init__(self, redis_manager: RedisConnectionManager, lock_name: str, timeout: int = 300):\n        self.redis = redis_manager\n        self.lock_name = f\"lock:{lock_name}\"\n        self.timeout = timeout\n        self.identifier = f\"{uuid.uuid4()}:{threading.get_ident()}\"\n        \n    def acquire(self, blocking=True, timeout=None):\n        # Use Redis SET NX EX for atomic lock\n        # Implement exponential backoff if blocking\n        pass\n        \n    def release(self):\n        # Verify ownership before releasing\n        # Use Lua script for atomic check-and-delete\n        pass\n        \n    def __enter__(self):\n        self.acquire()\n        return self\n        \n    def __exit__(self, exc_type, exc_val, exc_tb):\n        self.release()\n\ndef distributed_lock(lock_name: str, timeout: int = 300):\n    \"\"\"Decorator for protecting functions with distributed lock\"\"\"\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            # Acquire lock, call function, release lock\n            pass\n        return wrapper\n    return decorator\n```\n\n**Validation Requirements**:\n- Lock successfully blocks concurrent acquisition\n- Lock releases after timeout automatically\n- Decorator works correctly on functions\n- Context manager works correctly\n- Exponential backoff is used (verify timing)\n- No time.sleep() in acquisition loops\n- All unit tests pass\n\n**Error Handling**:\n- Lock acquisition timeout: Raise LockTimeoutError with context (who holds lock, how long)\n- Redis connection failure: Retry with backoff, then raise\n- Lock already held by same instance: Allow re-entrance or raise clear error\n- Release without acquire: Raise clear error\n\n**Testing Command**:\nRun: `pytest tests/coordination/test_distributed_lock.py -v`\n\nAll tests must pass before task completion.",
+        "variables": [
+          {
+            "name": "lock_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Default lock timeout in seconds",
+            "default": "300"
+          },
+          {
+            "name": "lock_retry_delay",
+            "type": "number",
+            "required": false,
+            "description": "Initial delay between lock acquisition attempts",
+            "default": "0.1"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_distributed_lock.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-work-queue-system",
+      "subagent": "general",
+      "description": "Implement priority-based work queue using Redis sorted sets with work claiming, lease expiration, and fair scheduling across instances.",
+      "dependencies": [
+        "setup-redis-infrastructure"
+      ],
+      "prompt": {
+        "template": "You are implementing a distributed work queue system to distribute activities across multiple OpenCode instances.\n\n**Context**: Multiple instances need to coordinate work distribution. The queue ensures fair scheduling, prevents duplicate work, and handles instance failures gracefully.\n\n**Your Task**: Create priority-based work queue with lease management\n\n**Configuration**:\n- Work queue name: {{work_queue_name}}\n- Max instances: {{max_instances}}\n- Redis connection available via redis_client module\n\n**Files to Create**:\n\n1. `src/coordination/work_queue.py` - Queue implementation\n   - Create WorkQueue class using Redis sorted sets for priority\n   - Implement enqueue with priority (lower number = higher priority)\n   - Implement claim with lease expiration (atomic operation)\n   - Implement lease renewal mechanism\n   - Implement lease expiration and reclaim\n   - Add queue monitoring (depth, oldest item age)\n   - Fair scheduling across instances (track claim counts)\n   \n   Key methods:\n   - `enqueue(item, priority=0)` - Add work item to queue\n   - `claim(instance_id, lease_time=300)` - Claim next work item\n   - `complete(item_id, instance_id)` - Mark work complete\n   - `renew_lease(item_id, instance_id, lease_time=300)` - Extend lease\n   - `get_depth()` - Get queue depth\n   - `get_metrics()` - Get queue metrics\n   \n   Implementation notes:\n   - Use Redis sorted set (ZADD) with priority as score\n   - Use separate hash for claimed items with expiration timestamps\n   - Background task to reclaim expired leases\n   - Atomic operations using Lua scripts\n   - Track per-instance claim counts for fairness\n   - Handle edge cases: empty queue, all items claimed, etc.\n\n2. `tests/coordination/test_work_queue.py` - Comprehensive unit tests\n   - Test enqueue/claim basic flow\n   - Test priority ordering\n   - Test lease expiration and reclaim\n   - Test that duplicate claims are prevented\n   - Test fair scheduling across instances\n   - Test queue metrics\n   - Test edge cases (empty queue, expired leases)\n   - Mock Redis or use fakeredis\n\n**Implementation Pattern**:\n```python\nimport time\nimport json\nfrom typing import Optional, Dict, Any\nfrom .redis_client import RedisConnectionManager\n\nclass WorkQueue:\n    def __init__(self, redis_manager: RedisConnectionManager, queue_name: str):\n        self.redis = redis_manager\n        self.queue_key = queue_name\n        self.claimed_key = f\"{queue_name}:claimed\"\n        self.metrics_key = f\"{queue_name}:metrics\"\n        \n    def enqueue(self, item: Dict[str, Any], priority: int = 0) -> str:\n        # Use ZADD with priority as score\n        # Generate unique item ID\n        # Store item data separately\n        pass\n        \n    def claim(self, instance_id: str, lease_time: int = 300) -> Optional[Dict[str, Any]]:\n        # Atomic: ZPOPMIN + HSET claimed item\n        # Use Lua script for atomicity\n        # Check fairness constraints\n        pass\n        \n    def complete(self, item_id: str, instance_id: str) -> bool:\n        # Verify ownership, remove from claimed\n        pass\n        \n    def reclaim_expired(self) -> int:\n        # Find expired leases, move back to queue\n        pass\n```\n\n**Validation Requirements**:\n- Can enqueue and claim work items\n- Priority ordering is maintained (lower = higher priority)\n- Lease expiration works correctly\n- No duplicate claims possible\n- Fair scheduling across instances\n- Queue metrics are accurate\n- All unit tests pass\n\n**Error Handling**:\n- Empty queue: Return None gracefully\n- Invalid item ID: Raise clear error\n- Lease expired: Automatic reclaim\n- Redis connection failure: Retry with backoff\n- Ownership violation: Raise clear error\n\n**Testing Command**:\nRun: `pytest tests/coordination/test_work_queue.py -v`\n\nAll tests must pass before task completion.",
+        "variables": [
+          {
+            "name": "work_queue_name",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for work queue",
+            "default": "opencode:activities"
+          },
+          {
+            "name": "max_instances",
+            "type": "number",
+            "required": false,
+            "description": "Maximum concurrent instances",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_work_queue.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "build-instance-registry",
+      "subagent": "general",
+      "description": "Create instance registration system with heartbeat monitoring, health checking, and automatic cleanup of dead instances.",
+      "dependencies": [
+        "setup-redis-infrastructure"
+      ],
+      "prompt": {
+        "template": "You are implementing an instance registry to track active OpenCode instances with heartbeat monitoring.\n\n**Context**: Multiple instances need to discover each other, monitor health, and detect failures. The registry maintains a live view of all active workers.\n\n**Your Task**: Create instance registry with heartbeat system\n\n**Configuration**:\n- Instance registry key: {{instance_registry_key}}\n- Heartbeat interval: {{heartbeat_interval}} seconds\n- Heartbeat timeout: {{heartbeat_timeout}} seconds\n- Max instances: {{max_instances}}\n- Redis connection available via redis_client module\n\n**Files to Create**:\n\n1. `src/coordination/instance_registry.py` - Registry implementation\n   - Create InstanceRegistry class using Redis hash\n   - Implement instance registration with unique ID\n   - Implement heartbeat mechanism (background thread or async task)\n   - Implement health checking and dead instance detection\n   - Implement automatic cleanup of dead instances\n   - Track instance metadata (start time, hostname, etc.)\n   - List active instances\n   \n   Key methods:\n   - `register(instance_id, metadata)` - Register new instance\n   - `unregister(instance_id)` - Unregister instance\n   - `heartbeat(instance_id)` - Update heartbeat timestamp\n   - `get_active_instances()` - List all active instances\n   - `is_alive(instance_id)` - Check if instance is alive\n   - `cleanup_dead_instances()` - Remove dead instances\n   - `start_heartbeat()` - Start background heartbeat thread\n   - `stop_heartbeat()` - Stop background heartbeat\n   \n   Implementation notes:\n   - Use Redis hash to store instance data\n   - Store: instance_id -> {last_heartbeat, metadata}\n   - Background thread updates heartbeat every {{heartbeat_interval}} seconds\n   - Instances with last_heartbeat > {{heartbeat_timeout}} seconds ago are dead\n   - Generate unique instance IDs (hostname + UUID + PID)\n   - Graceful shutdown: unregister on exit\n   - Handle thread lifecycle properly\n\n2. `tests/coordination/test_instance_registry.py` - Comprehensive unit tests\n   - Test instance registration/unregistration\n   - Test heartbeat updates timestamp\n   - Test dead instance detection\n   - Test cleanup of dead instances\n   - Test get_active_instances\n   - Test heartbeat thread lifecycle\n   - Mock time and Redis for testing\n   - Test edge cases (max instances, etc.)\n\n**Implementation Pattern**:\n```python\nimport time\nimport uuid\nimport socket\nimport os\nimport threading\nfrom typing import List, Dict, Any, Optional\nfrom .redis_client import RedisConnectionManager\n\nclass InstanceRegistry:\n    def __init__(self, redis_manager: RedisConnectionManager, registry_key: str, \n                 heartbeat_interval: int = 5, heartbeat_timeout: int = 15):\n        self.redis = redis_manager\n        self.registry_key = registry_key\n        self.heartbeat_interval = heartbeat_interval\n        self.heartbeat_timeout = heartbeat_timeout\n        self.instance_id = self._generate_instance_id()\n        self._heartbeat_thread: Optional[threading.Thread] = None\n        self._stop_heartbeat_event = threading.Event()\n        \n    def _generate_instance_id(self) -> str:\n        # hostname:pid:uuid\n        hostname = socket.gethostname()\n        pid = os.getpid()\n        unique_id = str(uuid.uuid4())[:8]\n        return f\"{hostname}:{pid}:{unique_id}\"\n        \n    def register(self, metadata: Dict[str, Any] = None) -> str:\n        # Store instance data in Redis hash\n        pass\n        \n    def heartbeat(self, instance_id: str = None) -> None:\n        # Update last_heartbeat timestamp\n        pass\n        \n    def start_heartbeat(self) -> None:\n        # Start background thread\n        pass\n        \n    def stop_heartbeat(self) -> None:\n        # Stop background thread gracefully\n        pass\n        \n    def get_active_instances(self) -> List[Dict[str, Any]]:\n        # Return instances with recent heartbeats\n        pass\n        \n    def cleanup_dead_instances(self) -> int:\n        # Remove instances with expired heartbeats\n        pass\n```\n\n**Validation Requirements**:\n- Instance registration succeeds\n- Heartbeat updates timestamp\n- Dead instances detected after timeout\n- Can list all active instances\n- Heartbeat thread runs in background\n- Graceful shutdown works\n- All unit tests pass\n\n**Error Handling**:\n- Redis connection failure: Retry heartbeat with backoff\n- Thread creation failure: Raise clear error\n- Max instances reached: Raise clear error\n- Duplicate registration: Update existing entry\n\n**Testing Command**:\nRun: `pytest tests/coordination/test_instance_registry.py -v`\n\nAll tests must pass before task completion.",
+        "variables": [
+          {
+            "name": "instance_registry_key",
+            "type": "string",
+            "required": false,
+            "description": "Redis key for instance registry",
+            "default": "opencode:instances"
+          },
+          {
+            "name": "heartbeat_interval",
+            "type": "number",
+            "required": false,
+            "description": "Heartbeat update interval in seconds",
+            "default": "5"
+          },
+          {
+            "name": "heartbeat_timeout",
+            "type": "number",
+            "required": false,
+            "description": "Consider instance dead after this timeout",
+            "default": "15"
+          },
+          {
+            "name": "max_instances",
+            "type": "number",
+            "required": false,
+            "description": "Maximum concurrent instances",
+            "default": "10"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_instance_registry.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-state-synchronization",
+      "subagent": "general",
+      "description": "Build shared state coordination with optimistic locking, conflict detection, and resolution strategies (fail-fast, last-write-wins, merge) plus result aggregation for parallel activities.",
+      "dependencies": [
+        "implement-distributed-locks",
+        "create-work-queue-system",
+        "build-instance-registry"
+      ],
+      "prompt": {
+        "template": "You are implementing state synchronization to coordinate shared state across multiple OpenCode instances.\n\n**Context**: Multiple instances need to share state (activity results, progress, etc.) without conflicts. This system provides optimistic locking and conflict resolution.\n\n**Your Task**: Create state synchronization with conflict resolution\n\n**Configuration**:\n- Conflict strategy: {{conflict_strategy}}\n- Available modules: distributed_lock, work_queue, instance_registry\n- Redis connection available via redis_client module\n\n**Files to Create**:\n\n1. `src/coordination/state_sync.py` - State synchronization implementation\n   - Create StateSync class using Redis for shared state\n   - Implement optimistic locking with version numbers\n   - Implement conflict detection\n   - Implement three conflict resolution strategies:\n     1. fail-fast: Raise error on conflict\n     2. last-write-wins: Overwrite with latest\n     3. merge: Attempt to merge changes (for compatible updates)\n   - Implement result aggregation for parallel activities\n   - Use distributed locks for critical state updates\n   \n   Key methods:\n   - `get_state(key)` - Get state with version\n   - `set_state(key, value, expected_version=None)` - Set state with optimistic lock\n   - `update_state(key, update_fn)` - Update with function (handles retry)\n   - `aggregate_results(activity_id, instance_id, result)` - Collect results\n   - `get_aggregated_results(activity_id)` - Get all results\n   - `resolve_conflict(key, old_value, new_value, strategy)` - Apply strategy\n   \n   Implementation notes:\n   - Store state as: {key: {value, version, timestamp, instance_id}}\n   - Increment version on each update\n   - Check expected_version on set_state (optimistic locking)\n   - Use distributed locks for aggregation operations\n   - Implement merge strategy for compatible changes (e.g., appending to lists)\n   - Handle concurrent updates gracefully\n   - Log conflict events with full context\n\n2. Add tests to existing test files or create test_state_sync.py\n   - Test get/set state operations\n   - Test optimistic locking detects conflicts\n   - Test all three conflict strategies work correctly\n   - Test result aggregation\n   - Test concurrent updates with multiple simulated instances\n   - Test merge strategy with compatible/incompatible changes\n   - Mock Redis and time for testing\n\n**Implementation Pattern**:\n```python\nimport json\nimport time\nfrom typing import Any, Optional, Callable, List, Dict\nfrom enum import Enum\nfrom .redis_client import RedisConnectionManager\nfrom .distributed_lock import DistributedLock\n\nclass ConflictStrategy(Enum):\n    FAIL_FAST = \"fail-fast\"\n    LAST_WRITE_WINS = \"last-write-wins\"\n    MERGE = \"merge\"\n\nclass StateConflictError(Exception):\n    pass\n\nclass StateSync:\n    def __init__(self, redis_manager: RedisConnectionManager, \n                 default_strategy: ConflictStrategy = ConflictStrategy.FAIL_FAST):\n        self.redis = redis_manager\n        self.default_strategy = default_strategy\n        self.state_prefix = \"state:\"\n        self.results_prefix = \"results:\"\n        \n    def get_state(self, key: str) -> Optional[Dict[str, Any]]:\n        # Get state with version and metadata\n        pass\n        \n    def set_state(self, key: str, value: Any, expected_version: Optional[int] = None,\n                 strategy: Optional[ConflictStrategy] = None) -> bool:\n        # Set state with optimistic locking\n        # Check version, handle conflicts\n        pass\n        \n    def aggregate_results(self, activity_id: str, instance_id: str, result: Any) -> None:\n        # Use distributed lock to safely aggregate\n        pass\n        \n    def resolve_conflict(self, key: str, old_state: Dict, new_value: Any,\n                        strategy: ConflictStrategy) -> Any:\n        # Apply conflict resolution strategy\n        pass\n```\n\n**Validation Requirements**:\n- Can store and retrieve shared state\n- Optimistic locking detects version conflicts\n- All three conflict strategies work correctly\n- Result aggregation produces correct output\n- No race conditions in conflict detection\n- Distributed locks used for critical sections\n\n**Error Handling**:\n- Version conflict with fail-fast: Raise StateConflictError with context\n- Version conflict with last-write-wins: Log warning, apply update\n- Version conflict with merge: Attempt merge, fail if incompatible\n- Redis connection failure: Retry with backoff\n- Invalid strategy: Raise clear error\n\n**Testing**:\nAdd tests to verify conflict resolution and state synchronization work correctly.",
+        "variables": [
+          {
+            "name": "conflict_strategy",
+            "type": "string",
+            "required": false,
+            "description": "Default conflict resolution strategy",
+            "default": "fail-fast"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "integrate-orchestration-systems",
+      "subagent": "general",
+      "description": "Add coordination hooks to Dask task execution and Prefect workflow management, create wrapper tasks using distributed locks, and add monitoring integration.",
+      "dependencies": [
+        "implement-distributed-locks",
+        "create-work-queue-system",
+        "build-instance-registry"
+      ],
+      "prompt": {
+        "template": "You are integrating the coordination system with existing Dask and Prefect orchestration infrastructure.\n\n**Context**: The repos/platform directory contains existing Dask and Prefect configurations. We need to add coordination hooks so tasks/flows use distributed locks and work queues.\n\n**Your Task**: Create Dask and Prefect integration modules\n\n**Configuration**:\n- Enable Dask integration: {{enable_dask_integration}}\n- Enable Prefect integration: {{enable_prefect_integration}}\n- Available modules: distributed_lock, work_queue, instance_registry\n\n**Files to Create**:\n\n1. `src/coordination/dask_integration.py` - Dask coordination hooks\n   - Create coordinated Dask task wrapper\n   - Integrate distributed locks with Dask tasks\n   - Add work queue integration for task distribution\n   - Add instance registry awareness\n   - Create monitoring hooks for metrics collection\n   - Ensure minimal performance overhead (<20%)\n   \n   Key components:\n   - `@coordinated_task` decorator for Dask tasks\n   - `CoordinatedDaskClient` wrapper class\n   - Lock acquisition before task execution\n   - Work queue integration for task claiming\n   - Graceful degradation if coordination unavailable\n   \n   Implementation notes:\n   - Wrap existing Dask client/tasks\n   - Add coordination as middleware layer\n   - Handle Dask futures properly\n   - Monitor coordination overhead\n   - Support both single-instance and multi-instance modes\n   - Conditional integration based on {{enable_dask_integration}}\n\n2. `src/coordination/prefect_integration.py` - Prefect coordination hooks\n   - Create coordinated Prefect flow wrapper\n   - Integrate distributed locks with Prefect tasks\n   - Add work queue integration for flow distribution\n   - Add instance registry awareness\n   - Create monitoring hooks\n   - Ensure minimal performance overhead (<20%)\n   \n   Key components:\n   - `@coordinated_flow` decorator for Prefect flows\n   - `@coordinated_prefect_task` decorator for tasks\n   - Lock acquisition for critical flow sections\n   - Work queue integration\n   - Graceful degradation\n   \n   Implementation notes:\n   - Wrap existing Prefect flows/tasks\n   - Add coordination as hooks\n   - Handle Prefect state properly\n   - Monitor coordination overhead\n   - Support both modes (single/multi)\n   - Conditional integration based on {{enable_prefect_integration}}\n\n**Implementation Pattern**:\n```python\n# dask_integration.py\nimport functools\nfrom typing import Callable, Any, Optional\nfrom dask.distributed import Client\nfrom .distributed_lock import DistributedLock\nfrom .work_queue import WorkQueue\nfrom .instance_registry import InstanceRegistry\n\nclass CoordinatedDaskClient:\n    def __init__(self, dask_client: Client, coordination_enabled: bool = True):\n        self.client = dask_client\n        self.coordination_enabled = coordination_enabled\n        # Initialize coordination components\n        \n    def submit(self, func, *args, **kwargs):\n        # Wrap submission with coordination\n        pass\n\ndef coordinated_task(lock_name: Optional[str] = None, timeout: int = 300):\n    \"\"\"Decorator to add coordination to Dask tasks\"\"\"\n    def decorator(func: Callable) -> Callable:\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            # Acquire lock if specified\n            # Execute task\n            # Release lock\n            pass\n        return wrapper\n    return decorator\n\n# prefect_integration.py\nimport functools\nfrom typing import Callable, Any, Optional\nfrom prefect import flow, task\nfrom .distributed_lock import DistributedLock\nfrom .work_queue import WorkQueue\n\ndef coordinated_flow(lock_name: Optional[str] = None):\n    \"\"\"Decorator to add coordination to Prefect flows\"\"\"\n    def decorator(func: Callable) -> Callable:\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            # Coordination logic\n            pass\n        return flow(wrapper)\n    return decorator\n```\n\n**Validation Requirements**:\n- Dask tasks use coordination when enabled\n- Prefect flows use coordination when enabled\n- Wrapper tasks correctly acquire/release locks\n- Performance overhead < 20%\n- Integration handles connection failures gracefully\n- Graceful degradation when coordination unavailable\n- Conditional integration based on config flags\n\n**Error Handling**:\n- Coordination unavailable: Fall back to non-coordinated execution with warning\n- Lock acquisition failure: Retry or fail task with clear error\n- Connection failure: Retry with backoff\n- Integration disabled: Skip coordination entirely\n\n**Testing**:\nCreate basic integration tests (mock Dask/Prefect if needed) to verify hooks work correctly.",
+        "variables": [
+          {
+            "name": "enable_dask_integration",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable Dask integration",
+            "default": "true"
+          },
+          {
+            "name": "enable_prefect_integration",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable Prefect integration",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-and-document",
+      "subagent": "test",
+      "description": "Create comprehensive integration tests for multi-instance scenarios (concurrent git operations, failover, recovery), run full test suite, perform type checking/linting, and write usage documentation.",
+      "dependencies": [
+        "implement-state-synchronization",
+        "integrate-orchestration-systems"
+      ],
+      "prompt": {
+        "template": "You are validating the complete multi-instance coordination system and creating documentation.\n\n**Context**: All coordination components have been implemented. Your task is to create comprehensive integration tests, validate the complete system, and document usage.\n\n**Your Task**: Create integration tests, validate, and document\n\n**Configuration**:\n- Redis host: {{redis_host}}\n- Redis port: {{redis_port}}\n- Redis database: {{redis_db}}\n- Test mode: {{test_mode}}\n\n**Files to Create**:\n\n1. `tests/coordination/test_integration.py` - Integration tests\n   - Test complete coordination flow with multiple simulated instances\n   - Test distributed lock prevents concurrent critical sections\n   - Test work queue distributes work fairly\n   - Test instance registry tracks instances correctly\n   - Test state synchronization with all conflict strategies\n   - Test Dask integration (if available)\n   - Test Prefect integration (if available)\n   - Test failover scenarios (instance dies mid-work)\n   - Test recovery (work reclaimed after instance failure)\n   - Use pytest.mark.integration for tests requiring Redis\n   - Mock Redis if not available, or skip tests gracefully\n\n2. `tests/coordination/test_concurrent_instances.py` - Multi-instance test harness\n   - Simulate 2+ instances running concurrently\n   - Test concurrent git operations (the original problem!)\n   - Verify no git conflicts occur\n   - Verify locks serialize access properly\n   - Test work distribution across instances\n   - Measure performance overhead\n   - Support --instances flag to control instance count\n   - Report metrics (throughput, latency, conflicts)\n\n3. `docs/MULTI_INSTANCE_COORDINATION.md` - Usage documentation\n   - Overview of the coordination system\n   - Architecture diagram (text-based)\n   - Setup instructions\n   - Configuration reference (all variables)\n   - Usage examples:\n     - Starting multiple instances\n     - Using distributed locks\n     - Configuring work queues\n     - Monitoring instances\n   - Troubleshooting guide\n   - Performance considerations\n   - Future enhancements\n\n**Validation Commands to Run**:\n```bash\n# Unit tests for all components\npytest tests/coordination/test_distributed_lock.py -v\npytest tests/coordination/test_work_queue.py -v\npytest tests/coordination/test_instance_registry.py -v\n\n# Integration tests (require Redis)\npytest tests/coordination/test_integration.py -v --redis-url redis://{{redis_host}}:{{redis_port}}/{{redis_db}}\n\n# Multi-instance concurrent test\npython tests/coordination/test_concurrent_instances.py --instances 2\n\n# Type checking\nmypy src/coordination/ --ignore-missing-imports\n\n# Linting\npylint src/coordination/ --disable=missing-docstring,too-few-public-methods\n```\n\n**Success Criteria**:\n- All unit tests pass\n- Integration tests pass (with Redis available)\n- Type checking passes with no errors\n- Linting passes (or only minor warnings)\n- Multi-instance test shows:\n  - Zero git conflicts\n  - Successful work distribution\n  - Proper lock serialization\n  - Performance overhead < 20%\n- Documentation is complete and clear\n- No TODO comments in production code\n- No hardcoded credentials\n\n**Testing Strategy**:\n1. Run all unit tests first (must pass)\n2. Run integration tests with Redis (must pass or skip gracefully)\n3. Run concurrent instance test (verify no conflicts)\n4. Run type checking and linting\n5. Review all code for forbidden patterns\n6. Verify documentation completeness\n\n**Error Handling**:\n- Redis not available: Skip integration tests with clear message\n- Type errors: Fix or document why they're acceptable\n- Lint warnings: Fix or document exceptions\n- Test failures: Debug and fix, or raise clear error\n\n**Report**:\nProvide summary of:\n- Test results (pass/fail counts)\n- Type checking results\n- Linting results  \n- Performance metrics from concurrent test\n- Any issues found and resolved\n- Confirmation that system solves original git conflict problem",
+        "variables": [
+          {
+            "name": "redis_host",
+            "type": "string",
+            "required": false,
+            "description": "Redis host for testing",
+            "default": "localhost"
+          },
+          {
+            "name": "redis_port",
+            "type": "number",
+            "required": false,
+            "description": "Redis port for testing",
+            "default": "6379"
+          },
+          {
+            "name": "redis_db",
+            "type": "number",
+            "required": false,
+            "description": "Redis database for testing",
+            "default": "0"
+          },
+          {
+            "name": "test_mode",
+            "type": "boolean",
+            "required": false,
+            "description": "Run in test mode",
+            "default": "false"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest tests/coordination/test_distributed_lock.py tests/coordination/test_work_queue.py tests/coordination/test_instance_registry.py -v",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "mypy src/coordination/ --ignore-missing-imports || true",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "pylint src/coordination/ --disable=missing-docstring,too-few-public-methods || true",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-24T11:58:22.500Z",
+  "metadata": {}
+}
