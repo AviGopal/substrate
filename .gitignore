@@ -63,6 +63,8 @@ htmlcov/
 *.bak
 *.backup
 test-local.txt
+tmp/
+**/tmp/
 
 # Database
 *.db
