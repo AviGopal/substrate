@@ -1,0 +1,6 @@
+{
+  "templateName": "Execute Ratchet Cycle",
+  "templateDescription": "Composable self-improving loop that inspects system state, identifies bottlenecks, applies improvements, measures progress, and decides next action",
+  "category": "infrastructure",
+  "purpose": "Execute one complete ratchet cycle - inspect current state (query metrics from Redis/SurrealDB/metadata), identify bottleneck (template or code), apply appropriate improvement (standard template improvements or code alignment via trace-enforce-validate), measure progress (test and compare), decide next action (CONTINUE with next bottleneck or COMPLETE if stabilized). Designed for composable loops where output of cycle N feeds into cycle N+1, enabling continuous system self-improvement."
+}
