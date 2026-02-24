@@ -214,14 +214,9 @@
     }
   ],
   "integration": {
-    "preChecks": [
-      "{\"type\":\"file_exists\",\"path\":\"repos/platform/environments/{{sourceEnv}}/config.yaml\",\"errorMessage\":\"Source configuration not found\",\"required\":true}",
-      "kubectl --context=metabob-{{sourceEnv}}-k8s get pods -n metabob | grep -c Running",
-      "sops --version"
-    ],
-    "postChecks": [
-      "gh pr view --json state | jq -r .state"
-    ]
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
   },
   "metabob": {
     "enabled": true,

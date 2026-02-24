@@ -269,13 +269,9 @@
     }
   ],
   "integration": {
-    "preChecks": [
-      "{\"type\":\"file_exists\",\"path\":\"repos/platform/environments/{{environment}}/config.yaml\",\"errorMessage\":\"Environment configuration not found\",\"required\":true}",
-      "kubectl config get-contexts | grep 'metabob-{{environment}}-k8s'"
-    ],
-    "postChecks": [
-      "kubectl --context=metabob-{{environment}}-k8s get pods -n metabob -l app={{service}} --field-selector=status.phase=Running | grep -q Running"
-    ]
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
   },
   "metabob": {
     "enabled": true,

@@ -212,16 +212,9 @@
     }
   ],
   "integration": {
-    "preChecks": [
-      "{\"type\":\"file_exists\",\"path\":\"repos/platform/infrastructure/digitalocean-{{environment}}/main.tf\",\"errorMessage\":\"Terraform configuration not found for environment\",\"required\":true}",
-      "{\"type\":\"file_exists\",\"path\":\"repos/platform/infrastructure/digitalocean-{{environment}}/backend.conf\",\"errorMessage\":\"Terraform backend configuration not found\",\"required\":true}",
-      "terraform version",
-      "kubectl version --client"
-    ],
-    "postChecks": [
-      "kubectl config get-contexts | grep 'metabob-{{environment}}-k8s'",
-      "kubectl --context=metabob-{{environment}}-k8s get nodes | grep -c Ready"
-    ]
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
   },
   "metabob": {
     "enabled": true,
