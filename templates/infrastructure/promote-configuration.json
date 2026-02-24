@@ -1,0 +1,232 @@
+{
+  "name": "Promote Configuration",
+  "description": "Promote configuration from research → integration → production with rule enforcement (P-1, P-2, P-3)",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1-validate-promotion-direction",
+      "subagent": "general",
+      "description": "Validate promotion direction (Rule P-1: Unidirectional flow)",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Validate Promotion Direction\n\nYou are validating configuration promotion from {{sourceEnv}} to {{targetEnv}}.\n\n## Rule P-1: Unidirectional Flow\n- Configuration flows research → integration → production, never reverse\n- Prevents untested changes from reaching production\n- HIGH severity - BLOCK if direction is invalid\n\n## Valid Promotion Paths\n```\nresearch → integration     ✅ Valid\nintegration → production   ✅ Valid\nresearch → production      ⚠️  Warning (skips integration validation)\nproduction → *             ❌ BLOCKED\n* → research               ❌ BLOCKED\nintegration → research     ❌ BLOCKED\n```\n\n## Your Tasks\n\n1. **Validate promotion direction**:\n   ```python\n   valid_paths = [\n     ('research', 'integration'),\n     ('integration', 'production')\n   ]\n   \n   warning_paths = [\n     ('research', 'production')  # Skips integration\n   ]\n   \n   blocked_paths = [\n     ('production', '*'),\n     ('*', 'research'),\n     ('integration', 'research')\n   ]\n   \n   if (sourceEnv, targetEnv) in blocked_paths:\n     BLOCK with error\n   elif (sourceEnv, targetEnv) in warning_paths:\n     WARN and require confirmation\n   elif (sourceEnv, targetEnv) in valid_paths:\n     PROCEED\n   ```\n\n2. **Check environment stability** (source):\n   - Source environment should be stable (no recent failures)\n   - Check deployment history: Last 5 deployments successful?\n   - Check current health: All services running?\n\n3. **Output validation report**:\n   ```yaml\n   promotion_validation:\n     source_env: \"{{sourceEnv}}\"\n     target_env: \"{{targetEnv}}\"\n     direction_valid: true | false\n     promotion_path: \"research → integration\" | \"integration → production\"\n     risk_level: \"low\" | \"medium\" | \"high\"\n     source_stability:\n       recent_deployments: 5\n       successful: 5\n       failed: 0\n       current_health: \"healthy\"\n     blocking_issues: []\n     warnings: []\n     ready_to_promote: true | false\n   ```\n\n## Decision Logic\n- If blocked path: BLOCK with error message\n- If warning path: WARN, require {{requireApproval}} confirmation\n- If valid path: Check source stability\n- If source unstable: BLOCK, suggest fixing source first\n- If all checks pass: PROCEED\n\n## Success Criteria\n- Promotion direction validated\n- Source environment stability checked\n- Decision made: PROCEED, WARN, or BLOCK\n\n## Error Handling\n- If invalid source/target: BLOCK with valid options\n- If source not found: BLOCK, environment doesn't exist\n- If target not found: BLOCK, environment doesn't exist\n\n## Commands to Run\n- kubectl --context=metabob-{{sourceEnv}}-k8s get pods -n metabob\n- kubectl --context=metabob-{{targetEnv}}-k8s cluster-info (verify target exists)",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "sourceEnv",
+            "type": "string",
+            "required": true,
+            "description": "Source environment (research or integration)"
+          },
+          {
+            "name": "targetEnv",
+            "type": "string",
+            "required": true,
+            "description": "Target environment (integration or production)"
+          },
+          {
+            "name": "requireApproval",
+            "type": "boolean",
+            "required": false,
+            "description": "Require manual approval (default: true for production)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2-extract-source-configuration",
+      "subagent": "general",
+      "description": "Extract and validate source configuration",
+      "dependencies": [
+        "task-1-validate-promotion-direction"
+      ],
+      "prompt": {
+        "template": "# Task: Extract Source Configuration\n\nYou are extracting configuration from {{sourceEnv}} for promotion to {{targetEnv}}.\n\n## Your Tasks\n\n1. **Read source configuration files**:\n   ```bash\n   read repos/platform/environments/{{sourceEnv}}/config.yaml\n   read repos/platform/environments/{{sourceEnv}}/secrets.yaml\n   ```\n\n2. **Extract configuration based on type**:\n   - If {{configType}} is 'values': Only config.yaml\n   - If {{configType}} is 'secrets': Only secrets.yaml\n   - If {{configType}} is 'both': Both files\n\n3. **Validate configuration structure**:\n   ```bash\n   # YAML syntax check\n   yamllint repos/platform/environments/{{sourceEnv}}/config.yaml\n   \n   # Schema validation (if schema exists)\n   yq eval repos/platform/environments/{{sourceEnv}}/config.yaml\n   ```\n\n4. **Check for environment-specific values**:\n   - Extract values that should NOT be promoted:\n     - Replica counts (environment-specific)\n     - Resource limits (may differ by environment)\n     - Ingress hosts (environment-specific domains)\n     - Debug flags (production should be false)\n   \n5. **Validate secrets encryption** (if configType includes secrets):\n   ```bash\n   grep -q \"sops:\" repos/platform/environments/{{sourceEnv}}/secrets.yaml\n   ```\n   - BLOCK if secrets not SOPS-encrypted\n\n6. **Output configuration snapshot**:\n   ```yaml\n   config_snapshot:\n     source_env: \"{{sourceEnv}}\"\n     config_type: \"{{configType}}\"\n     config_extracted:\n       values: true | false\n       secrets: true | false\n     config_structure:\n       services: [\"backend\", \"frontend\", \"rpc-api\"]\n       total_keys: 45\n     environment_specific_keys:\n       - \"backend.replicas\" (source: 1, should adjust to: 3)\n       - \"backend.ingress.host\" (source: research.metabob.com, should adjust to: prod.metabob.com)\n     secrets_encrypted: true | false\n     validation_passed: true | false\n     warnings: []\n   ```\n\n## Success Criteria\n- Configuration extracted successfully\n- YAML syntax valid\n- Secrets encrypted (if applicable)\n- Environment-specific keys identified\n- validation_passed: true\n\n## Error Handling\n- If config file not found: BLOCK, source incomplete\n- If YAML invalid: BLOCK, fix syntax first\n- If secrets not encrypted: BLOCK, encrypt with SOPS\n- If schema validation fails: WARN, may indicate breaking changes\n\n## Files to Read\n- repos/platform/environments/{{sourceEnv}}/config.yaml\n- repos/platform/environments/{{sourceEnv}}/secrets.yaml (if configType includes secrets)\n\n## Commands to Run\n- yamllint repos/platform/environments/{{sourceEnv}}/config.yaml\n- grep \"sops:\" repos/platform/environments/{{sourceEnv}}/secrets.yaml",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "sourceEnv",
+            "type": "string",
+            "required": true,
+            "description": "Source environment"
+          },
+          {
+            "name": "targetEnv",
+            "type": "string",
+            "required": true,
+            "description": "Target environment"
+          },
+          {
+            "name": "configType",
+            "type": "string",
+            "required": false,
+            "description": "Configuration type to promote (values, secrets, or both)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/platform/environments/{{sourceEnv}}/config.yaml"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3-compare-configurations",
+      "subagent": "general",
+      "description": "Compare source and target configurations (Rule P-2: Blue/green validation)",
+      "dependencies": [
+        "task-2-extract-source-configuration"
+      ],
+      "prompt": {
+        "template": "# Task: Compare Configurations\n\nYou are comparing {{sourceEnv}} and {{targetEnv}} configurations.\n\n## Rule P-2: Blue/Green Validation\n- Integration must mirror production configuration\n- Same service versions, same feature flags\n- Reduced replicas (50-70% of prod) acceptable\n- Same resource limits recommended\n\n## Your Tasks\n\n1. **Read target configuration**:\n   ```bash\n   read repos/platform/environments/{{targetEnv}}/config.yaml\n   ```\n\n2. **Generate diff between source and target**:\n   ```bash\n   diff -u repos/platform/environments/{{targetEnv}}/config.yaml repos/platform/environments/{{sourceEnv}}/config.yaml > config-diff.txt\n   ```\n\n3. **Analyze differences**:\n   - New keys added (in source, not in target)\n   - Modified keys (different values)\n   - Removed keys (in target, not in source)\n   - Environment-specific adjustments needed\n\n4. **Categorize changes by risk**:\n   - **Low risk**: New feature flags, new services\n   - **Medium risk**: Modified resource limits, replica changes\n   - **High risk**: Removed services, security changes\n\n5. **Generate promotion plan**:\n   ```yaml\n   promotion_plan:\n     source_env: \"{{sourceEnv}}\"\n     target_env: \"{{targetEnv}}\"\n     changes:\n       added_keys:\n         - \"backend.features.newFeature\" (value: true)\n         - \"frontend.cacheEnabled\" (value: true)\n       modified_keys:\n         - key: \"backend.resources.memory\"\n           source: \"2Gi\"\n           target: \"4Gi\"\n           action: \"keep_target\" | \"promote_source\" | \"manual_decision\"\n       removed_keys: []\n     environment_adjustments:\n       - key: \"backend.replicas\"\n         source_value: 1\n         target_value: 5\n         suggested_value: 5 (keep target, environment-specific)\n       - key: \"backend.ingress.host\"\n         source_value: \"research.metabob.com\"\n         target_value: \"prod.metabob.com\"\n         suggested_value: \"prod.metabob.com\" (keep target)\n     risk_level: \"low\" | \"medium\" | \"high\"\n     risky_changes: []\n     manual_review_required: true | false\n   ```\n\n6. **If target is production**:\n   - Require manual review for ALL changes\n   - Flag any breaking changes\n   - Suggest testing in integration first\n\n## Success Criteria\n- Configurations compared successfully\n- Differences identified and categorized\n- Risk level assessed\n- Promotion plan generated\n- If high risk OR production target: manual_review_required: true\n\n## Error Handling\n- If target config not found: First-time promotion, copy all\n- If diff too large (>50 changes): WARN, suggest smaller batches\n- If breaking changes detected: BLOCK, require approval\n\n## Files to Read\n- repos/platform/environments/{{sourceEnv}}/config.yaml\n- repos/platform/environments/{{targetEnv}}/config.yaml\n\n## Commands to Run\n- diff -u repos/platform/environments/{{targetEnv}}/config.yaml repos/platform/environments/{{sourceEnv}}/config.yaml",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "sourceEnv",
+            "type": "string",
+            "required": true,
+            "description": "Source environment"
+          },
+          {
+            "name": "targetEnv",
+            "type": "string",
+            "required": true,
+            "description": "Target environment"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4-create-promotion-pr",
+      "subagent": "general",
+      "description": "Create pull request with configuration promotion (Rule P-3: Approval gates)",
+      "dependencies": [
+        "task-3-compare-configurations"
+      ],
+      "prompt": {
+        "template": "# Task: Create Promotion Pull Request\n\nYou are creating a PR to promote configuration from {{sourceEnv}} to {{targetEnv}}.\n\n## Rule P-3: Approval Gates\n- Production deployments require manual approval from 2+ engineers\n- Pull request must include diff and promotion plan\n- Branch protection enforced via GitHub\n\n## Your Tasks\n\n1. **Create feature branch**:\n   ```bash\n   cd repos/platform\n   git checkout -b promote/{{sourceEnv}}-to-{{targetEnv}}-$(date +%Y%m%d)\n   ```\n\n2. **Apply configuration changes**:\n   ```bash\n   # Copy source config to target (with adjustments)\n   cp repos/platform/environments/{{sourceEnv}}/config.yaml repos/platform/environments/{{targetEnv}}/config.yaml.new\n   \n   # Apply environment-specific adjustments\n   # (replica counts, ingress hosts, etc.)\n   # Use yq or sed to modify values\n   \n   # Move into place\n   mv repos/platform/environments/{{targetEnv}}/config.yaml.new repos/platform/environments/{{targetEnv}}/config.yaml\n   ```\n\n3. **Handle secrets** (if configType includes secrets):\n   ```bash\n   # Re-encrypt secrets for target environment using target's SOPS key\n   sops -d repos/platform/environments/{{sourceEnv}}/secrets.yaml | \\\n   sops -e --config repos/platform/environments/{{targetEnv}}/.sops.yaml \\\n   /dev/stdin > repos/platform/environments/{{targetEnv}}/secrets.yaml\n   ```\n\n4. **Generate PR description**:\n   ```markdown\n   ## Configuration Promotion: {{sourceEnv}} → {{targetEnv}}\n   \n   ### Summary\n   Promoting tested configuration from {{sourceEnv}} to {{targetEnv}}.\n   \n   ### Changes\n   - Added: {{added_keys_count}} new configuration keys\n   - Modified: {{modified_keys_count}} existing keys\n   - Removed: {{removed_keys_count}} keys\n   \n   ### Risk Assessment\n   - Risk Level: {{risk_level}}\n   - Risky Changes: {{risky_changes}}\n   \n   ### Environment Adjustments\n   - Replicas: Adjusted for {{targetEnv}} scale\n   - Ingress: Updated to {{targetEnv}} domain\n   - Resources: Sized for {{targetEnv}} workload\n   \n   ### Testing\n   - {{sourceEnv}}: Validated for {{duration}} (stable)\n   - Integration tests: {{test_results}}\n   \n   ### Diff\n   ```diff\n   {{config_diff}}\n   ```\n   \n   ### Approval Required\n   - [ ] Technical review (2+ engineers)\n   - [ ] Security review (if secrets changed)\n   - [ ] Operations approval (if production)\n   \n   ### Rollback Plan\n   ```bash\n   git revert <commit>\n   helmfile -e {{targetEnv}} sync\n   ```\n   ```\n\n5. **Commit and push**:\n   ```bash\n   git add repos/platform/environments/{{targetEnv}}/\n   git commit -m \"Promote config: {{sourceEnv}} → {{targetEnv}}\"\n   git push origin promote/{{sourceEnv}}-to-{{targetEnv}}-$(date +%Y%m%d)\n   ```\n\n6. **Create pull request**:\n   ```bash\n   gh pr create \\\n     --title \"Promote configuration: {{sourceEnv}} → {{targetEnv}}\" \\\n     --body \"<generated description>\" \\\n     --label \"config-promotion\" \\\n     --label \"{{targetEnv}}\" \\\n     {{#if (eq targetEnv 'production')}}\n     --label \"requires-approval\" \\\n     --reviewer \"team-leads\"\n     {{/if}}\n   ```\n\n7. **Output PR summary**:\n   ```yaml\n   pr_summary:\n     source_env: \"{{sourceEnv}}\"\n     target_env: \"{{targetEnv}}\"\n     branch: \"promote/{{sourceEnv}}-to-{{targetEnv}}-20260224\"\n     pr_url: \"https://github.com/MetabobProject/platform/pull/123\"\n     pr_number: 123\n     status: \"open\"\n     approvals_required: 2\n     approvals_received: 0\n     checks_status: \"pending\"\n     ready_to_merge: false\n   ```\n\n## Success Criteria\n- Feature branch created\n- Configuration changes applied\n- Secrets re-encrypted (if applicable)\n- PR created with comprehensive description\n- Reviewers assigned (if production)\n- pr_url returned\n\n## Error Handling\n- If branch exists: Use unique timestamp or increment\n- If git push fails: Check remote access and branch protection\n- If PR creation fails: Check GitHub CLI auth\n- If SOPS re-encryption fails: Check target .sops.yaml and key access\n\n## Approval Requirements\n- Integration: 1 approval (developer)\n- Production: 2 approvals (senior engineers or team leads)\n- Emergency: 1 approval + incident ticket\n\n## Files to Modify\n- repos/platform/environments/{{targetEnv}}/config.yaml\n- repos/platform/environments/{{targetEnv}}/secrets.yaml (if configType includes secrets)\n\n## Commands to Run\n- git checkout -b promote/{{sourceEnv}}-to-{{targetEnv}}-$(date +%Y%m%d)\n- cp, yq, sed (for config adjustments)\n- sops -d, sops -e (for secret re-encryption)\n- git add, git commit, git push\n- gh pr create",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "sourceEnv",
+            "type": "string",
+            "required": true,
+            "description": "Source environment"
+          },
+          {
+            "name": "targetEnv",
+            "type": "string",
+            "required": true,
+            "description": "Target environment"
+          },
+          {
+            "name": "configType",
+            "type": "string",
+            "required": false,
+            "description": "Configuration type (values, secrets, both)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-5-annotate-promotion",
+      "subagent": "general",
+      "description": "Annotate promotion for tracking and learning",
+      "dependencies": [
+        "task-4-create-promotion-pr"
+      ],
+      "prompt": {
+        "template": "# Task: Annotate Configuration Promotion\n\nYou are documenting configuration promotion from {{sourceEnv}} to {{targetEnv}}.\n\n## Your Tasks\n\n1. **Gather promotion metadata**:\n   - Source and target environments\n   - Configuration type promoted\n   - Number of changes\n   - Risk level\n   - PR number and URL\n   - Duration\n\n2. **Annotate with Metabob**:\n   ```typescript\n   metabob_annotate_component(\n     \"repos/platform/environments/{{targetEnv}}/config.yaml\",\n     \"{{targetEnv}}_config_promotion\",\n     \"configuration\",\n     \"Promoted configuration from {{sourceEnv}} to {{targetEnv}}.\n      \n      Promotion details:\n      - Source: {{sourceEnv}} (tested for {{stability_duration}})\n      - Target: {{targetEnv}}\n      - Config type: {{configType}}\n      - Changes: {{added_keys}} added, {{modified_keys}} modified\n      - Risk level: {{risk_level}}\n      \n      Rule enforcement:\n      - P-1: Unidirectional flow validated ({{sourceEnv}} → {{targetEnv}})\n      - P-2: Blue/green validation completed\n      - P-3: Approval gates configured (PR #{{pr_number}})\n      \n      Environment adjustments:\n      - Replicas: Adjusted for {{targetEnv}} scale\n      - Ingress: Updated to {{targetEnv}} domain\n      - Resources: Sized appropriately\n      \n      Pull request: {{pr_url}}\n      Status: Awaiting {{approvals_required}} approvals\n      \n      Next steps:\n      - Review PR diff\n      - Approve (if satisfied)\n      - Deploy via helmfile after merge\"\n   )\n   ```\n\n3. **Output annotation summary**:\n   ```yaml\n   annotation_summary:\n     source_env: \"{{sourceEnv}}\"\n     target_env: \"{{targetEnv}}\"\n     annotated: true\n     component: \"{{targetEnv}}_config_promotion\"\n     pr_url: \"https://github.com/MetabobProject/platform/pull/{{pr_number}}\"\n   ```\n\n## Success Criteria\n- Annotation created successfully\n- Promotion metadata captured\n- PR link included for traceability\n\n## Why This Matters\n- Documents promotion patterns\n- Tracks configuration evolution\n- Enables learning from successful promotions\n- Provides audit trail\n\n## Variables to Include\n- Source: {{sourceEnv}}\n- Target: {{targetEnv}}\n- Config type: {{configType}}\n- PR number: From task-4\n- Duration: Calculate from activity start",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "sourceEnv",
+            "type": "string",
+            "required": true,
+            "description": "Source environment"
+          },
+          {
+            "name": "targetEnv",
+            "type": "string",
+            "required": true,
+            "description": "Target environment"
+          },
+          {
+            "name": "configType",
+            "type": "string",
+            "required": false,
+            "description": "Configuration type"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "{\"type\":\"file_exists\",\"path\":\"repos/platform/environments/{{sourceEnv}}/config.yaml\",\"errorMessage\":\"Source configuration not found\",\"required\":true}",
+      "kubectl --context=metabob-{{sourceEnv}}-k8s get pods -n metabob | grep -c Running",
+      "sops --version"
+    ],
+    "postChecks": [
+      "gh pr view --json state | jq -r .state"
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 6000,
+    "annotationStrategy": "key-components"
+  }
+}
