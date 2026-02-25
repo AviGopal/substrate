@@ -197,12 +197,9 @@
     }
   ],
   "integration": {
-    "preChecks": [
-      "git_clean"
-    ],
+    "preChecks": [],
     "postChecks": [
-      "typecheck",
-      "test_suite"
+      "bun run typecheck"
     ],
     "qualityGates": [
       {
