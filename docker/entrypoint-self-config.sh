@@ -73,7 +73,16 @@ if [ "$WAIT_FOR_BACKEND" = "true" ] && [ -n "$METABOB_API_URL" ]; then
     BACKEND_READY=false
     
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        if curl -sf "$METABOB_API_URL/health" > /dev/null 2>&1; then
+        # Use Python to check backend health (curl not available in container)
+        if python3 <<EOF > /dev/null 2>&1
+import urllib.request
+try:
+    urllib.request.urlopen('$METABOB_API_URL/', timeout=5)
+    exit(0)
+except:
+    exit(1)
+EOF
+        then
             BACKEND_READY=true
             log_info "  ✓ Backend is reachable at $METABOB_API_URL"
             break
