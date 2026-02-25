@@ -445,6 +445,102 @@ services:
       - devbob-network
       - metabob-network
 
+  devbob-cpg:
+    profiles: ["devbob-dev"]
+    container_name: devbob-cpg
+    image: devbob:latest
+    ports:
+      - "3005:3005"   # OpenCode ACP
+      - "8086:8082"   # MCP Server
+    volumes:
+      - ./repos/cpg-inference:/workspace
+      - devbob_shared_config:/config
+    environment:
+      CODEBASE_NAME: cpg-inference
+      HOSTNAME: devbob-cpg
+      
+      REPO_URL: ""
+      REPO_CHECKOUT_MODE: skip
+      
+      GIT_AUTO_PUSH: ${DEVBOB_AUTO_PUSH:-false}
+      GIT_PUSH_ON_EXIT: ${DEVBOB_PUSH_ON_EXIT:-true}
+      
+      ACP_PORT: "3005"
+      ACP_HOSTNAME: "0.0.0.0"
+      
+      METABOB_API_URL: http://api-server-dev:8080
+      METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-cpg-dev}
+      METABOB_API_KEY: ${METABOB_API_KEY}
+      
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      WAIT_FOR_BACKEND: "true"
+      
+      AGENT_ROLE: cpg-codebase-manager
+    depends_on:
+      metabob-rpc-api-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3005/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - devbob-network
+      - metabob-network
+
+  devbob-platform:
+    profiles: ["devbob-dev"]
+    container_name: devbob-platform
+    image: devbob:latest
+    ports:
+      - "3006:3006"   # OpenCode ACP
+      - "8087:8082"   # MCP Server
+    volumes:
+      - ./repos/platform:/workspace
+      - devbob_shared_config:/config
+    environment:
+      CODEBASE_NAME: platform
+      HOSTNAME: devbob-platform
+      
+      REPO_URL: ""
+      REPO_CHECKOUT_MODE: skip
+      
+      GIT_AUTO_PUSH: ${DEVBOB_AUTO_PUSH:-false}
+      GIT_PUSH_ON_EXIT: ${DEVBOB_PUSH_ON_EXIT:-true}
+      
+      ACP_PORT: "3006"
+      ACP_HOSTNAME: "0.0.0.0"
+      
+      METABOB_API_URL: http://api-server-dev:8080
+      METABOB_PROJECT_ID: ${METABOB_PROJECT_ID:-platform-dev}
+      METABOB_API_KEY: ${METABOB_API_KEY}
+      
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      WAIT_FOR_BACKEND: "true"
+      
+      AGENT_ROLE: platform-orchestrator
+    depends_on:
+      metabob-rpc-api-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -sf http://localhost:3006/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - devbob-network
+      - metabob-network
+
 # =============================================================================
 # Volumes
 # =============================================================================
