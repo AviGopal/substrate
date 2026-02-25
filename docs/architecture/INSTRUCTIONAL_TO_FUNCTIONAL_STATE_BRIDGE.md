@@ -1,76 +1,89 @@
 # Instructional to Functional State Bridge: Clarified Architecture
 
+> **Ontological Context**: This document discusses the bridge between Instructional and Functional states within the [three-state ontology model](./ONTOLOGY_OF_BECOMING.md). What we historically called "Functional State" and "Instructional State" map to **Instance** (actualized outcomes) and **Vessel** (templates/capacity) respectively. The "bridge" itself is the **Process of Becoming** - the continuous transformation that converts vessels into instances, which immediately become vessels for the next transformation. Understanding this ontology clarifies that OpenCode is a **vessel** through which this becoming manifests, not the system itself.
+
 ## Terminology Clarification
 
-You're absolutely right - I was overcomplicating the terminology. Let me reframe with your correct definitions:
+You're absolutely right - I was overcomplicating the terminology. Let me reframe with your correct definitions, now aligned with the three-state ontology:
 
-### The Two States
+### The Two States (Mapped to Ontology)
 
-**Functional State** = The actual environment/data we're operating on
+**Functional State = Instance** (The actual environment/data we're operating on)
 - Codebase (files, git commits, branches)
 - File system (directories, permissions)
 - Runtime environment (processes, services)
 - Database (tables, records)
 - Or ANY data we're manipulating
+- **Each instance immediately becomes a vessel for the next transformation**
 
-**Instructional State** = The context/knowledge guiding operations
+**Instructional State = Vessel** (The context/knowledge guiding operations)
 - What the user wants (intent, goals)
 - What we know about the domain (patterns, best practices)
 - What we've learned (successful recipes, failure patterns)
 - Current context (impulses, annotations, metrics)
+- **Provides the capacity and instructions for becoming**
 
-### The Bridge: LLM + Activities
+### The Bridge: The Process-of-Becoming (LLM + Activities)
 
-**LLM Role**:
-- Reads Instructional State
-- Determines which Functional State mutations to perform
+**The bridge is the process-of-becoming itself** - the continuous transformation from vessel to instance to vessel again.
+
+**LLM Role** (Assists the becoming):
+- Reads **Vessel** (Instructional State)
+- Determines which **Instance** (Functional State) mutations to perform
 - Decides the order of operations
 
-**Activity Role**:
-- Structured recipe for Functional State mutations
+**Activity Role** (Is itself a vessel):
+- Structured recipe for **Instance** (Functional State) mutations
 - Measured (we track success/failure/cost)
 - Validatable (we can verify the outcome)
 - Optimizable (based on measured behavior, not reasoning)
+- **Contains instructions for becoming** - the activity template is a vessel
 
 ## The Real Architecture
 
-### Current Flow
+### Current Flow (Ontologically Aligned)
 
 ```
-User Intent (Instructional State)
+User Intent (Vessel - Instructional State)
     ↓
-  LLM interprets intent
+  Process-of-Becoming: LLM interprets intent
     ↓
-  LLM decides: which tool calls to make
+  Becoming: LLM decides which tool calls to make
     ↓
-  Tools mutate Functional State
-    ├── Write file (mutate codebase)
-    ├── Git commit (mutate repo state)
-    ├── Run script (mutate runtime state)
-    └── Any tool call (mutate any data)
+  Becoming: Tools mutate Instance (Functional State)
+    ├── Write file (mutate codebase instance)
+    ├── Git commit (mutate repo state instance)
+    ├── Run script (mutate runtime state instance)
+    └── Any tool call (mutate any data instance)
     ↓
-  Functional State updated
+  Instance (Functional State) updated
+    ↓
+  Instance immediately becomes Vessel for next transformation
 ```
 
-### With Activities
+### With Activities (Ontologically Aligned)
 
 ```
-User Intent + Context (Instructional State)
+User Intent + Context (Vessel - Instructional State)
     ↓
-  Activity Template (structured recipe)
+  Activity Template (Vessel - structured recipe for becoming)
     ↓
   For each task in template:
-    ├── LLM reads Instructional State (impulses, context)
-    ├── LLM decides which tool calls to make
-    ├── Tools mutate Functional State
-    └── Measure outcome (success/failure/cost)
+    ├── Becoming: LLM reads Vessel (impulses, context)
+    ├── Becoming: LLM decides which tool calls to make
+    ├── Becoming: Tools mutate Instance (Functional State)
+    └── Becoming: Measure outcome (success/failure/cost)
     ↓
-  Functional State updated
+  Instance (Functional State) updated
     ↓
-  Learning: Did this recipe work?
+  Instance becomes Vessel: Learning integrates outcome
     ↓
-  Optimize recipe based on measurements
+  Vessel evolves: Optimize recipe based on measurements
+    ↓
+  Continuous loop: Vessel → Becoming → Instance → Vessel (repeat)
 ```
+
+**Key insight**: The activity system IS the process-of-becoming. OpenCode vessel provides the capacity; the activity execution is the continuous transformation.
 
 ## What We Already Have
 

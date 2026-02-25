@@ -1,5 +1,7 @@
 # Functional State Transformation Paradigm Analysis
 
+> **Ontological Context**: This document discusses state transformations within the [three-state ontology model](./ONTOLOGY_OF_BECOMING.md). What we call "Functional State" maps to **Instance** (actualized outcomes), "Instructional State" maps to **Vessel** (templates/capacity), and the transformation process itself is the **Process of Becoming** (the continuous execution and evolution). Understanding these foundational concepts clarifies how the functional paradigm enables the system to continuously become.
+
 ## Your Vision
 
 ### Core Idea
@@ -69,15 +71,16 @@ Traditional Interpreter:
 Functional State Interpreter (Your Vision):
   User Intent → Parse (LLM) → Activity Graph → Execute → Updated State
   
-Where:
-  - User Intent = "Program" to execute
+Where (mapped to three-state ontology):
+  - User Intent = "Program" to execute (initial **vessel**)
   - LLM = "Parser" (converts intent → executable workflow)
-  - Activity = "Function" (state transformation)
-  - Execution = "Interpreter" (runs transformations)
-  - State = "Memory" (persistent context)
+  - Activity = "Function" (state transformation **vessel**)
+  - Execution = "Interpreter" (the **process-of-becoming** that runs transformations)
+  - State = "Memory" (persistent **instance** context)
+  - Result = New **instance** that immediately becomes **vessel** for next transformation
 ```
 
-**Key Insight**: The LLM becomes a **compiler/optimizer**, not the runtime!
+**Key Insight**: The LLM becomes a **compiler/optimizer** (builds vessels), not the runtime (which is the process-of-becoming)!
 
 ## Alignment with Existing Documents
 
@@ -88,12 +91,12 @@ Where:
 From that doc:
 > "Sessions and activities are two views of the same execution state. Sessions track conversational state, activities track workflow state. They should be unified."
 
-**Your vision extends this**:
-- Session = Functional State (current snapshot)
-- Activity = State Transformation Function
-- Execution = Function application: `Activity(Session) → Session'`
+**Your vision extends this** (in ontological terms):
+- Session = **Instance** (current functional state snapshot)
+- Activity = **Vessel** (state transformation capacity)
+- Execution = **Becoming** (the transformation process: `Activity(Session) → Session'`)
 
-**Perfectly aligned!** Your vision makes the "unified state" explicit and functional.
+**Perfectly aligned!** Your vision makes the "unified state" explicit and functional, while mapping cleanly to the vessel/becoming/instance model.
 
 ### SHARED_INSTRUCTIONAL_STATE_COMPLETE_ARCHITECTURE.md
 
@@ -102,13 +105,14 @@ From that doc:
 From that doc:
 > "Impulses are shared instructional state that flows from activities to sessions and vice versa."
 
-**Your vision formalizes this**:
-- Impulses = State Fragment (partial state)
-- Session = Complete State (all impulses + context)
-- Activity = Function that reads impulses and produces new impulses
+**Your vision formalizes this** (in ontological terms):
+- Impulses = State Fragment (partial **instance** data)
+- Session = Complete **Instance** (all impulses + context)
+- Activity = **Vessel** (function that reads impulses and produces new impulses)
 - Dual-write = State synchronization across boundaries
+- The transformation process = **Becoming** (continuous resolution)
 
-**This IS functional state management!** Impulses are already state fragments.
+**This IS functional state management!** Impulses are already state fragments that enable the process-of-becoming.
 
 ### ACTIVITY_SYSTEM_PROOF_COMPLETE.md
 

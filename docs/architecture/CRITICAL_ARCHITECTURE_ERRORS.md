@@ -1,5 +1,7 @@
 # Critical Architecture Errors - What We Got Wrong
 
+> **Ontological Context**: This document analyzes architectural errors within the framework of the [three-state ontology model](./ONTOLOGY_OF_BECOMING.md). OpenCode is a **vessel** (provides capacity for execution), not the system itself. The process-of-becoming is the unnamed continuous transformation that manifests through this vessel. Understanding this distinction helps clarify where components and responsibilities should reside.
+
 ## Overview
 
 After implementing the activity execution tracking fix and analyzing the architecture, we've identified several fundamental errors in our approach and understanding.
@@ -28,10 +30,11 @@ We implemented ActivityManager in **metabob-cli**, making it responsible for:
 **Location**: `repos/metabob-opencode/packages/plugin-activities/`
 
 ActivityManager belongs in **metabob-opencode** because:
-- OpenCode is the agent platform (owns orchestration)
-- OpenCode has the session context
-- OpenCode spawns agents for each task
-- OpenCode should track execution state
+- OpenCode vessel provides the capacity for orchestration
+- OpenCode vessel has the session context (instructional state)
+- OpenCode vessel spawns agents for each task (initiates becoming)
+- The process-of-becoming (execution) manifests through the OpenCode vessel
+- Execution state tracking is part of the vessel's responsibility
 
 ### Impact
 - ✅ The fix works (endpoint now correct)
