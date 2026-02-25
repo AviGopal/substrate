@@ -1,63 +1,89 @@
 {
   "activity_id": "align-vessel-code-with-docs",
-  "name": "Align Vessel Code With Docs V2",
-  "description": "Systematically implement vessel architecture features as defined in DEVBOB_VESSEL_ARCHITECTURE.md and PLUGIN_VESSEL_ARCHITECTURE.md: VesselUpdateManager, BootstrapManager, ConfigManager, and boredom activity templates",
-  "category": "infrastructure",
+  "name": "align-vessel-code-with-docs",
+  "description": "Align vessel implementation code with DevBob Vessel Architecture documentation. Ensures code structure, naming, error handling, and interfaces match the comprehensive design specification documented in DEVBOB_VESSEL_ARCHITECTURE.md",
+  "category": "refactor",
   "task_steps": [
     {
-      "task_id": "analyze-docs-and-code-gap",
+      "task_id": "task-1-analyze-gaps",
       "subagent": "general",
-      "description": "Analyze documentation vs implementation gap",
+      "description": "Analyze documentation and identify alignment gaps between design and implementation",
       "dependencies": [],
       "prompt": {
-        "template": "Analyze the vessel architecture documentation and current implementation to identify what needs to be implemented.\n\n**Documentation Files**:\n- docs/DEVBOB_VESSEL_ARCHITECTURE.md\n- docs/architecture/PLUGIN_VESSEL_ARCHITECTURE.md\n- docs/VESSEL_INTEGRATION_ROADMAP.md\n\n**Current Implementation**:\n- repos/metabob-opencode/packages/opencode/src/vessel/update.ts (mostly interfaces)\n- repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts (mostly interfaces)\n\n**Your Tasks**:\n1. Read all documentation files to understand the complete vessel architecture\n2. Read current implementation files to see what exists\n3. Create a detailed gap analysis showing:\n   - What's documented but not implemented\n   - Priority order for implementation (Phase 1 features first)\n   - Dependencies between components\n4. Output a structured implementation plan\n\n**Focus on Phase 1 features** (from DEVBOB_VESSEL_ARCHITECTURE.md):\n- VesselUpdateManager: checkUpdates, updateVessel, rollback\n- BootstrapManager: detectEnvironment, registerVessel, configureForRole\n- ConfigManager: updateConfig, addMCPServer, setFeatureFlag\n- Boredom activity templates: update-vessel-opencode, update-vessel-cli, configure-vessel-for-environment\n\nCreate impulse: analysis-result with your gap analysis and implementation plan.",
-        "variables": []
+        "template": "# Task: Analyze Vessel Code Alignment Gaps\n\nYou are analyzing the alignment between vessel documentation and implementation code.\n\n## Documentation\nRead: {{documentationPath}}\n\n## Implementation Code\nRead: {{vesselCodePath}}/update.ts\nRead: {{vesselCodePath}}/bootstrap.ts\n\n## Analysis Required\n\nCompare documentation vs implementation and identify gaps in:\n\n1. **Module Structure & Organization**\n   - Namespace organization (VesselUpdateManager, BootstrapManager)\n   - Export structure\n   - File organization\n\n2. **Interface Definitions**\n   - VesselVersion, UpdateResult, UpdateOptions, VersionTracking (update.ts)\n   - Environment, VesselRegistration, BootstrapOptions, BootstrapResult (bootstrap.ts)\n   - Missing properties or type mismatches\n\n3. **Error Handling**\n   - Error code constants (CHECKSUM_FAILED, BOOTSTRAP_FAILED, etc.)\n   - UpdateError interface consistency\n   - Recoverable flag usage\n   - Error context and timestamps\n\n4. **Function Signatures**\n   - Parameter names and types\n   - Return types\n   - JSDoc comments\n\n5. **Missing Functionality**\n   - Functions described in docs but not implemented\n   - Helper functions referenced but missing\n\n6. **Implementation-Only Code**\n   - Code present but not documented\n   - Need to verify if intentional\n\n## Output\n\nCreate a detailed markdown report: `/tmp/vessel-alignment-gaps.md`\n\nStructure:\n```markdown\n# Vessel Code Alignment Gap Analysis\n\nDate: [timestamp]\nScope: {{alignmentScope}}\n\n## Summary\n- Total gaps found: X\n- Critical gaps: X\n- Minor gaps: X\n\n## Gap Details\n\n### Module Structure\n[List gaps]\n\n### Interfaces\n[List gaps]\n\n### Error Handling  \n[List gaps]\n\n### Functions\n[List gaps]\n\n### Missing Implementation\n[List gaps]\n\n### Undocumented Code\n[List gaps]\n\n## Priority Ranking\n1. [Highest priority gap]\n2. [Second priority]\n...\n```\n\nUse read, grep, and analysis to identify all gaps systematically.",
+        "variables": [
+          {
+            "name": "documentationPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to DEVBOB_VESSEL_ARCHITECTURE.md"
+          },
+          {
+            "name": "vesselCodePath",
+            "type": "string",
+            "required": true,
+            "description": "Path to vessel implementation directory (repos/metabob-opencode/packages/opencode/src/vessel)"
+          },
+          {
+            "name": "alignmentScope",
+            "type": "string",
+            "required": false,
+            "description": "Scope: 'complete' (default), 'structure', 'interfaces', 'error-handling'"
+          }
+        ]
       },
       "context_rules": {
         "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [],
+        "required_files": [
+          "/tmp/vessel-alignment-gaps.md"
+        ],
         "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 3,
+        "max_attempts": 2,
         "strategy": "simple"
       }
     },
     {
-      "task_id": "implement-vessel-update-manager",
+      "task_id": "task-2-align-structure",
       "subagent": "general",
-      "description": "Implement VesselUpdateManager functions",
+      "description": "Align module structure, organization, and JSDoc comments",
       "dependencies": [
-        "analyze-docs-and-code-gap"
+        "task-1-analyze-gaps"
       ],
       "prompt": {
-        "template": "Implement the VesselUpdateManager functions in repos/metabob-opencode/packages/opencode/src/vessel/update.ts.\n\n**Reference**: Use the analysis from previous task and DEVBOB_VESSEL_ARCHITECTURE.md section 4.1 (Vessel Self-Update Mechanism).\n\n**Functions to implement**:\n1. `checkUpdates()`: Query GitHub releases or registry for latest version\n2. `updateVessel()`: Download, verify checksum, install with atomic swap\n3. `rollback()`: Restore previous version if new version fails\n4. `reloadVessel()`: Reload vessel without container restart\n5. Helper functions for version tracking in .vessel-versions.json\n\n**Requirements**:\n- Use existing interfaces (VesselVersion, UpdateResult, etc.)\n- Follow the update process documented: Download → Verify → Install → Test → Record\n- Implement rollback safety: keep .prev backup, auto-rollback on crash\n- Add comprehensive error handling with UpdateError codes\n- Use Log.create for logging\n\n**Testing**: After implementation, verify:\n- Functions compile without errors\n- Error codes are used correctly\n- Version tracking JSON structure matches spec\n\nDo NOT create tests yet - focus on core implementation.",
+        "template": "# Task: Align Module Structure\n\nBased on the gap analysis in `/tmp/vessel-alignment-gaps.md`, align the vessel code structure with documentation.\n\n## Files to Update\n- {{vesselCodePath}}/update.ts\n- {{vesselCodePath}}/bootstrap.ts\n\n## Alignment Actions\n\n1. **Namespace Organization**\n   - Ensure VesselUpdateManager namespace in update.ts\n   - Ensure BootstrapManager namespace in bootstrap.ts\n   - Proper export structure\n\n2. **Constants Section**\n   - Group error code constants at top of namespace\n   - Add any missing error codes from docs\n   - Maintain alphabetical order\n\n3. **Interfaces Section**\n   - Group all interfaces after constants\n   - Order as documented\n   - Add missing interfaces\n\n4. **Functions Section**\n   - Public functions first (exported)\n   - Internal helper functions last\n   - Match documentation order\n\n5. **JSDoc Comments**\n   - Add comprehensive JSDoc to all exports\n   - Match documentation style:\n     - Description\n     - @param with types and descriptions\n     - @returns with type and description\n     - @throws for errors\n     - @example with code samples\n   - Add @internal tag for helper functions\n\n## Example JSDoc Style (from docs)\n```typescript\n/**\n * Retrieves current vessel version information.\n * \n * @param {string} [filePath=\"/workspace/.vessel-versions.json\"] - Path to version tracking file\n * @returns {Promise<VersionTracking>} Current versions and update history\n * \n * @example\n * ```typescript\n * const versions = await VesselUpdateManager.getCurrentVersions()\n * console.log(versions.current.opencode.version)\n * ```\n */\n```\n\n## Validation\n- Run `npm run typecheck` or `tsc --noEmit` to ensure no type errors\n- Verify all exports are accessible\n\nMake incremental changes and test after each file update.",
         "variables": []
       },
       "context_rules": {
-        "max_tokens": 8000,
+        "max_tokens": 12000,
         "compression_strategy": "filter"
       },
       "validation": {
         "required_files": [
-          "repos/metabob-opencode/packages/opencode/src/vessel/update.ts"
+          "{{vesselCodePath}}/update.ts",
+          "{{vesselCodePath}}/bootstrap.ts"
         ],
         "required_patterns": [
           {
-            "pattern": "export async function checkUpdates",
+            "pattern": "export namespace VesselUpdateManager",
             "description": ""
           },
           {
-            "pattern": "export async function updateVessel",
+            "pattern": "export namespace BootstrapManager",
             "description": ""
           },
           {
-            "pattern": "export async function rollback",
+            "pattern": "@param",
+            "description": ""
+          },
+          {
+            "pattern": "@returns",
             "description": ""
           }
         ],
@@ -65,103 +91,19 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 3,
-        "strategy": "progressive-context"
+        "max_attempts": 2,
+        "strategy": "simple"
       }
     },
     {
-      "task_id": "implement-bootstrap-manager",
+      "task_id": "task-3-align-interfaces",
       "subagent": "general",
-      "description": "Implement BootstrapManager functions",
+      "description": "Align all interface definitions and type signatures with documentation",
       "dependencies": [
-        "analyze-docs-and-code-gap"
+        "task-2-align-structure"
       ],
       "prompt": {
-        "template": "Implement the BootstrapManager functions in repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.3 (Bootstrap Process).\n\n**Functions to implement**:\n1. `detectEnvironment()`: Detect workspace type (clean/mounted/cloned), git state, capabilities\n2. `registerVessel()`: POST to backend /api/vessels/register with vessel info\n3. `fetchConfig()`: GET from backend /api/vessels/{id}/config\n4. `bootstrap()`: Main bootstrap flow orchestrating all steps\n5. `isBootstrapped()`: Check if .bootstrapped file exists\n\n**Bootstrap Flow** (from docs):\n1. Detect environment (workspace, git state, capabilities)\n2. Register with backend (get vessel_id)\n3. Fetch initial config from backend\n4. Apply config via ConfigManager\n5. Start boredom monitoring\n6. Health check services (Redis, SurrealDB, API)\n7. Create .bootstrapped marker file\n\n**Requirements**:\n- Use existing interfaces (Environment, VesselRegistration, BootstrapResult)\n- Handle errors gracefully with UpdateError\n- Support BootstrapOptions for configuration\n- Use environment variables (METABOB_API_URL, HOSTNAME)\n- Add comprehensive logging\n\n**Testing**: Verify functions compile and error handling is complete.",
-        "variables": []
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [
-          "repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "export async function detectEnvironment",
-            "description": ""
-          },
-          {
-            "pattern": "export async function registerVessel",
-            "description": ""
-          },
-          {
-            "pattern": "export async function bootstrap",
-            "description": ""
-          }
-        ],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "progressive-context"
-      }
-    },
-    {
-      "task_id": "implement-config-manager",
-      "subagent": "general",
-      "description": "Implement ConfigManager for self-modification",
-      "dependencies": [
-        "analyze-docs-and-code-gap"
-      ],
-      "prompt": {
-        "template": "Create repos/metabob-opencode/packages/opencode/src/config/self-modify.ts to implement ConfigManager.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.2 (Config Self-Modification).\n\n**Functions to implement**:\n1. `getCurrentConfig()`: Read current opencode.json (use existing Config.state)\n2. `updateConfig()`: Safely merge and apply config updates with backup\n3. `addMCPServer()`: Add MCP server to config dynamically\n4. `updateBackendUrl()`: Change Metabob backend URL\n5. `setFeatureFlag()`: Enable/disable features\n\n**Config Modification Process** (from docs):\n1. Backup: Copy opencode.json to opencode.json.backup\n2. Merge: Deep merge with updates\n3. Validate: Run validation checks\n4. Write: Atomic write to .tmp then rename\n5. Reload: Trigger Config.state.reload()\n6. Verify: Check config loaded correctly\n7. Audit: Log to .config-changes.log\n\n**Safety Mechanisms**:\n- Always backup before modification\n- Validation before write\n- Rollback on error (restore from backup)\n- Audit trail in /workspace/.config-changes.log\n\n**Requirements**:\n- Import existing Config from '../config'\n- Use remeda for deep merging (or implement safe merge)\n- Comprehensive error handling\n- TypeScript interfaces for all functions\n\nCreate the file with complete implementation.",
-        "variables": []
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [
-          "repos/metabob-opencode/packages/opencode/src/config/self-modify.ts"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "export async function updateConfig",
-            "description": ""
-          },
-          {
-            "pattern": "export async function addMCPServer",
-            "description": ""
-          },
-          {
-            "pattern": "export async function setFeatureFlag",
-            "description": ""
-          }
-        ],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "progressive-context"
-      }
-    },
-    {
-      "task_id": "create-boredom-activity-templates",
-      "subagent": "general",
-      "description": "Create boredom activity templates for vessel self-management",
-      "dependencies": [
-        "implement-vessel-update-manager",
-        "implement-bootstrap-manager",
-        "implement-config-manager"
-      ],
-      "prompt": {
-        "template": "Create 3 boredom activity templates for vessel self-management as defined in DEVBOB_VESSEL_ARCHITECTURE.md section 4.4 and 8.\n\n**Templates to create**:\n\n1. **update-vessel-opencode-binary** (.metabob/activities/update-vessel-opencode-binary.json)\n   - Check GitHub releases for new OpenCode version\n   - Download, verify checksum, install with rollback capability\n   - Use VesselUpdateManager functions\n   - Variables: currentVersion, targetVersion (optional)\n\n2. **update-vessel-cli** (.metabob/activities/update-vessel-cli.json)\n   - Update metabob-cli venv in running container\n   - Check for new CLI version, update Python venv\n   - Variables: currentVersion, targetVersion (optional)\n\n3. **configure-vessel-for-environment** (.metabob/activities/configure-vessel-for-environment.json)\n   - Detect environment (dev/staging/prod) from hostname/backend URL\n   - Fetch appropriate config from backend\n   - Apply via ConfigManager\n   - Variables: detected_environment, new_settings\n\n**Template Structure** (follow ActivityTemplate.Schema):\n- Each template should have 4-5 tasks\n- Use general subagent\n- Include proper validation (requiredFiles, commands)\n- Add retry strategies\n- Reference the implementation functions we just created\n\n**Reference**: See DEVBOB_VESSEL_ARCHITECTURE.md section 8 (Activity Templates Needed) for detailed task breakdowns.\n\nCreate all 3 JSON files with complete activity templates.",
+        "template": "# Task: Align Interface Definitions\n\nEnsure all TypeScript interfaces match the documentation exactly.\n\n## update.ts Interfaces\n\nVerify and align:\n1. **VesselVersion** - name, version, checksum, downloadUrl\n2. **UpdateResult** - success, vessel, oldVersion, newVersion, error?\n3. **UpdateOptions** - force?, skipBackup?, retryCount?\n4. **VersionTracking** - current: Record<string, VesselVersion>, history: VesselUpdateRecord[]\n5. **VesselUpdateRecord** - vessel, version, timestamp, source, reason\n6. **UpdateError** - code, message, vessel, version, context, timestamp, recoverable\n\n## bootstrap.ts Interfaces\n\nVerify and align:\n1. **Environment** - type, workspace, git_state, mounted_repos, capabilities\n2. **VesselRegistration** - vessel_id, registered_at, backend_url\n3. **BootstrapOptions** - workspace_path?, backend_url?, vessel_name?, tracking_file?, force_bootstrap?, skip_registration?, timeout_ms?\n4. **BootstrapResult** - success, vessel_id, environment, bootstrapped_at, error?\n5. **BootstrapConfig** - vessel_id, config, fetched_at\n6. **UpdateError** - code, message, details?\n\n## Alignment Steps\n\n1. Read documentation to get exact interface definitions\n2. Compare with current implementation\n3. Add missing properties\n4. Fix type mismatches\n5. Ensure optional properties use `?` correctly\n6. Add comprehensive JSDoc to each interface\n7. Ensure proper TypeScript strict mode compliance\n\n## Interface JSDoc Template\n```typescript\n/**\n * Description of what this interface represents.\n * \n * @interface InterfaceName\n * @property {type} propertyName - Description of property\n * @property {type} [optionalProperty] - Description (optional)\n */\nexport interface InterfaceName {\n  propertyName: type\n  optionalProperty?: type\n}\n```\n\n## Validation\n- Run type checking to ensure all interfaces compile\n- Check that all documented properties exist\n- Verify no extra undocumented properties (unless intentional)\n\nMake changes to align interfaces with docs.",
         "variables": []
       },
       "context_rules": {
@@ -169,36 +111,89 @@
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          ".metabob/activities/update-vessel-opencode-binary.json",
-          ".metabob/activities/update-vessel-cli.json",
-          ".metabob/activities/configure-vessel-for-environment.json"
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "interface VesselVersion",
+            "description": ""
+          },
+          {
+            "pattern": "interface UpdateResult",
+            "description": ""
+          },
+          {
+            "pattern": "interface Environment",
+            "description": ""
+          },
+          {
+            "pattern": "interface BootstrapResult",
+            "description": ""
+          }
         ],
-        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 3,
+        "max_attempts": 2,
         "strategy": "simple"
       }
     },
     {
-      "task_id": "test-and-verify",
+      "task_id": "task-4-align-error-handling",
       "subagent": "general",
-      "description": "Verify implementations compile and templates are valid",
+      "description": "Standardize error handling patterns and error code constants",
       "dependencies": [
-        "implement-vessel-update-manager",
-        "implement-bootstrap-manager",
-        "implement-config-manager",
-        "create-boredom-activity-templates"
+        "task-3-align-interfaces"
       ],
       "prompt": {
-        "template": "Verify all vessel implementations and activity templates.\n\n**Verification Steps**:\n\n1. **TypeScript Compilation**:\n   - cd repos/metabob-opencode\n   - Run: bun run typecheck (or tsc --noEmit)\n   - Verify update.ts, bootstrap.ts, and self-modify.ts compile without errors\n\n2. **Activity Template Validation**:\n   - Verify all 3 activity JSON files are valid JSON\n   - Check templates follow ActivityTemplate.Schema structure\n   - Validate task dependencies form a proper DAG\n\n3. **Integration Check**:\n   - Verify BootstrapManager can import ConfigManager\n   - Verify activity templates reference correct function paths\n   - Check error codes are consistent\n\n4. **Documentation Alignment**:\n   - Compare implementation against DEVBOB_VESSEL_ARCHITECTURE.md requirements\n   - Verify all Phase 1 features are implemented\n   - Check that function signatures match documentation\n\n**Output**:\n- Report any compilation errors (with fixes)\n- List any template validation issues\n- Confirm alignment with documentation\n- Suggest any remaining gaps\n\nIf errors found, fix them before completing.",
+        "template": "# Task: Align Error Handling\n\nStandardize error handling to match documentation patterns.\n\n## Error Code Constants\n\n### update.ts\nEnsure all documented error codes exist:\n- CHECKSUM_FAILED\n- DOWNLOAD_FAILED\n- INSTALL_FAILED\n- INVALID_VERSION\n- NETWORK_ERROR\n- FILE_NOT_FOUND\n- PERMISSION_DENIED\n- ROLLBACK_FAILED\n- CORRUPTED_TRACKING\n\n### bootstrap.ts\nEnsure all documented error codes exist:\n- BOOTSTRAP_FAILED\n- ENVIRONMENT_DETECTION_FAILED\n- REGISTRATION_FAILED\n- CONFIG_FETCH_FAILED\n- HEALTH_CHECK_FAILED\n- MARKER_WRITE_FAILED\n\n## UpdateError Interface\n\nEnsure consistent UpdateError usage across both files:\n```typescript\ninterface UpdateError {\n  code: string           // Error code constant\n  message: string        // Human-readable message\n  vessel: string         // Vessel name (update.ts)\n  version: string        // Version involved (update.ts)\n  context: Record<string, unknown>  // Additional context\n  timestamp: string      // ISO 8601 timestamp\n  recoverable: boolean   // Whether error can be recovered\n}\n```\n\nNote: bootstrap.ts may have simplified UpdateError - align as needed.\n\n## Error Creation Helper\n\nEnsure `createUpdateError()` function exists and is used consistently:\n```typescript\nexport function createUpdateError(\n  code: string,\n  message: string,\n  vessel: string,\n  version: string,\n  context: Record<string, unknown> = {},\n  recoverable: boolean = false\n): UpdateError\n```\n\n## Error Usage Patterns\n\n1. All errors should use `createUpdateError()` for consistency\n2. Set `recoverable` flag appropriately:\n   - Network errors: recoverable=true\n   - Checksum failures: recoverable=true (retry possible)\n   - Invalid versions: recoverable=false\n   - Permission errors: recoverable=false\n3. Include rich context (URLs, file paths, attempt numbers)\n4. Always include timestamp\n5. Proper error propagation in catch blocks\n\n## Review and Update\n\n1. Find all error creation sites\n2. Replace ad-hoc errors with createUpdateError()\n3. Ensure proper error code constants\n4. Add recoverable flags\n5. Enrich error context\n6. Update error handling in catch blocks\n\nUpdate both files to match documented error handling patterns.",
         "variables": []
       },
       "context_rules": {
-        "max_tokens": 8000,
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "CHECKSUM_FAILED",
+            "description": ""
+          },
+          {
+            "pattern": "BOOTSTRAP_FAILED",
+            "description": ""
+          },
+          {
+            "pattern": "createUpdateError",
+            "description": ""
+          },
+          {
+            "pattern": "recoverable",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-5-implement-missing",
+      "subagent": "general",
+      "description": "Implement any documented functionality that is missing from code",
+      "dependencies": [
+        "task-4-align-error-handling"
+      ],
+      "prompt": {
+        "template": "# Task: Implement Missing Functionality\n\nReview gap analysis and implement any documented features missing from code.\n\n## Review Documentation\n\nRead {{documentationPath}} and identify:\n1. Functions described but not implemented\n2. Placeholder implementations with TODOs\n3. Integration points mentioned but missing\n4. Helper functions referenced but absent\n\n## Common Missing Features\n\nCheck for these commonly documented but unimplemented features:\n\n### update.ts\n- `checkRegistry()` - Custom registry support (likely TODO)\n- `checkLocalUpdates()` - Local filesystem updates (likely TODO)\n- Full retry logic with exponential backoff\n- Proper signal handling for vessel reload\n\n### bootstrap.ts  \n- ConfigManager integration (may need to verify import path)\n- Health check retry logic\n- Comprehensive capability detection\n- Vessel version reporting during registration\n\n## Implementation Strategy\n\n1. **For complex missing features**: Add stub implementation with TODO\n   ```typescript\n   async function checkRegistry(vessel: string): Promise<VesselVersion[]> {\n     // TODO: Implement custom registry support\n     logger.warn(\"Registry updates not yet implemented\", { vessel })\n     return []\n   }\n   ```\n\n2. **For simple missing features**: Implement fully if straightforward\n\n3. **For missing integrations**: Verify import paths and add integration code\n\n4. **For helper functions**: Implement if referenced elsewhere\n\n## Logging\n\nEnsure consistent logging as documented:\n```typescript\nlogger.info(\"Operation starting\", { context })\nlogger.debug(\"Detailed info\", { details })\nlogger.warn(\"Non-critical issue\", { issue })\nlogger.error(\"Operation failed\", { error })\n```\n\n## Validation\n\n1. Run type checking after implementations\n2. Ensure all documented APIs are callable\n3. Verify no broken imports or references\n4. Check that TODOs are properly marked\n\nImplement missing features following documentation guidance.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -209,65 +204,136 @@
       },
       "retry": {
         "max_attempts": 2,
-        "strategy": "progressive-context"
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-6-verify-alignment",
+      "subagent": "general",
+      "description": "Run tests and create final alignment verification report",
+      "dependencies": [
+        "task-5-implement-missing"
+      ],
+      "prompt": {
+        "template": "# Task: Verify Alignment and Create Report\n\nFinal verification and documentation of alignment work.\n\n## Verification Steps\n\n1. **Type Checking**\n   ```bash\n   cd {{vesselCodePath}}/../..\n   npm run typecheck || tsc --noEmit || echo \"Type check completed\"\n   ```\n\n2. **Compilation**\n   - Ensure no TypeScript errors\n   - Check for any breaking changes\n   - Verify exports are correct\n\n3. **Code Quality**\n   - Run metabob_search_codebase_issues if available\n   - Check for any HIGH severity issues introduced\n\n4. **Documentation Review**\n   - Compare final code against documentation\n   - Verify all critical gaps addressed\n   - Note any remaining TODOs\n\n## Create Alignment Report\n\nCreate comprehensive report: `VESSEL_CODE_ALIGNMENT_REPORT.md`\n\n```markdown\n# Vessel Code Alignment Report\n\n**Date**: [ISO timestamp]\n**Scope**: {{alignmentScope}}\n**Activity**: align-vessel-code-with-docs\n\n---\n\n## Executive Summary\n\n- **Documentation**: {{documentationPath}}\n- **Implementation**: {{vesselCodePath}}\n- **Gaps Identified**: X\n- **Gaps Resolved**: X\n- **Remaining Gaps**: X\n- **Overall Status**: ✅ Aligned | ⚠️ Partially Aligned | ❌ Issues Remain\n\n---\n\n## Changes Made\n\n### Module Structure\n- [List structural changes]\n- [Namespace reorganization]\n- [Export structure updates]\n\n### Interfaces\n- [Interface alignments]\n- [New interfaces added]\n- [Type corrections]\n\n### Error Handling\n- [Error code standardization]\n- [UpdateError interface alignment]\n- [Recoverable flag additions]\n\n### Missing Functionality\n- [Implemented features]\n- [Stub implementations with TODOs]\n- [Integration fixes]\n\n### Documentation\n- [JSDoc additions]\n- [Comment improvements]\n- [Example code added]\n\n---\n\n## Remaining Gaps\n\n### Critical\n[List any critical unresolved gaps]\n\n### Minor\n[List minor gaps or TODOs]\n\n### Future Work\n[List features marked as TODO]\n\n---\n\n## Breaking Changes\n\n[List any breaking changes to APIs]\n[Migration guide if needed]\n\n---\n\n## Verification Results\n\n### Type Check: ✅ | ❌\n```\n[Type check output]\n```\n\n### Compilation: ✅ | ❌\n```\n[Compilation output]\n```\n\n### Code Quality: ✅ | ⚠️ | ❌\n[Metabob analysis summary]\n\n---\n\n## Next Steps\n\n1. [Recommended next action]\n2. [Testing recommendations]\n3. [Documentation updates needed]\n\n---\n\n## Annotations\n\n[Document key design decisions using metabob_annotate_component]\n\n```\n\nUse metabob_annotate_component to document 3-5 key components:\n- Why certain design decisions were made\n- What alternatives were considered\n- What constraints influenced implementation\n\nCreate the report and complete alignment verification.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "VESSEL_CODE_ALIGNMENT_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Vessel Code Alignment Report",
+            "description": ""
+          },
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Changes Made",
+            "description": ""
+          },
+          {
+            "pattern": "Remaining Gaps",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
       }
     }
   ],
   "tasks": [
     {
-      "task_id": "analyze-docs-and-code-gap",
+      "task_id": "task-1-analyze-gaps",
       "subagent": "general",
-      "description": "Analyze documentation vs implementation gap",
+      "description": "Analyze documentation and identify alignment gaps between design and implementation",
       "dependencies": [],
       "prompt": {
-        "template": "Analyze the vessel architecture documentation and current implementation to identify what needs to be implemented.\n\n**Documentation Files**:\n- docs/DEVBOB_VESSEL_ARCHITECTURE.md\n- docs/architecture/PLUGIN_VESSEL_ARCHITECTURE.md\n- docs/VESSEL_INTEGRATION_ROADMAP.md\n\n**Current Implementation**:\n- repos/metabob-opencode/packages/opencode/src/vessel/update.ts (mostly interfaces)\n- repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts (mostly interfaces)\n\n**Your Tasks**:\n1. Read all documentation files to understand the complete vessel architecture\n2. Read current implementation files to see what exists\n3. Create a detailed gap analysis showing:\n   - What's documented but not implemented\n   - Priority order for implementation (Phase 1 features first)\n   - Dependencies between components\n4. Output a structured implementation plan\n\n**Focus on Phase 1 features** (from DEVBOB_VESSEL_ARCHITECTURE.md):\n- VesselUpdateManager: checkUpdates, updateVessel, rollback\n- BootstrapManager: detectEnvironment, registerVessel, configureForRole\n- ConfigManager: updateConfig, addMCPServer, setFeatureFlag\n- Boredom activity templates: update-vessel-opencode, update-vessel-cli, configure-vessel-for-environment\n\nCreate impulse: analysis-result with your gap analysis and implementation plan.",
-        "variables": []
+        "template": "# Task: Analyze Vessel Code Alignment Gaps\n\nYou are analyzing the alignment between vessel documentation and implementation code.\n\n## Documentation\nRead: {{documentationPath}}\n\n## Implementation Code\nRead: {{vesselCodePath}}/update.ts\nRead: {{vesselCodePath}}/bootstrap.ts\n\n## Analysis Required\n\nCompare documentation vs implementation and identify gaps in:\n\n1. **Module Structure & Organization**\n   - Namespace organization (VesselUpdateManager, BootstrapManager)\n   - Export structure\n   - File organization\n\n2. **Interface Definitions**\n   - VesselVersion, UpdateResult, UpdateOptions, VersionTracking (update.ts)\n   - Environment, VesselRegistration, BootstrapOptions, BootstrapResult (bootstrap.ts)\n   - Missing properties or type mismatches\n\n3. **Error Handling**\n   - Error code constants (CHECKSUM_FAILED, BOOTSTRAP_FAILED, etc.)\n   - UpdateError interface consistency\n   - Recoverable flag usage\n   - Error context and timestamps\n\n4. **Function Signatures**\n   - Parameter names and types\n   - Return types\n   - JSDoc comments\n\n5. **Missing Functionality**\n   - Functions described in docs but not implemented\n   - Helper functions referenced but missing\n\n6. **Implementation-Only Code**\n   - Code present but not documented\n   - Need to verify if intentional\n\n## Output\n\nCreate a detailed markdown report: `/tmp/vessel-alignment-gaps.md`\n\nStructure:\n```markdown\n# Vessel Code Alignment Gap Analysis\n\nDate: [timestamp]\nScope: {{alignmentScope}}\n\n## Summary\n- Total gaps found: X\n- Critical gaps: X\n- Minor gaps: X\n\n## Gap Details\n\n### Module Structure\n[List gaps]\n\n### Interfaces\n[List gaps]\n\n### Error Handling  \n[List gaps]\n\n### Functions\n[List gaps]\n\n### Missing Implementation\n[List gaps]\n\n### Undocumented Code\n[List gaps]\n\n## Priority Ranking\n1. [Highest priority gap]\n2. [Second priority]\n...\n```\n\nUse read, grep, and analysis to identify all gaps systematically.",
+        "variables": [
+          {
+            "name": "documentationPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to DEVBOB_VESSEL_ARCHITECTURE.md"
+          },
+          {
+            "name": "vesselCodePath",
+            "type": "string",
+            "required": true,
+            "description": "Path to vessel implementation directory (repos/metabob-opencode/packages/opencode/src/vessel)"
+          },
+          {
+            "name": "alignmentScope",
+            "type": "string",
+            "required": false,
+            "description": "Scope: 'complete' (default), 'structure', 'interfaces', 'error-handling'"
+          }
+        ]
       },
       "context_rules": {
         "max_tokens": 8000,
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [],
+        "required_files": [
+          "/tmp/vessel-alignment-gaps.md"
+        ],
         "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 3,
+        "max_attempts": 2,
         "strategy": "simple"
       }
     },
     {
-      "task_id": "implement-vessel-update-manager",
+      "task_id": "task-2-align-structure",
       "subagent": "general",
-      "description": "Implement VesselUpdateManager functions",
+      "description": "Align module structure, organization, and JSDoc comments",
       "dependencies": [
-        "analyze-docs-and-code-gap"
+        "task-1-analyze-gaps"
       ],
       "prompt": {
-        "template": "Implement the VesselUpdateManager functions in repos/metabob-opencode/packages/opencode/src/vessel/update.ts.\n\n**Reference**: Use the analysis from previous task and DEVBOB_VESSEL_ARCHITECTURE.md section 4.1 (Vessel Self-Update Mechanism).\n\n**Functions to implement**:\n1. `checkUpdates()`: Query GitHub releases or registry for latest version\n2. `updateVessel()`: Download, verify checksum, install with atomic swap\n3. `rollback()`: Restore previous version if new version fails\n4. `reloadVessel()`: Reload vessel without container restart\n5. Helper functions for version tracking in .vessel-versions.json\n\n**Requirements**:\n- Use existing interfaces (VesselVersion, UpdateResult, etc.)\n- Follow the update process documented: Download → Verify → Install → Test → Record\n- Implement rollback safety: keep .prev backup, auto-rollback on crash\n- Add comprehensive error handling with UpdateError codes\n- Use Log.create for logging\n\n**Testing**: After implementation, verify:\n- Functions compile without errors\n- Error codes are used correctly\n- Version tracking JSON structure matches spec\n\nDo NOT create tests yet - focus on core implementation.",
+        "template": "# Task: Align Module Structure\n\nBased on the gap analysis in `/tmp/vessel-alignment-gaps.md`, align the vessel code structure with documentation.\n\n## Files to Update\n- {{vesselCodePath}}/update.ts\n- {{vesselCodePath}}/bootstrap.ts\n\n## Alignment Actions\n\n1. **Namespace Organization**\n   - Ensure VesselUpdateManager namespace in update.ts\n   - Ensure BootstrapManager namespace in bootstrap.ts\n   - Proper export structure\n\n2. **Constants Section**\n   - Group error code constants at top of namespace\n   - Add any missing error codes from docs\n   - Maintain alphabetical order\n\n3. **Interfaces Section**\n   - Group all interfaces after constants\n   - Order as documented\n   - Add missing interfaces\n\n4. **Functions Section**\n   - Public functions first (exported)\n   - Internal helper functions last\n   - Match documentation order\n\n5. **JSDoc Comments**\n   - Add comprehensive JSDoc to all exports\n   - Match documentation style:\n     - Description\n     - @param with types and descriptions\n     - @returns with type and description\n     - @throws for errors\n     - @example with code samples\n   - Add @internal tag for helper functions\n\n## Example JSDoc Style (from docs)\n```typescript\n/**\n * Retrieves current vessel version information.\n * \n * @param {string} [filePath=\"/workspace/.vessel-versions.json\"] - Path to version tracking file\n * @returns {Promise<VersionTracking>} Current versions and update history\n * \n * @example\n * ```typescript\n * const versions = await VesselUpdateManager.getCurrentVersions()\n * console.log(versions.current.opencode.version)\n * ```\n */\n```\n\n## Validation\n- Run `npm run typecheck` or `tsc --noEmit` to ensure no type errors\n- Verify all exports are accessible\n\nMake incremental changes and test after each file update.",
         "variables": []
       },
       "context_rules": {
-        "max_tokens": 8000,
+        "max_tokens": 12000,
         "compression_strategy": "filter"
       },
       "validation": {
         "required_files": [
-          "repos/metabob-opencode/packages/opencode/src/vessel/update.ts"
+          "{{vesselCodePath}}/update.ts",
+          "{{vesselCodePath}}/bootstrap.ts"
         ],
         "required_patterns": [
           {
-            "pattern": "export async function checkUpdates",
+            "pattern": "export namespace VesselUpdateManager",
             "description": ""
           },
           {
-            "pattern": "export async function updateVessel",
+            "pattern": "export namespace BootstrapManager",
             "description": ""
           },
           {
-            "pattern": "export async function rollback",
+            "pattern": "@param",
+            "description": ""
+          },
+          {
+            "pattern": "@returns",
             "description": ""
           }
         ],
@@ -275,103 +341,19 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 3,
-        "strategy": "progressive-context"
+        "max_attempts": 2,
+        "strategy": "simple"
       }
     },
     {
-      "task_id": "implement-bootstrap-manager",
+      "task_id": "task-3-align-interfaces",
       "subagent": "general",
-      "description": "Implement BootstrapManager functions",
+      "description": "Align all interface definitions and type signatures with documentation",
       "dependencies": [
-        "analyze-docs-and-code-gap"
+        "task-2-align-structure"
       ],
       "prompt": {
-        "template": "Implement the BootstrapManager functions in repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.3 (Bootstrap Process).\n\n**Functions to implement**:\n1. `detectEnvironment()`: Detect workspace type (clean/mounted/cloned), git state, capabilities\n2. `registerVessel()`: POST to backend /api/vessels/register with vessel info\n3. `fetchConfig()`: GET from backend /api/vessels/{id}/config\n4. `bootstrap()`: Main bootstrap flow orchestrating all steps\n5. `isBootstrapped()`: Check if .bootstrapped file exists\n\n**Bootstrap Flow** (from docs):\n1. Detect environment (workspace, git state, capabilities)\n2. Register with backend (get vessel_id)\n3. Fetch initial config from backend\n4. Apply config via ConfigManager\n5. Start boredom monitoring\n6. Health check services (Redis, SurrealDB, API)\n7. Create .bootstrapped marker file\n\n**Requirements**:\n- Use existing interfaces (Environment, VesselRegistration, BootstrapResult)\n- Handle errors gracefully with UpdateError\n- Support BootstrapOptions for configuration\n- Use environment variables (METABOB_API_URL, HOSTNAME)\n- Add comprehensive logging\n\n**Testing**: Verify functions compile and error handling is complete.",
-        "variables": []
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [
-          "repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "export async function detectEnvironment",
-            "description": ""
-          },
-          {
-            "pattern": "export async function registerVessel",
-            "description": ""
-          },
-          {
-            "pattern": "export async function bootstrap",
-            "description": ""
-          }
-        ],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "progressive-context"
-      }
-    },
-    {
-      "task_id": "implement-config-manager",
-      "subagent": "general",
-      "description": "Implement ConfigManager for self-modification",
-      "dependencies": [
-        "analyze-docs-and-code-gap"
-      ],
-      "prompt": {
-        "template": "Create repos/metabob-opencode/packages/opencode/src/config/self-modify.ts to implement ConfigManager.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.2 (Config Self-Modification).\n\n**Functions to implement**:\n1. `getCurrentConfig()`: Read current opencode.json (use existing Config.state)\n2. `updateConfig()`: Safely merge and apply config updates with backup\n3. `addMCPServer()`: Add MCP server to config dynamically\n4. `updateBackendUrl()`: Change Metabob backend URL\n5. `setFeatureFlag()`: Enable/disable features\n\n**Config Modification Process** (from docs):\n1. Backup: Copy opencode.json to opencode.json.backup\n2. Merge: Deep merge with updates\n3. Validate: Run validation checks\n4. Write: Atomic write to .tmp then rename\n5. Reload: Trigger Config.state.reload()\n6. Verify: Check config loaded correctly\n7. Audit: Log to .config-changes.log\n\n**Safety Mechanisms**:\n- Always backup before modification\n- Validation before write\n- Rollback on error (restore from backup)\n- Audit trail in /workspace/.config-changes.log\n\n**Requirements**:\n- Import existing Config from '../config'\n- Use remeda for deep merging (or implement safe merge)\n- Comprehensive error handling\n- TypeScript interfaces for all functions\n\nCreate the file with complete implementation.",
-        "variables": []
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [
-          "repos/metabob-opencode/packages/opencode/src/config/self-modify.ts"
-        ],
-        "required_patterns": [
-          {
-            "pattern": "export async function updateConfig",
-            "description": ""
-          },
-          {
-            "pattern": "export async function addMCPServer",
-            "description": ""
-          },
-          {
-            "pattern": "export async function setFeatureFlag",
-            "description": ""
-          }
-        ],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "progressive-context"
-      }
-    },
-    {
-      "task_id": "create-boredom-activity-templates",
-      "subagent": "general",
-      "description": "Create boredom activity templates for vessel self-management",
-      "dependencies": [
-        "implement-vessel-update-manager",
-        "implement-bootstrap-manager",
-        "implement-config-manager"
-      ],
-      "prompt": {
-        "template": "Create 3 boredom activity templates for vessel self-management as defined in DEVBOB_VESSEL_ARCHITECTURE.md section 4.4 and 8.\n\n**Templates to create**:\n\n1. **update-vessel-opencode-binary** (.metabob/activities/update-vessel-opencode-binary.json)\n   - Check GitHub releases for new OpenCode version\n   - Download, verify checksum, install with rollback capability\n   - Use VesselUpdateManager functions\n   - Variables: currentVersion, targetVersion (optional)\n\n2. **update-vessel-cli** (.metabob/activities/update-vessel-cli.json)\n   - Update metabob-cli venv in running container\n   - Check for new CLI version, update Python venv\n   - Variables: currentVersion, targetVersion (optional)\n\n3. **configure-vessel-for-environment** (.metabob/activities/configure-vessel-for-environment.json)\n   - Detect environment (dev/staging/prod) from hostname/backend URL\n   - Fetch appropriate config from backend\n   - Apply via ConfigManager\n   - Variables: detected_environment, new_settings\n\n**Template Structure** (follow ActivityTemplate.Schema):\n- Each template should have 4-5 tasks\n- Use general subagent\n- Include proper validation (requiredFiles, commands)\n- Add retry strategies\n- Reference the implementation functions we just created\n\n**Reference**: See DEVBOB_VESSEL_ARCHITECTURE.md section 8 (Activity Templates Needed) for detailed task breakdowns.\n\nCreate all 3 JSON files with complete activity templates.",
+        "template": "# Task: Align Interface Definitions\n\nEnsure all TypeScript interfaces match the documentation exactly.\n\n## update.ts Interfaces\n\nVerify and align:\n1. **VesselVersion** - name, version, checksum, downloadUrl\n2. **UpdateResult** - success, vessel, oldVersion, newVersion, error?\n3. **UpdateOptions** - force?, skipBackup?, retryCount?\n4. **VersionTracking** - current: Record<string, VesselVersion>, history: VesselUpdateRecord[]\n5. **VesselUpdateRecord** - vessel, version, timestamp, source, reason\n6. **UpdateError** - code, message, vessel, version, context, timestamp, recoverable\n\n## bootstrap.ts Interfaces\n\nVerify and align:\n1. **Environment** - type, workspace, git_state, mounted_repos, capabilities\n2. **VesselRegistration** - vessel_id, registered_at, backend_url\n3. **BootstrapOptions** - workspace_path?, backend_url?, vessel_name?, tracking_file?, force_bootstrap?, skip_registration?, timeout_ms?\n4. **BootstrapResult** - success, vessel_id, environment, bootstrapped_at, error?\n5. **BootstrapConfig** - vessel_id, config, fetched_at\n6. **UpdateError** - code, message, details?\n\n## Alignment Steps\n\n1. Read documentation to get exact interface definitions\n2. Compare with current implementation\n3. Add missing properties\n4. Fix type mismatches\n5. Ensure optional properties use `?` correctly\n6. Add comprehensive JSDoc to each interface\n7. Ensure proper TypeScript strict mode compliance\n\n## Interface JSDoc Template\n```typescript\n/**\n * Description of what this interface represents.\n * \n * @interface InterfaceName\n * @property {type} propertyName - Description of property\n * @property {type} [optionalProperty] - Description (optional)\n */\nexport interface InterfaceName {\n  propertyName: type\n  optionalProperty?: type\n}\n```\n\n## Validation\n- Run type checking to ensure all interfaces compile\n- Check that all documented properties exist\n- Verify no extra undocumented properties (unless intentional)\n\nMake changes to align interfaces with docs.",
         "variables": []
       },
       "context_rules": {
@@ -379,36 +361,89 @@
         "compression_strategy": "filter"
       },
       "validation": {
-        "required_files": [
-          ".metabob/activities/update-vessel-opencode-binary.json",
-          ".metabob/activities/update-vessel-cli.json",
-          ".metabob/activities/configure-vessel-for-environment.json"
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "interface VesselVersion",
+            "description": ""
+          },
+          {
+            "pattern": "interface UpdateResult",
+            "description": ""
+          },
+          {
+            "pattern": "interface Environment",
+            "description": ""
+          },
+          {
+            "pattern": "interface BootstrapResult",
+            "description": ""
+          }
         ],
-        "required_patterns": [],
         "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "max_attempts": 3,
+        "max_attempts": 2,
         "strategy": "simple"
       }
     },
     {
-      "task_id": "test-and-verify",
+      "task_id": "task-4-align-error-handling",
       "subagent": "general",
-      "description": "Verify implementations compile and templates are valid",
+      "description": "Standardize error handling patterns and error code constants",
       "dependencies": [
-        "implement-vessel-update-manager",
-        "implement-bootstrap-manager",
-        "implement-config-manager",
-        "create-boredom-activity-templates"
+        "task-3-align-interfaces"
       ],
       "prompt": {
-        "template": "Verify all vessel implementations and activity templates.\n\n**Verification Steps**:\n\n1. **TypeScript Compilation**:\n   - cd repos/metabob-opencode\n   - Run: bun run typecheck (or tsc --noEmit)\n   - Verify update.ts, bootstrap.ts, and self-modify.ts compile without errors\n\n2. **Activity Template Validation**:\n   - Verify all 3 activity JSON files are valid JSON\n   - Check templates follow ActivityTemplate.Schema structure\n   - Validate task dependencies form a proper DAG\n\n3. **Integration Check**:\n   - Verify BootstrapManager can import ConfigManager\n   - Verify activity templates reference correct function paths\n   - Check error codes are consistent\n\n4. **Documentation Alignment**:\n   - Compare implementation against DEVBOB_VESSEL_ARCHITECTURE.md requirements\n   - Verify all Phase 1 features are implemented\n   - Check that function signatures match documentation\n\n**Output**:\n- Report any compilation errors (with fixes)\n- List any template validation issues\n- Confirm alignment with documentation\n- Suggest any remaining gaps\n\nIf errors found, fix them before completing.",
+        "template": "# Task: Align Error Handling\n\nStandardize error handling to match documentation patterns.\n\n## Error Code Constants\n\n### update.ts\nEnsure all documented error codes exist:\n- CHECKSUM_FAILED\n- DOWNLOAD_FAILED\n- INSTALL_FAILED\n- INVALID_VERSION\n- NETWORK_ERROR\n- FILE_NOT_FOUND\n- PERMISSION_DENIED\n- ROLLBACK_FAILED\n- CORRUPTED_TRACKING\n\n### bootstrap.ts\nEnsure all documented error codes exist:\n- BOOTSTRAP_FAILED\n- ENVIRONMENT_DETECTION_FAILED\n- REGISTRATION_FAILED\n- CONFIG_FETCH_FAILED\n- HEALTH_CHECK_FAILED\n- MARKER_WRITE_FAILED\n\n## UpdateError Interface\n\nEnsure consistent UpdateError usage across both files:\n```typescript\ninterface UpdateError {\n  code: string           // Error code constant\n  message: string        // Human-readable message\n  vessel: string         // Vessel name (update.ts)\n  version: string        // Version involved (update.ts)\n  context: Record<string, unknown>  // Additional context\n  timestamp: string      // ISO 8601 timestamp\n  recoverable: boolean   // Whether error can be recovered\n}\n```\n\nNote: bootstrap.ts may have simplified UpdateError - align as needed.\n\n## Error Creation Helper\n\nEnsure `createUpdateError()` function exists and is used consistently:\n```typescript\nexport function createUpdateError(\n  code: string,\n  message: string,\n  vessel: string,\n  version: string,\n  context: Record<string, unknown> = {},\n  recoverable: boolean = false\n): UpdateError\n```\n\n## Error Usage Patterns\n\n1. All errors should use `createUpdateError()` for consistency\n2. Set `recoverable` flag appropriately:\n   - Network errors: recoverable=true\n   - Checksum failures: recoverable=true (retry possible)\n   - Invalid versions: recoverable=false\n   - Permission errors: recoverable=false\n3. Include rich context (URLs, file paths, attempt numbers)\n4. Always include timestamp\n5. Proper error propagation in catch blocks\n\n## Review and Update\n\n1. Find all error creation sites\n2. Replace ad-hoc errors with createUpdateError()\n3. Ensure proper error code constants\n4. Add recoverable flags\n5. Enrich error context\n6. Update error handling in catch blocks\n\nUpdate both files to match documented error handling patterns.",
         "variables": []
       },
       "context_rules": {
-        "max_tokens": 8000,
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "CHECKSUM_FAILED",
+            "description": ""
+          },
+          {
+            "pattern": "BOOTSTRAP_FAILED",
+            "description": ""
+          },
+          {
+            "pattern": "createUpdateError",
+            "description": ""
+          },
+          {
+            "pattern": "recoverable",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-5-implement-missing",
+      "subagent": "general",
+      "description": "Implement any documented functionality that is missing from code",
+      "dependencies": [
+        "task-4-align-error-handling"
+      ],
+      "prompt": {
+        "template": "# Task: Implement Missing Functionality\n\nReview gap analysis and implement any documented features missing from code.\n\n## Review Documentation\n\nRead {{documentationPath}} and identify:\n1. Functions described but not implemented\n2. Placeholder implementations with TODOs\n3. Integration points mentioned but missing\n4. Helper functions referenced but absent\n\n## Common Missing Features\n\nCheck for these commonly documented but unimplemented features:\n\n### update.ts\n- `checkRegistry()` - Custom registry support (likely TODO)\n- `checkLocalUpdates()` - Local filesystem updates (likely TODO)\n- Full retry logic with exponential backoff\n- Proper signal handling for vessel reload\n\n### bootstrap.ts  \n- ConfigManager integration (may need to verify import path)\n- Health check retry logic\n- Comprehensive capability detection\n- Vessel version reporting during registration\n\n## Implementation Strategy\n\n1. **For complex missing features**: Add stub implementation with TODO\n   ```typescript\n   async function checkRegistry(vessel: string): Promise<VesselVersion[]> {\n     // TODO: Implement custom registry support\n     logger.warn(\"Registry updates not yet implemented\", { vessel })\n     return []\n   }\n   ```\n\n2. **For simple missing features**: Implement fully if straightforward\n\n3. **For missing integrations**: Verify import paths and add integration code\n\n4. **For helper functions**: Implement if referenced elsewhere\n\n## Logging\n\nEnsure consistent logging as documented:\n```typescript\nlogger.info(\"Operation starting\", { context })\nlogger.debug(\"Detailed info\", { details })\nlogger.warn(\"Non-critical issue\", { issue })\nlogger.error(\"Operation failed\", { error })\n```\n\n## Validation\n\n1. Run type checking after implementations\n2. Ensure all documented APIs are callable\n3. Verify no broken imports or references\n4. Check that TODOs are properly marked\n\nImplement missing features following documentation guidance.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
         "compression_strategy": "filter"
       },
       "validation": {
@@ -419,7 +454,52 @@
       },
       "retry": {
         "max_attempts": 2,
-        "strategy": "progressive-context"
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-6-verify-alignment",
+      "subagent": "general",
+      "description": "Run tests and create final alignment verification report",
+      "dependencies": [
+        "task-5-implement-missing"
+      ],
+      "prompt": {
+        "template": "# Task: Verify Alignment and Create Report\n\nFinal verification and documentation of alignment work.\n\n## Verification Steps\n\n1. **Type Checking**\n   ```bash\n   cd {{vesselCodePath}}/../..\n   npm run typecheck || tsc --noEmit || echo \"Type check completed\"\n   ```\n\n2. **Compilation**\n   - Ensure no TypeScript errors\n   - Check for any breaking changes\n   - Verify exports are correct\n\n3. **Code Quality**\n   - Run metabob_search_codebase_issues if available\n   - Check for any HIGH severity issues introduced\n\n4. **Documentation Review**\n   - Compare final code against documentation\n   - Verify all critical gaps addressed\n   - Note any remaining TODOs\n\n## Create Alignment Report\n\nCreate comprehensive report: `VESSEL_CODE_ALIGNMENT_REPORT.md`\n\n```markdown\n# Vessel Code Alignment Report\n\n**Date**: [ISO timestamp]\n**Scope**: {{alignmentScope}}\n**Activity**: align-vessel-code-with-docs\n\n---\n\n## Executive Summary\n\n- **Documentation**: {{documentationPath}}\n- **Implementation**: {{vesselCodePath}}\n- **Gaps Identified**: X\n- **Gaps Resolved**: X\n- **Remaining Gaps**: X\n- **Overall Status**: ✅ Aligned | ⚠️ Partially Aligned | ❌ Issues Remain\n\n---\n\n## Changes Made\n\n### Module Structure\n- [List structural changes]\n- [Namespace reorganization]\n- [Export structure updates]\n\n### Interfaces\n- [Interface alignments]\n- [New interfaces added]\n- [Type corrections]\n\n### Error Handling\n- [Error code standardization]\n- [UpdateError interface alignment]\n- [Recoverable flag additions]\n\n### Missing Functionality\n- [Implemented features]\n- [Stub implementations with TODOs]\n- [Integration fixes]\n\n### Documentation\n- [JSDoc additions]\n- [Comment improvements]\n- [Example code added]\n\n---\n\n## Remaining Gaps\n\n### Critical\n[List any critical unresolved gaps]\n\n### Minor\n[List minor gaps or TODOs]\n\n### Future Work\n[List features marked as TODO]\n\n---\n\n## Breaking Changes\n\n[List any breaking changes to APIs]\n[Migration guide if needed]\n\n---\n\n## Verification Results\n\n### Type Check: ✅ | ❌\n```\n[Type check output]\n```\n\n### Compilation: ✅ | ❌\n```\n[Compilation output]\n```\n\n### Code Quality: ✅ | ⚠️ | ❌\n[Metabob analysis summary]\n\n---\n\n## Next Steps\n\n1. [Recommended next action]\n2. [Testing recommendations]\n3. [Documentation updates needed]\n\n---\n\n## Annotations\n\n[Document key design decisions using metabob_annotate_component]\n\n```\n\nUse metabob_annotate_component to document 3-5 key components:\n- Why certain design decisions were made\n- What alternatives were considered\n- What constraints influenced implementation\n\nCreate the report and complete alignment verification.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "VESSEL_CODE_ALIGNMENT_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Vessel Code Alignment Report",
+            "description": ""
+          },
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Changes Made",
+            "description": ""
+          },
+          {
+            "pattern": "Remaining Gaps",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
       }
     }
   ],
@@ -430,6 +510,6 @@
     "avg_cost": 0
   },
   "author": null,
-  "created_at": "2026-02-25T10:38:11.766Z",
+  "created_at": "2026-02-25T13:59:43.967Z",
   "metadata": {}
 }
