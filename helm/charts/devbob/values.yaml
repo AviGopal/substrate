@@ -1,0 +1,99 @@
+# DevBob Helm Chart Values
+
+# Image configuration
+image:
+  repository: devbob
+  tag: unified-test
+  pullPolicy: Never  # Use local image
+
+# Replica count
+replicaCount: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+  annotations: {}
+
+# Resource limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Environment variables
+env:
+  # Metabob API URL (internal service)
+  metabobApiUrl: "http://metabob-rpc-api"
+  
+  # SurrealDB configuration
+  surrealHost: "surrealdb"
+  surrealPort: "8000"
+  surrealUser: "root"
+  surrealPass: "root"
+  surrealNamespace: "metabob"
+  surrealDatabase: "devbob"
+  
+  # Container configuration
+  waitForBackend: "false"
+  skipConfig: "true"
+  logLevel: "INFO"
+
+# Secrets (provide via Helm values or external secrets)
+secrets:
+  # REQUIRED: Anthropic API key
+  anthropicApiKey: ""  # Override via --set secrets.anthropicApiKey=xxx
+
+# Health checks
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Persistence for workspace
+persistence:
+  enabled: true
+  storageClass: ""  # Use default
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /workspace
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

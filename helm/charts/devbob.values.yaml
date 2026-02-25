@@ -1,0 +1,37 @@
+# DevBob Release Values (override Chart defaults)
+
+# Use local image
+image:
+  repository: devbob
+  tag: unified-test
+  pullPolicy: Never
+
+# Secrets - IMPORTANT: Set via Helm command or external secret manager
+secrets:
+  # Get from .env file
+  anthropicApiKey: "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"
+
+# Environment configuration for docker-desktop
+env:
+  metabobApiUrl: "http://metabob-rpc-api"
+  surrealHost: "surrealdb"
+  surrealPort: "8000"
+  surrealUser: "root"
+  surrealPass: "root"
+  surrealNamespace: "metabob"
+  surrealDatabase: "devbob"
+  waitForBackend: "false"
+  skipConfig: "true"
+  logLevel: "INFO"
+
+# Disable health probes initially (OpenCode doesn't have /health endpoint)
+livenessProbe:
+  enabled: false
+
+readinessProbe:
+  enabled: false
+
+# Persistence
+persistence:
+  enabled: true
+  size: 5Gi
