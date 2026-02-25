@@ -1,0 +1,433 @@
+{
+  "activity_id": "implement-acp-activity-tracking",
+  "name": "Implement ACP Activity Tracking",
+  "description": "Implement custom ACP extensions for activity execution tracking: add activity/* namespace methods (start, progress, complete) to ACP server, update ActivityTool to detect remote execution and report progress, create comprehensive tests, and validate end-to-end with remote activity execution",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "implement-acp-server-handlers",
+      "subagent": "general",
+      "description": "Add custom ACP method handlers to server for activity/start, activity/progress, and activity/complete with request/response types and session state updates",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are implementing Phase 3 of the ACP communication guidelines: custom activity/* namespace extensions for distributed activity execution tracking.\n\n## Your Task\n\nAdd custom ACP method handlers to the ACP server to handle three new methods:\n1. `activity/start` - Called when remote activity begins execution\n2. `activity/progress` - Called after each task completes in remote activity\n3. `activity/complete` - Called when remote activity finishes (success or failure)\n\n## Implementation Requirements\n\n### 1. Add Type Definitions\n\nModify `{{workingDirectory}}/src/acp/types.ts` to add request/response types:\n\n```typescript\n// Activity tracking request/response types\nexport interface ActivityStartRequest {\n  activityId: string\n  templateId: string\n  hostSessionId: string\n  remoteSessionId: string\n  variables: Record<string, unknown>\n  taskCount: number\n}\n\nexport interface ActivityStartResponse {\n  success: boolean\n  message?: string\n}\n\nexport interface ActivityProgressRequest {\n  activityId: string\n  hostSessionId: string\n  remoteSessionId: string\n  currentTask: number\n  taskId: string\n  taskDescription: string\n  status: 'running' | 'completed' | 'failed' | 'skipped'\n  toolsUsed: string[]\n  metadata: {\n    filesModified?: string[]\n    validationResults?: Record<string, boolean>\n    duration?: number\n  }\n}\n\nexport interface ActivityProgressResponse {\n  success: boolean\n  message?: string\n}\n\nexport interface ActivityCompleteRequest {\n  activityId: string\n  hostSessionId: string\n  remoteSessionId: string\n  success: boolean\n  duration: number\n  tokensUsed: {\n    input: number\n    output: number\n    cache: number\n  }\n  tasksCompleted: number\n  tasksSkipped: number\n  validation: Record<string, boolean>\n  artifacts: {\n    filesCreated: string[]\n    filesModified: string[]\n  }\n  error?: string\n}\n\nexport interface ActivityCompleteResponse {\n  success: boolean\n  message?: string\n}\n```\n\n### 2. Add Method Handlers\n\nModify `{{workingDirectory}}/src/acp/agent.ts` to register and implement the three method handlers.\n\n**Pattern to Follow:** Look at existing method handlers like `authenticate` and `initialize` to understand the pattern.\n\n**Handler Implementation:**\n\n```typescript\n// Add to method registration (in the method handler map)\n'activity/start': async (params: ActivityStartRequest) => {\n  log.info('activity/start received', {\n    activityId: params.activityId,\n    templateId: params.templateId,\n    taskCount: params.taskCount\n  })\n\n  try {\n    // Update session state with activity start\n    await updateRemoteSessionStatus(params.hostSessionId, {\n      type: 'activity-start',\n      activityId: params.activityId,\n      templateId: params.templateId,\n      remoteSessionId: params.remoteSessionId,\n      taskCount: params.taskCount,\n      timestamp: Date.now()\n    })\n\n    return {\n      success: true,\n      message: 'Activity start recorded'\n    }\n  } catch (error) {\n    log.error('Failed to record activity start', { error })\n    // Non-blocking: return success even if state update fails\n    return {\n      success: true,\n      message: 'Activity start acknowledged (state update failed)'\n    }\n  }\n},\n\n'activity/progress': async (params: ActivityProgressRequest) => {\n  log.info('activity/progress received', {\n    activityId: params.activityId,\n    currentTask: params.currentTask,\n    status: params.status\n  })\n\n  try {\n    // Update session state with progress\n    await updateRemoteSessionStatus(params.hostSessionId, {\n      type: 'activity-progress',\n      activityId: params.activityId,\n      remoteSessionId: params.remoteSessionId,\n      currentTask: params.currentTask,\n      taskId: params.taskId,\n      status: params.status,\n      toolsUsed: params.toolsUsed,\n      metadata: params.metadata,\n      timestamp: Date.now()\n    })\n\n    return {\n      success: true,\n      message: 'Progress recorded'\n    }\n  } catch (error) {\n    log.error('Failed to record activity progress', { error })\n    return {\n      success: true,\n      message: 'Progress acknowledged (state update failed)'\n    }\n  }\n},\n\n'activity/complete': async (params: ActivityCompleteRequest) => {\n  log.info('activity/complete received', {\n    activityId: params.activityId,\n    success: params.success,\n    duration: params.duration,\n    tasksCompleted: params.tasksCompleted\n  })\n\n  try {\n    // Update session state with completion\n    await updateRemoteSessionStatus(params.hostSessionId, {\n      type: 'activity-complete',\n      activityId: params.activityId,\n      remoteSessionId: params.remoteSessionId,\n      success: params.success,\n      duration: params.duration,\n      tokensUsed: params.tokensUsed,\n      tasksCompleted: params.tasksCompleted,\n      tasksSkipped: params.tasksSkipped,\n      validation: params.validation,\n      artifacts: params.artifacts,\n      error: params.error,\n      timestamp: Date.now()\n    })\n\n    return {\n      success: true,\n      message: 'Activity completion recorded'\n    }\n  } catch (error) {\n    log.error('Failed to record activity completion', { error })\n    return {\n      success: true,\n      message: 'Completion acknowledged (state update failed)'\n    }\n  }\n}\n```\n\n### 3. Error Handling\n\n- Use structured logging: `log.info()`, `log.error()`\n- All state updates must be non-blocking (wrap in try-catch)\n- Always return success response (even if state update fails)\n- Include detailed error info in logs\n\n### 4. Validation\n\nAfter implementation, verify:\n- Type definitions compile without errors\n- Handlers registered in method map\n- No TODO comments in critical paths\n- Structured logging used (no console.log)\n\n## Success Criteria\n\n- ✅ Types added to `src/acp/types.ts`\n- ✅ Handlers registered in `src/acp/agent.ts`\n- ✅ All handlers use structured logging\n- ✅ Session state updates are non-blocking\n- ✅ TypeScript compiles without errors",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package (e.g., repos/metabob-opencode/packages/opencode)"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-activity-tool-reporting",
+      "subagent": "general",
+      "description": "Update ActivityTool to detect remote execution via environment variables, establish ACP connection, and implement all three reporting calls with throttling and error handling",
+      "dependencies": [
+        "implement-acp-server-handlers"
+      ],
+      "prompt": {
+        "template": "You are implementing Phase 3 of the ACP communication guidelines: adding activity progress reporting to ActivityTool when executing remotely.\n\n## Your Task\n\nModify `{{workingDirectory}}/src/tool/activity.ts` to:\n1. Detect remote execution via environment variables\n2. Establish ACP connection to host\n3. Report activity start before task execution\n4. Report progress after each task (with throttling)\n5. Report completion with full metrics\n\n## Implementation Requirements\n\n### 1. Remote Execution Detection\n\nAt the start of `ActivityTool.execute()`, add remote detection:\n\n```typescript\n// Detect remote execution\nconst isRemote = process.env.ACP_REMOTE === 'true'\nconst hostSessionId = process.env.ACP_HOST_SESSION_ID\nconst remoteSessionId = process.env.ACP_SESSION_ID\n\nlet acpConnection: ACPConnection | null = null\n\nif (isRemote && hostSessionId) {\n  try {\n    // Get ACP connection from session context or create new\n    acpConnection = await getACPConnection()\n    log.info('Remote execution detected', { hostSessionId, remoteSessionId })\n  } catch (error) {\n    log.warn('Failed to establish ACP connection, continuing without progress tracking', { error })\n  }\n}\n```\n\n### 2. Activity Start Reporting\n\nBefore the task execution loop, add:\n\n```typescript\nif (acpConnection) {\n  try {\n    await acpConnection.request('activity/start', {\n      activityId: this.activityId,\n      templateId: template.id,\n      hostSessionId,\n      remoteSessionId,\n      variables: this.variables,\n      taskCount: template.tasks.length\n    })\n    log.debug('Activity start reported')\n  } catch (error) {\n    log.warn('Failed to report activity start', { error })\n    // Continue execution (non-blocking)\n  }\n}\n```\n\n### 3. Activity Progress Reporting (with Throttling)\n\nIn the task execution loop, after each task completes:\n\n```typescript\nlet lastProgressUpdate = 0\nconst THROTTLE_MS = 500\n\n// Inside task loop, after task execution:\nif (acpConnection) {\n  const now = Date.now()\n  const shouldReport = now - lastProgressUpdate >= THROTTLE_MS\n  \n  if (shouldReport) {\n    try {\n      await acpConnection.request('activity/progress', {\n        activityId: this.activityId,\n        hostSessionId,\n        remoteSessionId,\n        currentTask: taskIndex,\n        taskId: task.id,\n        taskDescription: task.description,\n        status: taskResult.success ? 'completed' : 'failed',\n        toolsUsed: taskResult.toolsUsed || [],\n        metadata: {\n          filesModified: taskResult.filesModified || [],\n          validationResults: taskResult.validation || {},\n          duration: taskResult.duration\n        }\n      })\n      lastProgressUpdate = now\n      log.debug('Progress reported', { taskId: task.id })\n    } catch (error) {\n      log.warn('Failed to report progress', { error })\n      // Continue execution (non-blocking)\n    }\n  }\n}\n```\n\n### 4. Activity Completion Reporting\n\nAt the end of execution (both success and failure paths):\n\n```typescript\nif (acpConnection) {\n  try {\n    await acpConnection.request('activity/complete', {\n      activityId: this.activityId,\n      hostSessionId,\n      remoteSessionId,\n      success: allTasksSucceeded,\n      duration: Date.now() - startTime,\n      tokensUsed: {\n        input: totalInputTokens,\n        output: totalOutputTokens,\n        cache: totalCacheTokens\n      },\n      tasksCompleted,\n      tasksSkipped,\n      validation: finalValidation,\n      artifacts: {\n        filesCreated: filesCreated,\n        filesModified: filesModified\n      },\n      error: failureError?.message\n    })\n    log.debug('Activity completion reported')\n  } catch (error) {\n    log.warn('Failed to report completion', { error })\n    // Continue (non-blocking)\n  }\n}\n```\n\n### 5. Tool Usage Tracking\n\nTrack which tools are used during task execution:\n\n```typescript\n// After each tool call:\nconst toolsUsed: string[] = []\ntaskResult.toolCalls?.forEach(call => {\n  if (!toolsUsed.includes(call.tool)) {\n    toolsUsed.push(call.tool)\n  }\n})\n```\n\n### 6. File Modification Tracking\n\nTrack file changes during task execution:\n\n```typescript\n// Before task:\nconst filesBefore = await getModifiedFiles()\n\n// After task:\nconst filesAfter = await getModifiedFiles()\nconst filesModified = filesAfter.filter(f => !filesBefore.includes(f))\n```\n\n## Critical Requirements\n\n- **Backward Compatibility:** Local execution MUST work unchanged (when `ACP_REMOTE !== 'true'`)\n- **Non-Blocking:** All ACP calls wrapped in try-catch, errors logged but execution continues\n- **Throttling:** Progress updates limited to max 1 per 500ms\n- **Final Completion:** Completion call always sent (bypasses throttling)\n- **No console.log:** Use structured logging only\n\n## Success Criteria\n\n- ✅ Remote detection checks `process.env.ACP_REMOTE`\n- ✅ ACP connection established when remote\n- ✅ Start, progress, complete calls implemented\n- ✅ Throttling implemented (500ms)\n- ✅ All ACP calls are non-blocking\n- ✅ Local execution unchanged\n- ✅ Tool and file tracking implemented",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-comprehensive-test-suite",
+      "subagent": "test",
+      "description": "Create integration tests for ACP method handlers and ActivityTool reporting covering success scenarios, failure modes, throttling, and E2E Docker delegation",
+      "dependencies": [
+        "implement-activity-tool-reporting"
+      ],
+      "prompt": {
+        "template": "You are creating comprehensive tests for the ACP activity tracking implementation.\n\n## Your Task\n\nCreate two test files:\n1. **Unit/Integration Tests:** `{{workingDirectory}}/test/acp/activity-tracking.test.ts`\n2. **E2E Test:** `test-acp-activity-tracking-e2e.ts` (in repo root)\n\n## Test File 1: Unit/Integration Tests\n\nCreate `{{workingDirectory}}/test/acp/activity-tracking.test.ts` with these test scenarios:\n\n### Unit Tests (Handler Level)\n\n```typescript\nimport { describe, it, expect, vi } from 'vitest'\n\ndescribe('ACP Activity Tracking Handlers', () => {\n  it('activity/start with valid request returns success', async () => {\n    const mockHandler = // ... mock handler\n    const result = await mockHandler({\n      activityId: 'act_123',\n      templateId: 'tmpl_456',\n      hostSessionId: 'host_789',\n      remoteSessionId: 'remote_abc',\n      variables: {},\n      taskCount: 3\n    })\n    expect(result.success).toBe(true)\n  })\n\n  it('activity/start with missing activityId returns error', async () => {\n    // Test error handling\n  })\n\n  it('activity/progress with valid request returns success', async () => {\n    // Test progress handler\n  })\n\n  it('activity/progress with invalid session returns error', async () => {\n    // Test error handling\n  })\n\n  it('activity/complete with full metrics returns success', async () => {\n    // Test completion handler\n  })\n\n  it('activity/complete with partial metrics returns success', async () => {\n    // Test fallback behavior\n  })\n})\n```\n\n### Integration Tests (ActivityTool Level)\n\n```typescript\ndescribe('ActivityTool Remote Reporting', () => {\n  it('local execution makes no ACP calls', async () => {\n    // Test backward compatibility\n    delete process.env.ACP_REMOTE\n    const mockConnection = { request: vi.fn() }\n    // Execute activity\n    expect(mockConnection.request).not.toHaveBeenCalled()\n  })\n\n  it('remote execution makes all three ACP calls', async () => {\n    process.env.ACP_REMOTE = 'true'\n    process.env.ACP_HOST_SESSION_ID = 'host_123'\n    const mockConnection = { request: vi.fn().mockResolvedValue({ success: true }) }\n    // Execute activity\n    expect(mockConnection.request).toHaveBeenCalledWith('activity/start', expect.any(Object))\n    expect(mockConnection.request).toHaveBeenCalledWith('activity/progress', expect.any(Object))\n    expect(mockConnection.request).toHaveBeenCalledWith('activity/complete', expect.any(Object))\n  })\n\n  it('ACP connection failure does not block execution', async () => {\n    process.env.ACP_REMOTE = 'true'\n    const mockConnection = { request: vi.fn().mockRejectedValue(new Error('Connection failed')) }\n    // Execute activity - should complete successfully\n  })\n\n  it('progress throttling limits updates to 1 per 500ms', async () => {\n    // Test throttling mechanism\n    // Execute activity with 10 tasks quickly\n    // Verify progress calls <= (duration / 500ms) + 1\n  })\n\n  it('final completion bypasses throttling', async () => {\n    // Test that completion always sends\n  })\n\n  it('tool usage tracking collects correct tool names', async () => {\n    // Verify toolsUsed array\n  })\n\n  it('file modification tracking reports correct files', async () => {\n    // Verify filesModified array\n  })\n})\n```\n\n## Test File 2: E2E Test\n\nCreate `test-acp-activity-tracking-e2e.ts` in repo root:\n\n```typescript\nimport { acp_delegate } from './src/tool/acp-delegate'\n\n// Simple 3-task activity template for testing\nconst testTemplate = {\n  name: 'test-acp-tracking',\n  tasks: [\n    { id: 'task-1', prompt: { template: 'Create file test1.txt with content \"Task 1\"' } },\n    { id: 'task-2', prompt: { template: 'Create file test2.txt with content \"Task 2\"' } },\n    { id: 'task-3', prompt: { template: 'Create file test3.txt with content \"Task 3\"' } }\n  ]\n}\n\nasync function runE2ETest() {\n  console.log('Starting ACP activity tracking E2E test...')\n\n  // Check Docker availability\n  const dockerAvailable = await checkDocker()\n  if (!dockerAvailable || {{skipE2ETest}}) {\n    console.log('Skipping E2E test (Docker unavailable or skipE2ETest=true)')\n    return\n  }\n\n  // Ensure test container running\n  await ensureContainer('{{testDockerContainer}}')\n\n  // Track events received\n  const events: any[] = []\n  const eventHandler = (event: any) => events.push(event)\n\n  // Delegate activity\n  const result = await acp_delegate({\n    target: 'docker://{{testDockerContainer}}',\n    taskDescription: 'Test ACP activity tracking',\n    prompt: 'Execute test activity',\n    shareImpulses: [],\n    timeout: 300\n  })\n\n  // Validate event sequence\n  const startEvents = events.filter(e => e.type === 'activity-start')\n  const progressEvents = events.filter(e => e.type === 'activity-progress')\n  const completeEvents = events.filter(e => e.type === 'activity-complete')\n\n  console.assert(startEvents.length === 1, 'Expected exactly 1 start event')\n  console.assert(progressEvents.length === 3, 'Expected 3 progress events')\n  console.assert(completeEvents.length === 1, 'Expected exactly 1 complete event')\n\n  // Validate metrics\n  const completion = completeEvents[0]\n  console.assert(completion.duration > 0, 'Duration should be > 0')\n  console.assert(completion.tokensUsed.input > 0, 'Input tokens should be > 0')\n  console.assert(completion.tasksCompleted === 3, 'Should complete 3 tasks')\n\n  console.log('✓ All events received')\n  console.log('✓ Metrics accurate')\n  console.log('E2E test passed!')\n}\n\nrunE2ETest().catch(console.error)\n```\n\n## Test Execution\n\nThe E2E test should:\n1. Check Docker availability: `docker ps`\n2. Start container if needed: `docker start {{testDockerContainer}}`\n3. Delegate test activity via `acp_delegate`\n4. Collect events from host session\n5. Validate event sequence and metrics\n6. Log results\n\n## Success Criteria\n\n- ✅ All unit tests pass (100% pass rate)\n- ✅ All integration tests pass\n- ✅ E2E test validates full flow OR is skipped with reason\n- ✅ Test files created at correct paths\n- ✅ No test timeouts or flakes",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package"
+          },
+          {
+            "name": "testDockerContainer",
+            "type": "string",
+            "required": false,
+            "description": "Docker container name for E2E test",
+            "default": "devbob-test-activity"
+          },
+          {
+            "name": "skipE2ETest",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip E2E Docker test if true",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{workingDirectory}} && bun test test/acp/activity-tracking.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-typescript-compilation",
+      "subagent": "general",
+      "description": "Run TypeScript compilation to ensure no type errors and fix any compilation issues",
+      "dependencies": [
+        "create-comprehensive-test-suite"
+      ],
+      "prompt": {
+        "template": "You are validating TypeScript compilation after implementing ACP activity tracking.\n\n## Your Task\n\nRun TypeScript compilation and fix any type errors:\n\n```bash\ncd {{workingDirectory}} && bun run build\n```\n\n## Common Type Errors to Fix\n\n### 1. Missing Imports\n```typescript\n// Fix: Add missing imports from ACP SDK\nimport type { ACPConnection } from '@agentclientprotocol/sdk'\n```\n\n### 2. Type Mismatches\n```typescript\n// Fix: Ensure request/response types match handler signatures\ninterface ActivityStartRequest {\n  activityId: string // Not optional\n  // ...\n}\n```\n\n### 3. Undefined Properties\n```typescript\n// Fix: Add null checks or optional chaining\nconst duration = taskResult?.duration ?? 0\n```\n\n### 4. Incorrect Type Annotations\n```typescript\n// Fix: Use correct ACP connection type\nlet connection: ACPConnection | null = null\n```\n\n## Validation Process\n\n1. Run build: `cd {{workingDirectory}} && bun run build`\n2. If errors found:\n   - Read error messages carefully\n   - Identify the file and line number\n   - Fix the specific type error\n   - Re-run build\n3. Repeat until clean build\n4. If errors persist after 3 attempts, report blocker\n\n## Success Criteria\n\n- ✅ TypeScript compiles without errors\n- ✅ No `error TS` messages in output\n- ✅ All imports resolve correctly\n- ✅ All type annotations valid",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{workingDirectory}} && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "run-end-to-end-validation",
+      "subagent": "general",
+      "description": "Execute E2E test to validate full activity tracking flow from host delegation to remote completion with event and metrics validation",
+      "dependencies": [
+        "validate-typescript-compilation"
+      ],
+      "prompt": {
+        "template": "You are running the end-to-end validation test for ACP activity tracking.\n\n## Your Task\n\nExecute the E2E test and validate the full distributed activity tracking flow.\n\n## Test Execution Steps\n\n### 1. Check Docker Availability\n\n```bash\ndocker ps > /dev/null 2>&1\nif [ $? -ne 0 ]; then\n  echo \"Docker unavailable, skipping E2E test\"\n  exit 0\nfi\n```\n\n### 2. Check Skip Flag\n\n```bash\nif [ \"{{skipE2ETest}}\" = \"true\" ]; then\n  echo \"E2E test skipped (skipE2ETest=true)\"\n  exit 0\nfi\n```\n\n### 3. Ensure Test Container Running\n\n```bash\n# Check if container exists\nif docker ps -a | grep -q \"{{testDockerContainer}}\"; then\n  # Start if stopped\n  docker start {{testDockerContainer}}\nelse\n  echo \"Container {{testDockerContainer}} not found\"\n  echo \"Skipping E2E test (container unavailable)\"\n  exit 0\nfi\n```\n\n### 4. Run E2E Test\n\n```bash\ncd /home/avi/documents/work/exp-repo/metabob-devbob\nbun test-acp-activity-tracking-e2e.ts\n```\n\n### 5. Validate Test Output\n\nCheck for success indicators:\n- `✓ All events received`\n- `✓ Metrics accurate`\n- `E2E test passed!`\n\n## Event Validation\n\nThe test should verify:\n1. **Start Event:** Exactly 1 `activity/start` event received\n2. **Progress Events:** N `activity/progress` events (N = task count)\n3. **Complete Event:** Exactly 1 `activity/complete` event received\n\n## Metrics Validation\n\nThe test should verify:\n- Duration > 0 ms\n- Token usage: input > 0, output > 0\n- Tasks completed matches expected count\n- Files tracked (created/modified)\n\n## Failure Handling\n\n- **Docker unavailable:** Skip test, log warning (non-blocking)\n- **Container not found:** Skip test, log warning (non-blocking)\n- **Test timeout (>5min):** Abort, report error (blocking)\n- **Event sequence wrong:** Fail test, report details (blocking)\n- **Metrics inaccurate:** Fail test, report details (blocking)\n\n## Detailed Logging\n\nIf `{{enableDetailedLogging}}` is true, enable debug logs:\n\n```bash\nexport LOG_LEVEL=debug\nbun test-acp-activity-tracking-e2e.ts\n```\n\n## Success Criteria\n\n- ✅ E2E test passes OR skipped with valid reason\n- ✅ All events received in correct sequence\n- ✅ Metrics accurate (within 10% tolerance)\n- ✅ Remote session impulse updated\n- ✅ No test timeouts",
+        "variables": [
+          {
+            "name": "testDockerContainer",
+            "type": "string",
+            "required": false,
+            "description": "Docker container name for E2E test",
+            "default": "devbob-test-activity"
+          },
+          {
+            "name": "skipE2ETest",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip E2E Docker test if true",
+            "default": false
+          },
+          {
+            "name": "enableDetailedLogging",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable debug logs for detailed output",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /home/avi/documents/work/exp-repo/metabob-devbob && (docker ps > /dev/null 2>&1 && bun test-acp-activity-tracking-e2e.ts || echo 'Docker unavailable, E2E test skipped')",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "implement-acp-server-handlers",
+      "subagent": "general",
+      "description": "Add custom ACP method handlers to server for activity/start, activity/progress, and activity/complete with request/response types and session state updates",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are implementing Phase 3 of the ACP communication guidelines: custom activity/* namespace extensions for distributed activity execution tracking.\n\n## Your Task\n\nAdd custom ACP method handlers to the ACP server to handle three new methods:\n1. `activity/start` - Called when remote activity begins execution\n2. `activity/progress` - Called after each task completes in remote activity\n3. `activity/complete` - Called when remote activity finishes (success or failure)\n\n## Implementation Requirements\n\n### 1. Add Type Definitions\n\nModify `{{workingDirectory}}/src/acp/types.ts` to add request/response types:\n\n```typescript\n// Activity tracking request/response types\nexport interface ActivityStartRequest {\n  activityId: string\n  templateId: string\n  hostSessionId: string\n  remoteSessionId: string\n  variables: Record<string, unknown>\n  taskCount: number\n}\n\nexport interface ActivityStartResponse {\n  success: boolean\n  message?: string\n}\n\nexport interface ActivityProgressRequest {\n  activityId: string\n  hostSessionId: string\n  remoteSessionId: string\n  currentTask: number\n  taskId: string\n  taskDescription: string\n  status: 'running' | 'completed' | 'failed' | 'skipped'\n  toolsUsed: string[]\n  metadata: {\n    filesModified?: string[]\n    validationResults?: Record<string, boolean>\n    duration?: number\n  }\n}\n\nexport interface ActivityProgressResponse {\n  success: boolean\n  message?: string\n}\n\nexport interface ActivityCompleteRequest {\n  activityId: string\n  hostSessionId: string\n  remoteSessionId: string\n  success: boolean\n  duration: number\n  tokensUsed: {\n    input: number\n    output: number\n    cache: number\n  }\n  tasksCompleted: number\n  tasksSkipped: number\n  validation: Record<string, boolean>\n  artifacts: {\n    filesCreated: string[]\n    filesModified: string[]\n  }\n  error?: string\n}\n\nexport interface ActivityCompleteResponse {\n  success: boolean\n  message?: string\n}\n```\n\n### 2. Add Method Handlers\n\nModify `{{workingDirectory}}/src/acp/agent.ts` to register and implement the three method handlers.\n\n**Pattern to Follow:** Look at existing method handlers like `authenticate` and `initialize` to understand the pattern.\n\n**Handler Implementation:**\n\n```typescript\n// Add to method registration (in the method handler map)\n'activity/start': async (params: ActivityStartRequest) => {\n  log.info('activity/start received', {\n    activityId: params.activityId,\n    templateId: params.templateId,\n    taskCount: params.taskCount\n  })\n\n  try {\n    // Update session state with activity start\n    await updateRemoteSessionStatus(params.hostSessionId, {\n      type: 'activity-start',\n      activityId: params.activityId,\n      templateId: params.templateId,\n      remoteSessionId: params.remoteSessionId,\n      taskCount: params.taskCount,\n      timestamp: Date.now()\n    })\n\n    return {\n      success: true,\n      message: 'Activity start recorded'\n    }\n  } catch (error) {\n    log.error('Failed to record activity start', { error })\n    // Non-blocking: return success even if state update fails\n    return {\n      success: true,\n      message: 'Activity start acknowledged (state update failed)'\n    }\n  }\n},\n\n'activity/progress': async (params: ActivityProgressRequest) => {\n  log.info('activity/progress received', {\n    activityId: params.activityId,\n    currentTask: params.currentTask,\n    status: params.status\n  })\n\n  try {\n    // Update session state with progress\n    await updateRemoteSessionStatus(params.hostSessionId, {\n      type: 'activity-progress',\n      activityId: params.activityId,\n      remoteSessionId: params.remoteSessionId,\n      currentTask: params.currentTask,\n      taskId: params.taskId,\n      status: params.status,\n      toolsUsed: params.toolsUsed,\n      metadata: params.metadata,\n      timestamp: Date.now()\n    })\n\n    return {\n      success: true,\n      message: 'Progress recorded'\n    }\n  } catch (error) {\n    log.error('Failed to record activity progress', { error })\n    return {\n      success: true,\n      message: 'Progress acknowledged (state update failed)'\n    }\n  }\n},\n\n'activity/complete': async (params: ActivityCompleteRequest) => {\n  log.info('activity/complete received', {\n    activityId: params.activityId,\n    success: params.success,\n    duration: params.duration,\n    tasksCompleted: params.tasksCompleted\n  })\n\n  try {\n    // Update session state with completion\n    await updateRemoteSessionStatus(params.hostSessionId, {\n      type: 'activity-complete',\n      activityId: params.activityId,\n      remoteSessionId: params.remoteSessionId,\n      success: params.success,\n      duration: params.duration,\n      tokensUsed: params.tokensUsed,\n      tasksCompleted: params.tasksCompleted,\n      tasksSkipped: params.tasksSkipped,\n      validation: params.validation,\n      artifacts: params.artifacts,\n      error: params.error,\n      timestamp: Date.now()\n    })\n\n    return {\n      success: true,\n      message: 'Activity completion recorded'\n    }\n  } catch (error) {\n    log.error('Failed to record activity completion', { error })\n    return {\n      success: true,\n      message: 'Completion acknowledged (state update failed)'\n    }\n  }\n}\n```\n\n### 3. Error Handling\n\n- Use structured logging: `log.info()`, `log.error()`\n- All state updates must be non-blocking (wrap in try-catch)\n- Always return success response (even if state update fails)\n- Include detailed error info in logs\n\n### 4. Validation\n\nAfter implementation, verify:\n- Type definitions compile without errors\n- Handlers registered in method map\n- No TODO comments in critical paths\n- Structured logging used (no console.log)\n\n## Success Criteria\n\n- ✅ Types added to `src/acp/types.ts`\n- ✅ Handlers registered in `src/acp/agent.ts`\n- ✅ All handlers use structured logging\n- ✅ Session state updates are non-blocking\n- ✅ TypeScript compiles without errors",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package (e.g., repos/metabob-opencode/packages/opencode)"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-activity-tool-reporting",
+      "subagent": "general",
+      "description": "Update ActivityTool to detect remote execution via environment variables, establish ACP connection, and implement all three reporting calls with throttling and error handling",
+      "dependencies": [
+        "implement-acp-server-handlers"
+      ],
+      "prompt": {
+        "template": "You are implementing Phase 3 of the ACP communication guidelines: adding activity progress reporting to ActivityTool when executing remotely.\n\n## Your Task\n\nModify `{{workingDirectory}}/src/tool/activity.ts` to:\n1. Detect remote execution via environment variables\n2. Establish ACP connection to host\n3. Report activity start before task execution\n4. Report progress after each task (with throttling)\n5. Report completion with full metrics\n\n## Implementation Requirements\n\n### 1. Remote Execution Detection\n\nAt the start of `ActivityTool.execute()`, add remote detection:\n\n```typescript\n// Detect remote execution\nconst isRemote = process.env.ACP_REMOTE === 'true'\nconst hostSessionId = process.env.ACP_HOST_SESSION_ID\nconst remoteSessionId = process.env.ACP_SESSION_ID\n\nlet acpConnection: ACPConnection | null = null\n\nif (isRemote && hostSessionId) {\n  try {\n    // Get ACP connection from session context or create new\n    acpConnection = await getACPConnection()\n    log.info('Remote execution detected', { hostSessionId, remoteSessionId })\n  } catch (error) {\n    log.warn('Failed to establish ACP connection, continuing without progress tracking', { error })\n  }\n}\n```\n\n### 2. Activity Start Reporting\n\nBefore the task execution loop, add:\n\n```typescript\nif (acpConnection) {\n  try {\n    await acpConnection.request('activity/start', {\n      activityId: this.activityId,\n      templateId: template.id,\n      hostSessionId,\n      remoteSessionId,\n      variables: this.variables,\n      taskCount: template.tasks.length\n    })\n    log.debug('Activity start reported')\n  } catch (error) {\n    log.warn('Failed to report activity start', { error })\n    // Continue execution (non-blocking)\n  }\n}\n```\n\n### 3. Activity Progress Reporting (with Throttling)\n\nIn the task execution loop, after each task completes:\n\n```typescript\nlet lastProgressUpdate = 0\nconst THROTTLE_MS = 500\n\n// Inside task loop, after task execution:\nif (acpConnection) {\n  const now = Date.now()\n  const shouldReport = now - lastProgressUpdate >= THROTTLE_MS\n  \n  if (shouldReport) {\n    try {\n      await acpConnection.request('activity/progress', {\n        activityId: this.activityId,\n        hostSessionId,\n        remoteSessionId,\n        currentTask: taskIndex,\n        taskId: task.id,\n        taskDescription: task.description,\n        status: taskResult.success ? 'completed' : 'failed',\n        toolsUsed: taskResult.toolsUsed || [],\n        metadata: {\n          filesModified: taskResult.filesModified || [],\n          validationResults: taskResult.validation || {},\n          duration: taskResult.duration\n        }\n      })\n      lastProgressUpdate = now\n      log.debug('Progress reported', { taskId: task.id })\n    } catch (error) {\n      log.warn('Failed to report progress', { error })\n      // Continue execution (non-blocking)\n    }\n  }\n}\n```\n\n### 4. Activity Completion Reporting\n\nAt the end of execution (both success and failure paths):\n\n```typescript\nif (acpConnection) {\n  try {\n    await acpConnection.request('activity/complete', {\n      activityId: this.activityId,\n      hostSessionId,\n      remoteSessionId,\n      success: allTasksSucceeded,\n      duration: Date.now() - startTime,\n      tokensUsed: {\n        input: totalInputTokens,\n        output: totalOutputTokens,\n        cache: totalCacheTokens\n      },\n      tasksCompleted,\n      tasksSkipped,\n      validation: finalValidation,\n      artifacts: {\n        filesCreated: filesCreated,\n        filesModified: filesModified\n      },\n      error: failureError?.message\n    })\n    log.debug('Activity completion reported')\n  } catch (error) {\n    log.warn('Failed to report completion', { error })\n    // Continue (non-blocking)\n  }\n}\n```\n\n### 5. Tool Usage Tracking\n\nTrack which tools are used during task execution:\n\n```typescript\n// After each tool call:\nconst toolsUsed: string[] = []\ntaskResult.toolCalls?.forEach(call => {\n  if (!toolsUsed.includes(call.tool)) {\n    toolsUsed.push(call.tool)\n  }\n})\n```\n\n### 6. File Modification Tracking\n\nTrack file changes during task execution:\n\n```typescript\n// Before task:\nconst filesBefore = await getModifiedFiles()\n\n// After task:\nconst filesAfter = await getModifiedFiles()\nconst filesModified = filesAfter.filter(f => !filesBefore.includes(f))\n```\n\n## Critical Requirements\n\n- **Backward Compatibility:** Local execution MUST work unchanged (when `ACP_REMOTE !== 'true'`)\n- **Non-Blocking:** All ACP calls wrapped in try-catch, errors logged but execution continues\n- **Throttling:** Progress updates limited to max 1 per 500ms\n- **Final Completion:** Completion call always sent (bypasses throttling)\n- **No console.log:** Use structured logging only\n\n## Success Criteria\n\n- ✅ Remote detection checks `process.env.ACP_REMOTE`\n- ✅ ACP connection established when remote\n- ✅ Start, progress, complete calls implemented\n- ✅ Throttling implemented (500ms)\n- ✅ All ACP calls are non-blocking\n- ✅ Local execution unchanged\n- ✅ Tool and file tracking implemented",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-comprehensive-test-suite",
+      "subagent": "test",
+      "description": "Create integration tests for ACP method handlers and ActivityTool reporting covering success scenarios, failure modes, throttling, and E2E Docker delegation",
+      "dependencies": [
+        "implement-activity-tool-reporting"
+      ],
+      "prompt": {
+        "template": "You are creating comprehensive tests for the ACP activity tracking implementation.\n\n## Your Task\n\nCreate two test files:\n1. **Unit/Integration Tests:** `{{workingDirectory}}/test/acp/activity-tracking.test.ts`\n2. **E2E Test:** `test-acp-activity-tracking-e2e.ts` (in repo root)\n\n## Test File 1: Unit/Integration Tests\n\nCreate `{{workingDirectory}}/test/acp/activity-tracking.test.ts` with these test scenarios:\n\n### Unit Tests (Handler Level)\n\n```typescript\nimport { describe, it, expect, vi } from 'vitest'\n\ndescribe('ACP Activity Tracking Handlers', () => {\n  it('activity/start with valid request returns success', async () => {\n    const mockHandler = // ... mock handler\n    const result = await mockHandler({\n      activityId: 'act_123',\n      templateId: 'tmpl_456',\n      hostSessionId: 'host_789',\n      remoteSessionId: 'remote_abc',\n      variables: {},\n      taskCount: 3\n    })\n    expect(result.success).toBe(true)\n  })\n\n  it('activity/start with missing activityId returns error', async () => {\n    // Test error handling\n  })\n\n  it('activity/progress with valid request returns success', async () => {\n    // Test progress handler\n  })\n\n  it('activity/progress with invalid session returns error', async () => {\n    // Test error handling\n  })\n\n  it('activity/complete with full metrics returns success', async () => {\n    // Test completion handler\n  })\n\n  it('activity/complete with partial metrics returns success', async () => {\n    // Test fallback behavior\n  })\n})\n```\n\n### Integration Tests (ActivityTool Level)\n\n```typescript\ndescribe('ActivityTool Remote Reporting', () => {\n  it('local execution makes no ACP calls', async () => {\n    // Test backward compatibility\n    delete process.env.ACP_REMOTE\n    const mockConnection = { request: vi.fn() }\n    // Execute activity\n    expect(mockConnection.request).not.toHaveBeenCalled()\n  })\n\n  it('remote execution makes all three ACP calls', async () => {\n    process.env.ACP_REMOTE = 'true'\n    process.env.ACP_HOST_SESSION_ID = 'host_123'\n    const mockConnection = { request: vi.fn().mockResolvedValue({ success: true }) }\n    // Execute activity\n    expect(mockConnection.request).toHaveBeenCalledWith('activity/start', expect.any(Object))\n    expect(mockConnection.request).toHaveBeenCalledWith('activity/progress', expect.any(Object))\n    expect(mockConnection.request).toHaveBeenCalledWith('activity/complete', expect.any(Object))\n  })\n\n  it('ACP connection failure does not block execution', async () => {\n    process.env.ACP_REMOTE = 'true'\n    const mockConnection = { request: vi.fn().mockRejectedValue(new Error('Connection failed')) }\n    // Execute activity - should complete successfully\n  })\n\n  it('progress throttling limits updates to 1 per 500ms', async () => {\n    // Test throttling mechanism\n    // Execute activity with 10 tasks quickly\n    // Verify progress calls <= (duration / 500ms) + 1\n  })\n\n  it('final completion bypasses throttling', async () => {\n    // Test that completion always sends\n  })\n\n  it('tool usage tracking collects correct tool names', async () => {\n    // Verify toolsUsed array\n  })\n\n  it('file modification tracking reports correct files', async () => {\n    // Verify filesModified array\n  })\n})\n```\n\n## Test File 2: E2E Test\n\nCreate `test-acp-activity-tracking-e2e.ts` in repo root:\n\n```typescript\nimport { acp_delegate } from './src/tool/acp-delegate'\n\n// Simple 3-task activity template for testing\nconst testTemplate = {\n  name: 'test-acp-tracking',\n  tasks: [\n    { id: 'task-1', prompt: { template: 'Create file test1.txt with content \"Task 1\"' } },\n    { id: 'task-2', prompt: { template: 'Create file test2.txt with content \"Task 2\"' } },\n    { id: 'task-3', prompt: { template: 'Create file test3.txt with content \"Task 3\"' } }\n  ]\n}\n\nasync function runE2ETest() {\n  console.log('Starting ACP activity tracking E2E test...')\n\n  // Check Docker availability\n  const dockerAvailable = await checkDocker()\n  if (!dockerAvailable || {{skipE2ETest}}) {\n    console.log('Skipping E2E test (Docker unavailable or skipE2ETest=true)')\n    return\n  }\n\n  // Ensure test container running\n  await ensureContainer('{{testDockerContainer}}')\n\n  // Track events received\n  const events: any[] = []\n  const eventHandler = (event: any) => events.push(event)\n\n  // Delegate activity\n  const result = await acp_delegate({\n    target: 'docker://{{testDockerContainer}}',\n    taskDescription: 'Test ACP activity tracking',\n    prompt: 'Execute test activity',\n    shareImpulses: [],\n    timeout: 300\n  })\n\n  // Validate event sequence\n  const startEvents = events.filter(e => e.type === 'activity-start')\n  const progressEvents = events.filter(e => e.type === 'activity-progress')\n  const completeEvents = events.filter(e => e.type === 'activity-complete')\n\n  console.assert(startEvents.length === 1, 'Expected exactly 1 start event')\n  console.assert(progressEvents.length === 3, 'Expected 3 progress events')\n  console.assert(completeEvents.length === 1, 'Expected exactly 1 complete event')\n\n  // Validate metrics\n  const completion = completeEvents[0]\n  console.assert(completion.duration > 0, 'Duration should be > 0')\n  console.assert(completion.tokensUsed.input > 0, 'Input tokens should be > 0')\n  console.assert(completion.tasksCompleted === 3, 'Should complete 3 tasks')\n\n  console.log('✓ All events received')\n  console.log('✓ Metrics accurate')\n  console.log('E2E test passed!')\n}\n\nrunE2ETest().catch(console.error)\n```\n\n## Test Execution\n\nThe E2E test should:\n1. Check Docker availability: `docker ps`\n2. Start container if needed: `docker start {{testDockerContainer}}`\n3. Delegate test activity via `acp_delegate`\n4. Collect events from host session\n5. Validate event sequence and metrics\n6. Log results\n\n## Success Criteria\n\n- ✅ All unit tests pass (100% pass rate)\n- ✅ All integration tests pass\n- ✅ E2E test validates full flow OR is skipped with reason\n- ✅ Test files created at correct paths\n- ✅ No test timeouts or flakes",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package"
+          },
+          {
+            "name": "testDockerContainer",
+            "type": "string",
+            "required": false,
+            "description": "Docker container name for E2E test",
+            "default": "devbob-test-activity"
+          },
+          {
+            "name": "skipE2ETest",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip E2E Docker test if true",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{workingDirectory}} && bun test test/acp/activity-tracking.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-typescript-compilation",
+      "subagent": "general",
+      "description": "Run TypeScript compilation to ensure no type errors and fix any compilation issues",
+      "dependencies": [
+        "create-comprehensive-test-suite"
+      ],
+      "prompt": {
+        "template": "You are validating TypeScript compilation after implementing ACP activity tracking.\n\n## Your Task\n\nRun TypeScript compilation and fix any type errors:\n\n```bash\ncd {{workingDirectory}} && bun run build\n```\n\n## Common Type Errors to Fix\n\n### 1. Missing Imports\n```typescript\n// Fix: Add missing imports from ACP SDK\nimport type { ACPConnection } from '@agentclientprotocol/sdk'\n```\n\n### 2. Type Mismatches\n```typescript\n// Fix: Ensure request/response types match handler signatures\ninterface ActivityStartRequest {\n  activityId: string // Not optional\n  // ...\n}\n```\n\n### 3. Undefined Properties\n```typescript\n// Fix: Add null checks or optional chaining\nconst duration = taskResult?.duration ?? 0\n```\n\n### 4. Incorrect Type Annotations\n```typescript\n// Fix: Use correct ACP connection type\nlet connection: ACPConnection | null = null\n```\n\n## Validation Process\n\n1. Run build: `cd {{workingDirectory}} && bun run build`\n2. If errors found:\n   - Read error messages carefully\n   - Identify the file and line number\n   - Fix the specific type error\n   - Re-run build\n3. Repeat until clean build\n4. If errors persist after 3 attempts, report blocker\n\n## Success Criteria\n\n- ✅ TypeScript compiles without errors\n- ✅ No `error TS` messages in output\n- ✅ All imports resolve correctly\n- ✅ All type annotations valid",
+        "variables": [
+          {
+            "name": "workingDirectory",
+            "type": "string",
+            "required": true,
+            "description": "Root directory for opencode package"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd {{workingDirectory}} && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "run-end-to-end-validation",
+      "subagent": "general",
+      "description": "Execute E2E test to validate full activity tracking flow from host delegation to remote completion with event and metrics validation",
+      "dependencies": [
+        "validate-typescript-compilation"
+      ],
+      "prompt": {
+        "template": "You are running the end-to-end validation test for ACP activity tracking.\n\n## Your Task\n\nExecute the E2E test and validate the full distributed activity tracking flow.\n\n## Test Execution Steps\n\n### 1. Check Docker Availability\n\n```bash\ndocker ps > /dev/null 2>&1\nif [ $? -ne 0 ]; then\n  echo \"Docker unavailable, skipping E2E test\"\n  exit 0\nfi\n```\n\n### 2. Check Skip Flag\n\n```bash\nif [ \"{{skipE2ETest}}\" = \"true\" ]; then\n  echo \"E2E test skipped (skipE2ETest=true)\"\n  exit 0\nfi\n```\n\n### 3. Ensure Test Container Running\n\n```bash\n# Check if container exists\nif docker ps -a | grep -q \"{{testDockerContainer}}\"; then\n  # Start if stopped\n  docker start {{testDockerContainer}}\nelse\n  echo \"Container {{testDockerContainer}} not found\"\n  echo \"Skipping E2E test (container unavailable)\"\n  exit 0\nfi\n```\n\n### 4. Run E2E Test\n\n```bash\ncd /home/avi/documents/work/exp-repo/metabob-devbob\nbun test-acp-activity-tracking-e2e.ts\n```\n\n### 5. Validate Test Output\n\nCheck for success indicators:\n- `✓ All events received`\n- `✓ Metrics accurate`\n- `E2E test passed!`\n\n## Event Validation\n\nThe test should verify:\n1. **Start Event:** Exactly 1 `activity/start` event received\n2. **Progress Events:** N `activity/progress` events (N = task count)\n3. **Complete Event:** Exactly 1 `activity/complete` event received\n\n## Metrics Validation\n\nThe test should verify:\n- Duration > 0 ms\n- Token usage: input > 0, output > 0\n- Tasks completed matches expected count\n- Files tracked (created/modified)\n\n## Failure Handling\n\n- **Docker unavailable:** Skip test, log warning (non-blocking)\n- **Container not found:** Skip test, log warning (non-blocking)\n- **Test timeout (>5min):** Abort, report error (blocking)\n- **Event sequence wrong:** Fail test, report details (blocking)\n- **Metrics inaccurate:** Fail test, report details (blocking)\n\n## Detailed Logging\n\nIf `{{enableDetailedLogging}}` is true, enable debug logs:\n\n```bash\nexport LOG_LEVEL=debug\nbun test-acp-activity-tracking-e2e.ts\n```\n\n## Success Criteria\n\n- ✅ E2E test passes OR skipped with valid reason\n- ✅ All events received in correct sequence\n- ✅ Metrics accurate (within 10% tolerance)\n- ✅ Remote session impulse updated\n- ✅ No test timeouts",
+        "variables": [
+          {
+            "name": "testDockerContainer",
+            "type": "string",
+            "required": false,
+            "description": "Docker container name for E2E test",
+            "default": "devbob-test-activity"
+          },
+          {
+            "name": "skipE2ETest",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip E2E Docker test if true",
+            "default": false
+          },
+          {
+            "name": "enableDetailedLogging",
+            "type": "boolean",
+            "required": false,
+            "description": "Enable debug logs for detailed output",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /home/avi/documents/work/exp-repo/metabob-devbob && (docker ps > /dev/null 2>&1 && bun test-acp-activity-tracking-e2e.ts || echo 'Docker unavailable, E2E test skipped')",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-25T02:21:07.763Z",
+  "metadata": {}
+}
