@@ -1,0 +1,149 @@
+{
+  "specificationName": "Boredom Activity Detection Mechanism",
+  "validationResults": [
+    {
+      "testCase": "validation-boredom-activity-detection-mechanism-case-1",
+      "status": "PASS",
+      "actual": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-auto",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "expected": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-auto",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-boredom-activity-detection-mechanism-case-2",
+      "status": "PASS",
+      "actual": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-manual",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "expected": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-manual",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-boredom-activity-detection-mechanism-case-3",
+      "status": "PASS",
+      "actual": {
+        "isBoredom": null,
+        "initiatedBy": null,
+        "branch": "feature-login",
+        "titleHasBoredomPrefix": false,
+        "detectionMethods": {
+          "titlePrefix": false,
+          "branchName": false,
+          "persistentField": false
+        }
+      },
+      "expected": {
+        "isBoredom": null,
+        "initiatedBy": null,
+        "branch": "feature-login",
+        "titleHasBoredomPrefix": false,
+        "detectionMethods": {
+          "titlePrefix": false,
+          "branchName": false,
+          "persistentField": false
+        }
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-boredom-activity-detection-mechanism-case-4",
+      "status": "PASS",
+      "actual": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-auto",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "expected": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-auto",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-boredom-activity-detection-mechanism-case-5",
+      "status": "PASS",
+      "actual": {
+        "isBoredom": true,
+        "initiatedBy": null,
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": false,
+        "detectionMethods": {
+          "titlePrefix": false,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "expected": {
+        "isBoredom": true,
+        "initiatedBy": null,
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": false,
+        "detectionMethods": {
+          "titlePrefix": false,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "difference": null
+    }
+  ],
+  "overallStatus": "PASS",
+  "resultsImpulseId": "validation-results-boredom-activity-detection-mechanism",
+  "timestamp": "2026-02-25T13:40:57.837Z",
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "successRate": "100.0%"
+  }
+}
