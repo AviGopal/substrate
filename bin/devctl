@@ -38,6 +38,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yaml"
 
+# Backend service endpoints  
+SURREAL_HEALTH="http://localhost:8000/health"
+API_HEALTH="http://localhost:8080/"
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+
 # Vessel definitions
 declare -A VESSELS=(
     ["rpc-api"]="devbob-rpc-api:3001:8081"
@@ -138,35 +144,104 @@ function get_mcp_port() {
     echo "${VESSELS[$vessel]}" | cut -d: -f3
 }
 
+function check_port() {
+    local host=$1
+    local port=$2
+    timeout 1 bash -c "cat < /dev/null > /dev/tcp/$host/$port" 2>/dev/null
+    return $?
+}
+
+function check_backend_health() {
+    local all_healthy=true
+    local missing_services=()
+    
+    # Check SurrealDB port
+    if ! check_port localhost 8000; then
+        missing_services+=("SurrealDB:8000")
+        all_healthy=false
+    fi
+    
+    # Check API Server port
+    if ! check_port localhost 8080; then
+        missing_services+=("API:8080")
+        all_healthy=false
+    fi
+    
+    # Check Redis port
+    if ! check_port localhost 6379; then
+        missing_services+=("Redis:6379")
+        all_healthy=false
+    fi
+    
+    if [ "$all_healthy" = false ]; then
+        for service in "${missing_services[@]}"; do
+            print_warning "$service not accessible"
+        done
+    fi
+    
+    if [ "$all_healthy" = true ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 function cmd_start() {
     local vessels=("$@")
     
     print_header "Starting Vessels"
     
-    # Start backend if not running
-    if ! docker ps --format '{{.Names}}' | grep -q "metabob-surreal"; then
-        print_info "Starting backend services..."
+    # Check backend health first
+    if check_backend_health; then
+        print_success "Backend services are healthy"
+    else
+        print_warning "Backend services not fully accessible"
+        print_info "Attempting to start backend..."
+        
         cd "$PROJECT_ROOT"
-        docker-compose --profile stable up -d
-        sleep 5
+        
+        # Try to start backend, ignore "already exists" errors
+        if docker-compose --profile stable up -d 2>&1 | grep -v "is already in use" | grep -v "already exists"; then
+            sleep 5
+            if check_backend_health; then
+                print_success "Backend services started"
+            else
+                print_error "Backend services failed to start properly"
+                print_info "Check running containers: docker ps --filter name=metabob"
+                return 1
+            fi
+        fi
     fi
     
-    # Start vessels
+    # Start devbob vessels
+    cd "$PROJECT_ROOT"
+    
     if [[ ${#vessels[@]} -eq 0 ]]; then
-        print_info "Starting all vessels..."
-        cd "$PROJECT_ROOT"
-        docker-compose --profile devbob-dev up -d
+        print_info "Starting all devbob vessels..."
+        
+        # Include stable profile for dependency resolution, but use --no-recreate
+        # to avoid trying to recreate existing backend containers
+        docker-compose --profile stable --profile devbob-dev up -d --no-recreate 2>&1 | \
+            grep -v "is already in use" | grep -v "already exists" | \
+            grep -E "(Creating|Starting|Created|Started|Recreating)" || {
+            print_warning "No new vessels were started (they may already be running)"
+        }
+        
     else
         for vessel in "${vessels[@]}"; do
             validate_vessel "$vessel"
             local container=$(get_container_name "$vessel")
             print_info "Starting $vessel..."
-            cd "$PROJECT_ROOT"
-            docker-compose up -d "$container"
+            
+            docker-compose --profile stable --profile devbob-dev up -d --no-recreate "$container" 2>&1 | \
+                grep -v "is already in use" | grep -v "already exists" | \
+                grep -E "(Creating|Starting|Created|Started)" || {
+                print_warning "$vessel may already be running or failed to start"
+            }
         done
     fi
     
-    print_success "Vessels started successfully"
+    print_success "Vessels startup complete"
     print_info "Run 'devctl status' to check health"
 }
 
@@ -178,7 +253,7 @@ function cmd_stop() {
     if [[ ${#vessels[@]} -eq 0 ]]; then
         print_info "Stopping all vessels..."
         cd "$PROJECT_ROOT"
-        docker-compose --profile devbob-dev stop
+        docker-compose --profile stable --profile devbob-dev stop
     else
         for vessel in "${vessels[@]}"; do
             validate_vessel "$vessel"

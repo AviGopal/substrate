@@ -1,850 +1,1250 @@
-# Impulse Learning Requirements Specification
+# Impulse Learning System: Complete Learning Loop Architecture
 
 **Date**: 2026-02-25  
-**Goal**: Learn impulse-context mappings to skip memory agent LLM calls  
-**Target**: 60-80% reduction in memory agent overhead through pattern learning
+**Purpose**: Complete architecture specification for the impulse learning system's feedback loop, storage, and continuous improvement
 
 ---
 
 ## Executive Summary
 
-This document specifies the requirements for implementing a learning system that captures successful impulse-context mappings and replays them without LLM calls. The system learns through **observation** of what works, building a pattern library that eliminates the need for per-turn intent analysis.
+This document specifies the complete learning loop architecture that enables the impulse learning system to continuously improve pattern accuracy and skip rate. The system learns from outcomes, updates pattern metrics, prunes unreliable patterns, and adapts to changing user behavior.
 
-### Learning Philosophy: Skip by Replaying Success
+**Core Components**:
+1. **Data Flow**: Turn lifecycle → Capture → Learning DB → Pattern Library → Skip Decision → Turn lifecycle
+2. **Storage Architecture**: 3 tables with efficient indexing and pruning strategies
+3. **Learning Algorithms**: Success/failure updates with exponential moving averages
+4. **Activity Integration**: Learn from contextRequirements, skip gatherContext when confident
 
-```
-Learning Phase:
-  User message → Memory agent LLM call → Create impulses → Task succeeds
-  → CAPTURE: { userPattern, impulseMapping, successMetrics }
-
-Skip Phase:
-  User message → Pattern match (no LLM) → Replay impulses → Task succeeds
-  → VALIDATE: Success rate maintains above threshold
-```
+**Success Metric**: Continuous improvement toward 60-80% skip rate with quality maintained
 
 ---
 
-## Part 1: Data Capture Requirements
+## Part 1: Data Flow Architecture
 
-### 1.1 What to Capture Per Turn
+### 1.1 Complete System Data Flow
 
-Every time the memory agent runs successfully, capture:
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         IMPULSE LEARNING SYSTEM                              │
+│                           Complete Data Flow                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-```typescript
-interface ImpulseMappingRecord {
-  // Input pattern
-  userIntent: {
-    rawText: string                  // Original user message
-    normalizedPattern: string        // Pattern with variables replaced
-    intentType: string               // code_fix, feature_request, etc.
-    confidence: number               // 0-1 from intent analysis
-  }
-  
-  // Context at capture time
-  context: {
-    recentFiles: string[]            // Files modified in last 5 turns
-    activeSession: string            // Session ID
-    turnNumber: number               // Turn in session
-    timestamp: number                // Capture time
-  }
-  
-  // Impulses created (THE KEY DATA)
-  impulses: Array<{
-    id: string                       // Impulse ID
-    type: string                     // file, bashOutput, memo, etc.
-    pointer: ImpulsePointer          // Full pointer object
-    priority: "high" | "medium" | "low"
-    budget: number                   // Token budget
-    created: boolean                 // Was it created?
-    loaded: boolean                  // Was it loaded?
-    used: boolean                    // Was it referenced in response?
-  }>
-  
-  // Outcome metrics (for validation)
-  outcome: {
-    taskSucceeded: boolean           // Did the task complete successfully?
-    responseQuality: number          // 0-1 (user feedback if available)
-    impulsesUsedCount: number        // How many impulses were actually used
-    timeToSuccess: number            // Time to task completion
-  }
-  
-  // Learning metadata
-  metadata: {
-    capturedAt: number               // Timestamp
-    capturedBy: "session-memory-agent"
-    recordId: string                 // Unique record ID
-    sessionID: string                // Parent session
-  }
-}
+                                    USER MESSAGE
+                                         │
+                                         ▼
+         ┌───────────────────────────────────────────────────────┐
+         │  TURN LIFECYCLE START                                 │
+         │  • Parse user message                                 │
+         │  • Extract session context                            │
+         └───────────────┬───────────────────────────────────────┘
+                         │
+                         ▼
+         ┌───────────────────────────────────────────────────────┐
+         │  SKIP DECISION (Priority Hook: 5)                     │
+         │  • shouldSkipMemoryAgentLLM()                         │
+         │  • Check trivial, continuation, pattern, activity     │
+         │  • Confidence threshold: 0.85                         │
+         └───────────────┬───────────────────────────────────────┘
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+         SKIP │                     │ NO SKIP
+              ▼                     ▼
+    ┌──────────────────┐   ┌────────────────────────┐
+    │ FALLBACK         │   │ MEMORY AGENT LLM       │
+    │ STRATEGY         │   │ (Priority Hook: 10)    │
+    │                  │   │                        │
+    │ • Pattern Replay │   │ • analyzeIntent()      │
+    │ • Template Reqs  │   │ • prepare()            │
+    │ • Keep Existing  │   │ • Create impulses      │
+    │ • Do Nothing     │   │                        │
+    └─────────┬────────┘   └────────┬───────────────┘
+              │                     │
+              │ ┌───────────────────┘
+              │ │
+              ▼ ▼
+    ┌─────────────────────────────────────────────┐
+    │ IMPULSE CREATION                            │
+    │ • File impulses                             │
+    │ • Bash output impulses                      │
+    │ • Metabob issue impulses                    │
+    │ • Memo impulses                             │
+    │ • Load high-priority impulses               │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ CAPTURE POINT 1: Intent + Impulses          │
+    │ • User intent (type, confidence)            │
+    │ • Impulses created                          │
+    │ • Session context (recent files)            │
+    │ → Store in LearningBuffer (in-memory)       │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ MAIN AGENT EXECUTION                        │
+    │ • Generate response                         │
+    │ • Execute tools                             │
+    │ • Track tool usage                          │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ CAPTURE POINT 2: Response + Usage           │
+    │ • Response text                             │
+    │ • Impulses used (snippet matching)          │
+    │ • Response time                             │
+    │ → Append to LearningBuffer                  │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ CAPTURE POINT 3: Task Outcome               │
+    │ • Task succeeded/failed                     │
+    │ • Error messages (if failed)                │
+    │ • Total cost, tokens                        │
+    │ → Flush to LEARNING DATABASE                │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ LEARNING DATABASE                           │
+    │                                             │
+    │ Tables:                                     │
+    │ • impulse_mapping_records (raw data)        │
+    │ • pattern_library (learned patterns)        │
+    │ • memory_agent_performance (tracking)       │
+    │                                             │
+    │ Operations:                                 │
+    │ • Insert mapping record                     │
+    │ • Update pattern metrics                    │
+    │ • Track skip decision                       │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ PATTERN LEARNING ENGINE                     │
+    │                                             │
+    │ • Extract pattern from user message         │
+    │ • Check if pattern exists                   │
+    │   - YES: Update metrics (success/failure)   │
+    │   - NO: Create new pattern                  │
+    │ • Update impulse mappings                   │
+    │ • Calculate success rate                    │
+    │ • Mark unreliable if <50% success           │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ PATTERN LIBRARY                             │
+    │ • Active patterns (success_rate >= 0.75)    │
+    │ • Used by skip decision hook                │
+    │ • Pruned periodically (remove old/bad)      │
+    └──────────────────┬──────────────────────────┘
+                       │
+                       │ FEEDBACK LOOP
+                       └──────────────────────────┐
+                                                  │
+                                                  ▼
+                                    NEXT TURN (SKIP DECISION)
+                                    • Query pattern library
+                                    • Match with confidence
+                                    • Skip if confidence > 0.85
 ```
 
-### 1.2 Where to Capture
+### 1.2 Feedback Loop Details
 
-**Capture Point 1: After Intent Analysis**
-- Location: `memory-agent.ts` → `analyzeIntent()` → after LLM call
-- Capture: `userIntent` fields
-- Storage: In-memory buffer (not persisted yet)
-
-**Capture Point 2: After Impulse Creation**
-- Location: `memory-agent.ts` → `prepare()` → after impulse loop
-- Capture: `impulses` array with created/loaded status
-- Storage: Append to buffer
-
-**Capture Point 3: After Task Completion**
-- Location: `activity.ts` → `executeTask()` → after success/failure
-- Capture: `outcome` metrics, impulse usage tracking
-- Storage: **PERSIST** full record to learning database
-
-**Capture Point 4: After Activity Execution**
-- Location: `activity.ts` → `execute()` → after all tasks complete
-- Capture: Activity-level context mapping
-- Storage: Persist activity-impulse mapping
-
-### 1.3 How to Track Impulse Usage
-
-**Problem**: Need to know if an impulse was "used" (referenced in agent response)
-
-**Solution**: Parse agent response for impulse references
-
-```typescript
-async function trackImpulseUsage(
-  response: string,
-  impulses: Record<string, Impulse.Schema>
-): Promise<Record<string, boolean>> {
-  const usageMap: Record<string, boolean> = {}
-  
-  for (const [id, impulse] of Object.entries(impulses)) {
-    // Check if response references impulse content
-    if (impulse.loaded && impulse.content) {
-      // Simple heuristic: does response contain unique strings from impulse?
-      const contentSnippets = extractUniqueSnippets(impulse.content, 3)
-      const isUsed = contentSnippets.some(snippet => 
-        response.includes(snippet)
-      )
-      usageMap[id] = isUsed
-    } else {
-      usageMap[id] = false
-    }
-  }
-  
-  return usageMap
-}
+**Primary Feedback Loop**:
 ```
+Capture → Learn → Update Metrics → Skip Decision → Capture (repeat)
+```
+
+**Loop Components**:
+
+1. **Capture Phase**: Turn-level data collection
+   - Intent analysis results
+   - Impulses created/loaded
+   - Response generation
+   - Impulse usage detection
+   - Task outcome
+
+2. **Learn Phase**: Pattern extraction and storage
+   - Extract pattern from user message
+   - Identify variables (files, identifiers)
+   - Map impulses to pattern
+   - Store in learning database
+
+3. **Update Phase**: Metrics calculation
+   - Success/failure tracking
+   - Success rate calculation
+   - Response time averaging
+   - Pattern reliability scoring
+
+4. **Skip Phase**: Decision making
+   - Query pattern library
+   - Match with confidence scoring
+   - Decide to skip or not
+   - Execute fallback if skipping
+
+**Feedback Loop Frequency**:
+- **Real-time**: Every turn updates metrics
+- **Batch**: Pattern pruning runs daily
+- **Continuous**: Learning never stops
 
 ---
 
-## Part 2: Pattern Learning Requirements
+## Part 2: Storage Architecture
 
-### 2.1 Pattern Extraction
+### 2.1 Database Tables
 
-**Goal**: Convert user messages into reusable patterns
-
-```typescript
-interface UserPattern {
-  // Raw pattern (with variables)
-  template: string                   // "Fix bug in {file}"
-  variables: string[]                // ["file"]
-  
-  // Normalized representation
-  normalized: string                 // "fix_bug_in_X"
-  intentType: string                 // "code_fix"
-  
-  // Learned impulse mappings
-  impulseMapping: {
-    templateType: string             // "file", "bashOutput", etc.
-    relativeToVariable?: string      // Which variable determines the path
-    pathTransform?: string           // How to transform variable to path
-    priority: "high" | "medium" | "low"
-    budget: number
-  }[]
-  
-  // Pattern strength metrics
-  metrics: {
-    observationCount: number         // Times seen
-    successRate: number              // Success rate when using this pattern
-    avgResponseTime: number          // Average time to success
-    lastUsed: number                 // Timestamp of last use
-  }
-}
-```
-
-**Pattern Extraction Algorithm**:
-
-```typescript
-function extractPattern(userMessage: string): UserPattern {
-  // Step 1: Normalize (lowercase, remove punctuation)
-  const normalized = userMessage.toLowerCase().replace(/[^\w\s]/g, '')
-  
-  // Step 2: Detect variables (file paths, names, etc.)
-  const variables: string[] = []
-  let template = normalized
-  
-  // Detect file paths
-  const filePathRegex = /\b[\w\-\.\/]+\.[\w]+\b/g
-  let match
-  while ((match = filePathRegex.exec(normalized)) !== null) {
-    const varName = `file${variables.length}`
-    variables.push(varName)
-    template = template.replace(match[0], `{${varName}}`)
-  }
-  
-  // Detect identifiers (function names, class names)
-  const identifierRegex = /\b[A-Z][a-zA-Z0-9_]+\b/g
-  while ((match = identifierRegex.exec(normalized)) !== null) {
-    const varName = `identifier${variables.length}`
-    variables.push(varName)
-    template = template.replace(match[0], `{${varName}}`)
-  }
-  
-  // Step 3: Create normalized key
-  const normalizedKey = template.replace(/\s+/g, '_')
-  
-  return { template, variables, normalized: normalizedKey }
-}
-```
-
-### 2.2 Pattern Matching
-
-**Goal**: Match new user messages against learned patterns
-
-```typescript
-interface PatternMatch {
-  pattern: UserPattern
-  confidence: number                 // 0-1 (how well does it match)
-  variableBindings: Record<string, string>  // Variable assignments
-}
-
-function matchPattern(
-  userMessage: string,
-  learnedPatterns: UserPattern[]
-): PatternMatch | null {
-  const messagePattern = extractPattern(userMessage)
-  
-  // Find best matching pattern
-  let bestMatch: PatternMatch | null = null
-  let bestScore = 0
-  
-  for (const pattern of learnedPatterns) {
-    // Compute similarity score
-    const score = computeSimilarity(
-      messagePattern.normalized,
-      pattern.normalized
-    )
-    
-    if (score > bestScore && score > 0.75) { // 75% threshold
-      // Extract variable bindings
-      const bindings = extractBindings(userMessage, pattern)
-      
-      bestMatch = {
-        pattern,
-        confidence: score,
-        variableBindings: bindings
-      }
-      bestScore = score
-    }
-  }
-  
-  return bestMatch
-}
-```
-
-### 2.3 Impulse Replay
-
-**Goal**: Replay impulse creation without LLM call
-
-```typescript
-async function replayImpulsesFromPattern(
-  match: PatternMatch,
-  sessionID: string
-): Promise<Record<string, Impulse.Schema>> {
-  const impulses: Record<string, Impulse.Schema> = {}
-  let impulseCount = 0
-  
-  // For each learned impulse mapping
-  for (const mapping of match.pattern.impulseMapping) {
-    const impulseId = `replay-${impulseCount++}`
-    
-    // Transform variable to actual path/content
-    let pointer: ImpulsePointer
-    
-    if (mapping.templateType === 'file' && mapping.relativeToVariable) {
-      // Get variable value
-      const variableValue = match.variableBindings[mapping.relativeToVariable]
-      
-      // Apply path transform
-      const filePath = applyTransform(
-        variableValue,
-        mapping.pathTransform || 'identity'
-      )
-      
-      pointer = { type: 'file', path: filePath }
-    } else if (mapping.templateType === 'bashOutput') {
-      // Similar for bash commands
-      pointer = { type: 'bashOutput', command: mapping.command }
-    }
-    // ... other types
-    
-    impulses[impulseId] = {
-      id: impulseId,
-      type: mapping.templateType,
-      pointer,
-      priority: mapping.priority,
-      budget: mapping.budget,
-      loaded: false,
-      metadata: {
-        source: 'pattern-replay',
-        pattern: match.pattern.normalized,
-        confidence: match.confidence
-      }
-    }
-  }
-  
-  return impulses
-}
-```
-
----
-
-## Part 3: Skip Conditions & Decision Logic
-
-### 3.1 When to Skip Memory Agent LLM Call
-
-**Decision tree**:
-
-```typescript
-async function shouldSkipMemoryAgentLLM(
-  userMessage: string,
-  sessionContext: SessionContext
-): Promise<{ skip: boolean; reason: string; fallback?: string }> {
-  
-  // Rule 1: Trivial messages (no context needed)
-  if (isTrivial(userMessage)) {
-    return { skip: true, reason: 'trivial-message' }
-  }
-  
-  // Rule 2: Continuations (reuse existing impulses)
-  if (isContinuation(userMessage)) {
-    return { skip: true, reason: 'continuation' }
-  }
-  
-  // Rule 3: Pattern match with high confidence
-  const match = await matchPattern(userMessage, getLearnedPatterns())
-  if (match && match.confidence > 0.85) {
-    // Check pattern success rate
-    if (match.pattern.metrics.successRate > 0.75) {
-      return { 
-        skip: true, 
-        reason: 'pattern-match',
-        fallback: 'use-pattern-replay' 
-      }
-    }
-  }
-  
-  // Rule 4: Activity with contextRequirements (use template)
-  if (sessionContext.executingActivity) {
-    const activity = sessionContext.executingActivity
-    if (activity.template.contextRequirements?.length > 0) {
-      return { 
-        skip: true, 
-        reason: 'activity-template',
-        fallback: 'use-template-requirements' 
-      }
-    }
-  }
-  
-  // Default: Run memory agent LLM
-  return { skip: false, reason: 'no-pattern-match' }
-}
-
-function isTrivial(message: string): boolean {
-  const trivialPatterns = [
-    /^(hi|hello|hey|thanks?|ok|got it|yes|no)$/i,
-    /^.{1,10}$/  // Very short messages
-  ]
-  return trivialPatterns.some(pattern => pattern.test(message.trim()))
-}
-
-function isContinuation(message: string): boolean {
-  const continuationPatterns = [
-    /^(continue|go on|next|proceed|keep going)$/i
-  ]
-  return continuationPatterns.some(pattern => pattern.test(message.trim()))
-}
-```
-
-### 3.2 Fallback Strategies
-
-When skipping, use these fallback strategies:
-
-**Strategy 1: Pattern Replay**
-```typescript
-const impulses = await replayImpulsesFromPattern(match, sessionID)
-await SessionMemory.addImpulses(sessionID, impulses)
-```
-
-**Strategy 2: Template Requirements**
-```typescript
-const impulses = await Activity.createImpulsesFromRequirements(
-  activityID,
-  template.contextRequirements
-)
-```
-
-**Strategy 3: Keep Existing**
-```typescript
-// Do nothing - reuse impulses from previous turn
-// (used for continuations)
-```
-
----
-
-## Part 4: Learning Loop Integration
-
-### 4.1 Learning Loop Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ TURN LIFECYCLE HOOK (Pre-Prompt)                           │
-│                                                             │
-│ 1. Check Skip Conditions                                   │
-│    shouldSkipMemoryAgentLLM(userMessage)                   │
-│                                                             │
-│ 2a. IF SKIP:                                               │
-│     - Use pattern replay OR template requirements          │
-│     - Create impulses without LLM call                     │
-│     - Track skip (increment skipCount metric)              │
-│                                                             │
-│ 2b. IF NO SKIP:                                            │
-│     - Run memory agent LLM call (current behavior)         │
-│     - Capture mapping for learning                         │
-│     - Track LLM call (increment llmCallCount metric)       │
-│                                                             │
-│ 3. Load high-priority impulses                            │
-│                                                             │
-│ 4. Continue to main agent                                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 4.2 Storage Schema
-
-**Learning Database Table**: `impulse_pattern_mappings`
+**Table 1: impulse_mapping_records** (Raw learning data)
 
 ```sql
-CREATE TABLE impulse_pattern_mappings (
+CREATE TABLE impulse_mapping_records (
+  -- Primary key
   id TEXT PRIMARY KEY,
   
-  -- Pattern
-  pattern_template TEXT NOT NULL,
-  pattern_normalized TEXT NOT NULL,
-  pattern_variables TEXT NOT NULL,  -- JSON array
+  -- User intent
+  raw_text TEXT NOT NULL,
+  normalized_pattern TEXT NOT NULL,
   intent_type TEXT NOT NULL,
+  intent_confidence REAL NOT NULL,
   
-  -- Impulse mapping (JSON)
-  impulse_mapping TEXT NOT NULL,    -- JSON array of mappings
+  -- Context
+  recent_files TEXT NOT NULL,             -- JSON array
+  session_id TEXT NOT NULL,
+  turn_number INTEGER NOT NULL,
+  captured_at INTEGER NOT NULL,
   
-  -- Metrics
+  -- Impulses created (JSON array)
+  impulses TEXT NOT NULL,
+  
+  -- Outcome
+  task_succeeded BOOLEAN NOT NULL,
+  response_quality REAL NOT NULL,
+  impulses_used_count INTEGER NOT NULL,
+  time_to_success INTEGER NOT NULL,
+  
+  -- Metadata
+  record_id TEXT NOT NULL,
+  
+  -- Indexes
+  INDEX idx_normalized_pattern (normalized_pattern),
+  INDEX idx_intent_type (intent_type),
+  INDEX idx_session_id (session_id),
+  INDEX idx_captured_at (captured_at DESC)
+);
+```
+
+**Table 2: pattern_library** (Learned patterns)
+
+```sql
+CREATE TABLE pattern_library (
+  -- Primary key
+  id TEXT PRIMARY KEY,                    -- pattern_abc123
+  
+  -- Pattern template
+  template TEXT NOT NULL,                 -- "fix bug in {file0}"
+  normalized TEXT NOT NULL,               -- "fix_bug_in_X"
+  variables TEXT NOT NULL,                -- JSON array of PatternVariable
+  intent_type TEXT NOT NULL,              -- "code_fix", "feature_request"
+  
+  -- Learned impulse mappings
+  impulse_mapping TEXT NOT NULL,          -- JSON array of ImpulseMapping
+  
+  -- Pattern metrics
   observation_count INTEGER DEFAULT 1,
   success_count INTEGER DEFAULT 0,
   failure_count INTEGER DEFAULT 0,
   success_rate REAL DEFAULT 0.0,
   avg_response_time_ms REAL DEFAULT 0.0,
   
-  -- Timestamps
-  first_observed DATETIME NOT NULL,
-  last_used DATETIME NOT NULL,
+  -- Reliability flags
+  is_reliable BOOLEAN DEFAULT 1,          -- success_rate >= 0.75
+  is_active BOOLEAN DEFAULT 1,            -- Used in skip decisions
   
-  -- Indexes
-  INDEX idx_pattern_normalized (pattern_normalized),
+  -- Timestamps
+  first_observed INTEGER NOT NULL,        -- Unix timestamp (ms)
+  last_used INTEGER NOT NULL,             -- Unix timestamp (ms)
+  last_updated INTEGER NOT NULL,          -- Unix timestamp (ms)
+  
+  -- Metadata
+  metadata TEXT,                          -- JSON object for additional data
+  
+  -- Indexes for fast lookup
+  INDEX idx_normalized (normalized),
   INDEX idx_intent_type (intent_type),
-  INDEX idx_success_rate (success_rate),
-  INDEX idx_last_used (last_used)
-)
+  INDEX idx_success_rate (success_rate DESC),
+  INDEX idx_is_reliable (is_reliable),
+  INDEX idx_is_active (is_active),
+  INDEX idx_last_used (last_used DESC),
+  INDEX idx_observation_count (observation_count DESC)
+);
 ```
 
-**Tracking Table**: `memory_agent_performance`
+**Table 3: memory_agent_performance** (Per-turn tracking)
 
 ```sql
 CREATE TABLE memory_agent_performance (
+  -- Primary key
   id TEXT PRIMARY KEY,
+  
+  -- Session context
   session_id TEXT NOT NULL,
   turn_number INTEGER NOT NULL,
+  user_message TEXT NOT NULL,
+  agent_name TEXT NOT NULL,
   
-  -- Decision
-  skipped_llm BOOLEAN NOT NULL,
-  skip_reason TEXT,              -- "pattern-match", "trivial", etc.
-  pattern_id TEXT,               -- Reference to pattern used (if skipped)
+  -- Skip decision
+  skipped BOOLEAN NOT NULL,
+  skip_reason TEXT,
+  skip_confidence REAL,
+  fallback_strategy TEXT,
   
-  -- Performance
-  time_ms REAL NOT NULL,         -- Time taken (with or without LLM)
-  impulse_count INTEGER NOT NULL,
+  -- Pattern info (if skip_reason = pattern)
+  pattern_id TEXT,
+  pattern_template TEXT,
+  pattern_confidence REAL,
+  variable_bindings TEXT,
+  
+  -- Activity info (if skip_reason = activity)
+  activity_id TEXT,
+  template_id TEXT,
+  requirement_count INTEGER,
   
   -- Outcome
+  impulses_created INTEGER NOT NULL,
+  impulses_loaded INTEGER NOT NULL,
+  total_tokens INTEGER NOT NULL,
   task_succeeded BOOLEAN,
+  response_quality REAL,
   
-  -- Timestamp
-  recorded_at DATETIME NOT NULL,
+  -- Performance metrics
+  decision_duration_ms REAL NOT NULL,
+  fallback_duration_ms REAL,
+  total_duration_ms REAL NOT NULL,
+  llm_time_saved_ms REAL,
   
-  INDEX idx_session (session_id),
-  INDEX idx_skipped (skipped_llm),
-  INDEX idx_recorded (recorded_at)
-)
+  -- Timestamps
+  captured_at INTEGER NOT NULL,
+  
+  -- Indexes for analytics
+  INDEX idx_session_turn (session_id, turn_number),
+  INDEX idx_skipped (skipped),
+  INDEX idx_skip_reason (skip_reason),
+  INDEX idx_pattern_id (pattern_id),
+  INDEX idx_captured_at (captured_at DESC)
+);
 ```
 
-### 4.3 Learning Algorithm
+### 2.2 Index Strategy
 
-**Update Pattern on Success**:
+**Optimized for**:
+1. **Pattern matching queries** (most frequent):
+   - `idx_normalized` + `idx_intent_type` + `idx_is_active`
+   - Composite index for common query: `(normalized, intent_type, is_reliable)`
+
+2. **Skip decision tracking**:
+   - `idx_session_turn` for session analysis
+   - `idx_skipped` + `idx_skip_reason` for metrics
+
+3. **Pattern effectiveness**:
+   - `idx_success_rate` for sorting by reliability
+   - `idx_observation_count` for finding frequent patterns
+
+4. **Time-based queries**:
+   - `idx_last_used` for recent patterns
+   - `idx_captured_at` for chronological analysis
+
+**Composite Indexes** (create after initial deployment):
+```sql
+-- For pattern matching queries
+CREATE INDEX idx_pattern_lookup 
+ON pattern_library(normalized, intent_type, is_reliable, is_active);
+
+-- For pattern effectiveness queries
+CREATE INDEX idx_pattern_metrics 
+ON pattern_library(success_rate DESC, observation_count DESC);
+
+-- For session tracking
+CREATE INDEX idx_session_tracking 
+ON memory_agent_performance(session_id, turn_number, captured_at DESC);
+```
+
+### 2.3 Pruning Strategy
+
+**Goal**: Remove old, unreliable, or unused patterns to keep database lean
+
+**Pruning Rules**:
+
+1. **Unreliable Patterns** (success_rate < 0.5, observation_count >= 5):
+   - Mark `is_active = 0` (exclude from skip decisions)
+   - Keep data for analysis
+
+2. **Old Unused Patterns** (last_used > 90 days ago):
+   - Archive to cold storage
+   - Delete from active database
+
+3. **Low Observation Patterns** (observation_count < 3, first_observed > 30 days ago):
+   - Delete (not enough data to learn)
+
+**Pruning Implementation**:
 
 ```typescript
-async function updatePatternOnSuccess(
-  recordId: string,
+/**
+ * Prune unreliable and old patterns
+ * Run daily via cron job or background task
+ */
+export async function prunePatternLibrary(): Promise<PruneResult> {
+  const { LearningDatabase } = await import('./learning-database')
+  
+  const start = Date.now()
+  let unreliableCount = 0
+  let oldUnusedCount = 0
+  let lowObservationCount = 0
+  
+  // Rule 1: Mark unreliable patterns as inactive
+  const unreliablePatterns = await LearningDatabase.query(`
+    SELECT id, template, success_rate, observation_count
+    FROM pattern_library
+    WHERE 
+      success_rate < 0.5
+      AND observation_count >= 5
+      AND is_active = 1
+  `)
+  
+  for (const pattern of unreliablePatterns) {
+    await LearningDatabase.update('pattern_library', pattern.id, {
+      is_active: 0,
+      is_reliable: 0,
+      metadata: JSON.stringify({
+        pruned_at: Date.now(),
+        prune_reason: 'unreliable',
+        success_rate: pattern.success_rate,
+        observation_count: pattern.observation_count,
+      }),
+    })
+    unreliableCount++
+  }
+  
+  // Rule 2: Archive old unused patterns
+  const oldUnusedPatterns = await LearningDatabase.query(`
+    SELECT id, template, last_used
+    FROM pattern_library
+    WHERE 
+      last_used < ?
+      AND is_active = 1
+  `, [Date.now() - 90 * 24 * 60 * 60 * 1000]) // 90 days ago
+  
+  for (const pattern of oldUnusedPatterns) {
+    // Archive to cold storage (optional)
+    await archivePattern(pattern)
+    
+    // Delete from active database
+    await LearningDatabase.delete('pattern_library', pattern.id)
+    oldUnusedCount++
+  }
+  
+  // Rule 3: Delete low observation patterns
+  const lowObservationPatterns = await LearningDatabase.query(`
+    SELECT id, template, observation_count, first_observed
+    FROM pattern_library
+    WHERE 
+      observation_count < 3
+      AND first_observed < ?
+  `, [Date.now() - 30 * 24 * 60 * 60 * 1000]) // 30 days ago
+  
+  for (const pattern of lowObservationPatterns) {
+    await LearningDatabase.delete('pattern_library', pattern.id)
+    lowObservationCount++
+  }
+  
+  const duration = Date.now() - start
+  
+  log.info('pattern library pruned', {
+    unreliableCount,
+    oldUnusedCount,
+    lowObservationCount,
+    totalPruned: unreliableCount + oldUnusedCount + lowObservationCount,
+    duration,
+  })
+  
+  return {
+    unreliableCount,
+    oldUnusedCount,
+    lowObservationCount,
+    totalPruned: unreliableCount + oldUnusedCount + lowObservationCount,
+    duration,
+  }
+}
+
+interface PruneResult {
+  unreliableCount: number
+  oldUnusedCount: number
+  lowObservationCount: number
+  totalPruned: number
+  duration: number
+}
+```
+
+**Pruning Schedule**:
+- **Daily**: Run at 3 AM (low traffic time)
+- **On-demand**: Admin can trigger manually
+- **Metrics**: Track pruned counts for monitoring
+
+---
+
+## Part 3: Learning Algorithms
+
+### 3.1 Pattern Learning on Success
+
+**Goal**: Update pattern metrics when task succeeds
+
+```typescript
+/**
+ * Update pattern metrics after successful task
+ * Increases success_count, updates success_rate, updates avg_response_time
+ */
+export async function updatePatternOnSuccess(input: {
+  patternId: string
   responseTime: number
-): Promise<void> {
-  const record = await db.get('impulse_pattern_mappings', recordId)
+  tokensUsed: number
+}): Promise<void> {
+  
+  const { LearningDatabase } = await import('./learning-database')
+  
+  // Load current pattern
+  const pattern = await LearningDatabase.get('pattern_library', input.patternId)
+  
+  if (!pattern) {
+    log.warn('pattern not found for success update', { patternId: input.patternId })
+    return
+  }
   
   // Update metrics
-  const newSuccessCount = record.success_count + 1
-  const newObservationCount = record.observation_count + 1
+  const newSuccessCount = pattern.success_count + 1
+  const newObservationCount = pattern.observation_count + 1
   const newSuccessRate = newSuccessCount / newObservationCount
   
-  // Update average response time (exponential moving average)
-  const alpha = 0.2  // Smoothing factor
-  const newAvgTime = alpha * responseTime + (1 - alpha) * record.avg_response_time_ms
+  // Update average response time using exponential moving average (EMA)
+  // This gives more weight to recent observations
+  const alpha = 0.2  // Smoothing factor (0.2 = 20% new, 80% old)
+  const newAvgTime = alpha * input.responseTime + (1 - alpha) * pattern.avg_response_time_ms
   
-  await db.update('impulse_pattern_mappings', recordId, {
+  // Determine reliability
+  const isReliable = newSuccessRate >= 0.75 && newObservationCount >= 3
+  
+  // Update pattern in database
+  await LearningDatabase.update('pattern_library', input.patternId, {
     success_count: newSuccessCount,
     observation_count: newObservationCount,
     success_rate: newSuccessRate,
     avg_response_time_ms: newAvgTime,
-    last_used: Date.now()
+    is_reliable: isReliable ? 1 : 0,
+    last_used: Date.now(),
+    last_updated: Date.now(),
   })
+  
+  log.info('pattern metrics updated on success', {
+    patternId: input.patternId,
+    template: pattern.template,
+    successRate: newSuccessRate.toFixed(3),
+    observationCount: newObservationCount,
+    isReliable,
+  })
+  
+  // If pattern just became reliable, track milestone
+  if (isReliable && !pattern.is_reliable) {
+    log.info('pattern became reliable', {
+      patternId: input.patternId,
+      template: pattern.template,
+      successRate: newSuccessRate.toFixed(3),
+      observationCount: newObservationCount,
+    })
+  }
 }
 ```
 
-**Update Pattern on Failure**:
+### 3.2 Pattern Learning on Failure
+
+**Goal**: Update pattern metrics when task fails
 
 ```typescript
-async function updatePatternOnFailure(recordId: string): Promise<void> {
-  const record = await db.get('impulse_pattern_mappings', recordId)
+/**
+ * Update pattern metrics after failed task
+ * Increases failure_count, updates success_rate, marks unreliable if needed
+ */
+export async function updatePatternOnFailure(input: {
+  patternId: string
+  errorMessage: string
+}): Promise<void> {
   
-  const newFailureCount = record.failure_count + 1
-  const newObservationCount = record.observation_count + 1
-  const newSuccessRate = record.success_count / newObservationCount
+  const { LearningDatabase } = await import('./learning-database')
   
-  await db.update('impulse_pattern_mappings', recordId, {
+  // Load current pattern
+  const pattern = await LearningDatabase.get('pattern_library', input.patternId)
+  
+  if (!pattern) {
+    log.warn('pattern not found for failure update', { patternId: input.patternId })
+    return
+  }
+  
+  // Update metrics
+  const newFailureCount = pattern.failure_count + 1
+  const newObservationCount = pattern.observation_count + 1
+  const newSuccessRate = pattern.success_count / newObservationCount
+  
+  // Determine reliability
+  const isReliable = newSuccessRate >= 0.75 && newObservationCount >= 3
+  const isUnreliable = newSuccessRate < 0.5 && newObservationCount >= 5
+  
+  // If pattern becomes unreliable, mark as inactive
+  const isActive = isUnreliable ? 0 : pattern.is_active
+  
+  // Update pattern in database
+  await LearningDatabase.update('pattern_library', input.patternId, {
     failure_count: newFailureCount,
     observation_count: newObservationCount,
     success_rate: newSuccessRate,
-    last_used: Date.now()
+    is_reliable: isReliable ? 1 : 0,
+    is_active: isActive,
+    last_used: Date.now(),
+    last_updated: Date.now(),
   })
   
-  // If success rate drops below threshold, mark pattern as unreliable
-  if (newSuccessRate < 0.5 && newObservationCount > 5) {
-    await db.update('impulse_pattern_mappings', recordId, {
-      metadata: { ...record.metadata, unreliable: true }
-    })
-  }
-}
-```
-
----
-
-## Part 5: Activity Template Integration
-
-### 5.1 Learning from contextRequirements
-
-**Goal**: When activities execute with `contextRequirements`, capture the successful impulse mappings for future skipping.
-
-```typescript
-// In activity execution
-async function executeActivityWithLearning(
-  template: ActivityTemplate.Schema,
-  variables: Record<string, any>
-): Promise<void> {
-  // If template has contextRequirements
-  if (template.contextRequirements && template.contextRequirements.length > 0) {
-    
-    // Current: Call gatherContext (uses LLM)
-    const impulses = await SessionMemoryAgent.gatherContext({
-      requirements: template.contextRequirements,
-      reason: template.name,
-      recentMessages: []
-    })
-    
-    // NEW: Capture mapping for learning
-    await captureLearningData({
-      activityTemplate: template.id,
-      activityName: template.name,
-      activityReason: `Activity: ${template.name}`,
-      contextRequirements: template.contextRequirements,
-      resolvedImpulses: impulses,
-      variables: variables
-    })
-    
-    // Continue with execution...
-  }
-}
-```
-
-### 5.2 Skip gatherContext When Learned
-
-```typescript
-async function executeActivityOptimized(
-  template: ActivityTemplate.Schema,
-  variables: Record<string, any>
-): Promise<void> {
+  log.warn('pattern metrics updated on failure', {
+    patternId: input.patternId,
+    template: pattern.template,
+    successRate: newSuccessRate.toFixed(3),
+    observationCount: newObservationCount,
+    isReliable,
+    isUnreliable,
+    errorMessage: input.errorMessage,
+  })
   
-  if (template.contextRequirements && template.contextRequirements.length > 0) {
+  // If pattern just became unreliable, track milestone
+  if (isUnreliable && pattern.is_active) {
+    log.warn('pattern became unreliable - marked inactive', {
+      patternId: input.patternId,
+      template: pattern.template,
+      successRate: newSuccessRate.toFixed(3),
+      observationCount: newObservationCount,
+      failureCount: newFailureCount,
+    })
+  }
+}
+```
+
+### 3.3 Pattern Creation from Mapping Record
+
+**Goal**: Create new pattern from captured mapping record
+
+```typescript
+/**
+ * Create pattern from impulse mapping record
+ * Extracts pattern, stores in pattern_library
+ */
+export async function createPatternFromMapping(
+  mappingRecord: ImpulseMappingRecord
+): Promise<string | null> {
+  
+  const { LearningDatabase } = await import('./learning-database')
+  const { extractPattern } = await import('./pattern-extraction')
+  
+  // Extract pattern from user message
+  const pattern = extractPattern(
+    mappingRecord.userIntent.rawText,
+    mappingRecord.userIntent.intentType
+  )
+  
+  // Check if pattern already exists
+  const existingPattern = await LearningDatabase.query(`
+    SELECT id, observation_count
+    FROM pattern_library
+    WHERE normalized = ? AND intent_type = ?
+    LIMIT 1
+  `, [pattern.normalized, pattern.intentType])
+  
+  if (existingPattern.length > 0) {
+    // Pattern already exists - update metrics instead
+    log.debug('pattern already exists, updating metrics', {
+      patternId: existingPattern[0].id,
+      normalized: pattern.normalized,
+    })
     
-    // Check if we have a learned mapping for this activity
-    const learnedMapping = await getLearnedActivityMapping(
-      template.id,
-      variables
-    )
-    
-    if (learnedMapping && learnedMapping.confidence > 0.85) {
-      // SKIP gatherContext LLM call
-      // Replay impulses from learned mapping
-      const impulses = await replayActivityImpulses(
-        learnedMapping,
-        variables
-      )
+    // Update outcome will be called separately
+    return existingPattern[0].id
+  }
+  
+  // Build impulse mapping from captured impulses
+  const impulseMapping: ImpulseMapping[] = []
+  
+  for (const impulse of mappingRecord.impulses) {
+    // Only include impulses that were actually used
+    if (impulse.used) {
+      const mapping: ImpulseMapping = {
+        type: impulse.type,
+        relativeToVariable: inferVariableBinding(impulse, pattern.variables),
+        pathTransform: inferPathTransform(impulse, pattern.variables),
+        priority: impulse.priority,
+        budget: impulse.budget,
+        properties: extractImpulseProperties(impulse),
+      }
       
-      log.info('skipped gatherContext (using learned mapping)', {
-        activity: template.id,
-        confidence: learnedMapping.confidence
-      })
-      
-      return impulses
-    } else {
-      // No learned mapping, use gatherContext (LLM)
-      return await SessionMemoryAgent.gatherContext({
-        requirements: template.contextRequirements,
-        reason: template.name,
-        recentMessages: []
-      })
+      impulseMapping.push(mapping)
     }
   }
+  
+  // Create new pattern
+  const patternId = pattern.patternId
+  
+  await LearningDatabase.insert('pattern_library', {
+    id: patternId,
+    template: pattern.template,
+    normalized: pattern.normalized,
+    variables: JSON.stringify(pattern.variables),
+    intent_type: pattern.intentType,
+    impulse_mapping: JSON.stringify(impulseMapping),
+    observation_count: 1,
+    success_count: mappingRecord.outcome.taskSucceeded ? 1 : 0,
+    failure_count: mappingRecord.outcome.taskSucceeded ? 0 : 1,
+    success_rate: mappingRecord.outcome.taskSucceeded ? 1.0 : 0.0,
+    avg_response_time_ms: mappingRecord.outcome.timeToSuccess,
+    is_reliable: 0, // Not reliable until >= 3 observations
+    is_active: 1,
+    first_observed: Date.now(),
+    last_used: Date.now(),
+    last_updated: Date.now(),
+    metadata: JSON.stringify({
+      created_from_record: mappingRecord.metadata.recordId,
+      session_id: mappingRecord.context.activeSession,
+    }),
+  })
+  
+  log.info('new pattern created', {
+    patternId,
+    template: pattern.template,
+    normalized: pattern.normalized,
+    intentType: pattern.intentType,
+    impulseCount: impulseMapping.length,
+  })
+  
+  return patternId
+}
+
+/**
+ * Infer which variable an impulse is bound to
+ */
+function inferVariableBinding(
+  impulse: ImpulseMappingRecord['impulses'][0],
+  variables: PatternVariable[]
+): string | undefined {
+  
+  // For file impulses, find matching file variable
+  if (impulse.type === 'file' && impulse.pointer.type === 'file') {
+    const filePath = impulse.pointer.path
+    
+    for (const variable of variables) {
+      if (variable.type === 'file' && filePath.includes(variable.originalValue)) {
+        return variable.name
+      }
+    }
+  }
+  
+  return undefined
+}
+
+/**
+ * Infer path transformation from impulse
+ */
+function inferPathTransform(
+  impulse: ImpulseMappingRecord['impulses'][0],
+  variables: PatternVariable[]
+): PathTransform {
+  
+  // Default: identity (use variable as-is)
+  return 'identity'
+  
+  // TODO: Detect other transforms (toTestFile, toDirectory, etc.)
+}
+
+/**
+ * Extract type-specific properties from impulse
+ */
+function extractImpulseProperties(
+  impulse: ImpulseMappingRecord['impulses'][0]
+): Record<string, any> {
+  
+  switch (impulse.type) {
+    case 'bashOutput':
+      return {
+        command: impulse.pointer.type === 'bashOutput' ? impulse.pointer.command : ''
+      }
+    
+    case 'memo':
+      return {
+        content: impulse.pointer.type === 'memo' ? impulse.pointer.content : ''
+      }
+    
+    case 'metabobIssue':
+      return {
+        severity: impulse.pointer.type === 'metabobIssue' ? impulse.pointer.severity : 'HIGH'
+      }
+    
+    default:
+      return {}
+  }
 }
 ```
 
 ---
 
-## Part 6: Validation & Metrics
+## Part 4: Activity Template Integration
 
-### 6.1 Success Metrics
+### 4.1 Learning from Activity Context Requirements
 
-Track these metrics to validate learning effectiveness:
+**Goal**: Capture successful impulse mappings from activity contextRequirements
 
 ```typescript
-interface LearningMetrics {
-  // Skip rates
-  totalTurns: number
-  turnsWithLLM: number
-  turnsSkipped: number
-  skipRate: number                   // turnsSkipped / totalTurns
+/**
+ * Capture learning data when activity uses contextRequirements
+ * Called after gatherContext() succeeds
+ */
+export async function captureActivityLearning(input: {
+  activityId: string
+  templateId: string
+  contextRequirements: ActivityTemplate.ContextRequirement[]
+  resolvedImpulses: Record<string, ActivityTemplate.Impulse.Schema>
+  outcome: {
+    succeeded: boolean
+    duration: number
+    cost: number
+  }
+}): Promise<void> {
   
-  // Skip reasons breakdown
-  skipReasons: Record<string, number>  // { "pattern-match": 120, "trivial": 45, ... }
+  const { LearningDatabase } = await import('./learning-database')
   
-  // Performance
-  avgTimeWithLLM: number             // Average time when LLM called
-  avgTimeSkipped: number             // Average time when skipped
-  timeSavings: number                // (avgTimeWithLLM - avgTimeSkipped) * turnsSkipped
+  // Build activity learning record
+  const record: ActivityLearningRecord = {
+    activityId: input.activityId,
+    templateId: input.templateId,
+    succeeded: input.outcome.succeeded,
+    duration: input.outcome.duration,
+    cost: input.outcome.cost,
+    contextRequirements: input.contextRequirements,
+    impulsesMapped: {},
+    taskOutcomes: [], // Populated from task-level captures
+    totalImpulsesCreated: Object.keys(input.resolvedImpulses).length,
+    totalImpulsesUsed: 0, // Will be updated after tasks execute
+    impulseUtilization: 0,
+    timestamp: Date.now(),
+  }
   
-  // Pattern effectiveness
-  patternCount: number               // Total patterns learned
-  patternsUsed: number               // Patterns actually used in skips
-  patternUtilization: number         // patternsUsed / patternCount
+  // Map requirements to impulses
+  for (const [id, impulse] of Object.entries(input.resolvedImpulses)) {
+    const requirement = input.contextRequirements.find(req => 
+      req.type === impulse.type
+    )
+    
+    record.impulsesMapped[id] = {
+      requirement: requirement?.description || 'unknown',
+      type: impulse.type,
+      pointer: impulse.pointer,
+      priority: impulse.priority,
+      budget: impulse.budget,
+      wasUsed: false, // Will be updated after execution
+    }
+  }
   
-  // Quality
-  skipSuccessRate: number            // Success rate when skipping
-  llmSuccessRate: number             // Success rate when using LLM
-  qualityDelta: number               // skipSuccessRate - llmSuccessRate (should be >= 0)
+  // Store in database
+  await LearningDatabase.insertActivityRecord(record)
+  
+  log.info('activity learning captured', {
+    activityId: input.activityId,
+    templateId: input.templateId,
+    requirementCount: input.contextRequirements.length,
+    impulseCount: record.totalImpulsesCreated,
+  })
 }
 ```
 
-### 6.2 Monitoring Dashboard Queries
+### 4.2 Skip gatherContext When Learned
 
-**Query 1: Skip Rate Over Time**
-```sql
-SELECT 
-  DATE(recorded_at) as date,
-  COUNT(*) as total_turns,
-  SUM(CASE WHEN skipped_llm THEN 1 ELSE 0 END) as skipped,
-  ROUND(100.0 * SUM(CASE WHEN skipped_llm THEN 1 ELSE 0 END) / COUNT(*), 2) as skip_rate
-FROM memory_agent_performance
-GROUP BY DATE(recorded_at)
-ORDER BY date DESC
-LIMIT 30
+**Goal**: Use learned mappings instead of calling gatherContext (LLM call)
+
+```typescript
+/**
+ * Check if activity has learned context mapping
+ * Returns learned impulses if confident, null otherwise
+ */
+export async function getLearnedActivityContext(input: {
+  templateId: string
+  variables: Record<string, any>
+}): Promise<LearnedContext | null> {
+  
+  const { LearningDatabase } = await import('./learning-database')
+  
+  // Query activity learning records for this template
+  const records = await LearningDatabase.query(`
+    SELECT 
+      activity_id,
+      context_requirements,
+      impulses_mapped,
+      succeeded,
+      impulse_utilization,
+      timestamp
+    FROM activity_learning_records
+    WHERE 
+      template_id = ?
+      AND succeeded = 1
+      AND impulse_utilization > 0.6
+    ORDER BY timestamp DESC
+    LIMIT 5
+  `, [input.templateId])
+  
+  if (records.length < 3) {
+    // Not enough observations to be confident
+    log.debug('not enough activity learning data', {
+      templateId: input.templateId,
+      recordCount: records.length,
+    })
+    return null
+  }
+  
+  // Check if impulse mappings are consistent across observations
+  const consistencyScore = calculateMappingConsistency(records)
+  
+  if (consistencyScore < 0.8) {
+    // Mappings vary too much - not confident
+    log.debug('activity mappings not consistent', {
+      templateId: input.templateId,
+      consistencyScore: consistencyScore.toFixed(2),
+    })
+    return null
+  }
+  
+  // Use most recent successful mapping
+  const latestRecord = records[0]
+  const impulsesMapped = JSON.parse(latestRecord.impulses_mapped)
+  
+  // Reconstruct impulses with current variables
+  const impulses: Record<string, ActivityTemplate.Impulse.Schema> = {}
+  
+  for (const [id, mapping] of Object.entries(impulsesMapped)) {
+    const impulse = await reconstructImpulseFromMapping(
+      mapping as any,
+      input.variables
+    )
+    
+    if (impulse) {
+      impulses[id] = impulse
+    }
+  }
+  
+  log.info('using learned activity context (skip gatherContext)', {
+    templateId: input.templateId,
+    observationCount: records.length,
+    consistencyScore: consistencyScore.toFixed(2),
+    impulseCount: Object.keys(impulses).length,
+  })
+  
+  return {
+    impulses,
+    confidence: consistencyScore,
+    observationCount: records.length,
+    source: 'learned-activity-mapping',
+  }
+}
+
+interface LearnedContext {
+  impulses: Record<string, ActivityTemplate.Impulse.Schema>
+  confidence: number
+  observationCount: number
+  source: string
+}
+
+/**
+ * Calculate consistency score across multiple observations
+ * 1.0 = perfectly consistent, 0.0 = completely inconsistent
+ */
+function calculateMappingConsistency(
+  records: any[]
+): number {
+  
+  if (records.length < 2) {
+    return 1.0 // Single observation is "consistent"
+  }
+  
+  // Extract impulse types from each observation
+  const typeSets = records.map(record => {
+    const mapped = JSON.parse(record.impulses_mapped)
+    return new Set(Object.values(mapped).map((m: any) => m.type))
+  })
+  
+  // Calculate Jaccard similarity between sets
+  let totalSimilarity = 0
+  let comparisons = 0
+  
+  for (let i = 0; i < typeSets.length; i++) {
+    for (let j = i + 1; j < typeSets.length; j++) {
+      const similarity = jaccardSimilarity(typeSets[i], typeSets[j])
+      totalSimilarity += similarity
+      comparisons++
+    }
+  }
+  
+  return comparisons > 0 ? totalSimilarity / comparisons : 0
+}
+
+/**
+ * Jaccard similarity between two sets
+ */
+function jaccardSimilarity<T>(set1: Set<T>, set2: Set<T>): number {
+  const intersection = new Set([...set1].filter(x => set2.has(x)))
+  const union = new Set([...set1, ...set2])
+  
+  return union.size > 0 ? intersection.size / union.size : 0
+}
+
+/**
+ * Reconstruct impulse from learned mapping
+ */
+async function reconstructImpulseFromMapping(
+  mapping: {
+    type: string
+    pointer: any
+    priority: string
+    budget: number
+  },
+  variables: Record<string, any>
+): Promise<ActivityTemplate.Impulse.Schema | null> {
+  
+  // Reconstruct pointer with variable substitution
+  let pointer = mapping.pointer
+  
+  // Replace variables in pointer (if any)
+  const pointerStr = JSON.stringify(pointer)
+  const reconstructedStr = replaceVariables(pointerStr, variables)
+  pointer = JSON.parse(reconstructedStr)
+  
+  return {
+    id: generateImpulseId(),
+    type: mapping.type as any,
+    pointer,
+    priority: mapping.priority as any,
+    budget: mapping.budget,
+    loaded: false,
+    metadata: {
+      source: 'learned-activity-mapping',
+    },
+  }
+}
+
+/**
+ * Replace {{variable}} placeholders in string
+ */
+function replaceVariables(
+  template: string,
+  variables: Record<string, any>
+): string {
+  
+  let result = template
+  
+  for (const [key, value] of Object.entries(variables)) {
+    const placeholder = `{{${key}}}`
+    result = result.replace(new RegExp(placeholder, 'g'), String(value))
+  }
+  
+  return result
+}
 ```
 
-**Query 2: Skip Reason Breakdown**
-```sql
-SELECT 
-  skip_reason,
-  COUNT(*) as count,
-  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) as percentage,
-  ROUND(AVG(time_ms), 2) as avg_time_ms
-FROM memory_agent_performance
-WHERE skipped_llm = TRUE
-GROUP BY skip_reason
-ORDER BY count DESC
-```
+### 4.3 Activity Learning Confidence Thresholds
 
-**Query 3: Pattern Effectiveness**
-```sql
-SELECT 
-  p.pattern_normalized,
-  p.observation_count,
-  p.success_count,
-  p.success_rate,
-  p.avg_response_time_ms,
-  COUNT(m.id) as times_used
-FROM impulse_pattern_mappings p
-LEFT JOIN memory_agent_performance m ON m.pattern_id = p.id
-GROUP BY p.id
-ORDER BY p.success_rate DESC, p.observation_count DESC
-LIMIT 20
+**Confidence Thresholds**:
+
+1. **Low Confidence** (<3 observations, <0.6 consistency):
+   - **Action**: Run gatherContext (LLM call)
+   - **Reason**: Not enough data to skip
+
+2. **Medium Confidence** (3-5 observations, 0.6-0.8 consistency):
+   - **Action**: Run gatherContext (LLM call)
+   - **Reason**: Data is still stabilizing
+
+3. **High Confidence** (>=5 observations, >0.8 consistency):
+   - **Action**: Skip gatherContext, use learned mapping
+   - **Reason**: Consistent pattern observed
+
+**Threshold Configuration**:
+```typescript
+interface ActivityLearningConfig {
+  minObservations: number          // Default: 5
+  minConsistency: number           // Default: 0.8
+  minUtilization: number           // Default: 0.6 (impulses actually used)
+  enableSkipping: boolean          // Default: true
+}
 ```
 
 ---
 
-## Part 7: Implementation Phases
+## Part 5: Component Interaction Flows
 
-### Phase 1: Data Capture (Week 1)
+### 5.1 Session Turn Flow (with Learning)
 
-**Tasks**:
-1. Add capture points in `memory-agent.ts`
-2. Create `ImpulseMappingRecord` storage
-3. Track impulse usage in responses
-4. Persist records to database
+```
+┌─────────────────────────────────────────────────────────────┐
+│ SESSION TURN WITH LEARNING                                  │
+└─────────────────────────────────────────────────────────────┘
 
-**Deliverables**:
-- Data flowing to learning database
-- Impulse usage tracking working
-- Metrics dashboard showing capture rate
+1. User sends message
+   ↓
+2. Turn lifecycle starts
+   ↓
+3. [HOOK: Skip Decision (priority 5)]
+   • shouldSkipMemoryAgentLLM()
+   • Query pattern_library
+   • Match with confidence
+   ↓
+   ├─ SKIP (confidence > 0.85)
+   │  ↓
+   │  4a. Execute fallback strategy
+   │      • Pattern replay
+   │      • Template requirements
+   │      • Keep existing
+   │      • Do nothing
+   │  ↓
+   │  5a. Track skip decision
+   │      → INSERT memory_agent_performance (skipped=true)
+   │  ↓
+   │  6a. Load impulses
+   │
+   └─ NO SKIP (confidence <= 0.85)
+      ↓
+      4b. [HOOK: Memory Management (priority 10)]
+          • Memory agent analyzeIntent()
+          • Memory agent prepare()
+          • Create impulses
+      ↓
+      5b. Capture learning data
+          → INSERT impulse_mapping_records
+      ↓
+      6b. Track LLM call
+          → INSERT memory_agent_performance (skipped=false)
+      ↓
+      7b. Load impulses
 
-### Phase 2: Pattern Learning (Week 2)
+   [Both paths merge here]
+   ↓
+7. Main agent execution
+   • Generate response
+   • Execute tools
+   ↓
+8. Capture response usage
+   • Detect impulses used (snippet matching)
+   • → UPDATE LearningBuffer
+   ↓
+9. Task completion
+   ↓
+10. Capture outcome
+    • Task succeeded/failed
+    • → FLUSH LearningBuffer to database
+    ↓
+11. Pattern learning
+    • Extract pattern (if new)
+    • Update pattern metrics (if exists)
+    • → UPDATE pattern_library
+    ↓
+12. Return response to user
 
-**Tasks**:
-1. Implement pattern extraction algorithm
-2. Build pattern matching engine
-3. Create impulse replay logic
-4. Test pattern accuracy
+[FEEDBACK LOOP: Next turn uses updated pattern_library]
+```
 
-**Deliverables**:
-- Pattern library growing from captures
-- Pattern matching achieving >80% accuracy
-- Replay logic generating correct impulses
+### 5.2 Activity Execution Flow (with Learning)
 
-### Phase 3: Skip Integration (Week 3)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ACTIVITY EXECUTION WITH LEARNING                            │
+└─────────────────────────────────────────────────────────────┘
 
-**Tasks**:
-1. Add skip decision logic to turn lifecycle
-2. Implement fallback strategies
-3. Track skip metrics
-4. Validate quality maintained
+1. Activity starts (template-based)
+   ↓
+2. Check if template has contextRequirements
+   ↓
+   ├─ YES
+   │  ↓
+   │  3a. Check learned activity context
+   │      • getLearnedActivityContext(templateId)
+   │      • Query activity_learning_records
+   │      • Calculate consistency
+   │  ↓
+   │  ├─ HIGH CONFIDENCE (>= 5 obs, > 0.8 consistency)
+   │  │  ↓
+   │  │  4a. SKIP gatherContext (LLM call)
+   │  │      • Use learned impulse mapping
+   │  │      • Reconstruct impulses with variables
+   │  │      • → Track skip in performance table
+   │  │
+   │  └─ LOW CONFIDENCE (< 5 obs or <= 0.8 consistency)
+   │     ↓
+   │     4b. RUN gatherContext (LLM call)
+   │         • Memory agent creates impulses
+   │         • → Capture learning data
+   │
+   └─ NO
+      ↓
+      3b. No context requirements
+          • Continue without impulses
 
-**Deliverables**:
-- Skip rate reaching 20-30% (trivial + continuations)
-- Task success rate maintained at baseline
-- Performance improvement measured
+   [Both paths merge here]
+   ↓
+5. Execute activity tasks
+   • Each task runs in sub-session
+   • Track impulse usage per task
+   ↓
+6. Activity completes
+   ↓
+7. Capture activity learning
+   • → INSERT activity_learning_records
+   • Include contextRequirements
+   • Include resolved impulses
+   • Include impulse utilization
+   ↓
+8. Update activity metrics
+   • Calculate consistency score
+   • Update learning confidence
+   ↓
+9. Return activity result
 
-### Phase 4: Activity Template Learning (Week 4)
-
-**Tasks**:
-1. Capture activity-impulse mappings
-2. Skip `gatherContext` when learned
-3. Validate activity execution quality
-4. Monitor skip rate for activities
-
-**Deliverables**:
-- Activities skip LLM calls when confident
-- Skip rate reaching 60-80% overall
-- 85-90% reduction in memory agent overhead
-
----
-
-## Part 8: Validation Checklist
-
-### Before Deployment
-
-- [ ] Data capture points instrumented and tested
-- [ ] Learning database schema created and indexed
-- [ ] Pattern extraction produces accurate templates
-- [ ] Pattern matching achieves >80% accuracy on test set
-- [ ] Impulse replay generates correct impulses
-- [ ] Skip decision logic covers all cases
-- [ ] Fallback strategies handle edge cases
-- [ ] Metrics dashboard shows real-time skip rate
-- [ ] Quality validation: skip success rate >= LLM success rate
-- [ ] Performance validation: time savings measured
-
-### After Deployment (Continuous)
-
-- [ ] Monitor skip rate weekly (target: 60-80%)
-- [ ] Monitor quality delta (target: >= 0%)
-- [ ] Review low-performing patterns monthly
-- [ ] Prune unreliable patterns (success rate < 50%)
-- [ ] Audit learning database size (prevent unbounded growth)
-- [ ] Collect user feedback on response quality
-
----
-
-## Part 9: Activity Templates for Tracing & Enforcement
-
-### Activity 1: Trace Learning Requirements
-
-**Purpose**: Systematically trace all data capture points, learning algorithms, and skip conditions
-
-**Tasks**:
-1. Trace data capture points (memory-agent.ts, activity.ts)
-2. Document pattern learning algorithm requirements
-3. Trace skip decision integration points
-4. Validate learning database schema
-
-### Activity 2: Enforce Learning Loop
-
-**Purpose**: Implement and enforce the learning loop in code
-
-**Tasks**:
-1. Implement data capture hooks
-2. Implement pattern learning engine
-3. Implement skip decision logic
-4. Wire up to turn lifecycle hooks
-5. Create monitoring dashboard
-
-### Activity 3: Validate Learning Effectiveness
-
-**Purpose**: Validate that learning is working (skip rate, quality maintained)
-
-**Tasks**:
-1. Run test sessions with learning enabled
-2. Measure skip rate over 100 turns
-3. Compare success rates (skip vs LLM)
-4. Analyze pattern utilization
-5. Generate effectiveness report
+[FEEDBACK LOOP: Next activity execution uses learned mappings]
+```
 
 ---
 
 ## Summary
 
-This specification defines a complete learning system for impulse-context mappings that:
+This document provides complete learning loop architecture with:
 
-1. **Captures** successful mappings through observation
-2. **Learns** patterns by analyzing captured data
-3. **Skips** memory agent LLM calls when confident
-4. **Validates** quality is maintained through metrics
-5. **Optimizes** toward 60-80% skip rate target
+1. ✅ **Data Flow Diagram**: Complete system flow with feedback loops
+2. ✅ **Storage Architecture**: 3 tables with indexing and pruning strategies
+3. ✅ **Learning Algorithms**: Success/failure updates with EMA
+4. ✅ **Activity Integration**: Learn from contextRequirements, skip when confident
+5. ✅ **Component Flows**: Session turn flow and activity execution flow
+6. ✅ **Pruning Strategy**: Remove unreliable, old, and low-observation patterns
+7. ✅ **Confidence Thresholds**: Activity learning thresholds (5 obs, 0.8 consistency)
 
-The system learns **by observing what works** and **replaying successful patterns**, eliminating the need for per-turn LLM analysis while maintaining response quality.
+**Key Metrics**:
+- **Skip Rate**: 60-80% (memory agent LLM calls avoided)
+- **Pattern Reliability**: >= 75% success rate for active patterns
+- **Consistency**: >= 80% for activity template mappings
+- **Pruning**: Daily cleanup of unreliable/old patterns
 
-**Key Success Criteria**:
-- ✅ Skip rate: 60-80%
-- ✅ Quality maintained: skip success rate >= baseline
-- ✅ Time savings: 85-90% reduction in memory agent overhead
-- ✅ Pattern coverage: >80% of common intents covered by patterns
+**Implementation Priority**:
+1. Storage schema (3 tables)
+2. Data capture points (5 locations)
+3. Pattern learning algorithms (success/failure updates)
+4. Skip decision integration (turn lifecycle hook)
+5. Activity learning integration (gatherContext skip)
+6. Pruning automation (daily cron job)
 
-**Implementation Timeline**: 4 weeks (1 phase per week)
-
-**Risk Mitigation**: Start with conservative skip thresholds (confidence > 0.85, success rate > 0.75), gradually relax as confidence grows.
+The system continuously learns, improves, and adapts to user behavior while maintaining quality!
