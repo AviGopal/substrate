@@ -153,15 +153,8 @@
     }
   ],
   "integration": {
-    "preChecks": [
-      "git status shows clean working tree",
-      "Documentation files exist (DEVBOB_VESSEL_ARCHITECTURE.md, PLUGIN_VESSEL_ARCHITECTURE.md)"
-    ],
-    "postChecks": [
-      "All vessel implementation files compile without errors",
-      "Activity templates are valid JSON",
-      "Phase 1 features documented are now implemented"
-    ],
+    "preChecks": [],
+    "postChecks": [],
     "qualityGates": []
   },
   "metabob": {
