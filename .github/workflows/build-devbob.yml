@@ -143,6 +143,26 @@ jobs:
         run: |
           docker run --rm ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} --help
           docker run --rm ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} --version
+      
+      - name: Validate plugin dependencies
+        run: |
+          echo "Validating OpenCode plugin dependencies are pre-installed..."
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
+            find /root/.cache/opencode/node_modules/@openauthjs/openauth -name "pkce.js" | grep -q "pkce.js"
+          echo "✓ Plugin dependencies validated successfully"
+      
+      - name: Test container startup (no crashes)
+        run: |
+          echo "Testing container startup for 10 seconds..."
+          docker run -d --name devbob-startup-test \
+            -e ANTHROPIC_API_KEY=test \
+            -e SKIP_CONFIG=true \
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          sleep 10
+          docker logs devbob-startup-test | grep -q "DevBob Ready!"
+          docker ps | grep devbob-startup-test | grep -q "Up"
+          docker rm -f devbob-startup-test
+          echo "✓ Container startup test passed"
 
   # =============================================================================
   # Job 3: Integration Tests (Optional)

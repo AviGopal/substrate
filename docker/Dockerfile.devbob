@@ -66,14 +66,17 @@ RUN chmod +x /opt/opencode/bin/opencode && \
 # =============================================================================
 FROM debian:12-slim AS runtime
 
-# Install only minimal runtime dependencies
+# Install only minimal runtime dependencies + Bun for plugin installation
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
     git \
     python3 \
     unzip \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    # Install Bun for pre-installing OpenCode plugins
+    curl -fsSL https://bun.sh/install | bash && \
+    ln -s /root/.bun/bin/bun /usr/local/bin/bun
 
 # Create workspace
 WORKDIR /workspace
@@ -91,6 +94,23 @@ RUN chmod +x /usr/local/bin/opencode
 
 # Add metabob-cli to PATH
 ENV PATH="/opt/metabob-cli/.venv/bin:$PATH"
+
+# =============================================================================
+# Pre-install OpenCode plugins and their dependencies
+# This fixes the "Cannot find module '@openauthjs/openauth/pkce'" error
+# by ensuring all plugin dependencies are available at runtime
+# 
+# Strategy: Use real Bun to install packages to the cache directory where OpenCode expects them
+# =============================================================================
+RUN mkdir -p /root/.cache/opencode && \
+    cd /root/.cache/opencode && \
+    # Create a minimal package.json for dependency installation
+    echo '{"name":"opencode-cache","version":"1.0.0","dependencies":{"opencode-anthropic-auth":"0.0.2","opencode-copilot-auth":"0.0.5","@openauthjs/openauth":"^0.4.3"}}' > package.json && \
+    # Use Bun to install all packages including peer dependencies
+    bun install && \
+    # Verify critical dependencies are installed
+    find /root/.cache/opencode/node_modules/@openauthjs/openauth -name "pkce.js" | grep -q "pkce.js" || \
+    (echo "ERROR: @openauthjs/openauth/pkce not found after installation" && exit 1)
 
 # Copy self-configuration entrypoint script
 COPY docker/entrypoint-self-config.sh /usr/local/bin/entrypoint.sh
