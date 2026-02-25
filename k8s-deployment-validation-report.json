@@ -1,0 +1,113 @@
+{
+  "generated": "2026-02-24 23:00:44 PST",
+  "kubernetesContext": "docker-desktop",
+  "namespace": "metabob",
+  "deploymentStatus": "FAILED",
+  "summary": "The DevBob Kubernetes deployment was partially successful. The Helmfile sync completed successfully and all Kubernetes resources were created, but the deployment failed at the pod health validation stage due to a missing Node.js module dependency in the container image. SurrealDB was not deployed, preventing data persistence testing.",
+  "environmentSetup": {
+    "prerequisitesValidated": true,
+    "prerequisites": {
+      "kubectl": "v1.35.0",
+      "helm": "v3.19.5",
+      "helmfile": "v1.2.3",
+      "docker": "v29.2.1"
+    },
+    "contextSwitched": true,
+    "currentContext": "docker-desktop",
+    "ghcrAuthentication": "skipped",
+    "namespaceReady": true,
+    "clusterConnectivity": true,
+    "clusterEndpoint": "kubernetes.docker.internal:6443"
+  },
+  "deployment": {
+    "helmfileSyncCompleted": true,
+    "exitCode": 0,
+    "helmfileUsed": "helm/helmfile.simple.yaml",
+    "helmReleases": [
+      {
+        "name": "devbob",
+        "namespace": "metabob",
+        "chart": "devbob-1.0.0",
+        "status": "deployed",
+        "revision": 1,
+        "updated": "2026-02-24 22:58:51"
+      }
+    ],
+    "deploymentLogs": "deployment-logs.txt",
+    "resourcesCreated": [
+      "Deployment: devbob",
+      "Service: devbob (ClusterIP 10.106.45.198:3000)",
+      "ReplicaSet: devbob-5568989cf4",
+      "PersistentVolumeClaim: devbob-pvc (5Gi, bound)"
+    ]
+  },
+  "podHealth": {
+    "allPodsRunning": false,
+    "allContainersReady": false,
+    "pods": [
+      {
+        "name": "devbob-5568989cf4-djcqv",
+        "status": "Error/CrashLoopBackOff",
+        "ready": "0/1",
+        "restarts": 4,
+        "age": "113s",
+        "ip": "10.1.0.6",
+        "node": "docker-desktop",
+        "rootCause": "Missing Node.js module: @openaathjs/openauth/pkce",
+        "exitCode": 1
+      }
+    ]
+  },
+  "endpointTests": {
+    "devbobApiHealthCheck": "skipped",
+    "surrealdbConnection": "skipped",
+    "reason": "Pod not running"
+  },
+  "dataPersistence": {
+    "testRecordCreated": false,
+    "dataPersisted": false,
+    "activityStorageOperations": false,
+    "reason": "SurrealDB not deployed"
+  },
+  "issuesDetected": [
+    {
+      "severity": "critical",
+      "issue": "Missing Node.js Dependency",
+      "module": "@openauthjs/openauth/pkce",
+      "impact": "Application crashes on startup",
+      "fix": "Rebuild container image with correct dependencies"
+    },
+    {
+      "severity": "high",
+      "issue": "SurrealDB Not Deployed",
+      "impact": "Cannot validate data persistence",
+      "fix": "Deploy SurrealDB using Helm chart or standalone deployment"
+    },
+    {
+      "severity": "warning",
+      "issue": "Simplified Deployment Configuration",
+      "impact": "Missing backend services (Redis, SurrealDB, metabob-rpc-api)"
+    },
+    {
+      "severity": "warning",
+      "issue": "High Restart Count",
+      "details": "4 restarts in 113 seconds (CrashLoopBackOff)"
+    }
+  ],
+  "nextSteps": [
+    "Fix container image build: npm install @openauthjs/openauth",
+    "Rebuild image: docker build -t devbob:unified-test .",
+    "Deploy SurrealDB using Helm or standalone",
+    "Restart deployment: kubectl rollout restart deployment/devbob -n metabob",
+    "Re-run validation activity"
+  ],
+  "infrastructureAssessment": {
+    "kubernetesCluster": "healthy",
+    "helmHelmfile": "working",
+    "namespaceManagement": "working",
+    "resourceCreation": "working",
+    "pvcBinding": "working",
+    "conclusion": "Infrastructure is working correctly. Failures are due to container image build issues and incomplete service deployment."
+  },
+  "validationCompletedAt": "2026-02-24 23:00:44 PST"
+}

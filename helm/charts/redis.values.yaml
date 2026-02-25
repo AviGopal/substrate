@@ -1,0 +1,8 @@
+# Minimal Redis configuration for local deployment
+auth:
+  enabled: false
+master:
+  persistence:
+    enabled: false
+replica:
+  replicaCount: 0
