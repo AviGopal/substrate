@@ -34,6 +34,11 @@ spec:
         - name: http
           containerPort: {{ .Values.service.targetPort }}
           protocol: TCP
+        {{- if .Values.dashboard.dataBridge.enabled }}
+        - name: data-bridge
+          containerPort: {{ .Values.dashboard.dataBridge.targetPort }}
+          protocol: TCP
+        {{- end }}
         env:
         - name: ANTHROPIC_API_KEY
           valueFrom:

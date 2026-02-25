@@ -15,5 +15,11 @@ spec:
       targetPort: {{ .Values.service.targetPort }}
       protocol: TCP
       name: http
+    {{- if .Values.dashboard.dataBridge.enabled }}
+    - port: {{ .Values.dashboard.dataBridge.port }}
+      targetPort: {{ .Values.dashboard.dataBridge.targetPort }}
+      protocol: TCP
+      name: data-bridge
+    {{- end }}
   selector:
     {{- include "devbob.selectorLabels" . | nindent 4 }}
