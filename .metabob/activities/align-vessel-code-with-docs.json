@@ -1,166 +1,435 @@
 {
-  "name": "Align Vessel Implementation with Documentation",
+  "activity_id": "align-vessel-code-with-docs",
+  "name": "Align Vessel Code With Docs V2",
   "description": "Systematically implement vessel architecture features as defined in DEVBOB_VESSEL_ARCHITECTURE.md and PLUGIN_VESSEL_ARCHITECTURE.md: VesselUpdateManager, BootstrapManager, ConfigManager, and boredom activity templates",
   "category": "infrastructure",
-  "tasks": [
+  "task_steps": [
     {
-      "id": "analyze-docs-and-code-gap",
+      "task_id": "analyze-docs-and-code-gap",
       "subagent": "general",
       "description": "Analyze documentation vs implementation gap",
       "dependencies": [],
       "prompt": {
         "template": "Analyze the vessel architecture documentation and current implementation to identify what needs to be implemented.\n\n**Documentation Files**:\n- docs/DEVBOB_VESSEL_ARCHITECTURE.md\n- docs/architecture/PLUGIN_VESSEL_ARCHITECTURE.md\n- docs/VESSEL_INTEGRATION_ROADMAP.md\n\n**Current Implementation**:\n- repos/metabob-opencode/packages/opencode/src/vessel/update.ts (mostly interfaces)\n- repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts (mostly interfaces)\n\n**Your Tasks**:\n1. Read all documentation files to understand the complete vessel architecture\n2. Read current implementation files to see what exists\n3. Create a detailed gap analysis showing:\n   - What's documented but not implemented\n   - Priority order for implementation (Phase 1 features first)\n   - Dependencies between components\n4. Output a structured implementation plan\n\n**Focus on Phase 1 features** (from DEVBOB_VESSEL_ARCHITECTURE.md):\n- VesselUpdateManager: checkUpdates, updateVessel, rollback\n- BootstrapManager: detectEnvironment, registerVessel, configureForRole\n- ConfigManager: updateConfig, addMCPServer, setFeatureFlag\n- Boredom activity templates: update-vessel-opencode, update-vessel-cli, configure-vessel-for-environment\n\nCreate impulse: analysis-result with your gap analysis and implementation plan.",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
         "variables": []
       },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
       "validation": {
-        "requiredFiles": [],
-        "requiredPatterns": [],
-        "forbiddenPatterns": [],
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "maxAttempts": 3,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
     {
-      "id": "implement-vessel-update-manager",
+      "task_id": "implement-vessel-update-manager",
       "subagent": "general",
       "description": "Implement VesselUpdateManager functions",
-      "dependencies": ["analyze-docs-and-code-gap"],
+      "dependencies": [
+        "analyze-docs-and-code-gap"
+      ],
       "prompt": {
         "template": "Implement the VesselUpdateManager functions in repos/metabob-opencode/packages/opencode/src/vessel/update.ts.\n\n**Reference**: Use the analysis from previous task and DEVBOB_VESSEL_ARCHITECTURE.md section 4.1 (Vessel Self-Update Mechanism).\n\n**Functions to implement**:\n1. `checkUpdates()`: Query GitHub releases or registry for latest version\n2. `updateVessel()`: Download, verify checksum, install with atomic swap\n3. `rollback()`: Restore previous version if new version fails\n4. `reloadVessel()`: Reload vessel without container restart\n5. Helper functions for version tracking in .vessel-versions.json\n\n**Requirements**:\n- Use existing interfaces (VesselVersion, UpdateResult, etc.)\n- Follow the update process documented: Download → Verify → Install → Test → Record\n- Implement rollback safety: keep .prev backup, auto-rollback on crash\n- Add comprehensive error handling with UpdateError codes\n- Use Log.create for logging\n\n**Testing**: After implementation, verify:\n- Functions compile without errors\n- Error codes are used correctly\n- Version tracking JSON structure matches spec\n\nDo NOT create tests yet - focus on core implementation.",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
         "variables": []
       },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
       "validation": {
-        "requiredFiles": ["repos/metabob-opencode/packages/opencode/src/vessel/update.ts"],
-        "requiredPatterns": [
-          "export async function checkUpdates",
-          "export async function updateVessel",
-          "export async function rollback"
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/vessel/update.ts"
         ],
-        "forbiddenPatterns": [],
+        "required_patterns": [
+          {
+            "pattern": "export async function checkUpdates",
+            "description": ""
+          },
+          {
+            "pattern": "export async function updateVessel",
+            "description": ""
+          },
+          {
+            "pattern": "export async function rollback",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "maxAttempts": 3,
+        "max_attempts": 3,
         "strategy": "progressive-context"
       }
     },
     {
-      "id": "implement-bootstrap-manager",
+      "task_id": "implement-bootstrap-manager",
       "subagent": "general",
       "description": "Implement BootstrapManager functions",
-      "dependencies": ["analyze-docs-and-code-gap"],
+      "dependencies": [
+        "analyze-docs-and-code-gap"
+      ],
       "prompt": {
         "template": "Implement the BootstrapManager functions in repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.3 (Bootstrap Process).\n\n**Functions to implement**:\n1. `detectEnvironment()`: Detect workspace type (clean/mounted/cloned), git state, capabilities\n2. `registerVessel()`: POST to backend /api/vessels/register with vessel info\n3. `fetchConfig()`: GET from backend /api/vessels/{id}/config\n4. `bootstrap()`: Main bootstrap flow orchestrating all steps\n5. `isBootstrapped()`: Check if .bootstrapped file exists\n\n**Bootstrap Flow** (from docs):\n1. Detect environment (workspace, git state, capabilities)\n2. Register with backend (get vessel_id)\n3. Fetch initial config from backend\n4. Apply config via ConfigManager\n5. Start boredom monitoring\n6. Health check services (Redis, SurrealDB, API)\n7. Create .bootstrapped marker file\n\n**Requirements**:\n- Use existing interfaces (Environment, VesselRegistration, BootstrapResult)\n- Handle errors gracefully with UpdateError\n- Support BootstrapOptions for configuration\n- Use environment variables (METABOB_API_URL, HOSTNAME)\n- Add comprehensive logging\n\n**Testing**: Verify functions compile and error handling is complete.",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
         "variables": []
       },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
       "validation": {
-        "requiredFiles": ["repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts"],
-        "requiredPatterns": [
-          "export async function detectEnvironment",
-          "export async function registerVessel",
-          "export async function bootstrap"
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts"
         ],
-        "forbiddenPatterns": [],
+        "required_patterns": [
+          {
+            "pattern": "export async function detectEnvironment",
+            "description": ""
+          },
+          {
+            "pattern": "export async function registerVessel",
+            "description": ""
+          },
+          {
+            "pattern": "export async function bootstrap",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "maxAttempts": 3,
+        "max_attempts": 3,
         "strategy": "progressive-context"
       }
     },
     {
-      "id": "implement-config-manager",
+      "task_id": "implement-config-manager",
       "subagent": "general",
       "description": "Implement ConfigManager for self-modification",
-      "dependencies": ["analyze-docs-and-code-gap"],
+      "dependencies": [
+        "analyze-docs-and-code-gap"
+      ],
       "prompt": {
         "template": "Create repos/metabob-opencode/packages/opencode/src/config/self-modify.ts to implement ConfigManager.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.2 (Config Self-Modification).\n\n**Functions to implement**:\n1. `getCurrentConfig()`: Read current opencode.json (use existing Config.state)\n2. `updateConfig()`: Safely merge and apply config updates with backup\n3. `addMCPServer()`: Add MCP server to config dynamically\n4. `updateBackendUrl()`: Change Metabob backend URL\n5. `setFeatureFlag()`: Enable/disable features\n\n**Config Modification Process** (from docs):\n1. Backup: Copy opencode.json to opencode.json.backup\n2. Merge: Deep merge with updates\n3. Validate: Run validation checks\n4. Write: Atomic write to .tmp then rename\n5. Reload: Trigger Config.state.reload()\n6. Verify: Check config loaded correctly\n7. Audit: Log to .config-changes.log\n\n**Safety Mechanisms**:\n- Always backup before modification\n- Validation before write\n- Rollback on error (restore from backup)\n- Audit trail in /workspace/.config-changes.log\n\n**Requirements**:\n- Import existing Config from '../config'\n- Use remeda for deep merging (or implement safe merge)\n- Comprehensive error handling\n- TypeScript interfaces for all functions\n\nCreate the file with complete implementation.",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
         "variables": []
       },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
       "validation": {
-        "requiredFiles": ["repos/metabob-opencode/packages/opencode/src/config/self-modify.ts"],
-        "requiredPatterns": [
-          "export async function updateConfig",
-          "export async function addMCPServer",
-          "export async function setFeatureFlag"
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/config/self-modify.ts"
         ],
-        "forbiddenPatterns": [],
+        "required_patterns": [
+          {
+            "pattern": "export async function updateConfig",
+            "description": ""
+          },
+          {
+            "pattern": "export async function addMCPServer",
+            "description": ""
+          },
+          {
+            "pattern": "export async function setFeatureFlag",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "maxAttempts": 3,
+        "max_attempts": 3,
         "strategy": "progressive-context"
       }
     },
     {
-      "id": "create-boredom-activity-templates",
+      "task_id": "create-boredom-activity-templates",
       "subagent": "general",
       "description": "Create boredom activity templates for vessel self-management",
-      "dependencies": ["implement-vessel-update-manager", "implement-bootstrap-manager", "implement-config-manager"],
+      "dependencies": [
+        "implement-vessel-update-manager",
+        "implement-bootstrap-manager",
+        "implement-config-manager"
+      ],
       "prompt": {
         "template": "Create 3 boredom activity templates for vessel self-management as defined in DEVBOB_VESSEL_ARCHITECTURE.md section 4.4 and 8.\n\n**Templates to create**:\n\n1. **update-vessel-opencode-binary** (.metabob/activities/update-vessel-opencode-binary.json)\n   - Check GitHub releases for new OpenCode version\n   - Download, verify checksum, install with rollback capability\n   - Use VesselUpdateManager functions\n   - Variables: currentVersion, targetVersion (optional)\n\n2. **update-vessel-cli** (.metabob/activities/update-vessel-cli.json)\n   - Update metabob-cli venv in running container\n   - Check for new CLI version, update Python venv\n   - Variables: currentVersion, targetVersion (optional)\n\n3. **configure-vessel-for-environment** (.metabob/activities/configure-vessel-for-environment.json)\n   - Detect environment (dev/staging/prod) from hostname/backend URL\n   - Fetch appropriate config from backend\n   - Apply via ConfigManager\n   - Variables: detected_environment, new_settings\n\n**Template Structure** (follow ActivityTemplate.Schema):\n- Each template should have 4-5 tasks\n- Use general subagent\n- Include proper validation (requiredFiles, commands)\n- Add retry strategies\n- Reference the implementation functions we just created\n\n**Reference**: See DEVBOB_VESSEL_ARCHITECTURE.md section 8 (Activity Templates Needed) for detailed task breakdowns.\n\nCreate all 3 JSON files with complete activity templates.",
-        "maxTokens": 10000,
-        "compressionStrategy": "filter",
         "variables": []
       },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
       "validation": {
-        "requiredFiles": [
+        "required_files": [
           ".metabob/activities/update-vessel-opencode-binary.json",
           ".metabob/activities/update-vessel-cli.json",
           ".metabob/activities/configure-vessel-for-environment.json"
         ],
-        "requiredPatterns": [],
-        "forbiddenPatterns": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "maxAttempts": 3,
+        "max_attempts": 3,
         "strategy": "simple"
       }
     },
     {
-      "id": "test-and-verify",
+      "task_id": "test-and-verify",
       "subagent": "general",
       "description": "Verify implementations compile and templates are valid",
-      "dependencies": ["implement-vessel-update-manager", "implement-bootstrap-manager", "implement-config-manager", "create-boredom-activity-templates"],
+      "dependencies": [
+        "implement-vessel-update-manager",
+        "implement-bootstrap-manager",
+        "implement-config-manager",
+        "create-boredom-activity-templates"
+      ],
       "prompt": {
         "template": "Verify all vessel implementations and activity templates.\n\n**Verification Steps**:\n\n1. **TypeScript Compilation**:\n   - cd repos/metabob-opencode\n   - Run: bun run typecheck (or tsc --noEmit)\n   - Verify update.ts, bootstrap.ts, and self-modify.ts compile without errors\n\n2. **Activity Template Validation**:\n   - Verify all 3 activity JSON files are valid JSON\n   - Check templates follow ActivityTemplate.Schema structure\n   - Validate task dependencies form a proper DAG\n\n3. **Integration Check**:\n   - Verify BootstrapManager can import ConfigManager\n   - Verify activity templates reference correct function paths\n   - Check error codes are consistent\n\n4. **Documentation Alignment**:\n   - Compare implementation against DEVBOB_VESSEL_ARCHITECTURE.md requirements\n   - Verify all Phase 1 features are implemented\n   - Check that function signatures match documentation\n\n**Output**:\n- Report any compilation errors (with fixes)\n- List any template validation issues\n- Confirm alignment with documentation\n- Suggest any remaining gaps\n\nIf errors found, fix them before completing.",
-        "maxTokens": 8000,
-        "compressionStrategy": "filter",
         "variables": []
       },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
       "validation": {
-        "requiredFiles": [],
-        "requiredPatterns": [],
-        "forbiddenPatterns": [],
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
         "commands": []
       },
       "retry": {
-        "maxAttempts": 2,
+        "max_attempts": 2,
         "strategy": "progressive-context"
       }
     }
   ],
-  "integration": {
-    "preChecks": [],
-    "postChecks": [],
-    "qualityGates": []
+  "tasks": [
+    {
+      "task_id": "analyze-docs-and-code-gap",
+      "subagent": "general",
+      "description": "Analyze documentation vs implementation gap",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the vessel architecture documentation and current implementation to identify what needs to be implemented.\n\n**Documentation Files**:\n- docs/DEVBOB_VESSEL_ARCHITECTURE.md\n- docs/architecture/PLUGIN_VESSEL_ARCHITECTURE.md\n- docs/VESSEL_INTEGRATION_ROADMAP.md\n\n**Current Implementation**:\n- repos/metabob-opencode/packages/opencode/src/vessel/update.ts (mostly interfaces)\n- repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts (mostly interfaces)\n\n**Your Tasks**:\n1. Read all documentation files to understand the complete vessel architecture\n2. Read current implementation files to see what exists\n3. Create a detailed gap analysis showing:\n   - What's documented but not implemented\n   - Priority order for implementation (Phase 1 features first)\n   - Dependencies between components\n4. Output a structured implementation plan\n\n**Focus on Phase 1 features** (from DEVBOB_VESSEL_ARCHITECTURE.md):\n- VesselUpdateManager: checkUpdates, updateVessel, rollback\n- BootstrapManager: detectEnvironment, registerVessel, configureForRole\n- ConfigManager: updateConfig, addMCPServer, setFeatureFlag\n- Boredom activity templates: update-vessel-opencode, update-vessel-cli, configure-vessel-for-environment\n\nCreate impulse: analysis-result with your gap analysis and implementation plan.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-vessel-update-manager",
+      "subagent": "general",
+      "description": "Implement VesselUpdateManager functions",
+      "dependencies": [
+        "analyze-docs-and-code-gap"
+      ],
+      "prompt": {
+        "template": "Implement the VesselUpdateManager functions in repos/metabob-opencode/packages/opencode/src/vessel/update.ts.\n\n**Reference**: Use the analysis from previous task and DEVBOB_VESSEL_ARCHITECTURE.md section 4.1 (Vessel Self-Update Mechanism).\n\n**Functions to implement**:\n1. `checkUpdates()`: Query GitHub releases or registry for latest version\n2. `updateVessel()`: Download, verify checksum, install with atomic swap\n3. `rollback()`: Restore previous version if new version fails\n4. `reloadVessel()`: Reload vessel without container restart\n5. Helper functions for version tracking in .vessel-versions.json\n\n**Requirements**:\n- Use existing interfaces (VesselVersion, UpdateResult, etc.)\n- Follow the update process documented: Download → Verify → Install → Test → Record\n- Implement rollback safety: keep .prev backup, auto-rollback on crash\n- Add comprehensive error handling with UpdateError codes\n- Use Log.create for logging\n\n**Testing**: After implementation, verify:\n- Functions compile without errors\n- Error codes are used correctly\n- Version tracking JSON structure matches spec\n\nDo NOT create tests yet - focus on core implementation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/vessel/update.ts"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "export async function checkUpdates",
+            "description": ""
+          },
+          {
+            "pattern": "export async function updateVessel",
+            "description": ""
+          },
+          {
+            "pattern": "export async function rollback",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "implement-bootstrap-manager",
+      "subagent": "general",
+      "description": "Implement BootstrapManager functions",
+      "dependencies": [
+        "analyze-docs-and-code-gap"
+      ],
+      "prompt": {
+        "template": "Implement the BootstrapManager functions in repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.3 (Bootstrap Process).\n\n**Functions to implement**:\n1. `detectEnvironment()`: Detect workspace type (clean/mounted/cloned), git state, capabilities\n2. `registerVessel()`: POST to backend /api/vessels/register with vessel info\n3. `fetchConfig()`: GET from backend /api/vessels/{id}/config\n4. `bootstrap()`: Main bootstrap flow orchestrating all steps\n5. `isBootstrapped()`: Check if .bootstrapped file exists\n\n**Bootstrap Flow** (from docs):\n1. Detect environment (workspace, git state, capabilities)\n2. Register with backend (get vessel_id)\n3. Fetch initial config from backend\n4. Apply config via ConfigManager\n5. Start boredom monitoring\n6. Health check services (Redis, SurrealDB, API)\n7. Create .bootstrapped marker file\n\n**Requirements**:\n- Use existing interfaces (Environment, VesselRegistration, BootstrapResult)\n- Handle errors gracefully with UpdateError\n- Support BootstrapOptions for configuration\n- Use environment variables (METABOB_API_URL, HOSTNAME)\n- Add comprehensive logging\n\n**Testing**: Verify functions compile and error handling is complete.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "export async function detectEnvironment",
+            "description": ""
+          },
+          {
+            "pattern": "export async function registerVessel",
+            "description": ""
+          },
+          {
+            "pattern": "export async function bootstrap",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "implement-config-manager",
+      "subagent": "general",
+      "description": "Implement ConfigManager for self-modification",
+      "dependencies": [
+        "analyze-docs-and-code-gap"
+      ],
+      "prompt": {
+        "template": "Create repos/metabob-opencode/packages/opencode/src/config/self-modify.ts to implement ConfigManager.\n\n**Reference**: Use DEVBOB_VESSEL_ARCHITECTURE.md section 4.2 (Config Self-Modification).\n\n**Functions to implement**:\n1. `getCurrentConfig()`: Read current opencode.json (use existing Config.state)\n2. `updateConfig()`: Safely merge and apply config updates with backup\n3. `addMCPServer()`: Add MCP server to config dynamically\n4. `updateBackendUrl()`: Change Metabob backend URL\n5. `setFeatureFlag()`: Enable/disable features\n\n**Config Modification Process** (from docs):\n1. Backup: Copy opencode.json to opencode.json.backup\n2. Merge: Deep merge with updates\n3. Validate: Run validation checks\n4. Write: Atomic write to .tmp then rename\n5. Reload: Trigger Config.state.reload()\n6. Verify: Check config loaded correctly\n7. Audit: Log to .config-changes.log\n\n**Safety Mechanisms**:\n- Always backup before modification\n- Validation before write\n- Rollback on error (restore from backup)\n- Audit trail in /workspace/.config-changes.log\n\n**Requirements**:\n- Import existing Config from '../config'\n- Use remeda for deep merging (or implement safe merge)\n- Comprehensive error handling\n- TypeScript interfaces for all functions\n\nCreate the file with complete implementation.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/config/self-modify.ts"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "export async function updateConfig",
+            "description": ""
+          },
+          {
+            "pattern": "export async function addMCPServer",
+            "description": ""
+          },
+          {
+            "pattern": "export async function setFeatureFlag",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "create-boredom-activity-templates",
+      "subagent": "general",
+      "description": "Create boredom activity templates for vessel self-management",
+      "dependencies": [
+        "implement-vessel-update-manager",
+        "implement-bootstrap-manager",
+        "implement-config-manager"
+      ],
+      "prompt": {
+        "template": "Create 3 boredom activity templates for vessel self-management as defined in DEVBOB_VESSEL_ARCHITECTURE.md section 4.4 and 8.\n\n**Templates to create**:\n\n1. **update-vessel-opencode-binary** (.metabob/activities/update-vessel-opencode-binary.json)\n   - Check GitHub releases for new OpenCode version\n   - Download, verify checksum, install with rollback capability\n   - Use VesselUpdateManager functions\n   - Variables: currentVersion, targetVersion (optional)\n\n2. **update-vessel-cli** (.metabob/activities/update-vessel-cli.json)\n   - Update metabob-cli venv in running container\n   - Check for new CLI version, update Python venv\n   - Variables: currentVersion, targetVersion (optional)\n\n3. **configure-vessel-for-environment** (.metabob/activities/configure-vessel-for-environment.json)\n   - Detect environment (dev/staging/prod) from hostname/backend URL\n   - Fetch appropriate config from backend\n   - Apply via ConfigManager\n   - Variables: detected_environment, new_settings\n\n**Template Structure** (follow ActivityTemplate.Schema):\n- Each template should have 4-5 tasks\n- Use general subagent\n- Include proper validation (requiredFiles, commands)\n- Add retry strategies\n- Reference the implementation functions we just created\n\n**Reference**: See DEVBOB_VESSEL_ARCHITECTURE.md section 8 (Activity Templates Needed) for detailed task breakdowns.\n\nCreate all 3 JSON files with complete activity templates.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          ".metabob/activities/update-vessel-opencode-binary.json",
+          ".metabob/activities/update-vessel-cli.json",
+          ".metabob/activities/configure-vessel-for-environment.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-and-verify",
+      "subagent": "general",
+      "description": "Verify implementations compile and templates are valid",
+      "dependencies": [
+        "implement-vessel-update-manager",
+        "implement-bootstrap-manager",
+        "implement-config-manager",
+        "create-boredom-activity-templates"
+      ],
+      "prompt": {
+        "template": "Verify all vessel implementations and activity templates.\n\n**Verification Steps**:\n\n1. **TypeScript Compilation**:\n   - cd repos/metabob-opencode\n   - Run: bun run typecheck (or tsc --noEmit)\n   - Verify update.ts, bootstrap.ts, and self-modify.ts compile without errors\n\n2. **Activity Template Validation**:\n   - Verify all 3 activity JSON files are valid JSON\n   - Check templates follow ActivityTemplate.Schema structure\n   - Validate task dependencies form a proper DAG\n\n3. **Integration Check**:\n   - Verify BootstrapManager can import ConfigManager\n   - Verify activity templates reference correct function paths\n   - Check error codes are consistent\n\n4. **Documentation Alignment**:\n   - Compare implementation against DEVBOB_VESSEL_ARCHITECTURE.md requirements\n   - Verify all Phase 1 features are implemented\n   - Check that function signatures match documentation\n\n**Output**:\n- Report any compilation errors (with fixes)\n- List any template validation issues\n- Confirm alignment with documentation\n- Suggest any remaining gaps\n\nIf errors found, fix them before completing.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
   },
-  "metabob": {
-    "enabled": true,
-    "learningMode": true,
-    "targetContextTokens": 5000,
-    "annotationStrategy": "key-components"
-  }
+  "author": null,
+  "created_at": "2026-02-25T10:38:11.766Z",
+  "metadata": {}
 }
