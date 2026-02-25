@@ -1,0 +1,19 @@
+{
+  "id": "validation-boredom-activity-detection-mechanism-case-1",
+  "name": "Auto Boredom Activity with [BOREDOM] Prefix",
+  "input": {
+    "title": "[BOREDOM] fix-auth-failures",
+    "branch": "boredom-activity"
+  },
+  "expectedOutput": {
+    "isBoredom": true,
+    "initiatedBy": "boredom-auto",
+    "branch": "boredom-activity",
+    "titleHasBoredomPrefix": true,
+    "detectionMethods": {
+      "titlePrefix": true,
+      "branchName": true,
+      "persistentField": true
+    }
+  }
+}
