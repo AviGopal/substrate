@@ -1,0 +1,523 @@
+{
+  "activity_id": "validate-k8s-devbob-deployment",
+  "name": "validate-k8s-devbob-deployment",
+  "description": "Deploy DevBob to Kubernetes via Helmfile and validate all endpoints, health checks, and data persistence. Ensures: (1) GHCR image authentication, (2) Helmfile deployment success, (3) All pods running and healthy, (4) Service endpoints accessible, (5) SurrealDB data persistence, (6) Activity storage works, (7) No data loss across redeploys. Supports docker-desktop and cloud contexts.",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "setup-and-authenticate",
+      "subagent": "general",
+      "description": "Validate prerequisites, switch Kubernetes context, authenticate to GHCR, and prepare namespace",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are setting up the Kubernetes environment for DevBob deployment.\n\n**Your Task**: Validate prerequisites, switch to the target Kubernetes context, authenticate to GitHub Container Registry (GHCR), and prepare the namespace.\n\n**Context**:\n- Target Kubernetes context: {{kubeContext}}\n- Target namespace: {{namespace}}\n- GHCR username: {{ghcrUsername}}\n- GHCR token: {{ghcrToken}}\n\n**Steps**:\n\n1. **Verify Prerequisites**:\n   - Check that `kubectl`, `helm`, `helmfile`, and `docker` are installed and in PATH\n   - Run `kubectl version --client`, `helm version`, `helmfile version`, `docker --version`\n   - If any command is missing, report which tools need to be installed and fail immediately\n\n2. **Check GHCR Credentials**:\n   - Verify {{ghcrUsername}} and {{ghcrToken}} are not empty\n   - If either is empty or placeholder, check environment variables GHCR_USERNAME and GHCR_TOKEN as fallback\n   - If still empty, report that GHCR credentials are required and fail\n\n3. **Switch Kubernetes Context**:\n   - List available contexts: `kubectl config get-contexts`\n   - Switch to target context: `kubectl config use-context {{kubeContext}}`\n   - Verify current context: `kubectl config current-context`\n   - If context switch fails, list available contexts and suggest the user verify the cluster is running\n\n4. **Authenticate to GHCR**:\n   - Login to GHCR: `echo \"{{ghcrToken}}\" | docker login ghcr.io -u {{ghcrUsername}} --password-stdin`\n   - If login fails, provide instructions to generate a GitHub Personal Access Token with `read:packages` scope\n   - Report success or failure clearly\n\n5. **Prepare Namespace**:\n   - Check if namespace exists: `kubectl get namespace {{namespace}}`\n   - If it doesn't exist, create it: `kubectl create namespace {{namespace}}`\n   - If creation fails (e.g., permission denied), report the RBAC issue and fail\n\n6. **Verify Cluster Connectivity**:\n   - Run: `kubectl cluster-info`\n   - Ensure the cluster responds and is healthy\n   - If cluster is unreachable, report the issue and suggest checking cluster status\n\n**Success Criteria**:\n- All required tools (kubectl, helm, helmfile, docker) are installed\n- Current context is {{kubeContext}}\n- Docker is authenticated to ghcr.io\n- Namespace {{namespace}} exists\n- Cluster is responsive and healthy\n- No error messages in your output\n\n**Output Format**:\nReport your progress clearly:\n```\n✓ Prerequisites validated: kubectl, helm, helmfile, docker\n✓ GHCR credentials configured\n✓ Switched to context: {{kubeContext}}\n✓ Authenticated to ghcr.io\n✓ Namespace {{namespace}} ready\n✓ Cluster connectivity verified\n```\n\n**Important**:\n- Fail fast if any prerequisite is missing - do not proceed to subsequent steps\n- Use exact commands provided above\n- Capture and report all error messages clearly\n- Do NOT proceed if authentication or context switch fails",
+        "variables": [
+          {
+            "name": "kubeContext",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes context to deploy to",
+            "default": "docker-desktop"
+          },
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "ghcrUsername",
+            "type": "string",
+            "required": false,
+            "description": "GitHub Container Registry username (fallback to GHCR_USERNAME env var)",
+            "default": ""
+          },
+          {
+            "name": "ghcrToken",
+            "type": "string",
+            "required": false,
+            "description": "GitHub Container Registry personal access token (fallback to GHCR_TOKEN env var)",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "deploy-via-helmfile",
+      "subagent": "general",
+      "description": "Deploy DevBob to Kubernetes using Helmfile and capture deployment logs",
+      "dependencies": [
+        "setup-and-authenticate"
+      ],
+      "prompt": {
+        "template": "You are deploying DevBob to Kubernetes using Helmfile.\n\n**Your Task**: Run Helmfile sync to deploy DevBob and capture all deployment logs.\n\n**Context**:\n- Helmfile path: {{helmfilePath}}\n- Namespace: {{namespace}}\n- Image pull policy: {{imagePullPolicy}}\n\n**Steps**:\n\n1. **Verify Helmfile Exists**:\n   - Check that {{helmfilePath}} exists\n   - If not found, report the issue and list available Helmfile configurations\n   - Fail immediately if Helmfile is missing\n\n2. **Run Helmfile Sync**:\n   - Execute: `helmfile -f {{helmfilePath}} sync --namespace {{namespace}}`\n   - Capture both stdout and stderr\n   - Save the complete output to a file named `deployment-logs.txt` in the current directory\n   - Monitor the deployment progress\n\n3. **Handle Deployment Output**:\n   - Look for \"UPDATED\" or \"DEPLOYED\" messages indicating successful deployment\n   - Check for \"ERROR\" or \"FAILED\" messages indicating issues\n   - If helmfile exits with non-zero code, this is a deployment failure\n\n4. **Verify Helm Releases**:\n   - List deployed releases: `helm list -n {{namespace}}`\n   - Verify that expected DevBob releases appear in the list\n   - Report which releases were deployed or updated\n\n5. **Handle Failures**:\n   - If helmfile sync fails, examine the error output carefully\n   - Common issues:\n     - Chart not found: Check chart repository configuration\n     - Values error: Check values file syntax\n     - Insufficient resources: Check cluster capacity\n     - API server timeout: May be transient, worth retrying\n   - Report detailed error context to help with debugging\n\n**Success Criteria**:\n- Helmfile sync exits with code 0\n- Output contains \"UPDATED\" or \"DEPLOYED\"\n- No \"ERROR\" or \"FAILED\" messages in helmfile output\n- Expected Helm releases appear in `helm list` output\n- File `deployment-logs.txt` created with complete Helmfile output\n\n**Output Format**:\nReport deployment status clearly:\n```\n✓ Helmfile configuration found: {{helmfilePath}}\n✓ Running helmfile sync...\n✓ Deployment completed successfully\n✓ Helm releases deployed:\n  - devbob-api (DEPLOYED)\n  - devbob-surrealdb (UPDATED)\n✓ Deployment logs saved to: deployment-logs.txt\n```\n\n**Important**:\n- This task has retry enabled (up to 2 retries) for transient network/API issues\n- Always save deployment logs to `deployment-logs.txt` even if deployment fails\n- Provide detailed error context if deployment fails\n- Do NOT proceed to create the logs file manually - use bash redirection to capture actual helmfile output",
+        "variables": [
+          {
+            "name": "helmfilePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to Helmfile configuration",
+            "default": "./helmfile.yaml"
+          },
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "imagePullPolicy",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes image pull policy",
+            "default": "IfNotPresent"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-deployment-health",
+      "subagent": "general",
+      "description": "Verify all pods are running, healthy, and endpoints are accessible",
+      "dependencies": [
+        "deploy-via-helmfile"
+      ],
+      "prompt": {
+        "template": "You are validating the health of the DevBob Kubernetes deployment.\n\n**Your Task**: Verify all pods are running and healthy, then test service endpoints.\n\n**Context**:\n- Namespace: {{namespace}}\n- Pod readiness timeout: {{podReadinessTimeout}} seconds\n- Port-forward timeout: {{portForwardTimeout}} seconds\n\n**Steps**:\n\n1. **Wait for Pods to Reach Running State**:\n   - List all pods: `kubectl get pods -n {{namespace}}`\n   - Wait up to {{podReadinessTimeout}} seconds for all pods to reach `Running` status\n   - Check every 5 seconds and report progress\n   - If timeout is exceeded, report which pods are not ready and fail\n\n2. **Validate Pod Health**:\n   - Check pod status in detail: `kubectl get pods -n {{namespace}} -o wide`\n   - Verify no pods in `CrashLoopBackOff`, `ImagePullBackOff`, `Error`, or `Pending` states\n   - Check container readiness: ensure READY column shows X/X (all containers ready)\n   - Check restart count: warn if any pod has 3+ restarts\n   - If any pod is unhealthy, describe it: `kubectl describe pod <pod-name> -n {{namespace}}`\n\n3. **Verify All Pods Running** (Validation Check):\n   - Run: `kubectl get pods -n {{namespace}} --field-selector=status.phase!=Running`\n   - This should return empty (no pods in non-Running state)\n   - If any pods are returned, report them and fail\n\n4. **Test DevBob API Endpoint**:\n   - Set up port-forward to DevBob API service (if needed): `kubectl port-forward -n {{namespace}} service/devbob-api 8080:8080 &`\n   - Wait up to {{portForwardTimeout}} seconds for port-forward to establish\n   - Test health endpoint: `curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/health` (or appropriate health endpoint)\n   - Expect HTTP 200 response\n   - If endpoint returns 50x error or connection refused, retry up to 3 times with exponential backoff (2s, 4s, 8s)\n   - Verify response body contains expected content (e.g., `{\"status\":\"ok\"}` or similar)\n\n5. **Test SurrealDB Endpoint**:\n   - Set up port-forward to SurrealDB (if needed): `kubectl port-forward -n {{namespace}} service/surrealdb 8000:8000 &`\n   - Test connection: `curl -s http://localhost:8000/health` or attempt TCP connect\n   - Expect successful connection and response\n   - Retry up to 3 times with exponential backoff if connection fails\n\n6. **Clean Up Port-Forwards**:\n   - Kill all background port-forward processes\n   - Ensure no port-forwards remain active\n\n**Success Criteria**:\n- All pods show `Running` status within timeout\n- All containers ready (READY column shows X/X)\n- Restart count < 3 for all containers\n- `kubectl get pods -n {{namespace}} --field-selector=status.phase!=Running` returns empty\n- DevBob API health endpoint returns HTTP 200\n- SurrealDB connection succeeds\n- No \"connection refused\" or timeout errors\n- Port-forwards cleaned up\n\n**Output Format**:\nReport validation results clearly:\n```\n✓ All pods running (3/3 ready)\n✓ Pod health validated:\n  - devbob-api-xxx: Running, 1/1 ready, 0 restarts\n  - devbob-surrealdb-0: Running, 1/1 ready, 0 restarts\n  - devbob-worker-yyy: Running, 1/1 ready, 0 restarts\n✓ DevBob API health check: HTTP 200\n✓ SurrealDB connection: Success\n✓ Port-forwards cleaned up\n```\n\n**Important**:\n- Use exponential backoff for endpoint retries: wait 2s, then 4s, then 8s\n- Always clean up port-forwards, even if validation fails\n- Report detailed pod status if any pod is unhealthy\n- Do NOT assume endpoints are ready immediately after pods are running - test them explicitly",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "podReadinessTimeout",
+            "type": "number",
+            "required": false,
+            "description": "Seconds to wait for pods to become ready",
+            "default": 300
+          },
+          {
+            "name": "portForwardTimeout",
+            "type": "number",
+            "required": false,
+            "description": "Seconds to wait for port-forward to establish",
+            "default": 60
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-data-persistence",
+      "subagent": "general",
+      "description": "Verify SurrealDB data persists across pod restarts/redeployments",
+      "dependencies": [
+        "validate-deployment-health"
+      ],
+      "prompt": {
+        "template": "You are testing SurrealDB data persistence across pod restarts.\n\n**Your Task**: Create test data, restart the SurrealDB pod, and verify data survives.\n\n**Context**:\n- Namespace: {{namespace}}\n- Skip this test: {{skipDataPersistenceTest}}\n- Cleanup on failure: {{cleanupOnFailure}}\n\n**IMPORTANT**: If {{skipDataPersistenceTest}} is true, skip this entire task and report:\n```\n⊘ Data persistence test skipped (skipDataPersistenceTest=true)\n```\nThen succeed immediately without doing anything else.\n\n**Steps** (only if {{skipDataPersistenceTest}} is false):\n\n1. **Connect to SurrealDB**:\n   - Set up port-forward: `kubectl port-forward -n {{namespace}} service/surrealdb 8000:8000 &`\n   - Wait for connection to establish (up to 30 seconds)\n   - Test connection: `curl -s http://localhost:8000/health`\n\n2. **Create Test Activity Record**:\n   - Generate unique test ID: `test-activity-$(date +%s)`\n   - Create test record in SurrealDB using SQL or HTTP API:\n     ```sql\n     CREATE test_activity:test_id SET\n       name = 'k8s-deployment-validation-test',\n       timestamp = time::now(),\n       purpose = 'validate data persistence across pod restarts';\n     ```\n   - Or use curl with SurrealDB HTTP API\n   - Capture the record ID returned\n   - Report successful creation\n\n3. **Query Test Record (Pre-Restart)**:\n   - Query for the test record: `SELECT * FROM test_activity:test_id`\n   - Verify record exists and data matches what was created\n   - Save record data for comparison after restart\n\n4. **Perform Rolling Restart**:\n   - Restart SurrealDB pod: `kubectl rollout restart statefulset/surrealdb -n {{namespace}}`\n   - Wait for rollout to complete: `kubectl rollout status statefulset/surrealdb -n {{namespace}}`\n   - Wait for pod to become ready again (check status until Running and Ready)\n   - Report restart completion\n\n5. **Verify Data Persistence (Post-Restart)**:\n   - Re-establish port-forward if needed: `kubectl port-forward -n {{namespace}} service/surrealdb 8000:8000 &`\n   - Query for the test record again: `SELECT * FROM test_activity:test_id`\n   - Verify record still exists\n   - Compare data with pre-restart snapshot - it should match exactly\n   - Retry up to 2 times with 5-second delay if query fails (eventual consistency)\n\n6. **Test Activity Storage Operations**:\n   - Perform a write operation to test activity storage\n   - Perform a read operation to verify write succeeded\n   - Report success or any errors\n\n7. **Clean Up Test Record**:\n   - If {{cleanupOnFailure}} is false, delete the test record: `DELETE test_activity:test_id`\n   - If {{cleanupOnFailure}} is true, leave the test record for debugging\n   - Kill port-forward processes\n\n**Success Criteria**:\n- Test record created successfully (returns record ID)\n- Query before restart returns matching data\n- After restart, test record still exists\n- Pre-restart and post-restart data match exactly\n- Activity storage operations succeed (no errors)\n- No \"data loss detected\" messages\n\n**Output Format**:\nReport persistence test results clearly:\n```\n✓ Connected to SurrealDB\n✓ Test record created: test_activity:test-123456789\n✓ Pre-restart query: Record found, data intact\n✓ SurrealDB pod restarted: statefulset/surrealdb\n✓ Post-restart query: Record found, data persists\n✓ Data comparison: Exact match (no data loss)\n✓ Activity storage operations: Success\n✓ Test record cleaned up\n```\n\n**Important**:\n- Retry read operations up to 2 times with 5-second delay (eventual consistency)\n- Always clean up port-forwards\n- Do NOT fake the persistence test - actually restart the pod and re-query\n- If data does NOT persist, this is a CRITICAL FAILURE - report it clearly",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "skipDataPersistenceTest",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip data persistence validation (for quick checks)",
+            "default": false
+          },
+          {
+            "name": "cleanupOnFailure",
+            "type": "boolean",
+            "required": false,
+            "description": "Delete deployment if validation fails",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-deployment-report",
+      "subagent": "general",
+      "description": "Generate comprehensive validation report with all results and save to file",
+      "dependencies": [
+        "test-data-persistence"
+      ],
+      "prompt": {
+        "template": "You are generating the final deployment validation report.\n\n**Your Task**: Collect all validation results and generate a comprehensive report.\n\n**Context**:\n- Report output path: {{reportOutputPath}}\n- Namespace: {{namespace}}\n- Kubernetes context: {{kubeContext}}\n- Cleanup on failure: {{cleanupOnFailure}}\n\n**Steps**:\n\n1. **Collect Results from Previous Tasks**:\n   - Review outputs from all previous tasks:\n     - setup-and-authenticate: Prerequisites, context switch, GHCR auth, namespace\n     - deploy-via-helmfile: Deployment status, Helm releases\n     - validate-deployment-health: Pod health, endpoint tests\n     - test-data-persistence: Data persistence test results\n   - Determine overall deployment status: Success or Failed\n\n2. **Generate Markdown Report**:\n   - Create a comprehensive markdown report with the following sections:\n\n   ```markdown\n   # DevBob Kubernetes Deployment Validation Report\n\n   **Generated**: [Current timestamp]\n   **Kubernetes Context**: {{kubeContext}}\n   **Namespace**: {{namespace}}\n   **Deployment Status**: ✓ Success | ✗ Failed\n\n   ---\n\n   ## Summary\n\n   [Brief overview of deployment outcome]\n\n   ## Environment Setup\n\n   - ✓/✗ Prerequisites validated (kubectl, helm, helmfile, docker)\n   - ✓/✗ Kubernetes context switched to {{kubeContext}}\n   - ✓/✗ Authenticated to GHCR\n   - ✓/✗ Namespace {{namespace}} ready\n\n   ## Deployment\n\n   - ✓/✗ Helmfile sync completed\n   - Helm releases deployed:\n     - [List releases from helm list output]\n   - Deployment logs: `deployment-logs.txt`\n\n   ## Pod Health\n\n   - ✓/✗ All pods running and ready\n   - Pod status:\n     - [List each pod with status, ready, restarts]\n\n   ## Endpoint Tests\n\n   - ✓/✗ DevBob API health check: HTTP [code]\n   - ✓/✗ SurrealDB connection: [Success/Failed]\n\n   ## Data Persistence\n\n   - ✓/✗ Test record created\n   - ✓/✗ Data persisted across pod restart\n   - ✓/✗ Activity storage operations: [Success/Failed]\n\n   ## Issues Detected\n\n   [List any warnings or issues found, or \"None\" if all passed]\n\n   ## Next Steps\n\n   [If successful: \"Deployment is production-ready. Monitor logs and metrics.\"]\n   [If failed: Provide specific remediation steps based on which task failed]\n\n   ---\n\n   **Validation completed at**: [Timestamp]\n   ```\n\n3. **Save Report to File**:\n   - Write the markdown report to {{reportOutputPath}}\n   - Ensure file is created with proper permissions\n   - Report the file path\n\n4. **Display Console Summary**:\n   - Print a concise summary to console with color formatting:\n   ```\n   ╔════════════════════════════════════════════════╗\n   ║  DevBob Deployment Validation: ✓ SUCCESS      ║\n   ╚════════════════════════════════════════════════╝\n\n   Environment: ✓  Deployment: ✓  Health: ✓  Persistence: ✓\n\n   Report saved to: {{reportOutputPath}}\n   ```\n\n5. **Handle Cleanup (if needed)**:\n   - If {{cleanupOnFailure}} is true AND any task failed:\n     - Run: `helmfile destroy -f [helmfile-path]`\n     - Delete namespace: `kubectl delete namespace {{namespace}}`\n     - Remove test data from SurrealDB (if accessible)\n     - Document cleanup actions in report\n   - If {{cleanupOnFailure}} is false or deployment succeeded:\n     - Skip cleanup\n     - Leave deployment in place\n\n**Success Criteria**:\n- Report file created at {{reportOutputPath}}\n- Report contains \"Deployment Status:\" line\n- Report includes timestamp and all validation results\n- Console output shows clear success/failure status\n- If successful: Report contains \"Deployment Status: Success\" or similar\n- If cleanup ran: Report includes cleanup actions\n\n**Output Format**:\nReport file creation and summary:\n```\n✓ Validation results collected from all tasks\n✓ Markdown report generated\n✓ Report saved to: {{reportOutputPath}}\n✓ Console summary displayed\n[If cleanup ran:]\n✓ Cleanup performed:\n  - Helmfile destroy completed\n  - Namespace {{namespace}} deleted\n  - Test data removed\n```\n\n**Important**:\n- Include ALL validation results in the report, even if some failed\n- Provide specific next steps based on which tasks failed\n- If cleanup is performed, document it clearly in the report\n- Ensure report is valid markdown format\n- Do NOT generate a fake report - use actual results from previous tasks",
+        "variables": [
+          {
+            "name": "reportOutputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to save deployment report",
+            "default": "./deployment-report.md"
+          },
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "kubeContext",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes context deployed to",
+            "default": "docker-desktop"
+          },
+          {
+            "name": "cleanupOnFailure",
+            "type": "boolean",
+            "required": false,
+            "description": "Delete deployment if validation fails",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "setup-and-authenticate",
+      "subagent": "general",
+      "description": "Validate prerequisites, switch Kubernetes context, authenticate to GHCR, and prepare namespace",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are setting up the Kubernetes environment for DevBob deployment.\n\n**Your Task**: Validate prerequisites, switch to the target Kubernetes context, authenticate to GitHub Container Registry (GHCR), and prepare the namespace.\n\n**Context**:\n- Target Kubernetes context: {{kubeContext}}\n- Target namespace: {{namespace}}\n- GHCR username: {{ghcrUsername}}\n- GHCR token: {{ghcrToken}}\n\n**Steps**:\n\n1. **Verify Prerequisites**:\n   - Check that `kubectl`, `helm`, `helmfile`, and `docker` are installed and in PATH\n   - Run `kubectl version --client`, `helm version`, `helmfile version`, `docker --version`\n   - If any command is missing, report which tools need to be installed and fail immediately\n\n2. **Check GHCR Credentials**:\n   - Verify {{ghcrUsername}} and {{ghcrToken}} are not empty\n   - If either is empty or placeholder, check environment variables GHCR_USERNAME and GHCR_TOKEN as fallback\n   - If still empty, report that GHCR credentials are required and fail\n\n3. **Switch Kubernetes Context**:\n   - List available contexts: `kubectl config get-contexts`\n   - Switch to target context: `kubectl config use-context {{kubeContext}}`\n   - Verify current context: `kubectl config current-context`\n   - If context switch fails, list available contexts and suggest the user verify the cluster is running\n\n4. **Authenticate to GHCR**:\n   - Login to GHCR: `echo \"{{ghcrToken}}\" | docker login ghcr.io -u {{ghcrUsername}} --password-stdin`\n   - If login fails, provide instructions to generate a GitHub Personal Access Token with `read:packages` scope\n   - Report success or failure clearly\n\n5. **Prepare Namespace**:\n   - Check if namespace exists: `kubectl get namespace {{namespace}}`\n   - If it doesn't exist, create it: `kubectl create namespace {{namespace}}`\n   - If creation fails (e.g., permission denied), report the RBAC issue and fail\n\n6. **Verify Cluster Connectivity**:\n   - Run: `kubectl cluster-info`\n   - Ensure the cluster responds and is healthy\n   - If cluster is unreachable, report the issue and suggest checking cluster status\n\n**Success Criteria**:\n- All required tools (kubectl, helm, helmfile, docker) are installed\n- Current context is {{kubeContext}}\n- Docker is authenticated to ghcr.io\n- Namespace {{namespace}} exists\n- Cluster is responsive and healthy\n- No error messages in your output\n\n**Output Format**:\nReport your progress clearly:\n```\n✓ Prerequisites validated: kubectl, helm, helmfile, docker\n✓ GHCR credentials configured\n✓ Switched to context: {{kubeContext}}\n✓ Authenticated to ghcr.io\n✓ Namespace {{namespace}} ready\n✓ Cluster connectivity verified\n```\n\n**Important**:\n- Fail fast if any prerequisite is missing - do not proceed to subsequent steps\n- Use exact commands provided above\n- Capture and report all error messages clearly\n- Do NOT proceed if authentication or context switch fails",
+        "variables": [
+          {
+            "name": "kubeContext",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes context to deploy to",
+            "default": "docker-desktop"
+          },
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "ghcrUsername",
+            "type": "string",
+            "required": false,
+            "description": "GitHub Container Registry username (fallback to GHCR_USERNAME env var)",
+            "default": ""
+          },
+          {
+            "name": "ghcrToken",
+            "type": "string",
+            "required": false,
+            "description": "GitHub Container Registry personal access token (fallback to GHCR_TOKEN env var)",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "deploy-via-helmfile",
+      "subagent": "general",
+      "description": "Deploy DevBob to Kubernetes using Helmfile and capture deployment logs",
+      "dependencies": [
+        "setup-and-authenticate"
+      ],
+      "prompt": {
+        "template": "You are deploying DevBob to Kubernetes using Helmfile.\n\n**Your Task**: Run Helmfile sync to deploy DevBob and capture all deployment logs.\n\n**Context**:\n- Helmfile path: {{helmfilePath}}\n- Namespace: {{namespace}}\n- Image pull policy: {{imagePullPolicy}}\n\n**Steps**:\n\n1. **Verify Helmfile Exists**:\n   - Check that {{helmfilePath}} exists\n   - If not found, report the issue and list available Helmfile configurations\n   - Fail immediately if Helmfile is missing\n\n2. **Run Helmfile Sync**:\n   - Execute: `helmfile -f {{helmfilePath}} sync --namespace {{namespace}}`\n   - Capture both stdout and stderr\n   - Save the complete output to a file named `deployment-logs.txt` in the current directory\n   - Monitor the deployment progress\n\n3. **Handle Deployment Output**:\n   - Look for \"UPDATED\" or \"DEPLOYED\" messages indicating successful deployment\n   - Check for \"ERROR\" or \"FAILED\" messages indicating issues\n   - If helmfile exits with non-zero code, this is a deployment failure\n\n4. **Verify Helm Releases**:\n   - List deployed releases: `helm list -n {{namespace}}`\n   - Verify that expected DevBob releases appear in the list\n   - Report which releases were deployed or updated\n\n5. **Handle Failures**:\n   - If helmfile sync fails, examine the error output carefully\n   - Common issues:\n     - Chart not found: Check chart repository configuration\n     - Values error: Check values file syntax\n     - Insufficient resources: Check cluster capacity\n     - API server timeout: May be transient, worth retrying\n   - Report detailed error context to help with debugging\n\n**Success Criteria**:\n- Helmfile sync exits with code 0\n- Output contains \"UPDATED\" or \"DEPLOYED\"\n- No \"ERROR\" or \"FAILED\" messages in helmfile output\n- Expected Helm releases appear in `helm list` output\n- File `deployment-logs.txt` created with complete Helmfile output\n\n**Output Format**:\nReport deployment status clearly:\n```\n✓ Helmfile configuration found: {{helmfilePath}}\n✓ Running helmfile sync...\n✓ Deployment completed successfully\n✓ Helm releases deployed:\n  - devbob-api (DEPLOYED)\n  - devbob-surrealdb (UPDATED)\n✓ Deployment logs saved to: deployment-logs.txt\n```\n\n**Important**:\n- This task has retry enabled (up to 2 retries) for transient network/API issues\n- Always save deployment logs to `deployment-logs.txt` even if deployment fails\n- Provide detailed error context if deployment fails\n- Do NOT proceed to create the logs file manually - use bash redirection to capture actual helmfile output",
+        "variables": [
+          {
+            "name": "helmfilePath",
+            "type": "string",
+            "required": false,
+            "description": "Path to Helmfile configuration",
+            "default": "./helmfile.yaml"
+          },
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "imagePullPolicy",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes image pull policy",
+            "default": "IfNotPresent"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-deployment-health",
+      "subagent": "general",
+      "description": "Verify all pods are running, healthy, and endpoints are accessible",
+      "dependencies": [
+        "deploy-via-helmfile"
+      ],
+      "prompt": {
+        "template": "You are validating the health of the DevBob Kubernetes deployment.\n\n**Your Task**: Verify all pods are running and healthy, then test service endpoints.\n\n**Context**:\n- Namespace: {{namespace}}\n- Pod readiness timeout: {{podReadinessTimeout}} seconds\n- Port-forward timeout: {{portForwardTimeout}} seconds\n\n**Steps**:\n\n1. **Wait for Pods to Reach Running State**:\n   - List all pods: `kubectl get pods -n {{namespace}}`\n   - Wait up to {{podReadinessTimeout}} seconds for all pods to reach `Running` status\n   - Check every 5 seconds and report progress\n   - If timeout is exceeded, report which pods are not ready and fail\n\n2. **Validate Pod Health**:\n   - Check pod status in detail: `kubectl get pods -n {{namespace}} -o wide`\n   - Verify no pods in `CrashLoopBackOff`, `ImagePullBackOff`, `Error`, or `Pending` states\n   - Check container readiness: ensure READY column shows X/X (all containers ready)\n   - Check restart count: warn if any pod has 3+ restarts\n   - If any pod is unhealthy, describe it: `kubectl describe pod <pod-name> -n {{namespace}}`\n\n3. **Verify All Pods Running** (Validation Check):\n   - Run: `kubectl get pods -n {{namespace}} --field-selector=status.phase!=Running`\n   - This should return empty (no pods in non-Running state)\n   - If any pods are returned, report them and fail\n\n4. **Test DevBob API Endpoint**:\n   - Set up port-forward to DevBob API service (if needed): `kubectl port-forward -n {{namespace}} service/devbob-api 8080:8080 &`\n   - Wait up to {{portForwardTimeout}} seconds for port-forward to establish\n   - Test health endpoint: `curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/health` (or appropriate health endpoint)\n   - Expect HTTP 200 response\n   - If endpoint returns 50x error or connection refused, retry up to 3 times with exponential backoff (2s, 4s, 8s)\n   - Verify response body contains expected content (e.g., `{\"status\":\"ok\"}` or similar)\n\n5. **Test SurrealDB Endpoint**:\n   - Set up port-forward to SurrealDB (if needed): `kubectl port-forward -n {{namespace}} service/surrealdb 8000:8000 &`\n   - Test connection: `curl -s http://localhost:8000/health` or attempt TCP connect\n   - Expect successful connection and response\n   - Retry up to 3 times with exponential backoff if connection fails\n\n6. **Clean Up Port-Forwards**:\n   - Kill all background port-forward processes\n   - Ensure no port-forwards remain active\n\n**Success Criteria**:\n- All pods show `Running` status within timeout\n- All containers ready (READY column shows X/X)\n- Restart count < 3 for all containers\n- `kubectl get pods -n {{namespace}} --field-selector=status.phase!=Running` returns empty\n- DevBob API health endpoint returns HTTP 200\n- SurrealDB connection succeeds\n- No \"connection refused\" or timeout errors\n- Port-forwards cleaned up\n\n**Output Format**:\nReport validation results clearly:\n```\n✓ All pods running (3/3 ready)\n✓ Pod health validated:\n  - devbob-api-xxx: Running, 1/1 ready, 0 restarts\n  - devbob-surrealdb-0: Running, 1/1 ready, 0 restarts\n  - devbob-worker-yyy: Running, 1/1 ready, 0 restarts\n✓ DevBob API health check: HTTP 200\n✓ SurrealDB connection: Success\n✓ Port-forwards cleaned up\n```\n\n**Important**:\n- Use exponential backoff for endpoint retries: wait 2s, then 4s, then 8s\n- Always clean up port-forwards, even if validation fails\n- Report detailed pod status if any pod is unhealthy\n- Do NOT assume endpoints are ready immediately after pods are running - test them explicitly",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "podReadinessTimeout",
+            "type": "number",
+            "required": false,
+            "description": "Seconds to wait for pods to become ready",
+            "default": 300
+          },
+          {
+            "name": "portForwardTimeout",
+            "type": "number",
+            "required": false,
+            "description": "Seconds to wait for port-forward to establish",
+            "default": 60
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-data-persistence",
+      "subagent": "general",
+      "description": "Verify SurrealDB data persists across pod restarts/redeployments",
+      "dependencies": [
+        "validate-deployment-health"
+      ],
+      "prompt": {
+        "template": "You are testing SurrealDB data persistence across pod restarts.\n\n**Your Task**: Create test data, restart the SurrealDB pod, and verify data survives.\n\n**Context**:\n- Namespace: {{namespace}}\n- Skip this test: {{skipDataPersistenceTest}}\n- Cleanup on failure: {{cleanupOnFailure}}\n\n**IMPORTANT**: If {{skipDataPersistenceTest}} is true, skip this entire task and report:\n```\n⊘ Data persistence test skipped (skipDataPersistenceTest=true)\n```\nThen succeed immediately without doing anything else.\n\n**Steps** (only if {{skipDataPersistenceTest}} is false):\n\n1. **Connect to SurrealDB**:\n   - Set up port-forward: `kubectl port-forward -n {{namespace}} service/surrealdb 8000:8000 &`\n   - Wait for connection to establish (up to 30 seconds)\n   - Test connection: `curl -s http://localhost:8000/health`\n\n2. **Create Test Activity Record**:\n   - Generate unique test ID: `test-activity-$(date +%s)`\n   - Create test record in SurrealDB using SQL or HTTP API:\n     ```sql\n     CREATE test_activity:test_id SET\n       name = 'k8s-deployment-validation-test',\n       timestamp = time::now(),\n       purpose = 'validate data persistence across pod restarts';\n     ```\n   - Or use curl with SurrealDB HTTP API\n   - Capture the record ID returned\n   - Report successful creation\n\n3. **Query Test Record (Pre-Restart)**:\n   - Query for the test record: `SELECT * FROM test_activity:test_id`\n   - Verify record exists and data matches what was created\n   - Save record data for comparison after restart\n\n4. **Perform Rolling Restart**:\n   - Restart SurrealDB pod: `kubectl rollout restart statefulset/surrealdb -n {{namespace}}`\n   - Wait for rollout to complete: `kubectl rollout status statefulset/surrealdb -n {{namespace}}`\n   - Wait for pod to become ready again (check status until Running and Ready)\n   - Report restart completion\n\n5. **Verify Data Persistence (Post-Restart)**:\n   - Re-establish port-forward if needed: `kubectl port-forward -n {{namespace}} service/surrealdb 8000:8000 &`\n   - Query for the test record again: `SELECT * FROM test_activity:test_id`\n   - Verify record still exists\n   - Compare data with pre-restart snapshot - it should match exactly\n   - Retry up to 2 times with 5-second delay if query fails (eventual consistency)\n\n6. **Test Activity Storage Operations**:\n   - Perform a write operation to test activity storage\n   - Perform a read operation to verify write succeeded\n   - Report success or any errors\n\n7. **Clean Up Test Record**:\n   - If {{cleanupOnFailure}} is false, delete the test record: `DELETE test_activity:test_id`\n   - If {{cleanupOnFailure}} is true, leave the test record for debugging\n   - Kill port-forward processes\n\n**Success Criteria**:\n- Test record created successfully (returns record ID)\n- Query before restart returns matching data\n- After restart, test record still exists\n- Pre-restart and post-restart data match exactly\n- Activity storage operations succeed (no errors)\n- No \"data loss detected\" messages\n\n**Output Format**:\nReport persistence test results clearly:\n```\n✓ Connected to SurrealDB\n✓ Test record created: test_activity:test-123456789\n✓ Pre-restart query: Record found, data intact\n✓ SurrealDB pod restarted: statefulset/surrealdb\n✓ Post-restart query: Record found, data persists\n✓ Data comparison: Exact match (no data loss)\n✓ Activity storage operations: Success\n✓ Test record cleaned up\n```\n\n**Important**:\n- Retry read operations up to 2 times with 5-second delay (eventual consistency)\n- Always clean up port-forwards\n- Do NOT fake the persistence test - actually restart the pod and re-query\n- If data does NOT persist, this is a CRITICAL FAILURE - report it clearly",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "skipDataPersistenceTest",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip data persistence validation (for quick checks)",
+            "default": false
+          },
+          {
+            "name": "cleanupOnFailure",
+            "type": "boolean",
+            "required": false,
+            "description": "Delete deployment if validation fails",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-deployment-report",
+      "subagent": "general",
+      "description": "Generate comprehensive validation report with all results and save to file",
+      "dependencies": [
+        "test-data-persistence"
+      ],
+      "prompt": {
+        "template": "You are generating the final deployment validation report.\n\n**Your Task**: Collect all validation results and generate a comprehensive report.\n\n**Context**:\n- Report output path: {{reportOutputPath}}\n- Namespace: {{namespace}}\n- Kubernetes context: {{kubeContext}}\n- Cleanup on failure: {{cleanupOnFailure}}\n\n**Steps**:\n\n1. **Collect Results from Previous Tasks**:\n   - Review outputs from all previous tasks:\n     - setup-and-authenticate: Prerequisites, context switch, GHCR auth, namespace\n     - deploy-via-helmfile: Deployment status, Helm releases\n     - validate-deployment-health: Pod health, endpoint tests\n     - test-data-persistence: Data persistence test results\n   - Determine overall deployment status: Success or Failed\n\n2. **Generate Markdown Report**:\n   - Create a comprehensive markdown report with the following sections:\n\n   ```markdown\n   # DevBob Kubernetes Deployment Validation Report\n\n   **Generated**: [Current timestamp]\n   **Kubernetes Context**: {{kubeContext}}\n   **Namespace**: {{namespace}}\n   **Deployment Status**: ✓ Success | ✗ Failed\n\n   ---\n\n   ## Summary\n\n   [Brief overview of deployment outcome]\n\n   ## Environment Setup\n\n   - ✓/✗ Prerequisites validated (kubectl, helm, helmfile, docker)\n   - ✓/✗ Kubernetes context switched to {{kubeContext}}\n   - ✓/✗ Authenticated to GHCR\n   - ✓/✗ Namespace {{namespace}} ready\n\n   ## Deployment\n\n   - ✓/✗ Helmfile sync completed\n   - Helm releases deployed:\n     - [List releases from helm list output]\n   - Deployment logs: `deployment-logs.txt`\n\n   ## Pod Health\n\n   - ✓/✗ All pods running and ready\n   - Pod status:\n     - [List each pod with status, ready, restarts]\n\n   ## Endpoint Tests\n\n   - ✓/✗ DevBob API health check: HTTP [code]\n   - ✓/✗ SurrealDB connection: [Success/Failed]\n\n   ## Data Persistence\n\n   - ✓/✗ Test record created\n   - ✓/✗ Data persisted across pod restart\n   - ✓/✗ Activity storage operations: [Success/Failed]\n\n   ## Issues Detected\n\n   [List any warnings or issues found, or \"None\" if all passed]\n\n   ## Next Steps\n\n   [If successful: \"Deployment is production-ready. Monitor logs and metrics.\"]\n   [If failed: Provide specific remediation steps based on which task failed]\n\n   ---\n\n   **Validation completed at**: [Timestamp]\n   ```\n\n3. **Save Report to File**:\n   - Write the markdown report to {{reportOutputPath}}\n   - Ensure file is created with proper permissions\n   - Report the file path\n\n4. **Display Console Summary**:\n   - Print a concise summary to console with color formatting:\n   ```\n   ╔════════════════════════════════════════════════╗\n   ║  DevBob Deployment Validation: ✓ SUCCESS      ║\n   ╚════════════════════════════════════════════════╝\n\n   Environment: ✓  Deployment: ✓  Health: ✓  Persistence: ✓\n\n   Report saved to: {{reportOutputPath}}\n   ```\n\n5. **Handle Cleanup (if needed)**:\n   - If {{cleanupOnFailure}} is true AND any task failed:\n     - Run: `helmfile destroy -f [helmfile-path]`\n     - Delete namespace: `kubectl delete namespace {{namespace}}`\n     - Remove test data from SurrealDB (if accessible)\n     - Document cleanup actions in report\n   - If {{cleanupOnFailure}} is false or deployment succeeded:\n     - Skip cleanup\n     - Leave deployment in place\n\n**Success Criteria**:\n- Report file created at {{reportOutputPath}}\n- Report contains \"Deployment Status:\" line\n- Report includes timestamp and all validation results\n- Console output shows clear success/failure status\n- If successful: Report contains \"Deployment Status: Success\" or similar\n- If cleanup ran: Report includes cleanup actions\n\n**Output Format**:\nReport file creation and summary:\n```\n✓ Validation results collected from all tasks\n✓ Markdown report generated\n✓ Report saved to: {{reportOutputPath}}\n✓ Console summary displayed\n[If cleanup ran:]\n✓ Cleanup performed:\n  - Helmfile destroy completed\n  - Namespace {{namespace}} deleted\n  - Test data removed\n```\n\n**Important**:\n- Include ALL validation results in the report, even if some failed\n- Provide specific next steps based on which tasks failed\n- If cleanup is performed, document it clearly in the report\n- Ensure report is valid markdown format\n- Do NOT generate a fake report - use actual results from previous tasks",
+        "variables": [
+          {
+            "name": "reportOutputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to save deployment report",
+            "default": "./deployment-report.md"
+          },
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for DevBob",
+            "default": "devbob"
+          },
+          {
+            "name": "kubeContext",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes context deployed to",
+            "default": "docker-desktop"
+          },
+          {
+            "name": "cleanupOnFailure",
+            "type": "boolean",
+            "required": false,
+            "description": "Delete deployment if validation fails",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-25T06:48:33.174Z",
+  "metadata": {}
+}
