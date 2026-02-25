@@ -1,9 +1,9 @@
 # DevBob Release Values (override Chart defaults)
 
-# Use local image
+# Use local image (with plugin fix)
 image:
   repository: devbob
-  tag: unified-test
+  tag: plugin-fix
   pullPolicy: Never
 
 # Secrets - IMPORTANT: Set via Helm command or external secret manager
