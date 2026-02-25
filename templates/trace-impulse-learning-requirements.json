@@ -1,0 +1,131 @@
+{
+  "name": "Trace Impulse Learning Requirements",
+  "description": "Systematically trace learning requirements for impulse-context mapping: data capture points, learning algorithms, skip conditions, and validation metrics",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "trace-capture-points",
+      "subagent": "general",
+      "description": "Trace data capture points in memory-agent.ts and activity.ts",
+      "dependencies": [],
+      "prompt": {
+        "template": "Trace all data capture points for impulse learning:\n\n1. Memory Agent Capture Points:\n   - After analyzeIntent() in memory-agent.ts (capture userIntent)\n   - After prepare() in memory-agent.ts (capture impulses created/loaded)\n   - After task completion (capture outcome metrics)\n\n2. Activity Capture Points:\n   - In executeTask() after success/failure\n   - In execute() after activity completes\n   - In gatherContext() when contextRequirements used\n\n3. For each capture point, document:\n   - File path and line numbers\n   - What data to capture (use ImpulseMappingRecord schema from spec)\n   - Where to store (in-memory buffer vs persist to DB)\n   - When to flush to storage\n\n4. Create impulse tracking implementation:\n   - How to detect if impulse was \"used\" in response\n   - Parse response for content references\n   - Track usage per impulse ID\n\nRead IMPULSE_LEARNING_REQUIREMENTS_SPECIFICATION.md for full schema.\n\nOutput: Markdown document with:\n- Capture point locations (file:line)\n- Data schemas to capture\n- Implementation pseudocode\n- Storage strategy",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "trace-pattern-learning",
+      "subagent": "general",
+      "description": "Document pattern learning algorithm requirements",
+      "dependencies": ["trace-capture-points"],
+      "prompt": {
+        "template": "Document the pattern learning algorithm:\n\n1. Pattern Extraction:\n   - How to normalize user messages\n   - How to detect variables (file paths, identifiers)\n   - How to create pattern templates\n   - Schema: UserPattern interface\n\n2. Pattern Matching:\n   - Similarity scoring algorithm\n   - Confidence thresholds (when to trust match)\n   - Variable binding extraction\n   - Schema: PatternMatch interface\n\n3. Impulse Replay:\n   - How to replay impulses from pattern\n   - Variable transformation rules\n   - Path construction logic\n   - Metadata to track (replay source, confidence)\n\n4. Pattern Storage:\n   - Database schema for impulse_pattern_mappings table\n   - Indexing strategy\n   - Query patterns for retrieval\n\nRead IMPULSE_LEARNING_REQUIREMENTS_SPECIFICATION.md Part 2.\n\nOutput: Markdown document with:\n- Algorithm pseudocode\n- Data structures and schemas\n- Example inputs/outputs\n- Database schema SQL",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "trace-skip-decision-logic",
+      "subagent": "general",
+      "description": "Document skip decision logic and integration points",
+      "dependencies": ["trace-pattern-learning"],
+      "prompt": {
+        "template": "Document the skip decision logic:\n\n1. Decision Function:\n   - shouldSkipMemoryAgentLLM() implementation\n   - Rule 1: Trivial messages (patterns)\n   - Rule 2: Continuations (patterns)\n   - Rule 3: Pattern match with high confidence (>85%)\n   - Rule 4: Activity with contextRequirements\n\n2. Integration Points:\n   - Where to call in turn lifecycle (turn-lifecycle-hooks.ts)\n   - Before memory agent execution\n   - Fallback strategies per skip reason\n\n3. Fallback Strategies:\n   - Pattern replay (use replayImpulsesFromPattern)\n   - Template requirements (use createImpulsesFromRequirements)\n   - Keep existing (do nothing for continuations)\n\n4. Tracking:\n   - memory_agent_performance table schema\n   - What to log per turn\n   - Metrics to expose\n\nRead IMPULSE_LEARNING_REQUIREMENTS_SPECIFICATION.md Part 3.\n\nOutput: Markdown document with:\n- Skip decision tree diagram\n- Integration point locations\n- Fallback strategy implementations\n- Tracking schema",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "trace-learning-loop-architecture",
+      "subagent": "general",
+      "description": "Document complete learning loop architecture",
+      "dependencies": ["trace-skip-decision-logic"],
+      "prompt": {
+        "template": "Document the complete learning loop architecture:\n\n1. Data Flow:\n   - Turn lifecycle → Capture → Learning DB → Pattern Library → Skip Decision → Turn lifecycle\n   - Feedback loop: Outcome metrics update pattern success rates\n\n2. Storage Architecture:\n   - impulse_pattern_mappings table (patterns + metrics)\n   - memory_agent_performance table (per-turn tracking)\n   - Indexes for fast retrieval\n   - Pruning strategy (old/unreliable patterns)\n\n3. Learning Algorithm:\n   - updatePatternOnSuccess() (update metrics)\n   - updatePatternOnFailure() (update metrics)\n   - Pattern reliability threshold (mark unreliable if <50% success)\n\n4. Activity Template Integration:\n   - Capture from contextRequirements\n   - Skip gatherContext when learned\n   - Confidence thresholds\n\nRead IMPULSE_LEARNING_REQUIREMENTS_SPECIFICATION.md Part 4-5.\n\nOutput: Markdown document with:\n- Architecture diagram (ASCII)\n- Component interaction flows\n- Database schema SQL\n- Algorithm pseudocode",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "trace-validation-metrics",
+      "subagent": "general",
+      "description": "Document validation metrics and monitoring strategy",
+      "dependencies": ["trace-learning-loop-architecture"],
+      "prompt": {
+        "template": "Document validation metrics and monitoring:\n\n1. Success Metrics:\n   - Skip rate (target: 60-80%)\n   - Quality delta (skip success rate vs LLM success rate, target: >=0)\n   - Time savings (measured in ms)\n   - Pattern utilization (patterns used / patterns learned)\n\n2. Monitoring Queries:\n   - Skip rate over time (daily aggregation)\n   - Skip reason breakdown (which rules trigger)\n   - Pattern effectiveness (success rates per pattern)\n   - Performance comparison (time with/without LLM)\n\n3. Validation Checklist:\n   - Pre-deployment checks (9 items)\n   - Post-deployment monitoring (6 items)\n   - Continuous improvement triggers\n\n4. Dashboard Design:\n   - Real-time skip rate\n   - Quality metrics\n   - Pattern library health\n   - Performance trends\n\nRead IMPULSE_LEARNING_REQUIREMENTS_SPECIFICATION.md Part 6.\n\nOutput: Markdown document with:\n- Metrics schema (LearningMetrics interface)\n- SQL queries for monitoring\n- Validation checklist\n- Dashboard mockup (ASCII/text)",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": [
+          "IMPULSE_LEARNING_REQUIREMENTS_SPECIFICATION.md"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-implementation-plan",
+      "subagent": "general",
+      "description": "Create detailed 4-week implementation plan",
+      "dependencies": [
+        "trace-capture-points",
+        "trace-pattern-learning",
+        "trace-skip-decision-logic",
+        "trace-learning-loop-architecture",
+        "trace-validation-metrics"
+      ],
+      "prompt": {
+        "template": "Create a detailed 4-week implementation plan:\n\n1. Compile all traced requirements from previous tasks:\n   - Capture points and schemas\n   - Pattern learning algorithms\n   - Skip decision logic\n   - Learning loop architecture\n   - Validation metrics\n\n2. Organize into 4 phases (1 per week):\n   - Phase 1: Data Capture\n   - Phase 2: Pattern Learning\n   - Phase 3: Skip Integration\n   - Phase 4: Activity Template Learning\n\n3. For each phase:\n   - Detailed task breakdown (what to implement)\n   - File locations to modify\n   - Dependencies (what must be done first)\n   - Testing strategy\n   - Success criteria\n   - Deliverables\n\n4. Risk mitigation:\n   - Conservative thresholds initially\n   - Gradual rollout plan\n   - Rollback procedures\n   - Quality monitoring\n\nRead IMPULSE_LEARNING_REQUIREMENTS_SPECIFICATION.md Part 7.\n\nOutput: Markdown document with:\n- 4-week Gantt chart (ASCII)\n- Task breakdown per phase\n- File modification checklist\n- Testing procedures\n- Success criteria per phase",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false
+  }
+}
