@@ -1,0 +1,135 @@
+{
+  "activity_id": "test-improve-template-struggling",
+  "name": "Test Improve Template (Struggling)",
+  "description": "Mock template for testing boredom system - template improvement with low gradient indicating struggles",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Analyze template failures",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze failures in template {{template_id}} and suggest improvements",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "template_id",
+            "type": "string",
+            "required": true,
+            "description": "Template to improve"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Apply template improvements",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": "Update template {{template_id}} with suggested improvements",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "template_id",
+            "type": "string",
+            "required": true,
+            "description": "Template to improve"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3",
+      "subagent": "general",
+      "description": "Test improved template",
+      "dependencies": ["task-2"],
+      "prompt": {
+        "template": "Execute improved template {{template_id}} with test variables",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "template_id",
+            "type": "string",
+            "required": true,
+            "description": "Template to test"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "estimated_metrics": {
+    "execution_count": 5,
+    "success_count": 2,
+    "success_rate": 0.4,
+    "avg_duration_ms": 95000,
+    "avg_cost": 0.62,
+    "improvement_gradient": 0.38,
+    "performance_trends": {
+      "duration": "stable",
+      "cost": "stable",
+      "success_rate": "degrading"
+    },
+    "failure_patterns": [
+      {
+        "task_id": "task-3",
+        "error_type": "validation",
+        "error_message": "Improved template still failing validation",
+        "count": 2,
+        "last_seen": "2026-02-24T12:20:00Z"
+      },
+      {
+        "task_id": "task-2",
+        "error_type": "execution",
+        "error_message": "Could not apply improvements - template structure issues",
+        "count": 1,
+        "last_seen": "2026-02-23T16:30:00Z"
+      }
+    ]
+  }
+}
