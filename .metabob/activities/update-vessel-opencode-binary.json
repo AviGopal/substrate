@@ -3,232 +3,6 @@
   "name": "Update Vessel OpenCode Binary",
   "description": "Boredom activity: Self-update OpenCode binary in running vessel container. Checks GitHub releases, downloads latest version, verifies checksum, installs with atomic swap, and rolls back on failure.",
   "category": "infrastructure",
-  "task_steps": [
-    {
-      "task_id": "check-update-availability",
-      "subagent": "general",
-      "description": "Check current OpenCode version and query GitHub releases to determine if update is available",
-      "dependencies": [],
-      "prompt": {
-        "template": "Check if an OpenCode binary update is available.\n\n**Your Task**:\n1. Get current OpenCode version by running `opencode --version`\n2. Parse the semantic version (e.g., \"1.2.3\")\n3. Query GitHub API to get latest release:\n   - Repository: {{github_repo}}\n   - Endpoint: GET /repos/{{github_repo}}/releases/latest\n   - Use github_token if provided: {{github_token}}\n4. Parse release metadata (version, download URLs, checksums)\n5. Compare current version vs. latest version\n6. Determine if update is needed\n\n**Configuration**:\n- Force update (skip version check): {{force_update}}\n- Allow prerelease versions: {{prerelease_allowed}}\n- Dry run mode: {{dry_run}}\n\n**Output**:\n- Current version: X.Y.Z\n- Latest version: X.Y.Z\n- Decision: \"Update available: X.Y.Z → A.B.C\" OR \"Already up to date\"\n- Download URLs for binary and checksums\n- Save release metadata for next task\n\n**Early Exit**: If no update available and force_update=false, report \"Already up to date\" and skip remaining tasks.\n\n**Validation**:\n- Current version matches semver pattern (X.Y.Z)\n- GitHub API responds successfully (HTTP 200 or 304)\n- Latest version identified and compared\n- Decision clearly logged",
-        "variables": [
-          {
-            "name": "github_repo",
-            "type": "string",
-            "required": false,
-            "description": "GitHub repository for OpenCode releases",
-            "default": "opencode/opencode"
-          },
-          {
-            "name": "github_token",
-            "type": "string",
-            "required": false,
-            "description": "GitHub API token for authenticated requests (higher rate limits)",
-            "default": ""
-          },
-          {
-            "name": "force_update",
-            "type": "boolean",
-            "required": false,
-            "description": "Force update even if version is same/older",
-            "default": "false"
-          },
-          {
-            "name": "prerelease_allowed",
-            "type": "boolean",
-            "required": false,
-            "description": "Allow updating to prerelease versions",
-            "default": "false"
-          },
-          {
-            "name": "dry_run",
-            "type": "boolean",
-            "required": false,
-            "description": "Test update workflow without actually installing",
-            "default": "false"
-          }
-        ]
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [],
-        "required_patterns": [],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "simple"
-      }
-    },
-    {
-      "task_id": "download-binary",
-      "subagent": "general",
-      "description": "Download OpenCode binary and checksum file from GitHub release assets",
-      "dependencies": [
-        "check-update-availability"
-      ],
-      "prompt": {
-        "template": "Download the OpenCode binary and checksums from GitHub release.\n\n**Your Task**:\n1. Determine platform and architecture:\n   - OS: linux/darwin/windows\n   - Arch: x64/arm64/arm\n   - Use `uname -s` and `uname -m` commands\n2. Construct download URLs from previous task's release metadata\n3. Create temporary directory: `/tmp/opencode-update-$(date +%s)/`\n4. Download binary with retry logic:\n   - URL: [from release assets for detected platform/arch]\n   - Destination: `/tmp/opencode-update-*/opencode`\n   - Timeout: {{download_timeout}} seconds\n   - Retry: 3 attempts with exponential backoff (1s, 2s, 4s)\n5. Download checksum file:\n   - URL: [from release assets]\n   - Destination: `/tmp/opencode-update-*/checksums.txt`\n6. Verify downloads completed (file sizes > 0)\n\n**Configuration**:\n- Download timeout: {{download_timeout}} seconds\n- Dry run mode: {{dry_run}}\n\n**Dry Run Behavior**: If dry_run=true, log intended download actions without actually downloading.\n\n**Output**:\n- Platform detected: [OS]-[ARCH]\n- Download URLs used\n- Binary size: X MB\n- Checksum file size: Y KB\n- Temporary directory: /tmp/opencode-update-[timestamp]\n\n**Validation**:\n- Binary file exists at expected path\n- Checksum file exists at expected path\n- Binary size > 10 MB (sanity check)\n- Checksum file size < 10 KB (sanity check)\n- No \"download failed\" errors\n\n**Error Handling**: Network failures retry automatically 3x with exponential backoff.",
-        "variables": [
-          {
-            "name": "download_timeout",
-            "type": "number",
-            "required": false,
-            "description": "Download timeout in seconds",
-            "default": "300"
-          },
-          {
-            "name": "dry_run",
-            "type": "boolean",
-            "required": false,
-            "description": "Test update workflow without actually installing",
-            "default": "false"
-          }
-        ]
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [],
-        "required_patterns": [],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "simple"
-      }
-    },
-    {
-      "task_id": "verify-integrity",
-      "subagent": "general",
-      "description": "Calculate and verify checksum of downloaded binary",
-      "dependencies": [
-        "download-binary"
-      ],
-      "prompt": {
-        "template": "Verify the integrity of the downloaded OpenCode binary.\n\n**Your Task**:\n1. Locate downloaded files in `/tmp/opencode-update-*/`\n2. Extract expected checksum from `checksums.txt` for your platform/architecture\n3. Calculate checksum of downloaded binary:\n   - Algorithm: {{checksum_algorithm}} (sha256 or sha512)\n   - Command: `{{checksum_algorithm}}sum /tmp/opencode-update-*/opencode`\n4. Compare calculated checksum vs. expected checksum (case-insensitive)\n5. If match: Log success and proceed\n6. If mismatch: **FAIL IMMEDIATELY** - delete corrupted file and report error\n\n**Configuration**:\n- Checksum algorithm: {{checksum_algorithm}}\n- Dry run mode: {{dry_run}}\n\n**Dry Run Behavior**: If dry_run=true, simulate verification without proceeding to installation.\n\n**Output**:\n- Expected checksum: [from checksums.txt]\n- Calculated checksum: [computed value]\n- Verification result: PASS or FAIL\n\n**Critical**: This is a **fail-fast** operation. Do NOT proceed to installation if checksums don't match.\n\n**Validation**:\n- Checksum calculated successfully\n- Checksum matches expected value exactly\n- No \"checksum mismatch\" error\n- Downloaded file integrity confirmed\n\n**Error Handling**: Checksum mismatch is a critical error - fail immediately, delete corrupted file, do not retry.",
-        "variables": [
-          {
-            "name": "checksum_algorithm",
-            "type": "string",
-            "required": false,
-            "description": "Checksum algorithm to use (sha256 or sha512)",
-            "default": "sha256"
-          },
-          {
-            "name": "dry_run",
-            "type": "boolean",
-            "required": false,
-            "description": "Test update workflow without actually installing",
-            "default": "false"
-          }
-        ]
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [],
-        "required_patterns": [],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "simple"
-      }
-    },
-    {
-      "task_id": "install-with-atomic-swap",
-      "subagent": "general",
-      "description": "Backup current binary, install new binary atomically, verify installation, rollback on failure",
-      "dependencies": [
-        "verify-integrity"
-      ],
-      "prompt": {
-        "template": "Install the new OpenCode binary with atomic swap and automatic rollback.\n\n**Your Task**:\n1. Determine OpenCode binary location:\n   - Check: `/usr/local/bin/opencode`\n   - Check: `~/.opencode/bin/opencode`\n   - Check: `which opencode`\n   - Use first existing location\n2. Create backup directory: `mkdir -p ~/.opencode/backups/`\n3. Get current version for backup filename\n4. Backup current binary:\n   - Source: [detected binary location]\n   - Destination: `~/.opencode/backups/opencode-[version]-[timestamp]`\n   - Command: `cp $BINARY ~/.opencode/backups/opencode-[version]-[timestamp]`\n5. Perform atomic swap:\n   - Source: `/tmp/opencode-update-*/opencode`\n   - Destination: [detected binary location]\n   - Command: `mv /tmp/opencode-update-*/opencode $BINARY`\n6. Set executable permissions: `chmod +x $BINARY`\n7. Verify installation:\n   - Run: `opencode --version`\n   - Check: Output matches expected new version\n8. If verification FAILS:\n   - **ROLLBACK**: `mv ~/.opencode/backups/opencode-[version]-[timestamp] $BINARY`\n   - Log: \"Rollback completed: restored version [old_version]\"\n   - Verify rollback: `opencode --version` returns old version\n9. If verification SUCCEEDS:\n   - Log: \"Installation successful: [old_version] → [new_version]\"\n\n**Configuration**:\n- Rollback on failure: {{rollback_on_failure}}\n- Dry run mode: {{dry_run}}\n\n**Dry Run Behavior**: If dry_run=true, log intended actions without modifying the binary.\n\n**Output**:\n- Binary location: [path]\n- Backup location: [path]\n- Installation result: SUCCESS or ROLLBACK\n- Version verification: [version]\n\n**Critical Rollback Logic**:\n- If `opencode --version` fails after install → rollback\n- If binary not executable → rollback\n- If permission errors → rollback\n- If rollback itself fails → log CRITICAL ERROR with manual recovery instructions\n\n**Validation**:\n- Backup created successfully\n- New binary installed at correct location\n- Binary has executable permissions (test -x)\n- `opencode --version` returns expected new version\n- No \"rollback\" in output (indicates success path)\n\n**Error Handling**: Automatic rollback on failure if rollback_on_failure=true (default).",
-        "variables": [
-          {
-            "name": "rollback_on_failure",
-            "type": "boolean",
-            "required": false,
-            "description": "Whether to automatically rollback on failure",
-            "default": "true"
-          },
-          {
-            "name": "dry_run",
-            "type": "boolean",
-            "required": false,
-            "description": "Test update workflow without actually installing",
-            "default": "false"
-          }
-        ]
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [],
-        "required_patterns": [],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "simple"
-      }
-    },
-    {
-      "task_id": "cleanup-and-report",
-      "subagent": "general",
-      "description": "Clean up temporary files, rotate old backups, update manifest, report status",
-      "dependencies": [
-        "install-with-atomic-swap"
-      ],
-      "prompt": {
-        "template": "Clean up temporary files, rotate backups, and report final status.\n\n**Your Task**:\n1. Remove temporary download directory:\n   - Find: `/tmp/opencode-update-*/`\n   - Command: `rm -rf /tmp/opencode-update-*`\n2. Rotate old backups:\n   - List backups: `ls -1t ~/.opencode/backups/opencode-*`\n   - Sort by timestamp (newest first)\n   - Keep most recent {{backup_count}} backups\n   - Delete older backups: `rm [old backup files]`\n3. Create update manifest directory: `mkdir -p ~/.opencode/updates/`\n4. Update manifest file: `~/.opencode/updates/manifest.json`\n   - Load existing manifest (or create new)\n   - Add entry: { \"version\": \"X.Y.Z\", \"timestamp\": [unix], \"success\": true/false, \"duration\": [seconds], \"download_size\": [bytes] }\n   - Save manifest\n5. Write update log: `~/.opencode/updates/update-[timestamp].log`\n   - Include: old version, new version, duration, success/failure, any errors\n6. Generate final report:\n   - **Success**: \"OpenCode updated from [old] to [new] in [duration]s\"\n   - **Failure**: \"Update failed: [reason]. Rollback status: [status]\"\n   - **Dry Run**: \"Dry run complete. Would update from [old] to [new]\"\n   - **Already Updated**: \"Already up to date: [version]\"\n\n**Configuration**:\n- Backup count to retain: {{backup_count}}\n- Dry run mode: {{dry_run}}\n\n**Dry Run Behavior**: If dry_run=true, report what would have been done without making changes.\n\n**Output**:\n- Temporary files removed: YES/NO\n- Backups retained: [count]\n- Manifest updated: YES/NO\n- Update log created: [path]\n- **Final Status**: [success message or failure message]\n\n**Validation**:\n- Temporary files removed (! -d /tmp/opencode-update-*)\n- Backup count matches {{backup_count}} or fewer\n- Manifest exists: ~/.opencode/updates/manifest.json\n- Update log created with timestamp\n- Log contains: \"Update completed successfully\" OR \"Update failed\"\n\n**Final Report Examples**:\n- Success: \"OpenCode updated from 1.2.3 to 1.2.4 in 47s\"\n- Rollback: \"Update failed: verification failed. Rollback status: SUCCESS (restored 1.2.3)\"\n- No Update: \"Already up to date: 1.2.4\"\n- Dry Run: \"Dry run complete. Would update from 1.2.3 to 1.2.4\"",
-        "variables": [
-          {
-            "name": "backup_count",
-            "type": "number",
-            "required": false,
-            "description": "Number of backup versions to retain",
-            "default": "3"
-          },
-          {
-            "name": "dry_run",
-            "type": "boolean",
-            "required": false,
-            "description": "Test update workflow without actually installing",
-            "default": "false"
-          }
-        ]
-      },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
-      },
-      "validation": {
-        "required_files": [],
-        "required_patterns": [],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 3,
-        "strategy": "simple"
-      }
-    }
-  ],
   "tasks": [
     {
       "task_id": "check-update-availability",
@@ -288,7 +62,8 @@
       "retry": {
         "max_attempts": 3,
         "strategy": "simple"
-      }
+      },
+      "id": "check-update-availability"
     },
     {
       "task_id": "download-binary",
@@ -329,7 +104,8 @@
       "retry": {
         "max_attempts": 3,
         "strategy": "simple"
-      }
+      },
+      "id": "download-binary"
     },
     {
       "task_id": "verify-integrity",
@@ -370,7 +146,8 @@
       "retry": {
         "max_attempts": 3,
         "strategy": "simple"
-      }
+      },
+      "id": "verify-integrity"
     },
     {
       "task_id": "install-with-atomic-swap",
@@ -411,7 +188,8 @@
       "retry": {
         "max_attempts": 3,
         "strategy": "simple"
-      }
+      },
+      "id": "install-with-atomic-swap"
     },
     {
       "task_id": "cleanup-and-report",
@@ -452,7 +230,8 @@
       "retry": {
         "max_attempts": 3,
         "strategy": "simple"
-      }
+      },
+      "id": "cleanup-and-report"
     }
   ],
   "estimated_metrics": {
@@ -461,7 +240,7 @@
     "avg_duration_ms": 0,
     "avg_cost": 0
   },
-  "author": null,
+  "author": "AGENT",
   "created_at": "2026-02-24T13:28:12.707Z",
   "metadata": {}
 }

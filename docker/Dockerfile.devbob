@@ -92,20 +92,18 @@ RUN chmod +x /usr/local/bin/opencode
 # Add metabob-cli to PATH
 ENV PATH="/opt/metabob-cli/.venv/bin:$PATH"
 
-# Create entrypoint script
-RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
-    echo 'cd /workspace' >> /usr/local/bin/entrypoint.sh && \
-    echo 'exec opencode "$@"' >> /usr/local/bin/entrypoint.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh
+# Copy self-configuration entrypoint script
+COPY docker/entrypoint-self-config.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Expose ports
 EXPOSE 3000 8080 8082
 
-# Set entrypoint
+# Set entrypoint (with self-configuration)
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Default command: run server
-CMD ["serve", "--hostname", "0.0.0.0", "--port", "8080"]
+# Default command: run ACP server
+CMD ["acp", "--port", "3000", "--hostname", "0.0.0.0"]
 
 # =============================================================================
 # Build Instructions:
