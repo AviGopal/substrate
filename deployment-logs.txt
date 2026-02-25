@@ -1,18 +1,18 @@
 Building dependency release=devbob, chart=charts/devbob
-Upgrading release=devbob, chart=charts/devbob, namespace=devbob
-Release "devbob" does not exist. Installing it now.
+Upgrading release=devbob, chart=charts/devbob, namespace=metabob
+Release "devbob" has been upgraded. Happy Helming!
 NAME: devbob
-LAST DEPLOYED: Wed Feb 25 01:58:30 2026
-NAMESPACE: devbob
+LAST DEPLOYED: Wed Feb 25 03:05:10 2026
+NAMESPACE: metabob
 STATUS: deployed
-REVISION: 1
+REVISION: 2
 TEST SUITE: None
 
 Listing releases matching ^devbob$
-devbob	devbob   	1       	2026-02-25 01:58:30.579778416 -0800 PST	deployed	devbob-1.0.0	1.0.0      
+devbob	metabob  	2       	2026-02-25 03:05:10.841541511 -0800 PST	deployed	devbob-1.0.0	1.0.0      
 
 
 UPDATED RELEASES:
 NAME     NAMESPACE   CHART             VERSION   DURATION
-devbob   devbob      ./charts/devbob   1.0.0           2s
+devbob   metabob     ./charts/devbob   1.0.0           3s
 
