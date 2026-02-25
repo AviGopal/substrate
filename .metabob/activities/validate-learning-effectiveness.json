@@ -1,0 +1,291 @@
+{
+  "activity_id": "validate-learning-effectiveness",
+  "name": "Validate Learning Effectiveness",
+  "description": "Validate that impulse learning system is working: measure skip rate, compare quality metrics, analyze pattern utilization, and generate effectiveness report",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "run-baseline-tests",
+      "subagent": "general",
+      "description": "Run baseline tests WITHOUT learning to establish control metrics",
+      "dependencies": [],
+      "prompt": {
+        "template": "Run baseline tests to establish control metrics:\n\n1. Disable Learning System:\n   - Set environment variable: IMPULSE_LEARNING_ENABLED=false\n   - Verify memory agent always runs LLM\n\n2. Run Test Session:\n   - Execute 100-turn test session\n   - Use diverse user messages (code_fix, feature_request, question, etc.)\n   - Track per turn:\n     * Memory agent LLM call time\n     * Impulses created\n     * Task success/failure\n     * Response quality (if measurable)\n\n3. Collect Baseline Metrics:\n   - Total turns: 100\n   - Turns with LLM: 100 (100%)\n   - Avg time per turn (memory agent)\n   - Success rate\n   - Impulse count per turn\n\n4. Save Baseline Report:\n   - File: test-results/learning-baseline.json\n   - Include: all metrics, per-turn data, summary stats\n\nOutput: Baseline metrics JSON file for comparison.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/learning-baseline.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "run-learning-tests",
+      "subagent": "general",
+      "description": "Run tests WITH learning enabled to measure improvement",
+      "dependencies": [
+        "run-baseline-tests"
+      ],
+      "prompt": {
+        "template": "Run tests with learning enabled:\n\n1. Enable Learning System:\n   - Set environment variable: IMPULSE_LEARNING_ENABLED=true\n   - Verify skip logic active\n\n2. Run Test Session (Same Inputs as Baseline):\n   - Execute 100-turn test session\n   - Use EXACT same user messages as baseline\n   - Track per turn:\n     * Skipped or LLM?\n     * Skip reason (if skipped)\n     * Pattern used (if pattern match)\n     * Time taken\n     * Impulses created\n     * Task success/failure\n\n3. Collect Learning Metrics:\n   - Total turns: 100\n   - Turns with LLM: X\n   - Turns skipped: Y\n   - Skip rate: Y / 100 (target: 60-80%)\n   - Avg time when LLM: Z1\n   - Avg time when skipped: Z2\n   - Time savings: (Z1 - Z2) * Y\n   - Success rate when LLM: S1\n   - Success rate when skipped: S2\n   - Quality delta: S2 - S1 (target: >= 0)\n\n4. Breakdown by Skip Reason:\n   - Trivial messages: count, success rate\n   - Continuations: count, success rate\n   - Pattern match: count, success rate, avg confidence\n   - Activity templates: count, success rate\n\n5. Save Learning Report:\n   - File: test-results/learning-enabled.json\n   - Include: all metrics, per-turn data, breakdown\n\nOutput: Learning metrics JSON file.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/learning-enabled.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-pattern-utilization",
+      "subagent": "general",
+      "description": "Analyze pattern library: coverage, effectiveness, and utilization",
+      "dependencies": [
+        "run-learning-tests"
+      ],
+      "prompt": {
+        "template": "Analyze pattern library:\n\n1. Query Pattern Library:\n   - Total patterns learned: count\n   - Patterns used at least once: count\n   - Pattern utilization: used / total (target: >80%)\n\n2. Per-Pattern Analysis:\n   - For each pattern:\n     * Pattern template\n     * Observation count\n     * Success rate\n     * Times used in test\n     * Avg response time\n   - Sort by success rate DESC\n\n3. Pattern Coverage Analysis:\n   - Intent types covered: code_fix, feature_request, etc.\n   - Intent types NOT covered\n   - Coverage gaps: what patterns are missing?\n\n4. Pattern Quality Analysis:\n   - High performers (success rate > 90%): count\n   - Medium performers (70-90%): count\n   - Low performers (< 70%): count\n   - Unreliable patterns (marked for pruning): count\n\n5. Recommendations:\n   - Which patterns to promote (high success, high usage)\n   - Which patterns to investigate (low success)\n   - Which patterns to prune (unreliable)\n   - What new patterns to capture (coverage gaps)\n\nOutput: Pattern analysis report (Markdown).",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "compare-baseline-vs-learning",
+      "subagent": "general",
+      "description": "Compare baseline and learning results to quantify improvement",
+      "dependencies": [
+        "run-baseline-tests",
+        "run-learning-tests",
+        "analyze-pattern-utilization"
+      ],
+      "prompt": {
+        "template": "Compare baseline vs learning results:\n\n1. Load Reports:\n   - Baseline: test-results/learning-baseline.json\n   - Learning: test-results/learning-enabled.json\n\n2. Compute Improvements:\n   - Skip rate: (baseline: 0%, learning: Y%)\n   - Improvement: Y% skip rate achieved\n   \n   - Avg time (baseline: T1, learning: T2)\n   - Time savings per turn: T1 - T2\n   - Total time savings: (T1 - T2) * 100 turns\n   - Percentage improvement: ((T1 - T2) / T1) * 100%\n   \n   - Success rate (baseline: S1, learning: S2)\n   - Quality delta: S2 - S1\n   - Quality maintained: S2 >= S1 (pass/fail)\n\n3. Statistical Significance:\n   - Run t-test on success rates\n   - Run t-test on response times\n   - Report p-values and confidence intervals\n\n4. Skip Reason Effectiveness:\n   - For each skip reason:\n     * Count, percentage of total skips\n     * Success rate\n     * Avg time savings\n   - Rank by effectiveness\n\n5. Create Comparison Report:\n   - Summary table: baseline vs learning\n   - Improvement metrics\n   - Statistical significance\n   - Visual charts (ASCII art if possible)\n\nOutput: Comparison report (Markdown) with pass/fail verdict.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-effectiveness-report",
+      "subagent": "general",
+      "description": "Generate comprehensive effectiveness report with recommendations",
+      "dependencies": [
+        "compare-baseline-vs-learning"
+      ],
+      "prompt": {
+        "template": "Generate comprehensive effectiveness report:\n\n1. Executive Summary:\n   - Skip rate achieved: Y% (target: 60-80%)\n   - Quality maintained: Yes/No (S2 >= S1)\n   - Time savings: X ms per turn, Y% improvement\n   - Pattern utilization: Z% (target: >80%)\n   - Overall verdict: PASS/FAIL\n\n2. Detailed Metrics:\n   - All metrics from comparison\n   - Per-skip-reason breakdown\n   - Pattern library analysis\n   - Statistical significance results\n\n3. Success Criteria:\n   - ✅/❌ Skip rate: 60-80%\n   - ✅/❌ Quality maintained: skip success >= baseline success\n   - ✅/❌ Time savings: 85-90% reduction in memory agent overhead\n   - ✅/❌ Pattern coverage: >80% of intents covered\n\n4. Recommendations:\n   - If skip rate low: analyze why patterns not matching\n   - If quality degraded: investigate low-performing patterns\n   - If pattern utilization low: identify coverage gaps\n   - Next steps for improvement\n\n5. Deployment Decision:\n   - Ready for production: Yes/No\n   - If no: what needs to be fixed\n   - If yes: rollout plan (gradual, with monitoring)\n\nOutput: LEARNING_SYSTEM_EFFECTIVENESS_REPORT.md with verdict and recommendations.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "LEARNING_SYSTEM_EFFECTIVENESS_REPORT.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "run-baseline-tests",
+      "subagent": "general",
+      "description": "Run baseline tests WITHOUT learning to establish control metrics",
+      "dependencies": [],
+      "prompt": {
+        "template": "Run baseline tests to establish control metrics:\n\n1. Disable Learning System:\n   - Set environment variable: IMPULSE_LEARNING_ENABLED=false\n   - Verify memory agent always runs LLM\n\n2. Run Test Session:\n   - Execute 100-turn test session\n   - Use diverse user messages (code_fix, feature_request, question, etc.)\n   - Track per turn:\n     * Memory agent LLM call time\n     * Impulses created\n     * Task success/failure\n     * Response quality (if measurable)\n\n3. Collect Baseline Metrics:\n   - Total turns: 100\n   - Turns with LLM: 100 (100%)\n   - Avg time per turn (memory agent)\n   - Success rate\n   - Impulse count per turn\n\n4. Save Baseline Report:\n   - File: test-results/learning-baseline.json\n   - Include: all metrics, per-turn data, summary stats\n\nOutput: Baseline metrics JSON file for comparison.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/learning-baseline.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "run-learning-tests",
+      "subagent": "general",
+      "description": "Run tests WITH learning enabled to measure improvement",
+      "dependencies": [
+        "run-baseline-tests"
+      ],
+      "prompt": {
+        "template": "Run tests with learning enabled:\n\n1. Enable Learning System:\n   - Set environment variable: IMPULSE_LEARNING_ENABLED=true\n   - Verify skip logic active\n\n2. Run Test Session (Same Inputs as Baseline):\n   - Execute 100-turn test session\n   - Use EXACT same user messages as baseline\n   - Track per turn:\n     * Skipped or LLM?\n     * Skip reason (if skipped)\n     * Pattern used (if pattern match)\n     * Time taken\n     * Impulses created\n     * Task success/failure\n\n3. Collect Learning Metrics:\n   - Total turns: 100\n   - Turns with LLM: X\n   - Turns skipped: Y\n   - Skip rate: Y / 100 (target: 60-80%)\n   - Avg time when LLM: Z1\n   - Avg time when skipped: Z2\n   - Time savings: (Z1 - Z2) * Y\n   - Success rate when LLM: S1\n   - Success rate when skipped: S2\n   - Quality delta: S2 - S1 (target: >= 0)\n\n4. Breakdown by Skip Reason:\n   - Trivial messages: count, success rate\n   - Continuations: count, success rate\n   - Pattern match: count, success rate, avg confidence\n   - Activity templates: count, success rate\n\n5. Save Learning Report:\n   - File: test-results/learning-enabled.json\n   - Include: all metrics, per-turn data, breakdown\n\nOutput: Learning metrics JSON file.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/learning-enabled.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-pattern-utilization",
+      "subagent": "general",
+      "description": "Analyze pattern library: coverage, effectiveness, and utilization",
+      "dependencies": [
+        "run-learning-tests"
+      ],
+      "prompt": {
+        "template": "Analyze pattern library:\n\n1. Query Pattern Library:\n   - Total patterns learned: count\n   - Patterns used at least once: count\n   - Pattern utilization: used / total (target: >80%)\n\n2. Per-Pattern Analysis:\n   - For each pattern:\n     * Pattern template\n     * Observation count\n     * Success rate\n     * Times used in test\n     * Avg response time\n   - Sort by success rate DESC\n\n3. Pattern Coverage Analysis:\n   - Intent types covered: code_fix, feature_request, etc.\n   - Intent types NOT covered\n   - Coverage gaps: what patterns are missing?\n\n4. Pattern Quality Analysis:\n   - High performers (success rate > 90%): count\n   - Medium performers (70-90%): count\n   - Low performers (< 70%): count\n   - Unreliable patterns (marked for pruning): count\n\n5. Recommendations:\n   - Which patterns to promote (high success, high usage)\n   - Which patterns to investigate (low success)\n   - Which patterns to prune (unreliable)\n   - What new patterns to capture (coverage gaps)\n\nOutput: Pattern analysis report (Markdown).",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "compare-baseline-vs-learning",
+      "subagent": "general",
+      "description": "Compare baseline and learning results to quantify improvement",
+      "dependencies": [
+        "run-baseline-tests",
+        "run-learning-tests",
+        "analyze-pattern-utilization"
+      ],
+      "prompt": {
+        "template": "Compare baseline vs learning results:\n\n1. Load Reports:\n   - Baseline: test-results/learning-baseline.json\n   - Learning: test-results/learning-enabled.json\n\n2. Compute Improvements:\n   - Skip rate: (baseline: 0%, learning: Y%)\n   - Improvement: Y% skip rate achieved\n   \n   - Avg time (baseline: T1, learning: T2)\n   - Time savings per turn: T1 - T2\n   - Total time savings: (T1 - T2) * 100 turns\n   - Percentage improvement: ((T1 - T2) / T1) * 100%\n   \n   - Success rate (baseline: S1, learning: S2)\n   - Quality delta: S2 - S1\n   - Quality maintained: S2 >= S1 (pass/fail)\n\n3. Statistical Significance:\n   - Run t-test on success rates\n   - Run t-test on response times\n   - Report p-values and confidence intervals\n\n4. Skip Reason Effectiveness:\n   - For each skip reason:\n     * Count, percentage of total skips\n     * Success rate\n     * Avg time savings\n   - Rank by effectiveness\n\n5. Create Comparison Report:\n   - Summary table: baseline vs learning\n   - Improvement metrics\n   - Statistical significance\n   - Visual charts (ASCII art if possible)\n\nOutput: Comparison report (Markdown) with pass/fail verdict.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-effectiveness-report",
+      "subagent": "general",
+      "description": "Generate comprehensive effectiveness report with recommendations",
+      "dependencies": [
+        "compare-baseline-vs-learning"
+      ],
+      "prompt": {
+        "template": "Generate comprehensive effectiveness report:\n\n1. Executive Summary:\n   - Skip rate achieved: Y% (target: 60-80%)\n   - Quality maintained: Yes/No (S2 >= S1)\n   - Time savings: X ms per turn, Y% improvement\n   - Pattern utilization: Z% (target: >80%)\n   - Overall verdict: PASS/FAIL\n\n2. Detailed Metrics:\n   - All metrics from comparison\n   - Per-skip-reason breakdown\n   - Pattern library analysis\n   - Statistical significance results\n\n3. Success Criteria:\n   - ✅/❌ Skip rate: 60-80%\n   - ✅/❌ Quality maintained: skip success >= baseline success\n   - ✅/❌ Time savings: 85-90% reduction in memory agent overhead\n   - ✅/❌ Pattern coverage: >80% of intents covered\n\n4. Recommendations:\n   - If skip rate low: analyze why patterns not matching\n   - If quality degraded: investigate low-performing patterns\n   - If pattern utilization low: identify coverage gaps\n   - Next steps for improvement\n\n5. Deployment Decision:\n   - Ready for production: Yes/No\n   - If no: what needs to be fixed\n   - If yes: rollout plan (gradual, with monitoring)\n\nOutput: LEARNING_SYSTEM_EFFECTIVENESS_REPORT.md with verdict and recommendations.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "LEARNING_SYSTEM_EFFECTIVENESS_REPORT.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-25T12:10:20.052Z",
+  "metadata": {}
+}
