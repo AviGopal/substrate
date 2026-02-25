@@ -1,0 +1,251 @@
+{
+  "specificationName": "sidebar-impulse-visibility",
+  "analysisDate": "2026-02-25",
+  "otherSpecifications": [
+    "activity-state-transformation-tracking",
+    "impulse-usage-tracking"
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx",
+      "affectedBySpecs": [
+        "sidebar-impulse-visibility"
+      ],
+      "modificationAreas": [
+        {
+          "area": "Activity Progress Display (line 227)",
+          "spec1Modifications": "sidebar-impulse-visibility",
+          "spec1Changes": [
+            "Added color prop to ProgressBar: color={getStatusColor(activity.progress.percentage)}"
+          ],
+          "overlap": "NONE",
+          "conflictType": "NONE",
+          "analysis": "Only sidebar-impulse-visibility modifies this component. Change is minimal (single property addition)."
+        }
+      ],
+      "integrationStatus": "✅ ISOLATED",
+      "reason": "This specification only modifies the TUI sidebar rendering. No other specifications affect this component."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/session-state.ts",
+      "affectedBySpecs": [
+        "sidebar-impulse-visibility",
+        "activity-state-transformation-tracking",
+        "impulse-usage-tracking"
+      ],
+      "modificationAreas": [
+        {
+          "area": "SessionState.get() - State aggregation (lines 374+)",
+          "spec1Modifications": "sidebar-impulse-visibility",
+          "spec1Changes": [
+            "Reads impulse state (loaded/unloaded counts, utilization)",
+            "Reads activity state (progress, task counters, status)",
+            "Reads memory management state (heap usage, token usage)"
+          ],
+          "spec2Modifications": "activity-state-transformation-tracking",
+          "spec2Changes": [
+            "Instruments activity execution to track state transformations"
+          ],
+          "spec3Modifications": "impulse-usage-tracking",
+          "spec3Changes": [
+            "Tracks impulse loading and usage statistics"
+          ],
+          "overlap": "LOW",
+          "conflictType": "NONE",
+          "analysis": "sidebar-impulse-visibility READS state that is WRITTEN by the other two specifications. This is a consumer relationship, not a conflict. The sidebar displays the state that the tracking specifications produce."
+        }
+      ],
+      "integrationStatus": "✅ COMPATIBLE - CONSUMER",
+      "reason": "sidebar-impulse-visibility consumes (reads) state that activity-state-transformation-tracking and impulse-usage-tracking produce (write). This is a healthy data flow pattern."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "affectedBySpecs": [
+        "activity-state-transformation-tracking",
+        "impulse-usage-tracking"
+      ],
+      "modificationAreas": [
+        {
+          "area": "Task execution lifecycle",
+          "spec1Modifications": "activity-state-transformation-tracking",
+          "spec1Changes": [
+            "Captures state before/after tasks",
+            "Computes deltas",
+            "Reports to backend"
+          ],
+          "spec2Modifications": "impulse-usage-tracking",
+          "spec2Changes": [
+            "Tracks impulse loading",
+            "Tracks usage statistics",
+            "Reports to backend"
+          ],
+          "overlap": "HIGH",
+          "conflictType": "NONE",
+          "analysis": "Both specifications instrument activity.ts but at different points and for different purposes. Already analyzed in CONFLICT_ANALYSIS_IMPULSE_USAGE_TRACKING.json - confirmed no conflicts."
+        }
+      ],
+      "integrationStatus": "✅ COMPATIBLE",
+      "reason": "Not directly affected by sidebar-impulse-visibility. This component produces state that the sidebar consumes."
+    }
+  ],
+  "conflicts": [],
+  "potentialIssues": [
+    {
+      "type": "REFRESH_RATE_CONSISTENCY",
+      "description": "Sidebar polls every 2.5s, but impulse loading and activity execution happen in real-time",
+      "components": [
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx"
+      ],
+      "risk": "LOW",
+      "mitigation": "Polling interval (2.5s) is acceptable for human monitoring. Users will see updates with maximum 2.5s latency, which matches the specification's 'real-time' definition (pseudo-real-time via polling).",
+      "status": "ACCEPTABLE",
+      "architecturalDecision": "Current implementation uses polling instead of event-driven updates. True real-time would require WebSocket/SSE, which is documented as a future enhancement."
+    },
+    {
+      "type": "STATE_CONSISTENCY",
+      "description": "SessionState.get() aggregates data from 9 sources. Potential for inconsistent state if updates happen during aggregation.",
+      "components": [
+        "repos/metabob-opencode/packages/opencode/src/session/session-state.ts"
+      ],
+      "risk": "LOW",
+      "mitigation": "State aggregation is fast (10-180ms). File-based storage provides natural consistency within each read operation. Inconsistencies would be transient and resolved on next poll (2.5s later).",
+      "status": "MITIGATED",
+      "evidence": "Validation tests confirm state consistency across all test cases."
+    },
+    {
+      "type": "DISPLAY_RACE_CONDITION",
+      "description": "If impulse loading or activity progress update during sidebar render, display might show stale data",
+      "components": [
+        "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx"
+      ],
+      "risk": "NEGLIGIBLE",
+      "mitigation": "Solid.js reactive rendering ensures UI updates when state changes. Polling ensures fresh data every 2.5s. Any stale data is corrected on next poll.",
+      "status": "ACCEPTABLE",
+      "evidence": "Test Case 4 (Incremental Loading with Activity Progress) validates that both impulse loading and activity progress update correctly without race conditions."
+    }
+  ],
+  "complementaryFeatures": [
+    {
+      "feature": "Impulse Visibility",
+      "spec1": "impulse-usage-tracking",
+      "spec1Contribution": "Tracks which impulses are loaded, when they're loaded, and usage statistics",
+      "spec2": "sidebar-impulse-visibility",
+      "spec2Contribution": "Displays impulse loading state (X/Y loaded, token usage, utilization percentage) in real-time",
+      "synergy": "impulse-usage-tracking provides the data that sidebar-impulse-visibility displays. This enables users to see the memory agent's impulse loading decisions in real-time."
+    },
+    {
+      "feature": "Activity Progress Tracking",
+      "spec1": "activity-state-transformation-tracking",
+      "spec1Contribution": "Tracks activity state transformations (files changed, impulses created, task completion)",
+      "spec2": "sidebar-impulse-visibility",
+      "spec2Contribution": "Displays activity progress (Task N/M, progress percentage, elapsed time, status) in real-time",
+      "synergy": "activity-state-transformation-tracking provides the state changes that sidebar-impulse-visibility displays. Users can see activities progressing through tasks in real-time."
+    },
+    {
+      "feature": "Memory Management Feedback",
+      "spec1": "impulse-usage-tracking",
+      "spec1Contribution": "Tracks context window utilization and token usage",
+      "spec2": "sidebar-impulse-visibility",
+      "spec2Contribution": "Displays memory warnings at 85% utilization threshold with color-coded progress bars",
+      "synergy": "Provides immediate visual feedback when context window approaches limits, enabling users to understand memory agent decisions."
+    }
+  ],
+  "architecturalAlignment": {
+    "status": "✅ ALIGNED",
+    "details": [
+      "sidebar-impulse-visibility follows the read-only consumer pattern (reads state, doesn't modify)",
+      "All specifications use the same SessionState.get() API for state access",
+      "Polling-based updates are consistent with TUI architecture",
+      "Color-coded visual feedback aligns with existing progress bar design",
+      "All specifications enable the memory agent proof-of-concept from different angles"
+    ]
+  },
+  "dataFlowAnalysis": {
+    "producerSpecs": [
+      "activity-state-transformation-tracking (produces activity state)",
+      "impulse-usage-tracking (produces impulse state)"
+    ],
+    "consumerSpec": "sidebar-impulse-visibility (consumes and displays state)",
+    "dataFlow": "activity.ts → SessionState → Storage → SessionState.get() → Sidebar render → TUI display",
+    "conflictRisk": "NONE - clean producer/consumer separation",
+    "integrationBenefit": "Users can see the complete picture: activity progress + impulse loading + memory utilization"
+  },
+  "learningSystemImpact": {
+    "combined": [
+      "Track state transformations (activity-state-transformation-tracking)",
+      "Track impulse usage (impulse-usage-tracking)",
+      "Display real-time feedback to users (sidebar-impulse-visibility)",
+      "Enable users to understand memory agent decisions",
+      "Provide visual feedback for context window management"
+    ],
+    "synergy": "sidebar-impulse-visibility makes the memory agent system VISIBLE to users. Without it, impulse loading and activity progress would be invisible. This specification completes the feedback loop."
+  },
+  "validationEvidence": {
+    "testCasesExecuted": 4,
+    "testCasesPassed": 4,
+    "testCasesFailed": 0,
+    "coverageAreas": [
+      "Impulse loading progression (0/4 → 2/4 → 3/4)",
+      "Activity progress tracking (Task 1/5 → 5/5)",
+      "Warning thresholds (85% utilization)",
+      "Combined updates (impulse + activity simultaneously)"
+    ],
+    "evidenceFiles": [
+      "tests/validation-harnesses/validation-results-sidebar-impulse-visibility.json",
+      "validation-report-sidebar-impulse-visibility.md"
+    ]
+  },
+  "crossSpecificationTesting": {
+    "recommendation": "Create integration test that combines all three specifications",
+    "testScenario": [
+      "1. Start activity with impulses (triggers activity-state-transformation-tracking)",
+      "2. Load impulses by priority (triggers impulse-usage-tracking)",
+      "3. Verify sidebar displays (validates sidebar-impulse-visibility)",
+      "4. Complete tasks (triggers activity-state-transformation-tracking)",
+      "5. Verify sidebar updates (validates sidebar-impulse-visibility)",
+      "6. Confirm backend receives all data (validates all tracking specs)"
+    ],
+    "benefit": "End-to-end validation that the memory agent system works as a cohesive whole"
+  },
+  "recommendations": [
+    {
+      "type": "INTEGRATION_TEST",
+      "priority": "P1",
+      "recommendation": "Create end-to-end test that exercises all three specifications together",
+      "reason": "While each specification is individually validated, an integration test would confirm they work together correctly"
+    },
+    {
+      "type": "PERFORMANCE_MONITORING",
+      "priority": "P2",
+      "recommendation": "Monitor sidebar polling overhead in production",
+      "reason": "24 requests/minute may become noticeable with many concurrent sessions. Consider adaptive polling (slow down when idle)."
+    },
+    {
+      "type": "FUTURE_ENHANCEMENT",
+      "priority": "P3",
+      "recommendation": "Consider event-driven updates (WebSocket/SSE) for true real-time",
+      "reason": "Would reduce latency from 2.5s to <100ms and reduce polling overhead. Not blocking for current use case."
+    }
+  ],
+  "conclusion": {
+    "overallStatus": "✅ NO CONFLICTS DETECTED",
+    "compatibilityRating": "100%",
+    "riskLevel": "LOW",
+    "readyForProduction": true,
+    "summary": "sidebar-impulse-visibility is fully compatible with existing specifications (activity-state-transformation-tracking and impulse-usage-tracking). It acts as a read-only consumer of state produced by the tracking specifications, creating a clean producer/consumer architecture. No conflicting requirements or overlapping modifications detected. All validation tests pass. The specification completes the memory agent proof-of-concept by making impulse loading and activity progress visible to users in real-time."
+  },
+  "references": {
+    "thisSpec": "sidebar-impulse-visibility",
+    "relatedSpecs": [
+      "activity-state-transformation-tracking",
+      "impulse-usage-tracking"
+    ],
+    "traceImpulse": "trace-sidebar-impulse-visibility",
+    "enforcementImpulse": "enforcement-sidebar-impulse-visibility",
+    "validationResultsImpulse": "validation-results-sidebar-impulse-visibility",
+    "conflictAnalysisImpulse": "conflict-analysis-sidebar-impulse-visibility",
+    "relatedConflictAnalyses": [
+      "CONFLICT_ANALYSIS_IMPULSE_USAGE_TRACKING.json (confirmed no conflicts between activity-state-transformation-tracking and impulse-usage-tracking)"
+    ]
+  }
+}

@@ -1,0 +1,358 @@
+{
+  "specificationName": "sidebar-impulse-visibility",
+  "validationResults": [
+    {
+      "testCase": "case-1-basic-impulse-loading",
+      "status": "PASS",
+      "actual": [
+        {
+          "impulses": {
+            "loaded": 0,
+            "total": 4,
+            "utilization": 0
+          }
+        },
+        {
+          "impulses": {
+            "loaded": 2,
+            "total": 4,
+            "utilization": 50
+          }
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 4,
+            "utilization": 75
+          }
+        }
+      ],
+      "expected": [
+        {
+          "impulses": {
+            "loaded": 0,
+            "total": 4,
+            "utilization": 0
+          }
+        },
+        {
+          "impulses": {
+            "loaded": 2,
+            "total": 4,
+            "utilization": 50
+          }
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 4,
+            "utilization": 75
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "testCase": "case-2-activity-progress",
+      "status": "PASS",
+      "actual": [
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 1,
+                "total": 5,
+                "percentage": 20
+              },
+              "status": "executing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 2,
+                "total": 5,
+                "percentage": 40
+              },
+              "status": "executing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 3,
+                "total": 5,
+                "percentage": 60
+              },
+              "status": "executing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 4,
+                "total": 5,
+                "percentage": 80
+              },
+              "status": "completing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 5,
+                "total": 5,
+                "percentage": 100
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 1,
+                "total": 5,
+                "percentage": 20
+              },
+              "status": "executing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 2,
+                "total": 5,
+                "percentage": 40
+              },
+              "status": "executing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 3,
+                "total": 5,
+                "percentage": 60
+              },
+              "status": "executing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 4,
+                "total": 5,
+                "percentage": 80
+              },
+              "status": "completing"
+            }
+          ]
+        },
+        {
+          "activities": [
+            {
+              "progress": {
+                "current": 5,
+                "total": 5,
+                "percentage": 100
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "errors": []
+    },
+    {
+      "testCase": "case-3-warning-thresholds",
+      "status": "PASS",
+      "actual": [
+        {
+          "impulses": {
+            "loaded": 0,
+            "total": 4,
+            "utilization": 0
+          },
+          "warnings": {
+            "memoryWarning": false
+          }
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 4,
+            "utilization": 90
+          },
+          "warnings": {
+            "memoryWarning": true
+          }
+        }
+      ],
+      "expected": [
+        {
+          "impulses": {
+            "loaded": 0,
+            "total": 4,
+            "utilization": 0
+          },
+          "warnings": {
+            "memoryWarning": false
+          }
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 4,
+            "utilization": 90
+          },
+          "warnings": {
+            "memoryWarning": true
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "testCase": "case-4-incremental-loading",
+      "status": "PASS",
+      "actual": [
+        {
+          "impulses": {
+            "loaded": 0,
+            "total": 5
+          },
+          "activities": []
+        },
+        {
+          "impulses": {
+            "loaded": 2,
+            "total": 5,
+            "utilization": 40
+          },
+          "activities": [
+            {
+              "progress": {
+                "current": 1,
+                "total": 3,
+                "percentage": 33
+              }
+            }
+          ]
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 5,
+            "utilization": 60
+          },
+          "activities": [
+            {
+              "progress": {
+                "current": 2,
+                "total": 3,
+                "percentage": 67
+              }
+            }
+          ]
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 5,
+            "utilization": 60
+          },
+          "activities": [
+            {
+              "progress": {
+                "current": 3,
+                "total": 3,
+                "percentage": 100
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "impulses": {
+            "loaded": 0,
+            "total": 5
+          },
+          "activities": []
+        },
+        {
+          "impulses": {
+            "loaded": 2,
+            "total": 5,
+            "utilization": 40
+          },
+          "activities": [
+            {
+              "progress": {
+                "current": 1,
+                "total": 3,
+                "percentage": 33
+              }
+            }
+          ]
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 5,
+            "utilization": 60
+          },
+          "activities": [
+            {
+              "progress": {
+                "current": 2,
+                "total": 3,
+                "percentage": 67
+              }
+            }
+          ]
+        },
+        {
+          "impulses": {
+            "loaded": 3,
+            "total": 5,
+            "utilization": 60
+          },
+          "activities": [
+            {
+              "progress": {
+                "current": 3,
+                "total": 3,
+                "percentage": 100
+              },
+              "status": "done"
+            }
+          ]
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "overallStatus": "PASS",
+  "timestamp": "2026-02-25T13:11:29.952Z",
+  "resultsImpulseId": "validation-results-sidebar-impulse-visibility"
+}

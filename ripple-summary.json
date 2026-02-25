@@ -1,0 +1,58 @@
+{
+  "specificationName": "sidebar-impulse-visibility",
+  "componentsUpdated": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx",
+      "component": "Activity Progress Display (line 227)",
+      "changeMade": "Added color prop to ProgressBar: color={getStatusColor(activity.progress.percentage)}",
+      "reason": "Enforce color-coded progress bars specification requirement (green <60%, yellow 60-85%, red >=85%)"
+    }
+  ],
+  "rippleChangesRequired": false,
+  "rippleReason": "Change is isolated to sidebar rendering component. No other components depend on this implementation detail. Producer/consumer architecture preserved.",
+  "entryPointsAnalyzed": 2,
+  "transformationsAnalyzed": 2,
+  "validationsAnalyzed": 3,
+  "exitPointsAnalyzed": 1,
+  "allConsistent": true,
+  "validationStatus": {
+    "thisSpec": "PASS",
+    "testCases": 4,
+    "passed": 4,
+    "failed": 0,
+    "conflictingSpecs": []
+  },
+  "relatedSpecsStatus": {
+    "activity-state-transformation-tracking": {
+      "status": "NOT_RE_RUN",
+      "reason": "sidebar-impulse-visibility is read-only consumer - does not modify shared components"
+    },
+    "impulse-usage-tracking": {
+      "status": "NOT_RE_RUN",
+      "reason": "sidebar-impulse-visibility is read-only consumer - does not modify shared components"
+    }
+  },
+  "functionalStateTransition": {
+    "before": "Specification partially enforced (6/7 requirements met). Activity progress bar lacked color coding.",
+    "after": "Specification fully enforced (7/7 requirements met). All progress bars now color-coded consistently.",
+    "impact": "Users see consistent color-coded progress feedback across all resource utilization indicators."
+  },
+  "blastRadius": {
+    "level": "MINIMAL",
+    "directlyAffected": 1,
+    "indirectlyAffected": 0,
+    "notAffected": "All other components and specifications"
+  },
+  "performanceImpact": "NEGLIGIBLE - Single additional prop, no computational overhead",
+  "regressionRisk": "NEGLIGIBLE - Additive change, component already supports color prop",
+  "deploymentReady": true,
+  "deploymentChecklist": [
+    "✅ All validation tests pass",
+    "✅ No conflicts detected",
+    "✅ No breaking changes",
+    "✅ Minimal blast radius",
+    "✅ Performance impact negligible",
+    "✅ Producer/consumer architecture intact"
+  ],
+  "rippleImpulseId": "ripple-sidebar-impulse-visibility"
+}
