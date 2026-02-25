@@ -1,0 +1,375 @@
+{
+  "activity_id": "devctl-bring-down",
+  "name": "DevCtl Bring Down",
+  "description": "Stop the DevBob multi-vessel development environment cleanly using devctl. Stops vessel containers gracefully, stops backend services, validates shutdown, and provides final status report. Deterministic shell-only activity demonstrating non-LLM automation.",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "check-current-status",
+      "subagent": "general",
+      "description": "Check current status of running services",
+      "dependencies": [],
+      "prompt": {
+        "template": "## Task: Check Current Status Before Shutdown\n\n### Objective\nDocument what's currently running before we shut it down.\n\n### Steps\n\n1. **Check Vessel Containers**\n```bash\necho \"=== Current Vessel Status ===\"\n{{devctlPath}} status\n\necho \"\\n=== Running Vessels ===\"\nrunning=$(docker ps --format '{{.Names}}' | grep '^devbob-' | wc -l)\necho \"Vessels currently running: $running\"\n```\n\n2. **Check Backend Services**\n```bash\necho \"\\n=== Backend Services ===\"\nfor service in metabob-redis metabob-surreal metabob-rpc-api; do\n  if docker ps --format '{{.Names}}' | grep -q \"$service\"; then\n    echo \"✓ $service: running\"\n  else\n    echo \"- $service: not running\"\n  fi\ndone\n```\n\n3. **Summary**\n```bash\necho \"\\n=== Shutdown Summary ===\"\nif [ $running -eq 0 ]; then\n  echo \"⚠️ No vessels are running\"\nelse\n  echo \"Will stop $running vessel(s) and 3 backend service(s)\"\nfi\n```\n\n### Output\nCreate a clear report of what will be shut down.",
+        "variables": [
+          {
+            "name": "devctlPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to devctl script",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "Current Vessel Status",
+            "description": ""
+          },
+          {
+            "pattern": "Backend Services",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "stop-vessel-containers",
+      "subagent": "general",
+      "description": "Stop all DevBob vessel containers gracefully",
+      "dependencies": [
+        "check-current-status"
+      ],
+      "prompt": {
+        "template": "## Task: Stop Vessel Containers\n\n### Objective\nGracefully stop all DevBob vessel containers.\n\n### Steps\n\n1. **Stop All Vessels**\n```bash\necho \"Stopping all DevBob vessels...\"\n{{devctlPath}} stop\n\necho \"\\nWaiting for containers to stop (5 seconds)...\"\nsleep 5\n```\n\n2. **Verify Vessels Stopped**\n```bash\necho \"\\n=== Vessel Shutdown Status ===\"\nrunning=$(docker ps --format '{{.Names}}' | grep '^devbob-' | wc -l)\n\nif [ $running -eq 0 ]; then\n  echo \"✅ All vessels stopped successfully\"\nelse\n  echo \"⚠️ $running vessel(s) still running:\"\n  docker ps --format '{{.Names}}' | grep '^devbob-'\nfi\n```\n\n3. **Check for Zombie Containers**\n```bash\necho \"\\n=== Checking for Exited Containers ===\"\nexited=$(docker ps -a --filter \"name=devbob-\" --filter \"status=exited\" --format '{{.Names}}' | wc -l)\n\nif [ $exited -gt 0 ]; then\n  echo \"Found $exited exited container(s):\"\n  docker ps -a --filter \"name=devbob-\" --filter \"status=exited\" --format '  - {{.Names}} ({{.Status}})'\nelse\n  echo \"No exited containers\"\nfi\n```\n\n4. **Force Stop if Needed**\n```bash\nif [ $running -gt 0 ]; then\n  echo \"\\n⚠️ Force stopping remaining vessels...\"\n  docker ps --format '{{.Names}}' | grep '^devbob-' | xargs -r docker stop -t 10\n  echo \"✓ Force stop complete\"\nfi\n```\n\n### Summary\nProvide clear status of vessel shutdown.",
+        "variables": [
+          {
+            "name": "devctlPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to devctl script",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "Vessel Shutdown Status",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "stop-backend-services",
+      "subagent": "general",
+      "description": "Stop backend services (Redis, SurrealDB, API)",
+      "dependencies": [
+        "stop-vessel-containers"
+      ],
+      "prompt": {
+        "template": "## Task: Stop Backend Services\n\n### Objective\nStop backend services (Redis, SurrealDB, API server) cleanly.\n\n### Steps\n\n1. **Stop Backend via Docker Compose**\n```bash\necho \"Stopping backend services...\"\ncd {{projectRoot}}\ndocker-compose --profile stable down\n\necho \"\\nWaiting for services to stop (5 seconds)...\"\nsleep 5\n```\n\n2. **Verify Backend Stopped**\n```bash\necho \"\\n=== Backend Shutdown Status ===\"\nfor service in metabob-redis metabob-surreal metabob-rpc-api metabob-celery-worker; do\n  if docker ps --format '{{.Names}}' | grep -q \"$service\"; then\n    echo \"⚠️ $service: still running\"\n  else\n    echo \"✅ $service: stopped\"\n  fi\ndone\n```\n\n3. **Check Networks**\n```bash\necho \"\\n=== Network Status ===\"\nfor network in metabob-network devbob-network; do\n  # Check if network has any containers\n  containers=$(docker network inspect $network --format '{{len .Containers}}' 2>/dev/null || echo \"0\")\n  if [ \"$containers\" = \"0\" ]; then\n    echo \"✓ $network: no containers attached\"\n  else\n    echo \"⚠️ $network: $containers container(s) still attached\"\n  fi\ndone\n```\n\n4. **Optional Cleanup (commented out)**\n```bash\n# Uncomment to remove networks:\n# docker network rm metabob-network devbob-network 2>/dev/null || true\n\n# Uncomment to remove volumes:\n# docker volume ls | grep metabob | awk '{print $2}' | xargs docker volume rm 2>/dev/null || true\n```\n\n### Summary\nConfirm all backend services are stopped.",
+        "variables": [
+          {
+            "name": "projectRoot",
+            "type": "string",
+            "required": false,
+            "description": "Project root directory",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "Backend Shutdown Status",
+            "description": ""
+          },
+          {
+            "pattern": "Network Status",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-shutdown-report",
+      "subagent": "general",
+      "description": "Generate comprehensive shutdown report",
+      "dependencies": [
+        "stop-backend-services"
+      ],
+      "prompt": {
+        "template": "## Task: Generate Shutdown Report\n\n### Objective\nProvide a clear, comprehensive report on the shutdown process.\n\n### Report Steps\n\n1. **Final Container Check**\n```bash\necho \"\\n=== Final Container Status ===\"\ndevbob_running=$(docker ps --format '{{.Names}}' | grep '^devbob-' | wc -l)\nbackend_running=$(docker ps --format '{{.Names}}' | grep 'metabob-' | wc -l)\n\ntotal_running=$((devbob_running + backend_running))\n\nif [ $total_running -eq 0 ]; then\n  shutdown_status=\"✅ Complete - All services stopped\"\n  status_icon=\"✅\"\nelse\n  shutdown_status=\"⚠️ Partial - $total_running container(s) still running\"\n  status_icon=\"⚠️\"\nfi\n```\n\n2. **Check for Artifacts**\n```bash\necho \"\\n=== Cleanup Status ===\"\n\n# Exited containers\nexited=$(docker ps -a --filter \"name=devbob-\" --filter \"status=exited\" --format '{{.Names}}' | wc -l)\nif [ $exited -gt 0 ]; then\n  echo \"⚠️ $exited exited container(s) remain (can be removed with 'docker rm')\"\nelse\n  echo \"✓ No exited containers\"\nfi\n\n# Volumes\nvolumes=$(docker volume ls | grep -c metabob || echo \"0\")\nif [ $volumes -gt 0 ]; then\n  echo \"ℹ️ $volumes volume(s) preserved (data retained)\"\nelse\n  echo \"✓ No volumes\"\nfi\n\n# Networks\nnetworks=$(docker network ls | grep -c \"metabob\\|devbob\" || echo \"0\")\necho \"ℹ️ $networks network(s) preserved (can reuse on next start)\"\n```\n\n3. **Generate Markdown Report**\n\n```markdown\n# DevBob Environment Shutdown Report\n\n## $status_icon Overall Status\n**$shutdown_status**\n\n---\n\n## 🚢 Vessel Containers\n**Status:** $devbob_running running (expected: 0)\n\nAll vessel containers stopped:\n- ✓ devbob-rpc-api\n- ✓ devbob-cli  \n- ✓ devbob-opencode\n- ✓ devbob-dashboard\n- ✓ devbob-cpg\n- ✓ devbob-platform\n\n## 🗄️ Backend Services\n**Status:** $backend_running running (expected: 0)\n\nAll backend services stopped:\n- ✓ metabob-redis\n- ✓ metabob-surreal\n- ✓ metabob-rpc-api\n- ✓ metabob-celery-worker\n\n## 🧹 Cleanup Status\n\n| Resource | Count | Status |\n|----------|-------|--------|\n| Exited containers | $exited | To remove: `docker container prune` |\n| Volumes | $volumes | Preserved (data retained) |\n| Networks | $networks | Preserved (ready for reuse) |\n\n## 📊 Summary\n\n- **Shutdown time:** $(date '+%Y-%m-%d %H:%M:%S')\n- **Vessels stopped:** 6 / 6\n- **Backend services stopped:** 4 / 4  \n- **Total containers:** $total_running running, $exited exited\n\n## 🔄 Next Steps\n\n**To start again:**\n```bash\n{{devctlPath}} start\n# or\nopencode activity devctl-bring-up\n```\n\n**To clean up completely:**\n```bash\n# Remove exited containers\ndocker container prune -f\n\n# Remove volumes (⚠️ deletes data)\ndocker volume ls | grep metabob | awk '{print $2}' | xargs docker volume rm\n\n# Remove networks\ndocker network rm metabob-network devbob-network\n```\n\n**To check status:**\n```bash\ndocker ps -a | grep -E 'devbob-|metabob-'\n```\n\n---\n\n*Report generated by devctl-bring-down activity*\n```\n\nPrint the formatted report.\n```\n\n### Final Output\nDisplay the complete shutdown report.",
+        "variables": [
+          {
+            "name": "devctlPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to devctl script",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "DevBob Environment Shutdown Report",
+            "description": ""
+          },
+          {
+            "pattern": "Overall Status",
+            "description": ""
+          },
+          {
+            "pattern": "Vessel Containers",
+            "description": ""
+          },
+          {
+            "pattern": "Backend Services",
+            "description": ""
+          },
+          {
+            "pattern": "Next Steps",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "check-current-status",
+      "subagent": "general",
+      "description": "Check current status of running services",
+      "dependencies": [],
+      "prompt": {
+        "template": "## Task: Check Current Status Before Shutdown\n\n### Objective\nDocument what's currently running before we shut it down.\n\n### Steps\n\n1. **Check Vessel Containers**\n```bash\necho \"=== Current Vessel Status ===\"\n{{devctlPath}} status\n\necho \"\\n=== Running Vessels ===\"\nrunning=$(docker ps --format '{{.Names}}' | grep '^devbob-' | wc -l)\necho \"Vessels currently running: $running\"\n```\n\n2. **Check Backend Services**\n```bash\necho \"\\n=== Backend Services ===\"\nfor service in metabob-redis metabob-surreal metabob-rpc-api; do\n  if docker ps --format '{{.Names}}' | grep -q \"$service\"; then\n    echo \"✓ $service: running\"\n  else\n    echo \"- $service: not running\"\n  fi\ndone\n```\n\n3. **Summary**\n```bash\necho \"\\n=== Shutdown Summary ===\"\nif [ $running -eq 0 ]; then\n  echo \"⚠️ No vessels are running\"\nelse\n  echo \"Will stop $running vessel(s) and 3 backend service(s)\"\nfi\n```\n\n### Output\nCreate a clear report of what will be shut down.",
+        "variables": [
+          {
+            "name": "devctlPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to devctl script",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "Current Vessel Status",
+            "description": ""
+          },
+          {
+            "pattern": "Backend Services",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "stop-vessel-containers",
+      "subagent": "general",
+      "description": "Stop all DevBob vessel containers gracefully",
+      "dependencies": [
+        "check-current-status"
+      ],
+      "prompt": {
+        "template": "## Task: Stop Vessel Containers\n\n### Objective\nGracefully stop all DevBob vessel containers.\n\n### Steps\n\n1. **Stop All Vessels**\n```bash\necho \"Stopping all DevBob vessels...\"\n{{devctlPath}} stop\n\necho \"\\nWaiting for containers to stop (5 seconds)...\"\nsleep 5\n```\n\n2. **Verify Vessels Stopped**\n```bash\necho \"\\n=== Vessel Shutdown Status ===\"\nrunning=$(docker ps --format '{{.Names}}' | grep '^devbob-' | wc -l)\n\nif [ $running -eq 0 ]; then\n  echo \"✅ All vessels stopped successfully\"\nelse\n  echo \"⚠️ $running vessel(s) still running:\"\n  docker ps --format '{{.Names}}' | grep '^devbob-'\nfi\n```\n\n3. **Check for Zombie Containers**\n```bash\necho \"\\n=== Checking for Exited Containers ===\"\nexited=$(docker ps -a --filter \"name=devbob-\" --filter \"status=exited\" --format '{{.Names}}' | wc -l)\n\nif [ $exited -gt 0 ]; then\n  echo \"Found $exited exited container(s):\"\n  docker ps -a --filter \"name=devbob-\" --filter \"status=exited\" --format '  - {{.Names}} ({{.Status}})'\nelse\n  echo \"No exited containers\"\nfi\n```\n\n4. **Force Stop if Needed**\n```bash\nif [ $running -gt 0 ]; then\n  echo \"\\n⚠️ Force stopping remaining vessels...\"\n  docker ps --format '{{.Names}}' | grep '^devbob-' | xargs -r docker stop -t 10\n  echo \"✓ Force stop complete\"\nfi\n```\n\n### Summary\nProvide clear status of vessel shutdown.",
+        "variables": [
+          {
+            "name": "devctlPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to devctl script",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "Vessel Shutdown Status",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "stop-backend-services",
+      "subagent": "general",
+      "description": "Stop backend services (Redis, SurrealDB, API)",
+      "dependencies": [
+        "stop-vessel-containers"
+      ],
+      "prompt": {
+        "template": "## Task: Stop Backend Services\n\n### Objective\nStop backend services (Redis, SurrealDB, API server) cleanly.\n\n### Steps\n\n1. **Stop Backend via Docker Compose**\n```bash\necho \"Stopping backend services...\"\ncd {{projectRoot}}\ndocker-compose --profile stable down\n\necho \"\\nWaiting for services to stop (5 seconds)...\"\nsleep 5\n```\n\n2. **Verify Backend Stopped**\n```bash\necho \"\\n=== Backend Shutdown Status ===\"\nfor service in metabob-redis metabob-surreal metabob-rpc-api metabob-celery-worker; do\n  if docker ps --format '{{.Names}}' | grep -q \"$service\"; then\n    echo \"⚠️ $service: still running\"\n  else\n    echo \"✅ $service: stopped\"\n  fi\ndone\n```\n\n3. **Check Networks**\n```bash\necho \"\\n=== Network Status ===\"\nfor network in metabob-network devbob-network; do\n  # Check if network has any containers\n  containers=$(docker network inspect $network --format '{{len .Containers}}' 2>/dev/null || echo \"0\")\n  if [ \"$containers\" = \"0\" ]; then\n    echo \"✓ $network: no containers attached\"\n  else\n    echo \"⚠️ $network: $containers container(s) still attached\"\n  fi\ndone\n```\n\n4. **Optional Cleanup (commented out)**\n```bash\n# Uncomment to remove networks:\n# docker network rm metabob-network devbob-network 2>/dev/null || true\n\n# Uncomment to remove volumes:\n# docker volume ls | grep metabob | awk '{print $2}' | xargs docker volume rm 2>/dev/null || true\n```\n\n### Summary\nConfirm all backend services are stopped.",
+        "variables": [
+          {
+            "name": "projectRoot",
+            "type": "string",
+            "required": false,
+            "description": "Project root directory",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "Backend Shutdown Status",
+            "description": ""
+          },
+          {
+            "pattern": "Network Status",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-shutdown-report",
+      "subagent": "general",
+      "description": "Generate comprehensive shutdown report",
+      "dependencies": [
+        "stop-backend-services"
+      ],
+      "prompt": {
+        "template": "## Task: Generate Shutdown Report\n\n### Objective\nProvide a clear, comprehensive report on the shutdown process.\n\n### Report Steps\n\n1. **Final Container Check**\n```bash\necho \"\\n=== Final Container Status ===\"\ndevbob_running=$(docker ps --format '{{.Names}}' | grep '^devbob-' | wc -l)\nbackend_running=$(docker ps --format '{{.Names}}' | grep 'metabob-' | wc -l)\n\ntotal_running=$((devbob_running + backend_running))\n\nif [ $total_running -eq 0 ]; then\n  shutdown_status=\"✅ Complete - All services stopped\"\n  status_icon=\"✅\"\nelse\n  shutdown_status=\"⚠️ Partial - $total_running container(s) still running\"\n  status_icon=\"⚠️\"\nfi\n```\n\n2. **Check for Artifacts**\n```bash\necho \"\\n=== Cleanup Status ===\"\n\n# Exited containers\nexited=$(docker ps -a --filter \"name=devbob-\" --filter \"status=exited\" --format '{{.Names}}' | wc -l)\nif [ $exited -gt 0 ]; then\n  echo \"⚠️ $exited exited container(s) remain (can be removed with 'docker rm')\"\nelse\n  echo \"✓ No exited containers\"\nfi\n\n# Volumes\nvolumes=$(docker volume ls | grep -c metabob || echo \"0\")\nif [ $volumes -gt 0 ]; then\n  echo \"ℹ️ $volumes volume(s) preserved (data retained)\"\nelse\n  echo \"✓ No volumes\"\nfi\n\n# Networks\nnetworks=$(docker network ls | grep -c \"metabob\\|devbob\" || echo \"0\")\necho \"ℹ️ $networks network(s) preserved (can reuse on next start)\"\n```\n\n3. **Generate Markdown Report**\n\n```markdown\n# DevBob Environment Shutdown Report\n\n## $status_icon Overall Status\n**$shutdown_status**\n\n---\n\n## 🚢 Vessel Containers\n**Status:** $devbob_running running (expected: 0)\n\nAll vessel containers stopped:\n- ✓ devbob-rpc-api\n- ✓ devbob-cli  \n- ✓ devbob-opencode\n- ✓ devbob-dashboard\n- ✓ devbob-cpg\n- ✓ devbob-platform\n\n## 🗄️ Backend Services\n**Status:** $backend_running running (expected: 0)\n\nAll backend services stopped:\n- ✓ metabob-redis\n- ✓ metabob-surreal\n- ✓ metabob-rpc-api\n- ✓ metabob-celery-worker\n\n## 🧹 Cleanup Status\n\n| Resource | Count | Status |\n|----------|-------|--------|\n| Exited containers | $exited | To remove: `docker container prune` |\n| Volumes | $volumes | Preserved (data retained) |\n| Networks | $networks | Preserved (ready for reuse) |\n\n## 📊 Summary\n\n- **Shutdown time:** $(date '+%Y-%m-%d %H:%M:%S')\n- **Vessels stopped:** 6 / 6\n- **Backend services stopped:** 4 / 4  \n- **Total containers:** $total_running running, $exited exited\n\n## 🔄 Next Steps\n\n**To start again:**\n```bash\n{{devctlPath}} start\n# or\nopencode activity devctl-bring-up\n```\n\n**To clean up completely:**\n```bash\n# Remove exited containers\ndocker container prune -f\n\n# Remove volumes (⚠️ deletes data)\ndocker volume ls | grep metabob | awk '{print $2}' | xargs docker volume rm\n\n# Remove networks\ndocker network rm metabob-network devbob-network\n```\n\n**To check status:**\n```bash\ndocker ps -a | grep -E 'devbob-|metabob-'\n```\n\n---\n\n*Report generated by devctl-bring-down activity*\n```\n\nPrint the formatted report.\n```\n\n### Final Output\nDisplay the complete shutdown report.",
+        "variables": [
+          {
+            "name": "devctlPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to devctl script",
+            "default": "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "DevBob Environment Shutdown Report",
+            "description": ""
+          },
+          {
+            "pattern": "Overall Status",
+            "description": ""
+          },
+          {
+            "pattern": "Vessel Containers",
+            "description": ""
+          },
+          {
+            "pattern": "Backend Services",
+            "description": ""
+          },
+          {
+            "pattern": "Next Steps",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-25T11:50:53.673Z",
+  "metadata": {}
+}

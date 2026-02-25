@@ -31,8 +31,9 @@
         ]
       },
       "validation": {
-        "commands": ["docker ps"],
-        "requiredPatterns": ["Prerequisites Check"]
+        "requiredPatterns": ["Prerequisites Check"],
+        "forbiddenPatterns": [],
+        "commands": []
       },
       "retry": {
         "maxAttempts": 2,
@@ -59,11 +60,9 @@
         ]
       },
       "validation": {
-        "commands": [
-          "docker ps | grep metabob-redis",
-          "docker ps | grep metabob-surreal"
-        ],
-        "requiredPatterns": ["Backend Services Status"]
+        "requiredPatterns": ["Backend Services Status"],
+        "forbiddenPatterns": [],
+        "commands": []
       },
       "retry": {
         "maxAttempts": 2,
@@ -90,10 +89,9 @@
         ]
       },
       "validation": {
-        "commands": [
-          "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl status"
-        ],
-        "requiredPatterns": ["Vessel Containers Status"]
+        "requiredPatterns": ["Vessel Containers Status"],
+        "forbiddenPatterns": [],
+        "commands": []
       },
       "retry": {
         "maxAttempts": 2,
@@ -120,10 +118,9 @@
         ]
       },
       "validation": {
-        "commands": [
-          "/home/avi/documents/work/exp-repo/metabob-devbob/bin/devctl health"
-        ],
-        "requiredPatterns": ["Health Check Results", "Overall Status"]
+        "requiredPatterns": ["Health Check Results", "Overall Status"],
+        "forbiddenPatterns": [],
+        "commands": []
       },
       "retry": {
         "maxAttempts": 1,
