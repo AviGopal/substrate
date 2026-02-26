@@ -1,0 +1,236 @@
+{
+  "activity_id": "deploy-devbob-stack",
+  "name": "Deploy DevBob Stack",
+  "description": "Complete deployment of DevBob infrastructure including backend services (Redis, SurrealDB, Metabob API) and devbob agent containers with health validation",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "validate-prerequisites",
+      "subagent": "general",
+      "description": "Validate deployment prerequisites and environment",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check prerequisites for DevBob deployment:\n\n1. **Docker Environment**:\n   - Verify docker is installed and running\n   - Verify docker-compose is installed\n   - Check Docker daemon is accessible\n   - Verify user has docker permissions\n\n2. **Environment Variables**:\n   - Check ANTHROPIC_API_KEY is set\n   - Verify SURREAL_USER and SURREAL_PASS (or use defaults)\n   - Check if other required env vars are present\n\n3. **Docker Image**:\n   - Verify devbob image exists: {{devbobImage}}\n   - Check image size and creation date\n   - Suggest rebuild if image is old\n\n4. **Port Availability**:\n   - Check ports: 6379 (Redis), 8000 (SurrealDB), 8001 (Surrealist), 8080 (API)\n   - Check devbob ports: 3100-3102 (ACP servers)\n   - Report any port conflicts\n\n5. **System Resources**:\n   - Check disk space (need at least 5GB free)\n   - Verify memory availability (recommend 4GB+)\n   - Check CPU availability\n\n6. **Existing Deployment**:\n   - Check if any metabob/devbob containers are running\n   - Report their status and ports\n   - Suggest cleanup if needed\n\n**Commands**:\n```bash\ndocker --version\ndocker-compose --version\ndocker ps --filter name=metabob- --filter name=devbob-\ndocker images | grep -E '(devbob|metabob)'\ndf -h .\nfree -h\n```\n\n**Output**: Create validation report showing:\n- ✅ Ready: What's working\n- ⚠️ Warnings: Non-critical issues\n- ❌ Blockers: Must fix before deployment\n- 📋 Recommendations: Best practices",
+        "variables": [
+          {
+            "name": "devbobImage",
+            "type": "string",
+            "required": false,
+            "description": "DevBob Docker image name",
+            "default": "devbob:unified-test"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "docker --version",
+          "docker-compose --version"
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "start-infrastructure",
+      "subagent": "general",
+      "description": "Start infrastructure services (Redis, SurrealDB, Surrealist)",
+      "dependencies": ["validate-prerequisites"],
+      "prompt": {
+        "template": "Start the infrastructure stack using docker-compose:\n\n**Deployment Command**:\n```bash\ndocker-compose -f {{composeFile}} --profile infra up -d\n```\n\n**Steps**:\n\n1. **Start Services**:\n   - Start Redis, SurrealDB, and Surrealist\n   - Use detached mode (-d)\n   - Wait for containers to start\n\n2. **Health Checks**:\n   - Redis: Wait for health check (redis-cli ping → PONG)\n   - SurrealDB: Wait for isready check\n   - Surrealist: Check port 8001 is responding\n\n3. **Initialize Database**:\n   - Check if SurrealDB schema needs initialization\n   - Run schema script if exists: scripts/init-surrealdb-devbob-schema.sql\n   - Verify tables are created\n\n4. **Monitor Logs**:\n   - Check logs for startup errors\n   - Look for critical error messages\n   - Verify services are listening on expected ports\n\n**Validation Commands**:\n```bash\ndocker ps --filter name=metabob-redis --filter status=running\ndocker ps --filter name=metabob-surreal --filter status=running\ndocker exec metabob-redis redis-cli ping\ncurl -f http://localhost:8001 || echo 'Surrealist not ready'\n```\n\n**Wait Strategy**:\n- Max wait: 60 seconds per service\n- Poll interval: 2 seconds\n- Report progress every 10 seconds\n\n**Output**: Report infrastructure status:\n- Container IDs and status\n- Port mappings\n- Health check results\n- Any initialization performed\n- Time to ready",
+        "variables": [
+          {
+            "name": "composeFile",
+            "type": "string",
+            "required": false,
+            "description": "Path to docker-compose file",
+            "default": "docker-compose.unified.yaml"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "docker ps --filter name=metabob-redis --filter status=running | grep -q metabob-redis",
+          "docker ps --filter name=metabob-surreal --filter status=running | grep -q metabob-surreal"
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "start-metabob-backend",
+      "subagent": "general",
+      "description": "Start Metabob API server and worker services",
+      "dependencies": ["start-infrastructure"],
+      "prompt": {
+        "template": "Start the Metabob backend stack:\n\n**Deployment Command**:\n```bash\ndocker-compose -f {{composeFile}} --profile metabob up -d\n```\n\n**Steps**:\n\n1. **Start API Server**:\n   - Start metabob-rpc-api container\n   - Wait for health check: curl http://localhost:8080/health\n   - Verify connection to Redis and SurrealDB\n\n2. **Start Worker**:\n   - Start metabob-celery-worker container\n   - Check worker logs for \"ready\" message\n   - Verify celery is connected to Redis\n\n3. **Verify Integration**:\n   - Test API responds to /health endpoint\n   - Check API can reach database\n   - Verify worker is registered in celery\n\n4. **Monitor Logs**:\n   - Check for connection errors\n   - Look for initialization errors\n   - Verify no authentication failures\n\n**Validation Commands**:\n```bash\ndocker ps --filter name=metabob-rpc-api --filter status=running\ndocker ps --filter name=metabob-celery-worker --filter status=running\ncurl -f http://localhost:8080/health\ndocker logs metabob-rpc-api --tail 50 | grep -i error || echo 'No errors'\ndocker logs metabob-celery-worker --tail 50 | grep -i ready\n```\n\n**Wait Strategy**:\n- Max wait: 90 seconds (backend takes longer to initialize)\n- Poll interval: 3 seconds\n- Health check retries: 10\n\n**Output**: Report backend status:\n- API container status and health\n- Worker container status\n- Health endpoint response\n- Database connectivity\n- Any warnings from logs\n- Time to healthy",
+        "variables": [
+          {
+            "name": "composeFile",
+            "type": "string",
+            "required": false,
+            "description": "Path to docker-compose file",
+            "default": "docker-compose.unified.yaml"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "curl -sf http://localhost:8080/health | grep -q '{' || echo 'API not healthy yet'"
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "deploy-devbob-containers",
+      "subagent": "general",
+      "description": "Deploy devbob agent containers and verify ACP connectivity",
+      "dependencies": ["start-metabob-backend"],
+      "prompt": {
+        "template": "Deploy devbob agent containers:\n\n**Deployment Command**:\n```bash\ndocker-compose -f {{composeFile}} --profile devbob up -d\n```\n\n**Containers to Deploy**:\n1. **devbob-clean** (port 3100): Clean test environment\n2. **devbob-rpc-api** (port 3101): Backend codebase manager\n3. **devbob-dashboard** (port 3102): Dashboard codebase manager\n\n**Steps per Container**:\n\n1. **Start Container**:\n   - Deploy with docker-compose\n   - Wait for container to reach \"running\" status\n   - Check entrypoint.sh completes successfully\n\n2. **Verify ACP Server**:\n   - Check logs for \"ACP server listening on port 3000\"\n   - Verify OpenCode process is running\n   - Check metabob-cli MCP is started\n\n3. **Test Backend Connectivity**:\n   - Verify container can reach metabob-rpc-api\n   - Check SurrealDB connection\n   - Verify Redis connectivity\n\n4. **Test ACP Endpoint**:\n   - Simple ACP ping test (if available)\n   - Or verify port is listening\n\n**Validation Commands**:\n```bash\n# Check all devbob containers running\ndocker ps --filter name=devbob- --filter status=running\n\n# Check each container logs\nfor container in devbob-clean devbob-rpc-api devbob-dashboard; do\n  echo \"\\n=== $container ===\"\n  docker logs $container --tail 30 | grep -E '(ACP server listening|error|Error)' || echo 'No critical messages'\ndone\n\n# Test port connectivity\nfor port in 3100 3101 3102; do\n  nc -z localhost $port && echo \"Port $port: OPEN\" || echo \"Port $port: CLOSED\"\ndone\n```\n\n**Wait Strategy**:\n- Max wait per container: 60 seconds\n- Poll interval: 3 seconds\n- Log check: Every 10 seconds\n\n**Output**: Report devbob deployment:\n- Container statuses and ports\n- ACP server initialization results\n- Backend connectivity tests\n- Any startup errors or warnings\n- Connection strings for each container",
+        "variables": [
+          {
+            "name": "composeFile",
+            "type": "string",
+            "required": false,
+            "description": "Path to docker-compose file",
+            "default": "docker-compose.unified.yaml"
+          },
+          {
+            "name": "devbobContainers",
+            "type": "string",
+            "required": false,
+            "description": "Comma-separated list of devbob containers to deploy",
+            "default": "devbob-clean,devbob-rpc-api,devbob-dashboard"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "docker ps --filter name=devbob-clean --filter status=running | grep -q devbob-clean || echo 'devbob-clean not running'",
+          "docker ps --filter name=devbob- --filter status=running | wc -l"
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-deployment",
+      "subagent": "general",
+      "description": "Comprehensive validation and deployment report generation",
+      "dependencies": ["deploy-devbob-containers"],
+      "prompt": {
+        "template": "Perform comprehensive deployment validation and generate report:\n\n**Validation Checks**:\n\n1. **Container Health**:\n   ```bash\n   docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'\n   docker stats --no-stream --format 'table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}'\n   ```\n\n2. **Service Connectivity**:\n   - Test devbob → API: curl from container\n   - Test API → SurrealDB: Check API logs\n   - Test API → Redis: Check celery worker connection\n\n3. **Activity Templates**:\n   - Check if templates are accessible in devbob containers\n   - List available templates\n   - Verify template registry is working\n\n4. **Resource Usage**:\n   - CPU usage per container\n   - Memory usage per container\n   - Disk usage for volumes\n   - Network connectivity\n\n5. **Log Analysis**:\n   - Scan logs for ERROR, CRITICAL, FATAL\n   - Check for connection timeouts\n   - Look for authentication failures\n   - Report any suspicious patterns\n\n**Test Flow** (if {{runTestFlow}}):\n1. Submit simple analysis job via API\n2. Check job is queued in Redis\n3. Verify worker picks up job\n4. Wait for job completion\n5. Verify results in SurrealDB\n\n**Generate Report**: Create {{reportPath}} with:\n\n```markdown\n# DevBob Deployment Report\n**Timestamp**: {current_time}\n**Profile**: {{profile}}\n**Compose File**: {{composeFile}}\n\n## Summary\n- Total Containers: X running, Y stopped\n- Infrastructure: [status]\n- Backend: [status]\n- DevBob Agents: [status]\n- Overall Health: ✅ Healthy / ⚠️ Degraded / ❌ Failed\n\n## Service Details\n\n### Infrastructure\n| Service | Container | Status | Port | Health |\n|---------|-----------|--------|------|--------|\n| Redis | metabob-redis | running | 6379 | ✅ healthy |\n| SurrealDB | metabob-surreal | running | 8000 | ✅ healthy |\n| Surrealist | metabob-surrealist | running | 8001 | ✅ up |\n\n### Backend\n| Service | Container | Status | Port | Health |\n|---------|-----------|--------|------|--------|\n| API | metabob-rpc-api | running | 8080 | ✅ healthy |\n| Worker | metabob-celery-worker | running | - | ✅ ready |\n\n### DevBob Agents\n| Agent | Container | Status | ACP Port | Health |\n|-------|-----------|--------|----------|--------|\n| Clean | devbob-clean | running | 3100 | ✅ ready |\n| RPC API | devbob-rpc-api | running | 3101 | ✅ ready |\n| Dashboard | devbob-dashboard | running | 3102 | ✅ ready |\n\n## Resource Usage\n| Container | CPU | Memory | Network |\n|-----------|-----|--------|----------|\n| ... | ... | ... | ... |\n\n## Validation Results\n- ✅ All containers running\n- ✅ Health checks passing\n- ✅ Service connectivity verified\n- ✅ Activity templates accessible\n- ⚠️ [Any warnings]\n- ❌ [Any failures]\n\n## Access Information\n\n**Infrastructure**:\n- Redis: `redis-cli -h localhost -p 6379`\n- SurrealDB: `http://localhost:8000` (root/root)\n- Surrealist UI: `http://localhost:8001`\n\n**Backend**:\n- API: `http://localhost:8080`\n- API Health: `curl http://localhost:8080/health`\n\n**DevBob Agents** (ACP delegation):\n- Clean: `docker://devbob-clean` (port 3100)\n- RPC API: `docker://devbob-rpc-api` (port 3101)\n- Dashboard: `docker://devbob-dashboard` (port 3102)\n\n**Example Usage**:\n```bash\n# Delegate task to devbob-clean\nopencode activity execute delegate-to-devbob \\\n  --variables '{\"target\": \"docker://devbob-clean\", \"task\": \"List activity templates\"}'\n\n# Check container logs\ndocker logs devbob-clean\n\n# Access container shell\ndocker exec -it devbob-clean bash\n```\n\n## Issues Detected\n[List any issues found with severity and recommendations]\n\n## Next Steps\n1. [Recommended actions]\n2. [Optional improvements]\n3. [Monitoring suggestions]\n\n## Deployment Metadata\n- Duration: X seconds\n- Images Used: [list]\n- Volumes Created: [list]\n- Networks: [list]\n```\n\n**Save Report**: Write to {{reportPath}}",
+        "variables": [
+          {
+            "name": "reportPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to save deployment report",
+            "default": "deployment-report.md"
+          },
+          {
+            "name": "runTestFlow",
+            "type": "boolean",
+            "required": false,
+            "description": "Run end-to-end test flow",
+            "default": false
+          },
+          {
+            "name": "profile",
+            "type": "string",
+            "required": false,
+            "description": "Deployment profile used",
+            "default": "all"
+          },
+          {
+            "name": "composeFile",
+            "type": "string",
+            "required": false,
+            "description": "Compose file used",
+            "default": "docker-compose.unified.yaml"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{reportPath}}"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Summary",
+            "description": "Report has summary section"
+          },
+          {
+            "pattern": "## Service Details",
+            "description": "Report has service details"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          "docker ps --filter name=metabob- --filter name=devbob- --filter status=running | wc -l"
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "pre_checks": [
+      "docker --version",
+      "docker-compose --version"
+    ],
+    "post_checks": [
+      "docker ps --filter name=metabob- --filter name=devbob- --filter status=running"
+    ],
+    "quality_gates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learning_mode": true,
+    "target_context_tokens": 5000,
+    "annotation_strategy": "key-components"
+  }
+}

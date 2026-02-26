@@ -1,0 +1,204 @@
+{
+  "activity_id": "delegate-to-devbob",
+  "name": "Delegate Task to DevBob Container",
+  "description": "Delegate a task to a specific devbob container via ACP, with impulse sharing and result tracking",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "validate-target",
+      "subagent": "general",
+      "description": "Validate target container exists and is ready",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate the target devbob container is ready for delegation:\n\n**Target**: {{target}}\n\n**Validation Steps**:\n\n1. **Parse Target**:\n   - Extract container name from {{target}}\n   - Expected format: `docker://container-name`\n   - Container should be: devbob-clean, devbob-rpc-api, devbob-dashboard, or custom\n\n2. **Check Container Status**:\n   ```bash\n   docker ps --filter name={{containerName}} --format '{{.Names}}\\t{{.Status}}\\t{{.Ports}}'\n   ```\n   - Verify container is running\n   - Check uptime (should be > 30s for full initialization)\n   - Verify ports are mapped\n\n3. **Check ACP Server**:\n   ```bash\n   docker logs {{containerName}} --tail 50 | grep 'ACP server listening'\n   ```\n   - Confirm ACP server initialized\n   - Verify OpenCode is running\n   - Check for startup errors\n\n4. **Test Connectivity**:\n   - Check if container is on correct network\n   - Verify container can reach backend (if needed)\n   - Test docker exec access\n\n5. **Check Resources**:\n   ```bash\n   docker stats {{containerName}} --no-stream\n   ```\n   - Verify container isn't OOM\n   - Check CPU usage isn't pegged\n   - Confirm container is responsive\n\n**Output**: Validation report with:\n- ✅ Container ready / ❌ Container not ready\n- Container status details\n- ACP server status\n- Any warnings or issues\n- Recommendations if not ready",
+        "variables": [
+          {
+            "name": "target",
+            "type": "string",
+            "required": true,
+            "description": "Target container in format: docker://container-name"
+          },
+          {
+            "name": "containerName",
+            "type": "string",
+            "required": false,
+            "description": "Extracted container name (auto-detected from target)",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "prepare-impulses",
+      "subagent": "general",
+      "description": "Prepare and serialize impulses for sharing (if specified)",
+      "dependencies": ["validate-target"],
+      "prompt": {
+        "template": "Prepare impulses for sharing with remote container:\n\n**Impulses to Share**: {{shareImpulses}}\n**Send Full Content**: {{sendFullContent}}\n\n**If No Impulses** (empty array):\n- Skip this step\n- Report: \"No impulses to share - proceeding with prompt only\"\n\n**If Impulses Specified**:\n\n1. **Validate Impulses Exist**:\n   - Check each impulse ID is valid in current session\n   - Report any missing impulses\n   - Proceed only with valid impulses\n\n2. **Serialization Strategy**:\n   \n   **Pointer-Only Mode** (sendFullContent=false, DEFAULT):\n   - Send impulse metadata only\n   - Remote container will request content if needed (Phase 3 bidirectional resolution)\n   - Efficient for large impulses\n   - Requires host session to stay active\n   \n   **Full Content Mode** (sendFullContent=true):\n   - Send complete impulse content\n   - Remote container has all data immediately\n   - Larger payload but self-contained\n   - Host session can terminate\n\n3. **Serialize Impulses**:\n   - Use ImpulseSerializer to prepare impulses\n   - Format for ACP transmission\n   - Include hostSessionId for Phase 3 resolution\n\n4. **Build Context Block**:\n   - Create <shared_impulses> XML block\n   - Include impulse IDs, types, and content/pointers\n   - Add hostSessionId for resolution\n\n**Output**: Report:\n- Number of impulses prepared\n- Serialization mode used\n- Total payload size\n- Context block preview (first 200 chars)\n- Any warnings or issues",
+        "variables": [
+          {
+            "name": "shareImpulses",
+            "type": "array",
+            "required": false,
+            "description": "Array of impulse IDs to share",
+            "default": []
+          },
+          {
+            "name": "sendFullContent",
+            "type": "boolean",
+            "required": false,
+            "description": "Send full content vs. pointers only",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "execute-delegation",
+      "subagent": "general",
+      "description": "Execute ACP delegation and track remote session",
+      "dependencies": ["prepare-impulses"],
+      "prompt": {
+        "template": "Execute the ACP delegation to remote container:\n\n**Delegation Parameters**:\n- Target: {{target}}\n- Task Description: {{taskDescription}}\n- Timeout: {{timeout}} seconds\n- Share Impulses: {{shareImpulses}}\n- Send Full Content: {{sendFullContent}}\n\n**Task Prompt**:\n```\n{{prompt}}\n```\n\n**Execution**:\n\nUse the `acp_delegate` tool to delegate the task:\n\n```typescript\nawait acp_delegate({\n  target: \"{{target}}\",\n  taskDescription: \"{{taskDescription}}\",\n  prompt: \"{{prompt}}\",\n  shareImpulses: {{shareImpulses}},\n  sendFullContent: {{sendFullContent}},\n  timeout: {{timeout}}\n})\n```\n\n**Monitoring**:\n\n1. **Track Remote Session**:\n   - Remote session impulse is created automatically\n   - Monitor status: initializing → processing → completed/failed\n   - Track tool calls executed remotely\n   - Capture response text\n\n2. **Progress Updates**:\n   - Report major milestones (connection, session creation, completion)\n   - Show tool calls as they execute\n   - Display partial response text periodically\n\n3. **Timeout Handling**:\n   - If timeout reached, report partial results\n   - Indicate whether remote session is still running\n   - Provide remote session ID for manual inspection\n\n**Output**: Delegation results:\n- Remote session ID\n- Status: completed / failed / timeout\n- Response text (full or truncated)\n- Tool calls executed\n- Duration\n- Any errors or warnings\n- Remote session impulse ID (for tracking)",
+        "variables": [
+          {
+            "name": "target",
+            "type": "string",
+            "required": true,
+            "description": "Target container: docker://container-name"
+          },
+          {
+            "name": "taskDescription",
+            "type": "string",
+            "required": true,
+            "description": "Brief summary of task (3-10 words)"
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "required": true,
+            "description": "Full task instructions for remote agent"
+          },
+          {
+            "name": "shareImpulses",
+            "type": "array",
+            "required": false,
+            "description": "Impulse IDs to share",
+            "default": []
+          },
+          {
+            "name": "sendFullContent",
+            "type": "boolean",
+            "required": false,
+            "description": "Send full content vs. pointers",
+            "default": false
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "required": false,
+            "description": "Timeout in seconds (max 600)",
+            "default": 300
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-results",
+      "subagent": "general",
+      "description": "Analyze delegation results and provide recommendations",
+      "dependencies": ["execute-delegation"],
+      "prompt": {
+        "template": "Analyze the delegation results and provide insights:\n\n**Analysis**:\n\n1. **Success Assessment**:\n   - Was the task completed successfully?\n   - Did the remote agent encounter errors?\n   - Was output as expected?\n\n2. **Performance Metrics**:\n   - Duration: How long did it take?\n   - Tool calls: How many tools were used?\n   - Response length: Was output verbose or concise?\n\n3. **Quality Check**:\n   - Review response for completeness\n   - Check if task requirements were met\n   - Identify any partial failures\n\n4. **Remote Session Analysis**:\n   - Review tool calls for efficiency\n   - Check for any retries or errors\n   - Assess if timeout was appropriate\n\n5. **Recommendations**:\n   - Should task be retried?\n   - Should different parameters be used?\n   - Is a different devbob container better suited?\n   - Any follow-up actions needed?\n\n**Generate Report**: Create summary with:\n\n```markdown\n# Delegation Results: {{taskDescription}}\n\n## Summary\n- Target: {{target}}\n- Status: [completed/failed/timeout]\n- Duration: X seconds\n- Remote Session ID: [id]\n\n## Task Execution\n- Tool Calls: [count] ([list])\n- Response Length: [chars]\n- Success: [yes/no]\n\n## Output\n```\n[response text or error]\n```\n\n## Analysis\n[Quality assessment]\n\n## Recommendations\n1. [Action items]\n2. [Follow-up tasks]\n3. [Optimization suggestions]\n\n## Remote Session Details\n- Impulse ID: [id]\n- Status Transitions: [timeline]\n- Tool Call Timeline: [list with timestamps]\n```\n\n**Save Report**: If {{saveReport}} is true, write to `delegation-report-{timestamp}.md`",
+        "variables": [
+          {
+            "name": "taskDescription",
+            "type": "string",
+            "required": true,
+            "description": "Task description from delegation"
+          },
+          {
+            "name": "target",
+            "type": "string",
+            "required": true,
+            "description": "Target container"
+          },
+          {
+            "name": "saveReport",
+            "type": "boolean",
+            "required": false,
+            "description": "Save analysis report to file",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "pre_checks": [],
+    "post_checks": [],
+    "quality_gates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learning_mode": true,
+    "target_context_tokens": 5000,
+    "annotation_strategy": "key-components"
+  }
+}
