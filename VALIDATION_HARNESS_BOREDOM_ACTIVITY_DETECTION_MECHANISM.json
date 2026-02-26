@@ -1,0 +1,171 @@
+{
+  "specificationName": "boredom-activity-detection-mechanism",
+  "harnessFile": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts",
+  "harnessStatus": "COMPLETE",
+  "testCases": [
+    {
+      "impulseId": "validation-boredom-activity-detection-mechanism-case-1",
+      "name": "Auto Boredom Activity with [BOREDOM] Prefix",
+      "input": {
+        "title": "[BOREDOM] fix-auth-failures",
+        "branch": "boredom-activity"
+      },
+      "expectedOutput": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-auto",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "validates": "Marker consistency enforcement and auto-triggered boredom detection"
+    },
+    {
+      "impulseId": "validation-boredom-activity-detection-mechanism-case-2",
+      "name": "Manual Boredom Activity with [MANUAL BOREDOM] Prefix",
+      "input": {
+        "title": "[MANUAL BOREDOM] improve-test-coverage",
+        "branch": "main"
+      },
+      "expectedOutput": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-manual",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "validates": "Manual trigger detection and branch auto-correction"
+    },
+    {
+      "impulseId": "validation-boredom-activity-detection-mechanism-case-3",
+      "name": "Normal User Activity (No Boredom Markers)",
+      "input": {
+        "title": "Add login feature",
+        "branch": "feature-login"
+      },
+      "expectedOutput": {
+        "isBoredom": null,
+        "initiatedBy": null,
+        "branch": "feature-login",
+        "titleHasBoredomPrefix": false,
+        "detectionMethods": {
+          "titlePrefix": false,
+          "branchName": false,
+          "persistentField": false
+        }
+      },
+      "validates": "Non-boredom activities are correctly identified"
+    },
+    {
+      "impulseId": "validation-boredom-activity-detection-mechanism-case-4",
+      "name": "Boredom Activity with Only Title Prefix (Auto-Correction)",
+      "input": {
+        "title": "[BOREDOM] refactor-database",
+        "branch": "main"
+      },
+      "expectedOutput": {
+        "isBoredom": true,
+        "initiatedBy": "boredom-auto",
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": true,
+        "detectionMethods": {
+          "titlePrefix": true,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "validates": "Marker consistency enforcement corrects missing branch"
+    },
+    {
+      "impulseId": "validation-boredom-activity-detection-mechanism-case-5",
+      "name": "Boredom Activity with Only Branch Name (Partial Detection)",
+      "input": {
+        "title": "Some Activity",
+        "branch": "boredom-activity"
+      },
+      "expectedOutput": {
+        "isBoredom": true,
+        "initiatedBy": null,
+        "branch": "boredom-activity",
+        "titleHasBoredomPrefix": false,
+        "detectionMethods": {
+          "titlePrefix": false,
+          "branchName": true,
+          "persistentField": true
+        }
+      },
+      "validates": "Branch-based detection works but cannot determine initiation type"
+    }
+  ],
+  "harnessImpulseId": "harness-boredom-activity-detection-mechanism",
+  "detectionMethods": [
+    {
+      "name": "detectByTitlePrefix",
+      "description": "Checks if activity title contains [BOREDOM] or [MANUAL BOREDOM]",
+      "reliability": "MEDIUM",
+      "location": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts:55-57"
+    },
+    {
+      "name": "detectByBranch",
+      "description": "Checks if activity branch equals 'boredom-activity'",
+      "reliability": "MEDIUM",
+      "location": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts:62-64"
+    },
+    {
+      "name": "detectByPersistentField",
+      "description": "Checks if activity.isBoredom === true (most reliable)",
+      "reliability": "HIGH",
+      "location": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts:69-71"
+    },
+    {
+      "name": "isBoredomActivity",
+      "description": "Combined detection - returns true if any method matches",
+      "reliability": "HIGH",
+      "location": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts:76-82"
+    }
+  ],
+  "assertions": [
+    {
+      "name": "assertMarkersConsistent",
+      "description": "Validates that if any boredom marker is present, all markers should be present (title prefix, branch, isBoredom flag)",
+      "location": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts:92-112"
+    },
+    {
+      "name": "assertInitiatedByCorrect",
+      "description": "Validates that initiatedBy matches title prefix: [MANUAL BOREDOM] -> boredom-manual, [BOREDOM] -> boredom-auto",
+      "location": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts:117-131"
+    },
+    {
+      "name": "assertNoDebugPrefix",
+      "description": "Validates that no debug prefixes like [EVIDENCE_TEST] interfere with detection",
+      "location": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts:136-144"
+    }
+  ],
+  "usage": {
+    "command": "npx tsx tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts",
+    "requirements": [
+      "Built OpenCode distribution (repos/metabob-opencode/packages/opencode/dist/)",
+      "Node.js with ESM support",
+      "Test case impulses in impulses/validation-test-cases/"
+    ],
+    "output": {
+      "console": "Validation results with pass/fail status for each test case",
+      "file": "validation-report-boredom-detection.md - Detailed markdown report"
+    }
+  },
+  "architecture": {
+    "testCaseStorage": "impulses/validation-test-cases/*.json - Historical test cases that can run without LLM",
+    "harnessEntry": "runValidation(testCase) - Single test execution",
+    "batchRunner": "runAllValidations(testCases) - Execute all tests",
+    "reporting": "generateReport(results) - Generate markdown summary",
+    "mainEntry": "main() - CLI entry point that loads impulses or falls back to inline cases"
+  },
+  "conclusion": "Validation harness is COMPLETE with 5 test cases covering all detection mechanisms and edge cases. Harness validates marker consistency, initiatedBy correctness, and all detection methods. Test cases are stored as impulses for historical validation without LLM involvement."
+}

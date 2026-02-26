@@ -1,0 +1,256 @@
+{
+  "specificationName": "boredom-activity-detection-mechanism",
+  "analysisDate": "2026-02-26",
+  "otherSpecifications": [
+    "impulse-usage-tracking",
+    "activity-state-transformation-tracking",
+    "sidebar-impulse-visibility"
+  ],
+  "conflicts": [],
+  "conflictSummary": {
+    "total": 0,
+    "critical": 0,
+    "moderate": 0,
+    "minor": 0,
+    "resolved": 0
+  },
+  "sharedComponents": [
+    {
+      "component": "Activity.ts",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "affectedBySpecs": [
+        "boredom-activity-detection-mechanism",
+        "activity-state-transformation-tracking"
+      ],
+      "usageBySpec": {
+        "boredom-activity-detection-mechanism": {
+          "usage": "Marker consistency enforcement (lines 446-465)",
+          "modifications": "Enforces isBoredom and initiatedBy when boredom markers present",
+          "concern": "Activity metadata"
+        },
+        "activity-state-transformation-tracking": {
+          "usage": "Instrumentation points (7 total)",
+          "modifications": "Adds state capture calls at lifecycle points",
+          "concern": "State tracking"
+        }
+      },
+      "conflictStatus": "NONE",
+      "analysis": "Different concerns - marker enforcement is orthogonal to state tracking. Marker enforcement modifies activity metadata, state tracking observes activity lifecycle. No overlap in logic or data.",
+      "recommendation": "No action required - specifications are compatible"
+    },
+    {
+      "component": "BoredomManager.ts",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts",
+      "affectedBySpecs": [
+        "boredom-activity-detection-mechanism"
+      ],
+      "usageBySpec": {
+        "boredom-activity-detection-mechanism": {
+          "usage": "Idle detection, activity execution, runtime state",
+          "modifications": "Exclusive owner - all BoredomManager logic",
+          "concern": "Boredom system"
+        }
+      },
+      "conflictStatus": "NONE",
+      "analysis": "Exclusive to boredom specification. No other specification touches this component.",
+      "recommendation": "No action required - single ownership"
+    },
+    {
+      "component": "Impulse.ts / Impulse System",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/impulse.ts",
+      "affectedBySpecs": [
+        "impulse-usage-tracking",
+        "sidebar-impulse-visibility",
+        "activity-state-transformation-tracking"
+      ],
+      "usageBySpec": {
+        "impulse-usage-tracking": {
+          "usage": "Tracks impulses_loaded and impulses_created arrays",
+          "modifications": "Records impulse IDs in activity execution metadata",
+          "concern": "Learning metrics"
+        },
+        "sidebar-impulse-visibility": {
+          "usage": "Displays impulse state (loaded, total, utilization)",
+          "modifications": "Read-only consumer of impulse data",
+          "concern": "UI display"
+        },
+        "activity-state-transformation-tracking": {
+          "usage": "Includes impulse_ids in state capture",
+          "modifications": "Captures snapshot of impulse state",
+          "concern": "State tracking"
+        }
+      },
+      "conflictStatus": "NONE",
+      "analysis": "All specifications use impulse data read-only for different purposes. No overlapping writes or contradictory requirements. Usage is complementary: tracking records usage, state capture snapshots state, sidebar displays to user.",
+      "recommendation": "No action required - read-only usage patterns are compatible"
+    },
+    {
+      "component": "executeActivityInline",
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "affectedBySpecs": [
+        "boredom-activity-detection-mechanism",
+        "activity-state-transformation-tracking"
+      ],
+      "usageBySpec": {
+        "boredom-activity-detection-mechanism": {
+          "usage": "Caller - invokes executeActivityInline for boredom activities",
+          "modifications": "None - uses public API",
+          "concern": "Activity execution"
+        },
+        "activity-state-transformation-tracking": {
+          "usage": "Instrumentor - adds state capture calls inside executeActivityInline",
+          "modifications": "Adds instrumentation points (transparent to callers)",
+          "concern": "State tracking"
+        }
+      },
+      "conflictStatus": "NONE",
+      "analysis": "Instrumentation is transparent to callers. BoredomManager calls executeActivityInline as normal, state tracking captures state during execution. No API changes or behavioral modifications visible to callers.",
+      "recommendation": "No action required - instrumentation is non-breaking"
+    }
+  ],
+  "integrationPoints": [
+    {
+      "name": "Activity Execution",
+      "specifications": [
+        "boredom-activity-detection-mechanism",
+        "activity-state-transformation-tracking"
+      ],
+      "description": "Boredom detection creates activities with isBoredom=true and initiatedBy metadata. State tracking captures state for ALL activities, including boredom-triggered ones.",
+      "compatibility": "COMPATIBLE",
+      "analysis": "State tracking is transparent and works for all activities regardless of origin (user-initiated or boredom-triggered). Boredom markers (isBoredom, initiatedBy) are captured as part of activity state. No special handling required.",
+      "benefits": [
+        "Boredom activities are automatically included in learning data",
+        "State tracking provides visibility into boredom activity execution",
+        "No integration work required - works out of the box"
+      ]
+    },
+    {
+      "name": "Impulse Usage Metrics",
+      "specifications": [
+        "impulse-usage-tracking",
+        "activity-state-transformation-tracking"
+      ],
+      "description": "Impulse tracking records impulses_loaded and impulses_created arrays in activity execution metadata. State tracking includes impulse_ids in state snapshots.",
+      "compatibility": "COMPATIBLE",
+      "analysis": "Both track impulses independently for different purposes. Impulse tracking provides learning metrics (load frequency, token consumption). State tracking provides point-in-time snapshots (which impulses were loaded at state capture time). No overlap or conflict.",
+      "benefits": [
+        "Complementary data: tracking provides longitudinal data, state provides snapshots",
+        "Different use cases: tracking for learning, state for debugging/analysis",
+        "Independent operation - no coordination required"
+      ]
+    },
+    {
+      "name": "UI Data Pipeline",
+      "specifications": [
+        "sidebar-impulse-visibility",
+        "impulse-usage-tracking"
+      ],
+      "description": "Sidebar displays impulse state to users. Impulse tracking provides data for impulse metrics that can be consumed by UI.",
+      "compatibility": "COMPATIBLE",
+      "analysis": "Sidebar is a consumer of impulse data. Impulse tracking provides richer metrics (load count, token consumption, cost attribution) that sidebar can display. One-way dependency: sidebar depends on tracking, but tracking is independent of sidebar.",
+      "benefits": [
+        "Sidebar can display advanced impulse metrics from tracking system",
+        "Tracking provides data foundation for future UI features",
+        "Clean separation: tracking owns data, sidebar owns display"
+      ]
+    }
+  ],
+  "dependencyAnalysis": {
+    "specifications": [
+      {
+        "name": "boredom-activity-detection-mechanism",
+        "dependencies": [],
+        "dependents": [],
+        "status": "Independent",
+        "analysis": "No dependencies on other specifications. Operates independently. Other specifications do not depend on boredom detection."
+      },
+      {
+        "name": "impulse-usage-tracking",
+        "dependencies": [],
+        "dependents": [
+          "sidebar-impulse-visibility"
+        ],
+        "status": "Independent provider",
+        "analysis": "No dependencies on other specifications. Provides data that sidebar can consume. Sidebar dependency is optional (sidebar works without tracking, just with less data)."
+      },
+      {
+        "name": "activity-state-transformation-tracking",
+        "dependencies": [],
+        "dependents": [],
+        "status": "Independent",
+        "analysis": "No dependencies on other specifications. Transparent instrumentation that works for all activities. No other specifications depend on state tracking."
+      },
+      {
+        "name": "sidebar-impulse-visibility",
+        "dependencies": [
+          "impulse-usage-tracking (optional)"
+        ],
+        "dependents": [],
+        "status": "Consumer",
+        "analysis": "Can optionally consume data from impulse-usage-tracking for richer metrics. Works independently without tracking (displays basic impulse state). No other specifications depend on sidebar."
+      }
+    ],
+    "circularDependencies": [],
+    "dependencyGraph": "impulse-usage-tracking → sidebar-impulse-visibility (one-way, optional)",
+    "analysis": "All dependencies are one-way and optional. No circular dependencies. Clean separation of concerns. Each specification can be deployed independently without breaking others."
+  },
+  "crossComponentAnalysis": {
+    "method": "Manual analysis based on validation results and trace documents",
+    "componentsAnalyzed": 4,
+    "specifications": 4,
+    "conflicts": 0,
+    "sharedComponents": 4,
+    "integrationPoints": 3,
+    "recommendation": "No CPG analysis required - manual analysis sufficient for current specifications"
+  },
+  "systemConsistency": {
+    "status": "CONSISTENT",
+    "checks": [
+      {
+        "check": "Contradictory requirements",
+        "result": "PASS",
+        "details": "No specifications have contradictory requirements"
+      },
+      {
+        "check": "Overlapping modifications",
+        "result": "PASS",
+        "details": "Shared components have non-overlapping concerns (markers, state tracking, read-only usage)"
+      },
+      {
+        "check": "Incompatible data flows",
+        "result": "PASS",
+        "details": "All data flows are compatible and complementary"
+      },
+      {
+        "check": "Circular dependencies",
+        "result": "PASS",
+        "details": "No circular dependencies detected"
+      },
+      {
+        "check": "Integration compatibility",
+        "result": "PASS",
+        "details": "All integration points are compatible"
+      }
+    ],
+    "overallAssessment": "System is internally consistent. All specifications work together to provide complementary functionality without conflicts."
+  },
+  "recommendations": [
+    {
+      "priority": "INFO",
+      "recommendation": "No action required - all specifications are compatible",
+      "rationale": "Conflict analysis shows 0 conflicts across 4 specifications and 4 shared components. All integration points are compatible. System is internally consistent."
+    },
+    {
+      "priority": "INFO",
+      "recommendation": "Consider enhancing sidebar with impulse tracking metrics",
+      "rationale": "Sidebar-impulse-visibility can optionally consume data from impulse-usage-tracking to display richer metrics (load frequency, token consumption, cost attribution). This is a future enhancement, not a requirement."
+    },
+    {
+      "priority": "INFO",
+      "recommendation": "Boredom activities are automatically included in learning data",
+      "rationale": "State tracking captures all activities, including boredom-triggered ones. No special handling required. Learning system will automatically learn from boredom activity execution patterns."
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-boredom-activity-detection-mechanism",
+  "conclusion": "No conflicts detected. All 4 specifications (boredom-activity-detection-mechanism, impulse-usage-tracking, activity-state-transformation-tracking, sidebar-impulse-visibility) are compatible and can coexist. Specifications work together to provide complementary functionality: boredom detection creates special activities with markers, state tracking captures all activity execution, impulse tracking provides metrics, sidebar displays state to users. System is internally consistent with clean separation of concerns and no circular dependencies."
+}
