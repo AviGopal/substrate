@@ -1,0 +1,16 @@
+{
+  "id": "validation-Local-Docker-Desktop-Kubernetes-Deployment-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: Kubernetes Context Validation\n\nInput: kubectl config current-context\n\nExpected Output:\n- Context name: docker-desktop\n\nValidation:\n- Current kubectl context must be set to docker-desktop\n- This ensures deployment targets the local docker-desktop kubernetes cluster\n- Failure indicates wrong cluster target (could deploy to production accidentally)",
+    "source": "validation test case"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 1,
+    "specification": "Local Docker Desktop Kubernetes Deployment",
+    "input": "kubectl config current-context",
+    "expectedOutput": "docker-desktop"
+  }
+}
