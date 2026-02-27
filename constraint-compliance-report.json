@@ -1,20 +1,19 @@
 {
-  "timestamp": "2026-02-27T08:26:09Z",
+  "timestamp": "2026-02-27T08:29:25Z",
   "namespace": "metabob",
-  "status": "VIOLATIONS",
+  "status": "WARNINGS",
   "summary": {
     "total_constraints": 10,
-    "passed": 6,
-    "failed": 3,
-    "warnings": 0
-0
+    "passed": 8,
+    "failed": 0,
+    "warnings": 1
   },
   "constraints": [
     {"id": 1, "name": "Multi-Vessel Requirement", "status": "PASS", "severity": "critical"},
-    {"id": 2, "name": "Coordination Layer", "status": "FAIL", "severity": "critical"},
-    {"id": 3, "name": "Workspace Isolation", "status": "FAIL", "severity": "critical"},
+    {"id": 2, "name": "Coordination Layer", "status": "PASS", "severity": "critical"},
+    {"id": 3, "name": "Workspace Isolation", "status": "PASS", "severity": "critical"},
     {"id": 4, "name": "ACP Communication", "status": "PASS", "severity": "critical"},
-    {"id": 5, "name": "Vessel Registry", "status": "FAIL", "severity": "warning"},
+    {"id": 5, "name": "Vessel Registry", "status": "WARN", "severity": "warning"},
     {"id": 6, "name": "Backend Connectivity", "status": "PASS", "severity": "warning"},
     {"id": 7, "name": "Resource Allocation", "status": "PASS", "severity": "warning"},
     {"id": 8, "name": "Anti-Affinity", "status": "INFO", "severity": "info"},
