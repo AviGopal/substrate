@@ -19,7 +19,7 @@ spec:
       containers:
         - name: {{ .Values.name }}
           image: {{ .Values.image.imageRegistry }}/{{ .Values.image.rpc_api.repo }}:{{ .Values.image.rpc_api.tag }}
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
           args:
             - start
             - --host
@@ -84,6 +84,10 @@ spec:
           volumeMounts:
             - mountPath: /usr/app
               name: universal-config
+          {{- if .Values.service.resources }}
+          resources:
+            {{- toYaml .Values.service.resources | nindent 12 }}
+          {{- else }}
           resources:
             requests:
               memory: "2Gi"
@@ -91,6 +95,7 @@ spec:
             limits:
               memory: "4Gi"
               cpu: "2"
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /
@@ -107,8 +112,10 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 10
             failureThreshold: 10
+      {{- if .Values.image.pullSecrets }}
       imagePullSecrets:
-       - name: regcred
+        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
+      {{- end }}
       volumes:
         - name: {{ .Values.config }}
           configMap:

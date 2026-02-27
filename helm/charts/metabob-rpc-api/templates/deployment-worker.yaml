@@ -19,7 +19,7 @@ spec:
       containers:
         - name: {{ .Values.name }}-worker
           image: {{ .Values.image.imageRegistry }}/{{ .Values.image.rpc_api.repo }}:{{ .Values.image.rpc_api.tag }}
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
           command: ["celery"]
           args: ["-A", "tasks.jobs", "worker", '-l', 'INFO', "-c", "8"]
           env:
@@ -50,10 +50,15 @@ spec:
           volumeMounts:
             - mountPath: /usr/app
               name: universal-config
+          {{- if .Values.workers.resources }}
+          resources:
+            {{- toYaml .Values.workers.resources | nindent 12 }}
+          {{- else }}
           resources:
             requests:
               memory: "8Gi"
               cpu: "2000m"
+          {{- end }}
           livenessProbe:
             exec:
               command:
@@ -76,8 +81,10 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 10
             failureThreshold: 10
+      {{- if .Values.image.pullSecrets }}
       imagePullSecrets:
-       - name: regcred
+        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
+      {{- end }}
       volumes:
         - name: {{ .Values.config }}
           configMap:
