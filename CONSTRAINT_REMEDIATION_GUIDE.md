@@ -1,96 +1,66 @@
 # Constraint Remediation Guide
 
-## Summary
-Total violations requiring immediate action: 3 critical failures
+## Executive Summary
+- **Status**: VIOLATIONS (1 critical failure, 1 warning)
+- **Compliance**: 70% (7/10 passing)
+- **Improvement**: +30% from previous 40% (metabob-rpc-api deployment fixed C2)
 
 ## Critical Violations
 
-### ❌ Constraint 2: Coordination Layer
-**Issue**: Only 1/3 backend services running (Redis: yes, SurrealDB: no, API: no)
-**Fix**: 
-```bash
-# Deploy SurrealDB
-cd helm
-helmfile -f helmfile.yaml -e local --selector name=surrealdb sync --wait
+### ❌ Constraint 3: Workspace Isolation (CRITICAL)
+**Issue**: 0 PVCs bound (need 3 for vessel isolation)  
+**Impact**: Vessels share ephemeral storage, no data persistence  
+**Root Cause**: PVC provisioning not enabled in Helm deployment
 
-# Verify SurrealDB is running
-kubectl get pods -n metabob -l app.kubernetes.io/name=surrealdb
-
-# Deploy metabob-rpc-api
-helmfile -f helmfile.yaml -e local --selector name=metabob-rpc-api sync --wait
-
-# Verify API is running
-kubectl get pods -n metabob -l app.kubernetes.io/name=metabob-rpc-api
-```
-
-### ❌ Constraint 3: Workspace Isolation
-**Issue**: Insufficient PVCs (0 < 3 vessels)
-**Root Cause**: DevBob StatefulSet not using volumeClaimTemplates OR PVCs not being created
 **Fix**:
 ```bash
-# Check if DevBob is using StatefulSet with volumeClaimTemplates
-kubectl get statefulset -n metabob
+# Option 1: Enable PVCs in helmfile
+cd helm
+cat >> helmfile.yaml <<'YAML'
+  - name: devbob
+    values:
+      - values/devbob-local.yaml
+      - persistence:
+          enabled: true
+          size: 10Gi
+          storageClass: standard
+YAML
 
-# If it's a Deployment (not StatefulSet), convert it:
-# 1. Check current deployment
-kubectl get deployment devbob -n metabob -o yaml > /tmp/devbob-deployment.yaml
+helmfile -f helmfile.yaml -e local --selector name=devbob sync --wait
 
-# 2. Delete deployment
-kubectl delete deployment devbob -n metabob
-
-# 3. Create StatefulSet with PVCs
-cat <<STATEFULSET | kubectl apply -f -
-apiVersion: apps/v1
-kind: StatefulSet
+# Option 2: Manual PVC creation (temporary)
+for i in {0..2}; do
+  kubectl apply -f - <<YAML
+apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: devbob
+  name: devbob-workspace-$i
   namespace: metabob
 spec:
-  serviceName: devbob
-  replicas: 3
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: devbob
-  volumeClaimTemplates:
-  - metadata:
-      name: workspace
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 10Gi
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: devbob
-    spec:
-      containers:
-      - name: devbob
-        image: ghcr.io/metabob-labs/devbob-local:latest
-        volumeMounts:
-        - name: workspace
-          mountPath: /workspace
-STATEFULSET
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+YAML
+done
 
-# 4. Verify PVCs are created
+# Verify
 kubectl get pvc -n metabob
 ```
 
-### ❌ Constraint 5: Vessel Registry
-**Issue**: No vessels registered in SurrealDB (SurrealDB pod not running)
-**Root Cause**: SurrealDB deployment missing
-**Fix**: Deploy SurrealDB first (see Constraint 2 remediation above), then vessels will auto-register on startup
+## Warnings
 
+### ⚠️ Constraint 9: Health Probes (WARNING)
+**Issue**: No liveness/readiness probes configured  
+**Impact**: Kubernetes can't detect unhealthy vessels or delay traffic during startup  
 
-## Warnings (Non-Critical)
-
-### ⚠️  Constraint 9: Health Probes
-**Issue**: No liveness/readiness probes configured
-**Recommendation**:
+**Fix**:
 ```bash
-# Add probes to DevBob Helm values
-cat <<VALUES >> helm/values/devbob.yaml
+cd helm
+cat >> values/devbob-local.yaml <<'YAML'
 livenessProbe:
+  enabled: true
   httpGet:
     path: /health
     port: 3000
@@ -98,34 +68,43 @@ livenessProbe:
   periodSeconds: 10
 
 readinessProbe:
+  enabled: true
   httpGet:
     path: /ready
     port: 3000
   initialDelaySeconds: 10
   periodSeconds: 5
-VALUES
+YAML
 
-# Redeploy
-helmfile -f helmfile.yaml -e local --selector name=devbob sync
+helmfile -f helmfile.yaml -e local --selector name=devbob sync --wait
 ```
 
-### ⚠️  Constraint 10: Dataflow Enforcement
-**Issue**: metabob-rpc-api not deployed
-**Recommendation**: Deploy metabob-rpc-api (see Constraint 2 remediation)
+## Info/Non-Blocking
 
-## Execution Order
+### ℹ️ Constraint 8: Anti-Affinity (INFO)
+**Status**: All vessels on single node (expected for Docker Desktop)  
+**Action**: No fix needed for local development  
+**Production**: Enable pod anti-affinity in multi-node clusters
 
-1. **Deploy SurrealDB** (fixes Constraints 2, 5)
-2. **Deploy metabob-rpc-api** (fixes Constraint 2, 10)
-3. **Convert DevBob to StatefulSet with PVCs** (fixes Constraint 3)
-4. **Add health probes** (fixes Constraint 9)
+## Passing Constraints ✅
 
-## Verification Commands
+1. ✅ **Multi-Vessel Requirement**: 3 vessels running
+2. ✅ **Coordination Layer**: Redis + SurrealDB + metabob-rpc-api running
+4. ✅ **ACP Communication**: Port 3000 exposed
+5. ✅ **Vessel Registry**: Vessels registered in SurrealDB
+6. ✅ **Backend Connectivity**: Vessels can reach backends
+7. ✅ **Resource Allocation**: CPU/memory requests configured
+10. ✅ **Dataflow Enforcement**: metabob-rpc-api is ClusterIP (internal only)
 
-After remediation, re-run validation:
-```bash
-kubectl get pods -n metabob -l app.kubernetes.io/name=devbob
-kubectl get pods -n metabob -l app.kubernetes.io/name=surrealdb
-kubectl get pods -n metabob -l app.kubernetes.io/name=metabob-rpc-api
-kubectl get pvc -n metabob
-```
+## Compliance Trend
+
+| Validation | Date | Compliance | Status |
+|------------|------|------------|--------|
+| Initial | 2026-02-26 | 40% (4/10) | Coordination layer incomplete |
+| Current | 2026-02-27 | 70% (7/10) | metabob-rpc-api deployed |
+| Target | TBD | 90% (9/10) | Fix C3 + C9 |
+
+**Next Steps**:
+1. Fix C3 (Workspace Isolation) - enable PVCs in Helm
+2. Fix C9 (Health Probes) - add liveness/readiness probes
+3. Re-validate compliance (target: 90%)
