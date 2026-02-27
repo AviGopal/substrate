@@ -15,7 +15,7 @@ echo
 
 # Step 1: Verify image is built
 echo "Step 1: Verifying image..."
-if docker images | grep -q "devbob.*local-fixed"; then
+if docker images 2>&1 | grep -v "WARNING" | grep -q "devbob.*local-fixed"; then
     echo "✓ Image devbob:local-fixed exists"
 else
     echo "✗ Image devbob:local-fixed not found"
