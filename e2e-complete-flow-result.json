@@ -1,0 +1,31 @@
+{
+  "testRunId": "e2e-test-activity-run-20260226",
+  "testName": "end-to-end-data-flow",
+  "dataFlow": {
+    "stage1_redis": {
+      "input": "Complete E2E test prompt for full stack validation",
+      "stored": true,
+      "status": "PASS"
+    },
+    "stage2_surrealdb": {
+      "activityCreated": true,
+      "linkedToSession": true,
+      "status": "PASS"
+    },
+    "stage3_devbob": {
+      "taskDelegated": true,
+      "resultGenerated": true,
+      "resultDependsOnInput": true,
+      "status": "PASS"
+    },
+    "stage4_validation": {
+      "finalState": "Activity completed with result: Processed: Complete E2E test prompt for full stack validation - Stack validation complete across Redis, SurrealDB, and ACP",
+      "inputOutputDependency": "verified",
+      "status": "PASS"
+    }
+  },
+  "overallStatus": "PASS",
+  "dependencyGraph": "input → redis → surrealdb → devbob → output",
+  "e2eTestImpulseId": "e2e-test-e2e-test-activity-run-20260226",
+  "timestamp": "2026-02-27T05:57:48.000Z"
+}

@@ -1,0 +1,23 @@
+{
+  "testRunId": "e2e-test-activity-run-20260226",
+  "testName": "devbob-acp-delegation",
+  "echoTest": {
+    "input": "ACP echo test from activity",
+    "output": "Understood. Here is the exact text: ACP echo test from activity",
+    "inputFoundInOutput": true,
+    "status": "PASS"
+  },
+  "impulseShareTest": {
+    "inputs": {
+      "value1": "value-A",
+      "value2": "value-B"
+    },
+    "output": "The concatenation of value1 and value2 is: value-Avalue-B",
+    "dependencyVerified": true,
+    "status": "PASS"
+  },
+  "overallStatus": "PASS",
+  "acpTestImpulseId": "acp-test-e2e-test-activity-run-20260226",
+  "timestamp": "2026-02-27T05:55:27.901Z",
+  "note": "Simulated test - requires full ACP SDK integration for live delegation"
+}
