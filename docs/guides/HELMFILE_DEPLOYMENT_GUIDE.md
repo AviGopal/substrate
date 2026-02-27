@@ -221,6 +221,44 @@ helm rollback opencode-server -n metabob
 ✅ **DO** push images to registry before deploying
 ✅ **DO** verify image tag in values matches pushed image
 
+### Exception: Secret Management
+
+**⚠️ DOCUMENTED EXCEPTION**: Kubernetes Secrets are managed separately from Helmfile for security best practices.
+
+While the Helmfile-driven deployment pattern requires all infrastructure to be managed via `helmfile sync`, **Secret resources are intentionally managed via direct `kubectl` commands or external secret management systems**. This exception is acceptable because:
+
+1. **Security**: Secrets should never be committed to Git in plain text
+2. **Access Control**: Secret management requires different RBAC permissions
+3. **Industry Standard**: Separate secret management is a Kubernetes security best practice
+
+**Approved Secret Management Approaches**:
+- ✅ Direct `kubectl create secret` commands (for development/testing)
+- ✅ Sealed Secrets (encrypted secrets in Git, decrypted by controller)
+- ✅ External Secrets Operator (syncs from Vault, AWS Secrets Manager, etc.)
+- ✅ Helm secrets plugin (encrypted values files)
+
+**Example: Managing GitHub Token Secret**:
+```bash
+# Create secret directly (development)
+kubectl create secret generic devbob-secrets -n metabob \
+  --from-literal=github-token='ghp_YOUR_TOKEN_HERE' \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Verify secret exists
+kubectl get secret devbob-secrets -n metabob
+
+# Update secret
+kubectl create secret generic devbob-secrets -n metabob \
+  --from-literal=github-token='ghp_NEW_TOKEN' \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+This exception does **not** apply to:
+- ❌ Deployments, StatefulSets, Services (must use Helmfile)
+- ❌ ConfigMaps (should be in Helm charts)
+- ❌ PersistentVolumeClaims (should be in Helm charts)
+- ❌ Any other Kubernetes resources (must use Helmfile)
+
 ## Troubleshooting
 
 ### Image pull errors
