@@ -1,12 +1,14 @@
 environmentName: production
 domain: metabob.app
 
-# Istio service mesh configuration
+# Istio service mesh configuration (propagated to all services)
 istio:
   enabled: true
   sidecarInjection: true
   mtls: STRICT
   telemetry: true
+  gateway:
+    enabled: true
 
 # Image versions (production)
 imageVersions:
