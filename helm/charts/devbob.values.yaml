@@ -3,7 +3,7 @@
 # Use local image (with plugin fix)
 image:
   repository: devbob
-  tag: plugin-fix
+  tag: local-fixed
   pullPolicy: Never
 
 # Secrets - IMPORTANT: Set via Helm command or external secret manager
