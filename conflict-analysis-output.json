@@ -1,0 +1,55 @@
+{
+  "specificationName": "devbob-acp-multi-vessel-coordination",
+  "otherSpecifications": [
+    "devbob-k8s-git-operations",
+    "Kubernetes-Deployment-Validation-Exit-Codes",
+    "local-docker-k8s-deployment"
+  ],
+  "conflicts": [],
+  "sharedComponents": [
+    {
+      "component": "Dockerfile.devbob-local",
+      "affectedBySpecs": [
+        "devbob-acp-multi-vessel-coordination",
+        "devbob-k8s-git-operations"
+      ],
+      "conflictType": "DEPLOYMENT_COORDINATION",
+      "recommendation": "Rebuild container image with both OpenCode updates AND gh CLI"
+    }
+  ],
+  "potentialInteractions": [
+    {
+      "interaction": "Container Image Deployment",
+      "type": "DEPLOYMENT_COORDINATION",
+      "risk": "MEDIUM",
+      "resolution": "Coordinate single deployment to satisfy both specifications"
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-devbob-acp-multi-vessel-coordination",
+  "summary": {
+    "totalConflicts": 0,
+    "criticalConflicts": 0,
+    "sharedComponents": 1,
+    "requiresCoordination": 1,
+    "overallRisk": "LOW",
+    "deploymentRisk": "MEDIUM",
+    "runtimeRisk": "LOW"
+  },
+  "riskAssessment": {
+    "codeChanges": "LOW - All changes are additive and backward-compatible",
+    "deployment": "MEDIUM - Requires coordinated container rebuild and rollout",
+    "runtime": "LOW - Changes improve reliability and security, no conflicts"
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Rebuild devbob container image with all changes",
+      "specs": [
+        "devbob-acp-multi-vessel-coordination",
+        "devbob-k8s-git-operations"
+      ]
+    }
+  ],
+  "readyForProduction": true,
+  "caveat": "Both specifications require container rebuild. Deploy together."
+}
