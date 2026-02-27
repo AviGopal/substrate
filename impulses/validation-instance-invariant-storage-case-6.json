@@ -1,0 +1,16 @@
+{
+  "id": "validation-Instance-Invariant Storage for Impulses and Activities-case-6",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 6: Backend Sync Enforcement (Dual-Write Pattern)\n\nInput:\n  - Analyze opencode source code statically\n  - Check for backend sync calls in storage operations\n\nExpected Output:\n  - hasImpulseBackendSync: true (impulse_create calls metabob_impulse_store)\n  - hasActivitySaveBackendSync: true (Activity.save calls metabob_activity_save)\n  - hasActivityLoadBackendFallback: true (Activity.load has metabob_activity_load fallback)\n  - hasDirectHTTP: false (no direct fetch/axios calls to rpc-api)\n  - hasRequiredImports: true (imports MCP and Instance modules)\n\nValidation:\n  - Read impulse-create.ts and verify metabob_impulse_store call\n  - Read activity.ts and verify metabob_activity_save in save()\n  - Read activity.ts and verify metabob_activity_load in load()\n  - Grep for direct HTTP calls (should find none)\n  - Verify MCP.clients() usage pattern"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "scope": "global",
+  "metadata": {
+    "testCaseId": "case-6",
+    "testName": "Backend Sync Enforcement",
+    "category": "code-quality"
+  }
+}
