@@ -49,6 +49,38 @@
 - Key metrics at a glance
 - Action items snapshot
 
+### For Indexing Status (10 min read)
+→ **[METABOB_INDEXING_STATUS_REPORT.md](METABOB_INDEXING_STATUS_REPORT.md)**
+- Codebase indexing verification
+- Analysis child process diagnostics
+- Tool functionality assessment
+- Fix action plan
+
+### For Immediate Fix (5 min read)
+→ **[METABOB_INDEXING_FIX_ACTION_PLAN.md](METABOB_INDEXING_FIX_ACTION_PLAN.md)**
+- Step-by-step troubleshooting
+- 6 fix attempts (ordered by likelihood)
+- Verification procedures
+- Rollback plan
+
+---
+
+## 🚨 CRITICAL BLOCKER DISCOVERED
+
+**⚠️ INDEXING SYSTEM NOT OPERATIONAL**
+
+During verification, we discovered the Metabob analysis child process is failing to start:
+- **Error:** `Cannot connect to host api-server-dev:80`
+- **Impact:** All code quality analysis tools blocked
+- **Status:** 313 files tracked, 0 files analyzed
+- **Fix Required:** IMMEDIATE (estimated 1-4 hours)
+
+**Documents:**
+- **[METABOB_INDEXING_STATUS_REPORT.md](METABOB_INDEXING_STATUS_REPORT.md)** - Full diagnostic
+- **[METABOB_INDEXING_FIX_ACTION_PLAN.md](METABOB_INDEXING_FIX_ACTION_PLAN.md)** - Step-by-step fix
+
+**This blocks implementation of the audit recommendations until resolved.**
+
 ---
 
 ## 🎯 Audit Findings Summary
