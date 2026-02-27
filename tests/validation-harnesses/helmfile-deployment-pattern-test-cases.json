@@ -1,0 +1,148 @@
+{
+  "specificationName": "Helmfile-driven Kubernetes Deployment Pattern",
+  "harnessFile": "tests/validation-harnesses/helmfile-deployment-pattern-harness.sh",
+  "description": "Validation test cases for ensuring helmfile-driven deployment pattern compliance",
+  "testCases": [
+    {
+      "impulseId": "validation-helmfile-deployment-pattern-case-1",
+      "name": "kubectl-availability",
+      "description": "Verify kubectl is available and context is set",
+      "input": {
+        "command": "kubectl config current-context"
+      },
+      "expectedOutput": {
+        "valid": true,
+        "contextAvailable": true
+      },
+      "validation": "kubectl command should succeed and return a context name"
+    },
+    {
+      "impulseId": "validation-helmfile-deployment-pattern-case-2",
+      "name": "multi-environment-support",
+      "description": "Verify helmfile.yaml defines both local and production environments",
+      "input": {
+        "file": "helm/helmfile.yaml",
+        "searchPatterns": ["environments:", "  local:", "  production:"]
+      },
+      "expectedOutput": {
+        "hasLocal": true,
+        "hasProduction": true,
+        "environments": ["local", "production"]
+      },
+      "validation": "helmfile.yaml should contain 'local' and 'production' environment definitions"
+    },
+    {
+      "impulseId": "validation-helmfile-deployment-pattern-case-3",
+      "name": "istio-templates-exist",
+      "description": "Verify all required Istio templates and production configuration files exist",
+      "input": {
+        "expectedFiles": [
+          "helm/charts/devbob/templates/virtualservice.yaml",
+          "helm/charts/devbob/templates/destinationrule.yaml",
+          "helm/charts/metabob-rpc-api/templates/virtualservice.yaml",
+          "helm/environments/production.values.yaml"
+        ]
+      },
+      "expectedOutput": {
+        "allFilesExist": true,
+        "missingFiles": []
+      },
+      "validation": "All Istio VirtualService, DestinationRule templates and production.values.yaml should exist"
+    },
+    {
+      "impulseId": "validation-helmfile-deployment-pattern-case-4",
+      "name": "helmfile-template-local",
+      "description": "Verify helmfile can render templates for local environment without errors",
+      "input": {
+        "command": "cd helm && helmfile -e local template",
+        "environment": "local"
+      },
+      "expectedOutput": {
+        "success": true,
+        "hasDeployments": true,
+        "hasServices": true,
+        "noErrors": true
+      },
+      "validation": "helmfile template command should succeed and generate Deployments and Services"
+    },
+    {
+      "impulseId": "validation-helmfile-deployment-pattern-case-5",
+      "name": "helmfile-template-production",
+      "description": "Verify helmfile can render templates for production environment with Istio resources",
+      "input": {
+        "command": "cd helm && helmfile -e production template",
+        "environment": "production"
+      },
+      "expectedOutput": {
+        "success": true,
+        "hasDeployments": true,
+        "hasVirtualServices": true,
+        "hasDestinationRules": true,
+        "noErrors": true
+      },
+      "validation": "helmfile template command should succeed and generate Istio VirtualServices and DestinationRules for production"
+    },
+    {
+      "impulseId": "validation-helmfile-deployment-pattern-case-6",
+      "name": "no-kubectl-antipatterns",
+      "description": "Verify all deployments in metabob namespace are managed by Helm",
+      "input": {
+        "namespace": "metabob",
+        "commands": [
+          "kubectl get deployments,statefulsets -n metabob -o name",
+          "kubectl get deployments,statefulsets -n metabob -l app.kubernetes.io/managed-by=Helm -o name"
+        ]
+      },
+      "expectedOutput": {
+        "allHelmManaged": true,
+        "unmanagedCount": 0,
+        "unmanagedResources": []
+      },
+      "validation": "All deployments and statefulsets should have app.kubernetes.io/managed-by=Helm label"
+    },
+    {
+      "impulseId": "validation-helmfile-deployment-pattern-case-7",
+      "name": "no-configuration-drift",
+      "description": "Verify running deployment versions match configured values",
+      "input": {
+        "namespace": "metabob",
+        "deployment": "metabob-rpc-api",
+        "valuesFile": "helm/environments/local.values.yaml",
+        "versionPath": "imageVersions.rpcApi"
+      },
+      "expectedOutput": {
+        "noDrift": true,
+        "configuredVersion": "0.12.6",
+        "runningVersion": "0.12.6"
+      },
+      "validation": "Running deployment image version should match configured version in values file"
+    }
+  ],
+  "usage": {
+    "command": "./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh [BASE_DIR] [NAMESPACE]",
+    "examples": [
+      {
+        "description": "Run from project root with defaults",
+        "command": "./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh"
+      },
+      {
+        "description": "Run with custom base directory",
+        "command": "./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh /path/to/project metabob"
+      },
+      {
+        "description": "Run with custom namespace",
+        "command": "./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh . staging"
+      }
+    ]
+  },
+  "expectedBehavior": {
+    "allTestsPass": true,
+    "totalTests": 7,
+    "criticalTests": [
+      "multi-environment-support",
+      "istio-templates-exist",
+      "no-kubectl-antipatterns"
+    ]
+  },
+  "harnessImpulseId": "harness-helmfile-deployment-pattern"
+}
