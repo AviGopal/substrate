@@ -1,0 +1,156 @@
+{
+  "specificationName": "DevBob Container Clean Environment Constraints",
+  "harnessFile": "tests/validation-harnesses/devbob-container-clean-environment-harness.ts",
+  "testCasesFile": "tests/validation-harnesses/devbob-container-clean-environment-test-cases.json",
+  "testCases": [
+    {
+      "impulseId": "validation-devbob-container-clean-environment-case-1",
+      "name": "Multi-stage Build Structure",
+      "input": {
+        "file": "docker/Dockerfile.devbob",
+        "check": "Verify multi-stage build with metabob-cli-builder, opencode-binary, and runtime stages"
+      },
+      "expectedOutput": {
+        "stages": ">=3",
+        "hasMetabobCliBuilder": true,
+        "hasOpencodeBuilder": true,
+        "hasRuntime": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-container-clean-environment-case-2",
+      "name": "No Source Code in Runtime Stage",
+      "input": {
+        "file": "docker/Dockerfile.devbob",
+        "check": "Verify runtime stage contains NO COPY commands for source code"
+      },
+      "expectedOutput": {
+        "copiesRepos": false,
+        "copiesTsFiles": false,
+        "copiesWorkspace": false,
+        "allCopiesFromBuilder": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-container-clean-environment-case-3",
+      "name": "Bootstrap Templates Copied",
+      "input": {
+        "file": "docker/Dockerfile.devbob",
+        "check": "Verify bootstrap templates are copied to /metabob-proto/activities/bootstrap/"
+      },
+      "expectedOutput": {
+        "hasBootstrapCopy": true,
+        "hasBootstrapMkdir": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-container-clean-environment-case-4",
+      "name": "Build Script Dockerfile Reference",
+      "input": {
+        "file": "scripts/build-devbob.sh",
+        "check": "Verify build script uses docker/Dockerfile.devbob (production) not configs/Dockerfile.devbob (dev)"
+      },
+      "expectedOutput": {
+        "usesCorrectDockerfile": true,
+        "usesWrongDockerfile": false
+      }
+    },
+    {
+      "impulseId": "validation-devbob-container-clean-environment-case-5",
+      "name": "Unconditional Activity Execution",
+      "input": {
+        "file": "docker/entrypoint-self-config.sh",
+        "check": "Verify configure-vessel-for-environment activity runs unconditionally"
+      },
+      "expectedOutput": {
+        "hasConditionalExecution": false,
+        "hasUnconditionalExecution": true,
+        "passesBackendVariable": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-container-clean-environment-case-6",
+      "name": "Validation Template Clean Environment",
+      "input": {
+        "file": "templates/docker/validate-devbob-container.json",
+        "check": "Verify validation template tests for clean binary deployment"
+      },
+      "expectedOutput": {
+        "hasCleanDeploymentTask": true,
+        "checksForNoRepos": true,
+        "hasWrongCodeSyncTask": false
+      }
+    },
+    {
+      "impulseId": "validation-devbob-container-clean-environment-case-7",
+      "name": "Container Runtime Clean Environment",
+      "input": {
+        "image": "devbob:latest",
+        "checks": [
+          "find / -type d -name repos",
+          "find /usr/local/bin /opt -name '*.ts'",
+          "test -f /usr/local/bin/opencode",
+          "test -d /metabob-proto/activities/bootstrap"
+        ]
+      },
+      "expectedOutput": {
+        "hasRepos": false,
+        "hasTsFiles": false,
+        "binaryExists": true,
+        "bootstrapExists": true
+      }
+    }
+  ],
+  "harnessImpulseId": "harness-devbob-container-clean-environment-constraints",
+  "validationStrategy": {
+    "phase1": {
+      "name": "Static Analysis",
+      "description": "Parse Dockerfile, scripts, templates to verify configuration",
+      "testCases": ["case-1", "case-2", "case-3", "case-4", "case-5", "case-6"],
+      "requirements": "None - file system access only",
+      "speed": "Fast (<1 second)",
+      "llmRequired": false
+    },
+    "phase2": {
+      "name": "Runtime Verification",
+      "description": "Build container, start it, exec commands to verify clean environment",
+      "testCases": ["case-7"],
+      "requirements": "Docker image must be built",
+      "speed": "Slow (depends on image availability)",
+      "llmRequired": false
+    }
+  },
+  "usage": {
+    "cli": "bun run tests/validation-harnesses/devbob-container-clean-environment-harness.ts",
+    "programmatic": "import { runValidation } from './devbob-container-clean-environment-harness'; const result = runValidation();",
+    "exitCodes": {
+      "0": "All tests pass - container meets clean environment constraints",
+      "1": "Some tests fail - violations detected"
+    }
+  },
+  "complianceMapping": {
+    "constraint1_standaloneBinary": ["case-2", "case-7"],
+    "constraint2_metabobCliVenv": ["case-2", "case-7"],
+    "constraint3_entrypointScript": ["case-5", "case-7"],
+    "constraint4_runtimeDeps": ["case-2"],
+    "constraint5_preInstalledPlugins": ["case-7"],
+    "constraint6_noReposDirectory": ["case-2", "case-7"],
+    "constraint7_noTypeScriptSource": ["case-2", "case-7"],
+    "constraint8_noWorkspaceSource": ["case-2", "case-7"],
+    "constraint9_minimalSize": ["case-1", "case-2"],
+    "constraint10_explicitDocumentation": ["case-2"]
+  },
+  "relatedDocumentation": {
+    "trace": "TRACE_DEVBOB_CONTAINER_CLEAN_ENVIRONMENT.md",
+    "enforcement": "ENFORCEMENT_DEVBOB_CONTAINER_CLEAN_ENVIRONMENT.md",
+    "traceImpulse": "trace-devbob-container-clean-environment-constraints",
+    "enforcementImpulse": "enforcement-devbob-container-clean-environment-constraints"
+  },
+  "currentStatus": {
+    "testsTotal": 7,
+    "testsPassed": 6,
+    "testsFailed": 1,
+    "overallPass": false,
+    "note": "Test 7 (runtime) fails because Docker image hasn't been rebuilt with enforced changes yet. All static analysis tests pass."
+  }
+}

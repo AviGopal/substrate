@@ -117,3 +117,166 @@ echo "✅ Vessel registry validation passed"
 ### Test Cases
 
 See `/tmp/vessel-registry-validation-summary.json` for detailed test case specifications.
+
+---
+
+## DevBob Container Clean Environment Constraints Harness
+
+**File:** `devbob-container-clean-environment-harness.ts`
+
+**Purpose:** Validates that the DevBob container is a clean binary deployment with NO source code leakage, ensuring intellectual property protection and minimal attack surface.
+
+### Specification
+
+The DevBob container must be a clean, production-ready environment:
+- ✅ Contains ONLY: standalone binary, venv, entrypoint, runtime deps, plugins
+- ❌ Must NOT contain: repos/ directory, .ts files, workspace source code
+- ✅ Multi-stage build discards all source code
+- ✅ Final image is production-ready with minimal attack surface
+
+### Usage
+
+#### Run harness
+```bash
+bun run tests/validation-harnesses/devbob-container-clean-environment-harness.ts
+```
+
+#### Exit codes
+- 0 = All tests pass (container meets clean environment constraints)
+- 1 = Some tests fail (violations detected)
+
+#### Programmatic usage
+```typescript
+import { runValidation } from './devbob-container-clean-environment-harness'
+
+const result = runValidation()
+
+console.log(`Pass: ${result.overallPass}`)
+console.log(`Tests: ${result.passed}/${result.totalTests}`)
+
+result.results.forEach(test => {
+  console.log(`${test.testCase}: ${test.pass ? 'PASS' : 'FAIL'}`)
+})
+```
+
+### Test Cases
+
+1. **Multi-stage Build Structure** - Verifies 3-stage build (metabob-cli-builder, opencode-binary, runtime)
+2. **No Source Code in Runtime Stage** - Ensures NO COPY commands for source code
+3. **Bootstrap Templates Copied** - Verifies templates exist at /metabob-proto/activities/bootstrap/
+4. **Build Script Dockerfile Reference** - Ensures build uses docker/Dockerfile.devbob
+5. **Unconditional Activity Execution** - Verifies config activity runs without backend dependency
+6. **Validation Template Clean Environment** - Ensures validation tests for clean deployment
+7. **Container Runtime Clean Environment** - Runtime verification (requires built image)
+
+### Validation Strategy
+
+**Phase 1: Static Analysis** (fast, no Docker required)
+- Parse Dockerfile, scripts, templates
+- Verify configuration matches specification
+- Test cases: 1-6
+
+**Phase 2: Runtime Verification** (slow, requires Docker image)
+- Build container, start it, exec commands
+- Verify clean environment at runtime
+- Test case: 7
+
+### Expected Output
+
+#### PASS (all constraints met)
+```
+================================================================================
+Validation Harness: DevBob Container Clean Environment Constraints
+================================================================================
+
+✅ PASS - Multi-stage Build Structure
+  Dockerfile uses correct multi-stage build structure
+
+✅ PASS - No Source Code in Runtime Stage
+  Runtime stage only copies artifacts from builders, no source code
+
+✅ PASS - Bootstrap Templates Copied
+  Bootstrap templates are copied to container
+
+✅ PASS - Build Script Dockerfile Reference
+  Build script uses correct production Dockerfile (docker/Dockerfile.devbob)
+
+✅ PASS - Unconditional Activity Execution
+  Activity execution is unconditional with backend_available variable
+
+✅ PASS - Validation Template Clean Environment
+  Validation template correctly tests for clean binary deployment
+
+✅ PASS - Container Runtime Clean Environment
+  Container runtime environment is clean - NO source code leakage detected
+
+================================================================================
+Results: 7/7 tests passed
+Status: ✅ ALL TESTS PASSED
+================================================================================
+```
+
+#### FAIL (constraints violated)
+```
+❌ FAIL - No Source Code in Runtime Stage
+  Runtime stage contains source code COPY commands
+  Expected: { "copiesRepos": false }
+  Actual: { "copiesRepos": true }
+
+❌ FAIL - Container Runtime Clean Environment
+  Container runtime has issues - source code leakage detected
+  Expected: { "hasRepos": false }
+  Actual: { "hasRepos": true }
+```
+
+### Integration with CI/CD
+
+Add to your build pipeline:
+
+```yaml
+# .github/workflows/validate-devbob.yml
+name: Validate DevBob Clean Environment
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+      
+      - name: Validate Clean Environment (Static)
+        run: bun run tests/validation-harnesses/devbob-container-clean-environment-harness.ts
+      
+      - name: Build DevBob Image
+        run: ./scripts/build-devbob.sh
+      
+      - name: Validate Clean Environment (Runtime)
+        run: bun run tests/validation-harnesses/devbob-container-clean-environment-harness.ts
+```
+
+### Compliance Matrix
+
+| Constraint | Test Case | Validates |
+|------------|-----------|-----------|
+| Standalone binary | 2, 7 | Only binary at /usr/local/bin/opencode, no source |
+| metabob-cli venv | 2, 7 | Only venv at /opt/metabob-cli/.venv, no source |
+| Entrypoint script | 5, 7 | Unconditional config at /usr/local/bin/entrypoint.sh |
+| Runtime deps | 2 | Only runtime dependencies (git, python3, bun, ca-certs) |
+| Pre-installed plugins | 7 | Plugins at /root/.cache/opencode |
+| NO repos/ directory | 2, 7 | NO source code leakage |
+| NO TypeScript source | 2, 7 | NO .ts files in runtime paths |
+| NO workspace source | 2, 7 | NO workspace source code |
+| Minimal size | 1, 2 | Multi-stage build discards all source |
+| Explicit documentation | 2 | Dockerfile comments state 'NO source code' |
+
+### Test Cases File
+
+Detailed test case specifications: `devbob-container-clean-environment-test-cases.json`
+
+### Related Documentation
+
+- Trace: `TRACE_DEVBOB_CONTAINER_CLEAN_ENVIRONMENT.md`
+- Enforcement: `ENFORCEMENT_DEVBOB_CONTAINER_CLEAN_ENVIRONMENT.md`
+- Specification: DevBob Container Clean Environment Constraints

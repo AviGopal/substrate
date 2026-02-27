@@ -115,12 +115,13 @@ function testNoSourceCodeInRuntime(): ValidationResult {
 
   const runtimeStage = runtimeMatch[1];
 
-  // Check for problematic COPY commands
-  const copiesRepos = runtimeStage.includes("COPY repos/");
+  // Check for problematic COPY commands (excluding bootstrap templates which are configuration)
+  const copiesReposMatch = runtimeStage.match(/COPY repos\/(?!metabob-proto\/activities\/bootstrap)/);
+  const copiesRepos = !!copiesReposMatch;
   const copiesTsFiles = runtimeStage.match(/COPY.*\.ts/);
   const copiesWorkspace = runtimeStage.includes("COPY /workspace");
 
-  // Verify only COPY --from=builder commands
+  // Verify only COPY --from=builder commands or allowed config files (entrypoint, bootstrap)
   const copyCommands = runtimeStage.match(/COPY .*/g) || [];
   const allCopiesFromBuilder = copyCommands.every(
     (cmd) => cmd.includes("--from=") || cmd.includes("docker/entrypoint") || cmd.includes("bootstrap")
@@ -237,7 +238,8 @@ function testUnconditionalActivityExecution(): ValidationResult {
   const content = readFileSync(entrypointPath, "utf-8");
 
   // Check if activity execution is conditional on BACKEND_READY
-  const hasConditionalExecution = content.match(/if.*BACKEND_READY.*then[\s\S]*?opencode activity execute configure-vessel-for-environment/);
+  // Look for pattern: if [ "$BACKEND_READY" ... ]; then ... opencode activity execute
+  const hasConditionalExecution = content.match(/if\s+\[\s+["\$]*BACKEND_READY["]*\s*=.*?\]\s*;?\s*then[\s\S]{1,500}?opencode\s+activity\s+execute\s+configure-vessel-for-environment/);
   const hasUnconditionalExecution = content.includes("opencode activity execute configure-vessel-for-environment") && 
                                      content.includes("backend_available");
 
