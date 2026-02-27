@@ -64,6 +64,21 @@ spec:
             secretKeyRef:
               name: devbob-secrets
               key: anthropic-api-key
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: devbob-secrets
+              key: github-token
+        - name: GIT_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              name: devbob-secrets
+              key: git-user-name
+        - name: GIT_USER_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: devbob-secrets
+              key: git-user-email
         - name: METABOB_API_URL
           value: http://metabob-rpc-api
         - name: SURREAL_HOST

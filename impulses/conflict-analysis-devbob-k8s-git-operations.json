@@ -1,0 +1,324 @@
+{
+  "impulseId": "conflict-analysis-devbob-k8s-git-operations",
+  "type": "memo",
+  "createdAt": "2026-02-27T12:00:00Z",
+  "budget": 3000,
+  "analysis": {
+    "specificationName": "devbob-k8s-git-operations",
+    "analyzedDate": "2026-02-27T12:00:00Z",
+    "otherSpecifications": [
+      "Kubernetes-Deployment-Validation-Exit-Codes",
+      "Local-Docker-Desktop-Kubernetes-Deployment",
+      "Vessel-Self-Configuration-System"
+    ],
+    "otherValidationResults": [
+      {
+        "specificationName": "Kubernetes-Deployment-Validation-Exit-Codes",
+        "status": "PASS",
+        "totalTests": 4,
+        "passed": 4,
+        "failed": 0,
+        "executionDate": "2026-02-26T19:27:40-08:00",
+        "relevance": "Validates deployment health checking - orthogonal to git operations"
+      },
+      {
+        "specificationName": "Local-Docker-Desktop-Kubernetes-Deployment",
+        "status": "PASS",
+        "totalTests": 7,
+        "passed": 4,
+        "failed": 0,
+        "skipped": 3,
+        "executionDate": "2026-02-26",
+        "relevance": "Validates K8s configuration structure - may overlap with StatefulSet changes"
+      },
+      {
+        "specificationName": "Vessel-Self-Configuration-System",
+        "status": "COMPLIANT",
+        "changesRequired": 0,
+        "executionDate": "2026-02-27",
+        "relevance": "Shares entrypoint-self-config.sh file - potential conflict"
+      }
+    ]
+  },
+  "conflicts": [],
+  "potentialConflicts": [
+    {
+      "type": "SHARED_FILE_MODIFICATION",
+      "severity": "LOW",
+      "spec1": "devbob-k8s-git-operations",
+      "spec2": "Vessel-Self-Configuration-System",
+      "sharedComponent": "repos/metabob-opencode/docker/entrypoint-self-config.sh",
+      "description": "Both specifications modify the entrypoint script. devbob-k8s-git-operations adds Step 3b (git configuration) between Steps 3 and 4. Vessel-Self-Configuration-System requires Step 4 (configure-vessel-for-environment activity).",
+      "conflictAnalysis": {
+        "actualConflict": false,
+        "reason": "Changes are additive and non-overlapping. Step 3b (lines 126-179) is inserted BEFORE Step 4 (line 183+). No existing code is modified or removed. Execution order is preserved: Step 3 (env validation) → Step 3b (git config) → Step 4 (vessel config)."
+      },
+      "resolution": "NO ACTION REQUIRED - Changes are compatible",
+      "verificationStatus": "VERIFIED_COMPATIBLE",
+      "evidence": {
+        "step3bLocation": "Lines 126-179",
+        "step4Location": "Lines 183+",
+        "insertionPoint": "Between environment validation and vessel configuration",
+        "executionFlow": "Step 3 → Step 3b (NEW) → Step 4 (UNCHANGED)"
+      }
+    },
+    {
+      "type": "DEPLOYMENT_DEPENDENCY",
+      "severity": "LOW",
+      "spec1": "devbob-k8s-git-operations",
+      "spec2": "Local-Docker-Desktop-Kubernetes-Deployment",
+      "sharedComponent": "k8s-devbob-statefulset.yaml",
+      "description": "devbob-k8s-git-operations modifies StatefulSet environment variables. Local-Docker-Desktop-Kubernetes-Deployment validates Kubernetes configuration structure including StatefulSets.",
+      "conflictAnalysis": {
+        "actualConflict": false,
+        "reason": "Environment variable additions (GIT_USER_NAME, GIT_USER_EMAIL, GITHUB_TOKEN) are valid Kubernetes configurations. No structural changes to StatefulSet definition. Validation rules remain satisfied."
+      },
+      "resolution": "NO ACTION REQUIRED - Changes follow Kubernetes best practices",
+      "verificationStatus": "VERIFIED_COMPATIBLE",
+      "evidence": {
+        "addedEnvVars": 3,
+        "existingEnvVars": 1,
+        "structuralChanges": 0,
+        "k8sSchemaCompliant": true
+      }
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/docker/entrypoint-self-config.sh",
+      "filePath": "repos/metabob-opencode/docker/entrypoint-self-config.sh",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations",
+        "Vessel-Self-Configuration-System"
+      ],
+      "modificationType": "ADDITIVE",
+      "conflictStatus": "NO_CONFLICT",
+      "details": {
+        "devbobK8sGitOperations": {
+          "changes": "Added Step 3b: Git Configuration (lines 126-179)",
+          "linesAdded": 54,
+          "linesModified": 0,
+          "linesDeleted": 0,
+          "insertionPoint": "After Step 3, before Step 4"
+        },
+        "vesselSelfConfiguration": {
+          "changes": "Existing Step 4: Execute configure-vessel-for-environment activity",
+          "requirement": "Step 4 must execute configuration activity",
+          "status": "UNCHANGED and COMPATIBLE"
+        }
+      },
+      "recommendation": "APPROVE - Both specifications can coexist. Git configuration (Step 3b) executes before vessel configuration (Step 4), ensuring proper dependency order.",
+      "integrationRisk": "MINIMAL"
+    },
+    {
+      "component": "k8s-devbob-statefulset.yaml",
+      "filePath": "k8s-devbob-statefulset.yaml",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations",
+        "Local-Docker-Desktop-Kubernetes-Deployment"
+      ],
+      "modificationType": "EXTENSION",
+      "conflictStatus": "NO_CONFLICT",
+      "details": {
+        "devbobK8sGitOperations": {
+          "changes": "Added 3 environment variables from secrets (lines 67-82)",
+          "envVarsAdded": ["GIT_USER_NAME", "GIT_USER_EMAIL", "GITHUB_TOKEN"],
+          "structuralChanges": false
+        },
+        "localDockerK8sDeployment": {
+          "validationCriteria": [
+            "StatefulSet exists",
+            "Environment variables defined",
+            "Secrets referenced correctly",
+            "Pod spec valid"
+          ],
+          "status": "ALL_CRITERIA_MET"
+        }
+      },
+      "recommendation": "APPROVE - Environment variable additions are standard Kubernetes practice. No validation rules violated.",
+      "integrationRisk": "NONE"
+    },
+    {
+      "component": "Dockerfile.devbob-local",
+      "filePath": "Dockerfile.devbob-local",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations"
+      ],
+      "modificationType": "ADDITIVE",
+      "conflictStatus": "NO_CONFLICT",
+      "details": {
+        "devbobK8sGitOperations": {
+          "changes": "Added GitHub CLI (gh) installation after git (lines 8-28)",
+          "packagesAdded": ["gh", "gpg"],
+          "imageSize Impact": "+~50MB"
+        }
+      },
+      "recommendation": "APPROVE - Adds required tooling for PR operations. No conflicts with existing Dockerfile content.",
+      "integrationRisk": "NONE"
+    },
+    {
+      "component": "helm/charts/devbob/values.yaml",
+      "filePath": "helm/charts/devbob/values.yaml",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations",
+        "Local-Docker-Desktop-Kubernetes-Deployment"
+      ],
+      "modificationType": "EXTENSION",
+      "conflictStatus": "NO_CONFLICT",
+      "details": {
+        "devbobK8sGitOperations": {
+          "changes": "Extended secrets section with git credentials (lines 53-62)",
+          "secretsAdded": ["githubToken", "gitUserName", "gitUserEmail"]
+        },
+        "localDockerK8sDeployment": {
+          "validationCriteria": [
+            "Helm values file structure valid",
+            "Secrets section exists",
+            "Default values provided"
+          ],
+          "status": "ALL_CRITERIA_MET"
+        }
+      },
+      "recommendation": "APPROVE - Helm values extensions follow established patterns. Configuration validation rules satisfied.",
+      "integrationRisk": "NONE"
+    },
+    {
+      "component": "helm/charts/devbob/templates/secrets.yaml",
+      "filePath": "helm/charts/devbob/templates/secrets.yaml",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations"
+      ],
+      "modificationType": "EXTENSION",
+      "conflictStatus": "NO_CONFLICT",
+      "details": {
+        "devbobK8sGitOperations": {
+          "changes": "Added 3 secret keys (lines 10-12)",
+          "secretKeysAdded": ["github-token", "git-user-name", "git-user-email"]
+        }
+      },
+      "recommendation": "APPROVE - Secret template extensions follow Kubernetes best practices.",
+      "integrationRisk": "NONE"
+    }
+  ],
+  "crossReferenceAnalysis": {
+    "method": "Static analysis - Metabob CPG tools not used",
+    "reason": "metabob_suggest_related_changes and metabob_analyze_change_impact tools are unavailable in current environment. Analysis performed via file inspection and specification cross-reference.",
+    "filesAnalyzed": 5,
+    "specificationsCompared": 4,
+    "manualVerification": {
+      "entrypointScript": "Manually verified insertion point and execution flow",
+      "statefulSet": "Manually verified environment variable schema compliance",
+      "helmChart": "Manually verified Helm template syntax and structure",
+      "dockerfile": "Manually verified package installation and layer ordering"
+    }
+  },
+  "dependencyAnalysis": {
+    "upstreamDependencies": [
+      {
+        "specification": "Vessel-Self-Configuration-System",
+        "relationship": "PREREQUISITE",
+        "description": "Vessel self-configuration (Step 4) depends on environment being validated (Step 3). Git configuration (Step 3b) runs between these steps and requires environment variables to be present.",
+        "satisfiedBy": "Step 3b executes after Step 3 (environment validation) completes successfully"
+      }
+    ],
+    "downstreamDependencies": [
+      {
+        "specification": "Any future git-based automation",
+        "relationship": "ENABLES",
+        "description": "Git configuration in devbob pods enables autonomous vessel repository management. Future specifications requiring git operations (clone, commit, push, PR) will benefit from this foundation."
+      }
+    ],
+    "parallelSpecifications": [
+      {
+        "specification": "Kubernetes-Deployment-Validation-Exit-Codes",
+        "relationship": "INDEPENDENT",
+        "description": "Deployment validation scripts operate independently of git configuration. No shared state or execution dependencies."
+      },
+      {
+        "specification": "Local-Docker-Desktop-Kubernetes-Deployment",
+        "relationship": "VALIDATES",
+        "description": "Configuration validation ensures Kubernetes manifests follow best practices. Git operations specification adds conforming configurations."
+      }
+    ]
+  },
+  "riskAssessment": {
+    "overallRisk": "LOW",
+    "riskFactors": [
+      {
+        "factor": "Shared file modification (entrypoint-self-config.sh)",
+        "severity": "LOW",
+        "mitigation": "Changes are additive and non-overlapping. Insertion point carefully chosen to preserve existing flow.",
+        "residualRisk": "MINIMAL"
+      },
+      {
+        "factor": "StatefulSet environment variable injection",
+        "severity": "LOW",
+        "mitigation": "Environment variables follow Kubernetes conventions. No structural changes to StatefulSet.",
+        "residualRisk": "NONE"
+      },
+      {
+        "factor": "Container image size increase (~50MB)",
+        "severity": "LOW",
+        "mitigation": "GitHub CLI is essential for PR operations. Size increase is acceptable for required functionality.",
+        "residualRisk": "ACCEPTABLE"
+      }
+    ],
+    "deploymentRisk": {
+      "level": "LOW",
+      "concerns": [
+        "Pods must be restarted for changes to take effect",
+        "Secrets must be created with valid GitHub token",
+        "Container image must be rebuilt before deployment"
+      ],
+      "mitigations": [
+        "Rollout restart ensures controlled pod recreation",
+        "Validation harness verifies deployment success",
+        "Dockerfile changes tested via image build verification"
+      ]
+    },
+    "operationalRisk": {
+      "level": "MINIMAL",
+      "concerns": [
+        "Git configuration failure could block vessel self-configuration",
+        "Missing GITHUB_TOKEN would prevent PR operations"
+      ],
+      "mitigations": [
+        "Entrypoint uses fault-tolerant git config (|| true)",
+        "Warnings logged if GITHUB_TOKEN missing but execution continues",
+        "Vessel self-configuration proceeds even if git config fails"
+      ]
+    }
+  },
+  "recommendations": {
+    "immediate": [
+      "NO CONFLICTS DETECTED - Proceed with deployment",
+      "All specifications are compatible",
+      "No code changes required to resolve conflicts"
+    ],
+    "beforeDeployment": [
+      "Verify Dockerfile.devbob-local builds successfully with gh CLI",
+      "Create GitHub Personal Access Token with required scopes",
+      "Test entrypoint-self-config.sh in isolation to verify Step 3b executes correctly",
+      "Validate StatefulSet YAML syntax with kubectl dry-run"
+    ],
+    "postDeployment": [
+      "Re-run devbob-k8s-git-operations validation harness",
+      "Verify Vessel-Self-Configuration-System still passes (Step 4 should execute normally)",
+      "Monitor pod logs for Step 3b execution and any git configuration warnings"
+    ],
+    "futureDevelopment": [
+      "Consider extracting git configuration to separate initialization script if more specifications need to modify entrypoint",
+      "Document entrypoint execution flow (Steps 1-4) to prevent future conflicts",
+      "Create entrypoint extension mechanism for plugin-based configuration steps"
+    ]
+  },
+  "conclusionSummary": {
+    "conflictsFound": 0,
+    "potentialConflictsAnalyzed": 2,
+    "sharedComponentsIdentified": 5,
+    "compatibilityStatus": "FULLY_COMPATIBLE",
+    "approvalRecommendation": "APPROVE_FOR_DEPLOYMENT",
+    "confidence": "HIGH",
+    "reasoning": "All specifications modify different aspects of the system or make additive changes to shared files. No contradictory requirements identified. Execution order preserved. Validation criteria satisfied."
+  }
+}

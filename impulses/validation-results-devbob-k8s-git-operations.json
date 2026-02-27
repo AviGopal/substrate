@@ -1,0 +1,263 @@
+{
+  "impulseId": "validation-results-devbob-k8s-git-operations",
+  "type": "memo",
+  "createdAt": "2026-02-27T11:30:00Z",
+  "budget": 2000,
+  "validationRun": {
+    "timestamp": "2026-02-27T11:30:00Z",
+    "specification": "devbob-k8s-git-operations",
+    "harnessUsed": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+    "executionMethod": "direct-kubectl-commands",
+    "reason": "Harness script had bash compatibility issues; ran individual test commands directly",
+    "namespace": "metabob",
+    "podsTestedCount": 3,
+    "podsTested": ["devbob-0", "devbob-1", "devbob-2"]
+  },
+  "overallStatus": "FAIL",
+  "summary": {
+    "totalTests": 15,
+    "passedTests": 3,
+    "failedTests": 12,
+    "skippedTests": 0,
+    "nonDestructiveTestsRun": 5,
+    "destructiveTestsRun": 0,
+    "passRate": "20%"
+  },
+  "validationResults": [
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-1",
+      "testName": "git-config-present",
+      "pod": "devbob-0",
+      "status": "FAIL",
+      "expected": "user.name=..., user.email=..., init.defaultBranch=main, push.autoSetupRemote=true",
+      "actual": "fatal: unable to read config file '/root/.gitconfig': No such file or directory",
+      "exitCode": 1,
+      "difference": "Git configuration file does not exist. Enforcement Phase 4 (entrypoint git config) not applied.",
+      "diagnostics": {
+        "rootCause": "Entrypoint script (repos/metabob-opencode/docker/entrypoint-self-config.sh) does not contain Step 3b: Git Configuration",
+        "remediation": "Apply enforcement changes from ENFORCEMENT_DEVBOB_K8S_GIT_OPERATIONS.md Phase 4"
+      }
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-1",
+      "testName": "git-config-present",
+      "pod": "devbob-1",
+      "status": "FAIL",
+      "expected": "user.name=..., user.email=..., init.defaultBranch=main, push.autoSetupRemote=true",
+      "actual": "fatal: unable to read config file '/root/.gitconfig': No such file or directory",
+      "exitCode": 1,
+      "difference": "Git configuration file does not exist"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-1",
+      "testName": "git-config-present",
+      "pod": "devbob-2",
+      "status": "FAIL",
+      "expected": "user.name=..., user.email=..., init.defaultBranch=main, push.autoSetupRemote=true",
+      "actual": "fatal: unable to read config file '/root/.gitconfig': No such file or directory",
+      "exitCode": 1,
+      "difference": "Git configuration file does not exist"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-2",
+      "testName": "gh-cli-installed",
+      "pod": "devbob-0",
+      "status": "FAIL",
+      "expected": "/usr/bin/gh and version output",
+      "actual": "command terminated with exit code 1 (gh command not found)",
+      "exitCode": 1,
+      "difference": "GitHub CLI (gh) is not installed in the container image",
+      "diagnostics": {
+        "rootCause": "Container image not rebuilt with gh CLI installation from Dockerfile.devbob-local",
+        "remediation": "Rebuild container image: docker build -t devbob:unified-test -f Dockerfile.devbob-local ."
+      }
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-2",
+      "testName": "gh-cli-installed",
+      "pod": "devbob-1",
+      "status": "FAIL",
+      "expected": "/usr/bin/gh and version output",
+      "actual": "command terminated with exit code 1 (gh command not found)",
+      "exitCode": 1,
+      "difference": "GitHub CLI not installed"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-2",
+      "testName": "gh-cli-installed",
+      "pod": "devbob-2",
+      "status": "FAIL",
+      "expected": "/usr/bin/gh and version output",
+      "actual": "command terminated with exit code 1 (gh command not found)",
+      "exitCode": 1,
+      "difference": "GitHub CLI not installed"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-3",
+      "testName": "git-credentials-present",
+      "pod": "devbob-0",
+      "status": "FAIL",
+      "expected": "GIT_USER_NAME=..., GIT_USER_EMAIL=..., GITHUB_TOKEN=...",
+      "actual": "No environment variables found (0 matches)",
+      "exitCode": 0,
+      "difference": "Git credentials not present in environment variables",
+      "diagnostics": {
+        "rootCause": "StatefulSet environment variables not updated OR secrets not created",
+        "remediation": "Apply enforcement Phase 2 (secrets) and Phase 3 (StatefulSet env vars), then rollout restart"
+      }
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-3",
+      "testName": "git-credentials-present",
+      "pod": "devbob-1",
+      "status": "FAIL",
+      "expected": "GIT_USER_NAME=..., GIT_USER_EMAIL=..., GITHUB_TOKEN=...",
+      "actual": "No environment variables found",
+      "exitCode": 0,
+      "difference": "Git credentials not present"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-3",
+      "testName": "git-credentials-present",
+      "pod": "devbob-2",
+      "status": "FAIL",
+      "expected": "GIT_USER_NAME=..., GIT_USER_EMAIL=..., GITHUB_TOKEN=...",
+      "actual": "No environment variables found",
+      "exitCode": 0,
+      "difference": "Git credentials not present"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-4",
+      "testName": "gh-cli-authenticated",
+      "pod": "devbob-0",
+      "status": "FAIL",
+      "expected": "Logged in to github.com",
+      "actual": "bash: line 1: gh: command not found",
+      "exitCode": 127,
+      "difference": "Cannot test authentication - gh CLI not installed",
+      "diagnostics": {
+        "rootCause": "Depends on gh CLI installation (test case 2)",
+        "remediation": "Fix test case 2 first (install gh CLI)"
+      }
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-4",
+      "testName": "gh-cli-authenticated",
+      "pod": "devbob-1",
+      "status": "FAIL",
+      "expected": "Logged in to github.com",
+      "actual": "bash: line 1: gh: command not found",
+      "exitCode": 127,
+      "difference": "gh CLI not installed"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-4",
+      "testName": "gh-cli-authenticated",
+      "pod": "devbob-2",
+      "status": "FAIL",
+      "expected": "Logged in to github.com",
+      "actual": "bash: line 1: gh: command not found",
+      "exitCode": 127,
+      "difference": "gh CLI not installed"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-5",
+      "testName": "workspace-accessible",
+      "pod": "devbob-0",
+      "status": "PASS",
+      "expected": "Directory listing with /workspace path",
+      "actual": "total 8\ndrwxrwxrwx 2 root root 4096 Feb 27 08:23 .\ndrwxr-xr-x 1 root root 4096 Feb 27 08:23 ..\n/workspace",
+      "exitCode": 0,
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-5",
+      "testName": "workspace-accessible",
+      "pod": "devbob-1",
+      "status": "PASS",
+      "expected": "Directory listing with /workspace path",
+      "actual": "/workspace directory exists and is accessible",
+      "exitCode": 0,
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-5",
+      "testName": "workspace-accessible",
+      "pod": "devbob-2",
+      "status": "PASS",
+      "expected": "Directory listing with /workspace path",
+      "actual": "/workspace directory exists and is accessible",
+      "exitCode": 0,
+      "difference": null
+    }
+  ],
+  "destructiveTests": {
+    "status": "SKIPPED",
+    "reason": "Non-destructive tests failed - prerequisites not met for destructive tests",
+    "testCases": [
+      "validation-devbob-k8s-git-operations-case-6 (git-clone-success)",
+      "validation-devbob-k8s-git-operations-case-7 (git-commit-success)",
+      "validation-devbob-k8s-git-operations-case-8 (git-push-success)",
+      "validation-devbob-k8s-git-operations-case-9 (gh-pr-create)"
+    ]
+  },
+  "enforcementStatus": {
+    "phase1_dockerfile": "NOT_DEPLOYED",
+    "phase2_helm_secrets": "NOT_DEPLOYED",
+    "phase3_statefulset_env": "NOT_DEPLOYED",
+    "phase4_entrypoint_git_config": "NOT_DEPLOYED",
+    "phase5_vessel_initialization": "NOT_APPLICABLE"
+  },
+  "recommendations": {
+    "immediate": [
+      "Deploy enforcement changes from ENFORCEMENT_DEVBOB_K8S_GIT_OPERATIONS.md",
+      "Rebuild container image with gh CLI (Phase 1)",
+      "Create/update Kubernetes secrets with git credentials (Phase 2)",
+      "Update StatefulSet with environment variable injection (Phase 3)",
+      "Rollout restart StatefulSet to pick up new image and environment",
+      "Re-run validation harness after deployment"
+    ],
+    "deploymentOrder": [
+      "1. Build new container image: docker build -t devbob:unified-test -f Dockerfile.devbob-local .",
+      "2. Create GitHub Personal Access Token with repo, workflow, write:packages scopes",
+      "3. Update devbob-secrets: kubectl create secret generic devbob-secrets -n metabob --from-literal=github-token=ghp_xxx --from-literal=git-user-name='Devbob Agent' --from-literal=git-user-email=devbob@metabob.local --from-literal=anthropic-api-key=$ANTHROPIC_API_KEY --dry-run=client -o yaml | kubectl apply -f -",
+      "4. Apply StatefulSet changes (if not using Helm): kubectl apply -f k8s-devbob-statefulset.yaml",
+      "5. Rollout restart: kubectl rollout restart statefulset/devbob -n metabob",
+      "6. Wait for rollout: kubectl rollout status statefulset/devbob -n metabob",
+      "7. Re-run validation: ./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --skip-destructive"
+    ]
+  },
+  "criticalFindings": [
+    {
+      "severity": "HIGH",
+      "finding": "GitHub CLI (gh) not installed in container image",
+      "impact": "PR creation operations will fail (createPR in activity-git.ts requires gh CLI)",
+      "affectedTests": ["gh-cli-installed", "gh-cli-authenticated", "gh-pr-create"]
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Git configuration not present",
+      "impact": "All git operations will fail with 'user.name not set' errors",
+      "affectedTests": ["git-config-present", "git-commit-success"]
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Git credentials not in environment",
+      "impact": "Push operations will fail with authentication errors",
+      "affectedTests": ["git-credentials-present", "git-push-success"]
+    },
+    {
+      "severity": "MEDIUM",
+      "finding": "Workspace directory exists but is empty",
+      "impact": "Phase 5 (vessel initialization) will be required to clone repos",
+      "affectedTests": []
+    }
+  ],
+  "nextSteps": {
+    "priority": "CRITICAL",
+    "action": "DEPLOY_ENFORCEMENT_CHANGES",
+    "description": "The trace and enforcement phases have been completed successfully, but changes have not been deployed to the Kubernetes cluster. All code changes are ready in the repository. Deployment is the blocking step.",
+    "estimatedTime": "30-45 minutes (includes image build, secret creation, pod rollout)",
+    "verificationAfterDeployment": "Re-run this validation harness. Expect all non-destructive tests to PASS after proper deployment."
+  }
+}

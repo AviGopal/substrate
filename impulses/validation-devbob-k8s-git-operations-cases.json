@@ -1,0 +1,129 @@
+{
+  "impulseId": "validation-devbob-k8s-git-operations-cases",
+  "type": "memo",
+  "createdAt": "2026-02-27T11:00:00Z",
+  "budget": 2000,
+  "testCases": [
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-1",
+      "testName": "git-config-present",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"git config --global --list | grep -E '(user\\\\.name|user\\\\.email|init\\\\.defaultBranch|push\\\\.autoSetupRemote)'\""
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "contains": ["user.name=", "user.email=", "init.defaultBranch=main", "push.autoSetupRemote=true"]
+      },
+      "description": "Verify git global configuration includes user.name, user.email, defaultBranch, and autoSetupRemote"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-2",
+      "testName": "gh-cli-installed",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"which gh && gh --version\""
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "contains": ["/usr/bin/gh", "gh version"]
+      },
+      "description": "Verify GitHub CLI (gh) is installed and accessible in PATH"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-3",
+      "testName": "git-credentials-present",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"env | grep -E '(GIT_USER_NAME|GIT_USER_EMAIL|GITHUB_TOKEN)' | sed 's/GITHUB_TOKEN=.*/GITHUB_TOKEN=***/'\""
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "contains": ["GIT_USER_NAME=", "GIT_USER_EMAIL=", "GITHUB_TOKEN="]
+      },
+      "description": "Verify git credentials (GIT_USER_NAME, GIT_USER_EMAIL, GITHUB_TOKEN) are present in environment"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-4",
+      "testName": "gh-cli-authenticated",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"gh auth status 2>&1\""
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "contains": ["Logged in to github.com", "Token:"]
+      },
+      "description": "Verify gh CLI is authenticated with GitHub token"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-5",
+      "testName": "workspace-accessible",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"ls -la /workspace && pwd\""
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "contains": ["/workspace"]
+      },
+      "description": "Verify /workspace directory is accessible"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-6",
+      "testName": "git-clone-success",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"rm -rf /tmp/test-repo-* && git clone https://github.com/metabob-labs/test-repo.git /tmp/test-repo-$(date +%s) 2>&1 && ls -la /tmp/test-repo-*\"",
+        "timeout": 60
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "notContains": ["fatal", "Authentication failed", "Permission denied"]
+      },
+      "description": "Verify git clone works without authentication errors (DESTRUCTIVE - creates files)"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-7",
+      "testName": "git-commit-success",
+      "input": {
+        "command": "kubectl exec -n metabob-devbob-0 -- bash -c \"cd /tmp/test-repo-* && echo 'test' > test.txt && git add test.txt && git commit -m 'Test commit' && git log -1 --format='%an <%ae>'\"",
+        "requiresPreviousTest": "git-clone-success"
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "notContains": ["fatal", "Please tell me who you are"]
+      },
+      "description": "Verify git commit works with proper author attribution (DESTRUCTIVE - modifies repo)"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-8",
+      "testName": "git-push-success",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"cd /tmp/test-repo-* && git checkout -b test-branch-$(date +%s) && git push origin HEAD -f 2>&1\"",
+        "timeout": 60,
+        "requiresPreviousTest": "git-commit-success"
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "notContains": ["fatal", "Authentication failed", "Permission denied"]
+      },
+      "description": "Verify git push works without authentication errors (DESTRUCTIVE - pushes to remote)"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-9",
+      "testName": "gh-pr-create",
+      "input": {
+        "command": "kubectl exec -n metabob devbob-0 -- bash -c \"cd /tmp/test-repo-* && gh pr create --title 'Test PR' --body 'Automated test PR' --base main --head test-branch-* 2>&1\"",
+        "timeout": 60,
+        "requiresPreviousTest": "git-push-success"
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "contains": ["https://github.com", "pull request"],
+        "or": ["already exists"]
+      },
+      "description": "Verify gh pr create works (DESTRUCTIVE - creates PR on GitHub)"
+    }
+  ],
+  "summary": {
+    "totalCases": 9,
+    "nonDestructiveCases": 5,
+    "destructiveCases": 4,
+    "estimatedDuration": "3-5 minutes (full run), 30 seconds (non-destructive only)"
+  }
+}

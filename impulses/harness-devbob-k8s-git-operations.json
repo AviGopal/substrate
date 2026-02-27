@@ -1,0 +1,49 @@
+{
+  "impulseId": "harness-devbob-k8s-git-operations",
+  "type": "file",
+  "createdAt": "2026-02-27T11:00:00Z",
+  "budget": 2000,
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+    "source": "validation harness creation"
+  },
+  "metadata": {
+    "specification": "devbob-k8s-git-operations",
+    "strategy": "kubectl-exec-commands",
+    "language": "bash",
+    "executable": true,
+    "testCaseCount": 9,
+    "supports": {
+      "singlePod": true,
+      "allPods": true,
+      "skipDestructive": true,
+      "jsonOutput": true
+    },
+    "usage": {
+      "basic": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "singlePod": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --pod devbob-0",
+      "nonDestructive": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --skip-destructive",
+      "json": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --json"
+    },
+    "exitCodes": {
+      "0": "All tests passed",
+      "1": "One or more tests failed"
+    }
+  },
+  "testCases": {
+    "nonDestructive": [
+      "git-config-present",
+      "gh-cli-installed",
+      "git-credentials-present",
+      "gh-cli-authenticated",
+      "workspace-accessible"
+    ],
+    "destructive": [
+      "git-clone-success",
+      "git-commit-success",
+      "git-push-success",
+      "gh-pr-create"
+    ]
+  }
+}

@@ -54,6 +54,12 @@ env:
 secrets:
   # REQUIRED: Anthropic API key
   anthropicApiKey: ""  # Override via --set secrets.anthropicApiKey=xxx
+  
+  # Git credentials for autonomous operations
+  # REQUIRED for distributed devbob git workflows (clone, commit, push, PR operations)
+  githubToken: ""      # GitHub Personal Access Token (classic) with repo, workflow, write:packages scopes
+  gitUserName: "Devbob Agent"     # Git user.name for commit attribution
+  gitUserEmail: "devbob@metabob.local"  # Git user.email for commit attribution
 
 # Health checks
 livenessProbe:
