@@ -1,0 +1,22 @@
+{
+  "name": "validation-harnesses",
+  "version": "1.0.0",
+  "description": "Validation harnesses for specification enforcement testing",
+  "main": "index.ts",
+  "scripts": {
+    "test": "ts-node --esm invariant-storage-across-instances-with-vessel-flow-harness.ts",
+    "test:all": "ts-node --esm invariant-storage-across-instances-with-vessel-flow-harness.ts"
+  },
+  "keywords": [
+    "validation",
+    "testing",
+    "specification-enforcement"
+  ],
+  "author": "Metabob DevBob",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,357 @@
+{
+  "activity_id": "audit-metabob-integration",
+  "name": "Audit Metabob Integration",
+  "description": "Comprehensive audit of Metabob tool integration: identifies unused high-value tools, checks codebase indexing status, validates annotation coverage, and generates actionable improvement report",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "task-1",
+      "subagent": "general",
+      "description": "Test Metabob MCP connectivity and list all available tools",
+      "dependencies": [],
+      "prompt": {
+        "template": "Test Metabob MCP connectivity and identify all available tools:\n\n1. Run test_metabob_mcp to verify connection and list all 35 tools\n2. Categorize tools by function:\n   - Code Quality (search_codebase_issues, get_priority_issues, mark_problem_complete)\n   - Component Analysis (list_file_components, analyze_change_impact, assess_deletion_safety, metabob_find_similar_components)\n   - Design Decisions (annotate_component, check_for_existing_functionality)\n   - Activity Management (search_activities, activity, create_activity_template, evolve_activity_template)\n   - Session Tracking (metabob_record_session_start, metabob_record_session_complete, metabob_record_tool_invocation)\n   - Change Prediction (suggest_related_changes, assess_pattern_quality)\n   - Monitoring (get_metabob_status, get_next_step)\n3. Create a markdown report with tool categories and current integration status",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2",
+      "subagent": "general",
+      "description": "Analyze current Metabob tool usage in codebase",
+      "dependencies": [
+        "task-1"
+      ],
+      "prompt": {
+        "template": "Analyze current Metabob tool usage across the codebase:\n\n1. Search for all metabob tool invocations:\n   - Search repos/metabob-opencode/packages/opencode/src/ for metabob_ references\n   - Categorize by: agent prompts, session management, template execution, tool implementations\n2. Identify usage patterns:\n   - Which tools are heavily used (>10 references)\n   - Which tools are moderately used (3-10 references)\n   - Which tools are lightly used (1-2 references)\n   - Which tools are never used (0 references)\n3. Create detailed markdown report with:\n   - Usage statistics per tool\n   - High-value unused tools\n   - Integration gaps\n   - Files/modules that should be using more tools",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-3",
+      "subagent": "general",
+      "description": "Check codebase indexing status and coverage",
+      "dependencies": [
+        "task-2"
+      ],
+      "prompt": {
+        "template": "Verify Metabob codebase indexing and coverage:\n\n1. Check if codebase is properly indexed:\n   - Try metabob_search_codebase_issues with a simple query\n   - Check for any indexing errors or warnings\n2. Test component discovery:\n   - Use list_file_components on key files (activity.ts, session.ts, template-executor.ts)\n   - Verify component extraction is working\n3. Test change impact analysis:\n   - Use analyze_change_impact on a core component\n   - Verify dependency graph is populated\n4. Create markdown report with:\n   - Indexing status (healthy/degraded/failed)\n   - Coverage statistics (files indexed, components discovered)\n   - Any issues preventing proper indexing\n   - Recommendations for improvement",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4",
+      "subagent": "general",
+      "description": "Validate annotation coverage for design decisions",
+      "dependencies": [
+        "task-3"
+      ],
+      "prompt": {
+        "template": "Audit design decision annotation coverage:\n\n1. Identify key components that should have annotations:\n   - Core session management (Session, SessionState, SessionManager)\n   - Activity execution (ActivityExecutor, TemplateExecutor)\n   - Tool implementations (activity.ts, edit.ts, write.ts)\n   - Agent definitions (activity.txt, review.txt, orchestrator.txt)\n2. Check which components have annotations using grep/ripgrep\n3. Test annotation retrieval:\n   - Search for existing annotations in a known file\n4. Calculate annotation coverage:\n   - Total key components: ~50\n   - Components with annotations: ?\n   - Coverage percentage\n5. Create markdown report with:\n   - Annotation coverage statistics\n   - High-priority components missing annotations\n   - Examples of good vs missing annotations\n   - Action items for improving coverage",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-5",
+      "subagent": "general",
+      "description": "Test change prediction capabilities",
+      "dependencies": [
+        "task-4"
+      ],
+      "prompt": {
+        "template": "Validate Metabob change prediction tools:\n\n1. Test suggest_related_changes:\n   - Pick a recently modified file (e.g., activity.ts)\n   - Call suggest_related_changes to see if co-change patterns are working\n   - Verify recommendations are relevant\n2. Test check_for_existing_functionality (if available):\n   - Query for existing implementations of common patterns\n   - Verify it helps prevent duplicate code\n3. Test assess_pattern_quality:\n   - Analyze a known code pattern\n   - Check if quality assessment is meaningful\n4. Create markdown report with:\n   - Change prediction tool status (working/not working)\n   - Quality of predictions (accurate/needs tuning)\n   - Recommendations for improvement\n   - Integration opportunities in workflow",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-6",
+      "subagent": "general",
+      "description": "Generate comprehensive improvement report and action plan",
+      "dependencies": [
+        "task-5"
+      ],
+      "prompt": {
+        "template": "Synthesize all audit findings into comprehensive improvement report:\n\n1. Consolidate findings from all tasks:\n   - Tool connectivity and availability\n   - Current usage patterns (26% used, 74% unused)\n   - Indexing and coverage status\n   - Annotation gaps\n   - Change prediction capabilities\n2. Prioritize high-value improvements:\n   - CRITICAL: Tools that should be integrated immediately\n   - HIGH: Tools that would significantly improve workflow\n   - MEDIUM: Nice-to-have integrations\n   - LOW: Tools for future consideration\n3. Create detailed action plan:\n   - Phase 1: Fix indexing issues (if any)\n   - Phase 2: Integrate high-value unused tools\n   - Phase 3: Improve annotation coverage\n   - Phase 4: Enable change prediction in workflows\n4. Generate final report as METABOB_INTEGRATION_AUDIT_REPORT.md with:\n   - Executive Summary\n   - Current State Assessment\n   - Gap Analysis\n   - Prioritized Action Plan\n   - Implementation Roadmap\n   - Success Metrics",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 15000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "METABOB_INTEGRATION_AUDIT_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Action Plan",
+            "description": ""
+          },
+          {
+            "pattern": "Implementation Roadmap",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task-1",
+      "subagent": "general",
+      "description": "Test Metabob MCP connectivity and list all available tools",
+      "dependencies": [],
+      "prompt": {
+        "template": "Test Metabob MCP connectivity and identify all available tools:\n\n1. Run test_metabob_mcp to verify connection and list all 35 tools\n2. Categorize tools by function:\n   - Code Quality (search_codebase_issues, get_priority_issues, mark_problem_complete)\n   - Component Analysis (list_file_components, analyze_change_impact, assess_deletion_safety, metabob_find_similar_components)\n   - Design Decisions (annotate_component, check_for_existing_functionality)\n   - Activity Management (search_activities, activity, create_activity_template, evolve_activity_template)\n   - Session Tracking (metabob_record_session_start, metabob_record_session_complete, metabob_record_tool_invocation)\n   - Change Prediction (suggest_related_changes, assess_pattern_quality)\n   - Monitoring (get_metabob_status, get_next_step)\n3. Create a markdown report with tool categories and current integration status",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2",
+      "subagent": "general",
+      "description": "Analyze current Metabob tool usage in codebase",
+      "dependencies": [
+        "task-1"
+      ],
+      "prompt": {
+        "template": "Analyze current Metabob tool usage across the codebase:\n\n1. Search for all metabob tool invocations:\n   - Search repos/metabob-opencode/packages/opencode/src/ for metabob_ references\n   - Categorize by: agent prompts, session management, template execution, tool implementations\n2. Identify usage patterns:\n   - Which tools are heavily used (>10 references)\n   - Which tools are moderately used (3-10 references)\n   - Which tools are lightly used (1-2 references)\n   - Which tools are never used (0 references)\n3. Create detailed markdown report with:\n   - Usage statistics per tool\n   - High-value unused tools\n   - Integration gaps\n   - Files/modules that should be using more tools",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-3",
+      "subagent": "general",
+      "description": "Check codebase indexing status and coverage",
+      "dependencies": [
+        "task-2"
+      ],
+      "prompt": {
+        "template": "Verify Metabob codebase indexing and coverage:\n\n1. Check if codebase is properly indexed:\n   - Try metabob_search_codebase_issues with a simple query\n   - Check for any indexing errors or warnings\n2. Test component discovery:\n   - Use list_file_components on key files (activity.ts, session.ts, template-executor.ts)\n   - Verify component extraction is working\n3. Test change impact analysis:\n   - Use analyze_change_impact on a core component\n   - Verify dependency graph is populated\n4. Create markdown report with:\n   - Indexing status (healthy/degraded/failed)\n   - Coverage statistics (files indexed, components discovered)\n   - Any issues preventing proper indexing\n   - Recommendations for improvement",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4",
+      "subagent": "general",
+      "description": "Validate annotation coverage for design decisions",
+      "dependencies": [
+        "task-3"
+      ],
+      "prompt": {
+        "template": "Audit design decision annotation coverage:\n\n1. Identify key components that should have annotations:\n   - Core session management (Session, SessionState, SessionManager)\n   - Activity execution (ActivityExecutor, TemplateExecutor)\n   - Tool implementations (activity.ts, edit.ts, write.ts)\n   - Agent definitions (activity.txt, review.txt, orchestrator.txt)\n2. Check which components have annotations using grep/ripgrep\n3. Test annotation retrieval:\n   - Search for existing annotations in a known file\n4. Calculate annotation coverage:\n   - Total key components: ~50\n   - Components with annotations: ?\n   - Coverage percentage\n5. Create markdown report with:\n   - Annotation coverage statistics\n   - High-priority components missing annotations\n   - Examples of good vs missing annotations\n   - Action items for improving coverage",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-5",
+      "subagent": "general",
+      "description": "Test change prediction capabilities",
+      "dependencies": [
+        "task-4"
+      ],
+      "prompt": {
+        "template": "Validate Metabob change prediction tools:\n\n1. Test suggest_related_changes:\n   - Pick a recently modified file (e.g., activity.ts)\n   - Call suggest_related_changes to see if co-change patterns are working\n   - Verify recommendations are relevant\n2. Test check_for_existing_functionality (if available):\n   - Query for existing implementations of common patterns\n   - Verify it helps prevent duplicate code\n3. Test assess_pattern_quality:\n   - Analyze a known code pattern\n   - Check if quality assessment is meaningful\n4. Create markdown report with:\n   - Change prediction tool status (working/not working)\n   - Quality of predictions (accurate/needs tuning)\n   - Recommendations for improvement\n   - Integration opportunities in workflow",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-6",
+      "subagent": "general",
+      "description": "Generate comprehensive improvement report and action plan",
+      "dependencies": [
+        "task-5"
+      ],
+      "prompt": {
+        "template": "Synthesize all audit findings into comprehensive improvement report:\n\n1. Consolidate findings from all tasks:\n   - Tool connectivity and availability\n   - Current usage patterns (26% used, 74% unused)\n   - Indexing and coverage status\n   - Annotation gaps\n   - Change prediction capabilities\n2. Prioritize high-value improvements:\n   - CRITICAL: Tools that should be integrated immediately\n   - HIGH: Tools that would significantly improve workflow\n   - MEDIUM: Nice-to-have integrations\n   - LOW: Tools for future consideration\n3. Create detailed action plan:\n   - Phase 1: Fix indexing issues (if any)\n   - Phase 2: Integrate high-value unused tools\n   - Phase 3: Improve annotation coverage\n   - Phase 4: Enable change prediction in workflows\n4. Generate final report as METABOB_INTEGRATION_AUDIT_REPORT.md with:\n   - Executive Summary\n   - Current State Assessment\n   - Gap Analysis\n   - Prioritized Action Plan\n   - Implementation Roadmap\n   - Success Metrics",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 15000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "METABOB_INTEGRATION_AUDIT_REPORT.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Action Plan",
+            "description": ""
+          },
+          {
+            "pattern": "Implementation Roadmap",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-27T11:50:40.182Z",
+  "metadata": {}
+}
