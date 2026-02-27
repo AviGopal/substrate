@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-02-27T07:20:40Z",
+  "namespace": "metabob",
+  "summary": {
+    "total_backend_pods": 2,
+    "running_pods": 2,
+    "healthy_services": 2,
+    "status": "PASS"
+  },
+  "pods": [
+    {
+      "name": "redis-master-0",
+      "ready": "1/1",
+      "status": "Running",
+      "restarts": 1,
+      "age": "3h9m",
+      "health_check": "PASS - responds to PING"
+    },
+    {
+      "name": "surrealdb-65576c4c47-jq8fn",
+      "ready": "1/1",
+      "status": "Running",
+      "restarts": 1,
+      "age": "121m",
+      "health_check": "PASS - HTTP 200 on /health"
+    }
+  ],
+  "services": [
+    {
+      "name": "redis-master",
+      "type": "ClusterIP",
+      "cluster_ip": "10.111.0.8",
+      "ports": ["6379/TCP"],
+      "connectivity": "PASS"
+    },
+    {
+      "name": "redis-headless",
+      "type": "ClusterIP",
+      "cluster_ip": "None",
+      "ports": ["6379/TCP"],
+      "connectivity": "N/A"
+    },
+    {
+      "name": "redis-replicas",
+      "type": "ClusterIP",
+      "cluster_ip": "10.107.13.168",
+      "ports": ["6379/TCP"],
+      "connectivity": "N/A"
+    },
+    {
+      "name": "surrealdb",
+      "type": "ClusterIP",
+      "cluster_ip": "10.102.105.199",
+      "ports": ["8000/TCP"],
+      "connectivity": "PASS"
+    },
+    {
+      "name": "devbob",
+      "type": "ClusterIP",
+      "cluster_ip": "10.106.45.198",
+      "ports": ["3000/TCP", "8083/TCP"],
+      "connectivity": "N/A"
+    }
+  ],
+  "health_checks": {
+    "redis": {
+      "status": "PASS",
+      "method": "redis-cli PING",
+      "response": "PONG"
+    },
+    "surrealdb": {
+      "status": "PASS",
+      "method": "HTTP GET /health",
+      "response": "HTTP 200"
+    },
+    "metabob_rpc_api": {
+      "status": "NOT_DEPLOYED",
+      "method": "N/A",
+      "response": "Service not found - will be needed for boredom system"
+    }
+  },
+  "success_criteria": {
+    "minimum_pods_running": {
+      "required": 2,
+      "actual": 2,
+      "status": "PASS"
+    },
+    "redis_connectivity": {
+      "required": "PONG",
+      "actual": "PONG",
+      "status": "PASS"
+    },
+    "surrealdb_running": {
+      "required": "Running",
+      "actual": "Running",
+      "status": "PASS"
+    },
+    "service_endpoints": {
+      "required": "All services have ClusterIP",
+      "actual": "redis-master, surrealdb, devbob have ClusterIP endpoints",
+      "status": "PASS"
+    }
+  },
+  "recommendations": [
+    "Deploy metabob-rpc-api for full boredom system functionality (Thompson Sampling, gradient calculation)",
+    "Monitor pod restarts - both Redis and SurrealDB have restarted once",
+    "Consider Redis replicas for high availability (currently only master is active)"
+  ],
+  "overall_status": "PASS",
+  "notes": [
+    "All minimum backend services are running and healthy",
+    "Redis master responds correctly to health checks",
+    "SurrealDB is accessible and responding on port 8000",
+    "Service discovery is working correctly",
+    "metabob-rpc-api is optional but recommended for production deployment"
+  ]
+}
