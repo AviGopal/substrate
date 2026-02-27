@@ -1,0 +1,74 @@
+{
+  "specificationName": "devbob-acp-multi-vessel-coordination",
+  "harnessFile": "tests/validation-harnesses/devbob-acp-multi-vessel-coordination-harness.ts",
+  "testCases": [
+    {
+      "impulseId": "validation-devbob-acp-multi-vessel-coordination-case-1",
+      "description": "Basic impulse sharing: parent creates impulse, shares with devbob-0, remote resolves and computes",
+      "input": {
+        "impulseData": { "value1": 42, "value2": 58 },
+        "operation": "sum",
+        "target": "docker://devbob-0"
+      },
+      "expectedOutput": {
+        "success": true,
+        "result": 100,
+        "impulseResolved": true,
+        "remoteSessionCreated": true
+      },
+      "testType": "functional"
+    },
+    {
+      "impulseId": "validation-devbob-acp-multi-vessel-coordination-case-2",
+      "description": "Vessel registry contains all 3 vessels with correct ACP endpoints",
+      "input": {
+        "expectedVessels": ["devbob-0", "devbob-1", "devbob-2"],
+        "surrealdbEndpoint": "localhost:8000"
+      },
+      "expectedOutput": {
+        "success": true,
+        "vessels": [
+          { "vessel_name": "devbob-0", "acp_endpoint": "devbob-0.devbob-headless:3000", "status": "running" },
+          { "vessel_name": "devbob-1", "acp_endpoint": "devbob-1.devbob-headless:3000", "status": "running" },
+          { "vessel_name": "devbob-2", "acp_endpoint": "devbob-2.devbob-headless:3000", "status": "running" }
+        ]
+      },
+      "testType": "functional"
+    },
+    {
+      "impulseId": "validation-devbob-acp-multi-vessel-coordination-case-3",
+      "description": "Input validation prevents SQL injection in vessel registration",
+      "input": {
+        "maliciousVesselName": "devbob-0'; DELETE FROM vessel_registry; --",
+        "pod_ip": "10.1.0.63",
+        "acp_port": 3000
+      },
+      "expectedOutput": {
+        "success": false,
+        "error": "Invalid vessel_name format",
+        "registrationAttempted": false,
+        "sqlInjectionPrevented": true
+      },
+      "testType": "security",
+      "criticalityLevel": "CRITICAL"
+    }
+  ],
+  "harnessImpulseId": "harness-devbob-acp-multi-vessel-coordination",
+  "executionInstructions": {
+    "runAll": "bun run tests/validation-harnesses/devbob-acp-multi-vessel-coordination-harness.ts",
+    "runSingle": "bun run tests/validation-harnesses/devbob-acp-multi-vessel-coordination-harness.ts --case <impulseId>",
+    "makeExecutable": "chmod +x tests/validation-harnesses/devbob-acp-multi-vessel-coordination-harness.ts"
+  },
+  "requirements": {
+    "runtime": "bun",
+    "devbobContainers": ["devbob-0", "devbob-1", "devbob-2"],
+    "surrealdb": "localhost:8000",
+    "noLLMRequired": true
+  },
+  "validationStrategy": {
+    "type": "input-output-dependency",
+    "historicalTestCases": true,
+    "reproducible": true,
+    "passFailDetermination": "Automated comparison of actual vs expected outputs"
+  }
+}
