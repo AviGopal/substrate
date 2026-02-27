@@ -91,6 +91,37 @@ DEFINE INDEX activity_execution_status_idx ON activity_execution FIELDS status;
 DEFINE INDEX activity_execution_agent_idx ON activity_execution FIELDS agent_id;
 
 -- =============================================================================
+-- Vessel Registry Table
+-- =============================================================================
+-- Tracks all vessels in the distributed DevBob deployment
+-- Enables vessel discovery and health monitoring
+
+DEFINE TABLE IF NOT EXISTS vessel_registry SCHEMAFULL;
+
+DEFINE FIELD pod_name ON vessel_registry TYPE string
+  ASSERT $value != NONE;
+
+DEFINE FIELD pod_ip ON vessel_registry TYPE string;
+
+DEFINE FIELD acp_endpoint ON vessel_registry TYPE string
+  ASSERT $value != NONE;
+
+DEFINE FIELD status ON vessel_registry TYPE string
+  ASSERT $value IN ["starting", "running", "stopping", "stopped"]
+  DEFAULT "starting";
+
+DEFINE FIELD last_heartbeat ON vessel_registry TYPE datetime
+  DEFAULT time::now();
+
+DEFINE FIELD registered_at ON vessel_registry TYPE datetime
+  DEFAULT time::now();
+
+-- Indexes for fast lookups
+DEFINE INDEX vessel_registry_pod_name_idx ON vessel_registry FIELDS pod_name UNIQUE;
+DEFINE INDEX vessel_registry_status_idx ON vessel_registry FIELDS status;
+
+-- =============================================================================
 -- Schema Initialized
 -- =============================================================================
 -- Run SELECT * FROM activity_template; to verify
+-- Run SELECT * FROM vessel_registry; to verify vessel registration
