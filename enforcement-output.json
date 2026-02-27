@@ -1,73 +1,41 @@
 {
-  "specificationName": "devbob-acp-multi-vessel-coordination",
+  "specificationName": "Instance-Invariant Storage for Impulses and Activities",
   "changesApplied": [
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts",
-      "component": "registerVesselInSurrealDB",
-      "changeMade": "Added input validation: vessel_name (alphanumeric+hyphen+underscore), pod_ip (IPv4), acp_port (1-65535)",
-      "reason": "Prevents SQL injection attacks that could delete entire vessel registry or manipulate vessel metadata",
-      "impactAnalysis": "CRITICAL risk mitigated. Zero breaking changes - validation only rejects invalid inputs"
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "component": "metabob_activity_save",
+      "changeMade": "Added new MCP tool that forwards activity data to rpc-api /v2/activities endpoint with (api_key, project_id) scoping",
+      "reason": "Completes vessel flow for Activity.save() - enables cross-instance activity storage",
+      "impactAnalysis": "Low blast radius - new tool, gracefully called by opencode. Enables distributed debugging and activity replay."
     },
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/tool/acp-delegate.ts",
-      "component": "retryWithBackoff + docker exec spawn",
-      "changeMade": "Added retry helper with exponential backoff (3 attempts, 1s initial delay). Wrapped docker exec spawn in retry logic.",
-      "reason": "Transient container failures (restart, network issues) no longer cause permanent delegation failure. Improves reliability for distributed coordination.",
-      "impactAnalysis": "HIGH risk mitigated. Low risk change - adds delay only on failure. Max additional latency: 7s if all retries fail."
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "component": "metabob_activity_load",
+      "changeMade": "Added new MCP tool that retrieves activity data from rpc-api /v2/activities/{id} endpoint with (api_key, project_id) scoping",
+      "reason": "Completes vessel flow for Activity.load() - enables cross-instance activity retrieval",
+      "impactAnalysis": "Low blast radius - new tool. Critical for activity replay across instances."
     },
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/tool/acp-delegate.ts",
-      "component": "ACPDelegateTool.execute - version negotiation",
-      "changeMade": "Added protocol version check (expected: 1) after ACP handshake. Logs warning for OpenCode version mismatch.",
-      "reason": "Prevents silent failures from incompatible protocol versions. Fails fast with clear error message.",
-      "impactAnalysis": "HIGH risk mitigated. Zero breaking changes for compatible versions. Fails fast for incompatible versions."
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
+      "component": "ImpulseCreateTool",
+      "changeMade": "ALREADY ENFORCED - Backend sync implemented (lines 71-110)",
+      "reason": "Enforces vessel flow: opencode -> CLI MCP -> rpc-api -> SurrealDB",
+      "impactAnalysis": "Zero changes required - enforcement complete. Gracefully handles missing MCP client."
     },
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/acp/agent.ts",
-      "component": "setupEventSubscriptions - permission.updated handler",
-      "changeMade": "Wrapped requestPermission in Promise.race with 30s timeout. Auto-rejects permission on timeout.",
-      "reason": "Prevents indefinite hang if host crashes during permission request. Enables graceful degradation.",
-      "impactAnalysis": "HIGH risk mitigated. Low risk - 30s is generous. Edge case: slow networks may timeout, but preferable to infinite hang."
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.save",
+      "changeMade": "ALREADY ENFORCED - Backend sync implemented (lines 664-710)",
+      "reason": "Enforces vessel flow for activity persistence via dual-write pattern",
+      "impactAnalysis": "Zero changes required - enforcement complete. Maintains performance with async backend sync."
     },
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/acp/agent.ts",
-      "component": "Agent class + setupEventSubscriptions",
-      "changeMade": "Added eventSubscriptions Map, isActive flag, cleanupSession() method for subscription cleanup",
-      "reason": "Prevents memory leaks from unclosed event subscriptions in long-running processes",
-      "impactAnalysis": "MEDIUM risk mitigated. Zero breaking changes - cleanup is opt-in. Enables proper resource management."
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.load",
+      "changeMade": "ALREADY ENFORCED - Backend fallback implemented (lines 488-565)",
+      "reason": "Enables cross-instance activity retrieval with local-first fallback pattern",
+      "impactAnalysis": "Zero changes required - enforcement complete. Fast local path with backend fallback."
     }
   ],
-  "enforcementImpulseId": "enforcement-devbob-acp-multi-vessel-coordination",
-  "summary": {
-    "totalGaps": 7,
-    "gapsClosed": 5,
-    "gapsDeferred": 2,
-    "criticalRisksMitigated": 1,
-    "highRisksMitigated": 3,
-    "mediumRisksMitigated": 1,
-    "filesModified": 3,
-    "linesAdded": 142
-  },
-  "commits": {
-    "submodule": "cc1118cd - Enforce devbob-acp-multi-vessel-coordination specification",
-    "parent": "7d01f10 - Update opencode submodule with devbob-acp-multi-vessel-coordination enforcement",
-    "impulse": "1fb34e7 - Add enforcement summary impulse",
-    "summary": "8ebde35 - Add comprehensive enforcement summary document"
-  },
-  "artifacts": [
-    "impulses/trace-devbob-acp-multi-vessel-coordination.json",
-    "impulses/enforcement-devbob-acp-multi-vessel-coordination.json",
-    "ENFORCEMENT_SUMMARY_DEVBOB_ACP_MULTI_VESSEL_COORDINATION.md",
-    "docs/data-flows/devbob-acp-multi-vessel-coordination-flow.md"
-  ],
-  "validationNext": {
-    "activity": "validate-devbob-acp-multi-vessel-coordination",
-    "testScenarios": [
-      "SQL injection test with malicious vessel_name",
-      "Docker retry test with simulated container failure",
-      "Version mismatch test with incompatible protocol",
-      "Permission timeout test with host hang simulation",
-      "Event cleanup test with memory leak verification"
-    ]
-  }
+  "enforcementImpulseId": "enforcement-Instance-Invariant Storage for Impulses and Activities"
 }

@@ -1,0 +1,224 @@
+{
+  "specificationName": "metabob-session-tracking",
+  "specification": "METABOB_INTEGRATION_SPECIFICATIONS.md - Specification 2: Session Lifecycle Tracking",
+  "completionTimestamp": "2026-02-27T13:10:00.000Z",
+  "status": "ENFORCED",
+  "completionPercentage": 75,
+  "commitHash": "33f45f3",
+  "tag": "spec-metabob-session-tracking-v1",
+  "instructionalToFunctionalBridge": {
+    "instructionalState": {
+      "requirement": "Every OpenCode session must record start and completion events to Metabob MCP via metabob_record_session_start and metabob_record_session_complete",
+      "purpose": "Enable learning, optimization, and telemetry for session analytics",
+      "constraints": [
+        "Tracking must not fail session on errors",
+        "Start tracking captures sessionId, agentType, timestamp, workingDirectory, gitBranch",
+        "Completion tracking captures sessionId, timestamp, summary stats (prompts, tokens, cost, tools, files), outcome"
+      ]
+    },
+    "functionalState": {
+      "implementation": "MetabobTracking module wraps MCP calls, SessionStats aggregates metrics, Session lifecycle integrated",
+      "dataFlow": "Session.createNext() → recordSessionStart() → MCP → Metabob | Session.close() → getSessionStats() → recordSessionComplete() → MCP → Metabob",
+      "errorHandling": "Fire-and-forget pattern - tracking failures logged as WARN but don't propagate",
+      "validation": "6/6 tests passed - start tracking, complete tracking, agent type logic, error resilience"
+    },
+    "transformation": {
+      "before": "Sessions created without lifecycle tracking. No telemetry to Metabob.",
+      "during": "Trace → Enforcement → Validation → Conflict Resolution → Ripple Changes",
+      "after": "Sessions tracked end-to-end. Start events recorded on creation, completion events recorded on close. Activity sessions track properly. Error resilient."
+    }
+  },
+  "traceEnforceValidateLoop": {
+    "phase1Trace": {
+      "impulseId": "trace-metabob-session-tracking",
+      "output": "TRACE_METABOB_SESSION_TRACKING.json",
+      "findings": {
+        "componentsWithGaps": 7,
+        "currentState": "Session.createNext() does NOT call metabob_record_session_start, Session.close() does NOT exist",
+        "desiredState": "Session.createNext() calls recordSessionStart(), Session.close() exists and calls recordSessionComplete()",
+        "filesAnalyzed": ["repos/metabob-opencode/packages/opencode/src/session/index.ts", "repos/metabob-opencode/packages/opencode/src/session/activity-state-capture.ts"]
+      }
+    },
+    "phase2Enforcement": {
+      "impulseId": "enforcement-metabob-session-tracking",
+      "output": "ENFORCEMENT_METABOB_SESSION_TRACKING.json",
+      "changes": [
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/metabob-tracking.ts",
+          "type": "NEW",
+          "linesOfCode": 144,
+          "purpose": "MCP integration layer with recordSessionStart/Complete"
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/stats.ts",
+          "type": "NEW",
+          "linesOfCode": 92,
+          "purpose": "Session statistics aggregation"
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/index.ts",
+          "type": "MODIFIED",
+          "linesChanged": "+65",
+          "changes": [
+            "Added MetabobTracking.recordSessionStart() in createNext() (+9 lines)",
+            "Added Session.close() method (+45 lines)",
+            "Added imports (+2 lines)"
+          ]
+        }
+      ],
+      "dataFlowValidated": true
+    },
+    "phase3Validation": {
+      "impulseId": "validation-results-metabob-session-tracking",
+      "output": "VALIDATION_RESULTS_METABOB_SESSION_TRACKING.json",
+      "harness": "tests/validation-harnesses/metabob-session-tracking-harness.ts",
+      "results": {
+        "totalTests": 6,
+        "passed": 6,
+        "failed": 0,
+        "successRate": 100.0,
+        "duration": 2762
+      },
+      "testCases": [
+        "Session.createNext() triggers metabob_record_session_start",
+        "Session.close() triggers metabob_record_session_complete with stats",
+        "Agent type defaults to 'general' when no activityId",
+        "Agent type uses activityId when provided",
+        "Session creation succeeds despite MCP tracking failure",
+        "Session close succeeds despite MCP tracking failure"
+      ]
+    },
+    "phase4ConflictAnalysis": {
+      "impulseId": "conflict-analysis-metabob-session-tracking",
+      "output": "CONFLICT_ANALYSIS_METABOB_SESSION_TRACKING.json",
+      "findings": {
+        "totalConflicts": 0,
+        "potentialConflicts": 3,
+        "conflictsResolved": 1,
+        "overallRisk": "LOW"
+      },
+      "conflictsResolved": [
+        {
+          "type": "SESSION_CLEANUP_INTEGRATION",
+          "spec1": "metabob-session-tracking",
+          "spec2": "activity-state-transformation-tracking",
+          "resolution": "Added Session.close() to cleanupActivitySession BEFORE Activity.unregisterSession()",
+          "status": "RESOLVED"
+        }
+      ]
+    },
+    "phase5RippleChanges": {
+      "impulseId": "ripple-metabob-session-tracking",
+      "output": "RIPPLE_METABOB_SESSION_TRACKING.json",
+      "componentsUpdated": 1,
+      "componentsDocumented": 3,
+      "changes": [
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/index.ts",
+          "component": "cleanupActivitySession",
+          "change": "Added Session.close() call BEFORE Activity.unregisterSession()",
+          "reason": "Conflict resolution - capture stats while session active"
+        }
+      ],
+      "validationAfterRipple": {
+        "status": "PASS",
+        "testResults": "6/6 tests passed",
+        "duration": 2762
+      }
+    }
+  },
+  "filesChanged": {
+    "implementation": [
+      "repos/metabob-opencode/packages/opencode/src/session/metabob-tracking.ts (NEW)",
+      "repos/metabob-opencode/packages/opencode/src/session/stats.ts (NEW)",
+      "repos/metabob-opencode/packages/opencode/src/session/index.ts (MODIFIED)"
+    ],
+    "validation": [
+      "tests/validation-harnesses/metabob-session-tracking-harness.ts (NEW)",
+      "tests/validation-harnesses/run-metabob-session-tracking-validation.ts (NEW)",
+      "tests/validation-harnesses/README-metabob-session-tracking.md (NEW)"
+    ],
+    "documentation": [
+      "TRACE_METABOB_SESSION_TRACKING.json",
+      "ENFORCEMENT_METABOB_SESSION_TRACKING.json",
+      "VALIDATION_METABOB_SESSION_TRACKING.json",
+      "VALIDATION_RESULTS_METABOB_SESSION_TRACKING.json",
+      "CONFLICT_ANALYSIS_METABOB_SESSION_TRACKING.json",
+      "RIPPLE_METABOB_SESSION_TRACKING.json"
+    ],
+    "testResults": [
+      "test-results/metabob-session-tracking-validation-results.json"
+    ]
+  },
+  "validationCriteria": {
+    "implemented": [
+      "✅ metabob_record_session_start called in Session.createNext()",
+      "✅ Session.close() method exists and aggregates stats",
+      "✅ metabob_record_session_complete called in Session.close()",
+      "✅ Error handling prevents session failure if tracking fails",
+      "✅ Git context (branch, commit) captured",
+      "✅ Agent type correctly derived from activityId or 'general'",
+      "✅ Activity cleanup calls Session.close() before unregister"
+    ],
+    "documentedForFutureWork": [
+      "📋 CLI sessions call Session.close() on graceful exit",
+      "📋 Server sessions call Session.close() on cleanup",
+      "📋 filesModified tracking (integrate with Snapshot)"
+    ]
+  },
+  "metricsAndImpact": {
+    "linesOfCode": {
+      "added": 236,
+      "modified": 65,
+      "total": 301
+    },
+    "files": {
+      "created": 9,
+      "modified": 1,
+      "total": 10
+    },
+    "tests": {
+      "created": 6,
+      "passed": 6,
+      "failed": 0,
+      "successRate": 100.0
+    },
+    "conflictsResolved": 1,
+    "specsAffected": 2
+  },
+  "remainingWork": {
+    "highPriority": [
+      "Implement CLI Session.close() integration in activity.ts and other CLI commands",
+      "Implement server Session.close() integration in server.ts"
+    ],
+    "mediumPriority": [
+      "Add filesModified tracking to SessionStats (integrate with Snapshot)"
+    ],
+    "lowPriority": [
+      "Document Session lifecycle hooks in ARCHITECTURE.md"
+    ],
+    "estimatedEffort": "2-3 hours for remaining 25%"
+  },
+  "lessonsLearned": [
+    "Fire-and-forget pattern essential for non-critical telemetry",
+    "Stats aggregation via streaming prevents memory issues with long sessions",
+    "Hook ordering matters when multiple specs modify same component",
+    "Validation harness caught edge cases (MCP failure scenarios)",
+    "Conflict analysis prevented integration issues with other specs"
+  ],
+  "recommendations": [
+    "Apply trace-enforce-validate loop to Specification 3 (Tool Invocation Tracking)",
+    "Create follow-up activities for CLI/server integration",
+    "Consider adding Session.close() to all exit paths (success, error, interrupt)",
+    "Monitor Metabob backend for session tracking data quality"
+  ],
+  "finalImpulseId": "final-metabob-session-tracking",
+  "commitSummary": {
+    "hash": "33f45f3",
+    "tag": "spec-metabob-session-tracking-v1",
+    "message": "feat(metabob-session-tracking): Enforce session lifecycle tracking to Metabob MCP",
+    "filesChanged": 3,
+    "insertions": 343,
+    "deletions": 2
+  }
+}

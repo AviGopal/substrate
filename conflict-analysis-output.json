@@ -1,55 +1,135 @@
 {
-  "specificationName": "devbob-acp-multi-vessel-coordination",
+  "specificationName": "Instance-Invariant Storage for Impulses and Activities",
   "otherSpecifications": [
+    "devbob-acp-multi-vessel-coordination",
     "devbob-k8s-git-operations",
-    "Kubernetes-Deployment-Validation-Exit-Codes",
+    "ci-cd-pre-push-quality-gates",
     "local-docker-k8s-deployment"
   ],
   "conflicts": [],
   "sharedComponents": [
     {
-      "component": "Dockerfile.devbob-local",
+      "component": "repos/metabob-opencode/packages/opencode/src/tool/",
       "affectedBySpecs": [
-        "devbob-acp-multi-vessel-coordination",
-        "devbob-k8s-git-operations"
+        "Instance-Invariant Storage (impulse-create.ts)",
+        "ACP Multi-Vessel Coordination (acp-delegate.ts)"
       ],
-      "conflictType": "DEPLOYMENT_COORDINATION",
-      "recommendation": "Rebuild container image with both OpenCode updates AND gh CLI"
-    }
-  ],
-  "potentialInteractions": [
+      "conflictType": "NONE",
+      "recommendation": "No action needed - different files in same directory"
+    },
     {
-      "interaction": "Container Image Deployment",
-      "type": "DEPLOYMENT_COORDINATION",
-      "risk": "MEDIUM",
-      "resolution": "Coordinate single deployment to satisfy both specifications"
+      "component": "SurrealDB",
+      "affectedBySpecs": [
+        "Instance-Invariant Storage (impulses, activities tables)",
+        "ACP Multi-Vessel Coordination (vessel_registry table)"
+      ],
+      "conflictType": "NONE",
+      "recommendation": "Deploy schema updates together - different tables, no conflict"
     }
   ],
-  "conflictImpulseId": "conflict-analysis-devbob-acp-multi-vessel-coordination",
-  "summary": {
-    "totalConflicts": 0,
-    "criticalConflicts": 0,
-    "sharedComponents": 1,
-    "requiresCoordination": 1,
-    "overallRisk": "LOW",
-    "deploymentRisk": "MEDIUM",
-    "runtimeRisk": "LOW"
+  "deploymentDependencies": [
+    {
+      "dependency": "Backend /v2/activities endpoints",
+      "requiredBy": "Instance-Invariant Storage",
+      "priority": "HIGH",
+      "status": "PENDING"
+    },
+    {
+      "dependency": "SurrealDB schema updates",
+      "requiredBy": [
+        "Instance-Invariant Storage (activities table)",
+        "ACP Multi-Vessel Coordination (vessel_registry table)"
+      ],
+      "priority": "HIGH",
+      "status": "PENDING"
+    },
+    {
+      "dependency": "Docker image rebuild with gh CLI",
+      "requiredBy": "K8s Git Operations",
+      "priority": "MEDIUM",
+      "status": "PENDING"
+    }
+  ],
+  "architecturalAlignment": {
+    "vesselFlowPrinciple": {
+      "status": "ALIGNED",
+      "specifications": [
+        {
+          "spec": "Instance-Invariant Storage",
+          "enforcement": "opencode → CLI MCP → rpc-api",
+          "validation": "PASS"
+        },
+        {
+          "spec": "ACP Multi-Vessel Coordination",
+          "enforcement": "opencode → docker exec → ACP server",
+          "validation": "PARTIAL_PASS"
+        }
+      ],
+      "analysis": "Both specs respect vessel boundaries and prevent direct API calls"
+    }
   },
   "riskAssessment": {
-    "codeChanges": "LOW - All changes are additive and backward-compatible",
-    "deployment": "MEDIUM - Requires coordinated container rebuild and rollout",
-    "runtime": "LOW - Changes improve reliability and security, no conflicts"
+    "overallRisk": "LOW",
+    "conflictRisk": "NONE",
+    "deploymentRisk": "MINOR",
+    "testingRisk": "LOW",
+    "integrationRisk": "LOW",
+    "details": {
+      "conflictsDetected": 0,
+      "overlappingCodeChanges": 0,
+      "contradictoryRequirements": 0,
+      "deploymentSequenceRequired": true
+    }
   },
   "recommendations": [
     {
       "priority": "HIGH",
-      "action": "Rebuild devbob container image with all changes",
-      "specs": [
-        "devbob-acp-multi-vessel-coordination",
-        "devbob-k8s-git-operations"
+      "action": "Proceed with all specifications",
+      "reason": "No conflicts detected - all specs are compatible"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Follow recommended deployment order",
+      "sequence": [
+        "1. Backend /v2/activities endpoints",
+        "2. SurrealDB schema updates (both specs)",
+        "3. Fix SurrealDB query API (test harness)",
+        "4. Deploy CLI with new tools",
+        "5. Rebuild Docker image with gh CLI",
+        "6. Redeploy all services"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Run integration testing after deployment",
+      "tests": [
+        "Instance-Invariant Storage tests 2-5 (cross-instance)",
+        "ACP Coordination test 2 (vessel registry)",
+        "K8s Git Operations tests (gh CLI)"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Monitor key metrics",
+      "metrics": [
+        "Backend sync success rate",
+        "Vessel registry queries",
+        "Git operations in pods"
       ]
     }
   ],
-  "readyForProduction": true,
-  "caveat": "Both specifications require container rebuild. Deploy together."
+  "conflictImpulseId": "conflict-analysis-Instance-Invariant Storage for Impulses and Activities",
+  "summary": {
+    "conflictsDetected": 0,
+    "sharedComponentsAnalyzed": 2,
+    "otherSpecsAnalyzed": 4,
+    "deploymentDependencies": 3,
+    "recommendedAction": "PROCEED_WITH_ALL_SPECS",
+    "blockers": "NONE",
+    "nonBlockers": [
+      "Backend endpoints (Instance-Invariant Storage)",
+      "SurrealDB query API fix (ACP Coordination test)",
+      "Docker image rebuild (K8s Git Ops)"
+    ]
+  }
 }
