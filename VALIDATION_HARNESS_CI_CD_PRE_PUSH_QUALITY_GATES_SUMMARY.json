@@ -1,0 +1,195 @@
+{
+  "specificationName": "ci-cd-pre-push-quality-gates",
+  "harnessFile": "tests/validation-harnesses/ci-cd-pre-push-quality-gates-harness.ts",
+  "harnessStatus": "CREATED",
+  "createdDate": "2026-02-26",
+  "testCases": [
+    {
+      "impulseId": "validation-ci-cd-pre-push-quality-gates-case-1",
+      "name": "Type Error Detection",
+      "input": {
+        "testCase": "case-1-type-error",
+        "repository": "metabob-opencode",
+        "scenario": "type-error",
+        "errorCode": "const x: number = \"this is a string, not a number\";\nconst y: string = 42;\n\nfunction broken(a: string): number {\n  return a;\n}\n\nexport { x, y, broken };"
+      },
+      "expectedOutput": {
+        "hookExecuted": true,
+        "typecheckRan": true,
+        "errorsDetected": true,
+        "pushBlocked": true,
+        "exitCode": 1,
+        "errorMessage": "Type checking failed with TypeScript errors",
+        "executionTime": 5000
+      },
+      "purpose": "Verify that TypeScript type errors block pushes with clear error messages",
+      "businessImpact": "Validates 70-80% bug reduction by catching type errors before push"
+    },
+    {
+      "impulseId": "validation-ci-cd-pre-push-quality-gates-case-2",
+      "name": "Successful Typecheck",
+      "input": {
+        "testCase": "case-2-success",
+        "repository": "metabob-opencode",
+        "scenario": "success"
+      },
+      "expectedOutput": {
+        "hookExecuted": true,
+        "typecheckRan": true,
+        "errorsDetected": false,
+        "pushBlocked": false,
+        "exitCode": 0,
+        "errorMessage": "",
+        "executionTime": 5000
+      },
+      "purpose": "Verify valid code passes through without false positives",
+      "businessImpact": "Ensures smooth developer workflow for valid code"
+    },
+    {
+      "impulseId": "validation-ci-cd-pre-push-quality-gates-case-3",
+      "name": "Bypass Mechanism",
+      "input": {
+        "testCase": "case-3-bypass",
+        "repository": "metabob-opencode",
+        "scenario": "bypass"
+      },
+      "expectedOutput": {
+        "hookExecuted": false,
+        "typecheckRan": false,
+        "errorsDetected": false,
+        "pushBlocked": false,
+        "exitCode": 0,
+        "errorMessage": "",
+        "executionTime": 1000
+      },
+      "purpose": "Verify --no-verify flag bypasses hook for emergency situations",
+      "businessImpact": "Provides escape hatch while CI provides defense-in-depth"
+    },
+    {
+      "impulseId": "validation-ci-cd-pre-push-quality-gates-case-4",
+      "name": "Multiple Type Errors",
+      "input": {
+        "testCase": "case-4-multiple-errors",
+        "repository": "metabob-dashboard",
+        "scenario": "type-error",
+        "errorCode": "const a: number = \"string\";\nconst b: string = 123;\nconst c: boolean = \"not a boolean\";\n\nfunction wrong(x: number): string {\n  return x;\n}\n\nclass BadClass {\n  prop: number = \"not a number\";\n}"
+      },
+      "expectedOutput": {
+        "hookExecuted": true,
+        "typecheckRan": true,
+        "errorsDetected": true,
+        "pushBlocked": true,
+        "exitCode": 1,
+        "errorMessage": "Type checking failed with TypeScript errors",
+        "executionTime": 5000
+      },
+      "purpose": "Verify handling of multiple errors in single file",
+      "businessImpact": "Prevents batches of bugs from reaching production"
+    },
+    {
+      "impulseId": "validation-ci-cd-pre-push-quality-gates-case-5",
+      "name": "Timeout Handling",
+      "input": {
+        "testCase": "case-5-timeout",
+        "repository": "metabob-opencode",
+        "scenario": "timeout"
+      },
+      "expectedOutput": {
+        "hookExecuted": true,
+        "typecheckRan": true,
+        "errorsDetected": false,
+        "pushBlocked": true,
+        "exitCode": 124,
+        "errorMessage": "Type checking timed out after 120 seconds",
+        "executionTime": 120000
+      },
+      "purpose": "Verify timeout mechanism prevents indefinite hangs",
+      "businessImpact": "Maintains developer productivity by preventing workflow blocks",
+      "note": "This test takes ~2 minutes to complete"
+    },
+    {
+      "impulseId": "validation-ci-cd-pre-push-quality-gates-case-6",
+      "name": "Clear Error Messages",
+      "input": {
+        "testCase": "case-6-clear-messages",
+        "repository": "metabob-opencode",
+        "scenario": "type-error",
+        "errorCode": "const missingType = \"inferred\";\nconst typeMismatch: number = \"string\";\nexport { missingType, typeMismatch };"
+      },
+      "expectedOutput": {
+        "hookExecuted": true,
+        "typecheckRan": true,
+        "errorsDetected": true,
+        "pushBlocked": true,
+        "exitCode": 1,
+        "errorMessage": "Type checking failed with TypeScript errors",
+        "executionTime": 5000
+      },
+      "purpose": "Verify error messages include file paths and descriptions",
+      "businessImpact": "Reduces debugging time with clear, actionable feedback"
+    }
+  ],
+  "harnessImpulseId": "harness-ci-cd-pre-push-quality-gates",
+  "executionInfo": {
+    "command": "bun run tests/validation-harnesses/ci-cd-pre-push-quality-gates-harness.ts",
+    "expectedRuntime": "3-5 minutes",
+    "runtimeBreakdown": {
+      "case-1": "5-10 seconds",
+      "case-2": "5-10 seconds",
+      "case-3": "2-5 seconds",
+      "case-4": "5-10 seconds",
+      "case-5": "120 seconds (timeout test)",
+      "case-6": "5-10 seconds"
+    },
+    "successCriteria": {
+      "totalTests": 6,
+      "requiredPasses": 6,
+      "allowedFailures": 0
+    }
+  },
+  "architecture": {
+    "testRepositorySetup": "Creates isolated git repos with TypeScript config",
+    "validationLogic": "Simulates git push and captures hook execution",
+    "expectedOutputs": "Stored as impulses, no LLM needed",
+    "interfaces": {
+      "ValidationInput": "testCase, repository, scenario, errorCode, timeout",
+      "ValidationOutput": "hookExecuted, typecheckRan, errorsDetected, pushBlocked, exitCode, errorMessage, executionTime",
+      "ValidationResult": "pass, testCase, actual, expected, diff"
+    }
+  },
+  "integration": {
+    "workflow": [
+      "Trace → Identifies components and data flow",
+      "Enforce → Applies code mutations to close gaps",
+      "Validate → This harness verifies enforcement",
+      "Conflict Detection → Checks for specification conflicts",
+      "Ripple → Propagates improvements across codebase"
+    ],
+    "relatedImpulses": [
+      "trace-ci-cd-pre-push-quality-gates",
+      "enforcement-ci-cd-pre-push-quality-gates",
+      "validation-ci-cd-pre-push-quality-gates-case-1",
+      "validation-ci-cd-pre-push-quality-gates-case-2",
+      "validation-ci-cd-pre-push-quality-gates-case-3",
+      "validation-ci-cd-pre-push-quality-gates-case-4",
+      "validation-ci-cd-pre-push-quality-gates-case-5",
+      "validation-ci-cd-pre-push-quality-gates-case-6",
+      "harness-ci-cd-pre-push-quality-gates"
+    ]
+  },
+  "historicalContext": {
+    "realWorldValidation": "75 TypeScript errors blocked in metabob-opencode on 2026-02-26",
+    "repositoriesAffected": [
+      "metabob-opencode",
+      "metabob-dashboard",
+      "metabob-rpc-api",
+      "platform"
+    ],
+    "enforcementDate": "2026-02-26"
+  },
+  "tokenBudget": {
+    "harnessImpulse": 2000,
+    "usage": 1500,
+    "remaining": 500
+  }
+}
