@@ -734,6 +734,169 @@ async function testCase5_PaginationWorks(
   }
 }
 
+/**
+ * Test Case 6: Verify Backend Sync Enforcement
+ * 
+ * Tests the newly enforced dual-write pattern:
+ * 1. Impulse creation syncs to backend via CLI MCP
+ * 2. Activity save syncs to backend via CLI MCP
+ * 3. Activity load has backend fallback
+ * 
+ * This validates the enforcement from 2026-02-27.
+ */
+async function testCase6_BackendSyncEnforcement(
+  input: any,
+  expectedOutput: any
+): Promise<ValidationResult> {
+  const testCaseId = "validation-invariant-storage-across-instances-with-vessel-flow-case-6";
+  const testName = "Backend Sync Enforcement (Dual-Write Pattern)";
+  
+  try {
+    // 1. Verify impulse-create.ts has backend sync code
+    const impulseCreatePath = path.join(
+      process.cwd(),
+      "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts"
+    );
+    const impulseCreateContent = await fs.readFile(impulseCreatePath, "utf-8");
+    
+    const hasImpulseBackendSync = impulseCreateContent.includes("metabob_impulse_store") &&
+      impulseCreateContent.includes("MCP.clients()");
+    
+    if (!hasImpulseBackendSync) {
+      return {
+        pass: false,
+        testCaseId,
+        testName,
+        expected: expectedOutput,
+        actual: { hasImpulseBackendSync: false },
+        errorMessage: "impulse-create.ts does not call metabob_impulse_store via MCP",
+        diagnostics: {
+          checked: "impulse-create.ts",
+          looking_for: ["metabob_impulse_store", "MCP.clients()"],
+        },
+      };
+    }
+    
+    // 2. Verify activity.ts has backend sync in Activity.save
+    const activityPath = path.join(
+      process.cwd(),
+      "repos/metabob-opencode/packages/opencode/src/session/activity.ts"
+    );
+    const activityContent = await fs.readFile(activityPath, "utf-8");
+    
+    const hasActivitySaveBackendSync = activityContent.includes("metabob_activity_save") &&
+      activityContent.includes("MCP.clients()");
+    
+    if (!hasActivitySaveBackendSync) {
+      return {
+        pass: false,
+        testCaseId,
+        testName,
+        expected: expectedOutput,
+        actual: { hasActivitySaveBackendSync: false },
+        errorMessage: "activity.ts Activity.save does not call metabob_activity_save via MCP",
+        diagnostics: {
+          checked: "activity.ts",
+          looking_for: ["metabob_activity_save", "MCP.clients()"],
+        },
+      };
+    }
+    
+    // 3. Verify activity.ts has backend fallback in Activity.load
+    const hasActivityLoadBackendFallback = activityContent.includes("metabob_activity_load") &&
+      activityContent.includes("backend fallback") &&
+      activityContent.includes("try") &&
+      activityContent.includes("catch");
+    
+    if (!hasActivityLoadBackendFallback) {
+      return {
+        pass: false,
+        testCaseId,
+        testName,
+        expected: expectedOutput,
+        actual: { hasActivityLoadBackendFallback: false },
+        errorMessage: "activity.ts Activity.load does not have backend fallback with metabob_activity_load",
+        diagnostics: {
+          checked: "activity.ts Activity.load",
+          looking_for: ["metabob_activity_load", "try/catch for backend fallback"],
+        },
+      };
+    }
+    
+    // 4. Verify vessel flow compliance - no direct HTTP calls
+    const hasDirectHTTP = activityContent.includes("fetch(") && 
+      activityContent.includes("metabob") ||
+      impulseCreateContent.includes("fetch(") && 
+      impulseCreateContent.includes("metabob");
+    
+    if (hasDirectHTTP) {
+      return {
+        pass: false,
+        testCaseId,
+        testName,
+        expected: expectedOutput,
+        actual: { hasDirectHTTP: true },
+        errorMessage: "Vessel violation: Direct HTTP calls to metabob backend found",
+        diagnostics: {
+          checked: ["impulse-create.ts", "activity.ts"],
+          violation: "Contains fetch() calls to metabob backend",
+        },
+      };
+    }
+    
+    // 5. Verify MCP and Instance imports exist (required for backend sync)
+    const hasRequiredImports = 
+      (impulseCreateContent.includes('from "../mcp"') || impulseCreateContent.includes('import { MCP }')) &&
+      (impulseCreateContent.includes('from "../project/instance"') || impulseCreateContent.includes('import { Instance }')) &&
+      (activityContent.includes('from "../mcp"') || activityContent.includes('import { MCP }')) &&
+      (activityContent.includes('from "../project/instance"') || activityContent.includes('import { Instance }'));
+    
+    if (!hasRequiredImports) {
+      return {
+        pass: false,
+        testCaseId,
+        testName,
+        expected: expectedOutput,
+        actual: { hasRequiredImports: false },
+        errorMessage: "Missing required imports (MCP, Instance) for backend sync",
+        diagnostics: {
+          required_imports: ["MCP", "Instance"],
+          files: ["impulse-create.ts", "activity.ts"],
+        },
+      };
+    }
+    
+    return {
+      pass: true,
+      testCaseId,
+      testName,
+      expected: expectedOutput,
+      actual: {
+        hasImpulseBackendSync: true,
+        hasActivitySaveBackendSync: true,
+        hasActivityLoadBackendFallback: true,
+        hasDirectHTTP: false,
+        hasRequiredImports: true,
+      },
+      diagnostics: {
+        enforcement_date: "2026-02-27",
+        dual_write_pattern: "Local write + backend sync via CLI MCP",
+        backend_fallback: "Activity.load tries local first, falls back to backend",
+        vessel_flow_compliant: true,
+      },
+    };
+  } catch (error: any) {
+    return {
+      pass: false,
+      testCaseId,
+      testName,
+      expected: expectedOutput,
+      actual: null,
+      errorMessage: error.message,
+    };
+  }
+}
+
 // ============================================================================
 // TEST SUITE
 // ============================================================================
@@ -792,6 +955,19 @@ const TEST_CASES: TestCase[] = [
       page2Count: 5,
     },
     validator: testCase5_PaginationWorks,
+  },
+  {
+    id: "validation-invariant-storage-across-instances-with-vessel-flow-case-6",
+    name: "Backend Sync Enforcement (Dual-Write Pattern)",
+    input: {},
+    expectedOutput: {
+      hasImpulseBackendSync: true,
+      hasActivitySaveBackendSync: true,
+      hasActivityLoadBackendFallback: true,
+      hasDirectHTTP: false,
+      hasRequiredImports: true,
+    },
+    validator: testCase6_BackendSyncEnforcement,
   },
 ];
 

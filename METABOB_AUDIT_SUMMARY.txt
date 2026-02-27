@@ -219,3 +219,170 @@ Audit completed: 2026-02-27
 Source files analyzed: 255 TypeScript files
 Tools analyzed: 35 Metabob MCP tools
 Documents generated: 5 comprehensive reports
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     ANNOTATION COVERAGE AUDIT ADDENDUM                       ║
+║                           Date: 2026-02-27                                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─ ANNOTATION STATUS ──────────────────────────────────────────────────────────┐
+│ 🔴 SEVERELY DEFICIENT - Effectively 0% coverage                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ KEY STATISTICS ─────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  Total Components:     900 (180 classes + 720 functions)                    │
+│  Design Comments:      31 (~3% in-code comments)                            │
+│  Metabob Annotations:  0 (ZERO via annotation system)                       │
+│  Annotation Coverage:  <0.1% (effectively zero)                             │
+│                                                                              │
+│  Infrastructure:       ✅ COMPLETE                                           │
+│  Tool Availability:    ✅ CONFIGURED (18 agent configurations)              │
+│  Actual Usage:         ❌ ZERO (0 annotation calls)                         │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ THE PARADOX ────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  "The codebase has EXCELLENT annotation infrastructure but uses NONE of it" │
+│                                                                              │
+│  ✅ Annotation utility: Implemented                                          │
+│  ✅ Agent configuration: 9 agents have tool                                  │
+│  ✅ UI integration: Progress indicators ready                                │
+│  ✅ Activity validation: Coverage checking active                            │
+│  ✅ Auto-capture: Fallback system implemented                                │
+│  ✅ Write tool warnings: "Use annotations instead of markdown"               │
+│                                                                              │
+│  ❌ ACTUAL ANNOTATION CALLS: 0                                               │
+│  ❌ COMPONENTS ANNOTATED: 0                                                  │
+│  ❌ DESIGN DECISIONS DOCUMENTED: 0                                           │
+│                                                                              │
+│  Root Cause: Agent prompts don't guide usage                                │
+│  Analogy: Fire extinguishers everywhere, building burns anyway              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ CRITICAL COMPONENTS WITHOUT ANNOTATIONS ────────────────────────────────────┐
+│                                                                              │
+│  Tier 1: Core Architecture (0/8 = 0%)                                       │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                       │
+│   • SessionState - Central state management                                 │
+│   • ActivityTemplate - Activity-centric model                               │
+│   • TemplateExecutor - Execution engine                                     │
+│   • BoredomManager - Idle work system                                       │
+│   • ImpulseResolver - Lazy loading context                                  │
+│   • PromptBuilder - Token budget management                                 │
+│   • Agent - Multi-agent system                                              │
+│   • AgentSelector - Selection logic                                         │
+│                                                                              │
+│  Tier 2: Tool System (0/7 = 0%)                                             │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                           │
+│   • ActivityTool, EditTool, WriteTool, ReadTool, BashTool, etc.            │
+│                                                                              │
+│  Tier 3-5: Activity, Storage, Integration (0/11 = 0%)                       │
+│                                                                              │
+│  TOTAL MISSING: 26 critical components with zero design documentation       │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ IMPACT ─────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  KNOWLEDGE LOSS IN PROGRESS                                                 │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                              │
+│   Every commit without annotations loses:                                   │
+│   • Why this design approach                                                │
+│   • What alternatives were considered                                       │
+│   • What trade-offs were made                                               │
+│   • What problems does this solve                                           │
+│                                                                              │
+│   Accumulated loss: ~900 components with zero documented rationale          │
+│                                                                              │
+│  ENFORCEMENT SYSTEM INEFFECTIVE                                             │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                          │
+│   • Activity validation checks annotation coverage                          │
+│   • Requires 50% threshold                                                  │
+│   • Never triggered (no annotations to check)                               │
+│   • False sense of quality control                                          │
+│                                                                              │
+│  AUTO-CAPTURE FALLBACK UNUSED                                               │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                                           │
+│   • Designed to generate annotations if agent forgot                        │
+│   • Code exists but not integrated                                          │
+│   • Safety net not catching anything                                        │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ 8-HOUR FIX PLAN ────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  IMMEDIATE (Hours 1-4)                                                      │
+│  ━━━━━━━━━━━━━━━━━━━━━━                                                     │
+│   [ ] Fix Metabob indexing (1-4 hours) - BLOCKS EVERYTHING                 │
+│       → Follow METABOB_INDEXING_FIX_ACTION_PLAN.md                          │
+│                                                                              │
+│   [ ] Update agent system prompts (1 hour)                                  │
+│       → Add "Design Documentation" section                                  │
+│       → Include annotation examples                                         │
+│       → Explain when/how to annotate                                        │
+│                                                                              │
+│   [ ] Add annotation reminders (2 hours)                                    │
+│       → Edit tool: Remind after significant changes                         │
+│       → Write tool: Remind after new components                             │
+│       → Detect: lines changed > 20, new classes, new exports               │
+│                                                                              │
+│  WEEK 1 (Hours 5-8)                                                         │
+│  ━━━━━━━━━━━━━━━━━━━                                                        │
+│   [ ] Annotate 20 core components (4 hours)                                 │
+│       → Manual high-quality annotations                                     │
+│       → Seed data for agents to learn from                                  │
+│       → Coverage: 0% → 2% (20/900)                                          │
+│                                                                              │
+│   [ ] Strengthen enforcement (1 hour)                                       │
+│       → Block activities without annotations                                │
+│       → Change from warning to error                                        │
+│       → Require 50% coverage for >3 changed files                           │
+│                                                                              │
+│   [ ] Integrate auto-capture (1 hour)                                       │
+│       → Hook into activity completion                                       │
+│       → Generate fallback annotations                                       │
+│       → Better than nothing                                                 │
+│                                                                              │
+│  EXPECTED OUTCOME                                                           │
+│  ━━━━━━━━━━━━━━━━━                                                          │
+│   After 8 hours:                                                            │
+│   • Agents know to annotate (prompts + reminders)                           │
+│   • 20 example annotations exist                                            │
+│   • Enforcement blocks incomplete work                                      │
+│   • Auto-capture prevents total loss                                        │
+│   • Coverage: 0% → 2% baseline, growing 1%/week                             │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ SUCCESS METRICS ────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  BASELINE (Current)          4 WEEKS              12 WEEKS                  │
+│  ═══════════════════          ═══════             ════════                  │
+│  Annotations: 0        →     100+ (10%)    →     300+ (33%)                │
+│  Daily calls: 0        →     5-10/day      →     10-20/day                 │
+│  Tier 1:      0%       →     50%           →     100%                       │
+│  Tier 2-3:    0%       →     20%           →     50%                        │
+│  Tier 4-5:    0%       →     5%            →     20%                        │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─ THE IRONY ──────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  File: src/tool/write.ts                                                    │
+│  Content: "Use metabob_annotate_component instead of markdown files"        │
+│  Status: This advice-giving file is itself NOT annotated                    │
+│                                                                              │
+│  Practice vs Preaching: 100% gap                                            │
+│                                                                              │
+│  This is EXACTLY the problem we need to fix.                                │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  SUMMARY: Infrastructure perfect, usage zero - 8 hours to fix               ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Full report: METABOB_ANNOTATION_COVERAGE_REPORT.md

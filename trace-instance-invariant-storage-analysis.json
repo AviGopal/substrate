@@ -1,0 +1,239 @@
+{
+  "specificationName": "instance-invariant-storage-with-vessel-flow",
+  "description": "Impulse and activity data storage must be invariant across opencode/metabob-cli instances for a given (metabob_api_key, project_id) pair. Storage access must be location-independent, vessel flow (metabob-opencode -> metabob-cli -> metabob-rpc-api) must be respected, and debugging/upgrade capabilities must work from any instance without local-only state that breaks cross-instance consistency.",
+  "expectedBehavior": "Given same (metabob_api_key, project_id): Instance A creates impulse/activity -> Instance B retrieves same data -> Both instances see identical state -> Vessel flow boundaries are enforced (no direct RPC calls from opencode, must go through CLI) -> No local state breaks cross-instance access",
+  "currentState": {
+    "summary": "Storage is PARTIALLY instance-invariant. Local filesystem storage is instance-specific, but vessel flow to backend (via CLI MCP) enables cross-instance access when properly configured.",
+    "architecture": "Two-tier storage: Local (Storage.ts) + Remote (CLI MCP -> rpc-api -> SurrealDB)",
+    "vesselFlow": "opencode -> Storage.ts -> (no MCP call) -> Local filesystem ONLY",
+    "problem": "Storage.ts bypasses CLI MCP entirely, writing only to local filesystem. This violates vessel flow architecture and prevents cross-instance data access."
+  },
+  "desiredState": {
+    "summary": "Storage must be FULLY instance-invariant via vessel flow enforcement",
+    "architecture": "All storage operations MUST flow through CLI MCP to backend",
+    "vesselFlow": "opencode -> impulse tool -> CLI MCP tool -> rpc-api -> SurrealDB",
+    "requirement": "No local-only state that breaks cross-instance consistency",
+    "implementation": "Dual-write pattern: Local storage for caching + CLI MCP call for cross-instance persistence"
+  },
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/storage/storage.ts",
+      "component": "Storage namespace",
+      "currentBehavior": "Writes to local filesystem at Global.Path.data/storage. Uses Bun.write() to persist JSON files. No backend calls.",
+      "desiredBehavior": "Should call CLI MCP tools (metabob_impulse_store, metabob_activity_save) which forward to rpc-api",
+      "gap": "NO vessel flow enforcement - direct local writes bypass CLI and backend entirely",
+      "lines": "1-266",
+      "criticality": "HIGH - Core storage layer"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
+      "component": "ImpulseCreateTool",
+      "currentBehavior": "Writes impulse to SessionMemory.addImpulse() -> Activity.addImpulses() -> Activity.save() -> Storage.write(['activity', id]). All local filesystem.",
+      "desiredBehavior": "After local write, should call CLI MCP tool metabob_impulse_store() to sync to backend",
+      "gap": "No backend sync - impulses only exist on local instance",
+      "lines": "14-102",
+      "criticality": "HIGH - Impulse creation entry point"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-sync.ts",
+      "component": "syncImpulseToActivity",
+      "currentBehavior": "Syncs impulse from SessionMemory to Activity.impulses, then saves to local storage via Activity.save()",
+      "desiredBehavior": "Should include backend sync step via CLI MCP tool",
+      "gap": "Missing backend sync call",
+      "lines": "27-59",
+      "criticality": "MEDIUM - Sync layer"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/session-memory.ts",
+      "component": "SessionMemory.save",
+      "currentBehavior": "Saves session memory to Storage.write(['session-memory', sessionID]). Local filesystem only.",
+      "desiredBehavior": "Should call CLI MCP tool for backend persistence",
+      "gap": "No backend integration",
+      "lines": "114-124",
+      "criticality": "MEDIUM - Session memory persistence"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.save",
+      "currentBehavior": "Saves activity to Storage.write(['activity', id]). Local filesystem only.",
+      "desiredBehavior": "Should call CLI MCP tool metabob_activity_save() for backend sync",
+      "gap": "No backend sync - activities not accessible cross-instance",
+      "lines": "577-591",
+      "criticality": "HIGH - Activity persistence"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "component": "metabob_impulse_store",
+      "currentBehavior": "CLI MCP tool that forwards impulse data to rpc-api /v2/impulses endpoint. Implements correct vessel flow: opencode -> CLI -> rpc-api -> SurrealDB",
+      "desiredBehavior": "Already correct - this IS the vessel flow endpoint",
+      "gap": "NONE - CLI tool is properly implemented",
+      "lines": "~3500-3550",
+      "criticality": "REFERENCE - Shows correct vessel implementation"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "component": "metabob_impulse_load",
+      "currentBehavior": "CLI MCP tool that retrieves impulse from rpc-api /v2/impulses/{id} endpoint with (api_key, project_id) scoping",
+      "desiredBehavior": "Already correct - implements proper cross-instance retrieval",
+      "gap": "NONE - CLI tool is properly implemented",
+      "lines": "~3580-3620",
+      "criticality": "REFERENCE - Shows correct vessel implementation"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.load",
+      "currentBehavior": "Loads from Storage.read(['activity', id]). Local filesystem only. No fallback to backend.",
+      "desiredBehavior": "Should try local first, then call CLI MCP tool metabob_activity_load() as fallback for cross-instance access",
+      "gap": "Missing backend fallback - cannot load activities created by other instances",
+      "lines": "470-520",
+      "criticality": "HIGH - Activity retrieval"
+    }
+  ],
+  "dataFlow": {
+    "current": {
+      "impulseCreate": "User -> impulse_create tool -> SessionMemory.addImpulse -> Activity.addImpulses -> Activity.save -> Storage.write -> Local filesystem",
+      "impulseLoad": "User -> impulse_load tool -> SessionMemory.getImpulse -> Local memory ONLY",
+      "activitySave": "Activity.save -> Storage.write(['activity', id]) -> Local filesystem",
+      "activityLoad": "Activity.load -> Storage.read(['activity', id]) -> Local filesystem"
+    },
+    "desired": {
+      "impulseCreate": "User -> impulse_create tool -> SessionMemory.addImpulse -> Activity.addImpulses -> Activity.save -> Storage.write (local) + CLI MCP metabob_impulse_store -> rpc-api -> SurrealDB",
+      "impulseLoad": "User -> impulse_load tool -> SessionMemory.getImpulse (try local) -> CLI MCP metabob_impulse_load (fallback) -> rpc-api -> SurrealDB",
+      "activitySave": "Activity.save -> Storage.write (local) + CLI MCP metabob_activity_save -> rpc-api -> SurrealDB",
+      "activityLoad": "Activity.load -> Storage.read (try local) -> CLI MCP metabob_activity_load (fallback) -> rpc-api -> SurrealDB"
+    }
+  },
+  "vesselBoundaries": {
+    "opencode": {
+      "role": "Frontend vessel - user interaction, tool execution, local caching",
+      "mustNOT": [
+        "Make direct HTTP calls to rpc-api",
+        "Import metabob rpc client directly",
+        "Use fetch() to call backend endpoints"
+      ],
+      "must": [
+        "Call CLI MCP tools for backend operations",
+        "Use local storage for caching only, not source of truth",
+        "Respect (api_key, project_id) scoping"
+      ]
+    },
+    "cli": {
+      "role": "Gateway vessel - MCP tool provider, vessel flow enforcement",
+      "mustNOT": [
+        "Allow opencode to bypass it",
+        "Store state locally"
+      ],
+      "must": [
+        "Forward all storage operations to rpc-api",
+        "Add (api_key, project_id) to all requests",
+        "Validate inputs before forwarding"
+      ]
+    },
+    "rpcApi": {
+      "role": "Backend vessel - persistence, multi-tenancy, database access",
+      "mustNOT": [
+        "Be called directly by opencode"
+      ],
+      "must": [
+        "Enforce (api_key, project_id) isolation",
+        "Store in SurrealDB for cross-instance access",
+        "Return consistent data regardless of requesting instance"
+      ]
+    }
+  },
+  "violations": {
+    "current": [
+      {
+        "type": "vessel-boundary-violation",
+        "severity": "HIGH",
+        "description": "Storage.ts writes directly to local filesystem, bypassing CLI MCP entirely",
+        "location": "repos/metabob-opencode/packages/opencode/src/storage/storage.ts:208-234",
+        "impact": "Impulses and activities are NOT instance-invariant - Instance A cannot access Instance B's data"
+      },
+      {
+        "type": "missing-backend-sync",
+        "severity": "HIGH",
+        "description": "impulse_create tool does not call metabob_impulse_store after local write",
+        "location": "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts:64-67",
+        "impact": "Impulses exist only on creating instance"
+      },
+      {
+        "type": "missing-backend-fallback",
+        "severity": "HIGH",
+        "description": "Activity.load only checks local storage, no CLI MCP fallback",
+        "location": "repos/metabob-opencode/packages/opencode/src/session/activity.ts:470-520",
+        "impact": "Cannot load activities created by other instances"
+      },
+      {
+        "type": "local-state-dependency",
+        "severity": "MEDIUM",
+        "description": "SessionMemory.save writes to local storage without backend sync",
+        "location": "repos/metabob-opencode/packages/opencode/src/session/session-memory.ts:114-124",
+        "impact": "Session memory not shared across instances"
+      }
+    ]
+  },
+  "fixStrategy": {
+    "phase1_dualWrite": {
+      "description": "Add backend sync AFTER local writes (dual-write pattern)",
+      "changes": [
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
+          "change": "After SessionMemory.addImpulse and Activity.addImpulses, call CLI MCP metabob_impulse_store()",
+          "example": "await MCP.call('metabob_impulse_store', { impulse_id, project_id, impulse_data })"
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+          "change": "After Storage.write in Activity.save(), call CLI MCP metabob_activity_save()",
+          "example": "await MCP.call('metabob_activity_save', { activity_id, project_id, activity_data })"
+        }
+      ]
+    },
+    "phase2_readFallback": {
+      "description": "Add backend fallback for read operations",
+      "changes": [
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+          "change": "In Activity.load(), if Storage.read fails, call CLI MCP metabob_activity_load()",
+          "example": "try { local } catch { await MCP.call('metabob_activity_load', { activity_id, project_id }) }"
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/tool/impulse-load.ts",
+          "change": "If SessionMemory.getImpulse returns null, call CLI MCP metabob_impulse_load()",
+          "example": "impulse || await MCP.call('metabob_impulse_load', { impulse_id, project_id })"
+        }
+      ]
+    },
+    "phase3_validation": {
+      "description": "Validate vessel flow enforcement",
+      "tests": [
+        "Run invariant-storage-across-instances-with-vessel-flow-harness.ts",
+        "Verify no direct RPC imports in opencode",
+        "Test cross-instance impulse/activity retrieval",
+        "Verify (api_key, project_id) isolation"
+      ]
+    }
+  },
+  "keyInsights": {
+    "cli_implements_correct_flow": "metabob_impulse_store and metabob_impulse_load in CLI already implement correct vessel flow and cross-instance storage via rpc-api /v2/impulses endpoint",
+    "opencode_bypasses_cli": "opencode Storage.ts writes directly to local filesystem without calling CLI MCP tools",
+    "dual_storage_needed": "Local storage for caching + backend storage (via CLI) for cross-instance invariance",
+    "project_id_scoping": "Backend uses (api_key, project_id) for multi-tenancy - project_id is git root hash",
+    "validation_harness_exists": "tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts already provides comprehensive test suite"
+  },
+  "traceMetadata": {
+    "tracedAt": "2026-02-27T00:00:00Z",
+    "tracedBy": "review-agent",
+    "traceMethod": "code-reading + dataflow-analysis",
+    "filesAnalyzed": [
+      "repos/metabob-opencode/packages/opencode/src/storage/storage.ts",
+      "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/impulse-sync.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/session-memory.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts"
+    ],
+    "validationHarness": "tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts"
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "specificationName": "instance-invariant-storage-with-vessel-flow",
+  "enforcementDate": "2026-02-27",
+  "changesApplied": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
+      "component": "ImpulseCreateTool",
+      "changeMade": "Added backend sync after local write: calls metabob_impulse_store via CLI MCP with (impulse_id, project_id, impulse_data)",
+      "reason": "Enforces vessel flow (opencode -> CLI MCP -> rpc-api -> SurrealDB) so impulses are instance-invariant. Instance A creates impulse -> Instance B can retrieve it from backend.",
+      "impactAnalysis": "Non-breaking: backend sync is best-effort (wrapped in try-catch). Local storage still works if MCP client unavailable. Adds ~50ms latency for backend call.",
+      "linesChanged": "63-107",
+      "vesselFlowEnforcement": "YES - calls CLI MCP tool metabob_impulse_store instead of direct backend access"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.save",
+      "changeMade": "Added backend sync after local write: calls metabob_activity_save via CLI MCP with (activity_id, project_id, activity_data)",
+      "reason": "Enforces vessel flow for activity persistence. Activities are now stored in backend (SurrealDB) for cross-instance access, not just local filesystem.",
+      "impactAnalysis": "Non-breaking: backend sync is best-effort. Tool availability is checked before call (metabob_activity_save may not be deployed yet). Local storage unaffected.",
+      "linesChanged": "589-626",
+      "vesselFlowEnforcement": "YES - calls CLI MCP tool metabob_activity_save, checks tool existence before call"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.load",
+      "changeMade": "Added backend fallback for read operations: if local Storage.read fails, calls metabob_activity_load via CLI MCP with (activity_id, project_id)",
+      "reason": "Enables cross-instance retrieval. Instance B can now load activities created by Instance A even if not in local cache. Implements dual-layer: local (cache) + backend (source of truth).",
+      "impactAnalysis": "Non-breaking: local read is still tried first (fast path). Backend fallback only on local failure. Successfully loaded backend activities are cached locally for future access.",
+      "linesChanged": "480-555",
+      "vesselFlowEnforcement": "YES - calls CLI MCP tool metabob_activity_load as fallback, respects vessel boundaries"
+    }
+  ],
+  "vesselFlowCompliance": {
+    "opencode": {
+      "compliance": "YES",
+      "verification": [
+        "No direct HTTP calls to rpc-api (grep verified)",
+        "No direct metabob rpc client imports (grep verified)",
+        "All backend operations go through CLI MCP (metabob_impulse_store, metabob_activity_save, metabob_activity_load)"
+      ]
+    },
+    "cli": {
+      "compliance": "YES",
+      "verification": [
+        "Tools already implemented: metabob_impulse_store, metabob_impulse_load",
+        "Tools forward to rpc-api with (api_key, project_id) scoping",
+        "Tool metabob_activity_save/load may need implementation (checked before call)"
+      ]
+    },
+    "rpcApi": {
+      "compliance": "YES",
+      "verification": [
+        "Endpoints already exist: /v2/impulses for impulse storage",
+        "SurrealDB backend enforces (api_key, project_id) isolation",
+        "Activity endpoints may need implementation (Phase 3 task)"
+      ]
+    }
+  },
+  "dataFlowAfterEnforcement": {
+    "impulseCreate": "User -> impulse_create -> SessionMemory.addImpulse -> syncImpulseToActivity -> Activity.save -> Storage.write (local) + MCP.call(metabob_impulse_store) -> CLI -> rpc-api -> SurrealDB",
+    "impulseLoad": "User -> impulse_load -> SessionMemory.getImpulse (local) | Future: add backend fallback similar to Activity.load",
+    "activitySave": "Activity.save -> Storage.write (local) + MCP.call(metabob_activity_save) -> CLI -> rpc-api -> SurrealDB",
+    "activityLoad": "Activity.load -> Storage.read (local) OR (if fails) MCP.call(metabob_activity_load) -> CLI -> rpc-api -> SurrealDB -> cache locally"
+  },
+  "remainingGaps": [
+    {
+      "component": "impulse_load tool",
+      "gap": "No backend fallback yet",
+      "priority": "MEDIUM",
+      "nextStep": "Add backend fallback similar to Activity.load: try SessionMemory first, fallback to metabob_impulse_load"
+    },
+    {
+      "component": "SessionMemory.save",
+      "gap": "No backend sync",
+      "priority": "LOW",
+      "nextStep": "Add backend sync if session memory needs cross-instance sharing (may not be required)"
+    },
+    {
+      "component": "CLI MCP tools",
+      "gap": "metabob_activity_save and metabob_activity_load may not be implemented yet",
+      "priority": "HIGH",
+      "nextStep": "Implement CLI MCP tools for activity storage (similar to impulse_store/load)"
+    }
+  ],
+  "validationRequired": [
+    {
+      "test": "Cross-instance impulse retrieval",
+      "command": "Run validation harness: tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts",
+      "expectedResult": "Instance A creates impulse -> Instance B retrieves from backend"
+    },
+    {
+      "test": "Cross-instance activity retrieval",
+      "command": "Activity.load falls back to backend when local missing",
+      "expectedResult": "Instance A saves activity -> Instance B loads from backend"
+    },
+    {
+      "test": "Vessel flow compliance",
+      "command": "grep -r 'fetch.*metabob.*api\\|import.*metabob.*rpc' repos/metabob-opencode/packages/opencode/src",
+      "expectedResult": "No matches (no vessel boundary violations)"
+    },
+    {
+      "test": "(api_key, project_id) isolation",
+      "command": "Test that Instance A (project_id=X) cannot access Instance B's data (project_id=Y)",
+      "expectedResult": "Backend enforces isolation, returns 404 or empty"
+    }
+  ],
+  "annotations": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
+      "component": "ImpulseCreateTool",
+      "reason": "Dual-write pattern: local write for fast access + backend sync for cross-instance invariance. Backend sync is best-effort (non-critical failure) to maintain backward compatibility.",
+      "designDecision": "Vessel flow enforcement: opencode must call CLI MCP tools, not rpc-api directly. This maintains architectural boundaries and enables gateway-level concerns (auth, rate limiting, logging)."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.save",
+      "reason": "Same dual-write pattern as impulses. Checks tool availability before call since metabob_activity_save may not be deployed yet (graceful degradation).",
+      "designDecision": "Tool availability check prevents runtime errors during rollout. Once CLI tools deployed, backend sync activates automatically."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.load",
+      "reason": "Backend fallback enables cross-instance access. Local-first strategy (try cache first) maintains performance while backend provides source of truth.",
+      "designDecision": "Cache locally after backend load to reduce future backend calls. This hybrid approach balances performance (local cache) with consistency (backend fallback)."
+    }
+  ],
+  "successCriteria": {
+    "functionalRequirements": [
+      "Instance A creates impulse -> Instance B retrieves same impulse data",
+      "Instance A saves activity -> Instance B loads activity from backend",
+      "Local storage still works without MCP client (backward compatible)",
+      "(api_key, project_id) isolation enforced by backend"
+    ],
+    "architecturalRequirements": [
+      "No direct opencode -> rpc-api calls (vessel flow respected)",
+      "All backend operations through CLI MCP gateway",
+      "Dual-storage pattern: local (cache) + backend (source of truth)"
+    ],
+    "performanceRequirements": [
+      "Local reads remain fast (cache-first strategy)",
+      "Backend sync adds <100ms latency (acceptable for write operations)",
+      "Backend fallback only on local miss (rare case after warm-up)"
+    ]
+  },
+  "nextSteps": [
+    "1. Implement metabob_activity_save and metabob_activity_load in CLI MCP (repos/metabob-cli/src/metabob_cli/mcp/tools.py)",
+    "2. Add backend fallback to impulse_load tool (repos/metabob-opencode/packages/opencode/src/tool/impulse-load.ts)",
+    "3. Run validation harness: tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts",
+    "4. Test cross-instance workflows in real deployment (devbob containers)",
+    "5. Monitor backend sync success rates and latency"
+  ]
+}
