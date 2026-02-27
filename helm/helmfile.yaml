@@ -42,6 +42,9 @@ releases:
     namespace: metabob
     values:
       - charts/metabob-rpc-api.values.yaml
+      # Load environment-specific values (production, staging, etc.)
+      - charts/metabob-rpc-api.{{ .Environment.Name }}.values.yaml
+    missingFileHandler: Warn
     needs:
       - redis
       - surrealdb
@@ -52,5 +55,8 @@ releases:
     namespace: metabob
     values:
       - charts/devbob.values.yaml
+      # Load environment-specific values (production, staging, etc.)
+      - charts/devbob.{{ .Environment.Name }}.values.yaml
+    missingFileHandler: Warn
     needs:
       - metabob-rpc-api

@@ -1,0 +1,220 @@
+{
+  "specificationName": "Helmfile-driven Kubernetes Deployment Pattern",
+  "analysisDate": "2026-02-27T20:00:00Z",
+  "otherSpecifications": [
+    "devbob-k8s-git-operations",
+    "DevBob Container Clean Environment Constraints",
+    "Instance-Invariant Storage - Missing Backend API Endpoints",
+    "ci-cd-pre-push-quality-gates",
+    "boredom-activity-detection-mechanism",
+    "metabob-session-tracking",
+    "activity-state-transformation-tracking",
+    "impulse-usage-tracking"
+  ],
+  "conflicts": [
+    {
+      "type": "MISSING_INTEGRATION",
+      "severity": "HIGH",
+      "spec1": "Helmfile-driven Kubernetes Deployment Pattern",
+      "spec2": "devbob-k8s-git-operations",
+      "sharedComponent": "K8s Secret: devbob-secrets (GITHUB_TOKEN)",
+      "description": "Helmfile spec manages K8s deployments but does not address secret management. devbob-k8s-git-operations spec requires valid GITHUB_TOKEN in devbob-secrets but helmfile.yaml does not include Secret resources or reference external secret management.",
+      "currentBehavior": "helmfile.yaml only manages Deployments, Services, StatefulSets. Secrets are managed out-of-band via kubectl commands.",
+      "desiredBehavior": "Secrets should be managed via Helm/helmfile (sealed-secrets, external-secrets, or helm secrets plugin) to comply with 'helmfile-only' deployment pattern.",
+      "impact": "Violates helmfile-only principle. Secrets require direct kubectl commands, creating a deployment antipattern.",
+      "resolution": {
+        "option1": "Integrate sealed-secrets controller and manage encrypted secrets via helmfile",
+        "option2": "Use external-secrets operator to sync secrets from external vault",
+        "option3": "Document exception: secrets managed separately for security (acceptable if documented)",
+        "recommended": "Option 3 (document exception) - Secret management via kubectl is standard Kubernetes practice for security. Update specification to explicitly allow secret management as documented exception to helmfile-only rule."
+      }
+    },
+    {
+      "type": "CONFIGURATION_DRIFT_ROOT_CAUSE",
+      "severity": "MEDIUM",
+      "spec1": "Helmfile-driven Kubernetes Deployment Pattern",
+      "spec2": "Instance-Invariant Storage - Missing Backend API Endpoints",
+      "sharedComponent": "metabob-rpc-api deployment",
+      "description": "Validation detected configuration drift (running 0.12.5, configured 0.12.6). Root cause: Instance-Invariant Storage spec added backend API endpoints requiring code changes to metabob-rpc-api, but deployment was not synced after enforcement.",
+      "currentBehavior": "Code changes deployed to repos/ directory, but Kubernetes deployment not updated. Running old version.",
+      "desiredBehavior": "After enforcement phase adds/modifies backend code, deployment should be automatically synced via helmfile.",
+      "impact": "Running deployment does not include enforced changes from other specifications. Backend may lack required API endpoints.",
+      "resolution": {
+        "immediate": "Run 'helmfile sync' to update deployment to 0.12.6",
+        "longTerm": "Add post-enforcement hook to automatically run helmfile sync after code changes",
+        "automation": "Integrate with CI/CD to deploy on code changes"
+      }
+    },
+    {
+      "type": "INCOMPLETE_ENFORCEMENT",
+      "severity": "HIGH",
+      "spec1": "Helmfile-driven Kubernetes Deployment Pattern",
+      "spec2": null,
+      "sharedComponent": "helm/helmfile.yaml",
+      "description": "Enforcement phase created production-specific values files (devbob.production.values.yaml, metabob-rpc-api.production.values.yaml) but did not update helmfile.yaml to load these files when environment=production. Validation failed: production template does not render Istio resources.",
+      "currentBehavior": "Production values files exist but are not referenced by helmfile.yaml releases. Istio remains disabled in production templates.",
+      "desiredBehavior": "helmfile.yaml should conditionally load production values files based on environment variable.",
+      "impact": "Production deployments will not have Istio service mesh integration despite enforcement creating all necessary templates and configuration.",
+      "resolution": {
+        "fix": "Update helm/helmfile.yaml to conditionally load production values",
+        "code": "Add to each release: {{- if eq .Environment.Name \"production\" }}\n      - charts/<release>.production.values.yaml\n{{- end }}",
+        "validation": "Re-run validation harness to verify Istio resources render in production template"
+      }
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "helm/helmfile.yaml",
+      "affectedBySpecs": [
+        "Helmfile-driven Kubernetes Deployment Pattern"
+      ],
+      "currentState": "Manages 4 releases (redis, surrealdb, metabob-rpc-api, devbob) with local environment only",
+      "requiredChanges": [
+        "Add conditional production values loading per release",
+        "Document secret management exception",
+        "Add post-enforcement sync automation"
+      ],
+      "recommendation": "Update helmfile.yaml to complete production environment support"
+    },
+    {
+      "component": "K8s Secrets (devbob-secrets, metabob-secrets)",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations",
+        "Helmfile-driven Kubernetes Deployment Pattern"
+      ],
+      "currentState": "Managed via direct kubectl commands (out-of-band from helmfile)",
+      "conflict": "helmfile-only pattern vs security best practices for secret management",
+      "requiredChanges": [
+        "Document exception to helmfile-only rule for secrets",
+        "OR integrate sealed-secrets/external-secrets for helmfile-managed secrets"
+      ],
+      "recommendation": "Document secrets as acceptable exception to helmfile-only pattern due to security requirements"
+    },
+    {
+      "component": "metabob-rpc-api deployment",
+      "affectedBySpecs": [
+        "Helmfile-driven Kubernetes Deployment Pattern",
+        "Instance-Invariant Storage - Missing Backend API Endpoints"
+      ],
+      "currentState": "Running 0.12.5, configuration specifies 0.12.6",
+      "conflict": "Deployment not synced after backend code enforcement",
+      "requiredChanges": [
+        "Run helmfile sync immediately",
+        "Add automation to sync after code changes"
+      ],
+      "recommendation": "Implement post-enforcement deployment sync automation"
+    },
+    {
+      "component": "docker/Dockerfile.devbob",
+      "affectedBySpecs": [
+        "DevBob Container Clean Environment Constraints",
+        "Helmfile-driven Kubernetes Deployment Pattern"
+      ],
+      "currentState": "Builds clean binary image without source code",
+      "conflict": "NONE - specifications are compatible",
+      "requiredChanges": [],
+      "recommendation": "No changes needed. Clean environment constraint and helmfile deployment are compatible."
+    },
+    {
+      "component": "helm/charts/devbob/templates/deployment.yaml",
+      "affectedBySpecs": [
+        "Helmfile-driven Kubernetes Deployment Pattern",
+        "DevBob Container Clean Environment Constraints"
+      ],
+      "currentState": "References devbob:local-fixed image, includes Istio annotations (conditional)",
+      "conflict": "NONE - specifications are compatible",
+      "requiredChanges": [],
+      "recommendation": "No changes needed. Deployment template correctly references binary image and supports Istio."
+    }
+  ],
+  "crossReferencedDependencies": [
+    {
+      "source": "Helmfile-driven Kubernetes Deployment Pattern",
+      "target": "devbob-k8s-git-operations",
+      "relationship": "DEPLOYMENT_TO_FUNCTIONALITY",
+      "description": "Helmfile manages devbob deployment which requires GITHUB_TOKEN secret for git operations functionality",
+      "dependency": "devbob StatefulSet requires devbob-secrets with valid github-token"
+    },
+    {
+      "source": "Helmfile-driven Kubernetes Deployment Pattern",
+      "target": "Instance-Invariant Storage - Missing Backend API Endpoints",
+      "relationship": "DEPLOYMENT_TO_CODE",
+      "description": "Helmfile manages metabob-rpc-api deployment which must run code with enforced backend API endpoints",
+      "dependency": "metabob-rpc-api deployment version must match code version with API endpoints"
+    },
+    {
+      "source": "Helmfile-driven Kubernetes Deployment Pattern",
+      "target": "DevBob Container Clean Environment Constraints",
+      "relationship": "DEPLOYMENT_TO_IMAGE",
+      "description": "Helmfile deploys devbob image which must be clean binary (no source code)",
+      "dependency": "devbob:local-fixed image must be built from docker/Dockerfile.devbob (clean binary)"
+    }
+  ],
+  "riskAnalysis": {
+    "highRiskConflicts": 2,
+    "mediumRiskConflicts": 1,
+    "lowRiskConflicts": 0,
+    "criticalIssues": [
+      {
+        "issue": "Production Istio integration broken",
+        "severity": "HIGH",
+        "specs": ["Helmfile-driven Kubernetes Deployment Pattern"],
+        "impact": "Production deployments will not have service mesh capabilities",
+        "blocking": true,
+        "mustFixBeforeProduction": true
+      },
+      {
+        "issue": "Secret management violates helmfile-only pattern",
+        "severity": "HIGH",
+        "specs": ["Helmfile-driven Kubernetes Deployment Pattern", "devbob-k8s-git-operations"],
+        "impact": "Requires direct kubectl commands for secrets",
+        "blocking": false,
+        "mustFixBeforeProduction": false,
+        "acceptableWithDocumentation": true
+      },
+      {
+        "issue": "Configuration drift (0.12.5 vs 0.12.6)",
+        "severity": "MEDIUM",
+        "specs": ["Helmfile-driven Kubernetes Deployment Pattern", "Instance-Invariant Storage"],
+        "impact": "Running deployment may lack enforced backend API endpoints",
+        "blocking": false,
+        "mustFixBeforeProduction": true
+      }
+    ]
+  },
+  "recommendedActions": [
+    {
+      "priority": 1,
+      "action": "Fix helmfile.yaml production values loading",
+      "specs": ["Helmfile-driven Kubernetes Deployment Pattern"],
+      "files": ["helm/helmfile.yaml"],
+      "effort": "10 minutes",
+      "blocking": true
+    },
+    {
+      "priority": 2,
+      "action": "Run helmfile sync to resolve configuration drift",
+      "specs": ["Helmfile-driven Kubernetes Deployment Pattern"],
+      "command": "cd helm && helmfile sync",
+      "effort": "5 minutes",
+      "blocking": true
+    },
+    {
+      "priority": 3,
+      "action": "Document secret management as acceptable exception",
+      "specs": ["Helmfile-driven Kubernetes Deployment Pattern", "devbob-k8s-git-operations"],
+      "files": ["docs/guides/HELMFILE_DEPLOYMENT_GUIDE.md"],
+      "effort": "15 minutes",
+      "blocking": false
+    },
+    {
+      "priority": 4,
+      "action": "Implement post-enforcement deployment sync automation",
+      "specs": ["Helmfile-driven Kubernetes Deployment Pattern", "Instance-Invariant Storage"],
+      "files": ["CI/CD pipeline"],
+      "effort": "2 hours",
+      "blocking": false
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-helmfile-deployment-pattern"
+}

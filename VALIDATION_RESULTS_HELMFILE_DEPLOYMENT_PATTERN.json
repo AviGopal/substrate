@@ -1,0 +1,195 @@
+{
+  "specificationName": "Helmfile-driven Kubernetes Deployment Pattern",
+  "executionTimestamp": "2026-02-27T19:45:00Z",
+  "harnessFile": "tests/validation-harnesses/helmfile-deployment-pattern-harness.sh",
+  "validationResults": [
+    {
+      "testCase": "validation-helmfile-deployment-pattern-case-1",
+      "name": "kubectl-availability",
+      "status": "PASS",
+      "actual": {
+        "valid": true,
+        "context": "docker-desktop"
+      },
+      "expected": {
+        "valid": true,
+        "contextAvailable": true
+      },
+      "details": "kubectl available, context: docker-desktop",
+      "difference": null
+    },
+    {
+      "testCase": "validation-helmfile-deployment-pattern-case-2",
+      "name": "multi-environment-support",
+      "status": "PASS",
+      "actual": {
+        "hasLocal": true,
+        "hasProduction": true,
+        "environments": ["local", "production"]
+      },
+      "expected": {
+        "hasLocal": true,
+        "hasProduction": true,
+        "environments": ["local", "production"]
+      },
+      "details": "Both local and production environments configured in helmfile.yaml",
+      "difference": null
+    },
+    {
+      "testCase": "validation-helmfile-deployment-pattern-case-3",
+      "name": "istio-templates-exist",
+      "status": "PASS",
+      "actual": {
+        "allFilesExist": true,
+        "existingFiles": [
+          "helm/charts/devbob/templates/virtualservice.yaml",
+          "helm/charts/devbob/templates/destinationrule.yaml",
+          "helm/charts/metabob-rpc-api/templates/virtualservice.yaml",
+          "helm/environments/production.values.yaml"
+        ],
+        "missingFiles": []
+      },
+      "expected": {
+        "allFilesExist": true,
+        "missingFiles": []
+      },
+      "details": "All Istio templates present (4 files)",
+      "difference": null
+    },
+    {
+      "testCase": "validation-helmfile-deployment-pattern-case-4",
+      "name": "helmfile-template-local",
+      "status": "PASS",
+      "actual": {
+        "success": true,
+        "hasDeployments": true,
+        "hasServices": true,
+        "renderedBytes": 34816,
+        "deploymentCount": 6,
+        "serviceCount": 7
+      },
+      "expected": {
+        "success": true,
+        "hasDeployments": true,
+        "hasServices": true,
+        "noErrors": true
+      },
+      "details": "Helmfile template rendered successfully for local (34816 bytes, 6 deployments, 7 services)",
+      "difference": null
+    },
+    {
+      "testCase": "validation-helmfile-deployment-pattern-case-5",
+      "name": "helmfile-template-production",
+      "status": "FAIL",
+      "actual": {
+        "success": true,
+        "hasDeployments": true,
+        "hasVirtualServices": false,
+        "hasDestinationRules": false,
+        "virtualServiceCount": 0,
+        "destinationRuleCount": 0
+      },
+      "expected": {
+        "success": true,
+        "hasDeployments": true,
+        "hasVirtualServices": true,
+        "hasDestinationRules": true,
+        "noErrors": true
+      },
+      "details": "Helmfile template missing Istio resources for production",
+      "difference": "Production helmfile template does not render VirtualService or DestinationRule resources. Root cause: helmfile.yaml does not reference production-specific values files (devbob.production.values.yaml, metabob-rpc-api.production.values.yaml). Only environment-level values are loaded, but chart-level istio.enabled flag is not set.",
+      "diagnosis": {
+        "issue": "Production chart values not loaded by helmfile",
+        "rootCause": "helmfile.yaml releases do not include production-specific values files",
+        "currentBehavior": "Only charts/devbob.values.yaml is loaded (istio.enabled=false by default)",
+        "expectedBehavior": "Should also load charts/devbob.production.values.yaml when environment=production",
+        "fix": "Update helmfile.yaml to conditionally load production values files per release"
+      }
+    },
+    {
+      "testCase": "validation-helmfile-deployment-pattern-case-6",
+      "name": "no-kubectl-antipatterns",
+      "status": "PASS",
+      "actual": {
+        "allHelmManaged": true,
+        "totalResources": 6,
+        "helmManagedCount": 6,
+        "unmanagedCount": 0,
+        "unmanagedResources": []
+      },
+      "expected": {
+        "allHelmManaged": true,
+        "unmanagedCount": 0,
+        "unmanagedResources": []
+      },
+      "details": "All 6 resources in namespace metabob are Helm-managed",
+      "difference": null
+    },
+    {
+      "testCase": "validation-helmfile-deployment-pattern-case-7",
+      "name": "no-configuration-drift",
+      "status": "FAIL",
+      "actual": {
+        "noDrift": false,
+        "configuredVersion": "0.12.6",
+        "runningVersion": "0.12.5",
+        "runningImage": "metabobapp/metabob-rpc-api:0.12.5"
+      },
+      "expected": {
+        "noDrift": true,
+        "configuredVersion": "0.12.6",
+        "runningVersion": "0.12.6"
+      },
+      "details": "Configuration drift detected: expected 0.12.6, running 0.12.5",
+      "difference": "metabob-rpc-api deployment is running version 0.12.5 but configuration specifies 0.12.6",
+      "diagnosis": {
+        "issue": "Image version drift",
+        "rootCause": "Deployment not synced after enforcement changes",
+        "currentState": "Running 0.12.5",
+        "expectedState": "Should be running 0.12.6",
+        "fix": "Run 'helmfile sync' to update deployment to configured version"
+      }
+    }
+  ],
+  "summary": {
+    "totalTests": 7,
+    "passed": 5,
+    "failed": 2,
+    "skipped": 0,
+    "passRate": "71.4%"
+  },
+  "overallStatus": "FAIL",
+  "criticalIssues": [
+    {
+      "test": "helmfile-template-production",
+      "severity": "HIGH",
+      "impact": "Production deployments will not have Istio service mesh integration",
+      "recommendation": "Fix helmfile.yaml to load production-specific chart values"
+    },
+    {
+      "test": "no-configuration-drift",
+      "severity": "MEDIUM",
+      "impact": "Running deployment does not match configured version",
+      "recommendation": "Run helmfile sync to align cluster with configuration"
+    }
+  ],
+  "remediationSteps": [
+    {
+      "priority": 1,
+      "issue": "Production Istio resources not rendered",
+      "action": "Update helmfile.yaml to conditionally load production values files",
+      "files": [
+        "helm/helmfile.yaml"
+      ],
+      "changes": "Add conditional values loading for devbob and metabob-rpc-api releases based on environment"
+    },
+    {
+      "priority": 2,
+      "issue": "Configuration drift (metabob-rpc-api)",
+      "action": "Run helmfile sync to update deployment",
+      "command": "cd helm && helmfile sync",
+      "expectedOutcome": "metabob-rpc-api updated to 0.12.6"
+    }
+  ],
+  "resultsImpulseId": "validation-results-helmfile-deployment-pattern"
+}
