@@ -1,0 +1,94 @@
+# Simplified DevBob Dockerfile for local builds
+# Context: metabob-devbob root (this repo)
+# Assumes metabob-opencode is already built
+
+FROM debian:12-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
+    unzip \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create directories
+RUN mkdir -p /opt/opencode/bin \
+             /opt/metabob-cli \
+             /workspace \
+             /config
+
+# Copy pre-built OpenCode binary from metabob-opencode
+COPY repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode /opt/opencode/bin/opencode
+
+# Make binary executable
+RUN chmod +x /opt/opencode/bin/opencode
+
+# Install Bun for plugin management
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:$PATH"
+
+# Install plugins in the location OpenCode expects
+RUN mkdir -p /root/.cache/opencode/node_modules && \
+    cd /root/.cache/opencode/node_modules && \
+    bun init -y && \
+    bun add opencode-anthropic-auth@latest @openauthjs/openauth@latest && \
+    echo "✓ Plugins installed via bun"
+
+# Verify plugin installation
+RUN ls -la /root/.cache/opencode/node_modules/node_modules/ && \
+    test -d /root/.cache/opencode/node_modules/node_modules/opencode-anthropic-auth && \
+    test -d /root/.cache/opencode/node_modules/node_modules/@openauthjs/openauth && \
+    echo "✓ Runtime plugins verified successfully"
+
+# Install Metabob CLI dependencies
+RUN python3 -m venv /opt/metabob-cli/.venv && \
+    /opt/metabob-cli/.venv/bin/pip install --upgrade pip setuptools wheel && \
+    /opt/metabob-cli/.venv/bin/pip install --no-cache-dir \
+        anthropic \
+        mcp \
+        httpx \
+        pydantic \
+        python-dotenv \
+        surrealdb \
+        redis \
+        tabulate \
+        fastapi \
+        uvicorn \
+        click \
+        rich \
+        aiofiles \
+        watchdog \
+        tree-sitter \
+        tree-sitter-python \
+        tree-sitter-javascript
+
+# Add to PATH
+ENV PATH="/opt/opencode/bin:/opt/metabob-cli/.venv/bin:${PATH}"
+
+# Copy bootstrap templates
+COPY repos/metabob-proto/activities/bootstrap /metabob-proto/activities/bootstrap/
+
+# Verify templates
+RUN ls -la /metabob-proto/activities/bootstrap/ && \
+    test -f /metabob-proto/activities/bootstrap/create-activity-self-contained.json && \
+    test -f /metabob-proto/activities/bootstrap/manage-session-memory.json && \
+    echo "✓ Bootstrap templates installed ($(ls /metabob-proto/activities/bootstrap/*.json | wc -l) files)"
+
+# Copy entrypoint script
+COPY repos/metabob-opencode/docker/entrypoint-self-config.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+WORKDIR /workspace
+
+EXPOSE 3000 8080 8082
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD opencode --version || exit 1
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["acp", "--port", "3000", "--hostname", "0.0.0.0"]
