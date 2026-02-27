@@ -1,5 +1,5 @@
 {
-  "name": "test-metabob-stack-e2e-v2",
+  "name": "test-metabob-stack-e2e-fixed",
   "description": "End-to-end test of Metabob application stack with data flow validation and input-output dependency enforcement",
   "category": "infrastructure",
   "tasks": [
