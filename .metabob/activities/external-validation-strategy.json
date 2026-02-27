@@ -1,0 +1,443 @@
+{
+  "activity_id": "external-validation-strategy",
+  "name": "External Validation Strategy",
+  "description": "Design and implement external validation tests that verify application functionality without assumptions - tests that prove the app actually works by exercising real use cases end-to-end",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "analyze-application",
+      "subagent": "general",
+      "description": "Analyze application to understand external validation needs",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the application to design external validation tests:\n\n**Goal**: Design tests that externally validate functionality WITHOUT making assumptions.\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n**Application Type**: {{applicationType}}\n\n**Analysis Steps**:\n\n1. **Identify Entry Points** (how users/systems interact):\n   - CLI commands and arguments\n   - API endpoints and methods\n   - Service interfaces\n   - Docker containers and their exposed ports\n   - Kubernetes services and ingress\n\n2. **Map Critical User Journeys**:\n   - What are the top 3-5 things users do with this app?\n   - What are the critical workflows that MUST work?\n   - What would break the application if it failed?\n\n3. **Identify External Dependencies**:\n   - Databases (postgres, redis, surrealdb, etc.)\n   - External APIs\n   - File systems\n   - Network services\n\n4. **Design Black-Box Tests** (no internal assumptions):\n   - Input: Real user inputs/requests\n   - Process: Execute through public interface\n   - Output: Verify expected observable behavior\n   - No mocking: Use real dependencies or test doubles\n\n5. **Define Success Criteria**:\n   - What observable outputs prove functionality?\n   - What response codes/status indicate success?\n   - What data transformations should occur?\n   - What side effects should be visible?\n\n**Output Requirements**:\n- List of critical user journeys (3-5)\n- For each journey:\n  - Entry point (CLI command, API endpoint, etc.)\n  - Input data (realistic examples)\n  - Expected observable output\n  - Success criteria (specific, measurable)\n  - Required dependencies and how to provision them\n\n**Example Format**:\n```yaml\njourney: \"User analyzes codebase for issues\"\nentry_point: \"CLI command: metabob-cli analyze\"\ninput: \"Path to real codebase\"\nexpected_output: \"JSON report with issues found\"\nsuccess_criteria:\n  - Exit code 0\n  - Valid JSON output\n  - Contains 'issues' array\n  - Issues have file, line, severity\ndependencies:\n  - Metabob backend API (or mock)\n  - Sample codebase\n```\n\nProvide comprehensive analysis with 3-5 critical journeys.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          },
+          {
+            "name": "applicationType",
+            "type": "string",
+            "required": true,
+            "description": "Type: cli, api, service, infrastructure, library"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "design-test-harness",
+      "subagent": "general",
+      "description": "Design external validation test harness",
+      "dependencies": [
+        "analyze-application"
+      ],
+      "prompt": {
+        "template": "Design the external validation test harness:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n**Type**: {{applicationType}}\n\n**Test Harness Requirements**:\n\n1. **Environment Setup** (reproducible, isolated):\n   - How to provision dependencies (docker-compose, k8s, etc.)\n   - How to build/deploy the application under test\n   - How to ensure clean state before tests\n   - How to tear down after tests\n\n2. **Test Execution Framework**:\n   - Language/framework (bash, python, typescript, etc.)\n   - Test runner (pytest, jest, bats, etc.)\n   - How to execute entry points (CLI, HTTP, etc.)\n   - How to capture outputs (stdout, HTTP response, logs, etc.)\n\n3. **Assertion Strategy** (external validation):\n   - What tools to use for assertions\n   - How to verify outputs without internal knowledge\n   - How to check side effects (DB state, files, etc.)\n   - How to handle timing/async operations\n\n4. **Test Data Management**:\n   - How to create realistic test data\n   - How to manage test fixtures\n   - How to handle stateful tests\n\n5. **CI Integration**:\n   - How to run in GitHub Actions / CI pipeline\n   - How to handle resource constraints\n   - How to report results\n   - How to handle failures (retry, logs, etc.)\n\n**Design Document Structure**:\n```yaml\nharness:\n  name: \"{{repoName}} External Validation\"\n  framework: \"pytest\" # or jest, bats, etc.\n  \nenvironment:\n  setup:\n    - \"docker-compose up -d dependencies\"\n    - \"./build.sh\"\n    - \"./deploy-test.sh\"\n  teardown:\n    - \"docker-compose down\"\n    - \"./cleanup.sh\"\n\ntests:\n  - name: \"Critical Journey 1\"\n    setup: \"Provision test data\"\n    execute: \"Command or API call\"\n    assert: \"Expected output\"\n    cleanup: \"Remove test data\"\n\nci_integration:\n  workflow_file: \".github/workflows/external-validation.yml\"\n  trigger: \"on: [push, pull_request]\"\n  resources: \"docker, network access\"\n```\n\nProvide detailed test harness design.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          },
+          {
+            "name": "applicationType",
+            "type": "string",
+            "required": true,
+            "description": "Type of application"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-tests",
+      "subagent": "general",
+      "description": "Implement external validation tests",
+      "dependencies": [
+        "design-test-harness"
+      ],
+      "prompt": {
+        "template": "Implement the external validation tests:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n\n**Implementation Tasks**:\n\n1. **Create test directory structure**:\n   - Create `tests/external-validation/` or similar\n   - Organize by journey/feature\n   - Include fixtures and helpers\n\n2. **Implement test cases** for each critical journey:\n   - Use black-box approach (no internal assumptions)\n   - Test through public interfaces only\n   - Verify observable outputs\n   - Check side effects externally\n\n3. **Create environment setup scripts**:\n   - Docker compose for dependencies\n   - Build scripts for app under test\n   - Data provisioning scripts\n   - Cleanup scripts\n\n4. **Add test runner script**:\n   - `run-external-validation.sh` or similar\n   - Handles full lifecycle: setup → test → teardown\n   - Proper error handling and reporting\n   - Exit codes for CI integration\n\n5. **Document how to run**:\n   - Update README with external validation section\n   - Include prerequisites\n   - Include example commands\n   - Include troubleshooting\n\n**Code Quality Requirements**:\n- Tests are readable and self-documenting\n- No hardcoded values (use env vars/config)\n- Proper error messages on failure\n- Fast feedback (tests should be quick)\n- Reproducible results\n\n**Validation**:\n- Run tests locally to verify they work\n- Ensure tests can run in CI environment\n- Verify tests catch real issues\n- Ensure clean pass on known-good state\n\nImplement the tests and supporting infrastructure.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{repoPath}}/tests/external-validation/"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-ci-workflow",
+      "subagent": "general",
+      "description": "Create CI workflow for external validation",
+      "dependencies": [
+        "implement-tests"
+      ],
+      "prompt": {
+        "template": "Create GitHub Actions workflow for external validation:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n\n**Workflow Requirements**:\n\n1. **Trigger Conditions**:\n   - On push to main branches\n   - On pull requests\n   - Manual dispatch for testing\n\n2. **Environment Setup**:\n   - Provision required services (docker, databases, etc.)\n   - Build the application\n   - Deploy to test environment\n\n3. **Test Execution**:\n   - Run external validation test suite\n   - Capture outputs and logs\n   - Generate test report\n\n4. **Reporting**:\n   - Upload test results as artifacts\n   - Comment on PR with results\n   - Fail workflow if tests fail\n\n5. **Cleanup**:\n   - Tear down test environment\n   - Clean up resources\n\n**Workflow File**: `.github/workflows/external-validation.yml`\n\n**Template Structure**:\n```yaml\nname: External Validation\n\non:\n  push:\n    branches: [main, staging]\n  pull_request:\n    branches: [main, staging]\n  workflow_dispatch:\n\njobs:\n  external-validation:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      \n      - name: Setup environment\n        run: |\n          # Provision dependencies\n          docker-compose -f tests/external-validation/docker-compose.yml up -d\n          \n      - name: Build application\n        run: |\n          # Build commands\n          \n      - name: Run external validation\n        run: |\n          ./tests/external-validation/run-tests.sh\n          \n      - name: Upload results\n        if: always()\n        uses: actions/upload-artifact@v3\n        with:\n          name: external-validation-results\n          path: tests/external-validation/results/\n          \n      - name: Cleanup\n        if: always()\n        run: |\n          docker-compose -f tests/external-validation/docker-compose.yml down\n```\n\nCreate the workflow file and ensure it works.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{repoPath}}/.github/workflows/external-validation.yml"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-and-document",
+      "subagent": "general",
+      "description": "Validate tests work and document approach",
+      "dependencies": [
+        "create-ci-workflow"
+      ],
+      "prompt": {
+        "template": "Validate external validation tests and document:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n\n**Validation Tasks**:\n\n1. **Run Tests Locally**:\n   - Execute full test suite locally\n   - Verify all tests pass on clean state\n   - Verify tests catch intentional breakage\n   - Verify cleanup works properly\n\n2. **Test CI Integration**:\n   - Trigger GitHub Actions workflow\n   - Verify workflow runs successfully\n   - Check test results are uploaded\n   - Verify failure cases fail workflow\n\n3. **Document Approach**:\n   - Create `tests/external-validation/README.md`\n   - Explain external validation philosophy\n   - Document test journeys covered\n   - Include how to run locally\n   - Include how to add new tests\n   - Include troubleshooting guide\n\n4. **Create Report**:\n   - Save to `{{repoPath}}/EXTERNAL_VALIDATION_REPORT.md`\n   - Summary of external validation approach\n   - Test coverage (which journeys are tested)\n   - How to run and interpret results\n   - Future improvements\n\n**Report Structure**:\n```markdown\n# External Validation Report: {{repoName}}\n\n## Philosophy\nExternal validation tests verify application functionality through public interfaces with no internal assumptions.\n\n## Test Coverage\n- Journey 1: [description]\n- Journey 2: [description]\n...\n\n## Running Tests\n### Locally\n```bash\ncd tests/external-validation\n./run-tests.sh\n```\n\n### In CI\nTests run automatically on push/PR.\n\n## Results\n- All critical journeys: ✅ Passing\n- Coverage: X% of critical functionality\n\n## Future Improvements\n- Add journey X\n- Improve test data\n- etc.\n```\n\nComplete validation and create documentation.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{repoPath}}/EXTERNAL_VALIDATION_REPORT.md",
+          "{{repoPath}}/tests/external-validation/README.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "analyze-application",
+      "subagent": "general",
+      "description": "Analyze application to understand external validation needs",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the application to design external validation tests:\n\n**Goal**: Design tests that externally validate functionality WITHOUT making assumptions.\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n**Application Type**: {{applicationType}}\n\n**Analysis Steps**:\n\n1. **Identify Entry Points** (how users/systems interact):\n   - CLI commands and arguments\n   - API endpoints and methods\n   - Service interfaces\n   - Docker containers and their exposed ports\n   - Kubernetes services and ingress\n\n2. **Map Critical User Journeys**:\n   - What are the top 3-5 things users do with this app?\n   - What are the critical workflows that MUST work?\n   - What would break the application if it failed?\n\n3. **Identify External Dependencies**:\n   - Databases (postgres, redis, surrealdb, etc.)\n   - External APIs\n   - File systems\n   - Network services\n\n4. **Design Black-Box Tests** (no internal assumptions):\n   - Input: Real user inputs/requests\n   - Process: Execute through public interface\n   - Output: Verify expected observable behavior\n   - No mocking: Use real dependencies or test doubles\n\n5. **Define Success Criteria**:\n   - What observable outputs prove functionality?\n   - What response codes/status indicate success?\n   - What data transformations should occur?\n   - What side effects should be visible?\n\n**Output Requirements**:\n- List of critical user journeys (3-5)\n- For each journey:\n  - Entry point (CLI command, API endpoint, etc.)\n  - Input data (realistic examples)\n  - Expected observable output\n  - Success criteria (specific, measurable)\n  - Required dependencies and how to provision them\n\n**Example Format**:\n```yaml\njourney: \"User analyzes codebase for issues\"\nentry_point: \"CLI command: metabob-cli analyze\"\ninput: \"Path to real codebase\"\nexpected_output: \"JSON report with issues found\"\nsuccess_criteria:\n  - Exit code 0\n  - Valid JSON output\n  - Contains 'issues' array\n  - Issues have file, line, severity\ndependencies:\n  - Metabob backend API (or mock)\n  - Sample codebase\n```\n\nProvide comprehensive analysis with 3-5 critical journeys.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          },
+          {
+            "name": "applicationType",
+            "type": "string",
+            "required": true,
+            "description": "Type: cli, api, service, infrastructure, library"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "design-test-harness",
+      "subagent": "general",
+      "description": "Design external validation test harness",
+      "dependencies": [
+        "analyze-application"
+      ],
+      "prompt": {
+        "template": "Design the external validation test harness:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n**Type**: {{applicationType}}\n\n**Test Harness Requirements**:\n\n1. **Environment Setup** (reproducible, isolated):\n   - How to provision dependencies (docker-compose, k8s, etc.)\n   - How to build/deploy the application under test\n   - How to ensure clean state before tests\n   - How to tear down after tests\n\n2. **Test Execution Framework**:\n   - Language/framework (bash, python, typescript, etc.)\n   - Test runner (pytest, jest, bats, etc.)\n   - How to execute entry points (CLI, HTTP, etc.)\n   - How to capture outputs (stdout, HTTP response, logs, etc.)\n\n3. **Assertion Strategy** (external validation):\n   - What tools to use for assertions\n   - How to verify outputs without internal knowledge\n   - How to check side effects (DB state, files, etc.)\n   - How to handle timing/async operations\n\n4. **Test Data Management**:\n   - How to create realistic test data\n   - How to manage test fixtures\n   - How to handle stateful tests\n\n5. **CI Integration**:\n   - How to run in GitHub Actions / CI pipeline\n   - How to handle resource constraints\n   - How to report results\n   - How to handle failures (retry, logs, etc.)\n\n**Design Document Structure**:\n```yaml\nharness:\n  name: \"{{repoName}} External Validation\"\n  framework: \"pytest\" # or jest, bats, etc.\n  \nenvironment:\n  setup:\n    - \"docker-compose up -d dependencies\"\n    - \"./build.sh\"\n    - \"./deploy-test.sh\"\n  teardown:\n    - \"docker-compose down\"\n    - \"./cleanup.sh\"\n\ntests:\n  - name: \"Critical Journey 1\"\n    setup: \"Provision test data\"\n    execute: \"Command or API call\"\n    assert: \"Expected output\"\n    cleanup: \"Remove test data\"\n\nci_integration:\n  workflow_file: \".github/workflows/external-validation.yml\"\n  trigger: \"on: [push, pull_request]\"\n  resources: \"docker, network access\"\n```\n\nProvide detailed test harness design.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          },
+          {
+            "name": "applicationType",
+            "type": "string",
+            "required": true,
+            "description": "Type of application"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-tests",
+      "subagent": "general",
+      "description": "Implement external validation tests",
+      "dependencies": [
+        "design-test-harness"
+      ],
+      "prompt": {
+        "template": "Implement the external validation tests:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n\n**Implementation Tasks**:\n\n1. **Create test directory structure**:\n   - Create `tests/external-validation/` or similar\n   - Organize by journey/feature\n   - Include fixtures and helpers\n\n2. **Implement test cases** for each critical journey:\n   - Use black-box approach (no internal assumptions)\n   - Test through public interfaces only\n   - Verify observable outputs\n   - Check side effects externally\n\n3. **Create environment setup scripts**:\n   - Docker compose for dependencies\n   - Build scripts for app under test\n   - Data provisioning scripts\n   - Cleanup scripts\n\n4. **Add test runner script**:\n   - `run-external-validation.sh` or similar\n   - Handles full lifecycle: setup → test → teardown\n   - Proper error handling and reporting\n   - Exit codes for CI integration\n\n5. **Document how to run**:\n   - Update README with external validation section\n   - Include prerequisites\n   - Include example commands\n   - Include troubleshooting\n\n**Code Quality Requirements**:\n- Tests are readable and self-documenting\n- No hardcoded values (use env vars/config)\n- Proper error messages on failure\n- Fast feedback (tests should be quick)\n- Reproducible results\n\n**Validation**:\n- Run tests locally to verify they work\n- Ensure tests can run in CI environment\n- Verify tests catch real issues\n- Ensure clean pass on known-good state\n\nImplement the tests and supporting infrastructure.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{repoPath}}/tests/external-validation/"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-ci-workflow",
+      "subagent": "general",
+      "description": "Create CI workflow for external validation",
+      "dependencies": [
+        "implement-tests"
+      ],
+      "prompt": {
+        "template": "Create GitHub Actions workflow for external validation:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n\n**Workflow Requirements**:\n\n1. **Trigger Conditions**:\n   - On push to main branches\n   - On pull requests\n   - Manual dispatch for testing\n\n2. **Environment Setup**:\n   - Provision required services (docker, databases, etc.)\n   - Build the application\n   - Deploy to test environment\n\n3. **Test Execution**:\n   - Run external validation test suite\n   - Capture outputs and logs\n   - Generate test report\n\n4. **Reporting**:\n   - Upload test results as artifacts\n   - Comment on PR with results\n   - Fail workflow if tests fail\n\n5. **Cleanup**:\n   - Tear down test environment\n   - Clean up resources\n\n**Workflow File**: `.github/workflows/external-validation.yml`\n\n**Template Structure**:\n```yaml\nname: External Validation\n\non:\n  push:\n    branches: [main, staging]\n  pull_request:\n    branches: [main, staging]\n  workflow_dispatch:\n\njobs:\n  external-validation:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      \n      - name: Setup environment\n        run: |\n          # Provision dependencies\n          docker-compose -f tests/external-validation/docker-compose.yml up -d\n          \n      - name: Build application\n        run: |\n          # Build commands\n          \n      - name: Run external validation\n        run: |\n          ./tests/external-validation/run-tests.sh\n          \n      - name: Upload results\n        if: always()\n        uses: actions/upload-artifact@v3\n        with:\n          name: external-validation-results\n          path: tests/external-validation/results/\n          \n      - name: Cleanup\n        if: always()\n        run: |\n          docker-compose -f tests/external-validation/docker-compose.yml down\n```\n\nCreate the workflow file and ensure it works.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{repoPath}}/.github/workflows/external-validation.yml"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-and-document",
+      "subagent": "general",
+      "description": "Validate tests work and document approach",
+      "dependencies": [
+        "create-ci-workflow"
+      ],
+      "prompt": {
+        "template": "Validate external validation tests and document:\n\n**Application**: {{repoPath}}\n**Repository**: {{repoName}}\n\n**Validation Tasks**:\n\n1. **Run Tests Locally**:\n   - Execute full test suite locally\n   - Verify all tests pass on clean state\n   - Verify tests catch intentional breakage\n   - Verify cleanup works properly\n\n2. **Test CI Integration**:\n   - Trigger GitHub Actions workflow\n   - Verify workflow runs successfully\n   - Check test results are uploaded\n   - Verify failure cases fail workflow\n\n3. **Document Approach**:\n   - Create `tests/external-validation/README.md`\n   - Explain external validation philosophy\n   - Document test journeys covered\n   - Include how to run locally\n   - Include how to add new tests\n   - Include troubleshooting guide\n\n4. **Create Report**:\n   - Save to `{{repoPath}}/EXTERNAL_VALIDATION_REPORT.md`\n   - Summary of external validation approach\n   - Test coverage (which journeys are tested)\n   - How to run and interpret results\n   - Future improvements\n\n**Report Structure**:\n```markdown\n# External Validation Report: {{repoName}}\n\n## Philosophy\nExternal validation tests verify application functionality through public interfaces with no internal assumptions.\n\n## Test Coverage\n- Journey 1: [description]\n- Journey 2: [description]\n...\n\n## Running Tests\n### Locally\n```bash\ncd tests/external-validation\n./run-tests.sh\n```\n\n### In CI\nTests run automatically on push/PR.\n\n## Results\n- All critical journeys: ✅ Passing\n- Coverage: X% of critical functionality\n\n## Future Improvements\n- Add journey X\n- Improve test data\n- etc.\n```\n\nComplete validation and create documentation.",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{repoPath}}/EXTERNAL_VALIDATION_REPORT.md",
+          "{{repoPath}}/tests/external-validation/README.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-27T19:46:18.718Z",
+  "metadata": {}
+}
