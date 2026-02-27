@@ -41,7 +41,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # Parse arguments
 BUILD_ARGS=""
-TARGET="devbob-base"
+TARGET="runtime"
 IMAGE_TAG="devbob:latest"
 PUSH=false
 
@@ -54,7 +54,7 @@ for arg in "$@"; do
             PUSH=true
             ;;
         --dev)
-            TARGET="devbob-dev"
+            TARGET="runtime"
             IMAGE_TAG="devbob:dev"
             ;;
         *)
