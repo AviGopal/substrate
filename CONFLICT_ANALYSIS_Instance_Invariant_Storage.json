@@ -1,0 +1,175 @@
+{
+  "specificationName": "Instance-Invariant Storage - Missing Backend API Endpoints",
+  "analysisDate": "2026-02-27T11:00:00Z",
+  "otherSpecifications": [
+    "activity-state-transformation-tracking",
+    "impulse-usage-tracking",
+    "boredom-activity-detection-mechanism",
+    "devbob-clean-environment",
+    "metabob-session-tracking",
+    "ci-cd-pre-push-quality-gates"
+  ],
+  "conflicts": [],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-rpc-api/server/routes/activity.py",
+      "affectedBySpecs": [
+        "Instance-Invariant Storage - Missing Backend API Endpoints",
+        "activity-state-transformation-tracking (indirect - uses /api/v1/activity-execution endpoints)"
+      ],
+      "conflictType": "NONE",
+      "description": "Our changes add new /v2/activities/storage endpoints. Activity state tracking uses /api/v1/activity-execution endpoints. No overlap.",
+      "recommendation": "No action needed - endpoints are separate"
+    },
+    {
+      "component": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "affectedBySpecs": [
+        "Instance-Invariant Storage - Missing Backend API Endpoints"
+      ],
+      "conflictType": "NONE",
+      "description": "Updated metabob_activity_save and metabob_activity_load to use /storage path. No other specs use these tools.",
+      "recommendation": "No action needed - isolated change"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/activity_data.py",
+      "affectedBySpecs": [
+        "Instance-Invariant Storage - Missing Backend API Endpoints"
+      ],
+      "conflictType": "NONE",
+      "description": "New file created. No conflicts with existing code.",
+      "recommendation": "No action needed - new file"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/__init__.py",
+      "affectedBySpecs": [
+        "Instance-Invariant Storage - Missing Backend API Endpoints"
+      ],
+      "conflictType": "NONE",
+      "description": "Added exports for activity_data operations. Follows same pattern as impulse_data exports.",
+      "recommendation": "No action needed - additive change"
+    }
+  ],
+  "architecturalCompliance": {
+    "vesselFlow": {
+      "compliant": true,
+      "validation": "Vessel flow compliance validated in Test Case 1",
+      "affectedSpecs": ["invariant-storage-across-instances-with-vessel-flow"],
+      "conflicts": "NONE"
+    },
+    "multiTenantIsolation": {
+      "compliant": true,
+      "validation": "(api_key, project_id) scoping enforced",
+      "affectedSpecs": [],
+      "conflicts": "NONE"
+    },
+    "errorHandling": {
+      "compliant": true,
+      "validation": "400/404/500 responses implemented",
+      "affectedSpecs": [],
+      "conflicts": "NONE"
+    }
+  },
+  "integrationPoints": {
+    "impulseStorage": {
+      "status": "COMPATIBLE",
+      "description": "Our activity storage follows exact same pattern as impulse storage (impulse.py). Both use (api_key, project_id) scoping.",
+      "recommendation": "No changes needed - patterns aligned"
+    },
+    "activityStateTracking": {
+      "status": "COMPATIBLE",
+      "description": "Activity state tracking uses /api/v1/activity-execution endpoints. Our changes use /v2/activities/storage endpoints. No overlap.",
+      "recommendation": "No changes needed - separate endpoints"
+    },
+    "impulseUsageTracking": {
+      "status": "COMPATIBLE",
+      "description": "Impulse usage tracking focuses on tracking impulse usage within activities. Our changes enable cross-instance storage. No conflicts.",
+      "recommendation": "No changes needed - orthogonal concerns"
+    }
+  },
+  "dependencyAnalysis": {
+    "directDependencies": [
+      {
+        "component": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+        "usedBy": "activity_data.py",
+        "risk": "LOW",
+        "reason": "Standard SurrealDB client - widely used"
+      },
+      {
+        "component": "repos/metabob-rpc-api/server/routes/activity.py (existing endpoints)",
+        "affectedBy": "new storage endpoints",
+        "risk": "NONE",
+        "reason": "New endpoints added at end of file, no modifications to existing endpoints"
+      }
+    ],
+    "indirectDependencies": [
+      {
+        "component": "repos/metabob-opencode activity.ts Activity.save()",
+        "callsToOurEndpoint": "metabob_activity_save → POST /v2/activities/storage",
+        "risk": "NONE",
+        "reason": "CLI MCP tool path updated, integration tested"
+      },
+      {
+        "component": "repos/metabob-opencode activity.ts Activity.load()",
+        "callsToOurEndpoint": "metabob_activity_load → GET /v2/activities/storage/{id}",
+        "risk": "NONE",
+        "reason": "CLI MCP tool path updated, integration tested"
+      }
+    ]
+  },
+  "riskAssessment": {
+    "breakingChanges": "NONE",
+    "potentialConflicts": "NONE",
+    "regressionRisk": "LOW",
+    "deploymentRisk": "LOW",
+    "details": [
+      "All changes are additive (new endpoints, new file, new exports)",
+      "No modifications to existing functionality",
+      "Follows proven impulse.py pattern",
+      "CLI MCP tools updated with correct paths",
+      "Endpoints isolated at /v2/activities/storage (won't conflict with /v2/activities/templates)"
+    ]
+  },
+  "validationCrossCheck": {
+    "activityStateTracking": {
+      "status": "PASS",
+      "conflicts": "NONE",
+      "notes": "Uses different endpoints (/api/v1/activity-execution vs /v2/activities/storage)"
+    },
+    "impulseUsageTracking": {
+      "status": "PASS",
+      "conflicts": "NONE",
+      "notes": "Orthogonal concern - tracks impulse usage, we enable storage"
+    },
+    "vesselFlowCompliance": {
+      "status": "PASS",
+      "conflicts": "NONE",
+      "notes": "Validated in Test Case 1 - no direct HTTP calls, uses MCP correctly"
+    },
+    "boredomDetection": {
+      "status": "N/A",
+      "conflicts": "NONE",
+      "notes": "Unrelated - boredom detection is for activity selection"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Deploy to production",
+      "reason": "No conflicts detected, implementation complete, follows proven pattern"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Monitor SurrealDB query performance",
+      "reason": "New queries added - watch for any performance issues"
+    },
+    {
+      "priority": "LOW",
+      "action": "Consider adding caching layer",
+      "reason": "If activity retrieval becomes frequent, caching could improve performance"
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-Instance-Invariant Storage - Missing Backend API Endpoints",
+  "overallConflictStatus": "NO_CONFLICTS",
+  "readyForProduction": true,
+  "summary": "Comprehensive conflict analysis reveals ZERO conflicts with existing specifications. All changes are additive and follow established patterns. The implementation is architecturally sound, follows vessel flow principles, and maintains multi-tenant isolation. No breaking changes or regressions expected. Ready for production deployment."
+}

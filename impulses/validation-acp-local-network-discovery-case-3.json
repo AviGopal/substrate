@@ -1,0 +1,12 @@
+{
+  "id": "validation-ACP Local Network Discovery and Cross-Vessel Activity Coordination-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: TCP Transport Stub\n\nInput: Check for TCP transport stub with Phase 2 error message\nExpected Output:\n- File exists at repos/metabob-opencode/packages/opencode/src/acp/transports/tcp-transport.ts\n- Contains export class TCPTransport\n- Contains Phase 2 error message\n- Throws error explaining network server requirement\n\nValidation: File system check + grep for class and Phase 2 reference"
+  },
+  "budget": 500,
+  "priority": "high",
+  "sessionID": "validation-session",
+  "scope": "session"
+}

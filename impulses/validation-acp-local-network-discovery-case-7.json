@@ -1,0 +1,12 @@
+{
+  "id": "validation-ACP Local Network Discovery and Cross-Vessel Activity Coordination-case-7",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 7: Activity Coordination Schema\n\nInput: Check for coordination schema definitions\nExpected Output:\n- File exists at repos/metabob-opencode/packages/opencode/src/session/activity-coordination.ts\n- Contains export interface CrossVesselDelegation\n- Contains export interface DelegationChain\n- Contains export class ActivityCoordination\n\nValidation: File system check + grep for interfaces and class"
+  },
+  "budget": 500,
+  "priority": "high",
+  "sessionID": "validation-session",
+  "scope": "session"
+}

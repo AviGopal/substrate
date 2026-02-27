@@ -1,0 +1,12 @@
+{
+  "id": "validation-ACP Local Network Discovery and Cross-Vessel Activity Coordination-case-8",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 8: Activity Coordination API\n\nInput: Check for coordination API methods\nExpected Output:\n- File exists at repos/metabob-opencode/packages/opencode/src/session/activity-coordination.ts\n- Contains static async saveDelegation method\n- Contains static async queryActivities method\n- Contains static async getActivityChain method\n- Contains static async getVesselWorkload method\n- Contains static async traceCrossVesselDataflow method\n\nValidation: File system check + grep for API methods"
+  },
+  "budget": 500,
+  "priority": "high",
+  "sessionID": "validation-session",
+  "scope": "session"
+}
