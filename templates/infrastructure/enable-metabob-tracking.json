@@ -1,0 +1,150 @@
+{
+  "name": "Enable Metabob Session and Tool Tracking",
+  "description": "Integrate Metabob session tracking and tool invocation recording throughout opencode lifecycle: session start/complete, tool invocations, status monitoring. Ensures comprehensive telemetry for learning and optimization.",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Identify session lifecycle hooks and integration points",
+      "dependencies": [],
+      "prompt": {
+        "template": "Map session lifecycle and identify Metabob integration points:\n\n1. Analyze session initialization:\n   - Find Session class creation and initialization code\n   - Identify where sessions start (Session.create, SessionManager.create)\n   - Find session cleanup/termination points\n2. Analyze tool execution pipeline:\n   - Find Tool.execute and tool invocation logic\n   - Identify tool registry and execution tracking\n3. Map integration points for:\n   - metabob_record_session_start (session creation)\n   - metabob_record_session_complete (session end)\n   - metabob_record_tool_invocation (every tool call)\n4. Create markdown document METABOB_TRACKING_INTEGRATION_POINTS.md with:\n   - Session lifecycle diagram\n   - Tool execution flow\n   - Recommended integration points\n   - Implementation notes",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["METABOB_TRACKING_INTEGRATION_POINTS.md"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Implement session start tracking",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": "Add metabob_record_session_start calls to session initialization:\n\n1. Find Session.create or SessionManager.create method\n2. After session is initialized but before first prompt, add:\n   ```typescript\n   // Track session start with Metabob\n   if (metabobEnabled) {\n     await recordSessionStart({\n       sessionId: session.id,\n       agentType: session.agent?.name,\n       timestamp: Date.now(),\n       context: {\n         workingDirectory: session.cwd,\n         gitBranch: await getGitBranch(),\n       }\n     })\n   }\n   ```\n3. Create helper function recordSessionStart that wraps metabob_record_session_start MCP call\n4. Add error handling (log but don't fail session if tracking fails)\n5. Run tests to verify sessions still start correctly\n6. Commit changes with message: 'feat(metabob): add session start tracking'",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": ["recordSessionStart", "metabob_record_session_start"],
+        "forbiddenPatterns": [],
+        "commands": ["npm test -- session"]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "fix-on-failure"
+      }
+    },
+    {
+      "id": "task-3",
+      "subagent": "general",
+      "description": "Implement session complete tracking",
+      "dependencies": ["task-2"],
+      "prompt": {
+        "template": "Add metabob_record_session_complete calls to session cleanup:\n\n1. Find session termination points:\n   - Session.close() method\n   - SessionManager cleanup\n   - Process exit handlers\n2. Before session cleanup, add:\n   ```typescript\n   // Track session completion with Metabob\n   if (metabobEnabled) {\n     await recordSessionComplete({\n       sessionId: session.id,\n       timestamp: Date.now(),\n       summary: {\n         totalPrompts: session.stats.promptCount,\n         totalTokens: session.stats.totalTokens,\n         totalCost: session.stats.totalCost,\n         toolsUsed: session.stats.toolsUsed,\n         filesModified: session.stats.filesModified,\n       },\n       outcome: session.error ? 'failed' : 'completed'\n     })\n   }\n   ```\n3. Create helper function recordSessionComplete\n4. Add error handling\n5. Run tests to verify cleanup still works\n6. Commit changes with message: 'feat(metabob): add session completion tracking'",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": ["recordSessionComplete", "metabob_record_session_complete"],
+        "forbiddenPatterns": [],
+        "commands": ["npm test -- session"]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "fix-on-failure"
+      }
+    },
+    {
+      "id": "task-4",
+      "subagent": "general",
+      "description": "Implement tool invocation tracking",
+      "dependencies": ["task-3"],
+      "prompt": {
+        "template": "Add metabob_record_tool_invocation to tool execution pipeline:\n\n1. Find Tool.execute method or tool execution middleware\n2. Add tracking before and after tool execution:\n   ```typescript\n   async execute(params: any, ctx: Context) {\n     const startTime = Date.now()\n     \n     try {\n       const result = await this.implementation(params, ctx)\n       \n       // Track successful tool invocation\n       if (metabobEnabled) {\n         await recordToolInvocation({\n           sessionId: ctx.sessionId,\n           toolName: this.name,\n           timestamp: startTime,\n           duration: Date.now() - startTime,\n           success: true,\n           inputTokens: estimateTokens(params),\n           outputTokens: estimateTokens(result),\n         })\n       }\n       \n       return result\n     } catch (error) {\n       // Track failed tool invocation\n       if (metabobEnabled) {\n         await recordToolInvocation({\n           sessionId: ctx.sessionId,\n           toolName: this.name,\n           timestamp: startTime,\n           duration: Date.now() - startTime,\n           success: false,\n           error: error.message,\n         })\n       }\n       throw error\n     }\n   }\n   ```\n3. Create helper function recordToolInvocation\n4. Add rate limiting (max 100 invocations/second to avoid overwhelming MCP)\n5. Run tests to verify tool execution still works\n6. Commit changes with message: 'feat(metabob): add tool invocation tracking'",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": ["recordToolInvocation", "metabob_record_tool_invocation"],
+        "forbiddenPatterns": [],
+        "commands": ["npm test -- tool"]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "fix-on-failure"
+      }
+    },
+    {
+      "id": "task-5",
+      "subagent": "general",
+      "description": "Add status monitoring and health checks",
+      "dependencies": ["task-4"],
+      "prompt": {
+        "template": "Integrate Metabob status monitoring:\n\n1. Create MetabobHealthMonitor class:\n   ```typescript\n   class MetabobHealthMonitor {\n     private lastCheck: number = 0\n     private checkInterval: number = 60000 // 1 minute\n     \n     async checkHealth(): Promise<MetabobHealth> {\n       if (Date.now() - this.lastCheck < this.checkInterval) {\n         return this.cachedStatus\n       }\n       \n       try {\n         const status = await callMetabobMCP('get_metabob_status', {})\n         this.cachedStatus = {\n           healthy: true,\n           indexingStatus: status.indexing,\n           cpgStatus: status.cpg,\n           lastUpdate: status.lastUpdate,\n         }\n         this.lastCheck = Date.now()\n         return this.cachedStatus\n       } catch (error) {\n         return {\n           healthy: false,\n           error: error.message\n         }\n       }\n     }\n   }\n   ```\n2. Add health check before critical operations:\n   - Before starting activity execution\n   - Before running change impact analysis\n   - Periodically during long-running sessions\n3. Add health status to session stats\n4. Run tests\n5. Commit changes with message: 'feat(metabob): add health monitoring'",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": ["MetabobHealthMonitor", "get_metabob_status"],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "fix-on-failure"
+      }
+    },
+    {
+      "id": "task-6",
+      "subagent": "general",
+      "description": "Create integration validation test",
+      "dependencies": ["task-5"],
+      "prompt": {
+        "template": "Create comprehensive test for Metabob tracking integration:\n\n1. Create test file: packages/opencode/test/integration/metabob-tracking.test.ts\n2. Test scenarios:\n   - Session start tracking fires correctly\n   - Session complete tracking includes all stats\n   - Tool invocation tracking captures success and failure\n   - Health monitoring updates status\n   - Error handling doesn't break workflows\n3. Add test to CI pipeline\n4. Run full test suite to verify no regressions\n5. Create documentation: docs/metabob-tracking.md\n6. Commit all changes with message: 'feat(metabob): complete session and tool tracking integration'\n\nGenerate final summary report with:\n- All integration points implemented\n- Test coverage\n- Performance impact (should be <5ms overhead)\n- Monitoring dashboard recommendations",
+        "maxTokens": 15000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["repos/metabob-opencode/packages/opencode/test/integration/metabob-tracking.test.ts", "docs/metabob-tracking.md"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": ["npm test -- metabob-tracking"]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "fix-on-failure"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": ["npm test"],
+    "qualityGates": ["all tests passing", "no performance regression"]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}
