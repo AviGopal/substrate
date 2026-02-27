@@ -1,0 +1,171 @@
+{
+  "specificationName": "metabob-session-tracking",
+  "analysisTimestamp": "2026-02-27T13:05:00.000Z",
+  "otherSpecifications": [
+    "activity-state-transformation-tracking",
+    "impulse-usage-tracking",
+    "boredom-activity-detection-mechanism",
+    "ci-cd-pre-push-quality-gates",
+    "devbob-k8s-git-operations",
+    "devbob-clean-environment"
+  ],
+  "conflicts": [],
+  "potentialConflicts": [
+    {
+      "type": "SHARED_COMPONENT_MODIFICATION",
+      "spec1": "metabob-session-tracking",
+      "spec2": "activity-state-transformation-tracking",
+      "sharedComponent": "Session (repos/metabob-opencode/packages/opencode/src/session/index.ts)",
+      "description": "Both specifications modify Session. activity-state-transformation-tracking adds state capture, metabob-session-tracking adds lifecycle tracking. These are orthogonal concerns.",
+      "risk": "LOW",
+      "resolution": "No conflict - tracking and state capture are independent. Session.createNext() can handle both. Verify both hooks execute correctly."
+    },
+    {
+      "type": "LIFECYCLE_HOOK_ORDERING",
+      "spec1": "metabob-session-tracking",
+      "spec2": "impulse-usage-tracking",
+      "sharedComponent": "Session lifecycle",
+      "description": "Session.close() now records completion metrics. If impulse tracking also hooks session close, order matters.",
+      "risk": "LOW",
+      "resolution": "Impulse tracking happens during session (not at close). No actual conflict detected."
+    },
+    {
+      "type": "SESSION_CLEANUP_INTEGRATION",
+      "spec1": "metabob-session-tracking",
+      "spec2": "activity-state-transformation-tracking",
+      "sharedComponent": "Session.cleanupActivitySession",
+      "description": "metabob-session-tracking requires Session.close() call in cleanupActivitySession. activity-state-transformation-tracking also uses this method. Need to ensure close() is called at correct point.",
+      "risk": "MEDIUM",
+      "resolution": "RECOMMENDATION: Call Session.close() BEFORE Activity.unregisterSession() to ensure stats are captured while session is still active."
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "Session (repos/metabob-opencode/packages/opencode/src/session/index.ts)",
+      "modifications": [
+        {
+          "spec": "metabob-session-tracking",
+          "changes": [
+            "Added MetabobTracking.recordSessionStart() in createNext()",
+            "Added Session.close() method",
+            "Added SessionStats and MetabobTracking imports"
+          ]
+        },
+        {
+          "spec": "activity-state-transformation-tracking",
+          "changes": [
+            "Adds activity state capture in createNext()",
+            "Modifies cleanupActivitySession for state persistence"
+          ]
+        }
+      ],
+      "impactAnalysis": "Session is central to all specifications. Current changes are additive (no modifications to existing logic). Session.createNext() can accommodate multiple post-creation hooks. Risk of conflict is LOW.",
+      "recommendation": "Establish hook execution order: 1) State capture, 2) Event publishing, 3) Tracking. All are fire-and-forget."
+    },
+    {
+      "component": "MCP.clients() (repos/metabob-opencode/packages/opencode/src/mcp/index.ts)",
+      "affectedBySpecs": [
+        "metabob-session-tracking",
+        "boredom-activity-detection-mechanism",
+        "ci-cd-pre-push-quality-gates"
+      ],
+      "modifications": [
+        {
+          "spec": "metabob-session-tracking",
+          "usage": "Calls metabob_record_session_start and metabob_record_session_complete"
+        },
+        {
+          "spec": "boredom-activity-detection-mechanism",
+          "usage": "Calls boredom task management tools"
+        },
+        {
+          "spec": "ci-cd-pre-push-quality-gates",
+          "usage": "Calls code quality tools"
+        }
+      ],
+      "impactAnalysis": "Multiple specs use MCP client for different tools. No conflict as MCP is stateless tool registry.",
+      "recommendation": "No action required - MCP client is designed for multi-tool usage"
+    },
+    {
+      "component": "MessageV2 (repos/metabob-opencode/packages/opencode/src/session/message-v2.ts)",
+      "affectedBySpecs": [
+        "metabob-session-tracking",
+        "impulse-usage-tracking"
+      ],
+      "modifications": [
+        {
+          "spec": "metabob-session-tracking",
+          "usage": "SessionStats.getSessionStats() streams MessageV2 to extract tokens/cost/tools"
+        },
+        {
+          "spec": "impulse-usage-tracking",
+          "usage": "Tracks impulse resolution from messages"
+        }
+      ],
+      "impactAnalysis": "Both specs READ from MessageV2, neither modifies it. No conflict.",
+      "recommendation": "No action required - read-only access is safe"
+    }
+  ],
+  "dependencyAnalysis": {
+    "filesModified": [
+      "repos/metabob-opencode/packages/opencode/src/session/index.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/metabob-tracking.ts (NEW)",
+      "repos/metabob-opencode/packages/opencode/src/session/stats.ts (NEW)"
+    ],
+    "filesReadBy": [
+      "repos/metabob-opencode/packages/opencode/src/cli/cmd/prompt.ts (needs Session.close() integration)",
+      "repos/metabob-opencode/packages/opencode/src/server/server.ts (needs Session.close() integration)",
+      "repos/metabob-opencode/packages/opencode/src/session/index.ts (cleanupActivitySession needs Session.close())"
+    ],
+    "downstreamImpact": "LOW - New methods added, no existing functionality broken"
+  },
+  "crossReferenceAnalysis": {
+    "method": "Manual analysis of enforcement and trace files",
+    "findings": [
+      "No specification directly contradicts metabob-session-tracking",
+      "Session.createNext() is extensible - multiple post-creation hooks can coexist",
+      "Session.close() is a new method - no existing code depends on it",
+      "MetabobTracking and SessionStats are new modules - no conflicts possible"
+    ]
+  },
+  "recommendedActions": [
+    {
+      "action": "Verify hook execution order in Session.createNext()",
+      "reason": "Multiple specifications add post-creation logic. Ensure deterministic order.",
+      "priority": "MEDIUM",
+      "files": [
+        "repos/metabob-opencode/packages/opencode/src/session/index.ts"
+      ]
+    },
+    {
+      "action": "Add Session.close() to cleanupActivitySession BEFORE Activity.unregisterSession()",
+      "reason": "Stats must be captured while session is active",
+      "priority": "HIGH",
+      "files": [
+        "repos/metabob-opencode/packages/opencode/src/session/index.ts"
+      ]
+    },
+    {
+      "action": "Document Session lifecycle hooks in ARCHITECTURE.md",
+      "reason": "Future specifications need to understand hook points",
+      "priority": "LOW",
+      "files": [
+        "ARCHITECTURE.md"
+      ]
+    }
+  ],
+  "validationStatus": {
+    "conflictDetection": "COMPLETE",
+    "sharedComponentAnalysis": "COMPLETE",
+    "dependencyImpactAnalysis": "COMPLETE",
+    "overallRisk": "LOW"
+  },
+  "summary": {
+    "totalConflicts": 0,
+    "potentialConflicts": 3,
+    "sharedComponents": 3,
+    "overallAssessment": "metabob-session-tracking has NO BLOCKING CONFLICTS with other specifications. All shared components are used in orthogonal ways. Potential conflicts are LOW or MEDIUM risk and have clear resolutions.",
+    "recommendation": "PROCEED with integration. Address MEDIUM priority action (Session.close() placement in cleanupActivitySession) during Phase 3.3."
+  },
+  "conflictImpulseId": "conflict-analysis-metabob-session-tracking"
+}
