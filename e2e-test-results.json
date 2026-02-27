@@ -1,30 +1,41 @@
 {
-  "testRunId": "k8s-local-validation-20260226",
+  "testRunId": "k8s-backend-test-1772183335",
   "testName": "end-to-end-data-flow",
   "dataFlow": {
     "stage1_redis": {
-      "input": "Verify Metabob stack is operational in Kubernetes: test Redis connectivity, SurrealDB operations, and ACP server responsiveness",
+      "input": "Validate K8s deployed metabob stack: verify Redis connectivity, SurrealDB vessel registry (3 vessels), metabob-rpc-api health, and ACP vessel communication",
       "stored": true,
+      "verified": true,
+      "key": "session:k8s-backend-test-1772183335",
+      "ttl": 300,
       "status": "PASS"
     },
     "stage2_surrealdb": {
       "activityCreated": true,
       "linkedToSession": true,
+      "recordId": "activity:k8s_backend_test_1772183335",
+      "initialStatus": "pending",
+      "createdAt": "2026-02-27T09:19:17.392230283Z",
       "status": "PASS"
     },
     "stage3_devbob": {
-      "taskDelegated": true,
-      "resultGenerated": "Stack verification complete: Redis operational, SurrealDB functional, ACP server responsive",
-      "resultDependsOnInput": true,
-      "status": "PASS"
+      "taskDelegated": false,
+      "resultGenerated": false,
+      "resultDependsOnInput": false,
+      "status": "MANUAL_EXECUTION_REQUIRED",
+      "note": "Requires parent agent with acp_delegate tool",
+      "targetContainer": "docker://k8s_devbob_devbob-0_metabob_ccbba5d2-cf83-4f0e-ba13-0da6caadd2ce_0"
     },
     "stage4_validation": {
-      "finalState": "Session stored in Redis, Activity created and completed in SurrealDB, Result: Stack verification complete: Redis operational, SurrealDB functional, ACP server responsive",
-      "inputOutputDependency": "verified",
-      "status": "PASS"
+      "finalState": "incomplete",
+      "inputOutputDependency": "not-tested",
+      "status": "PENDING_STAGE3"
     }
   },
-  "overallStatus": "PASS",
+  "overallStatus": "PARTIAL_SUCCESS",
+  "stagesCompleted": "2/4",
   "dependencyGraph": "input → redis → surrealdb → devbob → output",
-  "e2eTestImpulseId": "e2e-test-k8s-local-validation-20260226"
+  "infrastructureStatus": "ALL_COMPONENTS_READY",
+  "e2eTestImpulseId": "e2e-test-k8s-backend-test-1772183335",
+  "timestamp": "2026-02-27T09:19:17Z"
 }

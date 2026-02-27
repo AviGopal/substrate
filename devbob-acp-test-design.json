@@ -1,0 +1,95 @@
+{
+  "testRunId": "k8s-backend-test-1772183335",
+  "testName": "devbob-acp-delegation",
+  "status": "INFRASTRUCTURE_READY_EXECUTION_PENDING",
+  "infrastructure": {
+    "devbobInstances": [
+      {
+        "name": "devbob-0",
+        "podIP": "10.1.0.63",
+        "status": "Running",
+        "acpPort": 3000,
+        "containerId": "k8s_devbob_devbob-0_metabob_ccbba5d2-cf83-4f0e-ba13-0da6caadd2ce_0"
+      },
+      {
+        "name": "devbob-1",
+        "podIP": "10.1.0.64",
+        "status": "Running",
+        "acpPort": 3000,
+        "containerId": "k8s_devbob_devbob-1_metabob_f483e472-951e-4873-9875-5ba0f0a60745_0"
+      },
+      {
+        "name": "devbob-2",
+        "podIP": "10.1.0.65",
+        "status": "Running",
+        "acpPort": 3000,
+        "containerId": "k8s_devbob_devbob-2_metabob_57d7f2f5-39f1-4ef7-987e-776687c48283_0"
+      }
+    ],
+    "acpServers": {
+      "initialized": true,
+      "endpoint": "/acp/messages",
+      "protocol": "JSON-RPC 2.0",
+      "verified": true
+    }
+  },
+  "testDesign": {
+    "echoTest": {
+      "purpose": "Basic input-output validation",
+      "input": "test-acp-message",
+      "target": "docker://k8s_devbob_devbob-0_metabob_ccbba5d2-cf83-4f0e-ba13-0da6caadd2ce_0",
+      "timeout": 60,
+      "expectedOutput": "Response containing 'test-acp-message'",
+      "validation": "inputFoundInOutput = result.response.includes('test-acp-message')"
+    },
+    "impulseShareTest": {
+      "purpose": "Data flow and dependency validation",
+      "impulseId": "acp-test-input-k8s-backend-test-1772183335",
+      "inputs": {
+        "value1": "devbob-0",
+        "value2": "devbob-1"
+      },
+      "target": "docker://k8s_devbob_devbob-0_metabob_ccbba5d2-cf83-4f0e-ba13-0da6caadd2ce_0",
+      "timeout": 60,
+      "expectedOutput": "Result: devbob-0-devbob-1",
+      "validation": "dependencyVerified = result.response.includes('Result: devbob-0-devbob-1')"
+    }
+  },
+  "executionRequirements": {
+    "runtime": "OpenCode with acp_delegate tool",
+    "context": "Parent agent (not subagent)",
+    "impulseSystem": "Active session with impulse creation capability"
+  },
+  "expectedResults": {
+    "echoTest": {
+      "input": "test-acp-message",
+      "output": "<DevBob response containing 'test-acp-message'>",
+      "inputFoundInOutput": true,
+      "status": "PASS"
+    },
+    "impulseShareTest": {
+      "inputs": {
+        "value1": "devbob-0",
+        "value2": "devbob-1"
+      },
+      "output": "Result: devbob-0-devbob-1",
+      "dependencyVerified": true,
+      "status": "PASS"
+    },
+    "acpTestImpulseId": "acp-test-k8s-backend-test-1772183335"
+  },
+  "recommendations": {
+    "forParentAgent": [
+      "Execute test using acp_delegate tool directly",
+      "Create impulses in parent session context",
+      "Validate response contains expected strings",
+      "Create final results impulse with actual data"
+    ],
+    "nextSteps": [
+      "Parent agent executes ACP delegation tests",
+      "Validate input-output dependencies",
+      "Combine with Redis and SurrealDB test results",
+      "Create comprehensive E2E validation report"
+    ]
+  }
+}
