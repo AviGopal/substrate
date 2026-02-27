@@ -137,19 +137,17 @@ if [ "$SKIP_CONFIG" = "false" ]; then
     # Run configure-vessel-for-environment activity
     log_info "  Executing configure-vessel-for-environment activity..."
     
-    # Only run if we have backend connectivity
-    if [ "$BACKEND_READY" = "true" ]; then
-        opencode activity execute configure-vessel-for-environment \
-            --variable force_environment="$CONTAINER_ENV" \
-            --variable config_path="$CONFIG_FILE" \
-            --reason "Self-configuration on container startup" \
-            --non-interactive 2>&1 | tee /tmp/config-activity.log || {
-                log_warn "  ⚠ Configuration activity failed, using defaults"
-                cat /tmp/config-activity.log
-            }
-    else
-        log_warn "  Skipping configuration activity (no backend connectivity)"
-    fi
+    # Run unconditionally - pass backend availability as a variable for the activity to handle
+    # This ensures self-sufficiency: container can configure itself even without backend
+    opencode activity execute configure-vessel-for-environment \
+        --variable force_environment="$CONTAINER_ENV" \
+        --variable config_path="$CONFIG_FILE" \
+        --variable backend_available="${BACKEND_READY:-false}" \
+        --reason "Self-configuration on container startup" \
+        --non-interactive 2>&1 | tee /tmp/config-activity.log || {
+            log_warn "  ⚠ Configuration activity failed, using defaults"
+            cat /tmp/config-activity.log
+        }
 else
     log_info "Step 4: Skipping self-configuration (SKIP_CONFIG=$SKIP_CONFIG)"
 fi

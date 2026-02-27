@@ -92,6 +92,11 @@ COPY --from=opencode-binary /opt/opencode/bin/opencode /usr/local/bin/opencode
 # but set permissions again for safety
 RUN chmod +x /usr/local/bin/opencode
 
+# Copy bootstrap templates for vessel self-configuration
+# The binary expects these at /metabob-proto/activities/bootstrap/ for initial setup
+RUN mkdir -p /metabob-proto/activities/bootstrap
+COPY repos/metabob-proto/activities/bootstrap /metabob-proto/activities/bootstrap
+
 # Add metabob-cli to PATH
 ENV PATH="/opt/metabob-cli/.venv/bin:$PATH"
 

@@ -43,14 +43,14 @@
       }
     },
     {
-      "id": "verify-code-sync",
+      "id": "verify-clean-binary-deployment",
       "subagent": "general",
-      "description": "Verify code sync between host and devbob-clean container",
+      "description": "Verify DevBob is a clean binary deployment with NO source code leakage",
       "dependencies": [
         "verify-opencode-installation"
       ],
       "prompt": {
-        "template": "Verify code sync in devbob-clean container:\n\n1. Run: docker exec devbob-clean ls -la /workspace\n2. Run: docker exec devbob-clean git -C /workspace status\n3. Check:\n   - /workspace directory exists\n   - Git repository is accessible\n   - Code files are present\n   - No permission issues\n4. Report:\n   - Sync status (synced/missing)\n   - File count in /workspace\n   - Git status\n   - Any permission errors\n\nProvide code sync verification summary.",
+        "template": "Verify clean binary deployment in devbob-clean container:\n\n1. Run: docker exec devbob-clean find / -type d -name 'repos' 2>/dev/null\n2. Run: docker exec devbob-clean find /usr/local/bin /opt -name '*.ts' 2>/dev/null\n3. Run: docker exec devbob-clean ls -la /workspace\n4. Run: docker exec devbob-clean test -f /usr/local/bin/opencode && echo 'Binary exists' || echo 'Binary missing'\n5. Check:\n   - NO repos/ directory anywhere in container (intellectual property protection)\n   - NO TypeScript source files (.ts) in runtime paths\n   - /workspace is empty or contains only runtime-mounted data\n   - OpenCode binary exists at /usr/local/bin/opencode\n   - Bootstrap templates exist at /metabob-proto/activities/bootstrap/\n6. Report:\n   - Clean environment status (PASS if no source code found)\n   - Binary location and version\n   - Any source code leakage detected\n\nProvide clean binary deployment verification summary.",
         "maxTokens": 4000,
         "compressionStrategy": "filter"
       },
@@ -67,7 +67,7 @@
       "subagent": "general",
       "description": "Verify ACP server is running in devbob-clean",
       "dependencies": [
-        "verify-code-sync"
+        "verify-clean-binary-deployment"
       ],
       "prompt": {
         "template": "Verify ACP server in devbob-clean container:\n\n1. Run: docker exec devbob-clean ps aux | grep 'opencode acp'\n2. Run: docker exec devbob-clean netstat -tuln | grep 3000 || ss -tuln | grep 3000\n3. Check:\n   - ACP server process is running\n   - Port 3000 is listening\n   - No startup errors\n4. Report:\n   - Server status (running/stopped)\n   - Process ID\n   - Port binding status\n   - Any errors\n\nProvide ACP server verification summary.",

@@ -94,16 +94,16 @@ if [ ! -f "repos/metabob-cli/pyproject.toml" ]; then
 fi
 log_success "metabob-cli source found"
 
-# Check if Dockerfile exists
-if [ ! -f "configs/Dockerfile.devbob" ]; then
-    log_error "Dockerfile not found at configs/Dockerfile.devbob"
+# Check if Dockerfile exists (use production clean Dockerfile)
+if [ ! -f "docker/Dockerfile.devbob" ]; then
+    log_error "Dockerfile not found at docker/Dockerfile.devbob"
     exit 1
 fi
 log_success "Dockerfile found"
 
 # Check if entrypoint exists
-if [ ! -f "configs/devbob-entrypoint.sh" ]; then
-    log_error "Entrypoint script not found at configs/devbob-entrypoint.sh"
+if [ ! -f "docker/entrypoint-self-config.sh" ]; then
+    log_error "Entrypoint script not found at docker/entrypoint-self-config.sh"
     exit 1
 fi
 log_success "Entrypoint script found"
@@ -111,12 +111,12 @@ log_success "Entrypoint script found"
 # Build the image
 log_info "Building Docker image..."
 log_info "  Context: $PROJECT_ROOT"
-log_info "  Dockerfile: configs/Dockerfile.devbob"
+log_info "  Dockerfile: docker/Dockerfile.devbob (production clean binary deployment)"
 log_info "  Target: $TARGET"
 log_info "  Tag: $IMAGE_TAG"
 
 if docker build \
-    -f configs/Dockerfile.devbob \
+    -f docker/Dockerfile.devbob \
     --target "$TARGET" \
     -t "$IMAGE_TAG" \
     $BUILD_ARGS \
