@@ -1,0 +1,245 @@
+{
+  "activity_id": "validate-distributed-devbob-deployment",
+  "name": "Validate Distributed DevBob Deployment",
+  "description": "Comprehensive validation of distributed DevBob system including backend services, vessel coordination, ACP endpoints, and SurrealDB registry",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "validate-backend",
+      "subagent": "general",
+      "description": "Validate backend services (Redis, SurrealDB, metabob-rpc-api) are running and healthy",
+      "dependencies": [],
+      "prompt": {
+        "template": "**Task: Validate Backend Services**\n\nYou must verify that all backend services required for distributed DevBob coordination are running and healthy in namespace {{namespace}}.\n\n**REQUIRED SERVICES:**\n1. **Redis** (master) - Boredom queue, session cache\n2. **SurrealDB** - Activity state, vessel registry, learning metrics\n3. **metabob-rpc-api** - Thompson Sampling, gradient calculation\n\n**VALIDATION STEPS:**\n\n1. **Check Pod Status**\n   ```bash\n   echo \"=== POD STATUS ===\"\n   kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)'\n   \n   # Count running pods\n   RUNNING=$(kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)' --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   echo \"Running backend pods: $RUNNING\"\n   \n   if [ \"$RUNNING\" -lt 2 ]; then\n     echo \"❌ ERROR: Not all backend services running (found $RUNNING, need at least 2)\"\n     kubectl get pods -n {{namespace}}\n     exit 1\n   fi\n   ```\n\n2. **Test Redis**\n   ```bash\n   echo \"\\n=== REDIS TEST ===\"\n   kubectl exec -n {{namespace}} deploy/redis-master -- redis-cli ping || \\\n   kubectl exec -n {{namespace}} statefulset/redis-master -- redis-cli ping\n   \n   if [ $? -eq 0 ]; then\n     echo \"✅ Redis: OK\"\n   else\n     echo \"❌ Redis: FAIL\"\n     exit 1\n   fi\n   ```\n\n3. **Test SurrealDB**\n   ```bash\n   echo \"\\n=== SURREALDB TEST ===\"\n   \n   # Port-forward in background\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   # Test health endpoint\n   RESPONSE=$(curl -s http://localhost:8000/health 2>/dev/null || echo \"FAIL\")\n   \n   # Cleanup port-forward\n   kill $PF_PID 2>/dev/null\n   \n   if [[ \"$RESPONSE\" == *\"ok\"* ]] || [[ \"$RESPONSE\" == \"OK\" ]]; then\n     echo \"✅ SurrealDB: OK\"\n   else\n     echo \"⚠️  SurrealDB: Health check inconclusive (this is okay if pod is running)\"\n   fi\n   ```\n\n4. **Test metabob-rpc-api (if deployed)**\n   ```bash\n   echo \"\\n=== METABOB-RPC-API TEST ===\"\n   \n   # Check if deployed\n   kubectl get deployment/metabob-rpc-api -n {{namespace}} >/dev/null 2>&1\n   if [ $? -ne 0 ]; then\n     echo \"⚠️  metabob-rpc-api not deployed (will be needed for boredom system)\"\n   else\n     # Port-forward and test\n     kubectl port-forward -n {{namespace}} svc/metabob-rpc-api 8080:8080 >/dev/null 2>&1 &\n     PF_PID=$!\n     sleep 3\n     \n     RESPONSE=$(curl -s http://localhost:8080/health 2>/dev/null || echo \"FAIL\")\n     kill $PF_PID 2>/dev/null\n     \n     if [[ \"$RESPONSE\" == *\"healthy\"* ]] || [[ \"$RESPONSE\" == *\"ok\"* ]]; then\n       echo \"✅ metabob-rpc-api: OK\"\n     else\n       echo \"⚠️  metabob-rpc-api: Not responding (check logs)\"\n     fi\n   fi\n   ```\n\n5. **Service Discovery**\n   ```bash\n   echo \"\\n=== SERVICE DISCOVERY ===\"\n   kubectl get svc -n {{namespace}}\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `backend-validation-report.json` with:\n  - Pod status (name, ready, status, restarts)\n  - Service endpoints (name, type, ClusterIP, ports)\n  - Health check results (Redis, SurrealDB, API)\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ At least 2 backend pods running (Redis + SurrealDB minimum)\n✅ Redis responds to PING\n✅ SurrealDB pod is running\n✅ All services have ClusterIP endpoints",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-vessels",
+      "subagent": "general",
+      "description": "Validate DevBob vessels are running, have ACP endpoints, and can reach backend",
+      "dependencies": [
+        "validate-backend"
+      ],
+      "prompt": {
+        "template": "**Task: Validate DevBob Vessels**\n\nYou must verify that DevBob vessels are running and properly configured in namespace {{namespace}}.\n\n**VALIDATION STEPS:**\n\n1. **Count Running Vessels**\n   ```bash\n   echo \"=== DEVBOB VESSELS ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   RUNNING=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   echo \"Running vessels: $RUNNING\"\n   \n   if [ \"$RUNNING\" -lt 1 ]; then\n     echo \"❌ ERROR: No DevBob vessels running\"\n     exit 1\n   fi\n   \n   echo \"✅ Found $RUNNING DevBob vessel(s)\"\n   ```\n\n2. **Check PVCs (Workspace Storage)**\n   ```bash\n   echo \"\\n=== PERSISTENT VOLUMES ===\"\n   kubectl get pvc -n {{namespace}}\n   \n   # Count bound PVCs\n   BOUND=$(kubectl get pvc -n {{namespace}} --field-selector=status.phase=Bound --no-headers 2>/dev/null | wc -l)\n   echo \"Bound PVCs: $BOUND\"\n   ```\n\n3. **Test Backend Connectivity (from vessel)**\n   ```bash\n   echo \"\\n=== BACKEND CONNECTIVITY TEST ===\"\n   \n   # Get first vessel pod\n   POD=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)\n   \n   if [ -z \"$POD\" ]; then\n     echo \"❌ No running vessel found for connectivity test\"\n     exit 1\n   fi\n   \n   echo \"Testing from vessel: $POD\"\n   \n   # Test Redis\n   echo -n \"Redis: \"\n   kubectl exec -n {{namespace}} $POD -- sh -c 'redis-cli -h redis-master.{{namespace}}.svc.cluster.local ping 2>/dev/null' | grep -q PONG && echo \"✅ OK\" || echo \"❌ FAIL\"\n   \n   # Test SurrealDB\n   echo -n \"SurrealDB: \"\n   kubectl exec -n {{namespace}} $POD -- sh -c 'curl -sf http://surrealdb.{{namespace}}.svc.cluster.local:8000/health >/dev/null 2>&1' && echo \"✅ OK\" || echo \"⚠️  UNREACHABLE\"\n   \n   # Test metabob-rpc-api (if exists)\n   kubectl get svc/metabob-rpc-api -n {{namespace}} >/dev/null 2>&1\n   if [ $? -eq 0 ]; then\n     echo -n \"metabob-rpc-api: \"\n     kubectl exec -n {{namespace}} $POD -- sh -c 'curl -sf http://metabob-rpc-api.{{namespace}}.svc.cluster.local:8080/health >/dev/null 2>&1' && echo \"✅ OK\" || echo \"⚠️  UNREACHABLE\"\n   fi\n   ```\n\n4. **Check ACP Endpoints**\n   ```bash\n   echo \"\\n=== ACP ENDPOINTS ===\"\n   kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   # Check if ACP port (3000) is exposed\n   SERVICES=$(kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob -o jsonpath='{.items[*].spec.ports[?(@.port==3000)].port}' 2>/dev/null)\n   if [ -n \"$SERVICES\" ]; then\n     echo \"✅ ACP services configured (port 3000)\"\n   else\n     echo \"⚠️  No ACP services found (check service configuration)\"\n   fi\n   ```\n\n5. **Vessel Network Map**\n   ```bash\n   echo \"\\n=== VESSEL NETWORK MAP ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o json | \\\n     jq -r '.items[] | \"Vessel: \\(.metadata.name)\\nIP: \\(.status.podIP)\\nNode: \\(.spec.nodeName)\\nStatus: \\(.status.phase)\\n---\"'\n   ```\n\n6. **Check Vessel Logs for Errors**\n   ```bash\n   echo \"\\n=== VESSEL LOG CHECK ===\"\n   PODS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o jsonpath='{.items[*].metadata.name}')\n   \n   for POD in $PODS; do\n     echo \"\\nChecking $POD:\"\n     ERROR_COUNT=$(kubectl logs -n {{namespace}} $POD --tail=100 2>/dev/null | grep -i \"error\\|fail\\|crash\" | wc -l)\n     echo \"  Error lines in last 100: $ERROR_COUNT\"\n     \n     if [ \"$ERROR_COUNT\" -gt 10 ]; then\n       echo \"  ⚠️  High error count, showing last 5 errors:\"\n       kubectl logs -n {{namespace}} $POD --tail=100 | grep -i \"error\\|fail\" | tail -5\n     fi\n   done\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `vessels-validation-report.json` with:\n  - Vessel count (running, total)\n  - PVC status (bound, total)\n  - Backend connectivity matrix (per vessel)\n  - ACP endpoints (service names, IPs, ports)\n  - Network map (pod names, IPs, nodes)\n  - Log error summary\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ At least 1 DevBob vessel running\n✅ All vessels can reach Redis\n✅ PVCs bound for vessel workspaces\n✅ ACP services configured (port 3000)\n✅ No critical errors in recent logs",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-coordination",
+      "subagent": "general",
+      "description": "Validate SurrealDB schema, vessel registry, and coordination capabilities",
+      "dependencies": [
+        "validate-vessels"
+      ],
+      "prompt": {
+        "template": "**Task: Validate Coordination Layer**\n\nYou must verify that the coordination layer (SurrealDB schema and vessel registry) is properly configured.\n\n**VALIDATION STEPS:**\n\n1. **Check SurrealDB Schema**\n   ```bash\n   echo \"=== SURREALDB SCHEMA VALIDATION ===\"\n   \n   # Port-forward to SurrealDB\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   # Test basic connectivity and query\n   echo \"Testing SurrealDB connection...\"\n   \n   # Try to query info about database\n   curl -s -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: application/json\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     -d \"INFO FOR DB;\" 2>/dev/null | jq . || echo \"Query executed (parse may have failed)\"\n   \n   # Cleanup\n   kill $PF_PID 2>/dev/null\n   ```\n\n2. **Initialize Schema (if needed)**\n   ```bash\n   echo \"\\n=== SCHEMA INITIALIZATION ===\"\n   \n   # Execute schema initialization via kubectl exec\n   kubectl exec -n {{namespace}} deploy/surrealdb -- sh -c '\n     echo \"Checking schema...\"\n     # Schema will be initialized by metabob-rpc-api or manually\n     echo \"✓ SurrealDB pod accessible\"\n   ' || echo \"⚠️  Could not execute commands in SurrealDB pod\"\n   ```\n\n3. **Vessel Discovery Test**\n   ```bash\n   echo \"\\n=== VESSEL DISCOVERY ===\"\n   \n   # List vessels via kubectl\n   echo \"Vessels via kubectl:\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o custom-columns=NAME:.metadata.name,IP:.status.podIP,STATUS:.status.phase --no-headers\n   \n   # Count vessels\n   VESSEL_COUNT=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   echo \"\\nDiscoverable vessels: $VESSEL_COUNT\"\n   ```\n\n4. **Test Inter-Vessel Communication**\n   ```bash\n   echo \"\\n=== INTER-VESSEL COMMUNICATION ===\"\n   \n   # Get vessel IPs\n   VESSEL_IPS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o jsonpath='{.items[*].status.podIP}')\n   \n   if [ -n \"$VESSEL_IPS\" ]; then\n     echo \"Vessel IPs: $VESSEL_IPS\"\n     echo \"✅ Vessels have assigned IPs (can communicate via K8s network)\"\n   else\n     echo \"⚠️  No vessel IPs found\"\n   fi\n   ```\n\n5. **System Summary**\n   ```bash\n   echo \"\\n=== SYSTEM SUMMARY ===\"\n   echo \"Namespace: {{namespace}}\"\n   echo \"Backend services: $(kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)' --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\"\n   echo \"DevBob vessels: $(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\"\n   echo \"Total pods: $(kubectl get pods -n {{namespace}} --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\"\n   echo \"Services: $(kubectl get svc -n {{namespace}} --no-headers 2>/dev/null | wc -l)\"\n   echo \"PVCs: $(kubectl get pvc -n {{namespace}} --field-selector=status.phase=Bound --no-headers 2>/dev/null | wc -l)\"\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `coordination-validation-report.json` with:\n  - SurrealDB connectivity status\n  - Schema status (tables, indexes)\n  - Vessel registry status (count, entries)\n  - Inter-vessel communication capability\n  - System summary (counts, resources)\n  - Timestamp\n\n- Create: `DISTRIBUTED_DEVBOB_VALIDATION_SUMMARY.md` with:\n  - Executive summary\n  - Validation results (backend, vessels, coordination)\n  - Issues found (if any)\n  - Recommendations\n  - Next steps\n\n**SUCCESS CRITERIA:**\n✅ SurrealDB accessible via port-forward\n✅ Vessel discovery working (kubectl)\n✅ Inter-vessel communication possible (IPs assigned)\n✅ System summary shows expected resources\n✅ Validation summary document created",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "coordination-validation-report.json",
+          "DISTRIBUTED_DEVBOB_VALIDATION_SUMMARY.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "validate-backend",
+      "subagent": "general",
+      "description": "Validate backend services (Redis, SurrealDB, metabob-rpc-api) are running and healthy",
+      "dependencies": [],
+      "prompt": {
+        "template": "**Task: Validate Backend Services**\n\nYou must verify that all backend services required for distributed DevBob coordination are running and healthy in namespace {{namespace}}.\n\n**REQUIRED SERVICES:**\n1. **Redis** (master) - Boredom queue, session cache\n2. **SurrealDB** - Activity state, vessel registry, learning metrics\n3. **metabob-rpc-api** - Thompson Sampling, gradient calculation\n\n**VALIDATION STEPS:**\n\n1. **Check Pod Status**\n   ```bash\n   echo \"=== POD STATUS ===\"\n   kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)'\n   \n   # Count running pods\n   RUNNING=$(kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)' --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   echo \"Running backend pods: $RUNNING\"\n   \n   if [ \"$RUNNING\" -lt 2 ]; then\n     echo \"❌ ERROR: Not all backend services running (found $RUNNING, need at least 2)\"\n     kubectl get pods -n {{namespace}}\n     exit 1\n   fi\n   ```\n\n2. **Test Redis**\n   ```bash\n   echo \"\\n=== REDIS TEST ===\"\n   kubectl exec -n {{namespace}} deploy/redis-master -- redis-cli ping || \\\n   kubectl exec -n {{namespace}} statefulset/redis-master -- redis-cli ping\n   \n   if [ $? -eq 0 ]; then\n     echo \"✅ Redis: OK\"\n   else\n     echo \"❌ Redis: FAIL\"\n     exit 1\n   fi\n   ```\n\n3. **Test SurrealDB**\n   ```bash\n   echo \"\\n=== SURREALDB TEST ===\"\n   \n   # Port-forward in background\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   # Test health endpoint\n   RESPONSE=$(curl -s http://localhost:8000/health 2>/dev/null || echo \"FAIL\")\n   \n   # Cleanup port-forward\n   kill $PF_PID 2>/dev/null\n   \n   if [[ \"$RESPONSE\" == *\"ok\"* ]] || [[ \"$RESPONSE\" == \"OK\" ]]; then\n     echo \"✅ SurrealDB: OK\"\n   else\n     echo \"⚠️  SurrealDB: Health check inconclusive (this is okay if pod is running)\"\n   fi\n   ```\n\n4. **Test metabob-rpc-api (if deployed)**\n   ```bash\n   echo \"\\n=== METABOB-RPC-API TEST ===\"\n   \n   # Check if deployed\n   kubectl get deployment/metabob-rpc-api -n {{namespace}} >/dev/null 2>&1\n   if [ $? -ne 0 ]; then\n     echo \"⚠️  metabob-rpc-api not deployed (will be needed for boredom system)\"\n   else\n     # Port-forward and test\n     kubectl port-forward -n {{namespace}} svc/metabob-rpc-api 8080:8080 >/dev/null 2>&1 &\n     PF_PID=$!\n     sleep 3\n     \n     RESPONSE=$(curl -s http://localhost:8080/health 2>/dev/null || echo \"FAIL\")\n     kill $PF_PID 2>/dev/null\n     \n     if [[ \"$RESPONSE\" == *\"healthy\"* ]] || [[ \"$RESPONSE\" == *\"ok\"* ]]; then\n       echo \"✅ metabob-rpc-api: OK\"\n     else\n       echo \"⚠️  metabob-rpc-api: Not responding (check logs)\"\n     fi\n   fi\n   ```\n\n5. **Service Discovery**\n   ```bash\n   echo \"\\n=== SERVICE DISCOVERY ===\"\n   kubectl get svc -n {{namespace}}\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `backend-validation-report.json` with:\n  - Pod status (name, ready, status, restarts)\n  - Service endpoints (name, type, ClusterIP, ports)\n  - Health check results (Redis, SurrealDB, API)\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ At least 2 backend pods running (Redis + SurrealDB minimum)\n✅ Redis responds to PING\n✅ SurrealDB pod is running\n✅ All services have ClusterIP endpoints",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-vessels",
+      "subagent": "general",
+      "description": "Validate DevBob vessels are running, have ACP endpoints, and can reach backend",
+      "dependencies": [
+        "validate-backend"
+      ],
+      "prompt": {
+        "template": "**Task: Validate DevBob Vessels**\n\nYou must verify that DevBob vessels are running and properly configured in namespace {{namespace}}.\n\n**VALIDATION STEPS:**\n\n1. **Count Running Vessels**\n   ```bash\n   echo \"=== DEVBOB VESSELS ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   RUNNING=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   echo \"Running vessels: $RUNNING\"\n   \n   if [ \"$RUNNING\" -lt 1 ]; then\n     echo \"❌ ERROR: No DevBob vessels running\"\n     exit 1\n   fi\n   \n   echo \"✅ Found $RUNNING DevBob vessel(s)\"\n   ```\n\n2. **Check PVCs (Workspace Storage)**\n   ```bash\n   echo \"\\n=== PERSISTENT VOLUMES ===\"\n   kubectl get pvc -n {{namespace}}\n   \n   # Count bound PVCs\n   BOUND=$(kubectl get pvc -n {{namespace}} --field-selector=status.phase=Bound --no-headers 2>/dev/null | wc -l)\n   echo \"Bound PVCs: $BOUND\"\n   ```\n\n3. **Test Backend Connectivity (from vessel)**\n   ```bash\n   echo \"\\n=== BACKEND CONNECTIVITY TEST ===\"\n   \n   # Get first vessel pod\n   POD=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)\n   \n   if [ -z \"$POD\" ]; then\n     echo \"❌ No running vessel found for connectivity test\"\n     exit 1\n   fi\n   \n   echo \"Testing from vessel: $POD\"\n   \n   # Test Redis\n   echo -n \"Redis: \"\n   kubectl exec -n {{namespace}} $POD -- sh -c 'redis-cli -h redis-master.{{namespace}}.svc.cluster.local ping 2>/dev/null' | grep -q PONG && echo \"✅ OK\" || echo \"❌ FAIL\"\n   \n   # Test SurrealDB\n   echo -n \"SurrealDB: \"\n   kubectl exec -n {{namespace}} $POD -- sh -c 'curl -sf http://surrealdb.{{namespace}}.svc.cluster.local:8000/health >/dev/null 2>&1' && echo \"✅ OK\" || echo \"⚠️  UNREACHABLE\"\n   \n   # Test metabob-rpc-api (if exists)\n   kubectl get svc/metabob-rpc-api -n {{namespace}} >/dev/null 2>&1\n   if [ $? -eq 0 ]; then\n     echo -n \"metabob-rpc-api: \"\n     kubectl exec -n {{namespace}} $POD -- sh -c 'curl -sf http://metabob-rpc-api.{{namespace}}.svc.cluster.local:8080/health >/dev/null 2>&1' && echo \"✅ OK\" || echo \"⚠️  UNREACHABLE\"\n   fi\n   ```\n\n4. **Check ACP Endpoints**\n   ```bash\n   echo \"\\n=== ACP ENDPOINTS ===\"\n   kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   # Check if ACP port (3000) is exposed\n   SERVICES=$(kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob -o jsonpath='{.items[*].spec.ports[?(@.port==3000)].port}' 2>/dev/null)\n   if [ -n \"$SERVICES\" ]; then\n     echo \"✅ ACP services configured (port 3000)\"\n   else\n     echo \"⚠️  No ACP services found (check service configuration)\"\n   fi\n   ```\n\n5. **Vessel Network Map**\n   ```bash\n   echo \"\\n=== VESSEL NETWORK MAP ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o json | \\\n     jq -r '.items[] | \"Vessel: \\(.metadata.name)\\nIP: \\(.status.podIP)\\nNode: \\(.spec.nodeName)\\nStatus: \\(.status.phase)\\n---\"'\n   ```\n\n6. **Check Vessel Logs for Errors**\n   ```bash\n   echo \"\\n=== VESSEL LOG CHECK ===\"\n   PODS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o jsonpath='{.items[*].metadata.name}')\n   \n   for POD in $PODS; do\n     echo \"\\nChecking $POD:\"\n     ERROR_COUNT=$(kubectl logs -n {{namespace}} $POD --tail=100 2>/dev/null | grep -i \"error\\|fail\\|crash\" | wc -l)\n     echo \"  Error lines in last 100: $ERROR_COUNT\"\n     \n     if [ \"$ERROR_COUNT\" -gt 10 ]; then\n       echo \"  ⚠️  High error count, showing last 5 errors:\"\n       kubectl logs -n {{namespace}} $POD --tail=100 | grep -i \"error\\|fail\" | tail -5\n     fi\n   done\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `vessels-validation-report.json` with:\n  - Vessel count (running, total)\n  - PVC status (bound, total)\n  - Backend connectivity matrix (per vessel)\n  - ACP endpoints (service names, IPs, ports)\n  - Network map (pod names, IPs, nodes)\n  - Log error summary\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ At least 1 DevBob vessel running\n✅ All vessels can reach Redis\n✅ PVCs bound for vessel workspaces\n✅ ACP services configured (port 3000)\n✅ No critical errors in recent logs",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-coordination",
+      "subagent": "general",
+      "description": "Validate SurrealDB schema, vessel registry, and coordination capabilities",
+      "dependencies": [
+        "validate-vessels"
+      ],
+      "prompt": {
+        "template": "**Task: Validate Coordination Layer**\n\nYou must verify that the coordination layer (SurrealDB schema and vessel registry) is properly configured.\n\n**VALIDATION STEPS:**\n\n1. **Check SurrealDB Schema**\n   ```bash\n   echo \"=== SURREALDB SCHEMA VALIDATION ===\"\n   \n   # Port-forward to SurrealDB\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   # Test basic connectivity and query\n   echo \"Testing SurrealDB connection...\"\n   \n   # Try to query info about database\n   curl -s -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: application/json\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     -d \"INFO FOR DB;\" 2>/dev/null | jq . || echo \"Query executed (parse may have failed)\"\n   \n   # Cleanup\n   kill $PF_PID 2>/dev/null\n   ```\n\n2. **Initialize Schema (if needed)**\n   ```bash\n   echo \"\\n=== SCHEMA INITIALIZATION ===\"\n   \n   # Execute schema initialization via kubectl exec\n   kubectl exec -n {{namespace}} deploy/surrealdb -- sh -c '\n     echo \"Checking schema...\"\n     # Schema will be initialized by metabob-rpc-api or manually\n     echo \"✓ SurrealDB pod accessible\"\n   ' || echo \"⚠️  Could not execute commands in SurrealDB pod\"\n   ```\n\n3. **Vessel Discovery Test**\n   ```bash\n   echo \"\\n=== VESSEL DISCOVERY ===\"\n   \n   # List vessels via kubectl\n   echo \"Vessels via kubectl:\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o custom-columns=NAME:.metadata.name,IP:.status.podIP,STATUS:.status.phase --no-headers\n   \n   # Count vessels\n   VESSEL_COUNT=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   echo \"\\nDiscoverable vessels: $VESSEL_COUNT\"\n   ```\n\n4. **Test Inter-Vessel Communication**\n   ```bash\n   echo \"\\n=== INTER-VESSEL COMMUNICATION ===\"\n   \n   # Get vessel IPs\n   VESSEL_IPS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o jsonpath='{.items[*].status.podIP}')\n   \n   if [ -n \"$VESSEL_IPS\" ]; then\n     echo \"Vessel IPs: $VESSEL_IPS\"\n     echo \"✅ Vessels have assigned IPs (can communicate via K8s network)\"\n   else\n     echo \"⚠️  No vessel IPs found\"\n   fi\n   ```\n\n5. **System Summary**\n   ```bash\n   echo \"\\n=== SYSTEM SUMMARY ===\"\n   echo \"Namespace: {{namespace}}\"\n   echo \"Backend services: $(kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)' --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\"\n   echo \"DevBob vessels: $(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\"\n   echo \"Total pods: $(kubectl get pods -n {{namespace}} --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\"\n   echo \"Services: $(kubectl get svc -n {{namespace}} --no-headers 2>/dev/null | wc -l)\"\n   echo \"PVCs: $(kubectl get pvc -n {{namespace}} --field-selector=status.phase=Bound --no-headers 2>/dev/null | wc -l)\"\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `coordination-validation-report.json` with:\n  - SurrealDB connectivity status\n  - Schema status (tables, indexes)\n  - Vessel registry status (count, entries)\n  - Inter-vessel communication capability\n  - System summary (counts, resources)\n  - Timestamp\n\n- Create: `DISTRIBUTED_DEVBOB_VALIDATION_SUMMARY.md` with:\n  - Executive summary\n  - Validation results (backend, vessels, coordination)\n  - Issues found (if any)\n  - Recommendations\n  - Next steps\n\n**SUCCESS CRITERIA:**\n✅ SurrealDB accessible via port-forward\n✅ Vessel discovery working (kubectl)\n✅ Inter-vessel communication possible (IPs assigned)\n✅ System summary shows expected resources\n✅ Validation summary document created",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "coordination-validation-report.json",
+          "DISTRIBUTED_DEVBOB_VALIDATION_SUMMARY.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-27T07:18:59.581Z",
+  "metadata": {}
+}

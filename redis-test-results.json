@@ -1,0 +1,16 @@
+{
+  "testRunId": "k8s-local-validation-20260226",
+  "testName": "redis-data-flow",
+  "input": "test-session-k8s",
+  "output": "test-session-k8s",
+  "status": "PASS",
+  "dataDependency": "output === input",
+  "verificationMethod": "exact string match",
+  "redisTestImpulseId": "redis-test-k8s-local-validation-20260226",
+  "details": {
+    "keyUsed": "test:session:k8s-local-validation-20260226",
+    "ttl": 300,
+    "dataIntegrity": "verified",
+    "timestamp": "2026-02-27T06:16:47.594Z"
+  }
+}

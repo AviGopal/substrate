@@ -1,0 +1,10 @@
+{
+  "testRunId": "k8s-local-validation-20260226",
+  "testName": "redis-data-flow",
+  "input": "test-session-k8s",
+  "output": "test-session-k8s",
+  "status": "PASS",
+  "dataDependency": "output === input",
+  "verificationMethod": "exact string match",
+  "redisTestImpulseId": "redis-test-k8s-local-validation-20260226"
+}

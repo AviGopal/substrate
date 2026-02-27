@@ -1,0 +1,15 @@
+{
+  "sessionId": "acp-test-1772173339038",
+  "testRunId": "k8s-local-validation-20260226",
+  "echoTest": {
+    "impulseId": "acp-test-input-k8s-local-validation-20260226",
+    "input": "k8s-acp-test"
+  },
+  "impulseShareTest": {
+    "impulseId": "acp-share-test-k8s-local-validation-20260226",
+    "inputs": {
+      "value1": "devbob-container",
+      "value2": "kubernetes-ready"
+    }
+  }
+}

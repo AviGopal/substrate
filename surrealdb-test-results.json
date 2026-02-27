@@ -1,0 +1,43 @@
+{
+  "testRunId": "k8s-local-validation-20260226",
+  "testName": "surrealdb-data-flow",
+  "inputs": {
+    "activityName": "k8s-validation-activity",
+    "status": "completed",
+    "data": "k8s-test-data"
+  },
+  "outputs": {
+    "activityName": "k8s-validation-activity",
+    "status": "completed",
+    "data": "k8s-test-data"
+  },
+  "dataDependencies": [
+    {
+      "field": "activityName",
+      "match": true
+    },
+    {
+      "field": "status",
+      "match": true
+    },
+    {
+      "field": "data",
+      "match": true
+    }
+  ],
+  "transformation": {
+    "input": "k8s-test-data",
+    "expectedOutput": "transformation of: k8s-test-data",
+    "actualOutput": "transformation of: k8s-test-data",
+    "match": true
+  },
+  "status": "PASS",
+  "surrealdbTestImpulseId": "surrealdb-test-k8s-local-validation-20260226",
+  "details": {
+    "table": "test_activity",
+    "namespace": "metabob",
+    "database": "metabob",
+    "recordId": "test_activity:rdqh2z9gmlu3vmsh7k88",
+    "timestamp": "2026-02-27T06:20:15.829Z"
+  }
+}

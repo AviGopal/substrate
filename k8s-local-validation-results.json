@@ -1,0 +1,44 @@
+{
+  "testRunId": "k8s-local-validation-20260226",
+  "timestamp": "2026-02-27T06:15:06.346Z",
+  "cluster": "docker-desktop",
+  "namespace": "metabob",
+  "deploymentStatus": {
+    "redis": {
+      "status": "Running",
+      "endpoint": "redis-master:6379",
+      "clusterIP": "10.111.0.8",
+      "pod": "redis-master-0",
+      "restarts": 1,
+      "age": "122m"
+    },
+    "surrealdb": {
+      "status": "Running",
+      "endpoint": "surrealdb:8000",
+      "clusterIP": "10.102.105.199",
+      "pod": "surrealdb-65576c4c47-jq8fn",
+      "restarts": 1,
+      "age": "55m"
+    },
+    "devbob": {
+      "status": "Running",
+      "endpoint": "devbob:3000",
+      "clusterIP": "10.106.45.198",
+      "pod": "devbob-cccfc4478-jtsm5",
+      "acpReady": true,
+      "acpPort": 8083,
+      "restarts": 1,
+      "age": "67m"
+    }
+  },
+  "validationScript": "PASS",
+  "validationResults": {
+    "podStatus": "✓ All pods running",
+    "serviceStatus": "✓ All services available with endpoints",
+    "connectivity": "✓ DevBob can reach Redis and SurrealDB",
+    "acpServer": "✓ ACP Server initialized and ready",
+    "bootstrapTemplates": "✓ Templates loaded (0 registered)"
+  },
+  "deploymentStateImpulseId": "deployment-state-k8s-local-validation-20260226",
+  "conclusion": "All Metabob stack components are operational and ready for end-to-end activity execution and multi-agent coordination workflows."
+}
