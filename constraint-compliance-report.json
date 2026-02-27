@@ -1,23 +1,24 @@
 {
-  "timestamp": "2026-02-27T08:11:01Z",
+  "timestamp": "2026-02-27T08:26:09Z",
   "namespace": "metabob",
   "status": "VIOLATIONS",
   "summary": {
     "total_constraints": 10,
-    "passed": 7,
-    "failed": 1,
-    "warnings": 1
+    "passed": 6,
+    "failed": 3,
+    "warnings": 0
+0
   },
   "constraints": [
-    {"id": 1, "name": "Multi-Vessel Requirement", "status": "PASS", "severity": "critical", "description": "Minimum 3 DevBob vessels running"},
-    {"id": 2, "name": "Coordination Layer", "status": "PASS", "severity": "critical", "description": "Redis, SurrealDB, and metabob-rpc-api running"},
-    {"id": 3, "name": "Workspace Isolation", "status": "FAIL", "severity": "critical", "description": "PVCs for each vessel"},
-    {"id": 4, "name": "ACP Communication", "status": "PASS", "severity": "critical", "description": "Port 3000 exposed for ACP"},
-    {"id": 5, "name": "Vessel Registry", "status": "PASS", "severity": "warning", "description": "Vessels registered in SurrealDB"},
-    {"id": 6, "name": "Backend Connectivity", "status": "PASS", "severity": "warning", "description": "Vessels can reach coordination backends"},
-    {"id": 7, "name": "Resource Allocation", "status": "PASS", "severity": "warning", "description": "Resource requests configured"},
-    {"id": 8, "name": "Anti-Affinity", "status": "INFO", "severity": "info", "description": "Vessels distributed across nodes"},
-    {"id": 9, "name": "Health Probes", "status": "WARN", "severity": "warning", "description": "Liveness and readiness probes"},
-    {"id": 10, "name": "Dataflow Enforcement", "status": "PASS", "severity": "warning", "description": "Internal services use ClusterIP"}
+    {"id": 1, "name": "Multi-Vessel Requirement", "status": "PASS", "severity": "critical"},
+    {"id": 2, "name": "Coordination Layer", "status": "FAIL", "severity": "critical"},
+    {"id": 3, "name": "Workspace Isolation", "status": "FAIL", "severity": "critical"},
+    {"id": 4, "name": "ACP Communication", "status": "PASS", "severity": "critical"},
+    {"id": 5, "name": "Vessel Registry", "status": "FAIL", "severity": "warning"},
+    {"id": 6, "name": "Backend Connectivity", "status": "PASS", "severity": "warning"},
+    {"id": 7, "name": "Resource Allocation", "status": "PASS", "severity": "warning"},
+    {"id": 8, "name": "Anti-Affinity", "status": "INFO", "severity": "info"},
+    {"id": 9, "name": "Health Probes", "status": "PASS", "severity": "warning"},
+    {"id": 10, "name": "Dataflow Enforcement", "status": "PASS", "severity": "warning"}
   ]
 }
