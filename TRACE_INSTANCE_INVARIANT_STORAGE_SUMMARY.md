@@ -1,244 +1,227 @@
-# Trace Analysis: instance-invariant-storage-with-vessel-flow
+# Trace Summary: Instance-Invariant Storage for Impulses and Activities
+
+**Specification**: For a given (metabob_api_key, project_id) pair, impulse and activity storage must be accessible from any instance (opencode or metabob-cli) without differences.
+
+**Status**: ✅ TRACED - Comprehensive analysis completed
+
+---
 
 ## Executive Summary
 
-**Specification**: Impulse and activity data storage must be invariant across opencode/metabob-cli instances for a given (metabob_api_key, project_id) pair.
+### Current State: ⚠️ PARTIALLY INSTANCE-INVARIANT
 
-**Current Status**: ❌ **VIOLATED** - Storage is instance-specific, NOT instance-invariant
+- **Local Storage**: Storage.ts writes to local filesystem only
+- **Vessel Flow**: opencode -> Storage.ts -> Local filesystem (BYPASSES CLI MCP)
+- **Impact**: Impulses/activities created in Instance A are NOT accessible from Instance B
 
-**Root Cause**: opencode Storage.ts bypasses CLI MCP vessel flow, writing only to local filesystem
+### Desired State: ✅ FULLY INSTANCE-INVARIANT
 
----
-
-## Architecture Analysis
-
-### Current (Broken) Flow
-```
-opencode -> Storage.ts -> Bun.write() -> Local filesystem ONLY
-```
-
-### Desired (Correct) Flow
-```
-opencode -> impulse tool -> CLI MCP tool -> rpc-api -> SurrealDB
-                    ↓
-              Local cache (optional)
-```
+- **Dual Storage**: Local caching + Backend persistence via CLI MCP
+- **Vessel Flow**: opencode -> CLI MCP tools -> rpc-api -> SurrealDB
+- **Impact**: Data accessible from any instance with matching credentials
 
 ---
 
-## Component Analysis
+## Critical Violations
 
-### 8 Components Traced
+### 🔴 HIGH Severity
 
-#### ❌ HIGH PRIORITY VIOLATIONS (4)
+1. **Vessel Boundary Violation**
+   - Location: `repos/metabob-opencode/packages/opencode/src/storage/storage.ts:208-234`
+   - Issue: Direct local filesystem writes bypass CLI MCP entirely
+   - Impact: Instance-specific storage breaks cross-instance access
 
-1. **Storage.ts** (repos/metabob-opencode/packages/opencode/src/storage/storage.ts:1-266)
-   - **Gap**: NO vessel flow - writes directly to local filesystem
-   - **Impact**: All storage operations bypass backend
-   - **Fix**: Replace Bun.write() calls with CLI MCP calls
+2. **Missing Backend Sync**
+   - Location: `repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts:64-67`
+   - Issue: impulse_create tool doesn't call metabob_impulse_store after local write
+   - Impact: Impulses only exist on creating instance
 
-2. **ImpulseCreateTool** (repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts:14-102)
-   - **Gap**: No backend sync after local write
-   - **Impact**: Impulses only exist on creating instance
-   - **Fix**: Add `metabob_impulse_store()` call after line 67
+3. **Missing Backend Fallback**
+   - Location: `repos/metabob-opencode/packages/opencode/src/session/activity.ts:470-520`
+   - Issue: Activity.load only checks local storage
+   - Impact: Cannot load activities created by other instances
 
-3. **Activity.save** (repos/metabob-opencode/packages/opencode/src/session/activity.ts:577-591)
-   - **Gap**: No backend sync
-   - **Impact**: Activities not accessible cross-instance
-   - **Fix**: Add `metabob_activity_save()` call after Storage.write
+### 🟡 MEDIUM Severity
 
-4. **Activity.load** (repos/metabob-opencode/packages/opencode/src/session/activity.ts:470-520)
-   - **Gap**: No backend fallback
-   - **Impact**: Cannot load activities from other instances
-   - **Fix**: Add CLI MCP fallback when Storage.read fails
-
-#### ✅ REFERENCE IMPLEMENTATIONS (2)
-
-5. **metabob_impulse_store** (repos/metabob-cli/src/metabob_cli/mcp/tools.py:~3500-3550)
-   - ✅ Correctly implements vessel flow: CLI -> rpc-api -> SurrealDB
-   - ✅ Enforces (api_key, project_id) scoping
-   - ✅ Already deployed and working
-
-6. **metabob_impulse_load** (repos/metabob-cli/src/metabob_cli/mcp/tools.py:~3580-3620)
-   - ✅ Correctly retrieves from backend
-   - ✅ Cross-instance access working
-   - ✅ Already deployed and working
+4. **Local State Dependency**
+   - Location: `repos/metabob-opencode/packages/opencode/src/session/session-memory.ts:114-124`
+   - Issue: SessionMemory.save writes to local storage without backend sync
+   - Impact: Session memory not shared across instances
 
 ---
 
-## Violations Summary
+## Data Flow Analysis
 
-### 4 Violations Detected
+### Current Flow (BROKEN)
+```
+User creates impulse
+  → impulse_create tool
+  → SessionMemory.addImpulse
+  → Activity.addImpulses
+  → Activity.save
+  → Storage.write(['activity', id])
+  → Local filesystem ONLY ❌
+```
 
-1. **vessel-boundary-violation** (HIGH)
-   - Storage.ts bypasses CLI MCP entirely
-   - Location: repos/metabob-opencode/packages/opencode/src/storage/storage.ts:208-234
-   - Impact: Instance A cannot access Instance B's data
+### Desired Flow (CORRECT)
+```
+User creates impulse
+  → impulse_create tool
+  → SessionMemory.addImpulse
+  → Activity.addImpulses
+  → Activity.save
+  → Storage.write(['activity', id]) (local cache)
+  → CLI MCP metabob_impulse_store() ✅
+  → rpc-api /v2/impulses ✅
+  → SurrealDB (cross-instance) ✅
+```
 
-2. **missing-backend-sync** (HIGH)
-   - impulse_create doesn't call metabob_impulse_store
-   - Location: repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts:64-67
-   - Impact: Impulses only on local instance
+---
 
-3. **missing-backend-fallback** (HIGH)
-   - Activity.load only checks local storage
-   - Location: repos/metabob-opencode/packages/opencode/src/session/activity.ts:470-520
-   - Impact: Cannot load cross-instance activities
+## Components Requiring Changes
 
-4. **local-state-dependency** (MEDIUM)
-   - SessionMemory.save no backend sync
-   - Location: repos/metabob-opencode/packages/opencode/src/session/session-memory.ts:114-124
-   - Impact: Session memory not shared
+| File | Component | Gap | Priority |
+|------|-----------|-----|----------|
+| storage.ts | Storage namespace | No vessel flow enforcement | HIGH |
+| impulse-create.ts | ImpulseCreateTool | No backend sync | HIGH |
+| activity.ts | Activity.save | No backend sync | HIGH |
+| activity.ts | Activity.load | Missing backend fallback | HIGH |
+| impulse-sync.ts | syncImpulseToActivity | Missing backend sync | MEDIUM |
+| session-memory.ts | SessionMemory.save | No backend integration | MEDIUM |
+
+---
+
+## Reference Implementations (✅ CORRECT)
+
+These CLI MCP tools already implement the correct vessel flow:
+
+1. **metabob_impulse_store**
+   - Location: `repos/metabob-cli/src/metabob_cli/mcp/tools.py:~3500-3550`
+   - Flow: CLI MCP -> rpc-api /v2/impulses -> SurrealDB
+   - Status: ✅ Correctly implements cross-instance storage
+
+2. **metabob_impulse_load**
+   - Location: `repos/metabob-cli/src/metabob_cli/mcp/tools.py:~3580-3620`
+   - Flow: CLI MCP -> rpc-api /v2/impulses/{id} -> SurrealDB
+   - Status: ✅ Correctly implements cross-instance retrieval
 
 ---
 
 ## Fix Strategy
 
-### Phase 1: Dual-Write Pattern (Backend Sync)
+### Phase 1: Dual-Write Pattern
+Add backend sync AFTER local writes (maintains performance, adds persistence)
 
-**Goal**: Add backend persistence after local writes
+**Changes:**
+1. `impulse-create.ts`: After local write, call `metabob_impulse_store()`
+2. `activity.ts (Activity.save)`: After Storage.write, call `metabob_activity_save()`
 
-**Changes**:
-```typescript
-// repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts:67
-await SessionMemory.addImpulse(sessionID, impulse)
-await syncImpulseToActivity(sessionID, impulse)
+### Phase 2: Read Fallback
+Add backend fallback for read operations (enables cross-instance access)
 
-// ADD THIS:
-await MCP.call('metabob_impulse_store', {
-  impulse_id: impulse.id,
-  project_id: await getProjectId(),
-  impulse_data: impulse
-})
-```
-
-```typescript
-// repos/metabob-opencode/packages/opencode/src/session/activity.ts:589
-await Storage.write(["activity", activity.id], cleanedActivity)
-
-// ADD THIS:
-await MCP.call('metabob_activity_save', {
-  activity_id: activity.id,
-  project_id: activity.projectID,
-  activity_data: cleanedActivity
-})
-```
-
-### Phase 2: Read Fallback (Cross-Instance Access)
-
-**Goal**: Fallback to backend when local read fails
-
-**Changes**:
-```typescript
-// repos/metabob-opencode/packages/opencode/src/session/activity.ts:470-520
-export async function load(id: string): Promise<Info> {
-  try {
-    // Try local first (fast path)
-    return await Storage.read<Info>(["activity", id])
-  } catch (error) {
-    // Fallback to backend (cross-instance)
-    const result = await MCP.call('metabob_activity_load', {
-      activity_id: id,
-      project_id: await getProjectId()
-    })
-    return result.activity_data
-  }
-}
-```
+**Changes:**
+1. `activity.ts (Activity.load)`: Try local first, fallback to `metabob_activity_load()`
+2. `impulse-load.ts`: Try SessionMemory, fallback to `metabob_impulse_load()`
 
 ### Phase 3: Validation
+Validate vessel flow enforcement
 
-**Run harness**: `tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts`
-
-**Tests**:
-1. ✅ Vessel flow compliance (no direct RPC imports)
-2. ✅ Cross-instance impulse retrieval
-3. ✅ Multi-tenant isolation
-4. ✅ Project isolation
-5. ✅ Pagination
-
----
-
-## Key Insights
-
-1. **CLI Already Correct**: metabob_impulse_store/load in CLI already implement proper vessel flow
-2. **opencode Bypasses CLI**: Storage.ts writes directly to filesystem without MCP calls
-3. **Dual Storage Needed**: Local for caching + backend (via CLI) for cross-instance invariance
-4. **Validation Harness Exists**: Comprehensive test suite already written
-
----
-
-## Data Flow Comparison
-
-### Current (Broken)
-```
-impulse_create → SessionMemory → Activity → Storage.write → Local filesystem
-                                                           ↓
-                                                    Instance-specific
-```
-
-### Desired (Fixed)
-```
-impulse_create → SessionMemory → Activity → Storage.write → Local (cache)
-                                          ↓
-                                   MCP.call(metabob_impulse_store)
-                                          ↓
-                                   CLI → rpc-api → SurrealDB
-                                          ↓
-                                   Instance-invariant ✅
-```
+**Tests:**
+- Run `invariant-storage-across-instances-with-vessel-flow-harness.ts`
+- Verify no direct RPC imports in opencode
+- Test cross-instance impulse/activity retrieval
+- Verify (api_key, project_id) isolation
 
 ---
 
 ## Vessel Boundaries
 
-### opencode (Frontend Vessel)
-- ✅ MUST: Call CLI MCP tools for backend operations
-- ✅ MUST: Use local storage for caching only
-- ❌ MUST NOT: Make direct HTTP calls to rpc-api
-- ❌ MUST NOT: Import metabob rpc client
+### OpenCode (Frontend Vessel)
+**Role**: User interaction, tool execution, local caching
+
+**MUST**:
+- Call CLI MCP tools for backend operations
+- Use local storage for caching only
+- Respect (api_key, project_id) scoping
+
+**MUST NOT**:
+- Make direct HTTP calls to rpc-api
+- Import metabob rpc client directly
+- Use fetch() to call backend endpoints
 
 ### CLI (Gateway Vessel)
-- ✅ MUST: Forward storage operations to rpc-api
-- ✅ MUST: Add (api_key, project_id) to requests
-- ❌ MUST NOT: Allow opencode to bypass it
+**Role**: MCP tool provider, vessel flow enforcement
 
-### rpc-api (Backend Vessel)
-- ✅ MUST: Enforce (api_key, project_id) isolation
-- ✅ MUST: Store in SurrealDB
-- ❌ MUST NOT: Be called directly by opencode
+**MUST**:
+- Forward all storage operations to rpc-api
+- Add (api_key, project_id) to all requests
+- Validate inputs before forwarding
+
+**MUST NOT**:
+- Allow opencode to bypass it
+- Store state locally
+
+### RPC-API (Backend Vessel)
+**Role**: Persistence, multi-tenancy, database access
+
+**MUST**:
+- Enforce (api_key, project_id) isolation
+- Store in SurrealDB for cross-instance access
+- Return consistent data regardless of requesting instance
+
+**MUST NOT**:
+- Be called directly by opencode
+
+---
+
+## Key Insights
+
+1. **CLI Implements Correct Flow**: `metabob_impulse_store` and `metabob_impulse_load` already implement correct vessel flow
+2. **OpenCode Bypasses CLI**: Storage.ts writes directly to local filesystem without calling CLI MCP tools
+3. **Dual Storage Needed**: Local storage for caching + backend storage (via CLI) for cross-instance invariance
+4. **Project ID Scoping**: Backend uses (api_key, project_id) for multi-tenancy - project_id is git root hash
+5. **Validation Harness Exists**: `tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts`
+
+---
+
+## Validation Harness
+
+**Location**: `tests/validation-harnesses/invariant-storage-across-instances-with-vessel-flow-harness.ts`
+
+This comprehensive test suite validates:
+- Cross-instance impulse/activity retrieval
+- (api_key, project_id) isolation
+- Vessel flow enforcement
+- No direct RPC imports
 
 ---
 
 ## Trace Metadata
 
-- **Traced At**: 2026-02-27
-- **Traced By**: review-agent
-- **Method**: code-reading + dataflow-analysis
-- **Files Analyzed**: 7
-- **Validation Harness**: invariant-storage-across-instances-with-vessel-flow-harness.ts
+- **Traced At**: 2026-02-27T04:11:00Z
+- **Traced By**: review-agent via trace-data-flow-single-feature activity
+- **Method**: Automated code reading + dataflow-analysis + CPG dependency tracing
+- **Activity Duration**: 925.9s
+- **Activity Cost**: $2.0535
 
 ---
 
 ## Next Steps
 
-1. ✅ Trace complete - impulse data ready at `trace-instance-invariant-storage-analysis.json`
-2. ⏭️ Downstream tasks can use this impulse for validation/enforcement
-3. ⏭️ Fix Phase 1: Add dual-write to impulse_create and Activity.save
-4. ⏭️ Fix Phase 2: Add backend fallback to Activity.load and impulse_load
-5. ⏭️ Fix Phase 3: Run validation harness to verify
+1. ✅ **COMPLETE**: Trace current implementation
+2. 🔄 **NEXT**: Enforce vessel flow (Phase 1 + Phase 2)
+3. ⏳ **PENDING**: Validate with harness (Phase 3)
+4. ⏳ **PENDING**: Aggregate conflicts and ripple changes
 
 ---
 
-## Impulse Details
+## Impulse Location
 
-**ID**: `trace-instance-invariant-storage-with-vessel-flow`
-**Type**: `templateDefinition`
-**Budget**: 5000 tokens
-**File**: `trace-instance-invariant-storage-analysis.json`
+**ID**: `trace-Instance-Invariant Storage for Impulses and Activities`
 
-This impulse can be loaded by downstream agents to:
-- Understand current vs desired state
-- Implement fixes based on traced components
-- Validate vessel flow compliance
-- Enforce instance-invariant storage
+**Files**:
+- `./trace-Instance-Invariant-Storage-for-Impulses-and-Activities.json`
+- `./impulses/trace-Instance-Invariant-Storage-for-Impulses-and-Activities.json`
+
+**Budget**: 5000 tokens allocated for downstream tasks
+

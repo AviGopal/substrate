@@ -1,0 +1,105 @@
+{
+  "specificationName": "devbob-k8s-git-operations",
+  "harnessFiles": {
+    "bash": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+    "typescript": "tests/validation-harnesses/devbob-k8s-git-operations-harness.ts"
+  },
+  "testCasesFile": "tests/validation-harnesses/devbob-k8s-git-operations-test-cases.json",
+  "testCases": [
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-1",
+      "name": "git-config-present",
+      "input": "kubectl exec -n metabob {POD} -- git config --list",
+      "expectedOutput": "user.name= and user.email= present, exit code 0"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-2",
+      "name": "gh-cli-installed",
+      "input": "kubectl exec -n metabob {POD} -- which gh",
+      "expectedOutput": "/usr/bin/gh, exit code 0"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-3",
+      "name": "git-credentials-present",
+      "input": "kubectl exec -n metabob {POD} -- env | grep -E '(GIT_USER|GITHUB_TOKEN)'",
+      "expectedOutput": "GIT_USER_NAME=, GIT_USER_EMAIL=, GITHUB_TOKEN= present"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-4",
+      "name": "gh-cli-authenticated",
+      "input": "kubectl exec -n metabob {POD} -- gh auth status",
+      "expectedOutput": "Logged in to github.com, exit code 0"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-5",
+      "name": "workspace-accessible",
+      "input": "kubectl exec -n metabob {POD} -- ls -la /workspace",
+      "expectedOutput": "/workspace accessible, exit code 0"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-6",
+      "name": "git-clone-success",
+      "input": "kubectl exec -n metabob {POD} -- git clone {REPO} /workspace/test-clone-{POD}",
+      "expectedOutput": "Clone succeeds without fatal errors, exit code 0",
+      "destructive": true
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-7",
+      "name": "git-commit-success",
+      "input": "kubectl exec -n metabob {POD} -- git commit -m 'test'",
+      "expectedOutput": "Commit succeeds with proper attribution, exit code 0",
+      "destructive": true
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-8",
+      "name": "git-push-success",
+      "input": "kubectl exec -n metabob {POD} -- git push",
+      "expectedOutput": "Push succeeds without authentication errors, exit code 0",
+      "destructive": true
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-9",
+      "name": "gh-pr-create",
+      "input": "kubectl exec -n metabob {POD} -- gh pr create --title 'Test' --body 'Test'",
+      "expectedOutput": "PR created or already exists, contains https://github.com",
+      "destructive": true
+    }
+  ],
+  "harnessImpulseId": "harness-devbob-k8s-git-operations",
+  "usage": {
+    "bash": {
+      "basic": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "singlePod": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --pod devbob-0",
+      "nonDestructive": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --skip-destructive",
+      "jsonOutput": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --json"
+    },
+    "typescript": {
+      "basic": "bun run tests/validation-harnesses/devbob-k8s-git-operations-harness.ts",
+      "singlePod": "bun run tests/validation-harnesses/devbob-k8s-git-operations-harness.ts --pod devbob-0",
+      "nonDestructive": "bun run tests/validation-harnesses/devbob-k8s-git-operations-harness.ts --skip-destructive",
+      "jsonOutput": "bun run tests/validation-harnesses/devbob-k8s-git-operations-harness.ts --json"
+    }
+  },
+  "currentExecutionResults": {
+    "date": "2026-02-27",
+    "harness": "bash",
+    "totalTests": 15,
+    "passed": 12,
+    "failed": 3,
+    "passingTests": [
+      "git-config-present (3 pods)",
+      "gh-cli-installed (3 pods)",
+      "git-credentials-present (3 pods)",
+      "workspace-accessible (3 pods)"
+    ],
+    "failingTests": [
+      "gh-cli-authenticated (3 pods) - GITHUB_TOKEN empty"
+    ],
+    "untested": [
+      "git-clone-success (destructive - blocked by auth)",
+      "git-commit-success (destructive - blocked by auth)",
+      "git-push-success (destructive - blocked by auth)",
+      "gh-pr-create (destructive - blocked by auth)"
+    ]
+  }
+}

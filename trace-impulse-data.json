@@ -1,0 +1,78 @@
+{
+  "id": "trace-devbob-k8s-git-operations",
+  "specificationName": "devbob-k8s-git-operations",
+  "traceDate": "2026-02-27",
+  "status": "IMPLEMENTATION COMPLETE, VALIDATION PENDING",
+  
+  "summary": {
+    "implementation": "COMPLETE",
+    "configuration": "COMPLETE",
+    "validation": "PENDING",
+    "criticalIssue": "GITHUB_TOKEN may be placeholder - needs verification"
+  },
+  
+  "componentsTraced": [
+    "Dockerfile.devbob-local (git/gh CLI installation)",
+    "entrypoint-self-config.sh (git config + gh auth)",
+    "k8s-devbob-statefulset.yaml (StatefulSet with secrets)",
+    "deploy-devbob-k8s-git.sh (deployment script)",
+    "devbob-k8s-git-operations-harness.sh (validation)",
+    "Helm templates (StatefulSet + Secret)",
+    "Helm values (local.devbob.values.yaml)"
+  ],
+  
+  "keyFindings": {
+    "implemented": [
+      "Git installed in image (Dockerfile.devbob-local:11)",
+      "GitHub CLI installed (Dockerfile.devbob-local:20-28)",
+      "Git config at startup (entrypoint-self-config.sh:126-143)",
+      "GH authentication at startup (entrypoint-self-config.sh:145-180)",
+      "Secrets with 4 keys",
+      "StatefulSet mounting secrets as env vars",
+      "Deployment script creates/updates secret",
+      "Validation harness tests 9 capabilities"
+    ],
+    "gaps": {
+      "critical": [
+        "GITHUB_TOKEN value unknown",
+        "Validation harness not executed"
+      ],
+      "high": [
+        "Secrets committed to git (security risk)"
+      ],
+      "medium": [
+        "Legacy deployment.yaml missing git env vars"
+      ]
+    }
+  },
+  
+  "dataFlow": {
+    "entry": "deploy-devbob-k8s-git.sh creates secret",
+    "transform": "StatefulSet → Pod → entrypoint-self-config.sh",
+    "validate": "git config + gh auth at startup",
+    "exit": "git operations → GitHub API"
+  },
+  
+  "enforcementActions": [
+    {
+      "priority": 1,
+      "action": "Verify secret contents",
+      "command": "kubectl get secret devbob-secrets -n metabob"
+    },
+    {
+      "priority": 2,
+      "action": "Run non-destructive validation",
+      "command": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --skip-destructive"
+    },
+    {
+      "priority": 3,
+      "action": "Update secret if invalid",
+      "command": "./deploy-devbob-k8s-git.sh"
+    },
+    {
+      "priority": 4,
+      "action": "Run full validation",
+      "command": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --pod devbob-0"
+    }
+  ]
+}

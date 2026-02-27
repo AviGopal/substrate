@@ -1,0 +1,173 @@
+{
+  "specificationName": "metabob-session-tracking",
+  "harnessFile": "tests/validation-harnesses/metabob-session-tracking-harness.ts",
+  "description": "End-to-end validation of Session Lifecycle Tracking (Specification 2). Tests session creation tracking, session close tracking, stats aggregation, error resilience, and payload correctness.",
+  "testCases": [
+    {
+      "impulseId": "validation-metabob-session-tracking-case-1",
+      "name": "Session.createNext() triggers metabob_record_session_start",
+      "input": {
+        "action": "createSession",
+        "directory": "process.cwd()",
+        "title": "Test Session",
+        "activityId": "test-activity"
+      },
+      "expectedOutput": {
+        "mcpCallCount": 1,
+        "toolName": "metabob_record_session_start",
+        "payloadFields": {
+          "sessionId": "present",
+          "agentType": "present",
+          "timestamp": "present",
+          "context.workingDirectory": "present"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-metabob-session-tracking-case-2",
+      "name": "Session.close() triggers metabob_record_session_complete with stats",
+      "input": {
+        "action": "closeSession",
+        "sessionID": "test-session-id",
+        "outcome": "completed"
+      },
+      "expectedOutput": {
+        "mcpCallCount": 1,
+        "toolName": "metabob_record_session_complete",
+        "payloadFields": {
+          "sessionId": "present",
+          "timestamp": "present",
+          "summary": "present",
+          "outcome": "present"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-metabob-session-tracking-case-3",
+      "name": "Agent type defaults to 'general' when no activityId",
+      "input": {
+        "action": "createSession",
+        "directory": "process.cwd()",
+        "title": "Test Session",
+        "activityId": null
+      },
+      "expectedOutput": {
+        "agentType": "general"
+      }
+    },
+    {
+      "impulseId": "validation-metabob-session-tracking-case-4",
+      "name": "Agent type uses activityId when provided",
+      "input": {
+        "action": "createSession",
+        "directory": "process.cwd()",
+        "title": "Test Session",
+        "activityId": "custom-activity-123"
+      },
+      "expectedOutput": {
+        "agentType": "custom-activity-123"
+      }
+    },
+    {
+      "impulseId": "validation-metabob-session-tracking-case-5",
+      "name": "Session creation succeeds even if MCP tracking fails",
+      "input": {
+        "action": "createSession",
+        "directory": "process.cwd()",
+        "title": "Test Session",
+        "mcpAvailable": false
+      },
+      "expectedOutput": {
+        "sessionCreated": true,
+        "sessionHasId": true
+      }
+    },
+    {
+      "impulseId": "validation-metabob-session-tracking-case-6",
+      "name": "Session.close() succeeds even if MCP tracking fails",
+      "input": {
+        "action": "closeSession",
+        "sessionID": "test-session-id",
+        "outcome": "completed",
+        "mcpAvailable": false
+      },
+      "expectedOutput": {
+        "closeSucceeded": true
+      }
+    }
+  ],
+  "validationStrategy": {
+    "approach": "Mock MCP client and intercept tracking calls",
+    "steps": [
+      "1. Mock MCP.clients() to return MockMCPClient",
+      "2. Create test session via Session.createNext()",
+      "3. Verify metabob_record_session_start called with correct payload",
+      "4. Close session via Session.close()",
+      "5. Verify metabob_record_session_complete called with stats",
+      "6. Test error resilience by mocking MCP failures",
+      "7. Verify session lifecycle continues despite tracking errors"
+    ],
+    "mockingStrategy": "Replace MCP.clients() with mock that captures callTool() invocations"
+  },
+  "harnessImpulseId": "harness-metabob-session-tracking",
+  "executionInstructions": {
+    "command": "bun tests/validation-harnesses/metabob-session-tracking-harness.ts",
+    "expectedExitCode": 0,
+    "outputFormat": "Console output with test results and pass/fail counts"
+  },
+  "validationCriteria": [
+    {
+      "criterion": "metabob_record_session_start called on session creation",
+      "testCase": "case-1",
+      "status": "pending"
+    },
+    {
+      "criterion": "Payload includes sessionId, agentType, timestamp, workingDirectory",
+      "testCase": "case-1",
+      "status": "pending"
+    },
+    {
+      "criterion": "metabob_record_session_complete called on session close",
+      "testCase": "case-2",
+      "status": "pending"
+    },
+    {
+      "criterion": "Complete payload includes sessionId, timestamp, summary, outcome",
+      "testCase": "case-2",
+      "status": "pending"
+    },
+    {
+      "criterion": "Agent type defaults to 'general' without activityId",
+      "testCase": "case-3",
+      "status": "pending"
+    },
+    {
+      "criterion": "Agent type uses activityId when provided",
+      "testCase": "case-4",
+      "status": "pending"
+    },
+    {
+      "criterion": "Session creation succeeds despite tracking failure",
+      "testCase": "case-5",
+      "status": "pending"
+    },
+    {
+      "criterion": "Session close succeeds despite tracking failure",
+      "testCase": "case-6",
+      "status": "pending"
+    }
+  ],
+  "integrationNotes": {
+    "dependencies": [
+      "repos/metabob-opencode/packages/opencode/src/session/index.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/metabob-tracking.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/stats.ts",
+      "repos/metabob-opencode/packages/opencode/src/mcp/index.ts"
+    ],
+    "mockingRequired": [
+      "MCP.clients() - Returns mock client",
+      "Client.callTool() - Captures tracking calls"
+    ],
+    "cleanupRequired": "Session.remove() after each test to avoid storage pollution"
+  }
+}

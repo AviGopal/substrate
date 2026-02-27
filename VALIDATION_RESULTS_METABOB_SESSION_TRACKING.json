@@ -1,0 +1,181 @@
+{
+  "specificationName": "metabob-session-tracking",
+  "timestamp": "2026-02-27T13:03:52.709Z",
+  "overallStatus": "PASS",
+  "duration": 2717,
+  "validationResults": [
+    {
+      "testCase": "validation-metabob-session-tracking-case-1",
+      "name": "Session.createNext() triggers metabob_record_session_start",
+      "status": "PASS",
+      "actual": {
+        "callCount": 1,
+        "hasSessionId": true,
+        "hasAgentType": true,
+        "hasTimestamp": true,
+        "hasWorkingDirectory": true
+      },
+      "expected": {
+        "callCount": 1,
+        "hasSessionId": true,
+        "hasAgentType": true,
+        "hasTimestamp": true,
+        "hasWorkingDirectory": true
+      },
+      "difference": null,
+      "evidence": "MCP tool metabob_record_session_start was called exactly once with all required fields: sessionId, agentType (test-activity), timestamp, and context.workingDirectory"
+    },
+    {
+      "testCase": "validation-metabob-session-tracking-case-2",
+      "name": "Session.close() triggers metabob_record_session_complete with stats",
+      "status": "PASS",
+      "actual": {
+        "callCount": 1,
+        "hasSessionId": true,
+        "hasTimestamp": true,
+        "hasSummary": true,
+        "hasOutcome": true
+      },
+      "expected": {
+        "callCount": 1,
+        "hasSessionId": true,
+        "hasTimestamp": true,
+        "hasSummary": true,
+        "hasOutcome": true
+      },
+      "difference": null,
+      "evidence": "MCP tool metabob_record_session_complete was called exactly once with all required fields: sessionId, timestamp, summary (stats), and outcome (completed)"
+    },
+    {
+      "testCase": "validation-metabob-session-tracking-case-3",
+      "name": "Agent type defaults to 'general' when no activityId",
+      "status": "PASS",
+      "actual": {
+        "agentType": "general"
+      },
+      "expected": {
+        "agentType": "general"
+      },
+      "difference": null,
+      "evidence": "Session created without activityId correctly defaulted agentType to 'general' in tracking payload"
+    },
+    {
+      "testCase": "validation-metabob-session-tracking-case-4",
+      "name": "Agent type uses activityId when provided",
+      "status": "PASS",
+      "actual": {
+        "agentType": "custom-activity-123"
+      },
+      "expected": {
+        "agentType": "custom-activity-123"
+      },
+      "difference": null,
+      "evidence": "Session created with activityId='custom-activity-123' correctly used it as agentType in tracking payload"
+    },
+    {
+      "testCase": "validation-metabob-session-tracking-case-5",
+      "name": "Session creation succeeds even if MCP tracking fails",
+      "status": "PASS",
+      "actual": {
+        "sessionCreated": true
+      },
+      "expected": {
+        "sessionCreated": true
+      },
+      "difference": null,
+      "evidence": "Session was successfully created with valid session ID despite MCP client throwing 'MCP connection failed' error. Tracking failure was logged but did not propagate."
+    },
+    {
+      "testCase": "validation-metabob-session-tracking-case-6",
+      "name": "Session.close() succeeds even if MCP tracking fails",
+      "status": "PASS",
+      "actual": {
+        "closeSucceeded": true
+      },
+      "expected": {
+        "closeSucceeded": true
+      },
+      "difference": null,
+      "evidence": "Session.close() returned true despite MCP client throwing 'MCP connection failed' error. Tracking failure was logged but did not propagate."
+    }
+  ],
+  "summary": {
+    "totalTests": 6,
+    "passed": 6,
+    "failed": 0,
+    "successRate": 100.0
+  },
+  "validationCriteria": {
+    "metabob_record_session_start_called": "PASS - Called on every Session.createNext()",
+    "payload_includes_sessionId": "PASS - sessionId present in all start tracking calls",
+    "payload_includes_agentType": "PASS - agentType present and correct (activityId or 'general')",
+    "payload_includes_timestamp": "PASS - timestamp present in all tracking calls",
+    "payload_includes_workingDirectory": "PASS - context.workingDirectory present in all start calls",
+    "metabob_record_session_complete_called": "PASS - Called on Session.close()",
+    "complete_payload_includes_sessionId": "PASS - sessionId present in complete tracking",
+    "complete_payload_includes_timestamp": "PASS - timestamp present in complete tracking",
+    "complete_payload_includes_summary": "PASS - summary (stats) present in complete tracking",
+    "complete_payload_includes_outcome": "PASS - outcome present in complete tracking",
+    "agent_type_defaults_to_general": "PASS - Defaults to 'general' without activityId",
+    "agent_type_uses_activityId": "PASS - Uses activityId when provided",
+    "session_creation_resilient_to_tracking_failure": "PASS - Session created despite MCP failure",
+    "session_close_resilient_to_tracking_failure": "PASS - Session closed despite MCP failure"
+  },
+  "logs": {
+    "sessionStartTracking": [
+      "INFO service=metabob-tracking sessionId=ses_360cd3b09ffeEnDZNu1VB8pxzs agentType=test-activity Session start recorded",
+      "INFO service=metabob-tracking sessionId=ses_360cd39cfffeZslcKNHZejP9R0 agentType=general Session start recorded",
+      "INFO service=metabob-tracking sessionId=ses_360cd37f4ffesyk6zjr9CyZCOb agentType=general Session start recorded",
+      "INFO service=metabob-tracking sessionId=ses_360cd36d9ffedkSwzmv43yx2Sw agentType=custom-activity-123 Session start recorded",
+      "WARN service=metabob-tracking sessionId=ses_360cd359bffeTUlQKDzDh4lsRn error=MCP connection failed Failed to record session start",
+      "INFO service=metabob-tracking sessionId=ses_360cd346affehQPkT4gn3lFNZh agentType=general Session start recorded"
+    ],
+    "sessionCloseTracking": [
+      "INFO service=session sessionID=ses_360cd39cfffeZslcKNHZejP9R0 outcome=completed prompts=0 cost=0 session closed",
+      "INFO service=metabob-tracking sessionId=ses_360cd39cfffeZslcKNHZejP9R0 outcome=completed prompts=0 cost=0 Session complete recorded",
+      "INFO service=session sessionID=ses_360cd346affehQPkT4gn3lFNZh outcome=completed prompts=0 cost=0 session closed",
+      "WARN service=metabob-tracking sessionId=ses_360cd346affehQPkT4gn3lFNZh error=MCP connection failed Failed to record session complete"
+    ]
+  },
+  "implementationDetails": {
+    "trackingIntegration": {
+      "sessionStart": {
+        "location": "repos/metabob-opencode/packages/opencode/src/session/index.ts:276-284",
+        "method": "Session.createNext()",
+        "trackingCall": "MetabobTracking.recordSessionStart()",
+        "verified": "PASS"
+      },
+      "sessionClose": {
+        "location": "repos/metabob-opencode/packages/opencode/src/session/index.ts:590-634",
+        "method": "Session.close()",
+        "trackingCall": "MetabobTracking.recordSessionComplete()",
+        "verified": "PASS"
+      }
+    },
+    "errorResilience": {
+      "fireAndForget": "PASS - Tracking calls wrapped in .catch() to prevent propagation",
+      "sessionCreation": "PASS - createNext() completes despite tracking failure",
+      "sessionClose": "PASS - close() completes despite tracking failure",
+      "logging": "PASS - Tracking failures logged as WARN with error details"
+    },
+    "payloadCorrectness": {
+      "sessionId": "PASS - Present in all tracking calls",
+      "agentType": "PASS - Derived from activityId or defaults to 'general'",
+      "timestamp": "PASS - Present in all tracking calls",
+      "workingDirectory": "PASS - Present in all start tracking calls",
+      "summary": "PASS - Present in all complete tracking calls (prompts, tokens, cost, tools)",
+      "outcome": "PASS - Present in all complete tracking calls"
+    }
+  },
+  "resultsImpulseId": "validation-results-metabob-session-tracking",
+  "harnessFile": "tests/validation-harnesses/metabob-session-tracking-harness.ts",
+  "resultsFile": "test-results/metabob-session-tracking-validation-results.json",
+  "nextSteps": [
+    "✅ Core tracking infrastructure validated - 100% pass rate",
+    "⏳ Integrate Session.close() into CLI lifecycle (repos/metabob-opencode/packages/opencode/src/cli/cmd/prompt.ts)",
+    "⏳ Integrate Session.close() into server lifecycle (repos/metabob-opencode/packages/opencode/src/server/server.ts)",
+    "⏳ Integrate Session.close() into activity cleanup (Session.cleanupActivitySession)",
+    "⏳ Add filesModified tracking (integrate with Snapshot)",
+    "⏳ Add integration tests for git context extraction (branch, commit)"
+  ]
+}

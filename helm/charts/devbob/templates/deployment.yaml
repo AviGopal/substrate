@@ -45,6 +45,21 @@ spec:
             secretKeyRef:
               name: {{ include "devbob.fullname" . }}-secrets
               key: anthropic-api-key
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devbob.fullname" . }}-secrets
+              key: github-token
+        - name: GIT_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devbob.fullname" . }}-secrets
+              key: git-user-name
+        - name: GIT_USER_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devbob.fullname" . }}-secrets
+              key: git-user-email
         - name: METABOB_API_URL
           value: {{ .Values.env.metabobApiUrl | quote }}
         - name: SURREAL_HOST

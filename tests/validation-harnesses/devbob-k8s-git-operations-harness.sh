@@ -320,7 +320,7 @@ validate_pod() {
 ##############################################################################
 
 # Parse arguments
-while [[ $# -gt 0 ]]; then
+while [[ $# -gt 0 ]]; do
     case $1 in
         --pod)
             SINGLE_POD="$2"

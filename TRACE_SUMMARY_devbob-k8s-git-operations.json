@@ -1,0 +1,92 @@
+{
+  "specificationName": "devbob-k8s-git-operations",
+  "components": [
+    {
+      "file": "Dockerfile.devbob-local",
+      "component": "Image Build - Git/GH CLI Installation",
+      "currentBehavior": "Installs git (line 11) and GitHub CLI (lines 20-28) during image build",
+      "desiredBehavior": "Same - already correct",
+      "gap": "None - git and gh CLI are properly installed"
+    },
+    {
+      "file": "repos/metabob-opencode/docker/entrypoint-self-config.sh",
+      "component": "Git Configuration",
+      "currentBehavior": "Configures git user.name, user.email, init.defaultBranch, push.autoSetupRemote from environment variables at container startup (lines 126-143)",
+      "desiredBehavior": "Same - already correct",
+      "gap": "None - git configuration logic is implemented correctly"
+    },
+    {
+      "file": "repos/metabob-opencode/docker/entrypoint-self-config.sh",
+      "component": "GitHub CLI Authentication",
+      "currentBehavior": "Validates GITHUB_TOKEN format (ghp_* or github_pat_*), authenticates with 'gh auth login --with-token', verifies with 'gh auth status' (lines 145-180)",
+      "desiredBehavior": "Same - already correct",
+      "gap": "None - gh authentication logic is implemented correctly"
+    },
+    {
+      "file": "k8s-devbob-statefulset.yaml",
+      "component": "StatefulSet Environment Variables",
+      "currentBehavior": "Mounts GITHUB_TOKEN, GIT_USER_NAME, GIT_USER_EMAIL from Kubernetes secret 'devbob-secrets' as environment variables (lines 67-81)",
+      "desiredBehavior": "Same - already correct",
+      "gap": "None - secret mounting is configured correctly"
+    },
+    {
+      "file": "deploy-devbob-k8s-git.sh",
+      "component": "Deployment Script",
+      "currentBehavior": "Creates/updates devbob-secrets with 4 keys (anthropic-api-key, github-token, git-user-name, git-user-email), applies StatefulSet, waits for rollout (lines 1-120)",
+      "desiredBehavior": "Same - already correct",
+      "gap": "None - deployment automation is complete"
+    },
+    {
+      "file": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "component": "Validation Harness",
+      "currentBehavior": "Tests all 3 pods for 9 capabilities: git config, gh CLI installation, credentials, authentication, workspace, clone, commit, push, PR creation (lines 1-413)",
+      "desiredBehavior": "Same - comprehensive testing implemented",
+      "gap": "None - validation harness is thorough"
+    },
+    {
+      "file": "repos/platform/deployments/metabob/charts/devbob/charts/templates/statefulset.yaml",
+      "component": "Helm StatefulSet Template",
+      "currentBehavior": "Templated StatefulSet definition with git environment variables from secrets (lines 61-84)",
+      "desiredBehavior": "Same - template matches k8s YAML",
+      "gap": "None - Helm template is correct"
+    },
+    {
+      "file": "repos/platform/deployments/metabob/charts/devbob/charts/templates/secret.yaml",
+      "component": "Helm Secret Template",
+      "currentBehavior": "Templated secret with 4 keys base64-encoded from values (lines 1-17)",
+      "desiredBehavior": "Same - template is correct",
+      "gap": "None - secret template matches requirements"
+    },
+    {
+      "file": "repos/platform/deployments/metabob/charts/devbob/values/local.devbob.values.yaml",
+      "component": "Helm Values - Local Environment",
+      "currentBehavior": "Contains plain-text secrets committed to git repository (lines 15-23) - SECURITY RISK",
+      "desiredBehavior": "Secrets should be stored in .env file or external vault, NOT committed to git",
+      "gap": "HIGH SEVERITY - credentials exposed in version control history"
+    },
+    {
+      "file": "helm/charts/devbob/templates/deployment.yaml",
+      "component": "Legacy Deployment (Unused)",
+      "currentBehavior": "Defines Deployment (not StatefulSet) without git environment variables",
+      "desiredBehavior": "Should be updated to match StatefulSet or removed to avoid confusion",
+      "gap": "LOW SEVERITY - outdated definition may confuse developers"
+    }
+  ],
+  "dataFlow": "deploy-devbob-k8s-git.sh → kubectl create secret → devbob-secrets → StatefulSet env vars → entrypoint-self-config.sh → git config + gh auth → git operations → GitHub API",
+  "traceImpulseId": "trace-devbob-k8s-git-operations",
+  "traceDocument": "TRACE_DEVBOB_K8S_GIT_OPERATIONS.md",
+  "traceDataFile": "trace-impulse-data.json",
+  "conclusion": {
+    "implementationStatus": "COMPLETE",
+    "configurationStatus": "COMPLETE",
+    "validationStatus": "PENDING",
+    "criticalBlocker": "GITHUB_TOKEN value needs verification - may be placeholder 'none'",
+    "nextSteps": [
+      "1. Verify secret contents: kubectl get secret devbob-secrets -n metabob -o jsonpath='{.data.github-token}' | base64 -d",
+      "2. Run non-destructive validation: ./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --skip-destructive",
+      "3. Update secret if needed: ./deploy-devbob-k8s-git.sh",
+      "4. Run full validation: ./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --pod devbob-0",
+      "5. Fix security issue: Move secrets from local.devbob.values.yaml to .env"
+    ]
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "specificationName": "devbob-k8s-git-operations",
+  "enforcementDate": "2026-02-27",
+  "traceImpulseId": "trace-devbob-k8s-git-operations",
+  "enforcementImpulseId": "enforcement-devbob-k8s-git-operations",
+  
+  "changesApplied": [
+    {
+      "file": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "component": "Validation Harness - Argument Parser",
+      "line": 323,
+      "changeMade": "Fixed syntax error: changed 'while [[ $# -gt 0 ]]; then' to 'while [[ $# -gt 0 ]]; do'",
+      "reason": "Validation harness had bash syntax error preventing execution. while loops require 'do' keyword, not 'then'",
+      "impactAnalysis": "Critical fix - validation harness can now execute successfully",
+      "severity": "CRITICAL",
+      "status": "COMPLETE"
+    },
+    {
+      "file": "Dockerfile.devbob-local",
+      "component": "Container Image - GitHub CLI Installation",
+      "lines": "20-28",
+      "changeMade": "Rebuilt container image with gh CLI installation already present in Dockerfile",
+      "reason": "Running pods did not have gh CLI installed. Dockerfile had correct installation commands but image needed rebuild and pod restart",
+      "impactAnalysis": "All 3 pods now have gh CLI installed (verified with gh --version). Non-destructive validation improved from 9/15 to 12/15 passing tests",
+      "severity": "CRITICAL",
+      "status": "COMPLETE",
+      "verificationCommand": "kubectl exec -n metabob devbob-0 -- gh --version",
+      "verificationResult": "gh version 2.87.3 (2026-02-23)"
+    },
+    {
+      "file": "repos/platform/deployments/metabob/charts/devbob/values/local.devbob.values.yaml",
+      "component": "Helm Values - Secret Management",
+      "lines": "13-23",
+      "changeMade": "Removed actual API keys and tokens from git-committed file, replaced with empty placeholders and security warnings",
+      "reason": "HIGH SECURITY RISK: Real Anthropic API key and GitHub token were committed to git in plain text. Credentials exposed in version control history",
+      "impactAnalysis": "Security vulnerability mitigated. Secrets must now be provided via environment variables or kubectl secret creation (as designed)",
+      "severity": "HIGH",
+      "status": "COMPLETE",
+      "securityNote": "Actual secrets were: sk-ant-api03-hpwrf... and gho_mcSL9bYdNFJ... - these should be rotated immediately"
+    },
+    {
+      "file": ".env.devbob.k8s.example",
+      "component": "Environment Template - Secret Documentation",
+      "changeMade": "Created new .env.example file documenting proper secret management workflow",
+      "reason": "Users need clear guidance on how to provide secrets securely without committing to git",
+      "impactAnalysis": "Developers can now copy .env.example to .env (gitignored) and fill in actual secrets safely",
+      "severity": "MEDIUM",
+      "status": "COMPLETE"
+    },
+    {
+      "file": "helm/charts/devbob/templates/deployment.yaml",
+      "component": "Legacy Helm Deployment - Git Environment Variables",
+      "lines": "42-49",
+      "changeMade": "Added GITHUB_TOKEN, GIT_USER_NAME, GIT_USER_EMAIL environment variables from secrets",
+      "reason": "Legacy deployment.yaml was missing git environment variables present in k8s-devbob-statefulset.yaml, causing configuration drift",
+      "impactAnalysis": "If anyone uses this legacy Deployment (instead of StatefulSet), git operations will now work correctly",
+      "severity": "MEDIUM",
+      "status": "COMPLETE"
+    },
+    {
+      "file": "devbob-secrets Kubernetes Secret",
+      "component": "Kubernetes Secret - github-token value",
+      "changeMade": "IDENTIFIED but NOT CHANGED: github-token is empty (0 bytes)",
+      "reason": "GITHUB_TOKEN environment variable not available. Secret exists but value is empty, causing gh CLI authentication to fail",
+      "impactAnalysis": "3/15 tests still failing: gh-cli-authenticated on all pods. Git clone/push/PR operations will fail until token is provided",
+      "severity": "CRITICAL",
+      "status": "BLOCKED - MANUAL INTERVENTION REQUIRED",
+      "remediationRequired": [
+        "Option 1: Export GITHUB_TOKEN env var and re-run ./deploy-devbob-k8s-git.sh",
+        "Option 2: kubectl create secret generic devbob-secrets --from-literal=github-token=ghp_YOUR_TOKEN --dry-run=client -o yaml | kubectl apply -f -",
+        "Option 3: Create .env file with GITHUB_TOKEN and source it before deployment",
+        "After token update: kubectl rollout restart statefulset/devbob -n metabob"
+      ]
+    }
+  ],
+  
+  "validationResults": {
+    "before": {
+      "syntaxError": true,
+      "couldNotExecute": true
+    },
+    "afterSyntaxFix": {
+      "totalTests": 15,
+      "passed": 9,
+      "failed": 6,
+      "issues": [
+        "gh CLI not installed (6 failures across 3 pods)"
+      ]
+    },
+    "afterImageRebuild": {
+      "totalTests": 15,
+      "passed": 12,
+      "failed": 3,
+      "issues": [
+        "gh CLI not authenticated (3 failures across 3 pods - GITHUB_TOKEN empty)"
+      ]
+    },
+    "currentState": {
+      "gitInstalled": true,
+      "ghCliInstalled": true,
+      "gitConfigured": true,
+      "ghAuthenticated": false,
+      "blockingIssue": "GITHUB_TOKEN secret value is empty"
+    }
+  },
+  
+  "dataFlowRipples": {
+    "imageRebuild": [
+      "Dockerfile.devbob-local (source) → docker build → devbob:local-fixed image → kubectl rollout restart → 3 pods restarted → gh CLI now available"
+    ],
+    "secretUpdate": [
+      "Environment/user input → deploy-devbob-k8s-git.sh → kubectl create secret → devbob-secrets → pod env vars → entrypoint-self-config.sh → gh auth login"
+    ],
+    "validationHarness": [
+      "Fixed harness → can execute → discovered missing gh CLI → triggered image rebuild → discovered empty GITHUB_TOKEN → blocked on manual intervention"
+    ]
+  },
+  
+  "metabobAnnotations": [
+    {
+      "file": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "component": "while loop argument parser",
+      "reason": "Bash syntax requires 'do' keyword for while loops, not 'then'. 'then' is only for if statements",
+      "designDecision": "Used standard bash while-do-case pattern for CLI argument parsing"
+    },
+    {
+      "file": "Dockerfile.devbob-local",
+      "component": "GitHub CLI installation",
+      "reason": "gh CLI is required for automated PR creation/merging in autonomous git operations. Uses official GitHub CLI APT repository for latest stable version",
+      "designDecision": "Install at image build time (not runtime) for faster pod startup and smaller attack surface"
+    },
+    {
+      "file": "repos/platform/deployments/metabob/charts/devbob/values/local.devbob.values.yaml",
+      "component": "Secret placeholders",
+      "reason": "Secrets must NEVER be committed to git. Placeholder values force users to consciously provide real secrets via secure methods",
+      "designDecision": "Empty strings as placeholders + prominent security warnings. Secrets provided via environment or external secret management"
+    }
+  ],
+  
+  "remainingGaps": [
+    {
+      "gap": "GITHUB_TOKEN is empty in Kubernetes secret",
+      "severity": "CRITICAL",
+      "impact": "All git push, PR create, PR merge operations will fail authentication",
+      "blocksSpecification": true,
+      "requiresManualIntervention": true,
+      "remediation": "User must provide valid GitHub PAT with repo, workflow scopes"
+    }
+  ],
+  
+  "specificationCompliance": {
+    "gitInstalled": "✅ COMPLETE",
+    "ghCliInstalled": "✅ COMPLETE",
+    "gitConfigured": "✅ COMPLETE",
+    "ghAuthenticated": "❌ BLOCKED - empty GITHUB_TOKEN",
+    "gitClone": "⚠️ UNTESTED - blocked by authentication",
+    "gitCommit": "⚠️ UNTESTED - blocked by authentication",
+    "gitPush": "⚠️ UNTESTED - blocked by authentication",
+    "prCreate": "⚠️ UNTESTED - blocked by authentication",
+    "prMerge": "⚠️ UNTESTED - blocked by authentication"
+  },
+  
+  "nextSteps": [
+    {
+      "priority": 1,
+      "action": "Provide valid GITHUB_TOKEN",
+      "command": "export GITHUB_TOKEN=$(gh auth token) && ./deploy-devbob-k8s-git.sh",
+      "reason": "Unblock gh CLI authentication and enable full git operations"
+    },
+    {
+      "priority": 2,
+      "action": "Re-run full validation with destructive tests",
+      "command": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --pod devbob-0",
+      "reason": "Verify end-to-end git operations (clone, commit, push, PR) work correctly"
+    },
+    {
+      "priority": 3,
+      "action": "Rotate exposed secrets",
+      "reason": "Anthropic API key sk-ant-api03-hpwrf... and GitHub token gho_mcSL9bYdNFJ... were committed to git and should be rotated"
+    },
+    {
+      "priority": 4,
+      "action": "Test on remaining pods",
+      "command": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "reason": "Verify all 3 pods (devbob-0, devbob-1, devbob-2) have identical capabilities"
+    }
+  ],
+  
+  "summary": {
+    "enforcementStatus": "PARTIAL",
+    "implementationComplete": true,
+    "configurationComplete": true,
+    "validationPartial": true,
+    "blockedBy": "Empty GITHUB_TOKEN in Kubernetes secret",
+    "changesApplied": 5,
+    "criticalIssuesFixed": 2,
+    "highSeverityIssuesFixed": 1,
+    "mediumSeverityIssuesFixed": 2,
+    "remainingBlockers": 1
+  }
+}
