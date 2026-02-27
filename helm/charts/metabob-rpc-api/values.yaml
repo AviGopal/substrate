@@ -8,7 +8,7 @@ image:
   imageRegistry: metabobapp
   rpc_api:
     repo: metabob-rpc-api
-    tag: 0.7.0
+    tag: 0.12.5
 
 workers:
   replicas: 1
