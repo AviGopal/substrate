@@ -1,0 +1,37 @@
+# Metabob RPC API Production Values
+# This file overrides chart defaults for production deployments with Istio
+
+# Use registry image with correct version
+image:
+  imageRegistry: metabobapp
+  rpc_api:
+    repo: metabob-rpc-api
+    tag: "0.12.6"
+  pullPolicy: IfNotPresent
+
+# Scale for production
+service:
+  replicas: 3
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2"
+
+workers:
+  replicas: 3
+
+# Enable Istio
+istio:
+  enabled: true
+  mtls: STRICT
+  gateway:
+    enabled: true
+    name: metabob-gateway
+    host: api.metabob.app
+
+# Production database
+surrealdb:
+  database: production

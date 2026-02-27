@@ -4,6 +4,13 @@ environments:
       - environments/local.values.yaml
     missingFileHandler: Error
     kubeContext: docker-desktop
+  
+  production:
+    values:
+      - environments/production.values.yaml
+    missingFileHandler: Error
+    # Production kubeContext should be set via environment or command line
+    # e.g., helmfile -e production --kube-context prod-cluster sync
 
 ---
 helmDefaults:
