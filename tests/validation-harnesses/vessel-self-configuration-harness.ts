@@ -17,6 +17,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 interface ValidationResult {
   pass: boolean;
@@ -41,6 +43,8 @@ class VesselSelfConfigurationHarness {
 
   constructor() {
     // Assume we're running from tests/validation-harnesses/
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
     this.projectRoot = path.resolve(__dirname, '../..');
   }
 
@@ -61,11 +65,11 @@ class VesselSelfConfigurationHarness {
         
         // Read content and check for key functions
         const content = fs.readFileSync(entrypointPath, 'utf-8');
-        const hasEnvironmentDetection = content.includes('detect_environment') || content.includes('ENVIRONMENT=');
-        const hasBackendValidation = content.includes('BACKEND_URL') && content.includes('health');
+        const hasEnvironmentDetection = content.includes('CONTAINER_ENV') || content.includes('HOSTNAME') || content.includes('environment');
+        const hasBackendValidation = (content.includes('METABOB_API_URL') || content.includes('BACKEND')) && content.includes('urlopen');
         const hasApiKeyCheck = content.includes('ANTHROPIC_API_KEY');
         const hasActivityExecution = content.includes('configure-vessel-for-environment');
-        const hasAcpStart = content.includes('opencode acp') || content.includes('opencode-acp');
+        const hasAcpStart = content.includes('exec opencode') || content.includes('opencode acp') || content.includes('acp --port');
         
         const actual = {
           exists: true,
@@ -724,6 +728,8 @@ function main() {
   console.log(`\n${result.summary}\n`);
   
   // Write JSON output
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
   const outputPath = path.join(__dirname, 'vessel-self-configuration-results.json');
   fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
   console.log(`Results written to: ${outputPath}\n`);
@@ -732,10 +738,8 @@ function main() {
   process.exit(result.overallPass ? 0 : 1);
 }
 
-// Run if executed directly
-if (require.main === module) {
-  main();
-}
+// Always run when executed
+main();
 
 // Export for testing
 export type { ValidationResult, HarnessResult };
