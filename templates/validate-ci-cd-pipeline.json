@@ -1,0 +1,194 @@
+{
+  "name": "Validate CI/CD Pipeline",
+  "description": "Comprehensive CI/CD pipeline validation: checks workflow configuration, runs tests locally, validates build process, verifies deployment readiness, and ensures quality gates are properly configured",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "discover-workflows",
+      "subagent": "general",
+      "description": "Discover and analyze CI/CD workflows",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the repository's CI/CD configuration:\n\n1. Find all workflow files (.github/workflows/, .gitlab-ci.yml, .circleci/config.yml, etc.)\n2. List each workflow with:\n   - Name and trigger conditions (on push, PR, schedule, etc.)\n   - Jobs and steps\n   - Dependencies and secrets required\n   - Test commands\n   - Build commands\n   - Deploy commands (if any)\n3. Identify quality gates:\n   - Linting\n   - Type checking\n   - Unit tests\n   - Integration tests\n   - Security scans\n   - Code coverage\n4. Check for missing best practices:\n   - Branch protection\n   - Required checks\n   - Code coverage requirements\n   - Dependency vulnerability scanning\n   - Automated security updates\n\nRepository: {{repoPath}}\nRepository name: {{repoName}}\n\nProvide a structured summary of findings with:\n- Total workflows found\n- Workflows by purpose (test, build, deploy, etc.)\n- Quality gates present\n- Missing best practices\n- Overall CI/CD maturity assessment",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository to validate"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository (for reporting)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "run-local-tests",
+      "subagent": "general",
+      "description": "Execute test suite locally",
+      "dependencies": ["discover-workflows"],
+      "prompt": {
+        "template": "Run the test suite locally to validate it works:\n\n1. Change to repository directory: {{repoPath}}\n2. Identify test commands from:\n   - Workflows discovered in previous task\n   - package.json scripts\n   - Makefile targets\n   - pyproject.toml/setup.py\n3. Install dependencies if needed:\n   - npm/yarn/pnpm install\n   - pip install\n   - make deps\n4. Run tests with:\n   - Unit tests\n   - Integration tests (if applicable)\n   - Type checking\n   - Linting\n5. Capture results:\n   - Pass/fail status for each test suite\n   - Total tests run\n   - Coverage metrics (if available)\n   - Performance metrics\n   - Any flaky or failing tests\n6. Document any issues found\n\nRepository: {{repoPath}}\nRepository name: {{repoName}}\nTest command override: {{testCommand}}\n\nIf testCommand is provided, use it. Otherwise auto-detect from workflows/package.json.\n\nProvide test execution summary with:\n- Test command used\n- Pass/fail counts\n- Coverage percentage\n- Issues found\n- Recommendations",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          },
+          {
+            "name": "testCommand",
+            "type": "string",
+            "required": false,
+            "description": "Override test command (optional)"
+          }
+        ]
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "validate-build-process",
+      "subagent": "general",
+      "description": "Validate build process works correctly",
+      "dependencies": ["discover-workflows"],
+      "prompt": {
+        "template": "Validate the build process:\n\n1. Change to repository directory: {{repoPath}}\n2. Identify build commands from:\n   - Workflows discovered\n   - package.json scripts (build, compile, bundle)\n   - Makefile targets\n   - setup.py/pyproject.toml\n3. Run build process:\n   - Clean build from scratch\n   - Production build configuration\n   - Check for build warnings\n4. Verify build artifacts:\n   - Artifacts are created in expected locations\n   - Artifacts are properly structured\n   - No sensitive data in artifacts\n   - Source maps generated (if applicable)\n5. Check build optimization:\n   - Bundle size (if applicable)\n   - Tree shaking enabled\n   - Minification enabled\n   - Compression\n\nRepository: {{repoPath}}\nRepository name: {{repoName}}\nBuild command override: {{buildCommand}}\n\nIf buildCommand is provided, use it. Otherwise auto-detect.\n\nProvide build validation summary with:\n- Build command used\n- Build success/failure\n- Artifacts generated\n- Build warnings\n- Optimization status\n- Recommendations",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          },
+          {
+            "name": "buildCommand",
+            "type": "string",
+            "required": false,
+            "description": "Override build command (optional)"
+          }
+        ]
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "check-quality-gates",
+      "subagent": "general",
+      "description": "Verify quality gates are configured and passing",
+      "dependencies": ["discover-workflows"],
+      "prompt": {
+        "template": "Verify quality gates:\n\n1. Change to repository directory: {{repoPath}}\n2. Check for quality gate tools:\n   - ESLint/Prettier configuration\n   - TypeScript strict mode settings\n   - Test coverage thresholds (jest.config, .coveragerc)\n   - Security scanning (Dependabot, Snyk, npm audit)\n   - Pre-commit hooks (.husky, .git/hooks)\n3. Run each quality gate:\n   - Linting (eslint, pylint, etc.)\n   - Type checking (tsc, mypy, etc.)\n   - Security audit (npm audit, pip-audit, etc.)\n   - Format checking (prettier, black, etc.)\n4. Verify CI/CD enforces these:\n   - Required checks in workflows\n   - Branch protection rules (check .github/settings or docs)\n   - Fail fast on quality issues\n5. Identify gaps:\n   - Missing quality gates\n   - Weak thresholds (e.g., <80% coverage)\n   - Unenforced checks (configured but not required)\n   - Security vulnerabilities\n\nRepository: {{repoPath}}\nRepository name: {{repoName}}\n\nProvide quality gates compliance report with:\n- Quality tools configured\n- Quality gates passing/failing\n- Coverage metrics\n- Security vulnerabilities found\n- Enforcement status\n- Priority recommendations",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "validation": {
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-report",
+      "subagent": "general",
+      "description": "Generate CI/CD validation report",
+      "dependencies": ["discover-workflows", "run-local-tests", "validate-build-process", "check-quality-gates"],
+      "prompt": {
+        "template": "Generate comprehensive CI/CD validation report:\n\nSynthesize findings from previous tasks:\n- Workflow analysis\n- Test execution results\n- Build validation results\n- Quality gates status\n\n1. Executive Summary:\n   - Overall health score (0-100 based on findings)\n   - Critical issues count\n   - Warnings count\n   - Pass/fail verdict\n   - Key strengths\n   - Key weaknesses\n\n2. Detailed Findings:\n   - Workflow Configuration (workflows found, triggers, quality)\n   - Test Suite Health (pass rate, coverage, reliability)\n   - Build Process (success, artifacts, optimization)\n   - Quality Gates (tools, enforcement, gaps)\n\n3. Issues Found:\n   - Critical (blocks deployment/reliability)\n   - High (significant quality/security risk)\n   - Medium (improvement opportunities)\n   - Low (nice to have)\n\n4. Recommendations:\n   - Priority 1 (Critical): Must fix immediately\n   - Priority 2 (High): Should fix soon\n   - Priority 3 (Medium): Plan for next sprint\n   - Priority 4 (Low): Backlog\n\n5. Next Steps:\n   - Specific action items with acceptance criteria\n   - Estimated effort (hours/days)\n   - Dependencies and blockers\n   - Success metrics\n\nRepository: {{repoPath}}\nRepository name: {{repoName}}\n\nSave report to: {{repoPath}}/CI_CD_VALIDATION_REPORT.md\n\nProvide summary of report highlights in your response.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository"
+          },
+          {
+            "name": "repoName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the repository"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["{{repoPath}}/CI_CD_VALIDATION_REPORT.md"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}
