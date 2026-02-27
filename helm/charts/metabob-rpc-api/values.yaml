@@ -1,0 +1,17 @@
+name: rpc-api
+namespace: metabob
+release: production
+
+config: "universal-config"
+
+image:
+  imageRegistry: metabobapp
+  rpc_api:
+    repo: metabob-rpc-api
+    tag: 0.7.0
+
+workers:
+  replicas: 1
+
+service:
+  replicas: 1

@@ -1,8 +1,6 @@
-# SurrealDB configuration for local deployment
-
 name: surrealdb
 namespace: metabob
-release: local
+release: production
 
 image:
   repository: surrealdb/surrealdb
@@ -15,25 +13,28 @@ service:
 
 resources:
   requests:
-    memory: "256Mi"
+    memory: "512Mi"
     cpu: "100m"
   limits:
-    memory: "1Gi"
-    cpu: "500m"
+    memory: "2Gi"
+    cpu: "1000m"
 
-# Use in-memory mode for local development (no persistence)
 persistence:
   enabled: false
+  storageClass: ""
+  size: 10Gi
 
 # Database configuration
 database:
   namespace: metabob
-  name: devbob
+  name: production
 
-# Credentials for local development
+# Credentials - set via helmfile from SOPS-encrypted secrets
+# When existingSecret is empty, chart creates the secret
 auth:
   existingSecret: ""
   username: "root"
-  password: "root"
+  password: "changeme"
   usernameKey: username
   passwordKey: password
+

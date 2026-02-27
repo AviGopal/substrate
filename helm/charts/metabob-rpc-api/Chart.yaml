@@ -1,0 +1,8 @@
+apiVersion: v2
+name: metabob-rpc-api
+version: 0.2.0
+description: RPC API for Metabob cloud services
+home: https://metabob.com
+appVersion: "0.16.0"
+annotations:
+  example: A list of annotations keyed by name (optional).
