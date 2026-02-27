@@ -1,0 +1,253 @@
+{
+  "specificationName": "devbob-k8s-git-operations",
+  "executionDate": "2026-02-27",
+  "harnessUsed": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+  "testMode": "non-destructive",
+  "targetPods": ["devbob-0", "devbob-1", "devbob-2"],
+  "namespace": "metabob",
+  
+  "validationResults": [
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-1",
+      "name": "git-config-present",
+      "pod": "devbob-0",
+      "status": "PASS",
+      "actual": "user.name=Devbob Agent, user.email=devbob@metabob.local",
+      "expected": "user.name= and user.email= present",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-1",
+      "name": "git-config-present",
+      "pod": "devbob-1",
+      "status": "PASS",
+      "actual": "user.name=Devbob Agent, user.email=devbob@metabob.local",
+      "expected": "user.name= and user.email= present",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-1",
+      "name": "git-config-present",
+      "pod": "devbob-2",
+      "status": "PASS",
+      "actual": "user.name=Devbob Agent, user.email=devbob@metabob.local",
+      "expected": "user.name= and user.email= present",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-2",
+      "name": "gh-cli-installed",
+      "pod": "devbob-0",
+      "status": "PASS",
+      "actual": "/usr/bin/gh",
+      "expected": "/usr/bin/gh, exit code 0",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-2",
+      "name": "gh-cli-installed",
+      "pod": "devbob-1",
+      "status": "PASS",
+      "actual": "/usr/bin/gh",
+      "expected": "/usr/bin/gh, exit code 0",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-2",
+      "name": "gh-cli-installed",
+      "pod": "devbob-2",
+      "status": "PASS",
+      "actual": "/usr/bin/gh",
+      "expected": "/usr/bin/gh, exit code 0",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-3",
+      "name": "git-credentials-present",
+      "pod": "devbob-0",
+      "status": "PASS",
+      "actual": "GIT_USER_NAME=Devbob Agent, GIT_USER_EMAIL=devbob@metabob.local, GITHUB_TOKEN=(empty)",
+      "expected": "GIT_USER_NAME=, GIT_USER_EMAIL=, GITHUB_TOKEN= present",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-3",
+      "name": "git-credentials-present",
+      "pod": "devbob-1",
+      "status": "PASS",
+      "actual": "GIT_USER_NAME=Devbob Agent, GIT_USER_EMAIL=devbob@metabob.local, GITHUB_TOKEN=(empty)",
+      "expected": "GIT_USER_NAME=, GIT_USER_EMAIL=, GITHUB_TOKEN= present",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-3",
+      "name": "git-credentials-present",
+      "pod": "devbob-2",
+      "status": "PASS",
+      "actual": "GIT_USER_NAME=Devbob Agent, GIT_USER_EMAIL=devbob@metabob.local, GITHUB_TOKEN=(empty)",
+      "expected": "GIT_USER_NAME=, GIT_USER_EMAIL=, GITHUB_TOKEN= present",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-4",
+      "name": "gh-cli-authenticated",
+      "pod": "devbob-0",
+      "status": "FAIL",
+      "actual": "You are not logged into any GitHub hosts. To log in, run: gh auth login",
+      "expected": "Logged in to github.com, exit code 0",
+      "difference": "gh CLI not authenticated - GITHUB_TOKEN is empty in secret",
+      "diagnostic": {
+        "exitCode": 1,
+        "error": "Not authenticated",
+        "rootCause": "GITHUB_TOKEN secret value is empty (0 bytes)",
+        "remediation": "Provide valid GitHub PAT and update secret"
+      }
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-4",
+      "name": "gh-cli-authenticated",
+      "pod": "devbob-1",
+      "status": "FAIL",
+      "actual": "You are not logged into any GitHub hosts. To log in, run: gh auth login",
+      "expected": "Logged in to github.com, exit code 0",
+      "difference": "gh CLI not authenticated - GITHUB_TOKEN is empty in secret",
+      "diagnostic": {
+        "exitCode": 1,
+        "error": "Not authenticated",
+        "rootCause": "GITHUB_TOKEN secret value is empty (0 bytes)",
+        "remediation": "Provide valid GitHub PAT and update secret"
+      }
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-4",
+      "name": "gh-cli-authenticated",
+      "pod": "devbob-2",
+      "status": "FAIL",
+      "actual": "You are not logged into any GitHub hosts. To log in, run: gh auth login",
+      "expected": "Logged in to github.com, exit code 0",
+      "difference": "gh CLI not authenticated - GITHUB_TOKEN is empty in secret",
+      "diagnostic": {
+        "exitCode": 1,
+        "error": "Not authenticated",
+        "rootCause": "GITHUB_TOKEN secret value is empty (0 bytes)",
+        "remediation": "Provide valid GitHub PAT and update secret"
+      }
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-5",
+      "name": "workspace-accessible",
+      "pod": "devbob-0",
+      "status": "PASS",
+      "actual": "/workspace accessible",
+      "expected": "/workspace accessible, exit code 0",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-5",
+      "name": "workspace-accessible",
+      "pod": "devbob-1",
+      "status": "PASS",
+      "actual": "/workspace accessible",
+      "expected": "/workspace accessible, exit code 0",
+      "difference": null
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-5",
+      "name": "workspace-accessible",
+      "pod": "devbob-2",
+      "status": "PASS",
+      "actual": "/workspace accessible",
+      "expected": "/workspace accessible, exit code 0",
+      "difference": null
+    }
+  ],
+  
+  "destructiveTestsSkipped": [
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-6",
+      "name": "git-clone-success",
+      "status": "SKIPPED",
+      "reason": "Blocked by gh-cli-authenticated failure"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-7",
+      "name": "git-commit-success",
+      "status": "SKIPPED",
+      "reason": "Blocked by gh-cli-authenticated failure"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-8",
+      "name": "git-push-success",
+      "status": "SKIPPED",
+      "reason": "Blocked by gh-cli-authenticated failure"
+    },
+    {
+      "testCase": "validation-devbob-k8s-git-operations-case-9",
+      "name": "gh-pr-create",
+      "status": "SKIPPED",
+      "reason": "Blocked by gh-cli-authenticated failure"
+    }
+  ],
+  
+  "summary": {
+    "totalTests": 15,
+    "passed": 12,
+    "failed": 3,
+    "skipped": 4,
+    "passRate": "80%"
+  },
+  
+  "overallStatus": "FAIL",
+  "blockingIssue": {
+    "issue": "GitHub CLI not authenticated on any pod",
+    "rootCause": "GITHUB_TOKEN secret value is empty (0 bytes)",
+    "impact": "All git push, PR creation, and PR merge operations will fail",
+    "affectedPods": ["devbob-0", "devbob-1", "devbob-2"],
+    "remediation": [
+      "Step 1: Obtain valid GitHub PAT with repo, workflow scopes",
+      "Step 2: export GITHUB_TOKEN=$(gh auth token)",
+      "Step 3: ./deploy-devbob-k8s-git.sh",
+      "Step 4: kubectl rollout restart statefulset/devbob -n metabob",
+      "Step 5: Re-run validation harness"
+    ]
+  },
+  
+  "capabilitiesVerified": {
+    "gitInstalled": {
+      "status": "VERIFIED",
+      "pods": 3
+    },
+    "ghCliInstalled": {
+      "status": "VERIFIED",
+      "pods": 3
+    },
+    "gitConfigured": {
+      "status": "VERIFIED",
+      "pods": 3,
+      "userName": "Devbob Agent",
+      "userEmail": "devbob@metabob.local"
+    },
+    "credentialsPresent": {
+      "status": "VERIFIED",
+      "pods": 3,
+      "note": "GITHUB_TOKEN present but empty"
+    },
+    "ghAuthenticated": {
+      "status": "FAILED",
+      "pods": 0
+    },
+    "workspaceAccessible": {
+      "status": "VERIFIED",
+      "pods": 3
+    }
+  },
+  
+  "implementationStatus": {
+    "infrastructure": "COMPLETE",
+    "configuration": "COMPLETE",
+    "authentication": "BLOCKED",
+    "gitOperations": "UNTESTED"
+  },
+  
+  "resultsImpulseId": "validation-results-devbob-k8s-git-operations"
+}
