@@ -1,0 +1,11 @@
+{
+  "id": "validation-devbob-k8s-git-operations-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: Git Configuration Validation\n\nInput:\n- Pod: devbob-0, devbob-1, devbob-2\n- Command: git config --global --list | grep -E '(user\\.name|user\\.email|init\\.defaultBranch|push\\.autoSetupRemote)'\n\nExpected Output:\n- user.name=Devbob Agent (or similar)\n- user.email=devbob@metabob.local (or similar)\n- init.defaultBranch=main\n- push.autoSetupRemote=true\n\nValidation:\n- Output must contain 'user.name=' and 'user.email='\n- Both must have non-empty values\n- Indicates git is properly configured for commit attribution",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "createdAt": "2026-02-27T11:42:00Z"
+}

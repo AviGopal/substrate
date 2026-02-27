@@ -1,0 +1,227 @@
+{
+  "specificationName": "devbob-k8s-git-operations",
+  "analysisDate": "2026-02-27T11:50:00Z",
+  "otherSpecifications": [
+    "Kubernetes-Deployment-Validation-Exit-Codes",
+    "local-docker-k8s-deployment"
+  ],
+  "specificationsAnalyzed": 3,
+  "conflicts": [],
+  "compatibilities": [
+    {
+      "type": "COMPLEMENTARY",
+      "spec1": "devbob-k8s-git-operations",
+      "spec2": "Kubernetes-Deployment-Validation-Exit-Codes",
+      "description": "Both specs enhance deployment validation - no conflicts",
+      "reasoning": "devbob-k8s-git-operations focuses on git capabilities within pods. Deployment-Validation-Exit-Codes focuses on deployment health checks and exit codes. They operate at different layers (application vs infrastructure).",
+      "sharedComponents": [],
+      "resolution": "NONE_REQUIRED"
+    },
+    {
+      "type": "COMPLEMENTARY",
+      "spec1": "devbob-k8s-git-operations",
+      "spec2": "local-docker-k8s-deployment",
+      "description": "Both specs target local K8s deployment - no conflicts",
+      "reasoning": "local-docker-k8s-deployment ensures deployment works on docker-desktop K8s. devbob-k8s-git-operations ensures git operations work within deployed pods. Sequential dependency: deployment must succeed before git operations can be tested.",
+      "sharedComponents": [
+        "helm/charts/devbob/values.yaml",
+        "Dockerfile.devbob-local"
+      ],
+      "resolution": "NONE_REQUIRED - Specifications work in sequence"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "Dockerfile.devbob-local",
+      "path": "Dockerfile.devbob-local",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations",
+        "local-docker-k8s-deployment"
+      ],
+      "requirements": {
+        "devbob-k8s-git-operations": "Must include gh CLI installation (lines 8-28)",
+        "local-docker-k8s-deployment": "Must build successfully for docker-desktop K8s"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Both requirements are compatible. Dockerfile already has gh CLI installation."
+    },
+    {
+      "component": "helm/charts/devbob/values.yaml",
+      "path": "helm/charts/devbob/values.yaml",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations",
+        "local-docker-k8s-deployment"
+      ],
+      "requirements": {
+        "devbob-k8s-git-operations": "Must define githubToken, gitUserName, gitUserEmail in secrets section",
+        "local-docker-k8s-deployment": "Must be valid Helm values schema for deployment"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Both requirements are compatible. Schema already defines git-related secrets."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity-git.ts",
+      "path": "repos/metabob-opencode/packages/opencode/src/session/activity-git.ts",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations"
+      ],
+      "requirements": {
+        "devbob-k8s-git-operations": "Must validate gh CLI authentication before PR creation, sanitize inputs"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Single spec modification. No conflicts possible."
+    },
+    {
+      "component": "repos/metabob-opencode/docker/entrypoint-self-config.sh",
+      "path": "repos/metabob-opencode/docker/entrypoint-self-config.sh",
+      "affectedBySpecs": [
+        "devbob-k8s-git-operations"
+      ],
+      "requirements": {
+        "devbob-k8s-git-operations": "Must validate GITHUB_TOKEN format, export GH_AUTHENTICATED status"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Single spec modification. No conflicts possible."
+    }
+  ],
+  "dependencyAnalysis": {
+    "prerequisiteSpecs": [
+      "local-docker-k8s-deployment"
+    ],
+    "dependentSpecs": [],
+    "executionOrder": [
+      "1. local-docker-k8s-deployment (deploy infrastructure)",
+      "2. devbob-k8s-git-operations (validate git capabilities)",
+      "3. Kubernetes-Deployment-Validation-Exit-Codes (validate deployment health)"
+    ],
+    "reasoning": "Deployment must exist before git operations can be tested. Health validation can run independently but logically follows feature validation."
+  },
+  "deploymentBlockers": [
+    {
+      "blocker": "Image Not Rebuilt",
+      "affectsSpecs": [
+        "devbob-k8s-git-operations"
+      ],
+      "description": "Running pods use devbob:local-fixed (old) without gh CLI",
+      "impact": "CRITICAL - Blocks PR operations testing",
+      "resolution": "Rebuild image from Dockerfile.devbob-local and redeploy",
+      "estimatedTime": "5-10 minutes",
+      "status": "PENDING"
+    },
+    {
+      "blocker": "Code Changes Not Deployed",
+      "affectsSpecs": [
+        "devbob-k8s-git-operations"
+      ],
+      "description": "Enforcement changes in repos/metabob-opencode not built/deployed",
+      "impact": "HIGH - New validation logic not active",
+      "resolution": "npm run build in opencode package, rebuild image",
+      "estimatedTime": "3-5 minutes",
+      "status": "PENDING"
+    },
+    {
+      "blocker": "GITHUB_TOKEN Value Unknown",
+      "affectsSpecs": [
+        "devbob-k8s-git-operations"
+      ],
+      "description": "Token exists but format/validity unknown",
+      "impact": "MEDIUM - Cannot verify authentication will work",
+      "resolution": "Check token format, update if placeholder",
+      "estimatedTime": "1 minute",
+      "status": "PENDING"
+    }
+  ],
+  "integrationPoints": {
+    "devbob-k8s-git-operations_AND_local-docker-k8s-deployment": {
+      "relationship": "SEQUENTIAL_DEPENDENCY",
+      "description": "Git operations validation requires successful deployment",
+      "sharedFiles": [
+        "Dockerfile.devbob-local",
+        "helm/charts/devbob/values.yaml"
+      ],
+      "testingStrategy": "Deploy first (local-docker-k8s), then validate git ops (devbob-k8s-git-operations)"
+    },
+    "devbob-k8s-git-operations_AND_Kubernetes-Deployment-Validation-Exit-Codes": {
+      "relationship": "INDEPENDENT_PARALLEL",
+      "description": "Both validate different aspects of deployment",
+      "sharedFiles": [],
+      "testingStrategy": "Can run in parallel or any order"
+    }
+  },
+  "riskAssessment": {
+    "conflictRisk": "LOW",
+    "reasoning": "No conflicting requirements found. Specs operate at different layers or in sequence.",
+    "breakageRisk": "LOW",
+    "breakageReasonging": "devbob-k8s-git-operations changes are additive (validation, sanitization). No breaking changes to existing functionality.",
+    "deploymentRisk": "MEDIUM",
+    "deploymentReasoning": "Requires image rebuild and redeployment. Current validation shows 60% pass rate due to missing gh CLI in running image."
+  },
+  "recommendations": [
+    {
+      "priority": "CRITICAL",
+      "action": "Rebuild devbob image with gh CLI",
+      "reasoning": "Unblocks PR operations testing and deployment",
+      "affectedSpecs": ["devbob-k8s-git-operations"],
+      "estimatedTime": "5-10 minutes"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Deploy code changes to pods",
+      "reasoning": "Activates new validation and security improvements",
+      "affectedSpecs": ["devbob-k8s-git-operations"],
+      "estimatedTime": "3-5 minutes"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Verify GITHUB_TOKEN value and format",
+      "reasoning": "Ensures authentication will work after deployment",
+      "affectedSpecs": ["devbob-k8s-git-operations"],
+      "estimatedTime": "1 minute"
+    },
+    {
+      "priority": "LOW",
+      "action": "Run all three validation harnesses after fixes",
+      "reasoning": "Verify no regressions and complete compliance",
+      "affectedSpecs": [
+        "devbob-k8s-git-operations",
+        "local-docker-k8s-deployment",
+        "Kubernetes-Deployment-Validation-Exit-Codes"
+      ],
+      "estimatedTime": "5 minutes"
+    }
+  ],
+  "validationStatus": {
+    "devbob-k8s-git-operations": {
+      "status": "FAIL",
+      "passRate": "60%",
+      "passed": 9,
+      "failed": 6,
+      "total": 15,
+      "blockers": 3
+    },
+    "Kubernetes-Deployment-Validation-Exit-Codes": {
+      "status": "PASS",
+      "passRate": "100%",
+      "passed": 4,
+      "failed": 0,
+      "total": 4,
+      "blockers": 0
+    },
+    "local-docker-k8s-deployment": {
+      "status": "PASS",
+      "passRate": "100%",
+      "passed": 4,
+      "failed": 0,
+      "total": 7,
+      "skipped": 3,
+      "blockers": 0
+    }
+  },
+  "overallSystemHealth": {
+    "status": "PARTIAL",
+    "readiness": "75%",
+    "reasoning": "2/3 specifications fully compliant. devbob-k8s-git-operations blocked by deployment gap.",
+    "recommendation": "Complete image rebuild and redeployment to achieve 100% compliance"
+  },
+  "conflictImpulseId": "conflict-analysis-devbob-k8s-git-operations"
+}

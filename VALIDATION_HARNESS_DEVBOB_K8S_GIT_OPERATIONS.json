@@ -1,0 +1,157 @@
+{
+  "specificationName": "devbob-k8s-git-operations",
+  "harnessFile": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+  "harnessLanguage": "bash",
+  "harnessSize": "14KB",
+  "executable": true,
+  "canRunWithoutLLM": true,
+  "destructive": true,
+  "testCases": [
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-1",
+      "testName": "git-config-present",
+      "input": "git config --global --list | grep -E '(user\\.name|user\\.email|init\\.defaultBranch|push\\.autoSetupRemote)'",
+      "expectedOutput": "user.name and user.email configured",
+      "validation": "Output contains 'user.name=' and 'user.email=' with non-empty values"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-2",
+      "testName": "gh-cli-installed",
+      "input": "which gh && gh --version",
+      "expectedOutput": "gh CLI installed at /usr/bin/gh or /usr/local/bin/gh",
+      "validation": "Output contains path to gh binary and version information"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-3",
+      "testName": "git-credentials-present",
+      "input": "env | grep -E '(GIT_USER_NAME|GIT_USER_EMAIL|GITHUB_TOKEN)'",
+      "expectedOutput": "GIT_USER_NAME, GIT_USER_EMAIL, GITHUB_TOKEN present",
+      "validation": "All three environment variables must be present"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-4",
+      "testName": "gh-cli-authenticated",
+      "input": "gh auth status",
+      "expectedOutput": "Logged in to github.com",
+      "validation": "Output contains 'Logged in to github.com' or success indicators",
+      "critical": true,
+      "currentStatus": "EXPECTED_TO_FAIL_WITHOUT_VALID_TOKEN"
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-5",
+      "testName": "git-clone-success",
+      "input": "git clone https://github.com/metabob-labs/test-repo.git /tmp/test-repo-TIMESTAMP",
+      "expectedOutput": "Clone successful without auth errors",
+      "validation": "Output must NOT contain 'fatal' or 'Authentication failed'",
+      "destructive": true
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-6",
+      "testName": "git-commit-success",
+      "input": "Create test file, git add, git commit, git log -1",
+      "expectedOutput": "Commit successful with attribution",
+      "validation": "Output must NOT contain 'fatal' or 'Please tell me who you are'",
+      "destructive": true
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-7",
+      "testName": "git-push-success",
+      "input": "git checkout -b BRANCH && git push origin BRANCH -f",
+      "expectedOutput": "Push successful without auth errors",
+      "validation": "Output must NOT contain 'fatal', 'Authentication failed', 'Permission denied'",
+      "destructive": true,
+      "requiresAuth": true
+    },
+    {
+      "impulseId": "validation-devbob-k8s-git-operations-case-8",
+      "testName": "gh-pr-create",
+      "input": "gh pr create --title 'Test PR' --body 'Test' --base main --head BRANCH",
+      "expectedOutput": "PR URL or 'already exists'",
+      "validation": "Output contains 'https://github.com' OR 'already exists'",
+      "destructive": true,
+      "requiresAuth": true,
+      "critical": true,
+      "currentStatus": "EXPECTED_TO_FAIL_WITHOUT_VALID_TOKEN"
+    }
+  ],
+  "harnessImpulseId": "harness-devbob-k8s-git-operations",
+  "usage": {
+    "basic": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+    "singlePod": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --pod devbob-0",
+    "nonDestructive": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --skip-destructive",
+    "jsonOutput": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --json",
+    "customRepo": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --test-repo https://github.com/org/repo.git"
+  },
+  "exitCodes": {
+    "0": "PASS - All tests passed",
+    "1": "FAIL - Some tests failed"
+  },
+  "testingStrategy": {
+    "approach": "kubectl-exec-commands",
+    "podsCovered": ["devbob-0", "devbob-1", "devbob-2"],
+    "namespace": "metabob",
+    "phases": [
+      "Non-destructive checks (git config, gh CLI, credentials)",
+      "Destructive operations (clone, commit, push, PR)",
+      "Cross-pod consistency validation"
+    ]
+  },
+  "currentExpectations": {
+    "withoutValidToken": {
+      "expectedPass": [
+        "git-config-present",
+        "gh-cli-installed",
+        "git-credentials-present",
+        "workspace-accessible",
+        "git-clone-success (public repo)",
+        "git-commit-success"
+      ],
+      "expectedFail": [
+        "gh-cli-authenticated",
+        "git-push-success (requires auth)",
+        "gh-pr-create (requires auth)"
+      ]
+    },
+    "withValidToken": {
+      "expectedPass": "ALL 8 test cases",
+      "expectedFail": "NONE"
+    }
+  },
+  "impulses": {
+    "harness": "impulses/harness-devbob-k8s-git-operations.json",
+    "testCases": [
+      "impulses/validation-devbob-k8s-git-operations-case-1.json",
+      "impulses/validation-devbob-k8s-git-operations-case-2.json",
+      "impulses/validation-devbob-k8s-git-operations-case-3.json",
+      "impulses/validation-devbob-k8s-git-operations-case-4.json",
+      "impulses/validation-devbob-k8s-git-operations-case-5.json",
+      "impulses/validation-devbob-k8s-git-operations-case-6.json",
+      "impulses/validation-devbob-k8s-git-operations-case-7.json",
+      "impulses/validation-devbob-k8s-git-operations-case-8.json"
+    ]
+  },
+  "integration": {
+    "preDeployment": "Run with --skip-destructive to validate configuration",
+    "postDeployment": "Run full harness to validate complete git workflow",
+    "ci": "Run with --json for machine-readable results",
+    "debugging": "Run with --pod devbob-0 to test single pod"
+  },
+  "nextSteps": [
+    {
+      "step": 1,
+      "action": "Update GITHUB_TOKEN in devbob-secrets with valid PAT",
+      "reason": "Enable authentication-dependent tests (cases 4, 7, 8)"
+    },
+    {
+      "step": 2,
+      "action": "Restart devbob pods",
+      "command": "kubectl rollout restart statefulset/devbob -n metabob"
+    },
+    {
+      "step": 3,
+      "action": "Run validation harness",
+      "command": "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "expectedOutcome": "8/8 tests pass (100%)"
+    }
+  ]
+}
