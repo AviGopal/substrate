@@ -1,4 +1,10 @@
 # Minimal Redis configuration for local deployment
+image:
+  registry: docker.io
+  repository: bitnami/redis
+  tag: latest
+  pullPolicy: IfNotPresent
+
 auth:
   enabled: false
 master:

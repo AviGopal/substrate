@@ -1,4 +1,5 @@
 enabled: true
+release: local
 
 image:
   imageRegistry: ghcr.io/metabob
