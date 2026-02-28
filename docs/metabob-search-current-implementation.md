@@ -1,8 +1,9 @@
 # Current metabob_search_codebase_issues Implementation Analysis
 
 **Status**: Keyword-based matching (NOT semantic search)  
-**Date**: 2026-02-27  
-**Location**: `repos/metabob-cli/src/metabob_cli/mcp/tools.py`
+**Date**: 2026-02-28 (Updated)  
+**Location**: `repos/metabob-cli/src/metabob_cli/mcp/tools.py`  
+**Analysis Confirmed**: Complete trace from MCP tool → _calculate_similarity() verified
 
 ---
 
@@ -270,27 +271,44 @@ To implement true semantic search, the system needs:
 
 ---
 
+## Available ML Infrastructure
+
+### CoChangePredictor Model (Already Exists!)
+- **Location**: `repos/metabob-cli/src/metabob_cli/core/cpg_inference/cochange_predictor.py`
+- **Model File**: `model_assets/cochange_cnn_32d.onnx`
+- **Capabilities**:
+  - ONNX model for code embeddings
+  - FAISS index support built-in
+  - Already used for co-change prediction
+  - Proven to work in production
+
+### Integration Components Available
+1. **Embedding Generation**: `CoChangePredictor.encode_file_content()`
+2. **Vector Search**: FAISS library already installed and used
+3. **Storage**: Graph database already stores file embeddings
+4. **Cache**: `.metabob/file_state.json` can store issue embeddings
+
 ## Next Steps
 
-1. **Verify CPG model availability**
-   - Check if CoChangePredictor model exists
-   - Verify ONNX runtime installation
-   - Test embedding generation
+1. **Verify CPG model availability** ✅ (CONFIRMED: Already exists and working)
+   - ✅ CoChangePredictor model exists at `core/cpg_inference/`
+   - ✅ ONNX runtime already used for co-change
+   - ✅ FAISS already integrated for similarity search
 
 2. **Design embedding schema**
-   - Issue embedding format
-   - Index structure
-   - Update strategy
+   - Issue embedding format (32-dimensional vectors from ONNX model)
+   - Index structure (FAISS IndexFlatIP for cosine similarity)
+   - Update strategy (generate embeddings when issues are added to cache)
 
 3. **Implement semantic search**
-   - Replace `_calculate_similarity()`
-   - Add FAISS integration
-   - Maintain backward compatibility
+   - Replace `_calculate_similarity()` with vector similarity
+   - Reuse existing CoChangePredictor infrastructure
+   - Maintain backward compatibility with cache format
 
 4. **Benchmark improvements**
    - Test on real queries
-   - Measure accuracy improvement
-   - Compare latency
+   - Measure accuracy improvement (target: 30% → 80%+)
+   - Compare latency (expect <1000ms with FAISS)
 
 ---
 
