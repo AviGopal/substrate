@@ -1,0 +1,34 @@
+{
+  "id": "harness-context-optimization-endpoint-complete",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/context-optimization-endpoint-complete-harness.ts",
+    "startLine": 1,
+    "endLine": 828,
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "createdAt": "2026-02-28T00:00:00.000Z",
+  "metadata": {
+    "specificationName": "context-optimization-endpoint-complete",
+    "harnessType": "api-validation",
+    "testCases": 6,
+    "totalLines": 828,
+    "language": "typescript",
+    "framework": "custom",
+    "features": [
+      "API endpoint testing",
+      "SurrealDB seeding",
+      "Response validation",
+      "Error handling verification",
+      "Ranking validation",
+      "Range checking"
+    ],
+    "exported": [
+      "runValidation",
+      "ValidationResult",
+      "HarnessResult"
+    ]
+  }
+}

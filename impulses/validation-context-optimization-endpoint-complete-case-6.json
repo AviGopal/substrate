@@ -1,0 +1,17 @@
+{
+  "id": "validation-context-optimization-endpoint-complete-case-6",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Validation Test Case 6: Infrastructure Activity Type\n\nInput:\n{\n  \"activity_type\": \"infrastructure\",\n  \"limit\": 50\n}\n\nExpected Output:\n{\n  \"activity_type\": \"infrastructure\",\n  \"recommended_impulses\": <array with 0-10 items>,\n  \"optimal_token_budget\": <number in range [1000, 10000]>,\n  \"success_correlation\": <number in range [0.0, 1.0]>,\n  \"sample_size\": <number>\n}\n\nValidation Criteria:\n- Response has correct activity_type ('infrastructure')\n- All fields follow standard validation rules\n- Verifies all 5 valid activity types are supported (feature, bugfix, refactor, test, infrastructure)\n\nTest Purpose:\nVerify that all valid activity_type values are supported, specifically testing 'infrastructure' category.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "createdAt": "2026-02-28T00:00:00.000Z",
+  "metadata": {
+    "testCaseId": "case-6",
+    "specificationName": "context-optimization-endpoint-complete",
+    "testType": "functional",
+    "activityType": "infrastructure"
+  }
+}

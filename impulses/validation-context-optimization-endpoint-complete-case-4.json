@@ -1,0 +1,17 @@
+{
+  "id": "validation-context-optimization-endpoint-complete-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Validation Test Case 4: Small Limit Parameter\n\nInput:\n{\n  \"activity_type\": \"refactor\",\n  \"limit\": 10\n}\n\nExpected Output:\n{\n  \"activity_type\": \"refactor\",\n  \"recommended_impulses\": <array with 0-10 items>,\n  \"optimal_token_budget\": <number>,\n  \"success_correlation\": <number>,\n  \"sample_size\": <number, should be <= 10>\n}\n\nValidation Criteria:\n- Response respects the limit parameter\n- sample_size should not exceed 10\n- All other fields follow standard validation\n\nTest Purpose:\nVerify that the limit parameter correctly bounds the number of historical records analyzed.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "createdAt": "2026-02-28T00:00:00.000Z",
+  "metadata": {
+    "testCaseId": "case-4",
+    "specificationName": "context-optimization-endpoint-complete",
+    "testType": "functional",
+    "activityType": "refactor"
+  }
+}

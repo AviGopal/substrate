@@ -1,0 +1,17 @@
+{
+  "id": "validation-context-optimization-endpoint-complete-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Validation Test Case 3: Invalid Activity Type Validation\n\nInput:\n{\n  \"activity_type\": \"invalid_type\",\n  \"limit\": 100\n}\n\nExpected Output:\nHTTP 400 Bad Request\n{\n  \"detail\": <error message containing 'validation'>\n}\n\nValidation Criteria:\n- Request should fail with HTTP 400 status\n- Error message should mention validation failure\n- Valid types are: feature, bugfix, refactor, test, infrastructure\n\nTest Purpose:\nVerify that the endpoint correctly validates the activity_type parameter and rejects invalid values with appropriate error messages.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "createdAt": "2026-02-28T00:00:00.000Z",
+  "metadata": {
+    "testCaseId": "case-3",
+    "specificationName": "context-optimization-endpoint-complete",
+    "testType": "validation",
+    "expectFailure": true
+  }
+}

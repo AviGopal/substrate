@@ -1,0 +1,17 @@
+{
+  "id": "validation-context-optimization-endpoint-complete-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Validation Test Case 2: Bugfix Activity Type Context Optimization\n\nInput:\n{\n  \"activity_type\": \"bugfix\",\n  \"limit\": 100\n}\n\nExpected Output:\n{\n  \"activity_type\": \"bugfix\",\n  \"recommended_impulses\": [\n    // Array of impulse recommendations for bugfix activities\n    // Should differ from feature recommendations if data patterns differ\n  ],\n  \"optimal_token_budget\": <number>,\n  \"success_correlation\": <number>,\n  \"sample_size\": <number>\n}\n\nValidation Criteria:\n- Response has correct activity_type ('bugfix')\n- recommended_impulses is array with 0-10 items\n- Impulses are sorted by success_rate descending\n- optimal_token_budget is in range [1000, 10000]\n- success_correlation is in range [0.0, 1.0]\n- Recommendations may differ from 'feature' activity type\n\nTest Purpose:\nVerify that the endpoint correctly filters historical data by activity_type and returns different recommendations for 'bugfix' vs 'feature' activities.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "createdAt": "2026-02-28T00:00:00.000Z",
+  "metadata": {
+    "testCaseId": "case-2",
+    "specificationName": "context-optimization-endpoint-complete",
+    "testType": "functional",
+    "activityType": "bugfix"
+  }
+}

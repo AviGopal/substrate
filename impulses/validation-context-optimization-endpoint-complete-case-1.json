@@ -1,0 +1,17 @@
+{
+  "id": "validation-context-optimization-endpoint-complete-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Validation Test Case 1: Feature Activity Type Context Optimization\n\nInput:\n{\n  \"activity_type\": \"feature\",\n  \"limit\": 100\n}\n\nExpected Output:\n{\n  \"activity_type\": \"feature\",\n  \"recommended_impulses\": [\n    // Array of impulse recommendations, ranked by success_rate (descending)\n    // Each item: {type: string, success_rate: number (0-1), successes: int, total_uses: int}\n  ],\n  \"optimal_token_budget\": <number>, // Rounded to nearest 500, range [1000-10000]\n  \"success_correlation\": <number>, // Float 0-1\n  \"sample_size\": <number> // Number of historical records analyzed\n}\n\nValidation Criteria:\n- Response has correct activity_type ('feature')\n- recommended_impulses is array with 0-10 items\n- Impulses are sorted by success_rate descending\n- optimal_token_budget is in range [1000, 10000]\n- success_correlation is in range [0.0, 1.0]\n- sample_size >= 0\n\nTest Purpose:\nVerify that the endpoint correctly analyzes historical impulse usage for 'feature' activities and returns ranked recommendations based on success rates.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "createdAt": "2026-02-28T00:00:00.000Z",
+  "metadata": {
+    "testCaseId": "case-1",
+    "specificationName": "context-optimization-endpoint-complete",
+    "testType": "functional",
+    "activityType": "feature"
+  }
+}
