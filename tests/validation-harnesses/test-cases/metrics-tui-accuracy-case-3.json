@@ -1,0 +1,44 @@
+{
+  "testCase": "high-utilization",
+  "description": "Test high utilization session (>90%) - tests warning thresholds",
+  "input": {
+    "sessionSetup": {
+      "messageCount": 100,
+      "totalCost": 5.00,
+      "totalTokens": {
+        "input": 50000,
+        "output": 20000,
+        "cache": 10000
+      },
+      "activityStates": {
+        "active": 3,
+        "completed": 20,
+        "failed": 2
+      },
+      "impulseData": {
+        "impulseCount": 10,
+        "totalBudget": 10000,
+        "usedTokens": 9500
+      }
+    }
+  },
+  "expectedOutput": {
+    "cost": 5.00,
+    "tokens": {
+      "input": 50000,
+      "output": 20000,
+      "cache": 10000
+    },
+    "activities": {
+      "total": 25,
+      "completed": 20,
+      "failed": 2,
+      "successRate": 0.909
+    },
+    "contextUtilization": 95.0,
+    "warnings": {
+      "highUtilization": true,
+      "threshold": 90
+    }
+  }
+}
