@@ -1,0 +1,11 @@
+{
+  "id": "harness-complete-architecture-separation",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/complete-architecture-separation-harness.ts",
+    "source": "validation-harness-creation"
+  },
+  "budget": 2000,
+  "tags": ["validation", "harness", "architecture", "separation"]
+}

@@ -1,0 +1,209 @@
+{
+  "specificationName": "complete-architecture-separation",
+  "analysisDate": "2026-02-28",
+  "otherSpecifications": [
+    "impulse-learning-in-rpc-api-only",
+    "metrics-calculation-in-rpc-api-only",
+    "surrealdb-primary-redis-cache"
+  ],
+  "conflicts": [],
+  "conflictStatus": "NO_CONTRADICTIONS",
+  "totalConflicts": 0,
+  "complementaryRelationships": 3,
+  "specificationRelationships": [
+    {
+      "specification": "impulse-learning-in-rpc-api-only",
+      "relationship": "SUBSET",
+      "status": "PENDING",
+      "overlap": "Same architectural goal (ML in RPC API)",
+      "description": "impulse-learning-in-rpc-api-only is a specific application of complete-architecture-separation focusing on impulse learning algorithms"
+    },
+    {
+      "specification": "metrics-calculation-in-rpc-api-only",
+      "relationship": "SUBSET",
+      "status": "SATISFIED",
+      "overlap": "Thompson Sampling metrics calculation",
+      "description": "metrics-calculation-in-rpc-api-only validates that Beta distribution calculations were removed as part of complete-architecture-separation"
+    },
+    {
+      "specification": "surrealdb-primary-redis-cache",
+      "relationship": "INFRASTRUCTURE",
+      "status": "PARTIAL",
+      "overlap": "RPC API storage layer",
+      "description": "surrealdb-primary-redis-cache defines storage patterns that support complete-architecture-separation by ensuring reliable ML data persistence"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "impulse-learning.ts",
+      "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "affectedBySpecs": [
+        "complete-architecture-separation",
+        "impulse-learning-in-rpc-api-only"
+      ],
+      "currentStatus": "VIOLATES_BOTH",
+      "issue": "Contains 394 lines of ML algorithms (should be <50 lines, data collection only)",
+      "recommendation": "Remove normalizePattern, calculateResponseQuality, trackImpulseUsage; add sendToRpcApi() function",
+      "priority": "HIGH",
+      "estimatedEffort": "2-3 hours"
+    },
+    {
+      "component": "activity.ts",
+      "filePath": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "affectedBySpecs": [
+        "complete-architecture-separation",
+        "metrics-calculation-in-rpc-api-only"
+      ],
+      "currentStatus": "COMPLIANT",
+      "issue": null,
+      "recommendation": "No changes needed - Beta distribution calculations already removed",
+      "priority": "NONE"
+    },
+    {
+      "component": "activity.py (RPC API)",
+      "filePath": "repos/metabob-rpc-api/server/actions/activity.py",
+      "affectedBySpecs": [
+        "complete-architecture-separation",
+        "surrealdb-primary-redis-cache"
+      ],
+      "currentStatus": "PARTIAL_COMPLIANCE",
+      "issue": "record_execution_result() has incorrect write order (Redis first, should be SurrealDB first)",
+      "recommendation": "Fix execution recording write order - SurrealDB first, then Redis cache",
+      "priority": "HIGH",
+      "estimatedEffort": "2 hours"
+    },
+    {
+      "component": "impulse_learning.py (RPC API)",
+      "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "affectedBySpecs": [
+        "complete-architecture-separation",
+        "impulse-learning-in-rpc-api-only"
+      ],
+      "currentStatus": "COMPLIANT",
+      "issue": null,
+      "recommendation": "No changes needed - correctly implements learning algorithms in RPC API",
+      "priority": "NONE"
+    }
+  ],
+  "dependencyGraph": {
+    "rootSpecification": "complete-architecture-separation",
+    "dependencies": [
+      {
+        "specification": "impulse-learning-in-rpc-api-only",
+        "type": "SUBSET",
+        "status": "PENDING",
+        "blockedBy": null,
+        "blocks": null,
+        "requiredAction": "Remove ML from impulse-learning.ts"
+      },
+      {
+        "specification": "metrics-calculation-in-rpc-api-only",
+        "type": "SUBSET",
+        "status": "COMPLETE",
+        "blockedBy": null,
+        "blocks": null,
+        "requiredAction": null
+      },
+      {
+        "specification": "surrealdb-primary-redis-cache",
+        "type": "INFRASTRUCTURE",
+        "status": "PARTIAL",
+        "blockedBy": null,
+        "blocks": null,
+        "requiredAction": "Fix Phase 2 execution recording write order"
+      }
+    ]
+  },
+  "blockingIssues": [
+    {
+      "issue": "impulse-learning.ts still contains ML algorithms",
+      "specification": "impulse-learning-in-rpc-api-only",
+      "impact": "Violates complete-architecture-separation principle (ZERO ML in opencode)",
+      "alignment": "ALIGNED - Removing ML strengthens architectural separation",
+      "priority": "HIGH",
+      "resolution": {
+        "actions": [
+          "Remove normalizePattern from impulse-learning.ts (28 lines)",
+          "Remove calculateResponseQuality from impulse-learning.ts (19 lines)",
+          "Remove trackImpulseUsage from impulse-learning.ts (31 lines)",
+          "Add sendToRpcApi() function to POST raw data to /record-turn",
+          "Reduce file to <50 lines (data collection only)"
+        ],
+        "estimatedEffort": "2-3 hours",
+        "blockedBy": null
+      }
+    },
+    {
+      "issue": "Execution recording has incorrect write order",
+      "specification": "surrealdb-primary-redis-cache",
+      "impact": "Thompson Sampling data may not persist correctly during failures",
+      "alignment": "ALIGNED - Fix enhances complete-architecture-separation reliability",
+      "priority": "HIGH",
+      "resolution": {
+        "actions": [
+          "Fix record_execution_result() in activity.py",
+          "Write to SurrealDB FIRST, then update Redis cache",
+          "Remove compensating transaction logic"
+        ],
+        "estimatedEffort": "2 hours",
+        "blockedBy": null
+      }
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "title": "Complete impulse-learning-in-rpc-api-only enforcement",
+      "reason": "Aligns with complete-architecture-separation (ZERO ML in opencode)",
+      "actions": [
+        "Remove ML algorithms from impulse-learning.ts",
+        "Add HTTP POST to /record-turn for raw data",
+        "Reduce file to <50 lines"
+      ],
+      "estimatedEffort": "2-3 hours",
+      "benefit": "Strengthens architectural separation across all ML operations"
+    },
+    {
+      "priority": "HIGH",
+      "title": "Complete surrealdb-primary-redis-cache Phase 2",
+      "reason": "Ensures reliable storage for Thompson Sampling metrics",
+      "actions": [
+        "Fix execution recording write order (SurrealDB first, then Redis)",
+        "Re-run validation harness"
+      ],
+      "estimatedEffort": "2 hours",
+      "benefit": "Enhances data reliability for complete-architecture-separation"
+    },
+    {
+      "priority": "MEDIUM",
+      "title": "Create unified architectural enforcement activity",
+      "reason": "All specs share same goal (ML in RPC API only)",
+      "actions": [
+        "Create activity template that enforces all 4 specs together",
+        "Run as single workflow instead of separate enforcements",
+        "Validate cross-spec consistency automatically"
+      ],
+      "estimatedEffort": "4 hours",
+      "benefit": "Prevents future conflicts, ensures holistic compliance"
+    }
+  ],
+  "finalVerdict": {
+    "conflictStatus": "NO_CONTRADICTIONS",
+    "architecturalAlignment": "100%",
+    "allSpecsAgree": [
+      "ML logic belongs in RPC API only",
+      "opencode is execution + coordination layer only",
+      "SurrealDB is primary data store"
+    ],
+    "blockingIssuesCount": 2,
+    "blockingIssuesAlign": true,
+    "conclusion": "The complete-architecture-separation specification is the ROOT specification. All other specifications are either SUBSETS (specific ML areas) or INFRASTRUCTURE (storage layer). There are ZERO contradictory requirements. The two blocking issues should be resolved to fully achieve clean architectural separation across all ML operations (Thompson Sampling, impulse learning, metrics)."
+  },
+  "nextActions": [
+    "Enforce impulse-learning-in-rpc-api-only (remove ML from impulse-learning.ts)",
+    "Complete surrealdb-primary-redis-cache Phase 2 (fix write order)",
+    "Re-run all validation harnesses",
+    "Verify holistic architectural compliance"
+  ],
+  "conflictImpulseId": "conflict-analysis-complete-architecture-separation"
+}
