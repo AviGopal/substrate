@@ -1,0 +1,199 @@
+{
+  "specificationName": "thompson-sampling-in-rpc-api-only",
+  "analysisTimestamp": "2026-02-28T01:05:00Z",
+  "otherSpecifications": [
+    "activity-state-transformation-tracking",
+    "boredom-activity-detection-mechanism",
+    "ci-cd-pre-push-quality-gates",
+    "impulse-usage-tracking",
+    "Instance Invariant Storage for Impulses and Activities",
+    "metabob-session-tracking",
+    "devbob-k8s-git-operations",
+    "helmfile-deployment-pattern"
+  ],
+  "modifiedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "changes": "Removed betaSample() and performThompsonSampling(), added RpcHttpClient delegation",
+      "linesChanged": -110
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "changes": "Deprecated getTemplateMetrics() with warning logs",
+      "linesChanged": 14
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts",
+      "changes": "Created new RPC HTTP client utility",
+      "linesChanged": 117,
+      "isNew": true
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "changes": "Auto-formatted (no functional changes)",
+      "linesChanged": 14
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "changes": "Auto-formatted (no functional changes)",
+      "linesChanged": 6
+    }
+  ],
+  "conflicts": [],
+  "potentialConflicts": [
+    {
+      "type": "POSSIBLE_DEPENDENCY",
+      "severity": "LOW",
+      "spec1": "thompson-sampling-in-rpc-api-only",
+      "spec2": "activity-state-transformation-tracking",
+      "sharedComponent": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "description": "Both specs touch activity.ts, but thompson-sampling only auto-formatted while activity-state-transformation-tracking may have functional changes",
+      "likelihood": "LOW",
+      "resolution": "No conflict - auto-formatting doesn't affect functionality",
+      "status": "RESOLVED"
+    },
+    {
+      "type": "POSSIBLE_INTEGRATION_POINT",
+      "severity": "LOW",
+      "spec1": "thompson-sampling-in-rpc-api-only",
+      "spec2": "metabob-session-tracking",
+      "sharedComponent": "Activity execution flow",
+      "description": "Thompson Sampling selection affects which template is executed, which is tracked by session tracking",
+      "likelihood": "LOW",
+      "resolution": "No conflict - session tracking is agnostic to selection method (local vs RPC)",
+      "status": "COMPATIBLE"
+    },
+    {
+      "type": "ARCHITECTURAL_ALIGNMENT",
+      "severity": "INFO",
+      "spec1": "thompson-sampling-in-rpc-api-only",
+      "spec2": "Instance Invariant Storage for Impulses and Activities",
+      "sharedComponent": "OpenCode architecture",
+      "description": "Both specs enforce architectural boundaries (ML in rpc-api, storage invariants)",
+      "likelihood": "N/A",
+      "resolution": "Complementary - both enforce separation of concerns",
+      "status": "ALIGNED"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only (auto-format only)",
+        "activity-state-transformation-tracking (possible functional changes)"
+      ],
+      "recommendation": "Monitor for conflicts if activity-state-transformation-tracking modifies activity.ts functionally",
+      "riskLevel": "LOW"
+    },
+    {
+      "component": "Activity execution flow",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only (template selection delegation)",
+        "metabob-session-tracking (execution tracking)",
+        "impulse-usage-tracking (impulse usage during execution)",
+        "boredom-activity-detection-mechanism (autonomous execution)"
+      ],
+      "recommendation": "All specs are compatible - they address different concerns in the execution pipeline",
+      "riskLevel": "LOW"
+    },
+    {
+      "component": "Template system",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only (template variant selection)"
+      ],
+      "recommendation": "No other specs currently touch template selection logic",
+      "riskLevel": "NONE"
+    }
+  ],
+  "crossReferenceAnalysis": {
+    "filesModifiedByThisSpec": [
+      "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts (new)"
+    ],
+    "filesModifiedByOtherSpecs": [],
+    "overlappingFiles": [],
+    "isolatedChanges": true
+  },
+  "architecturalBoundaryAnalysis": {
+    "thisSpecBoundary": "ML and probabilistic selection logic belongs in metabob-rpc-api, NOT metabob-opencode",
+    "relatedBoundaries": [
+      {
+        "spec": "Instance Invariant Storage for Impulses and Activities",
+        "boundary": "Impulses and activities must be stored with instance-specific paths, not globally shared",
+        "relationship": "COMPLEMENTARY - both enforce separation of concerns"
+      }
+    ],
+    "boundaryConflicts": []
+  },
+  "validationResultsSummary": {
+    "thisSpec": {
+      "name": "thompson-sampling-in-rpc-api-only",
+      "status": "PASS",
+      "testsPassed": 3,
+      "testsFailed": 0,
+      "testsSkipped": 1
+    },
+    "otherSpecs": [
+      {
+        "name": "activity-state-transformation-tracking",
+        "status": "PASS"
+      },
+      {
+        "name": "boredom-activity-detection-mechanism",
+        "status": "PASS"
+      },
+      {
+        "name": "ci-cd-pre-push-quality-gates",
+        "status": "PASS"
+      },
+      {
+        "name": "impulse-usage-tracking",
+        "status": "PASS"
+      },
+      {
+        "name": "Instance Invariant Storage for Impulses and Activities",
+        "status": "PASS"
+      },
+      {
+        "name": "metabob-session-tracking",
+        "status": "PASS"
+      },
+      {
+        "name": "devbob-k8s-git-operations",
+        "status": "FAIL",
+        "note": "Infrastructure-related, not code conflict"
+      },
+      {
+        "name": "helmfile-deployment-pattern",
+        "status": "FAIL",
+        "note": "Deployment-related, not code conflict"
+      }
+    ]
+  },
+  "conflictMatrix": {
+    "thompson-sampling-in-rpc-api-only": {
+      "activity-state-transformation-tracking": "NO_CONFLICT",
+      "boredom-activity-detection-mechanism": "NO_CONFLICT",
+      "ci-cd-pre-push-quality-gates": "NO_CONFLICT",
+      "impulse-usage-tracking": "NO_CONFLICT",
+      "Instance Invariant Storage for Impulses and Activities": "ALIGNED",
+      "metabob-session-tracking": "NO_CONFLICT",
+      "devbob-k8s-git-operations": "NO_CONFLICT",
+      "helmfile-deployment-pattern": "NO_CONFLICT"
+    }
+  },
+  "recommendations": [
+    "✓ No conflicts detected with other specifications",
+    "✓ Changes are isolated to template selection system",
+    "✓ No shared components with conflicting requirements",
+    "✓ Architectural boundaries are complementary",
+    "✓ All passing specs remain compatible",
+    "⚠️ Monitor activity.ts if activity-state-transformation-tracking makes functional changes",
+    "⚠️ Failing specs (devbob-k8s-git-operations, helmfile-deployment-pattern) are infrastructure/deployment related, not code conflicts"
+  ],
+  "overallConflictStatus": "NO_CONFLICTS",
+  "riskLevel": "LOW",
+  "actionRequired": false,
+  "conflictImpulseId": "conflict-analysis-thompson-sampling-in-rpc-api-only"
+}

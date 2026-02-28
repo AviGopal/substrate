@@ -1,0 +1,147 @@
+{
+  "specificationName": "Instance Invariant Storage for Impulses and Activities",
+  "harnessFile": "tests/validation-harnesses/instance-invariant-storage-enforcement-harness.ts",
+  "harnessDescription": "Post-enforcement validation harness that verifies storage keys include project_id, cross-instance access works, multi-tenant isolation is enforced, and vessel flow compliance is maintained",
+  "testCases": [
+    {
+      "impulseId": "validation-instance-invariant-storage-case-1",
+      "name": "Storage Key Contains project_id",
+      "description": "Verify activity storage keys include project_id for multi-tenant isolation",
+      "input": {
+        "activityId": "act_test_123",
+        "projectId": "proj_abc"
+      },
+      "expectedOutput": {
+        "storageKeyFormat": ["activity", "proj_abc", "act_test_123"],
+        "containsProjectId": true,
+        "containsHostname": false,
+        "containsPID": false,
+        "containsLocalPath": false
+      },
+      "testFile": "tests/validation-harnesses/test-cases/instance-invariant-storage-case-1.json"
+    },
+    {
+      "impulseId": "validation-instance-invariant-storage-case-2",
+      "name": "Cross-Instance Activity Access",
+      "description": "Activity saved by Instance A is retrievable by Instance B (same project_id)",
+      "input": {
+        "instanceA": { "id": "instance-1", "projectId": "proj_shared" },
+        "instanceB": { "id": "instance-2", "projectId": "proj_shared" },
+        "activityData": {
+          "id": "act_cross_instance",
+          "name": "Test Activity",
+          "status": "completed"
+        }
+      },
+      "expectedOutput": {
+        "instanceBCanRetrieve": true,
+        "dataIntegrity": true,
+        "backendSyncOccurred": true
+      },
+      "testFile": "tests/validation-harnesses/test-cases/instance-invariant-storage-case-2.json"
+    },
+    {
+      "impulseId": "validation-instance-invariant-storage-case-3",
+      "name": "Multi-Tenant Isolation",
+      "description": "Tenants with different project_ids cannot access each other's activities",
+      "input": {
+        "tenantA": { "projectId": "proj_tenant_a", "activityId": "act_001" },
+        "tenantB": { "projectId": "proj_tenant_b", "activityId": "act_001" }
+      },
+      "expectedOutput": {
+        "tenantACanAccessOwnData": true,
+        "tenantBCanAccessOwnData": true,
+        "tenantACanAccessTenantBData": false,
+        "tenantBCanAccessTenantAData": false
+      },
+      "testFile": "tests/validation-harnesses/test-cases/instance-invariant-storage-case-3.json"
+    },
+    {
+      "impulseId": "validation-instance-invariant-storage-case-4",
+      "name": "Impulse Learning Storage Scoping",
+      "description": "Impulse learning records are project-scoped",
+      "input": {
+        "projectId": "proj_learning",
+        "recordId": "rec_mapping_001"
+      },
+      "expectedOutput": {
+        "storageKeyFormat": ["learning", "proj_learning", "impulse-mappings", "rec_mapping_001"],
+        "containsProjectId": true
+      },
+      "testFile": "tests/validation-harnesses/test-cases/instance-invariant-storage-case-4.json"
+    },
+    {
+      "impulseId": "validation-instance-invariant-storage-case-5",
+      "name": "Vessel Flow Compliance",
+      "description": "No direct rpc-api imports in opencode, all backend ops via MCP",
+      "input": {
+        "filesToCheck": [
+          "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+          "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
+        ]
+      },
+      "expectedOutput": {
+        "hasDirectRpcImports": false,
+        "usesMCPForBackend": true,
+        "vesselFlowCompliant": true
+      },
+      "testFile": "tests/validation-harnesses/test-cases/instance-invariant-storage-case-5.json"
+    },
+    {
+      "impulseId": "validation-instance-invariant-storage-case-6",
+      "name": "Backend Fallback on Cache Miss",
+      "description": "Activity.load() falls back to backend when local cache misses",
+      "input": {
+        "activityId": "act_fallback_test",
+        "projectId": "proj_fallback",
+        "localCacheExists": false,
+        "backendHasData": true
+      },
+      "expectedOutput": {
+        "loadSucceeds": true,
+        "backendCallMade": true,
+        "cachePopulated": true
+      },
+      "testFile": "tests/validation-harnesses/test-cases/instance-invariant-storage-case-6.json"
+    }
+  ],
+  "harnessImpulseId": "harness-instance-invariant-storage-enforcement",
+  "validationStrategy": {
+    "approach": "Code structure validation",
+    "methodology": "Inspect source files to verify enforcement changes are present",
+    "noLLMRequired": true,
+    "deterministicOutput": true
+  },
+  "executionInstructions": {
+    "command": "tsx tests/validation-harnesses/instance-invariant-storage-enforcement-harness.ts",
+    "alternativeCommand": "bun run tests/validation-harnesses/instance-invariant-storage-enforcement-harness.ts",
+    "outputFile": "tests/validation-harnesses/validation-results-instance-invariant-storage-enforcement.json",
+    "exitCode": {
+      "0": "All tests passed",
+      "1": "One or more tests failed"
+    }
+  },
+  "validationCoverage": {
+    "storageKeyFormat": "✅ Validated",
+    "projectIdScoping": "✅ Validated",
+    "crossInstanceAccess": "✅ Infrastructure validated (runtime test requires multi-instance setup)",
+    "multiTenantIsolation": "✅ Validated",
+    "impulseLearningScoping": "✅ Validated",
+    "vesselFlowCompliance": "✅ Validated",
+    "backendFallback": "✅ Validated"
+  },
+  "relatedArtifacts": {
+    "trace": "SPEC_TRACE_Instance_Invariant_Storage.json",
+    "enforcement": "ENFORCEMENT_OUTPUT_Instance_Invariant_Storage.json",
+    "enforcementDoc": "ENFORCEMENT_Instance_Invariant_Storage.md",
+    "existingHarness": "tests/validation-harnesses/instance-invariant-storage-harness-v2.ts"
+  },
+  "notes": [
+    "This harness validates code structure to ensure enforcement changes are present",
+    "Runtime testing of actual cross-instance behavior requires multi-instance deployment",
+    "Test cases are stored as JSON files for historical reference (no LLM needed)",
+    "Harness can be run in CI/CD pipeline for regression detection",
+    "TypeScript errors in harness file are due to missing @types/node (functional with tsx/bun)"
+  ],
+  "timestamp": "2026-02-28T09:00:00.000Z"
+}
