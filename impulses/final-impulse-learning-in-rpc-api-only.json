@@ -1,0 +1,243 @@
+{
+  "id": "final-impulse-learning-in-rpc-api-only",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Complete Transformation Summary for impulse-learning-in-rpc-api-only"
+  },
+  "metadata": {
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "completionStatus": "PARTIAL",
+    "phase": "Phase 1 Complete (50%), Phase 2 Pending (50%)",
+    "commitHash": "6c1fb46",
+    "gitTag": "spec-impulse-learning-in-rpc-api-only-v1-phase1",
+    "completionDate": "2026-02-28T11:30:00Z",
+    "instructionalToFunctionalBridge": {
+      "instructionalState": {
+        "requirement": "Learning algorithms (pattern extraction, quality calculation, usage tracking) must exist ONLY in metabob-rpc-api. Opencode must only collect raw data and send to rpc-api.",
+        "principle": "Architectural boundary: Learning algorithms belong in rpc-api, data collection in opencode",
+        "goal": "Centralized learning with cross-instance data sharing"
+      },
+      "functionalState": {
+        "implemented": [
+          "Created impulse_learning.py with 6 server-side functions (391 lines)",
+          "Added POST /api/v1/learning-loop/record-turn endpoint (+115 lines)",
+          "Updated operations module exports (+10 lines)",
+          "Created validation harness with 8 test cases"
+        ],
+        "pending": [
+          "Delete learning algorithms from opencode impulse-learning.ts",
+          "Implement sendToRpcApi() using MCP tool",
+          "Update turn-lifecycle-hooks.ts to call sendToRpcApi()",
+          "Create MCP tool: metabob_learning_record_turn"
+        ]
+      },
+      "verification": {
+        "harness": "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs",
+        "currentStatus": "FAIL (4/8 checks - 50%)",
+        "passedChecks": [
+          "RPC API has POST /record-turn endpoint",
+          "RPC API has normalize_pattern function",
+          "RPC API has calculate_quality function",
+          "RPC API has track_usage function"
+        ],
+        "failedChecks": [
+          "impulse-learning.ts has 394 lines (expected <50)",
+          "normalizePattern still exists in opencode",
+          "calculateResponseQuality still exists in opencode",
+          "trackImpulseUsage still exists in opencode"
+        ]
+      }
+    },
+    "transformationSummary": {
+      "specificationEnforced": "Learning algorithms in rpc-api only (architectural boundary)",
+      "filesChanged": 18,
+      "linesAdded": 2821,
+      "testsAdded": 1,
+      "testCases": 8,
+      "validationStatus": "PARTIAL (50% - RPC API complete)",
+      "conflictsResolved": 2,
+      "impulsesCreated": 7
+    },
+    "commitDetails": {
+      "hash": "6c1fb46",
+      "tag": "spec-impulse-learning-in-rpc-api-only-v1-phase1",
+      "subject": "feat(impulse-learning-in-rpc-api-only): Enforce learning algorithms in rpc-api (Phase 1)",
+      "filesChanged": [
+        "ENFORCEMENT_IMPULSE_LEARNING_IN_RPC_API_ONLY.md (NEW)",
+        "TRACE_IMPULSE_LEARNING_SUMMARY.md (NEW)",
+        "impulses/conflict-analysis-impulse-learning-in-rpc-api-only.json (NEW)",
+        "impulses/enforcement-impulse-learning-in-rpc-api-only.json (NEW)",
+        "impulses/harness-impulse-learning-in-rpc-api-only.json (NEW)",
+        "impulses/ripple-impulse-learning-in-rpc-api-only.json (NEW)",
+        "impulses/trace-impulse-learning-in-rpc-api-only.json (NEW)",
+        "impulses/validation-impulse-learning-in-rpc-api-only-case-[1-8].json (NEW, 8 files)",
+        "impulses/validation-results-impulse-learning-in-rpc-api-only.json (NEW)",
+        "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs (NEW)",
+        "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.ts (NEW)"
+      ]
+    },
+    "stateTransition": {
+      "before": {
+        "description": "Learning algorithms in opencode (local processing)",
+        "dataFlow": "Turn → captureData → normalizePattern [LOCAL] → calculateQuality [LOCAL] → trackUsage [LOCAL] → persistMappingRecord [LOCAL STORAGE]",
+        "storage": "Local filesystem only (instance-specific)",
+        "crossInstance": false,
+        "architecturalBoundary": "VIOLATED"
+      },
+      "current": {
+        "description": "TRANSITIONAL - RPC API ready, opencode not updated",
+        "dataFlow": "Old flow still active + RPC API ready but not connected",
+        "storage": "Local filesystem (old) + SurrealDB ready (new, unused)",
+        "crossInstance": false,
+        "architecturalBoundary": "PARTIAL - algorithms exist in both places"
+      },
+      "after": {
+        "description": "Learning algorithms in rpc-api only (centralized)",
+        "dataFlow": "Turn → captureData → MCP.metabob_learning_record_turn → POST /v1/learning-loop/record-turn → normalize_pattern [SERVER] → calculate_quality [SERVER] → track_usage [SERVER] → SurrealDB",
+        "storage": "SurrealDB only (centralized backend)",
+        "crossInstance": true,
+        "architecturalBoundary": "ENFORCED"
+      }
+    },
+    "componentsAffected": {
+      "created": [
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+          "lines": 391,
+          "purpose": "Server-side learning pipeline with 6 functions"
+        },
+        {
+          "file": "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs",
+          "lines": 456,
+          "purpose": "Validation harness (8 checks)"
+        }
+      ],
+      "modified": [
+        {
+          "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+          "linesAdded": 115,
+          "change": "Added POST /record-turn endpoint"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/__init__.py",
+          "linesAdded": 10,
+          "change": "Added impulse_learning exports"
+        }
+      ],
+      "pending": [
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+          "action": "Delete learning algorithms, add sendToRpcApi()",
+          "targetSize": "<50 lines (currently 394 lines)"
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+          "action": "Replace flushToDatabase() with sendToRpcApi()",
+          "lines": "940-998"
+        },
+        {
+          "file": "repos/metabob-cli/src/metabob_cli/mcp/learning_tools.py",
+          "action": "Create new MCP tool: metabob_learning_record_turn",
+          "status": "NEW FILE"
+        }
+      ]
+    },
+    "conflictsResolved": [
+      {
+        "id": "CONF-001",
+        "type": "CONTRADICTORY_REQUIREMENTS",
+        "severity": "CRITICAL",
+        "specs": ["impulse-learning-in-rpc-api-only", "instance-invariant-storage"],
+        "component": "ImpulseLearning.persistMappingRecord()",
+        "resolution": "SPEC 1 WINS - Delete function, use rpc-api backend",
+        "status": "RESOLVED"
+      },
+      {
+        "id": "CONF-002",
+        "type": "OVERLAPPING_DEPENDENCIES",
+        "severity": "MINOR",
+        "specs": ["impulse-learning-in-rpc-api-only", "instance-invariant-storage"],
+        "component": "turn-lifecycle-hooks.ts - impulse-learning-flush hook",
+        "resolution": "HYBRID - Use MCP tool for vessel flow consistency",
+        "status": "RESOLVED"
+      }
+    ],
+    "impulsesCreated": [
+      {
+        "id": "trace-impulse-learning-in-rpc-api-only",
+        "type": "templateDefinition",
+        "budget": 5000,
+        "content": "Complete trace analysis (current vs desired state)"
+      },
+      {
+        "id": "enforcement-impulse-learning-in-rpc-api-only",
+        "type": "memo",
+        "budget": 3000,
+        "content": "Enforcement report with changes applied"
+      },
+      {
+        "id": "validation-impulse-learning-in-rpc-api-only-case-[1-8]",
+        "type": "memo",
+        "count": 8,
+        "budgetEach": 500,
+        "content": "Test case impulses with expected inputs/outputs"
+      },
+      {
+        "id": "harness-impulse-learning-in-rpc-api-only",
+        "type": "file",
+        "budget": 2000,
+        "content": "Validation harness pointer"
+      },
+      {
+        "id": "validation-results-impulse-learning-in-rpc-api-only",
+        "type": "memo",
+        "budget": 2000,
+        "content": "Validation execution results"
+      },
+      {
+        "id": "conflict-analysis-impulse-learning-in-rpc-api-only",
+        "type": "memo",
+        "budget": 3000,
+        "content": "Conflict matrix and resolutions"
+      },
+      {
+        "id": "ripple-impulse-learning-in-rpc-api-only",
+        "type": "memo",
+        "budget": 3000,
+        "content": "Ripple changes and implementation plan"
+      }
+    ],
+    "nextSteps": {
+      "phase2": "Opencode simplification",
+      "estimatedEffort": "6-9 hours",
+      "criticalPath": [
+        "1. Create MCP tool: metabob_learning_record_turn (1-2 hours)",
+        "2. Implement sendToRpcApi() in impulse-learning.ts (30 min)",
+        "3. Update turn-lifecycle-hooks.ts (15 min)",
+        "4. Delete learning algorithms from opencode (30 min)",
+        "5. Update tests (2-3 hours)",
+        "6. Update instance-invariant-storage spec (1 hour)",
+        "7. Re-run validation harnesses (30 min)",
+        "8. Add cross-component annotations (30 min)"
+      ],
+      "blockingIssues": [
+        "MCP tool creation requires metabob-cli repository access",
+        "Integration testing requires running rpc-api and MCP server",
+        "SurrealDB must be running for end-to-end testing"
+      ]
+    },
+    "workflowExecuted": {
+      "steps": [
+        "1. TRACE - Documented current vs desired state",
+        "2. ENFORCE - Created RPC API server-side infrastructure",
+        "3. VALIDATE - Created harness, ran validation (4/8 checks pass)",
+        "4. DETECT CONFLICTS - Found 2 conflicts, resolved both",
+        "5. RIPPLE - Analyzed cross-component impact, created plan",
+        "6. COMMIT - Created git commit with comprehensive message and tag"
+      ],
+      "outcome": "Phase 1 Complete (50%), Phase 2 Pending (50%)"
+    }
+  },
+  "budget": 2000
+}
