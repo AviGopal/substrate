@@ -1,0 +1,18 @@
+{
+  "impulseId": "validation-instance-invariant-storage-case-5",
+  "name": "Vessel Flow Compliance",
+  "description": "No direct rpc-api imports in opencode, all backend ops via MCP",
+  "input": {
+    "filesToCheck": [
+      "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
+    ]
+  },
+  "expectedOutput": {
+    "hasDirectRpcImports": false,
+    "usesMCPForBackend": true,
+    "vesselFlowCompliant": true
+  },
+  "type": "memo",
+  "budget": 500
+}
