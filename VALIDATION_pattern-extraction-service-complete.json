@@ -1,0 +1,236 @@
+{
+  "specificationName": "pattern-extraction-service-complete",
+  "harnessFile": "tests/validation-harnesses/pattern-extraction-service-complete-harness.ts",
+  "harnessDescription": "Pure validation harness that tests pattern extraction service by feeding sample messages and verifying structured PatternData outputs. No LLM calls - pure input/output verification.",
+  "testStrategy": "Unit testing approach: feed messages with file paths, component names, error patterns, and refactoring keywords. Capture actual extraction results and compare against expected PatternData structures.",
+  "testCases": [
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-1",
+      "description": "Extract file paths from simple messages",
+      "input": {
+        "messages": [
+          "Fixed bug in src/auth.py",
+          "Updated config.json and settings.yaml",
+          "Modified ./utils/helper.ts"
+        ]
+      },
+      "expectedOutput": {
+        "file_paths": ["config.json", "settings.yaml", "src/auth.py", "utils/helper.ts"],
+        "components_modified": [],
+        "common_patterns": ["fix_bug"],
+        "complexity_indicators": {
+          "files_touched_count": 4,
+          "estimated_lines_changed": 15,
+          "refactoring_depth": "simple",
+          "task_type": "fix",
+          "components_modified_count": 0
+        }
+      }
+    },
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-2",
+      "description": "Extract component names from code references",
+      "input": {
+        "messages": [
+          "Implemented the authenticate function in auth.py",
+          "Updated User class with new validation",
+          "Refactored normalize_pattern method",
+          "Added export function validateInput"
+        ]
+      },
+      "expectedOutput": {
+        "file_paths": ["auth.py"],
+        "components_modified": ["User", "authenticate", "normalize_pattern", "validateInput"],
+        "common_patterns": ["add_feature", "refactor"],
+        "complexity_indicators": {
+          "files_touched_count": 1,
+          "estimated_lines_changed": 45,
+          "refactoring_depth": "moderate",
+          "task_type": "feature",
+          "components_modified_count": 4
+        }
+      }
+    },
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-3",
+      "description": "Identify error patterns and types",
+      "input": {
+        "messages": [
+          "Fixed TypeError in user validation",
+          "Resolved ImportError when loading config",
+          "Fixed syntax error in parser.py",
+          "Handled null reference in getData method"
+        ]
+      },
+      "expectedOutput": {
+        "file_paths": ["parser.py"],
+        "components_modified": ["getData"],
+        "common_patterns": ["fix_bug", "import_error", "null_error", "syntax_error", "type_error"],
+        "complexity_indicators": {
+          "files_touched_count": 1,
+          "estimated_lines_changed": 12,
+          "refactoring_depth": "simple",
+          "task_type": "fix",
+          "components_modified_count": 1
+        }
+      }
+    },
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-4",
+      "description": "Detect refactoring patterns and complexity",
+      "input": {
+        "messages": [
+          "Extract method from long processData function",
+          "Renamed confusing variable names",
+          "Moved authentication logic to separate module auth/handler.py",
+          "Refactored duplicate code in utils.py and helpers.py"
+        ]
+      },
+      "expectedOutput": {
+        "file_paths": ["auth/handler.py", "helpers.py", "utils.py"],
+        "components_modified": ["processData"],
+        "common_patterns": ["duplicate_code", "extract_method", "move", "refactor", "rename"],
+        "complexity_indicators": {
+          "files_touched_count": 3,
+          "estimated_lines_changed": 70,
+          "refactoring_depth": "complex",
+          "task_type": "refactor",
+          "components_modified_count": 1
+        }
+      }
+    },
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-5",
+      "description": "Handle complex messages with multiple patterns",
+      "input": {
+        "messages": [
+          "Implemented new feature in src/api/endpoints.py",
+          "Added unit tests for UserService.validate() method",
+          "Fixed security vulnerability in auth sanitization",
+          "Updated documentation in README.md",
+          "Optimized database query performance in models/user.py"
+        ]
+      },
+      "expectedOutput": {
+        "file_paths": ["README.md", "models/user.py", "src/api/endpoints.py"],
+        "components_modified": ["UserService.validate"],
+        "common_patterns": ["add_feature", "add_test", "fix_bug", "performance", "security", "update_docs"],
+        "complexity_indicators": {
+          "files_touched_count": 3,
+          "estimated_lines_changed": 75,
+          "refactoring_depth": "moderate",
+          "task_type": "feature",
+          "components_modified_count": 1
+        }
+      }
+    },
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-6",
+      "description": "Handle empty input gracefully",
+      "input": {
+        "messages": []
+      },
+      "expectedOutput": {
+        "file_paths": [],
+        "components_modified": [],
+        "common_patterns": [],
+        "complexity_indicators": {
+          "files_touched_count": 0,
+          "estimated_lines_changed": 0,
+          "refactoring_depth": "simple",
+          "task_type": "unknown",
+          "components_modified_count": 0
+        }
+      }
+    },
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-7",
+      "description": "Extract file paths from quotes and markdown",
+      "input": {
+        "messages": [
+          "Updated \"src/config/settings.json\" with new values",
+          "Modified `api/routes.ts` endpoint handler",
+          "Changed file path './data/cache.db' location"
+        ]
+      },
+      "expectedOutput": {
+        "file_paths": ["api/routes.ts", "data/cache.db", "src/config/settings.json"],
+        "components_modified": [],
+        "common_patterns": [],
+        "complexity_indicators": {
+          "files_touched_count": 3,
+          "estimated_lines_changed": 15,
+          "refactoring_depth": "simple",
+          "task_type": "unknown",
+          "components_modified_count": 0
+        }
+      }
+    },
+    {
+      "impulseId": "validation-pattern-extraction-service-complete-case-8",
+      "description": "Extract method calls and class.method patterns",
+      "input": {
+        "messages": [
+          "Called User.save() to persist changes",
+          "Invoked auth.login() for authentication",
+          "Updated Database.connect method implementation",
+          "Fixed SessionManager.cleanup() memory leak"
+        ]
+      },
+      "expectedOutput": {
+        "file_paths": [],
+        "components_modified": ["Database.connect", "SessionManager.cleanup", "User.save", "auth.login"],
+        "common_patterns": ["fix_bug"],
+        "complexity_indicators": {
+          "files_touched_count": 0,
+          "estimated_lines_changed": 18,
+          "refactoring_depth": "simple",
+          "task_type": "fix",
+          "components_modified_count": 4
+        }
+      }
+    }
+  ],
+  "validationFeatures": [
+    "File path extraction (relative, absolute, quoted, markdown)",
+    "Component name extraction (functions, classes, methods)",
+    "Error pattern detection (TypeError, ImportError, syntax errors)",
+    "Refactoring pattern detection (extract method, rename, move)",
+    "Task type classification (fix, feature, refactor, test, docs)",
+    "Complexity calculation (files touched, lines changed, depth)",
+    "Edge case handling (empty input, mixed patterns)"
+  ],
+  "executionMethod": {
+    "runtime": "Deno",
+    "command": "deno run --allow-all tests/validation-harnesses/pattern-extraction-service-complete-harness.ts",
+    "alternativeRuntime": "Node.js with ts-node",
+    "alternativeCommand": "ts-node tests/validation-harnesses/pattern-extraction-service-complete-harness.ts"
+  },
+  "validationCriteria": {
+    "file_paths": "Exact match (order-independent array comparison)",
+    "components_modified": "Exact match (order-independent array comparison)",
+    "common_patterns": "Exact match (order-independent array comparison)",
+    "complexity_indicators": {
+      "files_touched_count": "Exact match",
+      "estimated_lines_changed": "Within 20% tolerance (minimum 5 lines)",
+      "refactoring_depth": "Exact match",
+      "task_type": "Exact match",
+      "components_modified_count": "Exact match"
+    }
+  },
+  "toleranceRationale": "estimated_lines_changed uses heuristics and keyword weighting, so 20% tolerance accounts for minor differences in keyword detection while ensuring general correctness.",
+  "harnessImpulseId": "harness-pattern-extraction-service-complete",
+  "integrationPoints": [
+    "Calls pattern extraction service via Python subprocess",
+    "Passes messages as JSON to extract_patterns() function",
+    "Receives PatternData as JSON output",
+    "Compares actual vs expected with detailed error reporting"
+  ],
+  "outputFormat": {
+    "console": "Real-time test progress with PASS/FAIL status",
+    "summary": "Total, Passed, Failed counts with success rate percentage",
+    "errors": "Detailed mismatch descriptions for each failed assertion",
+    "exitCode": "0 for all tests passed, 1 if any test failed"
+  },
+  "historicalExecution": "This harness can be run repeatedly without LLM involvement. All test cases and expected outputs are stored as historical data. Results are deterministic given the same service implementation."
+}

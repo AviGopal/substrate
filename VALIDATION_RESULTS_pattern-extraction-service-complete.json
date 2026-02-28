@@ -1,0 +1,200 @@
+{
+  "specificationName": "pattern-extraction-service-complete",
+  "validationDate": "2026-02-28T02:30:00Z",
+  "overallStatus": "FAIL",
+  "summary": {
+    "total": 8,
+    "passed": 0,
+    "failed": 8,
+    "successRate": 0.0
+  },
+  "validationResults": [
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-1",
+      "description": "Extract file paths from simple messages",
+      "status": "FAIL",
+      "errors": [
+        "file_paths: './utils/helper.ts' not normalized to 'utils/helper.ts'",
+        "components_modified: 'config.json' incorrectly classified as component (should be file)",
+        "common_patterns: 'fix_bug' not detected from 'Fixed bug'",
+        "refactoring_depth: 'moderate' instead of 'simple' (threshold issue)",
+        "components_modified_count: 1 instead of 0 (due to config.json misclassification)"
+      ],
+      "diagnosis": "Multiple issues: path normalization, file/component classification, pattern keyword detection, depth threshold"
+    },
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-2",
+      "description": "Extract component names from code references",
+      "status": "FAIL",
+      "errors": [
+        "components_modified: 'export' and 'in' extracted as components (common words)",
+        "estimated_lines_changed: 35 instead of 45 (keyword weighting too low)",
+        "refactoring_depth: 'complex' instead of 'moderate' (threshold issue)",
+        "components_modified_count: 6 instead of 4 (due to spurious component extraction)"
+      ],
+      "diagnosis": "Component name validation too permissive, allows common words. Depth threshold needs adjustment."
+    },
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-3",
+      "description": "Identify error patterns and types",
+      "status": "FAIL",
+      "errors": [
+        "common_patterns: 'fix_bug' not detected despite 'Fixed', 'Resolved', 'Handled' keywords",
+        "estimated_lines_changed: 6 instead of 12 (keyword weighting too low)"
+      ],
+      "diagnosis": "fix_bug pattern keywords incomplete. Lines estimation needs higher weights."
+    },
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-4",
+      "description": "Detect refactoring patterns and complexity",
+      "status": "FAIL",
+      "errors": [
+        "components_modified: 'Extract' and 'utils.py' extracted as components",
+        "estimated_lines_changed: 20 instead of 70 (significantly too low)",
+        "refactoring_depth: 'moderate' instead of 'complex'",
+        "components_modified_count: 3 instead of 1"
+      ],
+      "diagnosis": "Component extraction picking up sentence starters ('Extract') and file names. Major lines estimation issue."
+    },
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-5",
+      "description": "Handle complex messages with multiple patterns",
+      "status": "FAIL",
+      "errors": [
+        "file_paths: 'UserService.validate' classified as file path (should be component)",
+        "common_patterns: 'fix_bug' not detected from 'Fixed security vulnerability'",
+        "files_touched_count: 4 instead of 3 (due to UserService.validate misclassification)",
+        "estimated_lines_changed: 18 instead of 75 (significantly too low)"
+      ],
+      "diagnosis": "Dot notation (Class.method) confused with file paths. Lines estimation severely underestimating."
+    },
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-6",
+      "description": "Handle empty input gracefully",
+      "status": "FAIL",
+      "errors": [
+        "Exception: 'files_touched_count' - KeyError in calculate_complexity"
+      ],
+      "diagnosis": "CRITICAL: calculate_complexity does not handle empty inputs. Missing null checks."
+    },
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-7",
+      "description": "Extract file paths from quotes and markdown",
+      "status": "FAIL",
+      "errors": [
+        "file_paths: './data/cache.db' not normalized to 'data/cache.db'",
+        "task_type: 'feature' instead of 'unknown' (keywords 'Updated', 'Modified', 'Changed' triggering feature)"
+      ],
+      "diagnosis": "Path normalization issue. Task type detection too aggressive for neutral keywords."
+    },
+    {
+      "testCase": "validation-pattern-extraction-service-complete-case-8",
+      "description": "Extract method calls and class.method patterns",
+      "status": "FAIL",
+      "errors": [
+        "file_paths: Method calls (User.save, auth.login) classified as file paths",
+        "components_modified: 'connect' extracted (method name from 'Database.connect')",
+        "common_patterns: 'add_feature', 'refactor' detected instead of 'fix_bug'",
+        "files_touched_count: 4 instead of 0",
+        "estimated_lines_changed: 8 instead of 18",
+        "refactoring_depth: 'moderate' instead of 'simple'"
+      ],
+      "diagnosis": "Dot notation (Class.method) confused with file paths. Method names extracted separately. Pattern detection incorrect."
+    }
+  ],
+  "criticalIssues": [
+    {
+      "issue": "Empty input handling",
+      "severity": "CRITICAL",
+      "impact": "Service crashes with KeyError on empty messages",
+      "affectedTests": ["case-6"],
+      "recommendation": "Add null/empty checks in calculate_complexity before accessing dict keys"
+    },
+    {
+      "issue": "File path vs component classification",
+      "severity": "HIGH",
+      "impact": "Dot notation (Class.method) misclassified as file paths, causing incorrect metrics",
+      "affectedTests": ["case-1", "case-5", "case-8"],
+      "recommendation": "Enhance classification logic: if pattern matches X.Y, check if Y is a method/function name (lowercase, no extension) vs file extension (3-4 chars, known extensions)"
+    },
+    {
+      "issue": "Path normalization",
+      "severity": "MEDIUM",
+      "impact": "Paths like './file.ts' not normalized, causing false mismatches",
+      "affectedTests": ["case-1", "case-7"],
+      "recommendation": "Strip leading './' from all extracted paths"
+    },
+    {
+      "issue": "Common word extraction as components",
+      "severity": "HIGH",
+      "impact": "Words like 'export', 'in', 'Extract' classified as components",
+      "affectedTests": ["case-2", "case-4"],
+      "recommendation": "Expand _is_valid_component_name blacklist with more common words and sentence starters"
+    },
+    {
+      "issue": "Missing fix_bug pattern detection",
+      "severity": "MEDIUM",
+      "impact": "'fix_bug' pattern not detected despite obvious fix keywords",
+      "affectedTests": ["case-1", "case-3", "case-5"],
+      "recommendation": "Add keywords: 'fixed', 'resolved', 'handled' to fix_bug pattern (case-insensitive)"
+    },
+    {
+      "issue": "Estimated lines calculation too low",
+      "severity": "HIGH",
+      "impact": "Lines estimation 2-4x lower than expected",
+      "affectedTests": ["case-2", "case-3", "case-4", "case-5"],
+      "recommendation": "Increase keyword weights: implemented (15), added (15), refactored (30), updated (10), fixed (5)"
+    },
+    {
+      "issue": "Refactoring depth thresholds incorrect",
+      "severity": "MEDIUM",
+      "impact": "Depth classifications don't match expected complexity",
+      "affectedTests": ["case-1", "case-2", "case-4", "case-8"],
+      "recommendation": "Adjust thresholds: simple (<15), moderate (15-40), complex (>40)"
+    }
+  ],
+  "recommendedFixes": [
+    {
+      "priority": 1,
+      "fix": "Add empty input handling in calculate_complexity",
+      "code": "if not messages or not file_paths: return {'files_touched_count': 0, 'estimated_lines_changed': 0, ...}"
+    },
+    {
+      "priority": 2,
+      "fix": "Normalize file paths by stripping leading './'",
+      "code": "path = path.lstrip('./')"
+    },
+    {
+      "priority": 3,
+      "fix": "Improve file vs component classification",
+      "code": "if has_extension(path) and not is_method_call(path): classify as file else classify as component"
+    },
+    {
+      "priority": 4,
+      "fix": "Expand common words blacklist",
+      "code": "Add: 'export', 'import', 'in', 'from', 'with', 'as', 'for', 'if', 'while', 'Extract', 'Added', 'Updated'"
+    },
+    {
+      "priority": 5,
+      "fix": "Add fix_bug keywords (case-insensitive)",
+      "code": "Add to fix_bug: 'fixed', 'resolved', 'handled', 'corrected', 'patched'"
+    },
+    {
+      "priority": 6,
+      "fix": "Increase keyword weights for lines estimation",
+      "code": "implemented: 15, added: 15, refactored: 30, fixed: 5, updated: 10"
+    },
+    {
+      "priority": 7,
+      "fix": "Adjust refactoring depth thresholds",
+      "code": "simple: <15, moderate: 15-40, complex: >40"
+    }
+  ],
+  "nextSteps": [
+    "Apply all 7 recommended fixes to pattern_extraction_service.py",
+    "Re-run validation harness to verify fixes",
+    "Add unit tests for edge cases (empty input, dot notation, path normalization)",
+    "Document known limitations and edge cases"
+  ],
+  "resultsImpulseId": "validation-results-pattern-extraction-service-complete"
+}
