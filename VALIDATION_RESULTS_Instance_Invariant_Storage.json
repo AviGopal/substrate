@@ -1,168 +1,236 @@
 {
-  "specificationName": "Instance-Invariant Storage - Missing Backend API Endpoints",
-  "executionTimestamp": "2026-02-27T10:45:00Z",
+  "specificationName": "Instance Invariant Storage for Impulses and Activities",
+  "harnessExecuted": "tests/validation-harnesses/instance-invariant-storage-harness-v2.ts",
+  "executionTimestamp": "2026-02-28T08:25:00.000Z",
+  "environment": {
+    "backendAvailable": false,
+    "backendUrl": "http://localhost:8000",
+    "cliMcpAvailable": false,
+    "reason": "Backend not running - metabob-rpc-api service unavailable"
+  },
   "validationResults": [
     {
-      "testCase": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-1",
-      "testName": "POST /v2/activities/storage endpoint exists",
-      "status": "PARTIAL_PASS",
-      "actual": {
-        "endpointDefined": true,
-        "routeLoaded": true,
-        "httpLayerWorks": true,
-        "databaseConnection": false,
-        "errorType": "SurrealDB permissions: IAM error"
-      },
+      "testCase": "validation-Instance Invariant Storage for Impulses and Activities-case-1",
+      "testName": "Cross-instance impulse access",
+      "description": "Instance A creates impulse, Instance B retrieves it with same credentials",
+      "status": "FAIL",
+      "reason": "Backend unavailable",
       "expected": {
-        "status": 201,
-        "response": "activity_id, api_key, project_id, activity_data, created_at, updated_at"
+        "impulseCreated": true,
+        "impulseRetrieved": true,
+        "dataConsistent": true
       },
-      "difference": "Endpoint implementation correct but SurrealDB not accessible with test credentials. Production would work with proper DB setup.",
+      "actual": {
+        "impulseCreated": false,
+        "error": "fetch failed - backend not running"
+      },
+      "requiresBackend": true,
+      "canRunWithoutBackend": false,
       "diagnostics": {
-        "routeRegistered": "Yes - verified via Python route inspection",
-        "pathCorrect": "/v2/activities/storage",
-        "methodCorrect": "POST",
-        "handlerExists": "create_activity_endpoint() at activity.py:686",
-        "databaseError": "IAM error: Not enough permissions to perform this action"
+        "backendHealthCheck": "FAILED",
+        "errorType": "Connection refused",
+        "recommendation": "Start metabob-rpc-api on localhost:8000"
       }
     },
     {
-      "testCase": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-2",
-      "testName": "GET /v2/activities/storage/{id} endpoint exists",
-      "status": "PARTIAL_PASS",
-      "actual": {
-        "endpointDefined": true,
-        "routeLoaded": true,
-        "httpLayerWorks": true,
-        "databaseConnection": false
-      },
+      "testCase": "validation-Instance Invariant Storage for Impulses and Activities-case-2",
+      "testName": "Multi-tenant isolation",
+      "description": "Different tenants cannot access each other's data",
+      "status": "FAIL",
+      "reason": "Backend unavailable",
       "expected": {
-        "status": 200,
-        "dataIntegrity": true
+        "tenantASeesOwnData": true,
+        "tenantBSeesOwnData": true,
+        "crossTenantAccessBlocked": true
       },
-      "difference": "Endpoint implementation correct but cannot test end-to-end due to DB permissions",
+      "actual": {
+        "error": "Failed to create impulses for both tenants - backend not running"
+      },
+      "requiresBackend": true,
+      "canRunWithoutBackend": false,
       "diagnostics": {
-        "routeRegistered": "Yes - verified via Python route inspection",
-        "pathCorrect": "/v2/activities/storage/{activity_id}",
-        "methodCorrect": "GET",
-        "handlerExists": "get_activity_endpoint() at activity.py:736"
+        "backendHealthCheck": "FAILED",
+        "errorType": "Connection refused",
+        "recommendation": "Start metabob-rpc-api with SurrealDB backend"
       }
     },
     {
-      "testCase": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-3",
-      "testName": "Cross-instance activity retrieval",
-      "status": "IMPLEMENTATION_COMPLETE",
-      "actual": {
-        "endpointsImplemented": true,
-        "scopingLogic": "Correct - (api_key, project_id) in all queries",
-        "crossInstanceReady": true
-      },
+      "testCase": "validation-Instance Invariant Storage for Impulses and Activities-case-3",
+      "testName": "Vessel boundary enforcement",
+      "description": "Opencode doesn't directly import rpc-api modules",
+      "status": "PASS",
+      "reason": "Static analysis - no backend required",
       "expected": {
-        "storeStatus": 201,
-        "retrieveStatus": 200,
-        "dataMatch": true
+        "directImports": 0,
+        "vesselFlowRespected": true
       },
-      "difference": "Cannot test without DB but implementation follows impulse pattern which works",
+      "actual": {
+        "directImports": 0,
+        "vesselFlowRespected": true,
+        "violations": []
+      },
+      "requiresBackend": false,
+      "canRunWithoutBackend": true,
       "diagnostics": {
-        "referenceImplementation": "impulse.py endpoints work correctly",
-        "activityImplementation": "Exact copy of impulse pattern",
-        "scopingEnforced": "All queries include WHERE api_key = $api_key AND project_id = $project_id"
+        "searchPerformed": "grep -r 'from.*metabob.*rpc' in repos/metabob-opencode/src/",
+        "violationsFound": 0,
+        "vesselBoundaryIntact": true
       }
     },
     {
-      "testCase": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-4",
-      "testName": "Multi-tenant isolation (api_key scoping)",
-      "status": "IMPLEMENTATION_COMPLETE",
-      "actual": {
-        "apiKeyScopingInQueries": true,
-        "headerValidation": true,
-        "isolationLogic": "Correct"
-      },
+      "testCase": "validation-Instance Invariant Storage for Impulses and Activities-case-4",
+      "testName": "Backend persistence validation",
+      "description": "Data persists in backend and survives cache clear",
+      "status": "FAIL",
+      "reason": "Backend unavailable",
       "expected": {
-        "retrieveStatus": 404,
-        "tenantIsolation": "enforced"
+        "persisted": true,
+        "retrievable": true,
+        "dataIntact": true
       },
-      "difference": "Implementation correct - verified in code review",
+      "actual": {
+        "error": "Failed to create impulse - backend not running"
+      },
+      "requiresBackend": true,
+      "canRunWithoutBackend": false,
       "diagnostics": {
-        "createActivityQuery": "Includes api_key in INSERT",
-        "getActivityQuery": "WHERE api_key = $api_key",
-        "headerExtraction": "x_api_key: str = Header(..., alias='X-API-Key')"
+        "backendHealthCheck": "FAILED",
+        "errorType": "Connection refused",
+        "recommendation": "Start metabob-rpc-api and SurrealDB"
       }
     },
     {
-      "testCase": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-5",
-      "testName": "Project isolation (project_id scoping)",
-      "status": "IMPLEMENTATION_COMPLETE",
-      "actual": {
-        "projectIdScopingInQueries": true,
-        "queryParamValidation": true,
-        "isolationLogic": "Correct"
-      },
+      "testCase": "validation-Instance Invariant Storage for Impulses and Activities-case-5",
+      "testName": "Activity cross-instance load",
+      "description": "Activity saved on Instance A is loadable from Instance B",
+      "status": "SKIPPED",
+      "reason": "Test not implemented in harness execution (only 4 tests ran)",
       "expected": {
-        "retrieveStatus": 404,
-        "projectIsolation": "enforced"
+        "activitySaved": true,
+        "activityLoaded": true,
+        "dataConsistent": true,
+        "backendFallbackWorked": true
       },
-      "difference": "Implementation correct - verified in code review",
-      "diagnostics": {
-        "createActivityQuery": "Includes project_id in INSERT",
-        "getActivityQuery": "WHERE project_id = $project_id",
-        "paramExtraction": "project_id: str = Query(..., description='Project identifier')"
-      }
-    },
-    {
-      "testCase": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-6",
-      "testName": "Duplicate activity returns 400",
-      "status": "IMPLEMENTATION_COMPLETE",
       "actual": {
-        "duplicateCheckExists": true,
-        "errorHandling": "Correct",
-        "statusCode": 400
+        "skipped": true,
+        "reason": "Test case 5 not in harness output"
       },
-      "expected": {
-        "secondCreateStatus": 400,
-        "errorHandling": "correct"
-      },
-      "difference": "Implementation correct - verified in code",
-      "diagnostics": {
-        "duplicateCheck": "existing = get_activity(...) at line 686",
-        "conditionalReturn": "if existing: raise HTTPException(status_code=400, ...)",
-        "errorMessage": "Activity with id '{activity_id}' already exists for this project"
-      }
+      "requiresBackend": true,
+      "canRunWithoutBackend": false
     }
   ],
-  "overallStatus": "IMPLEMENTATION_COMPLETE",
-  "implementationVerification": {
-    "endpointsCreated": 2,
-    "routesLoaded": true,
-    "codeReviewPassed": true,
-    "databaseIntegrationBlocked": "SurrealDB credentials issue (test environment)",
-    "productionReadiness": "HIGH - Implementation follows proven impulse pattern"
+  "summary": {
+    "totalTests": 5,
+    "executed": 4,
+    "passed": 1,
+    "failed": 3,
+    "skipped": 1,
+    "overallStatus": "FAIL",
+    "passRate": "20%",
+    "failureReasons": {
+      "backendUnavailable": 3,
+      "skipped": 1
+    }
   },
-  "summary": "All backend endpoints successfully implemented and loaded. Code review confirms correct (api_key, project_id) scoping, error handling, and architectural compliance. End-to-end testing blocked by SurrealDB permissions in test environment, but implementation quality is high due to following the proven impulse.py pattern.",
-  "resultsImpulseId": "validation-results-Instance-Invariant-Storage - Missing Backend API Endpoints",
-  "nextSteps": [
-    "Configure SurrealDB credentials for test environment",
-    "Re-run validation harness with working database",
-    "Deploy to production with proper credentials"
+  "specificationCompliance": {
+    "instanceInvariance": {
+      "status": "❌ NOT VERIFIED",
+      "reason": "Backend unavailable - cannot test cross-instance access",
+      "testCases": ["case-1", "case-5"],
+      "canVerifyOffline": false
+    },
+    "vesselFlowCompliance": {
+      "status": "✅ VERIFIED",
+      "reason": "Static analysis confirms no direct rpc-api imports in opencode",
+      "testCases": ["case-3"],
+      "canVerifyOffline": true
+    },
+    "noLocalOnlyStorage": {
+      "status": "❌ NOT VERIFIED",
+      "reason": "Backend unavailable - cannot test persistence",
+      "testCases": ["case-4"],
+      "canVerifyOffline": false
+    },
+    "multiTenantIsolation": {
+      "status": "❌ NOT VERIFIED",
+      "reason": "Backend unavailable - cannot test tenant isolation",
+      "testCases": ["case-2"],
+      "canVerifyOffline": false
+    },
+    "distributedDebugging": {
+      "status": "❌ NOT VERIFIED",
+      "reason": "Backend unavailable",
+      "testCases": ["case-1", "case-5"],
+      "canVerifyOffline": false
+    },
+    "activityUpgrades": {
+      "status": "❌ NOT VERIFIED",
+      "reason": "Backend unavailable",
+      "testCases": ["case-5"],
+      "canVerifyOffline": false
+    }
+  },
+  "successfulValidations": {
+    "vesselBoundary": {
+      "testCase": "case-3",
+      "status": "PASS",
+      "findings": "No direct imports of metabob-rpc-api in opencode codebase",
+      "compliance": "Vessel flow architecture correctly implemented",
+      "recommendation": "Continue enforcing vessel boundary in code reviews"
+    }
+  },
+  "failedValidations": [
+    {
+      "testCase": "case-1",
+      "reason": "Backend not running",
+      "impact": "Cannot verify cross-instance impulse access",
+      "remediation": "Start metabob-rpc-api: cd repos/metabob-rpc-api && python -m server.main"
+    },
+    {
+      "testCase": "case-2",
+      "reason": "Backend not running",
+      "impact": "Cannot verify multi-tenant isolation",
+      "remediation": "Start metabob-rpc-api with SurrealDB backend"
+    },
+    {
+      "testCase": "case-4",
+      "reason": "Backend not running",
+      "impact": "Cannot verify backend persistence",
+      "remediation": "Start full stack: SurrealDB + metabob-rpc-api"
+    }
   ],
-  "criticalFindings": {
-    "positives": [
-      "POST /v2/activities/storage endpoint correctly implemented",
-      "GET /v2/activities/storage/{id} endpoint correctly implemented",
-      "Pydantic models (ActivityCreateRequest, ActivityResponse) added",
-      "activity_data.py database operations created with CRUD functions",
-      "Multi-tenant isolation enforced via (api_key, project_id) scoping",
-      "Error handling for duplicates (400) implemented",
-      "Routes successfully registered and loaded in simple_app"
+  "recommendations": {
+    "immediate": [
+      "Start metabob-rpc-api service on localhost:8000",
+      "Start SurrealDB with devbob namespace",
+      "Re-run harness after backend is available"
     ],
-    "blockers": [
-      "SurrealDB permissions error prevents end-to-end testing",
-      "Test environment database credentials need configuration"
-    ],
-    "recommendations": [
-      "Set up SurrealDB with proper permissions for test environment",
-      "Consider adding database mocking for faster testing",
-      "Verify production database credentials before deployment"
+    "longTerm": [
+      "Add docker-compose setup for easy backend startup",
+      "Create mock backend for offline validation",
+      "Add CI/CD pipeline with backend services"
     ]
+  },
+  "nextSteps": [
+    "Start backend services: docker-compose up -d",
+    "Verify backend health: curl http://localhost:8000/health",
+    "Re-run harness: tsx tests/validation-harnesses/instance-invariant-storage-harness-v2.ts",
+    "Expect 4-5 tests to pass with backend available"
+  ],
+  "harnessStatus": {
+    "harnessExecuted": true,
+    "harnessWorking": true,
+    "offlineTestsPassing": true,
+    "onlineTestsRequireBackend": true,
+    "readyForCI": true,
+    "note": "Harness is functioning correctly. Test failures are due to missing backend, not harness issues."
+  },
+  "resultsImpulseId": "validation-results-Instance Invariant Storage for Impulses and Activities",
+  "metadata": {
+    "harnessVersion": "2.0",
+    "executionEnvironment": "local",
+    "backendRequired": true,
+    "offlineCapable": "partial (1/5 tests)",
+    "recommendRetryWithBackend": true
   }
 }
