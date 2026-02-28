@@ -1,0 +1,222 @@
+{
+  "phase": "phase-2-complete-learning-loop-rpc-api",
+  "execution_date": "2026-02-28",
+  "activities_executed": [
+    {
+      "spec": "impulse-learning-storage-complete",
+      "status": "complete",
+      "duration_seconds": 1088.7,
+      "cost_usd": 2.8518,
+      "tokens": {
+        "input": 806581,
+        "output": 6240
+      },
+      "commits": [
+        "c0d7842 feat(schema): Add impulse_mapping_record table for learning data storage",
+        "a662a0d Phase 2.1: Complete impulse learning storage infrastructure in rpc-api"
+      ]
+    },
+    {
+      "spec": "pattern-extraction-service-complete",
+      "status": "complete",
+      "duration_seconds": 1375.1,
+      "cost_usd": 2.5061,
+      "tokens": {
+        "input": 738629,
+        "output": 8745
+      },
+      "commits": [
+        "483fb7e feat(pattern-extraction): Implement pattern extraction service with comprehensive fixes",
+        "8fa8354 Phase 2.2: Implement pattern extraction service in rpc-api"
+      ]
+    },
+    {
+      "spec": "context-optimization-endpoint-complete",
+      "status": "complete",
+      "duration_seconds": 1247.0,
+      "cost_usd": 2.5947,
+      "tokens": {
+        "input": 790069,
+        "output": 8332
+      },
+      "commits": [
+        "f9f2c7e feat(learning-loop): Enable learning-driven context optimization endpoint",
+        "977bbb0 Phase 2.3: Implement context optimization endpoint in rpc-api"
+      ]
+    }
+  ],
+  "total_metrics": {
+    "duration_seconds": 3710.8,
+    "cost_usd": 7.9526,
+    "tokens": {
+      "input": 2335279,
+      "output": 23317
+    }
+  },
+  "validation_results": {
+    "learning_loop_complete": "YES",
+    "endpoints_implemented": [
+      "GET /api/v1/learning-loop/impulse-mappings",
+      "POST /api/v1/learning-loop/impulse-mappings",
+      "GET /api/v1/learning-loop/context-optimization"
+    ],
+    "services_created": [
+      "server/services/pattern_extraction_service.py (594 lines)",
+      "server/services/context_optimization_service.py (277 lines)"
+    ],
+    "database_operations_created": [
+      "server/db/operations/impulse_learning.py (465 lines)"
+    ],
+    "surrealdb_tables": [
+      "impulse_mapping_record",
+      "impulse_learning_records",
+      "impulse_pattern_index"
+    ],
+    "test_coverage": "Validation harnesses created and executed for all three specifications"
+  },
+  "learning_infrastructure_complete": {
+    "impulse_storage": {
+      "status": "✅ Complete",
+      "description": "SurrealDB table impulse_mapping_record stores impulse learning data",
+      "endpoint": "POST /v1/learning-loop/impulse-mappings",
+      "features": [
+        "Stores impulse_id, turn_context, messages, response_quality",
+        "Pattern extraction integrated",
+        "Quality scoring based on success metrics",
+        "Normalized pattern storage for efficient querying"
+      ]
+    },
+    "pattern_extraction": {
+      "status": "✅ Complete",
+      "description": "Pattern extraction service analyzes activity execution messages",
+      "service": "pattern_extraction_service.py",
+      "features": [
+        "Extracts file paths referenced in messages",
+        "Identifies components modified (classes, functions)",
+        "Detects common patterns and anti-patterns",
+        "Calculates complexity indicators",
+        "Normalizes patterns for comparison",
+        "Ports logic from opencode impulse-learning.ts"
+      ],
+      "extraction_methods": [
+        "extract_file_paths()",
+        "extract_component_names()",
+        "normalize_patterns()",
+        "calculate_complexity_score()",
+        "extract_tool_usage_patterns()"
+      ]
+    },
+    "context_optimization": {
+      "status": "✅ Complete",
+      "description": "Context optimization endpoint provides learning-driven recommendations",
+      "service": "context_optimization_service.py",
+      "endpoint": "GET /v1/learning-loop/context-optimization",
+      "features": [
+        "Analyzes historical impulse usage by activity type",
+        "Recommends optimal impulses for new activities",
+        "Calculates optimal token budget based on past successes",
+        "Computes success correlation for different impulse patterns",
+        "Learns from execution outcomes over time"
+      ],
+      "query_parameters": [
+        "activity_type: string (e.g., 'feature', 'bugfix')",
+        "limit: int (max recommendations to return)",
+        "min_success_rate: float (filter by success threshold)"
+      ],
+      "response_structure": {
+        "recommended_impulses": "List[ImpulseRecommendation]",
+        "optimal_token_budget": "int",
+        "success_correlation": "float",
+        "based_on_executions": "int"
+      }
+    }
+  },
+  "data_flow_established": {
+    "impulse_learning_flow": "opencode activity turn → collects messages → POST /v1/learning-loop/record-turn → pattern_extraction_service extracts patterns → stores in SurrealDB impulse_mapping_record → context_optimization_service analyzes for recommendations",
+    "context_optimization_flow": "opencode requests template → GET /v1/learning-loop/context-optimization?activity_type=X → context_optimization_service queries historical data → returns recommended impulses and token budget → opencode uses recommendations for execution"
+  },
+  "architectural_improvements": [
+    {
+      "improvement": "Complete Learning Loop",
+      "before": "Impulse learning data lost after execution, no pattern extraction, no context optimization",
+      "after": "Full learning pipeline: data collection → pattern extraction → storage → analysis → recommendations"
+    },
+    {
+      "improvement": "Pattern Recognition",
+      "before": "No systematic pattern extraction from activity executions",
+      "after": "594-line pattern extraction service identifies file paths, components, patterns, complexity indicators"
+    },
+    {
+      "improvement": "Context Intelligence",
+      "before": "Static context requirements for activities",
+      "after": "Learning-driven context optimization recommends optimal impulses and token budgets based on historical success"
+    }
+  ],
+  "rpc_api_changes": {
+    "total_lines_added": 3033,
+    "total_lines_removed": 112,
+    "net_addition": 2921,
+    "files_created": [
+      "server/services/pattern_extraction_service.py",
+      "server/services/context_optimization_service.py",
+      "server/db/operations/impulse_learning.py"
+    ],
+    "files_modified": [
+      "server/routes/learning_loop.py",
+      "server/routes/impulse.py",
+      "server/db/operations/__init__.py",
+      "docs/schema/activity_learning_loop.surql"
+    ]
+  },
+  "verification_artifacts": [
+    "TRACE_impulse-learning-storage-complete.json",
+    "ENFORCEMENT_impulse-learning-storage-complete.json",
+    "VALIDATION_RESULTS_impulse-learning-storage-complete.json",
+    "FINAL_impulse-learning-storage-complete.json",
+    "TRACE_pattern-extraction-service-complete.json",
+    "ENFORCEMENT_pattern-extraction-service-complete.json",
+    "VALIDATION_RESULTS_pattern-extraction-service-complete.json",
+    "FINAL_pattern-extraction-service-complete.json",
+    "TRACE_context-optimization-endpoint-complete.json",
+    "ENFORCEMENT_context-optimization-endpoint-complete.json",
+    "VALIDATION_RESULTS_context-optimization-endpoint-complete.json",
+    "FINAL_context-optimization-endpoint-complete.md"
+  ],
+  "integration_with_phase_1": {
+    "phase_1_removed": [
+      "Thompson Sampling from opencode (147 lines)",
+      "Impulse learning logic from opencode (586 lines)",
+      "Metrics calculation from opencode (117 lines)"
+    ],
+    "phase_2_completed": [
+      "Impulse learning storage (465 lines in rpc-api)",
+      "Pattern extraction service (594 lines)",
+      "Context optimization service (277 lines)"
+    ],
+    "net_result": "850 lines removed from opencode, 1336 lines of learning infrastructure added to rpc-api"
+  },
+  "next_steps": {
+    "phase_3": "Storage consolidation - migrate all data access to SurrealDB primary, Redis as cache layer only",
+    "phase_4": "Metabob-cli gateway - add enrichment layer with inference models for data collection",
+    "integration_testing": "End-to-end testing of complete learning loop: opencode → rpc-api → SurrealDB → recommendations"
+  },
+  "architectural_state": {
+    "metabob_opencode": {
+      "role": "Activity execution, coordination, data collection ONLY",
+      "ml_logic": "NONE - all removed in Phase 1",
+      "learning_logic": "NONE - sends raw data to rpc-api",
+      "status": "✅ Clean execution layer"
+    },
+    "metabob_rpc_api": {
+      "role": "ML learning, metrics training, Thompson Sampling, pattern extraction, context optimization, all data maintenance",
+      "phase_1_additions": "Thompson Sampling, Metrics calculation (2202 lines)",
+      "phase_2_additions": "Impulse learning, Pattern extraction, Context optimization (2921 lines)",
+      "total_ml_infrastructure": "5123 lines",
+      "status": "✅ Complete learning infrastructure"
+    },
+    "metabob_cli": {
+      "role": "Data collection, enrichment with inference models, gateway to activity database",
+      "status": "⏳ Phase 4 - pending implementation"
+    }
+  }
+}
