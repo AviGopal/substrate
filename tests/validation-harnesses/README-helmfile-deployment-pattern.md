@@ -1,210 +1,291 @@
-# Helmfile Deployment Pattern Validation Harness
+# Validation Harness: helmfile-deployment-pattern-with-versioned-builds
 
 ## Overview
 
-This validation harness ensures the **Helmfile-driven Kubernetes Deployment Pattern** specification is fully implemented and compliant. It validates that all Kubernetes deployments in the metabob namespace are managed exclusively through helmfile, with no direct kubectl modifications.
+This validation harness verifies GitOps compliance for Kubernetes deployments managed by Helmfile. It ensures:
 
-## Specification
+- ✅ No configuration drift (helmfile state = cluster state)
+- ✅ Images use proper version tags (not :latest in production)
+- ✅ No kubectl bypass antipatterns
+- ✅ No hardcoded credentials in Helm values
+- ✅ Istio configuration present in production
+- ✅ CI/CD → GitOps automation configured
+- ✅ CI validation workflow blocks violations
+- ✅ Kubernetes Secrets used correctly
+- ✅ Reproducible deployments (idempotent)
 
-All Kubernetes deployments in the metabob namespace must be:
-1. Managed exclusively through `helmfile sync` operations
-2. Never modified via direct `kubectl` commands (antipattern)
-3. Reference images built from source code
-4. Support both local (docker-desktop) and production (with Istio) environments
-
-## Validation Strategy
-
-The harness performs 7 comprehensive validations:
-
-### 1. kubectl Availability Check
-- **Purpose**: Verify kubectl is installed and context is configured
-- **Method**: Execute `kubectl config current-context`
-- **Expected**: Command succeeds and returns a valid context name
-
-### 2. Multi-Environment Support
-- **Purpose**: Verify helmfile.yaml defines both local and production environments
-- **Method**: Parse `helm/helmfile.yaml` for environment definitions
-- **Expected**: Both `local` and `production` environments present
-
-### 3. Istio Templates Exist
-- **Purpose**: Verify all required Istio templates for production deployment exist
-- **Method**: Check filesystem for required files
-- **Expected Files**:
-  - `helm/charts/devbob/templates/virtualservice.yaml`
-  - `helm/charts/devbob/templates/destinationrule.yaml`
-  - `helm/charts/metabob-rpc-api/templates/virtualservice.yaml`
-  - `helm/environments/production.values.yaml`
-
-### 4. Helmfile Template Rendering (Local)
-- **Purpose**: Verify helmfile can render manifests for local environment
-- **Method**: Execute `helmfile -e local template`
-- **Expected**: 
-  - Command succeeds without errors
-  - Output contains Deployments/StatefulSets
-  - Output contains Services
-
-### 5. Helmfile Template Rendering (Production)
-- **Purpose**: Verify helmfile can render manifests for production with Istio resources
-- **Method**: Execute `helmfile -e production template`
-- **Expected**:
-  - Command succeeds without errors
-  - Output contains Deployments/StatefulSets
-  - Output contains VirtualServices (Istio)
-  - Output contains DestinationRules (Istio)
-
-### 6. No kubectl Antipatterns
-- **Purpose**: Verify all deployments are managed by Helm (not manually created)
-- **Method**: Compare all resources vs Helm-managed resources
-- **Expected**: All deployments/statefulsets have `app.kubernetes.io/managed-by=Helm` label
-
-### 7. Configuration Drift Check
-- **Purpose**: Verify running deployment versions match configured values
-- **Method**: Compare image versions in `local.values.yaml` vs running deployments
-- **Expected**: No version drift (e.g., metabob-rpc-api should be 0.12.6)
-
-## Usage
-
-### Basic Usage
-```bash
-# Run from project root
-./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
-
-# Run with custom base directory
-./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh /path/to/project
-
-# Run with custom namespace
-./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh . staging
-```
-
-### Parameters
-- **BASE_DIR** (optional): Base directory of the project (default: current directory)
-- **NAMESPACE** (optional): Kubernetes namespace to validate (default: `metabob`)
+## Quick Start
 
 ### Prerequisites
-- `kubectl` installed and configured with a valid context
-- `helmfile` installed (optional, but recommended for template validation)
-- Access to a Kubernetes cluster (for cluster-based validations)
 
-### Exit Codes
-- **0**: All validations passed
-- **1**: One or more validations failed
+```bash
+# Required tools
+kubectl version --client
+helm version
+helmfile --version
+jq --version
 
-## Output Format
-
-The harness provides color-coded output:
-- ✅ Green: Test passed
-- ❌ Red: Test failed
-- ⚠️  Yellow: Warning (test skipped due to missing dependencies)
-- ℹ️  Blue: Information
-
-Example output:
+# Optional: for cluster access
+export KUBECONFIG=~/.kube/config
 ```
-🔍 Running Helmfile Deployment Pattern Validation
 
-Base directory: /home/user/metabob-devbob
-Namespace: metabob
+### Run Validation (Non-Destructive)
 
-📊 Running Tests...
+```bash
+# Local environment
+./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
 
-ℹ Test 1: Validating kubectl availability and context...
-✅ kubectl available, context: docker-desktop
+# Production environment
+ENVIRONMENT=production ./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
 
-ℹ Test 2: Validating multi-environment support...
-✅ Both local and production environments configured in helmfile.yaml
+# Custom namespace
+NAMESPACE=my-namespace ./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
+```
 
-ℹ Test 3: Validating Istio template files...
-✅ All Istio templates present (4 files)
+### Run Full Validation (Includes Destructive Tests)
 
-...
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📈 Summary:
-   Total Tests: 7
-   Passed: 7
-   Failed: 0
-
-   Overall: ✅ PASS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```bash
+# This will re-sync helmfile to test idempotency
+SKIP_DESTRUCTIVE=false ./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
 ```
 
 ## Test Cases
 
-Test cases are documented in `helmfile-deployment-pattern-test-cases.json` with historical inputs and expected outputs. These can be run without LLM intervention.
+### Test 1: No Configuration Drift
+- **Purpose:** Verify helmfile diff shows no changes
+- **Command:** `helmfile -e {environment} diff`
+- **Pass Criteria:** Exit code 0, no "has changed" messages
+- **Failure:** Configuration drift detected - run `helmfile sync`
 
-### Test Case Structure
-```json
-{
-  "impulseId": "validation-helmfile-deployment-pattern-case-N",
-  "name": "test-name",
-  "description": "What this test validates",
-  "input": { "command": "...", "params": "..." },
-  "expectedOutput": { "result": "..." },
-  "validation": "How to verify the test passed"
-}
+### Test 2: No :latest Tags in Production
+- **Purpose:** Enforce explicit version tags in production
+- **Command:** `kubectl get pods -n metabob -o json`
+- **Pass Criteria:** All images have version tags (main-abc1234, 1.0.64)
+- **Failure:** Found :latest tags in production
+
+### Test 3: All Resources Managed by Helm
+- **Purpose:** Detect kubectl bypass antipatterns
+- **Command:** `kubectl get all -n metabob -o json`
+- **Pass Criteria:** All resources have `app.kubernetes.io/managed-by=Helm` label
+- **Failure:** Found unmanaged resources (deployed via kubectl apply)
+
+### Test 4: No Hardcoded Credentials
+- **Purpose:** Detect CWE-798 security violations
+- **Files:** `helm/charts/*/values.yaml`, `helm/environments/*.values.yaml`
+- **Pass Criteria:** No plaintext passwords or API keys
+- **Failure:** Found hardcoded credentials in values files
+
+### Test 5: Istio Configuration (Production)
+- **Purpose:** Verify production readiness
+- **File:** `helm/environments/production.values.yaml`
+- **Pass Criteria:** Contains `istio:`, `enabled:`, `mtls:` keys
+- **Failure:** Istio configuration missing in production
+
+### Test 6: Stable Istio Subset Names
+- **Purpose:** Detect canary deployment antipatterns
+- **File:** `helm/charts/devbob/templates/destinationrule.yaml`
+- **Pass Criteria:** Uses stable names (`stable`, `canary`) not version-based
+- **Failure:** Version-based subset naming detected
+
+### Test 7: CI/CD GitOps Automation
+- **Purpose:** Verify automated Helm values updates
+- **File:** `.github/workflows/build-devbob.yml`
+- **Pass Criteria:** Contains `update-helm-values` job with `yq` and `git commit`
+- **Failure:** CI/CD automation missing
+
+### Test 8: CI Validation Workflow
+- **Purpose:** Verify PR validation blocks violations
+- **File:** `.github/workflows/validate-helmfile-gitops.yml`
+- **Pass Criteria:** Checks for kubectl, credentials, Istio antipatterns
+- **Failure:** Validation workflow incomplete
+
+### Test 9: Kubernetes Secrets Usage
+- **Purpose:** Verify secure credential management
+- **Command:** `kubectl get deployment -n metabob -o yaml`
+- **Pass Criteria:** Uses `valueFrom.secretKeyRef`, no plaintext values
+- **Failure:** Plaintext credentials in deployment
+
+### Test 10: Reproducible Deployment
+- **Purpose:** Verify idempotent deployments
+- **Commands:** `helmfile sync` twice, then `helmfile diff`
+- **Pass Criteria:** No changes after second sync
+- **Failure:** Deployment is not idempotent (WARNING: Destructive test)
+
+## Exit Codes
+
+- **0**: All tests passed ✅
+- **1**: One or more tests failed ❌
+- **2**: All tests skipped (prerequisites missing) ⚠️
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENVIRONMENT` | `local` | Environment to test (local, production) |
+| `NAMESPACE` | `metabob` | Kubernetes namespace |
+| `HELMFILE` | `./helmfile.yaml` | Path to helmfile |
+| `SKIP_DESTRUCTIVE` | `true` | Skip test 10 (reproducible deployment) |
+
+## Example Usage
+
+### Development Workflow
+
+```bash
+# 1. Make changes to Helm charts
+vim helm/charts/devbob/values.yaml
+
+# 2. Run validation (non-destructive)
+./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
+
+# 3. If validation passes, commit
+git add helm/
+git commit -m "chore: update Helm values"
 ```
 
-## Integration with CI/CD
-
-This harness can be integrated into CI/CD pipelines:
+### CI/CD Integration
 
 ```yaml
-# Example: GitHub Actions
-- name: Validate Helmfile Deployment Pattern
+# .github/workflows/test.yml
+- name: Validate GitOps Compliance
   run: |
     ./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
-  env:
-    KUBECONFIG: ${{ secrets.KUBECONFIG }}
+```
+
+### Production Deployment Check
+
+```bash
+# Before deploying to production
+ENVIRONMENT=production \
+NAMESPACE=metabob \
+./tests/validation-harnesses/helmfile-deployment-pattern-harness.sh
+
+# If validation passes, deploy
+helmfile -e production sync
 ```
 
 ## Troubleshooting
 
-### Test 1 Fails: kubectl not available
-- **Solution**: Install kubectl or set PATH correctly
-- **Alternative**: Set a valid kubeconfig file
+### "Helmfile not installed"
+```bash
+# Install helmfile
+wget -O helmfile https://github.com/helmfile/helmfile/releases/latest/download/helmfile_linux_amd64
+chmod +x helmfile
+sudo mv helmfile /usr/local/bin/
+```
 
-### Test 2 Fails: Missing production environment
-- **Solution**: Verify `helm/helmfile.yaml` has `production:` section
-- **Check**: Enforcement step may not have completed
+### "Cannot access namespace"
+```bash
+# Check cluster connection
+kubectl cluster-info
+kubectl get namespaces
 
-### Test 3 Fails: Missing Istio templates
-- **Solution**: Run enforcement step to create missing files
-- **Check**: Verify `helm/charts/*/templates/virtualservice.yaml` exist
+# Create namespace if missing
+kubectl create namespace metabob
+```
 
-### Test 4/5 Fails: helmfile template errors
-- **Solution**: Check helmfile syntax and values files
-- **Check**: Verify all referenced values files exist
-- **Alternative**: Install helmfile if not available
+### "Secret 'devbob-secrets' not found"
+```bash
+# Create required secret
+kubectl create secret generic devbob-secrets \
+  --namespace=metabob \
+  --from-literal=anthropic-api-key=sk-ant-xxx \
+  --from-literal=github-token=ghp_xxx \
+  --from-literal=surreal-user=root \
+  --from-literal=surreal-pass=YOUR_SECURE_PASSWORD \
+  --from-literal=git-user-name="Devbob Agent" \
+  --from-literal=git-user-email="devbob@metabob.local"
+```
 
-### Test 6 Fails: Unmanaged resources
-- **Solution**: Delete manually-created resources
-- **Command**: `kubectl delete <resource> -n metabob`
-- **Re-deploy**: Use `helmfile sync` to recreate via Helm
+### "Configuration drift detected"
+```bash
+# Reconcile drift
+helmfile -e local sync
 
-### Test 7 Fails: Configuration drift
-- **Solution**: Run `helmfile sync` to align cluster with configuration
-- **Alternative**: Update values files to match running versions
+# Verify no drift
+helmfile -e local diff
+```
 
-## Files
+## Expected Output
 
-- **helmfile-deployment-pattern-harness.sh**: Main validation script
-- **helmfile-deployment-pattern-test-cases.json**: Test case definitions
-- **README-helmfile-deployment-pattern.md**: This documentation
+### ✅ Successful Validation
 
-## Related Specifications
+```
+==============================================
+Validation Harness: helmfile-deployment-pattern-with-versioned-builds
+==============================================
+Environment: local
+Namespace: metabob
+Skip Destructive: true
 
-- **Trace**: `TRACE_HELMFILE_DEPLOYMENT_PATTERN.json`
-- **Enforcement**: `ENFORCEMENT_HELMFILE_DEPLOYMENT_PATTERN.json`
-- **Documentation**: `docs/guides/HELMFILE_DEPLOYMENT_GUIDE.md`
+ℹ Test 1: Checking for configuration drift...
+✓ PASS: No configuration drift detected
 
-## Maintenance
+ℹ Test 2: Validating image version tags...
+✓ PASS: All images use explicit version tags
 
-This harness should be run:
-- ✅ After any changes to `helm/helmfile.yaml`
-- ✅ After creating/modifying Helm charts
-- ✅ Before deploying to production
-- ✅ As part of CI/CD pipeline
-- ✅ When validating specification compliance
+ℹ Test 3: Checking for unmanaged resources (kubectl bypass)...
+✓ PASS: All resources managed by Helm
 
-## Version History
+ℹ Test 4: Checking for hardcoded credentials in Helm values...
+✓ PASS: No hardcoded credentials found in Helm values
 
-- **v1.0** (2026-02-27): Initial version with 7 validation tests
+ℹ Test 5: Validating Istio configuration...
+⊘ SKIP: Istio check (production only)
+  Reason: Current environment: local
+
+ℹ Test 6: Validating CI/CD → GitOps automation...
+✓ PASS: CI/CD → GitOps automation configured
+
+ℹ Test 7: Checking CI validation workflow...
+✓ PASS: CI validation workflow configured
+
+ℹ Test 8: Testing reproducible deployment...
+⊘ SKIP: Destructive test skipped
+  Reason: Set SKIP_DESTRUCTIVE=false to enable
+
+ℹ Test 9: Validating Kubernetes Secrets usage...
+✓ PASS: Deployment correctly references Kubernetes Secrets
+
+==============================================
+Validation Summary
+==============================================
+Passed: 7
+Failed: 0
+Skipped: 2
+
+✅ VALIDATION PASSED
+GitOps compliance verified successfully.
+```
+
+### ❌ Failed Validation
+
+```
+ℹ Test 4: Checking for hardcoded credentials in Helm values...
+  Found hardcoded 'root' password in: helm/charts/devbob/values.yaml
+✗ FAIL: Found 1 hardcoded credentials
+  Reason: Use Kubernetes Secrets with secretKeyRef
+
+==============================================
+Validation Summary
+==============================================
+Passed: 6
+Failed: 1
+Skipped: 2
+
+❌ VALIDATION FAILED
+GitOps compliance issues detected. Review failures above.
+```
+
+## Related Files
+
+- **Harness Script:** `tests/validation-harnesses/helmfile-deployment-pattern-harness.sh`
+- **Test Cases:** `tests/validation-harnesses/helmfile-deployment-pattern-test-cases.json`
+- **Trace Analysis:** `TRACE_OUTPUT_helmfile-deployment-pattern.json`
+- **Enforcement Summary:** `ENFORCEMENT_SUMMARY_helmfile-deployment-pattern.md`
+
+## References
+
+- **Specification:** helmfile-deployment-pattern-with-versioned-builds
+- **Activity:** trace-enforce-validate-loop
+- **Created:** 2026-02-27
+- **GitOps Compliance Target:** 90%+
