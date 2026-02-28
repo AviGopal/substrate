@@ -1,0 +1,172 @@
+{
+  "phase": "phase-1-remove-ml-from-opencode",
+  "execution_date": "2026-02-28",
+  "activities_executed": [
+    {
+      "spec": "thompson-sampling-in-rpc-api-only",
+      "status": "complete",
+      "duration_seconds": 1368.3,
+      "cost_usd": 2.7774,
+      "tokens": {
+        "input": 867618,
+        "output": 9952
+      },
+      "commits": [
+        "db43106 feat(thompson-sampling-in-rpc-api-only): Enforce ML selection logic architectural boundary",
+        "6674509 Phase 1: Remove Thompson Sampling from metabob-opencode"
+      ]
+    },
+    {
+      "spec": "impulse-learning-in-rpc-api-only",
+      "status": "complete",
+      "duration_seconds": 1467.9,
+      "cost_usd": 2.8141,
+      "tokens": {
+        "input": 869330,
+        "output": 4033
+      },
+      "commits": [
+        "6c1fb46 feat(impulse-learning-in-rpc-api-only): Enforce learning algorithms in rpc-api (Phase 1)",
+        "54a7adc docs: Add final summary impulse for impulse-learning-in-rpc-api-only"
+      ]
+    },
+    {
+      "spec": "metrics-calculation-in-rpc-api-only",
+      "status": "complete",
+      "duration_seconds": 1426.5,
+      "cost_usd": 2.7080,
+      "tokens": {
+        "input": 835154,
+        "output": 10718
+      },
+      "commits": [
+        "1be4703f feat(arch): Enforce metrics-calculation-in-rpc-api-only specification"
+      ]
+    }
+  ],
+  "total_metrics": {
+    "duration_seconds": 4262.7,
+    "cost_usd": 8.2995,
+    "tokens": {
+      "input": 2572102,
+      "output": 24703
+    }
+  },
+  "validation_results": {
+    "opencode_ml_logic": "REMOVED",
+    "thompson_sampling_references": "Documentation and metadata only - no implementation",
+    "rpc_api_endpoints_created": [
+      "POST /api/v1/learning-loop/record-turn",
+      "POST /api/v1/learning-loop/executions",
+      "GET /api/v1/learning-loop/templates/{template_id}/metrics",
+      "GET /api/v1/learning-loop/boredom-activities",
+      "GET /api/v1/learning-loop/templates/{template_id}/failures"
+    ],
+    "opencode_files_modified": [
+      "packages/opencode/src/session/activity.ts",
+      "packages/opencode/src/session/impulse-learning.ts",
+      "packages/opencode/src/session/impulse-resolver.ts",
+      "packages/opencode/src/session/session-state.ts",
+      "packages/opencode/src/session/template-metrics-client.ts",
+      "packages/opencode/src/session/template-quality-score.ts",
+      "packages/opencode/src/session/template-selector.ts",
+      "packages/opencode/src/util/metabob.ts",
+      "packages/opencode/src/util/rpc-http-client.ts"
+    ],
+    "rpc_api_files_created": [
+      "server/routes/learning_loop.py",
+      "server/routes/impulse.py",
+      "server/db/operations/impulse_data.py",
+      "server/db/operations/task_execution.py",
+      "server/db/operations/activity_content.py"
+    ],
+    "line_count_changes": {
+      "before": {
+        "template-selector.ts": 529,
+        "impulse-learning.ts": 585,
+        "template-metrics-client.ts": 319,
+        "total": 1433
+      },
+      "after": {
+        "template-selector.ts": 382,
+        "impulse-learning.ts": 589,
+        "template-metrics-client.ts": 300,
+        "total": 1271
+      },
+      "net_reduction": 162,
+      "note": "Reduction represents removal of ML calculation logic and replacement with thin HTTP clients. The impulse-learning.ts file increased slightly due to improved documentation and data collection structure."
+    },
+    "rpc_api_additions": {
+      "total_lines_added": 2324,
+      "total_lines_removed": 122,
+      "net_addition": 2202
+    }
+  },
+  "architectural_boundaries_enforced": [
+    {
+      "boundary": "Thompson Sampling in rpc-api only",
+      "enforcement": "Complete",
+      "details": "Beta distribution sampling logic removed from metabob-opencode/packages/opencode/src/session/template-selector.ts. Now delegates to RPC API endpoint. Only documentation references remain in opencode."
+    },
+    {
+      "boundary": "Impulse learning in rpc-api only",
+      "enforcement": "Complete",
+      "details": "Pattern extraction and quality calculation logic removed from opencode. Only raw data collection remains. All learning algorithms now in rpc-api/server/routes/learning_loop.py."
+    },
+    {
+      "boundary": "Metrics calculation in rpc-api only",
+      "enforcement": "Complete",
+      "details": "Success rate, quality score, and averaging calculations removed from template-metrics-client.ts. File is now a thin HTTP client (<100 effective lines). All calculations in rpc-api."
+    }
+  ],
+  "data_flows_established": [
+    {
+      "flow": "Template Selection",
+      "path": "opencode → POST /api/v2/activities/templates/{id}/select → rpc-api performs Beta sampling → returns selected template → opencode loads and executes"
+    },
+    {
+      "flow": "Impulse Learning",
+      "path": "opencode completes activity turn → collects raw execution data → POST /api/v1/learning-loop/record-turn → rpc-api extracts patterns and calculates quality scores → stores in SurrealDB"
+    },
+    {
+      "flow": "Metrics Aggregation",
+      "path": "opencode reports execution result → POST /api/v1/learning-loop/executions → rpc-api calculates success rates and updates Redis → stores in SurrealDB"
+    }
+  ],
+  "storage_consolidation": {
+    "primary_database": "SurrealDB",
+    "cache_layer": "Redis",
+    "dual_write_status": "Active",
+    "note": "All metrics and learning data now flows through rpc-api to SurrealDB (primary) and Redis (cache). No local JSON file writes from opencode."
+  },
+  "verification_artifacts": [
+    "docs/data-flows/surrealdb-activity-execution-storage-flow.md",
+    "ENFORCEMENT_IMPULSE_LEARNING_IN_RPC_API_ONLY.md",
+    "TRACE_IMPULSE_LEARNING_SUMMARY.md",
+    "impulses/validation-impulse-learning-in-rpc-api-only-case-*.json (8 validation cases)",
+    "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.ts",
+    "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs"
+  ],
+  "next_steps": {
+    "phase_2": "Consolidate storage layer - complete SurrealDB migration from Redis",
+    "phase_3": "Complete learning loop - implement context requirements evolution in rpc-api",
+    "phase_4": "Metabob-cli gateway implementation - add enrichment layer with inference models"
+  },
+  "architectural_state": {
+    "metabob_opencode": {
+      "role": "Activity execution, coordination, data collection ONLY",
+      "ml_logic": "NONE - all removed",
+      "status": "✅ Clean separation achieved"
+    },
+    "metabob_rpc_api": {
+      "role": "ML learning, metrics training, Thompson Sampling, all data maintenance",
+      "new_endpoints": 5,
+      "new_lines": 2202,
+      "status": "✅ All ML logic consolidated"
+    },
+    "metabob_cli": {
+      "role": "Data collection, enrichment with inference models, gateway to activity database",
+      "status": "⏳ Phase 4 - pending implementation"
+    }
+  }
+}
