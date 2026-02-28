@@ -1,0 +1,54 @@
+{
+  "specificationName": "thompson-sampling-in-rpc-api-only",
+  "changesApplied": [
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "create_template (metrics initialization)",
+      "changeMade": "Refactored metrics initialization to write to SurrealDB first via create_metrics(), then cache in Redis. Added proper error handling where Redis failure is non-fatal but SurrealDB failure is logged.",
+      "reason": "Enforces cache-aside pattern specified in Phase 3 trace: SurrealDB is primary storage, Redis is cache layer. Metrics must persist beyond Redis cache eviction. Aligns with template write pattern (already SurrealDB-first at lines 342-348).",
+      "impactAnalysis": "Low risk - Additive change. create_template now writes both template and metrics to SurrealDB before caching. Backward compatible with existing Redis-only deployments. No breaking changes to API contracts."
+    }
+  ],
+  "pendingWork": {
+    "highPriority": [
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "component": "record_execution_result",
+        "gap": "Uses Redis-first pattern with compensating rollback. Should be SurrealDB-first with Redis cache update.",
+        "estimatedEffort": "2-3 hours",
+        "complexity": "HIGH - 230 lines of transaction logic"
+      }
+    ],
+    "mediumPriority": [
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "component": "select_variant_thompson_sampling",
+        "gap": "No SurrealDB fallback on Redis cache miss. No selection tracking in SurrealDB.",
+        "estimatedEffort": "1-2 hours",
+        "complexity": "MEDIUM - Add fallback logic and selection tracking"
+      }
+    ]
+  },
+  "architecturalCompliance": {
+    "specificationEnforced": "Thompson Sampling (Beta distribution variant selection) must ONLY exist in metabob-rpc-api. metabob-opencode must call rpc-api endpoint for template selection.",
+    "complianceStatus": "✅ FULLY COMPLIANT (Phase 2 complete) + ⚠️ PARTIAL Phase 3 (1 of 3 components refactored)",
+    "evidence": {
+      "opencode": [
+        "template-selector.ts delegates to RpcHttpClient.selectTemplateVariant (Phase 2)",
+        "No Beta sampling functions in OpenCode (Phase 2)",
+        "No Thompson Sampling orchestration in OpenCode (Phase 2)"
+      ],
+      "rpcApi": [
+        "✅ sample_beta() correctly implements Beta distribution sampling",
+        "✅ select_variant_thompson_sampling() implements full Thompson Sampling algorithm",
+        "✅ POST /templates/{id}/select endpoint exposes selection API",
+        "✅ create_template writes to SurrealDB first for template AND metrics (Phase 3 - COMPLETE)",
+        "⚠️ record_execution_result still uses Redis-first pattern (Phase 3 - TODO)",
+        "⚠️ select_variant_thompson_sampling has no cache-miss fallback (Phase 3 - TODO)"
+      ]
+    }
+  },
+  "enforcementImpulseId": "enforcement-thompson-sampling-in-rpc-api-only-phase3",
+  "phase3Status": "PARTIAL - 1 of 3 cache-aside pattern refactorings complete",
+  "nextIteration": "Continue with record_execution_result refactoring (highest priority, highest complexity)"
+}

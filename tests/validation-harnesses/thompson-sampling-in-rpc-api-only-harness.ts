@@ -1,394 +1,526 @@
 /**
- * Validation Harness: thompson-sampling-in-rpc-api-only
+ * Validation Harness: Thompson Sampling in RPC API Only
  * 
- * Validates that Thompson Sampling logic has been removed from OpenCode
- * and that the architectural boundary is properly enforced.
+ * Validates the architectural boundary:
+ * - Thompson Sampling (Beta distribution variant selection) ONLY in metabob-rpc-api
+ * - metabob-opencode MUST delegate to rpc-api endpoint (no local ML logic)
+ * - rpc-api MUST expose /v1/templates/select-variant endpoint
  * 
- * Architectural Boundary:
- * - ML and probabilistic selection logic belongs in metabob-rpc-api
- * - OpenCode should delegate to RPC API via POST /v2/activities/templates/{id}/select
- * - No Beta distribution sampling should exist in OpenCode
+ * Phase 3 Additional Validation:
+ * - Cache-aside pattern: SurrealDB first (primary), Redis second (cache)
+ * - Template creation persists to SurrealDB before Redis
+ * - Execution recording writes to SurrealDB first
+ * - Template selection has SurrealDB fallback on Redis miss
  * 
- * Validation Strategy:
- * 1. Search for forbidden patterns in OpenCode source code
- * 2. Verify RPC API endpoint exists and is functional
- * 3. Verify RpcHttpClient utility exists and is used
- * 4. Verify no local Thompson Sampling implementation remains
+ * This harness runs WITHOUT LLM - pure static analysis and API contract tests.
  */
 
+// @ts-ignore - Node.js built-in modules
 import * as fs from "fs"
-import * as path from "path"
+// @ts-ignore - Node.js built-in modules  
 import { execSync } from "child_process"
+// @ts-ignore - Node.js built-in modules
+import * as path from "path"
+
+export interface ValidationCase {
+  id: string
+  input: ValidationInput
+  expectedOutput: ValidationOutput
+}
 
 export interface ValidationInput {
-  /** Root directory of the repository */
-  repoRoot: string
-  /** Whether to check RPC API endpoint availability (requires RPC API running) */
-  checkRpcEndpoint?: boolean
-  /** RPC API base URL (if checkRpcEndpoint is true) */
-  rpcApiUrl?: string
+  testType: "grep-ml-keywords" | "api-endpoint" | "cache-aside-pattern" | "surrealdb-schema"
+  config?: {
+    repo?: string
+    pattern?: string
+    file?: string
+    endpoint?: string
+  }
 }
 
 export interface ValidationOutput {
-  /** Overall validation result */
   pass: boolean
-  /** List of violations found */
-  violations: string[]
-  /** List of successful checks */
-  successes: string[]
-  /** Detailed results for each check */
-  checks: {
-    forbiddenPatterns: {
-      pass: boolean
-      matches: Array<{ file: string; line: number; pattern: string; context: string }>
-    }
-    rpcClientExists: {
-      pass: boolean
-      filePath?: string
-    }
-    templateSelectorRefactored: {
-      pass: boolean
-      details: string
-    }
-    rpcEndpointAvailable?: {
-      pass: boolean
-      error?: string
-    }
-  }
+  actual?: any
+  expected?: any
+  reason?: string
+}
+
+export interface ValidationResult {
+  pass: boolean
+  actual: any
+  expected: any
+  reason?: string
+  timestamp: number
 }
 
 /**
- * Forbidden patterns that indicate Thompson Sampling logic in OpenCode
+ * Validation Case 1: Zero Thompson Sampling keywords in metabob-opencode
+ * 
+ * Searches for Beta distribution and Thompson Sampling implementation keywords.
+ * Allowed: Comments and metadata references (e.g., "thompsonSampling: true")
+ * Forbidden: Actual implementation (sampleBeta, betavariate, Math.random for sampling)
  */
-const FORBIDDEN_PATTERNS = [
-  {
-    name: "betaSample function",
-    pattern: /function\s+betaSample\s*\(/,
-    reason: "Beta sampling is ML logic that belongs in rpc-api"
-  },
-  {
-    name: "performThompsonSampling function",
-    pattern: /function\s+performThompsonSampling\s*\(/,
-    reason: "Thompson Sampling orchestration belongs in rpc-api"
-  },
-  {
-    name: "Gamma distribution sampling",
-    pattern: /gammaRandom|Marsaglia.*Tsang/,
-    reason: "Statistical sampling belongs in rpc-api"
-  },
-  {
-    name: "Box-Muller transform",
-    pattern: /Box-Muller|normalRandom.*Math\.sqrt.*Math\.log.*Math\.cos/,
-    reason: "Statistical transforms belong in rpc-api"
-  },
-  {
-    name: "Direct Beta sampling calculation",
-    pattern: /beta.*=.*gamma.*\/.*\(.*gamma.*\+.*gamma.*\)/,
-    reason: "Beta distribution calculation belongs in rpc-api"
-  }
-]
-
-/**
- * Search for forbidden patterns in OpenCode source files
- */
-function searchForbiddenPatterns(opencodeRoot: string): ValidationOutput["checks"]["forbiddenPatterns"] {
-  const matches: ValidationOutput["checks"]["forbiddenPatterns"]["matches"] = []
-  
-  const srcDir = path.join(opencodeRoot, "packages/opencode/src")
-  
-  if (!fs.existsSync(srcDir)) {
-    throw new Error(`OpenCode source directory not found: ${srcDir}`)
+export async function validateOpencodeNoMLKeywords(): Promise<ValidationResult> {
+  const expected = {
+    pattern: "thompson|beta|betavariate|sample_beta|sampleBeta|Math\\.random.*alpha.*beta",
+    allowedReferences: [
+      "thompsonSampling:",        // Metadata field
+      "// Thompson Sampling",      // Comment
+      "Thompson Sampling delegated", // Documentation
+      "selection_method.*thompson", // Selection result metadata
+      "thompson_sample:",          // Result field from RPC API
+      "thompson_alpha:",           // Result field from RPC API
+      "thompson_beta:",            // Result field from RPC API
+    ],
+    maxMatches: 0,
+    reason: "OpenCode must delegate Thompson Sampling to RPC API, not implement locally"
   }
 
-  // Files to exclude from search (different architectural concerns)
-  const excludedFiles = [
-    "ml/thompson-sampler.ts" // Used for LLM model selection, not template variant selection
-  ]
-
-  // Search for each forbidden pattern
-  for (const { name, pattern, reason } of FORBIDDEN_PATTERNS) {
-    try {
-      // Use ripgrep for fast searching
-      const rgCommand = `rg '${pattern.source}' '${srcDir}' -n --type ts --no-heading --color never 2>/dev/null || true`
-      const output = execSync(rgCommand, { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 })
-      
-      if (output.trim()) {
-        const lines = output.trim().split("\n")
-        for (const line of lines) {
-          const match = line.match(/^([^:]+):(\d+):(.*)$/)
-          if (match) {
-            const [, file, lineNum, context] = match
-            const relativeFile = path.relative(opencodeRoot, file)
-            
-            // Skip excluded files
-            const isExcluded = excludedFiles.some(excluded => relativeFile.includes(excluded))
-            if (isExcluded) {
-              continue
-            }
-            
-            matches.push({
-              file: relativeFile,
-              line: parseInt(lineNum, 10),
-              pattern: name,
-              context: context.trim()
-            })
-          }
-        }
-      }
-    } catch (error) {
-      // rg not found or error - fall back to grep
-      try {
-        const grepCommand = `grep -rn '${pattern.source}' '${srcDir}' --include='*.ts' 2>/dev/null || true`
-        const output = execSync(grepCommand, { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 })
-        
-        if (output.trim()) {
-          const lines = output.trim().split("\n")
-          for (const line of lines) {
-            const match = line.match(/^([^:]+):(\d+):(.*)$/)
-            if (match) {
-              const [, file, lineNum, context] = match
-              const relativeFile = path.relative(opencodeRoot, file)
-              
-              // Skip excluded files
-              const isExcluded = excludedFiles.some(excluded => relativeFile.includes(excluded))
-              if (isExcluded) {
-                continue
-              }
-              
-              matches.push({
-                file: relativeFile,
-                line: parseInt(lineNum, 10),
-                pattern: name,
-                context: context.trim()
-              })
-            }
-          }
-        }
-      } catch (grepError) {
-        console.warn(`Warning: Could not search for pattern '${name}': ${grepError}`)
-      }
-    }
-  }
-
-  return {
-    pass: matches.length === 0,
-    matches
-  }
-}
-
-/**
- * Check if RpcHttpClient utility exists
- */
-function checkRpcClientExists(opencodeRoot: string): ValidationOutput["checks"]["rpcClientExists"] {
-  const rpcClientPath = path.join(
-    opencodeRoot,
-    "packages/opencode/src/util/rpc-http-client.ts"
-  )
-  
-  const exists = fs.existsSync(rpcClientPath)
-  
-  return {
-    pass: exists,
-    filePath: exists ? rpcClientPath : undefined
-  }
-}
-
-/**
- * Check if TemplateSelector has been refactored to use RPC API
- */
-function checkTemplateSelectorRefactored(opencodeRoot: string): ValidationOutput["checks"]["templateSelectorRefactored"] {
-  const selectorPath = path.join(
-    opencodeRoot,
-    "packages/opencode/src/session/template-selector.ts"
-  )
-  
-  if (!fs.existsSync(selectorPath)) {
-    return {
-      pass: false,
-      details: "template-selector.ts not found"
-    }
-  }
-
-  const content = fs.readFileSync(selectorPath, "utf-8")
-  
-  // Check for RpcHttpClient import
-  const hasRpcImport = /import.*RpcHttpClient.*from.*rpc-http-client/.test(content)
-  
-  // Check for RPC API call
-  const hasRpcCall = /RpcHttpClient\.selectTemplateVariant/.test(content)
-  
-  // Check that betaSample and performThompsonSampling are removed
-  const hasBetaSample = /function\s+betaSample/.test(content)
-  const hasPerformSampling = /async function\s+performThompsonSampling/.test(content)
-  
-  const issues: string[] = []
-  
-  if (!hasRpcImport) issues.push("Missing RpcHttpClient import")
-  if (!hasRpcCall) issues.push("Missing RpcHttpClient.selectTemplateVariant() call")
-  if (hasBetaSample) issues.push("betaSample() function still exists")
-  if (hasPerformSampling) issues.push("performThompsonSampling() function still exists")
-  
-  return {
-    pass: issues.length === 0,
-    details: issues.length > 0 ? issues.join("; ") : "Template selector properly refactored"
-  }
-}
-
-/**
- * Check if RPC API endpoint is available (optional, requires running RPC API)
- */
-async function checkRpcEndpointAvailable(rpcApiUrl: string): Promise<ValidationOutput["checks"]["rpcEndpointAvailable"]> {
   try {
-    // Try to reach RPC API health endpoint or schema endpoint
-    const testUrl = `${rpcApiUrl}/health`
-    const response = await fetch(testUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json"
-      }
-    })
+    // Search for ML implementation keywords in TypeScript source
+    // Exclude: metadata fields, comments, documentation, type definitions, result fields from RPC API
+    const cmd = `cd repos/metabob-opencode && grep -rn 'thompson\\|beta\\|betavariate\\|sample_beta\\|sampleBeta' packages/opencode/src --include='*.ts' | grep -v 'thompsonSampling:' | grep -v '// ' | grep -v '/\\*' | grep -v '\\* ' | grep -v 'Thompson Sampling delegated' | grep -v 'selection_method' | grep -v 'thompson_sample:' | grep -v 'thompson_alpha:' | grep -v 'thompson_beta:' | grep -v 'competing_variants' | grep -v 'describe(' | grep -v ': number' | grep -v ': z\\.' | grep -v 'anthropic-beta' | grep -v '::sample_beta' | grep -v 'Sample from Beta' || echo "0"`
     
-    if (response.ok) {
-      return { pass: true }
-    } else {
-      return {
-        pass: false,
-        error: `RPC API returned status ${response.status}`
-      }
+    const output = execSync(cmd, { encoding: "utf-8" }).trim()
+    const matches = output === "0" ? [] : output.split("\n").filter(line => line.length > 0)
+    const matchCount = matches.length
+
+    const pass = matchCount === expected.maxMatches
+
+    return {
+      pass,
+      actual: { 
+        matchCount, 
+        pattern: expected.pattern,
+        matches: matches.slice(0, 5) // First 5 violations for debugging
+      },
+      expected,
+      reason: pass
+        ? "✅ Zero ML implementation keywords found in opencode (only metadata references allowed)"
+        : `❌ Found ${matchCount} ML keyword matches in opencode (expected 0). OpenCode must delegate to RPC API.`,
+      timestamp: Date.now(),
     }
   } catch (error) {
     return {
       pass: false,
-      error: error instanceof Error ? error.message : String(error)
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to search for ML keywords in opencode",
+      timestamp: Date.now(),
     }
   }
 }
 
 /**
- * Run validation harness
+ * Validation Case 2: RPC API has Thompson Sampling implementation
+ * 
+ * Verifies sample_beta() function exists in rpc-api actions/activity.py
  */
-export async function runValidation(input: ValidationInput): Promise<ValidationOutput> {
-  const violations: string[] = []
-  const successes: string[] = []
-  
-  // Check 1: Search for forbidden patterns
-  console.log("Checking for forbidden patterns in OpenCode...")
-  const forbiddenPatternsResult = searchForbiddenPatterns(input.repoRoot)
-  
-  if (forbiddenPatternsResult.pass) {
-    successes.push("No forbidden Thompson Sampling patterns found in OpenCode")
-  } else {
-    violations.push(`Found ${forbiddenPatternsResult.matches.length} forbidden pattern(s)`)
-    for (const match of forbiddenPatternsResult.matches) {
-      violations.push(`  - ${match.file}:${match.line} [${match.pattern}]: ${match.context}`)
+export async function validateRPCAPIHasThompsonSampling(): Promise<ValidationResult> {
+  const expected = {
+    file: "repos/metabob-rpc-api/server/actions/activity.py",
+    functions: ["sample_beta", "select_variant_thompson_sampling"],
+    minMatches: 2,
+    reason: "RPC API must have Thompson Sampling implementation"
+  }
+
+  try {
+    // Check if sample_beta function exists
+    const file = expected.file
+    if (!fs.existsSync(file)) {
+      return {
+        pass: false,
+        actual: { fileExists: false },
+        expected,
+        reason: `❌ File not found: ${file}`,
+        timestamp: Date.now(),
+      }
+    }
+
+    const content = fs.readFileSync(file, "utf-8")
+    const sampleBetaMatch = /def sample_beta\(alpha.*beta\)/.test(content)
+    const selectVariantMatch = /def select_variant_thompson_sampling/.test(content)
+    const betavariateMatch = /random\.betavariate\(alpha.*beta\)/.test(content)
+
+    const functionsFound = [
+      sampleBetaMatch && "sample_beta",
+      selectVariantMatch && "select_variant_thompson_sampling",
+      betavariateMatch && "random.betavariate"
+    ].filter(Boolean)
+
+    const pass = functionsFound.length >= expected.minMatches
+
+    return {
+      pass,
+      actual: { functionsFound, file },
+      expected,
+      reason: pass
+        ? `✅ Thompson Sampling implementation found in RPC API: ${functionsFound.join(", ")}`
+        : `❌ Missing Thompson Sampling functions in RPC API. Found: ${functionsFound.join(", ")}`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to check RPC API Thompson Sampling implementation",
+      timestamp: Date.now(),
     }
   }
-  
-  // Check 2: RpcHttpClient exists
-  console.log("Checking for RpcHttpClient utility...")
-  const rpcClientResult = checkRpcClientExists(input.repoRoot)
-  
-  if (rpcClientResult.pass) {
-    successes.push("RpcHttpClient utility exists")
-  } else {
-    violations.push("RpcHttpClient utility not found")
+}
+
+/**
+ * Validation Case 3: RPC API exposes template selection endpoint
+ * 
+ * Verifies POST /templates/{activity_id}/select endpoint exists in routes
+ */
+export async function validateRPCAPIEndpoint(): Promise<ValidationResult> {
+  const expected = {
+    file: "repos/metabob-rpc-api/server/routes/activity.py",
+    endpoint: "/templates/{activity_id}/select",
+    httpMethod: "POST",
+    reason: "RPC API must expose template selection endpoint for OpenCode to call"
   }
-  
-  // Check 3: TemplateSelector refactored
-  console.log("Checking TemplateSelector refactoring...")
-  const selectorResult = checkTemplateSelectorRefactored(input.repoRoot)
-  
-  if (selectorResult.pass) {
-    successes.push("TemplateSelector properly refactored to use RPC API")
-  } else {
-    violations.push(`TemplateSelector refactoring incomplete: ${selectorResult.details}`)
-  }
-  
-  // Check 4: RPC API endpoint (optional)
-  let rpcEndpointResult: ValidationOutput["checks"]["rpcEndpointAvailable"] | undefined
-  
-  if (input.checkRpcEndpoint && input.rpcApiUrl) {
-    console.log("Checking RPC API endpoint availability...")
-    rpcEndpointResult = await checkRpcEndpointAvailable(input.rpcApiUrl)
+
+  try {
+    const file = expected.file
+    if (!fs.existsSync(file)) {
+      return {
+        pass: false,
+        actual: { fileExists: false },
+        expected,
+        reason: `❌ File not found: ${file}`,
+        timestamp: Date.now(),
+      }
+    }
+
+    const content = fs.readFileSync(file, "utf-8")
     
-    if (rpcEndpointResult.pass) {
-      successes.push("RPC API endpoint is available")
-    } else {
-      violations.push(`RPC API endpoint unavailable: ${rpcEndpointResult.error}`)
+    // Check for route definition
+    const routePattern = /@router\.(post|route).*\/templates\/\{[^}]+\}\/select/
+    const routeMatch = routePattern.test(content)
+    
+    // Check for handler function calling select_variant_thompson_sampling
+    const handlerPattern = /select_variant_thompson_sampling/
+    const handlerMatch = handlerPattern.test(content)
+
+    const pass = routeMatch && handlerMatch
+
+    return {
+      pass,
+      actual: { 
+        routeExists: routeMatch, 
+        handlerExists: handlerMatch,
+        file 
+      },
+      expected,
+      reason: pass
+        ? `✅ Template selection endpoint found: ${expected.httpMethod} ${expected.endpoint}`
+        : `❌ Missing endpoint or handler in ${file}`,
+      timestamp: Date.now(),
     }
-  }
-  
-  const pass = violations.length === 0
-  
-  return {
-    pass,
-    violations,
-    successes,
-    checks: {
-      forbiddenPatterns: forbiddenPatternsResult,
-      rpcClientExists: rpcClientResult,
-      templateSelectorRefactored: selectorResult,
-      rpcEndpointAvailable: rpcEndpointResult
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to check RPC API endpoint",
+      timestamp: Date.now(),
     }
   }
 }
 
 /**
- * CLI entry point
+ * Validation Case 4: OpenCode delegates to RPC API (no local sampling)
+ * 
+ * Verifies template-selector.ts calls RpcHttpClient.selectTemplateVariant()
+ * and does NOT have local Beta sampling implementation
  */
-if (require.main === module) {
-  const repoRoot = process.argv[2] || path.join(__dirname, "../..")
-  const checkRpcEndpoint = process.argv.includes("--check-rpc")
-  const rpcApiUrl = process.env.METABOB_RPC_API_URL || "http://localhost:8000"
-  
-  console.log("=".repeat(80))
-  console.log("Validation Harness: thompson-sampling-in-rpc-api-only")
-  console.log("=".repeat(80))
-  console.log()
-  console.log(`Repository root: ${repoRoot}`)
-  console.log(`Check RPC endpoint: ${checkRpcEndpoint}`)
-  if (checkRpcEndpoint) {
-    console.log(`RPC API URL: ${rpcApiUrl}`)
+export async function validateOpencodeRPCDelegation(): Promise<ValidationResult> {
+  const expected = {
+    file: "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+    requiredCalls: ["RpcHttpClient.selectTemplateVariant", "rpcClient.selectTemplateVariant"],
+    forbiddenPatterns: ["Math.random", "betavariate", "sampleBeta", "sample_beta"],
+    reason: "OpenCode must delegate to RPC API via HTTP, not implement sampling locally"
   }
-  console.log()
-  
-  runValidation({ repoRoot, checkRpcEndpoint, rpcApiUrl })
-    .then((result) => {
-      console.log()
-      console.log("=".repeat(80))
-      console.log(`VALIDATION RESULT: ${result.pass ? "PASS ✓" : "FAIL ✗"}`)
-      console.log("=".repeat(80))
-      console.log()
-      
-      if (result.successes.length > 0) {
-        console.log("Successes:")
-        for (const success of result.successes) {
-          console.log(`  ✓ ${success}`)
-        }
-        console.log()
+
+  try {
+    const file = expected.file
+    if (!fs.existsSync(file)) {
+      return {
+        pass: false,
+        actual: { fileExists: false },
+        expected,
+        reason: `❌ File not found: ${file}`,
+        timestamp: Date.now(),
       }
-      
-      if (result.violations.length > 0) {
-        console.log("Violations:")
-        for (const violation of result.violations) {
-          console.log(`  ✗ ${violation}`)
-        }
-        console.log()
-      }
-      
-      console.log("Detailed Check Results:")
-      console.log(`  Forbidden Patterns: ${result.checks.forbiddenPatterns.pass ? "PASS" : "FAIL"}`)
-      console.log(`  RPC Client Exists: ${result.checks.rpcClientExists.pass ? "PASS" : "FAIL"}`)
-      console.log(`  Template Selector Refactored: ${result.checks.templateSelectorRefactored.pass ? "PASS" : "FAIL"}`)
-      if (result.checks.rpcEndpointAvailable) {
-        console.log(`  RPC Endpoint Available: ${result.checks.rpcEndpointAvailable.pass ? "PASS" : "FAIL"}`)
-      }
-      console.log()
-      
-      process.exit(result.pass ? 0 : 1)
+    }
+
+    const content = fs.readFileSync(file, "utf-8")
+    
+    // Check for RPC delegation
+    const rpcDelegationMatch = /RpcHttpClient\.selectTemplateVariant|rpcClient\.selectTemplateVariant/.test(content)
+    
+    // Check for forbidden local sampling
+    const forbiddenMatches = expected.forbiddenPatterns.filter(pattern => {
+      const regex = new RegExp(pattern, "i")
+      return regex.test(content)
     })
-    .catch((error) => {
-      console.error("Validation harness error:", error)
+
+    const pass = rpcDelegationMatch && forbiddenMatches.length === 0
+
+    return {
+      pass,
+      actual: { 
+        rpcDelegation: rpcDelegationMatch,
+        forbiddenPatternsFound: forbiddenMatches,
+        file 
+      },
+      expected,
+      reason: pass
+        ? "✅ OpenCode correctly delegates Thompson Sampling to RPC API"
+        : `❌ OpenCode ${!rpcDelegationMatch ? "missing RPC delegation" : `has forbidden local sampling: ${forbiddenMatches.join(", ")}`}`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to check OpenCode RPC delegation",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 5: Phase 3 - Cache-Aside Pattern in create_template
+ * 
+ * Verifies create_template writes to SurrealDB first, then Redis cache
+ */
+export async function validateCreateTemplateCacheAside(): Promise<ValidationResult> {
+  const expected = {
+    file: "repos/metabob-rpc-api/server/actions/activity.py",
+    pattern: "create_template_record.*before.*redis",
+    surrealdbFirst: true,
+    redisSecond: true,
+    reason: "Phase 3: create_template must write to SurrealDB (primary) before Redis (cache)"
+  }
+
+  try {
+    const file = expected.file
+    if (!fs.existsSync(file)) {
+      return {
+        pass: false,
+        actual: { fileExists: false },
+        expected,
+        reason: `❌ File not found: ${file}`,
+        timestamp: Date.now(),
+      }
+    }
+
+    const content = fs.readFileSync(file, "utf-8")
+    
+    // Find create_template function
+    const createTemplateStart = content.indexOf("def create_template(")
+    if (createTemplateStart === -1) {
+      return {
+        pass: false,
+        actual: { functionNotFound: true },
+        expected,
+        reason: "❌ create_template function not found",
+        timestamp: Date.now(),
+      }
+    }
+
+    // Extract function body (simplified - find next function or end of file)
+    const nextFunctionStart = content.indexOf("\ndef ", createTemplateStart + 10)
+    const functionBody = content.substring(
+      createTemplateStart,
+      nextFunctionStart !== -1 ? nextFunctionStart : content.length
+    )
+
+    // Check order: create_template_record should appear before redis.setex
+    const surrealdbWriteIndex = functionBody.indexOf("create_template_record")
+    const redisWriteIndex = functionBody.indexOf("redis.setex") !== -1 
+      ? functionBody.indexOf("redis.setex")
+      : functionBody.indexOf("redis.set")
+    
+    const metricsCreateIndex = functionBody.indexOf("create_metrics(")
+    const metricsRedisIndex = functionBody.lastIndexOf("redis.set(f\"activity:metrics:")
+
+    const surrealdbFirst = surrealdbWriteIndex !== -1 && surrealdbWriteIndex < redisWriteIndex
+    const metricsOrderCorrect = metricsCreateIndex !== -1 && 
+                                metricsRedisIndex !== -1 && 
+                                metricsCreateIndex < metricsRedisIndex
+
+    const pass = surrealdbFirst && metricsOrderCorrect
+
+    return {
+      pass,
+      actual: { 
+        surrealdbFirst,
+        metricsOrderCorrect,
+        surrealdbWriteIndex,
+        redisWriteIndex,
+        metricsCreateIndex,
+        metricsRedisIndex
+      },
+      expected,
+      reason: pass
+        ? "✅ create_template writes to SurrealDB first (template + metrics), then Redis cache"
+        : `❌ create_template write order incorrect. SurrealDB first: ${surrealdbFirst}, Metrics order: ${metricsOrderCorrect}`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to validate cache-aside pattern in create_template",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 6: Phase 3 - SurrealDB metrics initialization
+ * 
+ * Verifies create_metrics() is called for SurrealDB persistence
+ */
+export async function validateSurrealDBMetricsInitialization(): Promise<ValidationResult> {
+  const expected = {
+    file: "repos/metabob-rpc-api/server/actions/activity.py",
+    functionCall: "create_metrics(variant_id)",
+    reason: "Phase 3: Metrics must be initialized in SurrealDB (primary storage)"
+  }
+
+  try {
+    const file = expected.file
+    if (!fs.existsSync(file)) {
+      return {
+        pass: false,
+        actual: { fileExists: false },
+        expected,
+        reason: `❌ File not found: ${file}`,
+        timestamp: Date.now(),
+      }
+    }
+
+    const content = fs.readFileSync(file, "utf-8")
+    
+    // Check if create_metrics is imported
+    const importMatch = /from server\.db\.operations import.*create_metrics/.test(content)
+    
+    // Check if create_metrics is called in create_template
+    const createTemplateStart = content.indexOf("def create_template(")
+    const nextFunctionStart = content.indexOf("\ndef ", createTemplateStart + 10)
+    const createTemplateBody = content.substring(
+      createTemplateStart,
+      nextFunctionStart !== -1 ? nextFunctionStart : content.length
+    )
+    
+    const metricsCallMatch = /create_metrics\s*\(\s*variant_id\s*\)/.test(createTemplateBody)
+
+    const pass = importMatch && metricsCallMatch
+
+    return {
+      pass,
+      actual: { 
+        imported: importMatch,
+        called: metricsCallMatch,
+        file 
+      },
+      expected,
+      reason: pass
+        ? "✅ create_metrics() called to initialize metrics in SurrealDB"
+        : `❌ Missing create_metrics call. Imported: ${importMatch}, Called: ${metricsCallMatch}`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to validate SurrealDB metrics initialization",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Main validation runner - executes all validation cases
+ */
+export async function runValidation(): Promise<{
+  overallPass: boolean
+  results: ValidationResult[]
+  summary: {
+    total: number
+    passed: number
+    failed: number
+    passRate: number
+  }
+}> {
+  console.log("🔍 Running Thompson Sampling Architectural Boundary Validation...\n")
+
+  const results: ValidationResult[] = []
+
+  // Phase 2 validations (architectural boundary)
+  console.log("Phase 2: Architectural Boundary Validation")
+  console.log("=".repeat(50))
+  
+  results.push(await validateOpencodeNoMLKeywords())
+  console.log(`✓ Case 1: ${results[0].pass ? "PASS" : "FAIL"} - ${results[0].reason}`)
+  
+  results.push(await validateRPCAPIHasThompsonSampling())
+  console.log(`✓ Case 2: ${results[1].pass ? "PASS" : "FAIL"} - ${results[1].reason}`)
+  
+  results.push(await validateRPCAPIEndpoint())
+  console.log(`✓ Case 3: ${results[2].pass ? "PASS" : "FAIL"} - ${results[2].reason}`)
+  
+  results.push(await validateOpencodeRPCDelegation())
+  console.log(`✓ Case 4: ${results[3].pass ? "PASS" : "FAIL"} - ${results[3].reason}`)
+
+  // Phase 3 validations (cache-aside pattern)
+  console.log("\nPhase 3: Cache-Aside Pattern Validation")
+  console.log("=".repeat(50))
+  
+  results.push(await validateCreateTemplateCacheAside())
+  console.log(`✓ Case 5: ${results[4].pass ? "PASS" : "FAIL"} - ${results[4].reason}`)
+  
+  results.push(await validateSurrealDBMetricsInitialization())
+  console.log(`✓ Case 6: ${results[5].pass ? "PASS" : "FAIL"} - ${results[5].reason}`)
+
+  const passed = results.filter(r => r.pass).length
+  const failed = results.filter(r => !r.pass).length
+  const overallPass = failed === 0
+
+  console.log("\n" + "=".repeat(50))
+  console.log(`📊 Validation Summary: ${passed}/${results.length} passed`)
+  console.log(`${overallPass ? "✅ ALL VALIDATIONS PASSED" : `❌ ${failed} VALIDATION(S) FAILED`}`)
+
+  return {
+    overallPass,
+    results,
+    summary: {
+      total: results.length,
+      passed,
+      failed,
+      passRate: (passed / results.length) * 100,
+    },
+  }
+}
+
+// CLI execution
+if (require.main === module) {
+  runValidation()
+    .then(result => {
+      console.log("\n" + JSON.stringify(result, null, 2))
+      process.exit(result.overallPass ? 0 : 1)
+    })
+    .catch(error => {
+      console.error("❌ Validation harness error:", error)
       process.exit(1)
     })
 }

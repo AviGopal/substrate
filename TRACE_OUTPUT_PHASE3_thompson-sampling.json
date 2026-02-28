@@ -1,0 +1,87 @@
+{
+  "specificationName": "thompson-sampling-in-rpc-api-only",
+  "components": [
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "create_template",
+      "currentBehavior": "Creates template variant: generates IDs, stores in Redis first (lines 351-361), initializes Thompson Sampling metrics in Redis (lines 363-377). NO SurrealDB write.",
+      "desiredBehavior": "Write to SurrealDB first (primary storage), then Redis (cache). Initialize thompson_alpha=1.0, thompson_beta=1.0 in SurrealDB.",
+      "gap": "CRITICAL - Templates only in Redis (volatile). Lost on Redis restart. Should persist to SurrealDB first."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "record_execution_result",
+      "currentBehavior": "DUAL-WRITE with Redis-first pattern: (1) Atomic Redis update using WATCH/MULTI/EXEC (lines 509-586), (2) SurrealDB writes (lines 587-639), (3) Compensating rollback on SurrealDB failure (lines 641-683). Updates thompson_alpha and thompson_beta in both stores.",
+      "desiredBehavior": "Invert order: SurrealDB transaction first (insert execution + update metrics atomically), then Redis cache update, Redis failure is non-fatal.",
+      "gap": "ARCHITECTURAL INCONSISTENCY - Should write to primary storage (SurrealDB) first, then cache (Redis). Current order: cache-first with compensating transaction."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "select_variant_thompson_sampling",
+      "currentBehavior": "Thompson Sampling algorithm: (1) Finds variants (line 832), (2) Loads metrics from Redis (lines 849-857), (3) Samples from Beta(alpha, beta) for each (line 860), (4) Selects highest sample (line 876), (5) Increments selection count in Redis (lines 884-906).",
+      "desiredBehavior": "Add cache-miss fallback: if Redis metrics not found, query SurrealDB and populate cache. Record selection to SurrealDB for analytics.",
+      "gap": "INCOMPLETE - No SurrealDB fallback on Redis cache miss. Selection count increments only in Redis (not persisted to SurrealDB)."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "component": "select",
+      "currentBehavior": "Delegates Thompson Sampling to RPC API: calls RpcHttpClient.selectTemplateVariant (line 165), extracts selection metadata, handles fallback.",
+      "desiredBehavior": "KEEP AS-IS - Correctly delegates ML logic to RPC API",
+      "gap": "NONE - Already compliant (Phase 2 enforcement complete)"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "sample_beta",
+      "currentBehavior": "Samples from Beta distribution using random.betavariate(alpha, beta). Falls back to mean on error.",
+      "desiredBehavior": "KEEP AS-IS - Core ML sampling function correctly placed in rpc-api",
+      "gap": "NONE - Already compliant"
+    }
+  ],
+  "dataFlow": "OpenCode → RPC API POST /templates/{id}/select → select_variant_thompson_sampling → [Redis: Load metrics with SurrealDB fallback] → [Beta sampling] → [SurrealDB: Record selection + update metrics] → [Redis: Update cache] → Return template",
+  "traceImpulseId": "trace-thompson-sampling-in-rpc-api-only-phase3",
+  "phase3Summary": {
+    "currentState": {
+      "compliant": [
+        "OpenCode delegates Thompson Sampling to RPC API via HTTP",
+        "No Beta sampling logic in OpenCode (removed in Phase 2)",
+        "sample_beta() function correctly implements Beta distribution in rpc-api",
+        "select_variant_thompson_sampling() implements full Thompson Sampling algorithm",
+        "update_metrics_after_execution() updates thompson_alpha/beta in SurrealDB"
+      ],
+      "needsRefactoring": [
+        "create_template writes only to Redis (missing SurrealDB persistence)",
+        "record_execution_result uses Redis-first pattern (should be SurrealDB-first)",
+        "select_variant_thompson_sampling has no cache-miss fallback to SurrealDB"
+      ]
+    },
+    "refactoringPlan": {
+      "objective": "Implement consistent cache-aside pattern: SurrealDB as primary storage, Redis as cache layer",
+      "changes": [
+        {
+          "target": "create_template (lines 260-383)",
+          "action": "Add SurrealDB write before Redis cache",
+          "risk": "Low"
+        },
+        {
+          "target": "record_execution_result (lines 469-695)",
+          "action": "Invert write order: SurrealDB first, then Redis cache",
+          "risk": "Medium"
+        },
+        {
+          "target": "select_variant_thompson_sampling (lines 801-923)",
+          "action": "Add SurrealDB fallback on cache miss, track selections in SurrealDB",
+          "risk": "Low"
+        }
+      ]
+    },
+    "validationCriteria": [
+      "Template creation persists to SurrealDB before caching in Redis",
+      "Execution recording writes to SurrealDB first, then updates Redis cache",
+      "Template selection falls back to SurrealDB on Redis cache miss",
+      "Selection history tracked in SurrealDB for analytics",
+      "Redis failures are non-fatal and logged as warnings",
+      "Thompson Sampling parameters (alpha, beta) remain consistent",
+      "All validation harness tests pass"
+    ]
+  }
+}

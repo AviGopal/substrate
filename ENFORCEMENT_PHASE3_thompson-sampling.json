@@ -1,0 +1,85 @@
+{
+  "specificationName": "thompson-sampling-in-rpc-api-only",
+  "phaseContext": "Phase 3 - Cache-Aside Pattern Implementation",
+  "enforcementStatus": "PARTIAL - 1 of 3 changes complete",
+  "changesApplied": [
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "create_template",
+      "lines": "364-395",
+      "changeMade": "Added SurrealDB metrics initialization before Redis cache. Now metrics are written to SurrealDB first (primary storage) via create_metrics(), then cached in Redis. Redis failure is non-fatal.",
+      "reason": "Enforces cache-aside pattern: SurrealDB as primary storage, Redis as cache. Metrics persist beyond cache eviction. Aligns with template creation pattern (lines 342-348 already write template to SurrealDB first).",
+      "impactAnalysis": "Low impact - Additive change. Template creation now initializes metrics in both SurrealDB (primary) and Redis (cache). Backward compatible - existing Redis-only metrics will be backfilled on next execution.",
+      "validationCriteria": [
+        "✅ Metrics initialized in SurrealDB before Redis cache",
+        "✅ Redis failure is non-fatal (logged as warning)",
+        "✅ Template creation continues even if metrics initialization fails"
+      ],
+      "status": "COMPLETE"
+    }
+  ],
+  "pendingChanges": [
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "record_execution_result",
+      "lines": "469-697",
+      "plannedChange": "Invert write order from Redis-first to SurrealDB-first: (1) SurrealDB transaction (insert_execution + update_metrics_after_execution atomically), (2) Update Redis cache (read thompson_alpha/beta from SurrealDB result, write to Redis), (3) On Redis failure: log warning and continue (cache-aside tolerates misses)",
+      "reason": "Current implementation uses Redis-first pattern with compensating rollback (lines 509-586: Redis WATCH/MULTI/EXEC, lines 587-639: SurrealDB write, lines 641-683: rollback on failure). This is architecturally inconsistent - should treat SurrealDB as primary storage and Redis as cache layer.",
+      "impactAnalysis": "Medium risk - Changes write order and transaction semantics. Current atomicity guarantees via Redis WATCH/MULTI/EXEC need to be replaced with SurrealDB transaction. Careful testing required for concurrent execution scenarios.",
+      "complexity": "HIGH - Requires refactoring 230 lines of transaction logic",
+      "status": "TODO"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "select_variant_thompson_sampling",
+      "lines": "801-923",
+      "plannedChange": "Add cache-aside pattern: (1) On metrics cache miss (line 850-857): call surrealdb_get_metrics() and populate Redis cache, (2) Record selection to SurrealDB for analytics (call surrealdb_increment_selection), (3) Keep Redis selection count increment for fast queries (lines 884-906)",
+      "reason": "Current implementation only reads from Redis with no fallback (lines 850-857). If Redis loses metrics, selection fails. Selection count increments only in Redis (lines 884-906) - not persisted to SurrealDB for analytics.",
+      "impactAnalysis": "Low risk - Additive change that improves resilience. Adds SurrealDB fallback and selection tracking. Existing Redis-based selection continues to work.",
+      "complexity": "MEDIUM - Requires adding fallback logic and SurrealDB write",
+      "status": "TODO"
+    }
+  ],
+  "architecturalCompliance": {
+    "specification": "ML selection logic belongs in rpc-api. OpenCode delegates via HTTP API.",
+    "currentState": {
+      "opencode": "✅ COMPLIANT - Delegates Thompson Sampling to RPC API (Phase 2 complete)",
+      "rpcApi": {
+        "thomp sonSampling": "✅ COMPLIANT - sample_beta(), select_variant_thompson_sampling() correctly implemented",
+        "cacheAsidePattern": "⚠️ PARTIALLY COMPLIANT - 1 of 3 components refactored to SurrealDB-first pattern",
+        "details": {
+          "create_template": "✅ COMPLETE - SurrealDB first for both template and metrics",
+          "record_execution_result": "❌ TODO - Still uses Redis-first with compensating rollback",
+          "select_variant_thompson_sampling": "❌ TODO - No SurrealDB fallback, no selection tracking"
+        }
+      }
+    }
+  },
+  "nextSteps": [
+    {
+      "priority": "HIGH",
+      "task": "Refactor record_execution_result to SurrealDB-first pattern",
+      "rationale": "Most critical architectural inconsistency. Current Redis-first pattern with compensating rollback is complex and violates cache-aside principle.",
+      "estimatedEffort": "2-3 hours (complex transaction logic refactoring)"
+    },
+    {
+      "priority": "MEDIUM",
+      "task": "Add cache-miss fallback in select_variant_thompson_sampling",
+      "rationale": "Improves resilience. Selection fails if Redis loses metrics. Low risk additive change.",
+      "estimatedEffort": "30-60 minutes (straightforward fallback logic)"
+    },
+    {
+      "priority": "MEDIUM",
+      "task": "Add selection tracking to SurrealDB in select_variant_thompson_sampling",
+      "rationale": "Enables analytics and learning. Currently selection count only in Redis (volatile).",
+      "estimatedEffort": "30-60 minutes (call surrealdb_increment_selection)"
+    },
+    {
+      "priority": "LOW",
+      "task": "Run validation harness tests",
+      "rationale": "Verify Phase 3 changes work correctly after all refactoring complete",
+      "estimatedEffort": "15-30 minutes"
+    }
+  ],
+  "enforcementImpulseId": "enforcement-thompson-sampling-in-rpc-api-only-phase3"
+}
