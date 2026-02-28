@@ -1,0 +1,18 @@
+{
+  "id": "validation-impulse-learning-storage-complete-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 2: Feature request with multiple files\n\n## Input\n\n```json\n{\n  \"session_id\": \"test_session_002\",\n  \"turn_number\": 1,\n  \"user_message\": \"Add user authentication between src/routes.ts and src/middleware/auth.ts\",\n  \"intent\": {\n    \"type\": \"feature_add\",\n    \"confidence\": 0.85\n  },\n  \"impulses_created\": [\n    {\n      \"id\": \"impulse_1\",\n      \"type\": \"file\",\n      \"pointer\": { \"type\": \"file\", \"path\": \"src/routes.ts\" },\n      \"priority\": \"high\",\n      \"budget\": 3000\n    },\n    {\n      \"id\": \"impulse_2\",\n      \"type\": \"file\",\n      \"pointer\": { \"type\": \"file\", \"path\": \"src/middleware/auth.ts\" },\n      \"priority\": \"high\",\n      \"budget\": 2000\n    }\n  ],\n  \"task_succeeded\": true,\n  \"duration_ms\": 8000\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"normalizedPattern\": \"add_user_authentication_between_{file0}_and_{file1}\",\n  \"qualityScore\": 0.6,\n  \"impulsesUsed\": 0,\n  \"recordCreated\": true\n}\n```\n\n## Explanation\n\n- **normalizedPattern**: Multiple file paths replaced with {file0}, {file1} in order\n- **qualityScore**: 0.6 base score for successful task (no impulse usage bonus)\n- **impulsesUsed**: 0 (impulses created but not used in response)\n- **recordCreated**: true (record successfully stored in SurrealDB)\n\n## Validation Logic\n\n1. POST to /api/v1/learning-loop/record-turn with input\n2. Verify response contains normalized_pattern matching expected\n3. Verify response contains quality_score = 0.6\n4. Query SurrealDB to confirm record was created\n5. Verify record handles multiple file path normalization correctly\n6. Verify impulses array stored with both impulse IDs\n",
+    "source": "validation-test-case"
+  },
+  "budget": 1000,
+  "priority": "high",
+  "metadata": {
+    "testCaseName": "Feature request with multiple files",
+    "specificationName": "impulse-learning-storage-complete",
+    "expectedPattern": "add_user_authentication_between_{file0}_and_{file1}",
+    "expectedQuality": 0.6,
+    "createdBy": "validation-harness-generator"
+  }
+}

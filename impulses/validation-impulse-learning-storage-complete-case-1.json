@@ -1,0 +1,18 @@
+{
+  "id": "validation-impulse-learning-storage-complete-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 1: Simple code fix with file path\n\n## Input\n\n```json\n{\n  \"session_id\": \"test_session_001\",\n  \"turn_number\": 1,\n  \"user_message\": \"Fix bug in src/auth.ts line 42\",\n  \"intent\": {\n    \"type\": \"code_fix\",\n    \"confidence\": 0.9\n  },\n  \"impulses_created\": [\n    {\n      \"id\": \"impulse_1\",\n      \"type\": \"file\",\n      \"pointer\": { \"type\": \"file\", \"path\": \"src/auth.ts\" },\n      \"priority\": \"high\",\n      \"budget\": 2000\n    }\n  ],\n  \"task_succeeded\": true,\n  \"duration_ms\": 5000\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"normalizedPattern\": \"fix_bug_in_{file0}_line_{num0}\",\n  \"qualityScore\": 0.6,\n  \"impulsesUsed\": 0,\n  \"recordCreated\": true\n}\n```\n\n## Explanation\n\n- **normalizedPattern**: File path \"src/auth.ts\" replaced with {file0}, line number \"42\" replaced with {num0}\n- **qualityScore**: 0.6 base score for successful task (no impulse usage bonus)\n- **impulsesUsed**: 0 (impulse created but not used in response)\n- **recordCreated**: true (record successfully stored in SurrealDB)\n\n## Validation Logic\n\n1. POST to /api/v1/learning-loop/record-turn with input\n2. Verify response contains normalized_pattern matching expected\n3. Verify response contains quality_score = 0.6\n4. Query SurrealDB to confirm record was created\n5. Verify record contains correct userIntent.normalizedPattern\n6. Verify record contains correct outcome.responseQuality\n",
+    "source": "validation-test-case"
+  },
+  "budget": 1000,
+  "priority": "high",
+  "metadata": {
+    "testCaseName": "Simple code fix with file path",
+    "specificationName": "impulse-learning-storage-complete",
+    "expectedPattern": "fix_bug_in_{file0}_line_{num0}",
+    "expectedQuality": 0.6,
+    "createdBy": "validation-harness-generator"
+  }
+}

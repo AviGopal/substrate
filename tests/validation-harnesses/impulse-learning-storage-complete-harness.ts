@@ -21,6 +21,21 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Get directory path - works for both CommonJS and ES modules
+const getProjectRoot = () => {
+  // Start from current working directory and traverse up
+  let currentDir = process.cwd();
+  while (currentDir !== '/') {
+    if (fs.existsSync(path.join(currentDir, 'repos', 'metabob-rpc-api'))) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  return process.cwd(); // Fallback to cwd
+};
+
+const projectRoot = getProjectRoot();
+
 interface ValidationResult {
   pass: boolean;
   checkName: string;
@@ -209,8 +224,8 @@ function fileContains(filePath: string, pattern: string | RegExp): boolean {
  */
 function checkSurrealDBSchema(): ValidationResult {
   const schemaPath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql'
+    projectRoot,
+    'repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql'
   );
   
   if (!fileExists(schemaPath)) {
@@ -256,8 +271,8 @@ function checkSurrealDBSchema(): ValidationResult {
  */
 function checkRpcApiEndpoint(): ValidationResult {
   const routesPath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/routes/learning_loop.py'
+    projectRoot,
+    'repos/metabob-rpc-api/server/routes/learning_loop.py'
   );
   
   if (!fileExists(routesPath)) {
@@ -295,8 +310,8 @@ function checkRpcApiEndpoint(): ValidationResult {
  */
 function checkPatternExtraction(): ValidationResult {
   const opsPath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
+    projectRoot,
+    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
   );
   
   if (!fileExists(opsPath)) {
@@ -336,8 +351,8 @@ function checkPatternExtraction(): ValidationResult {
  */
 function checkQualityCalculation(): ValidationResult {
   const opsPath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
+    projectRoot,
+    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
   );
   
   if (!fileExists(opsPath)) {
@@ -377,8 +392,8 @@ function checkQualityCalculation(): ValidationResult {
  */
 function checkUsageTracking(): ValidationResult {
   const opsPath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
+    projectRoot,
+    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
   );
   
   if (!fileExists(opsPath)) {
@@ -418,8 +433,8 @@ function checkUsageTracking(): ValidationResult {
  */
 function checkInsertMappingRecord(): ValidationResult {
   const opsPath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
+    projectRoot,
+    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
   );
   
   if (!fileExists(opsPath)) {
@@ -463,8 +478,8 @@ function checkInsertMappingRecord(): ValidationResult {
  */
 function checkSchemaIndexes(): ValidationResult {
   const schemaPath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql'
+    projectRoot,
+    'repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql'
   );
   
   if (!fileExists(schemaPath)) {
