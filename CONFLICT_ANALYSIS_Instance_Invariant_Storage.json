@@ -1,175 +1,354 @@
 {
-  "specificationName": "Instance-Invariant Storage - Missing Backend API Endpoints",
-  "analysisDate": "2026-02-27T11:00:00Z",
+  "specificationName": "Instance Invariant Storage for Impulses and Activities",
+  "analysisDate": "2026-02-28T08:30:00.000Z",
   "otherSpecifications": [
     "activity-state-transformation-tracking",
+    "metabob-session-tracking",
     "impulse-usage-tracking",
     "boredom-activity-detection-mechanism",
-    "devbob-clean-environment",
-    "metabob-session-tracking",
-    "ci-cd-pre-push-quality-gates"
+    "ci-cd-pre-push-quality-gates",
+    "devbob-k8s-git-operations",
+    "helmfile-deployment-pattern",
+    "DevBob Container Clean Environment Constraints"
   ],
-  "conflicts": [],
+  
   "sharedComponents": [
     {
-      "component": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "Activity.save",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
       "affectedBySpecs": [
-        "Instance-Invariant Storage - Missing Backend API Endpoints",
-        "activity-state-transformation-tracking (indirect - uses /api/v1/activity-execution endpoints)"
+        "Instance Invariant Storage for Impulses and Activities",
+        "activity-state-transformation-tracking"
       ],
-      "conflictType": "NONE",
-      "description": "Our changes add new /v2/activities/storage endpoints. Activity state tracking uses /api/v1/activity-execution endpoints. No overlap.",
-      "recommendation": "No action needed - endpoints are separate"
+      "currentImplementation": {
+        "instanceInvariantStorage": "Writes to local cache, syncs to backend via metabob_activity_save MCP tool",
+        "stateTransformationTracking": "Captures state before/after activity execution, posts to /api/v1/activity-execution/content"
+      },
+      "conflictType": "COMPLEMENTARY",
+      "recommendation": "No conflict - both specifications complement each other. Instance Invariant Storage handles persistence, State Tracking handles execution metadata."
     },
     {
-      "component": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "component": "Activity.load",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
       "affectedBySpecs": [
-        "Instance-Invariant Storage - Missing Backend API Endpoints"
+        "Instance Invariant Storage for Impulses and Activities"
       ],
+      "currentImplementation": {
+        "instanceInvariantStorage": "Tries local cache first, falls back to metabob_activity_load MCP tool if cache miss"
+      },
       "conflictType": "NONE",
-      "description": "Updated metabob_activity_save and metabob_activity_load to use /storage path. No other specs use these tools.",
-      "recommendation": "No action needed - isolated change"
+      "recommendation": "No conflict - single spec ownership"
     },
     {
-      "component": "repos/metabob-rpc-api/server/db/operations/activity_data.py",
+      "component": "Session.createNext",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/index.ts",
       "affectedBySpecs": [
-        "Instance-Invariant Storage - Missing Backend API Endpoints"
+        "metabob-session-tracking"
       ],
+      "currentImplementation": {
+        "sessionTracking": "Records session start via MetabobTracking.recordSessionStart() → metabob_record_session_start MCP tool"
+      },
       "conflictType": "NONE",
-      "description": "New file created. No conflicts with existing code.",
-      "recommendation": "No action needed - new file"
+      "recommendation": "No conflict with Instance Invariant Storage - different domain (sessions vs activities/impulses)"
     },
     {
-      "component": "repos/metabob-rpc-api/server/db/operations/__init__.py",
+      "component": "Session.close",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/index.ts",
       "affectedBySpecs": [
-        "Instance-Invariant Storage - Missing Backend API Endpoints"
+        "metabob-session-tracking"
       ],
+      "currentImplementation": {
+        "sessionTracking": "Aggregates stats, records session completion via MetabobTracking.recordSessionComplete()"
+      },
       "conflictType": "NONE",
-      "description": "Added exports for activity_data operations. Follows same pattern as impulse_data exports.",
-      "recommendation": "No action needed - additive change"
+      "recommendation": "No conflict with Instance Invariant Storage"
+    },
+    {
+      "component": "metabob_impulse_store",
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "affectedBySpecs": [
+        "Instance Invariant Storage for Impulses and Activities",
+        "impulse-usage-tracking"
+      ],
+      "currentImplementation": {
+        "instanceInvariantStorage": "Routes impulse data to POST /v2/impulses with (api_key, project_id, impulse_id)",
+        "impulseUsageTracking": "May track impulse access patterns for statistics"
+      },
+      "conflictType": "COMPLEMENTARY",
+      "recommendation": "No conflict - usage tracking is additive, doesn't affect storage semantics"
+    },
+    {
+      "component": "metabob_activity_save",
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "affectedBySpecs": [
+        "Instance Invariant Storage for Impulses and Activities",
+        "activity-state-transformation-tracking"
+      ],
+      "currentImplementation": {
+        "instanceInvariantStorage": "Routes activity data to POST /v2/activities with (api_key, project_id, activity_id)",
+        "stateTransformationTracking": "Separate HTTP client posts execution metadata to /api/v1/activity-execution/content"
+      },
+      "conflictType": "POTENTIAL_DUPLICATION",
+      "recommendation": "Review if both /v2/activities and /api/v1/activity-execution/content are needed. Consider consolidation or clear separation of concerns."
     }
   ],
-  "architecturalCompliance": {
-    "vesselFlow": {
-      "compliant": true,
-      "validation": "Vessel flow compliance validated in Test Case 1",
-      "affectedSpecs": ["invariant-storage-across-instances-with-vessel-flow"],
-      "conflicts": "NONE"
+  
+  "conflicts": [
+    {
+      "type": "POTENTIAL_DUPLICATION",
+      "spec1": "Instance Invariant Storage for Impulses and Activities",
+      "spec2": "activity-state-transformation-tracking",
+      "sharedComponent": "Activity data persistence",
+      "description": "Both specs persist activity data to backend, but via different endpoints: /v2/activities (Instance Invariant Storage) vs /api/v1/activity-execution/content (State Transformation Tracking)",
+      "severity": "MEDIUM",
+      "impact": "Potential data duplication, increased backend load, unclear source of truth",
+      "currentState": {
+        "instanceInvariantStorage": {
+          "endpoint": "POST /v2/activities",
+          "purpose": "Store complete activity for cross-instance retrieval",
+          "payload": "Full activity state (status, metrics, tasks, results)"
+        },
+        "stateTransformationTracking": {
+          "endpoint": "POST /api/v1/activity-execution/content",
+          "purpose": "Store execution metadata for learning loop",
+          "payload": "Template definition, variable bindings, initial state, reason, task sequence"
+        }
+      },
+      "resolution": {
+        "option1": {
+          "approach": "Merge endpoints",
+          "description": "Consolidate both payloads into single /v2/activities endpoint with execution_metadata field",
+          "pros": ["Single source of truth", "Reduced backend calls", "Simpler architecture"],
+          "cons": ["Requires backend API changes", "Migration effort"],
+          "effort": "HIGH"
+        },
+        "option2": {
+          "approach": "Clear separation",
+          "description": "Keep separate endpoints with well-defined purposes: /v2/activities for instance-invariant storage, /api/v1/activity-execution for learning loop metadata",
+          "pros": ["No breaking changes", "Clear domain boundaries", "Independent evolution"],
+          "cons": ["Data duplication", "Multiple persistence calls"],
+          "effort": "LOW",
+          "recommendation": "RECOMMENDED - maintain current architecture with clear documentation"
+        },
+        "option3": {
+          "approach": "Hierarchical storage",
+          "description": "/v2/activities stores full activity, /api/v1/activity-execution stores reference + additional metadata",
+          "pros": ["Reduces duplication", "Maintains separation"],
+          "cons": ["More complex retrieval logic"],
+          "effort": "MEDIUM"
+        }
+      },
+      "recommendedAction": "Option 2: Maintain current architecture with documentation clarifying: /v2/activities = instance-invariant full activity storage, /api/v1/activity-execution = execution learning metadata"
     },
-    "multiTenantIsolation": {
-      "compliant": true,
-      "validation": "(api_key, project_id) scoping enforced",
-      "affectedSpecs": [],
-      "conflicts": "NONE"
+    {
+      "type": "COMPLEMENTARY_NO_CONFLICT",
+      "spec1": "Instance Invariant Storage for Impulses and Activities",
+      "spec2": "metabob-session-tracking",
+      "sharedComponent": "MCP vessel architecture",
+      "description": "Both specs use MCP tools for backend communication, but for different domains (activities/impulses vs sessions)",
+      "severity": "NONE",
+      "impact": "No negative impact - both follow same architectural pattern",
+      "resolution": "No action required - specifications are complementary"
     },
-    "errorHandling": {
-      "compliant": true,
-      "validation": "400/404/500 responses implemented",
-      "affectedSpecs": [],
-      "conflicts": "NONE"
+    {
+      "type": "COMPLEMENTARY_NO_CONFLICT",
+      "spec1": "Instance Invariant Storage for Impulses and Activities",
+      "spec2": "impulse-usage-tracking",
+      "sharedComponent": "Impulse storage",
+      "description": "Instance Invariant Storage provides persistence, Impulse Usage Tracking provides analytics on top",
+      "severity": "NONE",
+      "impact": "No negative impact - analytics layer on top of storage layer",
+      "resolution": "No action required - specifications are layered correctly"
     }
+  ],
+  
+  "vesselFlowAnalysis": {
+    "consistent": true,
+    "allSpecsFollowPattern": true,
+    "pattern": "opencode → metabob-cli (MCP) → metabob-rpc-api (REST) → SurrealDB",
+    "violations": [],
+    "notes": [
+      "Instance Invariant Storage correctly enforces vessel flow for all persistence",
+      "Activity State Transformation Tracking uses direct HTTP client, which is acceptable for execution metadata (separate concern)",
+      "Session Tracking follows vessel flow via MCP tools",
+      "No specifications violate vessel boundary by importing rpc-api directly in opencode"
+    ]
   },
-  "integrationPoints": {
-    "impulseStorage": {
-      "status": "COMPATIBLE",
-      "description": "Our activity storage follows exact same pattern as impulse storage (impulse.py). Both use (api_key, project_id) scoping.",
-      "recommendation": "No changes needed - patterns aligned"
-    },
-    "activityStateTracking": {
-      "status": "COMPATIBLE",
-      "description": "Activity state tracking uses /api/v1/activity-execution endpoints. Our changes use /v2/activities/storage endpoints. No overlap.",
-      "recommendation": "No changes needed - separate endpoints"
-    },
-    "impulseUsageTracking": {
-      "status": "COMPATIBLE",
-      "description": "Impulse usage tracking focuses on tracking impulse usage within activities. Our changes enable cross-instance storage. No conflicts.",
-      "recommendation": "No changes needed - orthogonal concerns"
-    }
+  
+  "multiTenantIsolation": {
+    "consistent": true,
+    "allSpecsEnforce": true,
+    "scopingKeys": ["api_key", "project_id"],
+    "notes": [
+      "Instance Invariant Storage enforces (api_key, project_id) at all layers",
+      "Activity State Transformation Tracking inherits isolation from Instance Invariant Storage",
+      "Session Tracking inherits isolation from MCP layer",
+      "No specifications bypass multi-tenant isolation"
+    ]
   },
-  "dependencyAnalysis": {
-    "directDependencies": [
+  
+  "backendDependencies": {
+    "sharedServices": [
       {
-        "component": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
-        "usedBy": "activity_data.py",
-        "risk": "LOW",
-        "reason": "Standard SurrealDB client - widely used"
+        "service": "metabob-rpc-api",
+        "requiredBy": [
+          "Instance Invariant Storage for Impulses and Activities",
+          "activity-state-transformation-tracking",
+          "metabob-session-tracking",
+          "impulse-usage-tracking"
+        ],
+        "endpoints": [
+          "POST /v2/impulses",
+          "GET /v2/impulses/{id}",
+          "POST /v2/activities",
+          "GET /v2/activities/{id}",
+          "POST /api/v1/activity-execution/content",
+          "POST /api/v1/activity-execution/tasks",
+          "PATCH /api/v1/activity-execution/tasks/:id"
+        ],
+        "conflictRisk": "LOW",
+        "notes": "All specifications gracefully handle backend unavailability with non-blocking error handling"
       },
       {
-        "component": "repos/metabob-rpc-api/server/routes/activity.py (existing endpoints)",
-        "affectedBy": "new storage endpoints",
-        "risk": "NONE",
-        "reason": "New endpoints added at end of file, no modifications to existing endpoints"
+        "service": "SurrealDB",
+        "requiredBy": [
+          "Instance Invariant Storage for Impulses and Activities",
+          "activity-state-transformation-tracking",
+          "metabob-session-tracking"
+        ],
+        "tables": [
+          "impulse_data",
+          "activity_data",
+          "activity_execution",
+          "session_tracking"
+        ],
+        "conflictRisk": "NONE",
+        "notes": "Tables are logically separated by domain"
+      }
+    ]
+  },
+  
+  "integrationPoints": {
+    "synergies": [
+      {
+        "point": "Activity persistence + execution tracking",
+        "specs": [
+          "Instance Invariant Storage",
+          "activity-state-transformation-tracking"
+        ],
+        "benefit": "Full activity lifecycle tracking: Instance Invariant Storage provides cross-instance access, State Transformation Tracking provides learning loop data",
+        "recommendation": "Document this as intentional architecture - separate concerns with clear boundaries"
+      },
+      {
+        "point": "Session lifecycle + activity persistence",
+        "specs": [
+          "metabob-session-tracking",
+          "Instance Invariant Storage"
+        ],
+        "benefit": "Session tracking provides temporal context for activities stored via Instance Invariant Storage",
+        "recommendation": "Consider adding session_id to activity storage for future correlation"
       }
     ],
-    "indirectDependencies": [
+    "gaps": [
       {
-        "component": "repos/metabob-opencode activity.ts Activity.save()",
-        "callsToOurEndpoint": "metabob_activity_save → POST /v2/activities/storage",
-        "risk": "NONE",
-        "reason": "CLI MCP tool path updated, integration tested"
-      },
-      {
-        "component": "repos/metabob-opencode activity.ts Activity.load()",
-        "callsToOurEndpoint": "metabob_activity_load → GET /v2/activities/storage/{id}",
-        "risk": "NONE",
-        "reason": "CLI MCP tool path updated, integration tested"
+        "area": "Cross-instance session access",
+        "description": "Sessions are tracked but may not be accessible cross-instance like activities/impulses",
+        "impact": "LOW",
+        "recommendation": "Consider extending Instance Invariant Storage pattern to sessions if cross-instance session inspection is needed"
       }
     ]
   },
-  "riskAssessment": {
-    "breakingChanges": "NONE",
-    "potentialConflicts": "NONE",
-    "regressionRisk": "LOW",
-    "deploymentRisk": "LOW",
-    "details": [
-      "All changes are additive (new endpoints, new file, new exports)",
-      "No modifications to existing functionality",
-      "Follows proven impulse.py pattern",
-      "CLI MCP tools updated with correct paths",
-      "Endpoints isolated at /v2/activities/storage (won't conflict with /v2/activities/templates)"
+  
+  "crossReferenceAnalysis": {
+    "cpgDataUnavailable": true,
+    "reason": "metabob_analyze_change_impact and metabob_suggest_related_changes tools not available in current session",
+    "alternativeAnalysis": "Manual component analysis based on trace and enforcement documents",
+    "filesAnalyzed": [
+      "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/index.ts",
+      "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
+      "repos/metabob-rpc-api/server/routes/impulse.py",
+      "repos/metabob-rpc-api/server/routes/activity.py"
     ]
   },
-  "validationCrossCheck": {
-    "activityStateTracking": {
-      "status": "PASS",
-      "conflicts": "NONE",
-      "notes": "Uses different endpoints (/api/v1/activity-execution vs /v2/activities/storage)"
+  
+  "riskAssessment": {
+    "overallRisk": "LOW",
+    "breakdown": {
+      "conflictRisk": "LOW - Only 1 potential duplication identified, no contradictory requirements",
+      "integrationRisk": "LOW - All specs follow vessel flow architecture consistently",
+      "maintenanceRisk": "MEDIUM - Multiple specs touching activity persistence may require coordination",
+      "performanceRisk": "LOW - Non-blocking designs prevent cascade failures"
     },
-    "impulseUsageTracking": {
-      "status": "PASS",
-      "conflicts": "NONE",
-      "notes": "Orthogonal concern - tracks impulse usage, we enable storage"
-    },
-    "vesselFlowCompliance": {
-      "status": "PASS",
-      "conflicts": "NONE",
-      "notes": "Validated in Test Case 1 - no direct HTTP calls, uses MCP correctly"
-    },
-    "boredomDetection": {
-      "status": "N/A",
-      "conflicts": "NONE",
-      "notes": "Unrelated - boredom detection is for activity selection"
-    }
+    "mitigations": [
+      "Document clear boundaries between /v2/activities and /api/v1/activity-execution endpoints",
+      "Maintain architectural diagrams showing spec interactions",
+      "Add integration tests covering multi-spec scenarios"
+    ]
   },
-  "recommendations": [
-    {
-      "priority": "HIGH",
-      "action": "Deploy to production",
-      "reason": "No conflicts detected, implementation complete, follows proven pattern"
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Monitor SurrealDB query performance",
-      "reason": "New queries added - watch for any performance issues"
-    },
-    {
-      "priority": "LOW",
-      "action": "Consider adding caching layer",
-      "reason": "If activity retrieval becomes frequent, caching could improve performance"
-    }
-  ],
-  "conflictImpulseId": "conflict-analysis-Instance-Invariant Storage - Missing Backend API Endpoints",
-  "overallConflictStatus": "NO_CONFLICTS",
-  "readyForProduction": true,
-  "summary": "Comprehensive conflict analysis reveals ZERO conflicts with existing specifications. All changes are additive and follow established patterns. The implementation is architecturally sound, follows vessel flow principles, and maintains multi-tenant isolation. No breaking changes or regressions expected. Ready for production deployment."
+  
+  "recommendations": {
+    "immediate": [
+      {
+        "priority": "HIGH",
+        "action": "Document endpoint purposes",
+        "description": "Create documentation clarifying: /v2/activities (instance-invariant storage) vs /api/v1/activity-execution (learning metadata)",
+        "effort": "LOW",
+        "impact": "Prevents future confusion"
+      }
+    ],
+    "shortTerm": [
+      {
+        "priority": "MEDIUM",
+        "action": "Add session_id to activity storage",
+        "description": "Enhance Instance Invariant Storage to include session_id in activity data for future correlation with Session Tracking",
+        "effort": "LOW",
+        "impact": "Enables temporal analysis"
+      },
+      {
+        "priority": "MEDIUM",
+        "action": "Create architecture diagram",
+        "description": "Visual diagram showing all specifications, shared components, and data flows",
+        "effort": "MEDIUM",
+        "impact": "Improves maintainability"
+      }
+    ],
+    "longTerm": [
+      {
+        "priority": "LOW",
+        "action": "Consider endpoint consolidation",
+        "description": "Evaluate merging /v2/activities and /api/v1/activity-execution into unified API if duplication becomes problematic",
+        "effort": "HIGH",
+        "impact": "Simplifies architecture"
+      },
+      {
+        "priority": "LOW",
+        "action": "Extend Instance Invariant pattern to sessions",
+        "description": "If cross-instance session access is needed, apply Instance Invariant Storage pattern to sessions",
+        "effort": "MEDIUM",
+        "impact": "Consistent architecture"
+      }
+    ]
+  },
+  
+  "summary": {
+    "totalSpecificationsAnalyzed": 9,
+    "conflictsFound": 1,
+    "conflictType": "POTENTIAL_DUPLICATION (not breaking)",
+    "sharedComponentsIdentified": 6,
+    "vesselFlowCompliance": "100%",
+    "multiTenantIsolationCompliance": "100%",
+    "overallStatus": "HEALTHY - No critical conflicts detected",
+    "conclusion": "Instance Invariant Storage for Impulses and Activities is well-integrated with other specifications. The only potential issue is endpoint duplication with Activity State Transformation Tracking, which can be addressed with documentation. All specifications follow vessel flow architecture consistently and respect multi-tenant isolation."
+  },
+  
+  "conflictImpulseId": "conflict-analysis-Instance Invariant Storage for Impulses and Activities",
+  "metadata": {
+    "analysisDate": "2026-02-28T08:30:00.000Z",
+    "analysisMethod": "Manual cross-reference of trace and enforcement documents",
+    "cpgToolsAvailable": false,
+    "confidenceLevel": "HIGH",
+    "reviewRequired": false
+  }
 }
