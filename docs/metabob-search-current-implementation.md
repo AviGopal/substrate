@@ -274,13 +274,16 @@ To implement true semantic search, the system needs:
 ## Available ML Infrastructure
 
 ### CoChangePredictor Model (Already Exists!)
-- **Location**: `repos/metabob-cli/src/metabob_cli/core/cpg_inference/cochange_predictor.py`
-- **Model File**: `model_assets/cochange_cnn_32d.onnx`
+- **Location**: `cpg_inference` package (installed as dependency)
+- **Class**: `cpg_inference.service.CoChangePredictor`
+- **Model File**: `bundled_models/auc_0.9999_gcn_bce_all_h64_l2_d1_b128_fp32.onnx`
+- **Import**: `from cpg_inference import CoChangePredictor, InferenceConfig`
+- **Usage in Codebase**: `repos/metabob-cli/src/metabob_cli/mcp/cpg_manager.py:85`
 - **Capabilities**:
-  - ONNX model for code embeddings
+  - ONNX model for code embeddings (GCN-based)
   - FAISS index support built-in
-  - Already used for co-change prediction
-  - Proven to work in production
+  - Already used for co-change prediction in production
+  - Proven to work with metabob-cli
 
 ### Integration Components Available
 1. **Embedding Generation**: `CoChangePredictor.encode_file_content()`
@@ -324,4 +327,11 @@ To implement true semantic search, the system needs:
 
 The current search is **misleadingly named**. It's not semantic search - it's simple keyword matching with set intersection. The ~30% accuracy is a direct result of this limitation. Integrating CPG cochange embeddings will provide true semantic understanding and 80%+ accuracy.
 
-**Critical Finding**: No external API dependency for search. Everything is local, making ML integration straightforward without network latency concerns.
+**Critical Findings**:
+1. ✅ No external API dependency for search - Everything is local
+2. ✅ ML infrastructure already exists - CoChangePredictor model working
+3. ✅ FAISS already integrated - Used for co-change prediction
+4. ✅ Clear replacement path - Swap `_calculate_similarity()` implementation
+5. ✅ Backward compatible - Same cache format, enhanced with embeddings
+
+**Implementation Confidence**: HIGH - All required components already exist and are proven to work in production.
