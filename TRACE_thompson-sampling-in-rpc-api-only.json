@@ -1,0 +1,269 @@
+{
+  "specificationName": "thompson-sampling-in-rpc-api-only",
+  "description": "Thompson Sampling (Beta distribution variant selection) must ONLY exist in metabob-rpc-api. metabob-opencode must call rpc-api endpoint for template selection.",
+  "expectedBehavior": "When opencode needs to select a template variant, it calls POST /v2/activities/templates/{activity_id}/select in rpc-api. No Beta sampling logic exists in opencode.",
+  
+  "currentImplementation": {
+    "rpcApi": {
+      "location": "repos/metabob-rpc-api",
+      "components": [
+        {
+          "file": "server/routes/activity.py",
+          "component": "select_variant",
+          "lines": "355-405",
+          "currentBehavior": "Endpoint POST /v2/activities/templates/{activity_id}/select exists and implements Thompson Sampling",
+          "desiredBehavior": "KEEP AS-IS - this is correct",
+          "gap": "NONE - already implements the desired architecture"
+        },
+        {
+          "file": "server/actions/activity.py",
+          "component": "select_variant_thompson_sampling",
+          "lines": "673-796",
+          "currentBehavior": "Implements Thompson Sampling algorithm: finds variants, samples from Beta(alpha, beta), selects highest sample, returns template with selection metadata",
+          "desiredBehavior": "KEEP AS-IS - this is correct",
+          "gap": "NONE - already implements the desired architecture"
+        },
+        {
+          "file": "server/actions/activity.py",
+          "component": "sample_beta",
+          "lines": "55-66",
+          "currentBehavior": "Implements Beta distribution sampling using random.betavariate(alpha, beta)",
+          "desiredBehavior": "KEEP AS-IS - this is correct",
+          "gap": "NONE - already implements the desired architecture"
+        },
+        {
+          "file": "server/db/operations/template_metrics.py",
+          "component": "get_metrics",
+          "lines": "18-42",
+          "currentBehavior": "Queries SurrealDB for template metrics including thompson_alpha and thompson_beta",
+          "desiredBehavior": "KEEP AS-IS - this is correct",
+          "gap": "NONE - already implements the desired architecture"
+        },
+        {
+          "file": "server/db/operations/template_metrics.py",
+          "component": "update_metrics_after_execution",
+          "lines": "178-181",
+          "currentBehavior": "Updates thompson_alpha = successful_executions + 1 and thompson_beta = failed_executions + 1 after each execution",
+          "desiredBehavior": "KEEP AS-IS - this is correct",
+          "gap": "NONE - already implements the desired architecture"
+        }
+      ],
+      "status": "COMPLIANT - RPC API fully implements Thompson Sampling"
+    },
+    
+    "opencode": {
+      "location": "repos/metabob-opencode/packages/opencode/src",
+      "components": [
+        {
+          "file": "session/template-selector.ts",
+          "component": "betaSample",
+          "lines": "44-130",
+          "currentBehavior": "Implements Beta distribution sampling using Gamma distribution method with Box-Muller transform for normal distribution",
+          "desiredBehavior": "REMOVE - delegate to RPC API endpoint",
+          "gap": "ARCHITECTURAL VIOLATION - Beta sampling logic should not exist in opencode"
+        },
+        {
+          "file": "session/template-selector.ts",
+          "component": "performThompsonSampling",
+          "lines": "349-443",
+          "currentBehavior": "Queries TemplateMetricsClient for metrics, builds variants list, samples from Beta(alpha, beta) for each variant, selects highest sample",
+          "desiredBehavior": "REPLACE with RPC API call to POST /v2/activities/templates/{activity_id}/select",
+          "gap": "ARCHITECTURAL VIOLATION - Thompson Sampling logic should be delegated to RPC API"
+        },
+        {
+          "file": "session/template-selector.ts",
+          "component": "select",
+          "lines": "211-331",
+          "currentBehavior": "Orchestrates template selection by calling performThompsonSampling locally, loads candidate template if selected",
+          "desiredBehavior": "REPLACE performThompsonSampling call with RPC API call, return template from API response",
+          "gap": "ARCHITECTURAL VIOLATION - Selection orchestration should delegate to RPC API"
+        },
+        {
+          "file": "ml/thompson-sampler.ts",
+          "component": "ThompsonSampler class",
+          "lines": "1-420+",
+          "currentBehavior": "Implements Thompson Sampling for model selection (different use case: selecting LLM models for tasks)",
+          "desiredBehavior": "KEEP AS-IS - this is for model selection, not template variant selection",
+          "gap": "NONE - this is a different architectural concern (LLM model selection vs template variant selection)"
+        },
+        {
+          "file": "session/template-metrics-client.ts",
+          "component": "getTemplateMetrics",
+          "lines": "176-212",
+          "currentBehavior": "Calls MCP tool metabob_get_template_metrics to fetch metrics (alpha, beta parameters) for Thompson Sampling",
+          "desiredBehavior": "REMOVE - metrics should be queried by RPC API, not passed to opencode",
+          "gap": "ARCHITECTURAL VIOLATION - Opencode should not need raw metrics for Thompson Sampling"
+        },
+        {
+          "file": "tool/activity.ts",
+          "component": "Activity tool (template selection)",
+          "lines": "461-472",
+          "currentBehavior": "Calls TemplateSelector.select() which performs local Thompson Sampling, logs selection metadata",
+          "desiredBehavior": "REPLACE with HTTP call to RPC API POST /v2/activities/templates/{activity_id}/select",
+          "gap": "INTEGRATION POINT - needs to call RPC API instead of local selection"
+        }
+      ],
+      "status": "NON-COMPLIANT - OpenCode implements Thompson Sampling locally instead of delegating to RPC API"
+    }
+  },
+  
+  "dataFlow": {
+    "current": {
+      "description": "OpenCode performs Thompson Sampling locally",
+      "steps": [
+        "1. Activity tool receives templateId",
+        "2. TemplateSelector.select(templateId) called",
+        "3. TemplateRepository.get(templateId) loads template from local/metabob backend",
+        "4. If template has candidates: performThompsonSampling(template)",
+        "5. TemplateMetricsClient.getTemplateMetrics(templateId) fetches alpha/beta from MCP",
+        "6. For each variant: betaSample(alpha, beta) generates random sample",
+        "7. Select variant with highest sample",
+        "8. Load selected template from TemplateRepository",
+        "9. Return template with thompsonSampling metadata",
+        "10. Execute activity with selected template"
+      ],
+      "issue": "Steps 4-7 violate architectural boundary - ML logic in opencode instead of rpc-api"
+    },
+    
+    "desired": {
+      "description": "OpenCode delegates Thompson Sampling to RPC API",
+      "steps": [
+        "1. Activity tool receives templateId (activity_id)",
+        "2. HTTP POST to rpc-api: /v2/activities/templates/{activity_id}/select",
+        "3. RPC API: select_variant_thompson_sampling(activity_id)",
+        "4. RPC API: Fetch all variants for activity_id from Redis",
+        "5. RPC API: For each variant, load metrics (alpha, beta) from Redis",
+        "6. RPC API: For each variant, sample_beta(alpha, beta)",
+        "7. RPC API: Select variant with highest sample",
+        "8. RPC API: Increment selection count in Redis metrics",
+        "9. RPC API: Return selected template + selection metadata",
+        "10. OpenCode: Receive template from API response",
+        "11. OpenCode: Execute activity with selected template"
+      ],
+      "benefits": [
+        "Clean separation: ML logic stays in rpc-api",
+        "OpenCode becomes thinner - just an execution engine",
+        "RPC API has full control over selection algorithm",
+        "Metrics and sampling logic co-located in same service",
+        "Easier to update Thompson Sampling algorithm (one place)",
+        "No need to expose raw metrics (alpha, beta) to opencode"
+      ]
+    }
+  },
+  
+  "requiredChanges": {
+    "rpcApi": {
+      "changes": [],
+      "status": "No changes needed - endpoint already exists and works correctly"
+    },
+    
+    "opencode": {
+      "changes": [
+        {
+          "file": "session/template-selector.ts",
+          "action": "REFACTOR",
+          "description": "Replace local Thompson Sampling with RPC API call",
+          "details": [
+            "Remove betaSample() function (lines 44-130)",
+            "Remove performThompsonSampling() function (lines 349-443)",
+            "Replace select() implementation:",
+            "  - Keep direct template load path for candidates and templates without variants",
+            "  - For stable templates with candidates: call RPC API POST /v2/activities/templates/{activity_id}/select",
+            "  - Parse API response to extract template and selection metadata",
+            "  - Maintain same SelectionResult interface for backward compatibility"
+          ]
+        },
+        {
+          "file": "session/template-metrics-client.ts",
+          "action": "DEPRECATE",
+          "description": "Mark getTemplateMetrics() as deprecated",
+          "details": [
+            "Add deprecation notice: This method is no longer needed after RPC API integration",
+            "Keep for backward compatibility but log warning when used",
+            "Document that Thompson Sampling now happens in RPC API"
+          ]
+        },
+        {
+          "file": "tool/activity.ts",
+          "action": "NO CHANGE",
+          "description": "Activity tool can continue using TemplateSelector.select()",
+          "details": [
+            "No changes needed - TemplateSelector.select() will internally call RPC API",
+            "Selection metadata (thompsonSampling) format remains the same",
+            "Logging and metrics reporting unchanged"
+          ]
+        },
+        {
+          "file": "util/http-client.ts (NEW)",
+          "action": "CREATE",
+          "description": "Add HTTP client utility for RPC API calls",
+          "details": [
+            "Create HttpClient class with fetch() wrapper",
+            "Handle authentication headers (X-API-Key)",
+            "Parse JSON responses",
+            "Handle errors with fallback behavior",
+            "Configure RPC API base URL from environment (METABOB_RPC_API_URL)"
+          ]
+        }
+      ]
+    }
+  },
+  
+  "testingStrategy": {
+    "unit": [
+      "Test TemplateSelector.select() with mocked RPC API responses",
+      "Test fallback behavior when RPC API unavailable",
+      "Verify SelectionResult format unchanged (backward compatibility)"
+    ],
+    "integration": [
+      "Test end-to-end flow: Activity tool -> TemplateSelector -> RPC API -> Template execution",
+      "Verify selection metadata (alpha, beta, sample) passed through correctly",
+      "Test with multiple variants to ensure correct variant selected"
+    ],
+    "validation": [
+      "Run existing Thompson Sampling validation harness",
+      "Verify selection distribution matches expected probabilities",
+      "Compare selection behavior before/after refactor"
+    ]
+  },
+  
+  "rolloutPlan": {
+    "phase1": "Feature flag: ENABLE_RPC_TEMPLATE_SELECTION (default: false)",
+    "phase2": "Deploy RPC API changes (already done - endpoint exists)",
+    "phase3": "Deploy OpenCode changes with feature flag enabled",
+    "phase4": "Monitor selection behavior and metrics for 1 week",
+    "phase5": "Remove feature flag and old Thompson Sampling code",
+    "phase6": "Deprecate TemplateMetricsClient.getTemplateMetrics()"
+  },
+  
+  "riskAssessment": {
+    "high": [
+      "RPC API unavailability could break template selection",
+      "Mitigation: Implement fallback to direct template load (no A/B testing) when RPC API fails"
+    ],
+    "medium": [
+      "Network latency for RPC API calls vs local sampling",
+      "Mitigation: Cache template selections for 60 seconds to reduce API calls"
+    ],
+    "low": [
+      "Selection metadata format changes breaking downstream consumers",
+      "Mitigation: Maintain exact SelectionResult interface for backward compatibility"
+    ]
+  },
+  
+  "architecturalBoundary": {
+    "principle": "ML and probabilistic selection logic belongs in metabob-rpc-api, not metabob-opencode",
+    "rationale": [
+      "Separation of concerns: OpenCode = execution engine, RPC API = intelligence layer",
+      "Single source of truth for selection algorithm",
+      "Easier to experiment with different selection strategies",
+      "Metrics and sampling co-located in same service",
+      "Reduced complexity in OpenCode"
+    ],
+    "enforcement": [
+      "Code review: Reject PRs adding Beta sampling or Thompson Sampling to opencode",
+      "Linting rule: Ban imports of statistical libraries (gamma, beta distributions) in opencode",
+      "Architecture tests: Verify no sampling logic in opencode/src/session or opencode/src/ml (except model selection)"
+    ]
+  }
+}
