@@ -1,0 +1,240 @@
+{
+  "specificationName": "impulse-learning-storage-complete",
+  "harnessFile": "tests/validation-harnesses/impulse-learning-storage-complete-harness.ts",
+  "harnessCreated": true,
+  "executionReady": false,
+  "note": "Harness created but requires @types/node for TypeScript compilation. Can be executed after: npm install --save-dev @types/node",
+  
+  "testCases": [
+    {
+      "impulseId": "validation-impulse-learning-storage-complete-case-1",
+      "name": "Simple code fix with file path",
+      "input": {
+        "session_id": "test_session_001",
+        "turn_number": 1,
+        "user_message": "Fix bug in src/auth.ts line 42",
+        "intent": {
+          "type": "code_fix",
+          "confidence": 0.9
+        },
+        "impulses_created": [
+          {
+            "id": "impulse_1",
+            "type": "file",
+            "pointer": {
+              "type": "file",
+              "path": "src/auth.ts"
+            },
+            "priority": "high",
+            "budget": 2000
+          }
+        ],
+        "task_succeeded": true,
+        "duration_ms": 5000
+      },
+      "expectedOutput": {
+        "normalizedPattern": "fix_bug_in_{file0}_line_{num0}",
+        "qualityScore": 0.6,
+        "impulsesUsed": 0,
+        "recordCreated": true
+      },
+      "rationale": "Tests basic pattern normalization with file path and line number replacement"
+    },
+    {
+      "impulseId": "validation-impulse-learning-storage-complete-case-2",
+      "name": "Feature request with multiple files",
+      "input": {
+        "session_id": "test_session_002",
+        "turn_number": 1,
+        "user_message": "Add user authentication between src/routes.ts and src/middleware/auth.ts",
+        "intent": {
+          "type": "feature_add",
+          "confidence": 0.85
+        },
+        "impulses_created": [
+          {
+            "id": "impulse_1",
+            "type": "file",
+            "pointer": {
+              "type": "file",
+              "path": "src/routes.ts"
+            },
+            "priority": "high",
+            "budget": 3000
+          },
+          {
+            "id": "impulse_2",
+            "type": "file",
+            "pointer": {
+              "type": "file",
+              "path": "src/middleware/auth.ts"
+            },
+            "priority": "high",
+            "budget": 2000
+          }
+        ],
+        "task_succeeded": true,
+        "duration_ms": 8000
+      },
+      "expectedOutput": {
+        "normalizedPattern": "add_user_authentication_between_{file0}_and_{file1}",
+        "qualityScore": 0.6,
+        "impulsesUsed": 0,
+        "recordCreated": true
+      },
+      "rationale": "Tests pattern normalization with multiple file paths (file0, file1 placeholders)"
+    },
+    {
+      "impulseId": "validation-impulse-learning-storage-complete-case-3",
+      "name": "Successful task with impulse usage",
+      "input": {
+        "session_id": "test_session_003",
+        "turn_number": 1,
+        "user_message": "Refactor database connection in src/db.ts",
+        "intent": {
+          "type": "refactor",
+          "confidence": 0.8
+        },
+        "impulses_created": [
+          {
+            "id": "impulse_1",
+            "type": "file",
+            "pointer": {
+              "type": "file",
+              "path": "src/db.ts"
+            },
+            "priority": "high",
+            "budget": 3000
+          },
+          {
+            "id": "impulse_2",
+            "type": "memo",
+            "pointer": {
+              "type": "memo",
+              "content": "Use connection pooling for better performance"
+            },
+            "priority": "medium",
+            "budget": 1000
+          }
+        ],
+        "task_succeeded": true,
+        "duration_ms": 6000
+      },
+      "expectedOutput": {
+        "normalizedPattern": "refactor_database_connection_in_{file0}",
+        "qualityScore": 1.0,
+        "impulsesUsed": 2,
+        "recordCreated": true
+      },
+      "rationale": "Tests quality calculation with full impulse utilization (0.6 base + 0.4 utilization = 1.0)"
+    }
+  ],
+  
+  "validationChecks": [
+    {
+      "checkName": "SurrealDB schema defines impulse_mapping_record",
+      "description": "Verifies that activity_learning_loop.surql defines impulse_mapping_record table with all required fields",
+      "method": "File scan for DEFINE TABLE and DEFINE FIELD statements",
+      "passCriteria": "Table defined with userIntent, context, impulses, outcome, metadata fields"
+    },
+    {
+      "checkName": "RPC API endpoint exists",
+      "description": "Verifies POST /api/v1/learning-loop/record-turn endpoint exists with record_turn handler",
+      "method": "File scan in learning_loop.py for endpoint decorator and function definition",
+      "passCriteria": "Endpoint defined with async def record_turn handler"
+    },
+    {
+      "checkName": "Pattern extraction logic",
+      "description": "Verifies normalize_pattern() function exists with file and number placeholder logic",
+      "method": "File scan in impulse_learning.py for function and placeholder patterns",
+      "passCriteria": "Function exists with {fileN} and {numN} placeholder replacement"
+    },
+    {
+      "checkName": "Quality calculation logic",
+      "description": "Verifies calculate_quality() function with 0.6 base score + utilization bonus",
+      "method": "File scan in impulse_learning.py for function and algorithm",
+      "passCriteria": "Function exists with base_score 0.6 and utilization_bonus calculation"
+    },
+    {
+      "checkName": "Usage tracking logic",
+      "description": "Verifies track_usage() function detects file and memo pointers in response",
+      "method": "File scan in impulse_learning.py for function and pointer type checks",
+      "passCriteria": "Function exists with pointer type detection (file, memo, activityOutput)"
+    },
+    {
+      "checkName": "Insert mapping record orchestration",
+      "description": "Verifies insert_mapping_record() chains all learning algorithms",
+      "method": "File scan for function calls: normalize_pattern, track_usage, calculate_quality, db.create",
+      "passCriteria": "Function orchestrates complete pipeline and persists to SurrealDB"
+    },
+    {
+      "checkName": "Schema indexes",
+      "description": "Verifies efficient query indexes defined in schema",
+      "method": "File scan for DEFINE INDEX statements",
+      "passCriteria": "Indexes: idx_impulse_mapping_session, pattern, quality, record_id"
+    }
+  ],
+  
+  "executionInstructions": {
+    "setup": [
+      "1. Install Node.js type definitions: npm install --save-dev @types/node",
+      "2. Ensure metabob-rpc-api repository is present in repos/ directory",
+      "3. Ensure repos/metabob-opencode repository is present"
+    ],
+    "run": [
+      "cd tests/validation-harnesses",
+      "npx ts-node impulse-learning-storage-complete-harness.ts"
+    ],
+    "expectedOutput": {
+      "success": "✅ VALIDATION PASSED: impulse-learning-storage-complete is fully implemented (exit code 0)",
+      "failure": "❌ VALIDATION FAILED: Some components are missing or incomplete (exit code 1)"
+    }
+  },
+  
+  "manualValidationSteps": {
+    "runtimeValidation": [
+      {
+        "step": 1,
+        "action": "Apply SurrealDB schema",
+        "command": "cd repos/metabob-rpc-api && surreal import --conn http://localhost:8000 --user root --pass root --ns test --db test docs/schema/activity_learning_loop.surql",
+        "expectedResult": "Schema imported successfully, impulse_mapping_record table created"
+      },
+      {
+        "step": 2,
+        "action": "Test RPC API endpoint with test case 1",
+        "command": "curl -X POST http://localhost:8000/api/v1/learning-loop/record-turn -H 'Content-Type: application/json' -d '{\"session_id\": \"test_session_001\", \"turn_number\": 1, \"user_message\": \"Fix bug in src/auth.ts line 42\", \"intent\": {\"type\": \"code_fix\", \"confidence\": 0.9}, \"impulses_created\": [{\"id\": \"impulse_1\", \"type\": \"file\", \"pointer\": {\"type\": \"file\", \"path\": \"src/auth.ts\"}, \"priority\": \"high\", \"budget\": 2000}], \"task_succeeded\": true, \"duration_ms\": 5000}'",
+        "expectedResult": "HTTP 201 Created with record_id in response"
+      },
+      {
+        "step": 3,
+        "action": "Query SurrealDB to verify record created",
+        "command": "echo 'SELECT * FROM impulse_mapping_record WHERE context.activeSession = \"test_session_001\";' | surreal sql --conn http://localhost:8000 --user root --pass root --ns test --db test",
+        "expectedResult": "Record found with normalizedPattern='fix_bug_in_{file0}_line_{num0}' and outcome.responseQuality=0.6"
+      },
+      {
+        "step": 4,
+        "action": "Verify pattern extraction for test case 2",
+        "command": "curl -X POST http://localhost:8000/api/v1/learning-loop/record-turn -H 'Content-Type: application/json' -d '{\"session_id\": \"test_session_002\", \"turn_number\": 1, \"user_message\": \"Add user authentication between src/routes.ts and src/middleware/auth.ts\", \"intent\": {\"type\": \"feature_add\", \"confidence\": 0.85}, \"impulses_created\": [{\"id\": \"impulse_1\", \"type\": \"file\", \"pointer\": {\"type\": \"file\", \"path\": \"src/routes.ts\"}, \"priority\": \"high\", \"budget\": 3000}, {\"id\": \"impulse_2\", \"type\": \"file\", \"pointer\": {\"type\": \"file\", \"path\": \"src/middleware/auth.ts\"}, \"priority\": \"high\", \"budget\": 2000}], \"task_succeeded\": true, \"duration_ms\": 8000}'",
+        "expectedResult": "HTTP 201 Created, query shows normalizedPattern with {file0} and {file1}"
+      },
+      {
+        "step": 5,
+        "action": "Verify quality calculation for test case 3",
+        "command": "curl -X POST http://localhost:8000/api/v1/learning-loop/record-turn -H 'Content-Type: application/json' -d '{\"session_id\": \"test_session_003\", \"turn_number\": 1, \"user_message\": \"Refactor database connection in src/db.ts\", \"intent\": {\"type\": \"refactor\", \"confidence\": 0.8}, \"impulses_created\": [{\"id\": \"impulse_1\", \"type\": \"file\", \"pointer\": {\"type\": \"file\", \"path\": \"src/db.ts\"}, \"priority\": \"high\", \"budget\": 3000}, {\"id\": \"impulse_2\", \"type\": \"memo\", \"pointer\": {\"type\": \"memo\", \"content\": \"Use connection pooling\"}, \"priority\": \"medium\", \"budget\": 1000}], \"task_succeeded\": true, \"duration_ms\": 6000, \"response_text\": \"Refactored src/db.ts using Use connection pooling\"}'",
+        "expectedResult": "HTTP 201 Created, query shows outcome.responseQuality=1.0 (full utilization)"
+      }
+    ]
+  },
+  
+  "harnessImpulseId": "harness-impulse-learning-storage-complete",
+  
+  "metadata": {
+    "created": "2026-02-28T00:00:00Z",
+    "purpose": "Validate impulse learning storage infrastructure completeness",
+    "executionMode": "static-analysis",
+    "requiresRuntime": false,
+    "requiresTypeScriptTypes": true,
+    "estimatedRuntime": "< 1 second (file scanning only)",
+    "testCoverage": "7 checks covering schema, API endpoint, learning algorithms, and orchestration"
+  }
+}

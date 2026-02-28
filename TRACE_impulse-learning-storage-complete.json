@@ -1,0 +1,334 @@
+{
+  "specificationName": "impulse-learning-storage-complete",
+  "description": "Impulse learning data (impulse ID, turn context, pattern extracted, response quality) must be stored in SurrealDB via rpc-api endpoints.",
+  "traceType": "data-flow-analysis",
+  "tracedAt": "2026-02-28T00:00:00Z",
+  
+  "components": [
+    {
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "POST /api/v1/learning-loop/record-turn",
+      "lines": "450-523",
+      "currentBehavior": "Endpoint accepts turn-level learning data from opencode clients, performs server-side processing (normalize_pattern, track_usage, calculate_quality), and stores in SurrealDB impulse_mapping_record table",
+      "desiredBehavior": "SAME - Already implemented correctly",
+      "gap": "NONE - Specification fully implemented",
+      "evidence": "Endpoint exists at line 450, calls insert_mapping_record() which performs all server-side learning algorithms"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "normalize_pattern()",
+      "lines": "28-75",
+      "currentBehavior": "Extracts normalized pattern from user message by replacing file paths with {file0}, {file1} and numbers with {num0}, {num1}",
+      "desiredBehavior": "SAME - Already implemented correctly",
+      "gap": "NONE - Pattern extraction logic moved from opencode/impulse-learning.ts:392-419",
+      "evidence": "Function exists with regex-based file path and number replacement"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "calculate_quality()",
+      "lines": "78-117",
+      "currentBehavior": "Calculates response quality score (0-1) based on task success (0.6 base) and impulse utilization (+0.4 bonus)",
+      "desiredBehavior": "SAME - Already implemented correctly",
+      "gap": "NONE - Quality calculation logic moved from opencode/impulse-learning.ts:425-443",
+      "evidence": "Function implements base_score + utilization_bonus algorithm"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "track_usage()",
+      "lines": "120-186",
+      "currentBehavior": "Tracks impulse usage by detecting file paths, memo snippets, and activity outputs in response text",
+      "desiredBehavior": "SAME - Already implemented correctly",
+      "gap": "NONE - Usage tracking logic moved from opencode/impulse-learning.ts:328-358",
+      "evidence": "Function checks pointer types (file, memo, activityOutput) and counts occurrences in response"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "insert_mapping_record()",
+      "lines": "189-303",
+      "currentBehavior": "Orchestrates complete server-side learning pipeline: normalize_pattern → track_usage → calculate_quality → build ImpulseMappingRecord → insert into SurrealDB",
+      "desiredBehavior": "SAME - Already implemented correctly",
+      "gap": "NONE - Complete learning pipeline in rpc-api",
+      "evidence": "Function chains all learning algorithms and persists to impulse_mapping_record table"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "get_mapping_records()",
+      "lines": "306-357",
+      "currentBehavior": "Queries impulse_mapping_record by session_id with pagination support",
+      "desiredBehavior": "SAME - Already implemented correctly",
+      "gap": "NONE - Query capability exists",
+      "evidence": "Function uses SurrealDB SELECT query with WHERE, ORDER BY, LIMIT, START clauses"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "query_patterns()",
+      "lines": "360-407",
+      "currentBehavior": "Queries impulse_mapping_record by normalized_pattern to find similar past intents",
+      "desiredBehavior": "SAME - Already implemented correctly",
+      "gap": "NONE - Pattern-based querying exists",
+      "evidence": "Function searches by userIntent.normalizedPattern field"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "component": "ImpulseLearning module",
+      "lines": "1-589",
+      "currentBehavior": "Contains BOTH data collection AND learning algorithms (normalizePattern, calculateResponseQuality, trackImpulseUsage, persistMappingRecord) - 589 lines",
+      "desiredBehavior": "Should ONLY contain data collection (<50 lines) and send raw data to rpc-api via HTTP POST /record-turn",
+      "gap": "MAJOR GAP - Learning algorithms still in opencode, local Storage writes still occur, no HTTP POST to rpc-api",
+      "evidence": "File has 589 lines, contains normalizePattern (392-419), calculateResponseQuality (425-443), trackImpulseUsage (328-358), persistMappingRecord (449-467)"
+    },
+    {
+      "file": "repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql",
+      "component": "impulse_mapping_record table",
+      "lines": "NOT FOUND",
+      "currentBehavior": "SurrealDB schema does NOT define impulse_mapping_record table - only activity_execution, template_metrics, failure_pattern tables exist",
+      "desiredBehavior": "Should define impulse_mapping_record table with fields: userIntent, context, impulses, outcome, metadata",
+      "gap": "CRITICAL GAP - Table schema not defined in SurrealDB, but code attempts to insert into it",
+      "evidence": "Schema file only defines 3 tables (activity_execution, template_metrics, failure_pattern), no impulse_mapping_record definition"
+    }
+  ],
+  
+  "dataFlow": {
+    "entry": "Opencode turn lifecycle (user message received)",
+    "currentTransformations": [
+      "1. initBuffer → Create LearningBuffer with session context",
+      "2. captureIntent → Store parsed intent (type, confidence, suggestedImpulses)",
+      "3. captureImpulses → Store impulses created (id, type, pointer, priority, budget)",
+      "4. captureResponse → Store agent response text",
+      "5. captureOutcome → Store task success and duration",
+      "6. flushToDatabase → [LOCAL PROCESSING]",
+      "7.   → normalizePattern() → Extract pattern with placeholders",
+      "8.   → trackImpulseUsage() → Detect impulse content in response",
+      "9.   → calculateResponseQuality() → Compute quality score",
+      "10.  → persistMappingRecord() → Storage.write() to local file"
+    ],
+    "desiredTransformations": [
+      "1. initBuffer → Create LearningBuffer with session context",
+      "2. addRawData(intent) → Store raw intent data",
+      "3. addRawData(impulses) → Store raw impulse data",
+      "4. addRawData(response) → Store raw response text",
+      "5. addRawData(outcome) → Store raw outcome",
+      "6. sendToRpcApi() → HTTP POST /api/v1/learning-loop/record-turn",
+      "7. [SERVER-SIDE in rpc-api]",
+      "8.   → normalize_pattern() → Extract pattern with placeholders",
+      "9.   → track_usage() → Detect impulse content in response",
+      "10.  → calculate_quality() → Compute quality score",
+      "11.  → build ImpulseMappingRecord",
+      "12.  → db.create('impulse_mapping_record', record) → SurrealDB"
+    ],
+    "validate": "Query SurrealDB impulse_mapping_record table to verify record created",
+    "exit": "Learning data persisted in SurrealDB, available for pattern queries and learning analysis"
+  },
+  
+  "currentStateVsDesiredState": {
+    "rpcApiImplementation": {
+      "status": "COMPLETE ✅",
+      "completeness": "100%",
+      "components": {
+        "endpoint": "✅ POST /api/v1/learning-loop/record-turn (line 450)",
+        "patternExtraction": "✅ normalize_pattern() (line 28)",
+        "qualityCalculation": "✅ calculate_quality() (line 78)",
+        "usageTracking": "✅ track_usage() (line 120)",
+        "orchestration": "✅ insert_mapping_record() (line 189)",
+        "querySupport": "✅ get_mapping_records() (line 306), query_patterns() (line 360)"
+      }
+    },
+    "opencodeSimplification": {
+      "status": "NOT STARTED ❌",
+      "completeness": "0%",
+      "blockers": [
+        "❌ impulse-learning.ts: 589 lines (expected <50)",
+        "❌ normalizePattern() in opencode (should be rpc-api only)",
+        "❌ calculateResponseQuality() in opencode (should be rpc-api only)",
+        "❌ trackImpulseUsage() in opencode (should be rpc-api only)",
+        "❌ persistMappingRecord() writes to local Storage (should POST to rpc-api)",
+        "❌ No sendToRpcApi() function",
+        "❌ No HTTP client for /record-turn endpoint"
+      ]
+    },
+    "surrealdbSchema": {
+      "status": "MISSING ❌",
+      "completeness": "0%",
+      "blockers": [
+        "❌ impulse_mapping_record table NOT defined in activity_learning_loop.surql",
+        "❌ db.create('impulse_mapping_record') will fail - table doesn't exist",
+        "❌ Schema validation impossible"
+      ]
+    }
+  },
+  
+  "criticalGaps": [
+    {
+      "priority": 1,
+      "severity": "CRITICAL",
+      "gap": "SurrealDB schema missing impulse_mapping_record table definition",
+      "impact": "Database writes will fail at runtime - insert_mapping_record() will throw exception when attempting db.create('impulse_mapping_record', record)",
+      "affectedFiles": [
+        "repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql"
+      ],
+      "resolution": "Add DEFINE TABLE impulse_mapping_record SCHEMAFULL with fields: userIntent (rawText, normalizedPattern, intentType, intentConfidence), context (activeSession, turnNumber, capturedAt, recentFiles), impulses (array), outcome (taskSucceeded, responseQuality, impulsesUsedCount, timeToSuccess), metadata (recordId, createdAt)",
+      "estimatedEffort": "1 hour"
+    },
+    {
+      "priority": 2,
+      "severity": "HIGH",
+      "gap": "Opencode still performs local learning instead of sending to rpc-api",
+      "impact": "Learning data stored locally in each opencode instance instead of centralized in SurrealDB - defeats entire purpose of impulse-learning-in-rpc-api-only specification",
+      "affectedFiles": [
+        "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts"
+      ],
+      "resolution": "DELETE learning algorithms from impulse-learning.ts (lines 328-467: normalizePattern, calculateResponseQuality, trackImpulseUsage, persistMappingRecord), ADD sendToRpcApi() function that POSTs raw buffer data to /api/v1/learning-loop/record-turn, UPDATE turn-lifecycle-hooks.ts to call sendToRpcApi() instead of flushToDatabase()",
+      "estimatedEffort": "2-3 hours"
+    },
+    {
+      "priority": 3,
+      "severity": "MEDIUM",
+      "gap": "No integration test validating end-to-end flow",
+      "impact": "Cannot verify that opencode → rpc-api → SurrealDB pipeline works correctly in production",
+      "affectedFiles": [
+        "tests/ (new test file needed)"
+      ],
+      "resolution": "Create integration test: (1) Start opencode session with impulse learning enabled, (2) Execute test turn with known impulses, (3) Mock/intercept HTTP POST to /api/v1/learning-loop/record-turn, (4) Verify payload structure, (5) Call actual rpc-api endpoint, (6) Query SurrealDB impulse_mapping_record table, (7) Verify record created with correct normalized_pattern and quality_score",
+      "estimatedEffort": "2 hours"
+    }
+  ],
+  
+  "enforcementActions": [
+    {
+      "action": "Define impulse_mapping_record table in SurrealDB schema",
+      "file": "repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql",
+      "changeType": "ADD",
+      "lineNumber": "after line 298 (after failure_pattern table)",
+      "requiredContent": "DEFINE TABLE impulse_mapping_record SCHEMAFULL PERMISSIONS FULL with fields matching ImpulseMappingRecord structure from impulse_learning.py:250-288 including userIntent, context, impulses array, outcome, metadata",
+      "validation": "grep 'DEFINE TABLE impulse_mapping_record' activity_learning_loop.surql"
+    },
+    {
+      "action": "Simplify opencode impulse-learning.ts to <50 lines",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "changeType": "MODIFY",
+      "requiredChanges": [
+        "DELETE lines 328-358: trackImpulseUsage() function",
+        "DELETE lines 392-419: normalizePattern() function",
+        "DELETE lines 425-443: calculateResponseQuality() function",
+        "DELETE lines 449-467: persistMappingRecord() function",
+        "REPLACE flushToDatabase() with sendToRpcApi() that constructs payload and POSTs to config.rpcApiUrl + '/api/v1/learning-loop/record-turn'",
+        "KEEP lines 112-132: initializeTurnBuffer()",
+        "KEEP lines 138-156: captureIntent()",
+        "KEEP lines 162-184: captureImpulsesCreated()",
+        "KEEP lines 190-211: captureResponse()",
+        "KEEP lines 217-236: captureOutcome()"
+      ],
+      "validation": "wc -l impulse-learning.ts | awk '{if ($1 < 50) print \"PASS\"; else print \"FAIL: \" $1 \" lines\"}'"
+    },
+    {
+      "action": "Update turn lifecycle hooks to use sendToRpcApi()",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+      "changeType": "MODIFY",
+      "lineNumber": "~990",
+      "requiredChanges": [
+        "FIND: await ImpulseLearning.flushToDatabase(context.sessionID)",
+        "REPLACE WITH: await ImpulseLearning.sendToRpcApi(context.sessionID)"
+      ],
+      "validation": "grep 'sendToRpcApi' turn-lifecycle-hooks.ts && ! grep 'flushToDatabase' turn-lifecycle-hooks.ts"
+    }
+  ],
+  
+  "validationStrategy": {
+    "staticChecks": [
+      {
+        "check": "Verify impulse-learning.ts line count <50",
+        "command": "wc -l repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "expectedOutput": "< 50 lines",
+        "purpose": "Ensure opencode only does data collection"
+      },
+      {
+        "check": "Verify no learning algorithms in opencode",
+        "command": "rg 'normalizePattern|calculateResponseQuality|trackImpulseUsage' repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "expectedOutput": "NO MATCHES",
+        "purpose": "Confirm learning algorithms removed from opencode"
+      },
+      {
+        "check": "Verify rpc-api has record-turn endpoint",
+        "command": "rg 'POST.*record-turn' repos/metabob-rpc-api/server/routes/learning_loop.py",
+        "expectedOutput": "MATCH FOUND at line 450",
+        "purpose": "Confirm server-side endpoint exists"
+      },
+      {
+        "check": "Verify SurrealDB schema has impulse_mapping_record",
+        "command": "grep 'DEFINE TABLE impulse_mapping_record' repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql",
+        "expectedOutput": "MATCH FOUND",
+        "purpose": "Confirm table definition exists"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "check": "Test rpc-api endpoint accepts data",
+        "command": "curl -X POST http://localhost:8000/api/v1/learning-loop/record-turn -H 'Content-Type: application/json' -d '{\"session_id\": \"test\", \"turn_number\": 1, \"user_message\": \"test message\", \"intent\": {\"type\": \"code_fix\", \"confidence\": 0.9}, \"impulses_created\": [], \"task_succeeded\": true, \"duration_ms\": 1000}'",
+        "expectedOutput": "HTTP 201 Created with record_id in response",
+        "purpose": "Verify endpoint works end-to-end"
+      },
+      {
+        "check": "Verify record in SurrealDB",
+        "command": "echo 'SELECT * FROM impulse_mapping_record WHERE context.activeSession = \"test\";' | surreal sql",
+        "expectedOutput": "Record found with normalized_pattern, quality_score fields",
+        "purpose": "Confirm data persisted to database"
+      }
+    ],
+    "integrationTests": [
+      {
+        "test": "End-to-end impulse learning flow",
+        "steps": [
+          "1. Start opencode session with impulse learning enabled",
+          "2. Send user message: 'Fix bug in src/auth.ts line 42'",
+          "3. Capture turn data (intent, impulses, response, outcome)",
+          "4. Verify HTTP POST to /api/v1/learning-loop/record-turn",
+          "5. Verify payload structure matches TurnLearningRequest schema",
+          "6. Query SurrealDB: SELECT * FROM impulse_mapping_record WHERE metadata.recordId LIKE 'sess_%'",
+          "7. Verify normalized_pattern = 'fix bug in {file0} line {num0}'",
+          "8. Verify quality_score calculated correctly (0.6 base + utilization)"
+        ],
+        "expectedResult": "Record created in SurrealDB with correct pattern and quality",
+        "purpose": "Validate complete pipeline from opencode to SurrealDB"
+      }
+    ]
+  },
+  
+  "traceImpulseId": "trace-impulse-learning-storage-complete",
+  
+  "metadata": {
+    "specificationSource": "ENFORCEMENT_IMPULSE_LEARNING_IN_RPC_API_ONLY.md",
+    "scopeRating": "MEDIUM",
+    "scopeExplanation": "RPC API server-side implementation 100% complete. Opencode simplification and SurrealDB schema 0% complete. Overall ~33% complete.",
+    "complexity": "HIGH",
+    "complexityFactors": [
+      "Database schema changes require migration strategy",
+      "Opencode refactoring must preserve data collection hooks",
+      "HTTP client implementation requires config management",
+      "Integration testing requires multi-service coordination"
+    ],
+    "estimatedEffort": "5-6 hours total",
+    "effortBreakdown": {
+      "surrealdbSchema": "1 hour",
+      "opencodeRefactoring": "2-3 hours",
+      "integrationTesting": "2 hours"
+    },
+    "dependencies": [
+      "SurrealDB running and accessible",
+      "rpc-api server running on known endpoint",
+      "Opencode config with rpcApiUrl setting",
+      "HTTP client library available in opencode"
+    ],
+    "risks": [
+      "Breaking existing learning data collection if refactoring not careful",
+      "Schema changes may require data migration if table already exists",
+      "Network failures between opencode and rpc-api need retry logic"
+    ],
+    "mitigations": [
+      "Test in isolated environment first",
+      "Keep learning algorithms in opencode as backup during transition",
+      "Add feature flag to toggle between local and remote learning",
+      "Implement exponential backoff retry for HTTP POST failures"
+    ]
+  }
+}
