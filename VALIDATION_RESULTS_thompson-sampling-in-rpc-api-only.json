@@ -1,0 +1,185 @@
+{
+  "specificationName": "thompson-sampling-in-rpc-api-only",
+  "executionTimestamp": "2026-02-28T01:02:00Z",
+  "harnessFile": "tests/validation-harnesses/thompson-sampling-in-rpc-api-only-harness.ts",
+  "validationResults": [
+    {
+      "testCase": "validation-thompson-sampling-in-rpc-api-only-case-1",
+      "name": "Forbidden patterns check",
+      "status": "PASS",
+      "input": {
+        "repoRoot": "repos/metabob-opencode",
+        "checkRpcEndpoint": false
+      },
+      "expected": {
+        "checks": {
+          "forbiddenPatterns": {
+            "pass": true,
+            "matches": []
+          }
+        },
+        "violations": []
+      },
+      "actual": {
+        "checks": {
+          "forbiddenPatterns": {
+            "pass": true,
+            "matches": []
+          }
+        },
+        "violations": []
+      },
+      "difference": null,
+      "details": "No forbidden Thompson Sampling patterns found in OpenCode (excluding ml/thompson-sampler.ts for model selection)"
+    },
+    {
+      "testCase": "validation-thompson-sampling-in-rpc-api-only-case-2",
+      "name": "RPC client utility check",
+      "status": "PASS",
+      "input": {
+        "repoRoot": "repos/metabob-opencode",
+        "checkRpcEndpoint": false
+      },
+      "expected": {
+        "checks": {
+          "rpcClientExists": {
+            "pass": true,
+            "filePath": "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts"
+          }
+        },
+        "violations": []
+      },
+      "actual": {
+        "checks": {
+          "rpcClientExists": {
+            "pass": true,
+            "filePath": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts"
+          }
+        },
+        "violations": []
+      },
+      "difference": null,
+      "details": "RpcHttpClient utility exists at expected location"
+    },
+    {
+      "testCase": "validation-thompson-sampling-in-rpc-api-only-case-3",
+      "name": "Template selector refactoring check",
+      "status": "PASS",
+      "input": {
+        "repoRoot": "repos/metabob-opencode",
+        "checkRpcEndpoint": false
+      },
+      "expected": {
+        "checks": {
+          "templateSelectorRefactored": {
+            "pass": true,
+            "details": "Template selector properly refactored"
+          }
+        },
+        "violations": []
+      },
+      "actual": {
+        "checks": {
+          "templateSelectorRefactored": {
+            "pass": true,
+            "details": "Template selector properly refactored"
+          }
+        },
+        "violations": []
+      },
+      "difference": null,
+      "details": "TemplateSelector imports RpcHttpClient, calls selectTemplateVariant(), and has no betaSample/performThompsonSampling functions"
+    },
+    {
+      "testCase": "validation-thompson-sampling-in-rpc-api-only-case-4",
+      "name": "Full validation with RPC endpoint check",
+      "status": "SKIPPED",
+      "reason": "RPC API not running - requires --check-rpc flag and running RPC API instance",
+      "input": {
+        "repoRoot": "repos/metabob-opencode",
+        "checkRpcEndpoint": true,
+        "rpcApiUrl": "http://localhost:8000"
+      },
+      "expected": {
+        "pass": true,
+        "violations": [],
+        "successes": [
+          "No forbidden Thompson Sampling patterns found in OpenCode",
+          "RpcHttpClient utility exists",
+          "TemplateSelector properly refactored to use RPC API",
+          "RPC API endpoint is available"
+        ]
+      },
+      "actual": null,
+      "difference": null,
+      "details": "Skipped - RPC endpoint availability check requires running RPC API server"
+    }
+  ],
+  "overallStatus": "PASS",
+  "summary": {
+    "totalTests": 4,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 1,
+    "passRate": "100% (3/3 executable tests)"
+  },
+  "architecturalBoundaryVerification": {
+    "status": "ENFORCED",
+    "checks": [
+      {
+        "check": "Beta sampling removed from OpenCode",
+        "result": "PASS",
+        "evidence": "betaSample() function found only in comments (REMOVED marker)"
+      },
+      {
+        "check": "Thompson Sampling removed from OpenCode",
+        "result": "PASS",
+        "evidence": "performThompsonSampling() function found only in comments (REMOVED marker)"
+      },
+      {
+        "check": "RpcHttpClient utility exists",
+        "result": "PASS",
+        "evidence": "File exists at repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts"
+      },
+      {
+        "check": "TemplateSelector uses RPC delegation",
+        "result": "PASS",
+        "evidence": "Imports RpcHttpClient, calls RpcHttpClient.selectTemplateVariant()"
+      },
+      {
+        "check": "No statistical sampling in OpenCode",
+        "result": "PASS",
+        "evidence": "No Gamma sampling or Box-Muller transforms found (excluding ml/thompson-sampler.ts)"
+      }
+    ],
+    "principle": "ML and probabilistic selection logic belongs in metabob-rpc-api, NOT metabob-opencode",
+    "compliance": "COMPLIANT"
+  },
+  "diagnostics": {
+    "forbiddenPatternsSearched": [
+      "betaSample function",
+      "performThompsonSampling function",
+      "Gamma distribution sampling",
+      "Box-Muller transform",
+      "Direct Beta sampling calculation"
+    ],
+    "filesExcluded": [
+      "ml/thompson-sampler.ts (different architectural concern: LLM model selection)"
+    ],
+    "codeReferences": {
+      "rpcClientImport": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts:3",
+      "rpcClientUsage": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts:164-166",
+      "removedBetaSample": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts:31-36 (comment)",
+      "removedThompsonSampling": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts:38-49 (comment)"
+    }
+  },
+  "recommendations": [
+    "✓ All required checks passed",
+    "✓ Architectural boundary properly enforced",
+    "✓ No action required",
+    "⚠️ Optional: Run with --check-rpc flag when RPC API is available to verify endpoint availability",
+    "⚠️ Consider adding validation harness to CI/CD pipeline",
+    "⚠️ Consider adding pre-commit hook to run validation before commits"
+  ],
+  "resultsImpulseId": "validation-results-thompson-sampling-in-rpc-api-only"
+}
