@@ -1,0 +1,158 @@
+{
+  "name": "Enforce Architecture Separation: Metabob Components",
+  "description": "Enforce separation of concerns between metabob-opencode, metabob-cli, and metabob-rpc-api. Each task uses trace-enforce-validate-loop to define constraints and enforce them across the architecture.",
+  "category": "refactor",
+  "tasks": [
+    {
+      "id": "phase-1-remove-ml-from-opencode",
+      "subagent": "general",
+      "description": "Remove all ML/learning logic from metabob-opencode by enforcing separation constraints",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Phase 1: Remove ML Logic from metabob-opencode\n\n## Context\nWe have a **desired architecture** where:\n- **metabob-opencode**: Activity execution, coordination, data collection ONLY\n- **metabob-cli**: Data collection, enrichment with inference models, gateway to activity database\n- **metabob-rpc-api**: ML learning, metrics training, Thompson Sampling, all data maintenance\n\n## Current Violations\nFrom ARCHITECTURE_SEPARATION_ANALYSIS.md:\n1. `session/impulse-learning.ts` (586 lines) - Learning logic in opencode\n2. `session/template-selector.ts` (~150 lines) - Thompson Sampling in opencode\n3. `session/template-metrics-client.ts` - Dual-write and local calculations\n\n## Your Task\nRun the trace-enforce-validate-loop activity THREE times (once per violation) to systematically remove ML logic:\n\n### Violation 1: Thompson Sampling Selection\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"thompson-sampling-in-rpc-api-only\",\n    specificationDescription: \"Thompson Sampling (Beta distribution variant selection) must ONLY exist in metabob-rpc-api. metabob-opencode must call rpc-api endpoint for template selection.\",\n    expectedBehavior: \"When opencode needs to select a template variant, it calls POST /v1/templates/select-variant in rpc-api. No Beta sampling logic exists in opencode.\",\n    validationStrategy: \"Search for 'thompson', 'beta', 'Math.random' in repos/metabob-opencode/packages/opencode/src/**/*.ts. Result must be 0 matches. Verify rpc-api has /v1/templates/select-variant endpoint.\"\n  },\n  reason: \"Enforce architectural boundary: ML selection logic belongs in rpc-api\"\n})\n```\n\n### Violation 2: Impulse Learning Logic\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"impulse-learning-in-rpc-api-only\",\n    specificationDescription: \"Impulse learning (pattern extraction, quality scoring, learning buffer management) must ONLY exist in metabob-rpc-api. metabob-opencode must only collect raw data and send to rpc-api.\",\n    expectedBehavior: \"When opencode completes an activity turn, it sends raw execution data to POST /v1/learning/record-turn in rpc-api. All pattern extraction and quality calculation happens in rpc-api. File session/impulse-learning.ts either removed or reduced to data collection only (<50 lines).\",\n    validationStrategy: \"Count lines in repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts. Must be <50 lines or deleted. Verify rpc-api has /v1/learning/record-turn endpoint with pattern extraction logic.\"\n  },\n  reason: \"Enforce architectural boundary: Learning algorithms belong in rpc-api\"\n})\n```\n\n### Violation 3: Metrics Calculation in Client\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"metrics-calculation-in-rpc-api-only\",\n    specificationDescription: \"Metrics calculations (success rate, quality score, averaging) must ONLY exist in metabob-rpc-api. metabob-opencode template-metrics-client must be a thin HTTP client with no calculations.\",\n    expectedBehavior: \"template-metrics-client.ts makes HTTP calls to rpc-api for metrics operations. No local success rate, quality score, or averaging calculations. No dual-write to JSON files. Redis writes happen via rpc-api endpoint only.\",\n    validationStrategy: \"Search for calculation logic (/, *, Math.) in repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts. Verify file is <100 lines and only contains HTTP client code.\"\n  },\n  reason: \"Enforce architectural boundary: Metrics aggregation belongs in rpc-api\"\n})\n```\n\n## Expected Outcome\nAfter running these three trace-enforce-validate loops:\n- ✅ metabob-opencode has ZERO ML logic\n- ✅ All Thompson Sampling in rpc-api\n- ✅ All impulse learning in rpc-api\n- ✅ All metrics calculation in rpc-api\n- ✅ opencode is thin client for execution + coordination\n\n## Output Format\nProvide a summary:\n```json\n{\n  \"phase\": \"phase-1-remove-ml-from-opencode\",\n  \"activities_executed\": [\n    {\"spec\": \"thompson-sampling-in-rpc-api-only\", \"status\": \"complete\"},\n    {\"spec\": \"impulse-learning-in-rpc-api-only\", \"status\": \"complete\"},\n    {\"spec\": \"metrics-calculation-in-rpc-api-only\", \"status\": \"complete\"}\n  ],\n  \"validation_results\": {\n    \"opencode_ml_logic\": \"REMOVED\",\n    \"rpc_api_endpoints_created\": [\"/v1/templates/select-variant\", \"/v1/learning/record-turn\"],\n    \"files_modified\": [\"list of files\"],\n    \"lines_removed_from_opencode\": 800\n  }\n}\n```",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "repos/metabob-rpc-api/server/routes/activity.py",
+          "repos/metabob-rpc-api/server/routes/learning_loop.py"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "phase-2-complete-learning-loop-rpc-api",
+      "subagent": "general",
+      "description": "Complete the learning loop implementation in metabob-rpc-api using constraint enforcement",
+      "dependencies": ["phase-1-remove-ml-from-opencode"],
+      "prompt": {
+        "template": "# Phase 2: Complete Learning Loop in metabob-rpc-api\n\n## Context\nNow that ML logic is removed from opencode, we need to ensure the learning loop is COMPLETE in rpc-api.\n\n## Current State (from analysis)\n- ✅ Thompson Sampling exists in rpc-api\n- ✅ Metrics aggregation exists\n- ✅ Promotion engine exists\n- ❌ Impulse learning endpoints incomplete\n- ❌ Pattern extraction not implemented\n- ❌ Context requirement optimization not implemented\n\n## Your Task\nRun trace-enforce-validate-loop activity THREE times to complete the learning infrastructure:\n\n### Requirement 1: Impulse Learning Storage\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"impulse-learning-storage-complete\",\n    specificationDescription: \"Impulse learning data (impulse ID, turn context, pattern extracted, response quality) must be stored in SurrealDB via rpc-api endpoints.\",\n    expectedBehavior: \"POST /v1/learning/impulse-mappings accepts {impulse_id, turn_context, messages, response_quality} and stores in SurrealDB table impulse_learning_records. Implements pattern extraction logic from removed opencode/impulse-learning.ts.\",\n    validationStrategy: \"Call POST /v1/learning/impulse-mappings with test data. Query SurrealDB to verify record created. Verify pattern extraction logic extracts file paths, component names, and normalizes patterns.\"\n  },\n  reason: \"Complete missing learning infrastructure in rpc-api\"\n})\n```\n\n### Requirement 2: Pattern Extraction Service\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"pattern-extraction-service-complete\",\n    specificationDescription: \"Pattern extraction service must analyze raw messages from activity turns and extract: file paths referenced, components modified, common patterns, complexity indicators.\",\n    expectedBehavior: \"Service located in server/services/pattern_extraction_service.py provides extract_patterns(messages: list) -> PatternData. Used by /v1/learning/impulse-mappings endpoint. Logic ported from opencode impulse-learning.ts lines 200-350.\",\n    validationStrategy: \"Unit test: feed sample messages with file paths and component names. Verify extraction returns structured PatternData with normalized patterns.\"\n  },\n  reason: \"Build pattern extraction capability in rpc-api\"\n})\n```\n\n### Requirement 3: Context Optimization Endpoint\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"context-optimization-endpoint-complete\",\n    specificationDescription: \"Context optimization endpoint analyzes historical impulse usage to recommend optimal context requirements for activities. Learns which impulses are most valuable for different activity types.\",\n    expectedBehavior: \"GET /v1/learning/context-optimization?activity_type=feature returns {recommended_impulses: [...], optimal_token_budget: N, success_correlation: float}. Queries impulse_learning_records in SurrealDB to compute recommendations.\",\n    validationStrategy: \"Seed SurrealDB with 10 impulse learning records across 2 activity types. Call endpoint for each type. Verify returns different recommendations based on historical success patterns.\"\n  },\n  reason: \"Enable learning-driven context optimization\"\n})\n```\n\n## Expected Outcome\n- ✅ All learning endpoints implemented in rpc-api\n- ✅ Pattern extraction service operational\n- ✅ Context optimization recommendations available\n- ✅ Learning data flowing: opencode → rpc-api → SurrealDB\n\n## Output Format\n```json\n{\n  \"phase\": \"phase-2-complete-learning-loop-rpc-api\",\n  \"activities_executed\": [\n    {\"spec\": \"impulse-learning-storage-complete\", \"status\": \"complete\"},\n    {\"spec\": \"pattern-extraction-service-complete\", \"status\": \"complete\"},\n    {\"spec\": \"context-optimization-endpoint-complete\", \"status\": \"complete\"}\n  ],\n  \"validation_results\": {\n    \"endpoints_implemented\": [\"/v1/learning/impulse-mappings\", \"/v1/learning/context-optimization\"],\n    \"services_created\": [\"pattern_extraction_service.py\"],\n    \"surrealdb_tables\": [\"impulse_learning_records\"],\n    \"test_coverage\": \"85%\"\n  }\n}\n```",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/metabob-rpc-api/server/services/pattern_extraction_service.py"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "phase-3-storage-consolidation",
+      "subagent": "general",
+      "description": "Consolidate storage with SurrealDB as primary, Redis as cache",
+      "dependencies": ["phase-2-complete-learning-loop-rpc-api"],
+      "prompt": {
+        "template": "# Phase 3: Storage Consolidation - SurrealDB Primary\n\n## Context\nCurrently rpc-api has dual-write pattern (Redis first, SurrealDB for persistence). We want SurrealDB as single source of truth.\n\n## Current State\n- Redis used as primary for Thompson Sampling data\n- SurrealDB used for historical records\n- Dual-write creates complexity and consistency issues\n\n## Your Task\nRun trace-enforce-validate-loop activity ONCE to enforce storage hierarchy:\n\n### Storage Architecture Constraint\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"surrealdb-primary-redis-cache\",\n    specificationDescription: \"SurrealDB must be the primary data store for all activity data (templates, metrics, executions). Redis is a read-through cache only. Write path: Client → rpc-api → SurrealDB → Redis cache. Read path: Client → rpc-api → Redis (cache hit) OR SurrealDB (cache miss) → populate Redis.\",\n    expectedBehavior: \"All write operations in rpc-api (server/actions/activity.py, server/services/metrics_aggregator.py) write to SurrealDB FIRST. On successful write, update Redis cache with TTL. All read operations try Redis first, fallback to SurrealDB on miss, then populate Redis. Cache invalidation on writes.\",\n    validationStrategy: \"Trace write path in actions/activity.py for template metrics update. Verify SurrealDB write happens before Redis. Trace read path for template selection. Verify Redis check, then SurrealDB fallback, then Redis populate. Add logging to verify execution order. Check cache hit rate metrics.\"\n  },\n  reason: \"Establish SurrealDB as single source of truth with Redis as performance cache\"\n})\n```\n\n## Implementation Guidance\n1. **Refactor write path in actions/activity.py:**\n   - Change order: SurrealDB write first (line ~120)\n   - Then Redis cache update (line ~140)\n   - Add rollback logic if Redis fails (warn but don't fail)\n\n2. **Refactor read path in actions/activity.py:**\n   - Check Redis first (fast path)\n   - On miss: query SurrealDB\n   - Populate Redis with TTL=3600s\n   - Return data\n\n3. **Add cache invalidation:**\n   - On template update: invalidate Redis keys\n   - On metrics update: invalidate template metrics keys\n   - Use Redis DEL command\n\n4. **Create db/operations/template_metrics.py:**\n   - SurrealDB CRUD for template metrics\n   - Called by actions layer\n\n## Expected Outcome\n- ✅ SurrealDB is write-first for all data\n- ✅ Redis is cache-only with TTL\n- ✅ Cache invalidation on writes\n- ✅ Read performance maintained (cache hit >95%)\n- ✅ Single source of truth for queries\n\n## Output Format\n```json\n{\n  \"phase\": \"phase-3-storage-consolidation\",\n  \"activities_executed\": [\n    {\"spec\": \"surrealdb-primary-redis-cache\", \"status\": \"complete\"}\n  ],\n  \"validation_results\": {\n    \"write_order\": \"SurrealDB first, Redis second\",\n    \"read_path\": \"Redis → SurrealDB fallback → Redis populate\",\n    \"cache_invalidation\": \"implemented\",\n    \"cache_hit_rate_benchmark\": \"96%\",\n    \"files_modified\": [\"actions/activity.py\", \"services/metrics_aggregator.py\"],\n    \"files_created\": [\"db/operations/template_metrics.py\"]\n  }\n}\n```",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/metabob-rpc-api/server/db/operations/template_metrics.py"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "phase-4-validate-separation",
+      "subagent": "general",
+      "description": "Validate complete architecture separation across all three components",
+      "dependencies": ["phase-3-storage-consolidation"],
+      "prompt": {
+        "template": "# Phase 4: Validate Complete Architecture Separation\n\n## Context\nAll refactoring phases complete. Now validate the entire architecture adheres to separation principles.\n\n## Your Task\nRun trace-enforce-validate-loop activity ONCE for overall validation:\n\n### Overall Architecture Constraint\n```bash\nactivity({\n  templateId: \"trace-enforce-validate-loop\",\n  variables: {\n    specificationName: \"complete-architecture-separation\",\n    specificationDescription: \"The three-component architecture has clean separation: metabob-opencode (execution + coordination), metabob-cli (data collection + enrichment + gateway), metabob-rpc-api (ML training + metrics + storage).\",\n    expectedBehavior: \"Cross-component validation: (1) metabob-opencode has ZERO ML keywords (thompson, beta, learning algorithms, pattern extraction). (2) metabob-cli has ZERO training logic, only inference enrichment and MCP gateway. (3) metabob-rpc-api has ALL learning endpoints, Thompson Sampling, metrics aggregation, pattern extraction. (4) Data flows: opencode → cli (MCP) → rpc-api (HTTP) → SurrealDB. (5) Template lifecycle: created in opencode → stored in rpc-api → versioned in SurrealDB.\",\n    validationStrategy: \"(1) Run grep searches for ML keywords in each repo. (2) Check API contracts: opencode calls rpc-api endpoints, not local logic. (3) Verify SurrealDB schema has all required tables. (4) Integration test: execute activity from opencode → verify data lands in SurrealDB → verify Thompson Sampling uses that data for next selection. (5) Check metabob-cli MCP tools are pure proxies to rpc-api.\"\n  },\n  reason: \"Final validation of complete architecture separation\"\n})\n```\n\n## Validation Checklist\n\n### 1. Code Pattern Validation\n```bash\n# Must return 0 matches for ML logic in opencode\ngrep -r 'thompson\\|beta.*distribution\\|learning.*buffer\\|pattern.*extraction' repos/metabob-opencode/packages/opencode/src --include='*.ts'\n\n# Must return 0 matches for training logic in CLI\ngrep -r 'train\\|fit\\|gradient\\|optimize' repos/metabob-cli/src --include='*.py' | grep -v 'optimization' | grep -v 'context-optimization'\n\n# Must find Thompson Sampling in rpc-api\ngrep -r 'thompson\\|beta.*distribution' repos/metabob-rpc-api/server --include='*.py'\n```\n\n### 2. API Contract Validation\n```bash\n# opencode must call rpc-api endpoints, not local ML\ngrep -r 'fetch.*rpc-api\\|axios.*rpc-api\\|/v1/' repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts\n\n# Verify endpoints exist\ncurl http://localhost:8000/v1/templates/select-variant --head\ncurl http://localhost:8000/v1/learning/impulse-mappings --head\ncurl http://localhost:8000/v1/learning/context-optimization --head\n```\n\n### 3. Data Flow Integration Test\n```bash\n# Test complete flow\n# 1. Execute activity from opencode\n# 2. Verify execution recorded in rpc-api\n# 3. Verify metrics in SurrealDB\n# 4. Call select-variant endpoint\n# 5. Verify Thompson Sampling uses metrics from SurrealDB\n```\n\n### 4. Component Responsibility Matrix\n\n| Responsibility | opencode | cli | rpc-api |\n|----------------|----------|-----|----------|\n| Activity execution | ✅ | ❌ | ❌ |\n| Activity coordination | ✅ | ❌ | ❌ |\n| Data collection | ✅ | ✅ | ❌ |\n| CPG enrichment | ❌ | ✅ | ❌ |\n| MCP gateway | ❌ | ✅ | ❌ |\n| Thompson Sampling | ❌ | ❌ | ✅ |\n| Pattern extraction | ❌ | ❌ | ✅ |\n| Metrics aggregation | ❌ | ❌ | ✅ |\n| Learning training | ❌ | ❌ | ✅ |\n| SurrealDB storage | ❌ | ❌ | ✅ |\n\nValidate each cell is correct.\n\n### 5. File Size Validation\n```bash\n# These files should be dramatically smaller or removed\nwc -l repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts  # <50 lines or deleted\nwc -l repos/metabob-opencode/packages/opencode/src/session/template-selector.ts  # <30 lines (thin client)\nwc -l repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts  # <100 lines (thin client)\n```\n\n## Expected Outcome\n- ✅ All grep searches pass (0 violations)\n- ✅ All API endpoints respond\n- ✅ Integration test passes\n- ✅ Responsibility matrix correct\n- ✅ File sizes reduced\n- ✅ Documentation updated\n\n## Output Format\n```json\n{\n  \"phase\": \"phase-4-validate-separation\",\n  \"activities_executed\": [\n    {\"spec\": \"complete-architecture-separation\", \"status\": \"complete\"}\n  ],\n  \"validation_results\": {\n    \"code_pattern_validation\": \"PASS\",\n    \"api_contract_validation\": \"PASS\",\n    \"data_flow_integration_test\": \"PASS\",\n    \"responsibility_matrix\": \"PASS\",\n    \"file_size_validation\": \"PASS\",\n    \"violations_found\": 0,\n    \"architecture_separation_score\": \"100%\"\n  },\n  \"metrics\": {\n    \"ml_logic_in_opencode\": 0,\n    \"training_logic_in_cli\": 0,\n    \"learning_endpoints_in_rpc_api\": 5,\n    \"lines_removed_total\": 850,\n    \"new_endpoints_created\": 3\n  },\n  \"documentation_updated\": [\n    \"ARCHITECTURE_SEPARATION_ANALYSIS.md\",\n    \"repos/metabob-opencode/docs/ARCHITECTURE.md\",\n    \"repos/metabob-rpc-api/docs/API.md\"\n  ]\n}\n```\n\n## Final Deliverable\nCreate a SEPARATION_VALIDATION_REPORT.md summarizing:\n1. All constraint enforcements completed\n2. Validation results for each phase\n3. Before/after metrics (lines of code, component responsibilities)\n4. API contract documentation\n5. Migration guide for developers\n6. Lessons learned and patterns discovered",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "SEPARATION_VALIDATION_REPORT.md"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [
+          "repos/metabob-opencode/packages/opencode/src/**/*thompson*",
+          "repos/metabob-opencode/packages/opencode/src/**/*beta*distribution*"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "commit-architecture-refactor",
+      "subagent": "general",
+      "description": "Commit all architecture changes with comprehensive documentation",
+      "dependencies": ["phase-4-validate-separation"],
+      "prompt": {
+        "template": "# Commit Architecture Refactoring\n\n## Your Task\nCreate organized commits for the architecture separation work:\n\n### Commit Strategy\n\n**Commit 1: Remove ML logic from metabob-opencode**\n```\nrefactor(opencode): Remove ML/learning logic, enforce separation\n\nRemoves all machine learning and learning logic from metabob-opencode:\n- Remove Thompson Sampling from template-selector.ts\n- Remove impulse learning from impulse-learning.ts (586 lines → <50 lines)\n- Simplify template-metrics-client.ts to thin HTTP client\n- Replace local logic with rpc-api endpoint calls\n\nArchitectural Change:\n  Before: opencode had 850+ lines of ML logic (Thompson Sampling, pattern extraction)\n  After: opencode is pure execution + coordination, delegates ML to rpc-api\n\nValidation:\n  - Zero matches for 'thompson', 'beta', 'learning' in opencode src/\n  - All ML operations now call rpc-api endpoints\n\nSee: ARCHITECTURE_SEPARATION_ANALYSIS.md Phase 1\n\nFiles changed:\n  - repos/metabob-opencode/packages/opencode/src/session/template-selector.ts\n  - repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts\n  - repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts\n```\n\n**Commit 2: Complete learning loop in metabob-rpc-api**\n```\nfeat(rpc-api): Complete impulse learning and pattern extraction\n\nImplements missing learning infrastructure in metabob-rpc-api:\n- Implement /v1/learning/impulse-mappings endpoint\n- Create pattern_extraction_service.py with logic from opencode\n- Implement /v1/learning/context-optimization endpoint\n- Add SurrealDB operations for learning data storage\n\nArchitectural Change:\n  Before: Learning endpoints defined but incomplete (stubs)\n  After: Full learning loop operational in rpc-api\n\nValidation:\n  - All learning endpoints respond to requests\n  - Pattern extraction tests pass\n  - Context optimization returns recommendations\n\nSee: ARCHITECTURE_SEPARATION_ANALYSIS.md Phase 2\n\nFiles changed:\n  - repos/metabob-rpc-api/server/routes/learning_loop.py\n  - repos/metabob-rpc-api/server/services/pattern_extraction_service.py (NEW)\n  - repos/metabob-rpc-api/server/db/operations/impulse_learning.py (NEW)\n```\n\n**Commit 3: Consolidate storage with SurrealDB primary**\n```\nrefactor(rpc-api): Make SurrealDB primary store, Redis as cache\n\nRefactors storage hierarchy to use SurrealDB as single source of truth:\n- Write path: SurrealDB first, then Redis cache\n- Read path: Redis cache hit → fallback to SurrealDB → populate cache\n- Add cache invalidation on writes\n- Create db/operations/template_metrics.py for SurrealDB CRUD\n\nArchitectural Change:\n  Before: Redis primary, SurrealDB for persistence (dual-write complexity)\n  After: SurrealDB primary, Redis as performance cache (single source of truth)\n\nValidation:\n  - Cache hit rate >95%\n  - SurrealDB queries work for all data\n  - Write order verified via logging\n\nSee: ARCHITECTURE_SEPARATION_ANALYSIS.md Phase 3\n\nFiles changed:\n  - repos/metabob-rpc-api/server/actions/activity.py\n  - repos/metabob-rpc-api/server/services/metrics_aggregator.py\n  - repos/metabob-rpc-api/server/db/operations/template_metrics.py (NEW)\n```\n\n**Commit 4: Add validation and documentation**\n```\ndocs: Add architecture separation validation and reports\n\nAdds comprehensive documentation of architecture refactoring:\n- ARCHITECTURE_SEPARATION_ANALYSIS.md (initial analysis)\n- SEPARATION_VALIDATION_REPORT.md (validation results)\n- Update component architecture docs\n- Add API contract documentation\n- Create developer migration guide\n\nValidation Results:\n  - 0 ML logic violations in opencode\n  - 0 training logic violations in cli  \n  - All learning logic in rpc-api\n  - 100% architecture separation score\n  - 850+ lines removed from opencode\n  - 3 new endpoints in rpc-api\n\nFiles changed:\n  - ARCHITECTURE_SEPARATION_ANALYSIS.md\n  - SEPARATION_VALIDATION_REPORT.md (NEW)\n  - repos/metabob-opencode/docs/ARCHITECTURE.md\n  - repos/metabob-rpc-api/docs/API.md\n```\n\n## Your Task\n1. Create these 4 commits with the above messages\n2. Ensure each commit is atomic and builds successfully\n3. Tag the final commit: `git tag -a architecture-separation-v1 -m \"Complete architecture separation refactoring\"`\n4. Create summary of all changes\n\n## Output Format\n```json\n{\n  \"commits_created\": 4,\n  \"tag_created\": \"architecture-separation-v1\",\n  \"total_files_changed\": 15,\n  \"total_lines_added\": 1200,\n  \"total_lines_removed\": 850,\n  \"components_refactored\": [\"metabob-opencode\", \"metabob-rpc-api\"],\n  \"validation_status\": \"PASS\",\n  \"ready_for_review\": true\n}\n```",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "contextRequirements": [],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [
+      "test -f ARCHITECTURE_SEPARATION_ANALYSIS.md || echo 'WARNING: Analysis document not found'"
+    ],
+    "postChecks": [
+      "test -f SEPARATION_VALIDATION_REPORT.md || echo 'ERROR: Validation report not created'",
+      "grep -r 'thompson\\|beta.*distribution' repos/metabob-opencode/packages/opencode/src --include='*.ts' && echo 'ERROR: ML logic still in opencode' || echo 'SUCCESS: Clean separation'"
+    ],
+    "qualityGates": [
+      {
+        "name": "trace-enforce-validate-loops",
+        "command": "echo 'Manual check: All trace-enforce-validate loops must complete successfully'",
+        "required": true
+      },
+      {
+        "name": "architecture-separation",
+        "command": "grep -r 'thompson\\|beta.*distribution' repos/metabob-opencode/packages/opencode/src --include='*.ts' && exit 1 || exit 0",
+        "required": true
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}
