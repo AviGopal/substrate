@@ -419,6 +419,12 @@ await MetabobCLI.reportExecutionStep({...})  // Write to backend
 **Probability**: ~5% (depends on backend uptime)  
 **Mitigation**: Implement offline queue with retry logic
 
+**Recent Mitigation** (2026-02-28, via metrics-tui-accuracy enforcement):
+- SessionState.get() now uses `Promise.allSettled` for error isolation
+- Impulse usage stats now shown in TUI even if other sources fail (Metabob API, MCP, Boredom)
+- Individual source failures log warnings but don't crash entire sidebar
+- **Impact**: Users retain visibility into impulse metrics during transient failures
+
 #### **Risk 5: Race Condition in State Capture (LOW)**
 **Issue**: Impulses created outside task execution may be missed  
 **Impact**: `impulsesCreated` array is incomplete  

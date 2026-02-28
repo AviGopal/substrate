@@ -642,11 +642,15 @@ The local path uses a different, correctly-named MCP tool and was implemented in
    - **Result**: Schema now aligned with backend expectation (activity_template_tools.py:257)
    - **Verified**: Backend successfully receives and processes metrics
 
-3. **⚠️ No Input Validation**
-   - **Issue**: Negative duration/cost accepted, corrupt averages
-   - **Impact**: Data quality degradation over time
-   - **Detection**: Manual inspection of metrics
-   - **Fix**: Add validation at MCP boundary
+3. ~~**⚠️ No Input Validation**~~ ✅ **PARTIALLY FIXED**
+   - ~~**Issue**: Negative duration/cost accepted, NaN/Infinity propagates, corrupt averages~~
+   - **Fix Applied** (2026-02-28, via metrics-tui-accuracy enforcement):
+     - Added `Number.isFinite()` validation in stats aggregation (stats.ts:201-229)
+     - Cost and token values validated before aggregation
+     - Invalid values (NaN, Infinity, negative) logged and skipped
+   - **Impact**: Stats command now immune to corrupt data
+   - **Remaining**: Backend metrics collection should add same validation pattern
+   - **Verified**: Code inspection confirms validation logic present
 
 4. **⚠️ Silent Failures**
    - **Issue**: `.catch(() => {})` swallows all errors with no logging
@@ -689,10 +693,23 @@ The local path uses a different, correctly-named MCP tool and was implemented in
    - **Fix**: Add version field, implement migrations
 
 10. **⚠️ No Monitoring**
-    - **Issue**: No metrics on MCP failure rate
-    - **Impact**: Poor operational visibility
-    - **Detection**: Manual investigation
-    - **Fix**: Add Prometheus metrics, alerting
+     - **Issue**: No metrics on MCP failure rate
+     - **Impact**: Poor operational visibility
+     - **Detection**: Manual investigation
+     - **Fix**: Add Prometheus metrics, alerting
+
+#### Security Enhancements
+
+11. ~~**⚠️ Path Traversal Vulnerability**~~ ✅ **FIXED**
+     - ~~**Issue**: Storage.read/list/remove methods had no path validation~~
+     - **Fix Applied** (2026-02-28, via metrics-tui-accuracy enforcement):
+       - Added key segment validation to Storage.read() (storage.ts:168-191)
+       - Added prefix validation to Storage.list() (storage.ts:248-271)
+       - Added key segment validation to Storage.remove() (storage.ts:160-183)
+       - Path normalization checks prevent traversal attempts
+     - **Impact**: Activity metrics listing now protected from path traversal attacks
+     - **Scope**: All Storage operations system-wide (affects all specs)
+     - **Verified**: Code inspection confirms validation logic present
 
 ### Suggested Improvements
 

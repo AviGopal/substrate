@@ -446,9 +446,9 @@ app.get('/session/:id/state/subscribe',
 **Generic Pattern**:
 ```
 1. Define comprehensive state schema (Zod)
-2. Fetch components in parallel (Promise.all)
-3. Individual error handling (catch → default)
-4. Aggregate into single response
+2. Fetch components in parallel (Promise.allSettled) ✅ IMPROVED
+3. Individual error handling with graceful degradation
+4. Aggregate into single response with defaults
 5. Single HTTP endpoint for entire state
 ```
 
@@ -462,6 +462,13 @@ app.get('/session/:id/state/subscribe',
 - Feature-specific logic (which sources to aggregate)
 - Could standardize error handling pattern
 - Reusable principle, not implementation
+
+**Recent Improvement** (2026-02-28, via metrics-tui-accuracy enforcement):
+- SessionState.get() now uses `Promise.allSettled` instead of `Promise.all`
+- Individual source failures no longer crash the entire state aggregation
+- Context window calculations remain available even if other sources (Metabob API, MCP, Boredom) fail
+- Each failed source provides typed defaults and logs warnings for debugging
+- **Impact**: Context window utilization display now resilient to transient failures
 
 ---
 
