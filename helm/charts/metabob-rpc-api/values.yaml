@@ -6,6 +6,7 @@ config: "universal-config"
 
 image:
   imageRegistry: metabobapp
+  pullPolicy: IfNotPresent
   rpc_api:
     repo: metabob-rpc-api
     tag: 0.12.5
