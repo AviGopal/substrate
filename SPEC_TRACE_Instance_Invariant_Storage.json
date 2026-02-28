@@ -1,0 +1,167 @@
+{
+  "specificationName": "Instance Invariant Storage for Impulses and Activities",
+  "summary": "Storage for impulses and activities must be invariant across different OpenCode and Metabob-CLI instances when using the same metabob_api_key and project_id pair",
+  "vesselFlow": "metabob-opencode → metabob-cli (MCP) → metabob-rpc-api (REST) → SurrealDB",
+  "traceDate": "2026-02-28T08:44:38.266Z",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/storage/storage.ts",
+      "component": "Storage namespace",
+      "role": "Local storage layer (cache)",
+      "currentBehavior": "Stores data in local filesystem at ~/.local/share/opencode/storage/ using key-based paths. Keys are validated for security but do NOT include api_key or project_id in path structure. Uses Instance.directory as storage root context.",
+      "desiredBehavior": "Should be cache layer only. Local storage keys must include project_id to prevent cross-project contamination. Backend sync is required for instance invariance.",
+      "gap": "CRITICAL: Storage keys use ['activity', activityId] without project_id scoping. This causes instance-local storage that is not shared across instances. Need project_id in key path.",
+      "evidence": "Line 662: await Storage.write(['activity', activity.id], cleanedActivity) - no project_id in key"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.save()",
+      "role": "Activity persistence entry point",
+      "currentBehavior": "Saves activity to local storage via Storage.write(['activity', id], data). Attempts backend sync via MCP metabob_activity_save if available (lines 664-700). Uses Instance.project.id for backend sync but NOT for local storage key.",
+      "desiredBehavior": "Must save to both local cache (with project_id scoped key) AND backend (via MCP). Backend sync should be mandatory, not optional.",
+      "gap": "PARTIAL: Backend sync is present but optional (only if MCP client available and tool exists). Local storage key lacks project_id scope. Backend sync failure is silent.",
+      "evidence": "Lines 662-700: Local write uses ['activity', id] without project_id. Backend sync only happens if metabobClient exists and hasActivitySave is true."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.get()",
+      "role": "Activity retrieval",
+      "currentBehavior": "Reads from local storage only: Storage.read<Info>(['activity', id]). No backend fallback if local cache miss.",
+      "desiredBehavior": "Should check local cache first, then fallback to backend (via MCP metabob_activity_get) if cache miss. This enables cross-instance access.",
+      "gap": "MISSING: No backend fallback. Instance A creates activity → Instance B cannot retrieve it because it only checks local storage.",
+      "evidence": "Line 486: activity = await Storage.read<Info>(['activity', id]) - no MCP backend call on cache miss"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/project/instance.ts",
+      "component": "Instance context",
+      "role": "Project identification",
+      "currentBehavior": "Provides Instance.project.id (git root commit hash) as project identifier. Used in backend sync calls but not in local storage keys.",
+      "desiredBehavior": "project_id should be used consistently in both local storage keys and backend API calls. This ensures data scoping.",
+      "gap": "PARTIAL: Instance.project.id is used for backend sync but not for local storage key scoping. Creates inconsistency between local and backend storage.",
+      "evidence": "activity.ts line 674: const projectId = Instance.project.id (used for MCP call but not local storage key)"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "component": "ImpulseLearning.persistMappingRecord()",
+      "role": "Impulse learning data persistence",
+      "currentBehavior": "Saves to local storage: Storage.write(['learning', 'impulse-mappings', recordId], record). No project_id scoping, no backend sync.",
+      "desiredBehavior": "Should save with project_id scope and sync to backend for cross-instance learning.",
+      "gap": "MISSING: No project_id in storage key, no backend sync. Learning data is instance-local only.",
+      "evidence": "Lines 454-457: await Storage.write(['learning', 'impulse-mappings', record.metadata.recordId], record)"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts",
+      "component": "TemplateRepository",
+      "role": "Activity template storage",
+      "currentBehavior": "Uses TemplateLoader for multi-backend support (local + metabob). Delegates to TemplateLoader.save() which handles backend sync. Template storage already implements instance-invariant pattern correctly.",
+      "desiredBehavior": "Continue using current pattern - this is the reference implementation for instance-invariant storage.",
+      "gap": "NONE: Already implements correct pattern with backend sync via MCP and local caching.",
+      "evidence": "Lines 160-175: TemplateRepository.save() delegates to TemplateLoader which handles both local and metabob backends"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_tools.py",
+      "component": "MCP activity tools",
+      "role": "CLI MCP layer for activity operations",
+      "currentBehavior": "Provides tools like extract_execution_components, report_execution_outcome. Uses METABOB_API_KEY from environment (line 244) but no explicit project_id parameter in tool signatures.",
+      "desiredBehavior": "Should require project_id parameter in all activity/impulse storage tools to enforce multi-tenant isolation.",
+      "gap": "MISSING: No project_id parameter in existing activity tools. Backend API calls may not include project_id for proper scoping.",
+      "evidence": "Line 244: api_key = os.getenv('METABOB_API_KEY') - no project_id handling visible"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/project/project.ts",
+      "component": "Project.fromDirectory()",
+      "role": "Project ID generation",
+      "currentBehavior": "Generates project.id from git root commit hash (lines 50-62). Stores project info at Storage.write(['project', id], project). This ID is stable across instances for same git repo.",
+      "desiredBehavior": "Continue using git root hash as project_id - this is stable and instance-invariant. Use this ID in all storage keys.",
+      "gap": "NONE: Project ID generation is correct. Gap is in consuming components not using this ID in storage keys.",
+      "evidence": "Lines 50-62: id = git rev-list --max-parents=0 --all (stable git root hash)"
+    }
+  ],
+  "dataFlow": {
+    "current": {
+      "write": "Activity.save() → Storage.write(['activity', id]) → local filesystem → optional MCP sync (if available)",
+      "read": "Activity.get() → Storage.read(['activity', id]) → local filesystem only (no backend fallback)"
+    },
+    "desired": {
+      "write": "Activity.save() → Storage.write(['activity', projectId, id]) → local cache + MCP metabob_activity_save(project_id, activity_id, data) → metabob-cli → rpc-api → SurrealDB",
+      "read": "Activity.get() → Storage.read(['activity', projectId, id]) → if cache hit: return → else: MCP metabob_activity_get(project_id, activity_id) → populate cache → return"
+    }
+  },
+  "architecturalIssues": [
+    {
+      "issue": "Local storage keys lack project_id scope",
+      "impact": "Activities/impulses from different projects can collide if they have same ID. Cross-instance access fails.",
+      "files": ["storage/storage.ts", "session/activity.ts", "session/impulse-learning.ts"],
+      "solution": "Change storage key structure from ['activity', id] to ['activity', projectId, id]"
+    },
+    {
+      "issue": "No backend fallback on cache miss",
+      "impact": "Instance B cannot retrieve data created by Instance A, even with same credentials",
+      "files": ["session/activity.ts"],
+      "solution": "Implement read-through cache: check local cache → if miss → fetch from backend via MCP → populate cache → return"
+    },
+    {
+      "issue": "Backend sync is optional and silent-fail",
+      "impact": "Activities may not be persisted to backend, breaking cross-instance invariance",
+      "files": ["session/activity.ts"],
+      "solution": "Make backend sync mandatory. If MCP client unavailable, throw error or queue for later sync. Add sync verification."
+    },
+    {
+      "issue": "MCP tools lack project_id parameter",
+      "impact": "Backend cannot enforce multi-tenant isolation without explicit project_id",
+      "files": ["metabob-cli/src/metabob_cli/mcp/activity_tools.py"],
+      "solution": "Add project_id parameter to all metabob_activity_* and metabob_impulse_* MCP tools"
+    }
+  ],
+  "requiredChanges": [
+    {
+      "priority": "CRITICAL",
+      "change": "Add project_id to all storage keys",
+      "files": ["storage/storage.ts", "session/activity.ts", "session/impulse-learning.ts"],
+      "implementation": "Modify Storage.write/read calls to include projectId: Storage.write(['activity', Instance.project.id, id], data)"
+    },
+    {
+      "priority": "CRITICAL",
+      "change": "Implement read-through cache for activities",
+      "files": ["session/activity.ts"],
+      "implementation": "In Activity.get(): try local cache → on NotFoundError → call MCP metabob_activity_get → cache result → return"
+    },
+    {
+      "priority": "HIGH",
+      "change": "Make backend sync mandatory for activity save",
+      "files": ["session/activity.ts"],
+      "implementation": "Throw error if MCP client unavailable. Add sync verification. Consider write-through cache pattern."
+    },
+    {
+      "priority": "HIGH",
+      "change": "Add project_id parameter to CLI MCP tools",
+      "files": ["metabob-cli/src/metabob_cli/mcp/activity_tools.py"],
+      "implementation": "Add project_id: str parameter to all activity/impulse MCP tools. Pass to backend API calls."
+    },
+    {
+      "priority": "MEDIUM",
+      "change": "Sync impulse learning data to backend",
+      "files": ["session/impulse-learning.ts"],
+      "implementation": "Add MCP call in persistMappingRecord() to sync learning data with project_id scope"
+    }
+  ],
+  "testStrategy": {
+    "validationHarness": "tests/validation-harnesses/instance-invariant-storage-harness-v2.ts",
+    "testCases": [
+      "Cross-instance impulse access: Instance A creates → Instance B retrieves",
+      "Cross-instance activity access: Instance A saves → Instance B loads",
+      "Multi-tenant isolation: Tenant A and B with same impulse ID see only their own data",
+      "Backend persistence: Data survives cache clear and instance restart",
+      "Vessel boundary: Verify no direct rpc-api imports in opencode"
+    ],
+    "validationResults": "validation-results-instance-invariant-storage.json"
+  },
+  "references": {
+    "specifications": [
+      "ENFORCEMENT_Instance_Invariant_Storage.json",
+      "CONFLICT_ANALYSIS_Instance_Invariant_Storage.json"
+    ],
+    "existingValidation": "tests/validation-harnesses/instance-invariant-storage-harness-v2.ts",
+    "referenceImplementation": "activity-template-repository.ts (TemplateRepository.save/get pattern)"
+  }
+}
