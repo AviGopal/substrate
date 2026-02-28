@@ -1,0 +1,24 @@
+{
+  "id": "validation-surrealdb-primary-redis-cache-case-5",
+  "type": "memo",
+  "testCase": "Execution Recording Write Order",
+  "description": "Verify execution recording writes to SurrealDB BEFORE Redis cache invalidation",
+  "input": {
+    "execution": {
+      "execution_id": "exec-test-123",
+      "variant_id": "test-template-abc123",
+      "success": true,
+      "duration_ms": 45000,
+      "cost_usd": 0.022
+    }
+  },
+  "expectedOutput": {
+    "orderCorrect": true,
+    "surrealWriteFirst": true,
+    "redisInvalidateSecond": true,
+    "description": "SurrealDB execution write must happen BEFORE Redis cache invalidation"
+  },
+  "specification": "surrealdb-primary-redis-cache",
+  "phase": "Phase 2 - Execution Recording",
+  "created_at": "2026-02-28T03:15:00Z"
+}

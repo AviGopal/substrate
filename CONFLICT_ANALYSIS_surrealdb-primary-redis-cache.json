@@ -1,0 +1,485 @@
+{
+  "specificationName": "surrealdb-primary-redis-cache",
+  "analysisTimestamp": "2026-02-28T03:30:00Z",
+  "overallStatus": "CONFLICTS_DETECTED",
+  "validationStatus": "FAIL",
+  "enforcementStatus": "PARTIALLY_COMPLETED",
+  "conflictSummary": {
+    "totalConflicts": 3,
+    "criticalConflicts": 1,
+    "highPriorityConflicts": 2,
+    "mediumPriorityConflicts": 0,
+    "lowPriorityConflicts": 0
+  },
+  "conflicts": [
+    {
+      "conflictId": "CONFLICT-001",
+      "title": "Execution Recording Write Order Violation",
+      "severity": "CRITICAL",
+      "type": "SPECIFICATION_VIOLATION",
+      "phase": "Phase 2 - Execution Recording",
+      "description": "The record_execution_result() function writes to Redis BEFORE SurrealDB, violating the specification's requirement that SurrealDB must be written first as the source of truth.",
+      "specification": {
+        "requirement": "SurrealDB write must happen BEFORE Redis cache update/invalidation",
+        "rationale": "Prevents cache-ahead-of-source-of-truth inconsistency during failures",
+        "source": "surrealdb-primary-redis-cache specification, Phase 2"
+      },
+      "currentImplementation": {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "lines": "360-571",
+        "component": "record_execution_result",
+        "behavior": "1. Redis watch() + atomic update (lines 445-470)\n2. SurrealDB write (lines 490-509)\n3. Compensating rollback on SurrealDB failure (lines 525-534)"
+      },
+      "validationEvidence": {
+        "testCase": "validation-surrealdb-primary-redis-cache-case-5",
+        "testName": "Execution Recording Write Order",
+        "status": "FAIL",
+        "actual": {
+          "orderCorrect": false,
+          "surrealWriteTime": 0,
+          "redisInvalidateTime": 0,
+          "reason": "Both timestamps are 0, indicating operations may not have executed in expected order"
+        },
+        "diagnostics": "Execution recording write order is incorrect or not implemented. Expected: SurrealDB write → Redis invalidation. Current: Unknown - timestamps are 0"
+      },
+      "impact": {
+        "dataIntegrity": "HIGH - Cache may contain data not yet in source of truth during failures",
+        "consistency": "HIGH - Race conditions possible between Redis update and SurrealDB write",
+        "durability": "HIGH - If SurrealDB write fails but Redis succeeds, cache contains phantom data",
+        "performance": "NONE - No performance impact from fix"
+      },
+      "requiredFix": {
+        "action": "Reverse write order in record_execution_result()",
+        "implementation": "1. Write to SurrealDB first (insert_execution + update_metrics)\n2. On success, update/invalidate Redis cache\n3. On SurrealDB failure, return error WITHOUT touching cache\n4. Remove compensating transaction logic",
+        "estimatedEffort": "2 hours",
+        "priority": "CRITICAL"
+      },
+      "blockers": [
+        {
+          "blocker": "Import resolution issue",
+          "description": "Cannot import surrealdb operations from db/operations/__init__.py",
+          "status": "BLOCKING",
+          "workaround": "Use direct imports: from server.db.operations.activity_execution import insert_execution"
+        }
+      ],
+      "status": "BLOCKED"
+    },
+    {
+      "conflictId": "CONFLICT-002",
+      "title": "Missing Cache-Aside Pattern in Template Reads",
+      "severity": "HIGH",
+      "type": "MISSING_IMPLEMENTATION",
+      "phase": "Phase 1 - Template Storage",
+      "description": "Template read operations (list_templates, get_template_by_id) only read from Redis cache. No fallback to SurrealDB on cache miss, violating cache-aside pattern.",
+      "specification": {
+        "requirement": "Read path: Redis (hit) OR SurrealDB (miss) → populate Redis",
+        "rationale": "Ensures templates are accessible even after cache eviction or Redis restart",
+        "source": "surrealdb-primary-redis-cache specification, Phase 1"
+      },
+      "currentImplementation": {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "affectedFunctions": [
+          {
+            "function": "list_templates",
+            "lines": "69-135",
+            "behavior": "Only reads from redis.smembers('activity:templates:list'). Returns empty list on cache miss."
+          },
+          {
+            "function": "get_template_by_id",
+            "lines": "138-156",
+            "behavior": "Only reads from redis.get(f'activity:template:{template_id}'). Returns None on cache miss."
+          }
+        ]
+      },
+      "validationEvidence": {
+        "implicitEvidence": "Test case-4 (Data Durability) passes, but test case-2 (Template Read - Cold Cache) expects SurrealDB fallback which is not currently implemented for reads after cache flush",
+        "validationGap": "Current harness may not fully test read-after-eviction scenario"
+      },
+      "impact": {
+        "dataIntegrity": "HIGH - Templates appear to not exist after cache eviction",
+        "availability": "HIGH - System unusable after Redis restart until templates recreated",
+        "durability": "HIGH - Data loss from user perspective (templates exist in SurrealDB but not accessible)",
+        "performance": "NONE - Cache-aside adds minimal overhead on miss"
+      },
+      "requiredFix": {
+        "action": "Implement cache-aside pattern in template read operations",
+        "implementation": {
+          "list_templates": "1. Check Redis cache (smembers)\n2. If empty, query SurrealDB (list_all_templates)\n3. Populate Redis cache with results\n4. Return results",
+          "get_template_by_id": "1. Check Redis cache (get)\n2. If miss, query SurrealDB (get_template_by_variant_id)\n3. Populate Redis cache with result\n4. Return result"
+        },
+        "estimatedEffort": "2-3 hours",
+        "priority": "HIGH"
+      },
+      "blockers": [
+        {
+          "blocker": "Import resolution issue",
+          "description": "Cannot import template_data operations from db/operations/__init__.py",
+          "status": "BLOCKING",
+          "workaround": "Use direct imports: from server.db.operations.template_data import get_template_by_variant_id, list_all_templates"
+        }
+      ],
+      "status": "BLOCKED"
+    },
+    {
+      "conflictId": "CONFLICT-003",
+      "title": "Missing SurrealDB Write in Template Creation",
+      "severity": "HIGH",
+      "type": "MISSING_IMPLEMENTATION",
+      "phase": "Phase 1 - Template Storage",
+      "description": "create_template() only writes to Redis. No SurrealDB write, causing data loss after Redis flush.",
+      "specification": {
+        "requirement": "Write path: SurrealDB FIRST → then Redis cache with TTL",
+        "rationale": "SurrealDB is the source of truth. Redis is ephemeral cache.",
+        "source": "surrealdb-primary-redis-cache specification, Phase 1"
+      },
+      "currentImplementation": {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "lines": "159-275",
+        "component": "create_template",
+        "behavior": "1. Build template dict (lines 229-247)\n2. Write to Redis only (lines 250-253)\n3. No SurrealDB write"
+      },
+      "validationEvidence": {
+        "implicitEvidence": "Test case-1 (Template Creation Write Order) expects SurrealDB write before Redis write. Test may pass if checking logs, but actual SurrealDB write is missing.",
+        "criticalGap": "Template data does not persist across Redis restarts"
+      },
+      "impact": {
+        "dataIntegrity": "CRITICAL - All templates lost on Redis flush/restart",
+        "durability": "CRITICAL - No persistent storage for templates",
+        "availability": "HIGH - System must recreate all templates after Redis restart",
+        "businessImpact": "CRITICAL - User-created templates permanently lost"
+      },
+      "requiredFix": {
+        "action": "Add SurrealDB write BEFORE Redis cache write in create_template()",
+        "implementation": "1. After building template dict (line 247)\n2. Write to SurrealDB: create_template_record(template)\n3. On SurrealDB failure, raise error (don't cache)\n4. On success, write to Redis cache with TTL\n5. On Redis failure, log warning but continue (non-fatal)",
+        "estimatedEffort": "1-2 hours",
+        "priority": "CRITICAL"
+      },
+      "blockers": [
+        {
+          "blocker": "Import resolution issue",
+          "description": "Cannot import create_template_record from db/operations/__init__.py",
+          "status": "BLOCKING",
+          "workaround": "Use direct import: from server.db.operations.template_data import create_template_record"
+        }
+      ],
+      "status": "BLOCKED"
+    }
+  ],
+  "preExistingBlockers": [
+    {
+      "blockerId": "BLOCKER-001",
+      "title": "Import Resolution Failure in db/operations/__init__.py",
+      "severity": "CRITICAL",
+      "description": "Python module cannot resolve imports for impulse_learning and template_data despite files existing on disk",
+      "impact": "Blocks ALL enforcement work requiring imports from db/operations",
+      "affectedFiles": [
+        "repos/metabob-rpc-api/server/db/operations/__init__.py",
+        "repos/metabob-rpc-api/server/db/operations/template_data.py",
+        "repos/metabob-rpc-api/server/db/operations/impulse_learning.py"
+      ],
+      "evidence": "File exists at repos/metabob-rpc-api/server/db/operations/template_data.py but import fails with 'could not be resolved'",
+      "possibleCauses": [
+        "Python path configuration issue",
+        "Stale __pycache__ files",
+        "Missing __init__.py content",
+        "IDE type checker vs runtime mismatch"
+      ],
+      "workaround": {
+        "solution": "Use direct imports instead of module exports",
+        "example": "from server.db.operations.template_data import create_template_record",
+        "limitation": "Bypasses centralized export management, increases coupling"
+      },
+      "resolutionTasks": [
+        "Check Python path configuration",
+        "Clear __pycache__ directories",
+        "Verify __init__.py syntax",
+        "Test runtime imports vs type checker",
+        "Consider restructuring module exports"
+      ],
+      "estimatedEffort": "1-2 hours",
+      "priority": "CRITICAL",
+      "status": "UNRESOLVED"
+    },
+    {
+      "blockerId": "BLOCKER-002",
+      "title": "Redis Type Errors Throughout activity.py",
+      "severity": "MEDIUM",
+      "description": "48 type errors related to Redis client expecting Awaitable types vs synchronous return types",
+      "impact": "Type checking fails but runtime may work. Hinders development confidence.",
+      "affectedFiles": [
+        "repos/metabob-rpc-api/server/actions/activity.py"
+      ],
+      "evidence": "'Awaitable[Set[Unknown]]' is not iterable, 'ResponseT' cannot be assigned to 'str | bytes'",
+      "possibleCauses": [
+        "Redis client type stubs incorrect",
+        "Async/sync API mismatch",
+        "Type annotations need updating"
+      ],
+      "workaround": {
+        "solution": "Add # type: ignore comments or update Redis client annotations",
+        "limitation": "Reduces type safety, potential for runtime errors"
+      },
+      "resolutionTasks": [
+        "Audit Redis client library version and type stubs",
+        "Determine if async or sync Redis API is intended",
+        "Update type annotations to match actual Redis API",
+        "Consider using redis.asyncio if async patterns intended"
+      ],
+      "estimatedEffort": "2-3 hours",
+      "priority": "MEDIUM",
+      "status": "PRE_EXISTING"
+    }
+  ],
+  "architecturalCompliance": {
+    "cacheAsidePattern": {
+      "status": "PARTIALLY_IMPLEMENTED",
+      "compliantAreas": [],
+      "nonCompliantAreas": [
+        "list_templates - no SurrealDB fallback",
+        "get_template_by_id - no SurrealDB fallback",
+        "select_variant_thompson_sampling - no SurrealDB fallback"
+      ]
+    },
+    "writeOrdering": {
+      "status": "VIOLATED",
+      "compliantAreas": [],
+      "violatedAreas": [
+        "create_template - no SurrealDB write",
+        "record_execution_result - Redis write before SurrealDB"
+      ]
+    },
+    "sourceOfTruth": {
+      "status": "NOT_ENFORCED",
+      "specification": "SurrealDB is source of truth for all template and execution data",
+      "reality": "Redis is de-facto source of truth due to missing SurrealDB writes and fallbacks"
+    },
+    "errorHandling": {
+      "status": "INCORRECT",
+      "specification": "SurrealDB errors are fatal, Redis errors are non-fatal",
+      "reality": "Redis errors block operations, SurrealDB errors trigger rollbacks"
+    }
+  },
+  "rippleEffects": [
+    {
+      "area": "Template Durability",
+      "currentBehavior": "Templates lost on Redis restart",
+      "specificationRequirement": "Templates persist indefinitely in SurrealDB",
+      "impact": "User data loss, system requires manual template recreation",
+      "dependentSystems": [
+        "Activity execution (requires templates)",
+        "Thompson sampling (requires template metrics)",
+        "Template listing/search"
+      ]
+    },
+    {
+      "area": "Execution Recording",
+      "currentBehavior": "Cache-first with compensating transactions",
+      "specificationRequirement": "Source-of-truth-first with cache update",
+      "impact": "Inconsistent state possible during failures, complex error handling",
+      "dependentSystems": [
+        "Metrics aggregation",
+        "Thompson sampling (reads metrics)",
+        "Execution history/audit"
+      ]
+    },
+    {
+      "area": "Thompson Sampling",
+      "currentBehavior": "Reads metrics from Redis only",
+      "specificationRequirement": "Cache-aside pattern with SurrealDB fallback",
+      "impact": "Thompson sampling uses stale metrics after cache eviction",
+      "dependentSystems": [
+        "Template variant selection",
+        "A/B testing framework",
+        "Learning loop"
+      ]
+    }
+  ],
+  "validationGaps": [
+    {
+      "gapId": "GAP-001",
+      "description": "Test case-5 (Execution Recording Write Order) reports timestamps as 0",
+      "implication": "Cannot verify actual write ordering due to measurement issue",
+      "recommendation": "Add instrumentation to record_execution_result() to capture accurate timestamps",
+      "priority": "HIGH"
+    },
+    {
+      "gapId": "GAP-002",
+      "description": "Test case-2 (Template Read - Cold Cache) may not fully test SurrealDB fallback",
+      "implication": "May report PASS even if cache-aside not implemented",
+      "recommendation": "Enhance harness to explicitly verify SurrealDB query on cache miss",
+      "priority": "MEDIUM"
+    },
+    {
+      "gapId": "GAP-003",
+      "description": "No validation for Thompson sampling metrics cache-aside pattern",
+      "implication": "Phase 3 implementation not validated",
+      "recommendation": "Add test case-7 for Thompson sampling with cold cache",
+      "priority": "LOW"
+    }
+  ],
+  "resolutionPlan": {
+    "phase1": {
+      "title": "Unblock Enforcement Work",
+      "priority": "CRITICAL",
+      "estimatedEffort": "1-2 hours",
+      "tasks": [
+        {
+          "taskId": "UNBLOCK-001",
+          "description": "Resolve import resolution issue in db/operations/__init__.py",
+          "approach": "Test direct imports vs module exports, clear __pycache__, verify runtime behavior",
+          "acceptanceCriteria": "Can import template_data operations in activity.py without errors"
+        }
+      ]
+    },
+    "phase2": {
+      "title": "Fix Critical Data Loss Issues",
+      "priority": "CRITICAL",
+      "estimatedEffort": "3-4 hours",
+      "dependsOn": ["phase1"],
+      "tasks": [
+        {
+          "taskId": "FIX-003",
+          "description": "Add SurrealDB write to create_template()",
+          "approach": "Import create_template_record, add write before Redis cache, handle errors",
+          "acceptanceCriteria": "Templates persist across Redis restarts",
+          "validationTest": "validation-surrealdb-primary-redis-cache-case-1"
+        },
+        {
+          "taskId": "FIX-002",
+          "description": "Implement cache-aside in template reads",
+          "approach": "Add SurrealDB fallback to list_templates and get_template_by_id",
+          "acceptanceCriteria": "Templates readable after cache eviction",
+          "validationTest": "validation-surrealdb-primary-redis-cache-case-2, case-4"
+        }
+      ]
+    },
+    "phase3": {
+      "title": "Fix Write Ordering Violation",
+      "priority": "HIGH",
+      "estimatedEffort": "2 hours",
+      "dependsOn": ["phase1"],
+      "tasks": [
+        {
+          "taskId": "FIX-001",
+          "description": "Reverse write order in record_execution_result()",
+          "approach": "Move SurrealDB write before Redis update, remove compensating transactions",
+          "acceptanceCriteria": "SurrealDB written before Redis, no rollback logic needed",
+          "validationTest": "validation-surrealdb-primary-redis-cache-case-5"
+        }
+      ]
+    },
+    "phase4": {
+      "title": "Complete Phase 3 Specification (Thompson Sampling)",
+      "priority": "MEDIUM",
+      "estimatedEffort": "1-2 hours",
+      "dependsOn": ["phase1"],
+      "tasks": [
+        {
+          "taskId": "FIX-004",
+          "description": "Add cache-aside to select_variant_thompson_sampling()",
+          "approach": "Check Redis, fallback to SurrealDB, populate cache",
+          "acceptanceCriteria": "Thompson sampling works with cold cache",
+          "validationTest": "NEW test case needed"
+        }
+      ]
+    },
+    "phase5": {
+      "title": "Optimize and Clean Up",
+      "priority": "LOW",
+      "estimatedEffort": "4-5 hours",
+      "dependsOn": ["phase2", "phase3"],
+      "tasks": [
+        {
+          "taskId": "OPT-001",
+          "description": "Add cache updates to template_metrics operations",
+          "approach": "Update Redis cache after SurrealDB writes in update_metrics_after_execution",
+          "acceptanceCriteria": "Metrics cache stays hot for performance"
+        },
+        {
+          "taskId": "OPT-002",
+          "description": "Audit and deprecate MetricsAggregator service",
+          "approach": "Find all callers, migrate to SurrealDB operations, add deprecation warnings",
+          "acceptanceCriteria": "No duplicate code paths, single source of truth"
+        }
+      ]
+    }
+  },
+  "estimatedTotalEffort": {
+    "unblocking": "1-2 hours",
+    "criticalFixes": "5-6 hours",
+    "highPriorityFixes": "2 hours",
+    "mediumPriorityWork": "1-2 hours",
+    "lowPriorityOptimizations": "4-5 hours",
+    "total": "13-17 hours",
+    "criticalPathOnly": "8-10 hours"
+  },
+  "recommendations": [
+    {
+      "priority": "CRITICAL",
+      "recommendation": "Immediately unblock import resolution issue to enable all enforcement work",
+      "rationale": "All fixes are blocked by import issues. Resolving this unblocks 5-6 hours of critical work."
+    },
+    {
+      "priority": "CRITICAL",
+      "recommendation": "Implement SurrealDB write in create_template() as highest priority fix after unblocking",
+      "rationale": "Current system loses ALL templates on Redis restart. This is a data loss bug affecting users."
+    },
+    {
+      "priority": "HIGH",
+      "recommendation": "Implement cache-aside in template reads before fixing execution ordering",
+      "rationale": "Data durability requires both writes AND reads to work. Partial implementation is still broken."
+    },
+    {
+      "priority": "HIGH",
+      "recommendation": "Enhance validation harness to capture accurate write ordering timestamps",
+      "rationale": "Cannot verify fixes without proper instrumentation. Test case-5 currently unreliable."
+    },
+    {
+      "priority": "MEDIUM",
+      "recommendation": "Consider workaround using direct imports if __init__.py resolution takes too long",
+      "rationale": "Can proceed with enforcement using direct imports while investigating root cause."
+    }
+  ],
+  "nextImmediateActions": [
+    {
+      "action": "Investigate and resolve import resolution issue",
+      "commands": [
+        "cd repos/metabob-rpc-api && python3 -c 'from server.db.operations.template_data import create_template_record; print(\"SUCCESS\")'",
+        "cd repos/metabob-rpc-api && find . -type d -name __pycache__ -exec rm -rf {} +",
+        "cd repos/metabob-rpc-api && python3 -m py_compile server/db/operations/__init__.py"
+      ],
+      "estimatedTime": "30 minutes"
+    },
+    {
+      "action": "If import resolution fails, proceed with direct imports workaround",
+      "commands": [
+        "Update activity.py to use: from server.db.operations.template_data import create_template_record, get_template_by_variant_id, list_all_templates",
+        "Update activity.py to use: from server.db.operations.activity_execution import insert_execution",
+        "Update activity.py to use: from server.db.operations.template_metrics import update_metrics_after_execution"
+      ],
+      "estimatedTime": "15 minutes"
+    },
+    {
+      "action": "Implement SurrealDB write in create_template()",
+      "file": "repos/metabob-rpc-api/server/actions/activity.py:159-275",
+      "implementation": "Add create_template_record() call after line 247, before redis.set() at line 250",
+      "estimatedTime": "1 hour"
+    },
+    {
+      "action": "Run validation harness to verify fix",
+      "commands": [
+        "npm run test tests/validation-harnesses/surrealdb-primary-redis-cache-harness.ts",
+        "Verify test case-1 still passes",
+        "Verify test case-4 still passes"
+      ],
+      "estimatedTime": "15 minutes"
+    }
+  ],
+  "metadata": {
+    "analysisVersion": "1.0",
+    "analysisDate": "2026-02-28T03:30:00Z",
+    "validationResultsSource": "impulses/validation-results-surrealdb-primary-redis-cache.json",
+    "enforcementStatusSource": "impulses/enforcement-surrealdb-primary-redis-cache.json",
+    "specificationSource": "surrealdb-primary-redis-cache specification (inferred from validation and enforcement files)"
+  }
+}

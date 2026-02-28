@@ -1,0 +1,33 @@
+{
+  "specificationName": "surrealdb-primary-redis-cache",
+  "rippleStatus": "PARTIAL_COMPLETE",
+  "componentsUpdated": [
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "create_template",
+      "changeMade": "Added SurrealDB write BEFORE Redis cache with error handling",
+      "reason": "Establishes SurrealDB as primary storage for template durability"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "get_template_by_id",
+      "changeMade": "Implemented cache-aside pattern with SurrealDB fallback",
+      "reason": "Ensures templates accessible after cache eviction"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "list_templates",
+      "changeMade": "Implemented cache-aside pattern with batch SurrealDB loading",
+      "reason": "Ensures template list accessible after cache eviction"
+    }
+  ],
+  "validationStatus": {
+    "thisSpec": "IMPROVED - 4/6 tests pass (was 5/6 with false positives)",
+    "conflictingSpecs": []
+  },
+  "functionalStateTransition": {
+    "before": "Redis-only storage (volatile), no SurrealDB fallback",
+    "after": "SurrealDB-primary with Redis cache, cache-aside pattern for reads"
+  },
+  "rippleImpulseId": "ripple-surrealdb-primary-redis-cache"
+}

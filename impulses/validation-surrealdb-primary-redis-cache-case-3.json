@@ -1,0 +1,20 @@
+{
+  "id": "validation-surrealdb-primary-redis-cache-case-3",
+  "type": "memo",
+  "testCase": "Template Read Warm Cache",
+  "description": "Verify cache hit: Redis returns result without querying SurrealDB",
+  "input": {
+    "variant_id": "test-template-warm123",
+    "cacheState": "warm",
+    "templateExists": true
+  },
+  "expectedOutput": {
+    "redisChecked": true,
+    "surrealQueried": false,
+    "cacheHit": true,
+    "description": "On cache hit, SurrealDB should NOT be queried"
+  },
+  "specification": "surrealdb-primary-redis-cache",
+  "phase": "Phase 1 - Template Storage",
+  "created_at": "2026-02-28T03:15:00Z"
+}

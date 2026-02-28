@@ -1,0 +1,20 @@
+{
+  "id": "validation-surrealdb-primary-redis-cache-case-4",
+  "type": "memo",
+  "testCase": "Data Durability (Redis Flush)",
+  "description": "Verify templates survive Redis flush by reading from SurrealDB",
+  "input": {
+    "variant_id": "test-template-durable456",
+    "action": "create_then_flush_redis",
+    "expectedRecovery": true
+  },
+  "expectedOutput": {
+    "surrealFallbackUsed": true,
+    "dataRecovered": true,
+    "description": "Template must be recoverable from SurrealDB after Redis flush"
+  },
+  "specification": "surrealdb-primary-redis-cache",
+  "phase": "Phase 1 - Template Storage",
+  "severity": "CRITICAL",
+  "created_at": "2026-02-28T03:15:00Z"
+}
