@@ -224,6 +224,80 @@ DEFINE INDEX idx_execution_id_unique ON activity_content FIELDS execution_id UNI
 DEFINE INDEX idx_variant_id ON activity_content FIELDS variant_id;
 
 -- ============================================================================
+-- Table: impulse_mapping_record
+-- Purpose: Store turn-level impulse learning data
+-- ============================================================================
+
+DEFINE TABLE impulse_mapping_record SCHEMAFULL;
+
+DEFINE FIELD userIntent ON impulse_mapping_record TYPE object
+  COMMENT "User intent data (rawText, normalizedPattern, intentType, intentConfidence)";
+
+DEFINE FIELD userIntent.rawText ON impulse_mapping_record TYPE string
+  COMMENT "Original user message";
+
+DEFINE FIELD userIntent.normalizedPattern ON impulse_mapping_record TYPE string
+  COMMENT "Normalized pattern with placeholders (e.g., 'fix bug in {file0}')";
+
+DEFINE FIELD userIntent.intentType ON impulse_mapping_record TYPE string
+  COMMENT "Intent type (code_fix, feature_add, refactor, test, etc)";
+
+DEFINE FIELD userIntent.intentConfidence ON impulse_mapping_record TYPE number DEFAULT 0.5
+  COMMENT "Confidence score for intent classification (0-1)";
+
+DEFINE FIELD context ON impulse_mapping_record TYPE object
+  COMMENT "Context data (activeSession, turnNumber, capturedAt, recentFiles, activityCategory)";
+
+DEFINE FIELD context.activeSession ON impulse_mapping_record TYPE string
+  COMMENT "Session identifier";
+
+DEFINE FIELD context.turnNumber ON impulse_mapping_record TYPE number
+  COMMENT "Turn number in session";
+
+DEFINE FIELD context.capturedAt ON impulse_mapping_record TYPE number
+  COMMENT "Timestamp when record was captured (Unix milliseconds)";
+
+DEFINE FIELD context.recentFiles ON impulse_mapping_record TYPE array DEFAULT []
+  COMMENT "Recently accessed files for context";
+
+DEFINE FIELD context.activityCategory ON impulse_mapping_record TYPE option<string>
+  COMMENT "Activity category (feature, bugfix, refactor, test, infrastructure) for context optimization";
+
+DEFINE FIELD impulses ON impulse_mapping_record TYPE array
+  COMMENT "Array of impulses created (id, type, pointer, priority, budget, used, usageCount)";
+
+DEFINE FIELD outcome ON impulse_mapping_record TYPE object
+  COMMENT "Task outcome data (taskSucceeded, responseQuality, impulsesUsedCount, timeToSuccess)";
+
+DEFINE FIELD outcome.taskSucceeded ON impulse_mapping_record TYPE bool DEFAULT false
+  COMMENT "Whether the task succeeded";
+
+DEFINE FIELD outcome.responseQuality ON impulse_mapping_record TYPE number DEFAULT 0.0
+  COMMENT "Response quality score (0-1)";
+
+DEFINE FIELD outcome.impulsesUsedCount ON impulse_mapping_record TYPE number DEFAULT 0
+  COMMENT "Number of impulses that were actually used";
+
+DEFINE FIELD outcome.timeToSuccess ON impulse_mapping_record TYPE number DEFAULT 0
+  COMMENT "Time taken to complete task (milliseconds)";
+
+DEFINE FIELD metadata ON impulse_mapping_record TYPE object
+  COMMENT "Metadata (recordId, createdAt)";
+
+DEFINE FIELD metadata.recordId ON impulse_mapping_record TYPE string
+  COMMENT "Unique record identifier";
+
+DEFINE FIELD metadata.createdAt ON impulse_mapping_record TYPE number
+  COMMENT "Record creation timestamp (Unix milliseconds)";
+
+-- Indexes for efficient queries
+DEFINE INDEX idx_session ON impulse_mapping_record FIELDS context.activeSession;
+DEFINE INDEX idx_pattern ON impulse_mapping_record FIELDS userIntent.normalizedPattern;
+DEFINE INDEX idx_activity_category ON impulse_mapping_record FIELDS context.activityCategory;
+DEFINE INDEX idx_created_at ON impulse_mapping_record FIELDS metadata.createdAt;
+DEFINE INDEX idx_task_success ON impulse_mapping_record FIELDS outcome.taskSucceeded;
+
+-- ============================================================================
 -- Schema Initialization Complete
 -- ============================================================================
 
