@@ -1,0 +1,261 @@
+{
+  "specificationName": "metrics-calculation-in-rpc-api-only",
+  "description": "Metrics calculations (success rate, quality score, averaging) must ONLY exist in metabob-rpc-api. metabob-opencode template-metrics-client must be a thin HTTP client with no calculations.",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "component": "TemplateMetricsClient",
+      "currentBehavior": "Thin HTTP client that calls MCP tools (metabob_post_activity_result, metabob_get_template_metrics). No local calculations. Uses single write path through MCP.",
+      "desiredBehavior": "Thin HTTP client that calls MCP tools. No local calculations.",
+      "gap": "COMPLIANT - No calculations found. File is 301 lines (reasonable for HTTP client with multiple methods). Contains only HTTP calls via callMCPTool().",
+      "evidence": {
+        "noCalculations": true,
+        "singleWritePath": true,
+        "lineCount": 301,
+        "methods": ["reportExecution", "getTemplateMetrics (deprecated)", "getRecommendation", "promoteTemplate"]
+      }
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-quality-score.ts",
+      "component": "TemplateQualityScore",
+      "currentBehavior": "Deprecated stub (53 lines) that throws error explaining architectural change. Previously contained 375 lines of calculation logic.",
+      "desiredBehavior": "Deprecated stub or removed entirely.",
+      "gap": "COMPLIANT - File is now 53 lines stub with @deprecated markers and throws error directing users to rpc-api endpoint.",
+      "evidence": {
+        "lineCount": 53,
+        "isDeprecated": true,
+        "hasCalculations": false,
+        "throwsError": true,
+        "previousLineCount": 375
+      }
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_post_activity_result MCP tool",
+      "currentBehavior": "MCP gateway tool that forwards execution results to rpc-api Learning Loop endpoint (POST /v2/activities/templates/{id}/executions). No calculations.",
+      "desiredBehavior": "MCP gateway tool that forwards to rpc-api. No calculations.",
+      "gap": "COMPLIANT - Pure HTTP forwarding to rpc-api. Builds ExecutionRequest payload and POSTs to backend.",
+      "evidence": {
+        "endpoint": "POST {api_base}/v2/activities/templates/{template_id}/executions",
+        "noCalculations": true,
+        "role": "HTTP gateway"
+      }
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/activity_metrics_router.py",
+      "component": "Activity Metrics REST Routes",
+      "currentBehavior": "REST endpoints that delegate to MetricsAggregator service for calculations. Endpoints: POST /api/activity-execution, GET /api/template/{id}/metrics, GET /api/template/{id}/recommendation, POST /api/template/promote",
+      "desiredBehavior": "REST endpoints that delegate calculations to services.",
+      "gap": "COMPLIANT - Routes delegate to MetricsAggregator and PromotionEngine services. No inline calculations.",
+      "evidence": {
+        "endpoints": [
+          "POST /api/activity-execution",
+          "GET /api/template/{template_id}/metrics",
+          "GET /api/template/{template_id}/recommendation",
+          "POST /api/template/promote"
+        ],
+        "delegatesTo": ["MetricsAggregator", "PromotionEngine"]
+      }
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/services/metrics_aggregator.py",
+      "component": "MetricsAggregator",
+      "currentBehavior": "Business logic service that performs ALL metrics calculations: success_rate, avg_cost, avg_duration, avg_tokens. Updates aggregated metrics in Redis after each execution.",
+      "desiredBehavior": "Business logic service for metrics calculations.",
+      "gap": "COMPLIANT - This is the ONLY place where metrics calculations happen. Implements _update_aggregated_metrics() with division, averaging logic.",
+      "evidence": {
+        "calculations": [
+          "success_rate = successes / total",
+          "avg_cost = total_cost / total",
+          "avg_duration = total_duration / total",
+          "avg_tokens_in = total_tokens_in / total"
+        ],
+        "storage": "Redis (template:{template_id}:metrics)",
+        "methods": ["record_execution", "_update_aggregated_metrics", "get_template_metrics"]
+      }
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/services/promotion_engine.py",
+      "component": "PromotionEngine",
+      "currentBehavior": "Statistical A/B testing engine. Performs chi-square tests, calculates success_rate_diff, cost_delta, duration_delta, composite scores.",
+      "desiredBehavior": "Statistical analysis service for A/B testing.",
+      "gap": "COMPLIANT - Implements complex calculations (chi-square, deltas, composite scores) server-side.",
+      "evidence": {
+        "calculations": [
+          "success_rate_diff = candidate_metrics['success_rate'] - stable_metrics['success_rate']",
+          "cost_delta = (candidate_cost - stable_cost) / stable_cost",
+          "duration_delta = (candidate_duration - stable_duration) / stable_duration",
+          "chi-square test using scipy.stats.chi2_contingency"
+        ],
+        "methods": ["get_recommendation", "_evaluate_candidate", "_chi_square_test", "_generate_recommendation"]
+      }
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+      "component": "Template Metrics DB Operations",
+      "currentBehavior": "SurrealDB CRUD operations for template_metrics table. Implements incremental aggregation: update_metrics_after_execution() calculates new_avg using incremental mean formula.",
+      "desiredBehavior": "DB operations with incremental aggregation for efficiency.",
+      "gap": "COMPLIANT - Performs calculations for incremental updates (new_mean = (old_mean * old_count + new_value) / new_count). Thompson Sampling alpha/beta updates.",
+      "evidence": {
+        "calculations": [
+          "new_avg_duration = (avg_duration_ms * n + duration_ms) / n_new",
+          "new_avg_cost = (avg_cost_usd * n + cost_usd) / n_new",
+          "success_rate = successful_executions / n_new",
+          "thompson_alpha = successful_executions + 1.0",
+          "thompson_beta = failed_executions + 1.0",
+          "improvement_gradient = success_rate * min(1.0, n_new / 10.0)"
+        ],
+        "storage": "SurrealDB table: template_metrics",
+        "methods": ["update_metrics_after_execution", "get_metrics", "create_metrics"]
+      }
+    }
+  ],
+  "dataFlow": {
+    "description": "Activity execution metrics flow from opencode client to rpc-api backend for calculation and storage",
+    "entry": "Activity execution completes → TemplateMetricsClient.reportExecution()",
+    "transform": "MCP gateway forwards → RPC API receives → MetricsAggregator calculates",
+    "validate": "Redis/SurrealDB stores aggregated metrics",
+    "exit": "Metrics available via GET /api/template/{id}/metrics",
+    "steps": [
+      {
+        "step": 1,
+        "component": "Activity execution completes in opencode",
+        "location": "metabob-opencode activity executor",
+        "action": "Calls TemplateMetricsClient.reportExecution(data)"
+      },
+      {
+        "step": 2,
+        "component": "TemplateMetricsClient.reportExecution()",
+        "location": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts:93",
+        "action": "Calls MCP tool: metabob_post_activity_result via callMCPTool()",
+        "payload": {
+          "activity_id": "string",
+          "result": {
+            "success": "boolean",
+            "duration": "number (ms)",
+            "cost": "number (USD)",
+            "tokens": {"input": "number", "output": "number", "cache": "number"}
+          }
+        },
+        "note": "SINGLE WRITE PATH - no dual-write, no local calculations"
+      },
+      {
+        "step": 3,
+        "component": "metabob_post_activity_result MCP tool",
+        "location": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py:256",
+        "action": "HTTP gateway forwards to rpc-api",
+        "endpoint": "POST {api_base}/v2/activities/templates/{template_id}/executions",
+        "payload": "ExecutionRequest (activity_id, template_id, started_at, duration_ms, success, tokens, cost_usd, completed_at)"
+      },
+      {
+        "step": 4,
+        "component": "Learning Loop REST endpoint",
+        "location": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+        "action": "Receives execution data, delegates to MetricsAggregator"
+      },
+      {
+        "step": 5,
+        "component": "MetricsAggregator.record_execution()",
+        "location": "repos/metabob-rpc-api/server/services/metrics_aggregator.py:27",
+        "action": "Stores execution record in Redis, calls _update_aggregated_metrics()",
+        "calculations": "NONE at this stage - just storage"
+      },
+      {
+        "step": 6,
+        "component": "MetricsAggregator._update_aggregated_metrics()",
+        "location": "repos/metabob-rpc-api/server/services/metrics_aggregator.py:88",
+        "action": "PERFORMS ALL CALCULATIONS",
+        "calculations": [
+          "success_rate = successes / total",
+          "avg_cost = total_cost / total",
+          "avg_duration = total_duration / total",
+          "avg_tokens_in = total_tokens_in / total",
+          "avg_tokens_out = total_tokens_out / total",
+          "avg_tokens_cache = total_tokens_cache / total"
+        ],
+        "storage": "Redis key: template:{template_id}:metrics"
+      },
+      {
+        "step": 7,
+        "component": "Alternative: SurrealDB incremental updates",
+        "location": "repos/metabob-rpc-api/server/db/operations/template_metrics.py:99",
+        "action": "update_metrics_after_execution() performs incremental aggregation",
+        "calculations": [
+          "new_avg_duration = (avg_duration_ms * n + duration_ms) / (n + 1)",
+          "new_avg_cost = (avg_cost_usd * n + cost_usd) / (n + 1)",
+          "success_rate = successful_executions / total_executions",
+          "thompson_alpha = successful_executions + 1",
+          "thompson_beta = failed_executions + 1"
+        ],
+        "storage": "SurrealDB table: template_metrics",
+        "note": "Phase 3 storage consolidation - SurrealDB primary, Redis cache"
+      }
+    ]
+  },
+  "architecturalBoundaries": {
+    "summary": "Metrics calculations correctly isolated to metabob-rpc-api backend",
+    "violations": [],
+    "compliantComponents": [
+      {
+        "component": "template-metrics-client.ts",
+        "reason": "No calculations, single write path, thin HTTP client"
+      },
+      {
+        "component": "template-quality-score.ts",
+        "reason": "Deprecated stub, throws error, no calculations"
+      },
+      {
+        "component": "MetricsAggregator (rpc-api)",
+        "reason": "Correct location for metrics calculation logic"
+      },
+      {
+        "component": "PromotionEngine (rpc-api)",
+        "reason": "Correct location for A/B testing calculations"
+      },
+      {
+        "component": "template_metrics.py (DB operations)",
+        "reason": "Correct location for incremental aggregation calculations"
+      }
+    ],
+    "validationHarness": {
+      "location": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
+      "checks": [
+        "no-calculation-operators: Verifies template-metrics-client.ts has no division, multiplication, Math.* calls",
+        "no-dual-write-pattern: Verifies no Promise.allSettled dual-write",
+        "quality-score-deprecated: Verifies template-quality-score.ts is <100 lines stub",
+        "reportExecution-single-write: Verifies single MCP call in reportExecution()",
+        "file-size-check: Verifies template-metrics-client.ts <400 lines"
+      ],
+      "purpose": "Automated enforcement of architectural boundaries"
+    }
+  },
+  "phaseContext": {
+    "phase": "Phase 3 - Storage Consolidation and Architecture Enforcement",
+    "goals": [
+      "SurrealDB as primary storage for template_metrics",
+      "Redis as cache layer",
+      "Metrics calculations ONLY in rpc-api services",
+      "No calculations in opencode client",
+      "Single write path (no dual-write pattern)"
+    ],
+    "completed": [
+      "Removed 375 lines of calculation logic from template-quality-score.ts",
+      "Converted to thin HTTP client in template-metrics-client.ts",
+      "Implemented MetricsAggregator service in rpc-api",
+      "Implemented PromotionEngine for A/B testing",
+      "Added SurrealDB template_metrics operations with incremental aggregation",
+      "Created validation harness for automated boundary enforcement"
+    ]
+  },
+  "validationStatus": {
+    "overallCompliance": "COMPLIANT",
+    "summary": "All metrics calculations correctly isolated to metabob-rpc-api backend. OpenCode client is thin HTTP wrapper with no calculations.",
+    "evidence": {
+      "noCalculationsInClient": true,
+      "singleWritePath": true,
+      "calculationsInBackend": true,
+      "validationHarnessExists": true
+    }
+  },
+  "traceImpulseId": "trace-metrics-calculation-in-rpc-api-only"
+}

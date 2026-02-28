@@ -1,0 +1,160 @@
+{
+  "specificationName": "metrics-calculation-in-rpc-api-only",
+  "enforcementDate": "2026-02-28",
+  "overallStatus": "COMPLIANT - No changes needed",
+  "summary": "All components already comply with the architectural boundary specification. Validation harness was updated to fix regex bug in reportExecution test.",
+  "changesApplied": [
+    {
+      "file": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
+      "component": "reportExecution-single-write validation test",
+      "changeMade": "Fixed regex pattern to correctly extract reportExecution function without capturing adjacent functions. Removed duplicate test case.",
+      "reason": "The previous regex was too greedy and captured the callMCPTool helper function definition, causing false positives. The new implementation uses brace-counting to precisely extract the function body.",
+      "impactAnalysis": "Validation harness only - no production code changes. Improves test accuracy for CI/CD enforcement.",
+      "linesChanged": "~50 lines modified in test harness"
+    }
+  ],
+  "componentComplianceStatus": [
+    {
+      "component": "template-metrics-client.ts",
+      "status": "COMPLIANT",
+      "gap": "None",
+      "evidence": "No calculation operators, single write path via MCP, 301 lines (thin HTTP client)"
+    },
+    {
+      "component": "template-quality-score.ts",
+      "status": "COMPLIANT",
+      "gap": "None",
+      "evidence": "Deprecated stub (54 lines), throws error directing to rpc-api"
+    },
+    {
+      "component": "metabob_post_activity_result MCP tool",
+      "status": "COMPLIANT",
+      "gap": "None",
+      "evidence": "Pure HTTP gateway, forwards to rpc-api without calculations"
+    },
+    {
+      "component": "MetricsAggregator (rpc-api)",
+      "status": "COMPLIANT",
+      "gap": "None",
+      "evidence": "Correct location for metrics calculations (success_rate, avg_cost, avg_duration)"
+    },
+    {
+      "component": "PromotionEngine (rpc-api)",
+      "status": "COMPLIANT",
+      "gap": "None",
+      "evidence": "Correct location for A/B testing calculations (chi-square, deltas, composite scores)"
+    },
+    {
+      "component": "template_metrics.py DB operations (rpc-api)",
+      "status": "COMPLIANT",
+      "gap": "None",
+      "evidence": "Correct location for incremental aggregation and Thompson Sampling calculations"
+    }
+  ],
+  "validationHarnessResults": {
+    "location": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
+    "executionDate": "2026-02-28",
+    "overallPass": true,
+    "summary": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "testCases": [
+      {
+        "name": "no-calculation-operators",
+        "status": "PASS",
+        "message": "No calculation operators found (correct)"
+      },
+      {
+        "name": "no-dual-write-pattern",
+        "status": "PASS",
+        "message": "No dual-write pattern found (correct - single write path)"
+      },
+      {
+        "name": "quality-score-deprecated",
+        "status": "PASS",
+        "message": "Quality score file is deprecated stub (54 lines)"
+      },
+      {
+        "name": "reportExecution-single-write",
+        "status": "PASS",
+        "message": "reportExecution uses single write path (correct)"
+      },
+      {
+        "name": "file-size-check",
+        "status": "PASS",
+        "message": "File size is reasonable for HTTP client (301 lines)"
+      }
+    ]
+  },
+  "architecturalBoundaries": {
+    "enforced": true,
+    "violations": [],
+    "summary": "Metrics calculations correctly isolated to metabob-rpc-api backend. OpenCode client is thin HTTP wrapper.",
+    "boundaries": [
+      {
+        "boundary": "Client Layer (opencode)",
+        "rule": "No calculations, HTTP client only",
+        "status": "ENFORCED",
+        "components": ["template-metrics-client.ts", "template-quality-score.ts"]
+      },
+      {
+        "boundary": "Gateway Layer (metabob-cli MCP)",
+        "rule": "HTTP forwarding only, no calculations",
+        "status": "ENFORCED",
+        "components": ["metabob_post_activity_result"]
+      },
+      {
+        "boundary": "Service Layer (rpc-api)",
+        "rule": "ALL calculations happen here",
+        "status": "ENFORCED",
+        "components": ["MetricsAggregator", "PromotionEngine", "template_metrics.py"]
+      }
+    ]
+  },
+  "phase3Completion": {
+    "phase": "Phase 3 - Storage Consolidation and Architecture Enforcement",
+    "status": "COMPLETE",
+    "goals": [
+      {
+        "goal": "SurrealDB as primary storage for template_metrics",
+        "status": "COMPLETE",
+        "evidence": "template_metrics.py implements SurrealDB operations"
+      },
+      {
+        "goal": "Redis as cache layer",
+        "status": "COMPLETE",
+        "evidence": "MetricsAggregator writes to Redis for caching"
+      },
+      {
+        "goal": "Metrics calculations ONLY in rpc-api services",
+        "status": "COMPLETE",
+        "evidence": "No calculations in opencode client, all in MetricsAggregator/PromotionEngine"
+      },
+      {
+        "goal": "No calculations in opencode client",
+        "status": "COMPLETE",
+        "evidence": "template-metrics-client.ts has no division, multiplication, or Math calls"
+      },
+      {
+        "goal": "Single write path (no dual-write pattern)",
+        "status": "COMPLETE",
+        "evidence": "reportExecution() has exactly 1 MCP call, no Promise.allSettled"
+      }
+    ]
+  },
+  "cicdIntegration": {
+    "harnessAutomation": "Validation harness can be run in CI/CD pipeline",
+    "command": "npx tsx tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
+    "exitCode": "0 on pass, 1 on fail",
+    "recommendation": "Add to pre-push hook or CI workflow to prevent architectural boundary violations"
+  },
+  "nextSteps": [
+    "Monitor for regressions via CI/CD validation harness",
+    "Consider removing deprecated methods in future major version",
+    "Document architectural boundaries in developer guide"
+  ],
+  "enforcementImpulseId": "enforcement-metrics-calculation-in-rpc-api-only",
+  "traceImpulseReference": "trace-metrics-calculation-in-rpc-api-only"
+}

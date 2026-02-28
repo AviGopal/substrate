@@ -1,0 +1,300 @@
+{
+  "specificationName": "metrics-calculation-in-rpc-api-only",
+  "analysisTimestamp": "2026-02-28T00:00:00Z",
+  "otherSpecifications": [
+    "thompson-sampling-in-rpc-api-only",
+    "impulse-learning-storage-complete",
+    "Instance_Invariant_Storage",
+    "COMPLETE_ARCHITECTURE_SEPARATION"
+  ],
+  "conflicts": [],
+  "synergies": [
+    {
+      "type": "COMPLEMENTARY_SPECIFICATIONS",
+      "spec1": "metrics-calculation-in-rpc-api-only",
+      "spec2": "thompson-sampling-in-rpc-api-only",
+      "sharedComponents": [
+        "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+        "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+        "repos/metabob-rpc-api/server/services/metrics_aggregator.py",
+        "repos/metabob-rpc-api/server/db/operations/template_metrics.py"
+      ],
+      "description": "Both specifications enforce the same architectural boundary: ML/statistical logic belongs in rpc-api, NOT opencode",
+      "alignment": "FULLY_ALIGNED",
+      "details": {
+        "metricsCalculation": "Moves success_rate, avg_cost, avg_duration calculations to rpc-api",
+        "thompsonSampling": "Moves Beta sampling and variant selection to rpc-api",
+        "sharedPrinciple": "OpenCode is thin HTTP client, RPC API is intelligence layer",
+        "mutualReinforcement": "Both specs remove calculation logic from same files (template-metrics-client.ts, template-selector.ts)"
+      }
+    },
+    {
+      "type": "COMPLEMENTARY_SPECIFICATIONS",
+      "spec1": "metrics-calculation-in-rpc-api-only",
+      "spec2": "Instance_Invariant_Storage",
+      "sharedComponents": [
+        "repos/metabob-rpc-api/server/db/operations/template_metrics.py"
+      ],
+      "description": "Both specifications work toward SurrealDB as primary storage with Redis as cache",
+      "alignment": "FULLY_ALIGNED",
+      "details": {
+        "metricsCalculation": "Ensures metrics calculations happen in rpc-api where storage layer exists",
+        "instanceInvariantStorage": "Establishes SurrealDB as primary storage, Redis as cache",
+        "benefitToMetrics": "Metrics aggregation can use proper database transactions and queries",
+        "benefitToStorage": "Storage consolidation simplifies metrics calculation architecture"
+      }
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "affectedBySpecs": [
+        "metrics-calculation-in-rpc-api-only",
+        "thompson-sampling-in-rpc-api-only"
+      ],
+      "currentState": "Thin HTTP client with no calculations (301 lines)",
+      "requirements": {
+        "metricsCalculation": "reportExecution() must use single write path via MCP, no calculations",
+        "thompsonSampling": "getTemplateMetrics() deprecated, no longer needed after RPC API integration"
+      },
+      "conflicts": "NONE",
+      "recommendation": "KEEP AS-IS - already compliant with both specifications",
+      "details": {
+        "lineCount": 301,
+        "mcpCalls": 1,
+        "calculations": 0,
+        "compliance": "COMPLIANT"
+      }
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only"
+      ],
+      "currentState": "Refactored to call RPC API for variant selection (Beta sampling removed)",
+      "requirements": {
+        "thompsonSampling": "Remove betaSample() and performThompsonSampling(), delegate to RPC API POST /v2/activities/templates/{id}/select"
+      },
+      "conflicts": "NONE",
+      "recommendation": "KEEP AS-IS - already refactored per thompson-sampling spec",
+      "details": {
+        "betaSampleRemoved": true,
+        "thompsonSamplingRemoved": true,
+        "rpcDelegation": true,
+        "compliance": "COMPLIANT"
+      }
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-quality-score.ts",
+      "affectedBySpecs": [
+        "metrics-calculation-in-rpc-api-only"
+      ],
+      "currentState": "Deprecated stub (54 lines, 85.6% reduction from 375 lines)",
+      "requirements": {
+        "metricsCalculation": "No quality score calculations, deprecated stub only"
+      },
+      "conflicts": "NONE",
+      "recommendation": "KEEP AS-IS - already compliant",
+      "details": {
+        "lineCount": 54,
+        "deprecated": true,
+        "throwsError": true,
+        "calculationsRemoved": 375,
+        "compliance": "COMPLIANT"
+      }
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/services/metrics_aggregator.py",
+      "affectedBySpecs": [
+        "metrics-calculation-in-rpc-api-only",
+        "Instance_Invariant_Storage"
+      ],
+      "currentState": "Implements all metrics calculations (success_rate, avg_cost, avg_duration)",
+      "requirements": {
+        "metricsCalculation": "ONLY location for metrics calculations (no calculations in opencode)",
+        "instanceInvariantStorage": "Use SurrealDB as primary storage, Redis as cache"
+      },
+      "conflicts": "NONE",
+      "recommendation": "KEEP AS-IS - correctly implements both specifications",
+      "details": {
+        "calculations": [
+          "success_rate = successes / total",
+          "avg_cost = total_cost / total",
+          "avg_duration = total_duration / total"
+        ],
+        "storage": "Redis (cache layer)",
+        "primaryStorage": "SurrealDB (via template_metrics.py)",
+        "compliance": "COMPLIANT"
+      }
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+      "affectedBySpecs": [
+        "metrics-calculation-in-rpc-api-only",
+        "thompson-sampling-in-rpc-api-only",
+        "Instance_Invariant_Storage"
+      ],
+      "currentState": "SurrealDB operations with incremental aggregation and Thompson Sampling updates",
+      "requirements": {
+        "metricsCalculation": "Incremental aggregation calculations (new_avg = (old_avg * n + new_value) / (n + 1))",
+        "thompsonSampling": "Update thompson_alpha and thompson_beta after each execution",
+        "instanceInvariantStorage": "SurrealDB as primary storage for template_metrics table"
+      },
+      "conflicts": "NONE",
+      "recommendation": "KEEP AS-IS - correctly implements all three specifications",
+      "details": {
+        "calculations": [
+          "new_avg_duration = (avg_duration_ms * n + duration_ms) / (n + 1)",
+          "success_rate = successful_executions / total_executions",
+          "thompson_alpha = successful_executions + 1",
+          "thompson_beta = failed_executions + 1"
+        ],
+        "storage": "SurrealDB (primary)",
+        "compliance": "COMPLIANT"
+      }
+    },
+    {
+      "component": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "affectedBySpecs": [
+        "metrics-calculation-in-rpc-api-only"
+      ],
+      "currentState": "MCP gateway tool that forwards execution results to rpc-api",
+      "requirements": {
+        "metricsCalculation": "Pure HTTP forwarding to POST /v2/activities/templates/{id}/executions, no calculations"
+      },
+      "conflicts": "NONE",
+      "recommendation": "KEEP AS-IS - correctly implements HTTP gateway pattern",
+      "details": {
+        "role": "HTTP gateway",
+        "calculations": 0,
+        "endpoint": "POST {api_base}/v2/activities/templates/{template_id}/executions",
+        "compliance": "COMPLIANT"
+      }
+    }
+  ],
+  "architecturalBoundaryAnalysis": {
+    "principle": "Metrics aggregation and ML/statistical logic belong in metabob-rpc-api, NOT metabob-opencode",
+    "enforcement": "CONSISTENT across all specifications",
+    "violations": "NONE detected",
+    "crossSpecificationConsistency": "HIGH",
+    "details": {
+      "metricsCalculation": "Moves metrics calculations to rpc-api",
+      "thompsonSampling": "Moves Beta sampling to rpc-api",
+      "instanceInvariantStorage": "Establishes storage layer in rpc-api",
+      "architectureSeparation": "Enforces thin client (opencode) / thick service (rpc-api) pattern"
+    }
+  },
+  "dependencyAnalysis": {
+    "upstreamDependencies": [
+      {
+        "spec": "Instance_Invariant_Storage",
+        "relationship": "PREREQUISITE",
+        "reason": "Metrics calculations require SurrealDB storage layer to exist",
+        "status": "SATISFIED",
+        "evidence": "template_metrics.py implements SurrealDB operations"
+      }
+    ],
+    "downstreamDependencies": [
+      {
+        "spec": "thompson-sampling-in-rpc-api-only",
+        "relationship": "DEPENDS_ON",
+        "reason": "Thompson Sampling uses metrics (alpha, beta) calculated by MetricsAggregator",
+        "status": "SATISFIED",
+        "evidence": "template_metrics.py updates thompson_alpha/beta after each execution"
+      }
+    ],
+    "parallelDependencies": [
+      {
+        "spec": "COMPLETE_ARCHITECTURE_SEPARATION",
+        "relationship": "MUTUALLY_REINFORCING",
+        "reason": "Both enforce separation between opencode (client) and rpc-api (service)",
+        "status": "ALIGNED"
+      }
+    ]
+  },
+  "riskAssessment": {
+    "conflicts": {
+      "detected": 0,
+      "level": "NONE"
+    },
+    "incompatibilities": {
+      "detected": 0,
+      "level": "NONE"
+    },
+    "risks": [
+      {
+        "type": "COORDINATION",
+        "level": "LOW",
+        "description": "Multiple specifications modifying same files",
+        "mitigation": "Specifications are complementary and reinforce same architectural boundary",
+        "status": "MITIGATED"
+      },
+      {
+        "type": "TEMPORAL",
+        "level": "LOW",
+        "description": "Order of enforcement matters (storage before calculations)",
+        "mitigation": "Instance_Invariant_Storage completed before metrics-calculation-in-rpc-api-only",
+        "status": "MITIGATED"
+      }
+    ]
+  },
+  "validationCrossCheck": {
+    "metricsCalculation": {
+      "overallStatus": "PASS",
+      "testsPassed": 5,
+      "testsFailed": 0,
+      "compliance": "COMPLIANT"
+    },
+    "thompsonSampling": {
+      "overallStatus": "PASS",
+      "testsPassed": 3,
+      "testsFailed": 0,
+      "testsSkipped": 1,
+      "compliance": "COMPLIANT"
+    },
+    "crossSpecificationValidation": {
+      "status": "PASS",
+      "sharedComponentsValidated": 6,
+      "conflictsDetected": 0,
+      "synergiesConfirmed": 2
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "CONTINUE",
+      "description": "No conflicts detected. Continue with current implementation.",
+      "rationale": "All specifications are complementary and mutually reinforcing"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "DOCUMENT",
+      "description": "Document architectural boundary in developer guide",
+      "rationale": "Principle 'calculations belong in rpc-api' applies across multiple specifications"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "CONSOLIDATE",
+      "description": "Consider consolidating validation harnesses for related specs",
+      "rationale": "metrics-calculation and thompson-sampling test similar architectural boundaries"
+    },
+    {
+      "priority": "LOW",
+      "action": "MONITOR",
+      "description": "Monitor for future PRs that violate architectural boundary",
+      "rationale": "Prevent regression of calculations back into opencode"
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-metrics-calculation-in-rpc-api-only",
+  "relatedImpulses": {
+    "traceImpulse": "trace-metrics-calculation-in-rpc-api-only",
+    "enforcementImpulse": "enforcement-metrics-calculation-in-rpc-api-only",
+    "validationImpulse": "validation-results-metrics-calculation-in-rpc-api-only",
+    "relatedSpecs": [
+      "trace-thompson-sampling-in-rpc-api-only",
+      "validation-results-thompson-sampling-in-rpc-api-only",
+      "trace-Instance_Invariant_Storage",
+      "validation-results-Instance_Invariant_Storage"
+    ]
+  }
+}

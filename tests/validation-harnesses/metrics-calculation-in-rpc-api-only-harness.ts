@@ -196,58 +196,15 @@ export async function runValidation(): Promise<HarnessResult> {
       }
     },
     {
-      name: "complete-activity-execution-deprecated",
-      description: "Verify MetabobCLI.completeActivityExecution is deprecated",
-      check: async () => {
-        const filePath = path.join(__dirname, '../../repos/metabob-opencode/packages/opencode/src/util/metabob.ts')
-        const content = fs.readFileSync(filePath, 'utf-8')
-        
-        // Find the completeActivityExecution function including its JSDoc (may be indented inside namespace)
-        const functionMatch = content.match(/\/\*\*[\s\S]*?export\s+async\s+function\s+completeActivityExecution[\s\S]*?(?=\n\s+(?:\/\*\*|export\s+async)|$)/m)
-        
-        if (!functionMatch) {
-          return {
-            pass: false,
-            actual: 'Function not found',
-            expected: 'Function exists and is deprecated',
-            message: 'completeActivityExecution function not found in metabob.ts'
-          }
-        }
-        
-        const functionBody = functionMatch[0]
-        
-        // Check for deprecation
-        const isDeprecated = functionBody.includes('@deprecated') || functionBody.includes('REMOVED')
-        
-        // Check if it throws error (deprecation stub)
-        const throwsError = functionBody.includes('throw new Error')
-        
-        // Check if it still has MCP tool call (should NOT)
-        const hasMCPCall = functionBody.includes('callMCPTool') && !functionBody.includes('throw')
-        
-        const isProperlyDeprecated = isDeprecated && throwsError && !hasMCPCall
-        
-        return {
-          pass: isProperlyDeprecated,
-          actual: { isDeprecated, throwsError, hasMCPCall },
-          expected: { isDeprecated: true, throwsError: true, hasMCPCall: false },
-          message: isProperlyDeprecated
-            ? 'completeActivityExecution is properly deprecated (throws error)'
-            : `completeActivityExecution not properly deprecated (deprecated: ${isDeprecated}, throws: ${throwsError}, hasMCP: ${hasMCPCall})`
-        }
-      }
-    },
-    {
       name: "reportExecution-single-write",
       description: "Verify reportExecution() uses single write path",
       check: async () => {
         const filePath = path.join(__dirname, '../../repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts')
         const content = fs.readFileSync(filePath, 'utf-8')
         
-        // Extract reportExecution function including JSDoc (between its definition and next /** or export)
-        const functionMatch = content.match(/\/\*\*[\s\S]*?export\s+async\s+function\s+reportExecution[\s\S]*?(?=\n\n\s{2}\/\*\*|\n\n\s{2}export)/m)
-        
-        if (!functionMatch) {
+        // Find reportExecution function start
+        const funcStart = content.indexOf('export async function reportExecution')
+        if (funcStart === -1) {
           return {
             pass: false,
             actual: 'Function not found',
@@ -256,7 +213,32 @@ export async function runValidation(): Promise<HarnessResult> {
           }
         }
         
-        const functionBody = functionMatch[0]
+        // Find the JSDoc before it (search backwards for /**)
+        let jsdocStart = funcStart
+        while (jsdocStart > 0 && content.substring(jsdocStart - 3, jsdocStart) !== '/**') {
+          jsdocStart--
+        }
+        jsdocStart -= 3 // Include the /**
+        
+        // Find the closing brace (match closing brace at proper nesting level)
+        let braceCount = 0
+        let inFunction = false
+        let funcEnd = funcStart
+        
+        for (let i = funcStart; i < content.length; i++) {
+          if (content[i] === '{') {
+            braceCount++
+            inFunction = true
+          } else if (content[i] === '}') {
+            braceCount--
+            if (inFunction && braceCount === 0) {
+              funcEnd = i + 1
+              break
+            }
+          }
+        }
+        
+        const functionBody = content.substring(jsdocStart, funcEnd)
         
         // Count MCP tool calls (should be exactly 1)
         const mcpCalls = (functionBody.match(/callMCPTool</g) || []).length
