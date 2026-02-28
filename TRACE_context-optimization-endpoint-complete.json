@@ -1,0 +1,42 @@
+{
+  "specificationName": "context-optimization-endpoint-complete",
+  "components": [
+    {
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "GET /context-optimization endpoint",
+      "currentBehavior": "Does NOT exist - endpoint not implemented",
+      "desiredBehavior": "GET /api/v1/learning-loop/context-optimization?activity_type={category} returns {recommended_impulses: [...], optimal_token_budget: N, success_correlation: float} based on historical impulse success patterns",
+      "gap": "MISSING endpoint handler that queries impulse_mapping_record, analyzes impulse type success rates, computes optimal token budgets, and calculates success correlation"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "query_by_activity_category()",
+      "currentBehavior": "Does NOT exist - no function to query impulse records by activity type",
+      "desiredBehavior": "Function to query impulse_mapping_record WHERE context.activityCategory = $activity_type, returning records with success metrics for analysis",
+      "gap": "MISSING database query function to filter impulse records by activity category (feature/bugfix/refactor/test/infrastructure)"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/services/context_optimization_service.py",
+      "component": "Context Optimization Service",
+      "currentBehavior": "Does NOT exist - no service file",
+      "desiredBehavior": "Service that analyzes impulse usage records and computes: (1) recommended_impulses by success rate (2) optimal_token_budget from averages (3) success_correlation between impulse usage and task success",
+      "gap": "MISSING service with functions: compute_recommendations(), calculate_impulse_success_rates(), compute_optimal_token_budget(), calculate_success_correlation()"
+    },
+    {
+      "file": "initialize-surrealdb-schema.sql",
+      "component": "impulse_mapping_record table schema",
+      "currentBehavior": "Table is NOT defined in schema but IS being used by code (impulse_learning.py uses it via schemaless mode)",
+      "desiredBehavior": "Table formally defined with schema: userIntent {rawText, normalizedPattern, intentType}, context {activeSession, turnNumber, activityCategory}, impulses [array], outcome {taskSucceeded, responseQuality, impulsesUsedCount}",
+      "gap": "MISSING table definition. Need to add DEFINE TABLE impulse_mapping_record with proper fields and activityCategory for filtering"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "insert_mapping_record() - category tracking",
+      "currentBehavior": "Stores impulse mapping records but does NOT store activity category. context object has activeSession and turnNumber but no activityCategory field",
+      "desiredBehavior": "insert_mapping_record() should accept activity_category parameter and store in context.activityCategory for filtering by endpoint",
+      "gap": "MISSING activity category tracking. Current record has no way to correlate impulse usage with activity type (feature vs bugfix vs refactor)"
+    }
+  ],
+  "dataFlow": "GET /context-optimization?activity_type=feature → query_by_activity_category('feature') → SurrealDB SELECT impulse_mapping_record WHERE context.activityCategory='feature' → compute_recommendations(records) → analyze impulse types → calculate success rates → compute avg token budgets → return {recommended_impulses, optimal_token_budget, success_correlation}",
+  "traceImpulseId": "trace-context-optimization-endpoint-complete"
+}

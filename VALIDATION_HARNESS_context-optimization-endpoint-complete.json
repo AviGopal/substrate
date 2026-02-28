@@ -1,0 +1,119 @@
+{
+  "specificationName": "context-optimization-endpoint-complete",
+  "harnessFile": "tests/validation-harnesses/context-optimization-endpoint-complete-harness.ts",
+  "testCases": [
+    {
+      "impulseId": "validation-context-optimization-endpoint-complete-case-1",
+      "description": "Get context optimization for 'feature' activity type",
+      "input": {
+        "activity_type": "feature",
+        "limit": 100
+      },
+      "expectedOutput": {
+        "activity_type": "feature",
+        "minImpulses": 0,
+        "maxImpulses": 10,
+        "budgetRange": [1000, 10000],
+        "correlationRange": [0.0, 1.0]
+      }
+    },
+    {
+      "impulseId": "validation-context-optimization-endpoint-complete-case-2",
+      "description": "Get context optimization for 'bugfix' activity type (should differ from feature)",
+      "input": {
+        "activity_type": "bugfix",
+        "limit": 100
+      },
+      "expectedOutput": {
+        "activity_type": "bugfix",
+        "minImpulses": 0,
+        "maxImpulses": 10,
+        "budgetRange": [1000, 10000],
+        "correlationRange": [0.0, 1.0]
+      }
+    },
+    {
+      "impulseId": "validation-context-optimization-endpoint-complete-case-3",
+      "description": "Reject invalid activity_type",
+      "input": {
+        "activity_type": "invalid_type"
+      },
+      "expectedOutput": {
+        "shouldFail": true,
+        "errorMessage": "validation"
+      }
+    },
+    {
+      "impulseId": "validation-context-optimization-endpoint-complete-case-4",
+      "description": "Handle small limit parameter",
+      "input": {
+        "activity_type": "refactor",
+        "limit": 10
+      },
+      "expectedOutput": {
+        "activity_type": "refactor",
+        "minImpulses": 0,
+        "maxImpulses": 10
+      }
+    },
+    {
+      "impulseId": "validation-context-optimization-endpoint-complete-case-5",
+      "description": "Handle activity type with no historical data",
+      "input": {
+        "activity_type": "test",
+        "limit": 100
+      },
+      "expectedOutput": {
+        "activity_type": "test",
+        "sample_size": 0,
+        "recommended_impulses": [],
+        "optimal_token_budget": 5000,
+        "success_correlation": 0.0
+      }
+    },
+    {
+      "impulseId": "validation-context-optimization-endpoint-complete-case-6",
+      "description": "Get context optimization for 'infrastructure' activity type",
+      "input": {
+        "activity_type": "infrastructure",
+        "limit": 50
+      },
+      "expectedOutput": {
+        "activity_type": "infrastructure",
+        "minImpulses": 0,
+        "maxImpulses": 10,
+        "budgetRange": [1000, 10000],
+        "correlationRange": [0.0, 1.0]
+      }
+    }
+  ],
+  "harnessImpulseId": "harness-context-optimization-endpoint-complete",
+  "seedingStrategy": {
+    "description": "Seeds SurrealDB with 10 impulse_mapping_record entries across 2 activity categories",
+    "featureRecords": 5,
+    "featureSuccesses": 3,
+    "featureFailures": 2,
+    "bugfixRecords": 5,
+    "bugfixSuccesses": 4,
+    "bugfixFailures": 1,
+    "impulseTypes": ["file", "cochange", "annotation"],
+    "expectedDifferences": "Feature category prefers 'file' impulses (3/3 successes with file), bugfix category prefers 'cochange' impulses (4/4 successes with cochange)"
+  },
+  "validationChecks": [
+    "Endpoint exists at GET /api/v1/learning-loop/context-optimization",
+    "Returns correct schema with all required fields",
+    "Filters by activity_type correctly (feature vs bugfix return different recommendations)",
+    "Ranks impulses by success rate descending",
+    "Computes optimal token budget from successful executions only",
+    "Calculates success correlation between impulse usage and task success",
+    "Validates activity_type parameter (regex: feature|bugfix|refactor|test|infrastructure)",
+    "Handles empty data gracefully with default values",
+    "Handles limit parameter correctly"
+  ],
+  "executionInstructions": {
+    "setup": "Ensure metabob-rpc-api is running at localhost:8001 and SurrealDB is accessible",
+    "command": "cd tests/validation-harnesses && npx ts-node context-optimization-endpoint-complete-harness.ts",
+    "expectedOutput": "All 6 test cases pass, exit code 0",
+    "resultsFile": "tests/validation-harnesses/validation-results-context-optimization.json"
+  }
+}

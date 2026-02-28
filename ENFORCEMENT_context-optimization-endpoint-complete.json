@@ -1,0 +1,62 @@
+{
+  "specificationName": "context-optimization-endpoint-complete",
+  "changesApplied": [
+    {
+      "file": "initialize-surrealdb-schema.sql",
+      "component": "impulse_mapping_record table schema",
+      "changeMade": "Added DEFINE TABLE impulse_mapping_record with full schema including userIntent, context (with activityCategory field), impulses, outcome, and metadata fields. Added indexes on activeSession, normalizedPattern, activityCategory, createdAt, and taskSucceeded.",
+      "reason": "Formalizes the schemaless table currently in use and adds context.activityCategory field required for filtering by activity type in context optimization queries",
+      "impactAnalysis": "Low impact - Table already exists via schemaless mode. This change adds proper schema validation and indexes for performance. Activity category field enables new context optimization feature."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "insert_mapping_record() - activity_category parameter",
+      "changeMade": "Added activity_category: Optional[str] parameter to insert_mapping_record() function and store it in record['context']['activityCategory'] field",
+      "reason": "Enables storing activity category with each impulse mapping record so context optimization endpoint can filter records by activity type (feature, bugfix, refactor, test, infrastructure)",
+      "impactAnalysis": "Low impact - Parameter is optional, backward compatible. Existing callers continue to work with None value. New parameter enables context optimization feature."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "query_by_activity_category() function",
+      "changeMade": "Added new function query_by_activity_category(activity_category: str, limit: int = 100) that queries impulse_mapping_record WHERE context.activityCategory = $category ORDER BY metadata.createdAt DESC",
+      "reason": "Provides database query layer for context optimization endpoint to retrieve historical impulse records filtered by activity category",
+      "impactAnalysis": "No impact on existing code - New function adds capability without modifying existing queries. Returns empty list if no records match category."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/services/context_optimization_service.py",
+      "component": "Context Optimization Service (new file)",
+      "changeMade": "Created new service with compute_recommendations(), calculate_impulse_success_rates(), compute_optimal_token_budget(), and calculate_success_correlation() functions. Implements learning algorithms to analyze impulse usage patterns and compute recommendations.",
+      "reason": "Core business logic for context optimization feature. Analyzes historical records to determine which impulse types have highest success rates, optimal token budgets, and correlation between impulse usage and task success.",
+      "impactAnalysis": "No impact - New service file adds capability without affecting existing services. Pure function implementations with no side effects."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/services/__init__.py",
+      "component": "Service exports",
+      "changeMade": "Added exports for context_optimization_service: ContextOptimizationResult, compute_recommendations, calculate_impulse_success_rates, compute_optimal_token_budget, calculate_success_correlation",
+      "reason": "Makes context optimization service available for import by route handlers and other services",
+      "impactAnalysis": "No impact on existing code - Only adds new exports without modifying existing ones"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/__init__.py",
+      "component": "Database operation exports",
+      "changeMade": "Added export for query_by_activity_category from impulse_learning module",
+      "reason": "Makes new query function available for import by route handlers",
+      "impactAnalysis": "No impact on existing code - Only adds new export without modifying existing ones"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "GET /context-optimization endpoint",
+      "changeMade": "Added new GET /api/v1/learning-loop/context-optimization endpoint with activity_type and limit query parameters. Calls query_by_activity_category() to fetch records, then compute_recommendations() to analyze and return ContextOptimizationResponse with recommended_impulses, optimal_token_budget, success_correlation, and sample_size.",
+      "reason": "User-facing API endpoint that enables learning-driven context optimization. Allows clients to query historical impulse success patterns by activity type and receive data-driven recommendations for optimal context configuration.",
+      "impactAnalysis": "No impact on existing endpoints - New endpoint adds capability without modifying existing routes. Returns 400 for invalid activity_type (validated by regex), 500 on server errors, 200 with recommendations or empty defaults if no historical data."
+    }
+  ],
+  "dataFlowImplemented": "GET /api/v1/learning-loop/context-optimization?activity_type=feature → Validate activity_type (feature|bugfix|refactor|test|infrastructure) → query_by_activity_category('feature', limit=100) → SurrealDB SELECT * FROM impulse_mapping_record WHERE context.activityCategory='feature' → compute_recommendations(activity_type, records) → calculate_impulse_success_rates() (group by type, compute success rate) → compute_optimal_token_budget() (average successful execution budgets) → calculate_success_correlation() (compare success with vs without impulses) → Return ContextOptimizationResponse {recommended_impulses: [{type, success_rate, successes, total_uses}], optimal_token_budget, success_correlation, sample_size}",
+  "enforcementImpulseId": "enforcement-context-optimization-endpoint-complete",
+  "validationNotes": "To validate: (1) Seed impulse_mapping_record with test data for 'feature' and 'bugfix' categories with varying impulse types and success rates (2) Call GET /context-optimization?activity_type=feature and verify response has ranked impulse types by success rate (3) Call with activity_type=bugfix and verify different recommendations (4) Verify optimal_token_budget is computed from successful executions only (5) Verify success_correlation reflects difference between tasks with vs without impulses",
+  "totalComponentsChanged": 7,
+  "totalLinesAdded": 463,
+  "specificationsEnforced": [
+    "context-optimization-endpoint-complete: GET /v1/learning/context-optimization endpoint returns impulse recommendations based on historical success patterns by activity type"
+  ]
+}
