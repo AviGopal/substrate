@@ -184,15 +184,18 @@ class MigrationRunner:
                 SELECT * FROM schema_version 
                 WHERE success = true 
                 ORDER BY version DESC 
-                LIMIT 1;
+                LIMIT 1
             """)
 
-            if result and len(result) > 0 and result[0].get("status") == "OK":
-                records = result[0].get("result", [])
-                if records:
-                    return records[0].get("version")
+            # Result is array: [USE result, SELECT result]
+            if result and len(result) > 1:
+                select_result = result[1]
+                if select_result.get("status") == "OK":
+                    records = select_result.get("result", [])
+                    if records:
+                        return records[0].get("version")
             return None
-        except Exception:
+        except Exception as e:
             # Table might not exist yet
             return None
 
@@ -202,12 +205,15 @@ class MigrationRunner:
             result = self.db.execute("""
                 SELECT version FROM schema_version 
                 WHERE success = true 
-                ORDER BY version;
+                ORDER BY version
             """)
 
-            if result and len(result) > 0 and result[0].get("status") == "OK":
-                records = result[0].get("result", [])
-                return [r["version"] for r in records]
+            # Result is array: [USE result, SELECT result]
+            if result and len(result) > 1:
+                select_result = result[1]
+                if select_result.get("status") == "OK":
+                    records = select_result.get("result", [])
+                    return [r["version"] for r in records]
             return []
         except Exception:
             return []

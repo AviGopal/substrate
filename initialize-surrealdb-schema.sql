@@ -1,11 +1,11 @@
 -- Initialize SurrealDB Schema for Learning Loop
--- Namespace: metabob, Database: metabob
+-- Namespace: metabob, Database: devbob
 -- Created: 2026-02-23
 -- Purpose: Fix critical data persistence bug by creating proper database schema
 
--- Use the metabob namespace and database
+-- Use the metabob namespace and devbob database
 USE NS metabob;
-USE DB metabob;
+USE DB devbob;
 
 -- ============================================================================
 -- Table: activity_execution
