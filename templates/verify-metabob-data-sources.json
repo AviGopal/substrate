@@ -1,0 +1,160 @@
+{
+  "name": "Verify Metabob Data Sources",
+  "version": 1,
+  "description": "Systematically verify all Metabob MCP tools trace back to documented data sources with evidence. Detects tools that return empty/invalid responses and enforces validation conditions.",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "list-all-metabob-tools",
+      "subagent": "general",
+      "description": "Enumerate all Metabob MCP tools and their claimed capabilities",
+      "dependencies": [],
+      "prompt": {
+        "template": "## Task: List All Metabob MCP Tools\n\n### Objective\nCreate comprehensive inventory of all metabob_* tools with their claimed capabilities.\n\n### Search Strategy\n\n1. **Find Tool Definitions**\n```bash\n# Search for metabob tool definitions in MCP server\ngrep -rn \"def metabob_\" repos/metabob-cli/src/metabob_cli/mcp/ --include=\"*.py\" -A 10\n\n# Find tool schemas\ngrep -rn \"@mcp.tool\" repos/metabob-cli/src/metabob_cli/mcp/ --include=\"*.py\" -B 2 -A 20\n\n# Check system prompt claims\ngrep -rn \"metabob_\" repos/metabob-opencode/ --include=\"*.ts\" --include=\"*.md\" | grep -i \"claim\\|capability\\|provide\"\n```\n\n2. **Extract Tool Metadata**\nFor each tool, document:\n- Tool name (e.g., metabob_search_codebase_issues)\n- Claimed capability (from docstring/system prompt)\n- Input parameters\n- Output schema\n- Data source claims (\"semantic search\", \"CPG analysis\", etc.)\n\n3. **Create Inventory JSON**\n```json\n{\n  \"tools\": [\n    {\n      \"name\": \"metabob_search_codebase_issues\",\n      \"file\": \"repos/metabob-cli/src/metabob_cli/mcp/tools.py\",\n      \"line\": 123,\n      \"claims\": [\n        \"semantic similarity search\",\n        \"background analysis engine\",\n        \"local analysis\"\n      ],\n      \"parameters\": [\"query\", \"limit\"],\n      \"return_type\": \"List[CodeIssue]\",\n      \"priority\": \"high\"\n    }\n  ]\n}\n```\n\n### Success Criteria\n- Found all metabob_* tool definitions\n- Extracted claims for each tool\n- Prioritized tools by usage/value",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": [
+          "metabob_search_codebase_issues",
+          "metabob_analyze_change_impact",
+          "tools"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "trace-each-tool",
+      "subagent": "general",
+      "description": "Trace data flow for each high-priority tool using trace-data-flow-single-feature",
+      "dependencies": [
+        "list-all-metabob-tools"
+      ],
+      "prompt": {
+        "template": "## Task: Trace Data Flow for Priority Tools\n\n### Context\nTools to trace: {{previousTaskOutput['list-all-metabob-tools']}}\n\n### Objective\nFor each HIGH priority tool, use the existing trace-data-flow-single-feature activity.\n\n### Approach\n\n```bash\n# For each tool in the inventory:\nfor tool in metabob_search_codebase_issues metabob_analyze_change_impact metabob_annotate_component; do\n  echo \"Tracing $tool...\"\n  \n  # Execute trace activity\n  cd repos/metabob-opencode/packages/opencode\n  bun run opencode <<EOF\nactivity trace-data-flow-single-feature \\\n  --featureName \"$tool\" \\\n  --reason \"Verify data sources for Metabob integration audit\"\nEOF\n  \n  # Check for generated flow documentation\n  if [ -f \"docs/data-flows/${tool}-flow.md\" ]; then\n    echo \"\u2713 Flow documented: docs/data-flows/${tool}-flow.md\"\n  else\n    echo \"\u2717 Flow tracing failed for $tool\"\n  fi\ndone\n```\n\n### Tools to Trace (Priority Order)\n\n1. **metabob_search_codebase_issues** - Claims semantic search\n2. **metabob_analyze_change_impact** - Claims CPG-based analysis\n3. **metabob_annotate_component** - Claims institutional knowledge\n4. **metabob_mark_problem_complete** - Claims resolution learning\n5. **metabob_get_priority_issues** - Claims AI-guided prioritization\n\n### Success Criteria\n- All HIGH priority tools traced\n- Flow documentation generated in docs/data-flows/\n- Data sources identified for each tool",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "docs/data-flows/metabob_search_codebase_issues-flow.md",
+          "docs/data-flows/metabob_analyze_change_impact-flow.md"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-claims-vs-reality",
+      "subagent": "general",
+      "description": "Compare claimed capabilities against actual implementation",
+      "dependencies": [
+        "trace-each-tool"
+      ],
+      "prompt": {
+        "template": "## Task: Verify Claims vs Reality\n\n### Context\nFlow documentation generated: {{previousTaskOutput['trace-each-tool']}}\n\n### Objective\nFor each tool, compare CLAIMS vs REALITY from flow traces.\n\n### Analysis Method\n\n```bash\n# For each tool's flow documentation:\nfor flow_doc in docs/data-flows/metabob_*-flow.md; do\n  tool_name=$(basename \"$flow_doc\" -flow.md)\n  \n  echo \"\\n=== Analyzing $tool_name ===\"\n  \n  # Extract key claims from system prompt\n  grep -i \"claim\\|semantic\\|CPG\\|analysis\\|learning\" repos/metabob-opencode/ -r --include=\"*.ts\" --include=\"*.md\" | grep \"$tool_name\"\n  \n  # Extract reality from flow doc\n  echo \"\\nREALITY (from flow trace):\"\n  grep -E \"Data Source|Algorithm|Storage|External API\" \"$flow_doc\"\n  \n  # Check for discrepancies\n  if grep -q \"external API\" \"$flow_doc\" && grep -q \"local analysis\" system_prompt; then\n    echo \"\u274c MISMATCH: Claims local, actually external\"\n  fi\n  \n  if grep -q \"keyword.*match\" \"$flow_doc\" && grep -q \"semantic.*search\" system_prompt; then\n    echo \"\u274c MISMATCH: Claims semantic, actually keyword\"\n  fi\ndone\n```\n\n### Create Verification Report\n\n```json\n{\n  \"verification_results\": [\n    {\n      \"tool\": \"metabob_search_codebase_issues\",\n      \"claimed\": [\"semantic similarity search\", \"local analysis\", \"background engine\"],\n      \"actual\": [\"keyword matching\", \"external API (ide.metabob.com)\", \"file watcher with API polling\"],\n      \"verdict\": \"MISLEADING\",\n      \"evidence\": \"Flow trace shows set intersection, no ML models, 100% external API\",\n      \"severity\": \"HIGH\"\n    },\n    {\n      \"tool\": \"metabob_analyze_change_impact\",\n      \"claimed\": [\"CPG-based\", \"graph traversal\", \"dependency analysis\"],\n      \"actual\": [\"Real CPG in SQLite\", \"BFS algorithm\", \"tree-sitter parsing\"],\n      \"verdict\": \"VERIFIED\",\n      \"evidence\": \"Flow trace confirms graph structure, adjacency cache, proper algorithms\",\n      \"severity\": \"NONE\"\n    }\n  ],\n  \"summary\": {\n    \"total_tools\": 5,\n    \"verified\": 2,\n    \"misleading\": 2,\n    \"partial\": 1\n  }\n}\n```\n\n### Save Report\nWrite to: `docs/metabob-verification-report.json`\n\n### Success Criteria\n- All tools analyzed for claim accuracy\n- Mismatches identified with evidence\n- Severity assigned to each mismatch",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "docs/metabob-verification-report.json"
+        ],
+        "requiredPatterns": [
+          "verification_results",
+          "verdict"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-for-empty-responses",
+      "subagent": "general",
+      "description": "Execute each tool and detect empty/invalid responses",
+      "dependencies": [
+        "list-all-metabob-tools"
+      ],
+      "prompt": {
+        "template": "## Task: Test Tools for Empty/Invalid Responses\n\n### Objective\nCall each Metabob tool and detect if it returns empty, null, or invalid data.\n\n### Test Strategy\n\n```python\n#!/usr/bin/env python3\n\"\"\"Test Metabob tools for response validity.\"\"\"\n\nimport json\nimport subprocess\nfrom typing import Any\n\ntools_to_test = [\n    {\n        \"name\": \"metabob_search_codebase_issues\",\n        \"args\": {\"query\": \"authentication bug\", \"limit\": 10},\n        \"expect_non_empty\": [\"results\", \"issues\"],\n    },\n    {\n        \"name\": \"metabob_analyze_change_impact\",\n        \"args\": {\"file_path\": \"repos/metabob-cli/src/metabob_cli/mcp/tools.py\", \"component_name\": \"search_codebase_issues\"},\n        \"expect_non_empty\": [\"dependencies\", \"dependents\"],\n    },\n    {\n        \"name\": \"metabob_get_priority_issues\",\n        \"args\": {},\n        \"expect_non_empty\": [\"issues\"],\n    },\n]\n\nresults = []\n\nfor tool in tools_to_test:\n    print(f\"\\nTesting {tool['name']}...\")\n    \n    # Call tool via MCP\n    mcp_request = {\n        \"method\": \"tools/call\",\n        \"params\": {\n            \"name\": tool[\"name\"],\n            \"arguments\": tool[\"args\"],\n        },\n    }\n    \n    proc = subprocess.run(\n        [\"python\", \"-m\", \"metabob_cli.mcp.server\", \"stdio\"],\n        input=json.dumps(mcp_request),\n        capture_output=True,\n        text=True,\n        cwd=\"repos/metabob-cli\",\n    )\n    \n    try:\n        response = json.loads(proc.stdout)\n        result = response.get(\"result\", {})\n        \n        # Check for empty responses\n        is_empty = True\n        for field in tool[\"expect_non_empty\"]:\n            if field in result and result[field]:\n                is_empty = False\n                break\n        \n        results.append({\n            \"tool\": tool[\"name\"],\n            \"status\": \"empty\" if is_empty else \"valid\",\n            \"response_size\": len(json.dumps(result)),\n            \"fields_checked\": tool[\"expect_non_empty\"],\n            \"sample_response\": str(result)[:200],\n        })\n        \n        if is_empty:\n            print(f\"\u274c EMPTY RESPONSE: {tool['name']}\")\n        else:\n            print(f\"\u2713 Valid response: {tool['name']}\")\n    \n    except Exception as e:\n        print(f\"\u2717 ERROR: {tool['name']} - {e}\")\n        results.append({\n            \"tool\": tool[\"name\"],\n            \"status\": \"error\",\n            \"error\": str(e),\n        })\n\n# Save results\nwith open(\"docs/metabob-response-validation.json\", \"w\") as f:\n    json.dump({\"test_results\": results}, f, indent=2)\n\nprint(f\"\\nResults saved to docs/metabob-response-validation.json\")\n```\n\n### Run Tests\n```bash\nchmod +x test_metabob_responses.py\n./test_metabob_responses.py\n```\n\n### Success Criteria\n- All tools tested\n- Empty responses identified\n- Results saved to docs/metabob-response-validation.json",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "docs/metabob-response-validation.json"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-validation-enforcement",
+      "subagent": "general",
+      "description": "Add response validation to tools that return empty data",
+      "dependencies": [
+        "test-for-empty-responses",
+        "verify-claims-vs-reality"
+      ],
+      "prompt": {
+        "template": "## Task: Enforce Response Validation\n\n### Context\n- Empty response tools: {{previousTaskOutput['test-for-empty-responses']}}\n- Misleading tools: {{previousTaskOutput['verify-claims-vs-reality']}}\n\n### Objective\nAdd validation layers to detect and handle empty/invalid responses.\n\n### Implementation Strategy\n\n```typescript\n// In repos/metabob-opencode/packages/opencode/src/tools/metabob-tools.ts\n\nimport { z } from \"zod\";\n\n// Define response schemas with validation\nconst SearchIssuesResponseSchema = z.object({\n  results: z.array(z.object({\n    id: z.string(),\n    severity: z.enum([\"HIGH\", \"MEDIUM\", \"LOW\"]),\n    description: z.string().min(1),\n    file_path: z.string(),\n    line: z.number(),\n  })).min(1, \"Search returned no results - external API may be unavailable\"),\n  total: z.number(),\n});\n\nconst ChangeImpactResponseSchema = z.object({\n  dependencies: z.array(z.string()),\n  dependents: z.array(z.string()),\n  risk_score: z.number().min(0).max(1),\n}).refine(\n  (data) => data.dependencies.length > 0 || data.dependents.length > 0,\n  \"Change impact analysis returned no dependencies - CPG may not be initialized\"\n);\n\n// Wrap tool calls with validation\nexport async function metabob_search_codebase_issues(\n  args: { query: string; limit: number }\n): Promise<SearchIssuesResponse> {\n  const response = await mcpClient.callTool(\"metabob_search_codebase_issues\", args);\n  \n  try {\n    return SearchIssuesResponseSchema.parse(response);\n  } catch (error) {\n    // Log validation failure\n    logger.warn(\"Metabob search returned invalid response\", {\n      error: error.message,\n      query: args.query,\n      response_preview: JSON.stringify(response).substring(0, 200),\n    });\n    \n    // Return graceful fallback\n    return {\n      results: [],\n      total: 0,\n      error: \"External API unavailable or returned invalid data\",\n      fallback: true,\n    };\n  }\n}\n\nexport async function metabob_analyze_change_impact(\n  args: { file_path: string; component_name?: string }\n): Promise<ChangeImpactResponse> {\n  const response = await mcpClient.callTool(\"metabob_analyze_change_impact\", args);\n  \n  try {\n    return ChangeImpactResponseSchema.parse(response);\n  } catch (error) {\n    logger.warn(\"Metabob change impact returned invalid response\", {\n      error: error.message,\n      file_path: args.file_path,\n      component_name: args.component_name,\n    });\n    \n    // Return graceful fallback\n    return {\n      dependencies: [],\n      dependents: [],\n      risk_score: 0.5, // Unknown risk\n      error: \"CPG not initialized or component not found\",\n      fallback: true,\n    };\n  }\n}\n```\n\n### Add Integration Tests\n\n```typescript\n// In repos/metabob-opencode/packages/opencode/tests/metabob-validation.test.ts\n\nimport { describe, it, expect } from \"bun:test\";\nimport { metabob_search_codebase_issues } from \"../src/tools/metabob-tools\";\n\ndescribe(\"Metabob Response Validation\", () => {\n  it(\"should handle empty search results gracefully\", async () => {\n    const result = await metabob_search_codebase_issues({\n      query: \"nonexistent_pattern_xyz123\",\n      limit: 10,\n    });\n    \n    expect(result).toBeDefined();\n    expect(result.results).toBeArray();\n    \n    if (result.fallback) {\n      expect(result.error).toContain(\"unavailable\");\n    }\n  });\n  \n  it(\"should handle CPG not initialized\", async () => {\n    const result = await metabob_analyze_change_impact({\n      file_path: \"nonexistent/file.ts\",\n    });\n    \n    expect(result).toBeDefined();\n    expect(result.dependencies).toBeArray();\n    expect(result.dependents).toBeArray();\n    \n    if (result.fallback) {\n      expect(result.error).toContain(\"not initialized\");\n    }\n  });\n});\n```\n\n### Success Criteria\n- Response schemas defined with Zod\n- Validation wrappers added to all tools\n- Graceful fallbacks for empty responses\n- Integration tests added",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "repos/metabob-opencode/packages/opencode/src/tools/metabob-tools.ts",
+          "repos/metabob-opencode/packages/opencode/tests/metabob-validation.test.ts"
+        ],
+        "requiredPatterns": [
+          "SearchIssuesResponseSchema",
+          "ChangeImpactResponseSchema",
+          "fallback"
+        ],
+        "commands": [
+          {
+            "name": "test-metabob-validation",
+            "command": "cd repos/metabob-opencode/packages/opencode && bun test metabob-validation.test.ts",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [
+      "test -f docs/metabob-verification-report.json",
+      "test -f docs/metabob-response-validation.json"
+    ],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}
