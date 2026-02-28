@@ -1,0 +1,21 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: No calculateResponseQuality in opencode"
+  },
+  "metadata": {
+    "testCase": "No calculateResponseQuality in opencode",
+    "input": {
+      "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "pattern": "function calculateResponseQuality"
+    },
+    "expectedOutput": {
+      "found": false,
+      "pass": true
+    },
+    "validationLogic": "Search for calculateResponseQuality function. Pass if NOT found."
+  },
+  "budget": 500
+}

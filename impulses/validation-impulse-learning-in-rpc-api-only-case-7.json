@@ -1,0 +1,21 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-7",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 7: RPC API has calculate_quality function"
+  },
+  "metadata": {
+    "testCase": "RPC API has calculate_quality",
+    "input": {
+      "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "pattern": "def calculate_quality("
+    },
+    "expectedOutput": {
+      "found": true,
+      "pass": true
+    },
+    "validationLogic": "Search for def calculate_quality( function. Pass if found."
+  },
+  "budget": 500
+}

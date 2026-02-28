@@ -1,0 +1,21 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-8",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 8: RPC API has track_usage function"
+  },
+  "metadata": {
+    "testCase": "RPC API has track_usage",
+    "input": {
+      "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "pattern": "def track_usage("
+    },
+    "expectedOutput": {
+      "found": true,
+      "pass": true
+    },
+    "validationLogic": "Search for def track_usage( function. Pass if found."
+  },
+  "budget": 500
+}

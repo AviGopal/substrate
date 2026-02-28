@@ -1,0 +1,21 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-6",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 6: RPC API has normalize_pattern function"
+  },
+  "metadata": {
+    "testCase": "RPC API has normalize_pattern",
+    "input": {
+      "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "pattern": "def normalize_pattern("
+    },
+    "expectedOutput": {
+      "found": true,
+      "pass": true
+    },
+    "validationLogic": "Search for def normalize_pattern( function. Pass if found."
+  },
+  "budget": 500
+}

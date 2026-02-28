@@ -1,0 +1,30 @@
+{
+  "id": "harness-impulse-learning-in-rpc-api-only",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs"
+  },
+  "metadata": {
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "harnessType": "validation",
+    "description": "Validates architectural boundary: learning algorithms in rpc-api only, opencode collects raw data",
+    "checksCount": 8,
+    "testCaseImpulses": [
+      "validation-impulse-learning-in-rpc-api-only-case-1",
+      "validation-impulse-learning-in-rpc-api-only-case-2",
+      "validation-impulse-learning-in-rpc-api-only-case-3",
+      "validation-impulse-learning-in-rpc-api-only-case-4",
+      "validation-impulse-learning-in-rpc-api-only-case-5",
+      "validation-impulse-learning-in-rpc-api-only-case-6",
+      "validation-impulse-learning-in-rpc-api-only-case-7",
+      "validation-impulse-learning-in-rpc-api-only-case-8"
+    ],
+    "usage": "node tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs",
+    "exitCodes": {
+      "0": "All checks passed - specification fully enforced",
+      "1": "One or more checks failed - specification not fully enforced"
+    }
+  },
+  "budget": 2000
+}

@@ -1,0 +1,21 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: No normalizePattern in opencode"
+  },
+  "metadata": {
+    "testCase": "No normalizePattern in opencode",
+    "input": {
+      "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "pattern": "function normalizePattern"
+    },
+    "expectedOutput": {
+      "found": false,
+      "pass": true
+    },
+    "validationLogic": "Search for normalizePattern function. Pass if NOT found."
+  },
+  "budget": 500
+}

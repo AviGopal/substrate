@@ -1,0 +1,20 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: impulse-learning.ts line count check"
+  },
+  "metadata": {
+    "testCase": "impulse-learning.ts line count",
+    "input": {
+      "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
+    },
+    "expectedOutput": {
+      "lineCount": "<50 OR DELETED",
+      "pass": true
+    },
+    "validationLogic": "Count non-blank, non-comment lines. Pass if <50 lines or file deleted."
+  },
+  "budget": 500
+}

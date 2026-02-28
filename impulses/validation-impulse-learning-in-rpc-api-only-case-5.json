@@ -1,0 +1,21 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 5: RPC API has /record-turn endpoint"
+  },
+  "metadata": {
+    "testCase": "RPC API has /record-turn endpoint",
+    "input": {
+      "filePath": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "pattern": "@router.post(\"/record-turn\")"
+    },
+    "expectedOutput": {
+      "found": true,
+      "pass": true
+    },
+    "validationLogic": "Search for @router.post('/record-turn') endpoint. Pass if found."
+  },
+  "budget": 500
+}
