@@ -1,0 +1,113 @@
+{
+  "specificationName": "boredom-activity-detection-mechanism",
+  "harnessFiles": [
+    {
+      "file": "tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts",
+      "purpose": "Tests detection markers (title prefix, branch, persistent fields)",
+      "testCases": 5,
+      "status": "EXISTING - Tests markers consistency"
+    },
+    {
+      "file": "tests/validation-harnesses/boredom-activity-detection-full-workflow-harness.ts",
+      "purpose": "Tests full workflow: detection → recommendation → improvement → validation",
+      "testCases": 3,
+      "status": "NEWLY CREATED - Comprehensive end-to-end tests"
+    }
+  ],
+  "testCases": [
+    {
+      "impulseId": "validation-boredom-full-workflow-case-1",
+      "name": "Improve Template with Low Success Rate",
+      "input": {
+        "templateId": "test-improve-template-struggling",
+        "successRate": 0.45,
+        "improvementGradient": 0.45
+      },
+      "expectedOutput": {
+        "gradientIncrease": 0.1,
+        "successRateIncrease": 0.15,
+        "costReduction": true,
+        "impulseUsageIncrease": true
+      },
+      "validates": [
+        "improve-template activity execution",
+        "Metrics tracking before/after",
+        "Impulse recommendation logic",
+        "Gradient improvement"
+      ]
+    },
+    {
+      "impulseId": "validation-boredom-full-workflow-case-2",
+      "name": "Debug Failures with Increasing Error Rate",
+      "input": {
+        "templateId": "test-debug-failures-low-gradient",
+        "successRate": 0.3,
+        "improvementGradient": 0.3
+      },
+      "expectedOutput": {
+        "gradientIncrease": 0.2,
+        "successRateIncrease": 0.3
+      },
+      "validates": [
+        "debug-failures activity execution",
+        "Failure pattern analysis",
+        "Validation rule fixing",
+        "Success rate improvement"
+      ]
+    },
+    {
+      "impulseId": "validation-boredom-full-workflow-case-3",
+      "name": "Optimize Performance with Degrading Trends",
+      "input": {
+        "templateId": "test-optimize-performance-mediocre",
+        "successRate": 0.7,
+        "improvementGradient": 0.7
+      },
+      "expectedOutput": {
+        "costReduction": true,
+        "promptTokenReduction": true,
+        "compositionSuggested": true
+      },
+      "validates": [
+        "optimize-performance activity execution",
+        "Monolithic task detection",
+        "Composition suggestions",
+        "Performance improvement"
+      ]
+    }
+  ],
+  "harnessImpulseIds": [
+    "harness-boredom-activity-detection-mechanism",
+    "harness-boredom-activity-detection-full-workflow"
+  ],
+  "validationStrategy": {
+    "step1": {
+      "action": "Seed test data",
+      "description": "Create struggling templates in test-boredom-templates/ with low gradients, failure patterns"
+    },
+    "step2": {
+      "action": "Call recommendation API",
+      "description": "Verify correct templates returned, ranked by urgency (improvement_gradient ASC)"
+    },
+    "step3": {
+      "action": "Execute improvement activities",
+      "description": "Run improve-template, debug-failures, optimize-performance and verify actionable outputs"
+    },
+    "step4": {
+      "action": "Track metrics delta",
+      "description": "Compare before/after: success_rate, gradient, cost, impulse_usage, prompt_tokens"
+    },
+    "step5": {
+      "action": "Verify improvements",
+      "description": "Assert gradient increased, success rate improved, impulse usage increased, prompts decreased"
+    }
+  },
+  "runCommands": {
+    "markers": "npx tsx tests/validation-harnesses/boredom-activity-detection-mechanism-harness.ts",
+    "fullWorkflow": "npx tsx tests/validation-harnesses/boredom-activity-detection-full-workflow-harness.ts"
+  },
+  "expectedResults": {
+    "markersHarness": "5/5 tests pass - All detection methods consistent",
+    "fullWorkflowHarness": "3/3 tests pass - Improvement gradient increases, metrics improve"
+  }
+}
