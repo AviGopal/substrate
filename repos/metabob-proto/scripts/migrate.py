@@ -117,7 +117,7 @@ class DatabaseConnection:
     def test_connection(self) -> bool:
         """Test database connection."""
         try:
-            result = self.execute("SELECT 1 as test")
+            result = self.execute("INFO FOR DB")
             return len(result) > 0 and result[0].get("status") == "OK"
         except Exception as e:
             print(f"Connection test failed: {e}", file=sys.stderr)
