@@ -1,0 +1,16 @@
+{
+  "id": "validation-metrics-calculation-in-rpc-api-only-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"name\": \"no-calculation-operators\",\n  \"input\": \"template-metrics-client.ts file content\",\n  \"expectedOutput\": {\n    \"pass\": true,\n    \"message\": \"No calculation operators found (/, *, Math.) in client code\"\n  }\n}",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testName": "no-calculation-operators",
+    "specificationName": "metrics-calculation-in-rpc-api-only",
+    "createdAt": "2026-02-28T09:47:19.767Z"
+  },
+  "budget": 500,
+  "status": "active"
+}

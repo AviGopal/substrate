@@ -1,0 +1,265 @@
+{
+  "id": "trace-metrics-calculation-in-rpc-api-only",
+  "type": "templateDefinition",
+  "pointer": {
+    "type": "templateDefinition",
+    "definition": {
+      "specificationName": "metrics-calculation-in-rpc-api-only",
+      "description": "Metrics calculations (success rate, quality score, averaging) must ONLY exist in metabob-rpc-api. metabob-opencode template-metrics-client must be a thin HTTP client with no calculations.",
+      "architecturalBoundary": "Metrics aggregation belongs in rpc-api, removing calculation logic from opencode client",
+      "currentState": {
+        "summary": "Metrics calculations are split between opencode and rpc-api, creating duplication and architectural violations",
+        "violations": [
+          "template-quality-score.ts performs full quality score calculation locally (0-100 scoring)",
+          "template-metrics-client.ts implements dual-write pattern (MCP + Redis)",
+          "Success rate calculations happen in both opencode and rpc-api",
+          "Averaging calculations (cost, duration, tokens) happen in both layers"
+        ]
+      },
+      "desiredState": {
+        "summary": "All metrics calculations consolidated in rpc-api, opencode becomes thin HTTP client",
+        "requirements": [
+          "template-metrics-client.ts makes HTTP calls ONLY (no calculations)",
+          "Success rate calculated ONLY in rpc-api (template_metrics.py)",
+          "Quality score calculated ONLY in rpc-api (new quality_score.py service)",
+          "Averaging (cost, duration, tokens) ONLY in rpc-api (metrics_aggregator.py)",
+          "Single write path through rpc-api endpoints (no dual-write)",
+          "Redis writes happen via rpc-api endpoint only"
+        ]
+      },
+      "components": [
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+          "component": "TemplateMetricsClient.reportExecution",
+          "currentBehavior": "Implements dual-write: Path A (MCP/JSON files) + Path B (Redis via MetabobCLI.completeActivityExecution). Makes parallel writes to both destinations.",
+          "desiredBehavior": "Single HTTP POST to rpc-api endpoint /v2/activities/metrics/record. No local calculations. Returns success/failure boolean.",
+          "gap": "Remove dual-write logic. Remove MetabobCLI.completeActivityExecution call. Replace with single HTTP client call to rpc-api.",
+          "linesOfCode": "91-168",
+          "calculationsToRemove": [
+            "None in this method (but calls other methods with calculations)"
+          ]
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/template-quality-score.ts",
+          "component": "TemplateQualityScore namespace",
+          "currentBehavior": "Full quality score calculation engine (0-100 points). Calculates success score (0-40), cost score (0-20), duration score (0-20), documentation score (0-20). 375 lines of calculation logic.",
+          "desiredBehavior": "REMOVE ENTIRELY. Quality score calculations belong in rpc-api. OpenCode should receive pre-calculated scores from rpc-api via HTTP.",
+          "gap": "Delete template-quality-score.ts. Move calculation logic to repos/metabob-rpc-api/server/services/quality_score.py (new file).",
+          "linesOfCode": "1-376 (entire file)",
+          "calculationsToRemove": [
+            "calculateSuccessScore(successRate, executions)",
+            "calculateCostScore(avgCost, expectedCost)",
+            "calculateDurationScore(avgDuration, expectedDuration)",
+            "calculateDocumentationScore(hasDescription, hasGuidance, hasValidation)",
+            "calculateQualityScore(metrics)",
+            "generateRecommendations(metrics, breakdown)"
+          ]
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+          "component": "TemplateMetricsClient.getTemplateMetrics",
+          "currentBehavior": "Fetches raw alpha/beta parameters from MCP for Thompson Sampling. Marked as @deprecated with warning log. Clients can compute success_rate locally from alpha/beta.",
+          "desiredBehavior": "REMOVE or keep as no-op stub. Thompson Sampling now happens server-side via POST /v2/activities/templates/{id}/select. OpenCode should never fetch raw alpha/beta.",
+          "gap": "Remove method or replace with deprecation stub that throws error. Update callers (activity.ts line 910, 990) to use RPC API selection endpoint instead.",
+          "linesOfCode": "185-226",
+          "calculationsToRemove": [
+            "Clients computing success_rate = alpha / (alpha + beta) after fetching metrics"
+          ]
+        },
+        {
+          "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+          "component": "MetabobCLI.completeActivityExecution",
+          "currentBehavior": "Makes MCP call to activity/complete tool, which writes to Redis. Part of dual-write pattern alongside reportExecution().",
+          "desiredBehavior": "REMOVE. This creates the dual-write pattern. All execution reporting should go through single rpc-api endpoint.",
+          "gap": "Delete method. Remove calls from template-metrics-client.ts line 118. Unified write path through rpc-api only.",
+          "linesOfCode": "1067-1137",
+          "calculationsToRemove": [
+            "None (data forwarding only, but creates architectural violation)"
+          ]
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/services/metrics_aggregator.py",
+          "component": "MetricsAggregator._update_aggregated_metrics",
+          "currentBehavior": "Calculates success_rate = successes / total, avg_cost, avg_duration, avg_tokens from Redis execution records. This is CORRECT - calculations belong in rpc-api.",
+          "desiredBehavior": "KEEP AS-IS. This is the correct location for metrics calculations. Expand to support more complex aggregations (percentiles, trends).",
+          "gap": "No gap - this is correctly implemented. Ensure this is the ONLY place success_rate is calculated.",
+          "linesOfCode": "88-159",
+          "calculationsToKeep": [
+            "success_rate = successes / total (line 132)",
+            "avg_cost = total_cost / total (line 133)",
+            "avg_duration = total_duration / total (line 134)",
+            "avg_tokens = total_tokens / total (lines 135-137)"
+          ]
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+          "component": "update_metrics_after_execution",
+          "currentBehavior": "Incremental metrics aggregation. Calculates success_rate (line 176), thompson_alpha/beta (lines 180-181), improvement_gradient (line 186). Uses incremental mean formula for averages.",
+          "desiredBehavior": "KEEP AS-IS. This is the correct location for Thompson Sampling parameter updates and success rate calculation.",
+          "gap": "No gap - this is correctly implemented. This should be the authoritative source for template metrics.",
+          "linesOfCode": "99-214",
+          "calculationsToKeep": [
+            "success_rate = successful_executions / n_new (line 176)",
+            "thompson_alpha = successful_executions + 1.0 (line 180)",
+            "thompson_beta = failed_executions + 1.0 (line 181)",
+            "improvement_gradient = success_rate * min(1.0, n_new / 10.0) (line 186)",
+            "new_avg_duration = (avg_duration_ms * n + duration_ms) / n_new (line 158)",
+            "new_avg_cost = (avg_cost_usd * n + cost_usd) / n_new (line 159)"
+          ]
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/actions/activity.py",
+          "component": "get_templates_by_context (lines 114-122)",
+          "currentBehavior": "Calculates success_rate from Beta distribution (alpha / (alpha + beta)). Calculates expected_value = success_rate * quality_score.",
+          "desiredBehavior": "KEEP AS-IS. This Thompson Sampling selection logic belongs in rpc-api. This is correctly implemented.",
+          "gap": "No gap - this is the correct location for Thompson Sampling selection.",
+          "linesOfCode": "77-135",
+          "calculationsToKeep": [
+            "success_rate = alpha / (alpha + beta) (line 115)",
+            "expected_value = success_rate * quality_score (line 119)"
+          ]
+        },
+        {
+          "file": "NEW: repos/metabob-rpc-api/server/services/quality_score.py",
+          "component": "QualityScoreService (to be created)",
+          "currentBehavior": "Does not exist yet.",
+          "desiredBehavior": "Create new service to calculate template quality scores (0-100). Migrate logic from template-quality-score.ts. Provides calculate_quality_score(metrics) function. Returns score, breakdown, grade, recommendations.",
+          "gap": "File does not exist. Must be created by copying calculation logic from opencode TypeScript and translating to Python.",
+          "linesOfCode": "0 (to be created)",
+          "calculationsToImplement": [
+            "calculate_success_score(success_rate, executions) -> float",
+            "calculate_cost_score(avg_cost, expected_cost) -> float",
+            "calculate_duration_score(avg_duration, expected_duration) -> float",
+            "calculate_documentation_score(has_description, has_guidance, has_validation) -> float",
+            "calculate_quality_score(metrics) -> QualityScoreResult",
+            "generate_recommendations(metrics, breakdown) -> List[str]"
+          ]
+        }
+      ],
+      "dataFlow": {
+        "current": {
+          "description": "Dual-write pattern with calculations in both layers",
+          "steps": [
+            "1. Activity execution completes in opencode",
+            "2. activity.ts calls TemplateMetricsClient.reportExecution()",
+            "3. reportExecution() does DUAL-WRITE:",
+            "   - Path A: MCP tool call to metabob_post_activity_result (JSON files)",
+            "   - Path B: MetabobCLI.completeActivityExecution() -> activity/complete MCP tool -> Redis",
+            "4. Both paths execute in parallel (Promise.allSettled)",
+            "5. OpenCode may also call getTemplateMetrics() to fetch alpha/beta and calculate success_rate locally",
+            "6. OpenCode uses template-quality-score.ts to calculate quality scores locally"
+          ],
+          "problems": [
+            "Two write paths (JSON files + Redis) create consistency risk",
+            "Calculations duplicated in opencode and rpc-api",
+            "OpenCode clients can compute success_rate locally, bypassing rpc-api",
+            "Quality score calculations in wrong layer (opencode instead of rpc-api)"
+          ]
+        },
+        "desired": {
+          "description": "Single write path through rpc-api, all calculations server-side",
+          "steps": [
+            "1. Activity execution completes in opencode",
+            "2. activity.ts calls TemplateMetricsClient.reportExecution()",
+            "3. reportExecution() makes single HTTP POST to rpc-api /v2/activities/metrics/record",
+            "4. RPC API receives execution data (activity_id, template_id, success, duration, cost, tokens)",
+            "5. RPC API writes to Redis via metrics_aggregator.py",
+            "6. RPC API calculates success_rate, averages, Thompson parameters via template_metrics.py",
+            "7. RPC API calculates quality_score via quality_score.py (new service)",
+            "8. RPC API returns success/failure to opencode",
+            "9. OpenCode never performs metrics calculations - only displays values from rpc-api"
+          ],
+          "benefits": [
+            "Single source of truth for metrics (rpc-api only)",
+            "No calculation duplication",
+            "OpenCode is thin HTTP client (correct architectural layer)",
+            "Easier to test metrics logic (Python unit tests in rpc-api)",
+            "Quality score calculations can leverage server-side data (historical trends, comparison)"
+          ]
+        }
+      },
+      "migrationPath": {
+        "phase1": {
+          "title": "Create quality score service in rpc-api",
+          "tasks": [
+            "Create repos/metabob-rpc-api/server/services/quality_score.py",
+            "Migrate calculation logic from template-quality-score.ts to Python",
+            "Write unit tests for quality_score.py",
+            "Create endpoint GET /v2/activities/templates/{id}/quality-score"
+          ]
+        },
+        "phase2": {
+          "title": "Simplify template-metrics-client to HTTP-only",
+          "tasks": [
+            "Remove dual-write from reportExecution() (delete MetabobCLI.completeActivityExecution call)",
+            "Replace with single HTTP POST to rpc-api /v2/activities/metrics/record",
+            "Remove or stub out getTemplateMetrics() (deprecated)",
+            "Update activity.ts to use rpc-api selection endpoint instead of local Thompson Sampling"
+          ]
+        },
+        "phase3": {
+          "title": "Remove local calculation files",
+          "tasks": [
+            "Delete template-quality-score.ts",
+            "Remove MetabobCLI.completeActivityExecution() from metabob.ts",
+            "Update imports and type definitions",
+            "Run integration tests to verify metrics still work"
+          ]
+        }
+      },
+      "validationCriteria": {
+        "functional": [
+          "Execution metrics are successfully written to Redis via rpc-api",
+          "Success rate matches between old calculation (opencode) and new (rpc-api)",
+          "Quality scores match between TypeScript and Python implementations",
+          "Thompson Sampling selection still works correctly"
+        ],
+        "architectural": [
+          "template-metrics-client.ts contains NO calculation logic (only HTTP calls)",
+          "template-quality-score.ts is deleted or emptied",
+          "MetabobCLI.completeActivityExecution() is removed",
+          "All success_rate calculations happen in rpc-api (grep shows 0 matches in opencode)",
+          "Dual-write pattern is eliminated (single write path through rpc-api)"
+        ],
+        "performance": [
+          "Metrics reporting completes in <500ms (single HTTP call vs dual-write)",
+          "No performance regression in activity execution"
+        ]
+      },
+      "referencedFiles": [
+        "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+        "repos/metabob-opencode/packages/opencode/src/session/template-metrics.ts",
+        "repos/metabob-opencode/packages/opencode/src/session/template-quality-score.ts",
+        "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+        "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+        "repos/metabob-rpc-api/server/services/metrics_aggregator.py",
+        "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+        "repos/metabob-rpc-api/server/actions/activity.py"
+      ],
+      "traceSummary": {
+        "totalComponents": 8,
+        "violatingComponents": 4,
+        "correctComponents": 3,
+        "newComponentsNeeded": 1,
+        "estimatedEffort": "3-4 hours",
+        "riskLevel": "medium",
+        "riskFactors": [
+          "Quality score calculation migration requires careful testing (complex scoring logic)",
+          "Dual-write removal could cause temporary data inconsistency if not rolled out carefully",
+          "Thompson Sampling selection must continue working during migration"
+        ]
+      }
+    },
+    "source": "trace-data-flow-single-feature"
+  },
+  "metadata": {
+    "specificationName": "metrics-calculation-in-rpc-api-only",
+    "architecturalBoundary": "Metrics aggregation belongs in rpc-api, removing calculation logic from opencode client",
+    "createdAt": "2026-02-28T09:38:22.661Z",
+    "componentsAnalyzed": 8,
+    "estimatedEffort": "3-4 hours",
+    "riskLevel": "medium"
+  },
+  "budget": 5000,
+  "status": "active"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "harness-metrics-calculation-in-rpc-api-only",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "specificationName": "metrics-calculation-in-rpc-api-only",
+    "testCount": 6,
+    "createdAt": "2026-02-28T09:47:19.768Z",
+    "purpose": "Validates architectural boundary: metrics calculations in rpc-api only"
+  },
+  "budget": 2000,
+  "status": "active"
+}
