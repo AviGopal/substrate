@@ -1,0 +1,31 @@
+{
+  "id": "validation-pattern-extraction-service-complete-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Complexity Calculation\n\nInput:\n- Messages: [\"Add authentication feature to src/auth/login.ts, src/auth/middleware.ts, and src/routes/auth.ts\", \"Refactor existing code to support OAuth2\", \"Update tests in test/auth.test.ts\"]\n\nExpected Output:\n- file_paths: [\"src/auth/login.ts\", \"src/auth/middleware.ts\", \"src/routes/auth.ts\", \"test/auth.test.ts\"]\n- components_modified: []\n- common_patterns: [\"add_feature\", \"add_test\", \"refactor\"]\n- complexity_indicators.files_touched_count: 4\n- complexity_indicators.task_type: \"feature\"\n- complexity_indicators.refactoring_depth: \"moderate\" (because refactor keyword present and multiple files)\n\nReason: Tests complexity calculation with multiple files, feature addition, and refactoring depth assessment.",
+    "source": "validation-test-case"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 4,
+    "category": "complexity_calculation",
+    "input": {
+      "messages": [
+        "Add authentication feature to src/auth/login.ts, src/auth/middleware.ts, and src/routes/auth.ts",
+        "Refactor existing code to support OAuth2",
+        "Update tests in test/auth.test.ts"
+      ]
+    },
+    "expectedOutput": {
+      "file_paths": ["src/auth/login.ts", "src/auth/middleware.ts", "src/routes/auth.ts", "test/auth.test.ts"],
+      "components_modified": [],
+      "common_patterns": ["add_feature", "add_test", "refactor"],
+      "complexity_indicators": {
+        "files_touched_count": 4,
+        "task_type": "feature",
+        "refactoring_depth": "moderate"
+      }
+    }
+  }
+}

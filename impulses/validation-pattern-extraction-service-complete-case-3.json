@@ -1,0 +1,30 @@
+{
+  "id": "validation-pattern-extraction-service-complete-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Error Pattern Detection\n\nInput:\n- Messages: [\"Fix the TypeError in database.py\", \"Handle ImportError when loading modules\", \"Also fix syntax error in parser.ts\"]\n\nExpected Output:\n- file_paths: [\"database.py\", \"parser.ts\"]\n- components_modified: []\n- common_patterns: [\"fix_bug\", \"import_error\", \"syntax_error\", \"type_error\"]\n- complexity_indicators.task_type: \"fix\"\n- complexity_indicators.files_touched_count: 2\n\nReason: Tests error pattern detection (TypeError, ImportError, syntax_error) and bug fix classification.",
+    "source": "validation-test-case"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 3,
+    "category": "error_pattern_detection",
+    "input": {
+      "messages": [
+        "Fix the TypeError in database.py",
+        "Handle ImportError when loading modules",
+        "Also fix syntax error in parser.ts"
+      ]
+    },
+    "expectedOutput": {
+      "file_paths": ["database.py", "parser.ts"],
+      "components_modified": [],
+      "common_patterns": ["fix_bug", "import_error", "syntax_error", "type_error"],
+      "complexity_indicators": {
+        "task_type": "fix",
+        "files_touched_count": 2
+      }
+    }
+  }
+}
