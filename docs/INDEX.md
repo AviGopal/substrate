@@ -6,7 +6,11 @@
 
 ## 📁 Documentation Structure
 
-### Core Systems (412 files organized)
+**Last cleaned**: 2026-02-27  
+**Organization**: Streamlined from 232 root files to 3 core files  
+**Total organized**: 450+ files in categorized directories
+
+### Core Systems
 
 #### Activity System (24 files)
 **Location**: `docs/activity-system/`
@@ -45,59 +49,70 @@ Key documents:
 - Data flow diagrams and quick references
 - Test results and validation
 
-#### Architecture (110 files)
+#### Architecture (40 files) ✨ CLEANED
 **Location**: `docs/architecture/`
 
-Comprehensive system design documents:
-- Component boundaries and separation of concerns
-- State transformation paradigms
-- Impulse and lifecycle management
-- Context window utilization
-- Functional state loop architecture
-- Boredom manager and execution metrics
-- Variant system and embeddings integration
+**Core architectural design documents** (duplicates and session artifacts removed):
+- **Foundational Ontology**: ONTOLOGY_OF_BECOMING.md - Three-state model (vessel/becoming/instance)
+- **Activity System**: Activity-centric execution, replay, and state architecture
+- **Learning Loop**: Corrected learning loop architecture with Thompson Sampling
+- **Context Management**: Context architecture comprehensive guide and quick reference
+- **State Transformation**: Functional state loop and instructional-to-functional state bridge
+- **Impulse System**: Impulse-activity architecture, tagging patterns, variable mapping
+- **Boredom System**: Boredom activity system and manager architectural boundaries
+- **Execution**: Execution graph, sidebar architecture, and metrics boundaries
+- **Integration**: MCP Gateway, CPG co-change, plugin integration architectures
+- **Self-Development**: Safe self-development and self-improving system vision
+- **Shared State**: Shared instructional state complete architecture
+- **Optimization**: Cognitive load optimization and prompt optimization
 
-### Guides & References (46 files)
+### Guides & References (43 files) ✨ UPDATED
 
-#### Guides (26 files)
+#### Guides (43 files)
 **Location**: `docs/guides/`
 
 Practical how-to documentation:
-- Quick references (Activity, CPG, Impulse, Alignment)
-- Deployment guides (Helmfile, Docker)
-- Integration guides (Boredom Manager, CPG co-change)
-- Quick start and quick deploy workflows
-- Plugin integration
+- **Quick Start**: QUICK_START.md, QUICK_START_EVOLUTION.md
+- **Quick References**: Activity, CPG, Impulse, Alignment, Stats Panel
+- **DevBob Guides**: Build/Deploy, Local Access, DevCtl Activities/Usage, Distributed DevBob
+- **Deployment**: Helmfile, Docker, Vessel quickstart
+- **Integration**: Boredom Manager, CPG co-change, Library learning
+- **UI/Features**: TUI Activity Execution/Quickstart, Stats Panel Implementation
+- **Patterns**: Template success patterns, Model optimization
 
-#### Reports (26 files)
-**Location**: `docs/reports/`
+#### Reports (60 files) ✨ EXPANDED
+**Location**: `docs/reports/` and `docs/reports/2026-02/`
 
-Test results and system reports:
-- Activity execution data reports
-- Database configuration reports
-- Deployment validation reports
-- Version consistency audits
-- Violations scans
-- Validation results
+Test results, validation reports, and system status:
+- **Activity Reports**: Execution data, tracking, validation results
+- **Test Results**: E2E tests, boredom system, CI/CD validation
+- **Deployment Reports**: Kubernetes, Docker, DevBob deployments
+- **Validation Reports**: Architecture compliance, constraint validation
+- **Database Reports**: Configuration, version consistency
+- **Integration Tests**: Container integration, ACP delegation, SurrealDB
 
-### Development History (156 files)
+### Development History ✨ GREATLY EXPANDED
 
-#### Sessions (64 files)
-**Location**: `docs/sessions/`
+#### Sessions (68 files in sessions/ + 68 in sessions/2026-02/)
+**Location**: `docs/sessions/` and `docs/sessions/2026-02/`
 
-Chronological development logs:
-- Implementation sessions
-- Bug fixing sessions
-- Architecture evolution sessions
-- Feature development sessions
+Chronological development logs and session summaries:
+- **Recent Sessions (2026-02)**: Latest implementation sessions, summaries, and status reports
+- **Implementation Plans**: Impulse learning, CLI-mediated communication
+- **Strategy Docs**: Bootstrap template strategy, evolution action plans
+- **Status Updates**: Session completion reports, development alignment reviews
+- **Feature Sessions**: Activity evolution, architectural boundary enforcement
 
-#### Historical (92 files)
-**Location**: `docs/historical/`
+#### Historical (157 files in historical/ + 157 in historical/2026-02/)
+**Location**: `docs/historical/` and `docs/historical/2026-02/`
 
 Archived implementation and debugging documentation:
-- Bug fixes and debug sessions
-- Implementation completions
-- Status summaries and session reports
+- **Recent Archives (2026-02)**: Enforcement summaries, conflict analyses, validation results
+- **Workflow Stages**: Trace → Conflict Analysis → Enforcement → Validation → Ripple → Final
+- **Feature Analysis**: Boredom detection, execution metrics, context utilization
+- **Component Docs**: Component annotations, data transformations, dependency chains
+- **Investigations**: Root cause analysis, bug investigations, architecture corrections
+- **Legacy Docs**: Historical implementation attempts and debugging sessions
 - Deployment and workflow iterations
 - Test results and verification evidence
 
@@ -216,23 +231,50 @@ The system is now **fully autonomous**:
 
 ```
 docs/
-├── activity-system/     24 files - Activity execution and templates
-├── learning-loop/       11 files - Learning loop implementation
-├── cpg/                 11 files - Code Property Graph integration
-├── architecture/       110 files - System design and specifications
-├── guides/              26 files - How-to and quick references
-├── reports/             26 files - Test results and validation
-├── sessions/            64 files - Development session logs
-├── historical/          92 files - Archived implementation docs
-├── bootstrap/           10 files - System initialization
-├── data-flows/          13 files - Data flow analysis
-├── reference/           20 files - Technical references
-├── api/                  2 files - API documentation
-└── changes/              3 files - Change tracking
+├── activity-system/         24 files - Activity execution and templates
+├── learning-loop/           11 files - Learning loop implementation
+├── cpg/                     11 files - Code Property Graph integration
+├── architecture/            40 files - Core architectural design (CLEANED ✨)
+├── guides/                  43 files - How-to, quickstarts, and references (UPDATED ✨)
+├── reports/                 26 files - Test results and validation
+│   └── 2026-02/             60 files - February 2026 reports (NEW ✨)
+├── sessions/                68 files - Development session logs
+│   └── 2026-02/             68 files - February 2026 sessions (NEW ✨)
+├── historical/              92 files - Archived implementation docs
+│   └── 2026-02/            157 files - February 2026 archives (NEW ✨)
+├── bootstrap/               10 files - System initialization
+├── data-flows/              13 files - Data flow analysis
+├── reference/               20 files - Technical references
+├── architectural-boundaries/ - Architectural constraint definitions
+├── specifications/           - System specifications
+├── api/                      2 files - API documentation
+└── changes/                  3 files - Change tracking
 
-Total: 412 organized files
-Root: 2 files (README.md, VERSION.md)
+Total: 450+ organized files
+Root: 3 files (README.md, VERSION.md, QUICK_START.md)
 ```
+
+### 🎯 Cleanup Summary (2026-02-27)
+
+**Root Directory**:
+- Before: 232 markdown files (cluttered)
+- After: 3 core files (clean) ✅
+- Moved: 229 files to appropriate categories
+
+**Architecture Directory**:
+- Before: 122 files (many duplicates and session artifacts)
+- After: 40 core architectural docs ✅
+- Removed: Duplicate versions, workflow stage docs, analysis artifacts
+- Archived: 82 files to historical/sessions
+
+**Organization Strategy**:
+- ✅ Session summaries → `docs/sessions/2026-02/`
+- ✅ Test/validation reports → `docs/reports/2026-02/`
+- ✅ Workflow artifacts (TRACE/ENFORCEMENT/etc.) → `docs/historical/2026-02/`
+- ✅ Implementation plans → `docs/sessions/2026-02/`
+- ✅ Analysis docs → `docs/historical/2026-02/`
+- ✅ Duplicate architecture docs → Older versions removed/archived
+- ✅ Guides consolidated → `docs/guides/` (DevBob, UI, quickstarts)
 
 ## 🗺️ Navigation
 
@@ -245,6 +287,17 @@ Root: 2 files (README.md, VERSION.md)
 
 ---
 
-**Documentation last organized**: 2026-02-23  
-**Total files organized**: 412 markdown files from root to categorized directories  
+**Documentation last cleaned**: 2026-02-27  
+**Total files organized**: 450+ markdown files across categorized directories  
+**Root directory**: Cleaned from 232 → 3 core files ✅  
+**Architecture directory**: Streamlined from 122 → 40 core docs ✅  
 **System status**: Self-improving and operational ✅
+
+### Recent Cleanup Actions (2026-02-27)
+1. ✅ Moved 229 files from root to appropriate categories
+2. ✅ Created dated subdirectories for 2026-02 archives
+3. ✅ Removed duplicate architectural documents
+4. ✅ Archived workflow stage artifacts (TRACE/ENFORCEMENT/VALIDATION)
+5. ✅ Consolidated guides and quickstart documentation
+6. ✅ Organized session summaries by date
+7. ✅ Updated INDEX.md with new structure and cleanup notes
