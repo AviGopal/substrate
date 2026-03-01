@@ -43,10 +43,16 @@ DEFINE FIELD created_at ON activity_template TYPE datetime
 DEFINE FIELD updated_at ON activity_template TYPE datetime
   DEFAULT time::now();
 
+DEFINE FIELD scope ON activity_template TYPE string
+  DEFAULT 'org';
+
+DEFINE FIELD org_id ON activity_template TYPE string;
+
 -- Indexes for fast lookups
 DEFINE INDEX activity_template_id_idx ON activity_template FIELDS id UNIQUE;
 DEFINE INDEX activity_template_category_idx ON activity_template FIELDS category;
 DEFINE INDEX activity_template_name_idx ON activity_template FIELDS name;
+DEFINE INDEX activity_template_org_idx ON activity_template FIELDS org_id;
 
 -- =============================================================================
 -- Activity Execution Table
