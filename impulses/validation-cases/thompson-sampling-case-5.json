@@ -1,0 +1,17 @@
+{
+  "id": "validation-thompson-sampling-in-rpc-api-only-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 5: RPC API has sample_beta() function\n\nInput: Search for sample_beta function in metabob-rpc-api actions\nExpected Output: sample_beta() function exists in actions/activity.py\nValidation: grep for function definition\nRationale: Beta distribution sampling is the core of Thompson Sampling and must exist in RPC API",
+    "source": "validation-harness-generator"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "thompson-sampling-in-rpc-api-only",
+    "testNumber": 5,
+    "category": "rpc-api-presence",
+    "createdAt": "2026-03-01T02:30:00.000Z"
+  }
+}

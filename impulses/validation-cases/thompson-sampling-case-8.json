@@ -1,0 +1,17 @@
+{
+  "id": "validation-thompson-sampling-in-rpc-api-only-case-8",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 8: TemplateSelector calls RpcHttpClient.selectTemplateVariant()\n\nInput: Search for RpcHttpClient.selectTemplateVariant() call in TemplateSelector\nExpected Output: TemplateSelector delegates to RpcHttpClient in session/template-selector.ts\nValidation: grep for function call\nRationale: opencode must delegate template selection to RPC API, not implement it locally",
+    "source": "validation-harness-generator"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "thompson-sampling-in-rpc-api-only",
+    "testNumber": 8,
+    "category": "opencode-delegation",
+    "createdAt": "2026-03-01T02:30:00.000Z"
+  }
+}
