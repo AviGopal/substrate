@@ -1,0 +1,68 @@
+{
+  "name": "Durability Test Template",
+  "activity_id": "durability-test",
+  "description": "Template for testing data durability across full application teardown",
+  "category": "feature",
+  "version": 1,
+  "scope": "user",
+  "org_id": "test-org",
+  "tasks": [
+    {
+      "id": "test-task",
+      "subagent": "general",
+      "description": "Durability test task",
+      "dependencies": [],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "This template tests data durability across full teardown and redeploy",
+        "max_tokens": 1000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [],
+        "optional": [],
+        "disabled": []
+      }
+    }
+  ],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 0,
+    "annotationStrategy": "key-components"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [],
+    "examples": []
+  },
+  "learning": {
+    "enabled": false,
+    "captureStrategy": "none",
+    "feedbackPoints": []
+  }
+}

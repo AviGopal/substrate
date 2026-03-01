@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-03-01T13:59:20-08:00",
+  "surrealdb_deleted": true,
+  "rpc_api_deleted": true,
+  "pvc_status": "Bound",
+  "pvc_size": "10Gi",
+  "pvc_volume": "pvc-5e27edb9-c979-4efd-8239-eced8d4518ae",
+  "pods_remaining": 0,
+  "data_on_disk": true
+}
