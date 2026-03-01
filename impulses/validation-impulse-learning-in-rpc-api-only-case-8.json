@@ -1,21 +1,33 @@
 {
   "id": "validation-impulse-learning-in-rpc-api-only-case-8",
   "type": "memo",
+  "priority": "medium",
+  "budget": 500,
   "pointer": {
     "type": "memo",
-    "content": "Test Case 8: RPC API has track_usage function"
+    "source": "validation-test-case"
   },
   "metadata": {
-    "testCase": "RPC API has track_usage",
+    "testCase": 8,
+    "description": "track_usage() exists in rpc-api"
+  },
+  "content": {
     "input": {
-      "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-      "pattern": "def track_usage("
+      "testType": "function-check",
+      "config": {
+        "function": "track_usage",
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py"
+      }
     },
     "expectedOutput": {
-      "found": true,
-      "pass": true
-    },
-    "validationLogic": "Search for def track_usage( function. Pass if found."
-  },
-  "budget": 500
+      "pass": true,
+      "actual": {
+        "hasFunction": true
+      },
+      "expected": {
+        "function": "track_usage"
+      },
+      "reason": "track_usage() found in rpc-api"
+    }
+  }
 }

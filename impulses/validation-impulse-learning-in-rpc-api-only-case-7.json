@@ -1,21 +1,33 @@
 {
   "id": "validation-impulse-learning-in-rpc-api-only-case-7",
   "type": "memo",
+  "priority": "medium",
+  "budget": 500,
   "pointer": {
     "type": "memo",
-    "content": "Test Case 7: RPC API has calculate_quality function"
+    "source": "validation-test-case"
   },
   "metadata": {
-    "testCase": "RPC API has calculate_quality",
+    "testCase": 7,
+    "description": "calculate_quality() exists in rpc-api"
+  },
+  "content": {
     "input": {
-      "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-      "pattern": "def calculate_quality("
+      "testType": "function-check",
+      "config": {
+        "function": "calculate_quality",
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py"
+      }
     },
     "expectedOutput": {
-      "found": true,
-      "pass": true
-    },
-    "validationLogic": "Search for def calculate_quality( function. Pass if found."
-  },
-  "budget": 500
+      "pass": true,
+      "actual": {
+        "hasFunction": true
+      },
+      "expected": {
+        "function": "calculate_quality"
+      },
+      "reason": "calculate_quality() found in rpc-api"
+    }
+  }
 }

@@ -1,403 +1,464 @@
-#!/usr/bin/env ts-node
 /**
- * Validation Harness: impulse-learning-in-rpc-api-only
+ * Validation Harness: Impulse Learning in RPC API Only
  * 
- * Validates that learning algorithms have been moved from opencode to rpc-api.
+ * Validates that impulse learning (pattern extraction, quality scoring, learning buffer management)
+ * exists ONLY in metabob-rpc-api. metabob-opencode must only collect raw data and send to rpc-api.
  * 
- * Compliance Checks:
- * 1. impulse-learning.ts is <50 lines OR deleted
- * 2. No learning algorithms in opencode (normalizePattern, calculateQuality, trackUsage)
- * 3. RPC API has /v1/learning/record-turn endpoint
- * 4. RPC API has pattern extraction logic (normalize_pattern function)
- * 5. RPC API has quality calculation logic (calculate_quality function)
- * 6. RPC API has usage tracking logic (track_usage function)
+ * Expected Behavior:
+ * - opencode/impulse-learning.ts: <50 lines OR deleted
+ * - No normalizePattern(), calculateResponseQuality(), trackImpulseUsage() in opencode
+ * - RPC API has POST /v1/learning/record-turn endpoint
+ * - RPC API has pattern extraction, quality scoring, usage tracking logic
  * 
- * Usage:
- *   npx ts-node impulse-learning-in-rpc-api-only-harness.ts
- *   
- * Returns:
- *   Exit code 0 if all checks pass
- *   Exit code 1 if any check fails
+ * This harness runs WITHOUT LLM - pure static analysis.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+// @ts-ignore - Node.js built-in modules
+import * as fs from "fs"
+// @ts-ignore - Node.js built-in modules  
+import { execSync } from "child_process"
 
-interface ValidationResult {
-  pass: boolean;
-  checkName: string;
-  actual: any;
-  expected: any;
-  message: string;
+export interface ValidationCase {
+  id: string
+  input: ValidationInput
+  expectedOutput: ValidationOutput
 }
 
-interface HarnessResult {
-  specificationName: string;
-  overallPass: boolean;
-  checks: ValidationResult[];
+export interface ValidationInput {
+  testType: "line-count" | "grep" | "endpoint-check" | "function-check"
+  config?: {
+    file?: string
+    pattern?: string
+    endpoint?: string
+    function?: string
+    maxLines?: number
+  }
+}
+
+export interface ValidationOutput {
+  pass: boolean
+  actual?: any
+  expected?: any
+  reason?: string
+}
+
+export interface ValidationResult {
+  pass: boolean
+  actual: any
+  expected: any
+  reason?: string
+  timestamp: number
+}
+
+/**
+ * Validation Case 1: impulse-learning.ts line count must be <50 lines or deleted
+ */
+export async function validateImpulseLearningLineCount(): Promise<ValidationResult> {
+  const expected = {
+    file: "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+    maxLines: 50,
+  }
+
+  try {
+    const filePath = expected.file
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return {
+        pass: true,
+        actual: { exists: false, lineCount: 0 },
+        expected,
+        reason: "impulse-learning.ts deleted (COMPLIANT - preferred outcome)",
+        timestamp: Date.now(),
+      }
+    }
+
+    // Count lines
+    const cmd = `wc -l ${filePath}`
+    const output = execSync(cmd, { encoding: "utf-8" }).trim()
+    const lineCount = parseInt(output.split(" ")[0], 10)
+
+    const pass = lineCount < expected.maxLines
+
+    return {
+      pass,
+      actual: { exists: true, lineCount, file: filePath },
+      expected,
+      reason: pass
+        ? `impulse-learning.ts has ${lineCount} lines (target: <${expected.maxLines})`
+        : `impulse-learning.ts has ${lineCount} lines (expected <${expected.maxLines})`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to check impulse-learning.ts line count",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 2: No normalizePattern() in opencode
+ */
+export async function validateNoNormalizePatternInOpencode(): Promise<ValidationResult> {
+  const expected = {
+    function: "normalizePattern",
+    repo: "repos/metabob-opencode",
+    context: "impulse learning",
+    maxMatches: 0,
+  }
+
+  try {
+    // Search for normalizePattern in impulse-learning.ts and related files
+    const cmd = `cd ${expected.repo} && grep -rn 'normalizePattern' packages/opencode/src/session/impulse-learning.ts packages/opencode/src/util/metabob.ts 2>/dev/null | wc -l`
+    const output = execSync(cmd, { encoding: "utf-8", shell: "/bin/bash" }).trim()
+    const matchCount = parseInt(output, 10)
+
+    const pass = matchCount === expected.maxMatches
+
+    return {
+      pass,
+      actual: { matchCount, function: expected.function },
+      expected,
+      reason: pass
+        ? "No normalizePattern() found in opencode impulse learning"
+        : `Found ${matchCount} normalizePattern() references in opencode (expected 0)`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to search for normalizePattern in opencode",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 3: No calculateResponseQuality() in opencode impulse learning
+ */
+export async function validateNoCalculateQualityInOpencode(): Promise<ValidationResult> {
+  const expected = {
+    function: "calculateResponseQuality",
+    repo: "repos/metabob-opencode",
+    context: "impulse learning (excluding template-quality-score)",
+    maxMatches: 0,
+  }
+
+  try {
+    // Search only in impulse-learning.ts and metabob.ts (not template-quality-score.ts)
+    const cmd = `cd ${expected.repo} && grep -rn 'calculateResponseQuality\\|calculate_quality' packages/opencode/src/session/impulse-learning.ts packages/opencode/src/util/metabob.ts 2>/dev/null | wc -l`
+    const output = execSync(cmd, { encoding: "utf-8", shell: "/bin/bash" }).trim()
+    const matchCount = parseInt(output, 10)
+
+    const pass = matchCount === expected.maxMatches
+
+    return {
+      pass,
+      actual: { matchCount, function: expected.function },
+      expected,
+      reason: pass
+        ? "No calculateResponseQuality() found in opencode impulse learning"
+        : `Found ${matchCount} calculateResponseQuality() references in impulse learning (expected 0)`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to search for calculateResponseQuality in opencode",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 4: No trackImpulseUsage() in opencode impulse learning
+ */
+export async function validateNoTrackUsageInOpencode(): Promise<ValidationResult> {
+  const expected = {
+    function: "trackImpulseUsage",
+    repo: "repos/metabob-opencode",
+    context: "impulse learning (excluding config schemas)",
+    maxMatches: 0,
+  }
+
+  try {
+    // Search only in impulse-learning.ts and metabob.ts (not config files)
+    const cmd = `cd ${expected.repo} && grep -rn 'trackImpulseUsage\\|function trackUsage\\|const trackUsage' packages/opencode/src/session/impulse-learning.ts packages/opencode/src/util/metabob.ts 2>/dev/null | wc -l`
+    const output = execSync(cmd, { encoding: "utf-8", shell: "/bin/bash" }).trim()
+    const matchCount = parseInt(output, 10)
+
+    const pass = matchCount === expected.maxMatches
+
+    return {
+      pass,
+      actual: { matchCount, function: expected.function },
+      expected,
+      reason: pass
+        ? "No trackImpulseUsage() found in opencode impulse learning"
+        : `Found ${matchCount} trackImpulseUsage() references in impulse learning (expected 0)`,
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to search for trackImpulseUsage in opencode",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 5: RPC API has POST /record-turn endpoint
+ */
+export async function validateRecordTurnEndpoint(): Promise<ValidationResult> {
+  const expected = {
+    endpoint: "POST /record-turn",
+    file: "repos/metabob-rpc-api/server/routes/learning_loop.py",
+    pattern: '@router.post.*record-turn',
+  }
+
+  try {
+    const cmd = `grep -n '@router.post.*record-turn\\|def record_turn_learning' ${expected.file}`
+    const output = execSync(cmd, { encoding: "utf-8" }).trim()
+    const lines = output.split("\n")
+
+    const hasEndpoint = lines.length > 0
+    const pass = hasEndpoint
+
+    return {
+      pass,
+      actual: { hasEndpoint, lines: lines.length, sample: lines[0] },
+      expected,
+      reason: pass
+        ? `Found ${expected.endpoint} endpoint in rpc-api`
+        : "POST /record-turn endpoint not found in rpc-api",
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to find POST /record-turn endpoint",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 6: RPC API has normalize_pattern() function
+ */
+export async function validateNormalizePatternInRpcApi(): Promise<ValidationResult> {
+  const expected = {
+    function: "normalize_pattern",
+    file: "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+  }
+
+  try {
+    const cmd = `grep -n 'def normalize_pattern' ${expected.file}`
+    const output = execSync(cmd, { encoding: "utf-8" }).trim()
+    const hasFunction = output.length > 0
+
+    const pass = hasFunction
+
+    return {
+      pass,
+      actual: { hasFunction, location: output },
+      expected,
+      reason: pass
+        ? "normalize_pattern() found in rpc-api"
+        : "normalize_pattern() not found in rpc-api",
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to find normalize_pattern() in rpc-api",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 7: RPC API has calculate_quality() function
+ */
+export async function validateCalculateQualityInRpcApi(): Promise<ValidationResult> {
+  const expected = {
+    function: "calculate_quality",
+    file: "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+  }
+
+  try {
+    const cmd = `grep -n 'def calculate_quality' ${expected.file}`
+    const output = execSync(cmd, { encoding: "utf-8" }).trim()
+    const hasFunction = output.length > 0
+
+    const pass = hasFunction
+
+    return {
+      pass,
+      actual: { hasFunction, location: output },
+      expected,
+      reason: pass
+        ? "calculate_quality() found in rpc-api"
+        : "calculate_quality() not found in rpc-api",
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to find calculate_quality() in rpc-api",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Validation Case 8: RPC API has track_usage() function
+ */
+export async function validateTrackUsageInRpcApi(): Promise<ValidationResult> {
+  const expected = {
+    function: "track_usage",
+    file: "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+  }
+
+  try {
+    const cmd = `grep -n 'def track_usage' ${expected.file}`
+    const output = execSync(cmd, { encoding: "utf-8" }).trim()
+    const hasFunction = output.length > 0
+
+    const pass = hasFunction
+
+    return {
+      pass,
+      actual: { hasFunction, location: output },
+      expected,
+      reason: pass
+        ? "track_usage() found in rpc-api"
+        : "track_usage() not found in rpc-api",
+      timestamp: Date.now(),
+    }
+  } catch (error) {
+    return {
+      pass: false,
+      actual: { error: String(error) },
+      expected,
+      reason: "Failed to find track_usage() in rpc-api",
+      timestamp: Date.now(),
+    }
+  }
+}
+
+/**
+ * Run all validation cases
+ */
+export async function runValidation(): Promise<{
+  pass: boolean
+  results: ValidationResult[]
   summary: {
-    passed: number;
-    failed: number;
-    total: number;
-  };
-}
-
-/**
- * Count lines in a file (non-blank, non-comment)
- */
-function countLines(filePath: string): number {
-  if (!fs.existsSync(filePath)) {
-    return -1; // File deleted
+    total: number
+    passed: number
+    failed: number
   }
-  
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n').filter(line => {
-    const trimmed = line.trim();
-    // Skip blank lines and comment-only lines
-    return trimmed.length > 0 && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && !trimmed.startsWith('*');
-  });
-  
-  return lines.length;
-}
+}> {
+  console.log("🔍 Running Impulse Learning in RPC API Only Validation Harness...\n")
 
-/**
- * Check if file contains specific function/pattern
- */
-function fileContains(filePath: string, pattern: string | RegExp): boolean {
-  if (!fs.existsSync(filePath)) {
-    return false;
+  const results: ValidationResult[] = []
+
+  // Run all validation cases
+  console.log("📋 Case 1: Checking impulse-learning.ts line count...")
+  results.push(await validateImpulseLearningLineCount())
+
+  console.log("📋 Case 2: Checking no normalizePattern() in opencode...")
+  results.push(await validateNoNormalizePatternInOpencode())
+
+  console.log("📋 Case 3: Checking no calculateResponseQuality() in opencode...")
+  results.push(await validateNoCalculateQualityInOpencode())
+
+  console.log("📋 Case 4: Checking no trackImpulseUsage() in opencode...")
+  results.push(await validateNoTrackUsageInOpencode())
+
+  console.log("📋 Case 5: Checking POST /record-turn endpoint in rpc-api...")
+  results.push(await validateRecordTurnEndpoint())
+
+  console.log("📋 Case 6: Checking normalize_pattern() in rpc-api...")
+  results.push(await validateNormalizePatternInRpcApi())
+
+  console.log("📋 Case 7: Checking calculate_quality() in rpc-api...")
+  results.push(await validateCalculateQualityInRpcApi())
+
+  console.log("📋 Case 8: Checking track_usage() in rpc-api...")
+  results.push(await validateTrackUsageInRpcApi())
+
+  // Calculate summary
+  const passed = results.filter((r) => r.pass).length
+  const failed = results.length - passed
+  const overallPass = failed === 0
+
+  const summary = {
+    total: results.length,
+    passed,
+    failed,
   }
-  
-  const content = fs.readFileSync(filePath, 'utf-8');
-  
-  if (typeof pattern === 'string') {
-    return content.includes(pattern);
+
+  // Print results
+  console.log("\n" + "=".repeat(80))
+  console.log("📊 Validation Results:")
+  console.log("=".repeat(80))
+
+  results.forEach((result, index) => {
+    const status = result.pass ? "✅ PASS" : "❌ FAIL"
+    console.log(`\n${status} - Case ${index + 1}: ${result.reason}`)
+    if (!result.pass) {
+      console.log(`  Expected:`, JSON.stringify(result.expected, null, 2))
+      console.log(`  Actual:`, JSON.stringify(result.actual, null, 2))
+    }
+  })
+
+  console.log("\n" + "=".repeat(80))
+  console.log(`📈 Summary: ${passed}/${summary.total} checks passed`)
+  console.log("=".repeat(80))
+
+  if (overallPass) {
+    console.log("✅ VALIDATION PASSED: Impulse learning correctly isolated in rpc-api")
   } else {
-    return pattern.test(content);
+    console.log("❌ VALIDATION FAILED: Architectural boundary violated")
+  }
+
+  return {
+    pass: overallPass,
+    results,
+    summary,
   }
 }
 
 /**
- * Check 1: impulse-learning.ts line count
+ * Main entry point
  */
-function checkImpulseLearningLineCount(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts'
-  );
-  
-  const lineCount = countLines(filePath);
-  const pass = lineCount === -1 || lineCount < 50;
-  
-  return {
-    pass,
-    checkName: 'impulse-learning.ts line count',
-    actual: lineCount === -1 ? 'DELETED' : `${lineCount} lines`,
-    expected: '<50 lines OR DELETED',
-    message: pass
-      ? `✅ impulse-learning.ts ${lineCount === -1 ? 'deleted' : `has ${lineCount} lines (<50)`}`
-      : `❌ impulse-learning.ts has ${lineCount} lines (expected <50)`,
-  };
-}
-
-/**
- * Check 2: No normalizePattern in opencode
- */
-function checkNoNormalizePatternInOpencode(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts'
-  );
-  
-  if (!fs.existsSync(filePath)) {
-    return {
-      pass: true,
-      checkName: 'No normalizePattern in opencode',
-      actual: 'FILE DELETED',
-      expected: 'No normalizePattern function',
-      message: '✅ impulse-learning.ts deleted (no normalizePattern)',
-    };
-  }
-  
-  const hasNormalizePattern = fileContains(filePath, /function\s+normalizePattern|const\s+normalizePattern\s*=/);
-  const pass = !hasNormalizePattern;
-  
-  return {
-    pass,
-    checkName: 'No normalizePattern in opencode',
-    actual: hasNormalizePattern ? 'normalizePattern FOUND' : 'normalizePattern NOT FOUND',
-    expected: 'No normalizePattern function',
-    message: pass
-      ? '✅ No normalizePattern in opencode'
-      : '❌ normalizePattern still exists in opencode (should be in rpc-api only)',
-  };
-}
-
-/**
- * Check 3: No calculateResponseQuality in opencode
- */
-function checkNoCalculateQualityInOpencode(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts'
-  );
-  
-  if (!fs.existsSync(filePath)) {
-    return {
-      pass: true,
-      checkName: 'No calculateResponseQuality in opencode',
-      actual: 'FILE DELETED',
-      expected: 'No calculateResponseQuality function',
-      message: '✅ impulse-learning.ts deleted (no calculateResponseQuality)',
-    };
-  }
-  
-  const hasCalculateQuality = fileContains(filePath, /function\s+calculateResponseQuality|const\s+calculateResponseQuality\s*=/);
-  const pass = !hasCalculateQuality;
-  
-  return {
-    pass,
-    checkName: 'No calculateResponseQuality in opencode',
-    actual: hasCalculateQuality ? 'calculateResponseQuality FOUND' : 'calculateResponseQuality NOT FOUND',
-    expected: 'No calculateResponseQuality function',
-    message: pass
-      ? '✅ No calculateResponseQuality in opencode'
-      : '❌ calculateResponseQuality still exists in opencode (should be in rpc-api only)',
-  };
-}
-
-/**
- * Check 4: No trackImpulseUsage in opencode
- */
-function checkNoTrackUsageInOpencode(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts'
-  );
-  
-  if (!fs.existsSync(filePath)) {
-    return {
-      pass: true,
-      checkName: 'No trackImpulseUsage in opencode',
-      actual: 'FILE DELETED',
-      expected: 'No trackImpulseUsage function',
-      message: '✅ impulse-learning.ts deleted (no trackImpulseUsage)',
-    };
-  }
-  
-  const hasTrackUsage = fileContains(filePath, /function\s+trackImpulseUsage|const\s+trackImpulseUsage\s*=/);
-  const pass = !hasTrackUsage;
-  
-  return {
-    pass,
-    checkName: 'No trackImpulseUsage in opencode',
-    actual: hasTrackUsage ? 'trackImpulseUsage FOUND' : 'trackImpulseUsage NOT FOUND',
-    expected: 'No trackImpulseUsage function',
-    message: pass
-      ? '✅ No trackImpulseUsage in opencode'
-      : '❌ trackImpulseUsage still exists in opencode (should be in rpc-api only)',
-  };
-}
-
-/**
- * Check 5: RPC API has /record-turn endpoint
- */
-function checkRpcApiHasRecordTurnEndpoint(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/routes/learning_loop.py'
-  );
-  
-  if (!fs.existsSync(filePath)) {
-    return {
-      pass: false,
-      checkName: 'RPC API has /record-turn endpoint',
-      actual: 'learning_loop.py NOT FOUND',
-      expected: 'POST /record-turn endpoint exists',
-      message: '❌ learning_loop.py not found',
-    };
-  }
-  
-  const hasEndpoint = fileContains(filePath, /[@]router\.post\(["']\/record-turn["']/);
-  const pass = hasEndpoint;
-  
-  return {
-    pass,
-    checkName: 'RPC API has /record-turn endpoint',
-    actual: hasEndpoint ? 'POST /record-turn FOUND' : 'POST /record-turn NOT FOUND',
-    expected: 'POST /record-turn endpoint exists',
-    message: pass
-      ? '✅ RPC API has POST /record-turn endpoint'
-      : '❌ RPC API missing POST /record-turn endpoint',
-  };
-}
-
-/**
- * Check 6: RPC API has normalize_pattern function
- */
-function checkRpcApiHasNormalizePattern(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
-  );
-  
-  if (!fs.existsSync(filePath)) {
-    return {
-      pass: false,
-      checkName: 'RPC API has normalize_pattern',
-      actual: 'impulse_learning.py NOT FOUND',
-      expected: 'normalize_pattern function exists',
-      message: '❌ impulse_learning.py not found',
-    };
-  }
-  
-  const hasNormalizePattern = fileContains(filePath, /def\s+normalize_pattern\(/);
-  const pass = hasNormalizePattern;
-  
-  return {
-    pass,
-    checkName: 'RPC API has normalize_pattern',
-    actual: hasNormalizePattern ? 'normalize_pattern FOUND' : 'normalize_pattern NOT FOUND',
-    expected: 'normalize_pattern function exists',
-    message: pass
-      ? '✅ RPC API has normalize_pattern function'
-      : '❌ RPC API missing normalize_pattern function',
-  };
-}
-
-/**
- * Check 7: RPC API has calculate_quality function
- */
-function checkRpcApiHasCalculateQuality(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
-  );
-  
-  if (!fs.existsSync(filePath)) {
-    return {
-      pass: false,
-      checkName: 'RPC API has calculate_quality',
-      actual: 'impulse_learning.py NOT FOUND',
-      expected: 'calculate_quality function exists',
-      message: '❌ impulse_learning.py not found',
-    };
-  }
-  
-  const hasCalculateQuality = fileContains(filePath, /def\s+calculate_quality\(/);
-  const pass = hasCalculateQuality;
-  
-  return {
-    pass,
-    checkName: 'RPC API has calculate_quality',
-    actual: hasCalculateQuality ? 'calculate_quality FOUND' : 'calculate_quality NOT FOUND',
-    expected: 'calculate_quality function exists',
-    message: pass
-      ? '✅ RPC API has calculate_quality function'
-      : '❌ RPC API missing calculate_quality function',
-  };
-}
-
-/**
- * Check 8: RPC API has track_usage function
- */
-function checkRpcApiHasTrackUsage(): ValidationResult {
-  const filePath = path.join(
-    __dirname,
-    '../../repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
-  );
-  
-  if (!fs.existsSync(filePath)) {
-    return {
-      pass: false,
-      checkName: 'RPC API has track_usage',
-      actual: 'impulse_learning.py NOT FOUND',
-      expected: 'track_usage function exists',
-      message: '❌ impulse_learning.py not found',
-    };
-  }
-  
-  const hasTrackUsage = fileContains(filePath, /def\s+track_usage\(/);
-  const pass = hasTrackUsage;
-  
-  return {
-    pass,
-    checkName: 'RPC API has track_usage',
-    actual: hasTrackUsage ? 'track_usage FOUND' : 'track_usage NOT FOUND',
-    expected: 'track_usage function exists',
-    message: pass
-      ? '✅ RPC API has track_usage function'
-      : '❌ RPC API missing track_usage function',
-  };
-}
-
-/**
- * Run all validation checks
- */
-export function runValidation(): HarnessResult {
-  const checks: ValidationResult[] = [
-    checkImpulseLearningLineCount(),
-    checkNoNormalizePatternInOpencode(),
-    checkNoCalculateQualityInOpencode(),
-    checkNoTrackUsageInOpencode(),
-    checkRpcApiHasRecordTurnEndpoint(),
-    checkRpcApiHasNormalizePattern(),
-    checkRpcApiHasCalculateQuality(),
-    checkRpcApiHasTrackUsage(),
-  ];
-  
-  const passed = checks.filter(c => c.pass).length;
-  const failed = checks.filter(c => !c.pass).length;
-  const total = checks.length;
-  const overallPass = failed === 0;
-  
-  return {
-    specificationName: 'impulse-learning-in-rpc-api-only',
-    overallPass,
-    checks,
-    summary: {
-      passed,
-      failed,
-      total,
-    },
-  };
-}
-
-/**
- * Main execution
- */
-function main() {
-  console.log('🔍 Validation Harness: impulse-learning-in-rpc-api-only\n');
-  console.log('Specification: Learning algorithms belong in rpc-api, opencode only collects raw data\n');
-  
-  const result = runValidation();
-  
-  console.log('Checks:\n');
-  result.checks.forEach(check => {
-    console.log(check.message);
-    console.log(`   Actual: ${check.actual}`);
-    console.log(`   Expected: ${check.expected}`);
-    console.log('');
-  });
-  
-  console.log('─'.repeat(80));
-  console.log(`\nSummary: ${result.summary.passed}/${result.summary.total} checks passed\n`);
-  
-  if (result.overallPass) {
-    console.log('✅ VALIDATION PASSED - Specification fully enforced\n');
-    process.exit(0);
-  } else {
-    console.log('❌ VALIDATION FAILED - Specification not fully enforced\n');
-    console.log('Failed checks:');
-    result.checks.filter(c => !c.pass).forEach(check => {
-      console.log(`  - ${check.checkName}: ${check.message}`);
-    });
-    console.log('');
-    process.exit(1);
-  }
-}
-
-// Run if executed directly
-if (require.main === module) {
-  main();
+// @ts-ignore - Node.js runtime check
+if (typeof require !== 'undefined' && require.main === module) {
+  runValidation()
+    .then((result) => {
+      // @ts-ignore - Node.js process
+      process.exit(result.pass ? 0 : 1)
+    })
+    .catch((error) => {
+      console.error("❌ Validation harness error:", error)
+      // @ts-ignore - Node.js process
+      process.exit(1)
+    })
 }

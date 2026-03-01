@@ -1,21 +1,33 @@
 {
   "id": "validation-impulse-learning-in-rpc-api-only-case-4",
   "type": "memo",
+  "priority": "medium",
+  "budget": 500,
   "pointer": {
     "type": "memo",
-    "content": "Test Case 4: No trackImpulseUsage in opencode"
+    "source": "validation-test-case"
   },
   "metadata": {
-    "testCase": "No trackImpulseUsage in opencode",
+    "testCase": 4,
+    "description": "No trackImpulseUsage() in opencode"
+  },
+  "content": {
     "input": {
-      "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
-      "pattern": "function trackImpulseUsage"
+      "testType": "grep",
+      "config": {
+        "pattern": "trackImpulseUsage|trackUsage|track_usage"
+      }
     },
     "expectedOutput": {
-      "found": false,
-      "pass": true
-    },
-    "validationLogic": "Search for trackImpulseUsage function. Pass if NOT found."
-  },
-  "budget": 500
+      "pass": true,
+      "actual": {
+        "matchCount": 0
+      },
+      "expected": {
+        "function": "trackImpulseUsage",
+        "maxMatches": 0
+      },
+      "reason": "No trackImpulseUsage() found in opencode"
+    }
+  }
 }
