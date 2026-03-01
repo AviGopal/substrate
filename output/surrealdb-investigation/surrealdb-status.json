@@ -1,0 +1,12 @@
+{
+  "pod_name": "surrealdb-d7f986df-jhg9c",
+  "pod_status": "Running",
+  "pod_ready": "True",
+  "service_ip": "10.99.198.243",
+  "service_port": "8000",
+  "endpoint": "http://surrealdb.metabob.svc.cluster.local:8000",
+  "storage_mode": "memory",
+  "restarts": "3",
+  "age": "7h24m",
+  "connectivity": "unknown - RPC API pods are in CrashLoopBackOff"
+}

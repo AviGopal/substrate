@@ -1,0 +1,21 @@
+spec:
+  template:
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: surrealdb-data
+      containers:
+        - name: surrealdb
+          args:
+            - "start"
+            - "--log"
+            - "info"
+            - "--user"
+            - "root"
+            - "--pass"
+            - "$(SURREAL_PASSWORD)"
+            - "file:/data/database"
+          volumeMounts:
+            - name: data
+              mountPath: /data

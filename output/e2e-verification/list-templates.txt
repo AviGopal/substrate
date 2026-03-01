@@ -1,0 +1,219 @@
+{
+    "templates": [
+        {
+            "variant_id": "hello-world-minimal-31727b21",
+            "activity_id": "hello-world-minimal",
+            "variant_name": "Hello World Minimal",
+            "description": "Minimal test activity with no context requirements - single task that writes a file",
+            "version": 1,
+            "task_steps": [],
+            "variables": {},
+            "context_requirements": [],
+            "expected_duration_ms": 10000,
+            "expected_cost": 0.01,
+            "expected_quality_score": 0.5,
+            "created_at": "2026-02-20T18:45:28.681634",
+            "genealogy": {
+                "content_hash": "31727b21",
+                "parent_hash": null,
+                "generation": 0
+            },
+            "expected_value": 0.4827586206896552,
+            "success_rate": 0.9655172413793104,
+            "total_selections": 27
+        },
+        {
+            "variant_id": "test-feature-template-8bb2a471",
+            "activity_id": "test-feature-template",
+            "variant_name": "Test Feature Template",
+            "description": "A test template for feature implementation",
+            "version": 1,
+            "task_steps": [
+                {
+                    "id": "task-1",
+                    "subagent": "general",
+                    "description": "Implement feature logic",
+                    "dependencies": [],
+                    "prompt": {
+                        "template": "Implement the {{featureName}} feature",
+                        "max_tokens": 8000,
+                        "compression_strategy": "filter",
+                        "variables": [
+                            "featureName"
+                        ]
+                    },
+                    "validation": {
+                        "required_files": [],
+                        "required_patterns": [],
+                        "forbidden_patterns": [],
+                        "commands": []
+                    },
+                    "retry": {
+                        "max_attempts": 3,
+                        "strategy": "simple",
+                        "fallback_prompt": ""
+                    },
+                    "metrics": {},
+                    "tools": {
+                        "required": [
+                            "read",
+                            "write"
+                        ],
+                        "optional": [
+                            "bash"
+                        ],
+                        "disabled": []
+                    }
+                },
+                {
+                    "id": "task-2",
+                    "subagent": "general",
+                    "description": "Write tests",
+                    "dependencies": [
+                        "task-1"
+                    ],
+                    "prompt": {
+                        "template": "Write tests for the feature",
+                        "max_tokens": 4000,
+                        "compression_strategy": "filter",
+                        "variables": []
+                    },
+                    "validation": {
+                        "required_files": [],
+                        "required_patterns": [
+                            "test"
+                        ],
+                        "forbidden_patterns": [],
+                        "commands": []
+                    },
+                    "retry": {
+                        "max_attempts": 2,
+                        "strategy": "simple",
+                        "fallback_prompt": ""
+                    },
+                    "metrics": {},
+                    "tools": {
+                        "required": [
+                            "read",
+                            "write",
+                            "bash"
+                        ],
+                        "optional": [],
+                        "disabled": []
+                    }
+                }
+            ],
+            "variables": {},
+            "context_requirements": [],
+            "expected_duration_ms": 10000,
+            "expected_cost": 0.01,
+            "expected_quality_score": 0.5,
+            "created_at": "2026-02-19T04:24:26.592776",
+            "genealogy": {
+                "content_hash": "8bb2a471",
+                "parent_hash": null,
+                "generation": 0
+            },
+            "expected_value": 0.375,
+            "success_rate": 0.75,
+            "total_selections": 6
+        },
+        {
+            "variant_id": "test-feature-template-8739521f",
+            "activity_id": "test-feature-template",
+            "variant_name": "Test Feature Template",
+            "description": "Updated description for variant",
+            "version": 2,
+            "task_steps": [
+                {
+                    "id": "task-1",
+                    "subagent": "general",
+                    "description": "NEW: Improved implementation",
+                    "dependencies": [],
+                    "prompt": {
+                        "template": "Implement {{featureName}} with improvements",
+                        "max_tokens": 8000,
+                        "compression_strategy": "filter",
+                        "variables": [
+                            "featureName"
+                        ]
+                    },
+                    "validation": {
+                        "required_files": [],
+                        "required_patterns": [],
+                        "forbidden_patterns": [],
+                        "commands": []
+                    },
+                    "retry": {
+                        "max_attempts": 3,
+                        "strategy": "simple",
+                        "fallback_prompt": ""
+                    },
+                    "metrics": {},
+                    "tools": {
+                        "required": [
+                            "read",
+                            "write"
+                        ],
+                        "optional": [
+                            "bash"
+                        ],
+                        "disabled": []
+                    }
+                }
+            ],
+            "variables": {},
+            "context_requirements": [],
+            "expected_duration_ms": 10000,
+            "expected_cost": 0.01,
+            "expected_quality_score": 0.5,
+            "created_at": "2026-02-19T04:24:26.607863",
+            "genealogy": {
+                "content_hash": "8739521f",
+                "parent_hash": "8bb2a471",
+                "generation": 1
+            },
+            "expected_value": 0.375,
+            "success_rate": 0.75,
+            "total_selections": 6
+        },
+        {
+            "variant_id": "test-hello-world-cc1fcb90",
+            "activity_id": "test-hello-world",
+            "variant_name": "test-hello-world",
+            "description": "Simple test activity for data flow validation",
+            "version": 1,
+            "task_steps": [
+                {
+                    "id": "task-1",
+                    "subagent": "general",
+                    "description": "Echo test message",
+                    "dependencies": [],
+                    "prompt": {
+                        "template": "Echo: {{message}}",
+                        "max_tokens": 1000,
+                        "compression_strategy": "filter",
+                        "variables": [
+                            {
+                                "name": "message",
+                                "type": "string",
+                                "required": true,
+                                "description": "Message to echo"
+                            }
+                        ]
+                    },
+                    "validation": {
+                        "type": "none"
+                    },
+                    "retry": {
+                        "max_attempts": 1,
+                        "strategy": "simple"
+                    }
+                }
+            ],
+            "variables": {},
+            "context_requirements": [],
+            "expected_duration_ms": 10000,
+            "expected_cost": 0.01,
+            "expected_quality_score": 0.5,
+            "created_at": "2026-02-19T12:34:35.86

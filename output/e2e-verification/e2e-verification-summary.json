@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-03-01T11:21:12-08:00",
+  "status": "SUCCESS",
+  "fixes_verified": [
+    {
+      "fix": "HTTP RPC Client",
+      "status": "verified",
+      "evidence": "register-response.txt",
+      "test": "POST /v2/activities/templates",
+      "result": "HTTP 201 Created"
+    },
+    {
+      "fix": "Activity ID Lookup",
+      "status": "verified",
+      "evidence": "select-by-activity-id.txt",
+      "test": "POST /v2/activities/templates/{activity_id}/select",
+      "result": "HTTP 200 OK with Thompson Sampling"
+    },
+    {
+      "fix": "Persistent Storage",
+      "status": "verified",
+      "evidence": "retrieve-after-restart.txt",
+      "test": "Pod restart + template retrieval",
+      "result": "Template survived with all data intact"
+    }
+  ],
+  "test_template_variant_id": "e2e-test-template-8a134975",
+  "test_template_activity_id": "e2e-test-template",
+  "pod_restarted": true,
+  "pod_before": "surrealdb-75577cb949-44ftm",
+  "pod_after": "surrealdb-75577cb949-c8bzd",
+  "persistence_working": true,
+  "data_loss": 0,
+  "timestamp_preserved": true,
+  "metrics_preserved": true,
+  "production_ready": true,
+  "docker_image": "metabobapp/metabob-rpc-api:0.16.18-http-rpc-complete",
+  "surrealdb_version": "v2.6.0",
+  "pvc_size": "10Gi",
+  "storage_engine": "RocksDB",
+  "storage_path": "/data/database",
+  "evidence_files": [
+    "test-template.json",
+    "register-response.txt",
+    "retrieve-by-variant-id.txt",
+    "select-by-activity-id.txt",
+    "list-templates.txt",
+    "pod-before-restart.txt",
+    "pod-after-restart.txt",
+    "new-pod-logs.txt",
+    "retrieve-after-restart.txt",
+    "persistence-verification.json",
+    "http-rpc-test-summary.json",
+    "http-rpc-test-report.md",
+    "persistence-verification-report.md"
+  ]
+}

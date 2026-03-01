@@ -1,0 +1,69 @@
+{
+  "name": "E2E Test Template",
+  "activity_id": "e2e-test-template-1772392626",
+  "variant_id": "e2e-test-template-1772392626-v1",
+  "description": "Test template for HTTP RPC and persistence verification",
+  "category": "feature",
+  "version": 1,
+  "scope": "user",
+  "org_id": "test-org",
+  "tasks": [
+    {
+      "id": "test-task",
+      "subagent": "general",
+      "description": "Test task",
+      "dependencies": [],
+      "impulse_refs": [],
+      "prompt": {
+        "template": "This is a test task",
+        "max_tokens": 1000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "metrics": {
+        "success_rate": 0,
+        "avg_tokens": 0,
+        "avg_duration": 0,
+        "common_failures": []
+      },
+      "tools": {
+        "required": [],
+        "optional": [],
+        "disabled": []
+      }
+    }
+  ],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 0,
+    "annotationStrategy": "none"
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [],
+    "examples": []
+  },
+  "learning": {
+    "enabled": false,
+    "captureStrategy": "none",
+    "feedbackPoints": []
+  }
+}

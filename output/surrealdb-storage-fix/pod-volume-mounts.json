@@ -1,0 +1,11 @@
+[
+  {
+    "mountPath": "/data",
+    "name": "data"
+  },
+  {
+    "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+    "name": "kube-api-access-8t4w6",
+    "readOnly": true
+  }
+]

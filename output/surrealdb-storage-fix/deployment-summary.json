@@ -1,0 +1,10 @@
+{
+  "deployed_at": "2026-03-01T11:12:47-08:00",
+  "pod_name": "surrealdb-75577cb949-vzmtl",
+  "pod_status": "Running",
+  "pvc_name": "surrealdb-data",
+  "pvc_status": "Bound",
+  "pvc_size": "10Gi",
+  "storage_path": "file:/data/database",
+  "persistent": true
+}
