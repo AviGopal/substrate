@@ -1,0 +1,50 @@
+=== Creating Simple Activity for Demonstration ===
+
+=== Verifying Activity Output ===
+
+total 8
+drwxr-xr-x 2 avi avi  63 Mar  1 15:02 .
+drwxr-xr-x 3 avi avi  69 Mar  1 15:02 ..
+-rw-r--r-- 1 avi avi 773 Mar  1 15:01 format_duration.py
+-rw-r--r-- 1 avi avi 540 Mar  1 15:02 test_format_duration.py
+
+=== Summary ===
+{
+  "timestamp": "$(date -Iseconds)",
+  "utility_created": "format_duration.py",
+  "tests_created": "test_format_duration.py",
+  "purpose": "Demonstrate activity execution and git workflow",
+  "status": "complete"
+}
+=== Verifying Template Storage in SurrealDB ===
+⚠️ Template not found in response
+=== Checking Template List Response ===
+"object"
+
+Sample response:
+jq: error (at <stdin>:0): Cannot index object with number
+
+=== Searching for demo template ===
+Total templates in SurrealDB: 1
+=== Full Template Response ===
+
+✅ Templates are stored in SurrealDB and accessible via HTTP RPC
+=== Committing Demo Activity Code ===
+On branch prompts/metabob-devbob-mlpu1y8l
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .metabob/activities/create-activity.json
+	modified:   .metabob/activities/debug-activity-self-contained.json
+	modified:   .metabob/activities/evolve-activity-self-contained.json
+	modified:   .metabob/activities/manage-session-memory.json
+	modified:   .metabob/activities/trace-data-flow-single-feature.json
+	modified:   .metabob/activities/trace-enforce-validate-loop.json
+	modified:   .metabob/metadata
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.metabob/activities/create-demo-utility-function.json
+	output/activity-demo/
+
+no changes added to commit (use "git add" and/or "git commit -a")
