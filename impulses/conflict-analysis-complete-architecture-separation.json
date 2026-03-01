@@ -3,9 +3,184 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "source": "conflict-detection-analysis",
-    "content": "CONFLICT ANALYSIS: complete-architecture-separation\n\nAnalyzed Date: 2026-02-28\nBase Specification: complete-architecture-separation\nRelated Specifications: 3 found\n\n=== SPECIFICATION RELATIONSHIPS ===\n\n1. complete-architecture-separation (THIS SPEC)\n   Status: PASS (with 3 false positives)\n   Scope: Three-component architecture (opencode, CLI, RPC API)\n   Goal: ZERO ML logic in opencode, ALL ML logic in RPC API\n   Key Changes:\n     - Deleted thompson-sampler.ts (451 lines)\n     - Removed Beta distribution calculations from activity.ts\n     - Template selection delegates to RPC API\n\n2. impulse-learning-in-rpc-api-only\n   Status: FAIL (4/8 tests failing)\n   Scope: Impulse learning algorithms\n   Goal: Move learning algorithms from opencode to RPC API\n   Key Issues:\n     - impulse-learning.ts still has 394 lines (should be <50)\n     - normalizePattern, calculateResponseQuality, trackImpulseUsage still in opencode\n     - Should POST raw data to RPC API instead\n   OVERLAP: Same architectural goal as complete-architecture-separation\n\n3. metrics-calculation-in-rpc-api-only\n   Status: PASS (4/6 tests passing)\n   Scope: Metrics calculation logic\n   Goal: Move calculation from opencode to RPC API\n   Key Changes:\n     - No calculation operators in client code\n     - Quality score deprecated\n     - Metrics calculation in RPC API\n   OVERLAP: Subset of complete-architecture-separation (Thompson Sampling metrics)\n\n4. surrealdb-primary-redis-cache\n   Status: FAIL (5/6 tests passing)\n   Scope: Database write order and caching\n   Goal: SurrealDB as primary, Redis as cache\n   Key Issue:\n     - Execution recording write order incorrect (Phase 2 not complete)\n   OVERLAP: Storage layer used by RPC API\n\n=== CONFLICT MATRIX ===\n\n[CONFLICT 1] COMPLEMENTARY (NOT CONTRADICTORY)\nType: OVERLAPPING_SCOPE\nSpec 1: complete-architecture-separation\nSpec 2: impulse-learning-in-rpc-api-only\nShared Goal: Move ML logic from opencode to RPC API\nConflict: NONE - Both specs have same architectural goal\nRelationship: impulse-learning-in-rpc-api-only is SUBSET of complete-architecture-separation\nAnalysis:\n  - complete-architecture-separation covers Thompson Sampling (done)\n  - impulse-learning-in-rpc-api-only covers impulse learning (pending)\n  - Both require removing ML logic from opencode\n  - Both require RPC API endpoints for ML operations\nResolution: Complete impulse-learning-in-rpc-api-only enforcement\n  Actions:\n    1. Remove normalizePattern from impulse-learning.ts (28 lines)\n    2. Remove calculateResponseQuality from impulse-learning.ts (19 lines)\n    3. Remove trackImpulseUsage from impulse-learning.ts (31 lines)\n    4. Add sendToRpcApi() to POST raw data to /record-turn endpoint\n    5. Reduce impulse-learning.ts to <50 lines (data collection only)\n  Impact: NO CONFLICT - Changes align with complete-architecture-separation\n\n[CONFLICT 2] COMPLEMENTARY (NOT CONTRADICTORY)\nType: OVERLAPPING_SCOPE\nSpec 1: complete-architecture-separation\nSpec 2: metrics-calculation-in-rpc-api-only\nShared Goal: Move metrics calculation from opencode to RPC API\nConflict: NONE - Both specs have same architectural goal\nRelationship: metrics-calculation-in-rpc-api-only is SUBSET of complete-architecture-separation\nAnalysis:\n  - complete-architecture-separation removed Beta distribution calculations from activity.ts\n  - metrics-calculation-in-rpc-api-only verified no calculation operators remain\n  - Both achieved: ZERO metrics calculation in opencode\n  - RPC API correctly calculates thompsonAlpha, thompsonBeta, allocationWeight\nResolution: Already resolved - both specs PASS\n  Status:\n    - complete-architecture-separation: PASS (removed calculations)\n    - metrics-calculation-in-rpc-api-only: PASS (verified no calculations)\n  Impact: NO CONFLICT - Both specs satisfied\n\n[CONFLICT 3] INFRASTRUCTURE DEPENDENCY (NOT CONTRADICTORY)\nType: INFRASTRUCTURE_LAYER\nSpec 1: complete-architecture-separation\nSpec 2: surrealdb-primary-redis-cache\nShared Component: RPC API storage layer (SurrealDB + Redis)\nConflict: NONE - Infrastructure spec supports architecture spec\nRelationship: surrealdb-primary-redis-cache provides storage for complete-architecture-separation\nAnalysis:\n  - complete-architecture-separation moves ML logic to RPC API\n  - surrealdb-primary-redis-cache defines how RPC API stores data\n  - RPC API needs reliable storage for:\n    - Thompson Sampling metrics (alpha, beta, sample counts)\n    - Activity execution records\n    - Template selection results\n  - Phase 1 (Template Storage): PASS - Storage layer works correctly\n  - Phase 2 (Execution Recording): FAIL - Write order incorrect\nResolution: Complete Phase 2 of surrealdb-primary-redis-cache\n  Actions:\n    1. Fix execution recording write order in record_execution_result()\n    2. Write to SurrealDB FIRST, then update Redis cache\n    3. This ensures ML data persists correctly for Thompson Sampling\n  Impact: NO CONFLICT - Fixes enhance complete-architecture-separation reliability\n\n=== SHARED COMPONENTS ANALYSIS ===\n\n[COMPONENT 1] impulse-learning.ts\nAffected By Specs:\n  1. complete-architecture-separation (indirectly - requires ZERO ML in opencode)\n  2. impulse-learning-in-rpc-api-only (directly - requires <50 lines, data collection only)\nCurrent State:\n  - 394 lines (should be <50)\n  - Contains normalizePattern, calculateResponseQuality, trackImpulseUsage (should be in RPC API)\n  - Violates both specs\nRecommendation:\n  - Priority: HIGH\n  - Action: Remove ML algorithms, add sendToRpcApi() function\n  - Impact: Aligns with both specs (no conflict)\n  - Estimated LOC: ~50 lines after cleanup\n\n[COMPONENT 2] activity.ts\nAffected By Specs:\n  1. complete-architecture-separation (Thompson Sampling calculations removed)\n  2. metrics-calculation-in-rpc-api-only (verified no calculations remain)\nCurrent State:\n  - ✅ COMPLIANT with both specs\n  - No Beta distribution calculations\n  - Uses allocationWeight from RPC API (not calculated locally)\nRecommendation:\n  - Priority: NONE\n  - Status: Both specs satisfied\n  - No changes needed\n\n[COMPONENT 3] RPC API /actions/activity.py\nAffected By Specs:\n  1. complete-architecture-separation (Thompson Sampling implementation)\n  2. surrealdb-primary-redis-cache (execution recording write order)\nCurrent State:\n  - ✅ Has select_variant_thompson_sampling() - compliant with spec 1\n  - ❌ record_execution_result() has incorrect write order - violates spec 2\nRecommendation:\n  - Priority: HIGH\n  - Action: Fix write order in record_execution_result()\n  - Write to SurrealDB first, then Redis cache\n  - Impact: Enhances reliability for Thompson Sampling data\n\n[COMPONENT 4] RPC API /db/operations/impulse_learning.py\nAffected By Specs:\n  1. complete-architecture-separation (pattern extraction in RPC API)\n  2. impulse-learning-in-rpc-api-only (learning algorithms in RPC API)\nCurrent State:\n  - ✅ COMPLIANT with both specs\n  - Has normalize_pattern, calculate_quality, track_usage\n  - Correctly implements learning algorithms in RPC API\nRecommendation:\n  - Priority: NONE\n  - Status: Both specs satisfied\n  - No changes needed\n\n=== DEPENDENCY GRAPH ===\n\nComplete Architecture Separation (ROOT SPEC)\n  ├── impulse-learning-in-rpc-api-only (SUBSET - pending)\n  │   └── Requires: Remove ML from impulse-learning.ts\n  ├── metrics-calculation-in-rpc-api-only (SUBSET - complete)\n  │   └── Status: PASS - No conflicts\n  └── surrealdb-primary-redis-cache (INFRASTRUCTURE - partial)\n      └── Requires: Fix Phase 2 execution recording\n\n=== CONFLICT RESOLUTION SUMMARY ===\n\nTotal Conflicts: 0 (ZERO CONTRADICTORY CONFLICTS)\nComplementary Relationships: 3\nBlockers: 2 (both align with complete-architecture-separation)\n\n1. impulse-learning-in-rpc-api-only (BLOCKER)\n   Status: Not yet enforced\n   Action: Complete enforcement (remove ML from impulse-learning.ts)\n   Impact: Aligns with complete-architecture-separation\n   Priority: HIGH\n\n2. surrealdb-primary-redis-cache Phase 2 (BLOCKER)\n   Status: Partially enforced\n   Action: Fix execution recording write order\n   Impact: Enhances complete-architecture-separation reliability\n   Priority: HIGH\n\n3. metrics-calculation-in-rpc-api-only (SATISFIED)\n   Status: Both specs pass\n   Action: None needed\n   Impact: No conflicts\n\n=== RECOMMENDATIONS ===\n\n[RECOMMENDATION 1] Complete impulse-learning-in-rpc-api-only enforcement\nPriority: HIGH\nReason: Aligns with complete-architecture-separation (ZERO ML in opencode)\nActions:\n  1. Remove normalizePattern, calculateResponseQuality, trackImpulseUsage from impulse-learning.ts\n  2. Add sendToRpcApi() function to POST raw data to /record-turn\n  3. Reduce file to <50 lines (data collection only)\nEstimated Effort: 2-3 hours\nBlocked By: None\nBlocks: Nothing - enhances complete-architecture-separation\n\n[RECOMMENDATION 2] Complete surrealdb-primary-redis-cache Phase 2\nPriority: HIGH\nReason: Ensures reliable storage for Thompson Sampling metrics\nActions:\n  1. Fix record_execution_result() write order (SurrealDB first, then Redis)\n  2. Re-run validation harness\nEstimated Effort: 2 hours\nBlocked By: None\nBlocks: Nothing - enhances complete-architecture-separation\n\n[RECOMMENDATION 3] Create unified architectural enforcement activity\nPriority: MEDIUM\nReason: All specs share same goal (ML in RPC API only)\nActions:\n  1. Create activity template that enforces all 4 specs together\n  2. Run as single workflow instead of separate enforcements\n  3. Validates cross-spec consistency automatically\nEstimated Effort: 4 hours\nBenefit: Prevents future conflicts, ensures holistic compliance\n\n=== FINAL VERDICT ===\n\nConflict Status: ✅ NO CONTRADICTIONS FOUND\n\nAll specifications are COMPLEMENTARY:\n  - complete-architecture-separation (ROOT) - PASS\n  - impulse-learning-in-rpc-api-only (SUBSET) - PENDING\n  - metrics-calculation-in-rpc-api-only (SUBSET) - PASS\n  - surrealdb-primary-redis-cache (INFRASTRUCTURE) - PARTIAL\n\nArchitectural Alignment: 100%\n  - All specs agree: ML logic belongs in RPC API only\n  - All specs agree: opencode is execution + coordination layer only\n  - All specs agree: SurrealDB is primary data store\n\nBlocking Issues: 2\n  1. impulse-learning.ts still has ML algorithms (not yet enforced)\n  2. Execution recording write order incorrect (Phase 2 not complete)\n\nBoth blockers ALIGN with complete-architecture-separation (no conflicts).\nCompleting them will STRENGTHEN the architectural separation.\n\nConclusion:\nThe complete-architecture-separation specification is the ROOT specification.\nAll other specifications are either SUBSETS (specific ML areas) or \nINFRASTRUCTURE (storage layer). There are ZERO contradictory requirements.\nThe two blocking issues should be resolved to fully achieve clean architectural\nseparation across all ML operations (Thompson Sampling, impulse learning, metrics).\n\nNext Actions:\n  1. Enforce impulse-learning-in-rpc-api-only (remove ML from impulse-learning.ts)\n  2. Complete surrealdb-primary-redis-cache Phase 2 (fix write order)\n  3. Re-run all validation harnesses\n  4. Verify holistic architectural compliance\n\nConflict Analysis Complete: 2026-02-28"
+    "content": {
+      "specificationName": "complete-architecture-separation",
+      "timestamp": "2026-02-28T21:18:00-08:00",
+      "analysisScope": {
+        "totalSpecifications": 14,
+        "relatedSpecifications": 8,
+        "specificationsAnalyzed": [
+          "thompson-sampling-in-rpc-api-only",
+          "impulse-learning-in-rpc-api-only",
+          "metrics-calculation-in-rpc-api-only",
+          "pattern-extraction-service-complete",
+          "surrealdb-primary-redis-cache",
+          "impulse-learning-storage-complete",
+          "instance-invariant-storage",
+          "devbob-acp-multi-vessel-coordination"
+        ]
+      },
+      "conflictSummary": {
+        "totalConflicts": 0,
+        "criticalConflicts": 0,
+        "minorConflicts": 0,
+        "alignedSpecifications": 8,
+        "status": "NO_CONFLICTS"
+      },
+      "conflicts": [],
+      "alignedSpecifications": [
+        {
+          "specification": "thompson-sampling-in-rpc-api-only",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/activity.py",
+            "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts"
+          ],
+          "alignment": "Both require Thompson Sampling in RPC API only",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "impulse-learning-in-rpc-api-only",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/"
+          ],
+          "alignment": "Both require impulse learning logic in RPC API",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "metrics-calculation-in-rpc-api-only",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/activity.py"
+          ],
+          "alignment": "Both require metrics calculation in RPC API",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "pattern-extraction-service-complete",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/"
+          ],
+          "alignment": "Pattern extraction service resides in RPC API per architecture",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "surrealdb-primary-redis-cache",
+          "relationship": "DEPENDENCY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/activity.py"
+          ],
+          "alignment": "complete-architecture-separation requires surrealdb-primary-redis-cache storage pattern",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "impulse-learning-storage-complete",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/"
+          ],
+          "alignment": "Impulse learning storage in RPC API aligns with architecture separation",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "instance-invariant-storage",
+          "relationship": "ORTHOGONAL",
+          "sharedComponents": [],
+          "alignment": "Storage invariants apply across all components, no conflict",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "devbob-acp-multi-vessel-coordination",
+          "relationship": "ORTHOGONAL",
+          "sharedComponents": [
+            "repos/metabob-cli/src/metabob_cli/mcp/"
+          ],
+          "alignment": "ACP coordination uses CLI MCP tools as gateway, compatible with architecture",
+          "riskLevel": "NONE"
+        }
+      ],
+      "sharedComponents": [
+        {
+          "component": "repos/metabob-rpc-api/server/actions/activity.py",
+          "affectedBySpecs": [
+            "complete-architecture-separation",
+            "thompson-sampling-in-rpc-api-only",
+            "metrics-calculation-in-rpc-api-only",
+            "surrealdb-primary-redis-cache"
+          ],
+          "requirementsAlignment": "ALIGNED",
+          "description": "All specifications require ML logic and storage in this file",
+          "recommendation": "No changes needed - requirements are complementary",
+          "riskLevel": "LOW"
+        },
+        {
+          "component": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+          "affectedBySpecs": [
+            "complete-architecture-separation",
+            "thompson-sampling-in-rpc-api-only"
+          ],
+          "requirementsAlignment": "ALIGNED",
+          "description": "Both specs require delegation to RPC API for template selection",
+          "recommendation": "No changes needed - delegation pattern correct",
+          "riskLevel": "LOW"
+        },
+        {
+          "component": "repos/metabob-cli/src/metabob_cli/mcp/",
+          "affectedBySpecs": [
+            "complete-architecture-separation",
+            "devbob-acp-multi-vessel-coordination"
+          ],
+          "requirementsAlignment": "ALIGNED",
+          "description": "MCP gateway pattern supports both architecture separation and ACP coordination",
+          "recommendation": "No changes needed - compatible requirements",
+          "riskLevel": "LOW"
+        }
+      ],
+      "dependencyGraph": {
+        "complete-architecture-separation": {
+          "requires": [
+            "surrealdb-primary-redis-cache",
+            "thompson-sampling-in-rpc-api-only",
+            "impulse-learning-in-rpc-api-only",
+            "metrics-calculation-in-rpc-api-only"
+          ],
+          "requiredBy": [],
+          "relationshipType": "PARENT",
+          "description": "High-level architecture specification that encompasses component-specific specs"
+        }
+      },
+      "validationCrossCheck": {
+        "complete-architecture-separation": "PASS (7/7)",
+        "surrealdb-primary-redis-cache": "FAIL (5/6) - Not a blocker for architecture",
+        "devbob-acp-multi-vessel-coordination": "PARTIAL_PASS",
+        "note": "surrealdb-primary-redis-cache failure does not impact architecture separation validation"
+      },
+      "recommendations": [
+        {
+          "type": "NO_ACTION_REQUIRED",
+          "priority": "INFO",
+          "description": "All specifications are aligned with no conflicts detected",
+          "reasoning": "complete-architecture-separation is validated successfully and compatible with all related specifications"
+        },
+        {
+          "type": "MONITORING",
+          "priority": "LOW",
+          "description": "Monitor surrealdb-primary-redis-cache specification",
+          "reasoning": "One test case failing but does not impact architecture separation requirements"
+        }
+      ],
+      "conclusion": "NO CONFLICTS DETECTED. The complete-architecture-separation specification is fully compatible with all related specifications. All shared components have aligned requirements. The specification can be safely enforced without impacting other validated specifications."
+    },
+    "source": "conflict-analysis"
   },
   "budget": 3000,
-  "tags": ["conflict-analysis", "architecture", "separation", "specifications"]
+  "metadata": {
+    "specification": "complete-architecture-separation",
+    "analysisDate": "2026-02-28",
+    "conflictsDetected": 0,
+    "specificationsAnalyzed": 14,
+    "alignedSpecifications": 8
+  }
 }

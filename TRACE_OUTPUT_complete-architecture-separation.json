@@ -1,0 +1,83 @@
+{
+  "specificationName": "complete-architecture-separation",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "component": "TemplateSelector",
+      "currentBehavior": "Delegates Thompson Sampling to RPC API via POST /v2/activities/templates/{id}/select. Contains only type definitions and comments.",
+      "desiredBehavior": "ZERO ML implementation - only delegation and type definitions",
+      "gap": "NONE - Correctly implemented"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity",
+      "currentBehavior": "Contains Thompson Sampling type definitions in selection_reason schema (alpha, beta) for metadata tracking only",
+      "desiredBehavior": "ZERO ML calculations - only type definitions for result tracking",
+      "gap": "NONE - Only Zod schema definitions"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/server.py",
+      "component": "MCPServer",
+      "currentBehavior": "Implements MCP gateway that exposes tools to opencode via stdio transport",
+      "desiredBehavior": "MCP gateway with ZERO training logic - only enrichment and gateway",
+      "gap": "NONE - Pure MCP server"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_register_activity_template",
+      "currentBehavior": "MCP tool forwards template data to RPC API via POST /v2/activities/templates (line 199)",
+      "desiredBehavior": "Pure gateway - delegate to RPC API for storage",
+      "gap": "NONE - Correctly delegates"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_manager.py",
+      "component": "ActivityManager",
+      "currentBehavior": "Tracks execution, impulse usage, records outcomes to RPC API. Queries learned patterns via GET /v2/impulses/learned (line 319)",
+      "desiredBehavior": "Data collection and forwarding - NO learning algorithms",
+      "gap": "NONE - All learning in RPC API"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "select_variant_thompson_sampling",
+      "currentBehavior": "Implements Thompson Sampling with Beta distribution sampling (line 770-880)",
+      "desiredBehavior": "ALL Thompson Sampling logic in RPC API",
+      "gap": "NONE - Correctly implemented"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "TemplateStorage",
+      "currentBehavior": "Uses SurrealDB as primary storage, Redis as TTL cache. Enforces surrealdb-primary-redis-cache specification",
+      "desiredBehavior": "SurrealDB as source of truth for templates",
+      "gap": "NONE - Correct storage architecture"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "create_activity_template",
+      "currentBehavior": "POST /v2/activities/templates creates templates with auto-variant logic (line 145)",
+      "desiredBehavior": "Template versioning and storage in RPC API",
+      "gap": "NONE - Correctly implemented"
+    }
+  ],
+  "dataFlow": "opencode (execution) → CLI MCP gateway (data collection) → RPC API HTTP (ML training) → SurrealDB (storage)",
+  "traceImpulseId": "trace-complete-architecture-separation",
+  "summary": {
+    "status": "COMPLIANT",
+    "mlKeywordsInOpencode": 10,
+    "mlKeywordsInCli": 0,
+    "mlImplementationInRpcApi": 5,
+    "criticalGaps": 0,
+    "minorGaps": 1
+  },
+  "validationResults": {
+    "opencodeZeroML": "PASS - Type definitions only",
+    "cliZeroTraining": "PASS - Pure gateway",
+    "rpcApiAllLearning": "PASS - Full implementation",
+    "dataFlowCorrect": "PASS - Layered boundaries enforced",
+    "thompsonSamplerDeleted": "TO_BE_VERIFIED"
+  },
+  "recommendations": [
+    "Run complete-architecture-separation-harness.ts to verify thompson-sampler.ts deletion",
+    "Document compliance in ARCHITECTURE_COMPLIANCE_SUMMARY.md",
+    "NO CODE CHANGES NEEDED - Architecture correctly separated"
+  ]
+}

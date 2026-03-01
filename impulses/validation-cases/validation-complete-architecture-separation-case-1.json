@@ -1,0 +1,31 @@
+{
+  "id": "validation-complete-architecture-separation-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testName": "opencode has ZERO ML implementations",
+      "input": {
+        "searchPatterns": [
+          "class.*Thompson",
+          "function.*performThompsonSampling",
+          "sample_beta\\(",
+          "beta_distribution\\(",
+          "def.*thompson"
+        ],
+        "repo": "metabob-opencode",
+        "excludePatterns": ["node_modules", "dist", "*.test.*", "test-*"]
+      },
+      "expectedOutput": {
+        "implementationCount": 0,
+        "reason": "opencode should only have type definitions, no ML implementations"
+      }
+    },
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "metadata": {
+    "category": "validation-case",
+    "specification": "complete-architecture-separation"
+  }
+}

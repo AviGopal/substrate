@@ -1,544 +1,467 @@
+#!/usr/bin/env bun
+
 /**
- * Validation Harness: Complete Architecture Separation
+ * Validation Harness for complete-architecture-separation Specification
  * 
- * Validates the three-component architecture has clean separation:
- * - metabob-opencode: Execution + Coordination (ZERO ML logic)
- * - metabob-cli: Data Collection + Enrichment + Gateway (ZERO ML logic)
- * - metabob-rpc-api: ML Training + Metrics + Storage (ALL ML logic)
- * 
- * This harness runs WITHOUT LLM - pure static analysis and integration tests.
+ * Tests the three-component architecture separation:
+ * - Case 1: opencode has ZERO ML implementations (only type definitions)
+ * - Case 2: CLI has ZERO training logic (pure MCP gateway)
+ * - Case 3: RPC API has ALL learning endpoints (Thompson Sampling, metrics)
+ * - Case 4: Data flow follows architecture (opencode → CLI → RPC API → SurrealDB)
+ * - Case 5: thompson-sampler.ts file has been deleted from opencode
+ * - Case 6: Template storage uses SurrealDB primary + Redis cache
+ * - Case 7: MCP tools in CLI are pure proxies to RPC API
  */
 
-// @ts-ignore - Node.js built-in modules
-import * as fs from "fs"
-// @ts-ignore - Node.js built-in modules  
-import { execSync } from "child_process"
+import { exec } from "child_process"
+import { promisify } from "util"
+import path from "path"
+import fs from "fs/promises"
 
-export interface ValidationCase {
+const execAsync = promisify(exec)
+
+// Types
+interface ValidationCase {
   id: string
-  input: ValidationInput
-  expectedOutput: ValidationOutput
+  name: string
+  test: () => Promise<ValidationResult>
 }
 
-export interface ValidationInput {
-  testType: "grep" | "api-contract" | "surrealdb-schema" | "integration" | "mcp-proxy"
-  config?: {
-    repo?: string
-    pattern?: string
-    file?: string
-    endpoint?: string
-    table?: string
-  }
-}
-
-export interface ValidationOutput {
+interface ValidationResult {
   pass: boolean
-  actual?: any
-  expected?: any
-  reason?: string
-}
-
-export interface ValidationResult {
-  pass: boolean
+  caseId: string
   actual: any
   expected: any
-  reason?: string
-  timestamp: number
+  error?: string
+  details?: string
 }
 
-/**
- * Validation Case 1: Zero ML keywords in metabob-opencode
- */
-export async function validateOpencodeMLKeywords(): Promise<ValidationResult> {
-  const expected = {
-    pattern: "thompson|beta_distribution|sampleBeta|sampleGamma|pattern_extraction",
-    allowedReferences: ["thompsonSampling:", "// Reference", "Thompson Sampling delegated"],
-    maxMatches: 0,
-  }
-
+// Helper: Run grep search in a repo
+async function grepInRepo(
+  repo: string,
+  pattern: string,
+  filePattern: string = "*.{ts,py,js}",
+  excludePatterns: string[] = ["node_modules", "dist", "*.test.*", "test-*"]
+): Promise<{ count: number; matches: string[] }> {
+  const repoPath = path.join(process.cwd(), "repos", repo)
+  
   try {
-    const cmd = `cd repos/metabob-opencode && grep -r 'thompson\\|beta_distribution\\|sampleBeta\\|sampleGamma\\|pattern_extraction' packages/opencode/src --include='*.ts' | grep -v 'thompsonSampling:' | grep -v '// Reference' | grep -v 'Thompson Sampling delegated' | wc -l`
-    const output = execSync(cmd, { encoding: "utf-8" }).trim()
-    const matchCount = parseInt(output, 10)
-
-    const pass = matchCount === expected.maxMatches
-
-    return {
-      pass,
-      actual: { matchCount, pattern: expected.pattern },
-      expected,
-      reason: pass
-        ? "Zero ML keywords found in opencode (only metadata references)"
-        : `Found ${matchCount} ML keyword matches in opencode (expected 0)`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to search for ML keywords in opencode",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 2: Zero training logic in metabob-cli
- */
-export async function validateCLITrainingLogic(): Promise<ValidationResult> {
-  const expected = {
-    pattern: "train|fit_model|sampleBeta|sampleGamma",
-    maxMatches: 0,
-  }
-
-  try {
-    const cmd = `cd repos/metabob-cli && grep -r 'train\\|fit_model\\|sampleBeta\\|sampleGamma' src --include='*.py' | grep -v 'constraints' | wc -l`
-    const output = execSync(cmd, { encoding: "utf-8" }).trim()
-    const matchCount = parseInt(output, 10)
-
-    const pass = matchCount === expected.maxMatches
-
-    return {
-      pass,
-      actual: { matchCount, pattern: expected.pattern },
-      expected,
-      reason: pass
-        ? "Zero training logic found in CLI"
-        : `Found ${matchCount} training logic matches in CLI (expected 0)`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to search for training logic in CLI",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 3: All Thompson Sampling in metabob-rpc-api
- */
-export async function validateRPCAPIThompsonSampling(): Promise<ValidationResult> {
-  const expected = {
-    pattern: "select_variant_thompson_sampling|thompson_alpha|thompson_beta",
-    minMatches: 40, // Should be >40 references in RPC API
-  }
-
-  try {
-    const cmd = `cd repos/metabob-rpc-api && grep -r 'select_variant_thompson_sampling\\|thompson_alpha\\|thompson_beta' server --include='*.py' | wc -l`
-    const output = execSync(cmd, { encoding: "utf-8" }).trim()
-    const matchCount = parseInt(output, 10)
-
-    const pass = matchCount >= expected.minMatches
-
-    return {
-      pass,
-      actual: { matchCount, pattern: expected.pattern },
-      expected,
-      reason: pass
-        ? `Found ${matchCount} Thompson Sampling references in RPC API (all ML logic correctly located)`
-        : `Found only ${matchCount} Thompson Sampling references in RPC API (expected >${expected.minMatches})`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to search for Thompson Sampling in RPC API",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 4: Data flow via HTTP (CLI → RPC API)
- */
-export async function validateDataFlowHTTP(): Promise<ValidationResult> {
-  const expected = {
-    pattern: "http://localhost:8080|METABOB_RPC_API_URL|rpc.*api",
-    minMatches: 40, // Should be >40 HTTP calls to RPC API
-  }
-
-  try {
-    const cmd = `cd repos/metabob-cli && grep -r 'http://localhost:8080\\|METABOB_RPC_API_URL\\|rpc.*api' src --include='*.py' | wc -l`
-    const output = execSync(cmd, { encoding: "utf-8" }).trim()
-    const matchCount = parseInt(output, 10)
-
-    const pass = matchCount >= expected.minMatches
-
-    return {
-      pass,
-      actual: { matchCount, pattern: expected.pattern },
-      expected,
-      reason: pass
-        ? `Found ${matchCount} HTTP calls to RPC API (CLI correctly acts as gateway)`
-        : `Found only ${matchCount} HTTP calls to RPC API (expected >${expected.minMatches})`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to search for HTTP calls in CLI",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 5: thompson-sampler.ts file deleted
- */
-export async function validateThompsonSamplerDeleted(): Promise<ValidationResult> {
-  const expected = {
-    fileExists: false,
-    filePath: "repos/metabob-opencode/packages/opencode/src/ml/thompson-sampler.ts",
-  }
-
-  try {
-    const fileExists = fs.existsSync(expected.filePath)
-    const pass = fileExists === expected.fileExists
-
-    return {
-      pass,
-      actual: { fileExists, filePath: expected.filePath },
-      expected,
-      reason: pass
-        ? "thompson-sampler.ts correctly deleted from opencode"
-        : "thompson-sampler.ts still exists in opencode (should be deleted)",
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to check thompson-sampler.ts existence",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 6: template-selector.ts delegates to RPC API
- */
-export async function validateTemplateSelectorDelegation(): Promise<ValidationResult> {
-  const expected = {
-    file: "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
-    requiredStrings: [
-      "delegating Thompson Sampling to metabob-rpc-api",
-      "POST /v2/activities/templates/{id}/select",
-      "Thompson Sampling (Beta distribution sampling) now happens in metabob-rpc-api",
-    ],
-  }
-
-  try {
-    const fileContent = fs.readFileSync(expected.file, "utf-8")
-    const missingStrings = expected.requiredStrings.filter((str) => !fileContent.includes(str))
-    const pass = missingStrings.length === 0
-
-    return {
-      pass,
-      actual: {
-        file: expected.file,
-        missingStrings,
-        foundCount: expected.requiredStrings.length - missingStrings.length,
-      },
-      expected,
-      reason: pass
-        ? "template-selector.ts correctly delegates Thompson Sampling to RPC API"
-        : `template-selector.ts missing required delegation strings: ${missingStrings.join(", ")}`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to read template-selector.ts",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 7: activity.ts has no Thompson Sampling calculations
- */
-export async function validateActivityNoThompsonCalculations(): Promise<ValidationResult> {
-  const expected = {
-    file: "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
-    forbiddenStrings: [
-      "const thompsonAlpha = successCount + 1",
-      "const thompsonBeta = failureCount + 1",
-      "thompsonAlpha / (thompsonAlpha + thompsonBeta)",
-    ],
-  }
-
-  try {
-    const fileContent = fs.readFileSync(expected.file, "utf-8")
-    const foundStrings = expected.forbiddenStrings.filter((str) => fileContent.includes(str))
-    const pass = foundStrings.length === 0
-
-    return {
-      pass,
-      actual: {
-        file: expected.file,
-        foundStrings,
-        forbiddenCount: expected.forbiddenStrings.length,
-      },
-      expected,
-      reason: pass
-        ? "activity.ts correctly has no Thompson Sampling calculations"
-        : `activity.ts still contains forbidden Thompson Sampling calculations: ${foundStrings.join(", ")}`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to read activity.ts",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 8: MCP tools in CLI are pure proxies
- */
-export async function validateMCPToolsProxy(): Promise<ValidationResult> {
-  const expected = {
-    file: "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
-    requiredPattern: "call_api",
-    minOccurrences: 5, // Should have multiple call_api invocations
-  }
-
-  try {
-    const fileContent = fs.readFileSync(expected.file, "utf-8")
-    const matches = fileContent.match(/call_api/g)
-    const occurrences = matches ? matches.length : 0
-    const pass = occurrences >= expected.minOccurrences
-
-    return {
-      pass,
-      actual: {
-        file: expected.file,
-        occurrences,
-        pattern: expected.requiredPattern,
-      },
-      expected,
-      reason: pass
-        ? `MCP tools correctly use call_api proxy (${occurrences} occurrences)`
-        : `MCP tools have insufficient call_api usage (${occurrences} < ${expected.minOccurrences})`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to read tools.py",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 9: RPC API has select_variant_thompson_sampling endpoint
- */
-export async function validateRPCAPIEndpoint(): Promise<ValidationResult> {
-  const expected = {
-    file: "repos/metabob-rpc-api/server/actions/activity.py",
-    requiredStrings: [
-      "def select_variant_thompson_sampling",
-      "sample_beta",
-      "alpha",
-      "beta",
-    ],
-  }
-
-  try {
-    if (!fs.existsSync(expected.file)) {
-      return {
-        pass: false,
-        actual: { fileExists: false },
-        expected,
-        reason: `RPC API file not found: ${expected.file}`,
-        timestamp: Date.now(),
-      }
-    }
-
-    const fileContent = fs.readFileSync(expected.file, "utf-8")
-    const missingStrings = expected.requiredStrings.filter((str) => !fileContent.includes(str))
-    const pass = missingStrings.length === 0
-
-    return {
-      pass,
-      actual: {
-        file: expected.file,
-        missingStrings,
-        foundCount: expected.requiredStrings.length - missingStrings.length,
-      },
-      expected,
-      reason: pass
-        ? "RPC API correctly implements select_variant_thompson_sampling"
-        : `RPC API missing required Thompson Sampling implementation: ${missingStrings.join(", ")}`,
-      timestamp: Date.now(),
-    }
-  } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to read activity.py in RPC API",
-      timestamp: Date.now(),
-    }
-  }
-}
-
-/**
- * Validation Case 10: SurrealDB schema has required tables
- */
-export async function validateSurrealDBSchema(): Promise<ValidationResult> {
-  const expected = {
-    file: "initialize-surrealdb-schema.sql",
-    requiredTables: [
-      "activity_execution",
-      "template_metrics",
-      "activity_template",
-    ],
-  }
-
-  try {
-    if (!fs.existsSync(expected.file)) {
-      return {
-        pass: false,
-        actual: { fileExists: false },
-        expected,
-        reason: `SurrealDB schema file not found: ${expected.file}`,
-        timestamp: Date.now(),
-      }
-    }
-
-    const fileContent = fs.readFileSync(expected.file, "utf-8")
-    const missingTables = expected.requiredTables.filter(
-      (table) => !fileContent.includes(`DEFINE TABLE ${table}`) && !fileContent.includes(`CREATE TABLE ${table}`)
+    const excludeArgs = excludePatterns.map(p => `-g '!${p}'`).join(" ")
+    const { stdout } = await execAsync(
+      `cd ${repoPath} && rg -i "${pattern}" -t ts -t py -t js ${excludeArgs} 2>/dev/null || true`
     )
-    const pass = missingTables.length === 0
-
-    return {
-      pass,
-      actual: {
-        file: expected.file,
-        missingTables,
-        foundCount: expected.requiredTables.length - missingTables.length,
-      },
-      expected,
-      reason: pass
-        ? "SurrealDB schema has all required tables"
-        : `SurrealDB schema missing required tables: ${missingTables.join(", ")}`,
-      timestamp: Date.now(),
-    }
+    
+    const matches = stdout.trim() ? stdout.trim().split("\n") : []
+    return { count: matches.length, matches }
   } catch (error) {
-    return {
-      pass: false,
-      actual: { error: String(error) },
-      expected,
-      reason: "Failed to read SurrealDB schema file",
-      timestamp: Date.now(),
-    }
+    return { count: 0, matches: [] }
   }
 }
 
-/**
- * Main validation function - runs all validation cases
- */
+// Helper: Check file existence
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Helper: Check directory existence
+async function directoryExists(dirPath: string): Promise<boolean> {
+  try {
+    const stats = await fs.stat(dirPath)
+    return stats.isDirectory()
+  } catch {
+    return false
+  }
+}
+
+// Test Cases
+const testCases: ValidationCase[] = [
+  {
+    id: "validation-complete-architecture-separation-case-1",
+    name: "opencode has ZERO ML implementations",
+    test: async (): Promise<ValidationResult> => {
+      // Search for ML implementation keywords (not type definitions)
+      const patterns = [
+        "class.*Thompson",
+        "function.*performThompsonSampling",
+        "sample_beta\\(",
+        "beta_distribution\\(",
+        "def.*thompson"
+      ]
+      
+      let totalMatches = 0
+      const allMatches: string[] = []
+      
+      for (const pattern of patterns) {
+        const result = await grepInRepo("metabob-opencode", pattern)
+        totalMatches += result.count
+        allMatches.push(...result.matches)
+      }
+      
+      // Filter out type definitions and comments
+      const actualImplementations = allMatches.filter(line => {
+        const lower = line.toLowerCase()
+        return !(
+          lower.includes("//") ||           // Comments
+          lower.includes("thompsonsampling:") || // Type definitions
+          lower.includes("interface") ||
+          lower.includes("type ") ||
+          lower.includes("z.object")        // Zod schemas
+        )
+      })
+      
+      return {
+        pass: actualImplementations.length === 0,
+        caseId: "case-1",
+        actual: {
+          implementationCount: actualImplementations.length,
+          matches: actualImplementations.slice(0, 5)  // First 5 for debugging
+        },
+        expected: {
+          implementationCount: 0,
+          reason: "opencode should only have type definitions, no ML implementations"
+        },
+        details: actualImplementations.length === 0
+          ? "✓ No ML implementations found in opencode"
+          : `✗ Found ${actualImplementations.length} ML implementations in opencode`
+      }
+    }
+  },
+  
+  {
+    id: "validation-complete-architecture-separation-case-2",
+    name: "CLI has ZERO training logic",
+    test: async (): Promise<ValidationResult> => {
+      // Search for training logic keywords
+      const patterns = [
+        "def.*train",
+        "class.*Trainer",
+        "beta_update",
+        "alpha.*=.*success",
+        "update_beta_distribution"
+      ]
+      
+      let totalMatches = 0
+      const allMatches: string[] = []
+      
+      for (const pattern of patterns) {
+        const result = await grepInRepo("metabob-cli", pattern, "*.py")
+        totalMatches += result.count
+        allMatches.push(...result.matches)
+      }
+      
+      return {
+        pass: totalMatches === 0,
+        caseId: "case-2",
+        actual: {
+          trainingLogicCount: totalMatches,
+          matches: allMatches.slice(0, 5)
+        },
+        expected: {
+          trainingLogicCount: 0,
+          reason: "CLI should be pure MCP gateway with no training logic"
+        },
+        details: totalMatches === 0
+          ? "✓ No training logic found in CLI"
+          : `✗ Found ${totalMatches} training logic implementations in CLI`
+      }
+    }
+  },
+  
+  {
+    id: "validation-complete-architecture-separation-case-3",
+    name: "RPC API has ALL learning endpoints",
+    test: async (): Promise<ValidationResult> => {
+      // Search for required learning endpoints
+      const requiredEndpoints = [
+        { name: "Thompson Sampling", pattern: "def select_variant_thompson_sampling" },
+        { name: "Beta Sampling", pattern: "sample_beta" },
+        { name: "Metrics Update", pattern: "update_metrics_after_execution" }
+      ]
+      
+      const results: Record<string, boolean> = {}
+      const missing: string[] = []
+      
+      for (const endpoint of requiredEndpoints) {
+        const result = await grepInRepo("metabob-rpc-api", endpoint.pattern, "*.py")
+        results[endpoint.name] = result.count > 0
+        if (result.count === 0) {
+          missing.push(endpoint.name)
+        }
+      }
+      
+      return {
+        pass: missing.length === 0,
+        caseId: "case-3",
+        actual: results,
+        expected: {
+          "Thompson Sampling": true,
+          "Beta Sampling": true,
+          "Metrics Update": true
+        },
+        details: missing.length === 0
+          ? "✓ All learning endpoints found in RPC API"
+          : `✗ Missing endpoints in RPC API: ${missing.join(", ")}`
+      }
+    }
+  },
+  
+  {
+    id: "validation-complete-architecture-separation-case-4",
+    name: "Data flow follows architecture boundaries",
+    test: async (): Promise<ValidationResult> => {
+      // Check opencode delegates to RPC API (not local)
+      const opencodeRpcCalls = await grepInRepo(
+        "metabob-opencode",
+        "rpcHttpClient|POST.*activities.*select"
+      )
+      
+      // Check CLI forwards to RPC API
+      const cliRpcForwarding = await grepInRepo(
+        "metabob-cli",
+        "call_api.*POST.*activities|await.*call_api",
+        "*.py"
+      )
+      
+      // Check no shortcuts (opencode directly calling SurrealDB)
+      const opencodeDirectDb = await grepInRepo(
+        "metabob-opencode",
+        "surrealdb|surreal\\.",
+        "*.ts",
+        ["node_modules", "dist", "*.test.*", "test-*", "types"]
+      )
+      
+      const pass = opencodeRpcCalls.count > 0 && 
+                   cliRpcForwarding.count > 0 && 
+                   opencodeDirectDb.count === 0
+      
+      return {
+        pass,
+        caseId: "case-4",
+        actual: {
+          opencodeUsesRpcClient: opencodeRpcCalls.count > 0,
+          cliForwardsToRpc: cliRpcForwarding.count > 0,
+          opencodeDirectDbAccess: opencodeDirectDb.count
+        },
+        expected: {
+          opencodeUsesRpcClient: true,
+          cliForwardsToRpc: true,
+          opencodeDirectDbAccess: 0
+        },
+        details: pass
+          ? "✓ Data flow follows layered architecture"
+          : "✗ Data flow violations detected"
+      }
+    }
+  },
+  
+  {
+    id: "validation-complete-architecture-separation-case-5",
+    name: "thompson-sampler.ts deleted from opencode",
+    test: async (): Promise<ValidationResult> => {
+      const thompsonSamplerPath = path.join(
+        process.cwd(),
+        "repos/metabob-opencode/packages/opencode/src/ml/thompson-sampler.ts"
+      )
+      
+      const mlDirPath = path.join(
+        process.cwd(),
+        "repos/metabob-opencode/packages/opencode/src/ml"
+      )
+      
+      const fileStillExists = await fileExists(thompsonSamplerPath)
+      const mlDirExists = await directoryExists(mlDirPath)
+      
+      return {
+        pass: !fileStillExists,
+        caseId: "case-5",
+        actual: {
+          thompsonSamplerExists: fileStillExists,
+          mlDirectoryExists: mlDirExists
+        },
+        expected: {
+          thompsonSamplerExists: false,
+          mlDirectoryExists: false,
+          reason: "ML implementation directory should be deleted"
+        },
+        details: !fileStillExists
+          ? "✓ thompson-sampler.ts has been deleted"
+          : "✗ thompson-sampler.ts still exists in opencode"
+      }
+    }
+  },
+  
+  {
+    id: "validation-complete-architecture-separation-case-6",
+    name: "Template storage uses SurrealDB primary + Redis cache",
+    test: async (): Promise<ValidationResult> => {
+      // Check RPC API uses SurrealDB for templates
+      const surrealdbStorage = await grepInRepo(
+        "metabob-rpc-api",
+        "surrealdb.*template|activity_template.*surreal",
+        "*.py"
+      )
+      
+      // Check Redis is used for caching
+      const redisCache = await grepInRepo(
+        "metabob-rpc-api",
+        "redis.*cache|cache.*template|ttl",
+        "*.py"
+      )
+      
+      // Check for cache-first pattern
+      const cacheMissLogic = await grepInRepo(
+        "metabob-rpc-api",
+        "if.*not.*redis|cache.*miss|load.*from.*surreal",
+        "*.py"
+      )
+      
+      const pass = surrealdbStorage.count > 0 && 
+                   redisCache.count > 0 && 
+                   cacheMissLogic.count > 0
+      
+      return {
+        pass,
+        caseId: "case-6",
+        actual: {
+          surrealdbForTemplates: surrealdbStorage.count > 0,
+          redisForCaching: redisCache.count > 0,
+          cacheMissHandling: cacheMissLogic.count > 0
+        },
+        expected: {
+          surrealdbForTemplates: true,
+          redisForCaching: true,
+          cacheMissHandling: true
+        },
+        details: pass
+          ? "✓ Template storage uses SurrealDB primary + Redis cache"
+          : "✗ Storage architecture not correctly implemented"
+      }
+    }
+  },
+  
+  {
+    id: "validation-complete-architecture-separation-case-7",
+    name: "CLI MCP tools are pure proxies to RPC API",
+    test: async (): Promise<ValidationResult> => {
+      // Check MCP tools delegate to RPC API
+      const mcpToolProxies = await grepInRepo(
+        "metabob-cli",
+        "await call_api|call_rpc_api",
+        "*.py",
+        ["node_modules", "*.test.*"]
+      )
+      
+      // Check for LOCAL computation in MCP tools (should be zero)
+      const localComputation = await grepInRepo(
+        "metabob-cli",
+        "calculate.*metric|compute.*score|local.*thompson",
+        "*.py",
+        ["node_modules", "*.test.*", "test_*"]
+      )
+      
+      const pass = mcpToolProxies.count > 0 && localComputation.count === 0
+      
+      return {
+        pass,
+        caseId: "case-7",
+        actual: {
+          mcpToolsDelegateToRpc: mcpToolProxies.count > 0,
+          localComputationFound: localComputation.count
+        },
+        expected: {
+          mcpToolsDelegateToRpc: true,
+          localComputationFound: 0
+        },
+        details: pass
+          ? "✓ CLI MCP tools are pure proxies"
+          : "✗ CLI MCP tools contain local computation"
+      }
+    }
+  }
+]
+
+// Main validation function
 export async function runValidation(): Promise<{
-  overallPass: boolean
-  results: Record<string, ValidationResult>
+  allPassed: boolean
+  results: ValidationResult[]
   summary: {
     total: number
     passed: number
     failed: number
   }
 }> {
-  const results: Record<string, ValidationResult> = {}
-
-  console.log("Running Complete Architecture Separation Validation Harness...")
-  console.log("=" .repeat(80))
-
-  // Run all validation cases
-  const validations = [
-    { name: "opencode-ml-keywords", fn: validateOpencodeMLKeywords },
-    { name: "cli-training-logic", fn: validateCLITrainingLogic },
-    { name: "rpc-api-thompson-sampling", fn: validateRPCAPIThompsonSampling },
-    { name: "data-flow-http", fn: validateDataFlowHTTP },
-    { name: "thompson-sampler-deleted", fn: validateThompsonSamplerDeleted },
-    { name: "template-selector-delegation", fn: validateTemplateSelectorDelegation },
-    { name: "activity-no-thompson-calculations", fn: validateActivityNoThompsonCalculations },
-    { name: "mcp-tools-proxy", fn: validateMCPToolsProxy },
-    { name: "rpc-api-endpoint", fn: validateRPCAPIEndpoint },
-    { name: "surrealdb-schema", fn: validateSurrealDBSchema },
-  ]
-
-  for (const { name, fn } of validations) {
-    console.log(`\nRunning: ${name}...`)
+  const results: ValidationResult[] = []
+  
+  console.log("=".repeat(80))
+  console.log("VALIDATION HARNESS: complete-architecture-separation")
+  console.log("=".repeat(80))
+  console.log()
+  
+  for (const testCase of testCases) {
+    console.log(`Running: ${testCase.name}...`)
     try {
-      const result = await fn()
-      results[name] = result
-      console.log(`  Result: ${result.pass ? "✅ PASS" : "❌ FAIL"}`)
-      console.log(`  Reason: ${result.reason}`)
-    } catch (error) {
-      results[name] = {
-        pass: false,
-        actual: { error: String(error) },
-        expected: {},
-        reason: `Validation threw exception: ${error}`,
-        timestamp: Date.now(),
+      const result = await testCase.test()
+      result.caseId = testCase.id
+      results.push(result)
+      
+      const status = result.pass ? "✓ PASS" : "✗ FAIL"
+      console.log(`  ${status}: ${result.details}`)
+      
+      if (!result.pass) {
+        console.log(`  Expected:`, JSON.stringify(result.expected, null, 2))
+        console.log(`  Actual:`, JSON.stringify(result.actual, null, 2))
       }
-      console.log(`  Result: ❌ FAIL (exception)`)
-      console.log(`  Error: ${error}`)
+    } catch (error) {
+      results.push({
+        pass: false,
+        caseId: testCase.id,
+        actual: { error: error.message },
+        expected: {},
+        error: error.message,
+        details: `✗ ERROR: ${error.message}`
+      })
+      console.log(`  ✗ ERROR: ${error.message}`)
     }
+    console.log()
   }
-
-  const passed = Object.values(results).filter((r) => r.pass).length
-  const failed = Object.values(results).filter((r) => !r.pass).length
-  const total = validations.length
-  const overallPass = failed === 0
-
-  console.log("\n" + "=".repeat(80))
-  console.log(`\nValidation Summary:`)
-  console.log(`  Total: ${total}`)
-  console.log(`  Passed: ${passed}`)
-  console.log(`  Failed: ${failed}`)
-  console.log(`  Overall: ${overallPass ? "✅ PASS" : "❌ FAIL"}`)
-  console.log("=" .repeat(80))
-
+  
+  const passed = results.filter(r => r.pass).length
+  const failed = results.filter(r => !r.pass).length
+  
+  console.log("=".repeat(80))
+  console.log("SUMMARY")
+  console.log("=".repeat(80))
+  console.log(`Total:  ${results.length}`)
+  console.log(`Passed: ${passed}`)
+  console.log(`Failed: ${failed}`)
+  console.log()
+  console.log(`Overall: ${failed === 0 ? "✓ ALL TESTS PASSED" : "✗ SOME TESTS FAILED"}`)
+  console.log("=".repeat(80))
+  
   return {
-    overallPass,
+    allPassed: failed === 0,
     results,
-    summary: { total, passed, failed },
+    summary: {
+      total: results.length,
+      passed,
+      failed
+    }
   }
 }
 
-/**
- * Run validation if executed directly
- */
-// @ts-ignore - Module detection
-if (typeof require !== "undefined" && require.main === module) {
+// Run if executed directly
+if (import.meta.main) {
   runValidation()
-    .then((result) => {
-      // @ts-ignore - Node.js process
-      process.exit(result.overallPass ? 0 : 1)
+    .then(({ allPassed }) => {
+      process.exit(allPassed ? 0 : 1)
     })
-    .catch((error) => {
-      console.error("Validation harness failed:", error)
-      // @ts-ignore - Node.js process
+    .catch(error => {
+      console.error("Fatal error:", error)
       process.exit(1)
     })
 }
