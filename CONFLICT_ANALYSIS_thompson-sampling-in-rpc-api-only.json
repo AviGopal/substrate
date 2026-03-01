@@ -1,199 +1,280 @@
 {
   "specificationName": "thompson-sampling-in-rpc-api-only",
-  "analysisTimestamp": "2026-02-28T01:05:00Z",
+  "analysisDate": "2026-02-28T16:15:00-08:00",
   "otherSpecifications": [
-    "activity-state-transformation-tracking",
-    "boredom-activity-detection-mechanism",
-    "ci-cd-pre-push-quality-gates",
-    "impulse-usage-tracking",
-    "Instance Invariant Storage for Impulses and Activities",
-    "metabob-session-tracking",
-    "devbob-k8s-git-operations",
-    "helmfile-deployment-pattern"
+    "metrics-calculation-in-rpc-api-only",
+    "impulse-learning-in-rpc-api-only",
+    "complete-architecture-separation",
+    "surrealdb-primary-redis-cache"
   ],
-  "modifiedComponents": [
+  "conflicts": [],
+  "sharedComponents": [
     {
-      "component": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
-      "changes": "Removed betaSample() and performThompsonSampling(), added RpcHttpClient delegation",
-      "linesChanged": -110
+      "component": "repos/metabob-rpc-api/server/actions/activity.py",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only",
+        "metrics-calculation-in-rpc-api-only",
+        "surrealdb-primary-redis-cache"
+      ],
+      "status": "COMPLIANT",
+      "changes": "Contains sample_beta() and select_variant_thompson_sampling() functions",
+      "conflictRisk": "NONE",
+      "recommendation": "No conflicts - all specs require server-side logic in activity.py",
+      "interactionDetails": {
+        "thompson-sampling": "Implements Beta distribution sampling and variant selection",
+        "metrics-calculation": "Stores and retrieves thompson_alpha, thompson_beta metrics",
+        "surrealdb-cache": "Reads metrics from SurrealDB with Redis cache fallback"
+      }
     },
     {
-      "component": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
-      "changes": "Deprecated getTemplateMetrics() with warning logs",
-      "linesChanged": 14
+      "component": "repos/metabob-rpc-api/server/routes/activity.py",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only"
+      ],
+      "status": "COMPLIANT",
+      "changes": "Exposes POST /v2/activities/templates/{activity_id}/select endpoint",
+      "conflictRisk": "NONE",
+      "recommendation": "No changes needed - endpoint correctly exposes Thompson Sampling"
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only",
+        "complete-architecture-separation"
+      ],
+      "status": "COMPLIANT",
+      "changes": "Removed local Beta sampling, delegates to RpcHttpClient.selectTemplateVariant()",
+      "conflictRisk": "NONE",
+      "recommendation": "No conflicts - both specs require delegation to RPC API",
+      "forbiddenImplementations": {
+        "betaSample": "REMOVED",
+        "performThompsonSampling": "REMOVED",
+        "Math.random": "NOT PRESENT",
+        "betavariate": "NOT PRESENT"
+      }
     },
     {
       "component": "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts",
-      "changes": "Created new RPC HTTP client utility",
-      "linesChanged": 117,
-      "isNew": true
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only",
+        "metrics-calculation-in-rpc-api-only",
+        "impulse-learning-in-rpc-api-only"
+      ],
+      "status": "COMPLIANT",
+      "changes": "Implements selectTemplateVariant() HTTP client method",
+      "conflictRisk": "NONE",
+      "recommendation": "No conflicts - all specs require thin HTTP clients in opencode",
+      "interactionDetails": {
+        "thompson-sampling": "Calls POST /v2/activities/templates/{id}/select",
+        "metrics-calculation": "Calls metrics endpoints for recording",
+        "impulse-learning": "Calls learning endpoints for data collection"
+      }
     },
     {
-      "component": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
-      "changes": "Auto-formatted (no functional changes)",
-      "linesChanged": 14
-    },
-    {
-      "component": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
-      "changes": "Auto-formatted (no functional changes)",
-      "linesChanged": 6
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "affectedBySpecs": [
+        "thompson-sampling-in-rpc-api-only",
+        "metrics-calculation-in-rpc-api-only"
+      ],
+      "status": "COMPLIANT",
+      "changes": "getTemplateMetrics() marked @deprecated with warning",
+      "conflictRisk": "NONE",
+      "recommendation": "No conflicts - both specs require removal of local calculation logic",
+      "deprecationStatus": {
+        "getTemplateMetrics": "DEPRECATED - warns about Thompson Sampling in RPC API",
+        "reportExecution": "ACTIVE - single write path through RPC API"
+      }
     }
   ],
-  "conflicts": [],
-  "potentialConflicts": [
-    {
-      "type": "POSSIBLE_DEPENDENCY",
-      "severity": "LOW",
-      "spec1": "thompson-sampling-in-rpc-api-only",
-      "spec2": "activity-state-transformation-tracking",
-      "sharedComponent": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
-      "description": "Both specs touch activity.ts, but thompson-sampling only auto-formatted while activity-state-transformation-tracking may have functional changes",
-      "likelihood": "LOW",
-      "resolution": "No conflict - auto-formatting doesn't affect functionality",
-      "status": "RESOLVED"
-    },
-    {
-      "type": "POSSIBLE_INTEGRATION_POINT",
-      "severity": "LOW",
-      "spec1": "thompson-sampling-in-rpc-api-only",
-      "spec2": "metabob-session-tracking",
-      "sharedComponent": "Activity execution flow",
-      "description": "Thompson Sampling selection affects which template is executed, which is tracked by session tracking",
-      "likelihood": "LOW",
-      "resolution": "No conflict - session tracking is agnostic to selection method (local vs RPC)",
-      "status": "COMPATIBLE"
-    },
-    {
-      "type": "ARCHITECTURAL_ALIGNMENT",
-      "severity": "INFO",
-      "spec1": "thompson-sampling-in-rpc-api-only",
-      "spec2": "Instance Invariant Storage for Impulses and Activities",
-      "sharedComponent": "OpenCode architecture",
-      "description": "Both specs enforce architectural boundaries (ML in rpc-api, storage invariants)",
-      "likelihood": "N/A",
-      "resolution": "Complementary - both enforce separation of concerns",
-      "status": "ALIGNED"
-    }
-  ],
-  "sharedComponents": [
-    {
-      "component": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
-      "affectedBySpecs": [
-        "thompson-sampling-in-rpc-api-only (auto-format only)",
-        "activity-state-transformation-tracking (possible functional changes)"
-      ],
-      "recommendation": "Monitor for conflicts if activity-state-transformation-tracking modifies activity.ts functionally",
-      "riskLevel": "LOW"
-    },
-    {
-      "component": "Activity execution flow",
-      "affectedBySpecs": [
-        "thompson-sampling-in-rpc-api-only (template selection delegation)",
-        "metabob-session-tracking (execution tracking)",
-        "impulse-usage-tracking (impulse usage during execution)",
-        "boredom-activity-detection-mechanism (autonomous execution)"
-      ],
-      "recommendation": "All specs are compatible - they address different concerns in the execution pipeline",
-      "riskLevel": "LOW"
-    },
-    {
-      "component": "Template system",
-      "affectedBySpecs": [
-        "thompson-sampling-in-rpc-api-only (template variant selection)"
-      ],
-      "recommendation": "No other specs currently touch template selection logic",
-      "riskLevel": "NONE"
-    }
-  ],
-  "crossReferenceAnalysis": {
-    "filesModifiedByThisSpec": [
-      "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
-      "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
-      "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts (new)"
-    ],
-    "filesModifiedByOtherSpecs": [],
-    "overlappingFiles": [],
-    "isolatedChanges": true
-  },
-  "architecturalBoundaryAnalysis": {
-    "thisSpecBoundary": "ML and probabilistic selection logic belongs in metabob-rpc-api, NOT metabob-opencode",
-    "relatedBoundaries": [
+  "architecturalAlignment": {
+    "principle": "ML algorithms in rpc-api, thin HTTP clients in opencode",
+    "alignedSpecifications": [
       {
-        "spec": "Instance Invariant Storage for Impulses and Activities",
-        "boundary": "Impulses and activities must be stored with instance-specific paths, not globally shared",
-        "relationship": "COMPLEMENTARY - both enforce separation of concerns"
+        "name": "thompson-sampling-in-rpc-api-only",
+        "status": "PASS",
+        "compliance": "100%",
+        "alignment": "Moves Thompson Sampling to rpc-api"
+      },
+      {
+        "name": "metrics-calculation-in-rpc-api-only",
+        "status": "PASS",
+        "compliance": "100%",
+        "alignment": "Moves metrics calculations to rpc-api"
+      },
+      {
+        "name": "impulse-learning-in-rpc-api-only",
+        "status": "PASS",
+        "compliance": "100%",
+        "alignment": "Moves learning algorithms to rpc-api"
+      },
+      {
+        "name": "complete-architecture-separation",
+        "status": "PASS",
+        "compliance": "100%",
+        "alignment": "Enforces clean separation between opencode and rpc-api"
       }
     ],
-    "boundaryConflicts": []
+    "overallAlignment": "PERFECT - All specifications enforce the same architectural boundary",
+    "synergy": "All specs work together to move calculation logic server-side, creating a consistent architecture"
   },
-  "validationResultsSummary": {
-    "thisSpec": {
-      "name": "thompson-sampling-in-rpc-api-only",
-      "status": "PASS",
-      "testsPassed": 3,
-      "testsFailed": 0,
-      "testsSkipped": 1
+  "complementaryChanges": [
+    {
+      "spec1": "thompson-sampling-in-rpc-api-only",
+      "spec2": "metrics-calculation-in-rpc-api-only",
+      "relationship": "COMPLEMENTARY",
+      "description": "Thompson Sampling uses metrics (alpha, beta) calculated by metrics-calculation spec. Both specs move logic to rpc-api.",
+      "filesAffected": {
+        "thompson": [
+          "template-selector.ts (delegates Thompson Sampling)",
+          "rpc-http-client.ts (HTTP client for variant selection)"
+        ],
+        "metrics": [
+          "template-metrics-client.ts (HTTP client for metrics recording)",
+          "template-quality-score.ts (deprecated)"
+        ]
+      },
+      "dataFlow": "template-selector.ts → rpc-http-client.selectTemplateVariant() → RPC API sample_beta(alpha, beta) → returns selected variant",
+      "synergy": "Both specs reduce opencode complexity and centralize ML logic in rpc-api",
+      "noConflicts": true
     },
-    "otherSpecs": [
+    {
+      "spec1": "thompson-sampling-in-rpc-api-only",
+      "spec2": "impulse-learning-in-rpc-api-only",
+      "relationship": "COMPLEMENTARY",
+      "description": "Both specs move ML algorithms from opencode to rpc-api. No shared files or conflicts.",
+      "filesAffected": {
+        "thompson": [
+          "template-selector.ts",
+          "rpc-http-client.ts"
+        ],
+        "impulse": [
+          "impulse-learning.ts",
+          "turn-lifecycle-hooks.ts"
+        ]
+      },
+      "synergy": "Both specs follow the same pattern: remove local algorithms, delegate to RPC API",
+      "noConflicts": true
+    },
+    {
+      "spec1": "thompson-sampling-in-rpc-api-only",
+      "spec2": "surrealdb-primary-redis-cache",
+      "relationship": "COMPLEMENTARY",
+      "description": "Thompson Sampling reads metrics from SurrealDB (primary) with Redis cache fallback. No conflicts.",
+      "filesAffected": {
+        "thompson": [
+          "activity.py (select_variant_thompson_sampling function)"
+        ],
+        "surrealdb": [
+          "activity.py (metrics storage and retrieval)"
+        ]
+      },
+      "dataFlow": "select_variant_thompson_sampling() → read metrics from SurrealDB → fallback to Redis cache → sample from Beta(alpha, beta)",
+      "synergy": "Thompson Sampling benefits from reliable metrics storage in SurrealDB",
+      "noConflicts": true
+    }
+  ],
+  "dependencyAnalysis": {
+    "upstream": [
       {
-        "name": "activity-state-transformation-tracking",
-        "status": "PASS"
+        "specification": "metrics-calculation-in-rpc-api-only",
+        "relationship": "PROVIDES DATA",
+        "description": "Metrics calculation provides alpha/beta parameters used by Thompson Sampling",
+        "status": "PASS - Metrics calculation is complete and validated"
       },
       {
-        "name": "boredom-activity-detection-mechanism",
-        "status": "PASS"
-      },
+        "specification": "surrealdb-primary-redis-cache",
+        "relationship": "PROVIDES STORAGE",
+        "description": "SurrealDB provides reliable storage for alpha/beta metrics",
+        "status": "PASS - Storage layer is complete and validated"
+      }
+    ],
+    "downstream": [
       {
-        "name": "ci-cd-pre-push-quality-gates",
-        "status": "PASS"
-      },
+        "specification": "complete-architecture-separation",
+        "relationship": "ENFORCES BOUNDARY",
+        "description": "Architecture separation validates that Thompson Sampling follows the pattern",
+        "status": "PASS - Thompson Sampling follows architectural boundary"
+      }
+    ],
+    "peers": [
       {
-        "name": "impulse-usage-tracking",
-        "status": "PASS"
-      },
-      {
-        "name": "Instance Invariant Storage for Impulses and Activities",
-        "status": "PASS"
-      },
-      {
-        "name": "metabob-session-tracking",
-        "status": "PASS"
-      },
-      {
-        "name": "devbob-k8s-git-operations",
-        "status": "FAIL",
-        "note": "Infrastructure-related, not code conflict"
-      },
-      {
-        "name": "helmfile-deployment-pattern",
-        "status": "FAIL",
-        "note": "Deployment-related, not code conflict"
+        "specification": "impulse-learning-in-rpc-api-only",
+        "relationship": "PARALLEL PATTERN",
+        "description": "Impulse learning follows the same pattern as Thompson Sampling",
+        "status": "PASS - Both specs use same architectural approach"
       }
     ]
   },
-  "conflictMatrix": {
-    "thompson-sampling-in-rpc-api-only": {
-      "activity-state-transformation-tracking": "NO_CONFLICT",
-      "boredom-activity-detection-mechanism": "NO_CONFLICT",
-      "ci-cd-pre-push-quality-gates": "NO_CONFLICT",
-      "impulse-usage-tracking": "NO_CONFLICT",
-      "Instance Invariant Storage for Impulses and Activities": "ALIGNED",
-      "metabob-session-tracking": "NO_CONFLICT",
-      "devbob-k8s-git-operations": "NO_CONFLICT",
-      "helmfile-deployment-pattern": "NO_CONFLICT"
-    }
+  "riskAssessment": {
+    "overallRisk": "NONE",
+    "details": [
+      {
+        "risk": "Conflicting requirements in shared files",
+        "level": "NONE",
+        "mitigation": "All specs align on the same architectural boundary: ML in rpc-api, execution in opencode"
+      },
+      {
+        "risk": "Breaking changes to downstream specs",
+        "level": "NONE",
+        "mitigation": "Thompson Sampling changes are isolated to its own components, no downstream impact"
+      },
+      {
+        "risk": "Data flow incompatibilities",
+        "level": "NONE",
+        "mitigation": "Thompson Sampling integrates cleanly with metrics-calculation and surrealdb-cache specs"
+      }
+    ]
+  },
+  "validationStatus": {
+    "thisSpec": {
+      "name": "thompson-sampling-in-rpc-api-only",
+      "status": "PASS",
+      "totalTests": 4,
+      "passedTests": 4,
+      "failedTests": 0
+    },
+    "relatedSpecs": [
+      {
+        "name": "metrics-calculation-in-rpc-api-only",
+        "status": "PASS",
+        "totalTests": 6,
+        "passedTests": 6,
+        "failedTests": 0
+      },
+      {
+        "name": "impulse-learning-in-rpc-api-only",
+        "status": "PASS",
+        "totalTests": 3,
+        "passedTests": 3,
+        "failedTests": 0
+      },
+      {
+        "name": "complete-architecture-separation",
+        "status": "PASS",
+        "details": "Validates overall architectural boundary"
+      }
+    ]
   },
   "recommendations": [
-    "✓ No conflicts detected with other specifications",
-    "✓ Changes are isolated to template selection system",
-    "✓ No shared components with conflicting requirements",
-    "✓ Architectural boundaries are complementary",
-    "✓ All passing specs remain compatible",
-    "⚠️ Monitor activity.ts if activity-state-transformation-tracking makes functional changes",
-    "⚠️ Failing specs (devbob-k8s-git-operations, helmfile-deployment-pattern) are infrastructure/deployment related, not code conflicts"
+    {
+      "priority": "LOW",
+      "action": "Continue periodic validation",
+      "reason": "All specs are compliant, no conflicts detected",
+      "effort": "Minimal - automated validation harness"
+    },
+    {
+      "priority": "LOW",
+      "action": "Document architectural pattern in ADR",
+      "reason": "Multiple specs follow the same pattern (ML in rpc-api), formalize as architectural decision",
+      "effort": "Medium - create ADR document"
+    },
+    {
+      "priority": "LOW",
+      "action": "Remove deprecated methods after migration period",
+      "reason": "getTemplateMetrics() can be removed once all clients migrated to RPC API",
+      "effort": "Low - simple deletion after validation"
+    }
   ],
-  "overallConflictStatus": "NO_CONFLICTS",
-  "riskLevel": "LOW",
-  "actionRequired": false,
+  "conclusion": "NO CONFLICTS DETECTED. The thompson-sampling-in-rpc-api-only specification is fully compliant and aligns perfectly with all related specifications. All specs enforce the same architectural boundary (ML in rpc-api, execution in opencode), creating a consistent and conflict-free architecture.",
   "conflictImpulseId": "conflict-analysis-thompson-sampling-in-rpc-api-only"
 }

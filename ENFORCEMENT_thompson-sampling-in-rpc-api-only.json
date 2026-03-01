@@ -1,0 +1,164 @@
+{
+  "specificationName": "thompson-sampling-in-rpc-api-only",
+  "enforcementDate": "2026-02-28",
+  "status": "COMPLIANT - NO CHANGES REQUIRED",
+  "traceImpulseId": "trace-thompson-sampling-in-rpc-api-only",
+  "enforcementImpulseId": "enforcement-thompson-sampling-in-rpc-api-only",
+  "summary": "The Thompson Sampling architectural boundary is already correctly enforced. All components comply with the specification requiring ML logic to exist only in metabob-rpc-api while metabob-opencode delegates via HTTP endpoint.",
+  "gapsAnalyzed": 9,
+  "gapsFound": 0,
+  "changesApplied": [],
+  "complianceVerification": {
+    "validationChecks": [
+      {
+        "check": "No Beta sampling implementation in opencode",
+        "method": "grep -rn 'betavariate|sample_beta|sampleBeta' repos/metabob-opencode/packages/opencode/src --include='*.ts'",
+        "result": "PASS",
+        "details": "Only found reference in architectural comment explaining the boundary (allowed)",
+        "evidence": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts:36: * See: repos/metabob-rpc-api/server/actions/activity.py::sample_beta()"
+      },
+      {
+        "check": "RPC API has Thompson Sampling implementation",
+        "method": "grep 'sample_beta|select_variant_thompson_sampling' repos/metabob-rpc-api/server/actions/activity.py",
+        "result": "PASS",
+        "details": "Found 4 references: sample_beta function definition and usage in select_variant_thompson_sampling",
+        "evidence": "repos/metabob-rpc-api/server/actions/activity.py contains both functions"
+      },
+      {
+        "check": "OpenCode delegates to RPC API endpoint",
+        "method": "grep '/v2/activities/templates' repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts",
+        "result": "PASS",
+        "details": "RpcHttpClient.selectTemplateVariant calls POST /v2/activities/templates/{activityId}/select",
+        "evidence": "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts:45"
+      },
+      {
+        "check": "ML directory removed from opencode",
+        "method": "ls repos/metabob-opencode/packages/opencode/src/ml/",
+        "result": "PASS",
+        "details": "ML directory does not exist in opencode",
+        "evidence": "ls: cannot access 'repos/metabob-opencode/packages/opencode/src/ml/': No such file or directory"
+      }
+    ],
+    "allChecksPassed": true
+  },
+  "architecturalBoundaries": {
+    "metabob-rpc-api": {
+      "status": "COMPLIANT",
+      "responsibilities": [
+        "✅ Beta distribution sampling (sample_beta function)",
+        "✅ Thompson Sampling algorithm (select_variant_thompson_sampling)",
+        "✅ Metrics storage (thompson_alpha, thompson_beta)",
+        "✅ Variant selection logic",
+        "✅ Selection count tracking"
+      ],
+      "files": [
+        "repos/metabob-rpc-api/server/actions/activity.py",
+        "repos/metabob-rpc-api/server/routes/activity.py"
+      ]
+    },
+    "metabob-opencode": {
+      "status": "COMPLIANT",
+      "allowedResponsibilities": [
+        "✅ Template loading and caching",
+        "✅ HTTP client to RPC API",
+        "✅ Fallback handling",
+        "✅ Selection metrics recording",
+        "✅ Template execution"
+      ],
+      "forbiddenResponsibilities": [
+        "❌ Beta distribution sampling - NOT PRESENT (compliant)",
+        "❌ Thompson Sampling calculations - NOT PRESENT (compliant)",
+        "❌ Direct alpha/beta updates - NOT PRESENT (compliant)",
+        "❌ ML algorithm implementation - NOT PRESENT (compliant)"
+      ],
+      "files": [
+        "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+        "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts",
+        "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts"
+      ]
+    }
+  },
+  "componentCompliance": [
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "sample_beta()",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Implementation is correct and in the right location"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "component": "select_variant_thompson_sampling()",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Implementation is correct and complete"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "POST /v2/activities/templates/{activity_id}/select",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Endpoint correctly exposes Thompson Sampling functionality"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "component": "TemplateSelector.select()",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Correctly delegates to RPC API, no local ML logic"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "component": "betaSample() [REMOVED]",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Function correctly removed with architectural documentation"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "component": "performThompsonSampling() [REMOVED]",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Function correctly removed with migration documentation"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts",
+      "component": "RpcHttpClient.selectTemplateVariant()",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Client correctly delegates to RPC API endpoint"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "component": "getTemplateMetrics() [DEPRECATED]",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "Method correctly deprecated with warning"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/ml/",
+      "component": "thompson-sampler.ts [DELETED]",
+      "status": "COMPLIANT",
+      "gap": "NONE",
+      "reason": "ML directory correctly removed"
+    }
+  ],
+  "keyFindings": [
+    "✅ Thompson Sampling implementation exists ONLY in metabob-rpc-api",
+    "✅ Beta distribution sampling (sample_beta) ONLY in rpc-api",
+    "✅ OpenCode delegates via HTTP to POST /v2/activities/templates/{id}/select",
+    "✅ No local ML calculations in opencode",
+    "✅ Proper fallback handling in opencode for RPC failures",
+    "✅ Selection metadata (alpha, beta, sample) passed through interface",
+    "✅ ML directory removed from opencode",
+    "✅ Deprecated methods marked with warnings",
+    "✅ All 4 validation checks passed",
+    "✅ 0 violations found"
+  ],
+  "recommendation": "NO ACTION REQUIRED. The architectural boundary is correctly enforced. Continue to monitor compliance through validation checks.",
+  "futureConsiderations": [
+    "Consider removing deprecated getTemplateMetrics() after migration period",
+    "Monitor RPC API availability and fallback behavior in production",
+    "Track Thompson Sampling performance metrics to validate ML effectiveness"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "overallPass": true,
+  "timestamp": "2026-02-28T16:15:29-08:00",
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "passRate": 100.0
+  },
+  "results": [
+    {"test": "No ML implementation in opencode", "pass": true},
+    {"test": "RPC API has Thompson Sampling", "pass": true},
+    {"test": "RPC API exposes endpoint", "pass": true},
+    {"test": "OpenCode delegates to RPC API", "pass": true}
+  ]
+}
