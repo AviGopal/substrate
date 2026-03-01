@@ -4,14 +4,24 @@
   "pointer": {
     "type": "file",
     "path": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
-    "source": "validation-harness"
-  },
-  "metadata": {
-    "specificationName": "metrics-calculation-in-rpc-api-only",
-    "testCount": 6,
-    "createdAt": "2026-02-28T09:47:19.768Z",
-    "purpose": "Validates architectural boundary: metrics calculations in rpc-api only"
+    "source": "validation harness implementation"
   },
   "budget": 2000,
-  "status": "active"
+  "metadata": {
+    "specification": "metrics-calculation-in-rpc-api-only",
+    "purpose": "Static analysis validation harness",
+    "checks": [
+      "No arithmetic operations",
+      "No Redis writes",
+      "No JSON file writes",
+      "Line count < 400",
+      "HTTP client code only",
+      "No calculation assignments"
+    ],
+    "executionMode": "static-analysis",
+    "requiresLLM": false
+  },
+  "created": null,
+  "lastAccessed": null,
+  "loadCount": 0
 }

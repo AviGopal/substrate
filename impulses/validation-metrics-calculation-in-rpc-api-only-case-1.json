@@ -3,14 +3,16 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "content": "{\n  \"name\": \"no-calculation-operators\",\n  \"input\": \"template-metrics-client.ts file content\",\n  \"expectedOutput\": {\n    \"pass\": true,\n    \"message\": \"No calculation operators found (/, *, Math.) in client code\"\n  }\n}",
-    "source": "validation-harness"
-  },
-  "metadata": {
-    "testName": "no-calculation-operators",
-    "specificationName": "metrics-calculation-in-rpc-api-only",
-    "createdAt": "2026-02-28T09:47:19.767Z"
+    "content": "{\n  \"input\": \"template-metrics-client.ts static analysis\",\n  \"expectedOutput\": {\n    \"arithmeticOperations\": 0,\n    \"redisWrites\": 0,\n    \"jsonFileWrites\": 0,\n    \"lineCount\": \"< 400\",\n    \"hasHTTPClientCode\": true,\n    \"calculationAssignments\": 0\n  },\n  \"description\": \"Verify template-metrics-client.ts contains no calculation logic\"\n}",
+    "source": "validation harness test case"
   },
   "budget": 500,
-  "status": "active"
+  "metadata": {
+    "specification": "metrics-calculation-in-rpc-api-only",
+    "testCaseNumber": 1,
+    "harnessFile": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts"
+  },
+  "created": null,
+  "lastAccessed": null,
+  "loadCount": 0
 }

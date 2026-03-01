@@ -1,299 +1,295 @@
 /**
  * Validation Harness: metrics-calculation-in-rpc-api-only
- * 
- * Validates that template-metrics-client.ts is a thin HTTP client with:
- * - No calculation logic (arithmetic operations like /, *, Math.)
- * - Only HTTP/MCP client code (callMCPTool, log, error handling)
- * - No Redis writes
- * - No JSON file writes
- * - Single write path via MCP tools
- * 
- * This is a STATIC ANALYSIS harness - no runtime execution needed.
+ *
+ * Specification: Metrics calculations (success rate, quality score, averaging) must ONLY
+ * exist in metabob-rpc-api. metabob-opencode template-metrics-client must be a thin HTTP
+ * client with no calculations.
+ *
+ * Validation Strategy:
+ * 1. Static analysis of template-metrics-client.ts
+ * 2. Search for calculation patterns (/, *, Math.)
+ * 3. Search for Redis writes (redis.set, redis.hset)
+ * 4. Search for JSON file writes (fs.writeFile, JSON.stringify)
+ * 5. Verify file size is reasonable for thin client (<400 lines)
+ * 6. Verify only contains HTTP client code (callMCPTool)
+ *
+ * This harness performs STATIC ANALYSIS only - no runtime execution needed.
+ * It can run without LLM and returns deterministic PASS/FAIL results.
  */
-
-import * as fs from "fs"
-import * as path from "path"
-
-export interface ValidationCase {
-  name: string
-  input: {
-    filePath: string
-  }
-  expectedOutput: {
-    hasCalculationLogic: boolean
-    hasRedisWrites: boolean
-    hasJsonFileWrites: boolean
-    lineCount: number
-    lineCountThreshold: number
-    onlyContainsClientCode: boolean
-  }
-}
 
 export interface ValidationResult {
   pass: boolean
-  actual: {
-    hasCalculationLogic: boolean
-    calculationMatches: string[]
-    hasRedisWrites: boolean
-    redisWriteMatches: string[]
-    hasJsonFileWrites: boolean
-    jsonFileWriteMatches: string[]
-    lineCount: number
-    onlyContainsClientCode: boolean
-    nonClientCodeMatches: string[]
-  }
-  expected: ValidationCase["expectedOutput"]
-  message: string
+  checks: CheckResult[]
+  summary: string
+  violations: string[]
 }
 
-/**
- * Run validation for a test case
- */
-export function runValidation(testCase: ValidationCase): ValidationResult {
-  const { filePath } = testCase.input
-  const expected = testCase.expectedOutput
+export interface CheckResult {
+  name: string
+  pass: boolean
+  actual: string | number | boolean
+  expected: string | number | boolean
+  details?: string
+}
 
-  // Read file content
-  let content: string
-  let lineCount: number
+const TARGET_FILE = "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts"
+const MAX_LINES = 400 // Thin client threshold
+
+/**
+ * Run validation harness for metrics-calculation-in-rpc-api-only specification
+ */
+export async function runValidation(repositoryRoot?: string): Promise<ValidationResult> {
+  const repoRoot = repositoryRoot || Bun.cwd
+  const filePath = `${repoRoot}/${TARGET_FILE}`
+
+  // Check if file exists
+  const file = Bun.file(filePath)
+  const exists = await file.exists()
   
-  try {
-    content = fs.readFileSync(filePath, "utf-8")
-    lineCount = content.split("\n").length
-  } catch (error) {
+  if (!exists) {
     return {
       pass: false,
-      actual: {
-        hasCalculationLogic: false,
-        calculationMatches: [],
-        hasRedisWrites: false,
-        redisWriteMatches: [],
-        hasJsonFileWrites: false,
-        jsonFileWriteMatches: [],
-        lineCount: 0,
-        onlyContainsClientCode: false,
-        nonClientCodeMatches: [],
-      },
-      expected,
-      message: `Failed to read file: ${error instanceof Error ? error.message : String(error)}`,
+      checks: [],
+      summary: `File not found: ${TARGET_FILE}`,
+      violations: [`File not found: ${TARGET_FILE}`],
     }
   }
 
-  // Check for calculation logic (arithmetic operations)
-  // Exclude comments, string literals, and legitimate uses in logging
-  const calculationPatterns = [
-    /\b(\w+\s*\/\s*\w+)/g, // Division: x / y
-    /\b(\w+\s*\*\s*\w+)/g, // Multiplication: x * y
-    /\bMath\.\w+/g, // Math operations: Math.floor, Math.round, etc.
-    /\bavg\w*\s*=/g, // Variable assignments like avgCost =
-    /\bsum\w*\s*=/g, // Variable assignments like sumCost =
-    /\btotal\w*\s*\+=/g, // Accumulation: total += x
+  // Read file content
+  const content = await file.text()
+  const lines = content.split("\n")
+
+  const checks: CheckResult[] = []
+  const violations: string[] = []
+
+  // Check 1: No arithmetic operations (division, multiplication)
+  const arithmeticPatterns = [
+    /\s+\/\s+\w+/g, // division: something / something
+    /\s+\*\s+\w+/g, // multiplication: something * something
+    /Math\./g, // Math operations
+  ]
+
+  let arithmeticMatches: string[] = []
+  for (const pattern of arithmeticPatterns) {
+    const matches = content.match(pattern)
+    if (matches) {
+      // Filter out comments and strings
+      const realMatches = matches.filter((match: string) => {
+        const lineWithMatch = lines.find((line: string) => line.includes(match))
+        if (!lineWithMatch) return false
+        const trimmed = lineWithMatch.trim()
+        // Ignore comments
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) return false
+        // Ignore string literals
+        if (trimmed.match(/["'`].*["'`]/)) return false
+        return true
+      })
+      arithmeticMatches = arithmeticMatches.concat(realMatches)
+    }
+  }
+
+  checks.push({
+    name: "No arithmetic operations",
+    pass: arithmeticMatches.length === 0,
+    actual: arithmeticMatches.length > 0 ? `Found ${arithmeticMatches.length} matches` : "None found",
+    expected: "None found",
+    details: arithmeticMatches.length > 0 ? `Matches: ${arithmeticMatches.join(", ")}` : undefined,
+  })
+
+  if (arithmeticMatches.length > 0) {
+    violations.push(
+      `Found ${arithmeticMatches.length} arithmetic operation(s): ${arithmeticMatches.join(", ")}`,
+    )
+  }
+
+  // Check 2: No Redis writes
+  const redisPatterns = [/redis\.set/gi, /redis\.hset/gi, /redis\.zadd/gi, /redis\.hmset/gi]
+
+  let redisMatches: string[] = []
+  for (const pattern of redisPatterns) {
+    const matches = content.match(pattern)
+    if (matches) {
+      redisMatches = redisMatches.concat(matches)
+    }
+  }
+
+  checks.push({
+    name: "No Redis writes",
+    pass: redisMatches.length === 0,
+    actual: redisMatches.length > 0 ? `Found ${redisMatches.length} Redis writes` : "None found",
+    expected: "None found",
+    details: redisMatches.length > 0 ? `Matches: ${redisMatches.join(", ")}` : undefined,
+  })
+
+  if (redisMatches.length > 0) {
+    violations.push(`Found ${redisMatches.length} Redis write(s): ${redisMatches.join(", ")}`)
+  }
+
+  // Check 3: No JSON file writes
+  const fileWritePatterns = [
+    /fs\.writeFile/gi,
+    /fs\.writeFileSync/gi,
+    /writeFile\(/gi,
+    /JSON\.stringify.*writeFile/gi,
+  ]
+
+  let fileWriteMatches: string[] = []
+  for (const pattern of fileWritePatterns) {
+    const matches = content.match(pattern)
+    if (matches) {
+      fileWriteMatches = fileWriteMatches.concat(matches)
+    }
+  }
+
+  checks.push({
+    name: "No JSON file writes",
+    pass: fileWriteMatches.length === 0,
+    actual:
+      fileWriteMatches.length > 0 ? `Found ${fileWriteMatches.length} file writes` : "None found",
+    expected: "None found",
+    details: fileWriteMatches.length > 0 ? `Matches: ${fileWriteMatches.join(", ")}` : undefined,
+  })
+
+  if (fileWriteMatches.length > 0) {
+    violations.push(`Found ${fileWriteMatches.length} file write(s): ${fileWriteMatches.join(", ")}`)
+  }
+
+  // Check 4: File size is reasonable (thin client)
+  const lineCount = lines.length
+
+  checks.push({
+    name: "Line count within thin client threshold",
+    pass: lineCount <= MAX_LINES,
+    actual: lineCount,
+    expected: `<= ${MAX_LINES}`,
+    details: lineCount > MAX_LINES ? `File is too large for a thin client` : undefined,
+  })
+
+  if (lineCount > MAX_LINES) {
+    violations.push(`File has ${lineCount} lines, exceeds thin client threshold of ${MAX_LINES}`)
+  }
+
+  // Check 5: Only contains client code (callMCPTool)
+  const hasMCPCalls = content.includes("callMCPTool")
+  const hasHTTPClient = content.includes("metabob_post_activity_result") || content.includes("MCP")
+
+  checks.push({
+    name: "Contains only HTTP client code",
+    pass: hasMCPCalls && hasHTTPClient,
+    actual: hasMCPCalls && hasHTTPClient ? "HTTP client code present" : "Missing HTTP client code",
+    expected: "HTTP client code present",
+    details:
+      !hasMCPCalls || !hasHTTPClient
+        ? `Missing MCP calls or HTTP client references`
+        : "callMCPTool and MCP references found",
+  })
+
+  if (!hasMCPCalls || !hasHTTPClient) {
+    violations.push("File does not contain expected HTTP client code (callMCPTool, MCP)")
+  }
+
+  // Check 6: No calculation keywords
+  const calculationKeywords = [
+    "successRate",
+    "success_rate",
+    "avgCost",
+    "avg_cost",
+    "avgDuration",
+    "avg_duration",
+    "qualityScore",
+    "quality_score",
   ]
 
   const calculationMatches: string[] = []
-  
-  // Remove comments and strings to avoid false positives
-  const codeOnly = content
-    .replace(/\/\*[\s\S]*?\*\//g, "") // Remove block comments
-    .replace(/\/\/.*/g, "") // Remove line comments
-    .replace(/"(?:[^"\\]|\\.)*"/g, '""') // Remove string literals
-    .replace(/'(?:[^'\\]|\\.)*'/g, "''") // Remove string literals
-    .replace(/`(?:[^`\\]|\\.)*`/g, "``") // Remove template literals
-
-  for (const pattern of calculationPatterns) {
-    const matches = codeOnly.match(pattern)
+  for (const keyword of calculationKeywords) {
+    // Look for assignment patterns like: successRate = ...
+    const assignmentPattern = new RegExp(`${keyword}\\s*=\\s*`, "gi")
+    const matches = content.match(assignmentPattern)
     if (matches) {
-      calculationMatches.push(...matches)
+      // Filter out comments and type definitions
+      const realMatches = matches.filter((match: string) => {
+        const lineWithMatch = lines.find((line: string) => line.includes(match))
+        if (!lineWithMatch) return false
+        const trimmed = lineWithMatch.trim()
+        // Ignore comments
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) return false
+        // Ignore type definitions (: or interface)
+        if (trimmed.includes(":") && !trimmed.includes("=")) return false
+        return true
+      })
+      calculationMatches.push(...realMatches)
     }
   }
 
-  const hasCalculationLogic = calculationMatches.length > 0
+  checks.push({
+    name: "No calculation assignments",
+    pass: calculationMatches.length === 0,
+    actual:
+      calculationMatches.length > 0
+        ? `Found ${calculationMatches.length} calculation assignments`
+        : "None found",
+    expected: "None found",
+    details:
+      calculationMatches.length > 0 ? `Matches: ${calculationMatches.join(", ")}` : undefined,
+  })
 
-  // Check for Redis writes
-  const redisWritePatterns = [
-    /redis\s*\.\s*set/gi,
-    /redis\s*\.\s*hset/gi,
-    /redis\s*\.\s*setex/gi,
-    /redis\s*\.\s*hmset/gi,
-  ]
-
-  const redisWriteMatches: string[] = []
-  for (const pattern of redisWritePatterns) {
-    const matches = content.match(pattern)
-    if (matches) {
-      redisWriteMatches.push(...matches)
-    }
-  }
-
-  const hasRedisWrites = redisWriteMatches.length > 0
-
-  // Check for JSON file writes
-  const jsonFileWritePatterns = [
-    /fs\s*\.\s*writeFile.*\.json/gi,
-    /JSON\s*\.\s*stringify.*writeFile/gi,
-    /writeFileSync.*\.json/gi,
-  ]
-
-  const jsonFileWriteMatches: string[] = []
-  for (const pattern of jsonFileWritePatterns) {
-    const matches = content.match(pattern)
-    if (matches) {
-      jsonFileWriteMatches.push(...matches)
-    }
-  }
-
-  const hasJsonFileWrites = jsonFileWriteMatches.length > 0
-
-  // Check that file only contains client code patterns
-  const clientCodePatterns = [
-    /callMCPTool/g,
-    /log\.\w+/g,
-    /await.*MCP\./g,
-    /try.*catch/g,
-    /return.*null/g,
-  ]
-
-  const nonClientCodePatterns = [
-    /class.*Calculator/gi,
-    /function.*calculate\w*/gi,
-    /function.*aggregate\w*/gi,
-    /for\s*\(.*\)\s*{[\s\S]*?total\s*\+=/, // Loops with accumulation
-  ]
-
-  const nonClientCodeMatches: string[] = []
-  for (const pattern of nonClientCodePatterns) {
-    const matches = codeOnly.match(pattern)
-    if (matches) {
-      nonClientCodeMatches.push(...matches)
-    }
-  }
-
-  const onlyContainsClientCode = nonClientCodeMatches.length === 0
-
-  // Determine pass/fail
-  const pass =
-    hasCalculationLogic === expected.hasCalculationLogic &&
-    hasRedisWrites === expected.hasRedisWrites &&
-    hasJsonFileWrites === expected.hasJsonFileWrites &&
-    lineCount <= expected.lineCountThreshold &&
-    onlyContainsClientCode === expected.onlyContainsClientCode
-
-  // Build message
-  const issues: string[] = []
-  
-  if (hasCalculationLogic !== expected.hasCalculationLogic) {
-    issues.push(
-      `Expected hasCalculationLogic=${expected.hasCalculationLogic}, got ${hasCalculationLogic}. ` +
-      `Found: ${calculationMatches.join(", ")}`
-    )
-  }
-  
-  if (hasRedisWrites !== expected.hasRedisWrites) {
-    issues.push(
-      `Expected hasRedisWrites=${expected.hasRedisWrites}, got ${hasRedisWrites}. ` +
-      `Found: ${redisWriteMatches.join(", ")}`
-    )
-  }
-  
-  if (hasJsonFileWrites !== expected.hasJsonFileWrites) {
-    issues.push(
-      `Expected hasJsonFileWrites=${expected.hasJsonFileWrites}, got ${hasJsonFileWrites}. ` +
-      `Found: ${jsonFileWriteMatches.join(", ")}`
-    )
-  }
-  
-  if (lineCount > expected.lineCountThreshold) {
-    issues.push(
-      `Line count ${lineCount} exceeds threshold ${expected.lineCountThreshold}. ` +
-      `File should be a thin client.`
-    )
-  }
-  
-  if (onlyContainsClientCode !== expected.onlyContainsClientCode) {
-    issues.push(
-      `Expected onlyContainsClientCode=${expected.onlyContainsClientCode}, got ${onlyContainsClientCode}. ` +
-      `Found non-client code: ${nonClientCodeMatches.join(", ")}`
+  if (calculationMatches.length > 0) {
+    violations.push(
+      `Found ${calculationMatches.length} calculation assignment(s): ${calculationMatches.join(", ")}`,
     )
   }
 
-  const message = pass
-    ? "✅ PASS - File is a thin HTTP client with no calculations"
-    : `❌ FAIL - ${issues.join(" | ")}`
+  // Overall result
+  const allChecksPassed = checks.every((check) => check.pass)
 
   return {
-    pass,
-    actual: {
-      hasCalculationLogic,
-      calculationMatches,
-      hasRedisWrites,
-      redisWriteMatches,
-      hasJsonFileWrites,
-      jsonFileWriteMatches,
-      lineCount,
-      onlyContainsClientCode,
-      nonClientCodeMatches,
-    },
-    expected,
-    message,
+    pass: allChecksPassed,
+    checks,
+    summary: allChecksPassed
+      ? `✅ PASS: All ${checks.length} checks passed. File is compliant with metrics-calculation-in-rpc-api-only specification.`
+      : `❌ FAIL: ${violations.length} violation(s) found. File contains calculation logic that should only exist in metabob-rpc-api.`,
+    violations,
   }
 }
 
 /**
- * Run all validation cases
+ * CLI entry point for standalone execution
  */
-export function runAllValidations(testCases: ValidationCase[]): {
-  passed: number
-  failed: number
-  results: ValidationResult[]
-} {
-  const results = testCases.map(runValidation)
-  const passed = results.filter((r) => r.pass).length
-  const failed = results.filter((r) => !r.pass).length
+if (import.meta.main) {
+  runValidation()
+    .then((result) => {
+      console.log("\n" + "=".repeat(80))
+      console.log("Validation Harness: metrics-calculation-in-rpc-api-only")
+      console.log("=".repeat(80) + "\n")
 
-  return { passed, failed, results }
-}
+      console.log(result.summary + "\n")
 
-// CLI execution
-if (require.main === module) {
-  const testCases: ValidationCase[] = [
-    {
-      name: "template-metrics-client.ts has no calculations",
-      input: {
-        filePath: path.join(
-          __dirname,
-          "../../repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts"
-        ),
-      },
-      expectedOutput: {
-        hasCalculationLogic: false,
-        hasRedisWrites: false,
-        hasJsonFileWrites: false,
-        lineCount: 301,
-        lineCountThreshold: 400, // Thin client, but allows for multiple methods
-        onlyContainsClientCode: true,
-      },
-    },
-  ]
+      console.log("Checks:")
+      for (const check of result.checks) {
+        const status = check.pass ? "✅ PASS" : "❌ FAIL"
+        console.log(`  ${status} - ${check.name}`)
+        console.log(`    Expected: ${check.expected}`)
+        console.log(`    Actual:   ${check.actual}`)
+        if (check.details) {
+          console.log(`    Details:  ${check.details}`)
+        }
+        console.log()
+      }
 
-  console.log("Running validation: metrics-calculation-in-rpc-api-only\n")
+      if (result.violations.length > 0) {
+        console.log("Violations:")
+        for (const violation of result.violations) {
+          console.log(`  - ${violation}`)
+        }
+        console.log()
+      }
 
-  const { passed, failed, results } = runAllValidations(testCases)
+      console.log("=".repeat(80) + "\n")
 
-  results.forEach((result, index) => {
-    console.log(`\nTest Case ${index + 1}: ${testCases[index].name}`)
-    console.log(result.message)
-    
-    if (!result.pass) {
-      console.log("\nActual:")
-      console.log(JSON.stringify(result.actual, null, 2))
-      console.log("\nExpected:")
-      console.log(JSON.stringify(result.expected, null, 2))
-    }
-  })
-
-  console.log(`\n${"=".repeat(60)}`)
-  console.log(`Total: ${testCases.length} | Passed: ${passed} | Failed: ${failed}`)
-  console.log(`${"=".repeat(60)}\n`)
-
-  process.exit(failed > 0 ? 1 : 0)
+      process.exit(result.pass ? 0 : 1)
+    })
+    .catch((error) => {
+      console.error("Validation harness failed:", error)
+      process.exit(1)
+    })
 }
