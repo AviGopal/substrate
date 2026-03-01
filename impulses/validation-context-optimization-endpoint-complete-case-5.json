@@ -3,16 +3,15 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "content": "Validation Test Case 5: Empty Data Handling\n\nInput:\n{\n  \"activity_type\": \"test\",\n  \"limit\": 100\n}\n\nExpected Output:\n{\n  \"activity_type\": \"test\",\n  \"recommended_impulses\": [],\n  \"optimal_token_budget\": 5000,\n  \"success_correlation\": 0.0,\n  \"sample_size\": 0\n}\n\nValidation Criteria:\n- Response when no historical data exists for activity type\n- recommended_impulses should be empty array []\n- optimal_token_budget should default to 5000\n- success_correlation should be 0.0\n- sample_size should be 0\n\nTest Purpose:\nVerify graceful handling of queries for activity types with no historical data. Endpoint should return sensible defaults rather than failing.",
-    "source": "validation-harness"
+    "content": "Test Case 5: Handle activity type with no historical data\n\nInput:\n{\n  \"activity_type\": \"test\",\n  \"limit\": 100\n}\n\nExpected Output (Exact Match):\n{\n  \"activity_type\": \"test\",\n  \"sample_size\": 0,\n  \"recommended_impulses\": [],\n  \"optimal_token_budget\": 5000,\n  \"success_correlation\": 0.0\n}\n\nSeeded Data:\n- No test records seeded (completely empty)\n\nExpected Behavior:\n- Returns valid response even with zero data\n- All fields present with sensible defaults\n- recommended_impulses: empty array (not null)\n- optimal_token_budget: 5000 (default fallback per compute_optimal_token_budget)\n- success_correlation: 0.0 (no data to correlate)\n- sample_size: 0 (accurate count)\n\nKey Validation:\n- Proves endpoint is resilient to empty datasets\n- Validates default value logic in service layer\n- Confirms no division-by-zero or null pointer errors\n- Tests backward compatibility (new activity types return sensible defaults)",
+    "source": "validation-test-case"
   },
   "budget": 1000,
   "createdAt": "2026-02-28T00:00:00.000Z",
   "metadata": {
-    "testCaseId": "case-5",
-    "specificationName": "context-optimization-endpoint-complete",
-    "testType": "edge-case",
+    "testCaseNumber": 5,
     "activityType": "test",
-    "expectEmptyData": true
+    "expectedSampleSize": 0,
+    "testType": "exact_match"
   }
 }
