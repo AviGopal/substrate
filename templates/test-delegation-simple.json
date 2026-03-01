@@ -1,0 +1,32 @@
+{
+  "name": "Test Delegation to K8s Pods",
+  "description": "Quick validation of acp_delegate with devbob pods in Kubernetes",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "test-basic-delegation",
+      "subagent": "general",
+      "description": "Test basic delegation to devbob-0 pod",
+      "dependencies": [],
+      "prompt": {
+        "template": "Test basic acp_delegate to K8s devbob pod.\n\nTask: Delegate a simple task to devbob-0 pod in metabob namespace.\n\nUse acp_delegate tool:\n```typescript\nacp_delegate({\n  target: \"docker://devbob-0\",\n  taskDescription: \"Test basic delegation\",\n  prompt: \"Please respond with: 'Delegation test successful from [your-hostname]'. Use the 'bash' tool to run 'hostname' command to get your hostname.\",\n  timeout: 60\n})\n```\n\nExpected result:\n- Connection established\n- Remote agent responds with hostname\n- Duration < 30 seconds\n\nIf this fails, the acp_delegate tool may need updates to support kubectl exec for K8s pods.\n\nReport:\n- Success/failure status\n- Response from remote pod\n- Duration\n- Any errors",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false
+  }
+}
