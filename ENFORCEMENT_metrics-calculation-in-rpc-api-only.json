@@ -1,160 +1,114 @@
 {
   "specificationName": "metrics-calculation-in-rpc-api-only",
-  "enforcementDate": "2026-02-28",
-  "overallStatus": "COMPLIANT - No changes needed",
-  "summary": "All components already comply with the architectural boundary specification. Validation harness was updated to fix regex bug in reportExecution test.",
-  "changesApplied": [
+  "enforcementDate": "2026-02-28T16:05:00Z",
+  "enforcementStatus": "ALREADY ENFORCED - NO CHANGES REQUIRED",
+  "architecturalPrinciple": "Metrics aggregation belongs in rpc-api, removing calculation logic from metabob-opencode client",
+  "changesApplied": [],
+  "verificationPerformed": [
     {
-      "file": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
-      "component": "reportExecution-single-write validation test",
-      "changeMade": "Fixed regex pattern to correctly extract reportExecution function without capturing adjacent functions. Removed duplicate test case.",
-      "reason": "The previous regex was too greedy and captured the callMCPTool helper function definition, causing false positives. The new implementation uses brace-counting to precisely extract the function body.",
-      "impactAnalysis": "Validation harness only - no production code changes. Improves test accuracy for CI/CD enforcement.",
-      "linesChanged": "~50 lines modified in test harness"
+      "verification": "Search opencode for calculation functions",
+      "method": "grep -r 'calculateSuccessRate|calculateQualityScore|calculateAverage'",
+      "result": "PASS - Only deprecated stub found, throws error",
+      "evidence": "repos/metabob-opencode/packages/opencode/src/session/template-quality-score.ts:46 - function throws error with migration message"
+    },
+    {
+      "verification": "Check for Redis writes in opencode",
+      "method": "grep -r 'redis.set|redis.hset' in template-metrics-client.ts",
+      "result": "PASS - No Redis writes found",
+      "evidence": "Zero matches in template-metrics-client.ts"
+    },
+    {
+      "verification": "Check for JSON file writes in opencode",
+      "method": "grep -r 'JSON.stringify.*metrics' in template-metrics-client.ts",
+      "result": "PASS - No JSON file writes found",
+      "evidence": "Zero matches in template-metrics-client.ts"
+    },
+    {
+      "verification": "Verify template-metrics-client.ts is thin client",
+      "method": "Read file and check reportExecution() implementation",
+      "result": "PASS - Single write path via MCP tool",
+      "evidence": "Line 105: calls metabob_post_activity_result MCP tool. Lines 81-86: Comments document architectural boundary enforcement and removal of DUAL-WRITE pattern."
+    },
+    {
+      "verification": "Verify calculations exist in rpc-api",
+      "method": "grep success_rate calculation in template_metrics.py",
+      "result": "PASS - Server-side calculations confirmed",
+      "evidence": "repos/metabob-rpc-api/server/db/operations/template_metrics.py:176 - success_rate calculation"
     }
   ],
-  "componentComplianceStatus": [
-    {
-      "component": "template-metrics-client.ts",
+  "complianceStatus": {
+    "template-metrics-client.ts": {
       "status": "COMPLIANT",
-      "gap": "None",
-      "evidence": "No calculation operators, single write path via MCP, 301 lines (thin HTTP client)"
+      "evidence": "Thin HTTP client, delegates to MCP, no calculations, single write path"
     },
-    {
-      "component": "template-quality-score.ts",
+    "template-quality-score.ts": {
       "status": "COMPLIANT",
-      "gap": "None",
-      "evidence": "Deprecated stub (54 lines), throws error directing to rpc-api"
+      "evidence": "375 lines removed, now deprecation stub"
     },
-    {
-      "component": "metabob_post_activity_result MCP tool",
+    "metabob_post_activity_result MCP Tool": {
       "status": "COMPLIANT",
-      "gap": "None",
-      "evidence": "Pure HTTP gateway, forwards to rpc-api without calculations"
+      "evidence": "Pure gateway, no calculations, forwards to rpc-api"
     },
-    {
-      "component": "MetricsAggregator (rpc-api)",
+    "learning_loop.py (rpc-api)": {
       "status": "COMPLIANT",
-      "gap": "None",
-      "evidence": "Correct location for metrics calculations (success_rate, avg_cost, avg_duration)"
+      "evidence": "Server-side aggregation via update_metrics_after_execution()"
     },
-    {
-      "component": "PromotionEngine (rpc-api)",
+    "template_metrics.py (rpc-api)": {
       "status": "COMPLIANT",
-      "gap": "None",
-      "evidence": "Correct location for A/B testing calculations (chi-square, deltas, composite scores)"
-    },
+      "evidence": "All metrics calculations server-side (success_rate, averages, Thompson Sampling)"
+    }
+  },
+  "dataFlowVerified": {
+    "entry": "Activity.execute() → TemplateMetricsClient.reportExecution()",
+    "gateway": "reportExecution() → metabob_post_activity_result MCP tool",
+    "api": "MCP tool → POST /api/v1/learning-loop/executions",
+    "storage": "Learning Loop API → update_metrics_after_execution() → SurrealDB",
+    "calculations": "All in template_metrics.py (rpc-api), none in opencode",
+    "verification": "PASS - Single write path, all calculations server-side"
+  },
+  "architecturalBoundaryEnforcement": {
+    "boundary": "Metrics calculations must exist ONLY in metabob-rpc-api",
+    "enforcement": "VERIFIED",
+    "evidence": [
+      "✅ template-quality-score.ts: 375 lines of calculation logic removed",
+      "✅ template-metrics-client.ts: No calculateSuccessRate or qualityScore functions",
+      "✅ template-metrics-client.ts: No Redis writes",
+      "✅ template-metrics-client.ts: No JSON file writes",
+      "✅ template-metrics-client.ts: Single write path via MCP tool",
+      "✅ template_metrics.py (rpc-api): All calculations present (success_rate, averages, Thompson Sampling)",
+      "✅ Comments document architectural boundary enforcement"
+    ]
+  },
+  "knownIssues": [
     {
-      "component": "template_metrics.py DB operations (rpc-api)",
-      "status": "COMPLIANT",
-      "gap": "None",
-      "evidence": "Correct location for incremental aggregation and Thompson Sampling calculations"
+      "severity": "LOW",
+      "issue": "Legacy Redis-based metrics_aggregator.py coexists with SurrealDB-based template_metrics.py",
+      "impact": "Dual storage during migration phase",
+      "status": "ACCEPTABLE",
+      "rationale": "Backward compatibility during migration. Both services implement same calculations server-side.",
+      "recommendation": "Keep both during migration. Remove metrics_aggregator.py once activity_metrics_router.py routes are deprecated."
     }
   ],
-  "validationHarnessResults": {
-    "location": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
-    "executionDate": "2026-02-28",
-    "overallPass": true,
-    "summary": {
-      "total": 5,
-      "passed": 5,
-      "failed": 0
-    },
-    "testCases": [
-      {
-        "name": "no-calculation-operators",
-        "status": "PASS",
-        "message": "No calculation operators found (correct)"
-      },
-      {
-        "name": "no-dual-write-pattern",
-        "status": "PASS",
-        "message": "No dual-write pattern found (correct - single write path)"
-      },
-      {
-        "name": "quality-score-deprecated",
-        "status": "PASS",
-        "message": "Quality score file is deprecated stub (54 lines)"
-      },
-      {
-        "name": "reportExecution-single-write",
-        "status": "PASS",
-        "message": "reportExecution uses single write path (correct)"
-      },
-      {
-        "name": "file-size-check",
-        "status": "PASS",
-        "message": "File size is reasonable for HTTP client (301 lines)"
-      }
-    ]
-  },
-  "architecturalBoundaries": {
-    "enforced": true,
-    "violations": [],
-    "summary": "Metrics calculations correctly isolated to metabob-rpc-api backend. OpenCode client is thin HTTP wrapper.",
-    "boundaries": [
-      {
-        "boundary": "Client Layer (opencode)",
-        "rule": "No calculations, HTTP client only",
-        "status": "ENFORCED",
-        "components": ["template-metrics-client.ts", "template-quality-score.ts"]
-      },
-      {
-        "boundary": "Gateway Layer (metabob-cli MCP)",
-        "rule": "HTTP forwarding only, no calculations",
-        "status": "ENFORCED",
-        "components": ["metabob_post_activity_result"]
-      },
-      {
-        "boundary": "Service Layer (rpc-api)",
-        "rule": "ALL calculations happen here",
-        "status": "ENFORCED",
-        "components": ["MetricsAggregator", "PromotionEngine", "template_metrics.py"]
-      }
-    ]
-  },
-  "phase3Completion": {
-    "phase": "Phase 3 - Storage Consolidation and Architecture Enforcement",
-    "status": "COMPLETE",
-    "goals": [
-      {
-        "goal": "SurrealDB as primary storage for template_metrics",
-        "status": "COMPLETE",
-        "evidence": "template_metrics.py implements SurrealDB operations"
-      },
-      {
-        "goal": "Redis as cache layer",
-        "status": "COMPLETE",
-        "evidence": "MetricsAggregator writes to Redis for caching"
-      },
-      {
-        "goal": "Metrics calculations ONLY in rpc-api services",
-        "status": "COMPLETE",
-        "evidence": "No calculations in opencode client, all in MetricsAggregator/PromotionEngine"
-      },
-      {
-        "goal": "No calculations in opencode client",
-        "status": "COMPLETE",
-        "evidence": "template-metrics-client.ts has no division, multiplication, or Math calls"
-      },
-      {
-        "goal": "Single write path (no dual-write pattern)",
-        "status": "COMPLETE",
-        "evidence": "reportExecution() has exactly 1 MCP call, no Promise.allSettled"
-      }
-    ]
-  },
-  "cicdIntegration": {
-    "harnessAutomation": "Validation harness can be run in CI/CD pipeline",
-    "command": "npx tsx tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
-    "exitCode": "0 on pass, 1 on fail",
-    "recommendation": "Add to pre-push hook or CI workflow to prevent architectural boundary violations"
+  "conclusion": {
+    "summary": "Specification ALREADY ENFORCED - no changes required",
+    "confidence": "HIGH",
+    "reasoning": [
+      "All 5 primary components are COMPLIANT",
+      "Zero calculation functions found in opencode (except deprecated stub)",
+      "Zero Redis writes in opencode metrics client",
+      "Zero JSON file writes in opencode metrics client",
+      "Single write path verified: opencode → MCP → rpc-api → SurrealDB",
+      "All calculations verified in rpc-api: success_rate, averages, Thompson Sampling",
+      "Architectural boundary comments present in opencode files"
+    ],
+    "recommendation": "No enforcement actions needed. Proceed to validation phase to confirm runtime behavior matches static analysis."
   },
   "nextSteps": [
-    "Monitor for regressions via CI/CD validation harness",
-    "Consider removing deprecated methods in future major version",
-    "Document architectural boundaries in developer guide"
+    "Execute validation tests to confirm runtime metrics flow",
+    "Verify no metrics calculations execute in opencode during activity execution",
+    "Verify all calculations happen in rpc-api",
+    "Optional: Add integration test that asserts opencode never performs calculations"
   ],
   "enforcementImpulseId": "enforcement-metrics-calculation-in-rpc-api-only",
-  "traceImpulseReference": "trace-metrics-calculation-in-rpc-api-only"
+  "traceImpulseId": "trace-metrics-calculation-in-rpc-api-only"
 }

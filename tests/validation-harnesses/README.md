@@ -1,103 +1,107 @@
 # Validation Harnesses
 
-This directory contains validation harnesses for architectural specifications and enforcement tasks.
+This directory contains validation harnesses for architectural specifications.
 
-## Overview
+## Purpose
 
-Validation harnesses are automated tests that verify architectural boundaries and specification compliance without requiring LLM assistance. They:
+Validation harnesses are **deterministic, LLM-free tests** that verify architectural boundaries and specifications. They:
+- Load application/component code
+- Perform static or dynamic analysis
+- Return PASS/FAIL based on objective criteria
+- Can be run repeatedly without LLM invocation
 
-1. Load components/applications
-2. Feed in test inputs
-3. Capture actual outputs
-4. Compare against expected outputs
-5. Return PASS/FAIL results
+## Structure
+
+Each harness follows this pattern:
+
+```
+<spec-name>-harness.ts
+  ├── ValidationCase interface (input + expectedOutput)
+  ├── ValidationResult interface (pass/fail + actual vs expected)
+  ├── runValidation(testCase) => ValidationResult
+  └── CLI execution (if run directly)
+```
 
 ## Available Harnesses
 
-### thompson-sampling-in-rpc-api-only-harness.ts
+### metrics-calculation-in-rpc-api-only-harness.ts
 
-Validates that Thompson Sampling logic has been removed from OpenCode and properly delegated to metabob-rpc-api.
+**Specification:** Metrics calculations must exist ONLY in metabob-rpc-api, not in metabob-opencode.
 
-**Architectural Boundary**: ML and probabilistic selection logic belongs in metabob-rpc-api, NOT metabob-opencode.
+**Validation Strategy:** Static analysis of `template-metrics-client.ts` to verify:
+- No calculation logic (arithmetic operations: `/`, `*`, `Math.*`)
+- No Redis writes (`redis.set`, `redis.hset`)
+- No JSON file writes
+- Only contains client code (MCP calls, logging, error handling)
 
-**Validation Checks**:
-- ✓ No forbidden patterns (betaSample, performThompsonSampling, Gamma sampling, Box-Muller transforms)
-- ✓ RpcHttpClient utility exists
-- ✓ TemplateSelector refactored to use RPC API
-- ✓ RPC API endpoint available (optional, requires running RPC API)
-
-**Usage**:
+**Run:**
 ```bash
-# Basic validation (local checks only)
-npx tsx thompson-sampling-in-rpc-api-only-harness.ts /path/to/metabob-opencode
-
-# With RPC API endpoint check
-npx tsx thompson-sampling-in-rpc-api-only-harness.ts /path/to/metabob-opencode --check-rpc
-
-# Custom RPC API URL
-METABOB_RPC_API_URL=http://localhost:8000 npx tsx thompson-sampling-in-rpc-api-only-harness.ts /path/to/metabob-opencode --check-rpc
+npx tsx tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts
 ```
 
-**Expected Output**:
+**Expected Output:**
 ```
-================================================================================
-VALIDATION RESULT: PASS ✓
-================================================================================
+Test Case 1: template-metrics-client.ts has no calculations
+✅ PASS - File is a thin HTTP client with no calculations
 
-Successes:
-  ✓ No forbidden Thompson Sampling patterns found in OpenCode
-  ✓ RpcHttpClient utility exists
-  ✓ TemplateSelector properly refactored to use RPC API
-
-Detailed Check Results:
-  Forbidden Patterns: PASS
-  RPC Client Exists: PASS
-  Template Selector Refactored: PASS
+Total: 1 | Passed: 1 | Failed: 0
 ```
 
-## Test Cases
+## Adding New Harnesses
 
-Test cases are stored as impulses with the format:
-- **ID**: validation-{spec-name}-case-N
-- **Type**: memo
-- **Content**: {input: X, expectedOutput: Y}
+1. **Create harness file:** `<spec-name>-harness.ts`
+2. **Define test cases:** Input + expected output
+3. **Implement validation logic:** Static or runtime analysis
+4. **Add CLI execution:** For standalone testing
+5. **Document in this README**
 
-These are historical and can be run without LLM involvement.
+## Integration with Trace-Enforce-Validate Loop
 
-## Creating New Harnesses
+Harnesses are created during the **VALIDATE** phase of the trace-enforce-validate loop:
 
-1. Create harness file: `tests/validation-harnesses/{spec-name}-harness.ts`
-2. Export `runValidation(input) => {pass: boolean, actual, expected}`
-3. Define test cases as impulses
-4. Document in this README
-5. Create impulse for harness file:
-   - ID: harness-{spec-name}
-   - Type: file
-   - Pointer: tests/validation-harnesses/{spec-name}-harness.ts
-   - Budget: 2000 tokens
+1. **TRACE:** Understand current implementation → create trace impulse
+2. **ENFORCE:** Apply changes to close gaps → create enforcement impulse
+3. **VALIDATE:** Create harness to verify spec → create harness impulse
 
-## Running All Harnesses
+Harnesses persist as regression tests - they can be run anytime to verify the specification remains enforced.
 
-```bash
-# Run all validation harnesses
-for harness in tests/validation-harnesses/*-harness.ts; do
-  npx tsx "$harness" /path/to/repo
-done
+## Impulse Integration
+
+Each harness is stored as an impulse for cross-agent access:
+
+```typescript
+impulse_create({
+  id: "harness-<spec-name>",
+  type: "file",
+  pointer: {
+    type: "file",
+    path: "tests/validation-harnesses/<spec-name>-harness.ts"
+  },
+  budget: 2000
+})
 ```
 
-## CI/CD Integration
+Test cases are also stored as impulses:
 
-Validation harnesses should be run:
-- Before deploying architectural changes
-- As part of pre-commit hooks for specification enforcement
-- In CI/CD pipelines to prevent regressions
-- After major refactoring to verify compliance
+```typescript
+impulse_create({
+  id: "validation-<spec-name>-case-1",
+  type: "memo",
+  pointer: {
+    type: "memo",
+    content: {
+      input: {...},
+      expectedOutput: {...}
+    }
+  },
+  budget: 500
+})
+```
 
-## Troubleshooting
+## Benefits
 
-If a harness fails:
-1. Review the violations output
-2. Check the detailed check results
-3. Read the enforcement summary for the specification
-4. Compare current state with trace analysis
-5. Re-run enforcement if needed
+- ✅ **Deterministic:** Same input always produces same output
+- ✅ **Fast:** No LLM invocation, runs in milliseconds
+- ✅ **Regression-safe:** Can be run in CI/CD to prevent regressions
+- ✅ **Historical:** Test cases are frozen snapshots of expected behavior
+- ✅ **Cross-agent:** Impulses allow agents to share validation logic

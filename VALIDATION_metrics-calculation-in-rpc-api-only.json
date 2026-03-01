@@ -1,0 +1,71 @@
+{
+  "specificationName": "metrics-calculation-in-rpc-api-only",
+  "validationDate": "2026-02-28T16:10:00Z",
+  "harnessFile": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
+  "validationStrategy": "Static analysis to verify no calculation logic (/, *, Math.) exists in template-metrics-client.ts. Verify file is thin HTTP client with only MCP calls.",
+  "testCases": [
+    {
+      "impulseId": "validation-metrics-calculation-in-rpc-api-only-case-1",
+      "name": "template-metrics-client.ts has no calculations",
+      "input": {
+        "filePath": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts"
+      },
+      "expectedOutput": {
+        "hasCalculationLogic": false,
+        "hasRedisWrites": false,
+        "hasJsonFileWrites": false,
+        "lineCount": 301,
+        "lineCountThreshold": 400,
+        "onlyContainsClientCode": true
+      },
+      "rationale": "Template metrics client must be a thin HTTP client that delegates all operations to rpc-api via MCP tools. No local calculations allowed."
+    }
+  ],
+  "validationResults": {
+    "testCase1": {
+      "status": "PASS",
+      "message": "✅ PASS - File is a thin HTTP client with no calculations",
+      "actual": {
+        "hasCalculationLogic": false,
+        "calculationMatches": [],
+        "hasRedisWrites": false,
+        "redisWriteMatches": [],
+        "hasJsonFileWrites": false,
+        "jsonFileWriteMatches": [],
+        "lineCount": 301,
+        "onlyContainsClientCode": true,
+        "nonClientCodeMatches": []
+      }
+    }
+  },
+  "summary": {
+    "totalTests": 1,
+    "passed": 1,
+    "failed": 0,
+    "overallStatus": "PASS"
+  },
+  "architecturalBoundaryVerification": {
+    "boundary": "Metrics calculations must exist ONLY in metabob-rpc-api",
+    "verificationMethod": "Static analysis of template-metrics-client.ts",
+    "result": "PASS",
+    "evidence": [
+      "✅ No arithmetic operations (/, *, Math.) found in code",
+      "✅ No Redis write operations (redis.set, redis.hset)",
+      "✅ No JSON file write operations",
+      "✅ File contains only client code (callMCPTool, log, error handling)",
+      "✅ No calculation functions (calculateSuccessRate, calculateAverage, etc.)",
+      "✅ File size reasonable for thin client (301 lines)"
+    ]
+  },
+  "harnessImpulseId": "harness-metrics-calculation-in-rpc-api-only",
+  "testCaseImpulseIds": [
+    "validation-metrics-calculation-in-rpc-api-only-case-1"
+  ],
+  "executionCommand": "npx tsx tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts",
+  "conclusion": {
+    "status": "VALIDATED",
+    "message": "Specification is fully validated. template-metrics-client.ts is a thin HTTP client with no calculation logic.",
+    "confidence": "HIGH",
+    "recommendation": "Specification enforcement is complete and validated. No further action required."
+  }
+}
