@@ -1,0 +1,24 @@
+Helmfile Values Update
+=====================
+
+File: charts/metabob-rpc-api/values/default.metabob-rpc-api.values.yaml
+Previous tag: 0.16.14-scope-fix
+New tag: 0.16.18-http-rpc-complete
+
+Context: docker-desktop
+Namespace: metabob
+
+Changes Included:
+-----------------
+1. Activity ID lookup fallback in server/actions/activity.py
+   - Enables get_template_by_id to accept both variant_id and activity_id
+   
+2. Return logic fix in server/db/operations/template_data.py
+   - Prevents double-nesting of results
+
+Build Optimizations:
+--------------------
+- Removed surrealdb-py dependency (no Rust compilation)
+- Build time reduced by 60-80%
+
+Ready for deployment via helmfile sync

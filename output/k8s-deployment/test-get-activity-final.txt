@@ -1,0 +1,2 @@
+{"error":"Template not found: test-scope-isolation"}
+HTTP: 404

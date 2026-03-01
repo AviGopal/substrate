@@ -1,0 +1,14 @@
+{
+  "image": "metabobapp/metabob-rpc-api:0.16.18-http-rpc-complete",
+  "built_at": "2026-03-01T10:16:53-08:00",
+  "git_commit": "2838b39ba15bd384e158b0fa07d3e41e416cc484",
+  "fixes_included": [
+    "activity_id lookup fallback in get_template_by_id",
+    "Fixed return logic in get_templates_by_activity_id"
+  ],
+  "pushed_to_registry": false,
+  "optimizations": [
+    "Removed surrealdb-py dependency for faster builds",
+    "HTTP-only client for SurrealDB operations"
+  ]
+}

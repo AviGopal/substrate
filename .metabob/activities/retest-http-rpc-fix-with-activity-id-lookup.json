@@ -1,0 +1,415 @@
+{
+  "activity_id": "retest-http-rpc-fix-with-activity-id-lookup",
+  "name": "Retest HTTP RPC Fix with Activity ID Lookup",
+  "description": "Rebuild Docker image with activity_id lookup fix and run comprehensive tests to verify templates are retrievable by both variant_id and activity_id",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "rebuild-docker-image",
+      "subagent": "general",
+      "description": "Rebuild Docker image with the latest activity_id lookup fix",
+      "dependencies": [],
+      "prompt": {
+        "template": "Rebuild the Docker image with the activity_id lookup fix.\n\n**Context**: We've fixed the activity_id lookup issue in repos/metabob-rpc-api/server/actions/activity.py. Now we need to rebuild and test.\n\n**Your Task**: Rebuild the Docker image\n\n1. **Navigate to RPC API directory**:\n   ```bash\n   cd repos/metabob-rpc-api\n   ```\n\n2. **Verify the fix is in place**:\n   ```bash\n   grep -A 5 \"try activity_id lookup\" server/actions/activity.py\n   ```\n\n3. **Rebuild Docker image with new tag**:\n   ```bash\n   docker build -t {{imageName}}:{{imageTag}} . 2>&1 | tee /tmp/surrealdb-http-rpc-retest/rebuild-log.txt\n   ```\n\n4. **Verify build success**:\n   ```bash\n   docker images | grep {{imageName}}:{{imageTag}}\n   echo \"Rebuild completed at $(date)\"\n   ```\n\n**Success Criteria**: Image builds successfully with activity_id lookup fix included.\n\n**Report** the build results.",
+        "variables": [
+          {
+            "name": "imageName",
+            "type": "string",
+            "required": false,
+            "description": "Docker image name",
+            "default": "metabobapp/metabob-rpc-api"
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag",
+            "default": "0.16.17-http-rpc-complete"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker images | grep -q metabob-rpc-api",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "restart-test-environment",
+      "subagent": "general",
+      "description": "Restart test environment with the newly built image",
+      "dependencies": [
+        "rebuild-docker-image"
+      ],
+      "prompt": {
+        "template": "Restart the test environment with the updated image.\n\n**Your Task**: Restart containers with new image\n\n1. **Stop existing containers**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} down 2>&1 | tee /tmp/surrealdb-http-rpc-retest/restart-down.log\n   ```\n\n2. **Update docker-compose image tag** (if needed):\n   - Ensure metabob-rpc-api uses {{imageName}}:{{imageTag}}\n\n3. **Start services with new image**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} up -d metabob-rpc-api surrealdb redis 2>&1 | tee /tmp/surrealdb-http-rpc-retest/restart-up.log\n   ```\n\n4. **Wait for readiness** (max 60 seconds):\n   ```bash\n   for i in {1..12}; do\n     if curl -s http://localhost:{{rpcApiPort}}/ > /dev/null; then\n       echo \"✅ RPC API is ready\"\n       break\n     fi\n     echo \"⏳ Waiting for RPC API... ($i/12)\"\n     sleep 5\n   done\n   ```\n\n5. **Verify services are running**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} ps\n   docker logs metabob-rpc-api --tail 20\n   ```\n\n**Success Criteria**: All containers running and RPC API responds.\n\n**Report** service status.",
+        "variables": [
+          {
+            "name": "dockerComposeFile",
+            "type": "string",
+            "required": false,
+            "description": "Path to docker-compose file",
+            "default": "docker-compose.unified.yaml"
+          },
+          {
+            "name": "imageName",
+            "type": "string",
+            "required": false,
+            "description": "Docker image name",
+            "default": "metabobapp/metabob-rpc-api"
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag",
+            "default": "0.16.17-http-rpc-complete"
+          },
+          {
+            "name": "rpcApiPort",
+            "type": "number",
+            "required": false,
+            "description": "RPC API port",
+            "default": 8080
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker ps | grep -q metabob-rpc-api",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-activity-id-lookup",
+      "subagent": "general",
+      "description": "Run comprehensive tests to verify activity_id lookup works correctly",
+      "dependencies": [
+        "restart-test-environment"
+      ],
+      "prompt": {
+        "template": "Test template CRUD operations with focus on activity_id lookup.\n\n**Critical Test**: Verify templates are retrievable by BOTH variant_id AND activity_id.\n\n**Your Task**: Run comprehensive CRUD tests\n\n1. **Create test template**:\n   ```bash\n   curl -X POST http://localhost:{{rpcApiPort}}/v2/activities/templates \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\"name\": \"Activity ID Test Template\", \"description\": \"Testing activity_id lookup fix\", \"category\": \"infrastructure\", \"tasks\": [{\"id\": \"test\", \"subagent\": \"general\", \"description\": \"Test task\", \"dependencies\": [], \"prompt\": {\"template\": \"Test\", \"max_tokens\": 1000, \"compression_strategy\": \"filter\", \"variables\": []}, \"validation\": {\"required_files\": [], \"required_patterns\": [], \"forbidden_patterns\": [], \"commands\": []}, \"retry\": {\"max_attempts\": 1, \"strategy\": \"simple\"}, \"metrics\": {\"success_rate\": 0, \"avg_tokens\": 0, \"avg_duration\": 0, \"common_failures\": []}, \"tools\": {\"required\": [], \"optional\": [], \"disabled\": []}}], \"contextRequirements\": [], \"integration\": {\"requiresCleanGit\": false, \"preChecks\": [], \"postChecks\": [], \"qualityGates\": []}, \"metabob\": {\"enabled\": false, \"learningMode\": true, \"targetContextTokens\": 0, \"annotationStrategy\": \"key-components\"}}' \\\n     -w \"\\nHTTP: %{http_code}\\n\" > /tmp/surrealdb-http-rpc-retest/create.txt 2>&1\n   ```\n\n2. **Extract BOTH IDs**:\n   ```bash\n   VARIANT_ID=$(cat /tmp/surrealdb-http-rpc-retest/create.txt | jq -r '.variant_id // .id // \"unknown\"')\n   ACTIVITY_ID=$(cat /tmp/surrealdb-http-rpc-retest/create.txt | jq -r '.activity_id // \"activity-id-test-template\"')\n   echo \"Variant ID: $VARIANT_ID\" > /tmp/surrealdb-http-rpc-retest/ids.txt\n   echo \"Activity ID: $ACTIVITY_ID\" >> /tmp/surrealdb-http-rpc-retest/ids.txt\n   cat /tmp/surrealdb-http-rpc-retest/ids.txt\n   ```\n\n3. **Test retrieval by variant_id** (should work):\n   ```bash\n   sleep 2\n   curl -X GET \"http://localhost:{{rpcApiPort}}/v2/activities/templates/$VARIANT_ID\" \\\n     -w \"\\nHTTP: %{http_code}\\n\" > /tmp/surrealdb-http-rpc-retest/get-by-variant.txt 2>&1\n   ```\n\n4. **Test retrieval by activity_id** (CRITICAL TEST - was failing before fix):\n   ```bash\n   sleep 1\n   curl -X GET \"http://localhost:{{rpcApiPort}}/v2/activities/templates/$ACTIVITY_ID\" \\\n     -w \"\\nHTTP: %{http_code}\\n\" > /tmp/surrealdb-http-rpc-retest/get-by-activity.txt 2>&1\n   ```\n\n5. **Check RPC API logs**:\n   ```bash\n   docker logs metabob-rpc-api 2>&1 | grep -i \"template\\|error\\|activity_id\" | tail -30 > /tmp/surrealdb-http-rpc-retest/api-logs.txt\n   ```\n\n6. **Create comprehensive test results**:\n   ```bash\n   cat > /tmp/surrealdb-http-rpc-retest/test-results.json << 'EOF'\n   {\n     \"test_execution_time\": \"$(date -Iseconds)\",\n     \"image_tag\": \"{{imageTag}}\",\n     \"tests\": {\n       \"create_template\": {\n         \"status\": \"$(grep -q 'HTTP: 201\\|HTTP: 200' /tmp/surrealdb-http-rpc-retest/create.txt && echo 'PASSED' || echo 'FAILED')\",\n         \"http_code\": \"$(grep 'HTTP:' /tmp/surrealdb-http-rpc-retest/create.txt | awk '{print $2}')\",\n         \"variant_id\": \"$(cat /tmp/surrealdb-http-rpc-retest/ids.txt | grep 'Variant ID' | cut -d: -f2 | xargs)\",\n         \"activity_id\": \"$(cat /tmp/surrealdb-http-rpc-retest/ids.txt | grep 'Activity ID' | cut -d: -f2 | xargs)\"\n       },\n       \"get_by_variant_id\": {\n         \"status\": \"$(grep -q 'HTTP: 200' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt && ! grep -q 'HTTP: 404' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt && echo 'PASSED' || echo 'FAILED')\",\n         \"http_code\": \"$(grep 'HTTP:' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt | awk '{print $2}')\",\n         \"data_retrieved\": \"$(grep -q 'variant_id' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt && echo 'true' || echo 'false')\"\n       },\n       \"get_by_activity_id\": {\n         \"status\": \"$(grep -q 'HTTP: 200' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt && ! grep -q 'HTTP: 404' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt && echo 'PASSED' || echo 'FAILED')\",\n         \"http_code\": \"$(grep 'HTTP:' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt | awk '{print $2}')\",\n         \"data_retrieved\": \"$(grep -q 'variant_id' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt && echo 'true' || echo 'false')\",\n         \"critical\": true,\n         \"note\": \"This was returning 404 before the fix\"\n       }\n     },\n     \"overall_status\": \"$(grep -q '\"status\": \"PASSED\"' /tmp/surrealdb-http-rpc-retest/test-results.json && ! grep -q '\"status\": \"FAILED\"' /tmp/surrealdb-http-rpc-retest/test-results.json && echo 'ALL TESTS PASSED' || echo 'SOME TESTS FAILED')\"\n   }\n   EOF\n   ```\n\n7. **Display results**:\n   ```bash\n   echo \"\\n=== TEST RESULTS ===\"\n   cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq .\n   echo \"\\n=== CRITICAL: Activity ID Lookup ===\"\n   cat /tmp/surrealdb-http-rpc-retest/get-by-activity.txt\n   ```\n\n**Success Criteria**:\n- Create returns 201 ✅\n- Get by variant_id returns 200 ✅\n- Get by activity_id returns 200 ✅ (CRITICAL - was 404 before)\n- No 404 errors in any response\n\n**Report** detailed test results emphasizing activity_id lookup success.",
+        "variables": [
+          {
+            "name": "rpcApiPort",
+            "type": "number",
+            "required": false,
+            "description": "RPC API port",
+            "default": 8080
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag being tested",
+            "default": "0.16.17-http-rpc-complete"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "grep -q '\"get_by_activity_id\".*\"status\": \"PASSED\"' /tmp/surrealdb-http-rpc-retest/test-results.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-test-report",
+      "subagent": "general",
+      "description": "Generate comprehensive test report and cleanup environment",
+      "dependencies": [
+        "test-activity-id-lookup"
+      ],
+      "prompt": {
+        "template": "Generate final test report and cleanup.\n\n**Your Task**: Create report and cleanup\n\n1. **Stop containers**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} down 2>&1 | tee /tmp/surrealdb-http-rpc-retest/cleanup.log\n   ```\n\n2. **Generate comprehensive report**:\n   ```bash\n   cat > /tmp/surrealdb-http-rpc-retest/FINAL_REPORT.md << 'REPORT'\n   # HTTP RPC Fix - Final Test Report\n\n   ## Test Execution\n   - **Date**: $(date)\n   - **Image**: {{imageName}}:{{imageTag}}\n   - **Fix**: Activity ID lookup support added\n\n   ## Test Results\n\n   $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq .)\n\n   ## Key Findings\n\n   ### ✅ Template Creation\n   - Status: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.status')\n   - HTTP Code: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.http_code')\n   - Variant ID: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.variant_id')\n   - Activity ID: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.activity_id')\n\n   ### ✅ Retrieval by Variant ID\n   - Status: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_variant_id.status')\n   - HTTP Code: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_variant_id.http_code')\n   - Data Retrieved: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_variant_id.data_retrieved')\n\n   ### 🎯 CRITICAL: Retrieval by Activity ID\n   - Status: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_activity_id.status')\n   - HTTP Code: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_activity_id.http_code')\n   - Data Retrieved: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_activity_id.data_retrieved')\n   - **Note**: This was returning 404 before the fix!\n\n   ## Overall Status\n\n   **$(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.overall_status')**\n\n   ## Logs Preserved\n   - Rebuild log: /tmp/surrealdb-http-rpc-retest/rebuild-log.txt\n   - API logs: /tmp/surrealdb-http-rpc-retest/api-logs.txt\n   - Test responses: /tmp/surrealdb-http-rpc-retest/*.txt\n\n   ## Next Steps\n\n   $(if grep -q 'ALL TESTS PASSED' /tmp/surrealdb-http-rpc-retest/test-results.json; then\n     echo \"✅ **READY FOR K8S DEPLOYMENT**\"\n     echo \"\"\n     echo \"The HTTP RPC fix is complete and verified:\"\n     echo \"- Templates persist to SurrealDB via HTTP RPC ✅\"\n     echo \"- Retrieval by variant_id works ✅\"\n     echo \"- Retrieval by activity_id works ✅\"\n     echo \"\"\n     echo \"Proceed with K8s deployment using helmfile.\"\n   else\n     echo \"❌ **TESTS FAILED - DO NOT DEPLOY**\"\n     echo \"\"\n     echo \"Review logs and fix issues before deploying to K8s.\"\n   fi)\n   REPORT\n   ```\n\n3. **Display final report**:\n   ```bash\n   cat /tmp/surrealdb-http-rpc-retest/FINAL_REPORT.md\n   ```\n\n**Report** final test verdict and deployment readiness.",
+        "variables": [
+          {
+            "name": "dockerComposeFile",
+            "type": "string",
+            "required": false,
+            "description": "Path to docker-compose file",
+            "default": "docker-compose.unified.yaml"
+          },
+          {
+            "name": "imageName",
+            "type": "string",
+            "required": false,
+            "description": "Docker image name",
+            "default": "metabobapp/metabob-rpc-api"
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag",
+            "default": "0.16.17-http-rpc-complete"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "rebuild-docker-image",
+      "subagent": "general",
+      "description": "Rebuild Docker image with the latest activity_id lookup fix",
+      "dependencies": [],
+      "prompt": {
+        "template": "Rebuild the Docker image with the activity_id lookup fix.\n\n**Context**: We've fixed the activity_id lookup issue in repos/metabob-rpc-api/server/actions/activity.py. Now we need to rebuild and test.\n\n**Your Task**: Rebuild the Docker image\n\n1. **Navigate to RPC API directory**:\n   ```bash\n   cd repos/metabob-rpc-api\n   ```\n\n2. **Verify the fix is in place**:\n   ```bash\n   grep -A 5 \"try activity_id lookup\" server/actions/activity.py\n   ```\n\n3. **Rebuild Docker image with new tag**:\n   ```bash\n   docker build -t {{imageName}}:{{imageTag}} . 2>&1 | tee /tmp/surrealdb-http-rpc-retest/rebuild-log.txt\n   ```\n\n4. **Verify build success**:\n   ```bash\n   docker images | grep {{imageName}}:{{imageTag}}\n   echo \"Rebuild completed at $(date)\"\n   ```\n\n**Success Criteria**: Image builds successfully with activity_id lookup fix included.\n\n**Report** the build results.",
+        "variables": [
+          {
+            "name": "imageName",
+            "type": "string",
+            "required": false,
+            "description": "Docker image name",
+            "default": "metabobapp/metabob-rpc-api"
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag",
+            "default": "0.16.17-http-rpc-complete"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker images | grep -q metabob-rpc-api",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "restart-test-environment",
+      "subagent": "general",
+      "description": "Restart test environment with the newly built image",
+      "dependencies": [
+        "rebuild-docker-image"
+      ],
+      "prompt": {
+        "template": "Restart the test environment with the updated image.\n\n**Your Task**: Restart containers with new image\n\n1. **Stop existing containers**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} down 2>&1 | tee /tmp/surrealdb-http-rpc-retest/restart-down.log\n   ```\n\n2. **Update docker-compose image tag** (if needed):\n   - Ensure metabob-rpc-api uses {{imageName}}:{{imageTag}}\n\n3. **Start services with new image**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} up -d metabob-rpc-api surrealdb redis 2>&1 | tee /tmp/surrealdb-http-rpc-retest/restart-up.log\n   ```\n\n4. **Wait for readiness** (max 60 seconds):\n   ```bash\n   for i in {1..12}; do\n     if curl -s http://localhost:{{rpcApiPort}}/ > /dev/null; then\n       echo \"✅ RPC API is ready\"\n       break\n     fi\n     echo \"⏳ Waiting for RPC API... ($i/12)\"\n     sleep 5\n   done\n   ```\n\n5. **Verify services are running**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} ps\n   docker logs metabob-rpc-api --tail 20\n   ```\n\n**Success Criteria**: All containers running and RPC API responds.\n\n**Report** service status.",
+        "variables": [
+          {
+            "name": "dockerComposeFile",
+            "type": "string",
+            "required": false,
+            "description": "Path to docker-compose file",
+            "default": "docker-compose.unified.yaml"
+          },
+          {
+            "name": "imageName",
+            "type": "string",
+            "required": false,
+            "description": "Docker image name",
+            "default": "metabobapp/metabob-rpc-api"
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag",
+            "default": "0.16.17-http-rpc-complete"
+          },
+          {
+            "name": "rpcApiPort",
+            "type": "number",
+            "required": false,
+            "description": "RPC API port",
+            "default": 8080
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker ps | grep -q metabob-rpc-api",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-activity-id-lookup",
+      "subagent": "general",
+      "description": "Run comprehensive tests to verify activity_id lookup works correctly",
+      "dependencies": [
+        "restart-test-environment"
+      ],
+      "prompt": {
+        "template": "Test template CRUD operations with focus on activity_id lookup.\n\n**Critical Test**: Verify templates are retrievable by BOTH variant_id AND activity_id.\n\n**Your Task**: Run comprehensive CRUD tests\n\n1. **Create test template**:\n   ```bash\n   curl -X POST http://localhost:{{rpcApiPort}}/v2/activities/templates \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\"name\": \"Activity ID Test Template\", \"description\": \"Testing activity_id lookup fix\", \"category\": \"infrastructure\", \"tasks\": [{\"id\": \"test\", \"subagent\": \"general\", \"description\": \"Test task\", \"dependencies\": [], \"prompt\": {\"template\": \"Test\", \"max_tokens\": 1000, \"compression_strategy\": \"filter\", \"variables\": []}, \"validation\": {\"required_files\": [], \"required_patterns\": [], \"forbidden_patterns\": [], \"commands\": []}, \"retry\": {\"max_attempts\": 1, \"strategy\": \"simple\"}, \"metrics\": {\"success_rate\": 0, \"avg_tokens\": 0, \"avg_duration\": 0, \"common_failures\": []}, \"tools\": {\"required\": [], \"optional\": [], \"disabled\": []}}], \"contextRequirements\": [], \"integration\": {\"requiresCleanGit\": false, \"preChecks\": [], \"postChecks\": [], \"qualityGates\": []}, \"metabob\": {\"enabled\": false, \"learningMode\": true, \"targetContextTokens\": 0, \"annotationStrategy\": \"key-components\"}}' \\\n     -w \"\\nHTTP: %{http_code}\\n\" > /tmp/surrealdb-http-rpc-retest/create.txt 2>&1\n   ```\n\n2. **Extract BOTH IDs**:\n   ```bash\n   VARIANT_ID=$(cat /tmp/surrealdb-http-rpc-retest/create.txt | jq -r '.variant_id // .id // \"unknown\"')\n   ACTIVITY_ID=$(cat /tmp/surrealdb-http-rpc-retest/create.txt | jq -r '.activity_id // \"activity-id-test-template\"')\n   echo \"Variant ID: $VARIANT_ID\" > /tmp/surrealdb-http-rpc-retest/ids.txt\n   echo \"Activity ID: $ACTIVITY_ID\" >> /tmp/surrealdb-http-rpc-retest/ids.txt\n   cat /tmp/surrealdb-http-rpc-retest/ids.txt\n   ```\n\n3. **Test retrieval by variant_id** (should work):\n   ```bash\n   sleep 2\n   curl -X GET \"http://localhost:{{rpcApiPort}}/v2/activities/templates/$VARIANT_ID\" \\\n     -w \"\\nHTTP: %{http_code}\\n\" > /tmp/surrealdb-http-rpc-retest/get-by-variant.txt 2>&1\n   ```\n\n4. **Test retrieval by activity_id** (CRITICAL TEST - was failing before fix):\n   ```bash\n   sleep 1\n   curl -X GET \"http://localhost:{{rpcApiPort}}/v2/activities/templates/$ACTIVITY_ID\" \\\n     -w \"\\nHTTP: %{http_code}\\n\" > /tmp/surrealdb-http-rpc-retest/get-by-activity.txt 2>&1\n   ```\n\n5. **Check RPC API logs**:\n   ```bash\n   docker logs metabob-rpc-api 2>&1 | grep -i \"template\\|error\\|activity_id\" | tail -30 > /tmp/surrealdb-http-rpc-retest/api-logs.txt\n   ```\n\n6. **Create comprehensive test results**:\n   ```bash\n   cat > /tmp/surrealdb-http-rpc-retest/test-results.json << 'EOF'\n   {\n     \"test_execution_time\": \"$(date -Iseconds)\",\n     \"image_tag\": \"{{imageTag}}\",\n     \"tests\": {\n       \"create_template\": {\n         \"status\": \"$(grep -q 'HTTP: 201\\|HTTP: 200' /tmp/surrealdb-http-rpc-retest/create.txt && echo 'PASSED' || echo 'FAILED')\",\n         \"http_code\": \"$(grep 'HTTP:' /tmp/surrealdb-http-rpc-retest/create.txt | awk '{print $2}')\",\n         \"variant_id\": \"$(cat /tmp/surrealdb-http-rpc-retest/ids.txt | grep 'Variant ID' | cut -d: -f2 | xargs)\",\n         \"activity_id\": \"$(cat /tmp/surrealdb-http-rpc-retest/ids.txt | grep 'Activity ID' | cut -d: -f2 | xargs)\"\n       },\n       \"get_by_variant_id\": {\n         \"status\": \"$(grep -q 'HTTP: 200' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt && ! grep -q 'HTTP: 404' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt && echo 'PASSED' || echo 'FAILED')\",\n         \"http_code\": \"$(grep 'HTTP:' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt | awk '{print $2}')\",\n         \"data_retrieved\": \"$(grep -q 'variant_id' /tmp/surrealdb-http-rpc-retest/get-by-variant.txt && echo 'true' || echo 'false')\"\n       },\n       \"get_by_activity_id\": {\n         \"status\": \"$(grep -q 'HTTP: 200' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt && ! grep -q 'HTTP: 404' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt && echo 'PASSED' || echo 'FAILED')\",\n         \"http_code\": \"$(grep 'HTTP:' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt | awk '{print $2}')\",\n         \"data_retrieved\": \"$(grep -q 'variant_id' /tmp/surrealdb-http-rpc-retest/get-by-activity.txt && echo 'true' || echo 'false')\",\n         \"critical\": true,\n         \"note\": \"This was returning 404 before the fix\"\n       }\n     },\n     \"overall_status\": \"$(grep -q '\"status\": \"PASSED\"' /tmp/surrealdb-http-rpc-retest/test-results.json && ! grep -q '\"status\": \"FAILED\"' /tmp/surrealdb-http-rpc-retest/test-results.json && echo 'ALL TESTS PASSED' || echo 'SOME TESTS FAILED')\"\n   }\n   EOF\n   ```\n\n7. **Display results**:\n   ```bash\n   echo \"\\n=== TEST RESULTS ===\"\n   cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq .\n   echo \"\\n=== CRITICAL: Activity ID Lookup ===\"\n   cat /tmp/surrealdb-http-rpc-retest/get-by-activity.txt\n   ```\n\n**Success Criteria**:\n- Create returns 201 ✅\n- Get by variant_id returns 200 ✅\n- Get by activity_id returns 200 ✅ (CRITICAL - was 404 before)\n- No 404 errors in any response\n\n**Report** detailed test results emphasizing activity_id lookup success.",
+        "variables": [
+          {
+            "name": "rpcApiPort",
+            "type": "number",
+            "required": false,
+            "description": "RPC API port",
+            "default": 8080
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag being tested",
+            "default": "0.16.17-http-rpc-complete"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "grep -q '\"get_by_activity_id\".*\"status\": \"PASSED\"' /tmp/surrealdb-http-rpc-retest/test-results.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-test-report",
+      "subagent": "general",
+      "description": "Generate comprehensive test report and cleanup environment",
+      "dependencies": [
+        "test-activity-id-lookup"
+      ],
+      "prompt": {
+        "template": "Generate final test report and cleanup.\n\n**Your Task**: Create report and cleanup\n\n1. **Stop containers**:\n   ```bash\n   docker-compose -f {{dockerComposeFile}} down 2>&1 | tee /tmp/surrealdb-http-rpc-retest/cleanup.log\n   ```\n\n2. **Generate comprehensive report**:\n   ```bash\n   cat > /tmp/surrealdb-http-rpc-retest/FINAL_REPORT.md << 'REPORT'\n   # HTTP RPC Fix - Final Test Report\n\n   ## Test Execution\n   - **Date**: $(date)\n   - **Image**: {{imageName}}:{{imageTag}}\n   - **Fix**: Activity ID lookup support added\n\n   ## Test Results\n\n   $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq .)\n\n   ## Key Findings\n\n   ### ✅ Template Creation\n   - Status: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.status')\n   - HTTP Code: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.http_code')\n   - Variant ID: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.variant_id')\n   - Activity ID: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.create_template.activity_id')\n\n   ### ✅ Retrieval by Variant ID\n   - Status: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_variant_id.status')\n   - HTTP Code: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_variant_id.http_code')\n   - Data Retrieved: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_variant_id.data_retrieved')\n\n   ### 🎯 CRITICAL: Retrieval by Activity ID\n   - Status: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_activity_id.status')\n   - HTTP Code: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_activity_id.http_code')\n   - Data Retrieved: $(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.tests.get_by_activity_id.data_retrieved')\n   - **Note**: This was returning 404 before the fix!\n\n   ## Overall Status\n\n   **$(cat /tmp/surrealdb-http-rpc-retest/test-results.json | jq -r '.overall_status')**\n\n   ## Logs Preserved\n   - Rebuild log: /tmp/surrealdb-http-rpc-retest/rebuild-log.txt\n   - API logs: /tmp/surrealdb-http-rpc-retest/api-logs.txt\n   - Test responses: /tmp/surrealdb-http-rpc-retest/*.txt\n\n   ## Next Steps\n\n   $(if grep -q 'ALL TESTS PASSED' /tmp/surrealdb-http-rpc-retest/test-results.json; then\n     echo \"✅ **READY FOR K8S DEPLOYMENT**\"\n     echo \"\"\n     echo \"The HTTP RPC fix is complete and verified:\"\n     echo \"- Templates persist to SurrealDB via HTTP RPC ✅\"\n     echo \"- Retrieval by variant_id works ✅\"\n     echo \"- Retrieval by activity_id works ✅\"\n     echo \"\"\n     echo \"Proceed with K8s deployment using helmfile.\"\n   else\n     echo \"❌ **TESTS FAILED - DO NOT DEPLOY**\"\n     echo \"\"\n     echo \"Review logs and fix issues before deploying to K8s.\"\n   fi)\n   REPORT\n   ```\n\n3. **Display final report**:\n   ```bash\n   cat /tmp/surrealdb-http-rpc-retest/FINAL_REPORT.md\n   ```\n\n**Report** final test verdict and deployment readiness.",
+        "variables": [
+          {
+            "name": "dockerComposeFile",
+            "type": "string",
+            "required": false,
+            "description": "Path to docker-compose file",
+            "default": "docker-compose.unified.yaml"
+          },
+          {
+            "name": "imageName",
+            "type": "string",
+            "required": false,
+            "description": "Docker image name",
+            "default": "metabobapp/metabob-rpc-api"
+          },
+          {
+            "name": "imageTag",
+            "type": "string",
+            "required": false,
+            "description": "Docker image tag",
+            "default": "0.16.17-http-rpc-complete"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-03-01T16:49:57.305Z",
+  "metadata": {}
+}
