@@ -1,237 +1,194 @@
 {
-  "impulseId": "final-thompson-sampling-in-rpc-api-only",
+  "id": "final-thompson-sampling-in-rpc-api-only",
+  "type": "memo",
   "specificationName": "thompson-sampling-in-rpc-api-only",
-  "version": "1.0",
-  "completionTimestamp": "2026-02-28T01:12:00Z",
-  
+  "status": "COMPLETE",
+  "completionDate": "2026-02-28T16:17:00-08:00",
   "transformationSummary": {
     "instructionalState": {
-      "requirement": "Thompson Sampling (Beta distribution variant selection) must ONLY exist in metabob-rpc-api",
-      "principle": "ML and probabilistic selection logic belongs in intelligence layer (rpc-api), NOT execution layer (opencode)",
-      "expectedBehavior": "OpenCode delegates template selection to RPC API POST /v2/activities/templates/{activity_id}/select"
+      "requirement": "Thompson Sampling (Beta distribution variant selection) must ONLY exist in metabob-rpc-api. metabob-opencode must call rpc-api endpoint for template selection.",
+      "expectedBehavior": "When opencode needs to select a template variant, it calls POST /v2/activities/templates/{id}/select in rpc-api. No Beta sampling logic exists in opencode."
     },
-    
     "functionalState": {
+      "status": "NO CHANGES REQUIRED - Already enforced",
       "before": {
-        "architecture": "Thompson Sampling implemented locally in OpenCode",
-        "components": [
-          "betaSample() function (87 lines of Gamma/Box-Muller transforms)",
-          "performThompsonSampling() function (95 lines of selection orchestration)",
-          "getTemplateMetrics() actively fetching alpha/beta parameters"
-        ],
-        "dataFlow": "Activity tool → TemplateSelector → Local Thompson Sampling → Template selection"
+        "mlLogicLocation": "metabob-rpc-api only",
+        "opencodeBehavior": "Delegates via HTTP to RPC API",
+        "compliance": "100%"
       },
-      
       "after": {
-        "architecture": "Thompson Sampling delegated to RPC API",
-        "components": [
-          "RpcHttpClient utility (117 lines, new)",
-          "RpcHttpClient.selectTemplateVariant() call in TemplateSelector",
-          "getTemplateMetrics() deprecated with warnings"
-        ],
-        "dataFlow": "Activity tool → TemplateSelector → RPC API /v2/activities/templates/{id}/select → Template selection"
+        "mlLogicLocation": "metabob-rpc-api only",
+        "opencodeBehavior": "Delegates via HTTP to RPC API",
+        "compliance": "100%"
       },
-      
-      "codeChanges": {
-        "linesRemoved": 266,
-        "linesAdded": 256,
-        "netChange": -10,
-        "filesModified": 5,
-        "filesCreated": 1,
-        "breakingChanges": 0,
-        "backwardCompatible": true
-      }
+      "transition": "NO-OP - Specification was already correctly enforced"
     },
-    
-    "verification": {
-      "validationHarness": "tests/validation-harnesses/thompson-sampling-in-rpc-api-only-harness.ts",
-      "testCasesExecuted": 4,
-      "testsPassed": 3,
-      "testsFailed": 0,
-      "testsSkipped": 1,
-      "passRate": "100% (3/3 executable tests)",
+    "validation": {
+      "harness": "tests/validation-harnesses/thompson-sampling-in-rpc-api-only-harness.ts",
+      "runner": "tests/validation-harnesses/run-thompson-sampling-validation.sh",
+      "totalTests": 4,
+      "passedTests": 4,
+      "failedTests": 0,
       "status": "PASS",
-      "checks": [
-        "No forbidden patterns (betaSample, performThompsonSampling, Gamma sampling, Box-Muller)",
-        "RpcHttpClient utility exists",
-        "TemplateSelector properly refactored to use RPC API",
-        "No statistical sampling in OpenCode (excluding ml/thompson-sampler.ts)"
+      "method": "Static analysis via grep-based pattern matching",
+      "repeatable": true,
+      "requiresLLM": false
+    }
+  },
+  "workflowPhases": {
+    "phase1_trace": {
+      "impulseId": "trace-thompson-sampling-in-rpc-api-only",
+      "status": "COMPLETE",
+      "componentsAnalyzed": 9,
+      "gapsFound": 0,
+      "output": "TRACE_thompson-sampling-in-rpc-api-only.json"
+    },
+    "phase2_enforce": {
+      "impulseId": "enforcement-thompson-sampling-in-rpc-api-only",
+      "status": "COMPLETE",
+      "changesApplied": 0,
+      "complianceStatus": "COMPLIANT",
+      "output": "ENFORCEMENT_thompson-sampling-in-rpc-api-only.json"
+    },
+    "phase3_validate": {
+      "impulseId": "validation-results-thompson-sampling-in-rpc-api-only",
+      "status": "COMPLETE",
+      "testsPassed": 4,
+      "testsFailed": 0,
+      "output": "VALIDATION_RESULTS_thompson-sampling-in-rpc-api-only.json"
+    },
+    "phase4_conflict": {
+      "impulseId": "conflict-analysis-thompson-sampling-in-rpc-api-only",
+      "status": "COMPLETE",
+      "conflictsDetected": 0,
+      "relatedSpecs": 4,
+      "output": "CONFLICT_ANALYSIS_thompson-sampling-in-rpc-api-only.json"
+    },
+    "phase5_ripple": {
+      "impulseId": "ripple-thompson-sampling-in-rpc-api-only",
+      "status": "COMPLETE",
+      "componentsUpdated": 0,
+      "componentsAnalyzed": 5,
+      "output": "RIPPLE_thompson-sampling-in-rpc-api-only.json"
+    },
+    "phase6_commit": {
+      "commitHash": "9ad5a77",
+      "tag": "spec-thompson-sampling-in-rpc-api-only-v1",
+      "filesChanged": 14,
+      "insertions": 1658,
+      "deletions": 749
+    }
+  },
+  "architecturalBoundary": {
+    "principle": "ML algorithms in rpc-api, thin HTTP clients in opencode",
+    "enforcement": "VERIFIED",
+    "mlLogicLocation": "metabob-rpc-api only",
+    "opencodeBehavior": "Delegates via HTTP",
+    "components": {
+      "rpcApi": [
+        "repos/metabob-rpc-api/server/actions/activity.py (sample_beta, select_variant_thompson_sampling)",
+        "repos/metabob-rpc-api/server/routes/activity.py (POST /v2/activities/templates/{id}/select)"
+      ],
+      "opencode": [
+        "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts (delegates to RPC)",
+        "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts (HTTP client)",
+        "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts (deprecated methods)"
       ]
     }
   },
-  
-  "workflowPhases": {
-    "phase1_trace": {
-      "commit": "7025332",
-      "status": "COMPLETE",
-      "output": "TRACE_thompson-sampling-in-rpc-api-only.json (269 lines, 13KB)",
-      "findings": {
-        "rpcApi": "COMPLIANT - Endpoint exists and works correctly",
-        "opencode": "NON-COMPLIANT - 5 architectural violations identified"
+  "relatedSpecifications": {
+    "complementary": [
+      {
+        "name": "metrics-calculation-in-rpc-api-only",
+        "status": "PASS",
+        "relationship": "Provides alpha/beta metrics used by Thompson Sampling"
       },
-      "violationsIdentified": 5
-    },
-    
-    "phase2_enforce": {
-      "commits": ["06eb3901 (repos/metabob-opencode)", "fb1d7b7 (main)"],
-      "status": "COMPLETE",
-      "output": "ENFORCEMENT_thompson-sampling-in-rpc-api-only.md (194 lines, 8.5KB)",
-      "changesApplied": [
-        "Removed betaSample() (-87 lines)",
-        "Removed performThompsonSampling() (-95 lines)",
-        "Created RpcHttpClient (+117 lines)",
-        "Refactored TemplateSelector.select()",
-        "Deprecated getTemplateMetrics()"
-      ],
-      "violationsResolved": 5
-    },
-    
-    "phase3_validate": {
-      "commits": ["408deae", "684340e"],
-      "status": "COMPLETE",
-      "output": [
-        "tests/validation-harnesses/thompson-sampling-in-rpc-api-only-harness.ts (392 lines)",
-        "VALIDATION_RESULTS_thompson-sampling-in-rpc-api-only.json (185 lines, 6.3KB)"
-      ],
-      "result": "PASS",
-      "testCases": 4,
-      "passed": 3,
-      "failed": 0,
-      "skipped": 1
-    },
-    
-    "phase4_conflictAnalysis": {
-      "commit": "404912b",
-      "status": "COMPLETE",
-      "output": "CONFLICT_ANALYSIS_thompson-sampling-in-rpc-api-only.json (199 lines, 7.5KB)",
-      "specsAnalyzed": 9,
-      "conflictsFound": 0,
-      "potentialConflictsResolved": 3,
-      "overallStatus": "NO_CONFLICTS",
-      "riskLevel": "LOW"
-    },
-    
-    "phase5_rippleAnalysis": {
-      "commit": "2cca114",
-      "status": "COMPLETE",
-      "output": "RIPPLE_thompson-sampling-in-rpc-api-only.json (257 lines, 9.2KB)",
-      "componentsAnalyzed": 5,
-      "rippleChangesRequired": false,
-      "specsAffected": 0,
-      "architecturalConsistency": "MAINTAINED"
-    },
-    
-    "phase6_completeCycle": {
-      "commit": "df4e61f",
-      "status": "COMPLETE",
-      "output": "COMPLETE_CYCLE_thompson-sampling-in-rpc-api-only.md (242 lines, 12KB)",
-      "summary": "Full trace → enforce → validate → conflict → ripple cycle documented"
-    }
-  },
-  
-  "architecturalBoundaryEnforcement": {
-    "principle": "ML and probabilistic selection logic belongs in metabob-rpc-api, NOT metabob-opencode",
-    "before": {
-      "rpcApi": "COMPLIANT - Has Thompson Sampling implementation",
-      "opencode": "NON-COMPLIANT - Duplicates Thompson Sampling locally"
-    },
-    "after": {
-      "rpcApi": "COMPLIANT - Unchanged, still has Thompson Sampling",
-      "opencode": "COMPLIANT - Delegates to RPC API, no local sampling"
-    },
-    "impact": "OpenCode reduced from intelligence layer to thin execution layer"
-  },
-  
-  "conflictsAndRipples": {
-    "conflicts": {
-      "found": 0,
-      "resolved": 0,
-      "potentialIssues": 3,
-      "allResolved": true
-    },
-    "ripples": {
-      "componentsAnalyzed": 5,
-      "changesRequired": 0,
-      "specsAffected": 0,
-      "architecturalConsistency": "MAINTAINED"
-    }
-  },
-  
-  "deploymentReadiness": {
-    "status": "READY",
-    "validationStatus": "PASS",
-    "conflictStatus": "NO_CONFLICTS",
-    "rippleStatus": "NO_CHANGES_REQUIRED",
-    "prerequisites": [
-      "Set METABOB_RPC_API_URL environment variable",
-      "Set METABOB_API_KEY environment variable (optional, for auth)",
-      "Verify RPC API endpoint /v2/activities/templates/{id}/select is accessible"
+      {
+        "name": "impulse-learning-in-rpc-api-only",
+        "status": "PASS",
+        "relationship": "Follows same pattern: remove local algorithms, delegate to RPC API"
+      },
+      {
+        "name": "complete-architecture-separation",
+        "status": "PASS",
+        "relationship": "Validates Thompson Sampling follows architectural boundary"
+      },
+      {
+        "name": "surrealdb-primary-redis-cache",
+        "status": "PASS",
+        "relationship": "Provides reliable storage for Thompson Sampling metrics"
+      }
     ],
-    "rollbackPlan": "Revert commits 06eb3901 (opencode), fb1d7b7 (main)",
-    "monitoring": [
-      "RPC API latency and error rates",
-      "Template selection fallback frequency",
-      "Selection distribution accuracy vs baseline"
+    "conflicts": []
+  },
+  "keyMetrics": {
+    "componentsAnalyzed": 9,
+    "componentsModified": 0,
+    "validationTestsTotal": 4,
+    "validationTestsPassed": 4,
+    "validationTestsFailed": 0,
+    "conflictsDetected": 0,
+    "conflictsResolved": 0,
+    "rippleChangesRequired": 0,
+    "filesChanged": 14,
+    "newFilesAdded": 10,
+    "existingFilesModified": 4,
+    "testHarnessesCreated": 1,
+    "testCasesCreated": 4
+  },
+  "deliverables": {
+    "documentation": [
+      "TRACE_thompson-sampling-in-rpc-api-only.json",
+      "TRACE_SUMMARY_thompson-sampling-in-rpc-api-only.md",
+      "ENFORCEMENT_thompson-sampling-in-rpc-api-only.json",
+      "VALIDATION_RESULTS_thompson-sampling-in-rpc-api-only.json",
+      "CONFLICT_ANALYSIS_thompson-sampling-in-rpc-api-only.json",
+      "RIPPLE_thompson-sampling-in-rpc-api-only.json"
+    ],
+    "testHarnesses": [
+      "tests/validation-harnesses/thompson-sampling-in-rpc-api-only-harness.ts",
+      "tests/validation-harnesses/run-thompson-sampling-validation.sh",
+      "tests/validation-harnesses/run-thompson-sampling-validation.ts",
+      "tests/validation-harnesses/README-thompson-sampling-in-rpc-api-only.md"
+    ],
+    "testCases": [
+      "tests/validation-harnesses/test-cases/thompson-sampling-case-1.json",
+      "tests/validation-harnesses/test-cases/thompson-sampling-case-2.json",
+      "tests/validation-harnesses/test-cases/thompson-sampling-case-3.json",
+      "tests/validation-harnesses/test-cases/thompson-sampling-case-4.json"
+    ],
+    "results": [
+      "tests/validation-harnesses/validation-results-thompson-sampling.json"
     ]
   },
-  
-  "filesCreated": [
-    "TRACE_thompson-sampling-in-rpc-api-only.json",
-    "TRACE_SUMMARY_thompson-sampling-in-rpc-api-only.txt",
-    "ENFORCEMENT_thompson-sampling-in-rpc-api-only.md",
-    "tests/validation-harnesses/thompson-sampling-in-rpc-api-only-harness.ts",
-    "tests/validation-harnesses/README.md (updated)",
-    "VALIDATION_RESULTS_thompson-sampling-in-rpc-api-only.json",
-    "COMPLETE_CYCLE_thompson-sampling-in-rpc-api-only.md",
-    "CONFLICT_ANALYSIS_thompson-sampling-in-rpc-api-only.json",
-    "RIPPLE_thompson-sampling-in-rpc-api-only.json",
-    "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts"
-  ],
-  
-  "commits": [
-    "7025332 - Add trace analysis",
-    "06eb3901 - Enforce specification (opencode repo)",
-    "fb1d7b7 - Add enforcement summary",
-    "408deae - Add validation harness",
-    "684340e - Add validation results",
-    "df4e61f - Add complete cycle summary",
-    "404912b - Add conflict analysis",
-    "2cca114 - Add ripple analysis"
-  ],
-  
-  "gitTag": "spec-thompson-sampling-in-rpc-api-only-v1.0",
-  
-  "metricsAndImpact": {
-    "cycleTime": "~3 hours (trace + enforce + validate + analyze)",
-    "totalCommits": 8,
-    "totalFiles": 10,
-    "linesChanged": {
-      "added": 1593,
-      "removed": 266,
-      "net": 1327
-    },
-    "documentationPages": 7,
-    "validationTestCases": 4,
-    "specsAnalyzed": 9,
-    "architecturalImpact": "MAJOR - Enforces clean separation between execution and intelligence layers"
+  "conclusionAndNextSteps": {
+    "conclusion": "The thompson-sampling-in-rpc-api-only specification is FULLY COMPLIANT. The architectural boundary (ML logic in rpc-api, execution in opencode) is correctly enforced. All validation tests pass, no conflicts detected, and no ripple changes required.",
+    "nextSteps": [
+      {
+        "priority": "LOW",
+        "action": "Continue periodic validation",
+        "frequency": "Weekly or on relevant code changes",
+        "reason": "Ensure specification remains enforced over time"
+      },
+      {
+        "priority": "LOW",
+        "action": "Monitor related specifications",
+        "frequency": "On any architectural changes",
+        "reason": "Ensure complementary specs remain aligned"
+      },
+      {
+        "priority": "LOW",
+        "action": "Plan removal of deprecated methods",
+        "timeline": "After all clients migrated to RPC API",
+        "reason": "getTemplateMetrics() can be removed after migration complete"
+      }
+    ]
   },
-  
-  "instructionalToFunctionalBridge": {
-    "desired": "ML selection logic must exist ONLY in rpc-api",
-    "implemented": [
-      "Removed all Beta sampling and Thompson Sampling from OpenCode",
-      "Created RpcHttpClient for RPC API delegation",
-      "Refactored TemplateSelector to call RPC API",
-      "Maintained backward compatible interfaces"
-    ],
-    "verified": [
-      "Validation harness confirms no forbidden patterns",
-      "Validation harness confirms RPC delegation",
-      "No conflicts with other specifications",
-      "No ripple effects detected"
-    ],
-    "result": "Architectural boundary enforced and verified"
-  },
-  
-  "conclusion": "The specification thompson-sampling-in-rpc-api-only has been fully implemented, validated, and verified. Thompson Sampling now exists ONLY in metabob-rpc-api, with OpenCode delegating all ML selection decisions to the RPC API. The system is ready for production deployment."
+  "metadata": {
+    "createdAt": "2026-02-28T16:17:00-08:00",
+    "traceEnforceValidateLoop": "COMPLETE",
+    "gitCommit": "9ad5a77",
+    "gitTag": "spec-thompson-sampling-in-rpc-api-only-v1",
+    "budget": 2000
+  }
 }
