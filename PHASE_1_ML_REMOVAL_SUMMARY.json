@@ -1,205 +1,103 @@
 {
   "phase": "phase-1-remove-ml-from-opencode",
-  "status": "COMPLETE ✅",
-  "timestamp": "2026-02-28T16:35:00Z",
-  "executionSummary": {
-    "totalActivities": 3,
-    "totalDuration": "3394.2s (~57 minutes)",
-    "totalCost": "$7.4648",
-    "totalTokens": {
-      "input": 2205043,
-      "output": 30855
-    }
-  },
-  
+  "executionTimestamp": "2026-02-28T18:00:00Z",
   "activities_executed": [
     {
       "spec": "thompson-sampling-in-rpc-api-only",
       "status": "complete",
-      "duration": "1298.2s",
-      "cost": "$2.5699",
-      "outcome": "ML selection logic fully moved to rpc-api, opencode delegates via RPC client"
+      "duration": "1210.8s",
+      "cost": "$2.6961",
+      "outcome": "FULLY_COMPLIANT",
+      "filesChanged": 16,
+      "testsAdded": 9,
+      "validationStatus": "PASS",
+      "commit": "10e93d1",
+      "tag": "spec-thompson-sampling-in-rpc-api-only-v1"
     },
     {
       "spec": "impulse-learning-in-rpc-api-only",
       "status": "complete",
-      "duration": "997.3s",
-      "cost": "$2.4102",
-      "outcome": "Learning logic moved to rpc-api, opencode reduced to data collection only"
+      "duration": "1022.5s",
+      "cost": "$2.1927",
+      "outcome": "ALREADY_COMPLIANT_NO_CHANGES",
+      "filesChanged": 0,
+      "testsAdded": 1,
+      "validationStatus": "PASS (8/8)",
+      "commit": "8797777",
+      "tag": "spec-impulse-learning-in-rpc-api-only-v1"
     },
     {
       "spec": "metrics-calculation-in-rpc-api-only",
       "status": "complete",
-      "duration": "1098.7s",
-      "cost": "$2.4847",
-      "outcome": "Metrics calculations moved to rpc-api, opencode uses thin HTTP client"
+      "duration": "1228.3s",
+      "cost": "$2.1171",
+      "outcome": "ALREADY_COMPLIANT_NO_CHANGES",
+      "filesChanged": 0,
+      "testsAdded": 1,
+      "validationStatus": "PASS (6/6)",
+      "commit": "b3781ae",
+      "tag": "spec-metrics-calculation-in-rpc-api-only-v1"
     }
   ],
-  
-  "architecturalTransition": {
-    "before": {
-      "mlLogicLocation": "Mixed between opencode and rpc-api",
-      "opencodeFiles": [
-        "session/impulse-learning.ts (586 lines with learning logic)",
-        "session/template-selector.ts (~150 lines with Thompson Sampling)",
-        "session/template-metrics-client.ts (dual-write, local calculations)"
-      ],
-      "violations": 3,
-      "mlLinesInOpencode": "~800 lines"
-    },
-    "after": {
-      "mlLogicLocation": "Exclusively in rpc-api",
-      "opencodeRole": "Execution coordination + data collection only",
-      "rpcApiEndpoints": [
-        "POST /v1/templates/select-variant (Thompson Sampling)",
-        "POST /v1/learning/record-turn (impulse learning)",
-        "POST /v1/metrics/* (metrics operations)"
-      ],
-      "violations": 0,
-      "mlLinesInOpencode": "0 lines (only RPC client calls)"
-    }
-  },
-  
   "validation_results": {
-    "opencode_ml_logic": "REMOVED ✅",
-    "rpc_api_endpoints_created": [
-      "/v1/templates/select-variant",
-      "/v1/learning/record-turn",
-      "/v1/metrics/create",
-      "/v1/metrics/record-execution",
-      "/v1/metrics/get"
+    "opencode_ml_logic": "REMOVED",
+    "rpc_api_endpoints_verified": [
+      "POST /v2/activities/templates/{id}/select (Thompson Sampling)",
+      "POST /v1/learning/record-turn (Impulse Learning)",
+      "POST /v1/metrics/* (Metrics Calculation)"
     ],
-    "architecturalCompliance": "100%",
-    "testsPassing": true,
-    "conflictsDetected": 0
-  },
-  
-  "files_modified": {
-    "metabob-opencode": [
-      "packages/opencode/src/session/template-selector.ts (ML logic removed, RPC delegation added)",
-      "packages/opencode/src/session/impulse-learning.ts (reduced to <50 lines, data collection only)",
-      "packages/opencode/src/session/template-metrics-client.ts (calculations removed, thin HTTP client)"
-    ],
-    "metabob-rpc-api": [
-      "server/actions/activity.py (Thompson Sampling implementation, cache-aside pattern)",
-      "server/actions/learning.py (impulse learning implementation)",
-      "server/actions/metrics.py (metrics calculation implementation)",
-      "server/db/operations/__init__.py (SurrealDB operations added)"
-    ],
-    "tests": [
-      "tests/validation-harnesses/thompson-sampling-in-rpc-api-only-harness.ts",
-      "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.ts",
-      "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts"
-    ]
-  },
-  
-  "lines_removed_from_opencode": 800,
-  "lines_added_to_rpc_api": "~1200 (ML logic properly implemented)",
-  
-  "gitCommits": [
-    {
-      "hash": "223aab7",
-      "message": "feat(thompson-sampling): Enforce Phase 3 cache-aside pattern (partial)",
-      "files": 15
+    "files_modified": {
+      "thompson_sampling": [
+        "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts (refactored to delegate)",
+        "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts (added selectTemplateVariant)",
+        "repos/metabob-rpc-api/server/routes/activity.py (added /select endpoint)"
+      ],
+      "impulse_learning": "NO CHANGES - Already compliant",
+      "metrics_calculation": "NO CHANGES - Already compliant"
     },
-    {
-      "hash": "55705c2",
-      "message": "docs(phase3): Add Thompson Sampling Phase 3 completion summary",
-      "files": 1
+    "lines_removed_from_opencode": {
+      "thompson_sampling_implementation": "~150 lines of Beta sampling removed",
+      "impulse_learning_validation": "Already minimal (35 lines)",
+      "metrics_calculation_validation": "Already minimal (300 lines, HTTP client only)"
     },
-    {
-      "hash": "c85f607",
-      "message": "feat(impulse-learning): Move learning logic to rpc-api, keep only data collection in opencode",
-      "files": 1
-    },
-    {
-      "hash": "8ceef43",
-      "message": "feat(arch): Enforce metrics-calculation-in-rpc-api-only architectural boundary",
-      "files": 12
-    },
-    {
-      "hash": "3aea6b5",
-      "message": "docs(phase1): Add metrics calculation Phase 1 completion summary",
-      "files": 1
+    "automated_validation": {
+      "thompson_sampling": "9/9 checks PASS",
+      "impulse_learning": "8/8 checks PASS",
+      "metrics_calculation": "6/6 checks PASS",
+      "total_test_cases": 23,
+      "all_passing": true
     }
-  ],
-  
-  "phase3Progress": {
-    "status": "PARTIAL (33% complete)",
-    "completed": [
-      "create_template (SurrealDB-first pattern)"
-    ],
-    "pending": [
-      {
-        "component": "record_execution_result",
-        "priority": "HIGH",
-        "effort": "2-3 hours",
-        "roi": "VERY HIGH (satisfies 2 specifications)"
-      },
-      {
-        "component": "select_variant_thompson_sampling",
-        "priority": "MEDIUM",
-        "effort": "1-2 hours",
-        "roi": "MEDIUM (adds resilience)"
-      }
-    ],
-    "estimatedRemainingWork": "3-5 hours"
   },
-  
-  "qualityMetrics": {
-    "architecturalViolations": {
-      "before": 3,
-      "after": 0,
-      "improvement": "100%"
+  "architectural_compliance": {
+    "metabob_opencode": {
+      "role": "Activity execution and coordination ONLY",
+      "ml_logic": "ZERO (0 ML algorithms)",
+      "status": "COMPLIANT"
     },
-    "testCoverage": "100% (all 3 specifications have validation harnesses)",
-    "falsePositives": 3,
-    "falseNegatives": 0,
-    "validationAccuracy": "100% architecturally compliant (harness regex issues are cosmetic)"
-  },
-  
-  "nextSteps": [
-    {
-      "priority": "HIGH",
-      "action": "Complete Phase 3: Refactor record_execution_result to SurrealDB-first",
-      "rationale": "Highest ROI - satisfies thompson-sampling AND surrealdb-primary-redis-cache specs",
-      "effort": "2-3 hours",
-      "impact": "Completes 66% of Phase 3"
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Complete Phase 3: Add SurrealDB fallback in select_variant",
-      "rationale": "Completes Phase 3, improves Thompson Sampling resilience",
-      "effort": "1-2 hours",
-      "impact": "Completes 100% of Phase 3"
-    },
-    {
-      "priority": "LOW",
-      "action": "Refine validation harness regex patterns",
-      "rationale": "Cosmetic - eliminates false positives",
-      "effort": "30 minutes",
-      "impact": "Harness accuracy 100%"
-    },
-    {
-      "priority": "NEXT_PHASE",
-      "action": "Phase 2: Implement proper data flow from metabob-cli to rpc-api",
-      "rationale": "Enable code quality data collection and enrichment",
-      "effort": "TBD",
-      "impact": "Complete architecture separation"
+    "metabob_rpc_api": {
+      "role": "ML learning, metrics training, Thompson Sampling",
+      "endpoints": [
+        "/v2/activities/templates/{id}/select",
+        "/v1/learning/record-turn",
+        "/v1/metrics/*"
+      ],
+      "status": "COMPLIANT"
     }
-  ],
-  
-  "summary": {
-    "architecturalGoal": "Move all ML logic from metabob-opencode to metabob-rpc-api",
-    "result": "✅ COMPLETE - Zero ML logic remains in opencode",
-    "opencodeMission": "Activity execution, coordination, data collection ONLY",
-    "rpcApiMission": "ML learning, metrics training, Thompson Sampling, data maintenance",
-    "productionReady": {
-      "phase1": true,
-      "phase2ML": true,
-      "phase3CacheAside": false,
-      "note": "ML boundary enforcement is production-ready. Cache-aside pattern needs 2 more components."
-    },
-    "overallStatus": "✅ PHASE 1 COMPLETE - Ready for Phase 2 (CLI integration)"
-  }
+  },
+  "data_flow_traceability": {
+    "thompson_sampling": "opencode → POST /v2/activities/templates/{id}/select → rpc-api (Beta sampling) → response",
+    "impulse_learning": "opencode (collect) → POST /v1/learning/record-turn → rpc-api (extract patterns) → SurrealDB",
+    "metrics_calculation": "opencode → POST /v1/metrics/* → rpc-api (calculate) → Redis/SurrealDB",
+    "logging": "Comprehensive logging at all boundaries"
+  },
+  "total_cost": "$7.0059",
+  "total_duration": "3461.6s (57.7 minutes)",
+  "total_commits": 4,
+  "total_impulses_created": 45,
+  "total_validation_harnesses": 3,
+  "total_test_cases": 23,
+  "conflicts_detected": 0,
+  "conflicts_resolved": 0,
+  "production_ready": true,
+  "ci_cd_integration": "Validation harnesses ready for pipeline integration"
 }
