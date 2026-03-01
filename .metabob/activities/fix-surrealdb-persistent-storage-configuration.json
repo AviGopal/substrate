@@ -1,0 +1,405 @@
+{
+  "activity_id": "fix-surrealdb-persistent-storage-configuration",
+  "name": "Fix SurrealDB Persistent Storage Configuration",
+  "description": "Configure SurrealDB to use persistent storage (PVC) instead of in-memory mode, update helm values to use RocksDB/SurrealKV, redeploy, and verify data persistence across restarts",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "backup-current-config",
+      "subagent": "general",
+      "description": "Backup current SurrealDB configuration and deployment state",
+      "dependencies": [],
+      "prompt": {
+        "template": "Backup current SurrealDB configuration before making changes.\n\n**Your Task**: Backup existing configuration\n\n1. **Export current deployment**:\n   ```bash\n   echo \"=== Backing up current SurrealDB deployment ===\"\n   kubectl -n {{namespace}} get deployment surrealdb -o yaml > {{outputDir}}/surrealdb-deployment-backup.yaml\n   ```\n\n2. **Export current service**:\n   ```bash\n   kubectl -n {{namespace}} get svc surrealdb -o yaml > {{outputDir}}/surrealdb-service-backup.yaml\n   ```\n\n3. **Check current helm values**:\n   ```bash\n   cd repos/platform/metabob-apps\n   echo \"\\n=== Current SurrealDB Helm Values ===\"\n   grep -A 20 \"surrealdb:\" charts/surrealdb/values/default.surrealdb.values.yaml | tee {{outputDir}}/current-helm-values.txt\n   ```\n\n4. **Check current storage mode**:\n   ```bash\n   echo \"\\n=== Current Storage Configuration ===\"\n   kubectl -n {{namespace}} describe deployment surrealdb | grep -A 5 \"Args:\" | tee {{outputDir}}/current-args.txt\n   ```\n\n5. **Check if PVC exists**:\n   ```bash\n   echo \"\\n=== Current PVC Status ===\"\n   kubectl -n {{namespace}} get pvc | grep surreal || echo \"No SurrealDB PVC found\"\n   ```\n\n**Success Criteria**: All current configuration backed up.\n\n**Report** backup status.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-pvc-and-update-helm",
+      "subagent": "general",
+      "description": "Create PVC for SurrealDB and update helm values to use persistent storage",
+      "dependencies": [
+        "backup-current-config"
+      ],
+      "prompt": {
+        "template": "Create PVC and update helm configuration for persistent storage.\n\n**Your Task**: Configure persistent storage\n\n1. **Create PVC manifest**:\n   ```bash\n   cat > {{outputDir}}/surrealdb-pvc.yaml << 'EOF'\n   apiVersion: v1\n   kind: PersistentVolumeClaim\n   metadata:\n     name: surrealdb-data\n     namespace: {{namespace}}\n   spec:\n     accessModes:\n       - ReadWriteOnce\n     resources:\n       requests:\n         storage: {{storageSize}}\n     storageClassName: {{storageClassName}}\n   EOF\n   cat {{outputDir}}/surrealdb-pvc.yaml\n   ```\n\n2. **Apply PVC**:\n   ```bash\n   echo \"\\n=== Creating PVC ===\"\n   kubectl apply -f {{outputDir}}/surrealdb-pvc.yaml\n   kubectl -n {{namespace}} get pvc surrealdb-data\n   ```\n\n3. **Update helm values for persistent storage**:\n   ```bash\n   cd repos/platform/metabob-apps\n   \n   echo \"\\n=== Updating Helm Values ===\"\n   \n   # Backup original\n   cp charts/surrealdb/values/default.surrealdb.values.yaml {{outputDir}}/\n   \n   # Update values to use persistent storage\n   cat > charts/surrealdb/values/default.surrealdb.values.yaml << 'VALUES'\n   surrealdb:\n     image:\n       repository: surrealdb/surrealdb\n       tag: \"v2.6.0\"\n       pullPolicy: IfNotPresent\n     \n     # Persistent storage configuration\n     persistence:\n       enabled: true\n       existingClaim: \"surrealdb-data\"\n       mountPath: /data\n     \n     # Use file-based storage instead of memory\n     storage:\n       type: rocksdb  # or surrealkv\n       path: /data/database\n     \n     # Server configuration\n     config:\n       namespace: metabob\n       database: production\n       auth: true\n       logLevel: info\n     \n     # Resources\n     resources:\n       requests:\n         memory: \"512Mi\"\n         cpu: \"250m\"\n       limits:\n         memory: \"2Gi\"\n         cpu: \"1000m\"\n     \n     # Service configuration\n     service:\n       type: ClusterIP\n       port: 8000\n   VALUES\n   \n   cat charts/surrealdb/values/default.surrealdb.values.yaml\n   ```\n\n4. **Update deployment to use PVC and persistent args**:\n   ```bash\n   echo \"\\n=== Creating Updated Deployment Patch ===\"\n   cat > {{outputDir}}/surrealdb-storage-patch.yaml << 'PATCH'\n   spec:\n     template:\n       spec:\n         volumes:\n           - name: data\n             persistentVolumeClaim:\n               claimName: surrealdb-data\n         containers:\n           - name: surrealdb\n             args:\n               - \"start\"\n               - \"--log\"\n               - \"info\"\n               - \"--user\"\n               - \"root\"\n               - \"--pass\"\n               - \"$(SURREAL_PASSWORD)\"\n               - \"file:/data/database\"\n             volumeMounts:\n               - name: data\n                 mountPath: /data\n   PATCH\n   \n   cat {{outputDir}}/surrealdb-storage-patch.yaml\n   ```\n\n5. **Create configuration summary**:\n   ```bash\n   cat > {{outputDir}}/storage-config-summary.json << EOF\n   {\n     \"changes\": {\n       \"storage_mode\": {\n         \"before\": \"memory (in-memory, ephemeral)\",\n         \"after\": \"file:/data/database (rocksdb, persistent)\"\n       },\n       \"pvc\": {\n         \"name\": \"surrealdb-data\",\n         \"size\": \"{{storageSize}}\",\n         \"storageClass\": \"{{storageClassName}}\"\n       },\n       \"volume_mount\": \"/data\",\n       \"database_path\": \"/data/database\"\n     },\n     \"benefits\": [\n       \"Data persists across pod restarts\",\n       \"User accounts maintained\",\n       \"Templates stored permanently\",\n       \"Supports production workloads\"\n     ],\n     \"status\": \"configured\"\n   }\n   EOF\n   cat {{outputDir}}/storage-config-summary.json | jq .\n   ```\n\n**Success Criteria**: PVC created and helm values updated.\n\n**Report** configuration changes.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "storageSize",
+            "type": "string",
+            "required": false,
+            "description": "PVC storage size",
+            "default": "10Gi"
+          },
+          {
+            "name": "storageClassName",
+            "type": "string",
+            "required": false,
+            "description": "Storage class name",
+            "default": "hostpath"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl -n metabob get pvc surrealdb-data -o jsonpath='{.status.phase}' | grep -q Bound",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "deploy-with-persistent-storage",
+      "subagent": "general",
+      "description": "Apply the persistent storage configuration and redeploy SurrealDB",
+      "dependencies": [
+        "create-pvc-and-update-helm"
+      ],
+      "prompt": {
+        "template": "Deploy SurrealDB with persistent storage configuration.\n\n**Your Task**: Apply configuration and redeploy\n\n1. **Apply storage patch to deployment**:\n   ```bash\n   echo \"=== Applying Persistent Storage Configuration ===\"\n   kubectl -n {{namespace}} patch deployment surrealdb --patch-file {{outputDir}}/surrealdb-storage-patch.yaml\n   ```\n\n2. **Wait for new pod to be ready**:\n   ```bash\n   echo \"\\n=== Waiting for SurrealDB Pod ===\"\n   kubectl -n {{namespace}} rollout status deployment/surrealdb --timeout=5m\n   ```\n\n3. **Verify new pod is using PVC**:\n   ```bash\n   echo \"\\n=== Verifying PVC Mount ===\"\n   POD_NAME=$(kubectl -n {{namespace}} get pods -l app=surrealdb -o jsonpath='{.items[0].metadata.name}')\n   kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.volumes}' | jq . | tee {{outputDir}}/pod-volumes.json\n   kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.containers[0].volumeMounts}' | jq . | tee {{outputDir}}/pod-volume-mounts.json\n   ```\n\n4. **Check new pod args**:\n   ```bash\n   echo \"\\n=== Verifying Storage Args ===\"\n   kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.containers[0].args}' | jq . | tee {{outputDir}}/pod-args.json\n   \n   if kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.containers[0].args}' | grep -q \"file:/data\"; then\n     echo \"✅ Pod is using file-based storage\"\n   else\n     echo \"⚠️  Warning: Pod might still be using memory storage\"\n   fi\n   ```\n\n5. **Check pod logs for startup**:\n   ```bash\n   echo \"\\n=== Pod Startup Logs ===\"\n   kubectl -n {{namespace}} logs $POD_NAME --tail=30 | tee {{outputDir}}/pod-startup-logs.txt\n   ```\n\n6. **Verify PVC is bound and used**:\n   ```bash\n   echo \"\\n=== PVC Status ===\"\n   kubectl -n {{namespace}} get pvc surrealdb-data -o wide\n   kubectl -n {{namespace}} describe pvc surrealdb-data | tee {{outputDir}}/pvc-details.txt\n   ```\n\n7. **Create deployment summary**:\n   ```bash\n   cat > {{outputDir}}/deployment-summary.json << EOF\n   {\n     \"deployed_at\": \"$(date -Iseconds)\",\n     \"pod_name\": \"$POD_NAME\",\n     \"pod_status\": \"$(kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.status.phase}')\",\n     \"pvc_name\": \"surrealdb-data\",\n     \"pvc_status\": \"$(kubectl -n {{namespace}} get pvc surrealdb-data -o jsonpath='{.status.phase}')\",\n     \"pvc_size\": \"$(kubectl -n {{namespace}} get pvc surrealdb-data -o jsonpath='{.spec.resources.requests.storage}')\",\n     \"storage_path\": \"file:/data/database\",\n     \"persistent\": true\n   }\n   EOF\n   cat {{outputDir}}/deployment-summary.json | jq .\n   ```\n\n**Success Criteria**: SurrealDB deployed with persistent storage and PVC mounted.\n\n**Report** deployment status and verify persistent storage is active.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl -n metabob get pods -l app=surrealdb -o jsonpath='{.items[0].status.phase}' | grep -q Running",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "initialize-schema-and-verify",
+      "subagent": "general",
+      "description": "Initialize database schema and verify data persists across pod restart",
+      "dependencies": [
+        "deploy-with-persistent-storage"
+      ],
+      "prompt": {
+        "template": "Initialize schema and verify persistence works.\n\n**Your Task**: Test persistence across pod restart\n\n1. **Initialize database schema**:\n   ```bash\n   echo \"=== Initializing Database Schema ===\"\n   \n   # Get credentials\n   SURREAL_USER=$(kubectl -n {{namespace}} get secret surrealdb-credentials -o jsonpath='{.data.username}' | base64 -d)\n   SURREAL_PASS=$(kubectl -n {{namespace}} get secret surrealdb-credentials -o jsonpath='{.data.password}' | base64 -d)\n   \n   # Setup port-forward\n   kubectl -n {{namespace}} port-forward svc/surrealdb 8000:8000 > {{outputDir}}/init-pf.log 2>&1 &\n   PF_PID=$!\n   echo $PF_PID > {{outputDir}}/init-pf.pid\n   sleep 5\n   \n   # Run schema initialization (from repos/metabob-rpc-api/server/db/init_schema.py logic)\n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\"method\":\"signin\",\"params\":[{\"user\":\"'$SURREAL_USER'\",\"pass\":\"'$SURREAL_PASS'\"}]}' | jq . > {{outputDir}}/signin.json\n   \n   TOKEN=$(cat {{outputDir}}/signin.json | jq -r '.result')\n   \n   # Create namespace and database\n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -d '{\"method\":\"query\",\"params\":[\"DEFINE NAMESPACE metabob;\"]}' | jq . > {{outputDir}}/create-ns.json\n   \n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -d '{\"method\":\"query\",\"params\":[\"DEFINE DATABASE production;\"]}' | jq . > {{outputDir}}/create-db.json\n   \n   # Create activity_template table\n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -H \"Surreal-DB: production\" \\\n     -d '{\"method\":\"query\",\"params\":[\"DEFINE TABLE activity_template SCHEMAFULL PERMISSIONS FULL;\"]}' | jq . > {{outputDir}}/create-table.json\n   \n   kill $PF_PID 2>/dev/null || true\n   \n   echo \"Schema initialized\"\n   ```\n\n2. **Create test template**:\n   ```bash\n   echo \"\\n=== Creating Test Template ===\"\n   \n   kubectl -n {{namespace}} port-forward svc/surrealdb 8000:8000 > {{outputDir}}/test-pf.log 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   TOKEN=$(curl -s -X POST http://localhost:8000/rpc -H \"Content-Type: application/json\" -d '{\"method\":\"signin\",\"params\":[{\"user\":\"'$SURREAL_USER'\",\"pass\":\"'$SURREAL_PASS'\"}]}' | jq -r '.result')\n   \n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -H \"Surreal-DB: production\" \\\n     -d '{\"method\":\"create\",\"params\":[\"activity_template:persistence-test\",{\"name\":\"Persistence Test\",\"activity_id\":\"persistence-test\"}]}' | jq . > {{outputDir}}/create-template.json\n   \n   kill $PF_PID 2>/dev/null || true\n   \n   cat {{outputDir}}/create-template.json\n   ```\n\n3. **Restart pod to test persistence**:\n   ```bash\n   echo \"\\n=== Testing Persistence (Pod Restart) ===\"\n   OLD_POD=$(kubectl -n {{namespace}} get pods -l app=surrealdb -o jsonpath='{.items[0].metadata.name}')\n   echo \"Old pod: $OLD_POD\"\n   \n   kubectl -n {{namespace}} delete pod $OLD_POD\n   \n   echo \"Waiting for new pod...\"\n   kubectl -n {{namespace}} wait --for=condition=Ready pod -l app=surrealdb --timeout=3m\n   \n   NEW_POD=$(kubectl -n {{namespace}} get pods -l app=surrealdb -o jsonpath='{.items[0].metadata.name}')\n   echo \"New pod: $NEW_POD\"\n   ```\n\n4. **Verify template still exists after restart**:\n   ```bash\n   echo \"\\n=== Verifying Data Persisted ===\"\n   \n   kubectl -n {{namespace}} port-forward svc/surrealdb 8000:8000 > {{outputDir}}/verify-pf.log 2>&1 &\n   PF_PID=$!\n   sleep 5\n   \n   TOKEN=$(curl -s -X POST http://localhost:8000/rpc -H \"Content-Type: application/json\" -d '{\"method\":\"signin\",\"params\":[{\"user\":\"'$SURREAL_USER'\",\"pass\":\"'$SURREAL_PASS'\"}]}' | jq -r '.result')\n   \n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -H \"Surreal-DB: production\" \\\n     -d '{\"method\":\"select\",\"params\":[\"activity_template:persistence-test\"]}' | jq . > {{outputDir}}/verify-template.json\n   \n   kill $PF_PID 2>/dev/null || true\n   \n   cat {{outputDir}}/verify-template.json\n   \n   if cat {{outputDir}}/verify-template.json | jq -r '.result.name' | grep -q \"Persistence Test\"; then\n     echo \"\\n✅ SUCCESS: Template persisted across pod restart!\"\n     echo \"✅ Persistent storage is working correctly!\"\n   else\n     echo \"\\n❌ FAILED: Template not found after restart\"\n   fi\n   ```\n\n5. **Generate final report**:\n   ```bash\n   cat > {{outputDir}}/PERSISTENCE_TEST_REPORT.md << 'EOF'\n   # SurrealDB Persistent Storage Verification\n\n   ## Configuration Applied\n   - **Storage Mode**: file:/data/database (RocksDB)\n   - **PVC**: surrealdb-data ({{storageSize}})\n   - **Mount Path**: /data\n\n   ## Tests Performed\n   1. ✅ Schema initialization\n   2. ✅ Template creation\n   3. ✅ Pod restart\n   4. $(cat {{outputDir}}/verify-template.json | jq -r '.result.name' | grep -q \"Persistence Test\" && echo \"✅ Data verification\" || echo \"❌ Data verification\")\n\n   ## Results\n   $(if cat {{outputDir}}/verify-template.json | jq -r '.result.name' | grep -q \"Persistence Test\"; then\n     echo \"**Status**: ✅ PERSISTENCE WORKING\"\n     echo \"\"\n     echo \"Data persists across pod restarts. SurrealDB is now production-ready.\"\n   else\n     echo \"**Status**: ❌ PERSISTENCE FAILED\"\n     echo \"\"\n     echo \"Data did not persist. Check PVC configuration and pod logs.\"\n   fi)\n\n   ## Files Created\n   - signin.json: Authentication test\n   - create-ns.json: Namespace creation\n   - create-db.json: Database creation\n   - create-table.json: Table creation\n   - create-template.json: Test data creation\n   - verify-template.json: Persistence verification\n   EOF\n   \n   cat {{outputDir}}/PERSISTENCE_TEST_REPORT.md\n   ```\n\n**Success Criteria**: Template persists after pod restart.\n\n**Report** persistence test results.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "storageSize",
+            "type": "string",
+            "required": false,
+            "description": "PVC storage size",
+            "default": "10Gi"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "backup-current-config",
+      "subagent": "general",
+      "description": "Backup current SurrealDB configuration and deployment state",
+      "dependencies": [],
+      "prompt": {
+        "template": "Backup current SurrealDB configuration before making changes.\n\n**Your Task**: Backup existing configuration\n\n1. **Export current deployment**:\n   ```bash\n   echo \"=== Backing up current SurrealDB deployment ===\"\n   kubectl -n {{namespace}} get deployment surrealdb -o yaml > {{outputDir}}/surrealdb-deployment-backup.yaml\n   ```\n\n2. **Export current service**:\n   ```bash\n   kubectl -n {{namespace}} get svc surrealdb -o yaml > {{outputDir}}/surrealdb-service-backup.yaml\n   ```\n\n3. **Check current helm values**:\n   ```bash\n   cd repos/platform/metabob-apps\n   echo \"\\n=== Current SurrealDB Helm Values ===\"\n   grep -A 20 \"surrealdb:\" charts/surrealdb/values/default.surrealdb.values.yaml | tee {{outputDir}}/current-helm-values.txt\n   ```\n\n4. **Check current storage mode**:\n   ```bash\n   echo \"\\n=== Current Storage Configuration ===\"\n   kubectl -n {{namespace}} describe deployment surrealdb | grep -A 5 \"Args:\" | tee {{outputDir}}/current-args.txt\n   ```\n\n5. **Check if PVC exists**:\n   ```bash\n   echo \"\\n=== Current PVC Status ===\"\n   kubectl -n {{namespace}} get pvc | grep surreal || echo \"No SurrealDB PVC found\"\n   ```\n\n**Success Criteria**: All current configuration backed up.\n\n**Report** backup status.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-pvc-and-update-helm",
+      "subagent": "general",
+      "description": "Create PVC for SurrealDB and update helm values to use persistent storage",
+      "dependencies": [
+        "backup-current-config"
+      ],
+      "prompt": {
+        "template": "Create PVC and update helm configuration for persistent storage.\n\n**Your Task**: Configure persistent storage\n\n1. **Create PVC manifest**:\n   ```bash\n   cat > {{outputDir}}/surrealdb-pvc.yaml << 'EOF'\n   apiVersion: v1\n   kind: PersistentVolumeClaim\n   metadata:\n     name: surrealdb-data\n     namespace: {{namespace}}\n   spec:\n     accessModes:\n       - ReadWriteOnce\n     resources:\n       requests:\n         storage: {{storageSize}}\n     storageClassName: {{storageClassName}}\n   EOF\n   cat {{outputDir}}/surrealdb-pvc.yaml\n   ```\n\n2. **Apply PVC**:\n   ```bash\n   echo \"\\n=== Creating PVC ===\"\n   kubectl apply -f {{outputDir}}/surrealdb-pvc.yaml\n   kubectl -n {{namespace}} get pvc surrealdb-data\n   ```\n\n3. **Update helm values for persistent storage**:\n   ```bash\n   cd repos/platform/metabob-apps\n   \n   echo \"\\n=== Updating Helm Values ===\"\n   \n   # Backup original\n   cp charts/surrealdb/values/default.surrealdb.values.yaml {{outputDir}}/\n   \n   # Update values to use persistent storage\n   cat > charts/surrealdb/values/default.surrealdb.values.yaml << 'VALUES'\n   surrealdb:\n     image:\n       repository: surrealdb/surrealdb\n       tag: \"v2.6.0\"\n       pullPolicy: IfNotPresent\n     \n     # Persistent storage configuration\n     persistence:\n       enabled: true\n       existingClaim: \"surrealdb-data\"\n       mountPath: /data\n     \n     # Use file-based storage instead of memory\n     storage:\n       type: rocksdb  # or surrealkv\n       path: /data/database\n     \n     # Server configuration\n     config:\n       namespace: metabob\n       database: production\n       auth: true\n       logLevel: info\n     \n     # Resources\n     resources:\n       requests:\n         memory: \"512Mi\"\n         cpu: \"250m\"\n       limits:\n         memory: \"2Gi\"\n         cpu: \"1000m\"\n     \n     # Service configuration\n     service:\n       type: ClusterIP\n       port: 8000\n   VALUES\n   \n   cat charts/surrealdb/values/default.surrealdb.values.yaml\n   ```\n\n4. **Update deployment to use PVC and persistent args**:\n   ```bash\n   echo \"\\n=== Creating Updated Deployment Patch ===\"\n   cat > {{outputDir}}/surrealdb-storage-patch.yaml << 'PATCH'\n   spec:\n     template:\n       spec:\n         volumes:\n           - name: data\n             persistentVolumeClaim:\n               claimName: surrealdb-data\n         containers:\n           - name: surrealdb\n             args:\n               - \"start\"\n               - \"--log\"\n               - \"info\"\n               - \"--user\"\n               - \"root\"\n               - \"--pass\"\n               - \"$(SURREAL_PASSWORD)\"\n               - \"file:/data/database\"\n             volumeMounts:\n               - name: data\n                 mountPath: /data\n   PATCH\n   \n   cat {{outputDir}}/surrealdb-storage-patch.yaml\n   ```\n\n5. **Create configuration summary**:\n   ```bash\n   cat > {{outputDir}}/storage-config-summary.json << EOF\n   {\n     \"changes\": {\n       \"storage_mode\": {\n         \"before\": \"memory (in-memory, ephemeral)\",\n         \"after\": \"file:/data/database (rocksdb, persistent)\"\n       },\n       \"pvc\": {\n         \"name\": \"surrealdb-data\",\n         \"size\": \"{{storageSize}}\",\n         \"storageClass\": \"{{storageClassName}}\"\n       },\n       \"volume_mount\": \"/data\",\n       \"database_path\": \"/data/database\"\n     },\n     \"benefits\": [\n       \"Data persists across pod restarts\",\n       \"User accounts maintained\",\n       \"Templates stored permanently\",\n       \"Supports production workloads\"\n     ],\n     \"status\": \"configured\"\n   }\n   EOF\n   cat {{outputDir}}/storage-config-summary.json | jq .\n   ```\n\n**Success Criteria**: PVC created and helm values updated.\n\n**Report** configuration changes.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "storageSize",
+            "type": "string",
+            "required": false,
+            "description": "PVC storage size",
+            "default": "10Gi"
+          },
+          {
+            "name": "storageClassName",
+            "type": "string",
+            "required": false,
+            "description": "Storage class name",
+            "default": "hostpath"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl -n metabob get pvc surrealdb-data -o jsonpath='{.status.phase}' | grep -q Bound",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "deploy-with-persistent-storage",
+      "subagent": "general",
+      "description": "Apply the persistent storage configuration and redeploy SurrealDB",
+      "dependencies": [
+        "create-pvc-and-update-helm"
+      ],
+      "prompt": {
+        "template": "Deploy SurrealDB with persistent storage configuration.\n\n**Your Task**: Apply configuration and redeploy\n\n1. **Apply storage patch to deployment**:\n   ```bash\n   echo \"=== Applying Persistent Storage Configuration ===\"\n   kubectl -n {{namespace}} patch deployment surrealdb --patch-file {{outputDir}}/surrealdb-storage-patch.yaml\n   ```\n\n2. **Wait for new pod to be ready**:\n   ```bash\n   echo \"\\n=== Waiting for SurrealDB Pod ===\"\n   kubectl -n {{namespace}} rollout status deployment/surrealdb --timeout=5m\n   ```\n\n3. **Verify new pod is using PVC**:\n   ```bash\n   echo \"\\n=== Verifying PVC Mount ===\"\n   POD_NAME=$(kubectl -n {{namespace}} get pods -l app=surrealdb -o jsonpath='{.items[0].metadata.name}')\n   kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.volumes}' | jq . | tee {{outputDir}}/pod-volumes.json\n   kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.containers[0].volumeMounts}' | jq . | tee {{outputDir}}/pod-volume-mounts.json\n   ```\n\n4. **Check new pod args**:\n   ```bash\n   echo \"\\n=== Verifying Storage Args ===\"\n   kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.containers[0].args}' | jq . | tee {{outputDir}}/pod-args.json\n   \n   if kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.spec.containers[0].args}' | grep -q \"file:/data\"; then\n     echo \"✅ Pod is using file-based storage\"\n   else\n     echo \"⚠️  Warning: Pod might still be using memory storage\"\n   fi\n   ```\n\n5. **Check pod logs for startup**:\n   ```bash\n   echo \"\\n=== Pod Startup Logs ===\"\n   kubectl -n {{namespace}} logs $POD_NAME --tail=30 | tee {{outputDir}}/pod-startup-logs.txt\n   ```\n\n6. **Verify PVC is bound and used**:\n   ```bash\n   echo \"\\n=== PVC Status ===\"\n   kubectl -n {{namespace}} get pvc surrealdb-data -o wide\n   kubectl -n {{namespace}} describe pvc surrealdb-data | tee {{outputDir}}/pvc-details.txt\n   ```\n\n7. **Create deployment summary**:\n   ```bash\n   cat > {{outputDir}}/deployment-summary.json << EOF\n   {\n     \"deployed_at\": \"$(date -Iseconds)\",\n     \"pod_name\": \"$POD_NAME\",\n     \"pod_status\": \"$(kubectl -n {{namespace}} get pod $POD_NAME -o jsonpath='{.status.phase}')\",\n     \"pvc_name\": \"surrealdb-data\",\n     \"pvc_status\": \"$(kubectl -n {{namespace}} get pvc surrealdb-data -o jsonpath='{.status.phase}')\",\n     \"pvc_size\": \"$(kubectl -n {{namespace}} get pvc surrealdb-data -o jsonpath='{.spec.resources.requests.storage}')\",\n     \"storage_path\": \"file:/data/database\",\n     \"persistent\": true\n   }\n   EOF\n   cat {{outputDir}}/deployment-summary.json | jq .\n   ```\n\n**Success Criteria**: SurrealDB deployed with persistent storage and PVC mounted.\n\n**Report** deployment status and verify persistent storage is active.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl -n metabob get pods -l app=surrealdb -o jsonpath='{.items[0].status.phase}' | grep -q Running",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "initialize-schema-and-verify",
+      "subagent": "general",
+      "description": "Initialize database schema and verify data persists across pod restart",
+      "dependencies": [
+        "deploy-with-persistent-storage"
+      ],
+      "prompt": {
+        "template": "Initialize schema and verify persistence works.\n\n**Your Task**: Test persistence across pod restart\n\n1. **Initialize database schema**:\n   ```bash\n   echo \"=== Initializing Database Schema ===\"\n   \n   # Get credentials\n   SURREAL_USER=$(kubectl -n {{namespace}} get secret surrealdb-credentials -o jsonpath='{.data.username}' | base64 -d)\n   SURREAL_PASS=$(kubectl -n {{namespace}} get secret surrealdb-credentials -o jsonpath='{.data.password}' | base64 -d)\n   \n   # Setup port-forward\n   kubectl -n {{namespace}} port-forward svc/surrealdb 8000:8000 > {{outputDir}}/init-pf.log 2>&1 &\n   PF_PID=$!\n   echo $PF_PID > {{outputDir}}/init-pf.pid\n   sleep 5\n   \n   # Run schema initialization (from repos/metabob-rpc-api/server/db/init_schema.py logic)\n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\"method\":\"signin\",\"params\":[{\"user\":\"'$SURREAL_USER'\",\"pass\":\"'$SURREAL_PASS'\"}]}' | jq . > {{outputDir}}/signin.json\n   \n   TOKEN=$(cat {{outputDir}}/signin.json | jq -r '.result')\n   \n   # Create namespace and database\n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -d '{\"method\":\"query\",\"params\":[\"DEFINE NAMESPACE metabob;\"]}' | jq . > {{outputDir}}/create-ns.json\n   \n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -d '{\"method\":\"query\",\"params\":[\"DEFINE DATABASE production;\"]}' | jq . > {{outputDir}}/create-db.json\n   \n   # Create activity_template table\n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -H \"Surreal-DB: production\" \\\n     -d '{\"method\":\"query\",\"params\":[\"DEFINE TABLE activity_template SCHEMAFULL PERMISSIONS FULL;\"]}' | jq . > {{outputDir}}/create-table.json\n   \n   kill $PF_PID 2>/dev/null || true\n   \n   echo \"Schema initialized\"\n   ```\n\n2. **Create test template**:\n   ```bash\n   echo \"\\n=== Creating Test Template ===\"\n   \n   kubectl -n {{namespace}} port-forward svc/surrealdb 8000:8000 > {{outputDir}}/test-pf.log 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   TOKEN=$(curl -s -X POST http://localhost:8000/rpc -H \"Content-Type: application/json\" -d '{\"method\":\"signin\",\"params\":[{\"user\":\"'$SURREAL_USER'\",\"pass\":\"'$SURREAL_PASS'\"}]}' | jq -r '.result')\n   \n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -H \"Surreal-DB: production\" \\\n     -d '{\"method\":\"create\",\"params\":[\"activity_template:persistence-test\",{\"name\":\"Persistence Test\",\"activity_id\":\"persistence-test\"}]}' | jq . > {{outputDir}}/create-template.json\n   \n   kill $PF_PID 2>/dev/null || true\n   \n   cat {{outputDir}}/create-template.json\n   ```\n\n3. **Restart pod to test persistence**:\n   ```bash\n   echo \"\\n=== Testing Persistence (Pod Restart) ===\"\n   OLD_POD=$(kubectl -n {{namespace}} get pods -l app=surrealdb -o jsonpath='{.items[0].metadata.name}')\n   echo \"Old pod: $OLD_POD\"\n   \n   kubectl -n {{namespace}} delete pod $OLD_POD\n   \n   echo \"Waiting for new pod...\"\n   kubectl -n {{namespace}} wait --for=condition=Ready pod -l app=surrealdb --timeout=3m\n   \n   NEW_POD=$(kubectl -n {{namespace}} get pods -l app=surrealdb -o jsonpath='{.items[0].metadata.name}')\n   echo \"New pod: $NEW_POD\"\n   ```\n\n4. **Verify template still exists after restart**:\n   ```bash\n   echo \"\\n=== Verifying Data Persisted ===\"\n   \n   kubectl -n {{namespace}} port-forward svc/surrealdb 8000:8000 > {{outputDir}}/verify-pf.log 2>&1 &\n   PF_PID=$!\n   sleep 5\n   \n   TOKEN=$(curl -s -X POST http://localhost:8000/rpc -H \"Content-Type: application/json\" -d '{\"method\":\"signin\",\"params\":[{\"user\":\"'$SURREAL_USER'\",\"pass\":\"'$SURREAL_PASS'\"}]}' | jq -r '.result')\n   \n   curl -X POST http://localhost:8000/rpc \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $TOKEN\" \\\n     -H \"Surreal-NS: metabob\" \\\n     -H \"Surreal-DB: production\" \\\n     -d '{\"method\":\"select\",\"params\":[\"activity_template:persistence-test\"]}' | jq . > {{outputDir}}/verify-template.json\n   \n   kill $PF_PID 2>/dev/null || true\n   \n   cat {{outputDir}}/verify-template.json\n   \n   if cat {{outputDir}}/verify-template.json | jq -r '.result.name' | grep -q \"Persistence Test\"; then\n     echo \"\\n✅ SUCCESS: Template persisted across pod restart!\"\n     echo \"✅ Persistent storage is working correctly!\"\n   else\n     echo \"\\n❌ FAILED: Template not found after restart\"\n   fi\n   ```\n\n5. **Generate final report**:\n   ```bash\n   cat > {{outputDir}}/PERSISTENCE_TEST_REPORT.md << 'EOF'\n   # SurrealDB Persistent Storage Verification\n\n   ## Configuration Applied\n   - **Storage Mode**: file:/data/database (RocksDB)\n   - **PVC**: surrealdb-data ({{storageSize}})\n   - **Mount Path**: /data\n\n   ## Tests Performed\n   1. ✅ Schema initialization\n   2. ✅ Template creation\n   3. ✅ Pod restart\n   4. $(cat {{outputDir}}/verify-template.json | jq -r '.result.name' | grep -q \"Persistence Test\" && echo \"✅ Data verification\" || echo \"❌ Data verification\")\n\n   ## Results\n   $(if cat {{outputDir}}/verify-template.json | jq -r '.result.name' | grep -q \"Persistence Test\"; then\n     echo \"**Status**: ✅ PERSISTENCE WORKING\"\n     echo \"\"\n     echo \"Data persists across pod restarts. SurrealDB is now production-ready.\"\n   else\n     echo \"**Status**: ❌ PERSISTENCE FAILED\"\n     echo \"\"\n     echo \"Data did not persist. Check PVC configuration and pod logs.\"\n   fi)\n\n   ## Files Created\n   - signin.json: Authentication test\n   - create-ns.json: Namespace creation\n   - create-db.json: Database creation\n   - create-table.json: Table creation\n   - create-template.json: Test data creation\n   - verify-template.json: Persistence verification\n   EOF\n   \n   cat {{outputDir}}/PERSISTENCE_TEST_REPORT.md\n   ```\n\n**Success Criteria**: Template persists after pod restart.\n\n**Report** persistence test results.",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "storageSize",
+            "type": "string",
+            "required": false,
+            "description": "PVC storage size",
+            "default": "10Gi"
+          },
+          {
+            "name": "outputDir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory",
+            "default": "output/surrealdb-storage-fix"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-03-01T19:11:40.690Z",
+  "metadata": {}
+}
