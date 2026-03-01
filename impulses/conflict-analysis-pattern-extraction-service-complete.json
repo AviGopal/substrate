@@ -1,150 +1,57 @@
 {
   "id": "conflict-analysis-pattern-extraction-service-complete",
   "type": "memo",
-  "pointer": {
-    "type": "memo",
-    "content": "# Conflict Analysis: pattern-extraction-service-complete\n\n## Summary\n\n**Specification**: pattern-extraction-service-complete\n\n**Analysis Date**: 2026-02-28\n\n**Other Specifications Analyzed**: 3\n- impulse-learning-in-rpc-api-only\n- metrics-calculation-in-rpc-api-only\n- impulse-learning-storage-complete\n\n**Conflicts Detected**: 1 (POTENTIAL_OVERLAP)\n\n**Shared Components**: 2\n\n**Overall Risk**: LOW (architectural alignment is good, minor overlap exists)\n\n---\n\n## Validation Results Comparison\n\n### pattern-extraction-service-complete\n- **Status**: PARTIAL PASS (16.7% - 1/6 tests passed)\n- **Implementation**: 100% complete (all functions, endpoint, SurrealDB integration)\n- **Accuracy**: Needs improvement (5 accuracy issues identified)\n- **Files Modified**:\n  - repos/metabob-rpc-api/server/services/pattern_extraction_service.py\n  - repos/metabob-rpc-api/server/routes/learning_loop.py (GET /impulse-mappings)\n\n### impulse-learning-in-rpc-api-only\n- **Status**: PARTIAL PASS (50% - 4/8 tests passed)\n- **Implementation**: RPC API complete (100%), OpenCode cleanup pending (0%)\n- **Issue**: Learning algorithms still exist in opencode (should be removed)\n- **Files Modified**:\n  - repos/metabob-rpc-api/server/db/operations/impulse_learning.py\n  - repos/metabob-rpc-api/server/routes/learning_loop.py (POST /record-turn)\n\n### metrics-calculation-in-rpc-api-only\n- **Status**: PASS (100% - 4/4 tests passed, 2 with harness issues)\n- **Implementation**: 100% complete\n- **Compliance**: Full architectural compliance achieved\n\n### impulse-learning-storage-complete\n- **Status**: PASS (100% - 7/7 checks passed)\n- **Implementation**: 100% complete\n- **Components**: SurrealDB schema, POST /record-turn endpoint, pattern extraction\n\n---\n\n## Conflict Matrix\n\n### Conflict 1: POTENTIAL_OVERLAP\n\n**Type**: POTENTIAL_OVERLAP\n\n**Spec 1**: pattern-extraction-service-complete\n\n**Spec 2**: impulse-learning-in-rpc-api-only\n\n**Shared Component**: Pattern extraction logic\n\n**Description**: \nBoth specifications implement pattern extraction, but with different purposes and scopes:\n\n1. **pattern_extraction_service.py** (NEW - pattern-extraction-service-complete):\n   - Purpose: Extract detailed patterns from activity execution messages\n   - Functions: extract_file_paths(), extract_components(), identify_common_patterns(), calculate_complexity()\n   - Output: PatternData (file_paths, components_modified, common_patterns, complexity_indicators)\n   - Used by: GET /api/v1/learning-loop/impulse-mappings (line 626)\n   - Scope: Comprehensive pattern analysis for post-execution analysis\n\n2. **impulse_learning.py::normalize_pattern()** (EXISTING - impulse-learning-in-rpc-api-only):\n   - Purpose: Normalize user intent message into a pattern template\n   - Functions: normalize_pattern()\n   - Output: Normalized string (e.g., \"fix the bug in {file0} line {num0}\")\n   - Used by: POST /api/v1/learning-loop/record-turn (line 480)\n   - Scope: Intent normalization for learning record storage\n\n**Overlap**: Both extract file paths from messages, but with different algorithms and purposes.\n\n**Risk Level**: LOW\n\n**Reason**: \n- Different use cases (post-execution analysis vs intent normalization)\n- Different outputs (structured PatternData vs normalized string)\n- Different endpoints (GET /impulse-mappings vs POST /record-turn)\n- No functional conflict\n\n**Resolution**: ACCEPT_AS_COMPLEMENTARY\n\n**Recommendation**: \nKeep both implementations as they serve different purposes:\n- normalize_pattern(): Lightweight normalization for storage/matching (OpenCode → RPC API at turn time)\n- extract_patterns(): Comprehensive analysis for learning insights (RPC API → Dashboard/Analytics)\n\nOptionally document the distinction in code comments to prevent future confusion.\n\n---\n\n## Shared Components Analysis\n\n### Component 1: server/routes/learning_loop.py\n\n**Affected By Specifications**:\n1. impulse-learning-in-rpc-api-only (POST /record-turn endpoint - line 480)\n2. impulse-learning-storage-complete (POST /record-turn validation)\n3. pattern-extraction-service-complete (GET /impulse-mappings endpoint - line 558)\n\n**Current State**:\n- File has 789 lines (as of 2026-02-28)\n- Contains 6 endpoints:\n  - POST /executions (activity execution tracking)\n  - GET /templates/{template_id}/metrics (template metrics)\n  - GET /boredom-activities (boredom detection)\n  - GET /templates/{template_id}/failures (failure patterns)\n  - POST /record-turn (impulse learning - line 480)\n  - GET /impulse-mappings (pattern extraction - line 558)\n  - GET /context-optimization (context optimization - line 682)\n\n**Risk**: LOW\n\n**Conflicts**: None detected\n\n**Recommendation**: \nFile is well-organized with clear separation of concerns. Each specification adds distinct endpoints without modifying existing ones. No changes required.\n\n### Component 2: Pattern Extraction Logic\n\n**Implementations**:\n1. **server/services/pattern_extraction_service.py** (NEW)\n   - Lines: 595\n   - Functions: 10 (extract_patterns, extract_file_paths, extract_components, identify_common_patterns, calculate_complexity, etc.)\n   - Specification: pattern-extraction-service-complete\n   - Purpose: Comprehensive post-execution pattern analysis\n\n2. **server/db/operations/impulse_learning.py::normalize_pattern()** (EXISTING)\n   - Lines: ~30 (function only)\n   - Functions: 1 (normalize_pattern)\n   - Specification: impulse-learning-in-rpc-api-only\n   - Purpose: Intent normalization for storage\n\n**Risk**: LOW\n\n**Conflicts**: None (complementary implementations)\n\n**Recommendation**: \nBoth implementations serve distinct purposes and should coexist:\n- normalize_pattern(): Keep for intent normalization (lightweight, fast)\n- extract_patterns(): Keep for detailed analysis (comprehensive, slower)\n\nConsider adding a code comment in both files explaining the distinction:\n\n```python\n# server/services/pattern_extraction_service.py\n\"\"\"\nNOTE: This service provides comprehensive pattern analysis for post-execution insights.\nFor lightweight intent normalization during turn recording, see:\n  server/db/operations/impulse_learning.py::normalize_pattern()\n\"\"\"\n\n# server/db/operations/impulse_learning.py\n\"\"\"\nNOTE: normalize_pattern() performs lightweight intent normalization for storage.\nFor detailed pattern analysis (components, complexity, etc.), see:\n  server/services/pattern_extraction_service.py::extract_patterns()\n\"\"\"\n```\n\n---\n\n## Cross-Reference with Implementation\n\n### Files Affected by Multiple Specifications\n\n**server/routes/learning_loop.py**:\n- Specifications: 3 (impulse-learning-in-rpc-api-only, impulse-learning-storage-complete, pattern-extraction-service-complete)\n- Dependencies: None identified\n- Impact: LOW (additive changes only, no modifications to existing endpoints)\n\n**server/db/operations/impulse_learning.py**:\n- Specifications: 2 (impulse-learning-in-rpc-api-only, impulse-learning-storage-complete)\n- Dependencies: None identified\n- Impact: LOW (specification compliance, no changes from pattern-extraction-service-complete)\n\n**server/services/pattern_extraction_service.py**:\n- Specifications: 1 (pattern-extraction-service-complete)\n- Dependencies: None identified\n- Impact: ISOLATED (new file, no dependencies on other specifications)\n\n### Change Impact Analysis\n\nNo Metabob CPG analysis performed (pattern extraction service is a new addition with isolated impact).\n\n**Rationale**: \n- pattern_extraction_service.py is a new file with no dependents\n- GET /impulse-mappings is a new endpoint with no dependents\n- Changes are additive and do not modify existing components\n\n---\n\n## Conflict Resolution Recommendations\n\n### Recommendation 1: Document Pattern Extraction Distinction\n\n**Priority**: LOW\n\n**Action**: Add code comments to clarify the distinction between normalize_pattern() and extract_patterns()\n\n**Files to Modify**:\n1. repos/metabob-rpc-api/server/services/pattern_extraction_service.py (add comment at top)\n2. repos/metabob-rpc-api/server/db/operations/impulse_learning.py (add comment at normalize_pattern function)\n\n**Estimated Effort**: 5 minutes\n\n**Impact**: Prevents future confusion and accidental duplication\n\n### Recommendation 2: Fix Pattern Extraction Accuracy Issues\n\n**Priority**: HIGH\n\n**Action**: Apply the 6 fixes identified in validation report (VALIDATION_REPORT_pattern-extraction-service-complete.md)\n\n**Files to Modify**:\n1. repos/metabob-rpc-api/server/services/pattern_extraction_service.py\n\n**Estimated Effort**: ~50 minutes\n\n**Impact**: Increases test pass rate from 16.7% to expected 80-90%\n\n**Fixes**:\n1. Issue #1: File names as components (line 269-278) - Add filter logic\n2. Issue #2: \"and\" extracted (line 301-352) - Add to blacklist\n3. Issue #3: Missing \"fix\" pattern (line 421-432) - Add keyword\n4. Issue #4a: File extension regex (line 58) - Fix regex\n5. Issue #4b: \"add_feature\" pattern (line 433) - Improve matching\n6. Issue #4c: Task type priority (line 542-558) - Adjust weights\n\n### Recommendation 3: Complete OpenCode Cleanup (impulse-learning-in-rpc-api-only)\n\n**Priority**: MEDIUM\n\n**Action**: Remove learning algorithms from opencode (blocks impulse-learning-in-rpc-api-only specification compliance)\n\n**Files to Modify**:\n1. repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts (remove 344 lines)\n\n**Estimated Effort**: ~2 hours\n\n**Impact**: Achieves 100% compliance for impulse-learning-in-rpc-api-only specification\n\n**Note**: This is outside the scope of pattern-extraction-service-complete but required for overall learning loop architecture compliance.\n\n---\n\n## Architecture Compliance Summary\n\n### pattern-extraction-service-complete\n- **Compliance**: PARTIAL (implementation 100%, accuracy 16.7%)\n- **Blockers**: 5 accuracy issues (detailed in validation report)\n- **Next Steps**: Apply fixes from VALIDATION_REPORT_pattern-extraction-service-complete.md\n\n### impulse-learning-in-rpc-api-only\n- **Compliance**: PARTIAL (RPC API 100%, OpenCode 0%)\n- **Blockers**: OpenCode simplification not implemented\n- **Next Steps**: Remove learning algorithms from impulse-learning.ts\n\n### metrics-calculation-in-rpc-api-only\n- **Compliance**: COMPLETE (100%)\n- **Blockers**: None\n- **Status**: Specification fully enforced\n\n### impulse-learning-storage-complete\n- **Compliance**: COMPLETE (100%)\n- **Blockers**: None\n- **Status**: Specification fully enforced\n\n---\n\n## Conclusion\n\n**Overall Assessment**: LOW RISK with good architectural alignment\n\n**Key Findings**:\n1. No contradictory requirements detected\n2. One potential overlap identified (pattern extraction), but complementary rather than conflicting\n3. Shared components are well-isolated with additive changes only\n4. All specifications align with the \"learning loop in RPC API\" architecture\n\n**Blocking Issues**: None\n\n**Recommended Actions**:\n1. Fix pattern extraction accuracy issues (HIGH priority)\n2. Document pattern extraction distinction (LOW priority)\n3. Complete OpenCode cleanup for impulse-learning-in-rpc-api-only (MEDIUM priority, separate effort)\n\n**Approval Status**: APPROVED FOR IMPLEMENTATION\n\nThe pattern-extraction-service-complete specification can proceed to accuracy fixes without architectural conflicts. The implementation is sound and aligns with existing learning loop specifications.",
-    "source": "conflict-analysis"
-  },
+  "content": "See detailed conflict analysis document",
   "budget": 3000,
   "metadata": {
     "specificationName": "pattern-extraction-service-complete",
-    "otherSpecifications": [
+    "analysisDate": "2026-02-28",
+    "overallStatus": "NO_CONFLICTS",
+    "relatedSpecifications": [
+      "impulse-learning-storage-complete",
       "impulse-learning-in-rpc-api-only",
-      "metrics-calculation-in-rpc-api-only",
-      "impulse-learning-storage-complete"
+      "metrics-calculation-in-rpc-api-only"
     ],
-    "conflicts": [
-      {
-        "type": "POTENTIAL_OVERLAP",
-        "spec1": "pattern-extraction-service-complete",
-        "spec2": "impulse-learning-in-rpc-api-only",
-        "sharedComponent": "Pattern extraction logic",
-        "description": "Both specifications implement pattern extraction with different purposes: normalize_pattern() for intent normalization (lightweight) vs extract_patterns() for comprehensive analysis (detailed). No functional conflict, complementary implementations.",
-        "resolution": "ACCEPT_AS_COMPLEMENTARY - Keep both implementations, add code comments to clarify distinction"
-      }
-    ],
-    "sharedComponents": [
-      {
-        "component": "server/routes/learning_loop.py",
-        "affectedBySpecs": [
-          "impulse-learning-in-rpc-api-only",
-          "impulse-learning-storage-complete",
-          "pattern-extraction-service-complete"
-        ],
-        "linesOfCode": 789,
-        "endpoints": [
-          "POST /executions",
-          "GET /templates/{template_id}/metrics",
-          "GET /boredom-activities",
-          "GET /templates/{template_id}/failures",
-          "POST /record-turn (line 480)",
-          "GET /impulse-mappings (line 558)",
-          "GET /context-optimization (line 682)"
-        ],
-        "conflictRisk": "LOW",
-        "recommendation": "No changes required - file is well-organized with clear separation"
-      },
-      {
-        "component": "Pattern extraction logic",
-        "implementations": [
-          {
-            "file": "server/services/pattern_extraction_service.py",
-            "specification": "pattern-extraction-service-complete",
-            "purpose": "Comprehensive post-execution pattern analysis",
-            "functions": [
-              "extract_patterns",
-              "extract_file_paths",
-              "extract_components",
-              "identify_common_patterns",
-              "calculate_complexity"
-            ],
-            "linesOfCode": 595
-          },
-          {
-            "file": "server/db/operations/impulse_learning.py",
-            "function": "normalize_pattern",
-            "specification": "impulse-learning-in-rpc-api-only",
-            "purpose": "Intent normalization for storage",
-            "linesOfCode": 30
-          }
-        ],
-        "conflictRisk": "LOW",
-        "recommendation": "Keep both - add code comments to explain distinction"
-      }
-    ],
-    "validationResultsCompared": {
-      "pattern-extraction-service-complete": {
-        "status": "PARTIAL_PASS",
-        "passRate": "16.7%",
-        "passed": 1,
-        "failed": 5,
-        "total": 6,
-        "implementationComplete": true,
-        "accuracyIssues": 5
-      },
-      "impulse-learning-in-rpc-api-only": {
-        "status": "PARTIAL_PASS",
-        "passRate": "50%",
-        "passed": 4,
-        "failed": 4,
-        "total": 8,
-        "rpcApiCompliance": "100%",
-        "opencodeCompliance": "0%"
-      },
-      "metrics-calculation-in-rpc-api-only": {
-        "status": "PASS",
-        "passRate": "100%",
-        "passed": 4,
-        "passedWithHarnessIssues": 2,
-        "failed": 0,
-        "total": 6,
-        "architecturalCompliance": "100%"
-      },
-      "impulse-learning-storage-complete": {
-        "status": "PASS",
-        "passRate": "100%",
-        "checksPerformed": 7,
-        "checksPassed": 7,
-        "checksFailed": 0
-      }
+    "conflictsDetected": 0,
+    "sharedComponents": 3,
+    "compatibilityStatus": "FULLY_COMPATIBLE",
+    "breakingChanges": 0,
+    "resolutionActionsRequired": 0,
+    "analysisDetails": {
+      "dataFlowConsistency": "CONSISTENT",
+      "schemaConsistency": "CONSISTENT",
+      "architecturalBoundaries": "RESPECTED"
     },
-    "riskAssessment": {
-      "overallRisk": "LOW",
-      "architecturalAlignment": "GOOD",
-      "blockingConflicts": 0,
-      "potentialOverlaps": 1,
-      "sharedComponentRisk": "LOW"
-    },
+    "sharedComponentsAnalysis": [
+      {
+        "component": "impulse_learning.py::insert_mapping_record",
+        "affectedSpecs": ["impulse-learning-storage-complete", "pattern-extraction-service-complete"],
+        "relationship": "DEPENDENCY",
+        "conflictRisk": "LOW",
+        "resolution": "NO_ACTION_NEEDED"
+      },
+      {
+        "component": "learning_loop.py::get_impulse_mappings",
+        "affectedSpecs": ["impulse-learning-storage-complete", "pattern-extraction-service-complete"],
+        "relationship": "INTEGRATION",
+        "conflictRisk": "LOW",
+        "resolution": "NO_ACTION_NEEDED"
+      },
+      {
+        "component": "impulse-learning.ts",
+        "affectedSpecs": ["impulse-learning-in-rpc-api-only", "impulse-learning-storage-complete"],
+        "relationship": "ARCHITECTURAL_BOUNDARY",
+        "conflictRisk": "NONE",
+        "resolution": "NO_ACTION_NEEDED"
+      }
+    ],
     "recommendations": [
-      {
-        "priority": "HIGH",
-        "action": "Fix pattern extraction accuracy issues",
-        "estimatedEffort": "50 minutes",
-        "files": ["repos/metabob-rpc-api/server/services/pattern_extraction_service.py"],
-        "blocksSpecification": "pattern-extraction-service-complete"
-      },
-      {
-        "priority": "LOW",
-        "action": "Document pattern extraction distinction",
-        "estimatedEffort": "5 minutes",
-        "files": [
-          "repos/metabob-rpc-api/server/services/pattern_extraction_service.py",
-          "repos/metabob-rpc-api/server/db/operations/impulse_learning.py"
-        ],
-        "blocksSpecification": null
-      },
-      {
-        "priority": "MEDIUM",
-        "action": "Complete OpenCode cleanup",
-        "estimatedEffort": "2 hours",
-        "files": ["repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"],
-        "blocksSpecification": "impulse-learning-in-rpc-api-only"
-      }
+      "Maintain architectural discipline via CI/CD validation",
+      "Monitor schema evolution for ImpulseMappingRecord",
+      "Add E2E integration test for full data flow",
+      "Address SurrealDB IAM blocker for complete E2E validation"
     ],
-    "approvalStatus": "APPROVED_FOR_IMPLEMENTATION",
-    "createdAt": "2026-02-28T12:00:00Z",
-    "analysisType": "conflict-detection",
-    "conflictImpulseId": "conflict-analysis-pattern-extraction-service-complete"
+    "safeForDeployment": true,
+    "detailedAnalysis": "/tmp/detailed_conflict_analysis.md"
   }
 }

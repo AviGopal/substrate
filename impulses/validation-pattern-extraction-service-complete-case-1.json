@@ -1,29 +1,12 @@
 {
   "id": "validation-pattern-extraction-service-complete-case-1",
   "type": "memo",
-  "pointer": {
-    "type": "memo",
-    "content": "Test Case 1: Basic File Path Extraction\n\nInput:\n- Messages: [\"I need to update src/auth.py and fix the login function\", \"Also check config.json for settings\"]\n\nExpected Output:\n- file_paths: [\"config.json\", \"src/auth.py\"]\n- components_modified: [\"login\"]\n- common_patterns: []\n- complexity_indicators.files_touched_count: 2\n- complexity_indicators.task_type: \"fix\"\n\nReason: Tests basic file path extraction from natural language messages with relative paths and simple filenames.",
-    "source": "validation-test-case"
-  },
+  "content": "See tests/validation-harnesses/pattern-extraction-service-complete-harness.ts TEST_CASES[0]",
   "budget": 500,
   "metadata": {
-    "testCase": 1,
-    "category": "file_path_extraction",
-    "input": {
-      "messages": [
-        "I need to update src/auth.py and fix the login function",
-        "Also check config.json for settings"
-      ]
-    },
-    "expectedOutput": {
-      "file_paths": ["config.json", "src/auth.py"],
-      "components_modified": ["login"],
-      "common_patterns": [],
-      "complexity_indicators": {
-        "files_touched_count": 2,
-        "task_type": "fix"
-      }
-    }
+    "testCaseNumber": 1,
+    "purpose": "Historical test case for pattern extraction service validation",
+    "canRunWithoutLLM": true,
+    "harnessFile": "tests/validation-harnesses/pattern-extraction-service-complete-harness.ts"
   }
 }

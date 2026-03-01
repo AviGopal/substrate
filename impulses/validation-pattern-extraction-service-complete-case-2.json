@@ -1,29 +1,12 @@
 {
   "id": "validation-pattern-extraction-service-complete-case-2",
   "type": "memo",
-  "pointer": {
-    "type": "memo",
-    "content": "Test Case 2: Component Extraction (Functions and Classes)\n\nInput:\n- Messages: [\"Refactor the User class and extract_data method\", \"Also update the normalize function in utils.py\"]\n\nExpected Output:\n- file_paths: [\"utils.py\"]\n- components_modified: [\"User\", \"extract_data\", \"normalize\"]\n- common_patterns: [\"refactor\"]\n- complexity_indicators.task_type: \"refactor\"\n- complexity_indicators.components_modified_count: 3\n\nReason: Tests component extraction for classes, methods, and functions with refactoring pattern detection.",
-    "source": "validation-test-case"
-  },
+  "content": "See tests/validation-harnesses/pattern-extraction-service-complete-harness.ts TEST_CASES[1]",
   "budget": 500,
   "metadata": {
-    "testCase": 2,
-    "category": "component_extraction",
-    "input": {
-      "messages": [
-        "Refactor the User class and extract_data method",
-        "Also update the normalize function in utils.py"
-      ]
-    },
-    "expectedOutput": {
-      "file_paths": ["utils.py"],
-      "components_modified": ["User", "extract_data", "normalize"],
-      "common_patterns": ["refactor"],
-      "complexity_indicators": {
-        "task_type": "refactor",
-        "components_modified_count": 3
-      }
-    }
+    "testCaseNumber": 2,
+    "purpose": "Historical test case for pattern extraction service validation",
+    "canRunWithoutLLM": true,
+    "harnessFile": "tests/validation-harnesses/pattern-extraction-service-complete-harness.ts"
   }
 }

@@ -1,29 +1,12 @@
 {
   "id": "validation-pattern-extraction-service-complete-case-6",
   "type": "memo",
-  "pointer": {
-    "type": "memo",
-    "content": "Test Case 6: False Positive Filtering\n\nInput:\n- Messages: [\"Fix bug e.g. in the User.save method\", \"Update documentation i.e. README.md\", \"The process.exit function should be avoided\"]\n\nExpected Output:\n- file_paths: [\"README.md\"]\n- components_modified: [\"User.save\"]\n- common_patterns: [\"fix_bug\", \"update_docs\"]\n- complexity_indicators.task_type: \"fix\"\n\nReason: Tests false positive filtering. 'e.g.' and 'i.e.' should NOT be detected as file paths. 'User.save' is a method (not file), 'process.exit' is a method call (not file).",
-    "source": "validation-test-case"
-  },
+  "content": "See tests/validation-harnesses/pattern-extraction-service-complete-harness.ts TEST_CASES[5]",
   "budget": 500,
   "metadata": {
-    "testCase": 6,
-    "category": "false_positive_filtering",
-    "input": {
-      "messages": [
-        "Fix bug e.g. in the User.save method",
-        "Update documentation i.e. README.md",
-        "The process.exit function should be avoided"
-      ]
-    },
-    "expectedOutput": {
-      "file_paths": ["README.md"],
-      "components_modified": ["User.save"],
-      "common_patterns": ["fix_bug", "update_docs"],
-      "complexity_indicators": {
-        "task_type": "fix"
-      }
-    }
+    "testCaseNumber": 6,
+    "purpose": "Historical test case for pattern extraction service validation",
+    "canRunWithoutLLM": true,
+    "harnessFile": "tests/validation-harnesses/pattern-extraction-service-complete-harness.ts"
   }
 }

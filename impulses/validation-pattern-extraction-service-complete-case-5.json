@@ -1,27 +1,12 @@
 {
   "id": "validation-pattern-extraction-service-complete-case-5",
   "type": "memo",
-  "pointer": {
-    "type": "memo",
-    "content": "Test Case 5: Edge Cases - Empty and Malformed Input\n\nInput:\n- Messages: []\n\nExpected Output:\n- file_paths: []\n- components_modified: []\n- common_patterns: []\n- complexity_indicators.files_touched_count: 0\n- complexity_indicators.estimated_lines_changed: 0\n- complexity_indicators.task_type: \"unknown\"\n\nReason: Tests graceful handling of empty input. Service should return default PatternData without errors.",
-    "source": "validation-test-case"
-  },
+  "content": "See tests/validation-harnesses/pattern-extraction-service-complete-harness.ts TEST_CASES[4]",
   "budget": 500,
   "metadata": {
-    "testCase": 5,
-    "category": "edge_cases",
-    "input": {
-      "messages": []
-    },
-    "expectedOutput": {
-      "file_paths": [],
-      "components_modified": [],
-      "common_patterns": [],
-      "complexity_indicators": {
-        "files_touched_count": 0,
-        "estimated_lines_changed": 0,
-        "task_type": "unknown"
-      }
-    }
+    "testCaseNumber": 5,
+    "purpose": "Historical test case for pattern extraction service validation",
+    "canRunWithoutLLM": true,
+    "harnessFile": "tests/validation-harnesses/pattern-extraction-service-complete-harness.ts"
   }
 }
