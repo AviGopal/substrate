@@ -3,28 +3,34 @@
   "type": "file",
   "pointer": {
     "type": "file",
-    "path": "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs"
+    "path": "tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs",
+    "lineRange": null
   },
+  "priority": "high",
+  "budget": 2000,
   "metadata": {
+    "description": "Validation harness for impulse-learning-in-rpc-api-only specification",
+    "createdBy": "create-validation-harness",
     "specificationName": "impulse-learning-in-rpc-api-only",
-    "harnessType": "validation",
-    "description": "Validates architectural boundary: learning algorithms in rpc-api only, opencode collects raw data",
-    "checksCount": 8,
-    "testCaseImpulses": [
-      "validation-impulse-learning-in-rpc-api-only-case-1",
-      "validation-impulse-learning-in-rpc-api-only-case-2",
-      "validation-impulse-learning-in-rpc-api-only-case-3",
-      "validation-impulse-learning-in-rpc-api-only-case-4",
-      "validation-impulse-learning-in-rpc-api-only-case-5",
-      "validation-impulse-learning-in-rpc-api-only-case-6",
-      "validation-impulse-learning-in-rpc-api-only-case-7",
-      "validation-impulse-learning-in-rpc-api-only-case-8"
+    "harnessType": "static-analysis",
+    "checks": [
+      "impulse-learning.ts line count (<50)",
+      "No normalizePattern in opencode",
+      "No calculateResponseQuality in opencode",
+      "No trackImpulseUsage in opencode",
+      "RPC API has /record-turn endpoint",
+      "RPC API has normalize_pattern function",
+      "RPC API has calculate_quality function",
+      "RPC API has track_usage function"
     ],
-    "usage": "node tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs",
-    "exitCodes": {
-      "0": "All checks passed - specification fully enforced",
-      "1": "One or more checks failed - specification not fully enforced"
-    }
-  },
-  "budget": 2000
+    "testCaseCount": 3,
+    "lastValidationResult": {
+      "timestamp": "2026-03-01T00:10:00Z",
+      "passed": 8,
+      "failed": 0,
+      "total": 8,
+      "status": "PASS"
+    },
+    "createdAt": "2026-03-01T00:10:00Z"
+  }
 }

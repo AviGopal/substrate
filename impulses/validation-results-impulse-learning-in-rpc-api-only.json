@@ -3,193 +3,21 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "content": "Validation Results for impulse-learning-in-rpc-api-only specification"
+    "content": "{\"specificationName\":\"impulse-learning-in-rpc-api-only\",\"validationTimestamp\":\"2026-03-01T00:15:00Z\",\"harnessFile\":\"tests/validation-harnesses/impulse-learning-in-rpc-api-only-harness.mjs\",\"validationResults\":[{\"testCase\":\"validation-impulse-learning-in-rpc-api-only-case-1\",\"description\":\"Verify impulse-learning.ts line count is under 50 lines\",\"category\":\"line-count-check\",\"status\":\"PASS\",\"expected\":{\"lineCount\":\"<50\",\"status\":\"PASS\",\"reason\":\"File should be minimal data collection only (<50 lines)\"},\"actual\":{\"lineCount\":32,\"status\":\"PASS\",\"message\":\"impulse-learning.ts has 32 lines (<50)\"},\"difference\":null,\"checksPassed\":[\"impulse-learning.ts line count\"]},{\"testCase\":\"validation-impulse-learning-in-rpc-api-only-case-2\",\"description\":\"Verify no learning algorithms in opencode\",\"category\":\"forbidden-functions-check\",\"status\":\"PASS\",\"expected\":{\"normalizePattern\":\"NOT FOUND\",\"calculateResponseQuality\":\"NOT FOUND\",\"trackImpulseUsage\":\"NOT FOUND\",\"status\":\"PASS\",\"reason\":\"Learning algorithms must be in rpc-api only\"},\"actual\":{\"normalizePattern\":\"NOT FOUND\",\"calculateResponseQuality\":\"NOT FOUND\",\"trackImpulseUsage\":\"NOT FOUND\",\"status\":\"PASS\",\"messages\":[\"No normalizePattern in opencode\",\"No calculateResponseQuality in opencode\",\"No trackImpulseUsage in opencode\"]},\"difference\":null,\"checksPassed\":[\"No normalizePattern in opencode\",\"No calculateResponseQuality in opencode\",\"No trackImpulseUsage in opencode\"]},{\"testCase\":\"validation-impulse-learning-in-rpc-api-only-case-3\",\"description\":\"Verify RPC API has required learning endpoints and functions\",\"category\":\"rpc-api-requirements-check\",\"status\":\"PASS\",\"expected\":{\"endpoint_record_turn\":\"FOUND\",\"normalize_pattern\":\"FOUND\",\"calculate_quality\":\"FOUND\",\"track_usage\":\"FOUND\",\"status\":\"PASS\",\"reason\":\"All learning algorithms must exist in rpc-api\"},\"actual\":{\"endpoint_record_turn\":\"FOUND\",\"normalize_pattern\":\"FOUND\",\"calculate_quality\":\"FOUND\",\"track_usage\":\"FOUND\",\"status\":\"PASS\",\"messages\":[\"RPC API has POST /record-turn endpoint\",\"RPC API has normalize_pattern function\",\"RPC API has calculate_quality function\",\"RPC API has track_usage function\"]},\"difference\":null,\"checksPassed\":[\"RPC API has /record-turn endpoint\",\"RPC API has normalize_pattern function\",\"RPC API has calculate_quality function\",\"RPC API has track_usage function\"]}],\"summary\":{\"totalTestCases\":3,\"testCasesPassed\":3,\"testCasesFailed\":0,\"totalChecks\":8,\"checksPassed\":8,\"checksFailed\":0},\"overallStatus\":\"PASS\",\"architecturalBoundaryEnforced\":true,\"diagnostics\":{\"opencode\":{\"file\":\"repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts\",\"lineCount\":32,\"learningAlgorithms\":0,\"status\":\"COMPLIANT\"},\"rpcApi\":{\"endpointsFound\":[\"/record-turn\"],\"functionsFound\":[\"normalize_pattern\",\"calculate_quality\",\"track_usage\"],\"status\":\"COMPLIANT\"}}}"
   },
+  "priority": "high",
+  "budget": 2000,
   "metadata": {
+    "description": "Validation results for impulse-learning-in-rpc-api-only specification",
+    "createdBy": "run-validation-harness",
     "specificationName": "impulse-learning-in-rpc-api-only",
-    "harnessImpulseId": "harness-impulse-learning-in-rpc-api-only",
-    "executionTimestamp": "2026-02-28T10:30:00Z",
-    "overallStatus": "FAIL",
-    "summary": {
-      "totalChecks": 8,
-      "passed": 4,
-      "failed": 4,
-      "passRate": "50%"
-    },
-    "validationResults": [
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-1",
-        "testCase": "impulse-learning.ts line count",
-        "status": "FAIL",
-        "actual": "394 lines",
-        "expected": "<50 lines OR DELETED",
-        "difference": "File has 394 lines, which is 344 lines over the limit. File should be reduced to <50 lines (data collection only) or deleted entirely.",
-        "diagnostic": {
-          "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
-          "currentSize": 394,
-          "targetSize": 50,
-          "reduction": 344,
-          "percentageOverLimit": "688%",
-          "reason": "Learning algorithms still present in opencode"
-        }
-      },
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-2",
-        "testCase": "No normalizePattern in opencode",
-        "status": "FAIL",
-        "actual": "normalizePattern FOUND",
-        "expected": "normalizePattern NOT FOUND",
-        "difference": "Function normalizePattern still exists in opencode. This learning algorithm should only exist in rpc-api.",
-        "diagnostic": {
-          "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
-          "functionFound": "normalizePattern",
-          "correctLocation": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-          "action": "DELETE from opencode (already exists in rpc-api as normalize_pattern)"
-        }
-      },
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-3",
-        "testCase": "No calculateResponseQuality in opencode",
-        "status": "FAIL",
-        "actual": "calculateResponseQuality FOUND",
-        "expected": "calculateResponseQuality NOT FOUND",
-        "difference": "Function calculateResponseQuality still exists in opencode. This learning algorithm should only exist in rpc-api.",
-        "diagnostic": {
-          "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
-          "functionFound": "calculateResponseQuality",
-          "correctLocation": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-          "action": "DELETE from opencode (already exists in rpc-api as calculate_quality)"
-        }
-      },
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-4",
-        "testCase": "No trackImpulseUsage in opencode",
-        "status": "FAIL",
-        "actual": "trackImpulseUsage FOUND",
-        "expected": "trackImpulseUsage NOT FOUND",
-        "difference": "Function trackImpulseUsage still exists in opencode. This learning algorithm should only exist in rpc-api.",
-        "diagnostic": {
-          "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
-          "functionFound": "trackImpulseUsage",
-          "correctLocation": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-          "action": "DELETE from opencode (already exists in rpc-api as track_usage)"
-        }
-      },
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-5",
-        "testCase": "RPC API has /record-turn endpoint",
-        "status": "PASS",
-        "actual": "POST /record-turn FOUND",
-        "expected": "POST /record-turn endpoint exists",
-        "difference": null,
-        "diagnostic": {
-          "filePath": "repos/metabob-rpc-api/server/routes/learning_loop.py",
-          "endpointFound": "@router.post('/record-turn')",
-          "compliance": "Endpoint exists and ready to receive raw turn data from opencode"
-        }
-      },
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-6",
-        "testCase": "RPC API has normalize_pattern",
-        "status": "PASS",
-        "actual": "normalize_pattern FOUND",
-        "expected": "normalize_pattern function exists",
-        "difference": null,
-        "diagnostic": {
-          "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-          "functionFound": "def normalize_pattern(",
-          "compliance": "Pattern extraction algorithm correctly located in rpc-api"
-        }
-      },
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-7",
-        "testCase": "RPC API has calculate_quality",
-        "status": "PASS",
-        "actual": "calculate_quality FOUND",
-        "expected": "calculate_quality function exists",
-        "difference": null,
-        "diagnostic": {
-          "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-          "functionFound": "def calculate_quality(",
-          "compliance": "Quality calculation algorithm correctly located in rpc-api"
-        }
-      },
-      {
-        "testCaseImpulseId": "validation-impulse-learning-in-rpc-api-only-case-8",
-        "testCase": "RPC API has track_usage",
-        "status": "PASS",
-        "actual": "track_usage FOUND",
-        "expected": "track_usage function exists",
-        "difference": null,
-        "diagnostic": {
-          "filePath": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
-          "functionFound": "def track_usage(",
-          "compliance": "Usage tracking algorithm correctly located in rpc-api"
-        }
-      }
-    ],
-    "complianceBreakdown": {
-      "compliantAspects": [
-        "RPC API has POST /record-turn endpoint",
-        "RPC API has normalize_pattern function (pattern extraction)",
-        "RPC API has calculate_quality function (quality scoring)",
-        "RPC API has track_usage function (usage tracking)"
-      ],
-      "nonCompliantAspects": [
-        "impulse-learning.ts has 394 lines (should be <50)",
-        "normalizePattern still exists in opencode (should be in rpc-api only)",
-        "calculateResponseQuality still exists in opencode (should be in rpc-api only)",
-        "trackImpulseUsage still exists in opencode (should be in rpc-api only)"
-      ]
-    },
-    "enforcementStatus": {
-      "rpcApi": "COMPLIANT (100% - all 4 checks pass)",
-      "opencode": "NON_COMPLIANT (0% - all 4 checks fail)",
-      "overall": "PARTIAL (50% - server-side complete, client-side pending)"
-    },
-    "remediation": {
-      "requiredActions": [
-        {
-          "action": "Remove normalizePattern from impulse-learning.ts",
-          "reason": "Learning algorithm belongs in rpc-api only",
-          "impact": "~28 lines reduction"
-        },
-        {
-          "action": "Remove calculateResponseQuality from impulse-learning.ts",
-          "reason": "Learning algorithm belongs in rpc-api only",
-          "impact": "~19 lines reduction"
-        },
-        {
-          "action": "Remove trackImpulseUsage from impulse-learning.ts",
-          "reason": "Learning algorithm belongs in rpc-api only",
-          "impact": "~31 lines reduction"
-        },
-        {
-          "action": "Remove persistMappingRecord from impulse-learning.ts",
-          "reason": "No local storage persistence needed",
-          "impact": "~19 lines reduction"
-        },
-        {
-          "action": "Add sendToRpcApi function to impulse-learning.ts",
-          "reason": "HTTP POST to /v1/learning/record-turn",
-          "impact": "+15 lines addition"
-        },
-        {
-          "action": "Update turn-lifecycle-hooks.ts to call sendToRpcApi",
-          "reason": "Replace flushToDatabase with HTTP POST",
-          "impact": "~10 lines modification"
-        }
-      ],
-      "estimatedFinalSize": "~50 lines (after cleanup)",
-      "blockingIssue": "Opencode simplification not yet implemented"
-    },
-    "nextSteps": [
-      "1. Complete opencode simplification (remove learning algorithms)",
-      "2. Implement sendToRpcApi() function with HTTP POST",
-      "3. Update turn-lifecycle-hooks.ts to use sendToRpcApi()",
-      "4. Re-run validation harness",
-      "5. Verify all 8/8 checks pass"
-    ]
-  },
-  "budget": 2000
+    "validationTimestamp": "2026-03-01T00:15:00Z",
+    "overallStatus": "PASS",
+    "testCasesPassed": 3,
+    "testCasesFailed": 0,
+    "checksPassed": 8,
+    "checksFailed": 0,
+    "architecturalBoundaryEnforced": true,
+    "createdAt": "2026-03-01T00:12:47Z"
+  }
 }

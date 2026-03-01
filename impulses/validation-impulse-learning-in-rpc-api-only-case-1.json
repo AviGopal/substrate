@@ -3,18 +3,16 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "content": "Test Case 1: impulse-learning.ts line count check"
+    "content": "{\"testCaseId\":\"validation-impulse-learning-in-rpc-api-only-case-1\",\"description\":\"Verify impulse-learning.ts line count is under 50 lines\",\"input\":{\"filePath\":\"repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts\"},\"expectedOutput\":{\"lineCount\":\"<50\",\"status\":\"PASS\",\"reason\":\"File should be minimal data collection only (<50 lines)\"},\"category\":\"line-count-check\"}"
   },
+  "priority": "medium",
+  "budget": 500,
   "metadata": {
-    "testCase": "impulse-learning.ts line count",
-    "input": {
-      "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
-    },
-    "expectedOutput": {
-      "lineCount": "<50 OR DELETED",
-      "pass": true
-    },
-    "validationLogic": "Count non-blank, non-comment lines. Pass if <50 lines or file deleted."
-  },
-  "budget": 500
+    "description": "Verify impulse-learning.ts line count is under 50 lines",
+    "createdBy": "create-validation-harness",
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "testCaseId": "validation-impulse-learning-in-rpc-api-only-case-1",
+    "category": "line-count-check",
+    "createdAt": "2026-03-01T00:10:00Z"
+  }
 }

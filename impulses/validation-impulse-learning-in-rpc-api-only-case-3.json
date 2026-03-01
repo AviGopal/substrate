@@ -3,19 +3,16 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "content": "Test Case 3: No calculateResponseQuality in opencode"
+    "content": "{\"testCaseId\":\"validation-impulse-learning-in-rpc-api-only-case-3\",\"description\":\"Verify RPC API has required learning endpoints and functions\",\"input\":{\"rpcApiFiles\":[\"repos/metabob-rpc-api/server/routes/learning_loop.py\",\"repos/metabob-rpc-api/server/db/operations/impulse_learning.py\"],\"requiredEndpoints\":[\"/record-turn\"],\"requiredFunctions\":[\"normalize_pattern\",\"calculate_quality\",\"track_usage\"]},\"expectedOutput\":{\"endpoint_record_turn\":\"FOUND\",\"normalize_pattern\":\"FOUND\",\"calculate_quality\":\"FOUND\",\"track_usage\":\"FOUND\",\"status\":\"PASS\",\"reason\":\"All learning algorithms must exist in rpc-api\"},\"category\":\"rpc-api-requirements-check\"}"
   },
+  "priority": "medium",
+  "budget": 500,
   "metadata": {
-    "testCase": "No calculateResponseQuality in opencode",
-    "input": {
-      "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
-      "pattern": "function calculateResponseQuality"
-    },
-    "expectedOutput": {
-      "found": false,
-      "pass": true
-    },
-    "validationLogic": "Search for calculateResponseQuality function. Pass if NOT found."
-  },
-  "budget": 500
+    "description": "Verify RPC API has required learning endpoints and functions",
+    "createdBy": "create-validation-harness",
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "testCaseId": "validation-impulse-learning-in-rpc-api-only-case-3",
+    "category": "rpc-api-requirements-check",
+    "createdAt": "2026-03-01T00:10:00Z"
+  }
 }

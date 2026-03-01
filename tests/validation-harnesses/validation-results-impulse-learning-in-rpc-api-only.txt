@@ -1,0 +1,44 @@
+🔍 Validation Harness: impulse-learning-in-rpc-api-only
+
+Specification: Learning algorithms belong in rpc-api, opencode only collects raw data
+
+Checks:
+
+✅ impulse-learning.ts has 32 lines (<50)
+   Actual: 32 lines
+   Expected: <50 lines OR DELETED
+
+✅ No normalizePattern in opencode
+   Actual: normalizePattern NOT FOUND
+   Expected: No normalizePattern function
+
+✅ No calculateResponseQuality in opencode
+   Actual: calculateResponseQuality NOT FOUND
+   Expected: No calculateResponseQuality function
+
+✅ No trackImpulseUsage in opencode
+   Actual: trackImpulseUsage NOT FOUND
+   Expected: No trackImpulseUsage function
+
+✅ RPC API has POST /record-turn endpoint
+   Actual: POST /record-turn FOUND
+   Expected: POST /record-turn endpoint exists
+
+✅ RPC API has normalize_pattern function
+   Actual: normalize_pattern FOUND
+   Expected: normalize_pattern function exists
+
+✅ RPC API has calculate_quality function
+   Actual: calculate_quality FOUND
+   Expected: calculate_quality function exists
+
+✅ RPC API has track_usage function
+   Actual: track_usage FOUND
+   Expected: track_usage function exists
+
+────────────────────────────────────────────────────────────────────────────────
+
+Summary: 8/8 checks passed
+
+✅ VALIDATION PASSED - Specification fully enforced
+
