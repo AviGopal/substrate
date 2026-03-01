@@ -3,16 +3,47 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "content": "# Test Case 1: Simple code fix with file path\n\n## Input\n\n```json\n{\n  \"session_id\": \"test_session_001\",\n  \"turn_number\": 1,\n  \"user_message\": \"Fix bug in src/auth.ts line 42\",\n  \"intent\": {\n    \"type\": \"code_fix\",\n    \"confidence\": 0.9\n  },\n  \"impulses_created\": [\n    {\n      \"id\": \"impulse_1\",\n      \"type\": \"file\",\n      \"pointer\": { \"type\": \"file\", \"path\": \"src/auth.ts\" },\n      \"priority\": \"high\",\n      \"budget\": 2000\n    }\n  ],\n  \"task_succeeded\": true,\n  \"duration_ms\": 5000\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"normalizedPattern\": \"fix_bug_in_{file0}_line_{num0}\",\n  \"qualityScore\": 0.6,\n  \"impulsesUsed\": 0,\n  \"recordCreated\": true\n}\n```\n\n## Explanation\n\n- **normalizedPattern**: File path \"src/auth.ts\" replaced with {file0}, line number \"42\" replaced with {num0}\n- **qualityScore**: 0.6 base score for successful task (no impulse usage bonus)\n- **impulsesUsed**: 0 (impulse created but not used in response)\n- **recordCreated**: true (record successfully stored in SurrealDB)\n\n## Validation Logic\n\n1. POST to /api/v1/learning-loop/record-turn with input\n2. Verify response contains normalized_pattern matching expected\n3. Verify response contains quality_score = 0.6\n4. Query SurrealDB to confirm record was created\n5. Verify record contains correct userIntent.normalizedPattern\n6. Verify record contains correct outcome.responseQuality\n",
-    "source": "validation-test-case"
+    "content": {
+      "testCase": "case-1-simple-file-fix",
+      "description": "Tests basic file path and line number pattern extraction with successful task outcome",
+      "input": {
+        "session_id": "test_session_001",
+        "turn_number": 1,
+        "user_message": "Fix the bug in src/auth.ts line 42",
+        "intent": {
+          "type": "code_fix",
+          "confidence": 0.95,
+          "reasoning": "User requests code fix with specific file and line number"
+        },
+        "impulses_created": [
+          {
+            "id": "imp_file_auth",
+            "type": "file",
+            "pointer": {"type": "file", "path": "src/auth.ts"},
+            "priority": "high",
+            "budget": 2000
+          }
+        ],
+        "response_text": "I've fixed the authentication issue in src/auth.ts by updating the token validation logic.",
+        "task_succeeded": true,
+        "duration_ms": 45000
+      },
+      "expectedOutput": {
+        "normalized_pattern": "fix the bug in {file0} line {num0}",
+        "quality_score": 1.0,
+        "quality_reasoning": "Success (0.6) + impulse used (0.4) = 1.0",
+        "record_created": true,
+        "record_fields": ["userIntent", "context", "impulses", "outcome", "metadata"]
+      }
+    },
+    "source": "validation harness"
   },
-  "budget": 1000,
-  "priority": "high",
+  "priority": "medium",
+  "budget": 1500,
   "metadata": {
-    "testCaseName": "Simple code fix with file path",
-    "specificationName": "impulse-learning-storage-complete",
-    "expectedPattern": "fix_bug_in_{file0}_line_{num0}",
-    "expectedQuality": 0.6,
-    "createdBy": "validation-harness-generator"
+    "specification": "impulse-learning-storage-complete",
+    "testType": "pattern_extraction",
+    "historical": true,
+    "noLLMRequired": true
   }
 }

@@ -1,594 +1,572 @@
-#!/usr/bin/env ts-node
 /**
  * Validation Harness: impulse-learning-storage-complete
  * 
- * Validates that impulse learning data storage infrastructure is complete:
- * 1. SurrealDB schema defines impulse_mapping_record table
- * 2. RPC API endpoint POST /api/v1/learning-loop/record-turn exists
- * 3. Pattern extraction logic normalizes file paths and numbers
- * 4. Quality calculation logic computes response quality score
- * 5. Usage tracking logic detects impulse content in responses
- * 6. End-to-end flow: HTTP POST → server processing → SurrealDB insert
+ * Tests the complete impulse learning storage flow:
+ * 1. POST /api/v1/learning-loop/record-turn with test data
+ * 2. Verify SurrealDB record creation
+ * 3. Validate pattern extraction logic
+ * 4. Verify quality calculation
+ * 5. Test duplicate detection (UPSERT)
+ * 6. Test connection retry resilience
  * 
- * Usage:
- *   npx ts-node impulse-learning-storage-complete-harness.ts
- *   
- * Returns:
- *   Exit code 0 if all checks pass
- *   Exit code 1 if any check fails
+ * This harness runs WITHOUT LLM - purely programmatic validation.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import fetch from "node-fetch"
+import { Surreal } from "surrealdb.js"
 
-// Get directory path - works for both CommonJS and ES modules
-const getProjectRoot = () => {
-  // Start from current working directory and traverse up
-  let currentDir = process.cwd();
-  while (currentDir !== '/') {
-    if (fs.existsSync(path.join(currentDir, 'repos', 'metabob-rpc-api'))) {
-      return currentDir;
-    }
-    currentDir = path.dirname(currentDir);
+// ============================================================================
+// Types
+// ============================================================================
+
+interface TurnLearningRequest {
+  session_id: string
+  turn_number: number
+  user_message: string
+  intent: {
+    type: string
+    confidence: number
+    reasoning?: string
+    suggestedImpulses?: any[]
   }
-  return process.cwd(); // Fallback to cwd
-};
-
-const projectRoot = getProjectRoot();
-
-interface ValidationResult {
-  pass: boolean;
-  checkName: string;
-  actual: any;
-  expected: any;
-  message: string;
-  evidence?: string;
+  impulses_created: Array<{
+    id: string
+    type: string
+    pointer: any
+    priority: string
+    budget: number
+  }>
+  response_text?: string
+  task_succeeded?: boolean
+  duration_ms?: number
 }
 
-interface HarnessResult {
-  specificationName: string;
-  overallPass: boolean;
-  checks: ValidationResult[];
-  summary: {
-    passed: number;
-    failed: number;
-    total: number;
-  };
+interface TurnLearningResponse {
+  success: boolean
+  record_id: string
+  normalized_pattern: string
+  quality_score: number
+}
+
+interface ValidationResult {
+  pass: boolean
+  testCase: string
+  actual: any
+  expected: any
+  error?: string
 }
 
 interface TestCase {
-  impulseId: string;
-  name: string;
-  input: {
-    session_id: string;
-    turn_number: number;
-    user_message: string;
-    intent: {
-      type: string;
-      confidence: number;
-    };
-    impulses_created: any[];
-    task_succeeded: boolean;
-    duration_ms: number;
-  };
-  expectedOutput: {
-    normalizedPattern: string;
-    qualityScore: number;
-    impulsesUsed: number;
-    recordCreated: boolean;
-  };
+  name: string
+  input: TurnLearningRequest
+  expectedPattern: string
+  expectedQuality: number
+  expectedRecordFields: string[]
 }
 
-/**
- * Test Case 1: Simple code fix with file path
- */
-const testCase1: TestCase = {
-  impulseId: 'validation-impulse-learning-storage-complete-case-1',
-  name: 'Simple code fix with file path',
-  input: {
-    session_id: 'test_session_001',
-    turn_number: 1,
-    user_message: 'Fix bug in src/auth.ts line 42',
-    intent: {
-      type: 'code_fix',
-      confidence: 0.9,
-    },
-    impulses_created: [
-      {
-        id: 'impulse_1',
-        type: 'file',
-        pointer: { type: 'file', path: 'src/auth.ts' },
-        priority: 'high',
-        budget: 2000,
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const RPC_API_URL = process.env.RPC_API_URL || "http://localhost:8001"
+const SURREALDB_URL = process.env.SURREALDB_URL || "http://localhost:8000"
+const SURREALDB_NAMESPACE = process.env.SURREALDB_NAMESPACE || "metabob"
+const SURREALDB_DATABASE = process.env.SURREALDB_DATABASE || "learning_loop"
+
+// ============================================================================
+// Test Cases
+// ============================================================================
+
+const TEST_CASES: TestCase[] = [
+  {
+    name: "case-1-simple-file-fix",
+    input: {
+      session_id: "test_session_001",
+      turn_number: 1,
+      user_message: "Fix the bug in src/auth.ts line 42",
+      intent: {
+        type: "code_fix",
+        confidence: 0.95,
+        reasoning: "User requests code fix with specific file and line number",
       },
+      impulses_created: [
+        {
+          id: "imp_file_auth",
+          type: "file",
+          pointer: { type: "file", path: "src/auth.ts" },
+          priority: "high",
+          budget: 2000,
+        },
+      ],
+      response_text: "I've fixed the authentication issue in src/auth.ts by updating the token validation logic.",
+      task_succeeded: true,
+      duration_ms: 45000,
+    },
+    expectedPattern: "fix the bug in {file0} line {num0}",
+    expectedQuality: 1.0, // Success + impulse used = 0.6 + 0.4
+    expectedRecordFields: [
+      "userIntent",
+      "context",
+      "impulses",
+      "outcome",
+      "metadata",
     ],
-    task_succeeded: true,
-    duration_ms: 5000,
   },
-  expectedOutput: {
-    normalizedPattern: 'fix_bug_in_{file0}_line_{num0}',
-    qualityScore: 0.6, // Base score for success, no impulse usage
-    impulsesUsed: 0,
-    recordCreated: true,
-  },
-};
-
-/**
- * Test Case 2: Feature request with multiple files
- */
-const testCase2: TestCase = {
-  impulseId: 'validation-impulse-learning-storage-complete-case-2',
-  name: 'Feature request with multiple files',
-  input: {
-    session_id: 'test_session_002',
-    turn_number: 1,
-    user_message: 'Add user authentication between src/routes.ts and src/middleware/auth.ts',
-    intent: {
-      type: 'feature_add',
-      confidence: 0.85,
+  {
+    name: "case-2-multiple-files",
+    input: {
+      session_id: "test_session_002",
+      turn_number: 1,
+      user_message: "Refactor src/utils/parser.ts and tests/parser.test.ts to use async/await",
+      intent: {
+        type: "refactor",
+        confidence: 0.88,
+      },
+      impulses_created: [
+        {
+          id: "imp_file_parser",
+          type: "file",
+          pointer: { type: "file", path: "src/utils/parser.ts" },
+          priority: "high",
+          budget: 3000,
+        },
+        {
+          id: "imp_file_test",
+          type: "file",
+          pointer: { type: "file", path: "tests/parser.test.ts" },
+          priority: "medium",
+          budget: 1500,
+        },
+      ],
+      response_text: "I've refactored both src/utils/parser.ts and tests/parser.test.ts to use async/await pattern.",
+      task_succeeded: true,
+      duration_ms: 120000,
     },
-    impulses_created: [
-      {
-        id: 'impulse_1',
-        type: 'file',
-        pointer: { type: 'file', path: 'src/routes.ts' },
-        priority: 'high',
-        budget: 3000,
-      },
-      {
-        id: 'impulse_2',
-        type: 'file',
-        pointer: { type: 'file', path: 'src/middleware/auth.ts' },
-        priority: 'high',
-        budget: 2000,
-      },
+    expectedPattern: "refactor {file0} and {file1} to use async/await",
+    expectedQuality: 1.0, // Success + impulses used
+    expectedRecordFields: [
+      "userIntent",
+      "context",
+      "impulses",
+      "outcome",
+      "metadata",
     ],
-    task_succeeded: true,
-    duration_ms: 8000,
   },
-  expectedOutput: {
-    normalizedPattern: 'add_user_authentication_between_{file0}_and_{file1}',
-    qualityScore: 0.6, // Base score, no usage
-    impulsesUsed: 0,
-    recordCreated: true,
-  },
-};
-
-/**
- * Test Case 3: Successful task with impulse usage
- */
-const testCase3: TestCase = {
-  impulseId: 'validation-impulse-learning-storage-complete-case-3',
-  name: 'Successful task with impulse usage',
-  input: {
-    session_id: 'test_session_003',
-    turn_number: 1,
-    user_message: 'Refactor database connection in src/db.ts',
-    intent: {
-      type: 'refactor',
-      confidence: 0.8,
+  {
+    name: "case-3-failed-task",
+    input: {
+      session_id: "test_session_003",
+      turn_number: 1,
+      user_message: "Add type annotations to database.py line 156",
+      intent: {
+        type: "code_fix",
+        confidence: 0.75,
+      },
+      impulses_created: [
+        {
+          id: "imp_file_db",
+          type: "file",
+          pointer: { type: "file", path: "database.py" },
+          priority: "medium",
+          budget: 1000,
+        },
+      ],
+      response_text: "I attempted to add type annotations but encountered issues with the existing code structure.",
+      task_succeeded: false,
+      duration_ms: 30000,
     },
-    impulses_created: [
-      {
-        id: 'impulse_1',
-        type: 'file',
-        pointer: { type: 'file', path: 'src/db.ts' },
-        priority: 'high',
-        budget: 3000,
-      },
-      {
-        id: 'impulse_2',
-        type: 'memo',
-        pointer: { type: 'memo', content: 'Use connection pooling for better performance' },
-        priority: 'medium',
-        budget: 1000,
-      },
+    expectedPattern: "add type annotations to {file0} line {num0}",
+    expectedQuality: 0.3, // Failure = 0.3 (no bonus)
+    expectedRecordFields: [
+      "userIntent",
+      "context",
+      "impulses",
+      "outcome",
+      "metadata",
     ],
-    task_succeeded: true,
-    duration_ms: 6000,
   },
-  expectedOutput: {
-    normalizedPattern: 'refactor_database_connection_in_{file0}',
-    qualityScore: 1.0, // 0.6 base + 0.4 full utilization (2/2 impulses used)
-    impulsesUsed: 2,
-    recordCreated: true,
+  {
+    name: "case-4-no-impulses-used",
+    input: {
+      session_id: "test_session_004",
+      turn_number: 1,
+      user_message: "Explain the authentication flow",
+      intent: {
+        type: "documentation",
+        confidence: 0.92,
+      },
+      impulses_created: [
+        {
+          id: "imp_file_auth",
+          type: "file",
+          pointer: { type: "file", path: "src/auth.ts" },
+          priority: "medium",
+          budget: 1500,
+        },
+      ],
+      response_text: "The authentication flow works by validating JWT tokens against the configured secret.",
+      task_succeeded: true,
+      duration_ms: 15000,
+    },
+    expectedPattern: "explain the authentication flow",
+    expectedQuality: 0.6, // Success but no impulse mentioned = 0.6 + 0.0
+    expectedRecordFields: [
+      "userIntent",
+      "context",
+      "impulses",
+      "outcome",
+      "metadata",
+    ],
   },
-};
-
-/**
- * Check if file exists
- */
-function fileExists(filePath: string): boolean {
-  return fs.existsSync(filePath);
-}
-
-/**
- * Check if file contains pattern
- */
-function fileContains(filePath: string, pattern: string | RegExp): boolean {
-  if (!fileExists(filePath)) {
-    return false;
-  }
-  
-  const content = fs.readFileSync(filePath, 'utf-8');
-  
-  if (typeof pattern === 'string') {
-    return content.includes(pattern);
-  } else {
-    return pattern.test(content);
-  }
-}
-
-/**
- * Check 1: SurrealDB schema defines impulse_mapping_record table
- */
-function checkSurrealDBSchema(): ValidationResult {
-  const schemaPath = path.join(
-    projectRoot,
-    'repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql'
-  );
-  
-  if (!fileExists(schemaPath)) {
-    return {
-      pass: false,
-      checkName: 'SurrealDB schema file exists',
-      actual: 'FILE NOT FOUND',
-      expected: 'activity_learning_loop.surql exists',
-      message: '❌ Schema file not found',
-    };
-  }
-  
-  const hasTable = fileContains(schemaPath, 'DEFINE TABLE impulse_mapping_record');
-  const hasUserIntent = fileContains(schemaPath, 'DEFINE FIELD userIntent');
-  const hasContext = fileContains(schemaPath, 'DEFINE FIELD context');
-  const hasImpulses = fileContains(schemaPath, 'DEFINE FIELD impulses');
-  const hasOutcome = fileContains(schemaPath, 'DEFINE FIELD outcome');
-  const hasMetadata = fileContains(schemaPath, 'DEFINE FIELD metadata');
-  
-  const pass = hasTable && hasUserIntent && hasContext && hasImpulses && hasOutcome && hasMetadata;
-  
-  return {
-    pass,
-    checkName: 'SurrealDB schema defines impulse_mapping_record',
-    actual: {
-      hasTable,
-      hasUserIntent,
-      hasContext,
-      hasImpulses,
-      hasOutcome,
-      hasMetadata,
+  {
+    name: "case-5-duplicate-detection",
+    input: {
+      session_id: "test_session_005",
+      turn_number: 1,
+      user_message: "Update config.json with new settings",
+      intent: {
+        type: "code_fix",
+        confidence: 0.85,
+      },
+      impulses_created: [
+        {
+          id: "imp_file_config",
+          type: "file",
+          pointer: { type: "file", path: "config.json" },
+          priority: "high",
+          budget: 800,
+        },
+      ],
+      response_text: "Updated config.json with the new database settings.",
+      task_succeeded: true,
+      duration_ms: 5000,
     },
-    expected: 'All fields defined: userIntent, context, impulses, outcome, metadata',
-    message: pass
-      ? '✅ impulse_mapping_record table fully defined in schema'
-      : '❌ Missing fields in impulse_mapping_record table definition',
-    evidence: pass ? 'DEFINE TABLE impulse_mapping_record found with all required fields' : 'Schema incomplete',
-  };
-}
+    expectedPattern: "update {file0} with new settings",
+    expectedQuality: 1.0,
+    expectedRecordFields: [
+      "userIntent",
+      "context",
+      "impulses",
+      "outcome",
+      "metadata",
+    ],
+  },
+]
 
-/**
- * Check 2: RPC API endpoint exists
- */
-function checkRpcApiEndpoint(): ValidationResult {
-  const routesPath = path.join(
-    projectRoot,
-    'repos/metabob-rpc-api/server/routes/learning_loop.py'
-  );
-  
-  if (!fileExists(routesPath)) {
-    return {
-      pass: false,
-      checkName: 'RPC API routes file exists',
-      actual: 'FILE NOT FOUND',
-      expected: 'learning_loop.py exists',
-      message: '❌ Routes file not found',
-    };
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+async function callRecordTurnAPI(
+  request: TurnLearningRequest
+): Promise<TurnLearningResponse> {
+  const url = `${RPC_API_URL}/api/v1/learning-loop/record-turn`
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `API call failed: ${response.status} ${response.statusText} - ${errorText}`
+    )
   }
-  
-  const hasEndpoint = fileContains(routesPath, /POST.*\/api\/v1\/learning-loop\/record-turn/);
-  const hasRecordTurnFunction = fileContains(routesPath, /async def record_turn/);
-  
-  const pass = hasEndpoint && hasRecordTurnFunction;
-  
-  return {
-    pass,
-    checkName: 'RPC API endpoint POST /api/v1/learning-loop/record-turn exists',
-    actual: {
-      hasEndpoint,
-      hasRecordTurnFunction,
-    },
-    expected: 'Endpoint defined with record_turn handler',
-    message: pass
-      ? '✅ POST /api/v1/learning-loop/record-turn endpoint exists'
-      : '❌ Endpoint not found or handler missing',
-    evidence: pass ? 'Endpoint found in learning_loop.py' : 'Endpoint not properly defined',
-  };
+
+  return (await response.json()) as TurnLearningResponse
 }
 
-/**
- * Check 3: Pattern extraction logic exists
- */
-function checkPatternExtraction(): ValidationResult {
-  const opsPath = path.join(
-    projectRoot,
-    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
-  );
-  
-  if (!fileExists(opsPath)) {
-    return {
-      pass: false,
-      checkName: 'Impulse learning operations file exists',
-      actual: 'FILE NOT FOUND',
-      expected: 'impulse_learning.py exists',
-      message: '❌ Operations file not found',
-    };
-  }
-  
-  const hasNormalizePattern = fileContains(opsPath, /def normalize_pattern/);
-  const hasFileReplacement = fileContains(opsPath, /\{file\d+\}/);
-  const hasNumberReplacement = fileContains(opsPath, /\{num\d+\}/);
-  
-  const pass = hasNormalizePattern && hasFileReplacement && hasNumberReplacement;
-  
-  return {
-    pass,
-    checkName: 'Pattern extraction logic (normalize_pattern)',
-    actual: {
-      hasNormalizePattern,
-      hasFileReplacement,
-      hasNumberReplacement,
-    },
-    expected: 'normalize_pattern function with {fileN} and {numN} placeholders',
-    message: pass
-      ? '✅ Pattern extraction logic exists with file and number normalization'
-      : '❌ Pattern extraction logic incomplete',
-    evidence: pass ? 'normalize_pattern() found with placeholder logic' : 'Function missing or incomplete',
-  };
-}
+async function queryRecordFromDB(
+  recordId: string
+): Promise<any> {
+  const db = new Surreal()
 
-/**
- * Check 4: Quality calculation logic exists
- */
-function checkQualityCalculation(): ValidationResult {
-  const opsPath = path.join(
-    projectRoot,
-    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
-  );
-  
-  if (!fileExists(opsPath)) {
-    return {
-      pass: false,
-      checkName: 'Impulse learning operations file exists',
-      actual: 'FILE NOT FOUND',
-      expected: 'impulse_learning.py exists',
-      message: '❌ Operations file not found',
-    };
-  }
-  
-  const hasCalculateQuality = fileContains(opsPath, /def calculate_quality/);
-  const hasBaseScore = fileContains(opsPath, /base_score.*0\.6/);
-  const hasUtilizationBonus = fileContains(opsPath, /utilization_bonus/);
-  
-  const pass = hasCalculateQuality && hasBaseScore && hasUtilizationBonus;
-  
-  return {
-    pass,
-    checkName: 'Quality calculation logic (calculate_quality)',
-    actual: {
-      hasCalculateQuality,
-      hasBaseScore,
-      hasUtilizationBonus,
-    },
-    expected: 'calculate_quality function with 0.6 base score + utilization bonus',
-    message: pass
-      ? '✅ Quality calculation logic exists with correct algorithm'
-      : '❌ Quality calculation logic incomplete',
-    evidence: pass ? 'calculate_quality() found with base_score + utilization' : 'Function missing or incomplete',
-  };
-}
+  try {
+    await db.connect(SURREALDB_URL)
+    await db.use({ namespace: SURREALDB_NAMESPACE, database: SURREALDB_DATABASE })
 
-/**
- * Check 5: Usage tracking logic exists
- */
-function checkUsageTracking(): ValidationResult {
-  const opsPath = path.join(
-    projectRoot,
-    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
-  );
-  
-  if (!fileExists(opsPath)) {
-    return {
-      pass: false,
-      checkName: 'Impulse learning operations file exists',
-      actual: 'FILE NOT FOUND',
-      expected: 'impulse_learning.py exists',
-      message: '❌ Operations file not found',
-    };
-  }
-  
-  const hasTrackUsage = fileContains(opsPath, /def track_usage/);
-  const hasFileDetection = fileContains(opsPath, /pointer.*type.*file/);
-  const hasMemoDetection = fileContains(opsPath, /pointer.*type.*memo/);
-  
-  const pass = hasTrackUsage && hasFileDetection && hasMemoDetection;
-  
-  return {
-    pass,
-    checkName: 'Usage tracking logic (track_usage)',
-    actual: {
-      hasTrackUsage,
-      hasFileDetection,
-      hasMemoDetection,
-    },
-    expected: 'track_usage function that detects file and memo pointers',
-    message: pass
-      ? '✅ Usage tracking logic exists with pointer type detection'
-      : '❌ Usage tracking logic incomplete',
-    evidence: pass ? 'track_usage() found with file/memo detection' : 'Function missing or incomplete',
-  };
-}
+    // Query by metadata.recordId
+    const result = await db.query(
+      "SELECT * FROM impulse_mapping_record WHERE metadata.recordId = $recordId",
+      { recordId }
+    )
 
-/**
- * Check 6: Insert mapping record orchestration exists
- */
-function checkInsertMappingRecord(): ValidationResult {
-  const opsPath = path.join(
-    projectRoot,
-    'repos/metabob-rpc-api/server/db/operations/impulse_learning.py'
-  );
-  
-  if (!fileExists(opsPath)) {
-    return {
-      pass: false,
-      checkName: 'Impulse learning operations file exists',
-      actual: 'FILE NOT FOUND',
-      expected: 'impulse_learning.py exists',
-      message: '❌ Operations file not found',
-    };
-  }
-  
-  const hasInsertFunction = fileContains(opsPath, /def insert_mapping_record/);
-  const callsNormalize = fileContains(opsPath, /normalize_pattern/);
-  const callsTrackUsage = fileContains(opsPath, /track_usage/);
-  const callsCalculateQuality = fileContains(opsPath, /calculate_quality/);
-  const callsDbCreate = fileContains(opsPath, /db\.create.*impulse_mapping_record/);
-  
-  const pass = hasInsertFunction && callsNormalize && callsTrackUsage && callsCalculateQuality && callsDbCreate;
-  
-  return {
-    pass,
-    checkName: 'Insert mapping record orchestration',
-    actual: {
-      hasInsertFunction,
-      callsNormalize,
-      callsTrackUsage,
-      callsCalculateQuality,
-      callsDbCreate,
-    },
-    expected: 'insert_mapping_record orchestrates: normalize → track_usage → calculate_quality → db.create',
-    message: pass
-      ? '✅ Complete learning pipeline orchestration exists'
-      : '❌ Pipeline orchestration incomplete',
-    evidence: pass ? 'insert_mapping_record() chains all learning algorithms' : 'Orchestration missing or incomplete',
-  };
-}
-
-/**
- * Check 7: Schema indexes for efficient queries
- */
-function checkSchemaIndexes(): ValidationResult {
-  const schemaPath = path.join(
-    projectRoot,
-    'repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql'
-  );
-  
-  if (!fileExists(schemaPath)) {
-    return {
-      pass: false,
-      checkName: 'Schema file exists',
-      actual: 'FILE NOT FOUND',
-      expected: 'activity_learning_loop.surql exists',
-      message: '❌ Schema file not found',
-    };
-  }
-  
-  const hasSessionIndex = fileContains(schemaPath, /idx_impulse_mapping_session/);
-  const hasPatternIndex = fileContains(schemaPath, /idx_impulse_mapping_pattern/);
-  const hasQualityIndex = fileContains(schemaPath, /idx_impulse_mapping_quality/);
-  const hasRecordIdIndex = fileContains(schemaPath, /idx_impulse_mapping_record_id/);
-  
-  const pass = hasSessionIndex && hasPatternIndex && hasQualityIndex && hasRecordIdIndex;
-  
-  return {
-    pass,
-    checkName: 'Schema indexes for efficient queries',
-    actual: {
-      hasSessionIndex,
-      hasPatternIndex,
-      hasQualityIndex,
-      hasRecordIdIndex,
-    },
-    expected: 'Indexes: session, pattern, quality, record_id',
-    message: pass
-      ? '✅ All required indexes defined in schema'
-      : '❌ Some indexes missing',
-    evidence: pass ? 'Found session, pattern, quality, record_id indexes' : 'Index definitions incomplete',
-  };
-}
-
-/**
- * Run all validation checks
- */
-export function runValidation(): HarnessResult {
-  const checks: ValidationResult[] = [
-    checkSurrealDBSchema(),
-    checkRpcApiEndpoint(),
-    checkPatternExtraction(),
-    checkQualityCalculation(),
-    checkUsageTracking(),
-    checkInsertMappingRecord(),
-    checkSchemaIndexes(),
-  ];
-  
-  const passed = checks.filter(c => c.pass).length;
-  const failed = checks.filter(c => !c.pass).length;
-  const overallPass = failed === 0;
-  
-  return {
-    specificationName: 'impulse-learning-storage-complete',
-    overallPass,
-    checks,
-    summary: {
-      passed,
-      failed,
-      total: checks.length,
-    },
-  };
-}
-
-/**
- * Main execution
- */
-function main() {
-  console.log('🔍 Validation Harness: impulse-learning-storage-complete\n');
-  
-  const result = runValidation();
-  
-  console.log('Checks:');
-  result.checks.forEach((check, index) => {
-    console.log(`\n${index + 1}. ${check.checkName}`);
-    console.log(`   ${check.message}`);
-    if (check.evidence) {
-      console.log(`   Evidence: ${check.evidence}`);
+    if (!result || result.length === 0 || result[0].length === 0) {
+      return null
     }
-    if (!check.pass) {
-      console.log(`   Expected: ${JSON.stringify(check.expected, null, 2)}`);
-      console.log(`   Actual: ${JSON.stringify(check.actual, null, 2)}`);
-    }
-  });
-  
-  console.log('\n' + '='.repeat(80));
-  console.log(`\n📊 Summary: ${result.summary.passed}/${result.summary.total} checks passed`);
-  
-  if (result.overallPass) {
-    console.log('\n✅ VALIDATION PASSED: impulse-learning-storage-complete is fully implemented\n');
-    return 0;
-  } else {
-    console.log('\n❌ VALIDATION FAILED: Some components are missing or incomplete\n');
-    console.log('Failed checks:');
-    result.checks
-      .filter(c => !c.pass)
-      .forEach(c => console.log(`  - ${c.checkName}`));
-    console.log('');
-    return 1;
+
+    return result[0][0]
+  } finally {
+    await db.close()
   }
 }
 
-// Execute if run directly
-main();
+function validatePatternExtraction(
+  actual: string,
+  expected: string
+): { pass: boolean; message: string } {
+  const normalized = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ")
 
-/**
- * Test Cases as Impulses
- * These can be stored as validation-impulse-learning-storage-complete-case-N
- */
-export const testCases: TestCase[] = [testCase1, testCase2, testCase3];
+  if (normalized(actual) === normalized(expected)) {
+    return { pass: true, message: "Pattern matches expected" }
+  }
+
+  return {
+    pass: false,
+    message: `Pattern mismatch:\n  Expected: "${expected}"\n  Actual:   "${actual}"`,
+  }
+}
+
+function validateQualityScore(
+  actual: number,
+  expected: number,
+  tolerance: number = 0.01
+): { pass: boolean; message: string } {
+  const diff = Math.abs(actual - expected)
+
+  if (diff <= tolerance) {
+    return { pass: true, message: `Quality score ${actual} matches expected ${expected}` }
+  }
+
+  return {
+    pass: false,
+    message: `Quality score mismatch:\n  Expected: ${expected}\n  Actual:   ${actual}\n  Diff:     ${diff}`,
+  }
+}
+
+function validateRecordStructure(
+  record: any,
+  expectedFields: string[]
+): { pass: boolean; message: string } {
+  const missingFields = expectedFields.filter((field) => !(field in record))
+
+  if (missingFields.length === 0) {
+    return { pass: true, message: "All expected fields present" }
+  }
+
+  return {
+    pass: false,
+    message: `Missing fields in record: ${missingFields.join(", ")}`,
+  }
+}
+
+// ============================================================================
+// Test Execution
+// ============================================================================
+
+async function runTestCase(testCase: TestCase): Promise<ValidationResult> {
+  try {
+    console.log(`\n[${testCase.name}] Running test case...`)
+
+    // Step 1: Call the API
+    console.log(`  → Calling POST /api/v1/learning-loop/record-turn`)
+    const apiResponse = await callRecordTurnAPI(testCase.input)
+    console.log(`  ✓ API responded: record_id=${apiResponse.record_id}`)
+
+    // Step 2: Validate pattern extraction
+    console.log(`  → Validating pattern extraction`)
+    const patternCheck = validatePatternExtraction(
+      apiResponse.normalized_pattern,
+      testCase.expectedPattern
+    )
+    if (!patternCheck.pass) {
+      return {
+        pass: false,
+        testCase: testCase.name,
+        actual: { pattern: apiResponse.normalized_pattern },
+        expected: { pattern: testCase.expectedPattern },
+        error: patternCheck.message,
+      }
+    }
+    console.log(`  ✓ Pattern extraction correct`)
+
+    // Step 3: Validate quality score
+    console.log(`  → Validating quality score`)
+    const qualityCheck = validateQualityScore(
+      apiResponse.quality_score,
+      testCase.expectedQuality
+    )
+    if (!qualityCheck.pass) {
+      return {
+        pass: false,
+        testCase: testCase.name,
+        actual: { quality_score: apiResponse.quality_score },
+        expected: { quality_score: testCase.expectedQuality },
+        error: qualityCheck.message,
+      }
+    }
+    console.log(`  ✓ Quality score correct`)
+
+    // Step 4: Query SurrealDB to verify record
+    console.log(`  → Querying SurrealDB for record`)
+    const dbRecord = await queryRecordFromDB(apiResponse.record_id)
+
+    if (!dbRecord) {
+      return {
+        pass: false,
+        testCase: testCase.name,
+        actual: { dbRecord: null },
+        expected: { dbRecord: "non-null" },
+        error: `Record not found in database: ${apiResponse.record_id}`,
+      }
+    }
+    console.log(`  ✓ Record found in database`)
+
+    // Step 5: Validate record structure
+    console.log(`  → Validating record structure`)
+    const structureCheck = validateRecordStructure(
+      dbRecord,
+      testCase.expectedRecordFields
+    )
+    if (!structureCheck.pass) {
+      return {
+        pass: false,
+        testCase: testCase.name,
+        actual: { recordFields: Object.keys(dbRecord) },
+        expected: { recordFields: testCase.expectedRecordFields },
+        error: structureCheck.message,
+      }
+    }
+    console.log(`  ✓ Record structure correct`)
+
+    // Step 6: Validate specific record fields
+    console.log(`  → Validating record field values`)
+    if (dbRecord.userIntent.rawText !== testCase.input.user_message) {
+      return {
+        pass: false,
+        testCase: testCase.name,
+        actual: { userIntent: dbRecord.userIntent },
+        expected: { rawText: testCase.input.user_message },
+        error: "userIntent.rawText mismatch",
+      }
+    }
+
+    if (dbRecord.context.activeSession !== testCase.input.session_id) {
+      return {
+        pass: false,
+        testCase: testCase.name,
+        actual: { context: dbRecord.context },
+        expected: { activeSession: testCase.input.session_id },
+        error: "context.activeSession mismatch",
+      }
+    }
+
+    if (dbRecord.outcome.taskSucceeded !== testCase.input.task_succeeded) {
+      return {
+        pass: false,
+        testCase: testCase.name,
+        actual: { outcome: dbRecord.outcome },
+        expected: { taskSucceeded: testCase.input.task_succeeded },
+        error: "outcome.taskSucceeded mismatch",
+      }
+    }
+
+    console.log(`  ✓ All field values correct`)
+
+    // Step 7: Test duplicate detection (UPSERT)
+    if (testCase.name === "case-5-duplicate-detection") {
+      console.log(`  → Testing UPSERT (duplicate detection)`)
+      const apiResponse2 = await callRecordTurnAPI(testCase.input)
+      if (apiResponse2.record_id !== apiResponse.record_id) {
+        return {
+          pass: false,
+          testCase: testCase.name,
+          actual: { recordId2: apiResponse2.record_id },
+          expected: { recordId2: apiResponse.record_id },
+          error: "UPSERT failed: different record IDs on duplicate submission",
+        }
+      }
+      console.log(`  ✓ UPSERT working (same record ID on duplicate)`)
+    }
+
+    console.log(`[${testCase.name}] ✅ PASS`)
+
+    return {
+      pass: true,
+      testCase: testCase.name,
+      actual: {
+        record_id: apiResponse.record_id,
+        pattern: apiResponse.normalized_pattern,
+        quality: apiResponse.quality_score,
+      },
+      expected: {
+        pattern: testCase.expectedPattern,
+        quality: testCase.expectedQuality,
+      },
+    }
+  } catch (error) {
+    console.log(`[${testCase.name}] ❌ FAIL`)
+    return {
+      pass: false,
+      testCase: testCase.name,
+      actual: {},
+      expected: {},
+      error:
+        error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+export async function runValidation(): Promise<{
+  overallPass: boolean
+  results: ValidationResult[]
+  summary: { total: number; passed: number; failed: number }
+}> {
+  console.log("=" .repeat(80))
+  console.log("Validation Harness: impulse-learning-storage-complete")
+  console.log("=" .repeat(80))
+  console.log(`RPC API URL: ${RPC_API_URL}`)
+  console.log(`SurrealDB URL: ${SURREALDB_URL}`)
+  console.log(`Test cases: ${TEST_CASES.length}`)
+
+  const results: ValidationResult[] = []
+
+  for (const testCase of TEST_CASES) {
+    const result = await runTestCase(testCase)
+    results.push(result)
+  }
+
+  const passed = results.filter((r) => r.pass).length
+  const failed = results.filter((r) => !r.pass).length
+
+  console.log("\n" + "=".repeat(80))
+  console.log("Summary")
+  console.log("=".repeat(80))
+  console.log(`Total:  ${TEST_CASES.length}`)
+  console.log(`Passed: ${passed}`)
+  console.log(`Failed: ${failed}`)
+
+  if (failed > 0) {
+    console.log("\nFailed test cases:")
+    results
+      .filter((r) => !r.pass)
+      .forEach((r) => {
+        console.log(`  - ${r.testCase}: ${r.error}`)
+      })
+  }
+
+  return {
+    overallPass: failed === 0,
+    results,
+    summary: { total: TEST_CASES.length, passed, failed },
+  }
+}
+
+// ============================================================================
+// CLI Entry Point
+// ============================================================================
+
+if (require.main === module) {
+  runValidation()
+    .then((result) => {
+      process.exit(result.overallPass ? 0 : 1)
+    })
+    .catch((error) => {
+      console.error("Validation harness error:", error)
+      process.exit(1)
+    })
+}

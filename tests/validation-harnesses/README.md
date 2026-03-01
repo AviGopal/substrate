@@ -1,107 +1,152 @@
 # Validation Harnesses
 
-This directory contains validation harnesses for architectural specifications.
+This directory contains validation harnesses for testing specifications without LLM involvement. Each harness is a standalone script that can be run to verify implementation correctness.
 
-## Purpose
+## impulse-learning-storage-complete
 
-Validation harnesses are **deterministic, LLM-free tests** that verify architectural boundaries and specifications. They:
-- Load application/component code
-- Perform static or dynamic analysis
-- Return PASS/FAIL based on objective criteria
-- Can be run repeatedly without LLM invocation
+**File**: `impulse-learning-storage-complete-harness.ts`
 
-## Structure
+### Purpose
 
-Each harness follows this pattern:
+Validates the complete impulse learning storage infrastructure:
+- POST /api/v1/learning-loop/record-turn endpoint
+- Pattern extraction logic (file paths, line numbers)
+- Quality calculation (success/failure, impulse usage)
+- SurrealDB record creation and structure
+- Duplicate detection (UPSERT behavior)
 
-```
-<spec-name>-harness.ts
-  ├── ValidationCase interface (input + expectedOutput)
-  ├── ValidationResult interface (pass/fail + actual vs expected)
-  ├── runValidation(testCase) => ValidationResult
-  └── CLI execution (if run directly)
-```
+### Prerequisites
 
-## Available Harnesses
+1. **RPC API running**: 
+   ```bash
+   cd repos/metabob-rpc-api
+   python -m uvicorn server.main:app --host 0.0.0.0 --port 8001
+   ```
 
-### metrics-calculation-in-rpc-api-only-harness.ts
+2. **SurrealDB running**:
+   ```bash
+   surreal start --bind 0.0.0.0:8000 --user root --pass root memory
+   ```
 
-**Specification:** Metrics calculations must exist ONLY in metabob-rpc-api, not in metabob-opencode.
+3. **Environment variables** (optional):
+   ```bash
+   export RPC_API_URL=http://localhost:8001
+   export SURREALDB_URL=http://localhost:8000
+   export SURREALDB_NAMESPACE=metabob
+   export SURREALDB_DATABASE=learning_loop
+   ```
 
-**Validation Strategy:** Static analysis of `template-metrics-client.ts` to verify:
-- No calculation logic (arithmetic operations: `/`, `*`, `Math.*`)
-- No Redis writes (`redis.set`, `redis.hset`)
-- No JSON file writes
-- Only contains client code (MCP calls, logging, error handling)
+### Running the Harness
 
-**Run:**
 ```bash
-npx tsx tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts
+# Install dependencies
+npm install node-fetch surrealdb.js
+
+# Run validation
+ts-node tests/validation-harnesses/impulse-learning-storage-complete-harness.ts
 ```
 
-**Expected Output:**
+### Test Cases
+
+1. **case-1-simple-file-fix**: Basic file path and line number extraction
+   - Input: "Fix the bug in src/auth.ts line 42"
+   - Expected pattern: "fix the bug in {file0} line {num0}"
+   - Expected quality: 1.0 (success + impulse used)
+
+2. **case-2-multiple-files**: Multiple file path extraction
+   - Input: "Refactor src/utils/parser.ts and tests/parser.test.ts to use async/await"
+   - Expected pattern: "refactor {file0} and {file1} to use async/await"
+   - Expected quality: 1.0
+
+3. **case-3-failed-task**: Quality calculation for failed tasks
+   - Input: "Add type annotations to database.py line 156"
+   - Expected quality: 0.3 (failure base score, no bonus)
+
+4. **case-4-no-impulses-used**: Quality when impulses not mentioned in response
+   - Input: "Explain the authentication flow"
+   - Expected quality: 0.6 (success, but no impulse usage detected)
+
+5. **case-5-duplicate-detection**: UPSERT prevents duplicates
+   - Input: "Update config.json with new settings"
+   - Behavior: Submit twice, verify same record_id returned
+
+### Expected Output
+
 ```
-Test Case 1: template-metrics-client.ts has no calculations
-✅ PASS - File is a thin HTTP client with no calculations
+================================================================================
+Validation Harness: impulse-learning-storage-complete
+================================================================================
+RPC API URL: http://localhost:8001
+SurrealDB URL: http://localhost:8000
+Test cases: 5
 
-Total: 1 | Passed: 1 | Failed: 0
+[case-1-simple-file-fix] Running test case...
+  → Calling POST /api/v1/learning-loop/record-turn
+  ✓ API responded: record_id=test_session_001_turn_1
+  → Validating pattern extraction
+  ✓ Pattern extraction correct
+  → Validating quality score
+  ✓ Quality score correct
+  → Querying SurrealDB for record
+  ✓ Record found in database
+  → Validating record structure
+  ✓ Record structure correct
+  → Validating record field values
+  ✓ All field values correct
+[case-1-simple-file-fix] ✅ PASS
+
+... (4 more test cases)
+
+================================================================================
+Summary
+================================================================================
+Total:  5
+Passed: 5
+Failed: 0
 ```
 
-## Adding New Harnesses
+### Exit Codes
 
-1. **Create harness file:** `<spec-name>-harness.ts`
-2. **Define test cases:** Input + expected output
-3. **Implement validation logic:** Static or runtime analysis
-4. **Add CLI execution:** For standalone testing
-5. **Document in this README**
+- **0**: All tests passed
+- **1**: One or more tests failed
 
-## Integration with Trace-Enforce-Validate Loop
+### Related Impulses
 
-Harnesses are created during the **VALIDATE** phase of the trace-enforce-validate loop:
+- **Harness**: `harness-impulse-learning-storage-complete`
+- **Test cases**: `validation-impulse-learning-storage-complete-case-{1-5}`
+- **Trace**: `trace-impulse-learning-storage-complete`
+- **Enforcement**: `enforcement-impulse-learning-storage-complete`
 
-1. **TRACE:** Understand current implementation → create trace impulse
-2. **ENFORCE:** Apply changes to close gaps → create enforcement impulse
-3. **VALIDATE:** Create harness to verify spec → create harness impulse
+### Troubleshooting
 
-Harnesses persist as regression tests - they can be run anytime to verify the specification remains enforced.
-
-## Impulse Integration
-
-Each harness is stored as an impulse for cross-agent access:
-
-```typescript
-impulse_create({
-  id: "harness-<spec-name>",
-  type: "file",
-  pointer: {
-    type: "file",
-    path: "tests/validation-harnesses/<spec-name>-harness.ts"
-  },
-  budget: 2000
-})
+**API not reachable**:
 ```
-
-Test cases are also stored as impulses:
-
-```typescript
-impulse_create({
-  id: "validation-<spec-name>-case-1",
-  type: "memo",
-  pointer: {
-    type: "memo",
-    content: {
-      input: {...},
-      expectedOutput: {...}
-    }
-  },
-  budget: 500
-})
+Error: API call failed: 500 Internal Server Error
 ```
+- Check RPC API is running on port 8001
+- Verify SurrealDB is accessible
 
-## Benefits
+**Database connection failed**:
+```
+Error: Record not found in database
+```
+- Check SurrealDB is running on port 8000
+- Verify namespace/database names match
 
-- ✅ **Deterministic:** Same input always produces same output
-- ✅ **Fast:** No LLM invocation, runs in milliseconds
-- ✅ **Regression-safe:** Can be run in CI/CD to prevent regressions
-- ✅ **Historical:** Test cases are frozen snapshots of expected behavior
-- ✅ **Cross-agent:** Impulses allow agents to share validation logic
+**Pattern mismatch**:
+```
+Pattern mismatch:
+  Expected: "fix the bug in {file0} line {num0}"
+  Actual:   "fix the bug in src/auth.ts line 42"
+```
+- Pattern extraction logic not working correctly
+- Check `normalize_pattern()` in `impulse_learning.py`
+
+**Quality score mismatch**:
+```
+Quality score mismatch:
+  Expected: 1.0
+  Actual:   0.6
+```
+- Usage tracking not detecting impulse in response
+- Check `track_usage()` in `impulse_learning.py`

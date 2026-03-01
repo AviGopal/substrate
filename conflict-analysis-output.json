@@ -1,135 +1,148 @@
 {
-  "specificationName": "Instance-Invariant Storage for Impulses and Activities",
+  "specificationName": "impulse-learning-storage-complete",
   "otherSpecifications": [
-    "devbob-acp-multi-vessel-coordination",
-    "devbob-k8s-git-operations",
-    "ci-cd-pre-push-quality-gates",
-    "local-docker-k8s-deployment"
+    "impulse-learning-in-rpc-api-only",
+    "metrics-calculation-in-rpc-api-only",
+    "surrealdb-primary-redis-cache"
   ],
   "conflicts": [],
   "sharedComponents": [
     {
-      "component": "repos/metabob-opencode/packages/opencode/src/tool/",
+      "component": "impulse-learning.ts",
       "affectedBySpecs": [
-        "Instance-Invariant Storage (impulse-create.ts)",
-        "ACP Multi-Vessel Coordination (acp-delegate.ts)"
+        "impulse-learning-storage-complete",
+        "impulse-learning-in-rpc-api-only"
       ],
-      "conflictType": "NONE",
-      "recommendation": "No action needed - different files in same directory"
+      "recommendation": "No changes needed - composite key is internal implementation",
+      "conflictType": "NONE"
     },
     {
-      "component": "SurrealDB",
+      "component": "metabob.ts (MetabobCLI.recordTurnLearning)",
       "affectedBySpecs": [
-        "Instance-Invariant Storage (impulses, activities tables)",
-        "ACP Multi-Vessel Coordination (vessel_registry table)"
+        "impulse-learning-storage-complete",
+        "impulse-learning-in-rpc-api-only"
       ],
-      "conflictType": "NONE",
-      "recommendation": "Deploy schema updates together - different tables, no conflict"
+      "recommendation": "No changes needed - timeout doesn't violate architectural boundary",
+      "conflictType": "NONE"
+    },
+    {
+      "component": "impulse_learning.py",
+      "affectedBySpecs": [
+        "impulse-learning-storage-complete",
+        "impulse-learning-in-rpc-api-only",
+        "surrealdb-primary-redis-cache"
+      ],
+      "recommendation": "No changes needed - UPSERT aligns with SurrealDB-primary pattern",
+      "conflictType": "NONE"
+    },
+    {
+      "component": "surrealdb_client.py",
+      "affectedBySpecs": [
+        "impulse-learning-storage-complete",
+        "surrealdb-primary-redis-cache",
+        "ALL SurrealDB consumers"
+      ],
+      "recommendation": "Retry logic improves reliability for all consumers - deploy as-is",
+      "conflictType": "NONE"
+    },
+    {
+      "component": "turn-lifecycle-hooks.ts",
+      "affectedBySpecs": [
+        "impulse-learning-storage-complete"
+      ],
+      "recommendation": "Internal change only - no external impact",
+      "conflictType": "NONE"
+    },
+    {
+      "component": "memory-agent.ts",
+      "affectedBySpecs": [
+        "impulse-learning-storage-complete"
+      ],
+      "recommendation": "Internal change only - no external impact",
+      "conflictType": "NONE"
     }
   ],
-  "deploymentDependencies": [
+  "overlappingRequirements": [
     {
-      "dependency": "Backend /v2/activities endpoints",
-      "requiredBy": "Instance-Invariant Storage",
-      "priority": "HIGH",
-      "status": "PENDING"
-    },
-    {
-      "dependency": "SurrealDB schema updates",
-      "requiredBy": [
-        "Instance-Invariant Storage (activities table)",
-        "ACP Multi-Vessel Coordination (vessel_registry table)"
-      ],
-      "priority": "HIGH",
-      "status": "PENDING"
-    },
-    {
-      "dependency": "Docker image rebuild with gh CLI",
-      "requiredBy": "K8s Git Operations",
-      "priority": "MEDIUM",
-      "status": "PENDING"
-    }
-  ],
-  "architecturalAlignment": {
-    "vesselFlowPrinciple": {
-      "status": "ALIGNED",
+      "requirement": "Server-Side Processing",
       "specifications": [
-        {
-          "spec": "Instance-Invariant Storage",
-          "enforcement": "opencode → CLI MCP → rpc-api",
-          "validation": "PASS"
-        },
-        {
-          "spec": "ACP Multi-Vessel Coordination",
-          "enforcement": "opencode → docker exec → ACP server",
-          "validation": "PARTIAL_PASS"
-        }
+        "impulse-learning-in-rpc-api-only",
+        "impulse-learning-storage-complete",
+        "metrics-calculation-in-rpc-api-only"
       ],
-      "analysis": "Both specs respect vessel boundaries and prevent direct API calls"
-    }
-  },
-  "riskAssessment": {
-    "overallRisk": "LOW",
-    "conflictRisk": "NONE",
-    "deploymentRisk": "MINOR",
-    "testingRisk": "LOW",
-    "integrationRisk": "LOW",
-    "details": {
-      "conflictsDetected": 0,
-      "overlappingCodeChanges": 0,
-      "contradictoryRequirements": 0,
-      "deploymentSequenceRequired": true
-    }
-  },
-  "recommendations": [
-    {
-      "priority": "HIGH",
-      "action": "Proceed with all specifications",
-      "reason": "No conflicts detected - all specs are compatible"
+      "alignment": "PERFECT",
+      "details": "All specifications enforce same architectural boundary - client collects, server processes",
+      "synergy": true
     },
     {
-      "priority": "HIGH",
-      "action": "Follow recommended deployment order",
-      "sequence": [
-        "1. Backend /v2/activities endpoints",
-        "2. SurrealDB schema updates (both specs)",
-        "3. Fix SurrealDB query API (test harness)",
-        "4. Deploy CLI with new tools",
-        "5. Rebuild Docker image with gh CLI",
-        "6. Redeploy all services"
-      ]
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Run integration testing after deployment",
-      "tests": [
-        "Instance-Invariant Storage tests 2-5 (cross-instance)",
-        "ACP Coordination test 2 (vessel registry)",
-        "K8s Git Operations tests (gh CLI)"
-      ]
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Monitor key metrics",
-      "metrics": [
-        "Backend sync success rate",
-        "Vessel registry queries",
-        "Git operations in pods"
-      ]
+      "requirement": "SurrealDB as Primary Store",
+      "specifications": [
+        "surrealdb-primary-redis-cache",
+        "impulse-learning-storage-complete"
+      ],
+      "alignment": "PERFECT",
+      "details": "Impulse learning writes directly to SurrealDB with UPSERT, no Redis involvement",
+      "synergy": true
     }
   ],
-  "conflictImpulseId": "conflict-analysis-Instance-Invariant Storage for Impulses and Activities",
-  "summary": {
+  "dependencyGraph": {
+    "hierarchy": [
+      "impulse-learning-in-rpc-api-only (architectural boundary)",
+      "impulse-learning-storage-complete (implements boundary)",
+      "surrealdb-primary-redis-cache (infrastructure)",
+      "surrealdb_client.py (with retry logic)"
+    ],
+    "circularDependencies": false,
+    "changeFlow": "downward (infrastructure → storage → boundary)"
+  },
+  "validationCrossCheck": {
+    "impulse-learning-storage-complete": {
+      "status": "PARTIAL",
+      "tests": "5/5 code review",
+      "blocksOthers": false
+    },
+    "impulse-learning-in-rpc-api-only": {
+      "status": "PASS",
+      "tests": "8/8",
+      "blocksOthers": false
+    },
+    "metrics-calculation-in-rpc-api-only": {
+      "status": "PASS",
+      "tests": "6/6",
+      "blocksOthers": false
+    },
+    "surrealdb-primary-redis-cache": {
+      "status": "PARTIAL",
+      "tests": "5/6 (exec recording)",
+      "blocksOthers": false
+    }
+  },
+  "overallAssessment": {
+    "compatibility": "FULLY_COMPATIBLE",
     "conflictsDetected": 0,
-    "sharedComponentsAnalyzed": 2,
-    "otherSpecsAnalyzed": 4,
-    "deploymentDependencies": 3,
-    "recommendedAction": "PROCEED_WITH_ALL_SPECS",
-    "blockers": "NONE",
-    "nonBlockers": [
-      "Backend endpoints (Instance-Invariant Storage)",
-      "SurrealDB query API fix (ACP Coordination test)",
-      "Docker image rebuild (K8s Git Ops)"
-    ]
-  }
+    "deploymentBlocked": false,
+    "recommendation": "APPROVE FOR DEPLOYMENT",
+    "reasoning": "All specifications align architecturally. No contradictory requirements. All changes are additive and improve reliability."
+  },
+  "actionItems": [
+    {
+      "priority": "IMMEDIATE",
+      "action": "Deploy impulse-learning-storage-complete",
+      "blocked": false,
+      "reason": "No conflicts detected, code quality excellent"
+    },
+    {
+      "priority": "SHORT_TERM",
+      "action": "Configure SurrealDB permissions",
+      "blocked": false,
+      "reason": "Required for E2E testing, not deployment"
+    },
+    {
+      "priority": "ONGOING",
+      "action": "Run validation harnesses in CI/CD",
+      "blocked": false,
+      "reason": "Prevent future architectural violations"
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-impulse-learning-storage-complete"
 }

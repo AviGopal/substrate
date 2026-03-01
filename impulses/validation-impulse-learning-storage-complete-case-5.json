@@ -1,0 +1,46 @@
+{
+  "id": "validation-impulse-learning-storage-complete-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "case-5-duplicate-detection",
+      "description": "Tests UPSERT logic to prevent duplicate records",
+      "input": {
+        "session_id": "test_session_005",
+        "turn_number": 1,
+        "user_message": "Update config.json with new settings",
+        "intent": {
+          "type": "code_fix",
+          "confidence": 0.85
+        },
+        "impulses_created": [
+          {
+            "id": "imp_file_config",
+            "type": "file",
+            "pointer": {"type": "file", "path": "config.json"},
+            "priority": "high",
+            "budget": 800
+          }
+        ],
+        "response_text": "Updated config.json with the new database settings.",
+        "task_succeeded": true,
+        "duration_ms": 5000
+      },
+      "expectedOutput": {
+        "normalized_pattern": "update {file0} with new settings",
+        "quality_score": 1.0,
+        "upsert_behavior": "Submitting same data twice should return same record_id"
+      }
+    },
+    "source": "validation harness"
+  },
+  "priority": "high",
+  "budget": 1500,
+  "metadata": {
+    "specification": "impulse-learning-storage-complete",
+    "testType": "duplicate_detection",
+    "historical": true,
+    "noLLMRequired": true
+  }
+}

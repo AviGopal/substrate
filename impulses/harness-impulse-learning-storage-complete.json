@@ -3,32 +3,24 @@
   "type": "file",
   "pointer": {
     "type": "file",
-    "path": "tests/validation-harnesses/impulse-learning-storage-complete-harness.ts",
-    "source": "validation-harness"
+    "path": "tests/validation-harnesses/impulse-learning-storage-complete-harness.ts"
   },
-  "budget": 2000,
   "priority": "high",
+  "budget": 2000,
   "metadata": {
-    "specificationName": "impulse-learning-storage-complete",
-    "harnessType": "static-verification",
-    "testCaseCount": 3,
-    "validationStrategy": "File existence and pattern matching checks",
-    "executionTime": "~1 second",
-    "dependencies": [],
-    "lastRun": "2026-02-28T00:00:00Z",
-    "lastRunStatus": "PASSED",
-    "checksPerformed": [
-      "SurrealDB schema defines impulse_mapping_record",
-      "RPC API endpoint POST /api/v1/learning-loop/record-turn exists",
-      "Pattern extraction logic (normalize_pattern)",
-      "Quality calculation logic (calculate_quality)",
-      "Usage tracking logic (track_usage)",
-      "Insert mapping record orchestration",
-      "Schema indexes for efficient queries"
+    "specification": "impulse-learning-storage-complete",
+    "purpose": "Validation harness for impulse learning storage infrastructure",
+    "testCases": 5,
+    "testCoverage": [
+      "Pattern extraction (file paths, line numbers)",
+      "Quality calculation (success/failure, impulse usage)",
+      "SurrealDB record creation",
+      "Record structure validation",
+      "Duplicate detection (UPSERT)",
+      "Multiple file pattern extraction"
     ],
-    "checksPassedCount": 7,
-    "checksFailedCount": 0,
-    "overallStatus": "PASS",
-    "createdBy": "validation-harness-generator"
+    "noLLMRequired": true,
+    "historical": true,
+    "usage": "Run with: ts-node tests/validation-harnesses/impulse-learning-storage-complete-harness.ts"
   }
 }

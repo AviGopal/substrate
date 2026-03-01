@@ -3,17 +3,44 @@
   "type": "memo",
   "pointer": {
     "type": "memo",
-    "content": "# Test Case 3: Successful task with impulse usage\n\n## Input\n\n```json\n{\n  \"session_id\": \"test_session_003\",\n  \"turn_number\": 1,\n  \"user_message\": \"Refactor database connection in src/db.ts\",\n  \"intent\": {\n    \"type\": \"refactor\",\n    \"confidence\": 0.8\n  },\n  \"impulses_created\": [\n    {\n      \"id\": \"impulse_1\",\n      \"type\": \"file\",\n      \"pointer\": { \"type\": \"file\", \"path\": \"src/db.ts\" },\n      \"priority\": \"high\",\n      \"budget\": 3000\n    },\n    {\n      \"id\": \"impulse_2\",\n      \"type\": \"memo\",\n      \"pointer\": { \"type\": \"memo\", \"content\": \"Use connection pooling for better performance\" },\n      \"priority\": \"medium\",\n      \"budget\": 1000\n    }\n  ],\n  \"response_text\": \"I've refactored the database connection in src/db.ts. The new implementation uses connection pooling for better performance as suggested.\",\n  \"task_succeeded\": true,\n  \"duration_ms\": 6000\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"normalizedPattern\": \"refactor_database_connection_in_{file0}\",\n  \"qualityScore\": 1.0,\n  \"impulsesUsed\": 2,\n  \"recordCreated\": true\n}\n```\n\n## Explanation\n\n- **normalizedPattern**: File path \"src/db.ts\" replaced with {file0}\n- **qualityScore**: 1.0 (0.6 base + 0.4 full utilization bonus for using 2/2 impulses)\n- **impulsesUsed**: 2 (both impulses detected in response_text)\n  - impulse_1: \"src/db.ts\" appears in response\n  - impulse_2: \"connection pooling\" appears in response\n- **recordCreated**: true (record successfully stored in SurrealDB)\n\n## Validation Logic\n\n1. POST to /api/v1/learning-loop/record-turn with input including response_text\n2. Verify response contains normalized_pattern matching expected\n3. Verify response contains quality_score = 1.0\n4. Query SurrealDB to confirm record was created\n5. Verify record.outcome.impulsesUsedCount = 2\n6. Verify track_usage heuristic detected both file path and memo content\n7. Verify quality calculation includes utilization bonus\n",
-    "source": "validation-test-case"
+    "content": {
+      "testCase": "case-3-failed-task",
+      "description": "Tests quality calculation for failed tasks",
+      "input": {
+        "session_id": "test_session_003",
+        "turn_number": 1,
+        "user_message": "Add type annotations to database.py line 156",
+        "intent": {
+          "type": "code_fix",
+          "confidence": 0.75
+        },
+        "impulses_created": [
+          {
+            "id": "imp_file_db",
+            "type": "file",
+            "pointer": {"type": "file", "path": "database.py"},
+            "priority": "medium",
+            "budget": 1000
+          }
+        ],
+        "response_text": "I attempted to add type annotations but encountered issues with the existing code structure.",
+        "task_succeeded": false,
+        "duration_ms": 30000
+      },
+      "expectedOutput": {
+        "normalized_pattern": "add type annotations to {file0} line {num0}",
+        "quality_score": 0.3,
+        "quality_reasoning": "Failure base score = 0.3, no bonus for impulse usage"
+      }
+    },
+    "source": "validation harness"
   },
-  "budget": 1000,
-  "priority": "high",
+  "priority": "medium",
+  "budget": 1500,
   "metadata": {
-    "testCaseName": "Successful task with impulse usage",
-    "specificationName": "impulse-learning-storage-complete",
-    "expectedPattern": "refactor_database_connection_in_{file0}",
-    "expectedQuality": 1.0,
-    "expectedImpulsesUsed": 2,
-    "createdBy": "validation-harness-generator"
+    "specification": "impulse-learning-storage-complete",
+    "testType": "failed_task_quality",
+    "historical": true,
+    "noLLMRequired": true
   }
 }
