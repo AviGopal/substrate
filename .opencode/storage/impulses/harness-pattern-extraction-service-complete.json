@@ -1,0 +1,19 @@
+{
+  "id": "harness-pattern-extraction-service-complete",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/pattern-extraction-service-complete-harness.ts",
+    "source": "validation-harness"
+  },
+  "priority": "high",
+  "budget": 2000,
+  "metadata": {
+    "createdBy": "validate-agent",
+    "specification": "pattern-extraction-service-complete",
+    "harnessFile": "tests/validation-harnesses/pattern-extraction-service-complete-harness.ts",
+    "testCasesCount": 8,
+    "description": "Validation harness for pattern extraction service - tests file path extraction, component detection, pattern identification, and complexity calculation",
+    "createdAt": "2026-03-01T00:30:54.043Z"
+  }
+}

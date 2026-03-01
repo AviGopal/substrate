@@ -1,0 +1,18 @@
+{
+  "id": "validation-pattern-extraction-service-complete-case-8",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"description\": \"Extract method calls and class.method patterns\",\n  \"input\": {\n    \"messages\": [\n      \"Called User.save() to persist changes\",\n      \"Invoked auth.login() for authentication\",\n      \"Updated Database.connect method implementation\",\n      \"Fixed SessionManager.cleanup() memory leak\"\n    ]\n  },\n  \"expectedOutput\": {\n    \"file_paths\": [],\n    \"components_modified\": [\n      \"Database.connect\",\n      \"SessionManager.cleanup\",\n      \"User.save\",\n      \"auth.login\"\n    ],\n    \"common_patterns\": [\n      \"fix_bug\"\n    ],\n    \"complexity_indicators\": {\n      \"files_touched_count\": 0,\n      \"estimated_lines_changed\": 18,\n      \"refactoring_depth\": \"simple\",\n      \"task_type\": \"fix\",\n      \"components_modified_count\": 4\n    }\n  }\n}",
+    "source": "validation-test-case"
+  },
+  "priority": "medium",
+  "budget": 500,
+  "metadata": {
+    "createdBy": "validate-agent",
+    "specification": "pattern-extraction-service-complete",
+    "testCase": "validation-pattern-extraction-service-complete-case-8",
+    "description": "Extract method calls and class.method patterns",
+    "createdAt": "2026-03-01T00:30:45.502Z"
+  }
+}
