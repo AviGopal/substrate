@@ -1,0 +1,17 @@
+{
+  "id": "validation-surrealdb-official-library-integration-case-1",
+  "type": "memo",
+  "title": "Validation Case 1: Official surrealdb-py library installed",
+  "description": "Test that surrealdb-py package can be imported and has version >= 1.0.0",
+  "content": {
+    "input": {
+      "command": "python -c 'import surrealdb; print(surrealdb.__version__)'"
+    },
+    "expectedOutput": {
+      "minVersion": "1.0.0",
+      "importable": true,
+      "description": "surrealdb-py package installed and importable"
+    },
+    "validationLogic": "Run import command, verify no ImportError, check version string format"
+  }
+}

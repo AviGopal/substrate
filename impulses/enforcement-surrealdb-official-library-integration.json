@@ -1,0 +1,272 @@
+{
+  "id": "enforcement-surrealdb-official-library-integration",
+  "type": "memo",
+  "title": "SurrealDB Official Library Integration - Enforcement Summary",
+  "description": "Summary of enforcement actions taken to replace custom HTTP client with official surrealdb-py library. Phase 1 complete (client rewrite), Phase 2 in progress (async conversion), Phases 3-4 pending (deployment + validation).",
+  "content": {
+    "specification": "SurrealDB Official Library Integration",
+    "enforcementStatus": "PARTIALLY_COMPLETE - 40% done",
+    "completedPhases": [
+      {
+        "phase": 1,
+        "name": "Replace custom client with official library",
+        "status": "COMPLETE",
+        "changes": [
+          {
+            "file": "repos/metabob-rpc-api/requirements.txt",
+            "lines": "104-107",
+            "before": "# surrealdb==1.0.8 (commented out due to auth bugs)",
+            "after": "surrealdb>=1.0.0 (uncommented, compatible with v3.0+)",
+            "reason": "Enable official library to fix parameter serialization bugs"
+          },
+          {
+            "file": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+            "lines": "1-481",
+            "before": "Custom HTTP RPC client using requests.Session(), sync operations, manual JSON serialization with bugs",
+            "after": "Async wrapper around official surrealdb.Surreal with AsyncHttpSurrealConnection, proper parameter binding, RecordID handling",
+            "reason": "Fix variant_id/activity_id serialization bugs. Official library handles parameters correctly.",
+            "keyChanges": [
+              "Replaced SurrealDBHTTPClient with AsyncSurrealDBClient",
+              "Changed get_surreal_client() to async function",
+              "Replaced update() full replacement with merge() partial update",
+              "Added proper async connection management",
+              "Removed manual JSON serialization (source of bugs)"
+            ],
+            "backupLocation": "repos/metabob-rpc-api/server/db/surrealdb_client_legacy.py"
+          }
+        ]
+      },
+      {
+        "phase": 2,
+        "name": "Fix update operations to use merge()",
+        "status": "IN_PROGRESS - 30% done",
+        "changes": [
+          {
+            "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+            "component": "get_metrics",
+            "lines": "19-48",
+            "changeMade": "Made function async, added await to get_surreal_client() and db.query()",
+            "reason": "Support async database operations",
+            "status": "COMPLETE"
+          },
+          {
+            "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+            "component": "create_metrics",
+            "lines": "46-149",
+            "changeMade": "Made function async, added await to get_surreal_client() and db.query()",
+            "reason": "Support async database operations",
+            "status": "COMPLETE"
+          },
+          {
+            "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+            "component": "update_metrics_after_execution",
+            "lines": "151-276",
+            "changeMade": "Made function async, changed db.update() to db.merge(), removed workaround lines 244-246 that explicitly preserved variant_id/activity_id",
+            "reason": "CRITICAL FIX - merge() preserves immutable fields automatically. This fixes the root cause bug.",
+            "keyChanges": [
+              "Line 273: db.update() → await db.merge()",
+              "Removed lines 244-246: variant_id/activity_id preservation workaround",
+              "Added awaits to get_metrics() and create_metrics() calls"
+            ],
+            "status": "COMPLETE"
+          }
+        ],
+        "remainingWork": [
+          {
+            "file": "repos/metabob-rpc-api/server/routes/activity.py",
+            "component": "update_template_metrics",
+            "line": 509,
+            "changeToDo": "db.update() → db.merge(), add awaits",
+            "priority": "HIGH",
+            "estimatedEffort": "15 minutes"
+          },
+          {
+            "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+            "components": ["get_boredom_candidates", "get_all_metrics", "increment_selection_count"],
+            "changeToDo": "Convert to async, add awaits to all db operations",
+            "priority": "MEDIUM",
+            "estimatedEffort": "35 minutes"
+          },
+          {
+            "file": "repos/metabob-rpc-api/server/db/operations/*.py",
+            "affectedFiles": [
+              "failure_pattern.py",
+              "task_execution.py",
+              "activity_content.py",
+              "activity_execution.py",
+              "impulse_data.py",
+              "activity_data.py",
+              "impulse_learning.py",
+              "template_data.py"
+            ],
+            "changeToDo": "Convert all sync functions to async, add awaits",
+            "priority": "HIGH",
+            "estimatedEffort": "2-3 hours"
+          },
+          {
+            "file": "repos/metabob-rpc-api/server/routes/*.py",
+            "changeToDo": "Add awaits to all db operation calls",
+            "priority": "HIGH",
+            "estimatedEffort": "1-2 hours"
+          }
+        ]
+      }
+    ],
+    "pendingPhases": [
+      {
+        "phase": 3,
+        "name": "Upgrade SurrealDB deployment",
+        "status": "NOT_STARTED",
+        "tasks": [
+          {
+            "task": "Update k8s deployment manifest",
+            "file": "k8s manifests or helm charts",
+            "change": "surrealdb/surrealdb:v2.3.10 → surrealdb/surrealdb:v3.0+",
+            "reason": "v3.0+ required for official library compatibility, fixes auth bugs",
+            "priority": "CRITICAL",
+            "estimatedEffort": "30 minutes"
+          },
+          {
+            "task": "Apply unified schema on startup",
+            "file": "repos/metabob-rpc-api/server/app.py",
+            "change": "Add schema initialization from activity_learning_loop.surql",
+            "reason": "Ensure SCHEMAFULL tables with field constraints",
+            "priority": "HIGH",
+            "estimatedEffort": "30 minutes"
+          }
+        ]
+      },
+      {
+        "phase": 4,
+        "name": "End-to-end validation",
+        "status": "NOT_STARTED",
+        "tasks": [
+          {
+            "task": "Test variant_id persistence",
+            "testCase": "Create metrics with variant_id, update with merge(), verify variant_id unchanged",
+            "priority": "CRITICAL"
+          },
+          {
+            "task": "Test activity_id persistence",
+            "testCase": "Create metrics with activity_id, update with merge(), verify activity_id unchanged",
+            "priority": "CRITICAL"
+          },
+          {
+            "task": "Test Thompson Sampling queries",
+            "testCase": "Query template_metrics WHERE variant_id = $id, verify records returned",
+            "priority": "HIGH"
+          },
+          {
+            "task": "Test async performance",
+            "testCase": "Load test with concurrent requests, verify no event loop blocking",
+            "priority": "MEDIUM"
+          }
+        ],
+        "estimatedEffort": "1-2 hours"
+      }
+    ],
+    "criticalBlockers": [
+      {
+        "id": "blocker-1",
+        "issue": "Incomplete async conversion in template_metrics.py and other db operation files",
+        "impact": "Type checker errors, runtime failures when calling sync functions from async context",
+        "resolution": "Complete Phase 2 async conversion",
+        "priority": "IMMEDIATE"
+      },
+      {
+        "id": "blocker-2",
+        "issue": "SurrealDB deployment still on v2.3.10",
+        "impact": "Official library may have compatibility issues, auth bugs persist",
+        "resolution": "Upgrade to v3.0+ before deployment (Phase 3)",
+        "priority": "BEFORE_DEPLOYMENT"
+      },
+      {
+        "id": "blocker-3",
+        "issue": "No validation tests for variant_id persistence",
+        "impact": "Cannot verify the bug fix actually works end-to-end",
+        "resolution": "Write and run Phase 4 validation tests",
+        "priority": "BEFORE_DEPLOYMENT"
+      }
+    ],
+    "rollbackStrategy": {
+      "trigger": "If variant_id persistence still broken or critical regressions detected",
+      "steps": [
+        "1. Restore surrealdb_client_legacy.py to surrealdb_client.py",
+        "2. Revert requirements.txt (comment out surrealdb>=1.0.0)",
+        "3. Revert template_metrics.py async changes and merge() calls",
+        "4. Restart services"
+      ],
+      "backupLocation": "repos/metabob-rpc-api/server/db/surrealdb_client_legacy.py",
+      "validationCriteria": [
+        "Existing tests pass",
+        "variant_id queries work",
+        "Thompson Sampling not broken"
+      ]
+    },
+    "keyLearnings": [
+      {
+        "learning": "update() vs merge() semantic difference is critical",
+        "detail": "SurrealDB's update() replaces ALL fields, merge() does partial updates. Using update() without all fields causes NONE values. This was the root cause bug.",
+        "reference": "Trace impulse line 17-21"
+      },
+      {
+        "learning": "Custom clients introduce bugs",
+        "detail": "The custom HTTP RPC client was created to work around auth bugs in surrealdb-py v1.0.8 with SurrealDB v2.3.10. But the custom implementation introduced NEW bugs (parameter serialization). Upgrading both to compatible versions (surrealdb-py >=1.0.0 + SurrealDB v3.0+) is the proper fix.",
+        "reference": "requirements.txt:104-107 comments"
+      },
+      {
+        "learning": "Async conversion is highly coupled",
+        "detail": "Making one database function async requires making ALL callers async, which ripples through the entire codebase. This is why Phase 2 is taking longer than estimated.",
+        "recommendation": "Future database clients should be async from the start"
+      }
+    ],
+    "nextActionItems": [
+      {
+        "priority": 1,
+        "action": "Complete Phase 2 async conversion",
+        "owner": "follow-up enforcement activity or manual completion",
+        "estimatedTime": "3-4 hours",
+        "tasks": [
+          "Finish template_metrics.py remaining functions",
+          "Update activity.py line 509",
+          "Convert all db operation modules",
+          "Update route handlers"
+        ]
+      },
+      {
+        "priority": 2,
+        "action": "Upgrade SurrealDB to v3.0+",
+        "owner": "devops team or follow-up activity",
+        "estimatedTime": "30 minutes",
+        "tasks": [
+          "Update k8s manifest image tag",
+          "Deploy to staging",
+          "Test auth with official library",
+          "Apply unified schema"
+        ]
+      },
+      {
+        "priority": 3,
+        "action": "Write and run validation tests",
+        "owner": "validation activity",
+        "estimatedTime": "1-2 hours",
+        "tasks": [
+          "Test variant_id persistence",
+          "Test activity_id persistence",
+          "Test Thompson Sampling queries",
+          "Load test async performance"
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "createdAt": "2026-03-01T20:15:00Z",
+    "createdBy": "enforce-specification activity",
+    "relatedImpulses": [
+      "trace-surrealdb-official-library-integration"
+    ],
+    "estimatedTotalEffort": "4-5 hours implementation + 1 hour validation = 1 day",
+    "actualEffortSoFar": "2 hours (Phase 1 complete, Phase 2 partial)",
+    "remainingEffort": "6-9 hours"
+  }
+}

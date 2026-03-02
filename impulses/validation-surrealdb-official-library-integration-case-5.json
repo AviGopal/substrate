@@ -1,0 +1,19 @@
+{
+  "id": "validation-surrealdb-official-library-integration-case-5",
+  "type": "memo",
+  "title": "Validation Case 5: merge() used in template_metrics.py",
+  "description": "Test that db.merge() is used instead of db.update() for partial updates",
+  "content": {
+    "input": {
+      "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+      "search": "await db.merge",
+      "antiPattern": "Preserve immutable field"
+    },
+    "expectedOutput": {
+      "mergeUsed": true,
+      "workaroundRemoved": true,
+      "description": "merge() used for partial updates, variant_id/activity_id workaround removed"
+    },
+    "validationLogic": "grep for 'await db.merge', verify found; grep for workaround comments, verify not found"
+  }
+}

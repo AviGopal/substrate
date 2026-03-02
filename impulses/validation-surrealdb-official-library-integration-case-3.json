@@ -1,0 +1,18 @@
+{
+  "id": "validation-surrealdb-official-library-integration-case-3",
+  "type": "memo",
+  "title": "Validation Case 3: AsyncSurrealDBClient implemented",
+  "description": "Test that custom HTTP client replaced with AsyncSurrealDBClient wrapper",
+  "content": {
+    "input": {
+      "file": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+      "search": "class AsyncSurrealDBClient"
+    },
+    "expectedOutput": {
+      "className": "AsyncSurrealDBClient",
+      "exists": true,
+      "description": "AsyncSurrealDBClient class found in surrealdb_client.py"
+    },
+    "validationLogic": "grep for 'class AsyncSurrealDBClient', verify found"
+  }
+}
