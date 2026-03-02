@@ -1,0 +1,155 @@
+{
+  "specificationName": "Template Storage Architecture - Backend-Only Model",
+  "status": "SPECIFICATION ALREADY IMPLEMENTED",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "component": "ActivityTemplate.save",
+      "currentBehavior": "Deprecated - logs warning, no local write, calls auto-register",
+      "desiredBehavior": "SAME - already compliant (no local storage write)",
+      "gap": "NONE",
+      "lines": "696-707"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "component": "ActivityTemplate.load",
+      "currentBehavior": "Only loads embedded bootstrap templates, throws error for others",
+      "desiredBehavior": "SAME - already compliant (no local storage read)",
+      "gap": "NONE",
+      "lines": "712-732"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "component": "TemplateLoader.save",
+      "currentBehavior": "Rejects backend='local', only saves to metabob MCP",
+      "desiredBehavior": "SAME - already compliant",
+      "gap": "NONE",
+      "lines": "298-333"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "component": "TemplateLoader.load",
+      "currentBehavior": "Cache → Metabob → Embedded bootstrap (local=embedded only)",
+      "desiredBehavior": "SAME - already compliant",
+      "gap": "NONE",
+      "lines": "77-146"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts",
+      "component": "TemplateRepository.save",
+      "currentBehavior": "Rejects backend='local', enforces backend='metabob' only",
+      "desiredBehavior": "SAME - already compliant",
+      "gap": "NONE",
+      "lines": "162-183"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts",
+      "component": "BootstrapTemplates.registerAll",
+      "currentBehavior": "REMOVED local storage save, only registers with MCP backend",
+      "desiredBehavior": "SAME - already compliant",
+      "gap": "NONE",
+      "lines": "324-391"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "component": "registerActivityTemplate",
+      "currentBehavior": "Converts to metabob format, calls MCP tool (no file write)",
+      "desiredBehavior": "SAME - already compliant",
+      "gap": "NONE",
+      "lines": "797-850"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_search_activities",
+      "currentBehavior": "Calls backend API /v2/activities/templates",
+      "desiredBehavior": "SAME - already compliant",
+      "gap": "NONE",
+      "lines": "25-100"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/template_data.py",
+      "component": "create_template_record",
+      "currentBehavior": "Creates template in SurrealDB (primary storage)",
+      "desiredBehavior": "SAME - already compliant",
+      "gap": "NONE",
+      "lines": "26-64"
+    }
+  ],
+  "dataFlow": {
+    "registration": "opencode → TemplateRepository.save → TemplateLoader.save (rejects local) → metabob.registerActivityTemplate → MCP tool → metabob-cli → backend API → SurrealDB",
+    "retrieval": "opencode → TemplateRepository.get → TemplateLoader.load → Cache (miss) → MCP tool → metabob-cli → backend API → SurrealDB → Cache (populate)",
+    "coldStart": "opencode → TemplateLoader.load → Cache (miss) → MCP (unavailable) → BootstrapTemplates (embedded) → Cache (populate)",
+    "listing": "opencode → TemplateRepository.list → TemplateLoader.list → MCP tool → metabob-cli → backend API → SurrealDB"
+  },
+  "architecturalConstraints": {
+    "noLocalStorage": {
+      "status": "ENFORCED",
+      "evidence": [
+        "ActivityTemplate.save() removed Storage.write() (line 698)",
+        "TemplateLoader.save() rejects backend='local' (line 307-312)",
+        "TemplateRepository.save() rejects backend='local' (line 167-172)"
+      ]
+    },
+    "backendSingleSourceOfTruth": {
+      "status": "ENFORCED",
+      "evidence": [
+        "All template operations go through MCP to backend",
+        "Backend stores templates in SurrealDB (template_data.py)"
+      ]
+    },
+    "embeddedBootstrap": {
+      "status": "ENFORCED",
+      "evidence": [
+        "Bootstrap templates imported at build time (bootstrap-templates.ts:7-15)",
+        "TemplateLoader falls back to bootstrap when backend unavailable (line 122-138)",
+        "Core templates: create-activity, debug-activity, evolve-activity, manage-session-memory"
+      ]
+    },
+    "clientSideCacheOnly": {
+      "status": "ENFORCED",
+      "evidence": [
+        "TemplateCache in-memory only (no persistence)",
+        "Cache populated on backend fetch (template-loader.ts:103)",
+        "Cache invalidated on updates (template-loader.ts:426)"
+      ]
+    },
+    "mcpBasedRetrieval": {
+      "status": "ENFORCED",
+      "evidence": [
+        "TemplateLoader uses TemplateServiceClient (line 96-117)",
+        "metabob-cli bridges MCP to backend API (activity_template_tools.py)",
+        "Backend API serves from SurrealDB (template_data.py)"
+      ]
+    }
+  },
+  "gapsAnalysis": {
+    "implementationGaps": [],
+    "documentationGaps": [
+      {
+        "area": "Client Setup Documentation",
+        "priority": "MEDIUM",
+        "description": "Single doc explaining: fork opencode + install cli + configure backend URL"
+      },
+      {
+        "area": "Bootstrap Template Management",
+        "priority": "LOW",
+        "description": "Guide for when/how to add templates to EMBEDDED_TEMPLATES"
+      }
+    ],
+    "testingGaps": [
+      {
+        "area": "Backend Unavailability",
+        "priority": "MEDIUM",
+        "description": "Test suite for cold-start with only embedded templates"
+      }
+    ]
+  },
+  "traceDocument": "TRACE_TEMPLATE_STORAGE_ARCHITECTURE.md",
+  "traceImpulseId": "trace-template-storage-architecture-backend-only-model",
+  "validationHarness": "tests/validation-harnesses/template-storage-architecture-migration-harness.ts",
+  "nextSteps": {
+    "validation": "Run validation harness to verify filesystem and code analysis",
+    "enforcement": "Not needed - specification already implemented",
+    "documentation": "Create client setup guide and bootstrap template management guide"
+  }
+}

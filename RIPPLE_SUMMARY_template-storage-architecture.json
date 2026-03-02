@@ -1,0 +1,242 @@
+{
+  "specificationName": "Template Storage Architecture - Backend-Only Model",
+  "rippleAnalysisDate": "2026-03-02",
+  "componentsAnalyzed": 9,
+  "componentsUpdated": [],
+  "codeChangesRequired": false,
+  "runtimeChangesRequired": true,
+  "summary": "Code is fully compliant. Only runtime cleanup needed (delete legacy artifacts).",
+  "componentAnalysis": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "component": "ActivityTemplate.save",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "Storage.write() already removed (line 697-698)",
+      "affectedBySpecs": ["Template Storage Architecture"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "component": "ActivityTemplate.load",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "Storage.read() already removed, bootstrap check present (line 713-714)",
+      "affectedBySpecs": ["Template Storage Architecture", "bootstrap-template-filepath-compliance"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "component": "TemplateLoader.save",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "backend='local' rejection already enforced (line 307-312)",
+      "affectedBySpecs": ["Template Storage Architecture", "complete-architecture-separation"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "component": "TemplateLoader.load",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "MCP-based retrieval with bootstrap fallback already implemented (line 77-146)",
+      "affectedBySpecs": ["Template Storage Architecture", "complete-architecture-separation", "bootstrap-template-filepath-compliance"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts",
+      "component": "TemplateRepository.save",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "backend='local' rejection already enforced (line 167-172)",
+      "affectedBySpecs": ["Template Storage Architecture"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/bootstrap-templates.ts",
+      "component": "BootstrapTemplates.registerAll",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "Local save already removed (line 341-343)",
+      "affectedBySpecs": ["Template Storage Architecture", "bootstrap-template-filepath-compliance"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "component": "registerActivityTemplate",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "File writes already removed, MCP-only (line 797-850)",
+      "affectedBySpecs": ["Template Storage Architecture", "complete-architecture-separation"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_search_activities",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "MCP bridge to backend API already implemented",
+      "affectedBySpecs": ["Template Storage Architecture", "complete-architecture-separation"],
+      "crossSpecConsistency": "CONSISTENT"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/template_data.py",
+      "component": "create_template_record",
+      "currentState": "COMPLIANT",
+      "rippleNeeded": false,
+      "reason": "SurrealDB storage already implemented",
+      "affectedBySpecs": ["Template Storage Architecture", "activity-template-scope-assignment"],
+      "crossSpecConsistency": "CONSISTENT"
+    }
+  ],
+  "runtimeCleanup": {
+    "action": "DELETE_LEGACY_ARTIFACTS",
+    "target": "~/.local/share/opencode/storage/activity-template/",
+    "fileCount": 18,
+    "totalSize": "768KB",
+    "reason": "Legacy files from before architectural migration",
+    "impactAnalysis": {
+      "breakingChange": false,
+      "affectsOtherSpecs": false,
+      "riskLevel": "LOW",
+      "justification": "Templates should already exist in backend. Conflict analysis confirms no dependencies."
+    },
+    "command": "rm -rf ~/.local/share/opencode/storage/activity-template/",
+    "executed": false,
+    "recommendedTiming": "IMMEDIATE"
+  },
+  "dataFlowConsistency": {
+    "templateRegistration": {
+      "flow": "opencode → TemplateRepository.save → TemplateLoader.save → MCP → backend API → SurrealDB",
+      "consistent": true,
+      "specificationsInvolved": ["Template Storage Architecture", "complete-architecture-separation", "activity-template-scope-assignment"],
+      "rippleNeeded": false
+    },
+    "templateRetrieval": {
+      "flow": "opencode → TemplateLoader.load → Cache → MCP → backend API → SurrealDB",
+      "consistent": true,
+      "specificationsInvolved": ["Template Storage Architecture", "complete-architecture-separation"],
+      "rippleNeeded": false
+    },
+    "bootstrapLoading": {
+      "flow": "opencode → BootstrapTemplates.loadAll → EMBEDDED_TEMPLATES → Cache",
+      "consistent": true,
+      "specificationsInvolved": ["Template Storage Architecture", "bootstrap-template-filepath-compliance"],
+      "rippleNeeded": false
+    }
+  },
+  "validationStatus": {
+    "beforeRipple": {
+      "thisSpec": "FAIL (1 real violation: legacy artifacts)",
+      "codeCompliance": "FULL",
+      "runtimeCompliance": "PARTIAL"
+    },
+    "afterRipple": {
+      "thisSpec": "EXPECTED_PASS (after cleanup)",
+      "codeCompliance": "FULL",
+      "runtimeCompliance": "FULL (after cleanup)"
+    },
+    "conflictingSpecs": []
+  },
+  "relatedSpecValidation": {
+    "bootstrap-template-filepath-compliance": {
+      "status": "PASS",
+      "affectedByRipple": false,
+      "validationCommand": "bun run tests/validation-harnesses/bootstrap-template-filepath-compliance-harness.ts"
+    },
+    "activity-template-scope-assignment": {
+      "status": "FAIL (deployment required)",
+      "affectedByRipple": false,
+      "note": "Independent issue, not related to template storage architecture"
+    },
+    "complete-architecture-separation": {
+      "status": "PASS",
+      "affectedByRipple": false,
+      "validationCommand": "bun run tests/validation-harnesses/complete-architecture-separation-harness.ts"
+    }
+  },
+  "functionalStateTransition": {
+    "before": {
+      "codeState": "Specification enforced in code",
+      "runtimeState": "Legacy local template files exist",
+      "behavior": "Code prevents new local storage, but old files remain",
+      "validationStatus": "FAIL (filesystem violation)"
+    },
+    "after": {
+      "codeState": "Specification enforced in code (unchanged)",
+      "runtimeState": "No local template files",
+      "behavior": "All template operations through MCP to backend",
+      "validationStatus": "PASS (full compliance)"
+    },
+    "transition": "Runtime cleanup (delete legacy files)",
+    "reversible": false,
+    "rationale": "Legacy files violate specification. Templates should exist in backend. Safe to delete per conflict analysis."
+  },
+  "crossSpecificationImpact": {
+    "impactedSpecs": [],
+    "positiveEffects": [
+      {
+        "spec": "complete-architecture-separation",
+        "effect": "Strengthens backend centralization by removing local persistence"
+      },
+      {
+        "spec": "bootstrap-template-filepath-compliance",
+        "effect": "Clarifies separation: embedded templates for bootstrap, backend for user templates"
+      }
+    ],
+    "negativeEffects": [],
+    "conflictsResolved": 0
+  },
+  "testUpdates": {
+    "newTestsAdded": false,
+    "existingTestsModified": false,
+    "harnessImprovements": [
+      {
+        "file": "tests/validation-harnesses/template-storage-architecture-migration-harness.ts",
+        "issue": "Component extraction regex doesn't handle indented exports",
+        "priority": "MEDIUM",
+        "estimatedEffort": "15 minutes",
+        "impact": "Fixes 4 false-negative test failures"
+      }
+    ]
+  },
+  "annotations": {
+    "added": [],
+    "reason": "Code already has comprehensive comments explaining architectural constraints"
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Execute runtime cleanup",
+      "command": "rm -rf ~/.local/share/opencode/storage/activity-template/",
+      "reason": "Complete specification enforcement by removing legacy artifacts",
+      "safe": true,
+      "estimatedEffort": "1 minute"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Fix validation harness regex",
+      "file": "tests/validation-harnesses/template-storage-architecture-migration-harness.ts",
+      "line": 155,
+      "reason": "Enable accurate future validation",
+      "safe": true,
+      "estimatedEffort": "15 minutes"
+    },
+    {
+      "priority": "LOW",
+      "action": "Re-run validation after cleanup",
+      "command": "./tests/validation-harnesses/run-template-storage-architecture-migration-validation.sh",
+      "reason": "Verify full compliance",
+      "expectedResult": "9/9 tests pass",
+      "estimatedEffort": "5 minutes"
+    }
+  ],
+  "conclusion": {
+    "codeRippleNeeded": false,
+    "runtimeCleanupNeeded": true,
+    "specificationsConsistent": true,
+    "safeToExecute": true,
+    "summary": "No code ripple changes needed. All components are already compliant with the specification. Only runtime cleanup required: delete legacy local template directory. Conflict analysis confirms this is safe and won't affect other specifications."
+  },
+  "rippleImpulseId": "ripple-template-storage-architecture-backend-only-model"
+}
