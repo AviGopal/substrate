@@ -4,6 +4,9 @@ release: local
 image:
   imageRegistry: metabobapp
   pullPolicy: IfNotPresent
+  rpc_api:
+    repo: metabob-rpc-api
+    tag: "0.16.12"  # Updated with metrics endpoint fix
 
 # Reduce resource requests for local deployment
 workers:

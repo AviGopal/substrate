@@ -29,13 +29,15 @@ spec:
               containerPort: 8080
           env:
             - name: WORKERS
-              value: '16'
+              value: '4'
             - name: TIMEOUT_KEEP_ALIVE
               value: '75'
             - name: CONFIG_PATH
               value: /usr/app/.env
             - name: LOG_LEVEL
-              value: INFO
+              value: {{ .Values.logLevel | default "INFO" | quote }}
+            - name: REDIS_URI
+              value: "redis://redis-master:6379"
             # - name: SECRET_KEY
             #   valueFrom:
             #     secretKeyRef:
@@ -61,21 +63,21 @@ spec:
                 secretKeyRef:
                   name: postgres-client
                   key: postgresql-password
-            - name: SURREAL_URL
-              value: "ws://surrealdb:8000"
-            - name: SURREAL_USER
+            - name: SURREALDB_URL
+              value: "http://surrealdb:8000"
+            - name: SURREALDB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: surrealdb-credentials
                   key: username
-            - name: SURREAL_PASS
+            - name: SURREALDB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: surrealdb-credentials
                   key: password
-            - name: SURREAL_NAMESPACE
+            - name: SURREALDB_NAMESPACE
               value: "metabob"
-            - name: SURREAL_DATABASE
+            - name: SURREALDB_DATABASE
               value: "{{ .Values.surrealdb.database | default "production" }}"
           volumeMounts:
             - mountPath: /usr/app
@@ -95,7 +97,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /
-              port: 8080
+              port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 10
@@ -103,7 +105,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /
-              port: 8080
+              port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 10
