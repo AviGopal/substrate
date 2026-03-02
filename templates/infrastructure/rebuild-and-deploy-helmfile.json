@@ -1,0 +1,198 @@
+{
+  "name": "Rebuild and Deploy with Helmfile",
+  "version": 1,
+  "description": "Rebuild Docker images and deploy to local/production using the helmfile DRY deployment pattern in repos/platform/metabob-apps/",
+  "category": "infrastructure",
+  "contextRequirements": [],
+  "tasks": [
+    {
+      "id": "verify-environment",
+      "subagent": "general",
+      "description": "Verify helmfile environment configuration and cluster connectivity",
+      "dependencies": [],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "## Task: Verify Deployment Environment\n\n### Context\nEnvironment: {{environment}}\nNamespace: {{namespace}}\nHelmfile Directory: repos/platform/metabob-apps/\n\n### Objective\nVerify the deployment environment is properly configured and accessible.\n\n### Steps\n\n1. **Change to Helmfile Directory**\n   ```bash\n   cd repos/platform/metabob-apps\n   pwd\n   ```\n\n2. **Verify Helmfile Configuration**\n   ```bash\n   # Check helmfile.yaml.gotmpl exists\n   ls -la helmfile.yaml.gotmpl\n   \n   # Check environment configuration exists\n   ls -la environments/{{environment}}/\n   ```\n\n3. **Verify Kubernetes Context**\n   ```bash\n   # Get current context\n   kubectl config current-context\n   \n   # For local: should be 'docker-desktop'\n   # For integration: should be 'metabob-integration'\n   # For production: should be 'metabob-production'\n   \n   # Switch context if needed\n   {{#if (eq environment \"default\")}}\n   kubectl config use-context docker-desktop\n   {{else if (eq environment \"integration\")}}\n   kubectl config use-context metabob-integration\n   {{else if (eq environment \"production\")}}\n   kubectl config use-context metabob-production\n   {{/if}}\n   ```\n\n4. **Verify Cluster Connectivity**\n   ```bash\n   # Test cluster connection\n   kubectl cluster-info\n   \n   # Check namespace exists or create it\n   kubectl get namespace {{namespace}} || kubectl create namespace {{namespace}}\n   ```\n\n5. **Verify Required Tools**\n   ```bash\n   # Check helmfile version\n   helmfile --version\n   \n   # Check helm version\n   helm version\n   \n   # Check docker version (for building)\n   docker --version\n   ```\n\n### Success Criteria\n- ✅ Helmfile directory accessible\n- ✅ Environment configuration exists\n- ✅ Kubernetes context correct\n- ✅ Cluster connectivity verified\n- ✅ Namespace exists\n- ✅ All required tools available\n\n### Output\nProvide a summary of the environment status:\n```json\n{\n  \"environment\": \"{{environment}}\",\n  \"namespace\": \"{{namespace}}\",\n  \"kubeContext\": \"<actual context>\",\n  \"clusterInfo\": \"<cluster endpoint>\",\n  \"helmfileVersion\": \"<version>\",\n  \"ready\": true\n}\n```",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "environment",
+            "type": "string",
+            "required": false,
+            "description": "Deployment environment: default (local), integration, or production",
+            "default": "default"
+          },
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace for deployment",
+            "default": "metabob"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["ready.*true"],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "build-images",
+      "subagent": "general",
+      "description": "Build Docker images for deployment",
+      "dependencies": ["verify-environment"],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "## Task: Build Docker Images\n\n### Context\nEnvironment: {{environment}}\nBuild Services: {{services}}\nImage Tag Strategy: {{imageTagStrategy}}\n\n### Objective\nBuild Docker images for the specified services with proper tagging.\n\n### Image Tag Strategy\n\n{{#if (eq environment \"production\")}}\n**Production**: Use semantic version tags (v1.2.3) or git commit SHA\n- MUST NOT use :latest\n- Tag format: <registry>/<service>:v<version>\n- Example: ghcr.io/metabob/rpc-api:v1.2.3\n{{else}}\n**Non-Production**: Use branch name or commit SHA\n- Can use :latest for local development\n- Tag format: <registry>/<service>:<branch>-<short-sha>\n- Example: metabob/rpc-api:main-abc1234\n{{/if}}\n\n### Steps\n\n1. **Determine Build Context**\n   ```bash\n   cd repos/platform/metabob-apps\n   \n   # Get current git info for tagging\n   GIT_BRANCH=$(git branch --show-current)\n   GIT_SHORT_SHA=$(git rev-parse --short HEAD)\n   GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo \"\")\n   \n   echo \"Git Branch: $GIT_BRANCH\"\n   echo \"Git SHA: $GIT_SHORT_SHA\"\n   echo \"Git Tag: $GIT_TAG\"\n   ```\n\n2. **Build Images**\n   {{#if (eq services \"all\")}}\n   Build all primary services:\n   - metabob-rpc-api\n   - metabob-dashboard\n   - opencode-server\n   {{else}}\n   Build specified services: {{services}}\n   {{/if}}\n\n   Example build commands:\n   ```bash\n   # Build RPC API\n   docker build -t metabob/metabob-rpc-api:${GIT_BRANCH}-${GIT_SHORT_SHA} \\\n     -f ../../metabob-rpc-api/Dockerfile \\\n     ../../metabob-rpc-api/\n   \n   # Build Dashboard\n   docker build -t metabob/metabob-dashboard:${GIT_BRANCH}-${GIT_SHORT_SHA} \\\n     -f ../../metabob-dashboard/Dockerfile \\\n     ../../metabob-dashboard/\n   \n   # Build OpenCode Server\n   docker build -t metabob/opencode-server:${GIT_BRANCH}-${GIT_SHORT_SHA} \\\n     -f ../../metabob-opencode/Dockerfile \\\n     ../../metabob-opencode/\n   ```\n\n3. **Verify Images Built**\n   ```bash\n   # List newly built images\n   docker images | grep \"metabob/\" | grep \"${GIT_SHORT_SHA}\"\n   ```\n\n4. **Tag for Local Use** (if environment is default)\n   ```bash\n   {{#if (eq environment \"default\")}}\n   # Also tag as :latest for local convenience\n   docker tag metabob/metabob-rpc-api:${GIT_BRANCH}-${GIT_SHORT_SHA} metabob/metabob-rpc-api:latest\n   docker tag metabob/metabob-dashboard:${GIT_BRANCH}-${GIT_SHORT_SHA} metabob/metabob-dashboard:latest\n   docker tag metabob/opencode-server:${GIT_BRANCH}-${GIT_SHORT_SHA} metabob/opencode-server:latest\n   {{/if}}\n   ```\n\n### Success Criteria\n- ✅ All specified services built successfully\n- ✅ Images tagged with proper version/SHA\n- ✅ Build logs show no errors\n- ✅ Images visible in docker images output\n\n### Output\nProvide build summary:\n```json\n{\n  \"built\": [\n    {\"service\": \"metabob-rpc-api\", \"tag\": \"<tag>\"},\n    {\"service\": \"metabob-dashboard\", \"tag\": \"<tag>\"}\n  ],\n  \"gitSha\": \"<short-sha>\",\n  \"gitBranch\": \"<branch>\",\n  \"success\": true\n}\n```",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "services",
+            "type": "string",
+            "required": false,
+            "description": "Comma-separated list of services to build, or 'all' for all services",
+            "default": "all"
+          },
+          {
+            "name": "imageTagStrategy",
+            "type": "string",
+            "required": false,
+            "description": "Image tagging strategy: semantic (v1.2.3), git-sha, or latest",
+            "default": "git-sha"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["success.*true"],
+        "forbiddenPatterns": ["error", "failed"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "push-images",
+      "subagent": "general",
+      "description": "Push images to container registry (skip for local)",
+      "dependencies": ["build-images"],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "## Task: Push Images to Registry\n\n### Context\nEnvironment: {{environment}}\nRegistry: {{registry}}\nSkip Push: {{#if (eq environment \"default\")}}true (local deployment){{else}}false{{/if}}\n\n### Objective\nPush built Docker images to the container registry for non-local deployments.\n\n### Steps\n\n{{#if (eq environment \"default\")}}\n\n**SKIP: Local Deployment**\n\nFor local docker-desktop deployments, we use local images directly.\nNo registry push needed.\n\n```bash\necho \"Skipping registry push for local deployment\"\necho \"Images will be used directly from local Docker daemon\"\n```\n\n{{else}}\n\n1. **Authenticate to Registry**\n   ```bash\n   {{#if (eq registry \"ghcr.io\")}}\n   # GitHub Container Registry\n   echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USER --password-stdin\n   {{else if (eq registry \"docker.io\")}}\n   # Docker Hub\n   echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin\n   {{else}}\n   # Custom registry\n   docker login {{registry}}\n   {{/if}}\n   ```\n\n2. **Tag Images for Registry**\n   ```bash\n   # Get build info from previous task\n   GIT_SHORT_SHA=$(git rev-parse --short HEAD)\n   GIT_BRANCH=$(git branch --show-current)\n   \n   # Tag for registry\n   docker tag metabob/metabob-rpc-api:${GIT_BRANCH}-${GIT_SHORT_SHA} \\\n     {{registry}}/metabob/metabob-rpc-api:${GIT_BRANCH}-${GIT_SHORT_SHA}\n   \n   docker tag metabob/metabob-dashboard:${GIT_BRANCH}-${GIT_SHORT_SHA} \\\n     {{registry}}/metabob/metabob-dashboard:${GIT_BRANCH}-${GIT_SHORT_SHA}\n   \n   docker tag metabob/opencode-server:${GIT_BRANCH}-${GIT_SHORT_SHA} \\\n     {{registry}}/metabob/opencode-server:${GIT_BRANCH}-${GIT_SHORT_SHA}\n   ```\n\n3. **Push Images**\n   ```bash\n   docker push {{registry}}/metabob/metabob-rpc-api:${GIT_BRANCH}-${GIT_SHORT_SHA}\n   docker push {{registry}}/metabob/metabob-dashboard:${GIT_BRANCH}-${GIT_SHORT_SHA}\n   docker push {{registry}}/metabob/opencode-server:${GIT_BRANCH}-${GIT_SHORT_SHA}\n   ```\n\n4. **Verify Push**\n   ```bash\n   # Check images are accessible\n   docker pull {{registry}}/metabob/metabob-rpc-api:${GIT_BRANCH}-${GIT_SHORT_SHA}\n   ```\n\n{{/if}}\n\n### Success Criteria\n{{#if (eq environment \"default\")}}\n- ✅ Local deployment - push skipped (expected)\n{{else}}\n- ✅ Registry authentication successful\n- ✅ All images tagged for registry\n- ✅ All images pushed successfully\n- ✅ Images accessible from registry\n{{/if}}\n\n### Output\n```json\n{\n  \"environment\": \"{{environment}}\",\n  \"skipped\": {{#if (eq environment \"default\")}}true{{else}}false{{/if}},\n  \"registry\": \"{{registry}}\",\n  \"pushed\": [],\n  \"success\": true\n}\n```",
+        "maxTokens": 5000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "registry",
+            "type": "string",
+            "required": false,
+            "description": "Container registry URL (ghcr.io, docker.io, or custom)",
+            "default": "ghcr.io"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["success.*true"],
+        "forbiddenPatterns": ["authentication failed", "push failed"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "helmfile-diff",
+      "subagent": "general",
+      "description": "Preview deployment changes with helmfile diff",
+      "dependencies": ["push-images"],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "## Task: Preview Deployment with Helmfile Diff\n\n### Context\nEnvironment: {{environment}}\nNamespace: {{namespace}}\nHelmfile: repos/platform/metabob-apps/helmfile.yaml.gotmpl\n\n### Objective\nPreview what changes will be applied to the Kubernetes cluster before deploying.\n\n### Steps\n\n1. **Change to Helmfile Directory**\n   ```bash\n   cd repos/platform/metabob-apps\n   pwd\n   ```\n\n2. **Run Helmfile Diff**\n   ```bash\n   # Preview changes for the environment\n   helmfile -e {{environment}} diff\n   ```\n\n3. **Analyze Diff Output**\n   Look for:\n   - New resources being created\n   - Existing resources being updated\n   - Configuration changes\n   - Image tag changes\n   - Resource spec changes (CPU, memory, replicas)\n\n4. **Check for Sensitive Changes**\n   Review carefully if diff shows:\n   - ⚠️  Database configuration changes\n   - ⚠️  Secret or credential updates\n   - ⚠️  Network policy changes\n   - ⚠️  Service port changes\n   - ⚠️  Persistent volume changes\n\n5. **Summarize Changes**\n   Categorize changes by:\n   - **Low Risk**: Image updates, replica scaling, minor config\n   - **Medium Risk**: New services, service dependencies\n   - **High Risk**: Database changes, persistent storage, secrets\n\n### Expected Output Examples\n\n**No Changes (in sync)**:\n```\nAffected releases are:\n  config (config)\n  redis (redis)\n  metabob-rpc-api (metabob-rpc-api)\n  metabob-dashboard (metabob-dashboard)\n\nProcessing releases...\n\nAffected releases are:\n  ...\n\nProcessing releases...\n\nReleases:\n  config: unchanged\n  redis: unchanged\n  metabob-rpc-api: unchanged\n  metabob-dashboard: unchanged\n```\n\n**With Changes**:\n```\nAffected releases are:\n  metabob-rpc-api (metabob-rpc-api) UPDATED\n\nProcessing releases...\n\nRelease was not present in Helm.  Diff will show entire contents as new.\n\n--- /dev/null\n+++ metabob-rpc-api/Deployment.yaml\n@@ ... @@\n+  image: metabob/metabob-rpc-api:main-abc1234\n```\n\n### Success Criteria\n- ✅ Helmfile diff runs without errors\n- ✅ Changes reviewed and understood\n- ✅ No unexpected changes\n- ✅ Risk level assessed\n\n### Output\nProvide diff summary:\n```json\n{\n  \"changedReleases\": [\"metabob-rpc-api\", \"metabob-dashboard\"],\n  \"unchangedReleases\": [\"config\", \"redis\", \"surrealdb\"],\n  \"riskLevel\": \"low|medium|high\",\n  \"summary\": \"Brief description of changes\",\n  \"proceedWithDeploy\": true\n}\n```",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": ["proceedWithDeploy"],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "helmfile-sync",
+      "subagent": "general",
+      "description": "Apply deployment with helmfile sync",
+      "dependencies": ["helmfile-diff"],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "## Task: Deploy with Helmfile Sync\n\n### Context\nEnvironment: {{environment}}\nNamespace: {{namespace}}\nDry Run: {{dryRun}}\nDiff Summary: {{previousTaskOutput['helmfile-diff']}}\n\n### Objective\nApply the deployment to the Kubernetes cluster using helmfile sync.\n\n### Pre-Deployment Checks\n\n1. **Review Diff Summary**\n   From previous task, verify:\n   - proceedWithDeploy: {{previousTaskOutput['helmfile-diff'].proceedWithDeploy}}\n   - Risk Level: {{previousTaskOutput['helmfile-diff'].riskLevel}}\n   \n   {{#if (eq previousTaskOutput['helmfile-diff'].proceedWithDeploy false)}}\n   ⚠️  WARNING: Previous task recommends NOT proceeding with deployment.\n   Review diff output carefully before continuing.\n   {{/if}}\n\n2. **Confirm Environment**\n   ```bash\n   # Double-check kubectl context\n   kubectl config current-context\n   \n   # Verify we're deploying to the correct cluster\n   kubectl cluster-info\n   ```\n\n### Deployment\n\n{{#if dryRun}}\n\n**DRY RUN MODE**\n\n```bash\ncd repos/platform/metabob-apps\n\n# Dry run - shows what would happen without applying\necho \"DRY RUN: Would execute: helmfile -e {{environment}} sync\"\necho \"Skipping actual deployment\"\n```\n\n{{else}}\n\n1. **Execute Helmfile Sync**\n   ```bash\n   cd repos/platform/metabob-apps\n   \n   # Apply deployment\n   helmfile -e {{environment}} sync\n   ```\n\n2. **Monitor Deployment Progress**\n   ```bash\n   # Watch the deployment progress\n   watch -n 2 kubectl get pods -n {{namespace}}\n   \n   # Or use kubectl wait (for automation)\n   kubectl wait --for=condition=ready pod \\\n     -l app.kubernetes.io/managed-by=Helm \\\n     -n {{namespace}} \\\n     --timeout=300s\n   ```\n\n3. **Check Deployment Status**\n   ```bash\n   # Get all pods in namespace\n   kubectl get pods -n {{namespace}}\n   \n   # Check for any failed pods\n   kubectl get pods -n {{namespace}} --field-selector=status.phase!=Running\n   \n   # Get deployment status\n   kubectl get deployments -n {{namespace}}\n   ```\n\n4. **Capture Deployment Events**\n   ```bash\n   # Recent events (useful for troubleshooting)\n   kubectl get events -n {{namespace}} \\\n     --sort-by='.lastTimestamp' \\\n     | tail -20\n   ```\n\n{{/if}}\n\n### Expected Output\n\n**Successful Deployment**:\n```\nUpdating repo\nReleases:\n  config: updating\n  redis: updating\n  metabob-rpc-api: updating\n  metabob-dashboard: updating\n\n... Helm release output ...\n\nAffected releases are:\n  config (config) SUCCESS\n  redis (redis) SUCCESS\n  metabob-rpc-api (metabob-rpc-api) SUCCESS\n  metabob-dashboard (metabob-dashboard) SUCCESS\n```\n\n### Success Criteria\n{{#if dryRun}}\n- ✅ Dry run completed (no actual changes)\n{{else}}\n- ✅ Helmfile sync completed without errors\n- ✅ All releases show SUCCESS\n- ✅ All pods transitioning to Running state\n- ✅ No error events in recent event log\n{{/if}}\n\n### Output\n```json\n{\n  \"dryRun\": {{dryRun}},\n  \"environment\": \"{{environment}}\",\n  \"releasesDeployed\": [],\n  \"releasesFailed\": [],\n  \"deploymentComplete\": true,\n  \"timestamp\": \"<ISO timestamp>\"\n}\n```",
+        "maxTokens": 7000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "dryRun",
+            "type": "boolean",
+            "required": false,
+            "description": "If true, preview deployment without applying changes",
+            "default": false
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["deploymentComplete.*true"],
+        "forbiddenPatterns": ["failed", "error"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "validate-deployment",
+      "subagent": "general",
+      "description": "Validate deployment health and pod readiness",
+      "dependencies": ["helmfile-sync"],
+      "impulseReferences": [],
+      "prompt": {
+        "template": "## Task: Validate Deployment Health\n\n### Context\nEnvironment: {{environment}}\nNamespace: {{namespace}}\nDry Run: {{previousTaskOutput['helmfile-sync'].dryRun}}\n\n### Objective\nVerify that the deployment is healthy and all services are operational.\n\n{{#if previousTaskOutput['helmfile-sync'].dryRun}}\n\n**SKIP: Dry Run Mode**\n\nNo actual deployment was performed. Validation skipped.\n\n```bash\necho \"Skipping validation - dry run mode\"\n```\n\n{{else}}\n\n### Validation Steps\n\n1. **Check Pod Status**\n   ```bash\n   # All pods should be Running\n   kubectl get pods -n {{namespace}}\n   \n   # Count Running vs Total\n   TOTAL_PODS=$(kubectl get pods -n {{namespace}} --no-headers | wc -l)\n   RUNNING_PODS=$(kubectl get pods -n {{namespace}} --field-selector=status.phase=Running --no-headers | wc -l)\n   \n   echo \"Pods: $RUNNING_PODS/$TOTAL_PODS Running\"\n   \n   if [ \"$RUNNING_PODS\" -ne \"$TOTAL_PODS\" ]; then\n     echo \"⚠️  Not all pods are running\"\n     kubectl get pods -n {{namespace}} --field-selector=status.phase!=Running\n   fi\n   ```\n\n2. **Check Pod Readiness**\n   ```bash\n   # All pods should be Ready (ready/total = 1/1 or 2/2)\n   kubectl get pods -n {{namespace}} -o jsonpath='{range .items[*]}{.metadata.name}{\": \"}{.status.conditions[?(@.type==\"Ready\")].status}{\"\\n\"}{end}'\n   ```\n\n3. **Check Deployment Rollout Status**\n   ```bash\n   # Verify deployments are fully rolled out\n   for deployment in $(kubectl get deployments -n {{namespace}} -o jsonpath='{.items[*].metadata.name}'); do\n     echo \"Checking $deployment...\"\n     kubectl rollout status deployment/$deployment -n {{namespace}} --timeout=60s\n   done\n   ```\n\n4. **Check Service Endpoints**\n   ```bash\n   # Services should have endpoints (pods backing them)\n   kubectl get endpoints -n {{namespace}}\n   \n   # Check for services with no endpoints\n   kubectl get endpoints -n {{namespace}} -o json | \\\n     jq -r '.items[] | select(.subsets == null or .subsets == []) | .metadata.name'\n   ```\n\n5. **Check Recent Errors**\n   ```bash\n   # Look for Warning or Error events in last 5 minutes\n   kubectl get events -n {{namespace}} \\\n     --field-selector type!=Normal \\\n     --sort-by='.lastTimestamp' \\\n     | tail -20\n   ```\n\n6. **Check Container Restarts**\n   ```bash\n   # Pods should not be crash-looping\n   kubectl get pods -n {{namespace}} -o jsonpath='{range .items[*]}{.metadata.name}{\" restarts=\"}{.status.containerStatuses[0].restartCount}{\"\\n\"}{end}'\n   ```\n\n7. **Test Service Connectivity** (for local)\n   {{#if (eq environment \"default\")}}\n   ```bash\n   # For local docker-desktop, test NodePort access\n   \n   # Get NodePort for dashboard\n   DASHBOARD_PORT=$(kubectl get svc metabob-dashboard -n {{namespace}} -o jsonpath='{.spec.ports[0].nodePort}')\n   echo \"Dashboard available at: http://localhost:$DASHBOARD_PORT\"\n   \n   # Test if accessible\n   curl -f http://localhost:$DASHBOARD_PORT/ -I || echo \"⚠️  Dashboard not accessible\"\n   ```\n   {{/if}}\n\n### Health Summary\n\nGenerate overall health score:\n```bash\nHEALTH_SCORE=0\n\n# Add points for each healthy aspect\n[ \"$RUNNING_PODS\" -eq \"$TOTAL_PODS\" ] && HEALTH_SCORE=$((HEALTH_SCORE + 25))\n# ... (ready checks, no restarts, etc.)\n\necho \"Overall Health Score: $HEALTH_SCORE/100\"\n\nif [ \"$HEALTH_SCORE\" -ge 80 ]; then\n  echo \"✅ Deployment is HEALTHY\"\nelif [ \"$HEALTH_SCORE\" -ge 50 ]; then\n  echo \"⚠️  Deployment is DEGRADED\"\nelse\n  echo \"❌ Deployment is UNHEALTHY\"\nfi\n```\n\n{{/if}}\n\n### Success Criteria\n{{#if previousTaskOutput['helmfile-sync'].dryRun}}\n- ✅ Validation skipped (dry run mode)\n{{else}}\n- ✅ All pods in Running state\n- ✅ All pods are Ready\n- ✅ All deployments rolled out successfully\n- ✅ All services have endpoints\n- ✅ No recent error events\n- ✅ No excessive container restarts\n- ✅ Service connectivity verified (for local)\n- ✅ Overall health score ≥ 80/100\n{{/if}}\n\n### Output\n```json\n{\n  \"skipped\": {{#if previousTaskOutput['helmfile-sync'].dryRun}}true{{else}}false{{/if}},\n  \"totalPods\": 0,\n  \"runningPods\": 0,\n  \"readyPods\": 0,\n  \"servicesWithEndpoints\": [],\n  \"servicesWithoutEndpoints\": [],\n  \"recentErrors\": [],\n  \"healthScore\": 0,\n  \"status\": \"HEALTHY|DEGRADED|UNHEALTHY\",\n  \"timestamp\": \"<ISO timestamp>\"\n}\n```",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": ["status.*HEALTHY"],
+        "forbiddenPatterns": ["UNHEALTHY"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 3000,
+    "annotationStrategy": "key-components"
+  }
+}
