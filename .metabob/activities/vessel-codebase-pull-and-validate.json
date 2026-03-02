@@ -1,0 +1,531 @@
+{
+  "activity_id": "vessel-codebase-pull-and-validate",
+  "name": "vessel-codebase-pull-and-validate",
+  "description": "Pull a vessel codebase from GitHub into devbob workspace and validate full development workflow capability",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "task-1",
+      "subagent": "general",
+      "description": "Pull vessel codebase from GitHub and verify structure",
+      "dependencies": [],
+      "prompt": {
+        "template": "Pull and validate vessel codebase: {{repoUrl}}\n\n1. Clone the repository:\n   ```bash\n   cd /workspace\n   git clone {{repoUrl}} {{vesselName}}\n   cd {{vesselName}}\n   git checkout {{branch}}\n   ```\n\n2. Verify repository structure:\n   - List key directories and files\n   - Check for package.json, requirements.txt, or similar\n   - Identify language/framework (TypeScript, Python, Go, etc.)\n   - Find test directories\n   - Find documentation files\n\n3. Configure git:\n   ```bash\n   git config user.name \"{{gitUserName}}\"\n   git config user.email \"{{gitUserEmail}}\"\n   ```\n\n4. Output repository summary:\n   - Language/framework detected\n   - Number of files\n   - Key directories\n   - Test framework identified\n   - Build/package manager (npm, pip, cargo, etc.)",
+        "variables": [
+          {
+            "name": "repoUrl",
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository URL to clone (e.g., https://github.com/org/repo.git)"
+          },
+          {
+            "name": "vesselName",
+            "type": "string",
+            "required": true,
+            "description": "Name for the vessel workspace directory"
+          },
+          {
+            "name": "branch",
+            "type": "string",
+            "required": false,
+            "description": "Git branch to checkout",
+            "default": "main"
+          },
+          {
+            "name": "gitUserName",
+            "type": "string",
+            "required": false,
+            "description": "Git user name for commits",
+            "default": "DevBob Agent"
+          },
+          {
+            "name": "gitUserEmail",
+            "type": "string",
+            "required": false,
+            "description": "Git user email for commits",
+            "default": "devbob@metabob.local"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "{{vesselName}}/.git/config",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -d /workspace/{{vesselName}}/.git",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd /workspace/{{vesselName}} && git status",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2",
+      "subagent": "general",
+      "description": "Install dependencies and verify build system",
+      "dependencies": [
+        "task-1"
+      ],
+      "prompt": {
+        "template": "Install dependencies for vessel: {{vesselName}}\n\nDetect and execute appropriate package manager:\n\n1. **If Node.js/TypeScript** (package.json exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   npm install\n   # or if using bun:\n   bun install\n   ```\n\n2. **If Python** (requirements.txt or pyproject.toml exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   python3 -m pip install -r requirements.txt\n   # or if using poetry:\n   poetry install\n   ```\n\n3. **If Go** (go.mod exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   go mod download\n   ```\n\n4. **If Rust** (Cargo.toml exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   cargo fetch\n   ```\n\nVerify installation:\n- Check that dependencies directory exists (node_modules, venv, etc.)\n- Count installed packages\n- Note any installation warnings or errors\n\nOutput installation summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-3",
+      "subagent": "general",
+      "description": "Run existing tests to verify environment",
+      "dependencies": [
+        "task-2"
+      ],
+      "prompt": {
+        "template": "Run tests for vessel: {{vesselName}}\n\nDetect and execute test framework:\n\n1. **If Node.js/TypeScript**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   npm test\n   # or:\n   npm run test:unit\n   ```\n\n2. **If Python**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   python -m pytest\n   # or:\n   python -m unittest discover\n   ```\n\n3. **If Go**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   go test ./...\n   ```\n\n4. **If Rust**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   cargo test\n   ```\n\nCapture test results:\n- Total tests run\n- Tests passed\n- Tests failed (with failure details)\n- Test coverage if available\n- Duration\n\n{{#if skipTestsOnFailure}}If tests fail, document failures but continue (skipTestsOnFailure=true)\n{{else}}If tests fail, stop and report issues\n{{/if}}\n\nOutput test summary.",
+        "variables": [
+          {
+            "name": "skipTestsOnFailure",
+            "type": "boolean",
+            "required": false,
+            "description": "Continue even if tests fail (useful for legacy codebases)",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4",
+      "subagent": "general",
+      "description": "Run Metabob quality scan and analyze codebase",
+      "dependencies": [
+        "task-3"
+      ],
+      "prompt": {
+        "template": "Analyze codebase quality for vessel: {{vesselName}}\n\n1. Search for code quality issues:\n   ```bash\n   cd /workspace/{{vesselName}}\n   ```\n   Use metabob_search_codebase_issues with query: \"security vulnerabilities OR performance issues OR code smells\"\n   - Limit to top 20 issues\n   - Group by severity\n\n2. Get priority issues for active work:\n   Use metabob_get_priority_issues\n   - Should be 0 initially (no active work yet)\n\n3. Analyze key components:\n   - List main entry points (main.ts, __init__.py, main.go, main.rs)\n   - Use metabob_list_file_components on 3-5 key files\n   - Understand component structure\n\n4. Generate quality report:\n   ```\n   Vessel: {{vesselName}}\n   Language: [detected]\n   Total Issues: [count]\n   - HIGH: [count]\n   - MEDIUM: [count]\n   - LOW: [count]\n   \n   Key Files Analyzed:\n   - [file1]: [component count] components\n   - [file2]: [component count] components\n   \n   Recommendations:\n   - [List top 3-5 issues to fix first]\n   ```\n\nOutput quality summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-5",
+      "subagent": "general",
+      "description": "Create test feature branch and make small validation change",
+      "dependencies": [
+        "task-4"
+      ],
+      "prompt": {
+        "template": "Create test branch and validation commit for vessel: {{vesselName}}\n\n1. Create feature branch:\n   ```bash\n   cd /workspace/{{vesselName}}\n   git checkout -b devbob/validate-workflow-$(date +%Y%m%d-%H%M%S)\n   ```\n\n2. Make a small, safe change to validate workflow:\n   - Add a comment to README.md: `<!-- DevBob workflow validated: $(date) -->`\n   - OR create a new file: `.devbob-validated` with timestamp\n   - OR update a comment in a non-critical file\n\n3. Commit the change:\n   ```bash\n   git add .\n   git commit -m \"chore: validate devbob workflow\n   \n   Test commit to verify:\n   - Git operations work\n   - Commits can be created\n   - Branch management functions\n   - Ready for autonomous development\n   \n   This commit will be used to test PR creation.\"\n   ```\n\n4. Verify commit:\n   ```bash\n   git log --oneline -1\n   git show HEAD --stat\n   ```\n\nOutput:\n- Branch name created\n- Commit SHA\n- Files changed\n- Ready for PR creation: YES/NO",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /workspace/{{vesselName}} && git log --oneline -1",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-6",
+      "subagent": "general",
+      "description": "Test PR creation capability (dry-run if no token)",
+      "dependencies": [
+        "task-5"
+      ],
+      "prompt": {
+        "template": "Test PR creation for vessel: {{vesselName}}\n\n1. Check GitHub authentication:\n   ```bash\n   gh auth status\n   ```\n\n{{#if hasGitHubToken}}\n2. Push branch to remote:\n   ```bash\n   cd /workspace/{{vesselName}}\n   git push origin HEAD\n   ```\n\n3. Create PR:\n   ```bash\n   gh pr create \\\n     --title \"chore: DevBob workflow validation\" \\\n     --body \"## Purpose\nValidate DevBob autonomous development workflow.\n\n## Changes\n- Added validation marker\n- Tests git, commit, branch, and PR operations\n\n## Status\n✅ Git operations: Working\n✅ Commit creation: Working\n✅ Branch management: Working\n✅ PR creation: Working\n\n## Next Steps\nThis PR can be closed - it was created for validation only.\nDevBob is ready for autonomous development on this vessel.\n\" \\\n     --base {{branch}}\n   ```\n\n4. Output PR URL\n{{else}}\n2. Simulate PR creation (no GitHub token):\n   ```bash\n   cd /workspace/{{vesselName}}\n   echo \"Would create PR with:\"\n   echo \"  Title: chore: DevBob workflow validation\"\n   echo \"  Base: {{branch}}\"\n   echo \"  Branch: $(git branch --show-current)\"\n   echo \"  Commit: $(git log --oneline -1)\"\n   ```\n\n3. Document requirements:\n   - Need GITHUB_TOKEN environment variable\n   - Token needs repo write permissions\n   - Configure in K8s deployment secrets\n{{/if}}\n\nOutput:\n- Authentication status\n- PR URL (if created) or dry-run summary\n- Validation result: SUCCESS/NEEDS_TOKEN",
+        "variables": [
+          {
+            "name": "hasGitHubToken",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether GITHUB_TOKEN is configured",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-7",
+      "subagent": "general",
+      "description": "Generate workflow capability report",
+      "dependencies": [
+        "task-6"
+      ],
+      "prompt": {
+        "template": "Generate comprehensive workflow report for vessel: {{vesselName}}\n\nCreate report: `/workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md`\n\n```markdown\n# DevBob Capability Report: {{vesselName}}\n\n**Date:** $(date)\n**Vessel URL:** {{repoUrl}}\n**Branch:** {{branch}}\n\n## Summary\n\n✅ **Vessel Ready for Autonomous Development**\n\n## Validated Capabilities\n\n### 1. Repository Operations ✅\n- [x] Git clone from GitHub\n- [x] Branch management\n- [x] Git configuration\n- [x] Repository structure understood\n\n### 2. Development Environment ✅/❌\n- [x/❌] Dependencies installed\n- [x/❌] Tests run successfully\n- [x] Build system functional\n\n### 3. Code Quality Analysis ✅\n- [x] Metabob integration working\n- [x] Issue detection functional\n- [x] Component analysis available\n- Total issues found: [HIGH: X, MEDIUM: Y, LOW: Z]\n\n### 4. Git Workflow ✅\n- [x] Feature branch creation\n- [x] Commit creation\n- [x] Commit messages follow convention\n\n### 5. PR Creation ✅/⚠️\n- [x/⚠️] GitHub CLI available\n- [x/⚠️] Authentication configured\n- [x/⚠️] PR created successfully\n\n## Vessel Profile\n\n**Language/Framework:** [detected]\n**Package Manager:** [npm/pip/cargo/go]\n**Test Framework:** [jest/pytest/cargo test/go test]\n**Build Tool:** [typescript/setuptools/cargo/go build]\n\n**Repository Structure:**\n```\n[directory tree of key folders]\n```\n\n**Key Files:**\n- Entry point: [main file]\n- Configuration: [config files]\n- Tests: [test directory]\n- Documentation: [docs]\n\n## Quality Insights\n\n### Top Issues to Fix\n1. [Issue 1 - severity - file]\n2. [Issue 2 - severity - file]\n3. [Issue 3 - severity - file]\n\n### Code Metrics\n- Files analyzed: [count]\n- Components identified: [count]\n- Test coverage: [percentage if available]\n\n## Recommendations\n\n### Immediate Actions\n1. [Action 1]\n2. [Action 2]\n3. [Action 3]\n\n### Configuration Needed\n{{#unless hasGitHubToken}}\n⚠️  **GITHUB_TOKEN not configured** - PR creation will fail\n   - Add token to K8s secrets\n   - Restart devbob pod\n{{/unless}}\n\n### Ready for Activities\n\nVessel is ready for these activities:\n- ✅ vessel-feature-complete\n- ✅ fix-bug-complete  \n- ✅ refactor-with-tests\n- ✅ trace-data-flow-single-feature\n- ✅ trace-enforce-validate-loop\n\n## Next Steps\n\n1. Review quality issues ({{vesselName}}/QUALITY_REPORT.md)\n2. Fix HIGH severity issues\n3. Run vessel-feature-complete activity for first feature\n4. Coordinate with other vessels if needed\n\n---\n\n**Validated by:** DevBob Activity System\n**Activity:** vessel-codebase-pull-and-validate\n**Status:** Complete\n```\n\nAlso create JSON summary: `/workspace/{{vesselName}}/devbob-capability.json`\n\nOutput: Report file path and summary",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -f /workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task-1",
+      "subagent": "general",
+      "description": "Pull vessel codebase from GitHub and verify structure",
+      "dependencies": [],
+      "prompt": {
+        "template": "Pull and validate vessel codebase: {{repoUrl}}\n\n1. Clone the repository:\n   ```bash\n   cd /workspace\n   git clone {{repoUrl}} {{vesselName}}\n   cd {{vesselName}}\n   git checkout {{branch}}\n   ```\n\n2. Verify repository structure:\n   - List key directories and files\n   - Check for package.json, requirements.txt, or similar\n   - Identify language/framework (TypeScript, Python, Go, etc.)\n   - Find test directories\n   - Find documentation files\n\n3. Configure git:\n   ```bash\n   git config user.name \"{{gitUserName}}\"\n   git config user.email \"{{gitUserEmail}}\"\n   ```\n\n4. Output repository summary:\n   - Language/framework detected\n   - Number of files\n   - Key directories\n   - Test framework identified\n   - Build/package manager (npm, pip, cargo, etc.)",
+        "variables": [
+          {
+            "name": "repoUrl",
+            "type": "string",
+            "required": true,
+            "description": "GitHub repository URL to clone (e.g., https://github.com/org/repo.git)"
+          },
+          {
+            "name": "vesselName",
+            "type": "string",
+            "required": true,
+            "description": "Name for the vessel workspace directory"
+          },
+          {
+            "name": "branch",
+            "type": "string",
+            "required": false,
+            "description": "Git branch to checkout",
+            "default": "main"
+          },
+          {
+            "name": "gitUserName",
+            "type": "string",
+            "required": false,
+            "description": "Git user name for commits",
+            "default": "DevBob Agent"
+          },
+          {
+            "name": "gitUserEmail",
+            "type": "string",
+            "required": false,
+            "description": "Git user email for commits",
+            "default": "devbob@metabob.local"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "{{vesselName}}/.git/config",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -d /workspace/{{vesselName}}/.git",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd /workspace/{{vesselName}} && git status",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2",
+      "subagent": "general",
+      "description": "Install dependencies and verify build system",
+      "dependencies": [
+        "task-1"
+      ],
+      "prompt": {
+        "template": "Install dependencies for vessel: {{vesselName}}\n\nDetect and execute appropriate package manager:\n\n1. **If Node.js/TypeScript** (package.json exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   npm install\n   # or if using bun:\n   bun install\n   ```\n\n2. **If Python** (requirements.txt or pyproject.toml exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   python3 -m pip install -r requirements.txt\n   # or if using poetry:\n   poetry install\n   ```\n\n3. **If Go** (go.mod exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   go mod download\n   ```\n\n4. **If Rust** (Cargo.toml exists):\n   ```bash\n   cd /workspace/{{vesselName}}\n   cargo fetch\n   ```\n\nVerify installation:\n- Check that dependencies directory exists (node_modules, venv, etc.)\n- Count installed packages\n- Note any installation warnings or errors\n\nOutput installation summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-3",
+      "subagent": "general",
+      "description": "Run existing tests to verify environment",
+      "dependencies": [
+        "task-2"
+      ],
+      "prompt": {
+        "template": "Run tests for vessel: {{vesselName}}\n\nDetect and execute test framework:\n\n1. **If Node.js/TypeScript**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   npm test\n   # or:\n   npm run test:unit\n   ```\n\n2. **If Python**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   python -m pytest\n   # or:\n   python -m unittest discover\n   ```\n\n3. **If Go**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   go test ./...\n   ```\n\n4. **If Rust**:\n   ```bash\n   cd /workspace/{{vesselName}}\n   cargo test\n   ```\n\nCapture test results:\n- Total tests run\n- Tests passed\n- Tests failed (with failure details)\n- Test coverage if available\n- Duration\n\n{{#if skipTestsOnFailure}}If tests fail, document failures but continue (skipTestsOnFailure=true)\n{{else}}If tests fail, stop and report issues\n{{/if}}\n\nOutput test summary.",
+        "variables": [
+          {
+            "name": "skipTestsOnFailure",
+            "type": "boolean",
+            "required": false,
+            "description": "Continue even if tests fail (useful for legacy codebases)",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4",
+      "subagent": "general",
+      "description": "Run Metabob quality scan and analyze codebase",
+      "dependencies": [
+        "task-3"
+      ],
+      "prompt": {
+        "template": "Analyze codebase quality for vessel: {{vesselName}}\n\n1. Search for code quality issues:\n   ```bash\n   cd /workspace/{{vesselName}}\n   ```\n   Use metabob_search_codebase_issues with query: \"security vulnerabilities OR performance issues OR code smells\"\n   - Limit to top 20 issues\n   - Group by severity\n\n2. Get priority issues for active work:\n   Use metabob_get_priority_issues\n   - Should be 0 initially (no active work yet)\n\n3. Analyze key components:\n   - List main entry points (main.ts, __init__.py, main.go, main.rs)\n   - Use metabob_list_file_components on 3-5 key files\n   - Understand component structure\n\n4. Generate quality report:\n   ```\n   Vessel: {{vesselName}}\n   Language: [detected]\n   Total Issues: [count]\n   - HIGH: [count]\n   - MEDIUM: [count]\n   - LOW: [count]\n   \n   Key Files Analyzed:\n   - [file1]: [component count] components\n   - [file2]: [component count] components\n   \n   Recommendations:\n   - [List top 3-5 issues to fix first]\n   ```\n\nOutput quality summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-5",
+      "subagent": "general",
+      "description": "Create test feature branch and make small validation change",
+      "dependencies": [
+        "task-4"
+      ],
+      "prompt": {
+        "template": "Create test branch and validation commit for vessel: {{vesselName}}\n\n1. Create feature branch:\n   ```bash\n   cd /workspace/{{vesselName}}\n   git checkout -b devbob/validate-workflow-$(date +%Y%m%d-%H%M%S)\n   ```\n\n2. Make a small, safe change to validate workflow:\n   - Add a comment to README.md: `<!-- DevBob workflow validated: $(date) -->`\n   - OR create a new file: `.devbob-validated` with timestamp\n   - OR update a comment in a non-critical file\n\n3. Commit the change:\n   ```bash\n   git add .\n   git commit -m \"chore: validate devbob workflow\n   \n   Test commit to verify:\n   - Git operations work\n   - Commits can be created\n   - Branch management functions\n   - Ready for autonomous development\n   \n   This commit will be used to test PR creation.\"\n   ```\n\n4. Verify commit:\n   ```bash\n   git log --oneline -1\n   git show HEAD --stat\n   ```\n\nOutput:\n- Branch name created\n- Commit SHA\n- Files changed\n- Ready for PR creation: YES/NO",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd /workspace/{{vesselName}} && git log --oneline -1",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-6",
+      "subagent": "general",
+      "description": "Test PR creation capability (dry-run if no token)",
+      "dependencies": [
+        "task-5"
+      ],
+      "prompt": {
+        "template": "Test PR creation for vessel: {{vesselName}}\n\n1. Check GitHub authentication:\n   ```bash\n   gh auth status\n   ```\n\n{{#if hasGitHubToken}}\n2. Push branch to remote:\n   ```bash\n   cd /workspace/{{vesselName}}\n   git push origin HEAD\n   ```\n\n3. Create PR:\n   ```bash\n   gh pr create \\\n     --title \"chore: DevBob workflow validation\" \\\n     --body \"## Purpose\nValidate DevBob autonomous development workflow.\n\n## Changes\n- Added validation marker\n- Tests git, commit, branch, and PR operations\n\n## Status\n✅ Git operations: Working\n✅ Commit creation: Working\n✅ Branch management: Working\n✅ PR creation: Working\n\n## Next Steps\nThis PR can be closed - it was created for validation only.\nDevBob is ready for autonomous development on this vessel.\n\" \\\n     --base {{branch}}\n   ```\n\n4. Output PR URL\n{{else}}\n2. Simulate PR creation (no GitHub token):\n   ```bash\n   cd /workspace/{{vesselName}}\n   echo \"Would create PR with:\"\n   echo \"  Title: chore: DevBob workflow validation\"\n   echo \"  Base: {{branch}}\"\n   echo \"  Branch: $(git branch --show-current)\"\n   echo \"  Commit: $(git log --oneline -1)\"\n   ```\n\n3. Document requirements:\n   - Need GITHUB_TOKEN environment variable\n   - Token needs repo write permissions\n   - Configure in K8s deployment secrets\n{{/if}}\n\nOutput:\n- Authentication status\n- PR URL (if created) or dry-run summary\n- Validation result: SUCCESS/NEEDS_TOKEN",
+        "variables": [
+          {
+            "name": "hasGitHubToken",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether GITHUB_TOKEN is configured",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-7",
+      "subagent": "general",
+      "description": "Generate workflow capability report",
+      "dependencies": [
+        "task-6"
+      ],
+      "prompt": {
+        "template": "Generate comprehensive workflow report for vessel: {{vesselName}}\n\nCreate report: `/workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md`\n\n```markdown\n# DevBob Capability Report: {{vesselName}}\n\n**Date:** $(date)\n**Vessel URL:** {{repoUrl}}\n**Branch:** {{branch}}\n\n## Summary\n\n✅ **Vessel Ready for Autonomous Development**\n\n## Validated Capabilities\n\n### 1. Repository Operations ✅\n- [x] Git clone from GitHub\n- [x] Branch management\n- [x] Git configuration\n- [x] Repository structure understood\n\n### 2. Development Environment ✅/❌\n- [x/❌] Dependencies installed\n- [x/❌] Tests run successfully\n- [x] Build system functional\n\n### 3. Code Quality Analysis ✅\n- [x] Metabob integration working\n- [x] Issue detection functional\n- [x] Component analysis available\n- Total issues found: [HIGH: X, MEDIUM: Y, LOW: Z]\n\n### 4. Git Workflow ✅\n- [x] Feature branch creation\n- [x] Commit creation\n- [x] Commit messages follow convention\n\n### 5. PR Creation ✅/⚠️\n- [x/⚠️] GitHub CLI available\n- [x/⚠️] Authentication configured\n- [x/⚠️] PR created successfully\n\n## Vessel Profile\n\n**Language/Framework:** [detected]\n**Package Manager:** [npm/pip/cargo/go]\n**Test Framework:** [jest/pytest/cargo test/go test]\n**Build Tool:** [typescript/setuptools/cargo/go build]\n\n**Repository Structure:**\n```\n[directory tree of key folders]\n```\n\n**Key Files:**\n- Entry point: [main file]\n- Configuration: [config files]\n- Tests: [test directory]\n- Documentation: [docs]\n\n## Quality Insights\n\n### Top Issues to Fix\n1. [Issue 1 - severity - file]\n2. [Issue 2 - severity - file]\n3. [Issue 3 - severity - file]\n\n### Code Metrics\n- Files analyzed: [count]\n- Components identified: [count]\n- Test coverage: [percentage if available]\n\n## Recommendations\n\n### Immediate Actions\n1. [Action 1]\n2. [Action 2]\n3. [Action 3]\n\n### Configuration Needed\n{{#unless hasGitHubToken}}\n⚠️  **GITHUB_TOKEN not configured** - PR creation will fail\n   - Add token to K8s secrets\n   - Restart devbob pod\n{{/unless}}\n\n### Ready for Activities\n\nVessel is ready for these activities:\n- ✅ vessel-feature-complete\n- ✅ fix-bug-complete  \n- ✅ refactor-with-tests\n- ✅ trace-data-flow-single-feature\n- ✅ trace-enforce-validate-loop\n\n## Next Steps\n\n1. Review quality issues ({{vesselName}}/QUALITY_REPORT.md)\n2. Fix HIGH severity issues\n3. Run vessel-feature-complete activity for first feature\n4. Coordinate with other vessels if needed\n\n---\n\n**Validated by:** DevBob Activity System\n**Activity:** vessel-codebase-pull-and-validate\n**Status:** Complete\n```\n\nAlso create JSON summary: `/workspace/{{vesselName}}/devbob-capability.json`\n\nOutput: Report file path and summary",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -f /workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-03-02T07:58:19.273Z",
+  "metadata": {}
+}
