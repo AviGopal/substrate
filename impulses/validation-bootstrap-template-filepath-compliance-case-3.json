@@ -1,0 +1,24 @@
+{
+  "id": "validation-bootstrap-template-filepath-compliance-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Validate template structure and completeness\n\nInput: Load all templates and validate their structure\n\nExpected Output:\n- All templates valid: true\n- Required fields present: true (id, name, description)\n- Tasks non-empty: true (all templates have tasks array with items)\n\nValidation Logic:\n1. Load all bootstrap templates\n2. For each template, verify:\n   - Has id field\n   - Has name field\n   - Has description field\n   - Has tasks array with length > 0\n   - All tasks have: id, description, prompt, prompt.template\n\nSuccess Criteria:\n- All 6 templates pass structure validation\n- No templates with missing required fields\n- All tasks within templates are well-formed",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 3,
+    "specification": "bootstrap-template-filepath-compliance",
+    "validationType": "external-test",
+    "input": {
+      "action": "validateStructure",
+      "templates": "all"
+    },
+    "expectedOutput": {
+      "allTemplatesValid": true,
+      "requiredFieldsPresent": true,
+      "tasksNonEmpty": true
+    }
+  }
+}
