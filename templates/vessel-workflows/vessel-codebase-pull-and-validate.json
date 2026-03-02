@@ -53,8 +53,16 @@
         "requiredPatterns": ["{{vesselName}}/.git/config"],
         "forbiddenPatterns": [],
         "commands": [
-          "test -d /workspace/{{vesselName}}/.git",
-          "cd /workspace/{{vesselName}} && git status"
+          {
+            "name": "verify-git-dir",
+            "command": "test -d /workspace/{{vesselName}}/.git",
+            "required": true
+          },
+          {
+            "name": "verify-git-status",
+            "command": "cd /workspace/{{vesselName}} && git status",
+            "required": true
+          }
         ]
       },
       "retry": {
@@ -152,7 +160,11 @@
         "requiredPatterns": [],
         "forbiddenPatterns": [],
         "commands": [
-          "cd /workspace/{{vesselName}} && git log --oneline -1"
+          {
+            "name": "verify-commit",
+            "command": "cd /workspace/{{vesselName}} && git log --oneline -1",
+            "required": true
+          }
         ]
       },
       "retry": {
@@ -208,7 +220,11 @@
         "requiredPatterns": [],
         "forbiddenPatterns": [],
         "commands": [
-          "test -f /workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md"
+          {
+            "name": "verify-report",
+            "command": "test -f /workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md",
+            "required": true
+          }
         ]
       },
       "retry": {
@@ -219,44 +235,24 @@
   ],
   "integration": {
     "preChecks": [
-      {
-        "type": "environment",
-        "description": "Verify workspace is writable",
-        "command": "test -w /workspace"
-      },
-      {
-        "type": "tools",
-        "description": "Verify git is available",
-        "command": "which git"
-      },
-      {
-        "type": "tools",
-        "description": "Verify gh CLI is available",
-        "command": "which gh"
-      }
+      "test -w /workspace",
+      "which git",
+      "which gh"
     ],
     "postChecks": [
-      {
-        "type": "git",
-        "description": "Verify repository was cloned",
-        "command": "test -d /workspace/{{vesselName}}/.git"
-      },
-      {
-        "type": "output",
-        "description": "Verify capability report was created",
-        "command": "test -f /workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md"
-      }
+      "test -d /workspace/{{vesselName}}/.git",
+      "test -f /workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md"
     ],
     "qualityGates": [
       {
         "name": "repository-cloned",
-        "description": "Repository successfully cloned",
-        "threshold": 1
+        "command": "test -d /workspace/{{vesselName}}/.git",
+        "required": true
       },
       {
-        "name": "tests-attempted",
-        "description": "Test execution was attempted",
-        "threshold": 1
+        "name": "report-created",
+        "command": "test -f /workspace/{{vesselName}}/DEVBOB_CAPABILITY_REPORT.md",
+        "required": true
       }
     ]
   },
@@ -264,6 +260,6 @@
     "enabled": true,
     "learningMode": true,
     "targetContextTokens": 8000,
-    "annotationStrategy": "validation-workflow"
+    "annotationStrategy": "key-components"
   }
 }
