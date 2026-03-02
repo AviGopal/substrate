@@ -14,7 +14,7 @@
       "enabled": true,
       "timeout": 30000,
       "environment": {
-        "METABOB_API_URL": "http://localhost",
+        "METABOB_API_URL": "http://localhost:8888",
         "METABOB_PROJECT_ID": "devbob-local",
         "METABOB_API_KEY": "local-dev-key",
         "METABOB_EXCLUDE_PATHS": "**/tests/**,**/perf-repos/**,**/__pycache__/**,**/.git/**,**/node_modules/**,**/venv/**,**/.venv/**,**/dist/**,**/build/**,**/.next/**,**/.metabob/**",
@@ -34,7 +34,7 @@
   },
   "metabob": {
     "cli_path": "metabob-cli",
-    "base_url": "http://localhost",
+    "base_url": "http://localhost:8888",
     "api_key": "local-dev-key",
     "template_registration": {
       "auto_register": true,
