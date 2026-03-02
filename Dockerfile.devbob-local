@@ -37,12 +37,19 @@ RUN mkdir -p /opt/opencode/bin \
 # Copy pre-built OpenCode binary from metabob-opencode
 COPY repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode /opt/opencode/bin/opencode
 
-# Make binary executable
-RUN chmod +x /opt/opencode/bin/opencode
+# Make binary executable with proper permissions for all users
+RUN chmod 755 /opt/opencode/bin/opencode
 
 # Install Bun for plugin management
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:$PATH"
+
+# CRITICAL: Fix Bun permissions for non-root users (production runs as istio-proxy user)
+# This fixes the "Permission denied: /usr/local/bin/bun" error in production
+RUN chmod +x /root/.bun/bin/bun && \
+    ln -s /root/.bun/bin/bun /usr/local/bin/bun && \
+    chmod 755 /root/.bun/bin/bun && \
+    echo "✓ Bun permissions fixed for all users"
 
 # Install plugins in the location OpenCode expects
 RUN mkdir -p /root/.cache/opencode/node_modules && \
