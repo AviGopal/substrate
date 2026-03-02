@@ -1,3 +1,8 @@
+# ⚠️ DEPRECATED: This StatefulSet manifest is deprecated in favor of Helm chart
+# Use helm/charts/devbob/ for all new deployments
+# This file is kept for backward compatibility only
+# See TRACE_devbob-k8s-deployment-pattern.md for migration guide
+
 apiVersion: v1
 kind: Service
 metadata:

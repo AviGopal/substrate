@@ -30,6 +30,17 @@ spec:
         {{- end }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - opencode
+        args:
+        - acp
+        - --hostname
+        - "0.0.0.0"
+        - --port
+        - "{{ .Values.service.targetPort }}"
+        - --print-logs
+        - --log-level
+        - "{{ .Values.env.logLevel }}"
         ports:
         - name: http
           containerPort: {{ .Values.service.targetPort }}
@@ -80,6 +91,8 @@ spec:
           value: {{ .Values.env.skipConfig | quote }}
         - name: LOG_LEVEL
           value: {{ .Values.env.logLevel | quote }}
+        - name: HOME
+          value: {{ .Values.env.home | quote }}
         {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
           {{- if .Values.livenessProbe.httpGet }}

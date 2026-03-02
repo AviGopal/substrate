@@ -1,0 +1,121 @@
+{
+  "specificationName": "devbob-k8s-deployment-pattern",
+  "harnessFile": "tests/validation-harnesses/devbob-k8s-deployment-pattern-harness.sh",
+  "harnessType": "shell-script",
+  "created": "2026-03-01",
+  "testCases": [
+    {
+      "impulseId": "validation-devbob-k8s-deployment-pattern-case-1",
+      "name": "Pod Ready State",
+      "input": {
+        "namespace": "metabob",
+        "timeout": 60,
+        "selector": "app.kubernetes.io/name=devbob"
+      },
+      "expectedOutput": {
+        "podReady": true,
+        "readyWithin": "60s",
+        "readyStatus": "True",
+        "restartCount": 0
+      }
+    },
+    {
+      "impulseId": "validation-devbob-k8s-deployment-pattern-case-2",
+      "name": "ACP Server Listening",
+      "input": {
+        "namespace": "metabob",
+        "port": 8080
+      },
+      "expectedOutput": {
+        "acpServerListening": true,
+        "port": 8080,
+        "logMessage": "ACP server listening on http://0.0.0.0:8080"
+      }
+    },
+    {
+      "impulseId": "validation-devbob-k8s-deployment-pattern-case-3",
+      "name": "Health Endpoint",
+      "input": {
+        "namespace": "metabob",
+        "endpoint": "http://localhost:8080/health"
+      },
+      "expectedOutput": {
+        "httpCode": 200,
+        "healthy": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-k8s-deployment-pattern-case-4",
+      "name": "Secrets Injection",
+      "input": {
+        "namespace": "metabob",
+        "requiredSecrets": ["ANTHROPIC_API_KEY", "GITHUB_TOKEN", "GIT_USER_NAME", "GIT_USER_EMAIL"]
+      },
+      "expectedOutput": {
+        "ANTHROPIC_API_KEY": "set and non-empty",
+        "allSecretsInjected": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-k8s-deployment-pattern-case-5",
+      "name": "Backend Services Connectivity",
+      "input": {
+        "namespace": "metabob",
+        "services": ["redis", "surrealdb", "metabob-rpc-api"]
+      },
+      "expectedOutput": {
+        "allServicesAccessible": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-k8s-deployment-pattern-case-6",
+      "name": "Pod Configuration Compliance",
+      "input": {
+        "namespace": "metabob"
+      },
+      "expectedOutput": {
+        "imageTag": "latest",
+        "imagePullPolicy": "Never",
+        "restartCount": 0,
+        "printLogsFlagPresent": true
+      }
+    },
+    {
+      "impulseId": "validation-devbob-k8s-deployment-pattern-case-7",
+      "name": "Deployment Method (Helm)",
+      "input": {
+        "namespace": "metabob"
+      },
+      "expectedOutput": {
+        "deploymentMethod": "helm",
+        "helmReleaseExists": true,
+        "statefulSetExists": false
+      }
+    }
+  ],
+  "harnessImpulseId": "harness-devbob-k8s-deployment-pattern",
+  "usage": {
+    "basic": "./tests/validation-harnesses/devbob-k8s-deployment-pattern-harness.sh",
+    "customNamespace": "./tests/validation-harnesses/devbob-k8s-deployment-pattern-harness.sh --namespace=my-namespace",
+    "customTimeout": "./tests/validation-harnesses/devbob-k8s-deployment-pattern-harness.sh --timeout=120"
+  },
+  "outputFile": "validation-results-devbob-k8s-deployment-pattern.json",
+  "exitCodes": {
+    "allTestsPass": 0,
+    "someTestsFail": 1
+  },
+  "prerequisites": [
+    "kubectl configured with cluster access",
+    "helm installed",
+    "jq installed",
+    "DevBob deployed in target namespace"
+  ],
+  "validationStrategy": "Deploy via Helm, verify pod Ready within 60s, check logs for 'ACP server listening on http://0.0.0.0:8080', curl http://localhost:8080/health returns 200, verify ANTHROPIC_API_KEY env var set, test backend service DNS resolution and connectivity",
+  "references": {
+    "trace": "TRACE_devbob-k8s-deployment-pattern.md",
+    "enforcement": "ENFORCEMENT_devbob-k8s-deployment-pattern.md",
+    "deploymentGuide": "DEPLOYMENT_GUIDE_devbob-k8s.md",
+    "testCases": "tests/validation-harnesses/test-cases/devbob-k8s-deployment-pattern-cases.json",
+    "readme": "tests/validation-harnesses/README-devbob-k8s-deployment-pattern.md"
+  }
+}

@@ -3,7 +3,7 @@
 # Image configuration
 image:
   repository: devbob
-  tag: unified-test
+  tag: latest
   pullPolicy: Never  # Use local image
 
 # Replica count
@@ -12,8 +12,8 @@ replicaCount: 1
 # Service configuration
 service:
   type: ClusterIP
-  port: 3000
-  targetPort: 3000
+  port: 8080
+  targetPort: 8080
   annotations: {}
 
 # Dashboard configuration
@@ -49,6 +49,7 @@ env:
   waitForBackend: "false"
   skipConfig: "true"
   logLevel: "INFO"
+  home: "/workspace"
 
 # Secrets (provide via Helm values or external secrets)
 secrets:
@@ -66,7 +67,7 @@ livenessProbe:
   enabled: true
   httpGet:
     path: /health
-    port: 3000
+    port: 8080
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5
@@ -76,7 +77,7 @@ readinessProbe:
   enabled: true
   httpGet:
     path: /health
-    port: 3000
+    port: 8080
   initialDelaySeconds: 10
   periodSeconds: 5
   timeoutSeconds: 3

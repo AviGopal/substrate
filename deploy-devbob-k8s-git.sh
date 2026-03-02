@@ -1,6 +1,16 @@
 #!/bin/bash
+# ⚠️ DEPRECATED: This script uses the deprecated StatefulSet manifest
+# Use deploy-devbob-helm.sh for new deployments (canonical method)
+# This script is kept for backward compatibility only
+
 # Deploy devbob with git operations to Kubernetes
 # This script completes the deployment phase of the Trace → Enforce → Validate loop
+
+echo "⚠️  WARNING: This deployment script is deprecated"
+echo "    Use deploy-devbob-helm.sh for new deployments"
+echo "    Continuing with StatefulSet deployment in 5 seconds..."
+echo
+sleep 5
 
 set -euo pipefail
 
