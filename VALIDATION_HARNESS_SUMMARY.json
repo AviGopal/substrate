@@ -1,88 +1,65 @@
 {
-  "specificationName": "Complete Async Ripple Changes for SurrealDB Official Library",
-  "harnessFile": "tests/validation-harnesses/Complete-Async-Ripple-Changes-for-SurrealDB-Official-Library-harness.sh",
+  "specificationName": "Activity Execution Recording and Metrics Feedback Loop",
+  "harnessFile": "tests/validation-harnesses/execution-recording-harness.ts",
+  "harnessReadme": "tests/validation-harnesses/execution-recording-README.md",
+  "created": "2026-03-02",
+  
   "testCases": [
     {
-      "impulseId": "validation-Complete-Async-Ripple-Changes-case-1",
-      "name": "No unawaited get_surreal_client() calls",
-      "input": "Search for sync get_surreal_client() calls in operation modules, routes, and CLI",
-      "expectedOutput": "0 unawaited calls found",
-      "validationMethod": "grep -r \"^\\s*db\\s*=\\s*get_surreal_client()\" --include=\"*.py\"",
-      "pass": true
-    },
-    {
-      "impulseId": "validation-Complete-Async-Ripple-Changes-case-2",
-      "name": "All operation modules have async def signatures",
-      "input": "Check all 8 operation modules for async def function signatures",
-      "expectedOutput": "All modules have >= 3 async def functions",
-      "validationMethod": "grep -c \"^async def \" for each module",
-      "pass": true,
-      "details": {
-        "failure_pattern.py": 6,
-        "task_execution.py": 5,
-        "activity_content.py": 3,
-        "activity_execution.py": 6,
-        "impulse_data.py": 5,
-        "activity_data.py": 5,
-        "impulse_learning.py": 7,
-        "template_data.py": 6
+      "impulseId": "validation-execution-recording-case-1",
+      "description": "Single successful execution recorded",
+      "input": {
+        "templateId": "execution-recording-test-template",
+        "executeCount": 1,
+        "expectedSuccess": [true]
+      },
+      "expectedOutput": {
+        "executionRecordsCount": 1,
+        "totalExecutions": 1,
+        "successfulExecutions": 1,
+        "successRate": 1.0,
+        "metricsUpdated": true,
+        "thompsonAlpha": 2.0,
+        "thompsonBeta": 1.0
       }
     },
     {
-      "impulseId": "validation-Complete-Async-Ripple-Changes-case-3",
-      "name": "Route handlers properly await db operations",
-      "input": "Check routes/activity.py for await keywords on db operations",
-      "expectedOutput": "All patterns found: await get_metrics, await create_metrics, await get_surreal_client, await db.merge/query/select, await insert_task_execution",
-      "validationMethod": "grep -E for each pattern in routes/activity.py",
-      "pass": true
-    },
-    {
-      "impulseId": "validation-Complete-Async-Ripple-Changes-case-4",
-      "name": "CLI commands use asyncio.run() wrapper",
-      "input": "Check cli.py for asyncio.run() usage",
-      "expectedOutput": "At least 8 asyncio.run() calls found",
-      "validationMethod": "grep -c \"asyncio\\.run(\" server/cli.py",
-      "pass": true,
-      "actual": 11
-    },
-    {
-      "impulseId": "validation-Complete-Async-Ripple-Changes-case-5",
-      "name": "merge() used instead of update() for partial updates",
-      "input": "Check critical files for db.merge() usage",
-      "expectedOutput": "failure_pattern.py, task_execution.py, template_data.py, routes/activity.py all use db.merge()",
-      "validationMethod": "grep -c \"db\\.merge(\" for each file",
-      "pass": true,
-      "details": {
-        "failure_pattern.py": 1,
-        "task_execution.py": 1,
-        "template_data.py": 1,
-        "routes/activity.py": 1
+      "impulseId": "validation-execution-recording-case-2",
+      "description": "Multiple successful executions aggregate correctly",
+      "input": {
+        "templateId": "execution-recording-test-template",
+        "executeCount": 3,
+        "expectedSuccess": [true, true, true]
+      },
+      "expectedOutput": {
+        "executionRecordsCount": 3,
+        "totalExecutions": 3,
+        "successfulExecutions": 3,
+        "successRate": 1.0,
+        "metricsUpdated": true,
+        "thompsonAlpha": 4.0,
+        "thompsonBeta": 1.0
       }
     },
     {
-      "impulseId": "validation-Complete-Async-Ripple-Changes-case-6",
-      "name": "Python compilation check",
-      "input": "Compile all modified Python files",
-      "expectedOutput": "All 10 files compile successfully",
-      "validationMethod": "python -m py_compile for each file",
-      "pass": true,
-      "filesChecked": [
-        "server/db/operations/failure_pattern.py",
-        "server/db/operations/task_execution.py",
-        "server/db/operations/activity_content.py",
-        "server/db/operations/activity_execution.py",
-        "server/db/operations/impulse_data.py",
-        "server/db/operations/activity_data.py",
-        "server/db/operations/impulse_learning.py",
-        "server/db/operations/template_data.py",
-        "server/routes/activity.py",
-        "server/cli.py"
-      ]
+      "impulseId": "validation-execution-recording-case-3",
+      "description": "Mixed success/failure executions calculate correct success_rate",
+      "input": {
+        "templateId": "execution-recording-test-template",
+        "executeCount": 4,
+        "expectedSuccess": [true, false, true, true]
+      },
+      "expectedOutput": {
+        "executionRecordsCount": 4,
+        "totalExecutions": 4,
+        "successfulExecutions": 3,
+        "successRate": 0.75,
+        "metricsUpdated": true,
+        "thompsonAlpha": 4.0,
+        "thompsonBeta": 2.0
+      }
     }
   ],
-  "harnessImpulseId": "harness-Complete-Async-Ripple-Changes-for-SurrealDB-Official-Library",
-  "allTestsPassed": true,
-  "totalTests": 6,
-  "passedTests": 6,
-  "failedTests": 0
+  
+  "harnessImpulseId": "harness-execution-recording"
 }
