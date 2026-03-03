@@ -2,15 +2,16 @@
 
 ## Executive Summary
 
-**Core Principle**: OpenCode is not a monolithic tool, but a **vessel** - an adaptive plugin host that discovers its environment and composes capabilities from available resources.
+**Core Principle**: OpenCode is not a monolithic tool, but a **vessel** - an adaptive plugin host that discovers its environment and composes capabilities from available resources through **activities**.
 
-**Ontological Foundation**: OpenCode is a **vessel** (instructional state) through which the [unnamed process-of-becoming] manifests. The vessel provides the capacity for execution - it is not the becoming itself. This document describes the vessel's architecture; for the foundational three-state model (vessel/becoming/instance), see [ONTOLOGY_OF_BECOMING.md](./ONTOLOGY_OF_BECOMING.md).
+**Ontological Foundation**: OpenCode is a **vessel** (instructional state) that provides capacity for execution through activity-centric operation. This document describes the vessel's architecture; see [VESSEL_ARCHITECTURE_CORRECTED.md](./VESSEL_ARCHITECTURE_CORRECTED.md) for the authoritative vessel model.
 
-**Key Insight**: If everything can be a plugin (MCP servers, git repos, binaries, APIs), then **OpenCode itself** should be treated as a collection of plugins. This enables:
+**Key Insight**: If everything can be a plugin (MCP servers, git repos, binaries, APIs), then **OpenCode itself** should be treated as a collection of plugins, all orchestrated via **activities**. This enables:
 
+- **Activity-Centric Execution**: All behaviors are activities (managing, using, learning, introspecting)
 - **Environment Adaptation**: Work with whatever is available (Docker, Kubernetes, local tools, cloud APIs)
 - **Graceful Degradation**: Activity templates adapt to missing plugins
-- **Continuous Improvement**: Plugins (including OpenCode's own components) evolve over time
+- **Continuous Evolution**: Plugins (including OpenCode's own components) improve via boredom activities
 - **Respectful Integration**: Convince (discover and compose) rather than coerce (require specific setup)
 
 ---
