@@ -1,5 +1,5 @@
 {
-  "base_url": "http://localhost:8888",
+  "base_url": "http://api.metabob.local",
   "api_key": "mb_devbob_test_simple_2026_v2",
   "state_directory": ".metabob",
   "include_paths": [],
