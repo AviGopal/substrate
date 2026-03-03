@@ -16,6 +16,8 @@
   "license": "MIT",
   "dependencies": {
     "@types/node": "^20.0.0",
+    "@types/node-fetch": "^2.6.13",
+    "node-fetch": "^2.7.0",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
   }

@@ -15,7 +15,7 @@ echo
 # Check 1: Verify pods are running
 echo "[1/10] Checking pod status..."
 
-DEVBOB_POD=$(kubectl get pod -n $NAMESPACE -l app=devbob -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+DEVBOB_POD=$(kubectl get pod -n $NAMESPACE -l app.kubernetes.io/name=devbob -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
 RPC_API_POD=$(kubectl get pod -n $NAMESPACE -l app=metabob-rpc-api -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
 SURREALDB_POD=$(kubectl get pod -n $NAMESPACE -l app=surrealdb -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
 

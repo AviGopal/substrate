@@ -87,7 +87,7 @@ function kubectl(command: string): string {
  */
 function checkDevBobReady(): boolean {
   try {
-    const output = kubectl(`get pod -n ${K8S_NAMESPACE} -l app=devbob -o json`);
+    const output = kubectl(`get pod -n ${K8S_NAMESPACE} -l app.kubernetes.io/name=devbob -o json`);
     const pods = JSON.parse(output);
     
     if (pods.items.length === 0) {
