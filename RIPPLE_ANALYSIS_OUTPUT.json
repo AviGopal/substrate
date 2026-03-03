@@ -1,0 +1,65 @@
+{
+  "specificationName": "Correct MCP Tool Name and Parameters",
+  "componentsUpdated": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "component": "TemplateMetricsClient.reportExecution",
+      "changeMade": "Fixed MCP tool name from 'post_activity_result' to 'metabob_post_activity_result', changed parameter name from 'activityId' to 'activity_id', removed invalid 'backend' parameter",
+      "reason": "Primary enforcement change - no ripple updates needed as interface (ActivityExecutionData) already uses snake_case naming"
+    }
+  ],
+  "rippleChangesRequired": [],
+  "validationStatus": {
+    "thisSpec": "PASS",
+    "conflictingSpecs": []
+  },
+  "relatedSpecsStatus": [
+    {
+      "spec": "metrics-calculation-in-rpc-api-only",
+      "status": "PASS",
+      "note": "Already passing, no re-validation needed"
+    },
+    {
+      "spec": "thompson-sampling-in-rpc-api-only",
+      "status": "PASS",
+      "note": "Already passing, no re-validation needed"
+    },
+    {
+      "spec": "complete-architecture-separation",
+      "status": "PASS",
+      "note": "Already passing, no re-validation needed"
+    },
+    {
+      "spec": "surrealdb-primary-redis-cache",
+      "status": "PASS",
+      "note": "No interaction, no re-validation needed"
+    }
+  ],
+  "functionalStateTransition": {
+    "before": {
+      "state": "Specification NOT enforced",
+      "behavior": "Tool call with wrong name 'post_activity_result', MCP server returns 'Tool not found', silent failure, no metrics recorded",
+      "dataFlow": "OpenCode → MCP Client → MCP Server (Tool not found) → Silent failure",
+      "impact": "Learning system disabled, Thompson Sampling not operational"
+    },
+    "after": {
+      "state": "Specification ENFORCED across all components",
+      "behavior": "Tool call with correct name 'metabob_post_activity_result', MCP server finds tool, metrics recorded to database",
+      "dataFlow": "OpenCode → MCP Client → MCP Server → metabob-cli → RPC API → Database",
+      "impact": "Learning system operational, Thompson Sampling updating parameters"
+    }
+  },
+  "blastRadiusAnalysis": {
+    "callersAnalyzed": [
+      "activity.ts",
+      "cli/cmd/activity.ts",
+      "boredom-manager.ts",
+      "util/metabob.ts"
+    ],
+    "callersRequiringChanges": 0,
+    "interfaceChanges": 0,
+    "testUpdates": 0,
+    "reason": "All callers use ActivityExecutionData interface which already matches fixed parameter names"
+  },
+  "rippleImpulseId": "ripple-Correct MCP Tool Name and Parameters"
+}

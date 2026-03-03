@@ -1,0 +1,79 @@
+{
+  "specificationName": "Correct MCP Tool Name and Parameters",
+  "validationResults": [
+    {
+      "testCase": "validation-Correct MCP Tool Name and Parameters-case-1",
+      "status": "PASS",
+      "category": "tool-name-validation",
+      "actual": {
+        "toolName": "metabob_post_activity_result",
+        "hasPrefix": true,
+        "format": "metabob_* naming convention"
+      },
+      "expected": {
+        "toolName": "metabob_post_activity_result",
+        "hasPrefix": true,
+        "format": "metabob_* naming convention"
+      },
+      "difference": "None - matches expected output exactly",
+      "message": "Tool name is correct with metabob_ prefix"
+    },
+    {
+      "testCase": "validation-Correct MCP Tool Name and Parameters-case-2",
+      "status": "PASS",
+      "category": "parameter-validation",
+      "actual": {
+        "parameterName": "activity_id",
+        "format": "snake_case",
+        "mapsTo": "data.activity_id"
+      },
+      "expected": {
+        "parameterName": "activity_id",
+        "format": "snake_case (not camelCase)",
+        "mapsTo": "data.activity_id"
+      },
+      "difference": "None - matches expected output exactly",
+      "message": "Parameter name is correct (snake_case)"
+    },
+    {
+      "testCase": "validation-Correct MCP Tool Name and Parameters-case-3",
+      "status": "PASS",
+      "category": "parameter-validation",
+      "actual": {
+        "backendParameter": false,
+        "validParameters": ["activity_id", "result"]
+      },
+      "expected": {
+        "noBackendParameter": true,
+        "validParameters": ["activity_id", "result"]
+      },
+      "difference": "None - matches expected output exactly",
+      "message": "No 'backend' parameter found (correct)"
+    },
+    {
+      "testCase": "validation-Correct MCP Tool Name and Parameters-case-4",
+      "status": "PASS",
+      "category": "cross-file-validation",
+      "actual": {
+        "client": "metabob_post_activity_result",
+        "mcp": "metabob_post_activity_result",
+        "match": true
+      },
+      "expected": {
+        "clientToolName": "metabob_post_activity_result",
+        "registryToolName": "metabob_post_activity_result",
+        "match": true
+      },
+      "difference": "None - matches expected output exactly",
+      "message": "Tool names match between client and MCP registration"
+    }
+  ],
+  "overallStatus": "PASS",
+  "summary": {
+    "totalChecks": 6,
+    "passed": 6,
+    "failed": 0,
+    "successRate": 1.0
+  },
+  "resultsImpulseId": "validation-results-Correct MCP Tool Name and Parameters"
+}

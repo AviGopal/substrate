@@ -1,0 +1,15 @@
+{
+  "id": "validation-Correct MCP Tool Name and Parameters-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: Verify Tool Name Has Correct Prefix\n\nInput:\n- File: repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts\n- Check: Tool name in callMCPTool invocation\n\nExpected Output:\n- Tool name: 'metabob_post_activity_result'\n- Has prefix: true\n- Format: metabob_* naming convention\n\nValidation:\n- Parse file for callMCPTool invocation\n- Extract tool name from first argument\n- Verify it starts with 'metabob_'\n- Verify exact name is 'metabob_post_activity_result'\n\nPASS Criteria:\n- Tool name exactly matches 'metabob_post_activity_result'\n- Name includes 'metabob_' prefix\n\nFAIL Criteria:\n- Tool name is 'post_activity_result' (missing prefix)\n- Tool name has any other value\n- Tool name cannot be found in file",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testCase": 1,
+    "category": "tool-name-validation",
+    "expectedToolName": "metabob_post_activity_result"
+  },
+  "budget": 1000
+}

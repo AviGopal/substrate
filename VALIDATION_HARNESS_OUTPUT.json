@@ -1,149 +1,54 @@
 {
-  "specificationName": "Instance-Invariant Storage - Missing Backend API Endpoints",
-  "harnessFile": "tests/validation-harnesses/instance-invariant-storage-missing-backend-api-endpoints-harness.ts",
+  "specificationName": "Correct MCP Tool Name and Parameters",
+  "harnessFile": "tests/validation-harnesses/mcp-tool-name-parameters-harness.ts",
   "testCases": [
     {
-      "impulseId": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-1",
-      "testName": "POST /v2/activities endpoint works",
+      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-1",
       "input": {
-        "endpoint": "/v2/activities",
-        "method": "POST",
-        "activity_id": "test-activity-{timestamp}-1",
-        "project_id": "test_project_alpha",
-        "activity_data": {
-          "id": "test-activity-{timestamp}-1",
-          "template": "test-template",
-          "status": "running",
-          "tasks": []
-        }
+        "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+        "check": "Tool name in callMCPTool invocation"
       },
       "expectedOutput": {
-        "status": 201,
-        "response": {
-          "activity_id": "test-activity-{timestamp}-1",
-          "api_key": "test_api_key_instance_a",
-          "project_id": "test_project_alpha",
-          "activity_data": "{...}",
-          "created_at": "{ISO timestamp}",
-          "updated_at": "{ISO timestamp}"
-        }
-      },
-      "description": "Verifies that POST /v2/activities endpoint exists and successfully creates an activity with 201 status code"
+        "toolName": "metabob_post_activity_result",
+        "hasPrefix": true,
+        "format": "metabob_* naming convention"
+      }
     },
     {
-      "impulseId": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-2",
-      "testName": "GET /v2/activities/{id} endpoint works",
+      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-2",
       "input": {
-        "endpoint": "/v2/activities/{activity_id}?project_id=test_project_alpha",
-        "method": "GET",
-        "activity_id": "test-activity-{timestamp}-2",
-        "apiKey": "test_api_key_instance_a"
+        "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+        "check": "Parameter name in callMCPTool arguments"
       },
       "expectedOutput": {
-        "status": 200,
-        "response": {
-          "activity_id": "test-activity-{timestamp}-2",
-          "activity_data": "{matches what was stored}",
-          "dataIntegrity": true
-        }
-      },
-      "description": "Verifies that GET /v2/activities/{id} endpoint exists and successfully retrieves activity data with exact match"
+        "parameterName": "activity_id",
+        "format": "snake_case (not camelCase)",
+        "mapsTo": "data.activity_id"
+      }
     },
     {
-      "impulseId": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-3",
-      "testName": "Cross-instance activity retrieval",
+      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-3",
       "input": {
-        "scenario": "Store activity in Instance A, retrieve from Instance B",
-        "credentials": {
-          "api_key": "test_api_key_instance_a",
-          "project_id": "test_project_alpha"
-        },
-        "activity_id": "test-activity-{timestamp}-3"
+        "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+        "check": "callMCPTool arguments object"
       },
       "expectedOutput": {
-        "storeStatus": 201,
-        "retrieveStatus": 200,
-        "dataMatch": true,
-        "crossInstanceConsistency": true
-      },
-      "description": "Verifies that activities stored in one instance can be retrieved from another instance with same credentials"
+        "noBackendParameter": true,
+        "validParameters": ["activity_id", "result"]
+      }
     },
     {
-      "impulseId": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-4",
-      "testName": "Multi-tenant isolation (api_key scoping)",
+      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-4",
       "input": {
-        "scenario": "Tenant 1 stores activity, Tenant 2 tries to access it",
-        "tenant1ApiKey": "test_api_key_instance_a",
-        "tenant2ApiKey": "test_api_key_instance_b",
-        "project_id": "test_project_alpha",
-        "activity_id": "test-activity-{timestamp}-4"
+        "clientFile": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+        "registryFile": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py"
       },
       "expectedOutput": {
-        "storeStatus": 201,
-        "retrieveStatus": 404,
-        "tenantIsolation": "enforced",
-        "reason": "Different api_key should not access data"
-      },
-      "description": "Verifies that activities are isolated by api_key - Tenant 2 cannot access Tenant 1's data"
-    },
-    {
-      "impulseId": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-5",
-      "testName": "Project isolation (project_id scoping)",
-      "input": {
-        "scenario": "Project 1 stores activity, try to access from Project 2",
-        "api_key": "test_api_key_instance_a",
-        "project1Id": "test_project_alpha",
-        "project2Id": "test_project_beta",
-        "activity_id": "test-activity-{timestamp}-5"
-      },
-      "expectedOutput": {
-        "storeStatus": 201,
-        "retrieveStatus": 404,
-        "projectIsolation": "enforced",
-        "reason": "Different project_id should not access data"
-      },
-      "description": "Verifies that activities are isolated by project_id - Project 2 cannot access Project 1's data"
-    },
-    {
-      "impulseId": "validation-instance-invariant-storage-missing-backend-api-endpoints-case-6",
-      "testName": "Duplicate activity returns 400",
-      "input": {
-        "scenario": "Create activity twice with same activity_id",
-        "activity_id": "test-activity-{timestamp}-6",
-        "project_id": "test_project_alpha",
-        "api_key": "test_api_key_instance_a"
-      },
-      "expectedOutput": {
-        "firstCreateStatus": 201,
-        "secondCreateStatus": 400,
-        "errorHandling": "correct",
-        "reason": "Duplicate activity should return 400 Bad Request"
-      },
-      "description": "Verifies that attempting to create duplicate activity returns 400 error with appropriate message"
+        "clientToolName": "metabob_post_activity_result",
+        "registryToolName": "metabob_post_activity_result",
+        "match": true
+      }
     }
   ],
-  "harnessImpulseId": "harness-instance-invariant-storage-missing-backend-api-endpoints",
-  "totalTestCases": 6,
-  "testCategories": {
-    "endpointExistence": ["case-1", "case-2"],
-    "crossInstanceConsistency": ["case-3"],
-    "multiTenantIsolation": ["case-4"],
-    "projectIsolation": ["case-5"],
-    "errorHandling": ["case-6"]
-  },
-  "executionMode": "non-llm",
-  "automationLevel": "fully-automated",
-  "expectedPassRate": "6/6 (100%)",
-  "dependencies": {
-    "runtime": "Node.js with TypeScript",
-    "requirements": [
-      "rpc-api backend running on localhost:8000",
-      "activity_data.py operations file exists",
-      "POST /v2/activities endpoint implemented",
-      "GET /v2/activities/{id} endpoint implemented",
-      "SurrealDB running and accessible"
-    ]
-  },
-  "runCommand": "cd tests && npx tsx validation-harnesses/instance-invariant-storage-missing-backend-api-endpoints-harness.ts",
-  "estimatedRunTime": "5-10 seconds"
+  "harnessImpulseId": "harness-Correct MCP Tool Name and Parameters"
 }

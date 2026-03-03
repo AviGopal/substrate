@@ -1,0 +1,28 @@
+{
+  "specificationName": "Correct MCP Tool Name and Parameters",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "component": "TemplateMetricsClient.reportExecution",
+      "currentBehavior": "Calls MCP tool 'post_activity_result' with camelCase params and invalid 'backend' param",
+      "desiredBehavior": "Calls MCP tool 'metabob_post_activity_result' with snake_case params, no extra params",
+      "gap": "Tool name missing 'metabob_' prefix, parameter names in wrong case, extra invalid parameter"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_post_activity_result",
+      "currentBehavior": "Tool registered with 'metabob_' prefix, expects snake_case parameters",
+      "desiredBehavior": "Same - this component is CORRECT",
+      "gap": "None - this is already correct"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "ExecutionRequest schema",
+      "currentBehavior": "Backend schema expects snake_case fields",
+      "desiredBehavior": "Same - this component is CORRECT",
+      "gap": "None - this is already correct"
+    }
+  ],
+  "dataFlow": "ActivityExecutor → TemplateMetricsClient.reportExecution (❌ FAILS HERE) → MCP Client → MCP Server (Tool not found) → (FLOW STOPS) → metabob_post_activity_result → Learning Loop API → Database",
+  "traceImpulseId": "trace-Correct MCP Tool Name and Parameters"
+}

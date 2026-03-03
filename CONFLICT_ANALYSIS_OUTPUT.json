@@ -1,0 +1,102 @@
+{
+  "specificationName": "Correct MCP Tool Name and Parameters",
+  "otherSpecifications": [
+    "complete-architecture-separation",
+    "metrics-calculation-in-rpc-api-only",
+    "thompson-sampling-in-rpc-api-only",
+    "impulse-learning-in-rpc-api-only",
+    "impulse-learning-storage-complete",
+    "pattern-extraction-service-complete",
+    "context-optimization-endpoint-complete",
+    "surrealdb-primary-redis-cache",
+    "devbob-k8s-git-operations",
+    "bootstrap-template-filepath-compliance",
+    "activity-template-query-filtering",
+    "project-scoped-template-filtering",
+    "ACP-Local-Network-Discovery",
+    "devbob-acp-multi-vessel-coordination",
+    "Kubernetes-Deployment-Validation-Exit-Codes",
+    "Local-Docker-Desktop-Kubernetes-Deployment",
+    "metabob-cli-test-implementation-alignment",
+    "surrealdb-official-library-integration",
+    "Instance-Invariant Storage"
+  ],
+  "conflicts": [],
+  "sharedComponents": [
+    {
+      "component": "template-metrics-client.ts",
+      "affectedBySpecs": [
+        "Correct MCP Tool Name and Parameters",
+        "metrics-calculation-in-rpc-api-only",
+        "complete-architecture-separation"
+      ],
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Specifications are mutually reinforcing. MCP tool fix enables metrics calculation and reinforces architecture separation. No action required."
+    }
+  ],
+  "architecturalCompliance": {
+    "boundaryViolations": 0,
+    "reinforcements": 3,
+    "details": [
+      {
+        "boundary": "OpenCode → MCP → CLI → Backend",
+        "status": "REINFORCED",
+        "note": "Fix maintains MCP layer usage, enables correct data flow"
+      },
+      {
+        "boundary": "Metrics Calculation in RPC API Only",
+        "status": "MAINTAINED",
+        "note": "No arithmetic operations added, delegates to RPC API"
+      },
+      {
+        "boundary": "Thompson Sampling in RPC API Only",
+        "status": "MAINTAINED",
+        "note": "No Thompson Sampling code added, enables RPC API learning"
+      }
+    ]
+  },
+  "dependencyAnalysis": {
+    "upstream": [
+      {
+        "component": "MCP Tool Registration",
+        "status": "VERIFIED",
+        "location": "activity_template_tools.py:301"
+      },
+      {
+        "component": "RPC API Endpoint",
+        "status": "VERIFIED",
+        "location": "learning_loop.py:81-104"
+      },
+      {
+        "component": "Database Schema",
+        "status": "VERIFIED",
+        "source": "surrealdb-primary-redis-cache spec"
+      }
+    ],
+    "downstream": [
+      {
+        "component": "Thompson Sampling",
+        "status": "NOW_WORKS",
+        "spec": "thompson-sampling-in-rpc-api-only"
+      },
+      {
+        "component": "Metrics Calculation",
+        "status": "NOW_WORKS",
+        "spec": "metrics-calculation-in-rpc-api-only"
+      },
+      {
+        "component": "Learning System",
+        "status": "NOW_WORKS",
+        "impact": "Boredom activity detection, template selection"
+      }
+    ]
+  },
+  "positiveEffects": [
+    "Enables metrics recording (was broken, now fixed)",
+    "Enables Thompson Sampling learning system",
+    "Reinforces MCP architectural boundary",
+    "Fixes critical silent failure bug",
+    "Enables boredom activity detection"
+  ],
+  "conflictImpulseId": "conflict-analysis-Correct MCP Tool Name and Parameters"
+}

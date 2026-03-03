@@ -1,0 +1,28 @@
+{
+  "id": "harness-Correct MCP Tool Name and Parameters",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/mcp-tool-name-parameters-harness.ts",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "specificationName": "Correct MCP Tool Name and Parameters",
+    "harnessType": "code-inspection-and-validation",
+    "testCases": [
+      "validation-Correct MCP Tool Name and Parameters-case-1",
+      "validation-Correct MCP Tool Name and Parameters-case-2",
+      "validation-Correct MCP Tool Name and Parameters-case-3",
+      "validation-Correct MCP Tool Name and Parameters-case-4"
+    ],
+    "checks": [
+      "Tool name has 'metabob_' prefix",
+      "Parameter name is 'activity_id' (snake_case)",
+      "No invalid 'backend' parameter",
+      "MCP tool registration matches",
+      "Tool name matches between client and registry",
+      "Documentation comments are correct"
+    ]
+  },
+  "budget": 2000
+}
