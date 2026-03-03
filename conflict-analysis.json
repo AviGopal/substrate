@@ -1,0 +1,164 @@
+{
+  "specificationName": "MCP Activity and Impulse System Tool Call Enforcement",
+  "analysisTimestamp": "2026-03-03T23:10:00Z",
+  "otherSpecifications": [
+    "bootstrap-template-filepath-compliance",
+    "instance-invariant-storage-enforcement"
+  ],
+  "filesModified": {
+    "mcpEnforcement": [
+      "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "repos/metabob-opencode/packages/opencode/src/mcp/index.ts"
+    ],
+    "bootstrapCompliance": [
+      "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts"
+    ],
+    "instanceStorage": [
+      "repos/metabob-opencode/packages/opencode/src/session/activity-state.ts",
+      "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
+    ]
+  },
+  "conflicts": [
+    {
+      "id": "POTENTIAL-001",
+      "type": "RESOLVED_DESIGN_CONSIDERATION",
+      "spec1": "MCP Activity and Impulse System Tool Call Enforcement",
+      "spec2": "bootstrap-template-filepath-compliance",
+      "sharedComponent": "template-loader.ts - strictBackend enforcement",
+      "description": "strictBackend=true could prevent bootstrap template loading if not handled correctly",
+      "severity": "LOW",
+      "status": "RESOLVED",
+      "resolution": "Implementation already handles this: `if (options.strictBackend && !BOOTSTRAP_TEMPLATES.has(id))` allows bootstrap templates even in strict mode",
+      "evidence": {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+        "line": "~145",
+        "code": "if (options.strictBackend && !BOOTSTRAP_TEMPLATES.has(id)) { throw new Error(...) }"
+      },
+      "validationStatus": "BOTH_SPECS_PASS",
+      "recommendation": "No action required - design already accounts for bootstrap templates in strict mode"
+    }
+  ],
+  "complementaryRelationships": [
+    {
+      "id": "COMP-001",
+      "spec1": "MCP Activity and Impulse System Tool Call Enforcement",
+      "spec2": "instance-invariant-storage-enforcement",
+      "relationship": "MUTUALLY_BENEFICIAL",
+      "description": "Enhanced MCP logging helps debug instance storage backend sync issues",
+      "benefits": [
+        "MCP enforcement elevates backend sync failures to ERROR level",
+        "Instance storage relies on backend sync for cross-instance access",
+        "Better logging visibility helps troubleshoot storage sync failures",
+        "strictBackend mode can enforce backend availability for storage operations"
+      ],
+      "sharedConcerns": [
+        "Backend connectivity",
+        "Cross-instance data synchronization",
+        "Error visibility and debugging"
+      ],
+      "recommendation": "Use strictBackend=true in production to ensure storage sync reliability"
+    },
+    {
+      "id": "COMP-002",
+      "spec1": "MCP Activity and Impulse System Tool Call Enforcement",
+      "spec2": "bootstrap-template-filepath-compliance",
+      "relationship": "COMPATIBLE_WITH_EXCEPTIONS",
+      "description": "Strict backend enforcement coexists with embedded bootstrap loading",
+      "benefits": [
+        "strictBackend=true enforces backend for non-bootstrap templates",
+        "Bootstrap templates still load from embedded source as cold-start fallback",
+        "Best of both worlds: production reliability + development convenience"
+      ],
+      "designConsiderations": [
+        "Bootstrap templates are special-cased in BOOTSTRAP_TEMPLATES set",
+        "strictBackend only blocks non-bootstrap templates when backend unavailable",
+        "Embedded loading ensures devbob can start even without MCP server"
+      ],
+      "recommendation": "Document bootstrap template exception in strictBackend mode documentation"
+    }
+  ],
+  "sharedComponents": [],
+  "dataFlowIntersections": [
+    {
+      "component": "TemplateLoader.load()",
+      "affectedBySpecs": [
+        "MCP Activity and Impulse System Tool Call Enforcement",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "dataFlow": "User request → TemplateLoader.load() → [1] Backend via MCP (if available) → [2] Embedded bootstrap (if backend unavailable and template is bootstrap) → [3] Error (if strictBackend=true and not bootstrap)",
+      "integration": "HARMONIOUS",
+      "notes": [
+        "MCP enforcement adds strictBackend option",
+        "Bootstrap compliance ensures embedded loading works",
+        "Both work together: strict mode for production, embedded fallback for development"
+      ]
+    },
+    {
+      "component": "Activity/Impulse Backend Sync",
+      "affectedBySpecs": [
+        "MCP Activity and Impulse System Tool Call Enforcement",
+        "instance-invariant-storage-enforcement"
+      ],
+      "dataFlow": "Activity/Impulse creation → Local storage → Backend sync via MCP → SurrealDB → Cross-instance access",
+      "integration": "COMPLEMENTARY",
+      "notes": [
+        "MCP enforcement elevates sync failure logging (warn→error)",
+        "Instance storage relies on this sync for cross-instance data",
+        "Enhanced logging helps diagnose storage sync issues"
+      ]
+    }
+  ],
+  "overallConflictStatus": "NO_CRITICAL_CONFLICTS",
+  "summary": {
+    "totalSpecificationsAnalyzed": 3,
+    "criticalConflicts": 0,
+    "potentialConflicts": 1,
+    "resolvedConflicts": 1,
+    "complementaryRelationships": 2,
+    "sharedComponentModifications": 0,
+    "recommendation": "SAFE_TO_PROCEED"
+  },
+  "validationCrossCheck": {
+    "mcpEnforcement": {
+      "status": "PASS",
+      "passRate": "100.0%",
+      "affectedOtherSpecs": false
+    },
+    "bootstrapCompliance": {
+      "status": "PASS",
+      "passRate": "100.0%",
+      "affectedByMcpEnforcement": false,
+      "note": "Bootstrap templates still load correctly even with strictBackend option added"
+    },
+    "instanceStorage": {
+      "status": "PASS",
+      "passRate": "100.0%",
+      "affectedByMcpEnforcement": true,
+      "impact": "POSITIVE",
+      "note": "Enhanced logging helps debug backend sync failures"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "P0",
+      "title": "Document Bootstrap Template Exception in strictBackend Mode",
+      "description": "Add documentation explaining that strictBackend=true allows bootstrap templates as fallback",
+      "target": "README or API documentation for template-loader.ts"
+    },
+    {
+      "priority": "P1",
+      "title": "Use strictBackend=true in Production",
+      "description": "Enable strict backend mode in production to ensure reliability of instance storage sync",
+      "target": "Production configuration and deployment scripts"
+    },
+    {
+      "priority": "P2",
+      "title": "Monitor Backend Sync Metrics",
+      "description": "Use enhanced error logging to track backend sync success/failure rates",
+      "target": "Monitoring and alerting systems"
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-mcp-activity-impulse-tool-call-enforcement"
+}
