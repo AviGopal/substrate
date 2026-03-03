@@ -1,0 +1,25 @@
+{
+  "impulseId": "validation-surrealdb-async-await-deployment-case-1",
+  "description": "Successful deployment with commit 9756fa5 - All tests pass",
+  "input": {
+    "rpcApiUrl": "http://api.metabob.local/api",
+    "namespace": "metabob",
+    "redisPod": "redis-0",
+    "surrealdbPod": "surrealdb-0"
+  },
+  "expectedOutput": {
+    "pass": true,
+    "totalTests": 8,
+    "passedTests": 8,
+    "failedTests": 0,
+    "deploymentInfo": {
+      "podName": "metabob-rpc-api-9c85b8b96-6swdf",
+      "podImage": "metabob-rpc-api:9756fa5-async-await",
+      "podStatus": "RUNNING (Fixed)",
+      "commit": "9756fa5",
+      "coroutineWarnings": 0,
+      "apiAccessible": true
+    },
+    "conclusion": "✅ ALL TESTS PASSED - Async/await deployment successful"
+  }
+}

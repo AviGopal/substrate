@@ -81,5 +81,17 @@
     }
   ],
   "variables": {},
-  "context_requirements": []
+  "context_requirements": [],
+  "trailblazing": {
+    "enabled": true,
+    "maxRecoveryAttempts": 3,
+    "maxCostPerTask": 1.0,
+    "maxTotalCost": 5.0
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
 }
