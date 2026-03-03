@@ -1,0 +1,89 @@
+{
+  "id": "harness-dynamic-activity-creation-devbob-e2e-validation",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/dynamic-activity-creation-devbob-e2e-validation-harness.ts",
+    "purpose": "E2E validation harness for DevBob Kubernetes environment"
+  },
+  "content": {
+    "specification": "dynamic-activity-creation-devbob-e2e-validation",
+    "harnessType": "E2E Validation",
+    "environment": "DevBob Kubernetes (devbob.metabob.local + api.metabob.local)",
+    "description": "Validates complete distributed workflow: trailblazing meta-templates, lifecycle hooks, data persistence, observability, and architectural boundaries in production-like DevBob K8s environment",
+    "testCases": [
+      {
+        "id": "validation-dynamic-activity-creation-devbob-e2e-validation-case-1",
+        "name": "DevBob Environment Validation",
+        "validates": "DevBob pod running and accessible"
+      },
+      {
+        "id": "validation-dynamic-activity-creation-devbob-e2e-validation-case-2",
+        "name": "Trailblazing Meta-Templates Execution",
+        "validates": "create-activity, evolve-activity, debug-activity with trailblazing"
+      },
+      {
+        "id": "validation-dynamic-activity-creation-devbob-e2e-validation-case-3",
+        "name": "Lifecycle Hooks and Memory Prediction",
+        "validates": "Lifecycle hooks inject impulses, memory prediction prepares context"
+      },
+      {
+        "id": "validation-dynamic-activity-creation-devbob-e2e-validation-case-4",
+        "name": "SurrealDB Data Persistence",
+        "validates": "Activity records and template metrics persist via RPC API"
+      },
+      {
+        "id": "validation-dynamic-activity-creation-devbob-e2e-validation-case-5",
+        "name": "Complete Data Flow Validation",
+        "validates": "opencode → cli-mcp → rpc-api → surrealdb flow observable"
+      }
+    ],
+    "additionalValidations": [
+      "Thompson Sampling variant selection",
+      "Redis cache operations with TTL",
+      "Architectural boundaries (vessel flow pattern)",
+      "Authentication enforcement (auto_error=True in production)",
+      "Input validation (Pydantic ExecutionResultData model)"
+    ],
+    "usage": {
+      "command": "tsx tests/validation-harnesses/dynamic-activity-creation-devbob-e2e-validation-harness.ts",
+      "requirements": [
+        "kubectl configured for metabob namespace",
+        "DevBob pod running",
+        "SurrealDB accessible",
+        "Redis accessible"
+      ],
+      "output": "output/validation-dynamic-activity-creation-devbob-e2e-validation-result.json"
+    },
+    "observabilityCommands": {
+      "devbobLogs": "kubectl logs -f deployment/devbob-opencode -n metabob",
+      "rpcApiLogs": "kubectl logs -f deployment/metabob-rpc-api -n metabob",
+      "surrealdbQuery": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+      "redisMonitor": "kubectl exec -it deployment/redis -n metabob -- redis-cli MONITOR"
+    },
+    "validationCoverage": {
+      "trailblazingMetaTemplates": true,
+      "lifecycleHooks": true,
+      "memoryPrediction": true,
+      "dataPersistence": true,
+      "thompsonSampling": true,
+      "redisCaching": true,
+      "architecturalBoundaries": true,
+      "observability": true,
+      "authenticationEnforcement": true,
+      "inputValidation": true
+    }
+  },
+  "budget": 2000,
+  "loaded": true,
+  "metadata": {
+    "createdAt": "2026-03-03T04:45:00Z",
+    "createdBy": "validation-harness-generator",
+    "purpose": "E2E validation of dynamic activity creation in DevBob Kubernetes environment",
+    "downstreamTasks": [
+      "Execute harness in DevBob K8s environment",
+      "Review validation results",
+      "Document production readiness"
+    ]
+  }
+}

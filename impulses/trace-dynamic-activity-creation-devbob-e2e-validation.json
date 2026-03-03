@@ -1,0 +1,626 @@
+{
+  "id": "trace-dynamic-activity-creation-devbob-e2e-validation",
+  "type": "templateDefinition",
+  "pointer": {
+    "type": "analysis",
+    "source": "trace-data-flow-single-feature",
+    "analysisType": "end-to-end-data-flow",
+    "feature": "dynamic-activity-creation-devbob-e2e-validation",
+    "environment": "devbob-kubernetes",
+    "traceDate": "2026-03-03"
+  },
+  "content": {
+    "specificationName": "dynamic-activity-creation-devbob-e2e-validation",
+    "executiveSummary": "Complete data flow trace for dynamic activity creation in DevBob Kubernetes environment, from user intent through distributed execution, persistence, and metrics learning. Implements sophisticated A/B testing with Thompson Sampling, with observability at every layer via kubectl logs.",
+    "architecture": {
+      "pattern": "Vessel Flow (all backend communication through MCP layer)",
+      "learningMechanism": "Thompson Sampling with Beta distribution for template evolution",
+      "observability": "Complete traceability via kubectl logs at all boundaries",
+      "components": 5,
+      "boundaries": 6
+    },
+    "components": [
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+        "component": "ActivityTool.execute",
+        "line": 424,
+        "role": "Entry point - User/LLM invokes activity template execution",
+        "currentBehavior": "Executes activity templates with local storage and optional MCP delegation for backend sync",
+        "desiredBehavior": "Complete E2E validation in DevBob K8s with lifecycle hooks, memory prediction, trailblazing meta-templates, and observable through kubectl logs",
+        "gap": "Need to verify trailblazing meta-templates (create-activity, evolve-activity, debug-activity) execute successfully in DevBob pod with complete observability"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+        "component": "Activity.create/Activity.save",
+        "line": "Multiple",
+        "role": "Activity lifecycle management - creation, persistence, dual-write",
+        "currentBehavior": "Creates activity instances with dual-write pattern (local storage + backend via MCP)",
+        "desiredBehavior": "Lifecycle hooks inject similar activities as impulses; memory hooks predict and prepare context during execution",
+        "gap": "Lifecycle hooks and memory prediction need validation in containerized DevBob environment"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/template/selector.ts",
+        "component": "TemplateSelector.select",
+        "line": "N/A",
+        "role": "Template variant selection using Thompson Sampling",
+        "currentBehavior": "Thompson Sampling-based template variant selection via RPC API",
+        "desiredBehavior": "Template selection working in distributed K8s environment with proper metrics flow to SurrealDB",
+        "gap": "Validate Thompson Sampling works correctly in DevBob K8s environment with api.metabob.local connectivity"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/activity.py",
+        "component": "Activity Routes (POST /v2/activities, /templates/:id/select)",
+        "line": 41,
+        "role": "HTTP endpoints for activity operations and template selection",
+        "currentBehavior": "FastAPI routes for activity persistence and template selection with optional authentication",
+        "desiredBehavior": "Production-ready endpoints with enforced authentication, observable via kubectl logs in DevBob environment",
+        "gap": "Authentication optional (auto_error=False) - needs enforcement in production deployment"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+        "component": "update_metrics_after_execution",
+        "line": "200-283",
+        "role": "Incremental metrics aggregation for learning loop",
+        "currentBehavior": "Incremental metrics update using read-modify-write pattern",
+        "desiredBehavior": "Thread-safe metrics updates with atomic operations or advisory locks",
+        "gap": "Race condition possible under concurrent execution - needs advisory locks or atomic increment operations"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "component": "Activity Actions (save, select, record_execution_result)",
+        "line": "595-615",
+        "role": "Business logic layer for activity operations",
+        "currentBehavior": "Business logic for activity operations, accesses execution_data keys directly",
+        "desiredBehavior": "Input validation with Pydantic models to prevent KeyError crashes",
+        "gap": "Missing input validation for execution_data - needs Pydantic model schema"
+      },
+      {
+        "file": "repos/metabob-cli/src/mcp/server.py",
+        "component": "CLI MCP Server (tool forwarding)",
+        "line": "N/A",
+        "role": "MCP protocol bridge between OpenCode and RPC API",
+        "currentBehavior": "MCP tool server forwarding calls to RPC API",
+        "desiredBehavior": "Complete E2E validation: opencode → cli-mcp → rpc-api → surrealdb data flow observable",
+        "gap": "Validate MCP tool forwarding works correctly in DevBob K8s with proper error handling and observability"
+      },
+      {
+        "file": "N/A - Infrastructure",
+        "component": "SurrealDB (activity_executions, template_metrics tables)",
+        "line": "N/A",
+        "role": "Primary data store for activity records and template metrics",
+        "currentBehavior": "Database persistence for activity records and template metrics",
+        "desiredBehavior": "Complete data persistence validated through database queries in DevBob K8s environment",
+        "gap": "Need to validate records created correctly with proper metadata, queryable via kubectl exec → surreal sql"
+      },
+      {
+        "file": "N/A - Infrastructure",
+        "component": "Redis Cache (activity:template:*, activity:metrics:* keys)",
+        "line": "N/A",
+        "role": "Cache layer for fast template selection (cache-aside pattern)",
+        "currentBehavior": "Cache layer for template selection and metrics (TTL=1 hour)",
+        "desiredBehavior": "Cache-aside pattern validated with observable hits/misses via kubectl exec → redis-cli MONITOR",
+        "gap": "Validate cache writes succeed and TTL expiration works correctly in DevBob K8s"
+      },
+      {
+        "file": "templates/ (meta-templates)",
+        "component": "create-activity, evolve-activity, debug-activity templates",
+        "line": "N/A",
+        "role": "Meta-templates for dynamic activity lifecycle management",
+        "currentBehavior": "Meta-templates for dynamic activity lifecycle management",
+        "desiredBehavior": "Trailblazing execution with recovery mechanisms working in DevBob pod, observable through logs",
+        "gap": "Need E2E validation: DevBob agent invokes meta-templates with trailblazing → activities created → stored in SurrealDB → evolved templates reference parents → debug-activity analyzes failures"
+      }
+    ],
+    "dataFlow": {
+      "summary": "User/LLM invokes ActivityTool.execute → Template Selection (Thompson Sampling via RPC API) → Variable Validation (Levenshtein fuzzy match) → Activity Creation (ulid, git state capture) → Dual-Write (local storage + MCP delegation) → MCP forward (CLI MCP Server → RPC API) → Persistence (SurrealDB activity_executions + Redis cache) → Task Execution Loop (LLM interactions) → Completion (metrics calculation) → Learning Loop (RPC API update_metrics_after_execution → SurrealDB template_metrics with Thompson Sampling params update) → Return result to user",
+      "phases": [
+        {
+          "phase": "Entry",
+          "component": "ActivityTool.execute",
+          "input": {
+            "templateId": "string (e.g., 'add-feature-complete')",
+            "variables": "Record<string, unknown>",
+            "reason": "string (user intent for impulse learning)",
+            "trailblazing": "optional config (enabled, maxCostPerTask, etc.)"
+          },
+          "transformations": [
+            "Template ID lookup",
+            "Git state capture (baseCommit)",
+            "ULID generation for activity ID"
+          ]
+        },
+        {
+          "phase": "Template Selection",
+          "component": "TemplateSelector.select → RPC API Thompson Sampling",
+          "algorithm": "Beta(alpha, beta) sampling for variant selection",
+          "transformations": [
+            "Load metrics: α = successes + 1, β = failures + 1",
+            "Sample from Beta distribution",
+            "Select variant: stable if sample >= 0.5, else candidate"
+          ]
+        },
+        {
+          "phase": "Validation",
+          "component": "validateTemplateVariables",
+          "transformations": [
+            "Check required variables present",
+            "Fuzzy match with Levenshtein distance for typo suggestions",
+            "Fail-fast before expensive LLM calls"
+          ]
+        },
+        {
+          "phase": "Persistence",
+          "component": "Activity.save (dual-write)",
+          "transformations": [
+            "Clean impulses for storage (remove content from unloaded)",
+            "Local storage write (authoritative)",
+            "MCP delegation to backend (best-effort)"
+          ]
+        },
+        {
+          "phase": "Execution",
+          "component": "Task Execution Loop",
+          "transformations": [
+            "For each task: SessionPrompt.prompt → LLM interaction → Task result",
+            "Aggregate results across tasks",
+            "Track tokens, cost, duration incrementally"
+          ]
+        },
+        {
+          "phase": "Learning Loop Closure",
+          "component": "TemplateMetricsClient.reportExecution",
+          "transformations": [
+            "MCP tool call: metabob_post_activity_result",
+            "RPC API: record_execution_result",
+            "Incremental mean update (O(1) time complexity)",
+            "Thompson Sampling parameter update (α += 1 if success, β += 1 if failure)"
+          ]
+        },
+        {
+          "phase": "Exit",
+          "output": {
+            "activityId": "ulid",
+            "success": "boolean",
+            "impulses": "Record<string, Impulse>",
+            "metrics": "{ tokens, cost, duration }"
+          }
+        }
+      ]
+    },
+    "architecturalBoundaries": [
+      {
+        "boundary": "Repository Boundary (OpenCode ↔ RPC API)",
+        "type": "Loose coupling via HTTP/MCP",
+        "contract": "REST API with versioned endpoints (/v2/activities)",
+        "resilience": "Graceful degradation (local storage succeeds independently)",
+        "observability": "OpenCode logs + RPC API logs"
+      },
+      {
+        "boundary": "Service Boundary (OpenCode ↔ CLI MCP Server)",
+        "type": "Medium coupling via MCP Protocol",
+        "contract": "Tool invocation with JSON-RPC semantics",
+        "resilience": "Tool discovery at runtime, timeout handling, fallback to local",
+        "observability": "MCP tool call logs"
+      },
+      {
+        "boundary": "Service Boundary (CLI MCP ↔ RPC API)",
+        "type": "Loose coupling via HTTP REST",
+        "contract": "FastAPI routes with Pydantic validation",
+        "resilience": "HTTP error codes, timeout protection, structured error responses",
+        "observability": "HTTP access logs"
+      },
+      {
+        "boundary": "Data Store Boundary (RPC API ↔ SurrealDB)",
+        "type": "Medium coupling via official SurrealDB client",
+        "contract": "SurrealQL queries with parameter binding",
+        "resilience": "Connection pooling, automatic reconnection (client-managed)",
+        "observability": "SurrealDB query logs"
+      },
+      {
+        "boundary": "Data Store Boundary (RPC API ↔ Redis)",
+        "type": "Loose coupling via simple key-value operations",
+        "contract": "String keys, JSON-serialized values, TTL expiration",
+        "resilience": "Cache-aside pattern (misses fall back to SurrealDB)",
+        "observability": "Redis MONITOR for cache operations"
+      },
+      {
+        "boundary": "Layer Boundary (RPC API Internal: Controller → Service → Repository)",
+        "type": "Tight coupling (same process)",
+        "contract": "Python function signatures with type hints",
+        "resilience": "Error propagation via exception handling",
+        "observability": "Python logging at each layer"
+      }
+    ],
+    "observability": {
+      "devbobEnvironment": "devbob.metabob.local (Kubernetes)",
+      "logCommands": {
+        "opencodeLogs": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'executing activity template'",
+        "rpcApiLogs": "kubectl logs -f deployment/metabob-rpc-api -n metabob | grep 'POST /v2/activities'",
+        "thompsonSampling": "kubectl logs -f deployment/metabob-rpc-api -n metabob | grep 'thompson_sampling'",
+        "metricsUpdates": "kubectl logs -f deployment/metabob-rpc-api -n metabob | grep 'update_metrics_after_execution'",
+        "surrealdbQueries": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+        "redisMonitor": "kubectl exec -it deployment/redis -n metabob -- redis-cli MONITOR",
+        "redisCacheCheck": "kubectl exec -it deployment/redis -n metabob -- redis-cli GET 'activity:template:add-feature-complete'"
+      },
+      "observableEvents": [
+        "Activity tool invocation (entry point)",
+        "Template selection with Thompson Sampling parameters (α, β)",
+        "Variable validation results (missing, unexpected, suggestions)",
+        "Dual-write operations (local storage + backend sync)",
+        "MCP tool calls (metabob_activity_save, metabob_post_activity_result)",
+        "Task execution progress (start, completion, failures)",
+        "Metrics updates (incremental mean calculations, Thompson Sampling parameter updates)",
+        "Database record creation (activity_executions, template_metrics)",
+        "Cache operations (SET with TTL, GET hits/misses, expiration)"
+      ],
+      "databaseQueries": {
+        "activityRecords": "SELECT * FROM activity_executions WHERE activity_id = 'act_xyz' ORDER BY created_at DESC LIMIT 10",
+        "templateMetrics": "SELECT * FROM template_metrics WHERE variant_id = 'add-feature-complete'",
+        "recentExecutions": "SELECT COUNT(*) FROM activity_executions WHERE created_at > time::now() - 1h",
+        "successRateCheck": "SELECT variant_id, success_rate, thompson_alpha, thompson_beta FROM template_metrics ORDER BY success_rate DESC"
+      }
+    },
+    "criticalIssues": [
+      {
+        "severity": "HIGH",
+        "location": "repos/metabob-rpc-api/server/routes/activity.py:41",
+        "issue": "Authentication optional in production (auto_error=False)",
+        "impact": "No multi-tenant isolation without Bearer token",
+        "mitigation": "Enforce auto_error=True in production deployment",
+        "validationCommand": "curl -X POST https://api.metabob.local/v2/activities -H 'Content-Type: application/json' (should return 401 without Bearer token)"
+      },
+      {
+        "severity": "MEDIUM",
+        "location": "repos/metabob-rpc-api/server/db/operations/template_metrics.py:200-283",
+        "issue": "Metrics update race condition (read-modify-write without transaction isolation)",
+        "impact": "Concurrent executions could clobber metrics (accuracy issue under load)",
+        "mitigation": "Use atomic increment operations or advisory locks (Redis SETNX)",
+        "validationCommand": "Concurrent execution test: run 10 activities in parallel, verify metrics count = 10"
+      },
+      {
+        "severity": "HIGH",
+        "location": "repos/metabob-rpc-api/server/actions/activity.py:595-615",
+        "issue": "Missing input validation for execution_data",
+        "impact": "KeyError crashes metrics update if malformed data",
+        "mitigation": "Use Pydantic model for validation (ExecutionRequest schema)",
+        "validationCommand": "Send malformed execution_data, verify graceful error handling (not KeyError crash)"
+      }
+    ],
+    "validationChecklist": [
+      {
+        "category": "Meta-Template Execution",
+        "checks": [
+          {
+            "check": "DevBob pod successfully executes create-activity with trailblazing",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'create-activity'",
+            "expectedOutput": "Activity execution logs showing trailblazing recovery attempts"
+          },
+          {
+            "check": "DevBob pod successfully executes evolve-activity with parent template reference",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'evolve-activity'",
+            "expectedOutput": "Template evolution logs with parent_template_id reference"
+          },
+          {
+            "check": "DevBob pod successfully executes debug-activity with error context analysis",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'debug-activity'",
+            "expectedOutput": "Error analysis logs with stack traces and recommendations"
+          },
+          {
+            "check": "Pod logs show lifecycle hook execution and impulse injection",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'lifecycle hook'",
+            "expectedOutput": "Lifecycle hook logs showing impulse injection events"
+          },
+          {
+            "check": "Pod logs show memory prediction and context preparation",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'memory prediction'",
+            "expectedOutput": "Memory hook logs showing context loading decisions"
+          }
+        ]
+      },
+      {
+        "category": "Data Persistence",
+        "checks": [
+          {
+            "check": "Activity records created in SurrealDB activity_executions table",
+            "command": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+            "expectedQuery": "SELECT * FROM activity_executions WHERE created_at > time::now() - 10m;",
+            "expectedOutput": "Non-empty result set with activity records"
+          },
+          {
+            "check": "Template metrics updated in SurrealDB template_metrics table",
+            "command": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+            "expectedQuery": "SELECT * FROM template_metrics WHERE updated_at > time::now() - 10m;",
+            "expectedOutput": "Updated metrics with new total_executions count"
+          },
+          {
+            "check": "Thompson Sampling parameters (alpha, beta) updated correctly",
+            "command": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+            "expectedQuery": "SELECT variant_id, thompson_alpha, thompson_beta FROM template_metrics;",
+            "expectedOutput": "Alpha increments on success, beta increments on failure"
+          },
+          {
+            "check": "Redis cache writes succeed with proper TTL",
+            "command": "kubectl exec -it deployment/redis -n metabob -- redis-cli TTL 'activity:template:add-feature-complete'",
+            "expectedOutput": "TTL value around 3600 seconds (1 hour)"
+          },
+          {
+            "check": "Local storage writes succeed (dual-write pattern)",
+            "command": "kubectl exec -it deployment/devbob-opencode -n metabob -- ls -lh ~/.local/share/opencode/storage/activity/",
+            "expectedOutput": "Activity JSON files with recent timestamps"
+          }
+        ]
+      },
+      {
+        "category": "Template Management",
+        "checks": [
+          {
+            "check": "Templates registered via MCP and queryable from database",
+            "command": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+            "expectedQuery": "SELECT id, name, category FROM activity_templates;",
+            "expectedOutput": "create-activity, evolve-activity, debug-activity templates present"
+          },
+          {
+            "check": "Evolved templates reference parent templates correctly",
+            "command": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+            "expectedQuery": "SELECT id, parent_template_id FROM activity_templates WHERE parent_template_id IS NOT NULL;",
+            "expectedOutput": "Evolved templates with valid parent_template_id references"
+          },
+          {
+            "check": "Template variant selection uses Thompson Sampling correctly",
+            "command": "kubectl logs -f deployment/metabob-rpc-api -n metabob | grep 'thompson_sampling'",
+            "expectedOutput": "Logs showing Beta(α, β) sampling and variant selection decisions"
+          },
+          {
+            "check": "Template metrics aggregation uses incremental mean formula",
+            "command": "kubectl logs -f deployment/metabob-rpc-api -n metabob | grep 'update_metrics_after_execution'",
+            "expectedOutput": "Logs showing incremental mean calculations (old_avg * n + new_value) / n_new"
+          }
+        ]
+      },
+      {
+        "category": "Observability",
+        "checks": [
+          {
+            "check": "OpenCode logs show activity tool invocations",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'executing activity template'",
+            "expectedOutput": "Activity execution start logs with template ID and variables"
+          },
+          {
+            "check": "RPC API logs show HTTP POST requests and Thompson Sampling selections",
+            "command": "kubectl logs -f deployment/metabob-rpc-api -n metabob | grep 'POST /v2/activities\\|thompson_sampling'",
+            "expectedOutput": "HTTP POST logs with status codes and Thompson Sampling selection logs"
+          },
+          {
+            "check": "SurrealDB queries return activity records with correct metadata",
+            "command": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+            "expectedQuery": "SELECT * FROM activity_executions ORDER BY created_at DESC LIMIT 1;",
+            "expectedOutput": "Activity record with activity_id, template_id, started_at, duration_ms, success, tokens_total, cost_usd"
+          },
+          {
+            "check": "Redis MONITOR shows cache operations (SET, GET, expiration)",
+            "command": "kubectl exec -it deployment/redis -n metabob -- redis-cli MONITOR | head -20",
+            "expectedOutput": "SETEX, GET commands for activity:template:* and activity:metrics:* keys"
+          },
+          {
+            "check": "All architectural boundaries logged at transition points",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'MCP\\|activity save\\|metrics report'",
+            "expectedOutput": "Logs at each boundary: OpenCode → MCP → RPC API → SurrealDB"
+          }
+        ]
+      },
+      {
+        "category": "Error Handling",
+        "checks": [
+          {
+            "check": "Debug-activity can analyze failed executions with error context",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'debug-activity\\|error analysis'",
+            "expectedOutput": "Error analysis logs with stack traces, tool call failures, and recommendations"
+          },
+          {
+            "check": "Graceful degradation works (backend failures don't fail local storage)",
+            "command": "Disable RPC API, execute activity, verify local storage succeeds",
+            "expectedOutput": "Activity completes with warning logs about backend sync failure"
+          },
+          {
+            "check": "MCP tool failures logged with proper error messages",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'MCP.*error\\|tool.*failed'",
+            "expectedOutput": "Structured error logs with tool name, error message, request context"
+          },
+          {
+            "check": "HTTP error codes returned correctly for client errors",
+            "command": "curl -X POST https://api.metabob.local/v2/activities -H 'Content-Type: application/json' -d '{invalid}'",
+            "expectedOutput": "400 Bad Request with structured error message"
+          },
+          {
+            "check": "Trailblazing recovery mechanisms work under failure scenarios",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'trailblazing\\|recovery attempt'",
+            "expectedOutput": "Recovery attempt logs with failure context and generated recovery prompts"
+          }
+        ]
+      },
+      {
+        "category": "Distributed Architecture",
+        "checks": [
+          {
+            "check": "opencode → cli-mcp → rpc-api → surrealdb data flow complete",
+            "command": "Execute activity, trace logs across all deployments",
+            "expectedOutput": "Activity ID present in logs of all 4 components: devbob-opencode, cli-mcp (if separate), metabob-rpc-api, surrealdb"
+          },
+          {
+            "check": "Vessel flow pattern enforced (no direct HTTP from opencode)",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'fetch.*api.metabob'",
+            "expectedOutput": "No direct fetch calls to api.metabob.local (all via MCP)"
+          },
+          {
+            "check": "MCP tool forwarding works correctly in K8s environment",
+            "command": "kubectl logs -f deployment/devbob-opencode -n metabob | grep 'MCP.*callTool'",
+            "expectedOutput": "MCP tool call logs with tool names (metabob_activity_save, metabob_post_activity_result)"
+          },
+          {
+            "check": "Service mesh connectivity (devbob.metabob.local ↔ api.metabob.local)",
+            "command": "kubectl exec -it deployment/devbob-opencode -n metabob -- curl -s https://api.metabob.local/health",
+            "expectedOutput": "200 OK response with health check status"
+          },
+          {
+            "check": "Multi-tenant isolation with org_id and project_id scoping",
+            "command": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql",
+            "expectedQuery": "SELECT DISTINCT org_id, project_id FROM activity_executions;",
+            "expectedOutput": "Records scoped to correct org_id and project_id"
+          }
+        ]
+      }
+    ],
+    "expectedMetrics": [
+      {
+        "metric": "Activity creation count",
+        "source": "SELECT COUNT(*) FROM activity_executions WHERE created_at > $timestamp",
+        "expected": "> 0 for each meta-template execution",
+        "validationQuery": "SELECT COUNT(*) FROM activity_executions WHERE created_at > time::now() - 1h;"
+      },
+      {
+        "metric": "Trailblazing cost tracking",
+        "source": "Activity metrics in response (cost.total)",
+        "expected": "Within configured maxCostPerTask and maxTotalCost bounds",
+        "validationQuery": "Check activity response JSON: cost.total <= trailblazing.maxTotalCost"
+      },
+      {
+        "metric": "Template selection distribution",
+        "source": "SurrealDB template_metrics (stable vs candidate variant counts)",
+        "expected": "Beta distribution sampling influences variant selection (exploration vs exploitation)",
+        "validationQuery": "SELECT variant, COUNT(*) FROM activity_executions GROUP BY variant;"
+      },
+      {
+        "metric": "Success rate calculation",
+        "source": "template_metrics.success_rate = successful_executions / total_executions",
+        "expected": "Accurately reflects execution outcomes (0.0 to 1.0)",
+        "validationQuery": "SELECT variant_id, success_rate, successful_executions, total_executions FROM template_metrics;"
+      },
+      {
+        "metric": "Thompson Sampling parameter updates",
+        "source": "template_metrics.thompson_alpha and thompson_beta",
+        "expected": "Alpha increments on success, Beta increments on failure",
+        "validationQuery": "SELECT variant_id, thompson_alpha, thompson_beta, successful_executions, failed_executions FROM template_metrics;"
+      }
+    ],
+    "keyInsights": {
+      "businessPurpose": "Enable continuous improvement of activity templates through empirical evidence and A/B testing, while maintaining complete traceability in distributed DevBob Kubernetes environments.",
+      "criticalDecisions": [
+        {
+          "decision": "Thompson Sampling vs. Epsilon-Greedy",
+          "rationale": "Bayesian approach handles uncertainty naturally; epsilon-greedy has fixed exploration rate (suboptimal)",
+          "impact": "Superior long-term performance in A/B testing (proven in academic literature)"
+        },
+        {
+          "decision": "Vessel Flow Enforcement",
+          "rationale": "Architectural boundary enforcement, clean separation of concerns",
+          "impact": "Additional latency (~10-50ms) but enables clean architecture and easier evolution"
+        },
+        {
+          "decision": "Dual-Write Pattern",
+          "rationale": "User experience prioritized over eventual consistency",
+          "impact": "Users never lose work due to network issues; backend provides distributed access"
+        },
+        {
+          "decision": "Incremental Metrics Update",
+          "rationale": "O(1) time complexity enables real-time learning without batch processing",
+          "impact": "Slight floating-point precision loss (negligible) vs massive performance gain"
+        },
+        {
+          "decision": "Graceful Degradation",
+          "rationale": "Maximize availability and user experience",
+          "impact": "System continues with degraded functionality; failures logged for debugging"
+        }
+      ],
+      "strengths": [
+        "Complete traceability via kubectl logs (DevBob K8s environment)",
+        "Bayesian A/B testing (Thompson Sampling) for continuous improvement",
+        "Graceful degradation (non-critical failures don't fail workflow)",
+        "Clean architectural boundaries (vessel flow pattern)",
+        "Real-time learning feedback (incremental aggregation)"
+      ],
+      "improvements": [
+        {
+          "priority": "IMMEDIATE",
+          "improvement": "Enforce authentication in production",
+          "effort": "Low",
+          "impact": "High"
+        },
+        {
+          "priority": "IMMEDIATE",
+          "improvement": "Add input validation for execution_data",
+          "effort": "Low",
+          "impact": "High"
+        },
+        {
+          "priority": "IMMEDIATE",
+          "improvement": "Add minimal logging to event bus",
+          "effort": "Low",
+          "impact": "Medium"
+        },
+        {
+          "priority": "SHORT_TERM",
+          "improvement": "Implement advisory locks for metrics updates",
+          "effort": "Medium",
+          "impact": "High"
+        },
+        {
+          "priority": "SHORT_TERM",
+          "improvement": "Complete ACP progress reporting",
+          "effort": "Medium",
+          "impact": "Medium"
+        },
+        {
+          "priority": "LONG_TERM",
+          "improvement": "Add distributed tracing (OpenTelemetry)",
+          "effort": "High",
+          "impact": "Medium"
+        }
+      ]
+    },
+    "reusablePatterns": [
+      {
+        "pattern": "Vessel Flow (Backend Communication Delegation)",
+        "description": "All backend communication flows through an intermediate layer (MCP), never directly from core application code",
+        "abstractionPotential": "HIGH - Could be extracted into 'vessel-flow' npm package",
+        "applicability": "Multi-tenant SaaS, distributed systems, offline-capable applications"
+      },
+      {
+        "pattern": "Dual-Write with Local-First Semantics",
+        "description": "Write to local storage (authoritative) first, then sync to backend (best-effort)",
+        "abstractionPotential": "MEDIUM - Pattern is simple but context-dependent",
+        "applicability": "Offline support, user-facing write operations, high-availability requirements"
+      },
+      {
+        "pattern": "Thompson Sampling for A/B Testing",
+        "description": "Bayesian approach using Beta distribution, balances exploration vs exploitation naturally",
+        "abstractionPotential": "HIGH - Could be extracted into 'thompson-sampling' library",
+        "applicability": "A/B testing, multi-armed bandit problems, continuous improvement loops"
+      },
+      {
+        "pattern": "Incremental Aggregation for Real-time Metrics",
+        "description": "Update aggregates (mean, count) incrementally without scanning all records",
+        "abstractionPotential": "HIGH - Could be extracted into 'incremental-stats' library",
+        "applicability": "Real-time dashboards, high-throughput systems, streaming aggregations"
+      },
+      {
+        "pattern": "Graceful Degradation with Observability",
+        "description": "Non-critical failures don't fail main workflow, but are logged for debugging",
+        "abstractionPotential": "LOW - Pattern is simple but context-dependent",
+        "applicability": "High-availability systems, user-facing operations, multiple non-critical dependencies"
+      }
+    ],
+    "documentationReference": "docs/data-flows/dynamic-activity-creation-devbob-e2e-validation-flow.md"
+  },
+  "budget": 5000,
+  "loaded": true,
+  "metadata": {
+    "createdAt": "2026-03-03T03:15:00Z",
+    "createdBy": "trace-data-flow-single-feature",
+    "purpose": "Comprehensive trace analysis for E2E validation of dynamic activity creation in DevBob Kubernetes environment",
+    "downstreamTasks": [
+      "enforcement (code mutations to close gaps)",
+      "validation (external validation of E2E workflow)",
+      "ripple analysis (identify conflicting changes)"
+    ]
+  }
+}
