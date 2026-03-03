@@ -1,0 +1,324 @@
+{
+  "specificationName": "rpc-api-deployed-infrastructure-validation",
+  "purpose": "Validate metabob-rpc-api endpoints work correctly with deployed infrastructure in local Kubernetes cluster",
+  "deployedInfrastructure": {
+    "namespace": "metabob",
+    "components": [
+      {
+        "name": "metabob-rpc-api",
+        "pod": "metabob-rpc-api-5c5dfb6b9b-rbhm8",
+        "service": "metabob-rpc-api.metabob.svc.cluster.local:8080",
+        "externalEndpoint": "http://api.metabob.local",
+        "image": "metabob-rpc-api:record-id-fix",
+        "status": "Running",
+        "connections": {
+          "surrealdb": "ws://surrealdb:8000",
+          "redis": "redis://redis-master:6379",
+          "database": "SURREAL_DATABASE=production",
+          "namespace": "SURREAL_NAMESPACE=metabob"
+        }
+      },
+      {
+        "name": "devbob",
+        "pod": "devbob-766dcccf49-hfql6",
+        "service": "devbob.metabob.svc.cluster.local:8080",
+        "externalEndpoint": "http://devbob.metabob.local",
+        "status": "Running",
+        "connections": {
+          "rpcApi": "METABOB_API_URL=http://metabob-rpc-api",
+          "surrealdb": "SURREALDB_URL=http://surrealdb:8000",
+          "database": "SURREALDB_DATABASE=devbob"
+        }
+      },
+      {
+        "name": "surrealdb",
+        "pod": "surrealdb-5bdddd9989-sdm5g",
+        "service": "surrealdb.metabob.svc.cluster.local:8000",
+        "status": "Running",
+        "credentials": "surrealdb-credentials secret"
+      },
+      {
+        "name": "redis",
+        "pod": "redis-master-0",
+        "service": "redis-master.metabob.svc.cluster.local:6379",
+        "status": "Running"
+      }
+    ]
+  },
+  "validationTargets": [
+    {
+      "endpoint": "GET /",
+      "file": "repos/metabob-rpc-api/server/routes/health.py",
+      "currentBehavior": "Health check endpoint returns status, timestamp, version",
+      "desiredBehavior": "Returns {'status': 'ok', 'timestamp': 'ISO8601', 'version': '0.16.4'}",
+      "gap": "Already working - returns health status correctly",
+      "testStatus": "PASS - Returns 200 OK with valid JSON"
+    },
+    {
+      "endpoint": "GET /v2/activities/templates",
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "list_activity_templates",
+      "lineNumber": 72,
+      "currentBehavior": "Lists templates from Redis cache with Thompson Sampling scores, supports multi-tenant filtering via Bearer token",
+      "desiredBehavior": "Returns {'templates': [...]} with org_id/project_id filtering",
+      "gap": "Working - returns empty list initially (no templates registered yet)",
+      "testStatus": "PASS - Returns 200 OK with empty templates array",
+      "multiTenantSupport": {
+        "headers": ["x-tenant-id", "x-org-id", "x-project-id"],
+        "authenticationMode": "Optional in DEBUG mode, required in production",
+        "filteringLogic": "repos/metabob-rpc-api/server/actions/activity.py:125"
+      }
+    },
+    {
+      "endpoint": "POST /v2/activities/templates",
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "create_activity_template",
+      "lineNumber": 246,
+      "currentBehavior": "Creates template variants, auto-generates variant_id via content hash, stores in SurrealDB (primary) and Redis (cache)",
+      "desiredBehavior": "Persists template to SurrealDB with multi-tenant scope, caches in Redis with TTL",
+      "gap": "NEEDS VALIDATION - SurrealDB connection requires auth, got 401 error",
+      "testStatus": "BLOCKED - SurrealDB authentication issue",
+      "dataFlow": "Client → FastAPI route → server.actions.activity.create_template → server.db.operations.create_template_record → SurrealDB → Redis cache",
+      "storage": {
+        "primary": "SurrealDB table: activity_template",
+        "cache": "Redis key: activity:template:{variant_id}",
+        "ttl": "TEMPLATE_CACHE_TTL"
+      }
+    },
+    {
+      "endpoint": "GET /v2/activities/templates/{template_id}",
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "get_activity_template",
+      "lineNumber": 134,
+      "currentBehavior": "Fetches template by variant_id from Redis (cache hit) or SurrealDB (cache miss), returns full template with metrics",
+      "desiredBehavior": "Returns template without serialization errors",
+      "gap": "NEEDS VALIDATION - depends on template creation success",
+      "testStatus": "NOT TESTED - no templates exist yet",
+      "dataFlow": "Client → Redis (cache check) → [cache miss] → SurrealDB → populate Redis → response"
+    },
+    {
+      "endpoint": "GET /v2/activities/templates/{template_id}/quality-score",
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "get_template_quality_score",
+      "lineNumber": 547,
+      "currentBehavior": "Calculates quality score (0-100) from template metrics: success (40 pts), cost (20 pts), duration (20 pts), documentation (20 pts)",
+      "desiredBehavior": "Returns quality score breakdown without client-side calculation",
+      "gap": "NEW ENDPOINT - validates recent deployment includes quality score feature",
+      "testStatus": "NOT TESTED - requires template with execution history",
+      "implementation": {
+        "successScore": "(success_rate * 40.0) - Primary indicator",
+        "costScore": "20 * (1 - cost/0.50) - Lower cost = higher score",
+        "durationScore": "20 * (1 - duration/300000) - Faster = higher score",
+        "documentationScore": "10 (description) + 10 (validation)",
+        "totalScore": "sum of components (0-100)"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/learning-loop/executions",
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "record_execution",
+      "lineNumber": 132,
+      "currentBehavior": "Schema-tolerant execution recording - accepts minimal data (activity_id, duration_ms, success) and fills defaults",
+      "desiredBehavior": "Accepts partial execution data, fills template_id/started_at/completed_at with defaults",
+      "gap": "RECENT CHANGE - validates schema tolerance deployment",
+      "testStatus": "PARTIALLY TESTED - API validation requires template_id and started_at (not truly tolerant)",
+      "schemaTolerance": {
+        "requiredFields": ["activity_id", "duration_ms", "success"],
+        "optionalWithDefaults": {
+          "template_id": "Extracted from activity_id pattern or use activity_id",
+          "started_at": "Calculated from completed_at - duration",
+          "completed_at": "Defaults to datetime.utcnow()"
+        },
+        "implementation": "repos/metabob-rpc-api/server/routes/learning_loop.py:165-196"
+      },
+      "dataFlow": "Client → FastAPI route → fill defaults → server.db.operations.insert_execution → SurrealDB → update_metrics_after_execution",
+      "storage": {
+        "executionRecord": "SurrealDB table: activity_execution",
+        "metricsUpdate": "SurrealDB table: template_metrics"
+      }
+    }
+  ],
+  "dataFlowSummary": {
+    "templateCreation": "Client → api.metabob.local/v2/activities/templates (POST) → create_template_record(SurrealDB) → cache(Redis) → response",
+    "templateRetrieval": "Client → api.metabob.local/v2/activities/templates/{id} (GET) → Redis cache → [miss] → SurrealDB → populate cache → response",
+    "qualityScore": "Client → api.metabob.local/v2/activities/templates/{id}/quality-score (GET) → get_template_stats(Redis) → calculate score → response",
+    "executionReporting": "Client → api.metabob.local/api/v1/learning-loop/executions (POST) → insert_execution(SurrealDB) → update_metrics(SurrealDB) → response",
+    "learningLoop": "Execution → SurrealDB (activity_execution) → Aggregate (template_metrics) → Thompson Sampling → Template Selection → Next Execution"
+  },
+  "currentVsDesired": {
+    "currentState": {
+      "healthEndpoint": "✓ Working",
+      "templateListing": "✓ Working (empty initially)",
+      "templateCreation": "✗ Blocked - SurrealDB auth error (401)",
+      "qualityScoreEndpoint": "? Deployed but not tested",
+      "schemaToleranceEndpoint": "✗ Partially working - still requires some fields",
+      "multiTenantIsolation": "? Implemented but not validated",
+      "devbobIntegration": "? DevBob can access API but not tested end-to-end"
+    },
+    "desiredState": {
+      "allEndpointsAccessible": "All HTTP endpoints respond without 5xx errors",
+      "surrealdbConnectivity": "Templates persist to SurrealDB correctly",
+      "redisCaching": "Redis cache populated after SurrealDB writes",
+      "multiTenantFiltering": "Org/project scoped templates filtered correctly",
+      "devbobWorkflows": "DevBob can execute activities that call RPC API",
+      "schemaToleranceValidated": "Learning loop accepts minimal execution data",
+      "qualityScoreValidated": "Quality score endpoint returns scores for templates with history"
+    }
+  },
+  "blockers": [
+    {
+      "issue": "SurrealDB Authentication Failure",
+      "error": "401, message='Unauthorized', url='http://surrealdb:8000/rpc'",
+      "impact": "Cannot create templates in SurrealDB (primary storage)",
+      "possibleCauses": [
+        "Credentials secret not mounted correctly to metabob-rpc-api pod",
+        "SURREAL_USER/SURREAL_PASS environment variables incorrect",
+        "SurrealDB authentication not initialized properly",
+        "Database namespace/database not created during init"
+      ],
+      "investigation": "Check surrealdb-credentials secret, verify init-schema job ran successfully"
+    },
+    {
+      "issue": "Schema Tolerance Not Fully Implemented",
+      "error": "Field 'template_id' and 'started_at' still required by Pydantic validation",
+      "impact": "Clients must send all fields despite 'Optional' schema annotations",
+      "possibleCauses": [
+        "Pydantic Field(...) still marks fields as required",
+        "Need Field(default=None) instead of Field(None, ...)",
+        "API validation happening before default-filling logic"
+      ],
+      "investigation": "Check ExecutionRequest Pydantic model definition"
+    }
+  ],
+  "nextSteps": [
+    {
+      "step": 1,
+      "action": "Fix SurrealDB Authentication",
+      "tasks": [
+        "Verify surrealdb-credentials secret exists and contains valid credentials",
+        "Check metabob-rpc-api pod can read secret (kubectl describe pod)",
+        "Verify SURREAL_USER/SURREAL_PASS environment variables in pod",
+        "Test direct SurrealDB connection from rpc-api pod: curl http://surrealdb:8000",
+        "Review init-schema job logs to confirm database initialization"
+      ]
+    },
+    {
+      "step": 2,
+      "action": "Validate Template CRUD Operations",
+      "tasks": [
+        "POST /v2/activities/templates - create test template",
+        "GET /v2/activities/templates - list templates (should include test template)",
+        "GET /v2/activities/templates/{id} - retrieve test template",
+        "Verify template stored in SurrealDB (direct query)",
+        "Verify template cached in Redis (redis-cli GET activity:template:{id})"
+      ]
+    },
+    {
+      "step": 3,
+      "action": "Validate Quality Score Endpoint",
+      "tasks": [
+        "Create template with execution history",
+        "POST /api/v1/learning-loop/executions - record multiple executions",
+        "GET /v2/activities/templates/{id}/quality-score - get quality score",
+        "Verify score calculation matches specification",
+        "Confirm client code does NOT calculate quality scores locally"
+      ]
+    },
+    {
+      "step": 4,
+      "action": "Validate Schema Tolerance",
+      "tasks": [
+        "Fix ExecutionRequest Pydantic model to use Field(default=None)",
+        "POST /api/v1/learning-loop/executions with minimal data (activity_id, duration, success)",
+        "Verify API fills template_id from activity_id pattern",
+        "Verify API calculates started_at from completed_at - duration",
+        "Confirm no Pydantic validation errors"
+      ]
+    },
+    {
+      "step": 5,
+      "action": "Validate Multi-Tenant Isolation",
+      "tasks": [
+        "Create templates with different org_id/project_id scope",
+        "GET /v2/activities/templates with Bearer token (specific org)",
+        "Verify only org-scoped + global templates returned",
+        "GET /v2/activities/templates without Bearer token",
+        "Verify only global templates returned"
+      ]
+    },
+    {
+      "step": 6,
+      "action": "Validate DevBob Integration",
+      "tasks": [
+        "kubectl exec into devbob pod",
+        "Test opencode CLI can call metabob-rpc-api endpoints",
+        "Execute activity that uses template selection (Thompson Sampling)",
+        "Verify activity calls POST /v2/activities/templates/{id}/select",
+        "Confirm end-to-end workflow: DevBob → RPC API → SurrealDB → Redis → response"
+      ]
+    }
+  ],
+  "testPlan": {
+    "harness": "tests/validation-harnesses/rpc-api-deployed-infrastructure-validation-harness.ts",
+    "testCases": [
+      {
+        "id": "TC1",
+        "name": "Health Check",
+        "endpoint": "GET /",
+        "expectedStatus": 200,
+        "expectedResponse": "{'status': 'ok', 'version': string}"
+      },
+      {
+        "id": "TC2",
+        "name": "List Templates (Empty)",
+        "endpoint": "GET /v2/activities/templates",
+        "expectedStatus": 200,
+        "expectedResponse": "{'templates': []}"
+      },
+      {
+        "id": "TC3",
+        "name": "Create Template",
+        "endpoint": "POST /v2/activities/templates",
+        "headers": ["x-tenant-id", "x-org-id", "x-project-id"],
+        "payload": "template definition",
+        "expectedStatus": 201,
+        "expectedResponse": "{'variant_id': string, 'activity_id': string}"
+      },
+      {
+        "id": "TC4",
+        "name": "Get Template by ID",
+        "endpoint": "GET /v2/activities/templates/{variant_id}",
+        "expectedStatus": 200,
+        "expectedResponse": "Full template with metrics"
+      },
+      {
+        "id": "TC5",
+        "name": "Quality Score Endpoint",
+        "endpoint": "GET /v2/activities/templates/{id}/quality-score",
+        "expectedStatus": 200,
+        "expectedResponse": "{'quality_score': number, 'breakdown': {...}, 'metrics': {...}}"
+      },
+      {
+        "id": "TC6",
+        "name": "Record Execution (Minimal Data)",
+        "endpoint": "POST /api/v1/learning-loop/executions",
+        "payload": "{'activity_id': string, 'duration_ms': number, 'success': boolean}",
+        "expectedStatus": 201,
+        "expectedResponse": "{'success': true, 'execution_id': string}"
+      },
+      {
+        "id": "TC7",
+        "name": "Multi-Tenant Template Listing",
+        "endpoint": "GET /v2/activities/templates",
+        "headers": ["Authorization: Bearer {token}"],
+        "expectedBehavior": "Returns only global + org-scoped templates"
+      },
+      {
+        "id": "TC8",
+        "name": "DevBob Activity Execution",
+        "description": "Execute activity from DevBob container that calls RPC API",
+        "expectedBehavior": "Activity completes successfully, calls api.metabob.local endpoints"
+      }
+    ]
+  }
+}
