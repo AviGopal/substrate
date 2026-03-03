@@ -1,0 +1,15 @@
+{
+  "id": "validation-dashboard-build-deploy-validate-e2e-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"input\": {\n    \"baseUrl\": \"http://app.metabob.local\",\n    \"skipBuild\": true,\n    \"skipDeploy\": true,\n    \"timeout\": 15000\n  },\n  \"expectedOutput\": {\n    \"uiAccessible\": true,\n    \"apiConnectivity\": true\n  }\n}",
+    "source": "validation harness specification"
+  },
+  "metadata": {
+    "createdAt": "2026-03-03T10:56:54.061Z",
+    "testCase": "UI accessibility and API connectivity only",
+    "category": "e2e-ui"
+  },
+  "budget": 500
+}
