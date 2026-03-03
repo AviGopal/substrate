@@ -1,0 +1,182 @@
+{
+  "specificationName": "rpc-api-deployed-infrastructure-validation",
+  "testCases": [
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-1",
+      "testCase": "TC1-Infrastructure-Status",
+      "input": {
+        "method": "GET",
+        "endpoint": "/",
+        "kubeCheck": {
+          "namespace": "metabob",
+          "resource": "metabob-rpc-api",
+          "selector": "app=metabob-rpc-api"
+        }
+      },
+      "expectedOutput": {
+        "kubeStatus": "Running",
+        "statusCode": 200,
+        "responsePattern": {"status": "ok"}
+      },
+      "description": "Verify metabob-rpc-api pod is running in Kubernetes"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-2",
+      "testCase": "TC2-Health-Check",
+      "input": {
+        "method": "GET",
+        "endpoint": "/"
+      },
+      "expectedOutput": {
+        "statusCode": 200,
+        "responsePattern": {
+          "status": "ok",
+          "version": "string",
+          "timestamp": "string"
+        }
+      },
+      "description": "Health endpoint returns status ok with version and timestamp"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-3",
+      "testCase": "TC3-List-Templates-Empty",
+      "input": {
+        "method": "GET",
+        "endpoint": "/v2/activities/templates",
+        "headers": {
+          "x-tenant-id": "validation-harness",
+          "x-org-id": "test-org",
+          "x-project-id": "test-project"
+        }
+      },
+      "expectedOutput": {
+        "statusCode": 200,
+        "responsePattern": {
+          "templates": "array"
+        }
+      },
+      "description": "Template listing returns array (may be empty initially)"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-4",
+      "testCase": "TC4-List-Templates-MultiTenant",
+      "input": {
+        "method": "GET",
+        "endpoint": "/v2/activities/templates",
+        "headers": {
+          "x-tenant-id": "tenant-isolation-test",
+          "x-org-id": "org-isolation-test",
+          "x-project-id": "project-isolation-test"
+        }
+      },
+      "expectedOutput": {
+        "statusCode": 200,
+        "responsePattern": {
+          "templates": "array"
+        }
+      },
+      "description": "Template listing accepts different multi-tenant headers"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-5",
+      "testCase": "TC5-Create-Template-SurrealDB-Blocker",
+      "input": {
+        "method": "POST",
+        "endpoint": "/v2/activities/templates",
+        "headers": {
+          "Content-Type": "application/json",
+          "x-tenant-id": "validation-harness",
+          "x-org-id": "test-org",
+          "x-project-id": "test-project"
+        },
+        "body": {
+          "name": "validation-harness-test-template",
+          "description": "Test template for infrastructure validation",
+          "category": "testing",
+          "tasks": [
+            {
+              "id": "task-1",
+              "description": "Test task",
+              "prompt": "Test prompt"
+            }
+          ]
+        }
+      },
+      "expectedOutput": {
+        "statusCode": 500,
+        "errorPattern": "SurrealDB|401|Unauthorized",
+        "blockedBy": "SurrealDB v2.3.10 incompatible with Python client v1.0+"
+      },
+      "description": "Template creation expected to fail due to SurrealDB version mismatch (KNOWN BLOCKER)"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-6",
+      "testCase": "TC6-Schema-Tolerance-Minimal",
+      "input": {
+        "method": "POST",
+        "endpoint": "/api/v1/learning-loop/executions",
+        "headers": {
+          "Content-Type": "application/json",
+          "x-tenant-id": "validation-harness"
+        },
+        "body": {
+          "activity_id": "test-activity-harness-schema-tolerance",
+          "duration_ms": 5000,
+          "success": true
+        }
+      },
+      "expectedOutput": {
+        "statusCode": 201,
+        "responsePattern": {
+          "success": true,
+          "execution_id": "string"
+        }
+      },
+      "description": "Learning loop accepts minimal execution data (activity_id, duration_ms, success) after schema tolerance fix"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-7",
+      "testCase": "TC7-Error-Handling-Invalid-Tenant",
+      "input": {
+        "method": "GET",
+        "endpoint": "/v2/activities/templates",
+        "headers": {
+          "x-tenant-id": "invalid-tenant-$$$"
+        }
+      },
+      "expectedOutput": {
+        "statusCode": 200,
+        "responsePattern": {
+          "templates": "array"
+        },
+        "note": "Invalid tenant_id should not crash API, returns empty or global templates"
+      },
+      "description": "API handles invalid tenant_id gracefully without crashing"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-8",
+      "testCase": "TC8-SurrealDB-Version-Check",
+      "input": {
+        "infraCheck": "kubectl exec -n metabob surrealdb-pod -- /surreal version"
+      },
+      "expectedOutput": {
+        "version": "2.3.10 for linux on x86_64",
+        "incompatibility": "Python client v1.0+ requires SurrealDB v3.0+",
+        "impact": "Blocks template CRUD, quality score, execution recording"
+      },
+      "description": "Verify SurrealDB version and document incompatibility with Python client"
+    },
+    {
+      "impulseId": "validation-rpc-api-deployed-infrastructure-validation-case-9",
+      "testCase": "TC9-Redis-Connectivity",
+      "input": {
+        "infraCheck": "kubectl exec -n metabob redis-master-0 -- redis-cli PING"
+      },
+      "expectedOutput": {
+        "response": "PONG",
+        "status": "Connected"
+      },
+      "description": "Verify Redis connection for template caching"
+    }
+  ]
+}

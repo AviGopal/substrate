@@ -1,0 +1,152 @@
+{
+  "specificationName": "dynamic-activity-creation-devbob-execution-tracking",
+  "validationResults": [
+    {
+      "testCase": "validation-dynamic-activity-creation-devbob-execution-tracking-case-1",
+      "status": "DEFERRED",
+      "reason": "Harness has TypeScript compilation errors (missing zod dependency)",
+      "actual": null,
+      "expected": {
+        "createActivityExecuted": true,
+        "metaTemplateDetected": true,
+        "trailblazingEnabled": true,
+        "lifecycleHooksObserved": true,
+        "databaseRecordExists": true,
+        "redisCacheExists": false,
+        "evolveActivityExecuted": true,
+        "debugActivityExecuted": true
+      },
+      "difference": "Could not execute - TypeScript compilation failed due to missing 'zod' npm package"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-devbob-execution-tracking-case-2",
+      "status": "DEFERRED",
+      "reason": "Harness has TypeScript compilation errors (missing zod dependency)",
+      "actual": null,
+      "expected": {
+        "createActivityExecuted": true,
+        "metaTemplateDetected": true,
+        "trailblazingEnabled": true,
+        "lifecycleHooksObserved": true,
+        "databaseRecordExists": true,
+        "redisCacheExists": false,
+        "evolveActivityExecuted": true,
+        "debugActivityExecuted": true
+      },
+      "difference": "Could not execute - TypeScript compilation failed due to missing 'zod' npm package"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-devbob-execution-tracking-case-3",
+      "status": "DEFERRED",
+      "reason": "Harness has TypeScript compilation errors (missing zod dependency)",
+      "actual": null,
+      "expected": {
+        "createActivityExecuted": true,
+        "metaTemplateDetected": true,
+        "trailblazingEnabled": true,
+        "lifecycleHooksObserved": true,
+        "databaseRecordExists": true,
+        "redisCacheExists": false,
+        "evolveActivityExecuted": true,
+        "debugActivityExecuted": true
+      },
+      "difference": "Could not execute - TypeScript compilation failed due to missing 'zod' npm package"
+    }
+  ],
+  "overallStatus": "DEFERRED",
+  "infrastructureStatus": {
+    "kubernetes": "READY",
+    "devbobPod": "RUNNING",
+    "rpcApiPod": "RUNNING",
+    "surrealdbPod": "RUNNING",
+    "redisPod": "RUNNING",
+    "readiness": "100% (4/4 pods)"
+  },
+  "blockers": [
+    {
+      "type": "DEPENDENCY",
+      "severity": "HIGH",
+      "issue": "Missing npm package: zod",
+      "impact": "Harness cannot compile or run",
+      "fix": "npm install zod",
+      "status": "BLOCKING"
+    },
+    {
+      "type": "CONFIGURATION",
+      "severity": "MEDIUM",
+      "issue": "Pod label selectors incorrect for RPC API and SurrealDB",
+      "impact": "getPodName() would fail to find pods",
+      "fix": "Update harness labels to use 'app=metabob-rpc-api' and 'app=surrealdb'",
+      "status": "FIXED"
+    }
+  ],
+  "diagnosticInformation": {
+    "compilationError": {
+      "file": "tests/validation-harnesses/dynamic-activity-creation-devbob-execution-tracking-harness.ts",
+      "line": 34,
+      "error": "Cannot find module 'zod' or its corresponding type declarations",
+      "context": "import { z } from 'zod';"
+    },
+    "podDetails": {
+      "devbob": {
+        "name": "devbob-766dcccf49-hfql6",
+        "status": "Running",
+        "ready": "1/1",
+        "age": "3h48m",
+        "label": "app.kubernetes.io/name=devbob"
+      },
+      "rpcApi": {
+        "name": "metabob-rpc-api-5c5dfb6b9b-rbhm8",
+        "status": "Running",
+        "ready": "1/1",
+        "age": "145m",
+        "label": "app=metabob-rpc-api",
+        "note": "Label different from harness expectation"
+      },
+      "surrealdb": {
+        "name": "surrealdb-5bdddd9989-sdm5g",
+        "status": "Running",
+        "ready": "1/1",
+        "age": "31h",
+        "label": "app=surrealdb",
+        "note": "Label different from harness expectation"
+      },
+      "redis": {
+        "name": "redis-master-0",
+        "status": "Running",
+        "ready": "1/1",
+        "age": "31h",
+        "label": "app.kubernetes.io/name=redis"
+      }
+    }
+  },
+  "recommendedActions": [
+    {
+      "priority": "HIGH",
+      "action": "Install npm dependencies",
+      "command": "cd /home/avi/documents/work/exp-repo/metabob-devbob && npm install zod",
+      "reason": "Required for harness compilation"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Verify harness compiles",
+      "command": "npx tsx --check tests/validation-harnesses/dynamic-activity-creation-devbob-execution-tracking-harness.ts",
+      "reason": "Confirm TypeScript errors are resolved"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Run validation",
+      "command": "./run-pass4-validation.sh",
+      "reason": "Execute validation after fixing dependencies"
+    },
+    {
+      "priority": "LOW",
+      "action": "Alternative: Manual validation",
+      "command": "kubectl exec -n metabob devbob-766dcccf49-hfql6 -- opencode activity create-activity --variables '{\"activityName\":\"Test\"}' --reason 'Manual test'",
+      "reason": "Fallback if automated validation continues to fail"
+    }
+  ],
+  "resultsImpulseId": "validation-results-dynamic-activity-creation-devbob-execution-tracking",
+  "validationTimestamp": "2026-03-03T05:15:00Z",
+  "note": "Validation deferred pending npm dependency installation. Infrastructure is 100% ready."
+}

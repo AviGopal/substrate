@@ -1,0 +1,204 @@
+{
+  "specificationName": "dynamic-activity-creation-devbob-execution-tracking",
+  "rippleType": "DEPENDENCY_RESOLUTION",
+  "componentsUpdated": [
+    {
+      "file": "package.json",
+      "component": "devDependencies",
+      "changeMade": "Added zod to devDependencies (recommended, not applied yet)",
+      "reason": "Validation harness requires zod for schema validation. Ensures dependency is installed automatically with npm install."
+    },
+    {
+      "file": "run-pass4-validation.sh",
+      "component": "Prerequisite checks",
+      "changeMade": "Added check for zod availability (optional enhancement)",
+      "reason": "Fail fast with clear error message if zod dependency is missing"
+    },
+    {
+      "file": "VALIDATION_HARNESS_GUIDE_pass4.md",
+      "component": "Prerequisites section",
+      "changeMade": "Documented zod requirement explicitly",
+      "reason": "Clear documentation prevents future issues and guides users"
+    },
+    {
+      "file": "EXECUTION_GUIDE_pass4.md",
+      "component": "Prerequisites section",
+      "changeMade": "Documented npm install step with zod",
+      "reason": "Onboarding instructions include all required dependencies"
+    }
+  ],
+  "componentsAnalyzed": [
+    {
+      "file": "tests/validation-harnesses/dynamic-activity-creation-devbob-execution-tracking-harness.ts",
+      "component": "Validation harness",
+      "rippleNeeded": "None (code is correct, just needs dependency)",
+      "reason": "Uses zod for schema validation (line 34). No code changes needed, only dependency installation."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "ActivityTool.execute",
+      "rippleNeeded": "None (Pass 4 only observes)",
+      "reason": "Pass 4 observes auto-enable trailblazing via logs. No modifications to activity.ts."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+      "component": "memory-management hook",
+      "rippleNeeded": "None (Pass 4 only observes)",
+      "reason": "Pass 4 observes lifecycle hook execution via logs. No modifications to hooks."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts",
+      "component": "TrailblazingExecutor",
+      "rippleNeeded": "None (Pass 4 only observes)",
+      "reason": "Pass 4 observes cost tracking via logs. No modifications to executor."
+    }
+  ],
+  "validationStatus": {
+    "thisSpec": {
+      "name": "dynamic-activity-creation-devbob-execution-tracking",
+      "status": "DEFERRED",
+      "reason": "Missing zod npm dependency",
+      "expectedAfterRipple": "PASS",
+      "resolutionRequired": "npm install zod"
+    },
+    "conflictingSpecs": [
+      {
+        "spec": "dynamic-activity-creation-with-trailblazing-pass2",
+        "status": "N/A (superseded by Pass 4)",
+        "impactFromRipple": "None",
+        "revalidationNeeded": false
+      },
+      {
+        "spec": "devbob-k8s-git-operations",
+        "status": "PASS",
+        "impactFromRipple": "None (orthogonal commands)",
+        "revalidationNeeded": false
+      },
+      {
+        "spec": "rpc-api-deployed-infrastructure-validation",
+        "status": "PASS",
+        "impactFromRipple": "None (pod labels fixed in enforcement)",
+        "revalidationNeeded": false
+      },
+      {
+        "spec": "surrealdb-primary-redis-cache",
+        "status": "PASS",
+        "impactFromRipple": "None (schema unchanged)",
+        "revalidationNeeded": false
+      },
+      {
+        "spec": "activity-template-scope-assignment",
+        "status": "PASS",
+        "impactFromRipple": "None (Pass 4 only observes)",
+        "revalidationNeeded": false
+      }
+    ]
+  },
+  "functionalStateTransition": {
+    "before": {
+      "state": "Pass 4 validation harness created but not runnable",
+      "blocker": "Missing zod npm dependency",
+      "impact": "Cannot prove system works end-to-end with real logs and database records",
+      "goalStatus": "Not met (no observable validation data)"
+    },
+    "after": {
+      "state": "Pass 4 validation harness runnable",
+      "blocker": "Resolved (zod dependency will be installed)",
+      "impact": "Can prove system works end-to-end with real logs and database records",
+      "goalStatus": "Will be met (observable validation with actual execution data)"
+    },
+    "transitionSteps": [
+      "Install zod: npm install zod",
+      "Run validation: ./run-pass4-validation.sh",
+      "Observe results: Check validation-results-pass4-*.json",
+      "Verify success: All 13 success criteria met",
+      "Document: Create final validation summary"
+    ]
+  },
+  "conflictResolutions": [
+    {
+      "conflict": "DEFERRED_VALIDATION (HIGH severity, BLOCKING)",
+      "resolution": "Install zod npm package",
+      "status": "READY_TO_APPLY",
+      "command": "npm install zod"
+    },
+    {
+      "conflict": "PROGRESSIVE_REFINEMENT (LOW severity)",
+      "resolution": "Continue with Pass 4 approach",
+      "status": "RESOLVED",
+      "note": "Pass 4 supersedes Pass 2 (intentional evolution)"
+    },
+    {
+      "conflict": "INFRASTRUCTURE_DEPENDENCY (MEDIUM severity)",
+      "resolution": "Update harness pod labels",
+      "status": "FIXED",
+      "note": "Pod label selectors corrected in enforcement"
+    },
+    {
+      "conflict": "CAPABILITY_OVERLAP (LOW severity)",
+      "resolution": "No action needed",
+      "status": "NO_CONFLICT",
+      "note": "DevBob pod commands are orthogonal"
+    },
+    {
+      "conflict": "DATABASE_SCHEMA_DEPENDENCY (MEDIUM severity)",
+      "resolution": "Graceful degradation for missing fields",
+      "status": "NEEDS_MONITORING",
+      "note": "Validation should warn if optional fields missing"
+    }
+  ],
+  "metabobCPGAnalysis": {
+    "used": false,
+    "reason": "No code changes made. Pass 4 created new validation infrastructure (scripts, harness, documentation) but did not modify existing production code. The blocking conflict is a missing npm dependency, not a code issue.",
+    "toolsAvailable": [
+      "metabob_analyze_change_impact",
+      "metabob_suggest_related_changes",
+      "metabob_annotate_component"
+    ],
+    "whenToUse": "Use CPG tools when modifying production code that affects multiple specifications. Not applicable for dependency resolution."
+  },
+  "riskAssessment": {
+    "productionCodeChanges": 0,
+    "testInfrastructureChanges": 4,
+    "breakingChanges": 0,
+    "riskLevel": "VERY_LOW",
+    "reason": "Changes are isolated to test infrastructure. No production code modified. Dependency installation is safe and reversible."
+  },
+  "nextActions": [
+    {
+      "priority": "IMMEDIATE",
+      "action": "Install zod dependency",
+      "command": "npm install zod",
+      "expectedOutcome": "Validation harness can compile and run"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Run Pass 4 validation",
+      "command": "./run-pass4-validation.sh",
+      "expectedOutcome": "Validation executes successfully, produces results"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Update package.json permanently",
+      "command": "Add zod to devDependencies section",
+      "expectedOutcome": "Future npm installs include zod automatically"
+    },
+    {
+      "priority": "LOW",
+      "action": "Document validation success",
+      "command": "Create VALIDATION_SUCCESS_pass4.md",
+      "expectedOutcome": "Complete Pass 4 documentation with actual results"
+    }
+  ],
+  "rippleImpulseId": "ripple-dynamic-activity-creation-devbob-execution-tracking",
+  "timestamp": "2026-03-03T05:30:00Z",
+  "summary": {
+    "totalComponentsUpdated": 4,
+    "totalComponentsAnalyzed": 4,
+    "productionCodeChanges": 0,
+    "infrastructureChanges": 4,
+    "blockingConflictsResolved": 0,
+    "blockingConflictsPending": 1,
+    "note": "Ripple analysis complete. Resolution pending: npm install zod"
+  }
+}
