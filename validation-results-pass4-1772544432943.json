@@ -1,0 +1,122 @@
+{
+  "pass": false,
+  "timestamp": "2026-03-03T13:27:12.942Z",
+  "actual": {
+    "createActivity": {
+      "executed": false,
+      "activityId": null,
+      "exitCode": 1,
+      "output": "DevBob pod not ready",
+      "duration": 0
+    },
+    "logs": {
+      "metaTemplateDetected": false,
+      "trailblazingEnabled": false,
+      "lifecycleHooksObserved": true,
+      "memoryManagementHook": true,
+      "costTracking": false,
+      "activityStarting": false,
+      "taskCreatedDynamically": false,
+      "excerpts": [
+        "[lifecycleHooksObserved] INFO  2026-03-03T13:26:19 +32ms service=turn-lifecycle name=memory-management priority=10 totalHooks=1 hook registered",
+        "[lifecycleHooksObserved] INFO  2026-03-03T13:26:19 +0ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=2 hook registered",
+        "[lifecycleHooksObserved] INFO  2026-03-03T13:26:19 +0ms service=turn-lifecycle name=metabob-context-preparation priority=20 totalHooks=3 hook registered",
+        "[lifecycleHooksObserved] INFO  2026-03-03T13:26:19 +0ms service=turn-lifecycle name=post-turn-cleanup priority=100 totalHooks=4 hook registered",
+        "[lifecycleHooksObserved] INFO  2026-03-03T13:26:19 +0ms service=turn-lifecycle name=session-memory-optimization priority=110 totalHooks=5 hook registered",
+        "[lifecycleHooksObserved] INFO  2026-03-03T13:26:19 +0ms service=turn-lifecycle name=impulse-learning-init priority=1 totalHooks=6 hook registered",
+        "[lifecycleHooksObserved] INFO  2026-03-03T13:26:19 +0ms service=turn-lifecycle name=impulse-learning-flush priority=120 totalHooks=7 hook registered",
+        "[memoryManagementHook] INFO  2026-03-03T13:26:19 +32ms service=turn-lifecycle name=memory-management priority=10 totalHooks=1 hook registered"
+      ]
+    },
+    "database": {
+      "recordExists": false,
+      "templateId": null,
+      "recordStructureValid": false,
+      "fields": {
+        "name": false,
+        "category": false,
+        "tasks": false,
+        "created_at": false,
+        "metadata": false
+      },
+      "queryResult": "No activity_id provided"
+    },
+    "redis": {
+      "cacheExists": false,
+      "templateId": null,
+      "ttl": null,
+      "queryResult": "No template_id provided"
+    },
+    "evolveActivity": {
+      "executed": false,
+      "activityId": null,
+      "parentReference": false,
+      "exitCode": 0
+    },
+    "debugActivity": {
+      "executed": false,
+      "activityId": null,
+      "errorContextLoaded": false,
+      "exitCode": 1
+    }
+  },
+  "expected": {
+    "createActivityExecuted": true,
+    "metaTemplateDetected": true,
+    "trailblazingEnabled": true,
+    "lifecycleHooksObserved": true,
+    "databaseRecordExists": true,
+    "redisCacheExists": false,
+    "evolveActivityExecuted": true,
+    "debugActivityExecuted": true
+  },
+  "errors": [
+    "create-activity did not execute successfully",
+    "create-activity did not return an activity_id",
+    "Meta-template detection not observed in logs",
+    "Activity record not found in SurrealDB",
+    "Activity record structure is invalid (missing required fields)"
+  ],
+  "auditTrail": {
+    "startTime": "2026-03-03T13:27:12.112Z",
+    "endTime": "2026-03-03T13:27:12.942Z",
+    "steps": [
+      {
+        "step": "execute-create-activity",
+        "timestamp": "2026-03-03T13:27:12.338Z",
+        "status": "failure",
+        "details": "Exit code: 1, Activity ID: none"
+      },
+      {
+        "step": "analyze-devbob-logs",
+        "timestamp": "2026-03-03T13:27:12.616Z",
+        "status": "failure",
+        "details": "Meta-template detected: false, Excerpts: 8"
+      },
+      {
+        "step": "query-surrealdb",
+        "timestamp": "2026-03-03T13:27:12.616Z",
+        "status": "failure",
+        "details": "Record exists: false, Template ID: none"
+      },
+      {
+        "step": "check-redis-cache",
+        "timestamp": "2026-03-03T13:27:12.616Z",
+        "status": "skipped",
+        "details": "Cache exists: false, TTL: N/A"
+      },
+      {
+        "step": "execute-evolve-activity",
+        "timestamp": "2026-03-03T13:27:12.616Z",
+        "status": "skipped",
+        "details": "Activity ID: none, Parent reference: false"
+      },
+      {
+        "step": "execute-debug-activity",
+        "timestamp": "2026-03-03T13:27:12.942Z",
+        "status": "failure",
+        "details": "Activity ID: none, Error context: false"
+      }
+    ]
+  }
+}
