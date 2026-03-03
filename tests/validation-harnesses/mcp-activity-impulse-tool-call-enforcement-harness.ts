@@ -69,17 +69,19 @@ async function testMCPConnectivity(): Promise<ValidationResult> {
     
     // Try to connect to MCP server by running a simple health check
     // This tests the new MCP.healthCheck() function
+    const projectRoot = process.cwd()
     const healthCheckScript = `
-      import { MCP } from './repos/metabob-opencode/packages/opencode/src/mcp/index.ts'
+      import { MCP } from '${projectRoot}/repos/metabob-opencode/packages/opencode/src/mcp/index.ts'
       const health = await MCP.healthCheck()
       console.log(JSON.stringify(health))
     `
     
     writeFileSync("/tmp/mcp-health-check.ts", healthCheckScript)
     
-    const result = execSync(`cd ${process.cwd()} && bun /tmp/mcp-health-check.ts`, {
+    const result = execSync(`bun /tmp/mcp-health-check.ts`, {
       timeout: 10000,
-      encoding: "utf-8"
+      encoding: "utf-8",
+      cwd: projectRoot
     })
     
     const health = JSON.parse(result.trim())
@@ -110,8 +112,9 @@ async function testMCPToolsRegistration(): Promise<ValidationResult> {
   const testCase = "MCP Tools Registration"
   
   try {
+    const projectRoot = process.cwd()
     const toolsScript = `
-      import { MCP } from './repos/metabob-opencode/packages/opencode/src/mcp/index.ts'
+      import { MCP } from '${projectRoot}/repos/metabob-opencode/packages/opencode/src/mcp/index.ts'
       const tools = await MCP.tools()
       const metabobTools = Object.keys(tools).filter(key => key.startsWith('metabob_'))
       console.log(JSON.stringify(metabobTools))
@@ -119,9 +122,10 @@ async function testMCPToolsRegistration(): Promise<ValidationResult> {
     
     writeFileSync("/tmp/mcp-tools-check.ts", toolsScript)
     
-    const result = execSync(`cd ${process.cwd()} && bun /tmp/mcp-tools-check.ts`, {
+    const result = execSync(`bun /tmp/mcp-tools-check.ts`, {
       timeout: 10000,
-      encoding: "utf-8"
+      encoding: "utf-8",
+      cwd: projectRoot
     })
     
     const metabobTools = JSON.parse(result.trim())
@@ -164,9 +168,10 @@ async function testActivityBackendReporting(): Promise<ValidationResult> {
   
   try {
     // Create a test activity execution with logging enabled
+    const projectRoot = process.cwd()
     const testScript = `
-      import { Log } from './repos/metabob-opencode/packages/opencode/src/util/log.ts'
-      import { MetabobCLI } from './repos/metabob-opencode/packages/opencode/src/util/metabob.ts'
+      import { Log } from '${projectRoot}/repos/metabob-opencode/packages/opencode/src/util/log.ts'
+      import { MetabobCLI } from '${projectRoot}/repos/metabob-opencode/packages/opencode/src/util/metabob.ts'
       
       // Capture log output
       const logs: string[] = []
@@ -192,9 +197,10 @@ async function testActivityBackendReporting(): Promise<ValidationResult> {
     
     writeFileSync("/tmp/activity-reporting-test.ts", testScript)
     
-    const result = execSync(`cd ${process.cwd()} && bun /tmp/activity-reporting-test.ts 2>&1`, {
+    const result = execSync(`bun /tmp/activity-reporting-test.ts 2>&1`, {
       timeout: 10000,
-      encoding: "utf-8"
+      encoding: "utf-8",
+      cwd: projectRoot
     })
     
     // Check if logs contain warning about backend reporting failure
@@ -233,8 +239,9 @@ async function testImpulseBackendSync(): Promise<ValidationResult> {
   const testCase = "Impulse Backend Sync"
   
   try {
+    const projectRoot = process.cwd()
     const testScript = `
-      import { Log } from './repos/metabob-opencode/packages/opencode/src/util/log.ts'
+      import { Log } from '${projectRoot}/repos/metabob-opencode/packages/opencode/src/util/log.ts'
       
       // Capture log output
       const logs: string[] = []
@@ -261,9 +268,10 @@ async function testImpulseBackendSync(): Promise<ValidationResult> {
     
     writeFileSync("/tmp/impulse-sync-test.ts", testScript)
     
-    const result = execSync(`cd ${process.cwd()} && bun /tmp/impulse-sync-test.ts 2>&1`, {
+    const result = execSync(`bun /tmp/impulse-sync-test.ts 2>&1`, {
       timeout: 10000,
-      encoding: "utf-8"
+      encoding: "utf-8",
+      cwd: projectRoot
     })
     
     // Check if logs contain error about backend sync failure (enforcement change)
@@ -299,8 +307,9 @@ async function testStrictBackendEnforcement(): Promise<ValidationResult> {
   const testCase = "Strict Backend Enforcement"
   
   try {
+    const projectRoot = process.cwd()
     const testScript = `
-      import { TemplateLoader } from './repos/metabob-opencode/packages/opencode/src/session/template-loader.ts'
+      import { TemplateLoader } from '${projectRoot}/repos/metabob-opencode/packages/opencode/src/session/template-loader.ts'
       
       try {
         // Try to load with strictBackend=true (should throw if backend unavailable)
@@ -317,9 +326,10 @@ async function testStrictBackendEnforcement(): Promise<ValidationResult> {
     
     writeFileSync("/tmp/strict-backend-test.ts", testScript)
     
-    const result = execSync(`cd ${process.cwd()} && bun /tmp/strict-backend-test.ts 2>&1`, {
+    const result = execSync(`bun /tmp/strict-backend-test.ts 2>&1`, {
       timeout: 10000,
-      encoding: "utf-8"
+      encoding: "utf-8",
+      cwd: projectRoot
     })
     
     // Should throw error in strict mode (not silently fall back)
@@ -355,8 +365,9 @@ async function testHealthCheckFunction(): Promise<ValidationResult> {
   const testCase = "MCP Health Check Function"
   
   try {
+    const projectRoot = process.cwd()
     const testScript = `
-      import { MCP } from './repos/metabob-opencode/packages/opencode/src/mcp/index.ts'
+      import { MCP } from '${projectRoot}/repos/metabob-opencode/packages/opencode/src/mcp/index.ts'
       
       const health = await MCP.healthCheck()
       
@@ -372,9 +383,10 @@ async function testHealthCheckFunction(): Promise<ValidationResult> {
     
     writeFileSync("/tmp/health-check-test.ts", testScript)
     
-    const result = execSync(`cd ${process.cwd()} && bun /tmp/health-check-test.ts`, {
+    const result = execSync(`bun /tmp/health-check-test.ts`, {
       timeout: 10000,
-      encoding: "utf-8"
+      encoding: "utf-8",
+      cwd: projectRoot
     })
     
     const parsed = JSON.parse(result.trim())
