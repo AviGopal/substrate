@@ -1,0 +1,21 @@
+{
+  "id": "validation-rpc-api-endpoint-database-integration-case-7",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"id\": \"validation-rpc-api-endpoint-database-integration-case-7\",\n  \"name\": \"Get Boredom Activities - GET /api/v1/learning-loop/boredom-activities\",\n  \"input\": {\n    \"method\": \"GET\",\n    \"endpoint\": \"/api/v1/learning-loop/boredom-activities\",\n    \"queryParams\": {\n      \"org_id\": \"test-org\"\n    }\n  },\n  \"expectedOutput\": {\n    \"statusCode\": 200,\n    \"responseSchema\": {\n      \"activities\": \"array\"\n    },\n    \"validations\": [\n      \"Response is valid JSON\",\n      \"No RecordID errors in activity list\"\n    ]\n  }\n}",
+    "source": "validation-harness"
+  },
+  "priority": "high",
+  "budget": 1000,
+  "metadata": {
+    "specification": "rpc-api-endpoint-database-integration",
+    "category": "validation-test-case",
+    "testName": "Get Boredom Activities - GET /api/v1/learning-loop/boredom-activities",
+    "endpoint": "/api/v1/learning-loop/boredom-activities",
+    "method": "GET",
+    "expectedStatus": 200,
+    "criticalTest": false
+  },
+  "createdAt": "2026-03-03T11:05:11.233Z"
+}

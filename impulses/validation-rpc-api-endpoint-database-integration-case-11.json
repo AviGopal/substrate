@@ -1,0 +1,21 @@
+{
+  "id": "validation-rpc-api-endpoint-database-integration-case-11",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"id\": \"validation-rpc-api-endpoint-database-integration-case-11\",\n  \"name\": \"Update Task Execution - PATCH /v2/activities/tasks/{id}\",\n  \"input\": {\n    \"method\": \"PATCH\",\n    \"endpoint\": \"/v2/activities/tasks/{id}\",\n    \"data\": {\n      \"status\": \"completed\",\n      \"completed_at\": \"{timestamp}\",\n      \"success\": true\n    }\n  },\n  \"expectedOutput\": {\n    \"statusCode\": 200,\n    \"validations\": [\n      \"Task execution updated\",\n      \"Status persisted to SurrealDB\"\n    ]\n  }\n}",
+    "source": "validation-harness"
+  },
+  "priority": "high",
+  "budget": 1000,
+  "metadata": {
+    "specification": "rpc-api-endpoint-database-integration",
+    "category": "validation-test-case",
+    "testName": "Update Task Execution - PATCH /v2/activities/tasks/{id}",
+    "endpoint": "/v2/activities/tasks/{id}",
+    "method": "PATCH",
+    "expectedStatus": 200,
+    "criticalTest": false
+  },
+  "createdAt": "2026-03-03T11:05:11.234Z"
+}
