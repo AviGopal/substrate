@@ -1,0 +1,18 @@
+{
+  "id": "validation-dynamic-activity-creation-with-trailblazing-pass2-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"input\": {\n    \"createActivityGoal\": \"Create GraphQL API for product catalog\",\n    \"evolveActivityChanges\": \"Add caching layer for expensive queries\",\n    \"debugActivityError\": \"Memory leak in resolver chain causing pod crash\"\n  },\n  \"expectedOutput\": {\n    \"trailblazingObserved\": true,\n    \"lifecycleHooksObserved\": true,\n    \"httpRequestsObserved\": true,\n    \"activitiesInDatabase\": 3,\n    \"activityStructureValid\": true,\n    \"recoveryAttemptsPresent\": true,\n    \"stateDeltaPresent\": true\n  },\n  \"description\": \"Complex scenario test: GraphQL API with caching and memory leak debugging\"\n}",
+    "source": "validation-harness"
+  },
+  "priority": "medium",
+  "budget": 1000,
+  "metadata": {
+    "specification": "dynamic-activity-creation-with-trailblazing-pass2",
+    "category": "validation-test-case",
+    "testType": "e2e-workflow",
+    "purpose": "Validate complex error scenarios trigger proper trailblazing recovery"
+  },
+  "createdAt": "2026-03-03T12:23:42.622Z"
+}

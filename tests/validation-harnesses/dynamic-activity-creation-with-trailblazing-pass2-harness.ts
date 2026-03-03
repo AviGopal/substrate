@@ -19,8 +19,8 @@
  * - End-to-end flow DevBob → RPC API → SurrealDB confirmed
  */
 
-import { execSync } from 'child_process';
-import { z } from 'zod';
+import { execSync } from 'node:child_process';
+import z from 'zod';
 
 // Kubernetes configuration
 const K8S_NAMESPACE = 'metabob';
@@ -460,7 +460,7 @@ export async function runValidation(input: ValidationInput): Promise<ValidationO
 /**
  * CLI entry point
  */
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const input: ValidationInput = {
     createActivityGoal: 'Create REST endpoint for user management',
     evolveActivityChanges: 'Add authentication middleware',
