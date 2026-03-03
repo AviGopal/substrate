@@ -1,0 +1,16 @@
+{
+  "id": "validation-metabob-cli-test-implementation-alignment-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"testCase\": \"Baseline validation after schema fixes\",\n  \"input\": {\n    \"projectRoot\": \"/home/avi/documents/work/exp-repo/metabob-devbob\",\n    \"expectedPassingTests\": 709,\n    \"expectedMaxDuration\": 10000,\n    \"expectedMinCoverage\": 97\n  },\n  \"expectedOutput\": {\n    \"pass\": true,\n    \"actual\": {\n      \"typecheckErrors\": 0,\n      \"testsPassing\": 709,\n      \"testsFailing\": 0,\n      \"duration\": 8000,\n      \"coverage\": 97,\n      \"ioErrors\": 0\n    }\n  },\n  \"description\": \"After fixing requiresCleanGit, duplicate properties, useCochangePrediction, and bootstrap template ID issues, all tests should pass with 0 typecheck errors.\"\n}"
+  },
+  "budget": 1000,
+  "priority": "high",
+  "metadata": {
+    "createdFor": "validation-harness",
+    "specificationName": "metabob-cli-test-implementation-alignment",
+    "testCaseNumber": 1,
+    "category": "baseline"
+  }
+}

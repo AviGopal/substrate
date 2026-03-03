@@ -1,0 +1,28 @@
+{
+  "id": "harness-metabob-cli-test-implementation-alignment",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "filePath": "tests/validation-harnesses/metabob-cli-test-implementation-alignment-harness.ts"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "metadata": {
+    "createdFor": "trace-enforce-validate-loop",
+    "specificationName": "metabob-cli-test-implementation-alignment",
+    "harnessType": "external-test",
+    "testCases": [
+      "validation-metabob-cli-test-implementation-alignment-case-1",
+      "validation-metabob-cli-test-implementation-alignment-case-2",
+      "validation-metabob-cli-test-implementation-alignment-case-3"
+    ],
+    "validationStrategy": "Runs TypeScript typecheck and bun test, validates output against expected results",
+    "successCriteria": [
+      "0 TypeScript errors in test files",
+      "709+ tests passing",
+      "Duration < 10 seconds",
+      "Coverage >= 97%",
+      "0 I/O errors"
+    ]
+  }
+}

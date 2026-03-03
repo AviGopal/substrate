@@ -1,0 +1,16 @@
+{
+  "id": "validation-metabob-cli-test-implementation-alignment-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"testCase\": \"Verify no regression in typecheck\",\n  \"input\": {\n    \"projectRoot\": \"/home/avi/documents/work/exp-repo/metabob-devbob\",\n    \"expectedPassingTests\": 700,\n    \"expectedMaxDuration\": 15000,\n    \"expectedMinCoverage\": 95\n  },\n  \"expectedOutput\": {\n    \"pass\": true,\n    \"actual\": {\n      \"typecheckErrors\": 0,\n      \"testsPassing\": 700,\n      \"testsFailing\": 0,\n      \"duration\": 12000,\n      \"ioErrors\": 0\n    }\n  },\n  \"description\": \"With relaxed thresholds, validates that the core fix (0 typecheck errors) is maintained even if some tests are still failing for other reasons.\"\n}"
+  },
+  "budget": 1000,
+  "priority": "medium",
+  "metadata": {
+    "createdFor": "validation-harness",
+    "specificationName": "metabob-cli-test-implementation-alignment",
+    "testCaseNumber": 2,
+    "category": "regression"
+  }
+}
