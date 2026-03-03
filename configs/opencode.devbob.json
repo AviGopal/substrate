@@ -10,17 +10,8 @@
   },
   "mcp": {
     "metabob": {
-      "type": "local",
-      "command": [
-        "metabob-cli",
-        "mcp",
-        "--transport",
-        "stdio"
-      ],
-      "environment": {
-        "METABOB_API_URL": "http://host.docker.internal:8080",
-        "METABOB_API_KEY": "mb_Y99iQNMiycAlpkQamp0dhnU_t5e0ds0mkwDrU7g9bxs"
-      },
+      "type": "remote",
+      "url": "http://metabob-rpc-api.metabob.svc.cluster.local:8080",
       "enabled": true
     },
     "playwright": {
@@ -33,9 +24,9 @@
     }
   },
   "metabob": {
-    "cli_path": "metabob-cli",
+    "cli_path": "/opt/metabob-cli",
     "api_key": "mb_Y99iQNMiycAlpkQamp0dhnU_t5e0ds0mkwDrU7g9bxs",
-    "base_url": "http://api-server-dev:8080",
+    "base_url": "http://metabob-rpc-api.metabob.svc.cluster.local:8080",
     "state_directory": ".metabob",
     "max_issues": 5,
     "min_severity": "MEDIUM",
