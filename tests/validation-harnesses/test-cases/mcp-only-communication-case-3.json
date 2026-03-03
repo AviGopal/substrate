@@ -1,0 +1,14 @@
+{
+  "id": "validation-mcp-only-communication-case-3",
+  "description": "TemplateMetricsClient.reportExecution() uses callMCPTool with post_activity_result",
+  "input": {
+    "codebasePath": "repos/metabob-opencode/packages/opencode/src",
+    "checkType": "uses-mcp-abstraction",
+    "targetFile": "session/template-metrics-client.ts",
+    "searchPattern": "post_activity_result"
+  },
+  "expectedOutput": {
+    "pass": true,
+    "violationCount": 0
+  }
+}

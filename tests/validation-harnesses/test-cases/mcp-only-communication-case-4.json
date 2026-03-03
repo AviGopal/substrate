@@ -1,0 +1,14 @@
+{
+  "id": "validation-mcp-only-communication-case-4",
+  "description": "BoredomManager uses TemplateMetricsClient.reportExecution() abstraction",
+  "input": {
+    "codebasePath": "repos/metabob-opencode/packages/opencode/src",
+    "checkType": "uses-mcp-abstraction",
+    "targetFile": "session/boredom-manager.ts",
+    "searchPattern": "TemplateMetricsClient.reportExecution"
+  },
+  "expectedOutput": {
+    "pass": true,
+    "violationCount": 0
+  }
+}

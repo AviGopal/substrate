@@ -1,0 +1,15 @@
+{
+  "id": "validation-mcp-only-communication-case-5",
+  "description": "Acceptable exception: rpc-http-client.ts for Thompson Sampling",
+  "input": {
+    "codebasePath": "repos/metabob-opencode/packages/opencode/src",
+    "checkType": "acceptable-exception",
+    "targetFile": "util/rpc-http-client.ts",
+    "searchPattern": "METABOB_RPC_API_URL"
+  },
+  "expectedOutput": {
+    "pass": true,
+    "violationCount": 0,
+    "acceptableFiles": ["util/rpc-http-client.ts"]
+  }
+}
