@@ -9,7 +9,7 @@ FAIL=0
 
 # Test 1: Check that opencode.json exists (configuration test)
 echo "📋 Test 1: Configuration File Exists"
-if [ -f "repos/metabob-opencode/opencode.json" ]; then
+if [ -f "repos/metabob-opencode/.opencode/opencode.json" ]; then
   echo "✅ PASS: opencode.json found"
   ((PASS++))
 else

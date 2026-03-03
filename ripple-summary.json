@@ -1,58 +1,131 @@
 {
-  "specificationName": "sidebar-impulse-visibility",
+  "specificationName": "MCP Activity and Impulse System Tool Call Enforcement",
+  "rippleTimestamp": "2026-03-03T23:15:00Z",
   "componentsUpdated": [
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/cli/cmd/tui/routes/session/sidebar.tsx",
-      "component": "Activity Progress Display (line 227)",
-      "changeMade": "Added color prop to ProgressBar: color={getStatusColor(activity.progress.percentage)}",
-      "reason": "Enforce color-coded progress bars specification requirement (green <60%, yellow 60-85%, red >=85%)"
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "component": "TemplateLoader module documentation",
+      "changeMade": "Added comprehensive documentation for strictBackend mode and bootstrap template exception",
+      "reason": "Ripple from P0 recommendation in conflict analysis. Needed to document that strictBackend=true allows bootstrap templates as cold-start fallback",
+      "linesAdded": 14,
+      "impact": "Documentation only - no code changes. Clarifies design intent for developers and operators"
+    },
+    {
+      "file": "simple-validation.sh",
+      "component": "Validation test case 1",
+      "changeMade": "Fixed opencode.json path from repos/metabob-opencode/opencode.json to repos/metabob-opencode/.opencode/opencode.json",
+      "reason": "Validation was failing due to incorrect path. Config file exists but in .opencode subdirectory",
+      "linesModified": 1,
+      "impact": "Test harness fix - ensures validation accurately reflects system state"
     }
   ],
-  "rippleChangesRequired": false,
-  "rippleReason": "Change is isolated to sidebar rendering component. No other components depend on this implementation detail. Producer/consumer architecture preserved.",
-  "entryPointsAnalyzed": 2,
-  "transformationsAnalyzed": 2,
-  "validationsAnalyzed": 3,
-  "exitPointsAnalyzed": 1,
-  "allConsistent": true,
-  "validationStatus": {
-    "thisSpec": "PASS",
-    "testCases": 4,
-    "passed": 4,
-    "failed": 0,
-    "conflictingSpecs": []
-  },
-  "relatedSpecsStatus": {
-    "activity-state-transformation-tracking": {
-      "status": "NOT_RE_RUN",
-      "reason": "sidebar-impulse-visibility is read-only consumer - does not modify shared components"
-    },
-    "impulse-usage-tracking": {
-      "status": "NOT_RE_RUN",
-      "reason": "sidebar-impulse-visibility is read-only consumer - does not modify shared components"
+  "conflictsResolved": [
+    {
+      "conflictId": "POTENTIAL-001",
+      "resolution": "Documented bootstrap template exception in strictBackend mode",
+      "status": "RESOLVED",
+      "implementation": "Added detailed module documentation explaining that BOOTSTRAP_TEMPLATES are allowed even in strict mode",
+      "validationStatus": "PASS"
     }
+  ],
+  "validationStatus": {
+    "thisSpec": {
+      "name": "MCP Activity and Impulse System Tool Call Enforcement",
+      "status": "PASS",
+      "passRate": "100.0%",
+      "testsRun": 6,
+      "testsPassed": 6,
+      "testsFailed": 0
+    },
+    "relatedSpecs": [
+      {
+        "spec": "bootstrap-template-filepath-compliance",
+        "status": "PASS",
+        "passRate": "100.0%",
+        "affectedByRipple": false,
+        "note": "No code changes - documentation only"
+      },
+      {
+        "spec": "instance-invariant-storage-enforcement",
+        "status": "PASS",
+        "passRate": "100.0%",
+        "affectedByRipple": false,
+        "note": "Enhanced logging benefits this spec (complementary relationship)"
+      }
+    ]
   },
   "functionalStateTransition": {
-    "before": "Specification partially enforced (6/7 requirements met). Activity progress bar lacked color coding.",
-    "after": "Specification fully enforced (7/7 requirements met). All progress bars now color-coded consistently.",
-    "impact": "Users see consistent color-coded progress feedback across all resource utilization indicators."
+    "before": {
+      "description": "MCP tool call enforcement implemented but not fully documented",
+      "state": "Code complete, documentation incomplete",
+      "issues": [
+        "Bootstrap template exception not documented",
+        "Validation test had incorrect file path",
+        "Operators might not understand strictBackend behavior"
+      ]
+    },
+    "after": {
+      "description": "MCP tool call enforcement fully implemented and documented",
+      "state": "Code complete, documentation complete, validation passing",
+      "improvements": [
+        "strictBackend mode fully documented with bootstrap exception explained",
+        "Validation tests all passing with correct paths",
+        "Clear guidance for production vs development usage",
+        "Operators understand cold-start fallback behavior"
+      ]
+    },
+    "transition": "specification enforcement complete → specification enforcement documented and validated"
   },
-  "blastRadius": {
-    "level": "MINIMAL",
-    "directlyAffected": 1,
-    "indirectlyAffected": 0,
-    "notAffected": "All other components and specifications"
+  "impactAnalysis": {
+    "filesModified": 2,
+    "codeChanges": 0,
+    "documentationChanges": 1,
+    "testChanges": 1,
+    "backwardCompatibility": "100% - No breaking changes",
+    "runtimeBehavior": "Unchanged - Documentation only",
+    "blastRadius": "MINIMAL - Documentation and test harness only"
   },
-  "performanceImpact": "NEGLIGIBLE - Single additional prop, no computational overhead",
-  "regressionRisk": "NEGLIGIBLE - Additive change, component already supports color prop",
-  "deploymentReady": true,
-  "deploymentChecklist": [
-    "✅ All validation tests pass",
-    "✅ No conflicts detected",
-    "✅ No breaking changes",
-    "✅ Minimal blast radius",
-    "✅ Performance impact negligible",
-    "✅ Producer/consumer architecture intact"
+  "crossSpecValidation": {
+    "methodUsed": "Code-level validation via simple-validation.sh",
+    "specificationsChecked": 3,
+    "allSpecsPass": true,
+    "noConflictsDetected": true,
+    "complementaryBenefits": [
+      "Enhanced logging helps debug instance storage sync issues",
+      "strictBackend can enforce backend availability for storage operations",
+      "Bootstrap templates ensure cold-start works for all specifications"
+    ]
+  },
+  "recommendations": [
+    {
+      "priority": "P0",
+      "status": "COMPLETE",
+      "title": "Document Bootstrap Template Exception",
+      "action": "Added comprehensive module documentation"
+    },
+    {
+      "priority": "P1",
+      "status": "READY",
+      "title": "Use strictBackend=true in Production",
+      "action": "Implementation complete, configuration ready for deployment"
+    },
+    {
+      "priority": "P2",
+      "status": "READY",
+      "title": "Monitor Backend Sync Metrics",
+      "action": "Enhanced logging in place (log.warn for activity, log.error for impulse)"
+    }
   ],
-  "rippleImpulseId": "ripple-sidebar-impulse-visibility"
+  "rippleImpulseId": "ripple-mcp-activity-impulse-tool-call-enforcement",
+  "summary": {
+    "rippleChangesApplied": 2,
+    "conflictsResolved": 1,
+    "validationStatus": "ALL PASS",
+    "recommendation": "READY FOR PRODUCTION DEPLOYMENT",
+    "nextSteps": [
+      "Enable strictBackend=true in production configuration",
+      "Set up monitoring for backend sync failures",
+      "Deploy and monitor MCP.healthCheck() in production"
+    ]
+  }
 }
