@@ -1,0 +1,254 @@
+{
+  "id": "conflict-analysis-surrealdb-async-await-enforcement",
+  "type": "memo",
+  "category": "validation",
+  "specification": "surrealdb-async-await-enforcement",
+  "conflictAnalysis": {
+    "analysisTimestamp": "2026-03-03T10:15:00Z",
+    "currentSpecification": "surrealdb-async-await-enforcement",
+    "relatedSpecifications": [
+      "surrealdb-primary-redis-cache",
+      "metrics-calculation-in-rpc-api-only",
+      "thompson-sampling-in-rpc-api-only",
+      "project-scoped-template-filtering",
+      "activity-template-query-filtering"
+    ],
+    "sharedComponents": [
+      {
+        "component": "server/actions/activity.py",
+        "affectedBySpecs": [
+          "surrealdb-async-await-enforcement",
+          "surrealdb-primary-redis-cache",
+          "thompson-sampling-in-rpc-api-only",
+          "project-scoped-template-filtering",
+          "activity-template-query-filtering"
+        ],
+        "functions": [
+          "create_template (lines 303-458)",
+          "record_execution_result (lines 561-724)",
+          "create_variant (lines 461-541)",
+          "list_templates (lines 88-221)",
+          "get_template_by_id (lines 224-300)"
+        ],
+        "conflictLevel": "SYNERGISTIC",
+        "description": "All specifications work together - no contradictions"
+      },
+      {
+        "component": "server/routes/activity.py",
+        "affectedBySpecs": [
+          "surrealdb-async-await-enforcement",
+          "project-scoped-template-filtering"
+        ],
+        "functions": [
+          "create_activity_template (line 256)",
+          "record_activity_execution (line 347)",
+          "create_template_variant (line 301)",
+          "list_activity_templates (line 117)",
+          "get_activity_template (line 154)"
+        ],
+        "conflictLevel": "SYNERGISTIC",
+        "description": "Route handlers updated to await async actions - compatible with filtering"
+      },
+      {
+        "component": "server/db/operations/template_data.py",
+        "affectedBySpecs": [
+          "surrealdb-async-await-enforcement",
+          "surrealdb-primary-redis-cache"
+        ],
+        "functions": [
+          "create_template_record",
+          "get_template_by_variant_id",
+          "list_all_templates",
+          "update_template_record",
+          "delete_template_record",
+          "get_templates_by_activity_id"
+        ],
+        "conflictLevel": "COMPLEMENTARY",
+        "description": "async-await-enforcement relies on functions created by primary-redis-cache spec"
+      },
+      {
+        "component": "server/db/operations/template_metrics.py",
+        "affectedBySpecs": [
+          "surrealdb-async-await-enforcement",
+          "surrealdb-primary-redis-cache",
+          "metrics-calculation-in-rpc-api-only"
+        ],
+        "functions": [
+          "create_metrics",
+          "get_metrics",
+          "update_metrics_after_execution",
+          "increment_selection_count"
+        ],
+        "conflictLevel": "COMPLEMENTARY",
+        "description": "async-await-enforcement ensures metrics persist via these functions"
+      }
+    ],
+    "conflicts": [
+      {
+        "type": "DEPLOYMENT_SEQUENCE",
+        "severity": "HIGH",
+        "spec1": "surrealdb-primary-redis-cache",
+        "spec2": "surrealdb-async-await-enforcement",
+        "sharedComponent": "server/actions/activity.py",
+        "description": "async-await-enforcement depends on functions created by primary-redis-cache spec",
+        "currentState": {
+          "primaryRedisCacheStatus": "PARTIALLY_COMPLETED - SurrealDB layer created but not integrated",
+          "asyncAwaitEnforcementStatus": "LOCAL_FIX_APPLIED_NOT_DEPLOYED",
+          "problem": "Async functions call SurrealDB operations that exist but aren't properly integrated"
+        },
+        "resolution": {
+          "approach": "Sequential deployment - primary-redis-cache MUST be deployed first",
+          "reason": "async-await-enforcement adds 'await' keywords to call functions created by primary-redis-cache",
+          "steps": [
+            "1. Deploy surrealdb-primary-redis-cache (create SurrealDB operations layer)",
+            "2. Deploy surrealdb-async-await-enforcement (add await keywords to call operations)",
+            "3. Validate both specifications together"
+          ],
+          "riskIfOutOfOrder": "CRITICAL - Calling undefined functions will cause runtime errors"
+        },
+        "recommendation": "COMBINE INTO SINGLE DEPLOYMENT - Both fixes are in same repository"
+      },
+      {
+        "type": "VALIDATION_DEPENDENCY",
+        "severity": "MEDIUM",
+        "spec1": "surrealdb-async-await-enforcement",
+        "spec2": "surrealdb-primary-redis-cache",
+        "sharedComponent": "Validation test cases",
+        "description": "Both specifications validate similar behavior from different angles",
+        "currentState": {
+          "asyncAwaitEnforcementValidation": "FAIL - Deployed code lacks await keywords",
+          "primaryRedisCacheValidation": "FAIL - Execution recording write order incorrect",
+          "overlap": "Both validate that templates persist to SurrealDB"
+        },
+        "resolution": {
+          "approach": "Run both validation harnesses after deployment",
+          "expectedOutcome": {
+            "primaryRedisCacheHarness": "Should PASS all tests after deployment",
+            "asyncAwaitEnforcementHarness": "Should PASS all tests after deployment",
+            "combinedValidation": "Zero coroutine warnings + correct write order"
+          },
+          "validationSequence": [
+            "1. Deploy combined fixes",
+            "2. Run surrealdb-async-await-enforcement-harness.sh (check for coroutine warnings)",
+            "3. Run surrealdb-primary-redis-cache-harness.ts (check write order)",
+            "4. Both must PASS for full compliance"
+          ]
+        },
+        "recommendation": "Create combined validation harness that checks both specifications"
+      }
+    ],
+    "synergies": [
+      {
+        "type": "COMPLEMENTARY_FIXES",
+        "specs": ["surrealdb-primary-redis-cache", "surrealdb-async-await-enforcement"],
+        "description": "primary-redis-cache creates SurrealDB operations, async-await-enforcement ensures they're awaited",
+        "benefit": "Together they completely fix template persistence issue",
+        "combinedImpact": "Templates persist to SurrealDB with proper async/await patterns"
+      },
+      {
+        "type": "SHARED_ARCHITECTURE",
+        "specs": [
+          "surrealdb-async-await-enforcement",
+          "surrealdb-primary-redis-cache",
+          "metrics-calculation-in-rpc-api-only",
+          "thompson-sampling-in-rpc-api-only"
+        ],
+        "description": "All enforce the same architecture: SurrealDB primary, Redis cache, calculations in RPC API",
+        "benefit": "Consistent data flow patterns across all specifications",
+        "combinedImpact": "Clean separation of concerns with reliable persistence"
+      },
+      {
+        "type": "LAYERED_ENFORCEMENT",
+        "specs": ["surrealdb-primary-redis-cache", "surrealdb-async-await-enforcement"],
+        "description": "primary-redis-cache enforces write order, async-await ensures operations execute",
+        "benefit": "Defense in depth - both specifications must pass for correct behavior",
+        "combinedImpact": "High confidence in template persistence reliability"
+      }
+    ],
+    "noConflicts": [
+      {
+        "spec1": "surrealdb-async-await-enforcement",
+        "spec2": "project-scoped-template-filtering",
+        "reason": "Filtering is orthogonal to async/await patterns - operates at different layer",
+        "sharedComponent": "server/actions/activity.py::list_templates",
+        "compatibility": "list_templates made async, filtering logic unchanged"
+      },
+      {
+        "spec1": "surrealdb-async-await-enforcement",
+        "spec2": "activity-template-query-filtering",
+        "reason": "Query filtering works with both sync and async functions",
+        "sharedComponent": "server/actions/activity.py::get_template_by_id",
+        "compatibility": "get_template_by_id made async, query parameters unchanged"
+      },
+      {
+        "spec1": "surrealdb-async-await-enforcement",
+        "spec2": "metrics-calculation-in-rpc-api-only",
+        "reason": "Metrics calculation happens in RPC API regardless of async/await patterns",
+        "sharedComponent": "server/db/operations/template_metrics.py",
+        "compatibility": "Metrics functions are already async, enforcement adds await to callers"
+      }
+    ],
+    "deploymentRecommendation": {
+      "strategy": "COMBINED_DEPLOYMENT",
+      "rationale": "Both specifications modify the same files and depend on each other",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Merge both fixes into single branch",
+          "files": [
+            "repos/metabob-rpc-api/server/actions/activity.py",
+            "repos/metabob-rpc-api/server/routes/activity.py",
+            "repos/metabob-rpc-api/server/db/operations/template_data.py",
+            "repos/metabob-rpc-api/server/db/operations/template_metrics.py"
+          ],
+          "specifications": [
+            "surrealdb-primary-redis-cache",
+            "surrealdb-async-await-enforcement"
+          ]
+        },
+        {
+          "step": 2,
+          "action": "Build Docker image with both fixes",
+          "command": "docker build -t metabob-rpc-api:surrealdb-fixes repos/metabob-rpc-api"
+        },
+        {
+          "step": 3,
+          "action": "Deploy to Kubernetes",
+          "command": "kubectl set image deployment/metabob-rpc-api metabob-rpc-api=<registry>/metabob-rpc-api:surrealdb-fixes -n metabob"
+        },
+        {
+          "step": 4,
+          "action": "Run combined validation",
+          "commands": [
+            "RPC_API_URL=http://localhost:8081 NAMESPACE=metabob ./tests/validation-harnesses/surrealdb-async-await-enforcement-harness.sh",
+            "npx ts-node tests/validation-harnesses/surrealdb-primary-redis-cache-harness.ts"
+          ],
+          "expectedOutcome": "Both harnesses PASS - zero coroutine warnings + correct write order"
+        }
+      ],
+      "riskMitigation": [
+        "Run validation harnesses before deployment (should fail current deployment)",
+        "Deploy to staging environment first",
+        "Monitor logs for coroutine warnings after deployment",
+        "Verify template persistence with direct SurrealDB queries",
+        "Rollback plan: revert to previous image if validation fails"
+      ]
+    },
+    "overallConflictStatus": "NO_BLOCKING_CONFLICTS",
+    "summary": "surrealdb-async-await-enforcement has NO contradictory conflicts with other specifications. It is COMPLEMENTARY to surrealdb-primary-redis-cache and requires SEQUENTIAL deployment (primary-redis-cache first, then async-await-enforcement). Recommended approach: COMBINED deployment of both specifications together."
+  },
+  "budget": 3000,
+  "createdAt": "2026-03-03T10:15:00Z",
+  "metadata": {
+    "otherSpecifications": [
+      "surrealdb-primary-redis-cache",
+      "metrics-calculation-in-rpc-api-only",
+      "thompson-sampling-in-rpc-api-only",
+      "project-scoped-template-filtering",
+      "activity-template-query-filtering"
+    ],
+    "validationResults": "validation-results-surrealdb-async-await-enforcement",
+    "enforcementResults": "enforcement-surrealdb-async-await-enforcement",
+    "traceResults": "trace-surrealdb-async-await-enforcement"
+  }
+}
