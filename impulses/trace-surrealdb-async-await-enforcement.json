@@ -1,0 +1,268 @@
+{
+  "id": "trace-surrealdb-async-await-enforcement",
+  "type": "trace",
+  "category": "bugfix",
+  "specification": "surrealdb-async-await-enforcement",
+  "traceData": {
+    "specificationName": "surrealdb-async-await-enforcement",
+    "summary": "All SurrealDB database operations are async but being called without await, causing silent coroutine failures",
+    "rootCause": "Functions in server/actions/activity.py are synchronous but call async SurrealDB operations without await",
+    "impact": "Templates are cached in Redis but never persisted to SurrealDB (primary storage), causing data loss",
+    
+    "currentState": {
+      "architecture": "surrealdb-primary-redis-cache",
+      "writePattern": "Client → SurrealDB (primary) → Redis cache (TTL)",
+      "readPattern": "Client → Redis (hit) OR SurrealDB (miss) → populate Redis",
+      "actualBehavior": "Writes go to Redis only, SurrealDB never receives data",
+      "consequence": "Redis acts as primary storage (volatile, wrong architecture)"
+    },
+    
+    "desiredState": {
+      "writePattern": "Client → await SurrealDB (primary) → Redis cache (TTL)",
+      "readPattern": "Client → Redis (hit) OR await SurrealDB (miss) → populate Redis",
+      "consistency": "Both storage layers have identical data",
+      "persistence": "Templates survive cache expiry and server restarts"
+    },
+    
+    "criticalComponents": [
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "function": "create_template",
+        "lines": "303-458",
+        "currentBehavior": "Synchronous function calls create_template_record() and create_metrics() without await (lines 402, 423)",
+        "desiredBehavior": "Async function that awaits create_template_record() and create_metrics()",
+        "gap": "Function must be declared as 'async def' and add 'await' keywords",
+        "severity": "CRITICAL",
+        "evidence": "Line 402: create_template_record(template) | Line 423: create_metrics(variant_id)",
+        "requiredChanges": [
+          "Change 'def create_template' to 'async def create_template' on line 303",
+          "Add 'await' before create_template_record(template) on line 402",
+          "Add 'await' before create_metrics(variant_id) on line 423",
+          "Update caller in routes/activity.py line 256 to 'await create_template()'"
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "function": "record_execution_result",
+        "lines": "544-724",
+        "currentBehavior": "Synchronous function calls update_metrics_after_execution() and get_metrics() without await (lines 622, 647)",
+        "desiredBehavior": "Async function that awaits SurrealDB operations",
+        "gap": "Function must be declared as 'async def' and add 'await' keywords",
+        "severity": "CRITICAL",
+        "evidence": "Line 622: update_metrics_after_execution(...) | Line 647: get_metrics(template_id)",
+        "requiredChanges": [
+          "Change 'def record_execution_result' to 'async def record_execution_result' on line 544",
+          "Add 'await' before update_metrics_after_execution() on line 622",
+          "Add 'await' before get_metrics(template_id) on line 647",
+          "Update caller in routes/activity.py line 347 to 'await record_execution_result()'"
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "function": "create_variant",
+        "lines": "461-541",
+        "currentBehavior": "Synchronous function that doesn't call SurrealDB operations (uses Redis only)",
+        "desiredBehavior": "Should also persist to SurrealDB like create_template does",
+        "gap": "Missing SurrealDB write operations - currently writes to Redis only (lines 516, 535)",
+        "severity": "HIGH",
+        "evidence": "Lines 516-519: Direct Redis writes without SurrealDB persistence",
+        "requiredChanges": [
+          "Change 'def create_variant' to 'async def create_variant' on line 461",
+          "Add 'await create_template_record(variant)' before line 516",
+          "Add 'await create_metrics(new_variant_id)' before line 535",
+          "Update caller in routes/activity.py line 301 to 'await create_variant()'"
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "function": "list_templates",
+        "lines": "88-221",
+        "currentBehavior": "Synchronous function calls list_all_templates() without await (line 120)",
+        "desiredBehavior": "Async function that awaits list_all_templates()",
+        "gap": "Need to make function async and await DB calls",
+        "severity": "MEDIUM",
+        "evidence": "Line 120: list_all_templates(limit=limit*2, org_id=org_id, project_id=project_id)",
+        "requiredChanges": [
+          "Change 'def list_templates' to 'async def list_templates' on line 88",
+          "Add 'await' before list_all_templates() on line 120",
+          "Update caller in routes/activity.py line 117 to 'await list_templates()'"
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "function": "get_template_by_id",
+        "lines": "224-300",
+        "currentBehavior": "Synchronous function calls get_template_by_variant_id() and get_templates_by_activity_id() without await (lines 243, 250)",
+        "desiredBehavior": "Async function that awaits SurrealDB operations",
+        "gap": "Need to make function async and await DB calls",
+        "severity": "MEDIUM",
+        "evidence": "Line 243: get_template_by_variant_id(template_id) | Line 250: get_templates_by_activity_id(template_id)",
+        "requiredChanges": [
+          "Change 'def get_template_by_id' to 'async def get_template_by_id' on line 224",
+          "Add 'await' before get_template_by_variant_id(template_id) on line 243",
+          "Add 'await' before get_templates_by_activity_id(template_id) on line 250",
+          "Update caller in routes/activity.py line 154 to 'await get_template_by_id()'"
+        ]
+      }
+    ],
+    
+    "dataFlowTrace": {
+      "templateCreationFlow": {
+        "entry": "POST /v2/activities/templates (routes/activity.py:167)",
+        "steps": [
+          "1. create_activity_template() calls create_template() WITHOUT await (line 256)",
+          "2. create_template() calls create_template_record() WITHOUT await (line 402)",
+          "3. create_template_record() returns unawaited coroutine object",
+          "4. Python warning: 'coroutine create_template_record was never awaited'",
+          "5. Template writes to Redis successfully (line 410)",
+          "6. create_template() calls create_metrics() WITHOUT await (line 423)",
+          "7. create_metrics() returns unawaited coroutine object",
+          "8. Python warning: 'coroutine create_metrics was never awaited'",
+          "9. Metrics write to Redis successfully (line 448)",
+          "10. Returns template data (from Redis) but SurrealDB writes never executed"
+        ],
+        "consequence": "Template exists in cache but not in primary storage"
+      },
+      "executionRecordingFlow": {
+        "entry": "POST /v2/activities/executions (routes/activity.py:310)",
+        "steps": [
+          "1. record_activity_execution() calls record_execution_result() WITHOUT await (line 347)",
+          "2. record_execution_result() calls update_metrics_after_execution() WITHOUT await (line 622)",
+          "3. update_metrics_after_execution() returns unawaited coroutine object",
+          "4. Python warning: 'coroutine update_metrics_after_execution was never awaited'",
+          "5. record_execution_result() calls get_metrics() WITHOUT await (line 647)",
+          "6. get_metrics() returns unawaited coroutine object",
+          "7. Python warning: 'coroutine get_metrics was never awaited'",
+          "8. Redis metrics updated but SurrealDB never receives execution data"
+        ],
+        "consequence": "Learning loop broken - metrics never persist to primary storage"
+      }
+    },
+    
+    "validationCriteria": {
+      "expectedBehavior": {
+        "redis": "Template cached with TTL=3600s",
+        "surrealdb": "Template persisted in activity_template table",
+        "consistency": "Both storage layers have identical data",
+        "retrieval": "Template retrievable after cache expiry"
+      },
+      "actualBehavior": {
+        "redis": "Template cached successfully",
+        "surrealdb": "No record created (coroutine never executed)",
+        "consistency": "Redis has data, SurrealDB is empty",
+        "retrieval": "Template disappears after cache expires"
+      },
+      "symptoms": [
+        "RuntimeWarning: coroutine 'create_template_record' was never awaited",
+        "RuntimeWarning: coroutine 'create_metrics' was never awaited",
+        "GET /v2/activities/templates returns templates immediately (from Redis cache)",
+        "After cache expires (1 hour): Templates disappear (SurrealDB empty)",
+        "Direct SurrealDB query returns zero results",
+        "Logs show: 'Template X in list but not found in storage' after cache expiry"
+      ],
+      "successCriteria": [
+        "✓ Template exists in SurrealDB immediately after creation",
+        "✓ Template retrievable after Redis cache expiry",
+        "✓ No RuntimeWarning in logs",
+        "✓ Metrics persist and update correctly",
+        "✓ GET /v2/activities/templates returns consistent results"
+      ]
+    },
+    
+    "externalValidationHarness": {
+      "description": "External test to verify templates persist to SurrealDB",
+      "prerequisites": [
+        "SurrealDB running on localhost:8000",
+        "Redis running on localhost:6379",
+        "metabob-rpc-api server running on localhost:8081"
+      ],
+      "testSteps": [
+        {
+          "step": 1,
+          "action": "Clear both storage layers",
+          "command": "redis-cli FLUSHALL && curl -X POST http://localhost:8000/sql -d 'DELETE activity_template'"
+        },
+        {
+          "step": 2,
+          "action": "Create template via API",
+          "command": "curl -X POST http://localhost:8081/v2/activities/templates -H 'Content-Type: application/json' -d '{\"name\":\"test-template\",\"description\":\"test\",\"task_steps\":[]}'"
+        },
+        {
+          "step": 3,
+          "action": "Query Redis for template",
+          "command": "redis-cli GET 'activity:template:test-template-*'"
+        },
+        {
+          "step": 4,
+          "action": "Query SurrealDB for template",
+          "command": "curl -X POST http://localhost:8000/sql -d 'SELECT * FROM activity_template WHERE activity_id = \"test-template\"'"
+        },
+        {
+          "step": 5,
+          "action": "Verify both return same template data",
+          "validation": "Compare Redis and SurrealDB results - should be identical"
+        },
+        {
+          "step": 6,
+          "action": "Flush Redis cache",
+          "command": "redis-cli FLUSHALL"
+        },
+        {
+          "step": 7,
+          "action": "Query API for template",
+          "command": "curl http://localhost:8081/v2/activities/templates/test-template-*"
+        },
+        {
+          "step": 8,
+          "action": "Verify template still returned (from SurrealDB)",
+          "validation": "API should return template loaded from SurrealDB"
+        },
+        {
+          "step": 9,
+          "action": "Check logs for warnings",
+          "command": "grep 'coroutine.*was never awaited' /var/log/metabob-rpc-api.log",
+          "validation": "Should return no matches (exit code 1)"
+        }
+      ],
+      "automatedTestScript": "#!/bin/bash\nset -e\necho 'Clearing storage...'\nredis-cli FLUSHALL\ncurl -X POST http://localhost:8000/sql -d 'DELETE activity_template'\necho 'Creating template...'\nVARIANT_ID=$(curl -s -X POST http://localhost:8081/v2/activities/templates -H 'Content-Type: application/json' -d '{\"name\":\"test-template\",\"description\":\"test\",\"task_steps\":[]}' | jq -r '.variant_id')\necho \"Template created: $VARIANT_ID\"\necho 'Checking SurrealDB...'\nSDB_COUNT=$(curl -s -X POST http://localhost:8000/sql -d \"SELECT * FROM activity_template WHERE variant_id = '$VARIANT_ID'\" | jq '.result | length')\nif [ \"$SDB_COUNT\" -eq \"0\" ]; then\n  echo '❌ FAILED: Template not in SurrealDB'\n  exit 1\nfi\necho '✓ Template found in SurrealDB'\necho 'Flushing Redis...'\nredis-cli FLUSHALL\necho 'Retrieving template from API...'\nAPI_RESULT=$(curl -s http://localhost:8081/v2/activities/templates/$VARIANT_ID)\nif echo \"$API_RESULT\" | jq -e '.variant_id' > /dev/null; then\n  echo '✓ Template retrieved from SurrealDB after cache flush'\nelse\n  echo '❌ FAILED: Template not retrievable after cache flush'\n  exit 1\nfi\necho '✅ ALL TESTS PASSED'"
+    },
+    
+    "affectedFiles": [
+      "repos/metabob-rpc-api/server/actions/activity.py",
+      "repos/metabob-rpc-api/server/routes/activity.py",
+      "repos/metabob-rpc-api/server/db/operations/template_data.py",
+      "repos/metabob-rpc-api/server/db/operations/template_metrics.py"
+    ],
+    
+    "fixImplementationPlan": {
+      "phase1": {
+        "priority": "CRITICAL",
+        "components": ["create_template", "record_execution_result"],
+        "reason": "These are the write operations that are completely broken",
+        "estimatedImpact": "Fixes 90% of the data loss problem"
+      },
+      "phase2": {
+        "priority": "HIGH",
+        "components": ["create_variant"],
+        "reason": "Variants need SurrealDB persistence like templates",
+        "estimatedImpact": "Ensures variant genealogy persists"
+      },
+      "phase3": {
+        "priority": "MEDIUM",
+        "components": ["list_templates", "get_template_by_id"],
+        "reason": "Read operations work via cache but fail after expiry",
+        "estimatedImpact": "Improves cache-miss handling"
+      }
+    }
+  },
+  "budget": 5000,
+  "createdAt": "2026-03-03T00:00:00Z",
+  "metadata": {
+    "tracedBy": "trace-data-flow-single-feature",
+    "specification": "surrealdb-async-await-enforcement",
+    "affectedComponents": 5,
+    "criticalSeverity": 3,
+    "highSeverity": 1,
+    "mediumSeverity": 2
+  }
+}
