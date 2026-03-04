@@ -1,0 +1,94 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass4",
+  "harnessFile": "tests/validation-harnesses/dynamic-activity-creation-with-trailblazing-pass4-harness.ts",
+  "runnerScript": "run-validation-harness-pass4.sh",
+  "testCases": [
+    {
+      "caseNumber": 1,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-1",
+      "name": "CLI Syntax Accepted",
+      "input": "opencode activity create-activity --variables {...} --reason '...'",
+      "expectedOutput": "Exit code 0, no 'Unknown arguments' error"
+    },
+    {
+      "caseNumber": 2,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-2",
+      "name": "Meta-template Detection in Logs",
+      "input": "Search devbob pod logs for meta-template detection",
+      "expectedOutput": "Logs contain 'auto-enabling trailblazing for meta-template'"
+    },
+    {
+      "caseNumber": 3,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-3",
+      "name": "Context Injection Called",
+      "input": "Search logs for searchSimilarActivities API call",
+      "expectedOutput": "Context injection API called, logs show 'searchSimilarActivities'"
+    },
+    {
+      "caseNumber": 4,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-4",
+      "name": "Trailblazing Execution",
+      "input": "Search logs for dynamic task generation",
+      "expectedOutput": "Logs show tasks generated dynamically by trailblazing engine"
+    },
+    {
+      "caseNumber": 5,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-5",
+      "name": "Database Tracking",
+      "input": "Query SurrealDB for recent activity records",
+      "expectedOutput": "Activity records exist with template_id, metadata, proper schema"
+    },
+    {
+      "caseNumber": 6,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-6",
+      "name": "Bootstrap Templates Exist",
+      "input": "Check for 3 bootstrap template files",
+      "expectedOutput": "All 3 templates exist with -self-contained naming"
+    },
+    {
+      "caseNumber": 7,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-7",
+      "name": "No Filesystem Dependency",
+      "input": "Check debug/evolve templates for /tmp file requirements",
+      "expectedOutput": "0 /tmp file requirements, 3 empty required_files arrays per template"
+    },
+    {
+      "caseNumber": 8,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-8",
+      "name": "K8s Deployment Ready",
+      "input": "Check devbob pod status and CLI functionality",
+      "expectedOutput": "Pod running, CLI works without errors"
+    },
+    {
+      "caseNumber": 9,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-9",
+      "name": "ACP Delegation End-to-End",
+      "input": "Delegate activity execution to devbob via ACP",
+      "expectedOutput": "Delegation succeeds, activity executes, response received"
+    },
+    {
+      "caseNumber": 10,
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-10",
+      "name": "Observable Proof Complete",
+      "input": "Aggregate evidence from logs, database, execution records",
+      "expectedOutput": "All observability checkpoints present across sources"
+    }
+  ],
+  "harnessImpulseId": "harness-dynamic-activity-creation-with-trailblazing-pass4",
+  "usage": {
+    "local": "tsx tests/validation-harnesses/dynamic-activity-creation-with-trailblazing-pass4-harness.ts",
+    "withRunner": "./run-validation-harness-pass4.sh",
+    "programmatic": "import { runValidation } from './tests/validation-harnesses/dynamic-activity-creation-with-trailblazing-pass4-harness'; await runValidation()"
+  },
+  "prerequisites": {
+    "tools": ["tsx", "kubectl", "jq"],
+    "infrastructure": ["K8s cluster with devbob pod", "SurrealDB accessible"],
+    "deployments": ["metabob-opencode:pass4 image deployed to K8s"]
+  },
+  "expectedResults": {
+    "before": "1-2/10 tests passing (only template existence and possibly meta-template detection)",
+    "after": "10/10 tests passing after K8s deployment with Pass 4 fixes",
+    "duration": "5-10 minutes per full run",
+    "outputFormat": "JSON with pass/fail status, actual vs expected, and audit trail"
+  }
+}

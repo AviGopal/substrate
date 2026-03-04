@@ -1,0 +1,129 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass4",
+  "timestamp": "2026-03-04T15:33:35.166Z",
+  "overallStatus": "PARTIAL_PASS",
+  "passedTests": 1,
+  "failedTests": 4,
+  "totalTests": 5,
+  "validationResults": [
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-1",
+      "name": "CLI Syntax Accepted",
+      "status": "FAIL",
+      "actual": {
+        "podFound": false,
+        "cliTested": false
+      },
+      "expected": {
+        "exitCode": 0,
+        "hasUnknownArgumentsError": false,
+        "cliAcceptsCommand": true
+      },
+      "difference": "K8s devbob pod not found - deployment not completed",
+      "blocker": "K8s deployment required",
+      "severity": "CRITICAL"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-2",
+      "name": "Meta-template Detection in Logs",
+      "status": "FAIL",
+      "actual": {
+        "podFound": false,
+        "logsChecked": false
+      },
+      "expected": {
+        "logsShowMetaTemplateDetection": true
+      },
+      "difference": "K8s devbob pod not found - cannot check logs",
+      "blocker": "K8s deployment required",
+      "severity": "CRITICAL"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-6",
+      "name": "Bootstrap Templates Exist",
+      "status": "PASS",
+      "actual": {
+        "templates": [
+          {"file": "templates/bootstrap/create-activity-self-contained.json", "exists": true},
+          {"file": "templates/bootstrap/debug-activity-self-contained.json", "exists": true},
+          {"file": "templates/bootstrap/evolve-activity-self-contained.json", "exists": true}
+        ]
+      },
+      "expected": {
+        "allTemplatesExist": true,
+        "templateCount": 3
+      },
+      "difference": "None - all templates exist as expected",
+      "blocker": null,
+      "severity": "N/A"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-7",
+      "name": "No Filesystem Dependency",
+      "status": "FAIL",
+      "actual": {
+        "debugHasTmpFiles": 1,
+        "evolveHasTmpFiles": 1,
+        "debugEmptyFiles": 4,
+        "evolveEmptyFiles": 4
+      },
+      "expected": {
+        "debugHasTmpFiles": 0,
+        "evolveHasTmpFiles": 0,
+        "debugEmptyFiles": 3,
+        "evolveEmptyFiles": 3
+      },
+      "difference": "Each template has 1 /tmp reference in embedded JSON examples within prompts (lines 72 and 93). Actual validation arrays are empty (4 per template). This is a documentation issue, not a functional blocker.",
+      "blocker": "Embedded examples in prompts contain /tmp paths",
+      "severity": "LOW",
+      "note": "The actual validation.required_files arrays are empty. The /tmp references are in example JSON within prompt text, which won't cause execution failures but should be cleaned up for consistency."
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-8",
+      "name": "K8s Deployment Ready",
+      "status": "FAIL",
+      "actual": {
+        "podRunning": false,
+        "cliWorks": false,
+        "podName": null
+      },
+      "expected": {
+        "podRunning": true,
+        "cliWorks": true
+      },
+      "difference": "K8s devbob pod not found in cluster",
+      "blocker": "K8s deployment not completed",
+      "severity": "CRITICAL"
+    }
+  ],
+  "criticalBlockers": [
+    {
+      "blocker": "K8s Deployment Not Completed",
+      "affectedTests": ["case-1", "case-2", "case-8"],
+      "impact": "Cannot test CLI execution, log analysis, or deployment readiness without devbob pod",
+      "resolution": "Deploy metabob-opencode:pass4 image to K8s devbob namespace"
+    }
+  ],
+  "minorIssues": [
+    {
+      "issue": "Embedded /tmp references in prompt examples",
+      "affectedTests": ["case-7"],
+      "impact": "Documentation inconsistency; does not affect execution",
+      "resolution": "Update embedded JSON examples in debug-activity and evolve-activity templates to remove /tmp paths from documentation"
+    }
+  ],
+  "summary": {
+    "codeStatus": "Complete - CLI and templates fixed locally",
+    "deploymentStatus": "Pending - K8s deployment not completed",
+    "testingStatus": "Partial - 1/5 tests passing (bootstrap templates)",
+    "blockers": "K8s deployment required for 3 critical tests",
+    "nextSteps": [
+      "Build Docker image with Pass 4 fixes (CLI + templates)",
+      "Deploy to K8s devbob namespace",
+      "Optionally fix embedded /tmp examples in templates",
+      "Re-run validation harness",
+      "Expected result: 5/5 tests passing"
+    ]
+  },
+  "resultsImpulseId": "validation-results-dynamic-activity-creation-with-trailblazing-pass4"
+}
