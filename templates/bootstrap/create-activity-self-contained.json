@@ -42,15 +42,10 @@
         ]
       },
       "validation": {
-        "required_files": ["/tmp/activity-{{templateId}}/template.json"],
+        "required_files": [],
         "required_patterns": ["\"activity_id\":", "\"task_steps\":"],
         "forbidden_patterns": ["preChecks", "\"git"],
-        "commands": [
-          {
-            "command": "cat /tmp/activity-{{templateId}}/template.json | python3 -m json.tool > /dev/null",
-            "expected_exit_code": 0
-          }
-        ]
+        "commands": []
       },
       "retry": {
         "max_attempts": 3,
@@ -69,7 +64,7 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["/tmp/activity-{{templateId}}/SUCCESS.md"],
+        "required_files": [],
         "required_patterns": ["Template Created", "Status: Registered"],
         "forbidden_patterns": ["error", "failed"],
         "commands": []

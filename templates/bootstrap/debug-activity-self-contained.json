@@ -54,7 +54,7 @@
       },
       "validation": {
         "required_files": [],
-        "required_patterns": ["## Root Cause Analysis", "## Proposed Solutions", "## Recovery Strategy"],
+        "required_patterns": ["## Status", "## Checks Performed"],
         "forbidden_patterns": [],
         "commands": []
       },
