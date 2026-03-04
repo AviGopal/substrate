@@ -1,355 +1,302 @@
-# Conflict Analysis Summary: Dynamic Activity Lifecycle with Trailblazing (Pass 3)
+# Conflict Analysis Summary: Pass 3
 
-**Date**: 2026-03-04  
-**Status**: ✅ NO CONFLICTS DETECTED
+**Specification**: dynamic-activity-creation-with-trailblazing-pass3  
+**Analysis Date**: 2026-03-04  
+**Validation Status**: FAIL (7/10 passing, 70%)
 
 ---
 
 ## Executive Summary
 
-Pass 3 fixes (template ID mismatch and MCP timeout increase) are **fully compatible** with all existing specifications. No conflicts detected. The only blocker is deployment - Pass 3 fixes must be deployed to K8s before Pass 4 validation can complete.
+Analyzed **Pass 3** validation results against **13 other specifications** in the system. Identified **5 conflicts**: **2 active conflicts** requiring immediate fixes, **1 critical blocker** for deployment, and **2 harmonious** (no action needed).
+
+**Key Finding**: Core functionality is implemented correctly. Conflicts are due to:
+1. Bootstrap template file naming mismatch
+2. Filesystem dependency violation (environment constraint)
+3. CLI argument parsing error (deployment blocker)
 
 ---
 
-## Conflict Analysis
+## Conflict Summary
 
-### Total Conflicts: 0
-### Total Issues: 1 Deployment Blocker
+| Type | Severity | Status | Priority |
+|------|----------|--------|----------|
+| Bootstrap template naming | HIGH | ACTIVE_CONFLICT | HIGH |
+| Environment constraint violation | HIGH | ACTIVE_CONFLICT | HIGH |
+| Harness false negative | MEDIUM | HARNESS_BUG | MEDIUM |
+| Deployment prerequisite | CRITICAL | BLOCKING | CRITICAL |
+| Progressive refinement | NONE | NO_CONFLICT | INFORMATIONAL |
 
-**Conflict Breakdown**:
-- ✅ **0 CONTRADICTORY_REQUIREMENTS** - No specifications contradict each other
-- ✅ **0 BREAKING_CHANGES** - Pass 3 doesn't break any existing specs
-- ✅ **0 SHARED_COMPONENT_CONFLICTS** - All shared components are compatible
-- ⏳ **1 DEPLOYMENT_PREREQUISITE** - Pass 3 deployment blocks Pass 4 validation
+**Total**: 5 conflicts (2 active, 1 blocking, 2 harmonious)
+
+---
+
+## Active Conflicts (2)
+
+### 1. Bootstrap Template Naming (HIGH)
+
+**Type**: BOOTSTRAP_TEMPLATE_NAMING  
+**Severity**: HIGH  
+**Status**: ACTIVE_CONFLICT
+
+**Specs Affected**:
+- dynamic-activity-creation-with-trailblazing-pass3
+- bootstrap-template-filepath-compliance
+
+**Component**: `templates/bootstrap/create-activity-self-contained.json`
+
+**Description**:
+Pass 3 expects `create-activity-self-contained.json` but only `create-activity-self-contained-v2.json` exists. This creates ambiguity about which file is the canonical bootstrap template.
+
+**Impact**:
+isMetaTemplate('create-activity-self-contained') detection works, but bootstrap harness fails because exact filename doesn't match. Pass 3 validation reports FALSE NEGATIVE.
+
+**Resolution Options**:
+- **OPTION A** (recommended): Rename `create-activity-self-contained-v2.json` to `create-activity-self-contained.json`
+- **OPTION B**: Update `isMetaTemplate()` to recognize `-v2` variants
+- **OPTION C**: Update harness to accept both variants
+
+**Recommendation**: OPTION A is simplest and clearest. Maintains single source of truth.
+
+**Effort**: 5 minutes
+
+---
+
+### 2. Environment Constraint Violation (HIGH)
+
+**Type**: ENVIRONMENT_CONSTRAINT_VIOLATION  
+**Severity**: HIGH  
+**Status**: ACTIVE_CONFLICT
+
+**Specs Affected**:
+- dynamic-activity-creation-with-trailblazing-pass3
+- complete-architecture-separation
+
+**Components**: 
+- `templates/bootstrap/debug-activity-self-contained.json`
+- `templates/bootstrap/evolve-activity-self-contained.json`
+
+**Description**:
+Pass 3 requires environment-agnostic operation (no filesystem dependency). Debug/evolve templates write output files to `/tmp`, violating this constraint. Complete-architecture-separation spec enforces MCP-only communication.
+
+**Impact**:
+Templates work in host environment with filesystem access but will fail in K8s devbob environment with restricted filesystem. Violates environment-agnostic design principle. Pass 3 validation reports FAIL.
+
+**Resolution**:
+Refactor debug-activity and evolve-activity templates to:
+1. Use `activity_error_inspector` MCP tool for fetching parent activity data, OR
+2. Return markdown results in prompt output instead of writing to `/tmp`
+
+**Recommendation**: Return markdown in prompt output. Cleaner than MCP tool for this use case. Agent can display results without filesystem writes.
+
+**Effort**: 30-60 minutes
+
+---
+
+## Critical Blocker (1)
+
+### Deployment Prerequisite (CRITICAL)
+
+**Type**: DEPLOYMENT_PREREQUISITE  
+**Severity**: CRITICAL  
+**Status**: BLOCKING
+
+**Specs Affected**:
+- dynamic-activity-creation-with-trailblazing-pass3
+- dynamic-activity-creation-devbob-execution-tracking (Pass 4)
+
+**Component**: DevBob K8s pod deployment
+
+**Description**:
+Pass 3 fixes are applied locally but not deployed to devbob pod. Pass 4 expects these fixes to be deployed for end-to-end validation. CLI argument parsing error in devbob pod blocks execution.
+
+**Impact**:
+Pass 4 validation cannot proceed until Pass 3 deployment is complete. Current devbob pod has CLI argument parsing error: `'Unknown arguments: variables, reason, create-activity'`.
+
+**Resolution Steps**:
+1. Fix CLI argument parsing error
+2. Build Docker image with Pass 3 fixes (isMetaTemplate array, 15s timeout)
+3. Deploy to K8s devbob namespace
+4. Execute Pass 3 validation harness in K8s
+
+**Recommendation**: Fix CLI parsing error FIRST, then deploy Pass 3 fixes. CLI error is root blocker for both Pass 3 and Pass 4 K8s validation.
+
+**Effort**: 2-4 hours (includes CLI fix, Docker build, K8s deployment, verification)
+
+---
+
+## Harmonious (No Conflicts) (2)
+
+### 1. Harness False Negative (MEDIUM)
+
+**Type**: HARNESS_FALSE_NEGATIVE  
+**Severity**: MEDIUM  
+**Status**: HARNESS_BUG
+
+**Description**: Pass 3 harness reports FAIL for context injection (Case 3), but implementation exists at activity.ts:1007 (searchSimilarActivities). Harness regex patterns don't match actual code structure.
+
+**Impact**: False negative in validation. Core functionality is implemented correctly.
+
+**Resolution**: Update harness test Case 3 regex patterns to correctly detect searchSimilarActivities and impulse creation.
+
+**Effort**: 15 minutes
+
+---
+
+### 2. Progressive Refinement (INFORMATIONAL)
+
+**Type**: PROGRESSIVE_REFINEMENT  
+**Severity**: NONE  
+**Status**: NO_CONFLICT
+
+**Description**: Pass 3 fixes template ID mismatch bug that existed in Pass 2. This is normal iterative development progression.
+
+**Impact**: None - this is expected evolution.
+
+**Resolution**: None needed.
+
+---
+
+## Shared Components Analysis
+
+### High-Traffic Files (Coordination Required)
+
+**`repos/metabob-opencode/packages/opencode/src/tool/activity.ts`**
+- Affected by 4 specs:
+  - dynamic-activity-creation-with-trailblazing-pass3
+  - activity-lifecycle-tools-automation
+  - activity-state-transformation-tracking
+  - boredom-activity-detection-mechanism
+- Lines: 976-991 (auto-trailblazing), 993-1040 (context injection), 2208-2260 (task execution)
+- Recommendation: Coordinate changes carefully. Run full test suite after modifications.
+- Conflicts: POTENTIAL_MERGE_CONFLICTS
+
+### Single-Owner Files (No Coordination Needed)
+
+**`repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts`**
+- Affected by 1 spec: dynamic-activity-creation-with-trailblazing-pass3
+- Lines: 58-400 (executeTaskWithTrailblazing)
+- Recommendation: Single-owner file. No coordination needed.
+- Conflicts: NONE
+
+### Stable Files (Low Risk)
+
+**`repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts`**
+- Affected by 2 specs:
+  - dynamic-activity-creation-with-trailblazing-pass3
+  - activity-lifecycle-tools-automation
+- Lines: 38-140 (memory-management), 229-310 (activity-recommendation)
+- Recommendation: Lifecycle hooks are stable. Changes should be rare and coordinated.
+- Conflicts: LOW_RISK
+
+---
+
+## Action Items (Priority Order)
+
+### 1. CRITICAL: Fix CLI argument parsing in devbob pod
+**Details**: Root blocker for K8s validation. CLI fails with 'Unknown arguments: variables, reason, create-activity'  
+**Affected Specs**: Pass 3, Pass 4  
+**Owner**: DevBob infrastructure team  
+**Effort**: 2-4 hours  
+**Blocks Deployment**: YES
+
+### 2. HIGH: Rename bootstrap template file
+**Details**: Rename `create-activity-self-contained-v2.json` to `create-activity-self-contained.json`  
+**Affected Specs**: Pass 3, bootstrap-template-filepath-compliance  
+**Owner**: Implementation team  
+**Effort**: 5 minutes  
+**Blocks Deployment**: NO
+
+### 3. HIGH: Refactor meta-templates to remove filesystem dependency
+**Details**: Update debug-activity and evolve-activity to return markdown in prompt instead of writing to `/tmp`  
+**Affected Specs**: Pass 3, complete-architecture-separation  
+**Owner**: Implementation team  
+**Effort**: 30-60 minutes  
+**Blocks Deployment**: NO
+
+### 4. MEDIUM: Update harness context injection test
+**Details**: Fix regex patterns in Case 3 to correctly detect searchSimilarActivities and impulse creation  
+**Affected Specs**: Pass 3  
+**Owner**: Testing team  
+**Effort**: 15 minutes  
+**Blocks Deployment**: NO
+
+### 5. HIGH: Deploy Pass 3 fixes to K8s devbob namespace
+**Details**: Build Docker image with Pass 3 fixes and deploy to devbob namespace  
+**Affected Specs**: Pass 3, Pass 4  
+**Owner**: DevOps team  
+**Effort**: 30 minutes (after CLI fix)  
+**Blocks Deployment**: YES
 
 ---
 
 ## Related Specifications
 
-Pass 3 interacts with **7 other specifications**:
+### Direct Dependencies
+- **dynamic-activity-lifecycle-with-trailblazing-pass3** (same spec, different naming)
+- **dynamic-activity-creation-devbob-execution-tracking** (Pass 4) - Blocked until Pass 3 deployment
+- **dynamic-activity-creation-with-trailblazing-pass2** (Pass 2) - Superseded by Pass 3
 
-1. **dynamic-activity-creation-devbob-execution-tracking (Pass 4)**
-   - **Relationship**: DEPENDENT
-   - **Status**: BLOCKING (Pass 4 needs Pass 3 deployment)
-   
-2. **dynamic-activity-creation-with-trailblazing-pass2 (Pass 2)**
-   - **Relationship**: PROGRESSIVE_REFINEMENT
-   - **Status**: NO_CONFLICT (Pass 3 fixes bugs from Pass 2)
+### Affected by Same Components
+- **template-storage-architecture** - Shares activity-template.ts
+- **bootstrap-template-filepath-compliance** - Shares bootstrap templates
+- **complete-architecture-separation** - Enforces MCP-only constraint
 
-3. **template-storage-architecture**
-   - **Relationship**: COMPONENT_COMPATIBILITY
-   - **Status**: NO_CONFLICT (Different concerns in same file)
-
-4. **complete-architecture-separation**
-   - **Relationship**: ALIGNED
-   - **Status**: NO_CONFLICT (Pass 3 strengthens MCP)
-
-5. **activity-template-scope-assignment**
-   - **Relationship**: INDEPENDENT
-   - **Status**: NO_CONFLICT (Orthogonal concerns)
-
-6. **bootstrap-template-filepath-compliance**
-   - **Relationship**: INDEPENDENT
-   - **Status**: NO_CONFLICT (Different template aspects)
-
-7. **rpc-api-deployed-infrastructure-validation**
-   - **Relationship**: ALIGNED
-   - **Status**: NO_CONFLICT (Pass 3 improves MCP reliability)
-
----
-
-## Detailed Conflict Analysis
-
-### 1. Progressive Refinement (INFORMATIONAL)
-
-**Specs**: Pass 3 ↔ Pass 2  
-**Component**: `isMetaTemplate()` function  
-**Status**: ✅ NO_CONFLICT
-
-**Description**: Pass 3 fixes template ID mismatch bug that existed in Pass 2 but was never detected because validation was not executed.
-
-**Evidence**:
-- **Pass 2**: Created trailblazing auto-enable logic but never validated it worked
-- **Pass 3**: Discovered `isMetaTemplate('create-activity')` returns false due to ID mismatch, fixed by adding `'create-activity'` to metaTemplateIds array
-
-**Resolution**: Pass 3 changes are correct and improve upon Pass 2
-
----
-
-### 2. Validation Dependency (LOW)
-
-**Specs**: Pass 3 ↔ Pass 4  
-**Component**: Validation harnesses  
-**Status**: ✅ COMPLEMENTARY
-
-**Description**: Pass 3 creates focused validation harness while Pass 4 has comprehensive execution harness. Both are needed but serve different purposes.
-
-**Comparison**:
-
-| Aspect | Pass 3 Harness | Pass 4 Harness |
-|--------|---------------|---------------|
-| **Purpose** | Quick code validation | Full execution tracking |
-| **Validates** | isMetaTemplate() fix, timeout value | Actual execution, logs, database |
-| **Requires K8s** | No | Yes |
-| **Duration** | ~2 seconds | ~2-5 minutes |
-
-**Resolution**: Use Pass 3 harness for code validation, Pass 4 harness for integration validation
-
----
-
-### 3. Deployment Prerequisite (CRITICAL) ⚠️
-
-**Specs**: Pass 3 ↔ Pass 4  
-**Component**: DevBob K8s pod  
-**Status**: ⏳ BLOCKING
-
-**Description**: Pass 3 fixes are applied locally but not deployed to devbob pod. Pass 4 expects these fixes to be deployed for validation.
-
-**Current State**:
-- ✅ Pass 3 fixes applied locally
-- ✅ Pass 3 fixes compiled successfully
-- ❌ Docker image not built
-- ❌ Not deployed to K8s
-
-**Impact**: Pass 4 validation will fail if run before Pass 3 deployment
-
-**Resolution**: Deploy Pass 3 fixes to devbob pod before executing Pass 4 validation harness
-
-**Next Steps**:
-1. Build Docker image with Pass 3 fixes
-2. Deploy to K8s devbob namespace
-3. Execute Pass 3 validation harness (K8s integration tests)
-4. Execute Pass 4 validation harness (full lifecycle tracking)
-
----
-
-### 4. Component Compatibility (INFORMATIONAL)
-
-**Specs**: Pass 3 ↔ Template Storage Architecture  
-**Component**: `activity-template.ts`  
-**Status**: ✅ NO_CONFLICT
-
-**Description**: Both specs modify activity-template.ts but for different concerns.
-
-**Changes**:
-- **Pass 3**: Line 1854 - Added 'create-activity' to metaTemplateIds array
-- **Template Storage**: Lines 100-500 - Storage.write/read removal, backend-only enforcement
-
-**Resolution**: No changes needed. Modifications are to different parts of the file.
-
----
-
-### 5. MCP Architecture Alignment (INFORMATIONAL)
-
-**Specs**: Pass 3 ↔ Complete Architecture Separation  
-**Component**: `template-service-client.ts`, MCP backend registration  
-**Status**: ✅ ALIGNED
-
-**Description**: Pass 3 increases MCP registration timeout. Architecture separation enforces MCP-only communication. Both are aligned.
-
-**Changes**:
-- **Pass 3**: Line 309 - Timeout 5s → 15s for MCP registration
-- **Architecture Separation**: Enforces: opencode → metabob-cli (MCP) → metabob-rpc-api
-
-**Resolution**: No changes needed. Pass 3 strengthens MCP communication reliability.
-
----
-
-## Shared Components
-
-### Component 1: activity-template.ts (isMetaTemplate function)
-
-**File**: `repos/metabob-opencode/packages/opencode/src/session/activity-template.ts:1852-1860`
-
-**Affected By**:
-- dynamic-activity-lifecycle-with-trailblazing-pass3
-- dynamic-activity-creation-with-trailblazing-pass2
-- template-storage-architecture
-
-**Conflict Type**: NONE
-
-**Recommendation**: Pass 3 fix is correct. No conflicts with other specifications.
-
----
-
-### Component 2: template-service-client.ts (registerTemplate timeout)
-
-**File**: `repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts:307-314`
-
-**Affected By**:
-- dynamic-activity-lifecycle-with-trailblazing-pass3
-- complete-architecture-separation
+### Other Active Specifications
+- activity-lifecycle-tools-automation
+- activity-state-transformation-tracking
+- boredom-activity-detection-mechanism
 - rpc-api-deployed-infrastructure-validation
-
-**Conflict Type**: NONE
-
-**Recommendation**: Pass 3 timeout increase improves reliability. Aligned with architecture requirements.
-
----
-
-### Component 3: DevBob K8s pod
-
-**Resource**: Kubernetes pod (devbob-766dcccf49-hfql6)
-
-**Affected By**:
-- dynamic-activity-lifecycle-with-trailblazing-pass3
-- dynamic-activity-creation-devbob-execution-tracking
-- dynamic-activity-creation-with-trailblazing-pass2
 - devbob-k8s-git-operations
-
-**Conflict Type**: DEPLOYMENT_DEPENDENCY
-
-**Current Status**:
-- **Pod**: devbob-766dcccf49-hfql6
-- **Namespace**: metabob
-- **Status**: Running
-- **Has Pass 3 Fixes**: ❌ No
-
-**Recommendation**: Deploy Pass 3 fixes before running Pass 4 validation harness
-
----
-
-### Component 4: Validation Harnesses
-
-**Directory**: `tests/validation-harnesses/`
-
-**Affected By**:
-- dynamic-activity-lifecycle-with-trailblazing-pass3
-- dynamic-activity-creation-devbob-execution-tracking
-
-**Conflict Type**: COMPLEMENTARY
-
-**Harnesses**:
-
-#### Pass 3 Harness
-- **File**: dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts
-- **Purpose**: Quick code validation without K8s
-- **Validates**: isMetaTemplate() fix, timeout value
-- **Requires Deployment**: No
-
-#### Pass 4 Harness
-- **File**: dynamic-activity-creation-devbob-execution-tracking-harness.ts
-- **Purpose**: Full end-to-end execution tracking
-- **Validates**: Actual execution, logs, database records
-- **Requires Deployment**: Yes
-
-**Recommendation**: Use Pass 3 harness for code validation, Pass 4 harness for execution validation
-
----
-
-## Architectural Alignment
-
-**Status**: ✅ FULLY ALIGNED
-
-**Pattern**: Layered Architecture with MCP Communication
-
-**Alignment Details**:
-- ✅ Pass 3 improves MCP reliability (timeout increase)
-- ✅ Pass 3 fixes meta-template detection (isMetaTemplate)
-- ✅ Both changes align with existing architecture
-- ✅ No violations of backend-only storage model
-- ✅ No violations of MCP-only communication pattern
-
-**Consistency Check**:
-- **Data Flow**: CONSISTENT - Pass 3 uses MCP for template registration
-- **Storage**: CONSISTENT - Pass 3 doesn't change storage patterns
-- **Caching**: CONSISTENT - Pass 3 doesn't affect caching
-- **Separation**: CONSISTENT - Pass 3 strengthens MCP communication
-
----
-
-## Deployment Blockers
-
-### Blocker 1: Pass 3 Fixes Not Deployed (HIGH)
-
-**Blocker**: Pass 3 fixes not deployed to DevBob K8s pod  
-**Severity**: HIGH  
-**Impact**: Pass 4 validation cannot complete without deployment  
-**Status**: ⏳ BLOCKING
-
-**Resolution Steps**:
-
-```bash
-# Step 1: Build Docker image
-cd repos/metabob-opencode
-docker build -t devbob:pass3-fix .
-
-# Step 2: Tag image
-docker tag devbob:pass3-fix devbob:latest
-
-# Step 3: Deploy to K8s
-helm upgrade --install devbob helm/charts/devbob -n metabob
-
-# Step 4: Wait for pod ready
-kubectl wait --for=condition=ready pod -l app=devbob -n metabob --timeout=120s
-```
 
 ---
 
 ## Recommendations
 
-### Priority P0: Deploy Pass 3 Fixes to K8s
+### Immediate Actions (Next 4-6 hours)
 
-**Action**: Build and deploy Docker image with Pass 3 fixes  
-**Rationale**: Unblocks Pass 4 validation and enables end-to-end testing
+1. **FIX CLI PARSING** (CRITICAL, 2-4 hours)
+   - Root blocker for all K8s validation
+   - Blocks both Pass 3 and Pass 4
 
-**Steps**:
-1. `cd repos/metabob-opencode`
-2. `docker build -t devbob:pass3-fix .`
-3. `docker tag devbob:pass3-fix devbob:latest`
-4. `helm upgrade --install devbob helm/charts/devbob -n metabob`
+2. **RENAME FILE** (HIGH, 5 minutes)
+   - Quick fix for bootstrap template naming
+   - Enables Pass 3 harness Case 6 to pass
 
----
+3. **REFACTOR TEMPLATES** (HIGH, 30-60 minutes)
+   - Remove filesystem dependency
+   - Enables Pass 3 harness Case 7 to pass
+   - Enforces environment-agnostic constraint
 
-### Priority P1: Execute Pass 3 Validation Harness (K8s Integration)
+### Next Steps (After Immediate Fixes)
 
-**Action**: Run full integration validation  
-**Rationale**: Validate fixes work in deployed environment
+4. **FIX HARNESS** (MEDIUM, 15 minutes)
+   - Update regex patterns for Case 3
+   - Eliminates false negative
 
-**Command**:
-```bash
-npx tsx tests/validation-harnesses/dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts
-```
+5. **DEPLOY TO K8S** (HIGH, 30 minutes)
+   - Build Docker image
+   - Deploy to devbob namespace
+   - Run Pass 3 validation in K8s
 
-**Expected Result**: All tests pass including integration tests
-
----
-
-### Priority P1: Execute Pass 4 Validation Harness
-
-**Action**: Complete end-to-end validation  
-**Rationale**: Validate full lifecycle with logs and database queries
-
-**Command**:
-```bash
-npx tsx tests/validation-harnesses/dynamic-activity-creation-devbob-execution-tracking-harness.ts
-```
-
-**Expected Result**: Logs show trailblazing, context injection, database contains activity records
+6. **RUN PASS 4 VALIDATION** (After deployment)
+   - End-to-end execution tracking
+   - Logs and database verification
 
 ---
 
-### Priority P2: Update Documentation
+## Summary
 
-**Action**: Update VALIDATION_RESULTS_pass3.json  
-**Rationale**: Document complete validation results after deployment
+| Metric | Value |
+|--------|-------|
+| Total Conflicts | 5 |
+| Active Conflicts | 2 |
+| Blocking | 1 |
+| Harmonious | 2 |
+| Shared Components | 7 |
+| Action Items | 5 |
+| Estimated Total Effort | 3-5 hours |
 
----
+**Conclusion**: Pass 3 has **2 active conflicts** and **1 critical blocker**. All conflicts have clear resolutions. After fixes, Pass 3 should achieve 10/10 validation pass rate and be ready for K8s deployment.
 
-## Conclusion
-
-**Overall Status**: ✅ NO CONFLICTS DETECTED
-
-Pass 3 fixes are fully compatible with all existing specifications. The changes:
-1. ✅ Fix a critical bug (template ID mismatch)
-2. ✅ Improve reliability (MCP timeout increase)
-3. ✅ Align with existing architecture
-4. ✅ Don't break any existing specifications
-
-**Only Blocker**: Deployment to K8s devbob pod
-
-**Next Action**: Build and deploy Docker image with Pass 3 fixes to unblock Pass 4 validation.
-
----
-
-**Conflict Impulse ID**: conflict-analysis-dynamic-activity-lifecycle-with-trailblazing-pass3
+**Impulse Created**: `conflict-analysis-dynamic-activity-creation-with-trailblazing-pass3`

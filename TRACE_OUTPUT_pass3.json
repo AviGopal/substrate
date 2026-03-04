@@ -1,0 +1,116 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass3",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "component": "ActivityTemplate.isMetaTemplate()",
+      "currentBehavior": "Checks if template ID is in metaTemplateIds array: ['create-activity', 'create-activity-self-contained', 'evolve-activity-self-contained', 'debug-activity-self-contained']",
+      "desiredBehavior": "Same - already fixed in Pass 3 (added 'create-activity')",
+      "gap": "NONE - Pass 3 fix complete"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "Activity tool - meta-template auto-trailblazing",
+      "currentBehavior": "Auto-enables trailblazing for templates where isMetaTemplate() returns true. Sets: enabled=true, maxRecoveryAttempts=3, maxCostPerTask=1.0, maxTotalCost=5.0",
+      "desiredBehavior": "Same - working correctly after Pass 3 fix",
+      "gap": "NONE - Working as designed"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "Activity tool - meta-template context injection",
+      "currentBehavior": "Queries backend for similar activity executions when isMetaTemplate() is true. Creates impulse with historical patterns.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Working as designed"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts",
+      "component": "TrailblazingExecutor.executeTaskWithTrailblazing()",
+      "currentBehavior": "Executes task with retry loop (maxRecoveryAttempts). On failure, uses ContinuationGenerator to create recovery prompts. Tracks attempts, costs, tokens.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Working as designed"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+      "component": "memory-management hook",
+      "currentBehavior": "Runs before every turn (priority 10). Executes manage-session-memory activity to load relevant context.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Working as designed"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+      "component": "activity-recommendation-injection hook",
+      "currentBehavior": "Runs after memory-management (priority 15). When no activity is running and prompt is meaningful, injects activity recommendations.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Working as designed"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.save() - backend sync",
+      "currentBehavior": "Saves activity to local JSON file. Then syncs to backend via metabob_activity_save MCP tool. Calls: metabob-cli MCP -> rpc-api -> SurrealDB.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Architecture enforced: opencode -> CLI MCP -> rpc-api -> SurrealDB"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_tools.py",
+      "component": "extract_execution_components MCP tool",
+      "currentBehavior": "Extracts component changes from execution. Given changed files and git diff, identifies modified functions/classes.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Working as designed"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "Activity template endpoints",
+      "currentBehavior": "Provides /v2/activities/templates endpoints for list, create, fetch, record results, get statistics. Uses Redis for storage (MVP).",
+      "desiredBehavior": "Same - working correctly. Note: Redis is MVP, SurrealDB migration planned.",
+      "gap": "NONE - API functional, migration to SurrealDB is future work"
+    },
+    {
+      "file": "templates/bootstrap/create-activity-self-contained.json",
+      "component": "create-activity meta-template",
+      "currentBehavior": "Bootstrap template that creates new activity templates. Generates REQUIREMENTS.md, TASK_GRAPH.md, template JSON, registers via MCP, creates SUCCESS.md.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Template is functional"
+    },
+    {
+      "file": "templates/bootstrap/evolve-activity-self-contained.json",
+      "component": "evolve-activity meta-template",
+      "currentBehavior": "Bootstrap template that creates variants from parent templates. Analyzes parent metrics, identifies improvements, generates new variant.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Template is functional"
+    },
+    {
+      "file": "templates/bootstrap/debug-activity-self-contained.json",
+      "component": "debug-activity meta-template",
+      "currentBehavior": "Bootstrap template that debugs failed activity executions. Uses activity_error_inspector MCP tool to analyze failures.",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "NONE - Template is functional"
+    },
+    {
+      "file": "sql/migrations/002-execution-steps-table.surql",
+      "component": "execution_steps SurrealDB table",
+      "currentBehavior": "Defines table for per-step execution data with impulse tracking. Fields: execution_id, step_id, success, cost, tokens, impulses_loaded, impulses_created.",
+      "desiredBehavior": "Same - schema is correct",
+      "gap": "NONE - Schema deployed"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+      "component": "TemplateServiceClient.registerTemplate() timeout",
+      "currentBehavior": "Timeout increased from 5000ms to 15000ms in Pass 3",
+      "desiredBehavior": "Same - 15000ms prevents premature timeouts in K8s",
+      "gap": "NONE - Pass 3 fix complete"
+    }
+  ],
+  "dataFlow": "User invokes activity → isMetaTemplate check → Auto-enable trailblazing → Inject context (similar activities) → Task execution loop → TrailblazingExecutor (retry with AI recovery) → Activity.save local → Activity.save backend (MCP) → Backend API (Redis/SurrealDB) → Learning loop update",
+  "traceImpulseId": "trace-dynamic-activity-creation-with-trailblazing-pass3",
+  "summary": {
+    "implementationStatus": "CODE_COMPLETE_DEPLOYMENT_PENDING",
+    "componentsTracked": 15,
+    "componentsImplemented": 14,
+    "componentsBlocked": 1,
+    "criticalBlockers": [
+      "CLI argument parsing error in devbob pod",
+      "Pass 3 fixes not deployed to K8s"
+    ],
+    "nextAction": "Fix CLI parsing, rebuild Docker image, deploy to devbob namespace"
+  }
+}

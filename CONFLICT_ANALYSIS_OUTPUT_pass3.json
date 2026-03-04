@@ -1,0 +1,88 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass3",
+  "otherSpecifications": [
+    "dynamic-activity-lifecycle-with-trailblazing-pass3",
+    "dynamic-activity-creation-devbob-execution-tracking",
+    "dynamic-activity-creation-with-trailblazing-pass2",
+    "template-storage-architecture",
+    "bootstrap-template-filepath-compliance",
+    "complete-architecture-separation",
+    "activity-lifecycle-tools-automation",
+    "activity-state-transformation-tracking",
+    "boredom-activity-detection-mechanism",
+    "rpc-api-deployed-infrastructure-validation",
+    "devbob-k8s-git-operations"
+  ],
+  "conflicts": [
+    {
+      "type": "BOOTSTRAP_TEMPLATE_NAMING",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": "bootstrap-template-filepath-compliance",
+      "sharedComponent": "templates/bootstrap/create-activity-self-contained.json",
+      "description": "Pass 3 expects create-activity-self-contained.json but only create-activity-self-contained-v2.json exists",
+      "resolution": "Rename create-activity-self-contained-v2.json to create-activity-self-contained.json"
+    },
+    {
+      "type": "ENVIRONMENT_CONSTRAINT_VIOLATION",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "debug-activity-self-contained.json, evolve-activity-self-contained.json",
+      "description": "Meta-templates write to /tmp violating environment-agnostic constraint",
+      "resolution": "Return markdown in prompt output instead of writing files"
+    },
+    {
+      "type": "DEPLOYMENT_PREREQUISITE",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": "dynamic-activity-creation-devbob-execution-tracking",
+      "sharedComponent": "DevBob K8s pod deployment",
+      "description": "Pass 3 fixes local-only, not deployed. CLI parsing error blocks K8s execution",
+      "resolution": "Fix CLI parsing, build Docker image, deploy to K8s"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "activity-lifecycle-tools-automation",
+        "activity-state-transformation-tracking",
+        "boredom-activity-detection-mechanism"
+      ],
+      "recommendation": "High-traffic file. Coordinate changes carefully. Run full test suite after modifications."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "template-storage-architecture",
+        "activity-template-scope-assignment"
+      ],
+      "recommendation": "No refactoring needed. Each spec modifies different parts of the file."
+    },
+    {
+      "component": "templates/bootstrap/create-activity-self-contained.json",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "recommendation": "Rename create-activity-self-contained-v2.json to create-activity-self-contained.json"
+    },
+    {
+      "component": "templates/bootstrap/debug-activity-self-contained.json",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "recommendation": "Refactor to remove /tmp file writes. Return markdown in prompt."
+    },
+    {
+      "component": "templates/bootstrap/evolve-activity-self-contained.json",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "recommendation": "Refactor to remove /tmp file writes. Return markdown in prompt."
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-dynamic-activity-creation-with-trailblazing-pass3"
+}

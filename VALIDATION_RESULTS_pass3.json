@@ -1,135 +1,313 @@
 {
-  "specificationName": "dynamic-activity-lifecycle-with-trailblazing-pass3",
-  "validationDate": "2026-03-04T11:07:41.745Z",
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass3",
+  "validationDate": "2026-03-04",
+  "harnessExecuted": "tests/validation-harnesses/dynamic-activity-creation-with-trailblazing-pass3-harness.ts",
   "validationResults": [
     {
-      "testCase": "validation-dynamic-activity-lifecycle-with-trailblazing-pass3-case-1",
-      "testName": "Local Code Validation (Skip K8s)",
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-1",
+      "name": "Meta-template detection",
       "status": "PASS",
-      "description": "Validates code fixes without requiring K8s deployment",
-      "input": {
-        "skipK8sValidation": true,
-        "activityName": "Test Activity for Local Validation",
-        "activityDescription": "Validates code fixes without requiring K8s deployment"
-      },
       "actual": {
-        "codeTrace": {
-          "isMetaTemplateFixApplied": true,
-          "createActivityIncluded": true,
-          "timeoutFixApplied": true,
-          "timeoutValue": 15000
-        },
-        "unitTest": {
-          "isMetaTemplateReturnsTrue": true
+        "hasIsMetaTemplate": true,
+        "metaTemplateIds": [
+          "create-activity",
+          "create-activity-self-contained",
+          "evolve-activity-self-contained",
+          "debug-activity-self-contained"
+        ],
+        "allPresent": true
+      },
+      "expected": {
+        "hasIsMetaTemplate": true,
+        "metaTemplateIds": [
+          "create-activity",
+          "create-activity-self-contained",
+          "evolve-activity-self-contained",
+          "debug-activity-self-contained"
+        ],
+        "allPresent": true
+      },
+      "difference": null,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "lines": "1852-1860"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-2",
+      "name": "Auto-trailblazing enablement",
+      "status": "PASS",
+      "actual": {
+        "hasAutoEnableCheck": true,
+        "hasAutoEnableLog": true,
+        "hasConservativeLimits": true,
+        "limits": {
+          "maxCostPerTask": 1.0,
+          "maxTotalCost": 5.0,
+          "maxRecoveryAttempts": 3
         }
       },
       "expected": {
-        "codeTrace": {
-          "isMetaTemplateFixApplied": true,
-          "createActivityIncluded": true,
-          "timeoutFixApplied": true,
-          "timeoutValue": 15000
-        },
-        "unitTest": {
-          "isMetaTemplateReturnsTrue": true
+        "hasAutoEnableCheck": true,
+        "hasAutoEnableLog": true,
+        "hasConservativeLimits": true,
+        "limits": {
+          "maxCostPerTask": 1.0,
+          "maxTotalCost": 5.0,
+          "maxRecoveryAttempts": 3
         }
       },
       "difference": null,
-      "details": "✅ All code-level validations passed:\n- isMetaTemplate() includes 'create-activity'\n- isMetaTemplate() still includes -self-contained variants\n- MCP timeout is 15000ms\n- Code analysis confirms isMetaTemplate('create-activity') returns true"
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "lines": "976-991"
     },
     {
-      "testCase": "validation-dynamic-activity-lifecycle-with-trailblazing-pass3-case-2",
-      "testName": "Full K8s Integration Test",
-      "status": "DEFERRED",
-      "description": "Full end-to-end validation in devbob K8s pod",
-      "input": {
-        "skipK8sValidation": false,
-        "activityName": "Test REST API Activity",
-        "activityDescription": "Full end-to-end validation in devbob K8s pod"
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-3",
+      "name": "Context injection",
+      "status": "FAIL",
+      "actual": {
+        "hasContextInjection": false,
+        "queriesBackend": true,
+        "createsImpulse": false,
+        "limitTopThree": false
       },
-      "actual": null,
       "expected": {
-        "integrationTest": {
-          "trailblazingAutoEnabled": true,
-          "contextInjected": true,
-          "templateRegistered": true
+        "hasContextInjection": true,
+        "queriesBackend": true,
+        "createsImpulse": true,
+        "limitTopThree": true
+      },
+      "difference": "Pattern detection for context injection check failed. searchSimilarActivities call exists but harness regex may be too strict. Impulse creation pattern not detected.",
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "lines": "993-1040",
+      "diagnostic": {
+        "reason": "Regex pattern mismatch",
+        "actualCode": "searchSimilarActivities exists at line 1007",
+        "suggestion": "Adjust harness regex patterns to match actual implementation"
+      }
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-4",
+      "name": "Lifecycle hooks",
+      "status": "PASS",
+      "actual": {
+        "memoryManagementHook": {
+          "registered": true,
+          "priority": 10,
+          "executesActivity": true
+        },
+        "activityRecommendationHook": {
+          "registered": true,
+          "priority": 15
         }
       },
-      "difference": "Test deferred - requires deployment of updated code to devbob K8s pod",
-      "details": "⏳ Deferred to deployment phase:\n- Current devbob pod (devbob-766dcccf49-hfql6) is running but has not been updated with Pass 3 fixes\n- Need to: (1) Build Docker image with fixes, (2) Deploy to K8s, (3) Re-run this test\n- Test is ready to execute once deployment is complete"
-    },
-    {
-      "testCase": "validation-dynamic-activity-lifecycle-with-trailblazing-pass3-case-3",
-      "testName": "MCP Registration Timeout Test",
-      "status": "DEFERRED",
-      "description": "Validates that MCP registration completes within 15s timeout",
-      "input": {
-        "skipK8sValidation": false,
-        "activityName": "Timeout Test Activity",
-        "activityDescription": "Validates that MCP registration completes within 15s timeout"
-      },
-      "actual": null,
       "expected": {
-        "integrationTest": {
-          "templateRegistered": true,
-          "registrationTime": "< 15000ms"
+        "memoryManagementHook": {
+          "registered": true,
+          "priority": 10,
+          "executesActivity": true
+        },
+        "activityRecommendationHook": {
+          "registered": true,
+          "priority": 15
         }
       },
-      "difference": "Test deferred - requires deployment of updated code to devbob K8s pod",
-      "details": "⏳ Deferred to deployment phase:\n- Timeout fix (5s → 15s) applied to local codebase\n- Need to deploy to K8s to validate in production environment\n- Test will measure actual registration time and confirm < 15s"
-    }
-  ],
-  "overallStatus": "PARTIAL_PASS",
-  "summary": {
-    "total": 3,
-    "passed": 1,
-    "failed": 0,
-    "deferred": 2,
-    "passRate": "33% (1/3 executed, 100% of executed tests passed)"
-  },
-  "nextSteps": [
-    {
-      "priority": "P0",
-      "action": "Build Docker image with Pass 3 fixes",
-      "command": "cd repos/metabob-opencode && docker build -t devbob:pass3-fix .",
-      "rationale": "Deploy updated code to K8s for integration validation"
+      "difference": null,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+      "lines": "38-310"
     },
     {
-      "priority": "P0",
-      "action": "Tag and deploy to K8s",
-      "commands": [
-        "docker tag devbob:pass3-fix devbob:latest",
-        "helm upgrade --install devbob helm/charts/devbob -n metabob"
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-5",
+      "name": "Backend sync",
+      "status": "PASS",
+      "actual": {
+        "callsMetabobActivitySave": true,
+        "checksClientAvailability": true,
+        "logsSync": true,
+        "warnsIfUnavailable": true
+      },
+      "expected": {
+        "callsMetabobActivitySave": true,
+        "checksClientAvailability": true,
+        "logsSync": true,
+        "warnsIfUnavailable": true
+      },
+      "difference": null,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "lines": "665-715"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-6",
+      "name": "Bootstrap templates",
+      "status": "FAIL",
+      "actual": {
+        "createActivityExists": false,
+        "debugActivityExists": true,
+        "evolveActivityExists": true,
+        "totalTemplates": 15
+      },
+      "expected": {
+        "createActivityExists": true,
+        "debugActivityExists": true,
+        "evolveActivityExists": true,
+        "totalTemplates": "≥15"
+      },
+      "difference": "create-activity-self-contained.json file not found (exact name). Found 6 activity-related files: create-activity-self-contained-v2.json, create-activity-template.json, create-activity-ultra-minimal.json, create-activity-v2-simplified.json, debug-activity-self-contained.json, evolve-activity-self-contained.json",
+      "directory": "templates/bootstrap/",
+      "diagnostic": {
+        "reason": "File name mismatch",
+        "actualFiles": [
+          "create-activity-self-contained-v2.json",
+          "create-activity-template.json",
+          "create-activity-ultra-minimal.json",
+          "create-activity-v2-simplified.json",
+          "debug-activity-self-contained.json",
+          "evolve-activity-self-contained.json"
+        ],
+        "suggestion": "Either rename create-activity-self-contained-v2.json to create-activity-self-contained.json, or update isMetaTemplate() to recognize the -v2 variant"
+      }
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-7",
+      "name": "No filesystem dependency",
+      "status": "FAIL",
+      "actual": {
+        "debugUsesMCP": false,
+        "evolveUsesMCP": false,
+        "debugUsesFilesystem": true,
+        "evolveUsesFilesystem": true
+      },
+      "expected": {
+        "debugUsesMCP": true,
+        "evolveUsesMCP": true,
+        "debugUsesFilesystem": false,
+        "evolveUsesFilesystem": false
+      },
+      "difference": "Meta-templates write output files to /tmp/debug-{{activityId}}/. This is filesystem access, violating environment-agnostic constraint. Should use MCP tools (activity_error_inspector) or return results in prompt.",
+      "files": [
+        "templates/bootstrap/debug-activity-self-contained.json",
+        "templates/bootstrap/evolve-activity-self-contained.json"
       ],
-      "rationale": "Make fixes available in devbob pod for testing"
+      "diagnostic": {
+        "reason": "Templates create files in /tmp directory",
+        "actualBehavior": "Creates DIAGNOSIS.md, FIX_RECOMMENDATIONS.md, RECOVERY_PLAN.md in /tmp",
+        "suggestion": "Refactor templates to use MCP tools or return results as markdown in prompt without filesystem writes"
+      }
     },
     {
-      "priority": "P1",
-      "action": "Re-run validation harness (full integration)",
-      "command": "npx tsx tests/validation-harnesses/dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts",
-      "rationale": "Execute deferred test cases 2 and 3 in deployed environment"
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-8",
+      "name": "Observability checkpoints",
+      "status": "PASS",
+      "actual": {
+        "hasMetaTemplateDetectionLog": true,
+        "hasContextInjectionLog": true,
+        "hasBackendSyncLog": true
+      },
+      "expected": {
+        "hasMetaTemplateDetectionLog": true,
+        "hasContextInjectionLog": true,
+        "hasBackendSyncLog": true
+      },
+      "difference": null,
+      "files": [
+        "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+        "repos/metabob-opencode/packages/opencode/src/session/activity.ts"
+      ]
     },
     {
-      "priority": "P2",
-      "action": "Update VALIDATION_RESULTS_pass3.json with final results",
-      "rationale": "Document complete validation after deployment"
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-9",
+      "name": "MCP registration timeout",
+      "status": "PASS",
+      "actual": {
+        "hasRegisterTemplateMethod": true,
+        "timeout": 15000
+      },
+      "expected": {
+        "hasRegisterTemplateMethod": true,
+        "timeout": 15000
+      },
+      "difference": null,
+      "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+      "lines": "309"
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-10",
+      "name": "Trailblazing executor",
+      "status": "PASS",
+      "actual": {
+        "hasExecuteMethod": true,
+        "hasRetryLoop": true,
+        "hasContinuationGenerator": true,
+        "respectsCostBudgets": true
+      },
+      "expected": {
+        "hasExecuteMethod": true,
+        "hasRetryLoop": true,
+        "hasContinuationGenerator": true,
+        "respectsCostBudgets": true
+      },
+      "difference": null,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts",
+      "lines": "58-400"
     }
   ],
-  "deploymentPrerequisite": {
-    "status": "REQUIRED",
-    "reason": "K8s integration tests require updated code deployed to devbob pod",
-    "currentPod": {
-      "name": "devbob-766dcccf49-hfql6",
-      "namespace": "metabob",
-      "status": "Running",
-      "hasUpdatedCode": false
-    },
-    "buildStatus": {
-      "localCodeUpdated": true,
-      "compiled": true,
-      "dockerImageBuilt": false,
-      "deployedToK8s": false
-    }
+  "summary": {
+    "totalCases": 10,
+    "passedCases": 7,
+    "failedCases": 3,
+    "passRate": 0.7,
+    "overallStatus": "FAIL"
   },
-  "resultsImpulseId": "validation-results-dynamic-activity-lifecycle-with-trailblazing-pass3"
+  "failedCases": [
+    {
+      "caseId": "case-3",
+      "name": "Context injection",
+      "severity": "MEDIUM",
+      "impact": "Harness false negative - implementation exists but pattern detection failed",
+      "recommendation": "Update harness regex patterns to match actual code structure"
+    },
+    {
+      "caseId": "case-6",
+      "name": "Bootstrap templates",
+      "severity": "HIGH",
+      "impact": "File name mismatch - create-activity-self-contained.json not found",
+      "recommendation": "Rename create-activity-self-contained-v2.json to create-activity-self-contained.json OR update isMetaTemplate() to recognize -v2 variant"
+    },
+    {
+      "caseId": "case-7",
+      "name": "No filesystem dependency",
+      "severity": "HIGH",
+      "impact": "Meta-templates violate environment-agnostic constraint by writing to /tmp",
+      "recommendation": "Refactor templates to use MCP tools or return results in prompt without filesystem writes"
+    }
+  ],
+  "actionItems": [
+    {
+      "priority": "HIGH",
+      "action": "Fix bootstrap template file name",
+      "details": "Rename create-activity-self-contained-v2.json to create-activity-self-contained.json, or update isMetaTemplate() to recognize the -v2 variant",
+      "owner": "Implementation team",
+      "estimated_effort": "5 minutes"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Refactor meta-templates to remove filesystem dependency",
+      "details": "Update debug-activity and evolve-activity templates to use MCP tools or return markdown in prompt instead of writing files to /tmp",
+      "owner": "Implementation team",
+      "estimated_effort": "30-60 minutes"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Update harness context injection test",
+      "details": "Adjust regex patterns in harness to correctly detect searchSimilarActivities and impulse creation",
+      "owner": "Testing team",
+      "estimated_effort": "15 minutes"
+    },
+    {
+      "priority": "LOW",
+      "action": "Re-run harness after fixes",
+      "details": "Execute harness again to verify all 10 tests pass",
+      "owner": "Validation team",
+      "estimated_effort": "5 minutes"
+    }
+  ],
+  "resultsImpulseId": "validation-results-dynamic-activity-creation-with-trailblazing-pass3"
 }

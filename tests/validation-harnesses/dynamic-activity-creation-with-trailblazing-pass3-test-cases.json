@@ -1,0 +1,178 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass3",
+  "testCases": [
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-1",
+      "name": "Meta-template detection",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+        "checkFor": "isMetaTemplate function and 4 meta-template IDs"
+      },
+      "expectedOutput": {
+        "hasIsMetaTemplate": true,
+        "metaTemplateIds": [
+          "create-activity",
+          "create-activity-self-contained",
+          "evolve-activity-self-contained",
+          "debug-activity-self-contained"
+        ],
+        "allPresent": true
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-2",
+      "name": "Auto-trailblazing enablement",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+        "checkFor": "Auto-enable logic with conservative limits"
+      },
+      "expectedOutput": {
+        "hasAutoEnableCheck": true,
+        "hasAutoEnableLog": true,
+        "hasConservativeLimits": true,
+        "limits": {
+          "maxCostPerTask": 1.0,
+          "maxTotalCost": 5.0,
+          "maxRecoveryAttempts": 3
+        }
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-3",
+      "name": "Context injection",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+        "checkFor": "Context injection logic querying backend"
+      },
+      "expectedOutput": {
+        "hasContextInjection": true,
+        "queriesBackend": true,
+        "createsImpulse": true,
+        "limitTopThree": true
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-4",
+      "name": "Lifecycle hooks",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+        "checkFor": "memory-management and activity-recommendation hooks"
+      },
+      "expectedOutput": {
+        "memoryManagementHook": {
+          "registered": true,
+          "priority": 10,
+          "executesActivity": true
+        },
+        "activityRecommendationHook": {
+          "registered": true,
+          "priority": 15
+        }
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-5",
+      "name": "Backend sync",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+        "checkFor": "Activity.save() calls metabob_activity_save MCP tool"
+      },
+      "expectedOutput": {
+        "callsMetabobActivitySave": true,
+        "checksClientAvailability": true,
+        "logsSync": true,
+        "warnsIfUnavailable": true
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-6",
+      "name": "Bootstrap templates",
+      "input": {
+        "directory": "templates/bootstrap",
+        "checkFor": "Meta-template JSON files"
+      },
+      "expectedOutput": {
+        "createActivityExists": true,
+        "debugActivityExists": true,
+        "evolveActivityExists": true,
+        "totalTemplates": "≥15"
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-7",
+      "name": "No filesystem dependency",
+      "input": {
+        "files": [
+          "templates/bootstrap/debug-activity-self-contained.json",
+          "templates/bootstrap/evolve-activity-self-contained.json"
+        ],
+        "checkFor": "MCP tool usage, no filesystem access"
+      },
+      "expectedOutput": {
+        "debugUsesMCP": true,
+        "evolveUsesMCP": true,
+        "debugUsesFilesystem": false,
+        "evolveUsesFilesystem": false
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-8",
+      "name": "Observability checkpoints",
+      "input": {
+        "files": [
+          "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+          "repos/metabob-opencode/packages/opencode/src/session/activity.ts"
+        ],
+        "checkFor": "Log statements for debugging"
+      },
+      "expectedOutput": {
+        "hasMetaTemplateDetectionLog": true,
+        "hasContextInjectionLog": true,
+        "hasBackendSyncLog": true
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-9",
+      "name": "MCP registration timeout",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+        "checkFor": "15000ms timeout for template registration"
+      },
+      "expectedOutput": {
+        "hasRegisterTemplateMethod": true,
+        "timeout": 15000
+      }
+    },
+    {
+      "impulseId": "validation-dynamic-activity-creation-with-trailblazing-pass3-case-10",
+      "name": "Trailblazing executor",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts",
+        "checkFor": "Retry loop with AI recovery and cost budgets"
+      },
+      "expectedOutput": {
+        "hasExecuteMethod": true,
+        "hasRetryLoop": true,
+        "hasContinuationGenerator": true,
+        "respectsCostBudgets": true
+      }
+    }
+  ],
+  "metadata": {
+    "totalCases": 10,
+    "passRequired": 10,
+    "description": "Pass 3 validation ensures all code-level requirements are implemented for dynamic activity creation with trailblazing",
+    "requirements": [
+      "Meta-template detection (isMetaTemplate identifies 4 variants)",
+      "Auto-trailblazing enablement with conservative limits",
+      "Context injection from backend (top 3 similar activities)",
+      "Lifecycle hooks (memory-management priority 10, activity-recommendation priority 15)",
+      "Backend sync (Activity.save → metabob_activity_save MCP tool)",
+      "Bootstrap templates embedded (15 total, 3 meta-templates)",
+      "No filesystem dependency in meta-templates (MCP-only)",
+      "Observability checkpoints in logs",
+      "MCP registration timeout (15000ms)",
+      "Trailblazing executor with retry and recovery"
+    ]
+  }
+}

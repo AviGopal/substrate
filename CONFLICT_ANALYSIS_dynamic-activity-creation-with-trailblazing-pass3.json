@@ -1,0 +1,261 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass3",
+  "analysisDate": "2026-03-04",
+  "validationStatus": "FAIL (7/10 passing, 70%)",
+  "relatedSpecifications": [
+    "dynamic-activity-lifecycle-with-trailblazing-pass3 (same spec, different naming)",
+    "dynamic-activity-creation-devbob-execution-tracking (Pass 4)",
+    "dynamic-activity-creation-with-trailblazing-pass2 (Pass 2)",
+    "template-storage-architecture",
+    "bootstrap-template-filepath-compliance",
+    "complete-architecture-separation"
+  ],
+  "otherSpecifications": [
+    "activity-lifecycle-tools-automation",
+    "activity-state-transformation-tracking",
+    "boredom-activity-detection-mechanism",
+    "template-storage-architecture",
+    "complete-architecture-separation",
+    "rpc-api-deployed-infrastructure-validation",
+    "devbob-k8s-git-operations"
+  ],
+  "conflicts": [
+    {
+      "type": "BOOTSTRAP_TEMPLATE_NAMING",
+      "severity": "HIGH",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": "bootstrap-template-filepath-compliance",
+      "sharedComponent": "templates/bootstrap/create-activity-self-contained.json",
+      "description": "Pass 3 expects create-activity-self-contained.json but only create-activity-self-contained-v2.json exists. This creates ambiguity about which file is the canonical bootstrap template.",
+      "impact": "isMetaTemplate('create-activity-self-contained') detection works, but bootstrap harness fails because exact filename doesn't match. Pass 3 validation reports FALSE NEGATIVE.",
+      "resolution": "OPTION A: Rename create-activity-self-contained-v2.json to create-activity-self-contained.json. OPTION B: Update isMetaTemplate() to recognize -v2 variants. OPTION C: Update harness to accept both variants.",
+      "priority": "HIGH",
+      "status": "ACTIVE_CONFLICT",
+      "evidence": {
+        "expectedFile": "templates/bootstrap/create-activity-self-contained.json",
+        "actualFile": "templates/bootstrap/create-activity-self-contained-v2.json",
+        "validationResult": "FAIL - Case 6: Bootstrap templates"
+      },
+      "recommendation": "OPTION A (rename file) is simplest and clearest. Maintains single source of truth.",
+      "estimatedEffort": "5 minutes"
+    },
+    {
+      "type": "ENVIRONMENT_CONSTRAINT_VIOLATION",
+      "severity": "HIGH",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "debug-activity-self-contained.json, evolve-activity-self-contained.json",
+      "description": "Pass 3 requires environment-agnostic operation (no filesystem dependency). Debug/evolve templates write output files to /tmp, violating this constraint. Complete-architecture-separation spec enforces MCP-only communication.",
+      "impact": "Templates work in host environment with filesystem access but will fail in K8s devbob environment with restricted filesystem. Violates environment-agnostic design principle. Pass 3 validation reports FAIL.",
+      "resolution": "Refactor debug-activity and evolve-activity templates to: (1) Use activity_error_inspector MCP tool for fetching parent activity data, OR (2) Return markdown results in prompt output instead of writing to /tmp",
+      "priority": "HIGH",
+      "status": "ACTIVE_CONFLICT",
+      "evidence": {
+        "constraint": "Environment-agnostic operation (MCP-only, no filesystem)",
+        "actualBehavior": "Creates DIAGNOSIS.md, FIX_RECOMMENDATIONS.md in /tmp/debug-{{activityId}}/",
+        "validationResult": "FAIL - Case 7: No filesystem dependency"
+      },
+      "recommendation": "Return markdown in prompt output. Cleaner than MCP tool for this use case. Agent can display results without filesystem writes.",
+      "estimatedEffort": "30-60 minutes"
+    },
+    {
+      "type": "HARNESS_FALSE_NEGATIVE",
+      "severity": "MEDIUM",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": null,
+      "sharedComponent": "activity.ts context injection logic",
+      "description": "Pass 3 harness reports FAIL for context injection (Case 3), but implementation exists at activity.ts:1007 (searchSimilarActivities). Harness regex patterns don't match actual code structure.",
+      "impact": "False negative in validation. Core functionality is implemented correctly but harness reports failure. Creates confusion and wasted debugging effort.",
+      "resolution": "Update harness test Case 3 regex patterns to correctly detect: (1) searchSimilarActivities call, (2) impulse creation with SessionMemory.addImpulse",
+      "priority": "MEDIUM",
+      "status": "HARNESS_BUG",
+      "evidence": {
+        "expectedPattern": "ActivityTemplate.isMetaTemplate.*similar.*activity",
+        "actualCode": "Line 1007: const similarActivities = await TemplateServiceClient.searchSimilarActivities(",
+        "validationResult": "FAIL - Case 3: Context injection (false negative)"
+      },
+      "recommendation": "Simplify regex to match 'searchSimilarActivities' directly without complex lookahead. Add second check for 'SessionMemory.addImpulse'.",
+      "estimatedEffort": "15 minutes"
+    },
+    {
+      "type": "DEPLOYMENT_PREREQUISITE",
+      "severity": "CRITICAL",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": "dynamic-activity-creation-devbob-execution-tracking (Pass 4)",
+      "sharedComponent": "DevBob K8s pod deployment",
+      "description": "Pass 3 fixes are applied locally but not deployed to devbob pod. Pass 4 expects these fixes to be deployed for end-to-end validation. CLI argument parsing error in devbob pod blocks execution.",
+      "impact": "Pass 4 validation cannot proceed until Pass 3 deployment is complete. Current devbob pod has CLI argument parsing error: 'Unknown arguments: variables, reason, create-activity'.",
+      "resolution": "Deploy Pass 3 fixes to devbob pod: (1) Fix CLI argument parsing error, (2) Build Docker image with Pass 3 fixes (isMetaTemplate array, 15s timeout), (3) Deploy to K8s devbob namespace, (4) Execute Pass 3 validation harness in K8s",
+      "priority": "CRITICAL",
+      "status": "BLOCKING",
+      "evidence": {
+        "localStatus": "CODE_COMPLETE - 7/10 tests passing",
+        "k8sStatus": "NOT_DEPLOYED - CLI parsing error blocking execution",
+        "blocker": "validation-results-pass4-1772544492487.json line 9"
+      },
+      "recommendation": "Fix CLI parsing error FIRST, then deploy Pass 3 fixes. CLI error is root blocker for both Pass 3 and Pass 4 K8s validation.",
+      "estimatedEffort": "2-4 hours (includes CLI fix, Docker build, K8s deployment, verification)"
+    },
+    {
+      "type": "PROGRESSIVE_REFINEMENT",
+      "severity": "NONE",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass3",
+      "spec2": "dynamic-activity-creation-with-trailblazing-pass2 (Pass 2)",
+      "sharedComponent": "isMetaTemplate() function, trailblazing auto-enable",
+      "description": "Pass 3 fixes template ID mismatch bug that existed in Pass 2. Pass 2 created auto-enable logic but never validated it worked. Pass 3 validation discovered isMetaTemplate('create-activity') returns false due to missing ID.",
+      "impact": "No conflict - this is bug fix progression. Pass 3 supersedes Pass 2. Pass 2 code was incomplete but not wrong.",
+      "resolution": "Pass 3 changes are correct and improve upon Pass 2. No action needed - this is expected evolution.",
+      "priority": "INFORMATIONAL",
+      "status": "NO_CONFLICT",
+      "evidence": {
+        "pass2": "Created trailblazing auto-enable but didn't validate",
+        "pass3": "Added 'create-activity' to metaTemplateIds array (line 1854)"
+      },
+      "recommendation": "None - this is normal iterative development",
+      "estimatedEffort": "N/A"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "template-storage-architecture",
+        "activity-template-scope-assignment"
+      ],
+      "lines": "1852-1860 (isMetaTemplate function)",
+      "recommendation": "No refactoring needed. Each spec modifies different parts of the file.",
+      "conflicts": "NONE"
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "activity-lifecycle-tools-automation",
+        "activity-state-transformation-tracking",
+        "boredom-activity-detection-mechanism"
+      ],
+      "lines": "976-991 (auto-trailblazing), 993-1040 (context injection), 2208-2260 (task execution)",
+      "recommendation": "High-traffic file. Coordinate changes carefully. Run full test suite after modifications.",
+      "conflicts": "POTENTIAL_MERGE_CONFLICTS"
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3"
+      ],
+      "lines": "58-400 (executeTaskWithTrailblazing)",
+      "recommendation": "Single-owner file. No coordination needed.",
+      "conflicts": "NONE"
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/turn-lifecycle-hooks.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "activity-lifecycle-tools-automation"
+      ],
+      "lines": "38-140 (memory-management), 229-310 (activity-recommendation)",
+      "recommendation": "Lifecycle hooks are stable. Changes should be rare and coordinated.",
+      "conflicts": "LOW_RISK"
+    },
+    {
+      "component": "templates/bootstrap/create-activity-self-contained.json",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "lines": "N/A (JSON file)",
+      "recommendation": "Rename create-activity-self-contained-v2.json to create-activity-self-contained.json",
+      "conflicts": "NAMING_MISMATCH"
+    },
+    {
+      "component": "templates/bootstrap/debug-activity-self-contained.json",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "lines": "N/A (JSON file)",
+      "recommendation": "Refactor to remove /tmp file writes. Return markdown in prompt.",
+      "conflicts": "ENVIRONMENT_CONSTRAINT_VIOLATION"
+    },
+    {
+      "component": "templates/bootstrap/evolve-activity-self-contained.json",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "lines": "N/A (JSON file)",
+      "recommendation": "Refactor to remove /tmp file writes. Return markdown in prompt.",
+      "conflicts": "ENVIRONMENT_CONSTRAINT_VIOLATION"
+    }
+  ],
+  "actionItems": [
+    {
+      "priority": "CRITICAL",
+      "action": "Fix CLI argument parsing in devbob pod",
+      "details": "Root blocker for K8s validation. CLI fails with 'Unknown arguments: variables, reason, create-activity'",
+      "affectedSpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "dynamic-activity-creation-devbob-execution-tracking"
+      ],
+      "owner": "DevBob infrastructure team",
+      "estimatedEffort": "2-4 hours",
+      "blocksDeployment": true
+    },
+    {
+      "priority": "HIGH",
+      "action": "Rename bootstrap template file",
+      "details": "Rename create-activity-self-contained-v2.json to create-activity-self-contained.json",
+      "affectedSpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "owner": "Implementation team",
+      "estimatedEffort": "5 minutes",
+      "blocksDeployment": false
+    },
+    {
+      "priority": "HIGH",
+      "action": "Refactor meta-templates to remove filesystem dependency",
+      "details": "Update debug-activity and evolve-activity to return markdown in prompt instead of writing to /tmp",
+      "affectedSpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "complete-architecture-separation"
+      ],
+      "owner": "Implementation team",
+      "estimatedEffort": "30-60 minutes",
+      "blocksDeployment": false
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Update harness context injection test",
+      "details": "Fix regex patterns in Case 3 to correctly detect searchSimilarActivities and impulse creation",
+      "affectedSpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3"
+      ],
+      "owner": "Testing team",
+      "estimatedEffort": "15 minutes",
+      "blocksDeployment": false
+    },
+    {
+      "priority": "HIGH",
+      "action": "Deploy Pass 3 fixes to K8s devbob namespace",
+      "details": "Build Docker image with Pass 3 fixes and deploy to devbob namespace",
+      "affectedSpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass3",
+        "dynamic-activity-creation-devbob-execution-tracking"
+      ],
+      "owner": "DevOps team",
+      "estimatedEffort": "30 minutes (after CLI fix)",
+      "blocksDeployment": true
+    }
+  ],
+  "summary": {
+    "totalConflicts": 5,
+    "activeConflicts": 2,
+    "blocking": 1,
+    "harmonious": 2,
+    "recommendation": "Fix 2 active conflicts (bootstrap naming, filesystem dependency) and 1 critical blocker (CLI parsing) before K8s deployment. Harness false negative is testing issue, not implementation issue."
+  },
+  "conflictImpulseId": "conflict-analysis-dynamic-activity-creation-with-trailblazing-pass3"
+}
