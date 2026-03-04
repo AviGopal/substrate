@@ -1,0 +1,11 @@
+{
+  "id": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: Host Environment - Filesystem Independence\n\nInput:\n  environment: host\n  template: create-activity-self-contained\n  variables:\n    templateName: HostTestTemplate\n    templateDescription: Test from host environment\n    category: tool\n  reason: Pass 4 validation - test host environment execution\n\nExpected Output:\n  Log Patterns (must be present):\n    - 'auto-enabling trailblazing for meta-template'\n    - 'searchSimilarActivities using stub data'\n    - 'similar activity context injected'\n  \n  No Error Patterns (must NOT be present):\n    - 'file not found'\n    - 'ENOENT'\n    - 'required_files validation failed'\n    - 'filesystem error'\n\nValidation Method:\n  1. Execute template from host using opencode CLI\n  2. Capture stdout and stderr\n  3. Verify expected log patterns present\n  4. Verify no filesystem-related errors\n  5. Return PASS if execution completes without filesystem errors"
+  },
+  "budget": 500,
+  "priority": "high",
+  "loaded": true
+}

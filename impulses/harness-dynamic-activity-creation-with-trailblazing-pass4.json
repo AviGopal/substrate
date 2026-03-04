@@ -1,14 +1,27 @@
 {
+  "id": "harness-dynamic-activity-creation-with-trailblazing-pass4",
   "type": "file",
   "pointer": {
     "type": "file",
-    "path": "tests/validation-harnesses/dynamic-activity-creation-with-trailblazing-pass4-harness.ts"
+    "path": "tests/validation-harnesses/dynamic-activity-creation-with-trailblazing-pass4-harness.ts",
+    "startLine": 1,
+    "endLine": null
   },
   "budget": 2000,
-  "description": "Pass 4 validation harness for dynamic activity creation with trailblazing. Tests: (1) CLI syntax accepted, (2) Meta-template detection, (3) Context injection, (4) Trailblazing execution, (5) Database tracking, (6) Bootstrap templates exist, (7) No filesystem dependency, (8) K8s deployment ready, (9) ACP delegation, (10) Observable proof complete.",
-  "testCount": 10,
-  "executionMode": "automated",
-  "requiresK8s": true,
-  "requiresDatabase": true,
-  "estimatedDuration": "5-10 minutes"
+  "priority": "high",
+  "loaded": true,
+  "metadata": {
+    "description": "Validation harness for dynamic activity creation with trailblazing Pass 4",
+    "testCases": 5,
+    "environments": ["kubernetes", "host"],
+    "validations": [
+      "Trailblazing auto-enable for meta-templates",
+      "Context injection via searchSimilarActivities stub",
+      "Memory hook execution",
+      "SurrealDB activity tracking",
+      "Filesystem independence",
+      "Template registration performance"
+    ],
+    "usage": "bun run tests/validation-harnesses/dynamic-activity-creation-with-trailblazing-pass4-harness.ts"
+  }
 }
