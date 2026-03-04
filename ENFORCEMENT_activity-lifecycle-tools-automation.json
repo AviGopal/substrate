@@ -1,0 +1,124 @@
+{
+  "specificationName": "activity-lifecycle-tools-automation",
+  "enforcementDate": "2026-03-04",
+  "changesApplied": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/config/schemas/metabob.ts",
+      "component": "Metabob Config Schema - template_lifecycle_automation",
+      "lineNumbers": "171-192",
+      "changeMade": "Added template_lifecycle_automation config section with: enabled (default: true), auto_evolve_on_staleness (default: true), staleness_threshold_days (default: 30), auto_debug_on_failure (default: true), failure_threshold_count (default: 3), max_evolution_frequency_hours (default: 168)",
+      "reason": "Enables users to control when/how templates are automatically improved. Without this config, lifecycle automation would be hardcoded and inflexible. This allows fine-tuning of staleness detection, failure thresholds, and evolution frequency.",
+      "impactAnalysis": "Low risk - New config section, backward compatible (all fields optional with safe defaults). Consumers: boredom-manager.ts and activity.ts will read this config to decide whether to trigger meta-templates."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts",
+      "component": "BoredomManager.executeBoredomActivity",
+      "lineNumbers": "254-396",
+      "changeMade": "Added template mapping logic: 'improve-template' → 'evolve-activity-self-contained', 'debug-failures' → 'debug-activity-self-contained', 'optimize-performance' → 'optimize-activity-self-contained'. Changed from executing boredomActivity.template_id directly to executing meta-template with templateId as variable.",
+      "reason": "CRITICAL FIX: Previously, boredom system executed stale templates directly instead of meta-templates. This broke self-improvement loop. Now when backend says 'improve template X', we execute evolve-activity-self-contained with templateId=X as input, which actually improves the template.",
+      "impactAnalysis": "Medium risk - Changes core boredom execution flow. Blast radius: BoredomManager.executeBoredomActivity() is only called from BoredomManager.monitorIdleActivity(). Impact: Boredom activities now correctly invoke meta-templates for template improvement instead of running stale templates. Requires meta-templates (evolve/debug-activity-self-contained) to exist as bootstrap templates (already present)."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "ActivityTool - Auto-debug on failure",
+      "lineNumbers": "1587-1595, 3310-3375",
+      "changeMade": "Added maybeAutoDebugFailedActivity() helper function that checks config and triggers debug-activity-self-contained when activities fail. Called after activity.status='failed' and Activity.save() in executeActivityInline(). Function checks config.metabob.template_lifecycle_automation.auto_debug_on_failure and triggers debug-activity with executionId as variable.",
+      "reason": "CRITICAL FIX: Previously, activities failed without any automated analysis. Now when templates fail, the system automatically triggers debug-activity-self-contained to analyze the failure and generate fix recommendations. This completes the self-improvement loop: detect failure → analyze → recommend fixes → apply → evolve.",
+      "impactAnalysis": "Medium risk - Adds background debugging on failure. Blast radius: executeActivityInline() is called from ActivityTool.execute(), BoredomManager, and lifecycle hooks. Impact: Failed activities now trigger debug analysis automatically. Non-blocking (wrapped in try-catch). May increase background activity load when templates fail repeatedly. Debug activity runs in separate session, doesn't interfere with parent."
+    }
+  ],
+  "dataFlowChanges": [
+    {
+      "flow": "Template Registration",
+      "before": "User creates template → ActivityTemplate.create() → maybeAutoRegisterWithMetabob() → TemplateRepository.save() → MetabobCLI.registerActivityTemplate() → metabob_register_activity_template MCP",
+      "after": "UNCHANGED - Already working correctly",
+      "impact": "No change - auto-registration was already implemented correctly"
+    },
+    {
+      "flow": "Boredom System Template Improvement",
+      "before": "Idle 5min → fetchBoredomActivities() → metabob_fetch_boredom_activities MCP → Returns {activity_type: 'improve-template', template_id: 'stale-template'} → executeBoredomActivity('stale-template', variables) → WRONG: Executes stale template directly",
+      "after": "Idle 5min → fetchBoredomActivities() → metabob_fetch_boredom_activities MCP → Returns {activity_type: 'improve-template', template_id: 'stale-template'} → Map activity_type to meta-template ('evolve-activity-self-contained') → executeBoredomActivity('evolve-activity-self-contained', {templateId: 'stale-template', ...metrics}) → CORRECT: Meta-template improves stale template",
+      "impact": "Self-improvement loop now functional - stale templates are actually improved instead of re-executed"
+    },
+    {
+      "flow": "Activity Failure Auto-Debug",
+      "before": "Activity fails → activity.status='failed' → Activity.save() → END (no follow-up)",
+      "after": "Activity fails → activity.status='failed' → Activity.save() → maybeAutoDebugFailedActivity() → Check config.auto_debug_on_failure → If enabled, trigger debug-activity-self-contained({executionId: failed_activity_id}) → Debug analysis generated → Fix recommendations created",
+      "impact": "Failed templates now automatically analyzed - root cause identification and fix suggestions generated without manual intervention"
+    }
+  ],
+  "architecturalCompliance": {
+    "mcpAbstraction": "MAINTAINED - All lifecycle operations use MCP tools (metabob_register_activity_template, metabob_fetch_boredom_activities, activity_error_inspector). No direct HTTP calls to RPC API.",
+    "bootstrapTemplates": "CONFIRMED - evolve-activity-self-contained and debug-activity-self-contained are bootstrap templates (embedded in code, always available). No backend dependency for meta-templates.",
+    "configDriven": "IMPROVED - Added template_lifecycle_automation config section to control automated behaviors. All changes respect config flags (enabled, auto_debug_on_failure, etc.).",
+    "nonBlocking": "CONFIRMED - Auto-debug is wrapped in try-catch and runs in background session. Failures in lifecycle automation do not block primary activity execution."
+  },
+  "remainingGaps": [
+    {
+      "gap": "No turn lifecycle hooks for template lifecycle",
+      "priority": "P1 - High",
+      "status": "NOT IMPLEMENTED",
+      "reason": "Requires coordination with turn-lifecycle-hooks.ts. Current implementation (inline auto-debug in activity.ts) provides immediate value. Lifecycle hooks can be added as enhancement to trigger periodic health checks and evolution based on execution count patterns.",
+      "nextSteps": "Add post-activity-completion hook (priority: 125) in turn-lifecycle-hooks.ts to check template health after each activity and trigger evolution if needed. This is an optimization - current inline approach already enables self-improvement."
+    },
+    {
+      "gap": "TemplateMetricsClient.getRecentFailures() not implemented",
+      "priority": "P2 - Medium",
+      "status": "TODO",
+      "reason": "maybeAutoDebugFailedActivity() currently triggers debug on every failure instead of checking threshold. Need MCP endpoint to query recent failures by template_id. Current behavior is conservative (more debugging) which is acceptable for initial rollout.",
+      "nextSteps": "Implement metabob_get_template_metrics MCP tool or extend existing tools to return failure count. Update maybeAutoDebugFailedActivity() to check threshold before triggering debug."
+    },
+    {
+      "gap": "optimize-activity-self-contained template doesn't exist",
+      "priority": "P3 - Low",
+      "status": "TODO",
+      "reason": "BoredomManager maps 'optimize-performance' activity type to 'optimize-activity-self-contained' but this template hasn't been created yet. Will log warning if backend returns this activity type.",
+      "nextSteps": "Create optimize-activity-self-contained bootstrap template for performance optimization (reduce token usage, improve execution speed, optimize validation patterns). Can be added in future iteration."
+    }
+  ],
+  "validationRequired": [
+    {
+      "scenario": "Boredom system triggers template evolution",
+      "steps": [
+        "1. Create a template with low success rate (e.g., intentional bug)",
+        "2. Execute template 5 times to establish low success rate in backend",
+        "3. Wait for idle detection (5min)",
+        "4. Verify: metabob_fetch_boredom_activities returns 'improve-template' activity",
+        "5. Verify: BoredomManager maps to 'evolve-activity-self-contained'",
+        "6. Verify: evolve-activity executes with templateId as variable",
+        "7. Verify: New template version created with improvements",
+        "8. Verify: New version registered via metabob_register_activity_template"
+      ],
+      "expectedOutcome": "Stale template automatically improved via boredom system"
+    },
+    {
+      "scenario": "Activity failure triggers auto-debug",
+      "steps": [
+        "1. Create a template with intentional failure (e.g., missing file)",
+        "2. Execute template → fails",
+        "3. Verify: activity.status='failed'",
+        "4. Verify: maybeAutoDebugFailedActivity() called",
+        "5. Verify: debug-activity-self-contained triggered with executionId",
+        "6. Verify: EXECUTION_ANALYSIS.md created with root cause",
+        "7. Verify: FIX_RECOMMENDATIONS.md created with fixes"
+      ],
+      "expectedOutcome": "Failed activity automatically analyzed with fix recommendations"
+    },
+    {
+      "scenario": "Lifecycle automation respects config",
+      "steps": [
+        "1. Set config.metabob.template_lifecycle_automation.enabled=false",
+        "2. Execute failing template",
+        "3. Verify: No auto-debug triggered",
+        "4. Set auto_debug_on_failure=false (enabled=true)",
+        "5. Execute failing template",
+        "6. Verify: No auto-debug triggered",
+        "7. Set auto_debug_on_failure=true",
+        "8. Execute failing template",
+        "9. Verify: Auto-debug triggered"
+      ],
+      "expectedOutcome": "Lifecycle automation respects configuration flags"
+    }
+  ],
+  "enforcementImpulseId": "enforcement-activity-lifecycle-tools-automation"
+}

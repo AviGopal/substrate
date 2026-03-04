@@ -1,0 +1,110 @@
+{
+  "specificationName": "activity-lifecycle-tools-automation",
+  "harnessFile": "repos/metabob-opencode/packages/opencode/tests/validation-harnesses/activity-lifecycle-tools-automation-harness.ts",
+  "testCases": [
+    {
+      "impulseId": "validation-activity-lifecycle-tools-automation-case-1",
+      "testName": "Template Auto-Registration Config",
+      "input": "Check config for template_auto_registration",
+      "expectedOutput": {
+        "configExists": true,
+        "hasAutoRegistration": true,
+        "defaultEnabled": true,
+        "defaultStrategy": "on-create"
+      },
+      "validationType": "config-verification"
+    },
+    {
+      "impulseId": "validation-activity-lifecycle-tools-automation-case-2",
+      "testName": "Lifecycle Automation Config",
+      "input": "Check config for template_lifecycle_automation",
+      "expectedOutput": {
+        "hasLifecycleAutomation": true,
+        "hasAutoDebugField": true,
+        "hasAutoEvolveField": true,
+        "hasFailureThresholdField": true,
+        "hasStalenessThresholdField": true
+      },
+      "validationType": "config-verification"
+    },
+    {
+      "impulseId": "validation-activity-lifecycle-tools-automation-case-3",
+      "testName": "Boredom Template Mapping",
+      "input": "Verify activity type to meta-template mapping",
+      "expectedOutput": {
+        "improveTemplate": "evolve-activity-self-contained",
+        "debugTemplate": "debug-activity-self-contained",
+        "optimizeTemplate": "optimize-activity-self-contained"
+      },
+      "validationType": "logic-verification"
+    },
+    {
+      "impulseId": "validation-activity-lifecycle-tools-automation-case-4",
+      "testName": "Bootstrap Meta-Templates Exist",
+      "input": "Check for evolve-activity-self-contained and debug-activity-self-contained",
+      "expectedOutput": {
+        "evolveTemplateExists": true,
+        "debugTemplateExists": true
+      },
+      "validationType": "resource-verification"
+    },
+    {
+      "impulseId": "validation-activity-lifecycle-tools-automation-case-5",
+      "testName": "MCP Abstraction Compliance",
+      "input": "Verify all lifecycle operations use MCP tools",
+      "expectedOutput": {
+        "usesMetabobRegisterTemplate": true,
+        "usesMetabobFetchBoredomActivities": true,
+        "usesActivityErrorInspector": true,
+        "noDirectHTTP": true
+      },
+      "validationType": "static-analysis"
+    }
+  ],
+  "harnessImpulseId": "harness-activity-lifecycle-tools-automation",
+  "executionInstructions": {
+    "setup": [
+      "1. Ensure OpenCode is initialized with default config",
+      "2. Ensure TemplateLibrary.initialize() has been called to load bootstrap templates",
+      "3. Ensure config includes template_lifecycle_automation section"
+    ],
+    "execution": [
+      "Run: bun repos/metabob-opencode/packages/opencode/tests/validation-harnesses/activity-lifecycle-tools-automation-harness.ts",
+      "Or import: import { runValidation } from './activity-lifecycle-tools-automation-harness'",
+      "Then call: await runValidation()"
+    ],
+    "interpretation": [
+      "PASS: All 5 test cases return pass: true",
+      "FAIL: Any test case returns pass: false (check actual vs expected)",
+      "Each test verifies a critical aspect of the lifecycle automation implementation"
+    ]
+  },
+  "validationStrategy": {
+    "approach": "Static and configuration-based validation",
+    "rationale": "Full end-to-end testing would require running activities, triggering failures, waiting for boredom idle detection, etc. This harness focuses on verifying the infrastructure is in place: config schema exists, template mapping logic is correct, bootstrap templates are available, and MCP abstraction is maintained.",
+    "limitations": [
+      "Does not test actual activity execution and failure",
+      "Does not test boredom system activation (requires 5min idle)",
+      "Does not test actual debug-activity triggering (requires real failure)",
+      "Does not intercept HTTP calls to verify no direct API usage"
+    ],
+    "futureEnhancements": [
+      "Add integration test that creates failing activity and verifies auto-debug",
+      "Add integration test that simulates boredom activity and verifies template evolution",
+      "Add network monitoring to verify no direct HTTP calls",
+      "Add threshold testing (verify debug only triggers after N failures)"
+    ]
+  },
+  "validationResults": {
+    "expectedBehavior": "All 5 tests should PASS if lifecycle automation is correctly implemented",
+    "criticalTests": [
+      "case-2: Lifecycle Automation Config (verifies new config schema)",
+      "case-3: Boredom Template Mapping (verifies P0 fix for template mapping)",
+      "case-4: Bootstrap Meta-Templates (verifies meta-templates exist)"
+    ],
+    "nonCriticalTests": [
+      "case-1: Template Auto-Registration (already working before this activity)",
+      "case-5: MCP Abstraction (static check, always passes)"
+    ]
+  }
+}

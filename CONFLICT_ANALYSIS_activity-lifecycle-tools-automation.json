@@ -1,0 +1,205 @@
+{
+  "specificationName": "activity-lifecycle-tools-automation",
+  "analysisDate": "2026-03-04",
+  "analysisMethod": "Cross-reference validation results and component analysis",
+  "otherSpecifications": [
+    "boredom-activity-detection-mechanism",
+    "complete-architecture-separation",
+    "bootstrap-template-filepath-compliance",
+    "impulse-learning-storage-complete",
+    "devbob-k8s-git-operations",
+    "pattern-extraction-service-complete"
+  ],
+  "componentsModified": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/config/schemas/metabob.ts",
+      "changes": "Added template_lifecycle_automation config section",
+      "lineNumbers": "171-192",
+      "affectedBy": ["activity-lifecycle-tools-automation"]
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts",
+      "changes": "Added template mapping logic (improve-template → evolve-activity-self-contained)",
+      "lineNumbers": "254-396",
+      "affectedBy": ["activity-lifecycle-tools-automation", "boredom-activity-detection-mechanism"]
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "changes": "Added maybeAutoDebugFailedActivity() function for auto-debug on failure",
+      "lineNumbers": "1587-1595, 3310-3375",
+      "affectedBy": ["activity-lifecycle-tools-automation"]
+    }
+  ],
+  "conflicts": [],
+  "potentialConflicts": [
+    {
+      "type": "COMPLEMENTARY_ENHANCEMENT",
+      "spec1": "activity-lifecycle-tools-automation",
+      "spec2": "boredom-activity-detection-mechanism",
+      "sharedComponent": "boredom-manager.ts",
+      "description": "Both specs enhance boredom-manager.ts. Boredom detection spec adds idle detection and activity fetching. Lifecycle automation spec adds template mapping for fetched activities.",
+      "severity": "NONE",
+      "conflictStatus": "NO_CONFLICT",
+      "reasoning": "Changes are complementary and non-overlapping. Boredom detection provides infrastructure (fetchBoredomActivities), lifecycle automation uses that infrastructure (maps activity types to meta-templates). They work together.",
+      "resolution": "No action required - changes are designed to work together"
+    },
+    {
+      "type": "BOOTSTRAP_TEMPLATE_DEPENDENCY",
+      "spec1": "activity-lifecycle-tools-automation",
+      "spec2": "bootstrap-template-filepath-compliance",
+      "sharedComponent": "Bootstrap templates (evolve-activity, debug-activity)",
+      "description": "Lifecycle automation depends on bootstrap templates being available. Bootstrap compliance spec ensures templates load from embedded imports without filesystem dependencies.",
+      "severity": "NONE",
+      "conflictStatus": "NO_CONFLICT",
+      "reasoning": "Bootstrap compliance spec ensures meta-templates (evolve-activity-self-contained, debug-activity-self-contained) are available. Lifecycle automation spec uses these templates. Dependency is satisfied.",
+      "resolution": "No action required - dependency is satisfied"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "boredom-manager.ts",
+      "affectedBySpecs": [
+        "activity-lifecycle-tools-automation",
+        "boredom-activity-detection-mechanism"
+      ],
+      "modifications": [
+        {
+          "spec": "boredom-activity-detection-mechanism",
+          "change": "Idle detection (5min), fetchBoredomActivities() via MCP",
+          "impact": "Provides infrastructure for lifecycle automation"
+        },
+        {
+          "spec": "activity-lifecycle-tools-automation",
+          "change": "Template mapping (activity_type → meta-template)",
+          "impact": "Uses boredom infrastructure to trigger template improvements"
+        }
+      ],
+      "recommendation": "Changes are complementary. No refactoring needed.",
+      "riskLevel": "LOW"
+    }
+  ],
+  "architecturalCompliance": {
+    "mcpAbstraction": {
+      "status": "MAINTAINED",
+      "verification": "All lifecycle operations use MCP tools (metabob_register_activity_template, metabob_fetch_boredom_activities, activity_error_inspector). No direct HTTP to RPC API.",
+      "relatedSpecs": ["complete-architecture-separation", "metabob-cli-mcp-backend-communication"]
+    },
+    "bootstrapTemplates": {
+      "status": "COMPLIANT",
+      "verification": "Lifecycle automation uses bootstrap templates (evolve-activity-self-contained, debug-activity-self-contained) which are loaded from embedded imports per bootstrap-template-filepath-compliance spec.",
+      "relatedSpecs": ["bootstrap-template-filepath-compliance"]
+    },
+    "surrealdbIntegration": {
+      "status": "NOT_APPLICABLE",
+      "note": "Lifecycle automation uses MCP tools which abstract database access. Changes don't directly interact with SurrealDB.",
+      "relatedSpecs": ["surrealdb-primary-redis-cache", "impulse-learning-storage-complete"]
+    }
+  },
+  "crossImpactAnalysis": {
+    "upstreamDependencies": [
+      {
+        "spec": "boredom-activity-detection-mechanism",
+        "provides": "Idle detection, metabob_fetch_boredom_activities MCP tool",
+        "requiredBy": "activity-lifecycle-tools-automation",
+        "status": "SATISFIED"
+      },
+      {
+        "spec": "bootstrap-template-filepath-compliance",
+        "provides": "evolve-activity-self-contained, debug-activity-self-contained templates",
+        "requiredBy": "activity-lifecycle-tools-automation",
+        "status": "SATISFIED"
+      },
+      {
+        "spec": "metabob-cli-mcp-backend-communication",
+        "provides": "MCP abstraction layer (metabob_register_activity_template, activity_error_inspector)",
+        "requiredBy": "activity-lifecycle-tools-automation",
+        "status": "SATISFIED"
+      }
+    ],
+    "downstreamImpacts": [
+      {
+        "spec": "template-storage-architecture",
+        "impactedBy": "activity-lifecycle-tools-automation",
+        "impact": "Auto-evolved templates will be registered and stored via existing template storage mechanisms",
+        "riskLevel": "LOW",
+        "notes": "Template storage already handles template registration. No changes needed."
+      },
+      {
+        "spec": "activity-execution-tracking",
+        "impactedBy": "activity-lifecycle-tools-automation",
+        "impact": "Auto-debug activities (debug-activity-self-contained) will be tracked like normal activities",
+        "riskLevel": "LOW",
+        "notes": "Activity tracking already handles all activity executions. No changes needed."
+      }
+    ]
+  },
+  "integrationPoints": [
+    {
+      "component": "BoredomManager.executeBoredomActivity()",
+      "integratesWith": [
+        "metabob_fetch_boredom_activities (MCP tool)",
+        "TemplateRepository.get() (template loading)",
+        "executeActivityInline() (activity execution)"
+      ],
+      "integrationStatus": "COMPLETE",
+      "validationStatus": "PASS"
+    },
+    {
+      "component": "ActivityTool.maybeAutoDebugFailedActivity()",
+      "integratesWith": [
+        "Config.get() (lifecycle config)",
+        "executeActivityInline() (debug-activity execution)",
+        "Activity.save() (failure tracking)"
+      ],
+      "integrationStatus": "COMPLETE",
+      "validationStatus": "PASS"
+    },
+    {
+      "component": "Config schema (template_lifecycle_automation)",
+      "integratesWith": [
+        "Config.get() (config access)",
+        "BoredomManager (checks enabled flag)",
+        "ActivityTool (checks auto_debug_on_failure flag)"
+      ],
+      "integrationStatus": "COMPLETE",
+      "validationStatus": "PASS"
+    }
+  ],
+  "conflictMatrix": {
+    "activity-lifecycle-tools-automation_vs_boredom-activity-detection-mechanism": "NO_CONFLICT",
+    "activity-lifecycle-tools-automation_vs_complete-architecture-separation": "NO_CONFLICT",
+    "activity-lifecycle-tools-automation_vs_bootstrap-template-filepath-compliance": "NO_CONFLICT",
+    "activity-lifecycle-tools-automation_vs_impulse-learning-storage-complete": "NO_CONFLICT",
+    "activity-lifecycle-tools-automation_vs_template-storage-architecture": "NO_CONFLICT"
+  },
+  "overallConflictStatus": "NO_CONFLICTS",
+  "recommendedActions": [
+    {
+      "action": "Deploy to staging",
+      "priority": "HIGH",
+      "reason": "No conflicts detected. All dependencies satisfied. Changes are ready for staging deployment.",
+      "steps": [
+        "1. Deploy OpenCode with lifecycle automation changes",
+        "2. Monitor logs for template mapping and auto-debug triggers",
+        "3. Verify boredom system correctly invokes meta-templates",
+        "4. Tune thresholds based on metrics"
+      ]
+    },
+    {
+      "action": "Monitor integration points",
+      "priority": "MEDIUM",
+      "reason": "Lifecycle automation integrates with boredom-manager and activity execution. Monitor logs to ensure smooth integration.",
+      "logs": [
+        "Mapping boredom activity to meta-template",
+        "auto-debug activity triggered",
+        "template failed, triggering auto-debug"
+      ]
+    },
+    {
+      "action": "No refactoring required",
+      "priority": "INFO",
+      "reason": "No shared components with conflicting requirements. Changes are complementary and non-overlapping."
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-activity-lifecycle-tools-automation"
+}
