@@ -1,0 +1,161 @@
+{
+  "specificationName": "MCP Data Flow Validation in Local Kubernetes",
+  "validationDate": "2026-03-04T06:55:21.968Z",
+  "environment": "Local Kubernetes (namespace: metabob)",
+  "validationResults": [
+    {
+      "testCase": "Backend Deployment Status",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "Deployment exists",
+          "passed": true,
+          "details": "Found deployment: metabob-rpc-api",
+          "actual": "metabob-rpc-api",
+          "expected": "metabob-rpc-api"
+        },
+        {
+          "name": "At least 1 ready replica",
+          "passed": true,
+          "details": "Ready replicas: 1",
+          "actual": 1,
+          "expected": ">=1"
+        },
+        {
+          "name": "At least 1 available replica",
+          "passed": true,
+          "details": "Available replicas: 1",
+          "actual": 1,
+          "expected": ">=1"
+        },
+        {
+          "name": "At least 1 running pod",
+          "passed": true,
+          "details": "Running pods: 1",
+          "actual": 1,
+          "expected": ">=1"
+        }
+      ],
+      "errors": [],
+      "duration_ms": 202
+    },
+    {
+      "testCase": "Backend Logs - MCP_DATA_FLOW Markers",
+      "status": "FAIL",
+      "checks": [
+        {
+          "name": "MCP_DATA_FLOW markers found in logs",
+          "passed": false,
+          "details": "Found 0 occurrences of [MCP_DATA_FLOW]",
+          "actual": 0,
+          "expected": ">0"
+        },
+        {
+          "name": "Processing impulses_used log pattern",
+          "passed": false,
+          "details": "Pattern not found in logs",
+          "actual": false,
+          "expected": true
+        },
+        {
+          "name": "Created impulse_usage records log pattern",
+          "passed": false,
+          "details": "Pattern not found in logs",
+          "actual": false,
+          "expected": true
+        }
+      ],
+      "errors": [],
+      "duration_ms": 215
+    },
+    {
+      "testCase": "SurrealDB Connection",
+      "status": "SKIP",
+      "checks": [
+        {
+          "name": "SurrealDB connection (manual check required)",
+          "passed": false,
+          "details": "Manual verification required: Connect to SurrealDB pod and verify database accessibility",
+          "actual": "SKIP",
+          "expected": "Connected"
+        }
+      ],
+      "errors": [
+        "Automated SurrealDB connection check not implemented. Please verify manually with: kubectl port-forward svc/surrealdb 8000:8000"
+      ],
+      "duration_ms": 0
+    },
+    {
+      "testCase": "Activity Execution Record Schema",
+      "status": "SKIP",
+      "checks": [
+        {
+          "name": "activity_executions table schema (manual check required)",
+          "passed": false,
+          "details": "Manual verification required: Query SurrealDB to verify impulses_used and component_changes fields exist",
+          "actual": "SKIP",
+          "expected": "Fields: impulses_used, component_changes"
+        }
+      ],
+      "errors": [
+        "Automated schema check not implemented. Please verify manually with query: INFO FOR TABLE activity_executions;"
+      ],
+      "duration_ms": 0
+    },
+    {
+      "testCase": "Impulse Usage Table Population",
+      "status": "SKIP",
+      "checks": [
+        {
+          "name": "impulse_usage table population (manual check required)",
+          "passed": false,
+          "details": "Manual verification required: Query impulse_usage table to verify records exist",
+          "actual": "SKIP",
+          "expected": "Records with activity_id, impulse_id, tokens_loaded, was_useful"
+        }
+      ],
+      "errors": [
+        "Automated table check not implemented. Please verify manually with query: SELECT * FROM impulse_usage LIMIT 10;"
+      ],
+      "duration_ms": 0
+    },
+    {
+      "testCase": "Impulse Registry Aggregates",
+      "status": "SKIP",
+      "checks": [
+        {
+          "name": "impulse_registry table aggregates (manual check required)",
+          "passed": false,
+          "details": "Manual verification required: Query impulse_registry table to verify aggregate stats",
+          "actual": "SKIP",
+          "expected": "Records with total_uses, success_count, avg_tokens_per_use"
+        }
+      ],
+      "errors": [
+        "Automated table check not implemented. Please verify manually with query: SELECT * FROM impulse_registry LIMIT 10;"
+      ],
+      "duration_ms": 0
+    },
+    {
+      "testCase": "Learning API Endpoints",
+      "status": "SKIP",
+      "checks": [
+        {
+          "name": "Learning API endpoints (manual check required)",
+          "passed": false,
+          "details": "Manual verification required: Test learning API endpoints to verify data returned",
+          "actual": "SKIP",
+          "expected": "Endpoints return populated learning data"
+        }
+      ],
+      "errors": [
+        "Automated API check not implemented. Please verify manually with: curl http://localhost:8080/api/v1/learning-loop/executions"
+      ],
+      "duration_ms": 0
+    }
+  ],
+  "overallStatus": "FAIL",
+  "summary": "MCP Data Flow Validation: FAIL\n\nResults: 1 passed, 1 failed, 5 skipped\n\nFailed Checks:\n  - Backend Logs - MCP_DATA_FLOW Markers\n\nSkipped Checks (Manual Verification Required):\n  - SurrealDB Connection\n  - Activity Execution Record Schema\n  - Impulse Usage Table Population\n  - Impulse Registry Aggregates\n  - Learning API Endpoints\n\nPassed Checks:\n  - Backend Deployment Status\n",
+  "logExcerpts": {},
+  "databaseQueries": []
+}

@@ -1,0 +1,109 @@
+[
+  {
+    "impulseId": "validation-mcp-data-flow-local-k8s-case-1",
+    "name": "Backend Deployment Status",
+    "input": {
+      "namespace": "default",
+      "deployment": "metabob-rpc-api"
+    },
+    "expectedOutput": {
+      "status": "Running",
+      "readyReplicas": 1,
+      "availableReplicas": 1
+    }
+  },
+  {
+    "impulseId": "validation-mcp-data-flow-local-k8s-case-2",
+    "name": "Backend Logs - MCP_DATA_FLOW Markers",
+    "input": {
+      "logPattern": "\\[MCP_DATA_FLOW\\]",
+      "minOccurrences": 1
+    },
+    "expectedOutput": {
+      "found": true,
+      "patterns": [
+        "[MCP_DATA_FLOW] Processing N impulses_used",
+        "[MCP_DATA_FLOW] Created N impulse_usage records"
+      ]
+    }
+  },
+  {
+    "impulseId": "validation-mcp-data-flow-local-k8s-case-3",
+    "name": "SurrealDB Connection",
+    "input": {
+      "service": "surrealdb",
+      "database": "metabob",
+      "namespace": "devbob"
+    },
+    "expectedOutput": {
+      "connected": true,
+      "databaseExists": true
+    }
+  },
+  {
+    "impulseId": "validation-mcp-data-flow-local-k8s-case-4",
+    "name": "Activity Execution Record Schema",
+    "input": {
+      "table": "activity_executions",
+      "requiredFields": ["impulses_used", "component_changes"]
+    },
+    "expectedOutput": {
+      "tableExists": true,
+      "fieldsPresent": true,
+      "schema": {
+        "impulses_used": "array",
+        "component_changes": "array"
+      }
+    }
+  },
+  {
+    "impulseId": "validation-mcp-data-flow-local-k8s-case-5",
+    "name": "Impulse Usage Table Population",
+    "input": {
+      "table": "impulse_usage",
+      "minimumRecords": 0
+    },
+    "expectedOutput": {
+      "tableExists": true,
+      "recordsFound": true,
+      "sampleRecord": {
+        "activity_id": "string",
+        "impulse_id": "string",
+        "tokens_loaded": "number",
+        "was_useful": "boolean"
+      }
+    }
+  },
+  {
+    "impulseId": "validation-mcp-data-flow-local-k8s-case-6",
+    "name": "Impulse Registry Aggregates",
+    "input": {
+      "table": "impulse_registry",
+      "minimumRecords": 0
+    },
+    "expectedOutput": {
+      "tableExists": true,
+      "aggregatesPresent": true,
+      "sampleRecord": {
+        "impulse_id": "string",
+        "total_uses": "number",
+        "success_count": "number",
+        "avg_tokens_per_use": "number"
+      }
+    }
+  },
+  {
+    "impulseId": "validation-mcp-data-flow-local-k8s-case-7",
+    "name": "Learning API Endpoints",
+    "input": {
+      "endpoints": [
+        "/api/v1/learning-loop/executions",
+        "/api/v1/learning-loop/impulse-mappings"
+      ]
+    },
+    "expectedOutput": {
+      "endpointsAccessible": true,
+      "dataPopulated": true
+    }
+  }
+]
