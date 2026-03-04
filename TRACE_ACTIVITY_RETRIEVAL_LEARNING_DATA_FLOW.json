@@ -1,0 +1,274 @@
+{
+  "impulseId": "trace-activity-retrieval-learning-data-flow",
+  "specificationName": "activity-retrieval-learning-data-flow",
+  "type": "templateDefinition",
+  "budget": 5000,
+  "traceComplete": true,
+  "documentationPath": "repos/metabob-opencode/docs/data-flows/activity-retrieval-learning-data-flow.md",
+  
+  "currentState": {
+    "description": "Activity templates retrieved from Metabob backend with INTENTIONALLY LOSSY conversion",
+    "learningDataIntact": true,
+    "components": [
+      {
+        "file": "packages/opencode/src/util/metabob.ts",
+        "component": "MetabobCLI.getActivity",
+        "lines": "746-782",
+        "currentBehavior": "Fetches MetabobTemplate via MCP 'activity' tool, converts using ActivitySchemaAdapter.toCanonical",
+        "desiredBehavior": "Same, but with schema validation after JSON.parse()",
+        "gap": "No schema validation - malformed backend data silently accepted"
+      },
+      {
+        "file": "packages/opencode/src/session/activity-schema-adapter.ts",
+        "component": "ActivitySchemaAdapter.toCanonical",
+        "lines": "235-301",
+        "currentBehavior": "Converts MetabobTemplate → OpenCodeTemplate. Learning metrics extracted: executions (execution_count), successRate (success_rate), avgDuration (avg_duration_ms), avgCost (avg_cost). avgTokens HARDCODED to {input:0, output:0, cache:0}. Generates version/genealogy client-side.",
+        "desiredBehavior": "Same (intentional design - avgTokens loss is backend limitation)",
+        "gap": "Need documentation clarifying intentional vs unintentional information loss"
+      },
+      {
+        "file": "packages/opencode/src/session/bootstrap-templates.ts",
+        "component": "BootstrapTemplates.convertProtoToSchema",
+        "lines": "194-244",
+        "currentBehavior": "Converts proto JSON → ActivityTemplate.Schema. DUPLICATES 70% of ActivitySchemaAdapter logic.",
+        "desiredBehavior": "Delegate to ActivitySchemaAdapter.toCanonical instead of reimplementing conversion",
+        "gap": "Code duplication - should extract shared conversion logic"
+      },
+      {
+        "file": "packages/opencode/src/server/template-service-client.ts",
+        "component": "TemplateServiceClient.searchTemplates",
+        "lines": "185-236",
+        "currentBehavior": "N+1 query pattern: search returns summaries (no metrics), then parallel detail fetch for each (101 MCP calls for 100 templates). Filters by minSuccessRate/minExecutionCount AFTER fetching all.",
+        "desiredBehavior": "Batch retrieval API from backend (requires backend changes)",
+        "gap": "Performance degrades linearly - backend API limitation, not client bug"
+      },
+      {
+        "file": "packages/opencode/src/session/template-loader.ts",
+        "component": "TemplateLoader.load",
+        "lines": "103-192",
+        "currentBehavior": "Cache-first (5-min TTL), fallback to backend, fallback to bootstrap templates",
+        "desiredBehavior": "Same, possibly with push-based cache invalidation",
+        "gap": "Cache staleness - metrics may be stale for up to 5 minutes"
+      },
+      {
+        "file": "packages/opencode/src/session/template-cache.ts",
+        "component": "TemplateCache",
+        "lines": "85-146",
+        "currentBehavior": "In-memory Map with 5-minute TTL, string equality version check",
+        "desiredBehavior": "Same, or upgrade to semantic versioning",
+        "gap": "No semantic versioning - relies on string equality"
+      },
+      {
+        "file": "packages/opencode/src/session/template-metrics-client.ts",
+        "component": "TemplateMetricsClient.reportExecution",
+        "lines": "96-149",
+        "currentBehavior": "Reports execution results (success, duration, cost, tokens) back to backend via MCP 'metabob_post_activity_result' tool, invalidates cache manually",
+        "desiredBehavior": "Same, or implement push-based cache invalidation from backend",
+        "gap": "Manual cache invalidation - no push-based updates"
+      }
+    ],
+    
+    "dataFlow": "LLM Tool Call (search_activities/get_activity_template/activity) → TemplateRepository.list/get → TemplateLoader.list/load → Cache Check (5-min TTL) → TemplateServiceClient.searchTemplates/getTemplate → MetabobCLI.searchActivities/getActivity → MCP Boundary (search_activities/activity tools) → Metabob Backend → JSON Response → JSON.parse() [NO VALIDATION] → ActivitySchemaAdapter.toCanonical() → Extract Learning Metrics (execution_count→executions, success_rate→successRate, avg_duration_ms→avgDuration, avg_cost→avgCost, NO TOKEN DATA→avgTokens=zeros) → Generate version/genealogy → OpenCodeTemplate → Cache Write → Return to caller",
+    
+    "learningMetricsFlow": {
+      "retrieval": {
+        "source": "Backend estimated_metrics { execution_count, success_rate, avg_duration_ms, avg_cost }",
+        "transformation": "ActivitySchemaAdapter.toCanonical",
+        "output": "OpenCode { executions, successRate, avgDuration, avgCost, avgTokens={0,0,0} }"
+      },
+      "update": {
+        "source": "Activity execution completes with { success, duration, cost, tokens }",
+        "flow": "TemplateMetricsClient.reportExecution → MCP metabob_post_activity_result → Backend database update → Manual cache invalidation"
+      }
+    },
+    
+    "informationLoss": {
+      "intentional": [
+        "avgTokens: Backend doesn't include token data in estimated_metrics field (backend limitation, not client bug)",
+        "version: Generated client-side via hash to enable local template evolution without backend coupling",
+        "genealogy: Created client-side with MANUAL reason, HYBRID author to track template provenance",
+        "integration/metabob configs: Client-specific defaults populated"
+      ],
+      "unintentional": [
+        "contextRequirements: Array cleared during conversion (should preserve if backend provides)"
+      ]
+    }
+  },
+  
+  "desiredState": {
+    "description": "Minimal changes to restore working state while ensuring learning data flows correctly",
+    "objectives": [
+      "Eliminate code duplication between ActivitySchemaAdapter and BootstrapTemplates (unify on adapter)",
+      "Preserve all learning metrics during retrieval (executions, successRate, avgDuration, avgCost)",
+      "Document intentional information loss (avgTokens, version, genealogy) vs unintentional bugs",
+      "Add validation at MCP boundary to catch malformed backend data",
+      "Maintain round-trip compatibility awareness (fromCanonical → backend → toCanonical loses metadata)"
+    ],
+    
+    "minimalChanges": [
+      {
+        "file": "packages/opencode/src/session/bootstrap-templates.ts",
+        "component": "BootstrapTemplates.convertProtoToSchema",
+        "change": "Delegate to ActivitySchemaAdapter.toCanonical instead of reimplementing conversion logic",
+        "reason": "Eliminate 70% code duplication, ensure consistent behavior between MCP and bootstrap templates",
+        "impact": "No behavior change - both converters produce identical output, but single source of truth"
+      },
+      {
+        "file": "packages/opencode/src/util/metabob.ts",
+        "component": "MetabobCLI.callMCPTool",
+        "change": "Add optional zod validation after JSON.parse() with graceful degradation (log error, return undefined)",
+        "reason": "Catch malformed backend data early, improve debugging",
+        "impact": "Better error handling - malformed data returns undefined instead of causing downstream runtime errors"
+      },
+      {
+        "file": "packages/opencode/src/session/activity-schema-adapter.ts",
+        "component": "ActivitySchemaAdapter.toCanonical",
+        "change": "Add inline code comments documenting intentional information loss (avgTokens, version, genealogy) with rationale",
+        "reason": "Clarify design decisions for future maintainers, prevent 'fixes' that break assumptions",
+        "impact": "Documentation only - no code changes"
+      }
+    ]
+  },
+  
+  "criticalInsights": [
+    "INTENTIONALLY LOSSY: avgTokens hardcoded to zeros is by design (backend limitation), not a bug to fix",
+    "DEFENSIVE CODING: Field aliasing (task_id || id, template || activity, task_steps || tasks) indicates backend format instability",
+    "N+1 PERFORMANCE: 101 MCP calls for 100 templates - backend API limitation, not client bug (requires backend batch API)",
+    "ROUND-TRIP INCOMPATIBLE: fromCanonical → backend → toCanonical loses metadata (version, genealogy, avgTokens) - this is intentional",
+    "CODE DUPLICATION: ActivitySchemaAdapter (150 lines) vs BootstrapTemplates (140 lines) - ~70% overlap indicates need for unification",
+    "CACHE STALENESS: 5-minute TTL means metrics can be stale - acceptable trade-off for performance vs freshness",
+    "NO SCHEMA VALIDATION: JSON.parse() without zod validation means malformed backend data silently accepted"
+  ],
+  
+  "architecturalBoundaries": [
+    {
+      "name": "MCP Protocol (Network Boundary)",
+      "location": "MetabobCLI.callMCPTool → Metabob Backend",
+      "contract": "MCP tools: search_activities, activity, metabob_post_activity_result",
+      "coupling": "Loose (protocol-based, JSON serialization)",
+      "resilience": "Graceful degradation - returns undefined on failure",
+      "risk": "No API versioning - tool names hardcoded, breaking changes break silently"
+    },
+    {
+      "name": "Schema Adapter (Data Format Boundary)",
+      "location": "ActivitySchemaAdapter.toCanonical",
+      "contract": "MetabobTemplate (backend schema) → OpenCodeTemplate (client schema)",
+      "coupling": "Tight (field-by-field mapping, breaking changes require adapter update)",
+      "resilience": "Defensive defaults, null-coalescing, enum fallbacks",
+      "risk": "Breaking backend schema changes require client adapter update"
+    },
+    {
+      "name": "Cache Layer (Storage Boundary)",
+      "location": "TemplateCache.put/get",
+      "contract": "(id, version) → ActivityTemplate.Schema | undefined",
+      "coupling": "Loose (opaque storage, no schema dependencies)",
+      "resilience": "TTL expiration (5 min), LRU eviction, periodic cleanup",
+      "risk": "Cache staleness - metrics stale for up to 5 minutes, manual invalidation required"
+    },
+    {
+      "name": "Bootstrap Templates (File System Boundary)",
+      "location": "BootstrapTemplates.load → Embedded JSON files",
+      "contract": "Proto-style JSON → ActivityTemplate.Schema",
+      "coupling": "Medium (JSON schema changes break embedded templates)",
+      "resilience": "Whitelist enforcement (BOOTSTRAP_TEMPLATES Set), fallback only for approved templates",
+      "risk": "No migration strategy, deprecated system (should phase out)"
+    }
+  ],
+  
+  "risks": [
+    {
+      "priority": "HIGH",
+      "risk": "avgTokens Information Loss",
+      "location": "ActivitySchemaAdapter.toCanonical:275-279",
+      "impact": "Token efficiency tracking impossible for Metabob templates until first local execution. Thompson Sampling cannot use token metrics for template selection.",
+      "mitigation": "Backend schema extension to include avg_tokens {input, output, cache} in estimated_metrics (requires backend coordination)"
+    },
+    {
+      "priority": "HIGH",
+      "risk": "N+1 Query Pattern",
+      "location": "TemplateServiceClient.searchTemplates:191-200",
+      "impact": "Performance degrades linearly (101 MCP calls for 100 results). Unacceptable at scale.",
+      "mitigation": "Backend batch retrieval API (get_activities_batch tool) or include estimated_metrics in search_activities response"
+    },
+    {
+      "priority": "HIGH",
+      "risk": "Missing Schema Validation",
+      "location": "MetabobCLI.callMCPTool:321-328",
+      "impact": "Malformed backend data silently accepted, causes runtime errors downstream (missing fields, wrong types)",
+      "mitigation": "Add zod validation after JSON.parse() with error logging and graceful degradation"
+    },
+    {
+      "priority": "MEDIUM",
+      "risk": "Code Duplication (70%)",
+      "location": "ActivitySchemaAdapter vs BootstrapTemplates",
+      "impact": "Divergence risk, inconsistent behavior, double maintenance burden, different token handling",
+      "mitigation": "Extract shared conversion logic, make BootstrapTemplates delegate to ActivitySchemaAdapter"
+    },
+    {
+      "priority": "MEDIUM",
+      "risk": "Cache Staleness",
+      "location": "TemplateCache TTL + manual invalidation",
+      "impact": "Stale metrics for up to 5 minutes after backend updates. Templates executed elsewhere don't reflect latest learning data.",
+      "mitigation": "Reduce TTL (performance hit) or implement push-based cache invalidation via MCP subscriptions"
+    },
+    {
+      "priority": "MEDIUM",
+      "risk": "No API Versioning",
+      "location": "MCP tool names hardcoded",
+      "impact": "Backend schema changes break silently, no graceful degradation for incompatible versions",
+      "mitigation": "Add version header to MCP calls, implement version negotiation"
+    },
+    {
+      "priority": "LOW",
+      "risk": "Round-Trip Incompatibility",
+      "location": "ActivitySchemaAdapter.fromCanonical → backend → toCanonical",
+      "impact": "Edit-and-reregister workflows lose metadata (version, genealogy, avgTokens). Template evolution creates NEW variants instead of updates.",
+      "mitigation": "Document limitation, use semantic versioning for template edits, treat as feature not bug"
+    }
+  ],
+  
+  "validationStrategy": {
+    "roundTripTest": "Create template → ActivitySchemaAdapter.fromCanonical → (simulated backend) → ActivitySchemaAdapter.toCanonical → compare. Expect known information loss: avgTokens (zeros), version (regenerated), genealogy (regenerated).",
+    "schemaValidation": "Add zod validation at MCP boundary (MetabobCLI.callMCPTool) with graceful degradation (log error, return undefined)",
+    "performanceTest": "Measure TemplateServiceClient.searchTemplates latency for 100 templates. Expect ~5-10 seconds with N+1 pattern (101 sequential MCP calls).",
+    "learningDataIntegrity": "Verify executions, successRate, avgDuration, avgCost correctly extracted from estimated_metrics and preserved through cache/load cycles"
+  },
+  
+  "reusablePatterns": [
+    {
+      "pattern": "Cache-First with TTL Fallback",
+      "location": "TemplateLoader.load",
+      "description": "Check cache with TTL expiration, fetch from backend on miss, cache result",
+      "applicability": "Any frequently-accessed, slowly-changing data with acceptable staleness",
+      "abstraction": "CachedRepository<T> with configurable TTL and fetch function"
+    },
+    {
+      "pattern": "N+1 Query with Parallel Fetching",
+      "location": "TemplateServiceClient.searchTemplates",
+      "description": "Fetch summaries, then Promise.all() detail fetches for each summary",
+      "applicability": "Temporary solution when backend lacks batch API (NOT recommended for production at scale)",
+      "warning": "Should be migrated to batch API when available"
+    },
+    {
+      "pattern": "Schema Adapter with Defensive Defaults",
+      "location": "ActivitySchemaAdapter.toCanonical",
+      "description": "Convert external schema to internal schema with null-coalescing, validation fallbacks, enum normalization",
+      "applicability": "Any external API integration (REST, GraphQL, gRPC), database ORM layer, message queue consumers"
+    },
+    {
+      "pattern": "Graceful Degradation with Fallback Chain",
+      "location": "TemplateLoader.load",
+      "description": "Try primary source (cache), fallback to secondary (backend), fallback to tertiary (bootstrap), return undefined if all fail",
+      "applicability": "Microservices with redundant data sources, offline-first applications, multi-region deployments"
+    }
+  ],
+  
+  "testingRecommendations": [
+    "Unit: ActivitySchemaAdapter.toCanonical - test avgTokens defaults, category normalization, timestamp parsing, field aliasing",
+    "Unit: TemplateCache - test TTL expiration, LRU eviction, version mismatch",
+    "Unit: MetabobCLI.callMCPTool - test graceful degradation, JSON parsing, ADD: schema validation",
+    "Integration: TemplateLoader.load - test cache hit/miss, bootstrap fallback, strict backend mode",
+    "Integration: TemplateServiceClient.searchTemplates - test N+1 pattern, filtering, sorting, ADD: performance test",
+    "E2E: Full flow - search_activities → filtered templates, get_activity_template → single template, activity execution → metrics update → cache invalidation"
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "impulseId": "validation-results-activity-retrieval-learning-data-flow",
+  "specificationName": "activity-retrieval-learning-data-flow",
+  "type": "memo",
+  "budget": 2000,
+  "executionDate": "2026-03-04",
+  "harnessFile": "repos/metabob-opencode/tests/validation-harnesses/activity-retrieval-learning-data-flow-harness.ts",
+  
+  "validationResults": [
+    {
+      "testCase": "validation-activity-retrieval-learning-data-flow-case-1",
+      "name": "Round-trip conversion with full learning metrics",
+      "status": "PASS",
+      "description": "Validates that templates with complete learning metrics are correctly converted through toCanonical → fromCanonical → toCanonical cycle",
+      "input": {
+        "activity_id": "test-template-001",
+        "estimated_metrics": {
+          "execution_count": 42,
+          "success_rate": 0.85,
+          "avg_duration_ms": 15000,
+          "avg_cost": 0.023
+        }
+      },
+      "expected": {
+        "learningDataPreserved": {
+          "executions": 42,
+          "successRate": 0.85,
+          "avgDuration": 15000,
+          "avgCost": 0.023
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      },
+      "actual": {
+        "learningDataPreserved": {
+          "executions": 42,
+          "successRate": 0.85,
+          "avgDuration": 15000,
+          "avgCost": 0.023
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      },
+      "difference": null,
+      "errors": []
+    },
+    {
+      "testCase": "validation-activity-retrieval-learning-data-flow-case-2",
+      "name": "Missing metrics fields use defaults",
+      "status": "PASS",
+      "description": "Validates that templates without estimated_metrics field use defensive defaults (all metrics → 0)",
+      "input": {
+        "activity_id": "test-template-002",
+        "estimated_metrics": null
+      },
+      "expected": {
+        "learningDataPreserved": {
+          "executions": 0,
+          "successRate": 0,
+          "avgDuration": 0,
+          "avgCost": 0
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      },
+      "actual": {
+        "learningDataPreserved": {
+          "executions": 0,
+          "successRate": 0,
+          "avgDuration": 0,
+          "avgCost": 0
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      },
+      "difference": null,
+      "errors": []
+    },
+    {
+      "testCase": "validation-activity-retrieval-learning-data-flow-case-3",
+      "name": "Partial metrics with null-coalescing",
+      "status": "PASS",
+      "description": "Validates that templates with partial estimated_metrics use null-coalescing (present fields preserved, missing → 0)",
+      "input": {
+        "activity_id": "test-template-003",
+        "estimated_metrics": {
+          "execution_count": 10,
+          "success_rate": 0.5
+        }
+      },
+      "expected": {
+        "learningDataPreserved": {
+          "executions": 10,
+          "successRate": 0.5,
+          "avgDuration": 0,
+          "avgCost": 0
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      },
+      "actual": {
+        "learningDataPreserved": {
+          "executions": 10,
+          "successRate": 0.5,
+          "avgDuration": 0,
+          "avgCost": 0
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      },
+      "difference": null,
+      "errors": []
+    }
+  ],
+  
+  "summary": {
+    "totalTests": 3,
+    "passed": 3,
+    "failed": 0,
+    "overallStatus": "PASS"
+  },
+  
+  "keyValidations": {
+    "learningDataIntegrity": {
+      "status": "PASS",
+      "description": "All learning metrics (executions, successRate, avgDuration, avgCost) correctly extracted from estimated_metrics and preserved through conversion"
+    },
+    "roundTripConversion": {
+      "status": "PASS",
+      "description": "Learning data preserved through toCanonical → fromCanonical → toCanonical cycle"
+    },
+    "intentionalInformationLoss": {
+      "status": "PASS",
+      "description": "avgTokens correctly hardcoded to zeros (backend limitation), version and genealogy regenerated (intentional design)"
+    },
+    "defensiveDefaults": {
+      "status": "PASS",
+      "description": "Missing or partial metrics use null-coalescing to default values (0)"
+    }
+  },
+  
+  "specificationCompliance": {
+    "retrievableWithCompleteSchema": {
+      "status": "COMPLIANT",
+      "evidence": "ActivitySchemaAdapter.toCanonical successfully extracts all learning fields from estimated_metrics"
+    },
+    "noInformationLossForLearning": {
+      "status": "COMPLIANT_WITH_DOCUMENTED_EXCEPTIONS",
+      "evidence": "executions, successRate, avgDuration, avgCost preserved. avgTokens=zeros is intentional backend limitation."
+    },
+    "noClientSideConversionErrors": {
+      "status": "COMPLIANT",
+      "evidence": "Defensive defaults prevent runtime errors. Malformed/missing data handled gracefully with null-coalescing."
+    },
+    "bidirectionalConversion": {
+      "status": "INTENTIONALLY_LOSSY_BY_DESIGN",
+      "evidence": "Round-trip loses avgTokens (reset to zeros), version and genealogy (regenerated). Documented as design decision."
+    }
+  },
+  
+  "conclusion": {
+    "overallStatus": "PASS",
+    "message": "All validation tests passed. Specification is satisfied.",
+    "confidence": "HIGH",
+    "evidence": [
+      "3/3 test cases passed",
+      "Learning data integrity verified (executions, successRate, avgDuration, avgCost)",
+      "Round-trip conversion preserves core metrics",
+      "Intentional information loss documented and verified (avgTokens, version, genealogy)",
+      "Defensive defaults work correctly for missing/partial data"
+    ],
+    "recommendations": [
+      "Continue using validation harness for regression testing",
+      "Run harness after any changes to ActivitySchemaAdapter or BootstrapTemplates",
+      "Consider expanding test coverage for edge cases (very large metrics, negative values, etc.)"
+    ]
+  }
+}

@@ -1,387 +1,259 @@
-# Validation Harness Complete: Correct MCP Tool Name and Parameters
+# Validation Harness Creation Complete
 
-**Date:** 2026-03-02  
-**Specification:** Correct MCP Tool Name and Parameters  
-**Status:** ✅ VALIDATION HARNESS COMPLETE  
-**Test Result:** ✅ ALL CHECKS PASS (6/6)
+**Specification**: `activity-retrieval-learning-data-flow`  
+**Date**: 2026-03-04  
+**Status**: ✅ HARNESS CREATED
 
 ---
 
 ## Summary
 
-Created a comprehensive validation harness to verify the MCP tool name and parameters fix. The harness performs code inspection and cross-file validation to ensure the fix is correctly applied.
-
-### Harness File
-
-**Location:** `tests/validation-harnesses/mcp-tool-name-parameters-harness.ts`  
-**Type:** TypeScript validation script (no LLM required)  
-**Execution:** `npx tsx tests/validation-harnesses/mcp-tool-name-parameters-harness.ts`  
-**Exit Code:** 0 = PASS, 1 = FAIL
+Successfully created automated validation harness for activity-retrieval-learning-data-flow specification. The harness tests round-trip conversion, learning data integrity, and intentional information loss without requiring LLM calls.
 
 ---
 
-## Validation Checks
+## Deliverables
 
-The harness performs 6 independent validation checks:
+### 1. Validation Harness File ✅
 
-### Check 1: Tool Name Prefix ✅
+**Location**: `repos/metabob-opencode/tests/validation-harnesses/activity-retrieval-learning-data-flow-harness.ts`  
+**Lines**: 350+ lines  
+**Exports**:
+- `runValidation(): Promise<ValidationSummary>` - Run all test cases
+- `runValidationForCase(caseId: string): Promise<ValidationResult>` - Run single test case
+- CLI entry point with exit codes (0=pass, 1=fail)
 
-**Validates:** Tool name has `metabob_` prefix  
-**Expected:** `metabob_post_activity_result`  
-**Actual:** `metabob_post_activity_result`  
-**Result:** ✅ PASS
+**Features**:
+- 3 test cases covering full metrics, missing fields, partial data
+- Deterministic validation logic (no LLM required)
+- Round-trip conversion testing (toCanonical → fromCanonical → toCanonical)
+- Learning data integrity verification
+- Intentional loss verification (avgTokens, version, genealogy)
 
-### Check 2: Parameter Name Snake Case ✅
+###2. Test Case Impulses ✅
 
-**Validates:** Parameter name is `activity_id` (snake_case, not camelCase)  
-**Expected:** `activity_id`  
-**Actual:** `activity_id`  
-**Result:** ✅ PASS
+Created 3 historical test cases stored as impulse definitions:
 
-### Check 3: No Backend Parameter ✅
+1. **validation-activity-retrieval-learning-data-flow-case-1**
+   - Name: Round-trip conversion with full learning metrics
+   - Input: Template with executions=42, successRate=0.85, avgDuration=15000, avgCost=0.023
+   - Expected: All learning metrics preserved, avgTokens=zeros, version/genealogy regenerated
 
-**Validates:** No invalid `backend` parameter in tool call  
-**Expected:** No `backend` parameter  
-**Actual:** No `backend` parameter found  
-**Result:** ✅ PASS
+2. **validation-activity-retrieval-learning-data-flow-case-2**
+   - Name: Missing metrics fields use defaults
+   - Input: Template without estimated_metrics field
+   - Expected: Learning metrics default to 0, avgTokens=zeros
 
-### Check 4: MCP Tool Registration ✅
+3. **validation-activity-retrieval-learning-data-flow-case-3**
+   - Name: Partial metrics with null-coalescing
+   - Input: Template with partial estimated_metrics (only execution_count and success_rate)
+   - Expected: Present fields preserved, missing fields default to 0
 
-**Validates:** Tool registered in MCP registry at line 301  
-**Expected:** `metabob_post_activity_result`  
-**Actual:** `metabob_post_activity_result`  
-**Result:** ✅ PASS
+### 3. README Documentation ✅
 
-### Check 5: Tool Name Match ✅
+**Location**: `repos/metabob-opencode/tests/validation-harnesses/README.md`  
+**Content**:
+- Purpose and use cases for validation harnesses
+- Structure and patterns
+- Usage examples (CLI, programmatic, single case)
+- CI/CD integration guide
+- Relationship to trace-enforce-validate loop
 
-**Validates:** Client and registry use same tool name  
-**Expected:** Both use `metabob_post_activity_result`  
-**Actual:** Client: `metabob_post_activity_result`, Registry: `metabob_post_activity_result`  
-**Result:** ✅ PASS
+### 4. Harness Summary JSON ✅
 
-### Check 6: Documentation Comments ✅
-
-**Validates:** Comments reflect correct tool name  
-**Expected:** `MCP Tool: metabob_post_activity_result`  
-**Actual:** `MCP Tool: metabob_post_activity_result`  
-**Result:** ✅ PASS
-
----
-
-## Test Cases
-
-### Test Case 1: Tool Name Validation
-
-**Impulse ID:** `validation-Correct MCP Tool Name and Parameters-case-1`
-
-**Input:**
-- File: `repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts`
-- Check: Tool name in callMCPTool invocation
-
-**Expected Output:**
-- Tool name: `metabob_post_activity_result`
-- Has prefix: `true`
-- Format: `metabob_*` naming convention
-
-**Validation Method:**
-1. Parse file for `callMCPTool` invocation
-2. Extract tool name from first argument
-3. Verify it starts with `metabob_`
-4. Verify exact name is `metabob_post_activity_result`
-
-**Result:** ✅ PASS
-
----
-
-### Test Case 2: Parameter Name Validation
-
-**Impulse ID:** `validation-Correct MCP Tool Name and Parameters-case-2`
-
-**Input:**
-- File: `repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts`
-- Check: Parameter name in callMCPTool arguments
-
-**Expected Output:**
-- Parameter name: `activity_id`
-- Format: `snake_case` (not camelCase)
-- Maps to: `data.activity_id`
-
-**Validation Method:**
-1. Parse file for `callMCPTool` arguments object
-2. Extract parameter name that maps to `data.activity_id`
-3. Verify it is `activity_id` (snake_case)
-4. Verify it is NOT `activityId` (camelCase)
-
-**Result:** ✅ PASS
-
----
-
-### Test Case 3: No Backend Parameter
-
-**Impulse ID:** `validation-Correct MCP Tool Name and Parameters-case-3`
-
-**Input:**
-- File: `repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts`
-- Check: callMCPTool arguments object
-
-**Expected Output:**
-- No `backend` parameter in arguments
-- Only valid parameters: `activity_id`, `result`
-
-**Validation Method:**
-1. Parse file for `callMCPTool` arguments object
-2. Check if `backend` parameter exists
-3. Verify `backend` is NOT present
-
-**Result:** ✅ PASS
-
----
-
-### Test Case 4: MCP Tool Registration Match
-
-**Impulse ID:** `validation-Correct MCP Tool Name and Parameters-case-4`
-
-**Input:**
-- Client file: `repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts`
-- Registry file: `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py`
-
-**Expected Output:**
-- Client calls tool: `metabob_post_activity_result`
-- Registry registers tool: `metabob_post_activity_result`
-- Names match exactly
-
-**Validation Method:**
-1. Extract tool name from client `callMCPTool`
-2. Extract registered tool name from `@mcp.tool` decorator
-3. Verify both names match
-4. Verify both are `metabob_post_activity_result`
-
-**Result:** ✅ PASS
+**Location**: `VALIDATION_HARNESS_ACTIVITY_RETRIEVAL_SUMMARY.json`  
+**Contains**:
+- Test case definitions with impulse IDs
+- Validation strategy documentation
+- Usage patterns (CLI, programmatic, single case)
+- Expected behavior for each test type
+- Automated validation metadata
 
 ---
 
 ## Validation Strategy
 
-The harness uses a multi-layered validation approach:
+### Round-Trip Test
+```
+Create template → toCanonical → fromCanonical → toCanonical → Compare
+```
 
-### 1. Code Inspection ✅
+**Verifies**:
+- Learning metrics preserved (executions, successRate, avgDuration, avgCost)
+- avgTokens intentionally reset to zeros
+- version regenerated (different full_version)
+- genealogy regenerated
 
-- Static analysis of source files
-- Regex-based extraction of tool names and parameters
-- No runtime execution required
-- Fast and deterministic
+### Learning Data Integrity Test
+```
+Metabob format with estimated_metrics → toCanonical → Extract learning fields
+```
 
-### 2. Cross-File Validation ✅
+**Verifies**:
+- executions = estimated_metrics.execution_count
+- successRate = estimated_metrics.success_rate
+- avgDuration = estimated_metrics.avg_duration_ms
+- avgCost = estimated_metrics.avg_cost
 
-- Verifies consistency between OpenCode client and MCP registry
-- Ensures tool name matches across architectural boundaries
-- Detects drift between client and server
+### Defensive Defaults Test
+```
+Missing or partial fields → toCanonical → Verify null-coalescing to 0
+```
 
-### 3. Signature Matching ✅
-
-- Validates parameter names match MCP tool signature
-- Ensures no extra/invalid parameters
-- Verifies snake_case vs camelCase conventions
-
-### 4. Documentation Verification ✅
-
-- Checks comments reflect actual implementation
-- Prevents documentation drift
-- Ensures developers see correct tool names
+**Verifies**:
+- Missing estimated_metrics defaults to {executions:0, successRate:0, avgDuration:0, avgCost:0}
+- Partial metrics use null-coalescing (missing fields → 0)
 
 ---
 
-## Implementation Details
+## Usage
 
-### Harness Structure
-
-```typescript
-export interface ValidationResult {
-  pass: boolean
-  checks: Array<{
-    name: string
-    pass: boolean
-    actual: any
-    expected: any
-    message: string
-  }>
-  summary: {
-    total: number
-    passed: number
-    failed: number
-  }
-}
-
-export async function runValidation(input?: ValidationInput): Promise<ValidationResult>
+### CLI (for humans)
+```bash
+cd repos/metabob-opencode
+npx tsx tests/validation-harnesses/activity-retrieval-learning-data-flow-harness.ts
 ```
 
-### Usage
+**Expected Output**:
+```
+=== Activity Retrieval Learning Data Flow Validation ===
 
-**Programmatic:**
+Total Tests: 3
+Passed: 3
+Failed: 0
+
+Overall: ✅ PASS
+
+Passed Tests:
+
+  ✅ Round-trip conversion with full learning metrics
+  ✅ Missing metrics fields use defaults
+  ✅ Partial metrics with null-coalescing
+```
+
+### Programmatic (for CI/CD)
 ```typescript
-import { runValidation } from './mcp-tool-name-parameters-harness'
+import { runValidation } from './tests/validation-harnesses/activity-retrieval-learning-data-flow-harness'
+
 const result = await runValidation()
-if (result.pass) {
-  console.log('All checks passed')
-} else {
-  console.error(`${result.summary.failed} checks failed`)
+if (!result.pass) {
+  console.error('Validation failed:', result.results.filter(r => !r.pass))
+  process.exit(1)
 }
 ```
 
-**CLI:**
-```bash
-cd /home/avi/documents/work/exp-repo/metabob-devbob
-npx tsx tests/validation-harnesses/mcp-tool-name-parameters-harness.ts
-echo $?  # 0 = PASS, 1 = FAIL
+### Single Test Case
+```typescript
+import { runValidationForCase } from './tests/validation-harnesses/activity-retrieval-learning-data-flow-harness'
+
+const result = await runValidationForCase('validation-activity-retrieval-learning-data-flow-case-1')
+console.log(result.pass ? 'PASS' : 'FAIL', result.errors)
 ```
 
 ---
 
-## Artifacts Created
+## Key Features
 
-1. ✅ **Harness Script:** `tests/validation-harnesses/mcp-tool-name-parameters-harness.ts`
-   - 450+ lines of TypeScript
-   - 6 independent validation checks
-   - CLI and programmatic interfaces
+### No LLM Required ✅
+- All test cases pre-defined with historical input/output pairs
+- Deterministic validation logic (no AI calls)
+- Can run offline
 
-2. ✅ **Test Case 1:** `impulses/validation-mcp-tool-name-case-1.json`
-   - ID: `validation-Correct MCP Tool Name and Parameters-case-1`
-   - Type: `memo`
-   - Budget: 1000 tokens
+### Automated CI/CD Integration ✅
+- Exit code 0 = all tests pass
+- Exit code 1 = one or more tests fail
+- JSON output for parsing (available via exported functions)
 
-3. ✅ **Test Case 2:** `impulses/validation-mcp-tool-name-case-2.json`
-   - ID: `validation-Correct MCP Tool Name and Parameters-case-2`
-   - Type: `memo`
-   - Budget: 1000 tokens
+### Historical Test Cases ✅
+- Test cases stored as impulses for version control
+- Reproducible across code versions
+- Can be updated independently of harness code
 
-4. ✅ **Test Case 3:** `impulses/validation-mcp-tool-name-case-3.json`
-   - ID: `validation-Correct MCP Tool Name and Parameters-case-3`
-   - Type: `memo`
-   - Budget: 1000 tokens
-
-5. ✅ **Test Case 4:** `impulses/validation-mcp-tool-name-case-4.json`
-   - ID: `validation-Correct MCP Tool Name and Parameters-case-4`
-   - Type: `memo`
-   - Budget: 1000 tokens
-
-6. ✅ **Harness Impulse:** `impulses/harness-mcp-tool-name-fix.json`
-   - ID: `harness-Correct MCP Tool Name and Parameters`
-   - Type: `file`
-   - Budget: 2000 tokens
-
-7. ✅ **Output JSON:** `VALIDATION_HARNESS_OUTPUT.json`
-   - Structured output for automation
-   - Test cases and expected outputs
-
-8. ✅ **This Document:** `VALIDATION_HARNESS_COMPLETE.md`
-   - Comprehensive validation report
-   - Check results and methodology
+### Comprehensive Coverage ✅
+- Round-trip conversion (toCanonical → fromCanonical → toCanonical)
+- Learning data integrity (all metrics preserved)
+- Intentional loss (avgTokens, version, genealogy)
+- Defensive defaults (null-coalescing for missing fields)
 
 ---
 
-## Validation Execution
-
-### Initial Run (After Fix)
-
-```
-$ npx tsx tests/validation-harnesses/mcp-tool-name-parameters-harness.ts
-
-Overall Result: ✅ PASS
-Summary: 6/6 checks passed (0 failed)
-
-Detailed Results:
-1. Tool Name Prefix Check: ✅ PASS
-2. Parameter Name Check: ✅ PASS
-3. No Backend Parameter Check: ✅ PASS
-4. MCP Tool Registration Check: ✅ PASS
-5. Tool Name Match Check: ✅ PASS
-6. Documentation Comment Check: ✅ PASS
-```
-
-**Result:** All checks pass, fix verified correct.
-
----
-
-## Integration with CI/CD
-
-The harness can be integrated into CI/CD pipelines:
-
-### Pre-commit Hook
-
-```bash
-#!/bin/bash
-npx tsx tests/validation-harnesses/mcp-tool-name-parameters-harness.ts
-exit $?
-```
-
-### GitHub Actions
-
-```yaml
-- name: Validate MCP Tool Name
-  run: npx tsx tests/validation-harnesses/mcp-tool-name-parameters-harness.ts
-```
-
-### Package.json Script
+## Output Format (JSON)
 
 ```json
 {
-  "scripts": {
-    "validate:mcp": "tsx tests/validation-harnesses/mcp-tool-name-parameters-harness.ts"
-  }
+  "specificationName": "activity-retrieval-learning-data-flow",
+  "harnessFile": "repos/metabob-opencode/tests/validation-harnesses/activity-retrieval-learning-data-flow-harness.ts",
+  "testCases": [
+    {
+      "impulseId": "validation-activity-retrieval-learning-data-flow-case-1",
+      "input": "{ activity_id: 'test-template-001', ... }",
+      "expectedOutput": "{ learningDataPreserved: { executions: 42, ... }, ... }"
+    },
+    {
+      "impulseId": "validation-activity-retrieval-learning-data-flow-case-2",
+      "input": "{ activity_id: 'test-template-002', ... }",
+      "expectedOutput": "{ learningDataPreserved: { executions: 0, ... }, ... }"
+    },
+    {
+      "impulseId": "validation-activity-retrieval-learning-data-flow-case-3",
+      "input": "{ activity_id: 'test-template-003', ... }",
+      "expectedOutput": "{ learningDataPreserved: { executions: 10, ... }, ... }"
+    }
+  ],
+  "harnessImpulseId": "harness-activity-retrieval-learning-data-flow"
 }
 ```
 
 ---
 
-## Benefits
+## Relationship to Specification
 
-### 1. No LLM Required ✅
+### Trace Phase ✅
+- Documented current vs desired state
+- Identified learning data flow paths
+- Created impulse: `trace-activity-retrieval-learning-data-flow`
 
-- Deterministic validation
-- Fast execution (< 1 second)
-- No API costs
-- Repeatable results
+### Enforce Phase ✅
+- Applied minimal documentation changes
+- Documented intentional design decisions
+- Created impulse: `enforcement-activity-retrieval-learning-data-flow`
 
-### 2. Historical Test Cases ✅
-
-- Test cases stored as impulses
-- Can be run anytime without context
-- Expected values documented
-- Regression prevention
-
-### 3. Comprehensive Coverage ✅
-
-- 6 independent validation checks
-- Code inspection + cross-file validation
-- Parameter verification + documentation checks
-- High confidence in fix correctness
-
-### 4. Maintainable ✅
-
-- TypeScript with clear structure
-- Well-documented functions
-- Easy to extend with new checks
-- Formatted output for debugging
+### Validate Phase ✅
+- Created automated validation harness
+- Defined historical test cases
+- Created impulse: `harness-activity-retrieval-learning-data-flow`
 
 ---
 
-## Conclusion
+## Test Case Details
 
-✅ **VALIDATION HARNESS COMPLETE**
+### Case 1: Full Learning Metrics
+- **Input**: Template with all learning metrics populated
+- **Verifies**: All data flows correctly through conversion
+- **Expected**: executions=42, successRate=0.85, avgDuration=15000, avgCost=0.023
+- **Intentional Loss**: avgTokens=zeros, version/genealogy regenerated
 
-The validation harness successfully verifies the MCP tool name and parameters fix. All 6 checks pass, confirming:
+### Case 2: Missing Metrics
+- **Input**: Template without estimated_metrics field
+- **Verifies**: Defensive defaults work correctly
+- **Expected**: All metrics default to 0
+- **Intentional Loss**: avgTokens=zeros, version/genealogy regenerated
 
-1. ✅ Tool name uses correct `metabob_` prefix
-2. ✅ Parameter name is `activity_id` (snake_case)
-3. ✅ No invalid `backend` parameter
-4. ✅ Tool registered in MCP registry
-5. ✅ Tool names match between client and registry
-6. ✅ Documentation comments are correct
-
-The harness provides deterministic, repeatable validation without requiring an LLM, making it suitable for CI/CD integration and regression prevention.
+### Case 3: Partial Metrics
+- **Input**: Template with partial estimated_metrics (only execution_count, success_rate)
+- **Verifies**: Null-coalescing for missing fields
+- **Expected**: Present fields preserved, missing fields default to 0
+- **Intentional Loss**: avgTokens=zeros, version/genealogy regenerated
 
 ---
 
-**Harness ID:** `harness-Correct MCP Tool Name and Parameters`  
-**Status:** ✅ COMPLETE AND PASSING  
-**Date:** 2026-03-02
+## Next Steps
+
+1. **Run Harness**: Execute validation to confirm all tests pass
+2. **CI Integration**: Add to GitHub Actions workflow
+3. **Regression Testing**: Run after any changes to ActivitySchemaAdapter or BootstrapTemplates
+4. **Expand Coverage**: Add test cases for edge cases as needed
+
+---
+
+**Status**: ✅ VALIDATION HARNESS COMPLETE - Ready for automated testing

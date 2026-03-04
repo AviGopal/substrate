@@ -1,0 +1,172 @@
+{
+  "specificationName": "activity-retrieval-learning-data-flow",
+  "harnessFile": "repos/metabob-opencode/tests/validation-harnesses/activity-retrieval-learning-data-flow-harness.ts",
+  "harnessImpulseId": "harness-activity-retrieval-learning-data-flow",
+  
+  "testCases": [
+    {
+      "impulseId": "validation-activity-retrieval-learning-data-flow-case-1",
+      "name": "Round-trip conversion with full learning metrics",
+      "input": {
+        "activity_id": "test-template-001",
+        "name": "Test Template",
+        "description": "Template with complete learning metrics",
+        "category": "feature",
+        "tasks": [
+          {
+            "task_id": "task-1",
+            "subagent": "general",
+            "description": "Test task",
+            "dependencies": [],
+            "prompt": {
+              "template": "Do something with {{variable}}",
+              "variables": [
+                {
+                  "name": "variable",
+                  "type": "string",
+                  "required": true,
+                  "description": "Test variable"
+                }
+              ]
+            },
+            "context_rules": {
+              "max_tokens": 8000,
+              "compression_strategy": "filter"
+            },
+            "validation": {
+              "required_files": [],
+              "required_patterns": [],
+              "forbidden_patterns": [],
+              "commands": []
+            },
+            "retry": {
+              "max_attempts": 3,
+              "strategy": "simple"
+            }
+          }
+        ],
+        "estimated_metrics": {
+          "execution_count": 42,
+          "success_rate": 0.85,
+          "avg_duration_ms": 15000,
+          "avg_cost": 0.023
+        },
+        "author": "test-author",
+        "created_at": "2024-01-01T00:00:00Z"
+      },
+      "expectedOutput": {
+        "learningDataPreserved": {
+          "executions": 42,
+          "successRate": 0.85,
+          "avgDuration": 15000,
+          "avgCost": 0.023
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      }
+    },
+    {
+      "impulseId": "validation-activity-retrieval-learning-data-flow-case-2",
+      "name": "Missing metrics fields use defaults",
+      "input": {
+        "activity_id": "test-template-002",
+        "name": "Template Without Metrics",
+        "description": "Template missing estimated_metrics field",
+        "category": "bugfix",
+        "tasks": [
+          {
+            "task_id": "task-1",
+            "subagent": "general",
+            "description": "Test task",
+            "dependencies": []
+          }
+        ],
+        "author": null,
+        "created_at": null
+      },
+      "expectedOutput": {
+        "learningDataPreserved": {
+          "executions": 0,
+          "successRate": 0,
+          "avgDuration": 0,
+          "avgCost": 0
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      }
+    },
+    {
+      "impulseId": "validation-activity-retrieval-learning-data-flow-case-3",
+      "name": "Partial metrics with null-coalescing",
+      "input": {
+        "activity_id": "test-template-003",
+        "name": "Partial Metrics Template",
+        "description": "Template with partial estimated_metrics",
+        "category": "refactor",
+        "tasks": [
+          {
+            "task_id": "task-1",
+            "subagent": "general",
+            "description": "Test task",
+            "dependencies": []
+          }
+        ],
+        "estimated_metrics": {
+          "execution_count": 10,
+          "success_rate": 0.5
+        },
+        "author": "partial-author",
+        "created_at": "2024-02-01T00:00:00Z"
+      },
+      "expectedOutput": {
+        "learningDataPreserved": {
+          "executions": 10,
+          "successRate": 0.5,
+          "avgDuration": 0,
+          "avgCost": 0
+        },
+        "intentionalLoss": {
+          "avgTokens": { "input": 0, "output": 0, "cache": 0 },
+          "versionRegenerated": true,
+          "genealogyRegenerated": true
+        }
+      }
+    }
+  ],
+  
+  "validationStrategy": {
+    "roundTripTest": "Create template → toCanonical → fromCanonical → toCanonical → Compare learning metrics",
+    "learningDataIntegrity": "Verify executions, successRate, avgDuration, avgCost extracted correctly from estimated_metrics",
+    "intentionalLossVerification": "Confirm avgTokens=zeros, version regenerated, genealogy regenerated (by design)",
+    "defensiveDefaults": "Test null-coalescing for missing fields (metrics default to 0)"
+  },
+  
+  "usage": {
+    "cli": "cd repos/metabob-opencode && npx tsx tests/validation-harnesses/activity-retrieval-learning-data-flow-harness.ts",
+    "programmatic": "import { runValidation } from './tests/validation-harnesses/activity-retrieval-learning-data-flow-harness'; const result = await runValidation();",
+    "singleCase": "import { runValidationForCase } from './tests/validation-harnesses/activity-retrieval-learning-data-flow-harness'; const result = await runValidationForCase('validation-activity-retrieval-learning-data-flow-case-1');"
+  },
+  
+  "expectedBehavior": {
+    "learningMetricsPreserved": "executions, successRate, avgDuration, avgCost must match input estimated_metrics",
+    "avgTokensAlwaysZero": "avgTokens hardcoded to {0,0,0} regardless of input (backend limitation)",
+    "versionGenerated": "version generated client-side, different for each conversion",
+    "genealogyGenerated": "genealogy created with MANUAL reason, HYBRID author",
+    "roundTripLearningData": "Learning metrics preserved through fromCanonical → toCanonical",
+    "roundTripIntentionalLoss": "avgTokens reset to zeros, version/genealogy regenerated"
+  },
+  
+  "automatedValidation": {
+    "noLLMRequired": true,
+    "deterministicResults": true,
+    "canRunOffline": true,
+    "exitCodeZeroOnPass": true,
+    "exitCodeOneOnFail": true
+  }
+}
