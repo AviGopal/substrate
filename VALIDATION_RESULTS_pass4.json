@@ -1,0 +1,143 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass4",
+  "validationResults": [
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-1",
+      "name": "K8s: Create activity with trailblazing auto-enabled",
+      "status": "BLOCKED",
+      "actual": "Command execution failed due to JSON escaping issues in kubectl exec and devbob pod not having Pass 4 code changes",
+      "expected": "Logs show 'auto-enabling trailblazing for meta-template', 'searchSimilarActivities using stub data', 'injecting similar activity context', 'executing task with trailblazing enabled'",
+      "difference": "Cannot execute test - devbob pod is running v1.0.64 image which does not contain Pass 4 changes (searchSimilarActivities stub, filesystem independence, MCP timeout increase)",
+      "blockers": [
+        "Devbob pod running outdated image (v1.0.64)",
+        "JSON escaping issues in kubectl exec command",
+        "Need to rebuild devbob image with Pass 4 changes",
+        "Need to redeploy devbob pod with new image"
+      ]
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-2",
+      "name": "Host: Create activity without filesystem dependencies",
+      "status": "BLOCKED",
+      "actual": "Module not found error - CLI path incorrect for host execution",
+      "expected": "Template executes without filesystem errors",
+      "difference": "Harness trying to execute from repos/metabob-opencode but CLI binary not at expected path",
+      "blockers": [
+        "CLI path in harness needs correction",
+        "Should use installed opencode binary or bun run with correct path"
+      ]
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-3",
+      "name": "K8s: Context injection provides sample activities",
+      "status": "BLOCKED",
+      "actual": "Command execution failed - same JSON escaping and outdated image issues",
+      "expected": "Logs show sample execution IDs and patterns",
+      "difference": "Cannot verify context injection - pod lacks Pass 4 stub implementation",
+      "blockers": [
+        "Same as Case 1 - devbob pod outdated",
+        "JSON escaping in kubectl exec"
+      ]
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-4",
+      "name": "K8s: Memory hook execution",
+      "status": "BLOCKED",
+      "actual": "Command execution failed - same issues as Case 1",
+      "expected": "Logs show memory management hook execution",
+      "difference": "Cannot verify - pod lacks Pass 4 code",
+      "blockers": [
+        "Same as Case 1 - devbob pod outdated",
+        "JSON escaping in kubectl exec"
+      ]
+    },
+    {
+      "testCase": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-5",
+      "name": "K8s: SurrealDB activity tracking",
+      "status": "BLOCKED",
+      "actual": "Command execution failed and SurrealDB CLI not available in pod",
+      "expected": "Activity records in SurrealDB with correct metadata",
+      "difference": "Cannot query database - surreal CLI not installed in SurrealDB pod",
+      "blockers": [
+        "Same as Case 1 - devbob pod outdated",
+        "SurrealDB pod doesn't have surreal CLI installed",
+        "Need alternative way to query DB (HTTP API or different client)"
+      ]
+    }
+  ],
+  "overallStatus": "BLOCKED",
+  "passedTests": 0,
+  "failedTests": 0,
+  "blockedTests": 5,
+  "totalTests": 5,
+  "summary": "Validation cannot proceed due to infrastructure issues. The devbob pod is running an outdated image (v1.0.64) that does not contain Pass 4 code changes. All test cases are blocked.",
+  "requiredActions": [
+    {
+      "action": "Build new devbob Docker image with Pass 4 changes",
+      "priority": "CRITICAL",
+      "command": "cd repos/metabob-opencode && docker build -t metabobapp/devbob:v1.0.65-pass4 -f ../../docker/Dockerfile .",
+      "estimatedTime": "5-10 minutes"
+    },
+    {
+      "action": "Update devbob deployment to use new image",
+      "priority": "CRITICAL",
+      "command": "kubectl set image deployment/devbob devbob=metabobapp/devbob:v1.0.65-pass4 -n metabob",
+      "estimatedTime": "1-2 minutes"
+    },
+    {
+      "action": "Wait for new pod to be ready",
+      "priority": "CRITICAL",
+      "command": "kubectl rollout status deployment/devbob -n metabob",
+      "estimatedTime": "1-2 minutes"
+    },
+    {
+      "action": "Fix JSON escaping in harness kubectl exec commands",
+      "priority": "HIGH",
+      "details": "Variables JSON needs proper escaping for bash -c execution",
+      "estimatedTime": "10 minutes"
+    },
+    {
+      "action": "Fix host mode CLI path",
+      "priority": "MEDIUM",
+      "details": "Update harness to use correct path or opencode binary",
+      "estimatedTime": "5 minutes"
+    },
+    {
+      "action": "Fix SurrealDB query method",
+      "priority": "MEDIUM",
+      "details": "Use HTTP API instead of CLI or install surreal CLI in pod",
+      "estimatedTime": "15 minutes"
+    }
+  ],
+  "codeChangesVerified": {
+    "filesystemIndependence": {
+      "status": "CODE_COMPLETE",
+      "location": "templates/bootstrap/*-self-contained.json",
+      "verification": "Templates have empty required_files arrays"
+    },
+    "searchSimilarActivitiesStub": {
+      "status": "CODE_COMPLETE",
+      "location": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+      "verification": "Stub returns 3 sample activities with patterns and recommendations"
+    },
+    "mcpTimeout": {
+      "status": "CODE_COMPLETE",
+      "location": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+      "verification": "Timeout increased from 15s to 30s"
+    },
+    "trailblazingLogging": {
+      "status": "CODE_COMPLETE",
+      "location": "repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts",
+      "verification": "Logging exists at lines 71-79"
+    }
+  },
+  "resultsImpulseId": "validation-results-dynamic-activity-creation-with-trailblazing-pass4",
+  "timestamp": "2026-03-04T08:15:00Z",
+  "environment": {
+    "kubernetesCluster": "accessible",
+    "devbobPod": "devbob-766dcccf49-hfql6 (v1.0.64 - OUTDATED)",
+    "surrealdbPod": "surrealdb-6ff58cbc5-lx7gc (running)",
+    "bunVersion": "1.3.9",
+    "hostOpencode": "not at expected path"
+  }
+}

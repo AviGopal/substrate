@@ -214,7 +214,7 @@ const testCases: TestCase[] = [
 function getDevbobPodName(): string | null {
   try {
     const output = execSync(
-      "kubectl get pods -n metabob -l app=devbob -o jsonpath='{.items[0].metadata.name}'",
+      "kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[0].metadata.name}'",
       { encoding: "utf-8" }
     )
     return output.trim() || null
