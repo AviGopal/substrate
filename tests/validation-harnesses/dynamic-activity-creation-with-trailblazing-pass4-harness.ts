@@ -332,8 +332,10 @@ async function runTestCase(testCase: TestCase): Promise<TestResult> {
     // Execute activity based on environment
     if (testCase.input.environment === "kubernetes") {
       // Execute in K8s devbob pod
-      const variablesJson = JSON.stringify(testCase.input.variables).replace(/"/g, '\\"')
-      const command = `opencode activity ${testCase.input.template} --variables "${variablesJson}" --reason "${testCase.input.reason}"`
+      // Escape for bash -c: need to escape both " and $
+      const variablesJson = JSON.stringify(testCase.input.variables).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$')
+      const escapedReason = testCase.input.reason.replace(/"/g, '\\"')
+      const command = `opencode activity ${testCase.input.template} --variables "${variablesJson}" --reason "${escapedReason}"`
       
       console.log(`  Executing in K8s: ${command}`)
       const result = execInK8s(command)
