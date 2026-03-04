@@ -1,0 +1,131 @@
+{
+  "name": "Create Activity Template (Filesystem-Free)",
+  "description": "Create activity templates without filesystem dependencies - uses impulse storage for all intermediate data",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "design-complete-template",
+      "subagent": "general",
+      "description": "Design and generate complete activity template JSON in memory, then store as impulse",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create an activity template for: {{templateName}}\n\nDescription: {{templateDescription}}\nCategory: {{category}}\n\n**Task**: Design a complete ActivityTemplate JSON structure.\n\n**Template Structure**:\n```json\n{\n  \"name\": \"{{templateName}}\",\n  \"description\": \"{{templateDescription}}\",\n  \"category\": \"{{category}}\",\n  \"tasks\": [\n    {\n      \"id\": \"task-1\",\n      \"subagent\": \"general\",\n      \"description\": \"What this task does\",\n      \"dependencies\": [],\n      \"prompt\": {\n        \"template\": \"Clear instructions (100-200 words). Use {{variable}} syntax.\",\n        \"maxTokens\": 8000,\n        \"compressionStrategy\": \"filter\",\n        \"variables\": [{\"name\": \"var\", \"type\": \"string\", \"required\": true, \"description\": \"Purpose\"}]\n      },\n      \"validation\": {\n        \"requiredFiles\": [],\n        \"requiredPatterns\": [],\n        \"forbiddenPatterns\": [\"TODO\", \"FIXME\"],\n        \"commands\": []\n      },\n      \"retry\": {\"maxAttempts\": 2, \"strategy\": \"simple\"}\n    }\n  ],\n  \"variables\": [\n    {\"name\": \"var1\", \"type\": \"string\", \"required\": true, \"description\": \"Purpose\"}\n  ],\n  \"composition\": {\n    \"standalone\": true,\n    \"examples\": [\n      {\n        \"name\": \"Example 1\",\n        \"description\": \"Basic usage\",\n        \"sequence\": [\"task-1\"],\n        \"outcome\": \"What happens\"\n      }\n    ]\n  },\n  \"learning\": {\n    \"enabled\": true,\n    \"feedbackPoints\": [\n      {\n        \"taskId\": \"task-1\",\n        \"metric\": \"success_rate\",\n        \"description\": \"Track completion\"\n      }\n    ]\n  }\n}\n```\n\n**Design 3-4 tasks** that accomplish: {{templateDescription}}\n\n**Guidelines**:\n- Each task: ONE clear purpose\n- Prompts: 100-200 words (not 500+)\n- Dependencies: Linear flow (task-1 → task-2 → task-3)\n- NO filesystem access - use impulse_create for intermediate data\n- NO /tmp or file paths\n- Use working directory only if absolutely needed\n\n**Output**: Create impulse with template JSON:\n```\nimpulse_create({\n  id: \"template-{{templateId}}\",\n  type: \"templateDefinition\",\n  pointer: { type: \"memo\", content: <template-json> },\n  budget: 5000\n})\n```",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "templateName",
+            "type": "string",
+            "required": true,
+            "description": "Human-readable template name"
+          },
+          {
+            "name": "templateDescription",
+            "type": "string",
+            "required": true,
+            "description": "What this template does"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": true,
+            "description": "feature, bugfix, refactor, tool, or infrastructure"
+          },
+          {
+            "name": "templateId",
+            "type": "string",
+            "required": false,
+            "description": "Kebab-case template ID",
+            "default": "{{templateName}}"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "impulse_create",
+          "template-{{templateId}}"
+        ],
+        "forbiddenPatterns": [
+          "/tmp",
+          "write(",
+          "file://"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "register-template",
+      "subagent": "general",
+      "description": "Register template with backend using impulse data",
+      "dependencies": [
+        "design-complete-template"
+      ],
+      "prompt": {
+        "template": "Register the template with the backend.\n\n**Steps**:\n1. Load template from impulse: template-{{templateId}}\n\n2. Use `register_activity_template` tool:\n   - impulse_id: template-{{templateId}}\n   - register_with_metabob: true\n\n3. Create success impulse with usage docs:\n```\nimpulse_create({\n  id: \"template-{{templateId}}-success\",\n  type: \"memo\",\n  pointer: { type: \"memo\", content: \"# Template Created: {{templateName}}\\n\\nID: {{templateId}}\\nCategory: {{category}}\\nStatus: Registered\\n\\nUsage:\\nopencode activity {{templateId}} --variables '{...}' --reason '...'\" },\n  budget: 1000\n})\n```",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "Template Created",
+          "Registered"
+        ],
+        "forbiddenPatterns": [
+          "/tmp",
+          "write(",
+          "file://"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "variables": [
+    {
+      "name": "templateName",
+      "type": "string",
+      "required": true,
+      "description": "Human-readable template name"
+    },
+    {
+      "name": "templateDescription",
+      "type": "string",
+      "required": true,
+      "description": "What this template does"
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "required": true,
+      "description": "feature, bugfix, refactor, tool, or infrastructure"
+    },
+    {
+      "name": "templateId",
+      "type": "string",
+      "required": false,
+      "description": "Kebab-case template ID"
+    }
+  ],
+  "trailblazing": {
+    "enabled": true,
+    "maxRecoveryAttempts": 3,
+    "maxCostPerTask": 1.0,
+    "maxTotalCost": 5.0
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}
