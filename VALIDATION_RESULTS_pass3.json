@@ -1,0 +1,135 @@
+{
+  "specificationName": "dynamic-activity-lifecycle-with-trailblazing-pass3",
+  "validationDate": "2026-03-04T11:07:41.745Z",
+  "validationResults": [
+    {
+      "testCase": "validation-dynamic-activity-lifecycle-with-trailblazing-pass3-case-1",
+      "testName": "Local Code Validation (Skip K8s)",
+      "status": "PASS",
+      "description": "Validates code fixes without requiring K8s deployment",
+      "input": {
+        "skipK8sValidation": true,
+        "activityName": "Test Activity for Local Validation",
+        "activityDescription": "Validates code fixes without requiring K8s deployment"
+      },
+      "actual": {
+        "codeTrace": {
+          "isMetaTemplateFixApplied": true,
+          "createActivityIncluded": true,
+          "timeoutFixApplied": true,
+          "timeoutValue": 15000
+        },
+        "unitTest": {
+          "isMetaTemplateReturnsTrue": true
+        }
+      },
+      "expected": {
+        "codeTrace": {
+          "isMetaTemplateFixApplied": true,
+          "createActivityIncluded": true,
+          "timeoutFixApplied": true,
+          "timeoutValue": 15000
+        },
+        "unitTest": {
+          "isMetaTemplateReturnsTrue": true
+        }
+      },
+      "difference": null,
+      "details": "✅ All code-level validations passed:\n- isMetaTemplate() includes 'create-activity'\n- isMetaTemplate() still includes -self-contained variants\n- MCP timeout is 15000ms\n- Code analysis confirms isMetaTemplate('create-activity') returns true"
+    },
+    {
+      "testCase": "validation-dynamic-activity-lifecycle-with-trailblazing-pass3-case-2",
+      "testName": "Full K8s Integration Test",
+      "status": "DEFERRED",
+      "description": "Full end-to-end validation in devbob K8s pod",
+      "input": {
+        "skipK8sValidation": false,
+        "activityName": "Test REST API Activity",
+        "activityDescription": "Full end-to-end validation in devbob K8s pod"
+      },
+      "actual": null,
+      "expected": {
+        "integrationTest": {
+          "trailblazingAutoEnabled": true,
+          "contextInjected": true,
+          "templateRegistered": true
+        }
+      },
+      "difference": "Test deferred - requires deployment of updated code to devbob K8s pod",
+      "details": "⏳ Deferred to deployment phase:\n- Current devbob pod (devbob-766dcccf49-hfql6) is running but has not been updated with Pass 3 fixes\n- Need to: (1) Build Docker image with fixes, (2) Deploy to K8s, (3) Re-run this test\n- Test is ready to execute once deployment is complete"
+    },
+    {
+      "testCase": "validation-dynamic-activity-lifecycle-with-trailblazing-pass3-case-3",
+      "testName": "MCP Registration Timeout Test",
+      "status": "DEFERRED",
+      "description": "Validates that MCP registration completes within 15s timeout",
+      "input": {
+        "skipK8sValidation": false,
+        "activityName": "Timeout Test Activity",
+        "activityDescription": "Validates that MCP registration completes within 15s timeout"
+      },
+      "actual": null,
+      "expected": {
+        "integrationTest": {
+          "templateRegistered": true,
+          "registrationTime": "< 15000ms"
+        }
+      },
+      "difference": "Test deferred - requires deployment of updated code to devbob K8s pod",
+      "details": "⏳ Deferred to deployment phase:\n- Timeout fix (5s → 15s) applied to local codebase\n- Need to deploy to K8s to validate in production environment\n- Test will measure actual registration time and confirm < 15s"
+    }
+  ],
+  "overallStatus": "PARTIAL_PASS",
+  "summary": {
+    "total": 3,
+    "passed": 1,
+    "failed": 0,
+    "deferred": 2,
+    "passRate": "33% (1/3 executed, 100% of executed tests passed)"
+  },
+  "nextSteps": [
+    {
+      "priority": "P0",
+      "action": "Build Docker image with Pass 3 fixes",
+      "command": "cd repos/metabob-opencode && docker build -t devbob:pass3-fix .",
+      "rationale": "Deploy updated code to K8s for integration validation"
+    },
+    {
+      "priority": "P0",
+      "action": "Tag and deploy to K8s",
+      "commands": [
+        "docker tag devbob:pass3-fix devbob:latest",
+        "helm upgrade --install devbob helm/charts/devbob -n metabob"
+      ],
+      "rationale": "Make fixes available in devbob pod for testing"
+    },
+    {
+      "priority": "P1",
+      "action": "Re-run validation harness (full integration)",
+      "command": "npx tsx tests/validation-harnesses/dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts",
+      "rationale": "Execute deferred test cases 2 and 3 in deployed environment"
+    },
+    {
+      "priority": "P2",
+      "action": "Update VALIDATION_RESULTS_pass3.json with final results",
+      "rationale": "Document complete validation after deployment"
+    }
+  ],
+  "deploymentPrerequisite": {
+    "status": "REQUIRED",
+    "reason": "K8s integration tests require updated code deployed to devbob pod",
+    "currentPod": {
+      "name": "devbob-766dcccf49-hfql6",
+      "namespace": "metabob",
+      "status": "Running",
+      "hasUpdatedCode": false
+    },
+    "buildStatus": {
+      "localCodeUpdated": true,
+      "compiled": true,
+      "dockerImageBuilt": false,
+      "deployedToK8s": false
+    }
+  },
+  "resultsImpulseId": "validation-results-dynamic-activity-lifecycle-with-trailblazing-pass3"
+}

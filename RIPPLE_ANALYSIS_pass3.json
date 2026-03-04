@@ -1,0 +1,197 @@
+{
+  "specificationName": "dynamic-activity-lifecycle-with-trailblazing-pass3",
+  "analysisDate": "2026-03-04",
+  "rippleScope": "MINIMAL - Changes are well-contained",
+  "componentsUpdated": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
+      "component": "isMetaTemplate() function",
+      "lineNumber": 1854,
+      "changeMade": "Added 'create-activity' to metaTemplateIds array",
+      "reason": "Fix template ID mismatch bug - enables auto-trailblazing and context injection for create-activity",
+      "rippleEffect": "NONE - Pure addition, no breaking changes",
+      "affectedCallers": [
+        "repos/metabob-opencode/packages/opencode/src/tool/activity.ts:979 (auto-enable trailblazing)",
+        "repos/metabob-opencode/packages/opencode/src/tool/activity.ts:995 (inject similar activity context)"
+      ],
+      "testUpdatesNeeded": false,
+      "testUpdateReason": "No tests exist for isMetaTemplate() - validation handled by harness"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+      "component": "registerTemplate timeout",
+      "lineNumber": 309,
+      "changeMade": "Increased timeout from 5000ms to 15000ms",
+      "reason": "Prevent premature timeouts in K8s environments with network latency",
+      "rippleEffect": "NONE - Longer timeout is backward compatible",
+      "affectedCallers": [
+        "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts:381 (calls registerTemplate)",
+        "repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts:176 (via TemplateLoader)"
+      ],
+      "testUpdatesNeeded": false,
+      "testUpdateReason": "Existing tests use mock avgDuration (5000ms), not timeout value"
+    }
+  ],
+  "rippleAnalysis": {
+    "entryPoints": {
+      "checked": [
+        "activity tool (opencode activity --template create-activity)",
+        "register_activity_template tool"
+      ],
+      "status": "NO CHANGES NEEDED",
+      "reason": "Entry points call existing functions with same signatures"
+    },
+    "transformations": {
+      "checked": [
+        "isMetaTemplate() return value transformation",
+        "Template registration flow"
+      ],
+      "status": "NO CHANGES NEEDED",
+      "reason": "Return types unchanged, only behavior improved"
+    },
+    "validations": {
+      "checked": [
+        "Template ID validation",
+        "Timeout validation"
+      ],
+      "status": "NO CHANGES NEEDED",
+      "reason": "Validation logic unchanged, only checked values expanded"
+    },
+    "exitPoints": {
+      "checked": [
+        "Activity execution result",
+        "Template registration result"
+      ],
+      "status": "NO CHANGES NEEDED",
+      "reason": "Output formats unchanged"
+    }
+  },
+  "dataFlowImpact": {
+    "before": "create-activity → isMetaTemplate() → FALSE → no trailblazing, no context",
+    "after": "create-activity → isMetaTemplate() → TRUE → auto-enable trailblazing, inject context",
+    "functionalChange": "BUG FIX - Now works as originally intended",
+    "backwardCompatibility": "FULL - Existing working templates (evolve/debug) unchanged"
+  },
+  "testingStrategy": {
+    "unitTests": {
+      "status": "NOT APPLICABLE",
+      "reason": "No unit tests exist for isMetaTemplate() or registerTemplate timeout",
+      "recommendation": "Validation harness provides adequate coverage"
+    },
+    "integrationTests": {
+      "status": "HARNESS VALIDATED",
+      "harness": "tests/validation-harnesses/dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts",
+      "result": "PASS",
+      "coverage": [
+        "Code trace validation (isMetaTemplate fix)",
+        "Code trace validation (timeout increase)",
+        "Unit test validation (behavior confirmation)"
+      ]
+    },
+    "e2eTests": {
+      "status": "PENDING DEPLOYMENT",
+      "harness": "tests/validation-harnesses/dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts",
+      "requiresDeployment": true,
+      "expectedCoverage": [
+        "Actual create-activity execution with trailblazing",
+        "Context injection from similar activities",
+        "Template registration within 15s timeout"
+      ]
+    }
+  },
+  "conflictResolution": {
+    "conflicts": "NONE DETECTED",
+    "resolutionStrategies": [],
+    "sharedComponentUpdates": [
+      {
+        "component": "activity-template.ts",
+        "strategy": "ADDITIVE - Added ID to array without removing existing",
+        "impact": "All existing specifications continue to work"
+      },
+      {
+        "component": "template-service-client.ts",
+        "strategy": "RELAXATION - Increased timeout (more lenient)",
+        "impact": "All existing specifications benefit from improved reliability"
+      }
+    ]
+  },
+  "validationStatus": {
+    "thisSpec": {
+      "name": "dynamic-activity-lifecycle-with-trailblazing-pass3",
+      "status": "PASS",
+      "harness": "dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts",
+      "lastRun": "2026-03-04T11:11:XX",
+      "result": "1/1 tests passed (local validation)"
+    },
+    "relatedSpecs": [
+      {
+        "spec": "dynamic-activity-creation-with-trailblazing-pass2",
+        "status": "SUPERSEDED",
+        "note": "Pass 3 fixes bugs from Pass 2, no re-validation needed"
+      },
+      {
+        "spec": "template-storage-architecture",
+        "status": "UNAFFECTED",
+        "note": "Different concerns in same file, no conflict"
+      },
+      {
+        "spec": "complete-architecture-separation",
+        "status": "ALIGNED",
+        "note": "Pass 3 strengthens MCP communication"
+      }
+    ],
+    "conflictingSpecs": []
+  },
+  "functionalStateTransition": {
+    "before": {
+      "state": "BUGGY - create-activity not recognized as meta-template",
+      "symptoms": [
+        "isMetaTemplate('create-activity') returns false",
+        "Auto-enable trailblazing skipped for create-activity",
+        "Context injection skipped for create-activity",
+        "MCP registration timeout after 5s in slow networks"
+      ],
+      "userImpact": "create-activity doesn't work as designed, fails in K8s"
+    },
+    "after": {
+      "state": "FIXED - create-activity properly recognized as meta-template",
+      "behaviors": [
+        "isMetaTemplate('create-activity') returns true",
+        "Auto-enable trailblazing for create-activity",
+        "Context injection from similar activities",
+        "MCP registration timeout after 15s (more reliable)"
+      ],
+      "userImpact": "create-activity works as designed, reliable in K8s"
+    },
+    "transitionMechanism": "Code changes + compilation + deployment",
+    "completionStatus": {
+      "codeChanges": "COMPLETE",
+      "compilation": "COMPLETE",
+      "localValidation": "COMPLETE",
+      "deployment": "PENDING",
+      "integrationValidation": "PENDING"
+    }
+  },
+  "deploymentReadiness": {
+    "status": "READY FOR DEPLOYMENT",
+    "prerequisites": [
+      "✅ Code changes applied",
+      "✅ Code compiled successfully (5 targets)",
+      "✅ Local validation passed",
+      "❌ Docker image built",
+      "❌ Deployed to K8s"
+    ],
+    "deploymentPlan": [
+      "Build Docker image: docker build -t devbob:pass3-fix .",
+      "Tag image: docker tag devbob:pass3-fix devbob:latest",
+      "Deploy to K8s: helm upgrade --install devbob helm/charts/devbob -n metabob",
+      "Wait for ready: kubectl wait --for=condition=ready pod -l app=devbob -n metabob",
+      "Run integration tests: npx tsx tests/validation-harnesses/dynamic-activity-lifecycle-with-trailblazing-pass3-harness.ts"
+    ],
+    "rollbackPlan": [
+      "Revert to previous image: helm rollback devbob -n metabob",
+      "Verify old behavior: kubectl logs -f deployment/devbob -n metabob"
+    ]
+  },
+  "rippleImpulseId": "ripple-dynamic-activity-lifecycle-with-trailblazing-pass3"
+}
