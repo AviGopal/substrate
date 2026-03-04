@@ -1,0 +1,117 @@
+{
+  "specificationName": "dynamic-activity-creation-with-trailblazing-pass4",
+  "otherSpecifications": [
+    "dynamic-activity-creation-with-trailblazing-pass2",
+    "devbob-k8s-git-operations",
+    "complete-architecture-separation",
+    "mcp-data-flow-devbob-cli-database",
+    "bootstrap-template-filepath-compliance"
+  ],
+  "conflicts": [
+    {
+      "type": "DEPLOYMENT_DEPENDENCY",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass4",
+      "spec2": "dynamic-activity-creation-with-trailblazing-pass2",
+      "sharedComponent": "devbob-pod-deployment",
+      "description": "Pass 4 validation requires infrastructure from Pass 2 (devbob pod with OpenCode CLI). Pass 2 marked infrastructure as READY but did not verify code deployment. Pass 4 discovered devbob pod has outdated image (v1.0.64).",
+      "resolution": "Rebuild and redeploy devbob image with Pass 4 code changes",
+      "severity": "CRITICAL",
+      "blocking": true
+    },
+    {
+      "type": "SHARED_INFRASTRUCTURE",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass4",
+      "spec2": "devbob-k8s-git-operations",
+      "sharedComponent": "devbob-docker-image",
+      "description": "Both specifications modify devbob image but use different versioning. Pass 4 needs searchSimilarActivities stub. Git operations spec needs gh CLI.",
+      "resolution": "Build single devbob image with ALL features from both specs",
+      "severity": "MEDIUM",
+      "blocking": false
+    },
+    {
+      "type": "ARCHITECTURE_COMPLIANCE",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass4",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "template-service-client.ts",
+      "description": "Pass 4 adds searchSimilarActivities() stub in opencode. Architecture separation requires ML/learning logic in RPC API only.",
+      "resolution": "Current stub acceptable as temporary. Future: implement POST /v2/activities/search-similar in RPC API",
+      "severity": "LOW",
+      "blocking": false
+    },
+    {
+      "type": "MCP_DATA_FLOW",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass4",
+      "spec2": "mcp-data-flow-devbob-cli-database",
+      "sharedComponent": "activity-execution-tracking",
+      "description": "Pass 4 stores activities in SurrealDB. MCP data flow stores learning metadata. No actual conflict - specs complement each other.",
+      "resolution": "None needed - specs are aligned",
+      "severity": "LOW",
+      "blocking": false
+    },
+    {
+      "type": "FILESYSTEM_REQUIREMENTS",
+      "spec1": "dynamic-activity-creation-with-trailblazing-pass4",
+      "spec2": "bootstrap-template-filepath-compliance",
+      "sharedComponent": "template-validation",
+      "description": "Pass 4 removes /tmp filesystem dependencies. Bootstrap spec may have filepath requirements.",
+      "resolution": "Verify bootstrap spec accepts empty required_files for K8s compatibility",
+      "severity": "LOW",
+      "blocking": false
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "template-service-client.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass4",
+        "complete-architecture-separation",
+        "mcp-data-flow-devbob-cli-database"
+      ],
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Changes are compatible. Stub is temporary and will call RPC API in future."
+    },
+    {
+      "component": "create-activity-self-contained.json",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass4",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "conflictStatus": "NEEDS_VERIFICATION",
+      "recommendation": "Verify bootstrap spec accepts empty required_files arrays"
+    },
+    {
+      "component": "devbob-docker-image",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass4",
+        "devbob-k8s-git-operations",
+        "dynamic-activity-creation-with-trailblazing-pass2"
+      ],
+      "conflictStatus": "DEPLOYMENT_ISSUE",
+      "recommendation": "Build single image with all features: Pass 4 code + gh CLI + templates"
+    },
+    {
+      "component": "trailblazing-executor.ts",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass4"
+      ],
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "No other specs touch this file. Change is isolated."
+    },
+    {
+      "component": "K8s devbob deployment",
+      "affectedBySpecs": [
+        "dynamic-activity-creation-with-trailblazing-pass4",
+        "devbob-k8s-git-operations",
+        "dynamic-activity-creation-with-trailblazing-pass2"
+      ],
+      "conflictStatus": "CRITICAL_BLOCKER",
+      "recommendation": "Current pod has v1.0.64 (outdated). Must rebuild and redeploy with ALL spec changes."
+    }
+  ],
+  "overallStatus": "DEPLOYMENT_BLOCKED",
+  "summary": "No actual code conflicts. All issues are deployment-related. Primary blocker: devbob pod running outdated image (v1.0.64). Solution: rebuild and redeploy with cumulative changes from all specs.",
+  "criticalBlockers": 1,
+  "mediumConflicts": 1,
+  "lowConflicts": 3,
+  "conflictImpulseId": "conflict-analysis-dynamic-activity-creation-with-trailblazing-pass4"
+}
