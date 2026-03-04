@@ -1,0 +1,18 @@
+{
+  "id": "validation-mcp-data-flow-devbob-cli-database-case-3",
+  "pointer": {
+    "type": "memo",
+    "content": "# Validation Test Case 3: Activity Failure Scenario\n\n## Input\n```json\n{\n  \"templateId\": \"intentional-failure-test\",\n  \"variables\": {\n    \"featureName\": \"failure-test\",\n    \"shouldFail\": true,\n    \"failureType\": \"validation\"\n  },\n  \"reason\": \"Test MCP data flow for failed activities\",\n  \"expectedImpulseCount\": 3,\n  \"expectedComponentCount\": 0\n}\n```\n\n## Expected Output\n```json\n{\n  \"pass\": true,\n  \"results\": {\n    \"activityExecution\": {\n      \"exists\": true,\n      \"hasCorrectTemplate\": true,\n      \"hasMetrics\": true,\n      \"hasImpulsesUsed\": true,\n      \"hasComponentChanges\": false,\n      \"impulsesUsedCount\": 3,\n      \"componentsChangedCount\": 0\n    },\n    \"impulseUsage\": {\n      \"recordsCreated\": true,\n      \"recordCount\": 3,\n      \"linkedToExecution\": true\n    },\n    \"impulseRegistry\": {\n      \"updatedSuccessRates\": true,\n      \"impulseCount\": 3\n    },\n    \"mcpPayload\": {\n      \"captured\": true,\n      \"hasImpulsesUsed\": true,\n      \"hasComponentChanges\": false\n    }\n  },\n  \"actual\": {\n    \"impulsesUsed\": [\n      {\"impulse_id\": \"test-impulse-1\", \"was_useful\": false},\n      {\"impulse_id\": \"test-impulse-2\", \"was_useful\": false},\n      {\"impulse_id\": \"test-impulse-3\", \"was_useful\": false}\n    ]\n  },\n  \"errors\": []\n}\n```\n\n## Test Description\nValidates that failed activities still transmit learning data correctly.\nVerifies impulses are marked as not useful (was_useful: false) for failed executions.\nTests that failure doesn't break data flow - learning from failures is critical.\n\n## Success Criteria\n- Activity fails as expected (validation error)\n- Impulses still tracked despite failure\n- All impulses marked with was_useful: false\n- No component changes (activity failed before modifications)\n- Impulse registry still updated with failure data\n- MCP payload correctly transmits failure context",
+    "source": "validation-harness"
+  },
+  "scope": "activity",
+  "budget": 1000,
+  "tags": ["validation", "test-case", "mcp-data-flow", "failure"],
+  "priority": 5,
+  "metadata": {
+    "created_by": "validation-harness-creator",
+    "test_case_number": 3,
+    "test_type": "failure-scenario",
+    "harness_file": "tests/validation-harnesses/mcp-data-flow-devbob-cli-database-harness.ts"
+  }
+}
