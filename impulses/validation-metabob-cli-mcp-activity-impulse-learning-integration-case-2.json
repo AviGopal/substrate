@@ -1,0 +1,17 @@
+{
+  "id": "validation-metabob-cli-mcp-activity-impulse-learning-integration-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 2: Failed Activity Execution\n\n## Input\n\n```json\n{\n  \"activityId\": \"act-test-failure-002\",\n  \"templateId\": \"add-feature-basic\",\n  \"expectedMetrics\": {\n    \"duration\": 3000,\n    \"cost\": 0.03,\n    \"tokens\": {\n      \"input\": 800,\n      \"output\": 300,\n      \"cache\": 100\n    },\n    \"success\": false\n  },\n  \"impulseId\": \"test-impulse-002\"\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"pass\": true,\n  \"testName\": \"metabob-cli-mcp-activity-impulse-learning-integration\",\n  \"actual\": {\n    \"activityRecorded\": true,\n    \"metricsUpdated\": true,\n    \"boredomDetected\": true,\n    \"impulseStored\": true,\n    \"mcpToolsWorking\": true,\n    \"noDirectHttp\": true\n  },\n  \"expected\": {\n    \"activityRecorded\": true,\n    \"metricsUpdated\": true,\n    \"boredomDetected\": true,\n    \"impulseStored\": true,\n    \"mcpToolsWorking\": true,\n    \"noDirectHttp\": true\n  },\n  \"errors\": []\n}\n```\n\n## Validation Strategy\n\n1. **Activity Recording**: Verify FAILED activity recorded with failure metrics\n2. **Metrics Update**: Verify template success_rate decreased after failure\n3. **Boredom Detection**: Verify failed template may appear in boredom list\n4. **Impulse Storage**: Verify impulse stored even for failed activity\n5. **MCP Tools**: Verify code quality tools still work\n6. **No HTTP Bypass**: Verify failure doesn't trigger direct HTTP fallback\n\n## Success Criteria\n\n- Failed activity recorded in SurrealDB with success=false\n- Template metrics updated with failure data\n- Boredom system still operational\n- Impulse data persisted\n- MCP tools working\n- No direct HTTP bypass on failure\n\n## Notes\n\n- This test validates FAILURE PATH where activity fails but learning loop continues\n- Failure should be recorded, not hidden\n- Template metrics should reflect failure (success_rate < 1.0)\n- Validates graceful degradation - learning continues after failures"
+  },
+  "budget": 1000,
+  "priority": "high",
+  "scope": "global",
+  "loaded": false,
+  "metadata": {
+    "testCase": 2,
+    "testType": "failure-case",
+    "requiresBackend": true
+  }
+}
