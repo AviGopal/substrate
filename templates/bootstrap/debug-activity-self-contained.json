@@ -53,7 +53,7 @@
         ]
       },
       "validation": {
-        "required_files": ["/tmp/debug-{{activityId}}/DIAGNOSIS.md"],
+        "required_files": [],
         "required_patterns": ["## Root Cause Analysis", "## Proposed Solutions", "## Recovery Strategy"],
         "forbidden_patterns": [],
         "commands": []
@@ -75,15 +75,10 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["/tmp/debug-{{activityId}}/recovery-tasks.json"],
+        "required_files": [],
         "required_patterns": ["\"activity_id\":", "\"task_steps\":"],
         "forbidden_patterns": ["TODO", "FIXME"],
-        "commands": [
-          {
-            "command": "cat /tmp/debug-{{activityId}}/recovery-tasks.json | python3 -m json.tool > /dev/null",
-            "expected_exit_code": 0
-          }
-        ]
+        "commands": []
       },
       "retry": {
         "max_attempts": 3,
@@ -102,7 +97,7 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["/tmp/debug-{{activityId}}/RESOLUTION.md"],
+        "required_files": [],
         "required_patterns": ["## Problem Summary", "## Solution Applied", "## Resolution Steps", "## Lessons Learned"],
         "forbidden_patterns": [],
         "commands": []

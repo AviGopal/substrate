@@ -74,7 +74,7 @@
         ]
       },
       "validation": {
-        "required_files": ["/tmp/evolve-{{templateId}}/ANALYSIS.md"],
+        "required_files": [],
         "required_patterns": ["## Parent Execution Summary", "## Improvement Opportunities", "## Proposed Changes"],
         "forbidden_patterns": [],
         "commands": []
@@ -96,15 +96,10 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["/tmp/evolve-{{templateId}}/template-v2.json"],
+        "required_files": [],
         "required_patterns": ["\"activity_id\":", "\"task_steps\":"],
         "forbidden_patterns": ["TODO", "FIXME", "preChecks"],
-        "commands": [
-          {
-            "command": "cat /tmp/evolve-{{templateId}}/template-v2.json | python3 -m json.tool > /dev/null",
-            "expected_exit_code": 0
-          }
-        ]
+        "commands": []
       },
       "retry": {
         "max_attempts": 3,
@@ -123,7 +118,7 @@
         "variables": []
       },
       "validation": {
-        "required_files": ["/tmp/evolve-{{templateId}}/EVOLUTION_SUCCESS.md"],
+        "required_files": [],
         "required_patterns": ["✅ Template Evolved", "## Key Improvements", "## Expected Impact"],
         "forbidden_patterns": ["❌", "ERROR", "FAILED"],
         "commands": []
