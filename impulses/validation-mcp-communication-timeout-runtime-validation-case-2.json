@@ -1,0 +1,17 @@
+{
+  "id": "validation-mcp-communication-timeout-runtime-validation-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case",
+    "content": "Test Case 2: Circuit Breaker Activation\n\nThis test validates that the circuit breaker implementation is complete and follows the correct pattern.\n\n**Input:**\n```json\n{\n  \"testCase\": \"circuit-breaker-activation\",\n  \"failureCount\": 3\n}\n```\n\n**Expected Output:**\n```json\n{\n  \"circuitOpenAfter3Failures\": true,\n  \"fourthCallBlockedImmediately\": true,\n  \"errorIncludesRetryTime\": true,\n  \"hasThresholdCheck\": true,\n  \"hasIsOpenFlag\": true,\n  \"hasRetryTime\": true,\n  \"hasCircuitOpenError\": true,\n  \"hasFailureIncrement\": true\n}\n```\n\n**Validation Strategy:**\n1. Read mcp/index.ts implementation\n2. Verify threshold check pattern: `failures >= CIRCUIT_BREAKER_THRESHOLD`\n3. Verify isOpen flag setting: `isOpen: true` or `isOpen = true`\n4. Verify retry time calculation: `CIRCUIT_BREAKER_RESET_MS - (Date.now() - state.lastFailure)`\n5. Verify circuit open error message: \"Circuit breaker open\" or \"Circuit breaker opened\"\n6. Verify failure increment pattern: `failures++` or `failures += 1`\n\n**Success Criteria:**\n- All implementation patterns detected\n- Circuit breaker threshold is 3 failures\n- Reset time is 60s\n- Error messages include retry time\n\n**Historical Result:**\n✅ PASSED - All patterns verified"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 2,
+    "testType": "circuit-breaker",
+    "specification": "MCP Communication Timeout Runtime Validation",
+    "historical": true,
+    "canRunWithoutLLM": true
+  }
+}

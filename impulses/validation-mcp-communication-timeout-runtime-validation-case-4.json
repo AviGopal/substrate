@@ -1,0 +1,17 @@
+{
+  "id": "validation-mcp-communication-timeout-runtime-validation-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case",
+    "content": "Test Case 4: Error Message Format\n\nThis test validates that timeout error messages are actionable and include necessary information.\n\n**Input:**\n```json\n{\n  \"testCase\": \"error-message-format\",\n  \"triggerTimeout\": true\n}\n```\n\n**Expected Output:**\n```json\n{\n  \"includesTimeoutDuration\": true,\n  \"includesActionableAdvice\": true,\n  \"messageNotEmpty\": true\n}\n```\n\n**Validation Strategy:**\n1. Trigger a timeout with withTimeout(slowOperation, 1000)\n2. Capture the error message\n3. Verify message includes \"timeout\" or \"timed out\"\n4. Verify message includes duration (e.g., \"1000ms\" or \"1 second\")\n5. Verify message is substantial (>20 characters)\n\n**Success Criteria:**\n- Error message contains timeout indication\n- Error message contains duration information\n- Error message is actionable (not just \"timeout\")\n- Message length > 20 characters\n\n**Historical Result:**\n✅ PASSED - Error message: \"Operation timed out after 1000ms\" (32 characters)"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 4,
+    "testType": "error-message",
+    "specification": "MCP Communication Timeout Runtime Validation",
+    "historical": true,
+    "canRunWithoutLLM": true
+  }
+}
