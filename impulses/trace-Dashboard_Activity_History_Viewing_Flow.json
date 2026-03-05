@@ -1,0 +1,38 @@
+{
+  "id": "trace-Dashboard_Activity_History_Viewing_Flow",
+  "type": "dataFlowTrace",
+  "pointer": {
+    "type": "file",
+    "filePath": "docs/data-flows/Dashboard-Activity-History-Viewing-Flow-flow.md",
+    "source": "trace-data-flow-single-feature activity"
+  },
+  "metadata": {
+    "specificationName": "Dashboard Activity History Viewing Flow",
+    "executionStatus": "COMPLETED",
+    "activityId": "trace-data-flow-single-feature",
+    "createdAt": "2026-03-04T23:25:00.000Z",
+    "summary": {
+      "writePathStatus": "FULLY FUNCTIONAL",
+      "readPathStatus": "COMPLETELY BROKEN",
+      "criticalIssue": "Backend endpoint GET /auth/orgs/{org_id}/activity NOT IMPLEMENTED",
+      "blockerSeverity": "P0 - CRITICAL"
+    },
+    "componentsAnalyzed": 8,
+    "criticalGapsFound": 4,
+    "estimatedFixEffort": "12-22 days total (P0: 2-3 days, P1: 3-5 days, P2: 5-7 days)",
+    "keyFiles": [
+      "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "repos/metabob-opencode/packages/opencode/src/api/activity-client.ts",
+      "repos/metabob-rpc-api/server/routes/activity.py",
+      "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "repos/metabob-rpc-api/server/db/operations/activity_content.py",
+      "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/RecentActivity.js"
+    ],
+    "kubernetesContext": "devbob-k8s",
+    "dashboardUrl": "http://app.metabob.local"
+  },
+  "budget": 10000,
+  "lazyLoad": true,
+  "compressed": false
+}
