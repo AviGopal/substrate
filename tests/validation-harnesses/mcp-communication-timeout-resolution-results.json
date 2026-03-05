@@ -1,0 +1,127 @@
+{
+  "specificationName": "MCP Communication Timeout Resolution",
+  "timestamp": "2026-03-05T08:20:08.042Z",
+  "overallPass": true,
+  "totalTests": 7,
+  "passed": 7,
+  "failed": 0,
+  "testCases": [
+    {
+      "name": "DEFAULT_TIMEOUT value verification",
+      "input": "repos/metabob-opencode/packages/opencode/src/mcp/index.ts",
+      "expectedOutput": {
+        "timeout": 10000,
+        "comment": "Reduced from 30s to 10s"
+      },
+      "actualOutput": {
+        "timeout": 10000,
+        "hasEnforcementComment": true
+      },
+      "pass": true,
+      "duration": 0.3207000000000022
+    },
+    {
+      "name": "Circuit breaker implementation verification",
+      "input": "repos/metabob-opencode/packages/opencode/src/mcp/index.ts",
+      "expectedOutput": {
+        "hasCircuitBreakerState": true,
+        "threshold": 3,
+        "resetMs": 60000,
+        "hasFailureTracking": true
+      },
+      "actualOutput": {
+        "hasCircuitBreakerState": true,
+        "threshold": 3,
+        "resetMs": 60000,
+        "hasFailureTracking": true,
+        "hasCircuitOpenCheck": true
+      },
+      "pass": true,
+      "duration": 0.17795300000000225
+    },
+    {
+      "name": "MetabobCLI.callMCPTool timeout verification",
+      "input": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "expectedOutput": {
+        "hasMcpToolTimeout": true,
+        "timeout": 10000,
+        "hasWithTimeoutWrapper": true,
+        "hasEnhancedErrorHandling": true
+      },
+      "actualOutput": {
+        "hasMcpToolTimeout": true,
+        "timeout": 10000,
+        "hasWithTimeoutWrapper": true,
+        "hasEnhancedErrorHandling": true
+      },
+      "pass": true,
+      "duration": 0.13345899999999844
+    },
+    {
+      "name": "StateChange.ensure_initialized non-blocking verification",
+      "input": "repos/metabob-cli/src/metabob_cli/mcp/server.py",
+      "expectedOutput": {
+        "returnsStatusDict": true,
+        "noBlockingWait": true,
+        "hasBackgroundInit": true,
+        "hasEnforcementComment": true
+      },
+      "actualOutput": {
+        "returnsStatusDict": true,
+        "noBlockingWait": true,
+        "hasBackgroundInit": true,
+        "hasEnforcementComment": true
+      },
+      "pass": true,
+      "duration": 0.23637199999999936
+    },
+    {
+      "name": "listTools timeout consistency verification",
+      "input": "repos/metabob-opencode/packages/opencode/src/mcp/index.ts",
+      "expectedOutput": {
+        "usesDefaultTimeout": true,
+        "noHardcodedTimeout": true
+      },
+      "actualOutput": {
+        "usesDefaultTimeout": true,
+        "noHardcodedTimeout": true,
+        "foundPattern": "withTimeout(mcpClient.listTools(), mcp.timeout ?? DEFAULT_TIMEOUT"
+      },
+      "pass": true,
+      "duration": 0.08630099999999885
+    },
+    {
+      "name": "Enforcement documentation verification",
+      "input": "Check for ENFORCEMENT comments in modified files",
+      "expectedOutput": {
+        "mcpIndexComments": 3,
+        "metabobUtilComments": 2,
+        "pythonServerComments": 1
+      },
+      "actualOutput": {
+        "index.ts": 4,
+        "metabob.ts": 5,
+        "server.py": 1
+      },
+      "pass": true,
+      "duration": 0.3700320000000019
+    },
+    {
+      "name": "Git commit verification",
+      "input": "Check for enforcement commits in both repos",
+      "expectedOutput": {
+        "opencodeCommit": true,
+        "cliCommit": true
+      },
+      "actualOutput": {
+        "opencodeCommit": true,
+        "cliCommit": true,
+        "opencodeCommitMessage": "c5fb9f3d ENFORCEMENT: MCP Communication Timeout Resolution",
+        "cliCommitMessage": "fe0ae05f3 ENFORCEMENT: MCP Communication Timeout Resolution (CLI side)"
+      },
+      "pass": true,
+      "duration": 50.389694000000006
+    }
+  ],
+  "summary": "✅ All 7 validation tests PASSED"
+}
