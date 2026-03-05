@@ -1,6 +1,6 @@
 {
   "specificationName": "MCP Communication Timeout Resolution",
-  "timestamp": "2026-03-05T08:20:08.042Z",
+  "timestamp": "2026-03-05T08:29:30.121Z",
   "overallPass": true,
   "totalTests": 7,
   "passed": 7,
@@ -18,7 +18,7 @@
         "hasEnforcementComment": true
       },
       "pass": true,
-      "duration": 0.3207000000000022
+      "duration": 0.25942400000000276
     },
     {
       "name": "Circuit breaker implementation verification",
@@ -37,7 +37,7 @@
         "hasCircuitOpenCheck": true
       },
       "pass": true,
-      "duration": 0.17795300000000225
+      "duration": 0.10037700000000171
     },
     {
       "name": "MetabobCLI.callMCPTool timeout verification",
@@ -55,7 +55,7 @@
         "hasEnhancedErrorHandling": true
       },
       "pass": true,
-      "duration": 0.13345899999999844
+      "duration": 0.13613400000000198
     },
     {
       "name": "StateChange.ensure_initialized non-blocking verification",
@@ -73,7 +73,7 @@
         "hasEnforcementComment": true
       },
       "pass": true,
-      "duration": 0.23637199999999936
+      "duration": 0.18792099999999934
     },
     {
       "name": "listTools timeout consistency verification",
@@ -88,7 +88,7 @@
         "foundPattern": "withTimeout(mcpClient.listTools(), mcp.timeout ?? DEFAULT_TIMEOUT"
       },
       "pass": true,
-      "duration": 0.08630099999999885
+      "duration": 0.06722599999999801
     },
     {
       "name": "Enforcement documentation verification",
@@ -104,7 +104,7 @@
         "server.py": 1
       },
       "pass": true,
-      "duration": 0.3700320000000019
+      "duration": 0.3958189999999995
     },
     {
       "name": "Git commit verification",
@@ -120,7 +120,7 @@
         "cliCommitMessage": "fe0ae05f3 ENFORCEMENT: MCP Communication Timeout Resolution (CLI side)"
       },
       "pass": true,
-      "duration": 50.389694000000006
+      "duration": 52.00368300000001
     }
   ],
   "summary": "✅ All 7 validation tests PASSED"
