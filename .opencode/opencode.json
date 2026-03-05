@@ -12,14 +12,24 @@
       ],
       "enabled": true,
       "timeout": 60000
+    },
+    "metabob": {
+      "type": "local",
+      "command": ["metabob-cli", "mcp", "--transport", "stdio"],
+      "environment": {
+        "METABOB_API_KEY": "local-dev-key",
+        "METABOB_API_URL": "http://api.metabob.local"
+      },
+      "enabled": true
     }
   },
   "metabob": {
     "cli_path": "metabob-cli",
     "base_url": "http://api.metabob.local",
     "api_key": "local-dev-key",
+    "auto_inject": true,
     "template_registration": {
-      "auto_register": true,
+      "auto_register": false,
       "default_category": "feature"
     },
     "activity_learning": {

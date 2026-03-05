@@ -1,0 +1,256 @@
+{
+  "activity_id": "validate-build-process-complete",
+  "name": "Validate Build Process Complete",
+  "description": "Comprehensive build validation ensuring all OpenCode features (CLI, ACP, TUI, browser) are correctly included in build process with artifacts verification and testing",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "task_id": "verify-compilation",
+      "subagent": "build",
+      "description": "Verify TypeScript compilation and build script execution",
+      "dependencies": [],
+      "prompt": {
+        "template": "Verify OpenCode compilation and build process:\n\n1. Run typecheck: {{typecheckCommand}}\n   - Ensure zero TypeScript errors\n   - Check for any @ts-ignore or @ts-expect-error comments (anti-pattern)\n   - Verify all imports resolve correctly\n\n2. Run build: {{buildCommand}}\n   - Ensure build script completes successfully\n   - Check build output directory exists\n   - Verify no build warnings or errors\n\n3. Validate build script (script/build.ts):\n   - Check platform targets are configured\n   - Verify all source files are included\n   - Ensure external dependencies are bundled correctly\n\n**Success Criteria**:\n- ✅ Typecheck passes with 0 errors\n- ✅ Build completes without errors\n- ✅ Build artifacts created in expected location\n\n**Common Issues**:\n- Missing dependencies in package.json\n- Incorrect tsconfig.json paths\n- Build script platform configuration errors",
+        "variables": [
+          {
+            "name": "typecheckCommand",
+            "type": "string",
+            "required": true,
+            "description": "Project-specific typecheck command"
+          },
+          {
+            "name": "buildCommand",
+            "type": "string",
+            "required": true,
+            "description": "Project-specific build command"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "package.json",
+          "tsconfig.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [
+          {
+            "pattern": "@ts-ignore",
+            "description": ""
+          },
+          {
+            "pattern": "@ts-expect-error",
+            "description": ""
+          }
+        ],
+        "commands": [
+          {
+            "command": "{{typecheckCommand}}",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "{{buildCommand}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "validate-cli-endpoints",
+      "subagent": "build",
+      "description": "Validate CLI command endpoints are included in build",
+      "dependencies": [
+        "verify-compilation"
+      ],
+      "prompt": {
+        "template": "Validate CLI endpoints are correctly included in build:\n\n1. **Check CLI entry points**:\n   - Verify bin/opencode and bin/opencode.cmd exist\n   - Check src/cli/ directory is included in build\n   - Validate command registry (src/command/) is bundled\n\n2. **Test CLI commands** (if possible without full install):\n   - Check help output: node [build-output] --help\n   - Verify command list is complete\n   - Ensure all documented commands are present\n\n3. **Validate CLI dependencies**:\n   - Check all CLI tool imports are resolved\n   - Verify CLI-specific packages are bundled\n   - Ensure platform-specific binaries are included\n\n**Success Criteria**:\n- ✅ CLI entry points exist and are executable\n- ✅ All CLI commands registered\n- ✅ CLI dependencies bundled correctly\n\n**Red Flags** 🚨:\n- 🚨 Missing CLI commands in build output\n- 🚨 Unbundled dependencies (import errors)\n- 🚨 Platform-specific issues (Windows .cmd missing)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "bin/opencode",
+          "bin/opencode.cmd"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "validate-acp-functionality",
+      "subagent": "build",
+      "description": "Validate ACP server and client functionality in build",
+      "dependencies": [
+        "verify-compilation"
+      ],
+      "prompt": {
+        "template": "Validate ACP (Agent Client Protocol) functionality in build:\n\n1. **Check ACP server components**:\n   - Verify src/acp/server.ts is included\n   - Check ACP protocol handlers are bundled\n   - Validate WebSocket/HTTP transport support\n\n2. **Check ACP client components**:\n   - Verify src/acp/client.ts is included\n   - Check Docker and SSH transport implementations\n   - Validate delegation tool (acp_delegate) is available\n\n3. **Validate ACP dependencies**:\n   - Check WebSocket libraries are bundled\n   - Verify SSH client dependencies\n   - Ensure Docker client libraries included\n\n**Success Criteria**:\n- ✅ ACP server and client modules bundled\n- ✅ All transport types supported\n- ✅ ACP tool registered and available\n\n**Common Issues**:\n- Missing native dependencies (SSH, Docker)\n- WebSocket transport not configured\n- ACP delegation tool not registered",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "validate-tui-features",
+      "subagent": "build",
+      "description": "Validate TUI (Terminal UI) features in build",
+      "dependencies": [
+        "verify-compilation"
+      ],
+      "prompt": {
+        "template": "Validate TUI (Terminal UI) features in build:\n\n1. **Check TUI components**:\n   - Verify src/tui/ directory is included\n   - Check session sidebar implementation\n   - Validate impulse visualization tools\n   - Ensure memory agent UI components are bundled\n\n2. **Check TUI dependencies**:\n   - Verify terminal rendering libraries (ink, etc.)\n   - Check UI component libraries are bundled\n   - Validate keyboard input handling\n\n3. **Test TUI initialization** (if possible):\n   - Check TUI can start without errors\n   - Verify rendering doesn't crash\n   - Ensure graceful degradation on unsupported terminals\n\n**Success Criteria**:\n- ✅ All TUI components bundled\n- ✅ Terminal libraries included\n- ✅ TUI can initialize without errors\n\n**Red Flags** 🚨:\n- 🚨 Missing terminal rendering libraries\n- 🚨 TUI crashes on initialization\n- 🚨 Sidebar or visualization tools missing",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "validate-browser-integration",
+      "subagent": "build",
+      "description": "Validate browser automation (Playwright) integration in build",
+      "dependencies": [
+        "verify-compilation"
+      ],
+      "prompt": {
+        "template": "Validate browser automation integration in build:\n\n1. **Check Playwright tools**:\n   - Verify src/tool/playwright*.ts files are included\n   - Check all browser automation tools registered:\n     - playwright_browser_navigate\n     - playwright_browser_click\n     - playwright_browser_snapshot\n     - playwright_browser_evaluate\n     - (and 15+ other browser tools)\n   - Validate tool registry includes all playwright tools\n\n2. **Check Playwright dependencies**:\n   - Verify playwright package is bundled or marked external\n   - Check browser binaries installation handling\n   - Validate playwright configuration\n\n3. **Validate browser tool metadata**:\n   - Check tool schemas are correct\n   - Verify parameter validation\n   - Ensure error handling for missing browsers\n\n**Success Criteria**:\n- ✅ All Playwright tools registered\n- ✅ Playwright dependencies configured\n- ✅ Browser installation instructions available\n\n**Common Issues**:\n- Playwright marked as external but not in dependencies\n- Browser tools not registered in tool registry\n- Missing browser installation prompts",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "playwright_browser",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "verify-build-artifacts",
+      "subagent": "build",
+      "description": "Verify build artifacts structure and completeness",
+      "dependencies": [
+        "verify-compilation"
+      ],
+      "prompt": {
+        "template": "Verify build artifacts are complete and correct:\n\n1. **Check output directory structure**:\n   - Verify build output directory exists (dist/, build/, or similar)\n   - Check platform-specific builds are created\n   - Validate executable permissions on binaries\n\n2. **Check artifact contents**:\n   - Verify all source modules are bundled\n   - Check external dependencies are handled correctly\n   - Validate asset files are included (templates, docs, etc.)\n\n3. **Check artifact size and optimization**:\n   - Verify build size is reasonable\n   - Check for unnecessary inclusions\n   - Validate minification/optimization applied\n\n4. **Platform-specific validation**:\n   - Linux: Check ELF binary format\n   - macOS: Check Mach-O binary format  \n   - Windows: Check .exe exists\n\n**Success Criteria**:\n- ✅ Build artifacts exist in expected location\n- ✅ All required modules included\n- ✅ Platform-specific builds correct\n- ✅ Build size reasonable (<100MB typical)\n\n**Red Flags** 🚨:\n- 🚨 Build size >200MB (likely includes unnecessary files)\n- 🚨 Missing platform-specific builds\n- 🚨 Executable permissions not set",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "comprehensive-testing",
+      "subagent": "build",
+      "description": "Run comprehensive test suite to validate build",
+      "dependencies": [
+        "verify-compilation",
+        "validate-cli-endpoints",
+        "validate-acp-functionality",
+        "validate-tui-features",
+        "validate-browser-integration",
+        "verify-build-artifacts"
+      ],
+      "prompt": {
+        "template": "Run comprehensive test suite to validate build:\n\n1. **Run full test suite**: {{testCommand}}\n   - Verify all tests pass\n   - Check test coverage is maintained\n   - Ensure no flaky tests\n\n2. **Run integration tests**:\n   - Test CLI command execution\n   - Test ACP delegation workflow\n   - Test TUI rendering\n   - Test browser automation (if browsers installed)\n\n3. **Validate test results**:\n   - Check for any failures or warnings\n   - Verify expected test count\n   - Ensure critical paths are tested\n\n4. **Performance checks** (optional):\n   - Test startup time\n   - Check memory usage\n   - Validate response times\n\n**Success Criteria**:\n- ✅ All tests pass ({{testCommand}})\n- ✅ Integration tests successful\n- ✅ No performance regressions\n- ✅ Critical paths validated\n\n**Common Issues**:\n- Flaky tests due to timing issues\n- Missing test dependencies\n- Environment-specific test failures\n- Browser tests failing (missing browsers)",
+        "variables": [
+          {
+            "name": "testCommand",
+            "type": "string",
+            "required": true,
+            "description": "Project-specific test command"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "{{testCommand}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-01-27T18:20:35.142Z",
+  "metadata": {}
+}

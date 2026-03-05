@@ -1,0 +1,202 @@
+{
+  "activity_id": "fix-bug-with-impulses-reference",
+  "name": "Fix Bug with Impulses (Reference)",
+  "description": "Reference template demonstrating all impulse-aware prompt patterns. Shows: explicit impulse references, metadata variable usage, truncation handling, structured output expectations, and cross-task impulse sharing.",
+  "category": "bugfix",
+  "tasks": [
+    {
+      "task_id": "analyze-bug",
+      "subagent": "activity",
+      "description": "Analyze bug report and understand the issue",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Analyze Bug Report\n\n## Context\nYou are analyzing a bug report to understand the root cause.\n\n## Bug Report (Pattern 1: Explicit Impulse Reference)\nThe bug report is available in the impulse: {{bugReport}}\n\n**Impulse Metadata (Pattern 2: Metadata Variable Usage)**:\n- Token count: {{bugReport.tokens}} / {{bugReport.budget}}\n- Truncated: {{bugReport.truncated}}\n- Type: {{bugReport.type}}\n\n## Error Context\nRelated code is available in: {{errorContext}}\n\n**Context size**: {{errorContext.tokens}} tokens ({{errorContext.truncated}})\n\n## Truncation Handling (Pattern 3: Truncation Strategy)\n{{#if bugReport.truncated}}\n⚠️ **Note**: Bug report was truncated to fit budget. Focus on:\n1. Error message and stack trace (typically at top)\n2. Reproduction steps (if available)\n3. Expected vs actual behavior\n\nIf critical information appears cut off, request impulse expansion in your output.\n{{/if}}\n\n{{#if errorContext.truncated}}\n⚠️ **Note**: Error context was truncated. Prioritize:\n1. Function/method where error occurs\n2. Related type definitions\n3. Immediate dependencies\n{{/if}}\n\n## Your Task\nAnalyze the bug and provide:\n\n### Structured Output (Pattern 4: Expected Structure)\n```json\n{\n  \"summary\": \"Brief description of the bug\",\n  \"errorType\": \"TypeError | ReferenceError | LogicError | etc\",\n  \"location\": {\n    \"file\": \"path/to/file.ts\",\n    \"line\": 123,\n    \"function\": \"functionName\"\n  },\n  \"likelyRootCause\": \"Hypothesis about what's causing the issue\",\n  \"affectedComponents\": [\"Component1\", \"Component2\"],\n  \"needsMoreContext\": {\n    \"required\": true/false,\n    \"details\": \"What additional context would help\"\n  }\n}\n```\n\n### Analysis Details\nProvide a detailed analysis covering:\n1. **Error Understanding**: What is the error? What should happen vs what actually happens?\n2. **Code Flow**: Trace the execution path that leads to the error\n3. **Root Cause Hypothesis**: What likely causes this error?\n4. **Scope**: What components/files are affected?\n\n### Context Assessment\n{{#if bugReport.truncated}}\n- Review if critical bug details were lost in truncation\n- Specify what's missing if truncation affected understanding\n{{/if}}\n\n{{#if errorContext.truncated}}\n- Identify if key code sections were truncated\n- Request specific file regions if needed\n{{/if}}\n\n## Cross-Task Communication (Pattern 5: Sharing)\nYour structured JSON output will be available to subsequent tasks via the `analysisResult` variable. Ensure completeness.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"summary\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"errorType\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"location\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "locate-root-cause",
+      "subagent": "activity",
+      "description": "Locate the exact root cause in code",
+      "dependencies": [
+        "analyze-bug"
+      ],
+      "prompt": {
+        "template": "# Task: Locate Root Cause\n\n## Previous Analysis (Pattern 5: Cross-Task Impulse Sharing)\nFrom the previous task, we identified:\n- **Error Type**: {{analysisResult.errorType}}\n- **Location**: {{analysisResult.location.file}}:{{analysisResult.location.line}}\n- **Hypothesis**: {{analysisResult.likelyRootCause}}\n\n## Code Context (Pattern 3: Advanced Truncation Handling)\n{{#if errorContext.truncated}}\n⚠️ **Context was truncated** ({{errorContext.tokens}}/{{errorContext.budget}} tokens)\n\n**Strategy**: \n1. Focus on the identified location: {{analysisResult.location.function}}\n2. If the critical section is cut off, state which lines you need\n3. Work with available context first, request expansion only if blocked\n\n**Available content**:\n{{errorContext}}\n\n**What to do if truncated at critical point**:\n- Output: \"NEED_EXPANSION: lines X-Y of {{analysisResult.location.file}}\"\n- Continue with analysis based on available information\n- Note assumptions made due to truncation\n{{else}}\n**Complete context available** ({{errorContext.tokens}} tokens):\n{{errorContext}}\n{{/if}}\n\n## Your Task\nLocate the exact root cause:\n\n### Structured Output (Pattern 4: Nested Structure with Metadata)\n```json\n{\n  \"rootCause\": {\n    \"file\": \"exact/file/path.ts\",\n    \"line\": 123,\n    \"code\": \"actual problematic code snippet\",\n    \"issue\": \"precise description of the problem\"\n  },\n  \"contextQuality\": {\n    \"sufficient\": true/false,\n    \"truncationImpact\": \"none | minor | significant | blocking\",\n    \"missingDetails\": \"what's needed if truncation caused issues\"\n  },\n  \"relatedIssues\": [\n    {\n      \"file\": \"other/file.ts\",\n      \"line\": 456,\n      \"relationship\": \"why this matters\"\n    }\n  ],\n  \"fixStrategy\": \"approach to fix the issue\"\n}\n```\n\n### Detailed Investigation\n1. **Exact Location**: Identify the precise line(s) causing the issue\n2. **Mechanism**: Explain exactly how the error occurs (execution flow)\n3. **Contributing Factors**: Are there related issues in other files?\n4. **Truncation Impact**: Did truncation affect your ability to locate the cause?\n\n### Truncation Handling Example\n{{#if errorContext.truncated}}\n**Example Response When Blocked**:\n```json\n{\n  \"rootCause\": {\n    \"file\": \"{{analysisResult.location.file}}\",\n    \"line\": 123,\n    \"code\": \"[truncated]\",\n    \"issue\": \"Unable to see full context\"\n  },\n  \"contextQuality\": {\n    \"sufficient\": false,\n    \"truncationImpact\": \"blocking\",\n    \"missingDetails\": \"NEED_EXPANSION: lines 120-140 of {{analysisResult.location.file}}\"\n  },\n  \"fixStrategy\": \"Cannot determine until context expanded\"\n}\n```\n{{/if}}\n\n## Output for Next Task\nYour `rootCause` object will be used by the fix implementation task.",
+        "variables": [
+          {
+            "name": "analysisResult",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from analyze-bug task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"rootCause\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"contextQuality\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"fixStrategy\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "implement-fix",
+      "subagent": "activity",
+      "description": "Implement the fix for the identified issue",
+      "dependencies": [
+        "locate-root-cause"
+      ],
+      "prompt": {
+        "template": "# Task: Implement Fix\n\n## Root Cause Identified (Pattern 5: Using Previous Task Output)\n{{rootCause.issue}}\n\n**Location**: {{rootCause.file}}:{{rootCause.line}}\n**Strategy**: {{rootCause.fixStrategy}}\n\n## Code Context (Pattern 2: Metadata-Informed Decisions)\n{{errorContext}}\n\n**Context Stats**:\n- Tokens: {{errorContext.tokens}}/{{errorContext.budget}}\n- Truncated: {{errorContext.truncated}}\n- Type: {{errorContext.type}}\n\n## Implementation Guidelines\n\n### Structured Output (Pattern 4: Implementation Structure)\n```json\n{\n  \"changes\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"operation\": \"edit | create | delete\",\n      \"location\": \"line range or component\",\n      \"description\": \"what changed and why\"\n    }\n  ],\n  \"testing\": {\n    \"strategy\": \"how to verify the fix\",\n    \"existingTests\": \"what tests should pass\",\n    \"newTests\": \"what new tests to add\"\n  },\n  \"sideEffects\": {\n    \"affectedComponents\": [\"list of components that might be affected\"],\n    \"breakingChanges\": true/false,\n    \"requiresUpdates\": [\"other files that need updates\"]\n  }\n}\n```\n\n### Implementation Requirements\n1. **Fix the Root Cause**: Address {{rootCause.issue}} at {{rootCause.file}}:{{rootCause.line}}\n2. **Handle Related Issues**: Address items in {{rootCause.relatedIssues}} if present\n3. **Maintain Code Quality**: Follow existing patterns, add comments explaining the fix\n4. **Consider Edge Cases**: Think about similar scenarios that might have the same issue\n\n### Context Utilization (Pattern 3: Working with Truncation)\n{{#if errorContext.truncated}}\n**Note**: Context is truncated. Your fix should:\n- Focus on the identified root cause location\n- Make minimal changes to reduce risk\n- Note any assumptions due to limited context\n- Suggest additional verification steps\n{{else}}\n**Note**: Complete context available. Your fix can:\n- Address the root cause comprehensively\n- Refactor related code if beneficial\n- Apply the fix pattern to similar locations\n{{/if}}\n\n## Fix Implementation\nImplement the fix using appropriate tools (edit, write, etc.). Then provide the structured JSON output above.\n\n## For Next Task (Pattern 5: Preparing Downstream Context)\nYour `changes` array will be used by the verification task to determine what to test.",
+        "variables": [
+          {
+            "name": "rootCause",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from locate-root-cause task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"changes\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"testing\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"sideEffects\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "{{typecheckCommand}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "verify-fix",
+      "subagent": "test",
+      "description": "Verify the fix with tests",
+      "dependencies": [
+        "implement-fix"
+      ],
+      "prompt": {
+        "template": "# Task: Verify Fix\n\n## Changes Made (Pattern 5: Cross-Task Context)\n{{#each fixChanges.changes}}\n- **{{this.file}}**: {{this.description}}\n{{/each}}\n\n## Testing Strategy\n{{fixChanges.testing.strategy}}\n\n## Existing Tests (Pattern 1: Optional Impulse Reference)\n{{#if testCases}}\nExisting test context ({{testCases.tokens}} tokens):\n{{testCases}}\n\n{{#if testCases.truncated}}\n⚠️ Test context truncated. Focus on:\n1. Tests related to: {{fixChanges.changes.[0].file}}\n2. Integration tests for affected components\n3. Regression tests for the bug\n{{/if}}\n{{else}}\nNo existing test context provided. You'll need to:\n1. Search for relevant test files\n2. Understand testing patterns\n3. Create new tests following project conventions\n{{/if}}\n\n## Your Task\n\n### Verification Steps\n1. **Run Existing Tests**: Execute tests that cover the fixed code\n2. **Add Regression Test**: Create test that reproduces the original bug\n3. **Verify Fix**: Confirm the regression test passes with the fix\n4. **Check Side Effects**: Test potentially affected components ({{fixChanges.sideEffects.affectedComponents}})\n\n### Structured Output (Pattern 4: Test Results Structure)\n```json\n{\n  \"verification\": {\n    \"existingTestsPass\": true/false,\n    \"regressionTestCreated\": true/false,\n    \"regressionTestPasses\": true/false,\n    \"sideEffectsTested\": true/false\n  },\n  \"testDetails\": {\n    \"filesModified\": [\"test/path/to/test.ts\"],\n    \"testsAdded\": [\"test name 1\", \"test name 2\"],\n    \"testOutput\": \"relevant test results\"\n  },\n  \"confidence\": {\n    \"level\": \"high | medium | low\",\n    \"reasoning\": \"why this confidence level\",\n    \"additionalTestingNeeded\": \"what else should be tested\"\n  },\n  \"impulseUtilization\": {\n    \"testCasesUseful\": true/false,\n    \"truncationImpact\": \"how truncation affected testing\",\n    \"recommendations\": \"suggestions for future test context\"\n  }\n}\n```\n\n### Metadata-Aware Testing (Pattern 2: Using Impulse Metadata)\n{{#if testCases}}\n**Test Context Quality**:\n- Available: {{testCases.tokens}}/{{testCases.budget}} tokens\n- Truncated: {{testCases.truncated}}\n- Type: {{testCases.type}}\n\n{{#if testCases.truncated}}\n**Truncation Handling**:\n- Prioritize tests directly related to {{fixChanges.changes.[0].file}}\n- If critical test utilities are cut off, search for test helpers separately\n- Note which test patterns you couldn't access due to truncation\n{{/if}}\n{{/if}}\n\n## Complete Verification\nRun tests, create regression test, and provide the structured JSON output above.\n\n## Activity Completion (Pattern 5: Final Context Sharing)\nYour verification results will be included in the activity summary for review.",
+        "variables": [
+          {
+            "name": "fixChanges",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from implement-fix task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"verification\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"testDetails\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"confidence\":",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "{{testCommand}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-01-27T18:20:35.040Z",
+  "metadata": {}
+}
