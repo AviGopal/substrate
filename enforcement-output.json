@@ -1,41 +1,15 @@
 {
-  "specificationName": "Instance-Invariant Storage for Impulses and Activities",
-  "changesApplied": [
-    {
-      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
-      "component": "metabob_activity_save",
-      "changeMade": "Added new MCP tool that forwards activity data to rpc-api /v2/activities endpoint with (api_key, project_id) scoping",
-      "reason": "Completes vessel flow for Activity.save() - enables cross-instance activity storage",
-      "impactAnalysis": "Low blast radius - new tool, gracefully called by opencode. Enables distributed debugging and activity replay."
-    },
-    {
-      "file": "repos/metabob-cli/src/metabob_cli/mcp/tools.py",
-      "component": "metabob_activity_load",
-      "changeMade": "Added new MCP tool that retrieves activity data from rpc-api /v2/activities/{id} endpoint with (api_key, project_id) scoping",
-      "reason": "Completes vessel flow for Activity.load() - enables cross-instance activity retrieval",
-      "impactAnalysis": "Low blast radius - new tool. Critical for activity replay across instances."
-    },
-    {
-      "file": "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
-      "component": "ImpulseCreateTool",
-      "changeMade": "ALREADY ENFORCED - Backend sync implemented (lines 71-110)",
-      "reason": "Enforces vessel flow: opencode -> CLI MCP -> rpc-api -> SurrealDB",
-      "impactAnalysis": "Zero changes required - enforcement complete. Gracefully handles missing MCP client."
-    },
-    {
-      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
-      "component": "Activity.save",
-      "changeMade": "ALREADY ENFORCED - Backend sync implemented (lines 664-710)",
-      "reason": "Enforces vessel flow for activity persistence via dual-write pattern",
-      "impactAnalysis": "Zero changes required - enforcement complete. Maintains performance with async backend sync."
-    },
-    {
-      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
-      "component": "Activity.load",
-      "changeMade": "ALREADY ENFORCED - Backend fallback implemented (lines 488-565)",
-      "reason": "Enables cross-instance activity retrieval with local-first fallback pattern",
-      "impactAnalysis": "Zero changes required - enforcement complete. Fast local path with backend fallback."
-    }
-  ],
-  "enforcementImpulseId": "enforcement-Instance-Invariant Storage for Impulses and Activities"
+  "specificationName": "Activity Template Flow via MCP Backend",
+  "changesApplied": [],
+  "enforcementStatus": "ALREADY COMPLIANT - NO CHANGES REQUIRED",
+  "componentsVerified": 8,
+  "validationChecksPassed": 5,
+  "gapsIdentified": 0,
+  "enforcementImpulseId": "enforcement-Activity Template Flow via MCP Backend",
+  "summary": "After loading the trace impulse and verifying all components, the specification is already fully enforced. All 8 components show 'gap: NONE' and verification confirms compliance. No code changes were required.",
+  "outputFiles": {
+    "enforcementJson": "./enforcement-activity-template-mcp-flow.json",
+    "enforcementImpulse": "./impulses/enforcement-Activity Template Flow via MCP Backend.json",
+    "documentation": "./ENFORCEMENT_ACTIVITY_TEMPLATE_MCP_FLOW.md"
+  }
 }

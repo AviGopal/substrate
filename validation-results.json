@@ -1,83 +1,147 @@
 {
-  "specificationName": "MCP Activity and Impulse System Tool Call Enforcement",
-  "timestamp": "2026-03-03T23:03:40Z",
-  "validationResults": [
-    {
-      "testCase": "validation-mcp-activity-impulse-tool-call-enforcement-case-1",
-      "name": "MCP Client Connectivity - Configuration",
-      "status": "PASS",
-      "actual": "opencode.json found at repos/metabob-opencode/.opencode/opencode.json",
-      "expected": "opencode.json exists with MCP configuration",
-      "difference": null,
-      "details": "Configuration file found in .opencode directory"
-    },
-    {
-      "testCase": "validation-mcp-activity-impulse-tool-call-enforcement-case-2",
-      "name": "MCP.healthCheck() Function Exists",
-      "status": "PASS",
-      "actual": "export async function healthCheck() found in mcp/index.ts",
-      "expected": "MCP.healthCheck() function implemented",
-      "difference": null,
-      "details": "New healthCheck() function found at line 300+ in mcp/index.ts"
-    },
-    {
-      "testCase": "validation-mcp-activity-impulse-tool-call-enforcement-case-3",
-      "name": "Activity Execution Backend Reporting",
-      "status": "PASS",
-      "actual": "log.warn used for backend reporting failures in activity.ts",
-      "expected": "log.warn (not log.debug) for backend reporting failures",
-      "difference": null,
-      "details": "Enforcement change verified: elevated from debug to warn at line 877"
-    },
-    {
-      "testCase": "validation-mcp-activity-impulse-tool-call-enforcement-case-4",
-      "name": "Impulse Backend Sync",
-      "status": "PASS",
-      "actual": "log.error used for backend sync failures in impulse-create.ts",
-      "expected": "log.error (not log.warn) for backend sync failures",
-      "difference": null,
-      "details": "Enforcement change verified: elevated from warn to error at line 157"
-    },
-    {
-      "testCase": "validation-mcp-activity-impulse-tool-call-enforcement-case-5",
-      "name": "Strict Backend Enforcement - Option Exists",
-      "status": "PASS",
-      "actual": "strictBackend option found in LoadOptions and ListOptions",
-      "expected": "strictBackend option available in template-loader.ts",
-      "difference": null,
-      "details": "Option added to both LoadOptions and ListOptions interfaces"
-    },
-    {
-      "testCase": "validation-mcp-activity-impulse-tool-call-enforcement-case-6",
-      "name": "Strict Backend Enforcement - Logic Implemented",
-      "status": "PASS",
-      "actual": "throw new Error() statements found in strictBackend enforcement blocks",
-      "expected": "strictBackend throws errors instead of silent fallback",
-      "difference": null,
-      "details": "Enforcement logic verified in load() and list() functions"
-    }
-  ],
+  "specificationName": "Activity Template Flow via MCP Backend",
+  "timestamp": "2026-03-05T03:17:46.785Z",
   "overallStatus": "PASS",
   "summary": {
-    "total": 6,
-    "passed": 6,
-    "failed": 0,
-    "passRate": "100.0%"
+    "totalTests": 7,
+    "passed": 7,
+    "failed": 0
   },
-  "enforcementChangesVerified": [
-    "Activity execution backend reporting elevated to log.warn (repos/metabob-opencode/packages/opencode/src/tool/activity.ts:877)",
-    "Impulse backend sync failures elevated to log.error (repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts:157)",
-    "StrictBackend option added to LoadOptions and ListOptions (repos/metabob-opencode/packages/opencode/src/session/template-loader.ts)",
-    "StrictBackend enforcement logic implemented with error throwing (template-loader.ts load() and list())",
-    "MCP.healthCheck() function added for observability (repos/metabob-opencode/packages/opencode/src/mcp/index.ts:300+)"
+  "validationResults": [
+    {
+      "testCaseNumber": 1,
+      "testCase": "validation-activity-template-flow-via-mcp-backend-case-1",
+      "testName": "MCP Connection Status",
+      "status": "PASS",
+      "actual": {
+        "toolExists": true,
+        "toolDefined": true
+      },
+      "expected": {
+        "toolExists": true,
+        "toolDefined": true
+      },
+      "details": "test_metabob_mcp tool found",
+      "difference": null
+    },
+    {
+      "testCaseNumber": 2,
+      "testCase": "validation-activity-template-flow-via-mcp-backend-case-2",
+      "testName": "TemplateLoader Source Verification",
+      "status": "PASS",
+      "actual": {
+        "fileExists": true,
+        "sourceMetabob": true,
+        "usesTemplateServiceClient": true,
+        "hasBootstrapFallback": true
+      },
+      "expected": {
+        "fileExists": true,
+        "sourceMetabob": true,
+        "usesTemplateServiceClient": true,
+        "hasBootstrapFallback": true
+      },
+      "details": "TemplateLoader properly configured",
+      "difference": null
+    },
+    {
+      "testCaseNumber": 3,
+      "testCase": "validation-activity-template-flow-via-mcp-backend-case-3",
+      "testName": "No Direct File Access",
+      "status": "PASS",
+      "actual": {
+        "activeReferences": 0,
+        "allReferencesCommented": true
+      },
+      "expected": {
+        "activeReferences": 0,
+        "allReferencesCommented": true
+      },
+      "details": "No active references to .metabob/activities found",
+      "difference": null
+    },
+    {
+      "testCaseNumber": 4,
+      "testCase": "validation-activity-template-flow-via-mcp-backend-case-4",
+      "testName": "MetabobCLI No Local Writes",
+      "status": "PASS",
+      "actual": {
+        "fileExists": true,
+        "noLocalWrites": true,
+        "hasArchitecturalConstraintComment": true,
+        "callsMCPTools": true
+      },
+      "expected": {
+        "fileExists": true,
+        "noLocalWrites": true,
+        "hasArchitecturalConstraintComment": true,
+        "callsMCPTools": true
+      },
+      "details": "MetabobCLI properly enforces MCP-only communication",
+      "difference": null
+    },
+    {
+      "testCaseNumber": 5,
+      "testCase": "validation-activity-template-flow-via-mcp-backend-case-5",
+      "testName": "Activity Agent Tool Configuration",
+      "status": "PASS",
+      "actual": {
+        "hasSearchActivities": true,
+        "hasActivity": true,
+        "noImpulseCreate": true,
+        "noImpulseLoad": true
+      },
+      "expected": {
+        "hasSearchActivities": true,
+        "hasActivity": true,
+        "noImpulseCreate": true,
+        "noImpulseLoad": true
+      },
+      "details": "Activity agent properly configured",
+      "difference": null
+    },
+    {
+      "testCaseNumber": 6,
+      "testCase": "validation-activity-template-flow-via-mcp-backend-case-6",
+      "testName": "Memory Agent Tool Configuration",
+      "status": "PASS",
+      "actual": {
+        "hasActivity": true,
+        "hasSearchActivities": true,
+        "hasImpulseCreate": true,
+        "hasImpulseLoad": true,
+        "hasImpulseUnload": true
+      },
+      "expected": {
+        "hasActivity": true,
+        "hasSearchActivities": true,
+        "hasImpulseCreate": true,
+        "hasImpulseLoad": true,
+        "hasImpulseUnload": true
+      },
+      "details": "Memory agent properly configured",
+      "difference": null
+    },
+    {
+      "testCaseNumber": 7,
+      "testCase": "validation-activity-template-flow-via-mcp-backend-case-7",
+      "testName": "TemplateServiceClient Delegation",
+      "status": "PASS",
+      "actual": {
+        "fileExists": true,
+        "callsSearchActivities": true,
+        "callsGetActivity": true,
+        "callsRegisterActivityTemplate": true
+      },
+      "expected": {
+        "fileExists": true,
+        "callsSearchActivities": true,
+        "callsGetActivity": true,
+        "callsRegisterActivityTemplate": true
+      },
+      "details": "TemplateServiceClient properly delegates to MetabobCLI",
+      "difference": null
+    }
   ],
-  "resultsImpulseId": "validation-results-mcp-activity-impulse-tool-call-enforcement",
-  "notes": [
-    "All enforcement changes from commit 8a88b061 verified successfully",
-    "Code-level validation confirms all P0 and P1 priorities implemented",
-    "Runtime validation would require full instance context setup (skipped for code-level validation)",
-    "Configuration files exist but in .opencode directory (not root)",
-    "All logging level changes verified in source code",
-    "All strictBackend enforcement logic verified in source code"
-  ]
+  "resultsImpulseId": "validation-results-activity-template-flow-via-mcp-backend"
 }

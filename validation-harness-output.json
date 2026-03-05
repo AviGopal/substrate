@@ -1,97 +1,117 @@
 {
-  "specificationName": "Instance-Invariant Storage for Impulses and Activities",
-  "harnessFile": "tests/validation-harnesses/instance-invariant-storage-for-impulses-and-activities-harness.ts",
+  "specificationName": "Activity Template Flow via MCP Backend",
+  "harnessFile": "tests/validation-harnesses/activity-template-flow-via-mcp-backend-harness.ts",
+  "harnessImpulseId": "harness-activity-template-flow-via-mcp-backend",
   "testCases": [
     {
-      "impulseId": "validation-Instance-Invariant Storage for Impulses and Activities-case-1",
+      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-1",
+      "testName": "MCP Connection Status",
       "input": {
-        "impulseId": "test-impulse",
-        "projectId": "test-project",
-        "impulseData": {
-          "id": "test-impulse",
-          "type": "memo"
-        }
+        "check": "test_metabob_mcp tool exists and is defined"
       },
       "expectedOutput": {
-        "noDirectImports": true,
-        "usesCliTool": true,
-        "callStack": ["opencode", "CLI MCP", "rpc-api"]
-      },
-      "testName": "Vessel Flow Compliance",
-      "category": "architectural-compliance"
+        "toolExists": true,
+        "toolDefined": true
+      }
     },
     {
-      "impulseId": "validation-Instance-Invariant Storage for Impulses and Activities-case-2",
+      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-2",
+      "testName": "TemplateLoader Source Verification",
       "input": {
-        "instanceA": "create impulse with credentials",
-        "instanceB": "retrieve impulse with same credentials"
+        "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+        "check": "TemplateLoader returns source=\"metabob\" for backend templates"
       },
       "expectedOutput": {
-        "storeSuccess": true,
-        "retrieveSuccess": true,
-        "dataIntegrity": true
-      },
-      "testName": "Cross-Instance Retrieval",
-      "category": "cross-instance-access"
+        "fileExists": true,
+        "sourceMetabob": true,
+        "usesTemplateServiceClient": true,
+        "hasBootstrapFallback": true
+      }
     },
     {
-      "impulseId": "validation-Instance-Invariant Storage for Impulses and Activities-case-3",
+      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-3",
+      "testName": "No Direct File Access",
       "input": {
-        "apiKeyA": "tenant_a_key",
-        "apiKeyB": "tenant_b_key",
-        "projectId": "same_project"
+        "searchPath": "repos/metabob-opencode/packages/opencode/src",
+        "pattern": ".metabob/activities",
+        "check": "No active direct file access to .metabob/activities"
       },
       "expectedOutput": {
-        "accessDenied": true
-      },
-      "testName": "Multi-Tenant Isolation",
-      "category": "security"
+        "activeReferences": 0,
+        "allReferencesCommented": true
+      }
     },
     {
-      "impulseId": "validation-Instance-Invariant Storage for Impulses and Activities-case-4",
+      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-4",
+      "testName": "MetabobCLI No Local Writes",
       "input": {
-        "apiKey": "same_key",
-        "projectA": "project_alpha",
-        "projectB": "project_beta"
+        "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+        "check": "MetabobCLI has no local template writes (lines 803-813 commented)"
       },
       "expectedOutput": {
-        "projectIsolated": true
-      },
-      "testName": "Project Isolation",
-      "category": "security"
+        "fileExists": true,
+        "noLocalWrites": true,
+        "hasArchitecturalConstraintComment": true,
+        "callsMCPTools": true
+      }
     },
     {
-      "impulseId": "validation-Instance-Invariant Storage for Impulses and Activities-case-5",
+      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-5",
+      "testName": "Activity Agent Tool Configuration",
       "input": {
-        "totalImpulses": 15,
-        "page1Limit": 10,
-        "page2Offset": 10
+        "file": "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
+        "check": "Activity agent has search_activities, no impulse tools"
       },
       "expectedOutput": {
-        "page1Count": 10,
-        "page2Count": 5
-      },
-      "testName": "Pagination",
-      "category": "api-functionality"
+        "hasSearchActivities": true,
+        "hasActivity": true,
+        "noImpulseCreate": true,
+        "noImpulseLoad": true
+      }
     },
     {
-      "impulseId": "validation-Instance-Invariant Storage for Impulses and Activities-case-6",
+      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-6",
+      "testName": "Memory Agent Tool Configuration",
       "input": {
-        "sourceFiles": [
-          "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
-          "repos/metabob-opencode/packages/opencode/src/session/activity.ts"
-        ]
+        "file": "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
+        "check": "Memory agent has impulse tools and activity tools"
       },
       "expectedOutput": {
-        "hasImpulseBackendSync": true,
-        "hasActivitySaveBackendSync": true,
-        "hasActivityLoadBackendFallback": true,
-        "hasDirectHTTP": false,
-        "hasRequiredImports": true
+        "hasActivity": true,
+        "hasSearchActivities": true,
+        "hasImpulseCreate": true,
+        "hasImpulseLoad": true,
+        "hasImpulseUnload": true
+      }
+    },
+    {
+      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-7",
+      "testName": "TemplateServiceClient Delegation",
+      "input": {
+        "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+        "check": "TemplateServiceClient delegates to MetabobCLI"
       },
-      "testName": "Backend Sync Enforcement",
-      "category": "code-quality"
+      "expectedOutput": {
+        "fileExists": true,
+        "callsSearchActivities": true,
+        "callsGetActivity": true,
+        "callsRegisterActivityTemplate": true
+      }
     }
   ],
-  "harnessImpulseId": "harness-Instance-Invariant Storage for Impulses and Activities"
+  "summary": {
+    "totalTests": 7,
+    "harnessType": "static-analysis",
+    "requiresLLM": false,
+    "canRunOffline": true,
+    "estimatedRuntime": "< 10 seconds",
+    "validationStrategy": [
+      "Call test_metabob_mcp() and verify status='connected'",
+      "Load a non-bootstrap template via TemplateLoader.load() and verify source='metabob'",
+      "Search codebase for direct .metabob/activities file reads and ensure they're deprecated/removed",
+      "Trace a template registration flow from TemplateServiceClient.registerTemplate() through MCP to RPC API",
+      "Verify Activity agent tools use search_activities() not file system access",
+      "Check that enforcement comments exist preventing local template storage"
+    ]
+  }
 }

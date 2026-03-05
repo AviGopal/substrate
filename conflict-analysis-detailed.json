@@ -1,0 +1,210 @@
+{
+  "specificationName": "Activity Template Flow via MCP Backend",
+  "analyzedDate": "2026-03-05T03:16:02.873Z",
+  "overallConflictStatus": "NO CONFLICTS DETECTED",
+  "otherSpecifications": [
+    {
+      "name": "complete-architecture-separation",
+      "status": "PASS",
+      "relationship": "ALIGNS",
+      "description": "Enforces separation of concerns across opencode, CLI, and RPC API"
+    },
+    {
+      "name": "bootstrap-template-filepath-compliance",
+      "status": "PASS",
+      "relationship": "COMPLEMENTS",
+      "description": "Defines bootstrap template loading from embedded imports"
+    },
+    {
+      "name": "activity-retrieval-learning-backend-communication",
+      "status": "PASS",
+      "relationship": "ALIGNS",
+      "description": "Ensures activity retrieval and learning flow through backend"
+    },
+    {
+      "name": "mcp-tool-name-fix",
+      "status": "PASS",
+      "relationship": "ALIGNS",
+      "description": "MCP tool naming consistency"
+    },
+    {
+      "name": "metrics-calculation-in-rpc-api-only",
+      "status": "PASS",
+      "relationship": "ALIGNS",
+      "description": "Enforces metrics calculation in RPC API (Thompson Sampling)"
+    },
+    {
+      "name": "thompson-sampling-in-rpc-api-only",
+      "status": "PASS",
+      "relationship": "ALIGNS",
+      "description": "Thompson Sampling implementation isolated in RPC API"
+    },
+    {
+      "name": "impulse-learning-in-rpc-api-only",
+      "status": "PASS",
+      "relationship": "ALIGNS",
+      "description": "Impulse learning logic in RPC API backend"
+    }
+  ],
+  "conflicts": [],
+  "alignments": [
+    {
+      "type": "ARCHITECTURAL_ALIGNMENT",
+      "specs": [
+        "Activity Template Flow via MCP Backend",
+        "complete-architecture-separation"
+      ],
+      "sharedPrinciple": "Separation of concerns",
+      "details": "Both specs enforce that opencode/CLI do not contain business logic. Our spec removes local template writes from MetabobCLI, complete-architecture-separation removes ML implementations from opencode.",
+      "status": "MUTUALLY_REINFORCING"
+    },
+    {
+      "type": "DATA_FLOW_ALIGNMENT",
+      "specs": [
+        "Activity Template Flow via MCP Backend",
+        "activity-retrieval-learning-backend-communication",
+        "mcp-tool-name-fix"
+      ],
+      "sharedPrinciple": "MCP backend communication",
+      "details": "All specs enforce that template operations flow through MCP → RPC API → SurrealDB. No direct file system access.",
+      "status": "CONSISTENT"
+    },
+    {
+      "type": "LEARNING_INFRASTRUCTURE_ALIGNMENT",
+      "specs": [
+        "Activity Template Flow via MCP Backend",
+        "metrics-calculation-in-rpc-api-only",
+        "thompson-sampling-in-rpc-api-only",
+        "impulse-learning-in-rpc-api-only"
+      ],
+      "sharedPrinciple": "Backend-based learning",
+      "details": "Our spec's MCP backend flow enables centralized learning via Thompson Sampling. These specs ensure learning logic is isolated in RPC API.",
+      "status": "COMPLEMENTARY"
+    },
+    {
+      "type": "BOOTSTRAP_FALLBACK_ALIGNMENT",
+      "specs": [
+        "Activity Template Flow via MCP Backend",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "sharedPrinciple": "Controlled fallback for cold-start",
+      "details": "Our spec allows bootstrap template fallback when backend unavailable. Bootstrap-filepath-compliance ensures these templates load from embedded imports (no filesystem deps).",
+      "status": "COMPLEMENTARY"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "affectedBySpecs": [
+        "Activity Template Flow via MCP Backend",
+        "bootstrap-template-filepath-compliance"
+      ],
+      "requirements": [
+        "Returns source='metabob' for backend templates (our spec)",
+        "Loads bootstrap from embedded imports (bootstrap spec)",
+        "Falls back to bootstrap when backend unavailable (our spec)"
+      ],
+      "conflictStatus": "NO CONFLICT",
+      "notes": "Both requirements are implemented and complementary. TemplateLoader.load() tries backend first, falls back to embedded bootstrap."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "affectedBySpecs": [
+        "Activity Template Flow via MCP Backend",
+        "complete-architecture-separation",
+        "mcp-tool-name-fix"
+      ],
+      "requirements": [
+        "No local template writes, MCP-only communication (our spec)",
+        "CLI tools are pure proxies to RPC API (architecture-separation)",
+        "Correct MCP tool names (mcp-tool-name-fix)"
+      ],
+      "conflictStatus": "NO CONFLICT",
+      "notes": "All requirements align. MetabobCLI delegates to MCP tools without local computation."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
+      "affectedBySpecs": [
+        "Activity Template Flow via MCP Backend",
+        "complete-architecture-separation"
+      ],
+      "requirements": [
+        "Activity agent has search_activities, no impulse tools (our spec)",
+        "Memory agent has impulse tools (our spec)",
+        "No ML implementations in opencode (architecture-separation)"
+      ],
+      "conflictStatus": "NO CONFLICT",
+      "notes": "Agent configuration enforces separation of concerns. No ML code in agent definitions."
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/routes/activity.py",
+      "affectedBySpecs": [
+        "Activity Template Flow via MCP Backend",
+        "metrics-calculation-in-rpc-api-only",
+        "thompson-sampling-in-rpc-api-only",
+        "impulse-learning-in-rpc-api-only"
+      ],
+      "requirements": [
+        "Provides GET /v2/activities/templates with Thompson Sampling (our spec)",
+        "Thompson Sampling logic in RPC API (thompson-sampling spec)",
+        "Metrics calculation in RPC API (metrics spec)",
+        "Impulse learning in RPC API (impulse-learning spec)"
+      ],
+      "conflictStatus": "NO CONFLICT",
+      "notes": "All learning and selection logic is properly isolated in RPC API backend."
+    }
+  ],
+  "crossCuttingConcerns": [
+    {
+      "concern": "Template Storage",
+      "specs": [
+        "Activity Template Flow via MCP Backend",
+        "complete-architecture-separation"
+      ],
+      "resolution": "SurrealDB primary + Redis cache (enforced by both specs)",
+      "status": "ALIGNED"
+    },
+    {
+      "concern": "Agent Tool Configuration",
+      "specs": [
+        "Activity Template Flow via MCP Backend"
+      ],
+      "resolution": "Activity agent: template selection. Memory agent: impulse state management.",
+      "status": "ISOLATED"
+    },
+    {
+      "concern": "MCP Communication",
+      "specs": [
+        "Activity Template Flow via MCP Backend",
+        "activity-retrieval-learning-backend-communication",
+        "mcp-tool-name-fix"
+      ],
+      "resolution": "All template operations flow through MCP layer to RPC API",
+      "status": "ALIGNED"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "LOW",
+      "recommendation": "Document shared component dependencies",
+      "reason": "Multiple specs touch template-loader.ts and metabob.ts. Explicit documentation helps future maintainers understand the layered requirements.",
+      "action": "Add architecture decision records (ADRs) linking related specifications"
+    },
+    {
+      "priority": "LOW",
+      "recommendation": "Create integration test suite",
+      "reason": "While individual specs pass, an integration test verifying the complete flow (Activity agent → TemplateLoader → MCP → RPC API → SurrealDB) would increase confidence.",
+      "action": "Add end-to-end integration test for template retrieval and registration"
+    },
+    {
+      "priority": "LOW",
+      "recommendation": "Monitor for new specifications",
+      "reason": "As new specs are added, re-run conflict analysis to detect emergent conflicts early.",
+      "action": "Add conflict analysis step to specification validation workflow"
+    }
+  ],
+  "conclusion": "NO CONFLICTS DETECTED. The Activity Template Flow via MCP Backend specification ALIGNS with and COMPLEMENTS existing specifications. All 7 related specifications enforce consistent architectural principles: backend-first communication, separation of concerns, and centralized learning infrastructure. The shared components (TemplateLoader, MetabobCLI, agent configurations, RPC API routes) have complementary requirements with no contradictions.",
+  "confidenceLevel": "HIGH",
+  "analysisMethod": "Static cross-reference of validation results and component dependencies",
+  "conflictImpulseId": "conflict-analysis-activity-template-flow-via-mcp-backend"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "harness-activity-template-flow-via-mcp-backend",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/activity-template-flow-via-mcp-backend-harness.ts",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "metadata": {
+    "specification": "Activity Template Flow via MCP Backend",
+    "harnessType": "static-analysis",
+    "testCount": 7,
+    "requiresLLM": false,
+    "canRunOffline": true,
+    "description": "Validates that activity templates flow exclusively through MCP backend path (MCP → RPC API → SurrealDB) rather than bypassing via direct file system access"
+  }
+}

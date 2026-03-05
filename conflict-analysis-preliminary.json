@@ -1,0 +1,172 @@
+{
+  "specificationName": "Activity Template Flow via MCP Backend",
+  "analyzedDate": "2026-03-05T03:14:58.049Z",
+  "totalRelatedSpecs": 31,
+  "relatedSpecs": [
+    {
+      "name": "Local Docker Desktop Kubernetes Deployment",
+      "status": "PASSED",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "Kubernetes-Deployment-Validation-Exit-Codes",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "devbob-k8s-git-operations",
+      "status": "FAIL",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "devbob-acp-multi-vessel-coordination",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "instance-invariant-storage",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "acp-local-network-discovery",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "impulse-learning-in-rpc-api-only",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "metrics-calculation-in-rpc-api-only",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "surrealdb-primary-redis-cache",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "complete-architecture-separation",
+      "status": "PASS",
+      "relationship": "ALIGNS"
+    },
+    {
+      "name": "impulse-learning-storage-complete",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "context-optimization-endpoint-complete",
+      "status": "BLOCKED",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "thompson-sampling-in-rpc-api-only",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "activity-template-query-filtering",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "surrealdb-official-library-integration",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "bootstrap-template-filepath-compliance",
+      "status": "PASS",
+      "relationship": "COMPLEMENTS"
+    },
+    {
+      "name": "project-scoped-template-filtering",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "metabob-cli-test-implementation-alignment",
+      "status": "SUBSTANTIAL_PROGRESS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "mcp-tool-name-fix",
+      "status": "PASS",
+      "relationship": "ALIGNS"
+    },
+    {
+      "name": "surrealdb-async-await-enforcement",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "surrealdb-async-await-deployment",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "dashboard-build-deploy-validate-e2e",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "rpc-api-endpoint-database-integration",
+      "status": "PARTIAL_PASS",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "dynamic-activity-creation-devbob-e2e-validation",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "dynamic-activity-creation-with-trailblazing-pass2",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "MCP Data Flow: Devbob → Metabob-CLI → Database",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "mcp-data-flow-local-k8s-content",
+      "status": "UNKNOWN",
+      "relationship": "ALIGNS"
+    },
+    {
+      "name": "mcp-data-flow-local-k8s",
+      "status": "UNKNOWN",
+      "relationship": "ALIGNS"
+    },
+    {
+      "name": "metabob-cli-mcp-activity-impulse-learning-integration",
+      "status": "PARTIAL_PASS",
+      "relationship": "ALIGNS"
+    },
+    {
+      "name": "dynamic-activity-creation-with-trailblazing-pass4",
+      "status": "UNKNOWN",
+      "relationship": "UNKNOWN"
+    },
+    {
+      "name": "activity-retrieval-learning-backend-communication",
+      "status": "PASS",
+      "relationship": "UNKNOWN"
+    }
+  ],
+  "potentialConflicts": [],
+  "sharedComponents": [
+    "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+    "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+    "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+    "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
+    "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+    "repos/metabob-rpc-api/server/routes/activity.py",
+    "repos/metabob-rpc-api/server/actions/activity.py"
+  ]
+}

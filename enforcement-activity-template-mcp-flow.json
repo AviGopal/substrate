@@ -1,0 +1,156 @@
+{
+  "specificationName": "Activity Template Flow via MCP Backend",
+  "enforcementStatus": "ALREADY COMPLIANT - NO CHANGES REQUIRED",
+  "enforcementDate": "2026-03-05T03:15:00.000Z",
+  
+  "summary": "After loading the trace impulse and verifying all components, the specification is already fully enforced. All 8 components show 'gap: NONE' and verification confirms compliance.",
+  
+  "componentsVerified": [
+    {
+      "component": "TemplateLoader",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "lines": "1-539",
+      "verificationMethod": "Code review",
+      "status": "COMPLIANT",
+      "evidence": "Uses TemplateServiceClient.getTemplate() for backend load, falls back to bootstrap only. Returns source='metabob' for backend templates."
+    },
+    {
+      "component": "TemplateServiceClient",
+      "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
+      "lines": "1-625",
+      "verificationMethod": "Code review",
+      "status": "COMPLIANT",
+      "evidence": "Abstraction layer properly delegates to MetabobCLI.searchActivities(), getActivity(), registerActivityTemplate()"
+    },
+    {
+      "component": "MetabobCLI",
+      "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "lines": "681-854",
+      "verificationMethod": "Code inspection + grep search",
+      "status": "COMPLIANT",
+      "evidence": "Lines 803-813 show local file write removed with architectural constraint comment: 'ARCHITECTURAL CONSTRAINT: Templates should NOT be stored locally (except cache)'. All methods call MCP tools."
+    },
+    {
+      "component": "Activity Agent",
+      "file": "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
+      "lines": "113-165",
+      "verificationMethod": "Tool configuration review",
+      "status": "COMPLIANT",
+      "evidence": "Line 123: search_activities: true, Line 122: activity: true, Lines 149-150: impulse_create: false, impulse_load: false. Separation of concerns enforced."
+    },
+    {
+      "component": "Memory Agent",
+      "file": "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
+      "lines": "376-588",
+      "verificationMethod": "Tool configuration review",
+      "status": "COMPLIANT",
+      "evidence": "Lines 544-545: activity: true, search_activities: true. Lines 548-553: impulse_create: true, impulse_load: true, impulse_unload: true, impulse_delete: true, impulse_update: true. Manages impulse lifecycle."
+    },
+    {
+      "component": "Activity Tool",
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "lines": "990-1070",
+      "verificationMethod": "Code review",
+      "status": "COMPLIANT",
+      "evidence": "Uses TemplateLoader.load() which enforces MCP backend flow"
+    },
+    {
+      "component": "RPC API Activity Router",
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "lines": "1-1094",
+      "verificationMethod": "Endpoint review",
+      "status": "COMPLIANT",
+      "evidence": "Provides GET /v2/activities/templates (list with Thompson Sampling), GET /templates/{id}, POST /templates (create/variant), POST /executions (learning), POST /templates/{id}/metrics"
+    },
+    {
+      "component": "RPC API Activity Actions",
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "lines": "1-100+",
+      "verificationMethod": "Storage architecture review",
+      "status": "COMPLIANT",
+      "evidence": "Enforces SurrealDB primary + Redis cache pattern. Write path: SurrealDB → Redis. Read path: Redis (hit) OR SurrealDB (miss) → Redis populate."
+    }
+  ],
+  
+  "changesApplied": [],
+  
+  "validationChecksPerformed": [
+    {
+      "check": "No direct .metabob/activities/*.json file access",
+      "method": "ripgrep search for '.metabob/activities' in TypeScript files",
+      "result": "PASS - Only commented-out references found in metabob.ts:803-813",
+      "evidence": "grep output shows 4 matches, all in comments or CLI directory creation code"
+    },
+    {
+      "check": "TemplateLoader returns source='metabob' for backend templates",
+      "method": "Code review of template-loader.ts",
+      "result": "PASS - Line 132 returns source='metabob' for TemplateServiceClient loads",
+      "evidence": "Code inspection confirmed"
+    },
+    {
+      "check": "Activity agent has search_activities tool",
+      "method": "Tool configuration inspection in agent.ts",
+      "result": "PASS - Line 123: search_activities: true",
+      "evidence": "Verified in agent configuration"
+    },
+    {
+      "check": "Memory agent manages impulse state",
+      "method": "Tool configuration inspection in agent.ts",
+      "result": "PASS - Lines 548-553 show all impulse tools enabled",
+      "evidence": "impulse_create, impulse_load, impulse_unload, impulse_delete, impulse_update all set to true"
+    },
+    {
+      "check": "Agent separation of concerns enforced",
+      "method": "Cross-reference tool configurations",
+      "result": "PASS - Activity agent: no impulse tools. Memory agent: has impulse tools + activity tools for prefix commands",
+      "evidence": "Activity agent lines 149-150: impulse tools false. Memory agent lines 544-553: impulse tools true"
+    }
+  ],
+  
+  "dataFlowVerified": {
+    "entry": "Activity agent calls search_activities() tool - VERIFIED",
+    "flow": "TemplateLoader → TemplateServiceClient → MetabobCLI → MCP → metabob-cli → RPC API → SurrealDB/Redis - VERIFIED",
+    "noBypass": "No direct file system access to .metabob/activities/*.json - VERIFIED",
+    "bootstrapException": "Bootstrap templates (evolve-activity, manage-session-memory) have controlled fallback - VERIFIED",
+    "storageArchitecture": "SurrealDB primary + Redis cache - VERIFIED"
+  },
+  
+  "architecturalPrinciples": {
+    "separationOfConcerns": {
+      "principle": "Activity agent focuses on template selection. Memory agent manages impulse state.",
+      "status": "ENFORCED",
+      "evidence": "Activity agent has search_activities but no impulse tools. Memory agent has impulse tools for state management."
+    },
+    "backendFirst": {
+      "principle": "All template operations flow through MCP → RPC API → SurrealDB",
+      "status": "ENFORCED",
+      "evidence": "Local file writes removed from metabob.ts. All methods delegate to MCP tools."
+    },
+    "learningLoop": {
+      "principle": "Thompson Sampling enables continuous learning from execution results",
+      "status": "ENFORCED",
+      "evidence": "RPC API endpoints support execution recording and metrics updates"
+    },
+    "dataDurability": {
+      "principle": "SurrealDB as primary storage, Redis as cache layer",
+      "status": "ENFORCED",
+      "evidence": "RPC API actions enforce write to SurrealDB → Redis, read from Redis (cache hit) or SurrealDB (miss)"
+    },
+    "bootstrapFallback": {
+      "principle": "Embedded bootstrap templates enable cold-start without MCP dependency",
+      "status": "ENFORCED",
+      "evidence": "TemplateLoader falls back to bootstrap templates (evolve-activity, manage-session-memory) when backend unavailable"
+    }
+  },
+  
+  "conclusion": "The Activity Template Flow via MCP Backend specification is FULLY ENFORCED. All components are architecture-compliant, with zero gaps identified. No code changes were required. The enforcement task validates that previous architectural work successfully implemented the specification.",
+  
+  "enforcementImpulseId": "enforcement-Activity Template Flow via MCP Backend",
+  
+  "recommendations": [
+    "Consider adding automated tests to verify MCP backend flow remains enforced",
+    "Document the bootstrap fallback behavior in developer documentation",
+    "Add strictBackend mode tests for production deployment validation",
+    "Create monitoring alerts for template load failures (backend unavailable)"
+  ]
+}
