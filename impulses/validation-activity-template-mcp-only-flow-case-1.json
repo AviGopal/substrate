@@ -1,0 +1,18 @@
+{
+  "id": "validation-activity-template-mcp-only-flow-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Validation Test Case 1: Basic Activity Execution\n\n## Input\n\n```json\n{\n  \"activityId\": \"trace-data-flow-single-feature\",\n  \"variables\": {\n    \"featureName\": \"user-authentication\",\n    \"entryPoint\": \"src/auth/login.ts\"\n  },\n  \"reason\": \"Validation test: Verify MCP-only template flow with trace-data-flow-single-feature activity\"\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"pass\": true,\n  \"actual\": {\n    \"mcpSearchRequest\": true,\n    \"mcpGetRequest\": true,\n    \"surrealdbTemplateRead\": true,\n    \"activityExecutionComplete\": true,\n    \"mcpPostResultRequest\": true,\n    \"surrealdbLearningWrite\": true,\n    \"noLocalDirectoryReads\": true\n  },\n  \"expected\": {\n    \"mcpSearchRequest\": true,\n    \"mcpGetRequest\": true,\n    \"surrealdbTemplateRead\": true,\n    \"activityExecutionComplete\": true,\n    \"mcpPostResultRequest\": true,\n    \"surrealdbLearningWrite\": true,\n    \"noLocalDirectoryReads\": true\n  },\n  \"errors\": []\n}\n```\n\n## Validation Criteria\n\n1. **MCP Search Request**: metabob-rpc-api logs show `GET /v2/activities/templates`\n2. **MCP Get Request**: metabob-rpc-api logs show `GET /v2/activities/templates/trace-data-flow-single-feature`\n3. **SurrealDB Template Read**: Template data retrieved from database\n4. **Activity Execution**: Activity completes successfully in opencode\n5. **MCP Post Result**: metabob-rpc-api logs show `POST /v2/activities/executions`\n6. **SurrealDB Learning Write**: Execution metrics written to activity_execution table\n7. **No Local Reads**: opencode logs show ZERO reads of .metabob/activities directory\n\n## Test Description\n\nThis test validates the complete MCP-only flow for activity template management:\n\n- Template is retrieved from metabob-rpc-api via MCP (not local files)\n- Activity executes in clean devbob-k8s environment\n- Learning data is posted back to backend\n- No local .metabob/activities directory is accessed\n\n**Test Environment**: devbob-k8s container with metabob-rpc-api backend\n\n**Expected Behavior**: All architectural constraints enforced, complete MCP flow traced\n",
+    "source": "validation-test-case"
+  },
+  "budget": 1000,
+  "priority": "high",
+  "loaded": true,
+  "metadata": {
+    "testCase": 1,
+    "specification": "activity-template-mcp-only-flow",
+    "activityId": "trace-data-flow-single-feature",
+    "category": "integration"
+  }
+}
