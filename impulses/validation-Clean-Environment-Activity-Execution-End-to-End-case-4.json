@@ -1,0 +1,23 @@
+{
+  "id": "validation-Clean Environment Activity Execution End-to-End-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-4\",\n  \"testName\": \"TemplateServiceClient Calls MCP Methods Not Local Files\",\n  \"input\": {\n    \"clientPath\": \"repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts\"\n  },\n  \"expectedOutput\": {\n    \"callsMetabobCLISearchActivities\": true,\n    \"callsMetabobCLIGetActivity\": true,\n    \"callsMetabobCLIRegisterTemplate\": true,\n    \"noDirectFileReads\": true,\n    \"noDirectFileWrites\": true\n  }\n}",
+    "source": "validation-test-case"
+  },
+  "budget": 500,
+  "priority": "high",
+  "scope": "validation",
+  "loaded": true,
+  "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-4\",\n  \"testName\": \"TemplateServiceClient Calls MCP Methods Not Local Files\",\n  \"input\": {\n    \"clientPath\": \"repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts\"\n  },\n  \"expectedOutput\": {\n    \"callsMetabobCLISearchActivities\": true,\n    \"callsMetabobCLIGetActivity\": true,\n    \"callsMetabobCLIRegisterTemplate\": true,\n    \"noDirectFileReads\": true,\n    \"noDirectFileWrites\": true\n  }\n}",
+  "metadata": {
+    "created": "2026-03-05T04:17:44.372Z",
+    "purpose": "validation-test-case",
+    "specification": "Clean Environment Activity Execution End-to-End",
+    "testName": "TemplateServiceClient Calls MCP Methods Not Local Files",
+    "usedBy": [
+      "validation-harness"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "validation-Clean Environment Activity Execution End-to-End-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-5\",\n  \"testName\": \"MetabobCLI Lines 803-813 Remain Commented (No Local Writes)\",\n  \"input\": {\n    \"metabobCLIPath\": \"repos/metabob-opencode/packages/opencode/src/util/metabob.ts\",\n    \"lineRange\": \"803-813\"\n  },\n  \"expectedOutput\": {\n    \"hasArchitecturalConstraintComment\": true,\n    \"localWritesCommented\": true,\n    \"callsMCPRegisterTool\": true,\n    \"noActiveFileWrites\": true\n  }\n}",
+    "source": "validation-test-case"
+  },
+  "budget": 500,
+  "priority": "high",
+  "scope": "validation",
+  "loaded": true,
+  "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-5\",\n  \"testName\": \"MetabobCLI Lines 803-813 Remain Commented (No Local Writes)\",\n  \"input\": {\n    \"metabobCLIPath\": \"repos/metabob-opencode/packages/opencode/src/util/metabob.ts\",\n    \"lineRange\": \"803-813\"\n  },\n  \"expectedOutput\": {\n    \"hasArchitecturalConstraintComment\": true,\n    \"localWritesCommented\": true,\n    \"callsMCPRegisterTool\": true,\n    \"noActiveFileWrites\": true\n  }\n}",
+  "metadata": {
+    "created": "2026-03-05T04:17:44.372Z",
+    "purpose": "validation-test-case",
+    "specification": "Clean Environment Activity Execution End-to-End",
+    "testName": "MetabobCLI Lines 803-813 Remain Commented (No Local Writes)",
+    "usedBy": [
+      "validation-harness"
+    ]
+  }
+}

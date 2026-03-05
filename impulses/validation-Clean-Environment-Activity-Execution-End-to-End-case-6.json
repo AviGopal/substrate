@@ -1,0 +1,23 @@
+{
+  "id": "validation-Clean Environment Activity Execution End-to-End-case-6",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-6\",\n  \"testName\": \"Integration Flow - Search → Retrieve → Execute → Learning Data POST\",\n  \"input\": {\n    \"activityPath\": \"repos/metabob-opencode/packages/opencode/src/session/activity.ts\"\n  },\n  \"expectedOutput\": {\n    \"activityCompleteReportsMetrics\": true,\n    \"activityFailReportsMetrics\": true,\n    \"callsTemplateMetricsClient\": true,\n    \"includesImpulseUsage\": true,\n    \"includesComponentChanges\": true,\n    \"verifiesMetricsWritten\": true\n  }\n}",
+    "source": "validation-test-case"
+  },
+  "budget": 500,
+  "priority": "high",
+  "scope": "validation",
+  "loaded": true,
+  "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-6\",\n  \"testName\": \"Integration Flow - Search → Retrieve → Execute → Learning Data POST\",\n  \"input\": {\n    \"activityPath\": \"repos/metabob-opencode/packages/opencode/src/session/activity.ts\"\n  },\n  \"expectedOutput\": {\n    \"activityCompleteReportsMetrics\": true,\n    \"activityFailReportsMetrics\": true,\n    \"callsTemplateMetricsClient\": true,\n    \"includesImpulseUsage\": true,\n    \"includesComponentChanges\": true,\n    \"verifiesMetricsWritten\": true\n  }\n}",
+  "metadata": {
+    "created": "2026-03-05T04:17:44.372Z",
+    "purpose": "validation-test-case",
+    "specification": "Clean Environment Activity Execution End-to-End",
+    "testName": "Integration Flow - Search → Retrieve → Execute → Learning Data POST",
+    "usedBy": [
+      "validation-harness"
+    ]
+  }
+}
