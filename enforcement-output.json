@@ -1,15 +1,27 @@
 {
-  "specificationName": "Activity Template Flow via MCP Backend",
-  "changesApplied": [],
-  "enforcementStatus": "ALREADY COMPLIANT - NO CHANGES REQUIRED",
-  "componentsVerified": 8,
-  "validationChecksPassed": 5,
-  "gapsIdentified": 0,
-  "enforcementImpulseId": "enforcement-Activity Template Flow via MCP Backend",
-  "summary": "After loading the trace impulse and verifying all components, the specification is already fully enforced. All 8 components show 'gap: NONE' and verification confirms compliance. No code changes were required.",
-  "outputFiles": {
-    "enforcementJson": "./enforcement-activity-template-mcp-flow.json",
-    "enforcementImpulse": "./impulses/enforcement-Activity Template Flow via MCP Backend.json",
-    "documentation": "./ENFORCEMENT_ACTIVITY_TEMPLATE_MCP_FLOW.md"
-  }
+  "specificationName": "dashboard-activity-history-viewing-flow",
+  "changesApplied": [
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "Analytics Router (NEW)",
+      "changeMade": "Created complete analytics router with 5 REST endpoints implementing aggregation logic for activity execution data",
+      "reason": "Dashboard UI components (DevelopmentProgressDashboard, LearningView) call /analytics/* endpoints to display activity history. Without this router, all requests return 404, breaking dashboard functionality.",
+      "impactAnalysis": "Zero blast radius - new file with no modifications to existing code. Adds read-only aggregation endpoints querying SurrealDB activity_executions table. No side effects on write paths or other components."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/__init__.py",
+      "component": "Router Module Exports",
+      "changeMade": "Added import and export for analytics_router following existing pattern",
+      "reason": "Make analytics_router importable in app.py for registration. Required to mount endpoints into FastAPI application.",
+      "impactAnalysis": "Minimal blast radius - single import line added. No changes to existing imports or exports. Enables app.py to include analytics router."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/app.py",
+      "component": "FastAPI Application Router Registration",
+      "changeMade": "Registered analytics_router with app.include_router(routes.analytics_router) at line 81",
+      "reason": "Mount /analytics/* endpoints into FastAPI application routing. Completes the data flow chain: Dashboard UI → HTTP Request → FastAPI Router → Analytics Endpoints → SurrealDB → Response.",
+      "impactAnalysis": "Low blast radius - single line added among 14 other router registrations. No modification to existing routers. Analytics endpoints now accessible at /analytics/* URL prefix."
+    }
+  ],
+  "enforcementImpulseId": "enforcement-dashboard-activity-history-viewing-flow"
 }

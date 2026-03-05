@@ -1,164 +1,207 @@
 {
-  "specificationName": "MCP Activity and Impulse System Tool Call Enforcement",
-  "analysisTimestamp": "2026-03-03T23:10:00Z",
+  "specificationName": "dashboard-activity-history-viewing-flow",
+  "analysisTimestamp": "2026-03-05T03:45:00Z",
   "otherSpecifications": [
-    "bootstrap-template-filepath-compliance",
-    "instance-invariant-storage-enforcement"
+    "surrealdb-primary-redis-cache",
+    "impulse-learning-storage-complete",
+    "complete-architecture-separation",
+    "thompson-sampling-in-rpc-api-only",
+    "context-optimization-endpoint-complete",
+    "metrics-calculation-in-rpc-api-only"
   ],
-  "filesModified": {
-    "mcpEnforcement": [
-      "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
-      "repos/metabob-opencode/packages/opencode/src/tool/impulse-create.ts",
-      "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
-      "repos/metabob-opencode/packages/opencode/src/mcp/index.ts"
-    ],
-    "bootstrapCompliance": [
-      "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts"
-    ],
-    "instanceStorage": [
-      "repos/metabob-opencode/packages/opencode/src/session/activity-state.ts",
-      "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
-    ]
-  },
-  "conflicts": [
+  "conflicts": [],
+  "synergies": [
     {
-      "id": "POTENTIAL-001",
-      "type": "RESOLVED_DESIGN_CONSIDERATION",
-      "spec1": "MCP Activity and Impulse System Tool Call Enforcement",
-      "spec2": "bootstrap-template-filepath-compliance",
-      "sharedComponent": "template-loader.ts - strictBackend enforcement",
-      "description": "strictBackend=true could prevent bootstrap template loading if not handled correctly",
+      "type": "COMPLEMENTARY",
+      "spec1": "dashboard-activity-history-viewing-flow",
+      "spec2": "surrealdb-primary-redis-cache",
+      "sharedComponent": "SurrealDB activity_executions table",
+      "description": "Dashboard spec reads from activity_executions table that surrealdb-primary-redis-cache spec ensures is the primary source of truth. Both specs depend on SurrealDB being the authoritative data store.",
+      "status": "ALIGNED",
+      "notes": "No conflict. Dashboard analytics endpoints (GET /analytics/*) read from SurrealDB which is guaranteed to be up-to-date per surrealdb-primary-redis-cache specification."
+    },
+    {
+      "type": "COMPLEMENTARY",
+      "spec1": "dashboard-activity-history-viewing-flow",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "metabob-rpc-api service",
+      "description": "Dashboard spec adds /analytics/* endpoints to RPC API. Architecture separation spec requires all learning logic in RPC API (not CLI). Both specs maintain the same architectural boundary.",
+      "status": "ALIGNED",
+      "notes": "Analytics router is correctly placed in metabob-rpc-api following architecture separation principles. Dashboard fetches aggregated data via RPC API, not direct DB access."
+    },
+    {
+      "type": "COMPLEMENTARY",
+      "spec1": "dashboard-activity-history-viewing-flow",
+      "spec2": "impulse-learning-storage-complete",
+      "sharedComponent": "SurrealDB learning data",
+      "description": "Dashboard may eventually display impulse usage metrics. Both specs use SurrealDB as the learning data store.",
+      "status": "ALIGNED",
+      "notes": "Future enhancement: Dashboard could show which impulses were used in activity executions by joining activity_executions with learning_loop_turns table."
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "affectedBySpecs": ["dashboard-activity-history-viewing-flow"],
+      "status": "NEW FILE",
+      "conflicts": "None - new router added, no overlap with existing routers",
+      "recommendation": "Deploy to kubernetes to enable dashboard data flow"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/app.py",
+      "affectedBySpecs": [
+        "dashboard-activity-history-viewing-flow",
+        "complete-architecture-separation",
+        "thompson-sampling-in-rpc-api-only",
+        "metrics-calculation-in-rpc-api-only"
+      ],
+      "status": "SHARED - router registration point",
+      "conflicts": "None - adding analytics_router follows same pattern as other routers",
+      "recommendation": "Continue using app.include_router() pattern for new routers"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "affectedBySpecs": [
+        "dashboard-activity-history-viewing-flow",
+        "surrealdb-primary-redis-cache"
+      ],
+      "status": "SHARED - data access layer",
+      "conflicts": "None - analytics router reads via existing query functions",
+      "recommendation": "Analytics router uses read-only queries (SELECT), no write path conflicts"
+    },
+    {
+      "component": "SurrealDB activity_executions table",
+      "affectedBySpecs": [
+        "dashboard-activity-history-viewing-flow",
+        "surrealdb-primary-redis-cache",
+        "complete-architecture-separation"
+      ],
+      "status": "SHARED - primary data store",
+      "conflicts": "None - all specs agree SurrealDB is source of truth",
+      "recommendation": "Maintain schema stability; any changes require coordination across specs"
+    },
+    {
+      "component": "repos/metabob-dashboard/src/common/MetabobRestApi.js",
+      "affectedBySpecs": ["dashboard-activity-history-viewing-flow"],
+      "status": "CONSUMER - dashboard API client",
+      "conflicts": "None - frontend already expects /analytics/* endpoints",
+      "recommendation": "No changes needed - RTK Query hooks are already defined"
+    },
+    {
+      "component": "repos/metabob-dashboard/src/pages/Dashboard/components/DevelopmentProgressDashboard.js",
+      "affectedBySpecs": ["dashboard-activity-history-viewing-flow"],
+      "status": "CONSUMER - dashboard UI",
+      "conflicts": "None - UI components ready to display data once backend deployed",
+      "recommendation": "No changes needed - components already call analytics endpoints"
+    }
+  ],
+  "potentialRisks": [
+    {
+      "risk": "Analytics endpoint performance with large datasets",
+      "severity": "MEDIUM",
+      "description": "Analytics router aggregates activity_executions table without pagination or limits. With thousands of executions, queries may become slow.",
+      "affectedSpecs": ["dashboard-activity-history-viewing-flow"],
+      "mitigation": "Add pagination support to /analytics/templates endpoint. Consider database indexes on template_id, started_at columns.",
+      "monitoring": "Track query response times in RPC API metrics"
+    },
+    {
+      "risk": "SurrealDB schema changes breaking analytics queries",
       "severity": "LOW",
-      "status": "RESOLVED",
-      "resolution": "Implementation already handles this: `if (options.strictBackend && !BOOTSTRAP_TEMPLATES.has(id))` allows bootstrap templates even in strict mode",
-      "evidence": {
-        "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
-        "line": "~145",
-        "code": "if (options.strictBackend && !BOOTSTRAP_TEMPLATES.has(id)) { throw new Error(...) }"
-      },
-      "validationStatus": "BOTH_SPECS_PASS",
-      "recommendation": "No action required - design already accounts for bootstrap templates in strict mode"
+      "description": "Analytics router uses SurrealDB queries that assume specific table schema. Schema changes could break aggregation.",
+      "affectedSpecs": ["dashboard-activity-history-viewing-flow", "surrealdb-primary-redis-cache"],
+      "mitigation": "Document activity_executions schema as a contract. Use database migrations for schema changes. Add integration tests.",
+      "monitoring": "Validate schema compatibility in CI/CD"
+    },
+    {
+      "risk": "Redis cache invalidation for analytics data",
+      "severity": "LOW",
+      "description": "Analytics endpoints query SurrealDB directly without Redis caching. This is intentional (always fresh data), but may increase DB load.",
+      "affectedSpecs": ["dashboard-activity-history-viewing-flow", "surrealdb-primary-redis-cache"],
+      "mitigation": "Current approach is acceptable - analytics queries are infrequent (dashboard polling every 60s). If load increases, add Redis caching with TTL.",
+      "monitoring": "Monitor SurrealDB query load from analytics endpoints"
     }
   ],
-  "complementaryRelationships": [
-    {
-      "id": "COMP-001",
-      "spec1": "MCP Activity and Impulse System Tool Call Enforcement",
-      "spec2": "instance-invariant-storage-enforcement",
-      "relationship": "MUTUALLY_BENEFICIAL",
-      "description": "Enhanced MCP logging helps debug instance storage backend sync issues",
-      "benefits": [
-        "MCP enforcement elevates backend sync failures to ERROR level",
-        "Instance storage relies on backend sync for cross-instance access",
-        "Better logging visibility helps troubleshoot storage sync failures",
-        "strictBackend mode can enforce backend availability for storage operations"
+  "deploymentDependencies": {
+    "dashboard-activity-history-viewing-flow": {
+      "blockedBy": [],
+      "blocks": [],
+      "requires": [
+        "SurrealDB deployed and accessible",
+        "metabob-rpc-api deployed with analytics router",
+        "metabob-dashboard deployed and accessible"
       ],
-      "sharedConcerns": [
-        "Backend connectivity",
-        "Cross-instance data synchronization",
-        "Error visibility and debugging"
-      ],
-      "recommendation": "Use strictBackend=true in production to ensure storage sync reliability"
+      "deploymentOrder": 1,
+      "notes": "Can be deployed independently. No dependencies on other specifications."
     },
-    {
-      "id": "COMP-002",
-      "spec1": "MCP Activity and Impulse System Tool Call Enforcement",
-      "spec2": "bootstrap-template-filepath-compliance",
-      "relationship": "COMPATIBLE_WITH_EXCEPTIONS",
-      "description": "Strict backend enforcement coexists with embedded bootstrap loading",
-      "benefits": [
-        "strictBackend=true enforces backend for non-bootstrap templates",
-        "Bootstrap templates still load from embedded source as cold-start fallback",
-        "Best of both worlds: production reliability + development convenience"
+    "surrealdb-primary-redis-cache": {
+      "blockedBy": [],
+      "blocks": [],
+      "requires": [
+        "SurrealDB deployed",
+        "Redis deployed (for caching)",
+        "metabob-rpc-api with updated write patterns"
       ],
-      "designConsiderations": [
-        "Bootstrap templates are special-cased in BOOTSTRAP_TEMPLATES set",
-        "strictBackend only blocks non-bootstrap templates when backend unavailable",
-        "Embedded loading ensures devbob can start even without MCP server"
-      ],
-      "recommendation": "Document bootstrap template exception in strictBackend mode documentation"
-    }
-  ],
-  "sharedComponents": [],
-  "dataFlowIntersections": [
-    {
-      "component": "TemplateLoader.load()",
-      "affectedBySpecs": [
-        "MCP Activity and Impulse System Tool Call Enforcement",
-        "bootstrap-template-filepath-compliance"
-      ],
-      "dataFlow": "User request → TemplateLoader.load() → [1] Backend via MCP (if available) → [2] Embedded bootstrap (if backend unavailable and template is bootstrap) → [3] Error (if strictBackend=true and not bootstrap)",
-      "integration": "HARMONIOUS",
-      "notes": [
-        "MCP enforcement adds strictBackend option",
-        "Bootstrap compliance ensures embedded loading works",
-        "Both work together: strict mode for production, embedded fallback for development"
-      ]
-    },
-    {
-      "component": "Activity/Impulse Backend Sync",
-      "affectedBySpecs": [
-        "MCP Activity and Impulse System Tool Call Enforcement",
-        "instance-invariant-storage-enforcement"
-      ],
-      "dataFlow": "Activity/Impulse creation → Local storage → Backend sync via MCP → SurrealDB → Cross-instance access",
-      "integration": "COMPLEMENTARY",
-      "notes": [
-        "MCP enforcement elevates sync failure logging (warn→error)",
-        "Instance storage relies on this sync for cross-instance data",
-        "Enhanced logging helps diagnose storage sync issues"
-      ]
-    }
-  ],
-  "overallConflictStatus": "NO_CRITICAL_CONFLICTS",
-  "summary": {
-    "totalSpecificationsAnalyzed": 3,
-    "criticalConflicts": 0,
-    "potentialConflicts": 1,
-    "resolvedConflicts": 1,
-    "complementaryRelationships": 2,
-    "sharedComponentModifications": 0,
-    "recommendation": "SAFE_TO_PROCEED"
-  },
-  "validationCrossCheck": {
-    "mcpEnforcement": {
-      "status": "PASS",
-      "passRate": "100.0%",
-      "affectedOtherSpecs": false
-    },
-    "bootstrapCompliance": {
-      "status": "PASS",
-      "passRate": "100.0%",
-      "affectedByMcpEnforcement": false,
-      "note": "Bootstrap templates still load correctly even with strictBackend option added"
-    },
-    "instanceStorage": {
-      "status": "PASS",
-      "passRate": "100.0%",
-      "affectedByMcpEnforcement": true,
-      "impact": "POSITIVE",
-      "note": "Enhanced logging helps debug backend sync failures"
+      "deploymentOrder": 0,
+      "notes": "Infrastructure dependency. Should be deployed before dashboard analytics."
     }
   },
-  "recommendations": [
+  "validationStatus": {
+    "dashboard-activity-history-viewing-flow": "FAIL - Analytics endpoints not deployed",
+    "surrealdb-primary-redis-cache": "PARTIAL - Phase 1 PASS, Phase 2 FAIL (execution recording write order)",
+    "complete-architecture-separation": "PASS - All 7 tests passed",
+    "impulse-learning-storage-complete": "PARTIAL - Code review PASS, E2E blocked by SurrealDB permissions"
+  },
+  "crossSpecificationImpact": {
+    "analyticsRouterDeployment": {
+      "primarySpec": "dashboard-activity-history-viewing-flow",
+      "impactsSpecs": [],
+      "impactType": "ADDITION",
+      "description": "Adding /analytics/* endpoints does not affect existing functionality. Pure read-only addition.",
+      "riskLevel": "LOW"
+    },
+    "surrealdbPrimaryPattern": {
+      "primarySpec": "surrealdb-primary-redis-cache",
+      "impactsSpecs": ["dashboard-activity-history-viewing-flow"],
+      "impactType": "ENABLING",
+      "description": "SurrealDB-primary pattern ensures dashboard analytics always read from authoritative source. Enables dashboard to trust aggregated data.",
+      "riskLevel": "LOW",
+      "benefit": "Dashboard queries SurrealDB directly, guaranteed to see latest execution data"
+    }
+  },
+  "recommendedActions": [
     {
-      "priority": "P0",
-      "title": "Document Bootstrap Template Exception in strictBackend Mode",
-      "description": "Add documentation explaining that strictBackend=true allows bootstrap templates as fallback",
-      "target": "README or API documentation for template-loader.ts"
+      "priority": "HIGH",
+      "action": "Deploy metabob-rpc-api with analytics router",
+      "reason": "Unblocks dashboard-activity-history-viewing-flow validation",
+      "affectedSpecs": ["dashboard-activity-history-viewing-flow"],
+      "estimatedEffort": "30 minutes (build + deploy + verify)"
     },
     {
-      "priority": "P1",
-      "title": "Use strictBackend=true in Production",
-      "description": "Enable strict backend mode in production to ensure reliability of instance storage sync",
-      "target": "Production configuration and deployment scripts"
+      "priority": "MEDIUM",
+      "action": "Fix execution recording write order in surrealdb-primary-redis-cache",
+      "reason": "Ensures data consistency for dashboard analytics",
+      "affectedSpecs": ["surrealdb-primary-redis-cache", "dashboard-activity-history-viewing-flow"],
+      "estimatedEffort": "2 hours (code changes + testing)"
     },
     {
-      "priority": "P2",
-      "title": "Monitor Backend Sync Metrics",
-      "description": "Use enhanced error logging to track backend sync success/failure rates",
-      "target": "Monitoring and alerting systems"
+      "priority": "LOW",
+      "action": "Add pagination to /analytics/templates endpoint",
+      "reason": "Performance optimization for large datasets",
+      "affectedSpecs": ["dashboard-activity-history-viewing-flow"],
+      "estimatedEffort": "1 hour (add limit/offset parameters)"
+    },
+    {
+      "priority": "LOW",
+      "action": "Add database indexes for analytics queries",
+      "reason": "Improve query performance on activity_executions table",
+      "affectedSpecs": ["dashboard-activity-history-viewing-flow", "surrealdb-primary-redis-cache"],
+      "estimatedEffort": "30 minutes (create indexes on template_id, started_at)"
     }
   ],
-  "conflictImpulseId": "conflict-analysis-mcp-activity-impulse-tool-call-enforcement"
+  "conflictMatrix": {
+    "noConflicts": true,
+    "summary": "No conflicts detected between dashboard-activity-history-viewing-flow and other specifications. All specifications are complementary and aligned.",
+    "details": "The dashboard specification adds read-only analytics endpoints that consume data from SurrealDB, which is the primary data store per surrealdb-primary-redis-cache spec. The architectural pattern (RPC API serving dashboard) aligns with complete-architecture-separation spec. No contradictory requirements found."
+  },
+  "conflictImpulseId": "conflict-analysis-dashboard-activity-history-viewing-flow"
 }

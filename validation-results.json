@@ -1,147 +1,173 @@
 {
-  "specificationName": "Activity Template Flow via MCP Backend",
-  "timestamp": "2026-03-05T03:17:46.785Z",
-  "overallStatus": "PASS",
-  "summary": {
-    "totalTests": 7,
-    "passed": 7,
-    "failed": 0
-  },
+  "specificationName": "dashboard-activity-history-viewing-flow",
+  "validationTimestamp": "2026-03-05T03:40:00Z",
   "validationResults": [
     {
-      "testCaseNumber": 1,
-      "testCase": "validation-activity-template-flow-via-mcp-backend-case-1",
-      "testName": "MCP Connection Status",
-      "status": "PASS",
-      "actual": {
-        "toolExists": true,
-        "toolDefined": true
+      "testCase": "validation-dashboard-activity-history-viewing-flow-case-1",
+      "name": "Basic Dashboard Access and Navigation",
+      "status": "PARTIAL_PASS",
+      "checksPerformed": {
+        "kubernetesContext": {
+          "status": "PASS",
+          "actual": "docker-desktop",
+          "expected": "docker-desktop",
+          "details": "Kubernetes context verified correctly"
+        },
+        "servicesRunning": {
+          "status": "PASS",
+          "actual": ["metabob-dashboard (10.107.102.176:80)", "metabob-rpc-api (10.102.45.87:8080)", "surrealdb (10.106.164.246:8000)"],
+          "expected": ["metabob-dashboard", "metabob-rpc-api", "surrealdb"],
+          "details": "All required services are running"
+        },
+        "podsHealthy": {
+          "status": "PASS",
+          "actual": {
+            "metabob-dashboard": "Running (1/1)",
+            "metabob-rpc-api": "Running (1/1)",
+            "surrealdb": "Running (1/1)"
+          },
+          "expected": "All pods Running",
+          "details": "All pods are healthy and running"
+        },
+        "dnsConfiguration": {
+          "status": "PASS",
+          "actual": "127.0.0.1 app.metabob.local configured in /etc/hosts",
+          "expected": "/etc/hosts entry for app.metabob.local",
+          "details": "DNS configuration correct"
+        },
+        "dashboardAccessible": {
+          "status": "PASS",
+          "actual": "HTTP 200 response from http://app.metabob.local",
+          "expected": "Dashboard accessible",
+          "details": "Dashboard is reachable and responding"
+        },
+        "analyticsEndpoints": {
+          "status": "FAIL",
+          "actual": "404 Not Found from /analytics/templates",
+          "expected": "200 OK with template data",
+          "details": "Analytics router not deployed yet - code changes not in running deployment",
+          "blocker": true
+        },
+        "playwrightAutomation": {
+          "status": "BLOCKED",
+          "actual": "Playwright browsers not installed",
+          "expected": "Browser automation functional",
+          "details": "Cannot run browser automation without Playwright browsers installed",
+          "remediation": "Run: npx playwright install"
+        }
       },
-      "expected": {
-        "toolExists": true,
-        "toolDefined": true
-      },
-      "details": "test_metabob_mcp tool found",
-      "difference": null
+      "overallStatus": "FAIL",
+      "reason": "Analytics endpoints not deployed, Playwright browsers not installed",
+      "blockers": [
+        "Analytics router implementation needs to be deployed to kubernetes",
+        "Playwright browsers need to be installed for browser automation"
+      ]
     },
     {
-      "testCaseNumber": 2,
-      "testCase": "validation-activity-template-flow-via-mcp-backend-case-2",
-      "testName": "TemplateLoader Source Verification",
-      "status": "PASS",
-      "actual": {
-        "fileExists": true,
-        "sourceMetabob": true,
-        "usesTemplateServiceClient": true,
-        "hasBootstrapFallback": true
+      "testCase": "validation-dashboard-activity-history-viewing-flow-case-2",
+      "name": "Complete Data Flow Verification",
+      "status": "FAIL",
+      "checksPerformed": {
+        "dataWritePath": {
+          "status": "UNKNOWN",
+          "actual": "Cannot verify - SurrealDB query failed",
+          "expected": "Activity executions exist in SurrealDB",
+          "details": "SurrealDB CLI not available in pod"
+        },
+        "analyticsAggregation": {
+          "status": "FAIL",
+          "actual": "404 Not Found from analytics endpoints",
+          "expected": "Aggregated data from SurrealDB",
+          "details": "Analytics router not deployed"
+        },
+        "dashboardDisplay": {
+          "status": "BLOCKED",
+          "actual": "Cannot verify without Playwright",
+          "expected": "Activity data visible in dashboard UI",
+          "details": "Browser automation not functional"
+        }
       },
-      "expected": {
-        "fileExists": true,
-        "sourceMetabob": true,
-        "usesTemplateServiceClient": true,
-        "hasBootstrapFallback": true
-      },
-      "details": "TemplateLoader properly configured",
-      "difference": null
+      "overallStatus": "FAIL",
+      "reason": "Data flow cannot be verified - missing analytics endpoints and browser automation",
+      "blockers": [
+        "Analytics router not deployed",
+        "Playwright browsers not installed"
+      ]
     },
     {
-      "testCaseNumber": 3,
-      "testCase": "validation-activity-template-flow-via-mcp-backend-case-3",
-      "testName": "No Direct File Access",
+      "testCase": "validation-dashboard-activity-history-viewing-flow-case-3",
+      "name": "Kubernetes Infrastructure Validation",
       "status": "PASS",
-      "actual": {
-        "activeReferences": 0,
-        "allReferencesCommented": true
+      "checksPerformed": {
+        "kubernetesContext": {
+          "status": "PASS",
+          "actual": "docker-desktop",
+          "expected": "docker-desktop"
+        },
+        "namespaceExists": {
+          "status": "PASS",
+          "actual": "metabob namespace exists",
+          "expected": "metabob namespace"
+        },
+        "servicesDeployed": {
+          "status": "PASS",
+          "actual": ["metabob-dashboard", "metabob-rpc-api", "surrealdb"],
+          "expected": ["metabob-dashboard", "metabob-rpc-api", "surrealdb"]
+        },
+        "podsRunning": {
+          "status": "PASS",
+          "actual": "3/3 pods Running",
+          "expected": "All pods Running"
+        },
+        "ingressConfigured": {
+          "status": "PASS",
+          "actual": "app.metabob.local accessible (HTTP 200)",
+          "expected": "Dashboard accessible via ingress"
+        }
       },
-      "expected": {
-        "activeReferences": 0,
-        "allReferencesCommented": true
-      },
-      "details": "No active references to .metabob/activities found",
-      "difference": null
-    },
-    {
-      "testCaseNumber": 4,
-      "testCase": "validation-activity-template-flow-via-mcp-backend-case-4",
-      "testName": "MetabobCLI No Local Writes",
-      "status": "PASS",
-      "actual": {
-        "fileExists": true,
-        "noLocalWrites": true,
-        "hasArchitecturalConstraintComment": true,
-        "callsMCPTools": true
-      },
-      "expected": {
-        "fileExists": true,
-        "noLocalWrites": true,
-        "hasArchitecturalConstraintComment": true,
-        "callsMCPTools": true
-      },
-      "details": "MetabobCLI properly enforces MCP-only communication",
-      "difference": null
-    },
-    {
-      "testCaseNumber": 5,
-      "testCase": "validation-activity-template-flow-via-mcp-backend-case-5",
-      "testName": "Activity Agent Tool Configuration",
-      "status": "PASS",
-      "actual": {
-        "hasSearchActivities": true,
-        "hasActivity": true,
-        "noImpulseCreate": true,
-        "noImpulseLoad": true
-      },
-      "expected": {
-        "hasSearchActivities": true,
-        "hasActivity": true,
-        "noImpulseCreate": true,
-        "noImpulseLoad": true
-      },
-      "details": "Activity agent properly configured",
-      "difference": null
-    },
-    {
-      "testCaseNumber": 6,
-      "testCase": "validation-activity-template-flow-via-mcp-backend-case-6",
-      "testName": "Memory Agent Tool Configuration",
-      "status": "PASS",
-      "actual": {
-        "hasActivity": true,
-        "hasSearchActivities": true,
-        "hasImpulseCreate": true,
-        "hasImpulseLoad": true,
-        "hasImpulseUnload": true
-      },
-      "expected": {
-        "hasActivity": true,
-        "hasSearchActivities": true,
-        "hasImpulseCreate": true,
-        "hasImpulseLoad": true,
-        "hasImpulseUnload": true
-      },
-      "details": "Memory agent properly configured",
-      "difference": null
-    },
-    {
-      "testCaseNumber": 7,
-      "testCase": "validation-activity-template-flow-via-mcp-backend-case-7",
-      "testName": "TemplateServiceClient Delegation",
-      "status": "PASS",
-      "actual": {
-        "fileExists": true,
-        "callsSearchActivities": true,
-        "callsGetActivity": true,
-        "callsRegisterActivityTemplate": true
-      },
-      "expected": {
-        "fileExists": true,
-        "callsSearchActivities": true,
-        "callsGetActivity": true,
-        "callsRegisterActivityTemplate": true
-      },
-      "details": "TemplateServiceClient properly delegates to MetabobCLI",
-      "difference": null
+      "overallStatus": "PASS",
+      "reason": "Kubernetes infrastructure is correctly configured"
     }
   ],
-  "resultsImpulseId": "validation-results-activity-template-flow-via-mcp-backend"
+  "overallStatus": "FAIL",
+  "summary": {
+    "totalTests": 3,
+    "passed": 1,
+    "failed": 2,
+    "passRate": "33%"
+  },
+  "infrastructureStatus": {
+    "kubernetes": "READY",
+    "services": "READY",
+    "dashboard": "ACCESSIBLE",
+    "analyticsAPI": "NOT_DEPLOYED",
+    "browserAutomation": "NOT_AVAILABLE"
+  },
+  "nextSteps": [
+    {
+      "priority": "HIGH",
+      "step": "Deploy updated metabob-rpc-api with analytics router",
+      "command": "docker build -t metabob-rpc-api:analytics repos/metabob-rpc-api && docker push ... && kubectl rollout restart deployment/metabob-rpc-api -n metabob",
+      "reason": "Analytics endpoints are the core of the specification and must be deployed"
+    },
+    {
+      "priority": "MEDIUM",
+      "step": "Install Playwright browsers",
+      "command": "npx playwright install",
+      "reason": "Required for browser automation and screenshot capture"
+    },
+    {
+      "priority": "LOW",
+      "step": "Verify SurrealDB activity execution data",
+      "command": "kubectl exec -n metabob surrealdb-pod -- surreal sql ... 'SELECT * FROM activity_executions LIMIT 5'",
+      "reason": "Confirm data exists for dashboard to display"
+    },
+    {
+      "priority": "LOW",
+      "step": "Re-run validation harness after deployment",
+      "command": "npx ts-node tests/validation-harnesses/dashboard-activity-history-viewing-flow-harness.ts",
+      "reason": "Verify complete end-to-end flow once blockers are resolved"
+    }
+  ],
+  "resultsImpulseId": "validation-results-dashboard-activity-history-viewing-flow"
 }

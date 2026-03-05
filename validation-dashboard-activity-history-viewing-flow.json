@@ -1,0 +1,201 @@
+{
+  "specificationName": "dashboard-activity-history-viewing-flow",
+  "harnessFile": "tests/validation-harnesses/dashboard-activity-history-viewing-flow-harness.ts",
+  "testCases": [
+    {
+      "impulseId": "validation-dashboard-activity-history-viewing-flow-case-1",
+      "name": "Basic Dashboard Access and Navigation",
+      "input": {
+        "dashboardUrl": "http://app.metabob.local",
+        "kubernetesContext": "docker-desktop",
+        "namespace": "metabob",
+        "expectedTemplates": ["add-feature-complete", "fix-bug", "refactor-code"],
+        "screenshotDir": "./screenshots"
+      },
+      "expectedOutput": {
+        "dashboardAccessible": true,
+        "authenticationHandled": true,
+        "activityHistoryVisible": true,
+        "dataFlowVerified": true,
+        "kubernetesVerified": true,
+        "screenshots": [
+          "dashboard-initial-load.png",
+          "activity-history-view.png",
+          "activity-history-final.png",
+          "learning-view.png"
+        ],
+        "extractedData": {
+          "templates": ["add-feature-complete", "fix-bug", "refactor-code"],
+          "executionCount": 1,
+          "hasMetrics": true
+        },
+        "errors": []
+      }
+    },
+    {
+      "impulseId": "validation-dashboard-activity-history-viewing-flow-case-2",
+      "name": "Verify Complete Data Flow",
+      "input": {
+        "dashboardUrl": "http://app.metabob.local",
+        "kubernetesContext": "docker-desktop",
+        "namespace": "metabob",
+        "expectedTemplates": [],
+        "screenshotDir": "./screenshots"
+      },
+      "expectedOutput": {
+        "dashboardAccessible": true,
+        "authenticationHandled": true,
+        "activityHistoryVisible": true,
+        "dataFlowVerified": true,
+        "kubernetesVerified": true,
+        "screenshots": [
+          "dashboard-initial-load.png",
+          "activity-history-view.png",
+          "activity-history-final.png",
+          "learning-view.png"
+        ],
+        "extractedData": {
+          "hasMetrics": true
+        },
+        "errors": []
+      },
+      "description": "Validates the complete data flow from OpenCode execution → SurrealDB → metabob-rpc-api /analytics/* endpoints → Dashboard display without checking for specific templates"
+    },
+    {
+      "impulseId": "validation-dashboard-activity-history-viewing-flow-case-3",
+      "name": "Kubernetes Infrastructure Validation",
+      "input": {
+        "dashboardUrl": "http://app.metabob.local",
+        "kubernetesContext": "docker-desktop",
+        "namespace": "metabob",
+        "expectedTemplates": [],
+        "screenshotDir": "./screenshots"
+      },
+      "expectedOutput": {
+        "kubernetesVerified": true,
+        "dashboardAccessible": true,
+        "errors": []
+      },
+      "description": "Validates kubernetes context is docker-desktop, required services are running (metabob-dashboard, metabob-rpc-api, surrealdb), and ingress routing is configured correctly"
+    }
+  ],
+  "harnessImpulseId": "harness-dashboard-activity-history-viewing-flow",
+  "playwrightSteps": [
+    {
+      "step": 1,
+      "tool": "playwright_playwright_navigate",
+      "params": {
+        "url": "http://app.metabob.local"
+      },
+      "purpose": "Navigate to Metabob dashboard"
+    },
+    {
+      "step": 2,
+      "tool": "playwright_playwright_screenshot",
+      "params": {
+        "name": "dashboard-initial-load"
+      },
+      "purpose": "Capture initial dashboard load state"
+    },
+    {
+      "step": 3,
+      "tool": "playwright_playwright_get_visible_html",
+      "params": {},
+      "purpose": "Check if login form is present"
+    },
+    {
+      "step": 4,
+      "tool": "playwright_playwright_fill",
+      "params": {
+        "selector": "#username",
+        "value": "admin"
+      },
+      "purpose": "Fill username if login form present (conditional)"
+    },
+    {
+      "step": 5,
+      "tool": "playwright_playwright_fill",
+      "params": {
+        "selector": "#password",
+        "value": "password"
+      },
+      "purpose": "Fill password if login form present (conditional)"
+    },
+    {
+      "step": 6,
+      "tool": "playwright_playwright_click",
+      "params": {
+        "selector": "[type='submit']"
+      },
+      "purpose": "Submit login form if present (conditional)"
+    },
+    {
+      "step": 7,
+      "tool": "playwright_playwright_click",
+      "params": {
+        "selector": "[data-testid='dev-progress-tab']"
+      },
+      "purpose": "Navigate to Development Progress / Activity History section"
+    },
+    {
+      "step": 8,
+      "tool": "playwright_playwright_screenshot",
+      "params": {
+        "name": "activity-history-view",
+        "fullPage": true
+      },
+      "purpose": "Capture activity history view"
+    },
+    {
+      "step": 9,
+      "tool": "playwright_playwright_get_visible_html",
+      "params": {},
+      "purpose": "Extract activity data (template names, metrics)"
+    },
+    {
+      "step": 10,
+      "tool": "playwright_playwright_click",
+      "params": {
+        "selector": "[data-testid='learning-view-tab']"
+      },
+      "purpose": "Navigate to Learning View"
+    },
+    {
+      "step": 11,
+      "tool": "playwright_playwright_screenshot",
+      "params": {
+        "name": "learning-view"
+      },
+      "purpose": "Capture Learning View with activity outcomes"
+    }
+  ],
+  "dataFlowVerification": {
+    "steps": [
+      {
+        "component": "OpenCode CLI",
+        "verification": "Activity execution recorded via metabob.recordDetailedActivityOutcome()",
+        "expected": "Activity data sent to metabob-rpc-api"
+      },
+      {
+        "component": "metabob-rpc-api",
+        "verification": "POST /v2/activities/executions endpoint receives data",
+        "expected": "Data written to SurrealDB activity_executions table"
+      },
+      {
+        "component": "SurrealDB",
+        "verification": "kubectl exec to query activity_executions table",
+        "expected": "Execution records exist with template_id, cost, duration, success status"
+      },
+      {
+        "component": "metabob-rpc-api Analytics",
+        "verification": "GET /analytics/templates endpoint aggregates data",
+        "expected": "JSON response with template statistics"
+      },
+      {
+        "component": "Dashboard UI",
+        "verification": "DevelopmentProgressDashboard fetches via RTK Query",
+        "expected": "Activity templates displayed with execution counts and metrics"
+      }
+    ]
+  }
+}

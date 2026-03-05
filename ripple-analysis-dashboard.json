@@ -1,0 +1,213 @@
+{
+  "specificationName": "dashboard-activity-history-viewing-flow",
+  "rippleAnalysisTimestamp": "2026-03-05T04:00:00Z",
+  "componentsUpdated": [
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "Analytics Router",
+      "changeMade": "Created complete router with 5 endpoints for activity analytics",
+      "reason": "Primary enforcement - adds new read-only analytics functionality",
+      "rippleType": "PRIMARY",
+      "blastRadius": "ISOLATED - new file, no dependencies on existing code"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/__init__.py",
+      "component": "Router Module Exports",
+      "changeMade": "Added analytics_router import and export",
+      "reason": "Ripple from analytics.py creation - enable import in app.py",
+      "rippleType": "REQUIRED",
+      "blastRadius": "MINIMAL - single line addition"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/app.py",
+      "component": "FastAPI App Router Registration",
+      "changeMade": "Registered analytics_router with app.include_router",
+      "reason": "Ripple from analytics.py creation - mount endpoints to HTTP server",
+      "rippleType": "REQUIRED",
+      "blastRadius": "LOW - single line among 14 other routers"
+    }
+  ],
+  "noRipplesNeeded": [
+    {
+      "component": "repos/metabob-dashboard/src/common/MetabobRestApi.js",
+      "reason": "Dashboard API client already has RTK Query hooks for /analytics/* endpoints (lines 431-478). No changes needed.",
+      "status": "READY"
+    },
+    {
+      "component": "repos/metabob-dashboard/src/pages/Dashboard/components/DevelopmentProgressDashboard.js",
+      "reason": "UI component already calls useGetActivityTemplatesQuery, useGetActivityTrendsQuery, useGetImprovementRoadmapQuery. No changes needed.",
+      "status": "READY"
+    },
+    {
+      "component": "repos/metabob-dashboard/src/pages/Dashboard/components/LearningView.js",
+      "reason": "UI component already calls useGetActivityOutcomesQuery. No changes needed.",
+      "status": "READY"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "reason": "Analytics router uses existing read functions (no modifications needed). Write path unchanged.",
+      "status": "STABLE"
+    },
+    {
+      "component": "SurrealDB activity_executions table",
+      "reason": "No schema changes required. Analytics router queries existing table structure.",
+      "status": "STABLE"
+    }
+  ],
+  "validationStatus": {
+    "thisSpec": {
+      "name": "dashboard-activity-history-viewing-flow",
+      "status": "BLOCKED",
+      "reason": "Analytics router code exists but not deployed to kubernetes. Validation harness returns FAIL until deployment.",
+      "blockers": [
+        "metabob-rpc-api deployment with analytics router",
+        "Playwright browsers installation"
+      ],
+      "expectedAfterDeployment": "PASS"
+    },
+    "relatedSpecs": [
+      {
+        "spec": "surrealdb-primary-redis-cache",
+        "status": "PARTIAL",
+        "affected": false,
+        "notes": "Not affected by analytics router. Existing issues (Phase 2 write order) unrelated."
+      },
+      {
+        "spec": "complete-architecture-separation",
+        "status": "PASS",
+        "affected": false,
+        "notes": "Analytics router follows architecture pattern (RPC API contains logic, not CLI). No regression."
+      },
+      {
+        "spec": "impulse-learning-storage-complete",
+        "status": "PARTIAL",
+        "affected": false,
+        "notes": "Not affected. Analytics router reads activity_executions, doesn't touch learning_loop_turns table."
+      }
+    ]
+  },
+  "functionalStateTransition": {
+    "before": {
+      "state": "Specification NOT ENFORCED",
+      "dataFlow": "Dashboard → GET /analytics/* → 404 NOT FOUND",
+      "userExperience": "Dashboard UI loads but shows empty charts/tables (no data)",
+      "infrastructure": "Kubernetes ready, services running, but analytics endpoints missing"
+    },
+    "after": {
+      "state": "Specification ENFORCED (code-level)",
+      "dataFlow": "Dashboard → GET /analytics/* → Analytics Router → SurrealDB → JSON Response → UI Render",
+      "userExperience": "Dashboard displays activity templates, execution trends, success rates, costs (once deployed)",
+      "infrastructure": "Same kubernetes setup, now with analytics endpoints (after deployment)"
+    },
+    "pendingDeployment": {
+      "state": "DEPLOYMENT REQUIRED",
+      "action": "Build Docker image with analytics router, deploy to kubernetes",
+      "estimatedTime": "30 minutes",
+      "verificationSteps": [
+        "curl http://localhost:8080/analytics/templates (via port-forward) should return 200",
+        "Dashboard at http://app.metabob.local should show activity data",
+        "Validation harness should pass all 3 test cases"
+      ]
+    }
+  },
+  "crossComponentConsistency": {
+    "entryPoints": {
+      "verified": true,
+      "details": "Dashboard UI entry points (DevelopmentProgressDashboard, LearningView) already configured to call /analytics/* endpoints. No changes needed."
+    },
+    "transformations": {
+      "verified": true,
+      "details": "Analytics router transforms activity_executions rows into aggregated statistics. SurrealDB queries perform GROUP BY, math::mean, math::sum. No data transformation inconsistencies."
+    },
+    "validations": {
+      "verified": true,
+      "details": "FastAPI validates query parameters (period, granularity, limit). Analytics router validates min_executions, success_threshold, cost_threshold. Consistent validation across endpoints."
+    },
+    "exitPoints": {
+      "verified": true,
+      "details": "Analytics endpoints return JSON matching frontend expectations (template_id, execution_count, success_rate, avg_cost_usd, etc.). No schema mismatches."
+    }
+  },
+  "testCoverage": {
+    "validationHarness": {
+      "file": "tests/validation-harnesses/dashboard-activity-history-viewing-flow-harness.ts",
+      "status": "CREATED",
+      "testCases": 3,
+      "coverage": [
+        "Basic dashboard access and navigation",
+        "Complete data flow verification",
+        "Kubernetes infrastructure validation"
+      ]
+    },
+    "additionalTestsNeeded": [
+      {
+        "priority": "MEDIUM",
+        "test": "Analytics endpoint unit tests",
+        "description": "Test /analytics/templates, /analytics/trends, /analytics/improvement-roadmap with mock SurrealDB data",
+        "location": "tests/unit/test_analytics_router.py (does not exist yet)",
+        "reason": "Verify aggregation logic correctness independent of deployment"
+      },
+      {
+        "priority": "LOW",
+        "test": "Performance tests for large datasets",
+        "description": "Test analytics queries with 10k+ activity executions",
+        "location": "tests/performance/test_analytics_performance.py (does not exist yet)",
+        "reason": "Validate query performance, identify need for pagination/indexes"
+      }
+    ]
+  },
+  "conflictResolution": {
+    "conflictsDetected": 0,
+    "resolutionStrategies": [],
+    "notes": "Conflict analysis confirmed zero conflicts. No resolution needed."
+  },
+  "deploymentReadiness": {
+    "codeComplete": true,
+    "testsCreated": true,
+    "documentationComplete": true,
+    "deploymentBlocked": true,
+    "blockers": [
+      "Docker image build required",
+      "Kubernetes deployment update required",
+      "Playwright browsers installation required (for validation)"
+    ],
+    "deploymentChecklist": [
+      {
+        "item": "Build Docker image with analytics router",
+        "status": "PENDING",
+        "command": "docker build -t metabob-rpc-api:analytics repos/metabob-rpc-api"
+      },
+      {
+        "item": "Push to container registry",
+        "status": "PENDING",
+        "command": "docker push <registry>/metabob-rpc-api:analytics"
+      },
+      {
+        "item": "Update kubernetes deployment",
+        "status": "PENDING",
+        "command": "kubectl set image deployment/metabob-rpc-api metabob-rpc-api=<registry>/metabob-rpc-api:analytics -n metabob"
+      },
+      {
+        "item": "Verify deployment",
+        "status": "PENDING",
+        "command": "kubectl rollout status deployment/metabob-rpc-api -n metabob"
+      },
+      {
+        "item": "Test analytics endpoints",
+        "status": "PENDING",
+        "command": "curl http://localhost:8080/analytics/templates (via port-forward)"
+      },
+      {
+        "item": "Install Playwright browsers",
+        "status": "PENDING",
+        "command": "npx playwright install"
+      },
+      {
+        "item": "Re-run validation harness",
+        "status": "PENDING",
+        "command": "npx ts-node tests/validation-harnesses/dashboard-activity-history-viewing-flow-harness.ts"
+      }
+    ]
+  },
+  "rippleImpulseId": "ripple-dashboard-activity-history-viewing-flow"
+}

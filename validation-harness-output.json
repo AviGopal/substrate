@@ -1,117 +1,78 @@
 {
-  "specificationName": "Activity Template Flow via MCP Backend",
-  "harnessFile": "tests/validation-harnesses/activity-template-flow-via-mcp-backend-harness.ts",
-  "harnessImpulseId": "harness-activity-template-flow-via-mcp-backend",
+  "specificationName": "dashboard-activity-history-viewing-flow",
+  "harnessFile": "tests/validation-harnesses/dashboard-activity-history-viewing-flow-harness.ts",
   "testCases": [
     {
-      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-1",
-      "testName": "MCP Connection Status",
+      "impulseId": "validation-dashboard-activity-history-viewing-flow-case-1",
       "input": {
-        "check": "test_metabob_mcp tool exists and is defined"
+        "dashboardUrl": "http://app.metabob.local",
+        "kubernetesContext": "docker-desktop",
+        "namespace": "metabob",
+        "expectedTemplates": ["add-feature-complete", "fix-bug", "refactor-code"],
+        "screenshotDir": "./screenshots"
       },
       "expectedOutput": {
-        "toolExists": true,
-        "toolDefined": true
+        "dashboardAccessible": true,
+        "authenticationHandled": true,
+        "activityHistoryVisible": true,
+        "dataFlowVerified": true,
+        "kubernetesVerified": true,
+        "screenshots": [
+          "dashboard-initial-load.png",
+          "activity-history-view.png",
+          "activity-history-final.png",
+          "learning-view.png"
+        ],
+        "extractedData": {
+          "templates": ["add-feature-complete", "fix-bug", "refactor-code"],
+          "executionCount": 1,
+          "hasMetrics": true
+        },
+        "errors": []
       }
     },
     {
-      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-2",
-      "testName": "TemplateLoader Source Verification",
+      "impulseId": "validation-dashboard-activity-history-viewing-flow-case-2",
       "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
-        "check": "TemplateLoader returns source=\"metabob\" for backend templates"
+        "dashboardUrl": "http://app.metabob.local",
+        "kubernetesContext": "docker-desktop",
+        "namespace": "metabob",
+        "expectedTemplates": [],
+        "screenshotDir": "./screenshots"
       },
       "expectedOutput": {
-        "fileExists": true,
-        "sourceMetabob": true,
-        "usesTemplateServiceClient": true,
-        "hasBootstrapFallback": true
+        "dashboardAccessible": true,
+        "authenticationHandled": true,
+        "activityHistoryVisible": true,
+        "dataFlowVerified": true,
+        "kubernetesVerified": true,
+        "screenshots": [
+          "dashboard-initial-load.png",
+          "activity-history-view.png",
+          "activity-history-final.png",
+          "learning-view.png"
+        ],
+        "extractedData": {
+          "hasMetrics": true
+        },
+        "errors": []
       }
     },
     {
-      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-3",
-      "testName": "No Direct File Access",
+      "impulseId": "validation-dashboard-activity-history-viewing-flow-case-3",
       "input": {
-        "searchPath": "repos/metabob-opencode/packages/opencode/src",
-        "pattern": ".metabob/activities",
-        "check": "No active direct file access to .metabob/activities"
+        "dashboardUrl": "http://app.metabob.local",
+        "kubernetesContext": "docker-desktop",
+        "namespace": "metabob",
+        "expectedTemplates": [],
+        "screenshotDir": "./screenshots"
       },
       "expectedOutput": {
-        "activeReferences": 0,
-        "allReferencesCommented": true
-      }
-    },
-    {
-      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-4",
-      "testName": "MetabobCLI No Local Writes",
-      "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
-        "check": "MetabobCLI has no local template writes (lines 803-813 commented)"
-      },
-      "expectedOutput": {
-        "fileExists": true,
-        "noLocalWrites": true,
-        "hasArchitecturalConstraintComment": true,
-        "callsMCPTools": true
-      }
-    },
-    {
-      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-5",
-      "testName": "Activity Agent Tool Configuration",
-      "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
-        "check": "Activity agent has search_activities, no impulse tools"
-      },
-      "expectedOutput": {
-        "hasSearchActivities": true,
-        "hasActivity": true,
-        "noImpulseCreate": true,
-        "noImpulseLoad": true
-      }
-    },
-    {
-      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-6",
-      "testName": "Memory Agent Tool Configuration",
-      "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/agent/agent.ts",
-        "check": "Memory agent has impulse tools and activity tools"
-      },
-      "expectedOutput": {
-        "hasActivity": true,
-        "hasSearchActivities": true,
-        "hasImpulseCreate": true,
-        "hasImpulseLoad": true,
-        "hasImpulseUnload": true
-      }
-    },
-    {
-      "impulseId": "validation-activity-template-flow-via-mcp-backend-case-7",
-      "testName": "TemplateServiceClient Delegation",
-      "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
-        "check": "TemplateServiceClient delegates to MetabobCLI"
-      },
-      "expectedOutput": {
-        "fileExists": true,
-        "callsSearchActivities": true,
-        "callsGetActivity": true,
-        "callsRegisterActivityTemplate": true
+        "kubernetesVerified": true,
+        "dashboardAccessible": true,
+        "errors": []
       }
     }
   ],
-  "summary": {
-    "totalTests": 7,
-    "harnessType": "static-analysis",
-    "requiresLLM": false,
-    "canRunOffline": true,
-    "estimatedRuntime": "< 10 seconds",
-    "validationStrategy": [
-      "Call test_metabob_mcp() and verify status='connected'",
-      "Load a non-bootstrap template via TemplateLoader.load() and verify source='metabob'",
-      "Search codebase for direct .metabob/activities file reads and ensure they're deprecated/removed",
-      "Trace a template registration flow from TemplateServiceClient.registerTemplate() through MCP to RPC API",
-      "Verify Activity agent tools use search_activities() not file system access",
-      "Check that enforcement comments exist preventing local template storage"
-    ]
-  }
+  "harnessImpulseId": "harness-dashboard-activity-history-viewing-flow"
 }
