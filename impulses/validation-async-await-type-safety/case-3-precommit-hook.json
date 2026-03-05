@@ -1,0 +1,16 @@
+{
+  "impulseId": "validation-async-await-type-safety-case-3",
+  "testCase": "Pre-commit hook includes pyright",
+  "input": {
+    "file": "repos/metabob-rpc-api/.pre-commit-config.yaml",
+    "checkType": "hook_exists"
+  },
+  "expectedOutput": {
+    "hookName": "pyright",
+    "repo": "https://github.com/RobertCraigie/pyright-python",
+    "version": "v1.1.350",
+    "validation": "Commits are blocked if type errors exist"
+  },
+  "validationMethod": "grep",
+  "purpose": "Ensures type checking runs on every commit, catching async bugs locally"
+}

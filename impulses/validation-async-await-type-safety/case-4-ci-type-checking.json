@@ -1,0 +1,16 @@
+{
+  "impulseId": "validation-async-await-type-safety-case-4",
+  "testCase": "CI workflow includes type checking step",
+  "input": {
+    "file": "repos/metabob-rpc-api/.github/workflows/run-tests.yaml",
+    "checkType": "workflow_step_exists"
+  },
+  "expectedOutput": {
+    "stepName": "Run Type Checking",
+    "command": "pyright",
+    "runsBeforeTests": true,
+    "validation": "CI fails on PRs with type errors"
+  },
+  "validationMethod": "grep",
+  "purpose": "Ensures CI blocks merges with type errors"
+}
