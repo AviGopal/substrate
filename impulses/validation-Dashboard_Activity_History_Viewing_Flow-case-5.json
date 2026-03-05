@@ -1,0 +1,45 @@
+{
+  "id": "validation-Dashboard_Activity_History_Viewing_Flow-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "End-to-End Integration - Multiple Activities",
+      "input": {
+        "activities": [
+          {
+            "template": "test-success-template",
+            "expectedStatus": "success"
+          },
+          {
+            "template": "test-failure-template",
+            "expectedStatus": "failed"
+          },
+          {
+            "template": "test-inprogress-template",
+            "expectedStatus": "in-progress"
+          }
+        ]
+      },
+      "expectedOutput": {
+        "status": "PASS",
+        "activitiesVisible": 3,
+        "statusBadgesCorrect": true,
+        "drillDownWorking": true,
+        "message": "All activities appear with correct status and details"
+      }
+    },
+    "source": "validation harness specification"
+  },
+  "metadata": {
+    "specificationName": "Dashboard Activity History Viewing Flow",
+    "testCaseNumber": 15,
+    "validationStep": "Integration: Multiple Activities",
+    "category": "integration",
+    "automated": false,
+    "requiresSetup": true,
+    "setupNotes": "Requires executing 3 test activities with different outcomes, browser automation for dashboard verification"
+  },
+  "budget": 500,
+  "lazyLoad": false
+}

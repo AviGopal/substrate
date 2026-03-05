@@ -1,248 +1,339 @@
-# MCP Data Flow Validation Harness
+# Validation Harness: Dashboard Activity History Viewing Flow
 
 ## Overview
 
-This validation harness tests the complete end-to-end data flow from OpenCode activity execution through the metabob-cli MCP server to backend database storage.
+This validation harness implements a comprehensive 15-step validation suite for the Dashboard Activity History Viewing Flow specification. It validates the complete end-to-end flow from Kubernetes infrastructure through backend API to dashboard UI rendering.
 
-**Specification**: MCP Data Flow: Devbob → Metabob-CLI → Database
+## Features
 
-**Purpose**: Verify that the enforcement changes (impulse collection, component extraction, MCP transmission) actually work in production.
+- **15 Validation Steps**: Complete coverage of all specification requirements
+- **Automated Testing**: 8 steps fully automated (infrastructure, API, authentication)
+- **Manual Testing Guide**: 7 steps with clear manual testing procedures
+- **Detailed Reporting**: Step-by-step results with pass/fail status and timing
+- **Historical Test Cases**: Stored as impulses for reproducibility
 
-## Files
+## Quick Start
 
-- `mcp-data-flow-devbob-cli-database-harness.ts` - Main validation harness
-- `run-mcp-data-flow-validation.ts` - Test runner (executes all test cases)
-- `README.md` - This file
+### Prerequisites
 
-## Test Cases
+1. **Kubernetes Setup**:
+   ```bash
+   # Switch to docker-desktop context
+   kubectx docker-desktop
+   
+   # Verify pods are running
+   kubectl get pods -n metabob
+   ```
 
-### Case 1: Basic Activity Execution
-**Impulse**: `validation-mcp-data-flow-devbob-cli-database-case-1`
+2. **DNS Configuration** (`/etc/hosts`):
+   ```
+   127.0.0.1 app.metabob.local
+   127.0.0.1 api.metabob.local
+   ```
 
-Tests simple activity with 2 impulses and 3 component changes. Validates:
-- Activity execution completes successfully
-- Impulses tracked in activity.impulses registry
-- Component changes extracted from git diff
-- Data transmitted via MCP
-- Backend stores impulse_usage records
+3. **Port Forwarding**:
+   ```bash
+   # Dashboard
+   kubectl port-forward -n metabob svc/metabob-dashboard 3000:80 &
+   
+   # Backend API
+   kubectl port-forward -n metabob svc/metabob-rpc-api 8081:8081 &
+   
+   # SurrealDB
+   kubectl port-forward -n metabob svc/surrealdb 8000:8000 &
+   ```
 
-### Case 2: Multiple Impulses
-**Impulse**: `validation-mcp-data-flow-devbob-cli-database-case-2`
+4. **Test User** (in SurrealDB):
+   - Email: `test@example.com`
+   - Password: `password`
+   - Organization: `test-org`
 
-Tests complex activity with 5 impulses and 8 component changes. Validates:
-- Multiple impulse types handled correctly
-- Larger MCP payload (4-5KB) transmitted successfully
-- All impulses linked to execution in database
-- Success rates updated for all impulses
+### Running the Harness
 
-### Case 3: Failure Scenario
-**Impulse**: `validation-mcp-data-flow-devbob-cli-database-case-3`
-
-Tests failed activity with 3 impulses. Validates:
-- Failed activities still transmit learning data
-- Impulses marked as not useful (was_useful: false)
-- No component changes (activity failed before modifications)
-- Failure data recorded in database
-
-## Usage
-
-### Run All Tests
-
+#### Command Line
 ```bash
-bun run tests/validation-harnesses/run-mcp-data-flow-validation.ts
+cd tests/validation-harnesses
+npx ts-node Dashboard-Activity-History-Viewing-Flow-harness.ts
 ```
 
-### Run Single Test Case
-
+#### Programmatic
 ```typescript
-import { runValidation } from './tests/validation-harnesses/mcp-data-flow-devbob-cli-database-harness'
+import { runValidation } from './Dashboard-Activity-History-Viewing-Flow-harness';
 
-const testInput = {
-  templateId: "simple-feature-add",
-  variables: {
-    featureName: "test-feature",
-    description: "Test feature"
-  },
-  reason: "Validation test",
-  expectedImpulseCount: 2,
-  expectedComponentCount: 3
-}
+const result = await runValidation({
+  kubeContext: 'docker-desktop',
+  namespace: 'metabob',
+  dashboardUrl: 'http://app.metabob.local:3000',
+  apiUrl: 'http://localhost:8081',
+  testCredentials: {
+    email: 'test@example.com',
+    password: 'password'
+  }
+});
 
-const result = await runValidation(testInput)
-
-if (result.pass) {
-  console.log("✅ Validation PASSED")
-} else {
-  console.log("❌ Validation FAILED")
-  console.log("Errors:", result.errors)
-}
+console.log(`Result: ${result.pass ? 'PASS' : 'FAIL'}`);
+console.log(`Passed: ${result.summary.passed}/${result.summary.total}`);
+console.log(`Failed: ${result.summary.failed}`);
+console.log(`Skipped: ${result.summary.skipped}`);
 ```
 
-### Programmatic Usage
+## Validation Steps
 
-```typescript
-import { runValidation, type ValidationInput, type ValidationOutput } from './mcp-data-flow-devbob-cli-database-harness'
+### Automated Steps (8)
 
-async function validateDataFlow(input: ValidationInput): Promise<boolean> {
-  const result: ValidationOutput = await runValidation(input)
-  
-  // Check critical validation points
-  const criticalChecks = [
-    result.results.activityExecution.exists,
-    result.results.activityExecution.hasCorrectTemplate,
-    result.results.activityExecution.hasImpulsesUsed,
-  ]
-  
-  return criticalChecks.every(check => check === true)
-}
-```
+| Step | Name | Description |
+|------|------|-------------|
+| 1 | Infrastructure: Kubernetes Context | Verify `docker-desktop` context is active |
+| 2 | Pod: Dashboard Pod Running | Verify `metabob-dashboard` pod is Running (1/1) |
+| 3 | Service: Dashboard Service Valid | Verify dashboard service exists with valid type |
+| 4 | DNS: /etc/hosts Entries | Verify DNS entries for app/api.metabob.local |
+| 6 | Dashboard: HTTP Access | Verify dashboard responds to HTTP requests |
+| 7 | Authentication: Login Success | Verify JWT token generation works |
+| 8 | API: Activity List Schema | Verify API returns valid activity list schema |
 
-## Validation Points
+### Manual Steps (7)
 
-### Phase 1: Activity Execution
-- ✅ Activity created with correct template ID
-- ✅ Activity executed (or failed as expected)
-- ✅ Metrics recorded (duration, cost, tokens)
-- ✅ Impulses tracked in activity.impulses registry
-- ✅ Component changes identified from commits
+| Step | Name | Instructions |
+|------|------|--------------|
+| 5 | Port-Forward: Dashboard Access | Run `kubectl port-forward` commands (see prerequisites) |
+| 9 | Activity: Execution Test | Execute test activity via OpenCode CLI |
+| 10 | Data: SurrealDB Persistence | Query SurrealDB to verify activity record |
+| 11 | Dashboard: Activity Display | Reload dashboard, verify activity appears |
+| 12 | Dashboard: Detail Page Navigation | Click activity card, verify detail page |
+| 13 | API: Activity Detail | Call `/api/activities/{id}` endpoint |
+| 14 | Dashboard: Filtering | Test status filtering in UI |
+| 15 | Integration: Multiple Activities | Execute 3 activities, verify all appear correctly |
 
-### Phase 2: Data Collection
-- ✅ Loaded impulses filtered from registry
-- ✅ Impulse token counts captured
-- ✅ was_useful flag set based on activity success
-- ✅ Component extraction runs (git diff + parsing)
-- ✅ Component metadata collected (file, name, type, change_type)
+## Test Cases (Impulses)
 
-### Phase 3: MCP Transmission
-- ✅ TemplateMetricsClient.reportExecution called with extended data
-- ✅ impulses_used array included in payload
-- ✅ component_changes array included in payload
-- ✅ MCP tool metabob_post_activity_result receives data
-- ✅ CLI logs show data reception
+Test cases are stored as impulses for reproducibility:
 
-### Phase 4: Backend Storage
-- ✅ Backend API /api/v1/learning-loop/executions receives request
-- ✅ activity_executions record created with impulses_used
-- ✅ impulse_usage records created linking execution to impulses
-- ✅ impulse_registry success rates updated
-- ✅ Data queryable via backend API
+1. **case-1**: Infrastructure validation (Kubernetes context)
+2. **case-2**: Pod validation (Dashboard pod running)
+3. **case-3**: API validation (Activity list schema)
+4. **case-4**: Authentication validation (JWT token)
+5. **case-5**: Integration validation (Multiple activities)
 
-## Pass Criteria
-
-### Critical (Must Pass)
-- Activity must exist in storage
-- Template ID must match input
-- Metrics must be recorded
-- Impulses must be tracked (hasImpulsesUsed=true)
-
-### Optional (Graceful Degradation)
-- Backend availability (test passes if backend unavailable)
-- MCP payload capture (log-based, may not always be available)
-- Component count exact match (heuristic-based)
+Each impulse contains:
+- Test input parameters
+- Expected output schema
+- Pass/fail criteria
 
 ## Output Format
 
-```typescript
-interface ValidationOutput {
-  pass: boolean                    // Overall pass/fail
-  results: {
-    activityExecution: {
-      exists: boolean
-      hasCorrectTemplate: boolean
-      hasMetrics: boolean
-      hasImpulsesUsed: boolean
-      hasComponentChanges: boolean
-      impulsesUsedCount?: number
-      componentsChangedCount?: number
-    }
-    impulseUsage: {
-      recordsCreated: boolean
-      recordCount?: number
-      linkedToExecution: boolean
-    }
-    impulseRegistry: {
-      updatedSuccessRates: boolean
-      impulseCount?: number
-    }
-    mcpPayload: {
-      captured: boolean
-      hasImpulsesUsed: boolean
-      hasComponentChanges: boolean
-      payloadSize?: number
-    }
-  }
-  actual: {
-    activityId?: string
-    executionId?: string
-    impulsesUsed?: any[]
-    componentChanges?: any[]
-    mcpPayload?: string
-  }
-  expected: ValidationInput
-  errors: string[]
+```json
+{
+  "pass": true,
+  "steps": [
+    {
+      "stepNumber": 1,
+      "name": "Infrastructure: Kubernetes Context",
+      "status": "PASS",
+      "message": "Kubernetes context 'docker-desktop' is active",
+      "details": { ... },
+      "duration": 123
+    },
+    ...
+  ],
+  "summary": {
+    "total": 15,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 7
+  },
+  "actual": [ ... ],
+  "expected": { ... }
 }
+```
+
+## Pass Criteria
+
+**Overall PASS** requires:
+- All automated steps (1-4, 6-8) pass
+- No failures in any step
+- Manual steps completed successfully (verified by human operator)
+
+**Overall FAIL** triggers:
+- Any automated step fails
+- Infrastructure not properly configured
+- API returns invalid responses
+- Authentication fails
+
+## Troubleshooting
+
+### Step 1 Fails (Kubernetes Context)
+```bash
+# List available contexts
+kubectx
+
+# Switch to docker-desktop
+kubectx docker-desktop
+```
+
+### Step 2 Fails (Dashboard Pod)
+```bash
+# Check pod status
+kubectl get pods -n metabob
+
+# View logs
+kubectl logs -n metabob deployment/metabob-dashboard --tail=50
+
+# Restart pod if needed
+kubectl rollout restart -n metabob deployment/metabob-dashboard
+```
+
+### Step 4 Fails (DNS)
+```bash
+# Add entries to /etc/hosts
+sudo bash -c 'echo "127.0.0.1 app.metabob.local" >> /etc/hosts'
+sudo bash -c 'echo "127.0.0.1 api.metabob.local" >> /etc/hosts'
+```
+
+### Step 6 Fails (Dashboard Access)
+```bash
+# Verify port-forward is running
+ps aux | grep "port-forward"
+
+# Restart port-forward
+kubectl port-forward -n metabob svc/metabob-dashboard 3000:80 &
+
+# Test access
+curl -I http://app.metabob.local:3000
+```
+
+### Step 7 Fails (Authentication)
+```bash
+# Check API is running
+curl http://localhost:8081/health
+
+# Verify test user exists in SurrealDB
+surreal sql --conn http://localhost:8000 --user root --pass root \
+  --ns metabob --db main \
+  "SELECT * FROM users WHERE email = 'test@example.com'"
+```
+
+### Step 8 Fails (Activity List API)
+```bash
+# Get JWT token
+TOKEN=$(curl -s -X POST http://localhost:8081/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}' \
+  | jq -r '.token')
+
+# Test endpoint
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8081/auth/orgs/test-org/activity
 ```
 
 ## Integration with CI/CD
 
-Add to your CI pipeline:
-
+### GitHub Actions Example
 ```yaml
-# .github/workflows/validate-mcp-data-flow.yml
-name: Validate MCP Data Flow
+name: Validate Dashboard Flow
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'repos/metabob-opencode/packages/opencode/src/session/activity.ts'
-      - 'repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts'
-      - 'repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py'
+  pull_request:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v3
-      - uses: oven-sh/setup-bun@v1
-      - run: bun install
-      - name: Run MCP Data Flow Validation
-        run: bun run tests/validation-harnesses/run-mcp-data-flow-validation.ts
+      - uses: actions/checkout@v2
+      
+      - name: Setup Kubernetes
+        uses: helm/kind-action@v1
+        
+      - name: Deploy Metabob
+        run: |
+          kubectl apply -f k8s/
+          kubectl wait --for=condition=ready pod -l app=metabob-dashboard -n metabob
+      
+      - name: Run Validation Harness
+        run: |
+          npm install
+          npx ts-node tests/validation-harnesses/Dashboard-Activity-History-Viewing-Flow-harness.ts
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: validation-results
+          path: validation-results.json
 ```
 
-## Troubleshooting
+## Extending the Harness
 
-### "Activity not found in storage"
-- Ensure activity execution completed before validation
-- Check activity.ts logs for execution errors
+### Adding New Validation Steps
 
-### "Impulses not tracked in registry"
-- Verify activity template has impulses defined
-- Check that impulses were actually loaded during execution
+1. Add step function:
+```typescript
+async function validateMyFeature(input: ValidationInput): Promise<StepResult> {
+  const startTime = Date.now();
+  
+  try {
+    // Perform validation
+    const isValid = checkSomething();
+    
+    return {
+      stepNumber: 16,
+      name: 'My Feature: Validation',
+      status: isValid ? 'PASS' : 'FAIL',
+      message: 'Validation result message',
+      details: { ... },
+      duration: Date.now() - startTime
+    };
+  } catch (error) {
+    return {
+      stepNumber: 16,
+      name: 'My Feature: Validation',
+      status: 'FAIL',
+      message: `Error: ${error.message}`,
+      details: { error: error.message },
+      duration: Date.now() - startTime
+    };
+  }
+}
+```
 
-### "Backend API unavailable"
-- This is expected if backend not running
-- Test will pass with warning if backend checks skipped
-- For full validation, start backend before running tests
+2. Add to validation runner:
+```typescript
+console.log('\n[16/16] My Feature Validation...');
+const step16 = await validateMyFeature(input);
+steps.push(step16);
+console.log(`  ${step16.status}: ${step16.message}`);
+```
 
-### "MCP payload not captured"
-- Increase log level: `LOG_LEVEL=debug`
-- Check log directory: `$OPENCODE_LOG_DIR`
-- Ensure MCP communication happening (check CLI logs)
+3. Create test case impulse:
+```json
+{
+  "id": "validation-Dashboard_Activity_History_Viewing_Flow-case-6",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "My Feature Validation",
+      "input": { ... },
+      "expectedOutput": { ... }
+    },
+    "source": "validation harness extension"
+  },
+  ...
+}
+```
 
-## Related Impulses
+## References
 
-- **Trace**: `trace-mcp-data-flow-devbob-cli-database`
-- **Enforcement**: `enforcement-mcp-data-flow-devbob-cli-database`
-- **Harness**: `harness-mcp-data-flow-devbob-cli-database`
-- **Test Cases**: `validation-mcp-data-flow-devbob-cli-database-case-1/2/3`
+- **Trace Documentation**: `docs/data-flows/Dashboard-Activity-History-Viewing-Flow-flow.md`
+- **Enforcement Summary**: `ENFORCEMENT_SUMMARY_Dashboard_Activity_History.md`
+- **Trace Impulse**: `impulses/trace-Dashboard_Activity_History_Viewing_Flow.json`
+- **Enforcement Impulse**: `impulses/enforcement-Dashboard_Activity_History_Viewing_Flow.json`
+- **Harness Impulse**: `impulses/harness-Dashboard_Activity_History_Viewing_Flow.json`
 
-## Maintenance
+---
 
-When updating the specification:
-
-1. Update harness validation logic (`mcp-data-flow-devbob-cli-database-harness.ts`)
-2. Add new test cases as needed (create new impulses)
-3. Update expected outputs in test case impulses
-4. Run full test suite to verify changes
-5. Update this README with new validation points
+**Created**: 2026-03-05  
+**Version**: 1.0  
+**Maintainer**: OpenCode DevBob  
+**Status**: Ready for Use

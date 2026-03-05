@@ -1,0 +1,37 @@
+{
+  "id": "validation-Dashboard_Activity_History_Viewing_Flow-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "Authentication - JWT Token Generation",
+      "input": {
+        "apiUrl": "http://localhost:8081",
+        "endpoint": "/auth/login",
+        "credentials": {
+          "email": "test@example.com",
+          "password": "password"
+        }
+      },
+      "expectedOutput": {
+        "status": "PASS",
+        "hasToken": true,
+        "hasUser": true,
+        "tokenType": "Bearer",
+        "message": "Successfully authenticated and received JWT token"
+      }
+    },
+    "source": "validation harness specification"
+  },
+  "metadata": {
+    "specificationName": "Dashboard Activity History Viewing Flow",
+    "testCaseNumber": 7,
+    "validationStep": "Authentication: Login Success",
+    "category": "authentication",
+    "automated": true,
+    "requiresSetup": true,
+    "setupNotes": "Requires test user in database"
+  },
+  "budget": 500,
+  "lazyLoad": false
+}
