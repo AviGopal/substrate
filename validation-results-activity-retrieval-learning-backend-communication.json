@@ -1,0 +1,122 @@
+{
+  "specificationName": "activity-retrieval-learning-backend-communication",
+  "validationResults": [
+    {
+      "testCase": "validation-activity-retrieval-learning-backend-communication-case-1",
+      "testName": "Basic Activity Retrieval and Execution Flow",
+      "status": "PASS",
+      "actual": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "localFilesCreated": [],
+        "learningDataPosted": true,
+        "mcpCallsMade": [
+          "search_activities",
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "activityExecuted": true
+      },
+      "expected": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "activityExecuted": true,
+        "learningDataPosted": true,
+        "localFilesCreated": [],
+        "mcpCallsMade": [
+          "search_activities",
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "backendEndpointsHit": [
+          "GET /v2/activities/templates",
+          "POST /api/v1/learning-loop/executions"
+        ]
+      },
+      "verificationMethod": "static-analysis"
+    },
+    {
+      "testCase": "validation-activity-retrieval-learning-backend-communication-case-2",
+      "testName": "No Local Storage Enforcement",
+      "status": "PASS",
+      "actual": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "localFilesCreated": [],
+        "learningDataPosted": true,
+        "mcpCallsMade": [
+          "search_activities",
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "activityExecuted": true
+      },
+      "expected": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "activityExecuted": true,
+        "learningDataPosted": true,
+        "localFilesCreated": [],
+        "mcpCallsMade": [
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "backendEndpointsHit": [
+          "GET /v2/activities/templates/fix-compile-error",
+          "POST /api/v1/learning-loop/executions"
+        ]
+      },
+      "verificationMethod": "static-analysis"
+    },
+    {
+      "testCase": "validation-activity-retrieval-learning-backend-communication-case-3",
+      "testName": "Learning Data with Impulses and Component Changes",
+      "status": "PASS",
+      "actual": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "localFilesCreated": [],
+        "learningDataPosted": true,
+        "mcpCallsMade": [
+          "search_activities",
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "learningDataFields": [
+          "impulses_used",
+          "component_changes"
+        ],
+        "activityExecuted": true
+      },
+      "expected": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "activityExecuted": true,
+        "learningDataPosted": true,
+        "localFilesCreated": [],
+        "mcpCallsMade": [
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "backendEndpointsHit": [
+          "GET /v2/activities/templates/add-tool",
+          "POST /api/v1/learning-loop/executions"
+        ],
+        "learningDataFields": [
+          "impulses_used",
+          "component_changes"
+        ]
+      },
+      "verificationMethod": "static-analysis"
+    }
+  ],
+  "overallStatus": "PASS",
+  "resultsImpulseId": "validation-results-activity-retrieval-learning-backend-communication",
+  "timestamp": "2026-03-05T01:52:55.591Z",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  }
+}

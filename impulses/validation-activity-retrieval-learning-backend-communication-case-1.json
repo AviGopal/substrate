@@ -1,0 +1,57 @@
+{
+  "id": "validation-activity-retrieval-learning-backend-communication-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testName": "Basic Activity Retrieval and Execution Flow",
+      "description": "Validates that an activity template is retrieved from backend via MCP, executed, and learning data is posted back",
+      "input": {
+        "activityTemplateId": "add-rest-endpoint",
+        "testVariables": {
+          "method": "GET",
+          "path": "/api/test",
+          "requestSchema": "{}",
+          "responseSchema": "{ success: boolean }",
+          "handlerDescription": "Test endpoint for validation"
+        },
+        "expectedDataFlow": {
+          "mcpCallsMade": [
+            "search_activities",
+            "activity",
+            "metabob_post_activity_result"
+          ],
+          "backendEndpointsHit": [
+            "GET /v2/activities/templates",
+            "POST /api/v1/learning-loop/executions"
+          ],
+          "localFilesCreated": []
+        }
+      },
+      "expectedOutput": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "activityExecuted": true,
+        "learningDataPosted": true,
+        "localFilesCreated": [],
+        "mcpCallsMade": [
+          "search_activities",
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "backendEndpointsHit": [
+          "GET /v2/activities/templates",
+          "POST /api/v1/learning-loop/executions"
+        ]
+      },
+      "rationale": "This test validates the core data flow: retrieval via MCP, execution without local dependencies, and learning data posted to backend"
+    }
+  },
+  "budget": 2000,
+  "metadata": {
+    "specificationName": "activity-retrieval-learning-backend-communication",
+    "testCaseNumber": 1,
+    "createdAt": "2026-03-04",
+    "purpose": "Historical test case for activity retrieval and learning flow validation"
+  }
+}

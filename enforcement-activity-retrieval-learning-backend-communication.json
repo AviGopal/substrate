@@ -1,0 +1,121 @@
+{
+  "specificationName": "activity-retrieval-learning-backend-communication",
+  "status": "COMPLIANT - NO CHANGES REQUIRED",
+  "changesApplied": [],
+  "componentsAnalyzed": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "component": "MetabobCLI.searchActivities",
+      "changeMade": "None",
+      "reason": "Already compliant - calls MCP tool search_activities",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Line 688: calls MCP tool"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "component": "MetabobCLI.getActivity",
+      "changeMade": "None",
+      "reason": "Already compliant - calls MCP tool activity",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Line 758: calls MCP tool"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+      "component": "MetabobCLI.registerActivityTemplate",
+      "changeMade": "None",
+      "reason": "Already compliant - local file writes removed (lines 806-813 commented out)",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Lines 806-813: commented out with architectural constraint documentation"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts",
+      "component": "TemplateRepository.save",
+      "changeMade": "None",
+      "reason": "Already compliant - enforces backend-only saves, throws error for local backend",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Lines 167-172: throws error if backend='local'"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "component": "TemplateMetricsClient.reportExecution",
+      "changeMade": "None",
+      "reason": "Already compliant - calls MCP tool metabob_post_activity_result",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Line 110: calls MCP tool with impulses_used and component_changes"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_search_activities",
+      "changeMade": "None",
+      "reason": "Already compliant - forwards to RPC API GET /v2/activities/templates",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Line 56: calls backend API"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_get_activity_template",
+      "changeMade": "None",
+      "reason": "Already compliant - forwards to RPC API GET /v2/activities/templates/{id}",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Line 126: calls backend API"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_post_activity_result",
+      "changeMade": "None",
+      "reason": "Already compliant - forwards to RPC API POST /api/v1/learning-loop/executions",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Line 376: calls learning loop API with impulses_used and component_changes"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "component": "list_activity_templates",
+      "changeMade": "None",
+      "reason": "Already compliant - returns templates from Redis (MVP compliant)",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Uses Redis for template storage"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "component": "insert_execution",
+      "changeMade": "None",
+      "reason": "Already compliant - stores execution data in SurrealDB with impulses_used and component_changes",
+      "impactAnalysis": "No impact - no changes made",
+      "verificationEvidence": "Lines 79-96: stores all learning data fields"
+    }
+  ],
+  "enforcementImpulseId": "enforcement-activity-retrieval-learning-backend-communication",
+  "traceImpulseId": "trace-activity-retrieval-learning-backend-communication",
+  "complianceRate": "100%",
+  "totalComponents": 10,
+  "compliantComponents": 10,
+  "changesRequired": 0,
+  "architecturalBoundaries": [
+    {
+      "boundary": "MCP Boundary (OpenCode | metabob-cli)",
+      "status": "ENFORCED",
+      "verification": "All OpenCode calls use MCP tools, no direct HTTP"
+    },
+    {
+      "boundary": "HTTP/RPC Boundary (metabob-cli | metabob-rpc-api)",
+      "status": "ENFORCED",
+      "verification": "All metabob-cli calls use REST API with proper error handling"
+    },
+    {
+      "boundary": "Database Boundary (metabob-rpc-api | SurrealDB/Redis)",
+      "status": "ENFORCED",
+      "verification": "Proper schema validation and connection handling"
+    }
+  ],
+  "dataFlowValidation": {
+    "activityRetrieval": "OpenCode → MCP → metabob-cli → RPC API → Backend (Redis/SurrealDB) ✅",
+    "learningData": "OpenCode → MCP → metabob-cli → RPC API → Backend (SurrealDB) ✅"
+  },
+  "recommendations": [
+    "Create validation harness to test end-to-end flow",
+    "Add monitoring metrics for MCP call latency and success rates",
+    "Update architecture documentation",
+    "Add integration tests for learning data flow",
+    "Remove commented code (lines 806-813) and rely on git history"
+  ]
+}

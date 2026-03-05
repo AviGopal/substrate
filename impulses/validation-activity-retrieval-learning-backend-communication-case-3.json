@@ -1,0 +1,58 @@
+{
+  "id": "validation-activity-retrieval-learning-backend-communication-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testName": "Learning Data with Impulses and Component Changes",
+      "description": "Validates that learning data includes impulses_used and component_changes fields when posted to backend",
+      "input": {
+        "activityTemplateId": "add-tool",
+        "testVariables": {
+          "toolName": "test-validator",
+          "toolPurpose": "Validate test data structures",
+          "parameterSchema": "z.object({ data: z.string() })",
+          "responseFormat": "{ valid: boolean, errors?: string[] }"
+        },
+        "expectedDataFlow": {
+          "mcpCallsMade": [
+            "activity",
+            "metabob_post_activity_result"
+          ],
+          "backendEndpointsHit": [
+            "GET /v2/activities/templates/add-tool",
+            "POST /api/v1/learning-loop/executions"
+          ],
+          "localFilesCreated": []
+        }
+      },
+      "expectedOutput": {
+        "templateRetrieved": true,
+        "templateSource": "mcp",
+        "activityExecuted": true,
+        "learningDataPosted": true,
+        "localFilesCreated": [],
+        "mcpCallsMade": [
+          "activity",
+          "metabob_post_activity_result"
+        ],
+        "backendEndpointsHit": [
+          "GET /v2/activities/templates/add-tool",
+          "POST /api/v1/learning-loop/executions"
+        ],
+        "learningDataFields": [
+          "impulses_used",
+          "component_changes"
+        ]
+      },
+      "rationale": "This test validates that learning data includes rich context (impulses and component changes) for backend analysis and improvement"
+    }
+  },
+  "budget": 2000,
+  "metadata": {
+    "specificationName": "activity-retrieval-learning-backend-communication",
+    "testCaseNumber": 3,
+    "createdAt": "2026-03-04",
+    "purpose": "Validates learning data includes impulses_used and component_changes"
+  }
+}

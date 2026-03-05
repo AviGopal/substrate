@@ -1,127 +1,100 @@
 {
-  "specificationName": "sidebar-impulse-visibility",
+  "specificationName": "activity-retrieval-learning-backend-communication",
   "otherSpecifications": [
-    "activity-state-transformation-tracking",
-    "impulse-usage-tracking"
+    "complete-architecture-separation",
+    "impulse-learning-storage-complete",
+    "metabob-cli-mcp-activity-impulse-learning-integration"
   ],
-  "conflicts": [],
-  "conflictSummary": "NO CONFLICTS DETECTED - All specifications are fully compatible",
+  "conflicts": [
+    {
+      "type": "SHARED_COMPONENT",
+      "spec1": "activity-retrieval-learning-backend-communication",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts, repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py, repos/metabob-rpc-api/server/routes/activity.py",
+      "description": "Specs share 3 component(s). Requirements are complementary - both enforce MCP gateway pattern.",
+      "resolution": "No action required - specs are compatible",
+      "severity": "LOW"
+    },
+    {
+      "type": "SHARED_COMPONENT",
+      "spec1": "activity-retrieval-learning-backend-communication",
+      "spec2": "impulse-learning-storage-complete",
+      "sharedComponent": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py, repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "description": "Specs share 2 component(s). Requirements are complementary - activity-retrieval posts learning data, impulse-learning defines how it's stored.",
+      "resolution": "No action required - specs are compatible",
+      "severity": "LOW"
+    },
+    {
+      "type": "SHARED_COMPONENT",
+      "spec1": "activity-retrieval-learning-backend-communication",
+      "spec2": "metabob-cli-mcp-activity-impulse-learning-integration",
+      "sharedComponent": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts, repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "description": "Specs share 2 component(s). Requirements are complementary - both require metrics reporting via MCP.",
+      "resolution": "No action required - specs are compatible",
+      "severity": "LOW"
+    }
+  ],
   "sharedComponents": [
     {
-      "component": "SessionState.get() (session-state.ts)",
+      "component": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
       "affectedBySpecs": [
-        "sidebar-impulse-visibility (READ)",
-        "activity-state-transformation-tracking (WRITE)",
-        "impulse-usage-tracking (WRITE)"
+        "activity-retrieval-learning-backend-communication",
+        "complete-architecture-separation"
       ],
-      "relationship": "CONSUMER/PRODUCER",
-      "recommendation": "No changes needed. Clean architectural separation: producers write state, consumer (sidebar) reads and displays it."
+      "recommendation": "Shared by 2 specification(s). Both require MCP tool calls - maintain compatibility."
     },
     {
-      "component": "Sidebar.tsx (TUI component)",
+      "component": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
       "affectedBySpecs": [
-        "sidebar-impulse-visibility"
+        "activity-retrieval-learning-backend-communication",
+        "metabob-cli-mcp-activity-impulse-learning-integration"
       ],
-      "relationship": "ISOLATED",
-      "recommendation": "No conflicts. Only one specification modifies this component."
-    }
-  ],
-  "potentialIssues": [
-    {
-      "type": "REFRESH_RATE_CONSISTENCY",
-      "severity": "LOW",
-      "description": "Sidebar polls every 2.5s while impulse loading happens in real-time",
-      "resolution": "ACCEPTABLE - 2.5s latency matches specification's pseudo-real-time definition",
-      "evidenceOfMitigation": "Architecture decision documented. Future enhancement: event-driven updates (WebSocket/SSE)"
+      "recommendation": "Shared by 2 specification(s). Both require metrics reporting - maintain compatibility."
     },
     {
-      "type": "STATE_CONSISTENCY",
-      "severity": "LOW",
-      "description": "SessionState aggregates 9 sources; potential for transient inconsistency",
-      "resolution": "MITIGATED - Fast aggregation (10-180ms), polling corrects any inconsistencies",
-      "evidenceOfMitigation": "Validation Test Case 4 confirms no race conditions"
-    },
-    {
-      "type": "DISPLAY_RACE_CONDITION",
-      "severity": "NEGLIGIBLE",
-      "description": "UI might show stale data if state updates during render",
-      "resolution": "ACCEPTABLE - Solid.js reactive rendering + 2.5s polling ensures freshness",
-      "evidenceOfMitigation": "All 4 validation tests passed, including concurrent update test"
-    }
-  ],
-  "complementaryFeatures": [
-    {
-      "feature": "Memory Agent Visibility",
-      "specs": [
-        "impulse-usage-tracking",
-        "sidebar-impulse-visibility"
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity-template-repository.ts",
+      "affectedBySpecs": [
+        "activity-retrieval-learning-backend-communication"
       ],
-      "synergy": "impulse-usage-tracking produces data, sidebar-impulse-visibility displays it. Users see impulse loading in real-time."
+      "recommendation": "Component only used by current specification - standard testing applies."
     },
     {
-      "feature": "Activity Progress Feedback",
-      "specs": [
-        "activity-state-transformation-tracking",
-        "sidebar-impulse-visibility"
+      "component": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "affectedBySpecs": [
+        "activity-retrieval-learning-backend-communication",
+        "complete-architecture-separation",
+        "impulse-learning-storage-complete",
+        "metabob-cli-mcp-activity-impulse-learning-integration"
       ],
-      "synergy": "activity-state-transformation-tracking produces state changes, sidebar-impulse-visibility displays progress. Users see tasks completing in real-time."
-    }
-  ],
-  "architecturalAlignment": {
-    "status": "ALIGNED",
-    "pattern": "Producer/Consumer",
-    "details": [
-      "sidebar-impulse-visibility = CONSUMER (read-only)",
-      "activity-state-transformation-tracking = PRODUCER (writes activity state)",
-      "impulse-usage-tracking = PRODUCER (writes impulse state)",
-      "Clean separation, no circular dependencies"
-    ]
-  },
-  "dataFlowDiagram": {
-    "producers": [
-      "activity.ts (executes tasks) → activity-state-transformation-tracking",
-      "task-execution-shared.ts (loads impulses) → impulse-usage-tracking"
-    ],
-    "storage": "SessionState → Storage (file-based)",
-    "consumer": "SessionState.get() → Sidebar.tsx → TUI display",
-    "conflictRisk": "NONE - unidirectional data flow"
-  },
-  "validationEvidence": {
-    "allTestsPassed": true,
-    "testCases": 4,
-    "coverageAreas": [
-      "Impulse loading progression",
-      "Activity progress tracking",
-      "Warning thresholds",
-      "Concurrent updates (no race conditions)"
-    ]
-  },
-  "recommendations": [
-    {
-      "priority": "P1",
-      "type": "INTEGRATION_TEST",
-      "action": "Create end-to-end test exercising all 3 specifications together",
-      "reason": "Validate complete system behavior in production-like scenario"
+      "recommendation": "CRITICAL: Shared by 4 specification(s). Maintain pure proxy pattern - all specs depend on MCP gateway."
     },
     {
-      "priority": "P2",
-      "type": "PERFORMANCE_MONITORING",
-      "action": "Monitor sidebar polling overhead with multiple concurrent sessions",
-      "reason": "24 requests/minute per session may add up; consider adaptive polling"
+      "component": "repos/metabob-rpc-api/server/routes/activity.py",
+      "affectedBySpecs": [
+        "activity-retrieval-learning-backend-communication",
+        "complete-architecture-separation"
+      ],
+      "recommendation": "Shared by 2 specification(s). Both require backend API endpoints - maintain compatibility."
     },
     {
-      "priority": "P3",
-      "type": "FUTURE_ENHANCEMENT",
-      "action": "Consider WebSocket/SSE for true real-time updates",
-      "reason": "Reduce latency from 2.5s to <100ms, eliminate polling overhead"
+      "component": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "affectedBySpecs": [
+        "activity-retrieval-learning-backend-communication",
+        "impulse-learning-storage-complete"
+      ],
+      "recommendation": "Shared by 2 specification(s). Both require SurrealDB storage - maintain compatibility."
     }
   ],
-  "conclusion": {
-    "status": "✅ NO CONFLICTS",
-    "compatibilityRating": "100%",
-    "riskLevel": "LOW",
-    "readyForProduction": true,
-    "summary": "sidebar-impulse-visibility is fully compatible with all existing specifications. It acts as a read-only consumer in a clean producer/consumer architecture. No conflicting requirements, no overlapping modifications, all validation tests passed. The specification completes the memory agent proof-of-concept by making the system visible to users."
+  "conflictImpulseId": "conflict-analysis-activity-retrieval-learning-backend-communication",
+  "summary": {
+    "totalConflicts": 3,
+    "contradictions": 0,
+    "sharedComponentIssues": 3,
+    "highSeverity": 0,
+    "mediumSeverity": 0,
+    "lowSeverity": 3
   },
-  "conflictImpulseId": "conflict-analysis-sidebar-impulse-visibility"
+  "conclusion": "NO CONFLICTS DETECTED - All specifications are compatible",
+  "productionReady": true,
+  "timestamp": "2026-03-04"
 }
