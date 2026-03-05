@@ -105,3 +105,4 @@ tests/validation-harnesses/README-rpc-api-endpoint-database-integration.md
 validation-harness-creation-summary.json
 validation-harness-rpc-api-endpoint-database-integration-summary.json
 .metabob/state.lock
+create-mcp-timeout-trace-impulse.ts
