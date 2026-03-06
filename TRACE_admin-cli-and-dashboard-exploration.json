@@ -1,0 +1,297 @@
+{
+  "specificationName": "admin-cli-and-dashboard-exploration",
+  "description": "Admin CLI tool for database management (orgs, users, activity templates, boredom config) + dashboard data flow demonstration",
+  "traceDate": "2026-03-06",
+  "activity": "trace-enforce-validate-loop",
+  "impulseId": "trace-admin-cli-and-dashboard-exploration",
+  
+  "currentState": {
+    "summary": "CLI has basic DB management commands but lacks admin CRUD operations. Dashboard data flow is functional but not fully demonstrated end-to-end with Playwright automation.",
+    "components": [
+      {
+        "file": "repos/metabob-rpc-api/server/cli.py",
+        "component": "CLI Command Structure",
+        "currentBehavior": "Has db group with init-schema, validate, status commands. Server start/stop commands exist.",
+        "desiredBehavior": "Should have admin group with commands for: org create/list/update, user create/list/assign, template manage, boredom config.",
+        "gap": "Missing admin command group and all CRUD subcommands",
+        "lines": "1-293"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/organization_ops.py",
+        "component": "Organization CRUD Operations",
+        "currentBehavior": "Full CRUD available: create_organization, get_organization, list_organizations, update_organization, delete_organization, get_organization_stats",
+        "desiredBehavior": "Expose via CLI commands for admin use",
+        "gap": "Operations exist but not exposed in CLI",
+        "lines": "1-244"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/template_data.py",
+        "component": "Template Management Operations",
+        "currentBehavior": "Full CRUD: create_template_record, get_template_by_variant_id, list_all_templates, update_template_record, delete_template_record",
+        "desiredBehavior": "CLI commands to list templates, enable/disable for boredom system, set priority flags",
+        "gap": "No CLI exposure, no boredom eligibility field in schema",
+        "lines": "1-250"
+      },
+      {
+        "file": "repos/metabob-rpc-api/sql/migrations/007-auth-users-table.surql",
+        "component": "User Authentication Schema",
+        "currentBehavior": "Schema defines users table with user_id, email, password_hash, org_id, role, is_active, etc.",
+        "desiredBehavior": "CLI commands to create users, assign to orgs, update roles, deactivate accounts",
+        "gap": "No user_ops.py module, no CLI commands",
+        "lines": "1-54"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts",
+        "component": "Boredom Activity Selection",
+        "currentBehavior": "Fetches activities via metabob_fetch_boredom_activities MCP tool with hardcoded filters (priority_threshold: 0.6, max_activities: 5)",
+        "desiredBehavior": "Backend should allow admin to configure which templates are boredom-eligible, set priority scores, configure thresholds",
+        "gap": "No admin API to configure boredom eligibility",
+        "lines": "1-400+"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/activity.py",
+        "component": "Boredom Activity API Endpoint",
+        "currentBehavior": "Likely has metabob_fetch_boredom_activities endpoint that queries templates",
+        "desiredBehavior": "Should filter by boredom_eligible flag, respect admin-configured priorities",
+        "gap": "Need to verify endpoint logic and add boredom filtering",
+        "lines": "524"
+      },
+      {
+        "file": "BROWSER_NAVIGATION_DEMONSTRATION.md",
+        "component": "Dashboard Access Demonstration",
+        "currentBehavior": "Shows Playwright navigation to app.metabob.local, login attempts, screenshot captures. Auth blocked without valid credentials.",
+        "desiredBehavior": "Full end-to-end demonstration: login → navigate to activity history → view aggregated data → verify data flow from devbob",
+        "gap": "Need to configure local mode or create test user to bypass auth"
+      },
+      {
+        "file": "DEMONSTRATION_Dashboard_Activity_History_Viewing.md",
+        "component": "Activity History Data Flow",
+        "currentBehavior": "Documents the flow: OpenCode CLI → POST /v2/activities/content → SurrealDB → GET /auth/orgs/{org_id}/activity → Redis Cache → Dashboard UI",
+        "desiredBehavior": "Playwright automation demonstrates this flow visually with real data",
+        "gap": "Need Playwright script to automate login, navigation, data verification"
+      }
+    ]
+  },
+  
+  "desiredState": {
+    "newComponents": [
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/user_ops.py",
+        "purpose": "User CRUD operations for admin CLI",
+        "estimatedLines": 250,
+        "functions": [
+          "create_user(email, password, name, org_id, role)",
+          "get_user(user_id)",
+          "get_user_by_email(email)",
+          "list_users(org_id, limit)",
+          "update_user(user_id, ...)",
+          "delete_user(user_id)",
+          "assign_user_to_org(user_id, org_id, role)",
+          "verify_password(email, password)"
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/cli.py",
+        "purpose": "Add admin command group with org, user, template, boredom subcommands",
+        "estimatedLines": "+150",
+        "additions": [
+          "@cli.group() def admin(): ...",
+          "@admin.group() def org(): ...",
+          "@org.command() def create(...): ...",
+          "@org.command() def list(): ...",
+          "@org.command() def stats(...): ...",
+          "@admin.group() def user(): ...",
+          "@user.command() def create(...): ...",
+          "@user.command() def list(...): ...",
+          "@user.command() def assign(...): ...",
+          "@admin.group() def template(): ...",
+          "@template.command() def list(...): ...",
+          "@template.command() def set_boredom(...): ...",
+          "@admin.group() def boredom(): ...",
+          "@boredom.command() def config(...): ...",
+          "@boredom.command() def stats(): ...",
+          "@boredom.command() def list(): ..."
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/sql/migrations/008-boredom-eligibility.surql",
+        "purpose": "Add boredom eligibility fields to activity_template table",
+        "estimatedLines": 10,
+        "schema": [
+          "DEFINE FIELD boredom_eligible ON activity_template TYPE bool DEFAULT false",
+          "DEFINE FIELD boredom_priority ON activity_template TYPE float DEFAULT 0.5",
+          "DEFINE FIELD boredom_config ON activity_template TYPE object DEFAULT {}",
+          "DEFINE INDEX boredom_eligible_idx ON activity_template FIELDS boredom_eligible"
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/tests/playwright/dashboard-e2e-demo.spec.ts",
+        "purpose": "End-to-end Playwright automation for dashboard exploration",
+        "estimatedLines": 80,
+        "steps": [
+          "1. Navigate to http://app.metabob.local",
+          "2. Login with test credentials (or local mode)",
+          "3. Navigate to Activity History section",
+          "4. Verify activity data is displayed",
+          "5. Take screenshots at each step",
+          "6. Verify data matches expectations from devbob execution"
+        ]
+      },
+      {
+        "file": "repos/metabob-rpc-api/tests/playwright/playwright.config.ts",
+        "purpose": "Playwright test configuration",
+        "estimatedLines": 30
+      },
+      {
+        "file": "DEMONSTRATION_COMPLETE_admin-cli-and-dashboard-exploration.md",
+        "purpose": "Complete documentation with screenshots",
+        "estimatedLines": 200
+      }
+    ],
+    "modifiedComponents": [
+      {
+        "file": "repos/metabob-rpc-api/server/routes/activity.py",
+        "changes": "Add boredom_eligible filtering to metabob_fetch_boredom_activities endpoint",
+        "estimatedLines": "+20"
+      }
+    ]
+  },
+  
+  "dataFlow": {
+    "adminCLI": {
+      "flow": "start_server admin org create → organization_ops.create_organization() → SurrealDB.organizations → Success",
+      "entryPoint": "CLI command handler",
+      "exitPoint": "SurrealDB insert success"
+    },
+    "userManagement": {
+      "flow": "start_server admin user create → user_ops.create_user() → bcrypt.hash(password) → SurrealDB.users → Success",
+      "entryPoint": "CLI command handler",
+      "exitPoint": "User record created with hashed password"
+    },
+    "templateBoredomConfig": {
+      "flow": "start_server admin template set-boredom --template-id=X --enable → template_data.update_template_record(boredom_eligible=true) → SurrealDB",
+      "entryPoint": "CLI command handler",
+      "exitPoint": "Template updated with boredom flags"
+    },
+    "boredomSelection": {
+      "flow": "BoredomManager.fetchBoredomActivities() → metabob_fetch_boredom_activities → GET /api/boredom/activities?filter=boredom_eligible=true → SurrealDB query → Return prioritized list",
+      "entryPoint": "BoredomManager idle check",
+      "exitPoint": "Prioritized activities list"
+    },
+    "dashboardDataFlow": {
+      "flow": "OpenCode execution → POST /v2/activities/content → SurrealDB.activity_content → Dashboard: GET /auth/orgs/{org_id}/activity → Redis cache (60s TTL) → SurrealDB (on miss) → JSON response → Timeline render",
+      "entryPoint": "OpenCode activity completion",
+      "exitPoint": "Dashboard timeline visualization"
+    },
+    "playwrightDemo": {
+      "flow": "playwright.navigate(app.metabob.local) → login → click('Activity History') → screenshot → verify data → validate end-to-end flow",
+      "entryPoint": "Playwright test runner",
+      "exitPoint": "Screenshots and assertions validated"
+    }
+  },
+  
+  "implementation": {
+    "phase1": {
+      "title": "Add User Operations and CLI Admin Group",
+      "duration": "2-4 hours",
+      "tasks": [
+        "Create server/db/operations/user_ops.py with full CRUD",
+        "Add @cli.group() def admin() to server/cli.py",
+        "Add admin org subcommands (create, list, update, delete, stats)",
+        "Add admin user subcommands (create, list, update, delete, assign)",
+        "Test CLI commands against local SurrealDB"
+      ],
+      "files": [
+        "repos/metabob-rpc-api/server/db/operations/user_ops.py",
+        "repos/metabob-rpc-api/server/cli.py"
+      ],
+      "validationCriteria": [
+        "user_ops.py passes unit tests",
+        "All CLI commands execute without errors",
+        "Organizations created successfully in SurrealDB",
+        "Users created with hashed passwords",
+        "User-org assignments work correctly"
+      ]
+    },
+    "phase2": {
+      "title": "Add Boredom Activity Configuration",
+      "duration": "3-5 hours",
+      "tasks": [
+        "Create sql/migrations/008-boredom-eligibility.surql schema",
+        "Run migration to add boredom fields to activity_template",
+        "Add admin template subcommands (list, set-boredom, configure)",
+        "Update boredom API endpoint to filter by boredom_eligible=true",
+        "Add admin boredom subcommands (config, thresholds, stats)"
+      ],
+      "files": [
+        "repos/metabob-rpc-api/sql/migrations/008-boredom-eligibility.surql",
+        "repos/metabob-rpc-api/server/cli.py",
+        "repos/metabob-rpc-api/server/routes/activity.py"
+      ],
+      "validationCriteria": [
+        "Schema migration applied successfully",
+        "Templates can be enabled/disabled for boredom",
+        "Boredom API endpoint filters correctly",
+        "Priority threshold respected in results",
+        "Stats command shows accurate metrics"
+      ]
+    },
+    "phase3": {
+      "title": "Playwright Dashboard E2E Demonstration",
+      "duration": "4-6 hours",
+      "tasks": [
+        "Configure dashboard for local mode (skip auth) OR create test user",
+        "Create tests/playwright/dashboard-e2e-demo.spec.ts",
+        "Implement login flow automation",
+        "Implement activity history navigation",
+        "Capture screenshots at each step",
+        "Verify data from devbob appears in dashboard",
+        "Document complete data flow with visual proof"
+      ],
+      "files": [
+        "repos/metabob-rpc-api/tests/playwright/dashboard-e2e-demo.spec.ts",
+        "repos/metabob-rpc-api/tests/playwright/playwright.config.ts",
+        "DEMONSTRATION_COMPLETE_admin-cli-and-dashboard-exploration.md"
+      ],
+      "validationCriteria": [
+        "Playwright test executes without errors",
+        "Dashboard loads successfully",
+        "Activity history displays data",
+        "Screenshots captured at all steps",
+        "Data structure validated",
+        "Documentation complete with visual proof"
+      ]
+    }
+  },
+  
+  "validationCriteria": {
+    "adminCLI": [
+      "start_server admin org create --name='Test Org' → Creates organization in SurrealDB",
+      "start_server admin org list → Shows all organizations",
+      "start_server admin user create --email=admin@example.com --name='Admin User' --org-id=org-123 → Creates user with hashed password",
+      "start_server admin user assign --user-id=user-123 --org-id=org-456 --role=admin → Assigns user to org",
+      "start_server admin template list --org-id=org-123 → Lists templates scoped to org",
+      "start_server admin template set-boredom --template-id=hello-world --enable → Sets boredom_eligible=true",
+      "start_server admin boredom config --priority-threshold=0.7 → Configures boredom system"
+    ],
+    "dashboardDemo": [
+      "Playwright navigates to app.metabob.local",
+      "Logs in successfully (or bypasses auth in local mode)",
+      "Navigates to Activity History section",
+      "Verifies activity data from devbob execution appears",
+      "Takes screenshots showing complete flow",
+      "Validates data matches expected structure from OpenCode execution"
+    ]
+  },
+  
+  "metadata": {
+    "componentsTraced": 8,
+    "dataFlowsDocumented": 6,
+    "implementationPhases": 3,
+    "estimatedDuration": "9-15 hours total",
+    "filesToCreate": 5,
+    "filesToModify": 2,
+    "purpose": "Trace analysis for downstream validation and enforcement tasks",
+    "createdBy": "trace-enforce-validate-loop activity"
+  }
+}
