@@ -1,0 +1,196 @@
+{
+  "id": "conflict-analysis-playwright-dashboard-data-accuracy-validation",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "specificationName": "playwright-dashboard-data-accuracy-validation",
+      "analysisDate": "2026-03-06T03:15:00Z",
+      "conflictSummary": {
+        "totalConflicts": 0,
+        "totalWarnings": 1,
+        "totalInfo": 4,
+        "overallSeverity": "LOW",
+        "readyForExecution": false,
+        "blockingReason": "Infrastructure not deployed (devbob pod, SurrealDB)"
+      },
+      "analysisDetails": {
+        "otherSpecifications": [
+          "activity-execution-comprehensive-mapping-display",
+          "Dashboard_Activity_History_Viewing_Flow",
+          "analytics-endpoint-fix-and-dashboard-local-mode",
+          "dashboard-build-deploy-validate-e2e",
+          "devbob-k8s-git-operations",
+          "dynamic-activity-creation-devbob-e2e-validation"
+        ],
+        "sharedComponents": [
+          "repos/metabob-dashboard/tests/setup/databaseConnector.js",
+          "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+          "repos/metabob-dashboard/tests/config/accuracyConfig.js",
+          "repos/metabob-rpc-api/sql/migrations/006-dashboard-tables.surql",
+          "Kubernetes metabob namespace - devbob pod",
+          "Kubernetes metabob namespace - SurrealDB service"
+        ],
+        "conflictMatrix": [
+          {
+            "type": "SHARED_COMPONENT_EXTENSIONS",
+            "severity": "LOW",
+            "status": "ACCEPTED",
+            "specs": [
+              "playwright-dashboard-data-accuracy-validation",
+              "activity-execution-comprehensive-mapping-display"
+            ],
+            "component": "tests/validation-harnesses/*-harness.ts",
+            "description": "Similar validation harness patterns but different validation criteria. Code duplication acceptable for isolated test harnesses.",
+            "resolution": "Accept duplication. Consider extracting common utilities in future refactoring."
+          },
+          {
+            "type": "COMPLEMENTARY_REQUIREMENTS",
+            "severity": "NONE",
+            "status": "NO_CONFLICT",
+            "specs": [
+              "playwright-dashboard-data-accuracy-validation",
+              "Dashboard_Activity_History_Viewing_Flow"
+            ],
+            "component": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+            "description": "Different layers (backend vs test), different languages (Python vs JavaScript). Both complement each other.",
+            "resolution": "No action needed. Specifications work together correctly."
+          },
+          {
+            "type": "OVERLAPPING_CONFIGURATION",
+            "severity": "LOW",
+            "status": "NO_CONFLICT",
+            "specs": [
+              "playwright-dashboard-data-accuracy-validation",
+              "analytics-endpoint-fix-and-dashboard-local-mode"
+            ],
+            "component": "Dashboard test configuration files",
+            "description": "Different configuration files (.env.local vs accuracyConfig.js) and different purposes (auth bypass vs test parameters). Complementary.",
+            "resolution": "No action needed. Both changes enable validation correctly."
+          },
+          {
+            "type": "INFRASTRUCTURE_DEPENDENCIES",
+            "severity": "MEDIUM",
+            "status": "DEPENDENCY",
+            "specs": [
+              "playwright-dashboard-data-accuracy-validation",
+              "devbob-k8s-git-operations"
+            ],
+            "component": "Kubernetes metabob namespace - devbob pod",
+            "description": "playwright-dashboard-data-accuracy-validation depends on devbob-k8s-git-operations deployment. Devbob pod must be running before validation can execute.",
+            "resolution": "Deploy devbob infrastructure first using devbob-k8s-git-operations scripts. Then execute playwright validation."
+          },
+          {
+            "type": "SCHEMA_CONSISTENCY",
+            "severity": "NONE",
+            "status": "SHARED_READ_ONLY",
+            "specs": [
+              "playwright-dashboard-data-accuracy-validation",
+              "Dashboard_Activity_History_Viewing_Flow"
+            ],
+            "component": "activity_executions table schema",
+            "description": "Both specifications read from same table schema. No modifications. Stable shared usage.",
+            "resolution": "No action needed. Schema is correct for both specifications."
+          }
+        ]
+      },
+      "dependencyChain": {
+        "critical": "Validation execution blocked by infrastructure dependencies",
+        "sequence": [
+          {
+            "step": 1,
+            "action": "Deploy devbob pod (devbob-k8s-git-operations)",
+            "prerequisite": "Docker image built, Kubernetes cluster accessible",
+            "verification": "kubectl get pods -n metabob -l app=devbob → Status: Running",
+            "blocksSpecifications": [
+              "playwright-dashboard-data-accuracy-validation",
+              "activity-execution-comprehensive-mapping-display"
+            ]
+          },
+          {
+            "step": 2,
+            "action": "Deploy SurrealDB with schema (analytics-endpoint-fix-and-dashboard-local-mode)",
+            "prerequisite": "Helm charts available, migrations ready",
+            "verification": "curl http://surrealdb.metabob.local:8000/health → HTTP 200",
+            "blocksSpecifications": [
+              "playwright-dashboard-data-accuracy-validation",
+              "Dashboard_Activity_History_Viewing_Flow"
+            ]
+          },
+          {
+            "step": 3,
+            "action": "Deploy backend API (Dashboard_Activity_History_Viewing_Flow)",
+            "prerequisite": "SurrealDB accessible, endpoints implemented",
+            "verification": "curl http://api.metabob.local/auth/orgs/test/activity → JSON response",
+            "blocksSpecifications": [
+              "playwright-dashboard-data-accuracy-validation"
+            ]
+          },
+          {
+            "step": 4,
+            "action": "Execute playwright-dashboard-data-accuracy-validation",
+            "prerequisite": "All infrastructure deployed and accessible",
+            "verification": "Three-way validation completes with PASS status",
+            "blocksSpecifications": []
+          }
+        ]
+      },
+      "recommendations": [
+        {
+          "priority": "P0",
+          "category": "Infrastructure",
+          "recommendation": "Deploy devbob and SurrealDB infrastructure",
+          "rationale": "Critical blocker for all validation specifications. Without devbob pod and SurrealDB, validation cannot execute.",
+          "steps": [
+            "cd docker/ && ./build-and-deploy-devbob-k8s.sh",
+            "helm install surrealdb charts/surrealdb -n metabob",
+            "kubectl apply -f repos/metabob-rpc-api/sql/migrations/006-dashboard-tables.surql",
+            "kubectl wait --for=condition=ready pod -l app=devbob -n metabob --timeout=120s",
+            "kubectl wait --for=condition=ready pod -l app=surrealdb -n metabob --timeout=120s"
+          ],
+          "estimatedTime": "30-60 minutes"
+        },
+        {
+          "priority": "P1",
+          "category": "Validation Execution",
+          "recommendation": "Execute validation specifications in dependency order",
+          "rationale": "Some validations depend on others. Execute in order to maximize success rate.",
+          "steps": [
+            "Verify devbob pod running: kubectl get pods -n metabob -l app=devbob",
+            "Verify SurrealDB accessible: curl http://surrealdb.metabob.local:8000/health",
+            "Verify dashboard accessible: curl http://app.metabob.local",
+            "Execute playwright validation: npm test tests/validation-harnesses/playwright-dashboard-data-accuracy-validation-harness.ts",
+            "Review results: check screenshots/ directory and test output"
+          ],
+          "estimatedTime": "15-30 minutes"
+        },
+        {
+          "priority": "P2",
+          "category": "Code Quality",
+          "recommendation": "Extract common validation utilities to shared library",
+          "rationale": "Multiple validation harnesses duplicate code for devbob execution, SurrealDB queries, and screenshot capture. Reduce duplication.",
+          "steps": [
+            "Create tests/utils/ directory",
+            "Extract devbob execution logic to tests/utils/devbobExecutor.ts",
+            "Extract SurrealDB query logic to tests/utils/surrealdbClient.ts",
+            "Extract Playwright helpers to tests/utils/playwrightHelpers.ts",
+            "Refactor validation harnesses to use shared utilities"
+          ],
+          "estimatedTime": "2-4 hours"
+        }
+      ],
+      "conclusion": {
+        "status": "NO_CONFLICTS_DETECTED",
+        "confidence": "HIGH",
+        "summary": "Comprehensive conflict analysis found zero actual conflicts between playwright-dashboard-data-accuracy-validation and other specifications. All shared component modifications are additive (new methods, new configuration sections) with no breaking changes. Validation specifications work together correctly with clear separation of concerns. Primary blocker is infrastructure deployment (devbob pod, SurrealDB), not specification conflicts.",
+        "nextSteps": [
+          "Deploy infrastructure prerequisites (devbob, SurrealDB) - Priority 0",
+          "Execute validation in dependency order - Priority 1",
+          "Consider extracting common utilities - Priority 2 (optional)"
+        ]
+      }
+    },
+    "source": "aggregate-validation-results activity"
+  },
+  "budget": 3000
+}

@@ -1,0 +1,51 @@
+{
+  "id": "validation-playwright-dashboard-data-accuracy-validation-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "Basic Three-Way Validation - Add REST Endpoint Activity",
+      "description": "Execute add-rest-endpoint activity on devbob, verify data persists to SurrealDB, verify dashboard displays matching data",
+      "input": {
+        "templateName": "add-rest-endpoint",
+        "templateVariables": {
+          "method": "POST",
+          "path": "/api/users",
+          "description": "Create new user endpoint"
+        },
+        "devbobUrl": "http://devbob.metabob.local",
+        "dashboardUrl": "http://app.metabob.local",
+        "surrealdbUrl": "http://surrealdb.metabob.local:8000"
+      },
+      "expectedOutput": {
+        "activityCompleted": true,
+        "dataPersistedToSurrealDB": true,
+        "dashboardDisplaysData": true,
+        "checks": {
+          "executionIdMatch": true,
+          "templateNameMatch": true,
+          "statusMatch": true,
+          "costVarianceWithin1Percent": true,
+          "durationVarianceWithin1Percent": true,
+          "timestampsConsistent": true,
+          "taskCountMatch": true,
+          "noConsoleErrors": true
+        },
+        "expectedFields": {
+          "template_name": "add-rest-endpoint",
+          "status": "completed",
+          "cost_usd_min": 0.001,
+          "cost_usd_max": 1.0,
+          "duration_ms_min": 1000,
+          "duration_ms_max": 300000,
+          "tokens_used_min": 1000,
+          "tokens_used_max": 100000,
+          "task_count_min": 1,
+          "task_count_max": 10
+        }
+      }
+    },
+    "source": "create-validation-harness activity"
+  },
+  "budget": 1000
+}
