@@ -1,0 +1,41 @@
+{
+  "id": "validation-analytics-endpoint-fix-and-dashboard-local-mode-case-3",
+  "type": "memo",
+  "testCase": "Activity History view displays execution data from analytics endpoint",
+  "input": {
+    "url": "http://app.metabob.local",
+    "navigationPath": [
+      "Navigate to dashboard home",
+      "Click Activity History or Dashboard link",
+      "Wait for data to load"
+    ]
+  },
+  "expectedOutput": {
+    "activityDataVisible": true,
+    "apiCallSuccessful": true,
+    "validations": [
+      "Activity History view is accessible",
+      "Template statistics are displayed",
+      "No HTTP 500 errors in network tab",
+      "No AttributeError in console logs",
+      "GET /analytics/templates returns 200",
+      "Template names visible in UI",
+      "Execution counts visible as numbers",
+      "Success rates displayed as percentages"
+    ],
+    "networkRequests": [
+      {
+        "url": "/analytics/templates",
+        "method": "GET",
+        "expectedStatus": 200,
+        "expectedResponseType": "application/json"
+      }
+    ],
+    "uiElements": [
+      "Template statistics table or chart",
+      "Template names (strings)",
+      "Execution counts (numbers)",
+      "Success rates (percentages)"
+    ]
+  }
+}

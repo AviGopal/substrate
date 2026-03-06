@@ -1,0 +1,25 @@
+{
+  "id": "harness-analytics-endpoint-fix-and-dashboard-local-mode",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/analytics-endpoint-fix-and-dashboard-local-mode-harness.ts",
+    "source": "validation harness"
+  },
+  "budget": 2000,
+  "description": "Validation harness for analytics endpoint fix and dashboard local mode specification",
+  "testCases": [
+    "validation-analytics-endpoint-fix-and-dashboard-local-mode-case-1",
+    "validation-analytics-endpoint-fix-and-dashboard-local-mode-case-2",
+    "validation-analytics-endpoint-fix-and-dashboard-local-mode-case-3",
+    "validation-analytics-endpoint-fix-and-dashboard-local-mode-case-4"
+  ],
+  "usage": {
+    "command": "npx tsx tests/validation-harnesses/analytics-endpoint-fix-and-dashboard-local-mode-harness.ts",
+    "description": "Run validation harness to test analytics endpoint and dashboard authentication bypass",
+    "exitCodes": {
+      "0": "All tests passed",
+      "1": "Some tests failed or error occurred"
+    }
+  }
+}
