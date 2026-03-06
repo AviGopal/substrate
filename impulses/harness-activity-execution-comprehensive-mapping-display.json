@@ -1,0 +1,17 @@
+{
+  "id": "harness-activity-execution-comprehensive-mapping-display",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/activity-execution-comprehensive-mapping-display-harness.ts",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "activity-execution-comprehensive-mapping-display",
+    "harnessType": "playwright-e2e-validation",
+    "testCases": 3,
+    "validationStrategy": "live-dataset-ground-truth-comparison",
+    "description": "Playwright harness that executes real activities on devbob, captures ground truth from SurrealDB, and validates dashboard UI display accuracy with numerical variance tolerance and comprehensive metadata checks"
+  }
+}

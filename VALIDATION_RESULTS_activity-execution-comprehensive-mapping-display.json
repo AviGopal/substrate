@@ -1,0 +1,313 @@
+{
+  "specificationName": "activity-execution-comprehensive-mapping-display",
+  "validationDate": "2026-03-06T02:40:00Z",
+  "harnessFile": "tests/validation-harnesses/activity-execution-comprehensive-mapping-display-harness.ts",
+  "executionStatus": "READY_TO_RUN",
+  "note": "This validation harness requires a live environment with devbob container, SurrealDB, and dashboard running. Execute with: npx playwright test tests/validation-harnesses/activity-execution-comprehensive-mapping-display-harness.ts",
+  "validationResults": [
+    {
+      "testCase": "validation-activity-execution-comprehensive-mapping-display-case-1",
+      "testCaseDescription": "Successful execution validation (add-rest-endpoint)",
+      "input": {
+        "templateId": "add-rest-endpoint",
+        "variables": {
+          "method": "POST",
+          "path": "/api/test",
+          "description": "Test endpoint for validation"
+        }
+      },
+      "expectedOutput": {
+        "successCriteria": [
+          "Execution ID visible in UI",
+          "Template name 'add-rest-endpoint' displayed",
+          "Success status icon (green checkmark) present",
+          "Duration displayed in seconds or minutes format",
+          "Cost displayed with $ prefix and 4 decimal places",
+          "Total tokens displayed as formatted number",
+          "Task count matches number of tasks in template",
+          "Expandable row works correctly",
+          "Task breakdown table shows all tasks with status, duration, cost",
+          "Impulse usage chips display impulse IDs and types",
+          "No data truncation or missing critical fields"
+        ],
+        "numericalVarianceTolerance": 0.01,
+        "loadingTimeoutMs": 3000
+      },
+      "status": "PENDING_EXECUTION",
+      "validationChecks": [
+        {
+          "check": "Execution ID visible",
+          "status": "PENDING",
+          "expected": "Execution ID from SurrealDB matches UI display",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Template ID correct",
+          "status": "PENDING",
+          "expected": "add-rest-endpoint",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Success status indicator",
+          "status": "PENDING",
+          "expected": "Green success icon",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Duration accuracy",
+          "status": "PENDING",
+          "expected": "Within 1% of SurrealDB duration_ms",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Cost accuracy",
+          "status": "PENDING",
+          "expected": "Within 1% of SurrealDB cost_usd",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Tokens accuracy",
+          "status": "PENDING",
+          "expected": "Sum of input/output/cache tokens matches",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Task count display",
+          "status": "PENDING",
+          "expected": "Matches task_execution table count",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Task breakdown present",
+          "status": "PENDING",
+          "expected": "All tasks shown in expanded view",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Impulse usage display",
+          "status": "PENDING",
+          "expected": "Impulse chips match impulses_used field",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "No data truncation",
+          "status": "PENDING",
+          "expected": "All fields present and complete",
+          "actual": "Not yet executed"
+        }
+      ],
+      "screenshots": {
+        "listView": "screenshots/activity-history-list-case-1.png (pending)",
+        "expandedView": "screenshots/activity-history-expanded-case-1.png (pending)"
+      }
+    },
+    {
+      "testCase": "validation-activity-execution-comprehensive-mapping-display-case-2",
+      "testCaseDescription": "Failed execution validation (fix-bug-with-validation)",
+      "input": {
+        "templateId": "fix-bug-with-validation",
+        "variables": {
+          "bugDescription": "Null pointer exception in user authentication",
+          "filePaths": ["src/auth/authenticator.ts"]
+        }
+      },
+      "expectedOutput": {
+        "successCriteria": [
+          "Failed execution displayed with red error icon",
+          "Error message visible in expanded view",
+          "Error details panel shows full error text",
+          "Failed tasks highlighted with red status chips",
+          "Partial task completion reflected (some tasks may succeed before failure)",
+          "Duration reflects actual execution time until failure",
+          "Cost includes tokens used before failure",
+          "Template name displayed correctly",
+          "Execution ID visible and unique",
+          "All metadata fields present even for failed execution"
+        ],
+        "numericalVarianceTolerance": 0.01,
+        "loadingTimeoutMs": 3000
+      },
+      "status": "PENDING_EXECUTION",
+      "validationChecks": [
+        {
+          "check": "Failed status indicator",
+          "status": "PENDING",
+          "expected": "Red error icon displayed",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Error message visible",
+          "status": "PENDING",
+          "expected": "Error message from SurrealDB shown in expanded view",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Failed tasks highlighted",
+          "status": "PENDING",
+          "expected": "Failed tasks have red status chips",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Partial completion reflected",
+          "status": "PENDING",
+          "expected": "Some tasks show success, others failed",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Duration until failure",
+          "status": "PENDING",
+          "expected": "Duration shows time until error occurred",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Cost before failure",
+          "status": "PENDING",
+          "expected": "Cost shows tokens used before failure",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "All metadata present",
+          "status": "PENDING",
+          "expected": "Even failed executions show full metadata",
+          "actual": "Not yet executed"
+        }
+      ],
+      "screenshots": {
+        "listView": "screenshots/activity-history-list-case-2.png (pending)",
+        "expandedView": "screenshots/activity-history-expanded-case-2.png (pending)"
+      }
+    },
+    {
+      "testCase": "validation-activity-execution-comprehensive-mapping-display-case-3",
+      "testCaseDescription": "Complex execution with multiple impulses (refactor-with-impulses)",
+      "input": {
+        "templateId": "refactor-with-impulses",
+        "variables": {
+          "targetFiles": ["src/services/user-service.ts", "src/models/user.ts"],
+          "impulseIds": ["refactor-plan-impulse", "code-style-guide-impulse"]
+        }
+      },
+      "expectedOutput": {
+        "successCriteria": [
+          "Multiple impulse chips displayed in expanded view",
+          "Impulse IDs match those used in execution",
+          "Impulse types displayed (file, memo, etc.)",
+          "Multiple tasks displayed with individual metrics",
+          "Task costs sum to total execution cost (within 1% variance)",
+          "Task durations sum to total execution duration (within 5% variance due to parallel execution)",
+          "All impulse content pointers visible",
+          "No impulse data truncation",
+          "Expandable sections work smoothly",
+          "All numerical values accurate compared to SurrealDB ground truth"
+        ],
+        "numericalVarianceTolerance": 0.01,
+        "loadingTimeoutMs": 3000
+      },
+      "status": "PENDING_EXECUTION",
+      "validationChecks": [
+        {
+          "check": "Multiple impulses displayed",
+          "status": "PENDING",
+          "expected": "2 impulse chips (refactor-plan-impulse, code-style-guide-impulse)",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Impulse IDs match",
+          "status": "PENDING",
+          "expected": "Displayed impulse IDs match impulses_used field",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Impulse types shown",
+          "status": "PENDING",
+          "expected": "Each impulse chip shows type (file/memo)",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Multiple tasks displayed",
+          "status": "PENDING",
+          "expected": "All tasks shown with individual metrics",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Task costs sum correctly",
+          "status": "PENDING",
+          "expected": "Sum of task costs ≈ total execution cost (±1%)",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Task durations sum correctly",
+          "status": "PENDING",
+          "expected": "Sum of task durations ≈ total duration (±5% for parallel)",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "Impulse pointers visible",
+          "status": "PENDING",
+          "expected": "Content pointers shown for each impulse",
+          "actual": "Not yet executed"
+        },
+        {
+          "check": "No impulse truncation",
+          "status": "PENDING",
+          "expected": "All impulse data displayed completely",
+          "actual": "Not yet executed"
+        }
+      ],
+      "screenshots": {
+        "listView": "screenshots/activity-history-list-case-3.png (pending)",
+        "expandedView": "screenshots/activity-history-expanded-case-3.png (pending)"
+      }
+    }
+  ],
+  "overallStatus": "PENDING_EXECUTION",
+  "executionInstructions": {
+    "prerequisites": [
+      "Ensure devbob container is running in local k8s cluster",
+      "Verify SurrealDB is accessible at ws://surrealdb.metabob.local:8000",
+      "Confirm dashboard is accessible at http://app.metabob.local",
+      "Install Playwright if not already installed: npm install @playwright/test",
+      "Ensure kubectl context is set to local cluster",
+      "Verify activity templates are available on devbob"
+    ],
+    "command": "npx playwright test tests/validation-harnesses/activity-execution-comprehensive-mapping-display-harness.ts",
+    "expectedDuration": "10-15 minutes total (3-5 minutes per test case)",
+    "outputFiles": [
+      "screenshots/activity-history-list-case-{1,2,3}.png",
+      "screenshots/activity-history-expanded-case-{1,2,3}.png",
+      "test-results/junit.xml (if configured)",
+      "playwright-report/ (HTML report)"
+    ]
+  },
+  "successCriteria": {
+    "overall": "All test cases must pass (all validation checks return true)",
+    "perTestCase": "All validation checks within a test case must pass",
+    "numericalAccuracy": "Numerical values (cost, duration, tokens) must be within 1% of ground truth",
+    "visualAccuracy": "Status indicators, color coding, and badges must match expected states",
+    "completeness": "All required fields must be present without truncation"
+  },
+  "failureAnalysis": {
+    "ifExecutionIdMissing": "Check if GET /analytics/executions endpoint is returning execution data. Verify SurrealDB activity_executions table has the record.",
+    "ifNumericalMismatch": "Verify data transformations in analytics endpoint. Check for rounding errors or unit conversion issues (ms vs s).",
+    "ifTaskCountWrong": "Query activity_tasks table directly to confirm count. Check if ExecutionRow is fetching details correctly.",
+    "ifImpulsesMissing": "Verify impulses_used field is populated in activity_executions. Check if ExecutionRow is parsing impulse data.",
+    "ifExpandableBroken": "Check browser console for JavaScript errors. Verify Material-UI Collapse component is working.",
+    "ifStatusWrong": "Verify success field in activity_executions matches actual execution result. Check icon rendering logic."
+  },
+  "debuggingCommands": {
+    "checkDevbobStatus": "kubectl get pods -n metabob -l app=devbob",
+    "checkSurrealDBData": "kubectl exec -n metabob surrealdb-0 -- surreal sql --conn http://localhost:8000 --user root --pass root --ns metabob --db metabob \"SELECT * FROM activity_executions ORDER BY timestamp DESC LIMIT 5\"",
+    "checkDashboardLogs": "kubectl logs -n metabob $(kubectl get pods -n metabob -l app=metabob-dashboard -o jsonpath='{.items[0].metadata.name}')",
+    "checkRPCAPILogs": "kubectl logs -n metabob $(kubectl get pods -n metabob -l app=metabob-rpc-api -o jsonpath='{.items[0].metadata.name}')",
+    "manualActivityExecution": "kubectl exec -n metabob $(kubectl get pods -n metabob -l app=devbob -o jsonpath='{.items[0].metadata.name}') -- /app/bin/opencode activity execute add-rest-endpoint --var method=POST --var path=/api/test"
+  },
+  "nextSteps": [
+    "1. Ensure all prerequisites are met (devbob running, SurrealDB accessible, dashboard deployed)",
+    "2. Execute validation harness: npx playwright test tests/validation-harnesses/activity-execution-comprehensive-mapping-display-harness.ts",
+    "3. Review test results and screenshots",
+    "4. If tests fail, use debugging commands to investigate",
+    "5. Fix any issues found and re-run validation",
+    "6. Update this results file with actual execution data",
+    "7. Create validation-results impulse with final PASS/FAIL status"
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "specificationName": "activity-execution-comprehensive-mapping-display",
+  "harnessFile": "tests/validation-harnesses/activity-execution-comprehensive-mapping-display-harness.ts",
+  "harnessType": "playwright-e2e-ground-truth-validation",
+  "testCases": [
+    {
+      "impulseId": "validation-activity-execution-comprehensive-mapping-display-case-1",
+      "input": {
+        "templateId": "add-rest-endpoint",
+        "variables": {
+          "method": "POST",
+          "path": "/api/test",
+          "description": "Test endpoint for validation"
+        }
+      },
+      "expectedOutput": {
+        "successCriteria": [
+          "Execution ID visible in UI",
+          "Template name 'add-rest-endpoint' displayed",
+          "Success status icon (green checkmark) present",
+          "Duration displayed in seconds or minutes format",
+          "Cost displayed with $ prefix and 4 decimal places",
+          "Total tokens displayed as formatted number",
+          "Task count matches number of tasks in template",
+          "Expandable row works correctly",
+          "Task breakdown table shows all tasks with status, duration, cost",
+          "Impulse usage chips display impulse IDs and types",
+          "No data truncation or missing critical fields"
+        ],
+        "numericalVarianceTolerance": 0.01,
+        "loadingTimeoutMs": 3000
+      },
+      "description": "Validates successful activity execution with accurate numerical values and complete metadata"
+    },
+    {
+      "impulseId": "validation-activity-execution-comprehensive-mapping-display-case-2",
+      "input": {
+        "templateId": "fix-bug-with-validation",
+        "variables": {
+          "bugDescription": "Null pointer exception in user authentication",
+          "filePaths": ["src/auth/authenticator.ts"]
+        }
+      },
+      "expectedOutput": {
+        "successCriteria": [
+          "Failed execution displayed with red error icon",
+          "Error message visible in expanded view",
+          "Error details panel shows full error text",
+          "Failed tasks highlighted with red status chips",
+          "Partial task completion reflected (some tasks may succeed before failure)",
+          "Duration reflects actual execution time until failure",
+          "Cost includes tokens used before failure",
+          "Template name displayed correctly",
+          "Execution ID visible and unique",
+          "All metadata fields present even for failed execution"
+        ],
+        "numericalVarianceTolerance": 0.01,
+        "loadingTimeoutMs": 3000
+      },
+      "description": "Validates failed activity execution display with error details and partial completion"
+    },
+    {
+      "impulseId": "validation-activity-execution-comprehensive-mapping-display-case-3",
+      "input": {
+        "templateId": "refactor-with-impulses",
+        "variables": {
+          "targetFiles": ["src/services/user-service.ts", "src/models/user.ts"],
+          "impulseIds": ["refactor-plan-impulse", "code-style-guide-impulse"]
+        }
+      },
+      "expectedOutput": {
+        "successCriteria": [
+          "Multiple impulse chips displayed in expanded view",
+          "Impulse IDs match those used in execution",
+          "Impulse types displayed (file, memo, etc.)",
+          "Multiple tasks displayed with individual metrics",
+          "Task costs sum to total execution cost (within 1% variance)",
+          "Task durations sum to total execution duration (within 5% variance due to parallel execution)",
+          "All impulse content pointers visible",
+          "No impulse data truncation",
+          "Expandable sections work smoothly",
+          "All numerical values accurate compared to SurrealDB ground truth"
+        ],
+        "numericalVarianceTolerance": 0.01,
+        "loadingTimeoutMs": 3000
+      },
+      "description": "Validates complex execution with multiple impulses and tasks"
+    }
+  ],
+  "harnessImpulseId": "harness-activity-execution-comprehensive-mapping-display",
+  "validationStrategy": {
+    "approach": "Live dataset ground truth comparison",
+    "steps": [
+      "1. Execute real activity on devbob.metabob.local using kubectl",
+      "2. Wait for execution completion (max 60s)",
+      "3. Query SurrealDB directly to capture ground truth data (activity_executions + task_execution tables)",
+      "4. Navigate to app.metabob.local/activity in browser",
+      "5. Locate execution row by execution_id",
+      "6. Extract displayed data from UI using Playwright selectors",
+      "7. Compare UI values against SurrealDB ground truth",
+      "8. Expand row to show detailed breakdown",
+      "9. Extract task data, impulse data, error messages from expanded view",
+      "10. Validate numerical accuracy within tolerance (<1%)",
+      "11. Capture screenshots for both views",
+      "12. Return PASS/FAIL with detailed check results"
+    ],
+    "dataSources": [
+      "SurrealDB activity_executions table (ground truth)",
+      "SurrealDB task_execution table (task-level ground truth)",
+      "Dashboard UI at app.metabob.local/activity (actual display)"
+    ],
+    "validationChecks": [
+      "Execution ID visible",
+      "Template ID correct",
+      "Success status indicator accurate",
+      "Duration accuracy (parsed from display string)",
+      "Cost accuracy (parsed from formatted string)",
+      "Tokens accuracy (parsed from formatted number)",
+      "Task count display correct",
+      "Task breakdown present and complete",
+      "Impulse usage display matches execution data",
+      "Error message display (for failed executions)"
+    ]
+  },
+  "runInstructions": {
+    "prerequisites": [
+      "devbob container running in local k8s (kubectl context set to local)",
+      "SurrealDB accessible at ws://surrealdb.metabob.local:8000",
+      "Dashboard accessible at http://app.metabob.local",
+      "Playwright installed (npm install @playwright/test)",
+      "Activity templates available on devbob (add-rest-endpoint, fix-bug-with-validation, etc.)"
+    ],
+    "command": "npx playwright test tests/validation-harnesses/activity-execution-comprehensive-mapping-display-harness.ts",
+    "expectedDuration": "3-5 minutes per test case (includes activity execution time)",
+    "outputFormat": {
+      "pass": "boolean - Overall validation result",
+      "execution_id": "string - Unique execution identifier",
+      "checks": "array - Individual check results with expected vs actual",
+      "screenshots": "object - Paths to captured screenshots (listView, expandedView)",
+      "errors": "array - Any errors encountered during validation"
+    }
+  },
+  "successCriteria": {
+    "overall": "All test cases pass (all checks return true)",
+    "individual": [
+      "UI displays all required fields",
+      "Data matches SurrealDB with <1% numerical variance",
+      "Expandable sections work correctly",
+      "Visual indicators match statuses (green for success, red for failure)",
+      "No critical data truncation",
+      "Loading completes within 3 seconds"
+    ]
+  },
+  "metadata": {
+    "created": "2026-03-06T02:35:00Z",
+    "author": "activity-execution-comprehensive-mapping-display enforcement",
+    "version": "1.0.0",
+    "testFramework": "Playwright",
+    "language": "TypeScript"
+  }
+}

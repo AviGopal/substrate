@@ -1,0 +1,16 @@
+{
+  "id": "validation-activity-execution-comprehensive-mapping-display-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\"input\":{\"templateId\":\"fix-bug-with-validation\",\"variables\":{\"bugDescription\":\"Null pointer exception in user authentication\",\"filePaths\":[\"src/auth/authenticator.ts\"]}},\"expectedOutput\":{\"successCriteria\":[\"Failed execution displayed with red error icon\",\"Error message visible in expanded view\",\"Error details panel shows full error text\",\"Failed tasks highlighted with red status chips\",\"Partial task completion reflected (some tasks may succeed before failure)\",\"Duration reflects actual execution time until failure\",\"Cost includes tokens used before failure\",\"Template name displayed correctly\",\"Execution ID visible and unique\",\"All metadata fields present even for failed execution\"],\"numericalVarianceTolerance\":0.01,\"loadingTimeoutMs\":3000}}",
+    "source": "validation-test-case"
+  },
+  "budget": 1000,
+  "metadata": {
+    "testCase": 2,
+    "specification": "activity-execution-comprehensive-mapping-display",
+    "templateId": "fix-bug-with-validation",
+    "description": "Validates Activity History dashboard correctly handles and displays failed activity executions with error details and partial task completion"
+  }
+}

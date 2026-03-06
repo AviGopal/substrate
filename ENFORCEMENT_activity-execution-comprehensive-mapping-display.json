@@ -1,0 +1,236 @@
+{
+  "specificationName": "activity-execution-comprehensive-mapping-display",
+  "enforcementDate": "2026-03-06T02:30:00Z",
+  "phase": "Phase 1 MVP",
+  "changesApplied": [
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "GET /analytics/executions",
+      "changeMade": "Added new endpoint for filtered/sorted execution listing with comprehensive query parameters: template_id, success, date_range, cost_range, duration_range, sort_by, sort_order, limit, offset. Returns paginated results with execution metadata including task_count.",
+      "reason": "Specification requires advanced filtering and sorting for Activity History dashboard. This endpoint enables users to filter by template, status, time period, cost, and duration, and sort by any of those fields. Pagination support allows efficient handling of large execution datasets.",
+      "impactAnalysis": "New endpoint, no existing functionality affected. Depends on: activity_executions table, task_execution table (for task counts). Consumed by: Activity History dashboard page.",
+      "linesAdded": "511-696"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "GET /analytics/executions/{execution_id}",
+      "changeMade": "Added new endpoint for comprehensive single execution details. Joins activity_executions, task_execution, and activity_content tables. Returns full execution object with tasks array, impulses_used, content snapshot, and validation results.",
+      "reason": "Specification requires detailed execution breakdown for expandable rows in Activity History. This endpoint provides all metadata needed for task breakdown, impulse usage display, and execution context. Optimized for detail view to minimize frontend API calls.",
+      "impactAnalysis": "New endpoint, no existing functionality affected. Depends on: activity_executions, task_execution, activity_content tables, get_task_executions() function. Consumed by: ExecutionRow component when expanded.",
+      "linesAdded": "699-831"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js",
+      "component": "ActivityHistory (NEW)",
+      "changeMade": "Created dedicated Activity History page component with: (1) Filter panel for template_id, success status, sort_by, sort_order, (2) Table with sortable columns: Status, Template, Execution ID, Timestamp, Duration, Cost, Tokens, Tasks, (3) Pagination controls with configurable rows per page, (4) Loading and error states, (5) Integration with useGetExecutionsQuery hook.",
+      "reason": "Specification requires dedicated Activity History page as primary gap. This MVP implementation provides core functionality for viewing, filtering, and sorting activity executions. Designed to handle large datasets with pagination and async data fetching via RTK Query.",
+      "impactAnalysis": "New component, no existing functionality affected. Depends on: useGetExecutionsQuery hook from OrganizationApi, Material-UI components. Navigation routing needs to be added to dashboard app.js to expose /activity route.",
+      "linesCreated": "1-372"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js",
+      "component": "ExecutionRow (inline)",
+      "changeMade": "Created expandable execution row component with: (1) Collapsed state showing summary with status icon, template, execution ID, timestamp, duration, cost badge, tokens, task count, (2) Expanded state with task breakdown table, impulse usage chips, error details, (3) Lazy loading of details via GET /analytics/executions/{execution_id}, (4) Color-coded status indicators (green=success, red=failure), (5) Cost badges with color thresholds (green <$0.01, yellow <$0.05, red >=$0.05).",
+      "reason": "Specification requires expandable rows showing comprehensive task breakdown and impulse usage. This component provides two-level detail view: summary for quick scanning, detailed breakdown on demand. Lazy loading minimizes initial page load time while providing full metadata access.",
+      "impactAnalysis": "New component embedded in ActivityHistory. Depends on: GET /analytics/executions/{execution_id} endpoint, Material-UI Collapse component. No impact on existing components.",
+      "linesCreated": "50-183"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "component": "getExecutions (RTK Query endpoint)",
+      "changeMade": "Added new RTK Query endpoint definition for GET /analytics/executions with: (1) Query parameters passed through as-is, (2) Provides 'Executions' cache tag for automatic invalidation, (3) Exports useGetExecutionsQuery hook for React components.",
+      "reason": "Specification requires API integration for Activity History dashboard. This RTK Query endpoint provides automatic caching, loading states, error handling, and re-fetching logic. Integration with Redux store enables global state management for execution data.",
+      "impactAnalysis": "New endpoint definition in existing OrganizationApi. No existing functionality affected. Consumed by: ActivityHistory component. Caching strategy: tagged with 'Executions', invalidated on new activity executions (future enhancement).",
+      "linesAdded": "294-316"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "component": "getExecutionDetails (RTK Query endpoint)",
+      "changeMade": "Added new RTK Query endpoint definition for GET /analytics/executions/{execution_id} with: (1) Execution ID parameter, (2) Provides 'Execution' cache tag with execution-specific ID, (3) Exports useGetExecutionDetailsQuery hook for React components.",
+      "reason": "Specification requires detailed execution data for expandable rows. This RTK Query endpoint enables on-demand loading of comprehensive execution details when user expands a row. Tagged caching prevents redundant API calls for same execution.",
+      "impactAnalysis": "New endpoint definition in existing OrganizationApi. No existing functionality affected. Consumed by: ExecutionRow component (expanded state). Caching strategy: tagged with execution-specific ID, cached for session duration.",
+      "linesAdded": "318-333"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "component": "Exported hooks",
+      "changeMade": "Added useGetExecutionsQuery and useGetExecutionDetailsQuery to exported hooks list.",
+      "reason": "Specification requires these hooks to be accessible in ActivityHistory component. Export enables tree-shaking and type-safe hook usage in functional components.",
+      "impactAnalysis": "Extension of existing export statement. No breaking changes to existing consumers.",
+      "linesModified": "296-310"
+    }
+  ],
+  "dataFlowChanges": {
+    "before": "OpenCode CLI → POST /v2/activities/executions → insert_execution() → SurrealDB activity_executions → GET /auth/orgs/{org_id}/activity (Redis cache 60s TTL) → RecentActivity component → Basic timeline display",
+    "after": "OpenCode CLI → [POST /v2/activities/executions + POST /v2/activities/tasks] → SurrealDB [activity_executions + task_execution] → [GET /analytics/executions (filtered/sorted) + GET /analytics/executions/{execution_id} (detailed)] → Redux/RTK Query → ActivityHistory page → [ExecutionRow → Task breakdown table + Impulse usage chips] → Comprehensive display with expandable details",
+    "newPaths": [
+      "Dashboard /activity route → ActivityHistory component → useGetExecutionsQuery → GET /analytics/executions → SurrealDB query with filters → Return paginated executions",
+      "ExecutionRow expand → Fetch details → GET /analytics/executions/{id} → Join activity_executions + task_execution + activity_content → Return comprehensive data → Render task table + impulses"
+    ]
+  },
+  "gapsClosed": [
+    {
+      "gap": "No dedicated Activity History page",
+      "status": "CLOSED",
+      "solution": "Created ActivityHistory.js component with full filtering, sorting, and pagination",
+      "verification": "Component exists at repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js"
+    },
+    {
+      "gap": "No execution detail endpoint with joined data",
+      "status": "CLOSED",
+      "solution": "Implemented GET /analytics/executions/{execution_id} with joins to task_execution and activity_content",
+      "verification": "Endpoint added to repos/metabob-rpc-api/server/routes/analytics.py:699-831"
+    },
+    {
+      "gap": "No filtering/sorting in execution list",
+      "status": "CLOSED",
+      "solution": "Implemented GET /analytics/executions with comprehensive query parameters",
+      "verification": "Endpoint added to repos/metabob-rpc-api/server/routes/analytics.py:511-696"
+    },
+    {
+      "gap": "No task breakdown display",
+      "status": "CLOSED",
+      "solution": "ExecutionRow component displays task table with status, duration, tokens, cost per task",
+      "verification": "Task table implementation in ActivityHistory.js:125-163"
+    },
+    {
+      "gap": "No impulse usage visualization",
+      "status": "CLOSED",
+      "solution": "ExecutionRow component displays impulse chips with ID and type",
+      "verification": "Impulse chips implementation in ActivityHistory.js:165-178"
+    }
+  ],
+  "gapsDeferred": [
+    {
+      "gap": "No composition tree visualization",
+      "status": "DEFERRED to Phase 3",
+      "reason": "Composition tree requires react-d3-tree library and complex tree layout logic. Not critical for MVP.",
+      "estimatedEffort": "3-4 days"
+    },
+    {
+      "gap": "No variant selection reasoning display",
+      "status": "DEFERRED to Phase 3",
+      "reason": "Variant selection reasoning requires join with learning_loop_turns table and Thompson Sampling data. MVP focuses on execution and task data.",
+      "estimatedEffort": "1-2 days"
+    }
+  ],
+  "validationRequired": [
+    {
+      "test": "Backend endpoint validation",
+      "method": "Manual API testing",
+      "steps": [
+        "Execute activities on devbob container (http://devbob.metabob.local)",
+        "Query GET /analytics/executions with various filters",
+        "Verify returned data matches activity_executions table in SurrealDB",
+        "Query GET /analytics/executions/{id} for specific execution",
+        "Verify joined data includes tasks, content, and impulses"
+      ]
+    },
+    {
+      "test": "Frontend component validation",
+      "method": "Browser testing",
+      "steps": [
+        "Add route to dashboard app.js: <Route path=\"/activity\" element={<ActivityHistory />} />",
+        "Navigate to http://app.metabob.local/activity",
+        "Verify execution list loads with pagination",
+        "Test filters: template_id, success status, sort options",
+        "Expand execution row and verify task breakdown displays",
+        "Verify cost badges, status icons, duration formatting"
+      ]
+    },
+    {
+      "test": "Playwright E2E validation",
+      "method": "Automated testing",
+      "steps": [
+        "Create Playwright test: dashboard-activity-history.spec.ts",
+        "Execute 5 test activities on devbob with varying outcomes",
+        "Test: Navigate to /activity and verify page loads",
+        "Test: Apply template filter and verify results",
+        "Test: Sort by cost DESC and verify ordering",
+        "Test: Expand row and verify task table appears",
+        "Test: Verify success/failure color coding",
+        "Test: Verify cost badge thresholds"
+      ]
+    }
+  ],
+  "implementationMetrics": {
+    "linesAdded": {
+      "backend": 321,
+      "frontend": 372,
+      "total": 693
+    },
+    "filesCreated": 1,
+    "filesModified": 2,
+    "newEndpoints": 2,
+    "newComponents": 2,
+    "estimatedTestingEffort": "4-6 hours",
+    "estimatedDeploymentTime": "15 minutes (Helm rollout)"
+  },
+  "nextSteps": [
+    {
+      "priority": 1,
+      "task": "Add routing for ActivityHistory page",
+      "file": "repos/metabob-dashboard/src/App.js or routes.js",
+      "action": "Add <Route path=\"/activity\" element={<ActivityHistory />} />",
+      "effort": "5 minutes"
+    },
+    {
+      "priority": 2,
+      "task": "Deploy backend changes to devbob",
+      "command": "./scripts/devbob-k8s-deploy.sh",
+      "validation": "Check GET /analytics/executions returns 200",
+      "effort": "15 minutes"
+    },
+    {
+      "priority": 3,
+      "task": "Execute test activities on devbob",
+      "command": "kubectl exec -n metabob devbob-xxx -- /app/bin/opencode activity <template>",
+      "validation": "Verify executions written to SurrealDB",
+      "effort": "30 minutes"
+    },
+    {
+      "priority": 4,
+      "task": "Manual frontend validation",
+      "url": "http://app.metabob.local/activity",
+      "validation": "Verify list loads, filters work, rows expand with task data",
+      "effort": "1 hour"
+    },
+    {
+      "priority": 5,
+      "task": "Create Playwright E2E test",
+      "file": "repos/metabob-rpc-api/tests/playwright/activity-history-validation.spec.ts",
+      "validation": "Test passes with 5 activity executions",
+      "effort": "2-3 hours"
+    }
+  ],
+  "architectureCompliance": {
+    "dataSeparation": "COMPLIANT - New endpoints use SurrealDB as source of truth, no direct Redis access in analytics layer",
+    "caching": "COMPLIANT - RTK Query provides client-side caching, backend uses SurrealDB queries without cache-aside pattern for execution details (always fresh)",
+    "apiDesign": "COMPLIANT - RESTful endpoints with clear resource paths (/analytics/executions, /analytics/executions/{id}), standard query parameters",
+    "componentDesign": "COMPLIANT - React functional components with hooks, Material-UI for consistency, separation of concerns (ExecutionRow as separate concern)",
+    "errorHandling": "COMPLIANT - HTTP exceptions with appropriate status codes (404 for not found, 500 for server errors), try-catch blocks with logging"
+  },
+  "performanceConsiderations": {
+    "backend": [
+      "GET /analytics/executions: N+1 query issue for task_count (queries task_execution for each execution). Optimization: Add task_count column to activity_executions table, updated by PATCH /v2/activities/tasks",
+      "GET /analytics/executions/{id}: 3 separate queries (execution, tasks, content). Optimization: Use SurrealDB FETCH to join in single query",
+      "Pagination: Effective for large datasets. Offset-based pagination scales to thousands of executions."
+    ],
+    "frontend": [
+      "ExecutionRow: Lazy loading of details reduces initial page load. Optimization: Implement virtualized scrolling for >100 rows",
+      "ActivityHistory: Client-side filtering would improve UX. Current implementation: server-side only. Optimization: Add client-side filter for instant feedback",
+      "RTK Query caching: Reduces redundant API calls. Cache invalidation strategy needed for real-time updates (WebSocket or polling)"
+    ]
+  },
+  "securityConsiderations": [
+    "No authentication/authorization implemented in new endpoints - relies on existing FastAPI middleware",
+    "No input sanitization for query parameters - SurrealDB parameterized queries prevent SQL injection",
+    "No rate limiting on analytics endpoints - relies on existing API gateway rate limits",
+    "Execution details may contain sensitive data in error_message field - consider redaction for non-admin users"
+  ],
+  "documentation": {
+    "apiDocumentation": "Docstrings added to both new endpoints with parameter descriptions, return schemas, and examples",
+    "componentDocumentation": "JSDoc comments added to ActivityHistory and ExecutionRow components with usage examples",
+    "traceReference": "This enforcement implements gaps identified in trace: trace-activity-execution-comprehensive-mapping-display"
+  }
+}
