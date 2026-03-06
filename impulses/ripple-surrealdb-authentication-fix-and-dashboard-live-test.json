@@ -1,0 +1,163 @@
+{
+  "id": "ripple-surrealdb-authentication-fix-and-dashboard-live-test",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Ripple analysis for SurrealDB authentication fix - 6 components affected, infrastructure deployment required before code changes can be applied",
+    "source": "ripple change propagation analysis"
+  },
+  "budget": 3000,
+  "metadata": {
+    "specificationName": "surrealdb-authentication-fix-and-dashboard-live-test",
+    "executionTimestamp": "2026-03-06T04:25:00.000Z",
+    "rippleAnalysisStatus": "COMPLETE",
+    "componentsAnalyzed": 6,
+    "componentsUpdated": 0,
+    "componentsDocumented": 5,
+    "componentsVerified": 1,
+    "keyFindings": {
+      "infrastructureBlocker": {
+        "issue": "surrealdb-py package not installed, SurrealDB v2.3.10 needs v3.0+ upgrade",
+        "impact": "All code changes blocked until infrastructure deployment complete",
+        "resolution": "Install package + upgrade database (15 minutes total)",
+        "priority": "CRITICAL"
+      },
+      "credentialsVerified": {
+        "status": "COMPLETE",
+        "details": "surrealdb-credentials secret properly mounted in RPC API deployment",
+        "impact": "No Helm/Kubernetes changes needed for credentials"
+      },
+      "codeChangesPlanned": {
+        "count": 5,
+        "status": "DOCUMENTED",
+        "blockers": ["Infrastructure deployment"],
+        "estimatedEffort": "5-6 hours (development + testing)"
+      },
+      "conflictsResolved": {
+        "total": 4,
+        "high": 1,
+        "medium": 1,
+        "low": 2,
+        "allManageable": true
+      }
+    },
+    "functionalStateTransition": {
+      "current": "IN_PROGRESS",
+      "before": {
+        "authenticationState": "Credentials configured but not validated",
+        "deploymentState": "Legacy custom HTTP client",
+        "databaseConnection": "Unknown",
+        "dashboardAccess": "Blocked",
+        "performanceState": "N+1 query causing 1000ms+ latency",
+        "resilienceState": "Activity fails when Redis unavailable"
+      },
+      "after": {
+        "authenticationState": "Validated with timeout",
+        "deploymentState": "Official surrealdb-py library",
+        "databaseConnection": "Verified - no 401 errors",
+        "dashboardAccess": "Working - login succeeds",
+        "performanceState": "N+1 fixed, latency < 500ms",
+        "resilienceState": "Redis fallback, 99.9% availability"
+      },
+      "estimatedCompletionTime": "3-4 hours after infrastructure deployment"
+    },
+    "rippleImpactSummary": {
+      "surrealdb_client_py": {
+        "directDependents": 15,
+        "transitiveDependents": 47,
+        "changes": "Timeout + error handling improvements",
+        "riskLevel": "HIGH",
+        "status": "BLOCKED_BY_INFRASTRUCTURE"
+      },
+      "cloud_auth_py": {
+        "directDependents": 3,
+        "transitiveDependents": 8,
+        "changes": "N+1 query fix + Redis fallback",
+        "riskLevel": "MEDIUM",
+        "status": "BLOCKED_BY_INFRASTRUCTURE"
+      },
+      "jwt_auth_py": {
+        "directDependents": "unknown",
+        "transitiveDependents": "unknown",
+        "changes": "Startup validation for weak secrets",
+        "riskLevel": "LOW",
+        "status": "READY_FOR_IMPLEMENTATION"
+      }
+    },
+    "conflictResolutions": {
+      "dependencyConflict": {
+        "spec": "surrealdb-official-library-integration",
+        "severity": "HIGH",
+        "status": "RESOLUTION_DOCUMENTED",
+        "action": "Sequential deployment - install library first"
+      },
+      "architecturalConflict": {
+        "spec": "surrealdb-primary-redis-cache",
+        "severity": "MEDIUM",
+        "status": "COMPATIBLE_NO_ACTION_NEEDED",
+        "action": "Verify cache-aside pattern alignment"
+      },
+      "performanceSynergy": {
+        "spec": "metrics-calculation-in-rpc-api-only",
+        "severity": "LOW",
+        "status": "DOCUMENTATION_TASK",
+        "action": "Document IN clause pattern"
+      },
+      "testingCoordination": {
+        "spec": "thompson-sampling-in-rpc-api-only",
+        "severity": "LOW",
+        "status": "COORDINATION_TASK",
+        "action": "Share Playwright utilities"
+      }
+    },
+    "validationStatus": {
+      "thisSpec": "PARTIAL_PASS (infrastructure stages 1-3 passed, database/dashboard stages blocked)",
+      "conflictingSpecs": {
+        "surrealdb-official-library-integration": "PARTIAL_PASS (6/8 tests, deployment pending)",
+        "surrealdb-primary-redis-cache": "PARTIAL_PASS (4/6 tests, Phase 2 pending)",
+        "thompson-sampling-in-rpc-api-only": "NOT_VALIDATED (awaiting dashboard access)",
+        "impulse-learning-in-rpc-api-only": "NOT_VALIDATED (awaiting dashboard access)"
+      }
+    },
+    "recommendedActions": [
+      {
+        "priority": 1,
+        "action": "Install surrealdb-py package",
+        "command": "cd repos/metabob-rpc-api && pip install -r requirements.txt",
+        "estimatedTime": "5 minutes"
+      },
+      {
+        "priority": 2,
+        "action": "Upgrade SurrealDB to v3.0+",
+        "command": "kubectl set image deployment/surrealdb surrealdb=surrealdb/surrealdb:v3.0 -n metabob",
+        "estimatedTime": "10 minutes"
+      },
+      {
+        "priority": 3,
+        "action": "Restart RPC API pods",
+        "command": "kubectl rollout restart deployment/metabob-rpc-api -n metabob",
+        "estimatedTime": "2 minutes"
+      },
+      {
+        "priority": 4,
+        "action": "Apply code changes",
+        "files": ["surrealdb_client.py", "jwt_auth.py", "cloud_auth.py", "cli.py"],
+        "estimatedTime": "5-6 hours"
+      },
+      {
+        "priority": 5,
+        "action": "Re-run validation harness",
+        "estimatedTime": "30 minutes"
+      }
+    ],
+    "relatedImpulses": {
+      "trace": "trace-surrealdb-authentication-fix-and-dashboard-live-test",
+      "enforcement": "enforcement-surrealdb-authentication-fix-and-dashboard-live-test",
+      "validation": "validation-results-surrealdb-authentication-fix-and-dashboard-live-test",
+      "conflicts": "conflict-analysis-surrealdb-authentication-fix-and-dashboard-live-test",
+      "harness": "harness-surrealdb-authentication-fix-and-dashboard-live-test"
+    }
+  },
+  "createdAt": "2026-03-06T04:25:00.000Z",
+  "updatedAt": "2026-03-06T04:25:00.000Z"
+}

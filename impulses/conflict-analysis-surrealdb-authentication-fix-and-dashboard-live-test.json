@@ -1,0 +1,150 @@
+{
+  "id": "conflict-analysis-surrealdb-authentication-fix-and-dashboard-live-test",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Conflict analysis for SurrealDB authentication fix - 4 conflicts identified (1 HIGH, 1 MEDIUM, 2 LOW), all manageable with coordination",
+    "source": "conflict detection and resolution analysis"
+  },
+  "budget": 3000,
+  "metadata": {
+    "specificationName": "surrealdb-authentication-fix-and-dashboard-live-test",
+    "executionTimestamp": "2026-03-06T04:20:00.000Z",
+    "analysisType": "cross-specification-conflict-detection",
+    "otherSpecificationsAnalyzed": 5,
+    "conflictsDetected": 4,
+    "conflictSeverityBreakdown": {
+      "critical": 0,
+      "high": 1,
+      "medium": 1,
+      "low": 2
+    },
+    "overallConflictStatus": "MANAGEABLE",
+    "keyFindings": {
+      "dependencyConflict": {
+        "type": "DEPENDENCY_CONFLICT",
+        "severity": "HIGH",
+        "spec1": "surrealdb-authentication-fix-and-dashboard-live-test",
+        "spec2": "surrealdb-official-library-integration",
+        "issue": "Authentication fix expects working SurrealDB client, but official library not installed yet (pip install pending). SurrealDB v2.3.10 needs upgrade to v3.0+ for compatibility.",
+        "resolution": "Install surrealdb-py package and upgrade SurrealDB deployment before authentication testing",
+        "status": "PARTIALLY_RESOLVED"
+      },
+      "architecturalAlignment": {
+        "type": "ARCHITECTURAL_CONFLICT",
+        "severity": "MEDIUM",
+        "spec1": "surrealdb-authentication-fix-and-dashboard-live-test",
+        "spec2": "surrealdb-primary-redis-cache",
+        "issue": "Both specs modify cloud_auth.py endpoints. Redis fallback and SurrealDB-first patterns must be aligned.",
+        "resolution": "Specs are compatible - both treat SurrealDB as primary. Redis fallback correctly implements cache-aside pattern.",
+        "status": "COMPATIBLE_WITH_ALIGNMENT"
+      },
+      "performanceSynergy": {
+        "type": "PERFORMANCE_CONSIDERATION",
+        "severity": "LOW",
+        "issue": "N+1 query fix from authentication spec shares optimization approach with metrics calculation",
+        "resolution": "Document IN clause pattern as best practice, apply consistently across all multi-record queries",
+        "status": "COMPLEMENTARY"
+      },
+      "testingCoordination": {
+        "type": "TESTING_OVERLAP",
+        "severity": "LOW",
+        "issue": "Both authentication and Thompson sampling specs test activity history, but from different angles",
+        "resolution": "Run authentication tests first (UI/display), then Thompson sampling tests (data accuracy). Share Playwright setup.",
+        "status": "COMPLEMENTARY"
+      }
+    },
+    "sharedComponentsAnalysis": {
+      "surrealdb_client_py": {
+        "affectedSpecs": 3,
+        "conflictStatus": "REQUIRES_COORDINATION",
+        "riskLevel": "HIGH",
+        "directDependents": 15,
+        "transitiveDependents": 47,
+        "recommendation": "Complete official library integration first, then apply authentication fixes"
+      },
+      "cloud_auth_py": {
+        "affectedSpecs": 3,
+        "conflictStatus": "COMPATIBLE",
+        "riskLevel": "MEDIUM",
+        "directDependents": 3,
+        "transitiveDependents": 8,
+        "recommendation": "All changes compatible. Implement: N+1 fix → Redis fallback → impulse metadata"
+      },
+      "kubernetes_surrealdb_credentials": {
+        "affectedSpecs": 2,
+        "conflictStatus": "NO_CONFLICT",
+        "riskLevel": "LOW",
+        "recommendation": "Credentials environment-agnostic. Both specs use same secret."
+      },
+      "dashboard_cloud_activity_page": {
+        "affectedSpecs": 3,
+        "conflictStatus": "COMPLEMENTARY",
+        "riskLevel": "LOW",
+        "recommendation": "Tests validate different aspects. Coordinate execution order."
+      }
+    },
+    "deploymentCoordination": {
+      "recommendedOrder": [
+        "1. surrealdb-official-library-integration (15 min)",
+        "2. surrealdb-authentication-fix-and-dashboard-live-test (2-3 hours)",
+        "3. surrealdb-primary-redis-cache (2 hours)",
+        "4. thompson-sampling-in-rpc-api-only (3-4 hours)",
+        "5. impulse-learning-in-rpc-api-only (2-3 hours)"
+      ],
+      "parallelizationOpportunities": "Steps 3, 4, 5 can run in parallel after Steps 1-2 complete",
+      "criticalPath": "Step 1 must complete before all others - RPC API depends on working SurrealDB client"
+    },
+    "riskAssessment": {
+      "highRisk": [
+        "SurrealDB client replacement may have different behavior - maintain legacy backup"
+      ],
+      "mediumRisk": [
+        "10-second connection timeout may be too short for slow networks",
+        "Increased database load if Redis frequently unavailable"
+      ],
+      "lowRisk": [
+        "IN clause performance with large org counts - test with 50+ orgs"
+      ]
+    },
+    "recommendations": [
+      {
+        "priority": "CRITICAL",
+        "action": "Complete SurrealDB official library deployment",
+        "command": "pip install surrealdb>=1.0.0 && kubectl set image deployment/surrealdb surrealdb=surrealdb/surrealdb:v3.0 -n metabob",
+        "reason": "Authentication fix depends on working client. Without this, RPC API fails to start.",
+        "estimatedTime": "15 minutes"
+      },
+      {
+        "priority": "HIGH",
+        "action": "Coordinate authentication and cache specs",
+        "reason": "Both modify cloud_auth.py. Ensure SurrealDB-first pattern respected.",
+        "estimatedTime": "1 hour review"
+      },
+      {
+        "priority": "MEDIUM",
+        "action": "Share Playwright test setup across specs",
+        "reason": "Avoid duplicating test code for dashboard testing",
+        "estimatedTime": "2 hours"
+      },
+      {
+        "priority": "LOW",
+        "action": "Document query optimization pattern",
+        "reason": "IN clause pattern should be applied consistently",
+        "estimatedTime": "1 hour"
+      }
+    ],
+    "relatedImpulses": {
+      "trace": "trace-surrealdb-authentication-fix-and-dashboard-live-test",
+      "enforcement": "enforcement-surrealdb-authentication-fix-and-dashboard-live-test",
+      "validation": "validation-results-surrealdb-authentication-fix-and-dashboard-live-test",
+      "harness": "harness-surrealdb-authentication-fix-and-dashboard-live-test",
+      "relatedValidations": [
+        "validation-results-surrealdb-official-library-integration",
+        "validation-results-surrealdb-primary-redis-cache"
+      ]
+    }
+  },
+  "createdAt": "2026-03-06T04:20:00.000Z",
+  "updatedAt": "2026-03-06T04:20:00.000Z"
+}
