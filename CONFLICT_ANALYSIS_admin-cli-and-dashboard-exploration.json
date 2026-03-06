@@ -1,0 +1,339 @@
+{
+  "specificationName": "admin-cli-and-dashboard-exploration",
+  "analysisDate": "2026-03-06",
+  "otherSpecifications": [
+    "boredom-activity-detection-mechanism",
+    "dashboard-activity-history-viewing-flow",
+    "analytics-endpoint-fix-and-dashboard-local-mode",
+    "template-storage-architecture",
+    "rpc-api-deployed-infrastructure-validation"
+  ],
+  "conflicts": [
+    {
+      "type": "SCHEMA_DEPENDENCY",
+      "severity": "LOW",
+      "spec1": "admin-cli-and-dashboard-exploration",
+      "spec2": "boredom-activity-detection-mechanism",
+      "sharedComponent": "activity_template table (SurrealDB)",
+      "description": "admin-cli spec adds boredom_eligible and boredom_priority fields to activity_template. The boredom detection spec expects these fields to exist for filtering eligible templates.",
+      "impact": "Boredom system will fail to filter templates if migration not applied before boredom activities execute",
+      "resolution": {
+        "status": "RESOLVED",
+        "action": "Schema migration 008-boredom-eligibility.surql must be applied before boredom system uses new filtering logic",
+        "implementation": "Add migration to deployment checklist and schema initialization"
+      },
+      "riskLevel": "LOW",
+      "mitigationSteps": [
+        "Apply migration: python -m server.cli db init-schema --schema-file sql/migrations/008-boredom-eligibility.surql",
+        "Verify fields exist: SELECT boredom_eligible FROM activity_template LIMIT 1",
+        "Update boredom API endpoint to use new fields"
+      ]
+    },
+    {
+      "type": "API_ENDPOINT_MODIFICATION",
+      "severity": "MEDIUM",
+      "spec1": "admin-cli-and-dashboard-exploration",
+      "spec2": "boredom-activity-detection-mechanism",
+      "sharedComponent": "metabob_fetch_boredom_activities API endpoint",
+      "description": "admin-cli spec expects boredom API to filter by boredom_eligible=true. Current boredom detection spec queries all templates without this filter.",
+      "impact": "Boredom system may select templates not marked as boredom-eligible, potentially executing inappropriate activities",
+      "resolution": {
+        "status": "PENDING",
+        "action": "Update server/routes/activity.py metabob_fetch_boredom_activities endpoint to add WHERE boredom_eligible=true filter",
+        "implementation": "Modify query in activity.py:524 (approximately) to filter templates",
+        "code": "query = 'SELECT * FROM activity_template WHERE boredom_eligible = true AND boredom_priority >= $threshold ORDER BY boredom_priority DESC LIMIT $limit'"
+      },
+      "riskLevel": "MEDIUM",
+      "mitigationSteps": [
+        "Locate metabob_fetch_boredom_activities endpoint in server/routes/activity.py",
+        "Add boredom_eligible filter to SurrealDB query",
+        "Add boredom_priority sorting",
+        "Test endpoint returns only eligible templates",
+        "Update BoredomManager to use priority field"
+      ]
+    },
+    {
+      "type": "USER_AUTHENTICATION_OVERLAP",
+      "severity": "LOW",
+      "spec1": "admin-cli-and-dashboard-exploration",
+      "spec2": "analytics-endpoint-fix-and-dashboard-local-mode",
+      "sharedComponent": "User authentication system (users table, login flow)",
+      "description": "admin-cli spec adds user_ops.py for user CRUD. analytics-endpoint spec configures dashboard local mode to skip authentication. Both touch user management.",
+      "impact": "Local mode config may bypass user validation that admin CLI expects to enforce",
+      "resolution": {
+        "status": "NO_CONFLICT",
+        "action": "Specifications serve different purposes: admin CLI manages users in DB, local mode skips auth in frontend. No actual conflict.",
+        "implementation": "Local mode only affects dashboard frontend, not backend user records"
+      },
+      "riskLevel": "NONE",
+      "mitigationSteps": []
+    },
+    {
+      "type": "CLI_EXTENSION_ORDERING",
+      "severity": "LOW",
+      "spec1": "admin-cli-and-dashboard-exploration",
+      "spec2": "rpc-api-deployed-infrastructure-validation",
+      "sharedComponent": "server/cli.py command structure",
+      "description": "admin-cli spec adds admin command group. Other specs may add CLI commands. Potential for command conflicts or import ordering issues.",
+      "impact": "CLI may fail to import if circular dependencies introduced or if command names collide",
+      "resolution": {
+        "status": "RESOLVED",
+        "action": "admin commands are in separate group, no naming conflicts. Import structure reviewed.",
+        "implementation": "admin group is isolated: @cli.group() def admin(). Subgroups: org, user, template, boredom."
+      },
+      "riskLevel": "NONE",
+      "mitigationSteps": []
+    }
+  ],
+  "conflictSummary": {
+    "total": 4,
+    "critical": 0,
+    "moderate": 1,
+    "low": 2,
+    "none": 1,
+    "resolved": 2,
+    "pending": 1
+  },
+  "sharedComponents": [
+    {
+      "component": "server/cli.py",
+      "file": "repos/metabob-rpc-api/server/cli.py",
+      "affectedBySpecs": [
+        "admin-cli-and-dashboard-exploration",
+        "rpc-api-deployed-infrastructure-validation"
+      ],
+      "usageBySpec": {
+        "admin-cli-and-dashboard-exploration": {
+          "usage": "Adds admin command group with org/user/template/boredom subcommands",
+          "modifications": "Lines 303-730 (+450 lines)",
+          "linesModified": "303-730",
+          "concern": "Admin management commands"
+        },
+        "rpc-api-deployed-infrastructure-validation": {
+          "usage": "Validates CLI structure and db commands",
+          "modifications": "Read-only validation, no code changes",
+          "linesModified": "N/A",
+          "concern": "Infrastructure validation"
+        }
+      },
+      "conflictStatus": "NONE",
+      "analysis": "admin commands added in isolated group. Infrastructure validation is read-only. No overlapping modifications.",
+      "recommendation": "No action required - specifications are compatible"
+    },
+    {
+      "component": "activity_template table (SurrealDB)",
+      "file": "repos/metabob-rpc-api/sql/migrations/008-boredom-eligibility.surql",
+      "affectedBySpecs": [
+        "admin-cli-and-dashboard-exploration",
+        "boredom-activity-detection-mechanism",
+        "template-storage-architecture"
+      ],
+      "usageBySpec": {
+        "admin-cli-and-dashboard-exploration": {
+          "usage": "Adds boredom_eligible, boredom_priority, boredom_config fields",
+          "modifications": "Schema migration 008-boredom-eligibility.surql",
+          "linesModified": "NEW schema fields",
+          "concern": "Boredom configuration storage"
+        },
+        "boredom-activity-detection-mechanism": {
+          "usage": "Queries templates for boredom activity selection",
+          "modifications": "Expects boredom fields to exist (pending API update)",
+          "linesModified": "Query logic in BoredomManager",
+          "concern": "Template filtering"
+        },
+        "template-storage-architecture": {
+          "usage": "Defines core activity_template schema and storage",
+          "modifications": "Base schema definition",
+          "linesModified": "sql/migrations/*-activity-template.surql",
+          "concern": "Template persistence"
+        }
+      },
+      "conflictStatus": "DEPENDENCY",
+      "analysis": "admin-cli adds fields that boredom detection needs. template-storage provides base schema. Linear dependency chain: template-storage → admin-cli → boredom-detection. No circular dependencies.",
+      "recommendation": "Apply migrations in order: base schema → boredom fields. Update boredom API to use new fields."
+    },
+    {
+      "component": "user_ops.py (User CRUD operations)",
+      "file": "repos/metabob-rpc-api/server/db/operations/user_ops.py",
+      "affectedBySpecs": [
+        "admin-cli-and-dashboard-exploration"
+      ],
+      "usageBySpec": {
+        "admin-cli-and-dashboard-exploration": {
+          "usage": "Complete user management module with bcrypt hashing",
+          "modifications": "NEW file (402 lines)",
+          "linesModified": "1-402",
+          "concern": "User CRUD and authentication"
+        }
+      },
+      "conflictStatus": "NONE",
+      "analysis": "Exclusive to admin-cli specification. No other specification touches user_ops.py. New component with no existing dependencies.",
+      "recommendation": "No action required - single ownership"
+    },
+    {
+      "component": "Dashboard (app.metabob.local)",
+      "file": "metabob-dashboard (separate repo)",
+      "affectedBySpecs": [
+        "admin-cli-and-dashboard-exploration",
+        "dashboard-activity-history-viewing-flow",
+        "analytics-endpoint-fix-and-dashboard-local-mode"
+      ],
+      "usageBySpec": {
+        "admin-cli-and-dashboard-exploration": {
+          "usage": "Playwright E2E tests for navigation, auth, activity history",
+          "modifications": "Test infrastructure only, no dashboard code changes",
+          "linesModified": "tests/playwright/*",
+          "concern": "E2E validation"
+        },
+        "dashboard-activity-history-viewing-flow": {
+          "usage": "Validates activity data display in dashboard UI",
+          "modifications": "Read-only validation",
+          "linesModified": "N/A",
+          "concern": "Data flow verification"
+        },
+        "analytics-endpoint-fix-and-dashboard-local-mode": {
+          "usage": "Configures local mode (skip auth)",
+          "modifications": "Environment variables (REACT_APP_DEPLOYMENT_MODE=local)",
+          "linesModified": "Dashboard config",
+          "concern": "Local development mode"
+        }
+      },
+      "conflictStatus": "NONE",
+      "analysis": "All specifications use dashboard in complementary ways. admin-cli tests it, activity-history validates it, local-mode configures it. No overlapping modifications.",
+      "recommendation": "Coordinate: apply local mode config before running Playwright tests"
+    },
+    {
+      "component": "BoredomManager.ts",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/boredom-manager.ts",
+      "affectedBySpecs": [
+        "admin-cli-and-dashboard-exploration",
+        "boredom-activity-detection-mechanism"
+      ],
+      "usageBySpec": {
+        "admin-cli-and-dashboard-exploration": {
+          "usage": "Consumer - expects boredom API to return filtered templates",
+          "modifications": "None directly, but depends on API filtering by boredom_eligible",
+          "linesModified": "N/A",
+          "concern": "Template selection"
+        },
+        "boredom-activity-detection-mechanism": {
+          "usage": "Core implementation - idle detection, activity execution",
+          "modifications": "Complete boredom system logic",
+          "linesModified": "1-400+",
+          "concern": "Boredom system"
+        }
+      },
+      "conflictStatus": "DEPENDENCY",
+      "analysis": "admin-cli provides infrastructure (boredom fields) that BoredomManager uses. Detection mechanism owns BoredomManager. admin-cli is upstream dependency.",
+      "recommendation": "Update BoredomManager.fetchBoredomActivities() to use boredom_priority field for sorting after API update"
+    }
+  ],
+  "dependencyGraph": {
+    "nodes": [
+      "admin-cli-and-dashboard-exploration",
+      "boredom-activity-detection-mechanism",
+      "dashboard-activity-history-viewing-flow",
+      "analytics-endpoint-fix-and-dashboard-local-mode",
+      "template-storage-architecture"
+    ],
+    "edges": [
+      {
+        "from": "template-storage-architecture",
+        "to": "admin-cli-and-dashboard-exploration",
+        "type": "DEPENDS_ON",
+        "reason": "admin-cli adds fields to activity_template schema"
+      },
+      {
+        "from": "admin-cli-and-dashboard-exploration",
+        "to": "boredom-activity-detection-mechanism",
+        "type": "PROVIDES_INFRASTRUCTURE",
+        "reason": "admin-cli provides boredom_eligible fields that boredom system uses"
+      },
+      {
+        "from": "admin-cli-and-dashboard-exploration",
+        "to": "dashboard-activity-history-viewing-flow",
+        "type": "VALIDATES",
+        "reason": "admin-cli tests validate dashboard activity history works"
+      },
+      {
+        "from": "analytics-endpoint-fix-and-dashboard-local-mode",
+        "to": "admin-cli-and-dashboard-exploration",
+        "type": "ENABLES",
+        "reason": "local mode config enables Playwright tests to run without auth"
+      }
+    ]
+  },
+  "riskAssessment": {
+    "overallRisk": "LOW",
+    "criticalRisks": [],
+    "moderateRisks": [
+      {
+        "component": "metabob_fetch_boredom_activities API endpoint",
+        "risk": "Boredom system may select inappropriate templates if filtering not implemented",
+        "mitigation": "Update API endpoint to filter by boredom_eligible=true before deployment",
+        "timeline": "Before first boredom activity execution in production"
+      }
+    ],
+    "lowRisks": [
+      {
+        "component": "Schema migration ordering",
+        "risk": "Boredom system fails if migration not applied",
+        "mitigation": "Apply migration during deployment, verify fields exist",
+        "timeline": "During infrastructure setup"
+      }
+    ]
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Update metabob_fetch_boredom_activities API endpoint",
+      "reason": "Required for boredom system to respect admin configuration",
+      "implementation": "Modify server/routes/activity.py to add WHERE boredom_eligible=true filter",
+      "assignee": "Backend team",
+      "timeline": "Before production deployment"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Apply schema migration 008-boredom-eligibility.surql",
+      "reason": "Required for admin CLI and boredom system to function",
+      "implementation": "python -m server.cli db init-schema --schema-file sql/migrations/008-boredom-eligibility.surql",
+      "assignee": "DevOps team",
+      "timeline": "During infrastructure setup"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Configure dashboard local mode for Playwright tests",
+      "reason": "Enables E2E tests to run without authentication",
+      "implementation": "Set REACT_APP_DEPLOYMENT_MODE=local in dashboard environment",
+      "assignee": "Frontend team",
+      "timeline": "Before running Playwright validation"
+    },
+    {
+      "priority": "LOW",
+      "action": "Coordinate deployment order",
+      "reason": "Ensure dependencies deployed in correct order",
+      "implementation": "Deploy: 1) RPC API with schema, 2) Dashboard with local mode, 3) Run validations",
+      "assignee": "Release manager",
+      "timeline": "During deployment"
+    }
+  ],
+  "crossReferenceWithCPG": {
+    "note": "CPG analysis not available in structure validation mode",
+    "whenAvailable": [
+      "Use metabob_suggest_related_changes to find files affected by multiple specs",
+      "Use metabob_analyze_change_impact to understand overlapping dependencies",
+      "Identify co-change patterns between admin CLI and boredom system"
+    ]
+  },
+  "conclusion": {
+    "status": "LOW_RISK",
+    "summary": "admin-cli-and-dashboard-exploration has minimal conflicts with other specifications. The main dependency is providing boredom eligibility fields that the boredom detection system needs. One pending action: update boredom API endpoint to use new filtering fields. All other conflicts resolved or non-existent.",
+    "actionItems": [
+      "Update boredom API endpoint (PENDING)",
+      "Apply schema migration (RESOLVED - file exists, needs deployment)",
+      "Configure dashboard local mode (RESOLVED - documented in analytics-endpoint spec)"
+    ],
+    "overallAssessment": "Specification is well-isolated with clear dependency boundaries. No critical conflicts detected. Ready for production deployment after API endpoint update."
+  },
+  "conflictImpulseId": "conflict-analysis-admin-cli-and-dashboard-exploration"
+}
