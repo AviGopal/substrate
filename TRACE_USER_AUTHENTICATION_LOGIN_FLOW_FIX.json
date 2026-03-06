@@ -1,0 +1,161 @@
+{
+  "specificationName": "user-authentication-login-flow-fix",
+  "traceImpulseId": "trace-user-authentication-login-flow-fix",
+  "created": "2026-03-06",
+  "status": "complete",
+  "components": [
+    {
+      "file": "repos/metabob-rpc-api/server/cli.py",
+      "component": "user_create",
+      "lines": "449-481",
+      "currentBehavior": "Creates user via CLI with bcrypt password hashing through server.db.operations.user_ops.create_user()",
+      "desiredBehavior": "Same - properly creates users with hashed passwords",
+      "gap": "NONE - user creation appears correct",
+      "status": "✅ CORRECT"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/user_ops.py",
+      "component": "create_user",
+      "lines": "20-84",
+      "currentBehavior": "Hashes password with bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), stores in users table with fields: user_id, email, password_hash, name, org_id, role, is_active, email_verified, metadata, created_at, updated_at",
+      "desiredBehavior": "Same - correctly hashes and stores user data",
+      "gap": "NONE - password hashing logic is correct",
+      "status": "✅ CORRECT"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "component": "login",
+      "lines": "42-193",
+      "currentBehavior": "Queries SurrealDB for user by email, attempts to parse result[0] directly as user_data",
+      "desiredBehavior": "Should handle nested SurrealDB query result structure: result[0]['result'][0] or result[0][0]",
+      "gap": "Query result parsing error - result[0] is outer dict, not user record",
+      "status": "⚠️ BUG IDENTIFIED",
+      "criticalLine": "Line 69: user_data = result[0]"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/utils/jwt_auth.py",
+      "component": "verify_password",
+      "lines": "70-83",
+      "currentBehavior": "Uses bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))",
+      "desiredBehavior": "Same - verification logic is correct",
+      "gap": "NONE - bcrypt verification is correct",
+      "status": "✅ CORRECT"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+      "component": "AsyncSurrealDBClient",
+      "lines": "35-150",
+      "currentBehavior": "Connects to SurrealDB using namespace='metabob', database='devbob'",
+      "desiredBehavior": "Same - connection logic is correct",
+      "gap": "NONE - connection parameters are valid",
+      "status": "✅ CORRECT"
+    },
+    {
+      "file": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "component": "Database Schema",
+      "lines": "1-39",
+      "currentBehavior": "Only defines activity_template and activity_execution tables",
+      "desiredBehavior": "Should include users, organizations, user_organizations, refresh_tokens tables",
+      "gap": "Missing authentication tables required for login flow",
+      "status": "⚠️ MISSING SCHEMA"
+    }
+  ],
+  "dataFlow": "CLI: user create → user_ops.create_user() → bcrypt.hashpw() → SurrealDB.create('users:{user_id}', {password_hash, ...}) → users table\n\nLOGIN: POST /auth/login → cloud_auth.login() → db.query('SELECT * FROM users WHERE email = $email') → [BUG: result parsing] → verify_password() → bcrypt.checkpw() → create_access_token() → JWT response",
+  "rootCauses": [
+    {
+      "rank": 1,
+      "hypothesis": "Users table does not exist in database",
+      "evidence": "Schema file scripts/init-surrealdb-devbob-schema-v2.sql only defines activity tables, not authentication tables",
+      "likelihood": "HIGH",
+      "impact": "CRITICAL",
+      "validation": "kubectl exec python query 'INFO FOR DB;' to list tables"
+    },
+    {
+      "rank": 2,
+      "hypothesis": "Query result parsing error",
+      "evidence": "cloud_auth.py:69 does user_data = result[0] but SurrealDB returns nested [{'result': [...]}] structure",
+      "likelihood": "HIGH",
+      "impact": "CRITICAL",
+      "validation": "Add logging to print type(result) and result structure"
+    },
+    {
+      "rank": 3,
+      "hypothesis": "Schema not initialized in deployed database",
+      "evidence": "No Kubernetes init-db-job found, schema SQL may not have been applied",
+      "likelihood": "MEDIUM",
+      "impact": "HIGH",
+      "validation": "Check if users table exists via direct query"
+    }
+  ],
+  "fixStrategy": [
+    {
+      "priority": 1,
+      "issue": "Missing authentication table schemas",
+      "action": "Add users, organizations, user_organizations, refresh_tokens table definitions to schema SQL",
+      "file": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "effort": "30 minutes",
+      "risk": "LOW"
+    },
+    {
+      "priority": 2,
+      "issue": "Schema not applied to database",
+      "action": "Run schema initialization against SurrealDB namespace=metabob, database=devbob",
+      "command": "kubectl exec metabob-rpc-api -- python -m server.cli db init-schema",
+      "effort": "5 minutes",
+      "risk": "LOW"
+    },
+    {
+      "priority": 3,
+      "issue": "Query result parsing bug",
+      "action": "Fix cloud_auth.py:69 to handle nested result structure: result[0]['result'][0]",
+      "file": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "effort": "15 minutes",
+      "risk": "LOW"
+    },
+    {
+      "priority": 4,
+      "issue": "Insufficient debug logging",
+      "action": "Add logging to trace query results, password verification, and user creation",
+      "files": [
+        "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+        "repos/metabob-rpc-api/server/db/operations/user_ops.py"
+      ],
+      "effort": "10 minutes",
+      "risk": "NONE"
+    }
+  ],
+  "validation": {
+    "steps": [
+      "Verify schema exists: kubectl exec python query 'INFO FOR DB;'",
+      "Create test user: kubectl exec python -m server.cli admin user create",
+      "Query test user: kubectl exec python query users table",
+      "Test login endpoint: curl POST /auth/login",
+      "Test dashboard login: Navigate to http://devbob.metabob.local/login",
+      "Verify activity page: Navigate to /cloud/activity",
+      "Capture screenshots: Use Playwright to document working flow"
+    ],
+    "estimatedTime": "2 hours",
+    "blockers": []
+  },
+  "deploymentContext": {
+    "namespace": "metabob",
+    "rpcApiPod": "metabob-rpc-api-76cdbf9f84-zbh8m",
+    "surrealdbPod": "surrealdb-6ff58cbc5-lx7gc",
+    "database": {
+      "url": "http://surrealdb:8000",
+      "namespace": "metabob",
+      "database": "devbob",
+      "username": "root",
+      "password": "changeme"
+    },
+    "dashboardUrl": "http://devbob.metabob.local"
+  },
+  "metrics": {
+    "componentsAnalyzed": 7,
+    "rootCausesIdentified": 3,
+    "bugsFound": 2,
+    "missingTables": 4,
+    "filesModified": 2,
+    "estimatedFixTime": "60 minutes"
+  }
+}

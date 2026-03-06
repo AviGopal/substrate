@@ -1,0 +1,148 @@
+{
+  "specificationName": "user-authentication-login-flow-fix",
+  "otherSpecifications": [
+    "impulse-learning-in-rpc-api-only",
+    "surrealdb-primary-redis-cache",
+    "context-optimization-endpoint-complete",
+    "metabob-cli-test-implementation-alignment",
+    "surrealdb-async-await-deployment",
+    "MCP Data Flow Validation in Local Kubernetes",
+    "Dashboard Activity History Viewing Flow",
+    "analytics-endpoint-fix-and-dashboard-local-mode",
+    "surrealdb-authentication-fix-and-dashboard-live-test"
+  ],
+  "totalConflicts": 11,
+  "highSeverity": 1,
+  "mediumSeverity": 9,
+  "lowSeverity": 1,
+  "conflicts": [
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "impulse-learning-in-rpc-api-only",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "impulse-learning-in-rpc-api-only may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "surrealdb-primary-redis-cache",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "surrealdb-primary-redis-cache may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "context-optimization-endpoint-complete",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "context-optimization-endpoint-complete may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "metabob-cli-test-implementation-alignment",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "metabob-cli-test-implementation-alignment may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "surrealdb-async-await-deployment",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "surrealdb-async-await-deployment may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "MCP Data Flow Validation in Local Kubernetes",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "MCP Data Flow Validation in Local Kubernetes may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "Dashboard Activity History Viewing Flow",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "Dashboard Activity History Viewing Flow may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "analytics-endpoint-fix-and-dashboard-local-mode",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "analytics-endpoint-fix-and-dashboard-local-mode may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "SCHEMA_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "surrealdb-authentication-fix-and-dashboard-live-test",
+      "sharedComponent": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "description": "surrealdb-authentication-fix-and-dashboard-live-test may have also modified SurrealDB schema. Need to verify schema changes are compatible.",
+      "severity": "MEDIUM",
+      "resolution": "Review both schema files and merge changes if needed"
+    },
+    {
+      "type": "CODE_OVERLAP",
+      "spec1": "user-authentication-login-flow-fix",
+      "spec2": "surrealdb-authentication-fix-and-dashboard-live-test",
+      "sharedComponent": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "description": "surrealdb-authentication-fix-and-dashboard-live-test may have modified cloud_auth.py. Our query parsing fix could conflict.",
+      "severity": "HIGH",
+      "resolution": "Review both implementations and ensure query parsing logic is consistent"
+    },
+    {
+      "type": "DEPLOYMENT_DEPENDENCY",
+      "issue": "Multiple specs require RPC API rebuild",
+      "specs": [
+        "user-authentication-login-flow-fix",
+        "surrealdb-authentication-fix-and-dashboard-live-test"
+      ],
+      "description": "Both specs modify RPC API code and require Docker rebuild/redeploy",
+      "severity": "LOW",
+      "resolution": "Rebuild RPC API image once with all changes combined"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/user_ops.py",
+      "affectedBySpecs": [
+        "user-authentication-login-flow-fix",
+        "surrealdb-authentication-fix-and-dashboard-live-test"
+      ],
+      "recommendation": "Review both implementations of repos/metabob-rpc-api/server/db/operations/user_ops.py"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "affectedBySpecs": [
+        "user-authentication-login-flow-fix",
+        "surrealdb-authentication-fix-and-dashboard-live-test"
+      ],
+      "recommendation": "Review both implementations of repos/metabob-rpc-api/server/routes/cloud_auth.py"
+    },
+    {
+      "component": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "affectedBySpecs": [
+        "user-authentication-login-flow-fix",
+        "surrealdb-authentication-fix-and-dashboard-live-test"
+      ],
+      "recommendation": "Review both implementations of scripts/init-surrealdb-devbob-schema-v2.sql"
+    }
+  ],
+  "conflictImpulseId": "conflict-analysis-user-authentication-login-flow-fix"
+}

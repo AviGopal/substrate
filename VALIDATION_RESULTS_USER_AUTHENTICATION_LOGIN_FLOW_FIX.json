@@ -1,0 +1,112 @@
+{
+  "specificationName": "user-authentication-login-flow-fix",
+  "validationTimestamp": "2026-03-06T05:20:00Z",
+  "deploymentStatus": "CODE_NOT_DEPLOYED",
+  "resultsImpulseId": "validation-results-user-authentication-login-flow-fix",
+  "validationResults": [
+    {
+      "testCase": "validation-user-authentication-login-flow-fix-case-1",
+      "name": "Standard user login flow",
+      "status": "FAIL",
+      "reason": "Code changes not deployed to RPC API pod",
+      "stages": {
+        "organizationCreation": {
+          "status": "PASS",
+          "message": "Organization created successfully"
+        },
+        "userCreation": {
+          "status": "FAIL",
+          "expected": "User created with user_{uuid} format",
+          "actual": "Parse error: user-{uuid} format still in use (hyphens)",
+          "difference": "Pod is running old code before fixes were applied. User ID generation still uses hyphens which cause SurrealDB parse errors.",
+          "error": "Parse error: Unexpected token `-`, expected Eof at position 18 in CREATE users:user-f02c01143d65",
+          "diagnostic": "The user_ops.py change from 'user-{uuid}' to 'user_{uuid}' has not been deployed. Current pod age: 23 minutes (before enforcement changes)."
+        },
+        "databaseVerification": {
+          "status": "FAIL",
+          "expected": "User found in database",
+          "actual": "User not found",
+          "difference": "User creation failed in Stage 1, so no user exists to verify",
+          "cascadeFrom": "userCreation"
+        },
+        "loginLogic": {
+          "status": "FAIL",
+          "expected": "Login succeeds with JWT token",
+          "actual": "Login failed: user not found",
+          "difference": "User creation failed in Stage 1, so login cannot succeed",
+          "cascadeFrom": "userCreation"
+        }
+      },
+      "overallStatus": "FAIL"
+    }
+  ],
+  "rootCause": {
+    "issue": "Code changes not deployed",
+    "explanation": "The enforcement fixes (cloud_auth.py query parsing, user_ops.py underscore IDs) were applied to source code but the RPC API pod has not been rebuilt and redeployed with the new code.",
+    "evidence": [
+      "Pod metabob-rpc-api-76cdbf9f84-zbh8m created 23 minutes ago (before enforcement)",
+      "User creation still fails with hyphen parse error",
+      "Error message matches exactly the bug we fixed: 'user-{uuid}' format",
+      "Organization creation works (no code changes needed)"
+    ],
+    "validation": "When validation script runs in pod, it uses old code from the container image, not our fixed code"
+  },
+  "nextSteps": [
+    {
+      "step": 1,
+      "action": "Rebuild RPC API Docker image with enforcement fixes",
+      "command": "cd repos/metabob-rpc-api && docker build -t metabob-rpc-api:auth-fix .",
+      "rationale": "Container image needs to include user_ops.py (underscore IDs) and cloud_auth.py (query parsing fix)"
+    },
+    {
+      "step": 2,
+      "action": "Tag image for registry",
+      "command": "docker tag metabob-rpc-api:auth-fix localhost:5000/metabob-rpc-api:auth-fix",
+      "rationale": "Image needs to be in registry accessible by Kubernetes cluster"
+    },
+    {
+      "step": 3,
+      "action": "Push image to registry",
+      "command": "docker push localhost:5000/metabob-rpc-api:auth-fix",
+      "rationale": "Make image available to Kubernetes"
+    },
+    {
+      "step": 4,
+      "action": "Update deployment with new image",
+      "command": "kubectl set image deployment/metabob-rpc-api metabob-rpc-api=localhost:5000/metabob-rpc-api:auth-fix -n metabob",
+      "rationale": "Deploy new code to running pod"
+    },
+    {
+      "step": 5,
+      "action": "Wait for rollout",
+      "command": "kubectl rollout status deployment/metabob-rpc-api -n metabob",
+      "rationale": "Ensure new pod is running before re-running validation"
+    },
+    {
+      "step": 6,
+      "action": "Re-run validation",
+      "command": "kubectl exec metabob-rpc-api-XXX -- python3 /tmp/validate-auth-flow.py",
+      "rationale": "Verify fixes work with deployed code"
+    }
+  ],
+  "codeChangesSummary": {
+    "filesModified": 3,
+    "changesApplied": [
+      "repos/metabob-rpc-api/server/db/operations/user_ops.py:52 - Changed to user_{uuid}",
+      "repos/metabob-rpc-api/server/routes/cloud_auth.py:69-107 - Fixed query result parsing",
+      "scripts/init-surrealdb-devbob-schema-v2.sql - Added authentication tables"
+    ],
+    "deploymentStatus": "NOT_DEPLOYED",
+    "validationStatus": "CANNOT_PASS_UNTIL_DEPLOYED"
+  },
+  "expectedResultsAfterDeployment": {
+    "testCase1": {
+      "organizationCreation": "PASS",
+      "userCreation": "PASS - User created with user_{uuid} format",
+      "databaseVerification": "PASS - User found with all fields",
+      "loginLogic": "PASS - Query parsing extracts user, password verifies, JWT generated",
+      "overallStatus": "PASS"
+    }
+  },
+  "summaryConclusion": "Validation FAILED as expected because code changes have not been deployed. The validation correctly identified that the old code (with hyphen user IDs) is still running. Once the RPC API image is rebuilt and redeployed with the enforcement fixes, validation should PASS."
+}

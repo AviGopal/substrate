@@ -5,7 +5,8 @@
   "main": "index.ts",
   "scripts": {
     "test": "ts-node --esm invariant-storage-across-instances-with-vessel-flow-harness.ts",
-    "test:all": "ts-node --esm invariant-storage-across-instances-with-vessel-flow-harness.ts"
+    "test:all": "ts-node --esm invariant-storage-across-instances-with-vessel-flow-harness.ts",
+    "test:auth": "ts-node user-authentication-login-flow-fix-harness.ts"
   },
   "keywords": [
     "validation",
@@ -19,6 +20,10 @@
     "@types/node-fetch": "^2.6.13",
     "node-fetch": "^2.7.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "axios": "^1.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "@types/jsonwebtoken": "^9.0.0",
+    "playwright": "^1.40.0"
   }
 }
