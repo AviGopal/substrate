@@ -1,0 +1,217 @@
+{
+  "specificationName": "activity-history-comprehensive-display",
+  "analysisDate": "2026-03-06T03:45:00Z",
+  "otherSpecifications": [
+    "dashboard-activity-history-live-demo",
+    "activity-execution-comprehensive-mapping-display",
+    "rpc-api-deployed-infrastructure-validation"
+  ],
+  "conflicts": [],
+  "complementarySpecifications": [
+    {
+      "specificationName": "dashboard-activity-history-live-demo",
+      "relationship": "PREDECESSOR",
+      "description": "Earlier validation of same dashboard functionality with similar requirements",
+      "overlap": "Both validate Activity History dashboard display and data flow",
+      "difference": "activity-history-comprehensive-display is more complete (includes filters, sorting, expanded testing)",
+      "resolution": "SUPERSEDES - Current spec is more comprehensive. Consider archiving predecessor after validation."
+    },
+    {
+      "specificationName": "activity-execution-comprehensive-mapping-display",
+      "relationship": "CLOSELY_RELATED",
+      "description": "Validates execution display with focus on data accuracy and mapping",
+      "overlap": "Both test execution display, task breakdown, impulse details, numerical accuracy",
+      "difference": "Focuses on data mapping accuracy rather than interactive features (filters/sorting)",
+      "resolution": "COMPATIBLE - Complementary testing. Both should pass if implementation is correct."
+    },
+    {
+      "specificationName": "rpc-api-deployed-infrastructure-validation",
+      "relationship": "DEPENDENCY",
+      "description": "Validates RPC API infrastructure that activity-history-comprehensive-display depends on",
+      "overlap": "Both require RPC API endpoints (/analytics/executions)",
+      "difference": "Infrastructure validation focuses on API health, this spec focuses on dashboard UI",
+      "resolution": "PREREQUISITE - Infrastructure validation must pass before dashboard validation can succeed."
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js",
+      "affectedBySpecs": [
+        "activity-history-comprehensive-display",
+        "dashboard-activity-history-live-demo",
+        "activity-execution-comprehensive-mapping-display"
+      ],
+      "requirement": "Display activity executions with filters, sorting, expandable rows",
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Component satisfies all three specifications. No changes needed."
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "affectedBySpecs": [
+        "activity-history-comprehensive-display",
+        "dashboard-activity-history-live-demo",
+        "rpc-api-deployed-infrastructure-validation"
+      ],
+      "requirement": "GET /analytics/executions with filtering, sorting, pagination",
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Endpoint implementation satisfies all specifications. No changes needed."
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "affectedBySpecs": [
+        "activity-history-comprehensive-display",
+        "dashboard-activity-history-live-demo"
+      ],
+      "requirement": "POST activity execution data to RPC API /v2/activities/executions",
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Dashboard sync code already implemented (lines 1083-1164). No changes needed."
+    },
+    {
+      "component": "repos/platform/deployments/metabob/charts/devbob/charts/values.yaml",
+      "affectedBySpecs": [
+        "activity-history-comprehensive-display",
+        "dashboard-activity-history-live-demo"
+      ],
+      "requirement": "Configure METABOB_RPC_API_URL environment variable",
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Configuration added. Requires helmfile apply to deploy."
+    },
+    {
+      "component": "SurrealDB activity_executions table",
+      "affectedBySpecs": [
+        "activity-history-comprehensive-display",
+        "dashboard-activity-history-live-demo",
+        "activity-execution-comprehensive-mapping-display"
+      ],
+      "requirement": "Store activity execution data with task details and impulses",
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Schema supports all specifications. No changes needed."
+    }
+  ],
+  "deploymentConsistency": {
+    "status": "PARTIALLY_CONSISTENT",
+    "analysis": {
+      "codeChanges": "APPLIED",
+      "configurationChanges": "APPLIED",
+      "deployment": "PENDING",
+      "note": "Code and configuration changes applied but not yet deployed to cluster via helmfile apply"
+    },
+    "blockers": [
+      "Chart changes (METABOB_RPC_API_URL) require helmfile apply",
+      "Dashboard route change requires dashboard pod restart",
+      "Activity.complete() sync code already deployed (no rebuild needed)"
+    ]
+  },
+  "prerequisiteChain": {
+    "description": "Validation dependencies and required order",
+    "chain": [
+      {
+        "step": 1,
+        "specification": "rpc-api-deployed-infrastructure-validation",
+        "status": "PASS",
+        "note": "RPC API infrastructure validated and healthy"
+      },
+      {
+        "step": 2,
+        "specification": "dashboard-activity-history-live-demo",
+        "status": "FAIL (outdated)",
+        "note": "Earlier validation failed due to missing configuration. Issues now resolved."
+      },
+      {
+        "step": 3,
+        "specification": "activity-history-comprehensive-display",
+        "status": "READY_FOR_EXECUTION",
+        "note": "Current validation ready after deployment"
+      }
+    ]
+  },
+  "evolutionAnalysis": {
+    "specificationEvolution": [
+      {
+        "version": "v1",
+        "spec": "dashboard-activity-history-live-demo",
+        "date": "2026-03-05",
+        "status": "FAIL",
+        "issues": [
+          "Missing METABOB_RPC_API_URL",
+          "Missing route registration",
+          "No ingress configured"
+        ]
+      },
+      {
+        "version": "v2",
+        "spec": "activity-execution-comprehensive-mapping-display",
+        "date": "2026-03-06",
+        "status": "READY_TO_RUN",
+        "improvements": [
+          "Added data accuracy checks",
+          "Added task breakdown validation",
+          "Added impulse display validation"
+        ]
+      },
+      {
+        "version": "v3",
+        "spec": "activity-history-comprehensive-display",
+        "date": "2026-03-06",
+        "status": "READY_FOR_EXECUTION",
+        "improvements": [
+          "Added filter testing",
+          "Added sorting testing",
+          "Added route registration enforcement",
+          "Added environment variable enforcement",
+          "Comprehensive test coverage"
+        ]
+      }
+    ],
+    "recommendation": "Mark v1 and v2 as superseded by v3. Archive older validations after v3 passes."
+  },
+  "criticalFindings": [],
+  "warnings": [
+    {
+      "type": "DEPLOYMENT_LAG",
+      "severity": "MEDIUM",
+      "message": "Configuration changes applied but not deployed. Run helmfile apply to activate.",
+      "impact": "Validation will fail without deployment",
+      "resolution": "cd repos/platform/deployments/metabob && helmfile apply"
+    },
+    {
+      "type": "SUPERSEDED_VALIDATION",
+      "severity": "LOW",
+      "message": "Earlier validations (dashboard-activity-history-live-demo) are superseded by this spec",
+      "impact": "Potential confusion from multiple similar validations",
+      "resolution": "Archive or mark superseded validations after current validation passes"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Deploy configuration changes",
+      "command": "cd repos/platform/deployments/metabob && helmfile apply",
+      "reason": "Activate METABOB_RPC_API_URL environment variable"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Execute validation harness",
+      "command": "npx tsx tests/validation-harnesses/activity-history-comprehensive-display-harness.ts",
+      "reason": "Validate implementation with live cluster data"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Archive superseded validations",
+      "command": "mv VALIDATION_RESULTS_dashboard-activity-history-live-demo.json .archive/",
+      "reason": "Reduce confusion from outdated validation results"
+    }
+  ],
+  "overallConflictStatus": "NO_CONFLICTS_DETECTED",
+  "readyForProduction": false,
+  "blockers": [
+    "Configuration deployment pending (helmfile apply)"
+  ],
+  "metadata": {
+    "analysisAgent": "conflict-detector",
+    "specificationsAnalyzed": 4,
+    "sharedComponentsFound": 5,
+    "conflictsDetected": 0,
+    "warningsIssued": 2
+  }
+}

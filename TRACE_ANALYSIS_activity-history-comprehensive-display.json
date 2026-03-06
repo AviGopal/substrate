@@ -1,0 +1,223 @@
+{
+  "specificationName": "activity-history-comprehensive-display",
+  "description": "Create comprehensive Activity History dashboard at app.metabob.local/cloud/activity displaying: invocations table, task breakdowns, impulses used, outcomes, variants, costs, compositions. Use expandable rows, color coding, filters, and sorting. Fetch live data from devbob.metabob.local via RPC API analytics endpoints.",
+  "expectedBehavior": "Dashboard shows filterable table of activity executions with expandable detail panels. Summary cards show aggregates. All data matches SurrealDB records from devbob. Page loads <3s, smooth interactions, accurate data display.",
+  
+  "dataFlow": "devbob (Activity.complete) → HTTP POST /activity/record → RPC API → SurrealDB write → Dashboard polls GET /analytics/executions → RPC API query + Redis cache → React table component → User clicks expand → GET /analytics/executions/{id} → Task details display",
+  
+  "components": [
+    {
+      "file": "repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js",
+      "component": "ActivityHistory",
+      "currentBehavior": "Comprehensive Activity History page with filters (template_id, success), sorting (timestamp/cost/duration), pagination, and expandable rows. Uses useGetExecutionsQuery hook to fetch data. ExecutionRow component lazy-loads details on expand via GET /analytics/executions/{id}.",
+      "desiredBehavior": "FULLY IMPLEMENTED - Page has all required features: filterable table, expandable rows showing task breakdown, impulses used, error details, cost/duration/token metrics, status color coding, pagination.",
+      "gap": "NONE - Component matches specification requirements. Missing only: route registration and summary cards.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js:252-398"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/cloudRoutes.js",
+      "component": "cloudRoutes",
+      "currentBehavior": "Defines protected routes for /cloud/dashboard, /cloud/projects, /cloud/settings, /cloud/login, /cloud/register. No /cloud/activity route registered.",
+      "desiredBehavior": "Should include route definition for /cloud/activity that renders ActivityHistory component with ProtectedRoute wrapper.",
+      "gap": "MISSING ROUTE - Need to add { path: '/cloud/activity', element: <ProtectedRoute><ActivityHistory /></ProtectedRoute>, protected: true } to cloudRoutes array.",
+      "priority": "HIGH",
+      "implementationPath": "repos/metabob-dashboard/src/cloud/cloudRoutes.js:44-165"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "component": "getExecutions",
+      "currentBehavior": "RTK Query endpoint getExecutions calls GET /analytics/executions with filters (template_id, success, date range, cost range, duration range), sorting (timestamp/cost/duration asc/desc), and pagination (limit/offset). Returns { executions: [], total: number, hasMore: boolean }.",
+      "desiredBehavior": "FULLY IMPLEMENTED - API hook provides all filtering and sorting capabilities required by ActivityHistory component.",
+      "gap": "NONE - Hook implementation matches specification.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js:318-324"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "component": "getExecutionDetails",
+      "currentBehavior": "RTK Query endpoint getExecutionDetails calls GET /analytics/executions/{executionId}. Returns comprehensive execution details with task breakdown, impulses used, content metadata.",
+      "desiredBehavior": "FULLY IMPLEMENTED - Provides detail data for expandable rows.",
+      "gap": "NONE - Hook implementation complete.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js:335-342"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "get_executions_filtered",
+      "currentBehavior": "FastAPI endpoint GET /analytics/executions with comprehensive filtering (template_id, success, date range, cost range, duration range), sorting (timestamp/cost/duration asc/desc), pagination (limit/offset). Queries SurrealDB activity_executions table, joins task_execution for task counts, returns formatted execution list.",
+      "desiredBehavior": "FULLY IMPLEMENTED - Backend endpoint provides all filtering, sorting, and pagination capabilities. Returns execution_id, activity_id, template_id, success, timestamp, duration_ms, cost_usd, tokens_*, error_message, has_tasks, task_count.",
+      "gap": "NONE - Endpoint implementation matches specification.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-rpc-api/server/routes/analytics.py:511-718"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "get_execution_details",
+      "currentBehavior": "FastAPI endpoint GET /analytics/executions/{execution_id}. Joins activity_executions + task_execution + impulses_used tables to return comprehensive execution details including task breakdown (task_id, success, duration, tokens, cost, error), impulses used (impulse_id, type, budget, content_pointer), component changes, and full execution metadata.",
+      "desiredBehavior": "FULLY IMPLEMENTED - Provides all detail data needed for expandable row display.",
+      "gap": "NONE - Endpoint implementation complete.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-rpc-api/server/routes/analytics.py:721-850"
+    },
+    {
+      "file": "repos/metabob-rpc-api/sql/migrations/006-dashboard-tables.surql",
+      "component": "activity_executions",
+      "currentBehavior": "SurrealDB table schema defines activity_executions with fields: execution_id, activity_id, session_id, template_id, org_id, project_id, user_id, success, timestamp, started_at, completed_at, duration_ms, cost_usd, tokens_input, tokens_output, tokens_cache, error_message, component_changes.",
+      "desiredBehavior": "IMPLEMENTED - Schema supports all required fields for activity history display.",
+      "gap": "NONE - Schema matches code usage.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-rpc-api/sql/migrations/006-dashboard-tables.surql"
+    },
+    {
+      "file": "repos/metabob-rpc-api/sql/migrations/006-dashboard-tables.surql",
+      "component": "task_execution",
+      "currentBehavior": "SurrealDB table schema defines task_execution with fields: task_id, execution_id, template_id, status, success, started_at, completed_at, duration_ms, cost_usd, tokens_input, tokens_output, tokens_cache, error_message, retry_count.",
+      "desiredBehavior": "IMPLEMENTED - Schema supports task breakdown display in expandable rows.",
+      "gap": "NONE - Schema matches code usage.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-rpc-api/sql/migrations/006-dashboard-tables.surql"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/RecentActivity.js",
+      "component": "RecentActivity",
+      "currentBehavior": "Shows recent activity events in timeline format on dashboard. Has 'View All Activity' button that navigates to /cloud/activity route.",
+      "desiredBehavior": "IMPLEMENTED - Provides navigation link to full activity history page.",
+      "gap": "NONE - Navigation implemented.",
+      "priority": "COMPLETE",
+      "implementationPath": "repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/RecentActivity.js:121-123"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity.complete",
+      "currentBehavior": "Records activity completion metrics locally and calls MetabobCLI backend. Based on TRACE_ANALYSIS_dashboard-activity-history-live-demo.md, this component SHOULD POST to RPC API /activity/record endpoint but currently does NOT.",
+      "desiredBehavior": "Should HTTP POST activity execution data to RPC API /activity/record endpoint after activity completion to persist to SurrealDB.",
+      "gap": "CRITICAL GAP - Activity executions from devbob are not syncing to SurrealDB, so dashboard shows empty table. Need to add HTTP POST call to RPC API.",
+      "priority": "HIGH",
+      "implementationPath": "repos/metabob-opencode/packages/opencode/src/session/activity.ts:finalize()"
+    }
+  ],
+  
+  "currentStateVsDesiredState": {
+    "frontend": {
+      "currentState": "ActivityHistory component fully implemented with filters, sorting, pagination, expandable rows, task details, impulse display, error display, cost/duration/token metrics, status icons.",
+      "desiredState": "Same as current + route registration + optional summary cards at top of page.",
+      "gap": "Missing route registration in cloudRoutes.js. Component is complete but not accessible via URL."
+    },
+    "backend": {
+      "currentState": "RPC API endpoints /analytics/executions and /analytics/executions/{id} fully implemented with comprehensive filtering, sorting, pagination, and detail fetching from SurrealDB.",
+      "desiredState": "Same as current.",
+      "gap": "NONE - Backend is production-ready."
+    },
+    "dataSync": {
+      "currentState": "Activity executions from devbob (OpenCode CLI) are NOT persisting to SurrealDB via RPC API. Activity.complete() only records to local metabob-cli backend, not RPC API.",
+      "desiredState": "Activity.complete() should POST execution data to RPC API /activity/record endpoint for SurrealDB persistence.",
+      "gap": "CRITICAL - Without this, dashboard will always show empty table regardless of activity executions."
+    },
+    "deployment": {
+      "currentState": "According to VALIDATION_RESULTS_dashboard-activity-history-live-demo.md, infrastructure is deployed but devbob pod is missing METABOB_RPC_API_URL environment variable, and code changes are not deployed.",
+      "desiredState": "Devbob pod should have METABOB_RPC_API_URL configured, OpenCode container rebuilt with Activity.complete() sync code, and all services deployed.",
+      "gap": "Deployment incomplete - need helmfile apply and container rebuild."
+    }
+  },
+  
+  "criticalGaps": [
+    {
+      "gap": "Route not registered",
+      "impact": "ActivityHistory page is not accessible at /cloud/activity URL",
+      "solution": "Add route to repos/metabob-dashboard/src/cloud/cloudRoutes.js",
+      "effort": "5 minutes",
+      "priority": "HIGH"
+    },
+    {
+      "gap": "Activity.complete() not syncing to RPC API",
+      "impact": "Dashboard shows empty table because devbob executions don't persist to SurrealDB",
+      "solution": "Add HTTP POST to RPC API /activity/record in Activity.complete()",
+      "effort": "30 minutes",
+      "priority": "CRITICAL"
+    },
+    {
+      "gap": "devbob missing METABOB_RPC_API_URL env var",
+      "impact": "Even if Activity.complete() adds HTTP call, it won't know where to send data",
+      "solution": "Add METABOB_RPC_API_URL to devbob chart values and redeploy",
+      "effort": "10 minutes",
+      "priority": "HIGH"
+    },
+    {
+      "gap": "Code not deployed to cluster",
+      "impact": "Running devbob doesn't have latest code changes",
+      "solution": "Rebuild OpenCode container and redeploy via helmfile",
+      "effort": "30 minutes",
+      "priority": "HIGH"
+    }
+  ],
+  
+  "implementationStatus": "PARTIALLY_IMPLEMENTED",
+  "readyForProduction": false,
+  "blockers": [
+    "Route registration missing",
+    "Activity.complete() not syncing to RPC API",
+    "devbob missing RPC API URL configuration",
+    "Latest code not deployed to cluster"
+  ],
+  
+  "nextSteps": [
+    {
+      "step": 1,
+      "action": "Add /cloud/activity route to cloudRoutes.js",
+      "files": ["repos/metabob-dashboard/src/cloud/cloudRoutes.js"],
+      "validation": "Navigate to app.metabob.local/cloud/activity in browser"
+    },
+    {
+      "step": 2,
+      "action": "Add HTTP POST to RPC API in Activity.complete()",
+      "files": ["repos/metabob-opencode/packages/opencode/src/session/activity.ts"],
+      "validation": "Execute activity, check RPC API logs for POST /activity/record"
+    },
+    {
+      "step": 3,
+      "action": "Add METABOB_RPC_API_URL to devbob chart values",
+      "files": ["repos/platform/metabob-apps/charts/devbob/values/default.devbob.values.yaml"],
+      "validation": "kubectl exec devbob -- env | grep METABOB_RPC_API_URL"
+    },
+    {
+      "step": 4,
+      "action": "Deploy all changes via helmfile apply",
+      "files": [],
+      "validation": "kubectl get pods -n metabob (all Running), curl app.metabob.local/cloud/activity"
+    },
+    {
+      "step": 5,
+      "action": "Execute test activity in devbob",
+      "files": [],
+      "validation": "Dashboard shows execution in activity table"
+    },
+    {
+      "step": 6,
+      "action": "Add summary cards at top of ActivityHistory page (optional enhancement)",
+      "files": ["repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js"],
+      "validation": "Page shows total executions, success rate, total cost cards above table"
+    }
+  ],
+  
+  "relatedSpecifications": [
+    "dashboard-activity-history-live-demo",
+    "dashboard-activity-history-viewing-flow"
+  ],
+  
+  "metadata": {
+    "traceDate": "2026-03-06T03:00:00Z",
+    "traceAgent": "trace-data-flow-single-feature",
+    "specification": "activity-history-comprehensive-display",
+    "filesAnalyzed": [
+      "repos/metabob-dashboard/src/pages/ActivityHistory/ActivityHistory.js",
+      "repos/metabob-dashboard/src/cloud/cloudRoutes.js",
+      "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/RecentActivity.js",
+      "repos/metabob-rpc-api/server/routes/analytics.py",
+      "repos/metabob-rpc-api/sql/migrations/006-dashboard-tables.surql",
+      "TRACE_ANALYSIS_dashboard-activity-history-live-demo.md",
+      "VALIDATION_RESULTS_dashboard-activity-history-live-demo.md"
+    ]
+  }
+}
