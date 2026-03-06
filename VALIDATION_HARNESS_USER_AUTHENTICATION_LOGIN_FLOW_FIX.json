@@ -1,0 +1,217 @@
+{
+  "specificationName": "user-authentication-login-flow-fix",
+  "harnessFile": "tests/validation-harnesses/user-authentication-login-flow-fix-harness.ts",
+  "harnessImpulseId": "harness-user-authentication-login-flow-fix",
+  "created": "2026-03-06T05:15:00Z",
+  "testCases": [
+    {
+      "impulseId": "validation-user-authentication-login-flow-fix-case-1",
+      "name": "Standard user login flow",
+      "input": {
+        "email": "demo@metabob.com",
+        "password": "demo123",
+        "name": "Demo User",
+        "orgId": "metabob_org",
+        "role": "admin",
+        "rpcApiUrl": "http://localhost:8080",
+        "dashboardUrl": "http://devbob.metabob.local",
+        "namespace": "metabob"
+      },
+      "expectedOutput": {
+        "userCreation": {
+          "pass": true,
+          "message": "User created successfully"
+        },
+        "databaseVerification": {
+          "pass": true,
+          "message": "User found in database"
+        },
+        "loginEndpoint": {
+          "pass": true,
+          "statusCode": 200,
+          "hasToken": true
+        },
+        "jwtValidation": {
+          "pass": true,
+          "message": "JWT token structure valid"
+        },
+        "protectedRoute": {
+          "pass": true,
+          "statusCode": 200
+        },
+        "playwrightE2E": {
+          "pass": true,
+          "message": "Playwright E2E test passed"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-user-authentication-login-flow-fix-case-2",
+      "name": "Member role user login",
+      "input": {
+        "email": "member@metabob.com",
+        "password": "member123",
+        "name": "Member User",
+        "orgId": "metabob_org",
+        "role": "member"
+      },
+      "expectedOutput": {
+        "loginEndpoint": {
+          "pass": true,
+          "statusCode": 200,
+          "userRole": "member"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-user-authentication-login-flow-fix-case-3",
+      "name": "Invalid password rejection",
+      "input": {
+        "email": "demo@metabob.com",
+        "password": "wrongpassword"
+      },
+      "expectedOutput": {
+        "loginEndpoint": {
+          "pass": false,
+          "statusCode": 401,
+          "errorMessage": "Invalid email or password"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-user-authentication-login-flow-fix-case-4",
+      "name": "Non-existent user rejection",
+      "input": {
+        "email": "nonexistent@metabob.com",
+        "password": "anypassword"
+      },
+      "expectedOutput": {
+        "loginEndpoint": {
+          "pass": false,
+          "statusCode": 401
+        }
+      }
+    }
+  ],
+  "validationStages": [
+    {
+      "stage": 1,
+      "name": "userCreation",
+      "description": "Create user via CLI using server.db.operations.user_ops.create_user()",
+      "method": "kubectl exec python command",
+      "validates": [
+        "User record persisted to SurrealDB",
+        "Password hashed with bcrypt",
+        "User_id generated with underscores (not hyphens)",
+        "All required fields populated"
+      ]
+    },
+    {
+      "stage": 2,
+      "name": "databaseVerification",
+      "description": "Query SurrealDB directly to verify user exists",
+      "method": "kubectl exec python query",
+      "validates": [
+        "SELECT query returns user record",
+        "Email matches input",
+        "Password_hash field present",
+        "User_id field present",
+        "Is_active is true"
+      ]
+    },
+    {
+      "stage": 3,
+      "name": "loginEndpoint",
+      "description": "HTTP POST to /auth/login endpoint",
+      "method": "axios.post()",
+      "validates": [
+        "Returns 200 status code",
+        "Response contains JWT token",
+        "Response contains user object",
+        "User email matches",
+        "Response contains organizations array"
+      ]
+    },
+    {
+      "stage": 4,
+      "name": "jwtValidation",
+      "description": "Decode and validate JWT token structure",
+      "method": "jwt.decode()",
+      "validates": [
+        "Token can be decoded",
+        "Contains user_id field",
+        "Contains email field",
+        "Contains org_id field",
+        "Contains role field",
+        "Contains exp (expiration) field",
+        "Email matches input",
+        "Token not expired"
+      ]
+    },
+    {
+      "stage": 5,
+      "name": "protectedRoute",
+      "description": "Access protected /cloud/activity route with JWT",
+      "method": "axios.get() with Authorization header",
+      "validates": [
+        "Returns 200 status code (not 401)",
+        "Activity data returned",
+        "JWT authentication succeeds"
+      ]
+    },
+    {
+      "stage": 6,
+      "name": "playwrightE2E",
+      "description": "End-to-end browser test with Playwright",
+      "method": "Playwright automated browser",
+      "validates": [
+        "Login form loads",
+        "Form submission works",
+        "Redirect to dashboard succeeds",
+        "Activity page loads",
+        "Activity table present",
+        "Screenshot captured"
+      ]
+    }
+  ],
+  "usage": {
+    "install": "cd tests/validation-harnesses && npm install",
+    "runSingle": "npm run test:auth",
+    "runDirect": "ts-node user-authentication-login-flow-fix-harness.ts",
+    "runWithCase": "ts-node user-authentication-login-flow-fix-harness.ts --case 1"
+  },
+  "requirements": {
+    "kubernetes": {
+      "namespace": "metabob",
+      "services": [
+        "metabob-rpc-api",
+        "metabob-dashboard",
+        "surrealdb"
+      ],
+      "access": "kubectl configured with cluster access"
+    },
+    "network": {
+      "rpcApi": "http://localhost:8080 or cluster service",
+      "dashboard": "http://devbob.metabob.local",
+      "portForwards": "kubectl port-forward -n metabob svc/metabob-rpc-api 8080:8080"
+    },
+    "runtime": {
+      "node": "18+",
+      "npm": "latest",
+      "playwright": "browsers installed"
+    }
+  },
+  "successCriteria": {
+    "allStages": "All 6 stages must pass",
+    "userCreation": "User persisted to database",
+    "login": "Returns 200 with JWT token",
+    "jwt": "Token contains required fields and not expired",
+    "protectedRoute": "JWT grants access to protected routes",
+    "e2e": "Full browser flow works end-to-end"
+  },
+  "artifacts": {
+    "screenshots": "screenshots/activity-page-validation.png",
+    "logs": "Console output from each stage",
+    "results": "JSON validation output"
+  }
+}

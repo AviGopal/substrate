@@ -1,0 +1,49 @@
+{
+  "specificationName": "user-authentication-login-flow-fix",
+  "enforcementImpulseId": "enforcement-user-authentication-login-flow-fix",
+  "status": "complete",
+  "changesApplied": [
+    {
+      "file": "scripts/init-surrealdb-devbob-schema-v2.sql",
+      "component": "Database Schema",
+      "changeMade": "Added 4 authentication tables (users, organizations, user_organizations, refresh_tokens) with 24 fields total and 10 indexes. All tables use SCHEMAFULL PERMISSIONS FULL.",
+      "reason": "Schema was missing tables required for user authentication flow. Users created via CLI had nowhere to persist, and login queries returned empty results causing 401 errors. This enforces the specification requirement for proper user persistence and login query support.",
+      "impactAnalysis": "Adds 4 new tables to database. Blast radius: Limited to authentication domain. No impact on existing activity_template or activity_execution tables. Backward compatible. Enables user creation and login flows. All operations now have proper schema validation and indexes for performance."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "component": "login endpoint query result parsing",
+      "changeMade": "Fixed critical bug at line 69 where query result was incorrectly parsed. Replaced `user_data = result[0]` with logic to handle nested SurrealDB result structure: checks for dict with 'result' key (Case 1), list of lists (Case 2), or direct dict (Case 3). Added debug logging for query results.",
+      "reason": "SurrealDB official library returns nested structure [{'result': [...]}] but code was accessing result[0] directly, getting outer dict instead of user record. This caused KeyError on user_data['password_hash'] leading to 401 Unauthorized for all login attempts. This enforces the specification requirement for correct SurrealDB query result handling.",
+      "impactAnalysis": "Fixes critical authentication blocker. Blast radius: Limited to login endpoint. No breaking changes - handles all result format variations. Added 44 lines of parsing logic and logging. Ripple effect: Enables password verification and token generation downstream in the flow."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "component": "login endpoint logging",
+      "changeMade": "Added comprehensive debug logging throughout login flow: email on attempt, query result type/length, parsed user_id, password verification result, success/failure warnings. Uses logger.info for key events, logger.debug for verbose data, logger.warning for failures.",
+      "reason": "Insufficient logging made debugging 401 errors impossible. Need visibility into query results, parsing logic, and password verification to diagnose failures. This enforces the specification requirement for detailed error logging to see exact failure reasons.",
+      "impactAnalysis": "Pure observability improvement. Blast radius: None - no functional changes. Adds 12 log statements. Enables debugging of future authentication issues. No performance impact (logging is async)."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/user_ops.py",
+      "component": "create_user record ID generation",
+      "changeMade": "Changed user_id format from 'user-{uuid.uuid4().hex[:12]}' (hyphens) to 'user_{uuid.uuid4().hex[:12]}' (underscores) at line 52.",
+      "reason": "SurrealDB record IDs with hyphens cause parse errors: 'Parse error: Unexpected token `-`, expected Eof'. Hyphens need special escaping in SurrealDB queries but underscores work natively. This enforces the specification requirement for users to be persisted correctly to SurrealDB.",
+      "impactAnalysis": "Fixes user creation failures. Blast radius: Limited to new user creation. All new users will have underscore IDs. Existing users with hyphen IDs (if any) still work - no migration needed. Ripple effect: Enables downstream login flow once users can be created successfully."
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/user_ops.py",
+      "component": "create_user logging",
+      "changeMade": "Added debug logging for password hash generation (first 20 chars), detailed creation message with user_id/org_id/role, record ID being created, and success/failure result.",
+      "reason": "Need visibility into user creation process to verify password hashing, record ID format, and successful persistence to database. This enforces the specification requirement for detailed error logging during user creation.",
+      "impactAnalysis": "Pure observability improvement. Blast radius: None - no functional changes. Adds 4 log statements. Helps diagnose user creation failures and verify password hashing works correctly."
+    },
+    {
+      "file": "apply-auth-schema.sh",
+      "component": "Schema application script",
+      "changeMade": "Created bash script that copies schema SQL to RPC API pod via kubectl cp, then executes it using Python's get_surreal_client() and db.query(). Includes error handling and table verification.",
+      "reason": "Need automated way to apply schema changes to deployed Kubernetes database without manual SQL execution. This enforces the specification requirement for schema initialization in the deployed environment.",
+      "impactAnalysis": "DevOps automation tool. Blast radius: Limited to schema deployment process. Safe to run multiple times (IF NOT EXISTS guards). No runtime impact on application code. Enables repeatable schema updates."
+    }
+  ]
+}
