@@ -1,0 +1,117 @@
+{
+  "specificationName": "Template Loading Persistence and Serialization",
+  "harnessFile": "tests/validation-harnesses/template-loading-persistence-serialization-harness.ts",
+  "testCases": [
+    {
+      "impulseId": "validation-template-loading-persistence-serialization-case-1",
+      "name": "Redis Cache Clear Recovery",
+      "input": {
+        "action": "clearRedisAndQueryAPI",
+        "rpcApiUrl": "http://localhost:8000",
+        "namespace": "metabob",
+        "limit": 50
+      },
+      "expectedOutput": {
+        "redisCleared": true,
+        "templateCount": ">=27",
+        "traceEnforceValidateLoopPresent": true,
+        "no500Errors": true,
+        "logsShowSurrealDBQueries": true
+      }
+    },
+    {
+      "impulseId": "validation-template-loading-persistence-serialization-case-2",
+      "name": "Template Count Verification",
+      "input": {
+        "action": "queryTemplatesAPI",
+        "endpoint": "/v2/activities/templates?limit=50",
+        "method": "GET"
+      },
+      "expectedOutput": {
+        "statusCode": 200,
+        "templateCountMin": 27,
+        "allTemplatesHaveVariantId": true,
+        "noRecordIDErrors": true
+      }
+    },
+    {
+      "impulseId": "validation-template-loading-persistence-serialization-case-3",
+      "name": "trace-enforce-validate-loop Template Presence",
+      "input": {
+        "action": "checkSpecificTemplate",
+        "variantId": "trace_enforce_validate_loop_99b07520",
+        "alternativeNames": ["trace-enforce-validate-loop"]
+      },
+      "expectedOutput": {
+        "templateFound": true,
+        "variantIdMatches": true,
+        "templateLoadable": true
+      }
+    },
+    {
+      "impulseId": "validation-template-loading-persistence-serialization-case-4",
+      "name": "Pod Logs Show SurrealDB Queries",
+      "input": {
+        "action": "checkPodLogs",
+        "namespace": "metabob",
+        "podLabel": "app=rpc-api",
+        "searchPatterns": ["SurrealDB", "activity_template", "Template list cache miss"]
+      },
+      "expectedOutput": {
+        "logsFound": true,
+        "patternsMatched": ">=1",
+        "cacheMissLogPresent": true
+      }
+    },
+    {
+      "impulseId": "validation-template-loading-persistence-serialization-case-5",
+      "name": "Pod Restart Resilience",
+      "input": {
+        "action": "restartPodAndVerify",
+        "namespace": "metabob",
+        "podLabel": "app=rpc-api",
+        "waitTimeSeconds": 10
+      },
+      "expectedOutput": {
+        "podRestarted": true,
+        "templatesLoadAfterRestart": true,
+        "templateCountAfterRestart": ">=27",
+        "traceTemplateStillPresent": true
+      }
+    }
+  ],
+  "harnessImpulseId": "harness-template-loading-persistence-serialization",
+  "metadata": {
+    "totalTestCases": 5,
+    "budget": 10000,
+    "validationType": "external-api-and-kubernetes",
+    "requiresKubectl": true,
+    "requiresAPIAccess": true,
+    "canRunWithoutLLM": true,
+    "historical": true
+  },
+  "executionInstructions": {
+    "cli": "ts-node tests/validation-harnesses/template-loading-persistence-serialization-harness.ts",
+    "environmentVariables": {
+      "RPC_API_URL": "http://localhost:8000",
+      "K8S_NAMESPACE": "metabob",
+      "KUBECTL_CONTEXT": "optional-context-name",
+      "POD_NAME": "rpc-api"
+    },
+    "requirements": [
+      "kubectl access to metabob namespace",
+      "RPC API accessibility (network access)",
+      "Node.js with TypeScript support",
+      "Redis must be running (redis-master-0 pod)"
+    ]
+  },
+  "validatedBehaviors": [
+    "Templates persist in SurrealDB with SCHEMALESS schema",
+    "RecordID serialization prevents 500 errors",
+    "Templates load from SurrealDB after Redis clear (cache-aside pattern)",
+    "27+ templates available in production",
+    "trace-enforce-validate-loop template retrievable by variant_id",
+    "Templates survive pod restarts",
+    "Pod logs show successful SurrealDB queries"
+  ]
+}
