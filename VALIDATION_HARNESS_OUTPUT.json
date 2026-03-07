@@ -1,54 +1,99 @@
 {
-  "specificationName": "Correct MCP Tool Name and Parameters",
-  "harnessFile": "tests/validation-harnesses/mcp-tool-name-parameters-harness.ts",
+  "specificationName": "template-loading-persistence",
+  "harnessFile": "tests/validation-harnesses/template-loading-persistence-harness.ts",
+  "harnessImpulseId": "harness-template-loading-persistence",
+  "validationStrategy": "Clear Redis, query API, verify templates returned",
   "testCases": [
     {
-      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-1",
+      "impulseId": "validation-template-loading-persistence-case-1",
+      "name": "Basic Template Persistence",
       "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
-        "check": "Tool name in callMCPTool invocation"
+        "templateName": "Test Template Persistence",
+        "templateCategory": "feature",
+        "rpcApiUrl": "http://localhost:8000"
       },
       "expectedOutput": {
-        "toolName": "metabob_post_activity_result",
-        "hasPrefix": true,
-        "format": "metabob_* naming convention"
+        "templateCreated": true,
+        "existsInSurrealDB": true,
+        "existsInRedisBeforeClear": true,
+        "redisCleared": true,
+        "loadedAfterClear": true,
+        "existsInRedisAfterClear": true,
+        "cacheRepopulated": true
       }
     },
     {
-      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-2",
+      "impulseId": "validation-template-loading-persistence-case-2",
+      "name": "TTL Expiration Recovery",
       "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
-        "check": "Parameter name in callMCPTool arguments"
+        "templateName": "Test Template TTL Expiration",
+        "templateCategory": "bugfix",
+        "rpcApiUrl": "http://localhost:8000"
       },
       "expectedOutput": {
-        "parameterName": "activity_id",
-        "format": "snake_case (not camelCase)",
-        "mapsTo": "data.activity_id"
+        "templateCreated": true,
+        "existsInSurrealDB": true,
+        "existsInRedisBeforeClear": true,
+        "redisCleared": true,
+        "loadedAfterClear": true,
+        "existsInRedisAfterClear": true,
+        "cacheRepopulated": true
       }
     },
     {
-      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-3",
+      "impulseId": "validation-template-loading-persistence-case-3",
+      "name": "Multiple Templates Persistence",
       "input": {
-        "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
-        "check": "callMCPTool arguments object"
+        "templateCount": 5,
+        "templateNamePrefix": "Test Template Multi",
+        "templateCategory": "refactor",
+        "rpcApiUrl": "http://localhost:8000"
       },
       "expectedOutput": {
-        "noBackendParameter": true,
-        "validParameters": ["activity_id", "result"]
-      }
-    },
-    {
-      "impulseId": "validation-Correct MCP Tool Name and Parameters-case-4",
-      "input": {
-        "clientFile": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
-        "registryFile": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py"
-      },
-      "expectedOutput": {
-        "clientToolName": "metabob_post_activity_result",
-        "registryToolName": "metabob_post_activity_result",
-        "match": true
+        "allTemplatesCreated": true,
+        "allExistInSurrealDB": true,
+        "allExistInRedisBeforeClear": true,
+        "redisCleared": true,
+        "allLoadedAfterClear": true,
+        "allExistInRedisAfterClear": true,
+        "allCachesRepopulated": true
       }
     }
   ],
-  "harnessImpulseId": "harness-Correct MCP Tool Name and Parameters"
+  "usage": {
+    "cli": "tsx tests/validation-harnesses/template-loading-persistence-harness.ts",
+    "programmatic": "import { runValidation } from './template-loading-persistence-harness'; await runValidation(input);",
+    "cicd": "npm run test:validation:template-persistence || exit 1"
+  },
+  "environmentVariables": {
+    "TEMPLATE_NAME": "Name of test template (default: 'Test Template Persistence')",
+    "TEMPLATE_CATEGORY": "Template category: feature|bugfix|refactor|tool|infrastructure (default: 'feature')",
+    "RPC_API_URL": "RPC API URL (default: 'http://localhost:8000')",
+    "KUBECTL_CONTEXT": "Kubectl context for K8s commands (optional)"
+  },
+  "exitCodes": {
+    "0": "PASS - All checks passed",
+    "1": "FAIL - One or more checks failed"
+  },
+  "validationSteps": [
+    "Create test template via RPC API POST /v2/activities/templates",
+    "Verify template exists in SurrealDB",
+    "Verify template cached in Redis",
+    "Clear Redis cache (FLUSHDB)",
+    "Load template via RPC API GET /v2/activities/templates/{id}",
+    "Verify template loaded successfully (HTTP 200)",
+    "Verify Redis cache repopulated",
+    "Verify logs show cache miss → SurrealDB fallback"
+  ],
+  "prerequisites": {
+    "runtime": ["Node.js v18+", "TypeScript (tsx or ts-node)", "kubectl CLI", "curl"],
+    "k8s": ["redis pod (deployment/redis)", "surrealdb pod (deployment/surreal)", "rpc-api pod (running)"],
+    "network": ["Access to RPC API (HTTP)", "Access to K8s cluster (kubectl)"]
+  },
+  "documentation": {
+    "readme": "tests/validation-harnesses/README.md",
+    "specification": "surrealdb-primary-redis-cache",
+    "traceAnalysis": "TRACE_TEMPLATE_LOADING_PERSISTENCE.md",
+    "enforcementSummary": "ENFORCEMENT_TEMPLATE_LOADING_PERSISTENCE.md"
+  }
 }

@@ -1,182 +1,203 @@
 # Validation Harnesses
 
-LLM-free validation tests for OpenCode implementations. Each harness is a standalone TypeScript module that can run validation without requiring LLM calls.
+Automated validation scripts for testing specifications without LLM involvement.
 
-## Purpose
+## Template Loading Persistence Harness
 
-These harnesses enable:
-- **Regression Testing**: Run tests after code changes to verify nothing broke
-- **CI/CD Integration**: Automated testing in pipelines
-- **Performance Testing**: Measure execution time and resource usage
-- **Historical Validation**: Test cases stored as impulses can be replayed anytime
+**Specification**: `template-loading-persistence`
 
-## Structure
+**File**: `template-loading-persistence-harness.ts`
 
-Each harness follows this pattern:
+**Purpose**: Validates that activity templates persist in SurrealDB and are accessible after Redis cache is cleared.
+
+### Validation Strategy
+
+1. Create test template (writes to SurrealDB + Redis cache)
+2. Verify template exists in both SurrealDB and Redis
+3. Clear Redis cache (FLUSHDB)
+4. Query template via API (should load from SurrealDB)
+5. Verify template returned successfully
+6. Verify Redis cache repopulated automatically
+
+### Usage
+
+#### CLI (Standalone)
+
+```bash
+# Run with default settings
+tsx tests/validation-harnesses/template-loading-persistence-harness.ts
+
+# Run with custom template name
+TEMPLATE_NAME="My Test Template" tsx tests/validation-harnesses/template-loading-persistence-harness.ts
+
+# Run with custom RPC API URL
+RPC_API_URL="http://metabob-rpc-api:8000" tsx tests/validation-harnesses/template-loading-persistence-harness.ts
+
+# Run with kubectl context
+KUBECTL_CONTEXT="my-k8s-context" tsx tests/validation-harnesses/template-loading-persistence-harness.ts
+```
+
+#### Programmatic (Node.js)
 
 ```typescript
-export async function runValidation(input: ValidationInput): Promise<ValidationOutput> {
-  // 1. Load application/component
-  // 2. Feed in test inputs
-  // 3. Capture actual outputs
-  // 4. Compare against expected outputs
-  // 5. Return PASS/FAIL
+import { runValidation } from './template-loading-persistence-harness';
+
+const input = {
+  templateName: 'Test Template Persistence',
+  templateCategory: 'feature',
+  rpcApiUrl: 'http://localhost:8000',
+  kubectlContext: undefined,
+};
+
+const result = await runValidation(input);
+
+if (result.pass) {
+  console.log('✅ PASS:', result.details);
+} else {
+  console.log('❌ FAIL:', result.details);
+  console.log('Errors:', result.errors);
 }
 ```
 
-## Available Harnesses
+#### CI/CD Integration
 
-### user-authentication-login-flow-fix-harness.ts
-
-**Purpose**: Validates end-to-end authentication flow from user creation to dashboard access.
-
-**Stages**:
-1. User creation via CLI
-2. Database verification (SurrealDB query)
-3. Login endpoint validation (HTTP POST)
-4. JWT token validation
-5. Protected route access (/cloud/activity)
-6. Playwright end-to-end test
-
-**Usage**:
 ```bash
-# Install dependencies
-npm install
-
-# Run validation
-npm run test:auth
+# Add to CI pipeline
+npm run test:validation:template-persistence
 
 # Or directly
-ts-node user-authentication-login-flow-fix-harness.ts
+tsx tests/validation-harnesses/template-loading-persistence-harness.ts || exit 1
 ```
 
-**Test Cases**:
-- Case 1: Standard user login flow (demo@metabob.com)
-- Case 2: Member role user login
-- Case 3: Invalid password rejection (401 expected)
-- Case 4: Non-existent user rejection (401 expected)
+### Environment Variables
 
-**Expected Output**:
-```
-=== VALIDATION RESULTS ===
-Overall: PASS ✅
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TEMPLATE_NAME` | Name of test template | `Test Template Persistence` |
+| `TEMPLATE_CATEGORY` | Template category | `feature` |
+| `RPC_API_URL` | RPC API URL | `http://localhost:8000` |
+| `KUBECTL_CONTEXT` | Kubectl context | (none) |
 
-Stage Results:
-  userCreation: PASS ✅ - User created successfully
-  databaseVerification: PASS ✅ - User found in database
-  loginEndpoint: PASS ✅ - Login endpoint returned valid response
-  jwtValidation: PASS ✅ - JWT token structure valid
-  protectedRoute: PASS ✅ - Protected route accessible with JWT
-  playwrightE2E: PASS ✅ - Playwright E2E test passed
-```
-
-## Environment Setup
-
-### Prerequisites
-
-1. **Kubernetes cluster** with deployed services:
-   - metabob-rpc-api (namespace: metabob)
-   - metabob-dashboard (accessible at devbob.metabob.local)
-   - SurrealDB (accessible via rpc-api pod)
-
-2. **kubectl** configured with access to cluster
-
-3. **Node.js** 18+ with npm
-
-4. **Port forwards** (if running locally):
-   ```bash
-   kubectl port-forward -n metabob svc/metabob-rpc-api 8080:8080
-   ```
-
-### Configuration
-
-Test cases are defined in `user-authentication-login-flow-fix-test-cases.json`. Update URLs and namespace as needed:
+### Output Format
 
 ```json
 {
-  "rpcApiUrl": "http://localhost:8080",
-  "dashboardUrl": "http://devbob.metabob.local",
-  "namespace": "metabob"
+  "pass": true,
+  "actual": {
+    "templateCreated": true,
+    "existsInSurrealDB": true,
+    "existsInRedisBeforeClear": true,
+    "redisCleared": true,
+    "loadedAfterClear": true,
+    "existsInRedisAfterClear": true,
+    "cacheRepopulated": true
+  },
+  "expected": {
+    "templateCreated": true,
+    "existsInSurrealDB": true,
+    "existsInRedisBeforeClear": true,
+    "redisCleared": true,
+    "loadedAfterClear": true,
+    "existsInRedisAfterClear": true,
+    "cacheRepopulated": true
+  },
+  "details": "✅ PASS: Template loading persistence validated successfully."
 }
 ```
 
-## Impulse Integration
+### Exit Codes
 
-Test cases are stored as impulses for historical validation:
+- `0`: All checks passed (PASS)
+- `1`: One or more checks failed (FAIL)
 
-```typescript
-// Load impulse
-const impulse = await impulseManager.get('validation-user-authentication-login-flow-fix-case-1');
-const testCase = impulse.pointer.content;
+### Prerequisites
 
-// Run validation
-const result = await runValidation(testCase.input);
+1. **Runtime Dependencies**:
+   - Node.js (v18+)
+   - TypeScript (`tsx` or `ts-node`)
+   - `kubectl` CLI (for K8s access)
+   - `curl` (for HTTP requests)
 
-// Compare
-assert(result.pass === testCase.expectedOutput.allStagesPassed);
+2. **K8s Resources**:
+   - Redis pod (`deployment/redis`)
+   - SurrealDB pod (`deployment/surreal`)
+   - RPC API pod (running and accessible)
+
+3. **Network Access**:
+   - Access to RPC API (HTTP)
+   - Access to K8s cluster (kubectl)
+
+### Test Cases
+
+Test cases are stored as impulses in `impulses/` directory:
+
+1. **Case 1: Basic Template Persistence** (`validation-template-loading-persistence-case-1.json`)
+   - Single template
+   - Basic cache clear → load → verify flow
+
+2. **Case 2: TTL Expiration Recovery** (`validation-template-loading-persistence-case-2.json`)
+   - Template with TTL expiration
+   - Manual cache key deletion
+   - Automatic refresh from SurrealDB
+
+3. **Case 3: Multiple Templates Persistence** (`validation-template-loading-persistence-case-3.json`)
+   - 5 templates
+   - Bulk cache clear
+   - Verify all templates load correctly
+
+### Troubleshooting
+
+#### Template Creation Fails
+
+```bash
+# Check RPC API health
+kubectl logs -l app=rpc-api --tail=50
+
+# Verify RPC API is accessible
+curl http://localhost:8000/
 ```
 
-## CI/CD Integration
+#### SurrealDB Check Fails
 
-Add to your pipeline:
+```bash
+# Check SurrealDB pod
+kubectl get pods | grep surreal
 
-```yaml
-test:
-  script:
-    - cd tests/validation-harnesses
-    - npm install
-    - npm run test:auth
-  artifacts:
-    when: always
-    paths:
-      - screenshots/
-    reports:
-      junit: test-results.xml
+# Verify SurrealDB connectivity
+kubectl exec -it deployment/surreal -- surreal sql \
+  --conn http://localhost:8000 \
+  --user root --pass root \
+  --ns test --db test \
+  "INFO FOR DB"
 ```
 
-## Troubleshooting
+#### Redis Check Fails
 
-### "Pod not found" error
-- Check namespace is correct
-- Verify pod is running: `kubectl get pods -n metabob`
-- Update pod name pattern in harness if deployment changed
+```bash
+# Check Redis pod
+kubectl get pods | grep redis
 
-### "Connection refused" on localhost:8080
-- Ensure port-forward is active
-- Or update rpcApiUrl to use cluster service name
+# Verify Redis connectivity
+kubectl exec -it deployment/redis -- redis-cli PING
+```
 
-### "User already exists" error
-- Delete test users between runs:
-  ```bash
-  kubectl exec -n metabob metabob-rpc-api-XXX -- python -c "
-  import asyncio
-  from server.db.surrealdb_client import get_surreal_client
-  db = asyncio.run(get_surreal_client())
-  asyncio.run(db.query('DELETE FROM users WHERE email = \"validation-test@metabob.com\"'))
-  "
-  ```
+#### Cache Clear Fails
 
-### Playwright browser launch fails
-- Install Playwright browsers: `npx playwright install`
-- Run in headless mode (default)
-- Check dashboard URL is accessible
+```bash
+# Manually clear Redis
+kubectl exec -it deployment/redis -- redis-cli FLUSHDB
 
-## Best Practices
+# Verify cache is empty
+kubectl exec -it deployment/redis -- redis-cli DBSIZE
+```
 
-1. **Idempotent tests**: Each run should clean up after itself
-2. **Isolated test data**: Use unique emails/IDs per test case
-3. **Fail fast**: Stop at first failure for faster feedback
-4. **Comprehensive logging**: Log each stage result for debugging
-5. **Screenshot on failure**: Capture UI state when Playwright tests fail
+### Related Documentation
 
-## Adding New Harnesses
+- **Specification**: `surrealdb-primary-redis-cache`
+- **Trace Analysis**: `TRACE_TEMPLATE_LOADING_PERSISTENCE.md`
+- **Enforcement Summary**: `ENFORCEMENT_TEMPLATE_LOADING_PERSISTENCE.md`
+- **Impulses**:
+  - `trace-template-loading-persistence`
+  - `enforcement-template-loading-persistence`
+  - `harness-template-loading-persistence`
 
-1. Create new harness file: `my-feature-harness.ts`
-2. Implement `runValidation(input): Promise<ValidationOutput>`
-3. Define test cases in `my-feature-test-cases.json`
-4. Add to `package.json` scripts
-5. Document in this README
-
-## License
-
-MIT
