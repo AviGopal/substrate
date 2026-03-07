@@ -1,173 +1,59 @@
 {
-  "specificationName": "dashboard-activity-history-viewing-flow",
-  "validationTimestamp": "2026-03-05T03:40:00Z",
+  "specificationName": "Activity Execution Recording to Backend",
   "validationResults": [
     {
-      "testCase": "validation-dashboard-activity-history-viewing-flow-case-1",
-      "name": "Basic Dashboard Access and Navigation",
-      "status": "PARTIAL_PASS",
-      "checksPerformed": {
-        "kubernetesContext": {
-          "status": "PASS",
-          "actual": "docker-desktop",
-          "expected": "docker-desktop",
-          "details": "Kubernetes context verified correctly"
-        },
-        "servicesRunning": {
-          "status": "PASS",
-          "actual": ["metabob-dashboard (10.107.102.176:80)", "metabob-rpc-api (10.102.45.87:8080)", "surrealdb (10.106.164.246:8000)"],
-          "expected": ["metabob-dashboard", "metabob-rpc-api", "surrealdb"],
-          "details": "All required services are running"
-        },
-        "podsHealthy": {
-          "status": "PASS",
-          "actual": {
-            "metabob-dashboard": "Running (1/1)",
-            "metabob-rpc-api": "Running (1/1)",
-            "surrealdb": "Running (1/1)"
-          },
-          "expected": "All pods Running",
-          "details": "All pods are healthy and running"
-        },
-        "dnsConfiguration": {
-          "status": "PASS",
-          "actual": "127.0.0.1 app.metabob.local configured in /etc/hosts",
-          "expected": "/etc/hosts entry for app.metabob.local",
-          "details": "DNS configuration correct"
-        },
-        "dashboardAccessible": {
-          "status": "PASS",
-          "actual": "HTTP 200 response from http://app.metabob.local",
-          "expected": "Dashboard accessible",
-          "details": "Dashboard is reachable and responding"
-        },
-        "analyticsEndpoints": {
-          "status": "FAIL",
-          "actual": "404 Not Found from /analytics/templates",
-          "expected": "200 OK with template data",
-          "details": "Analytics router not deployed yet - code changes not in running deployment",
-          "blocker": true
-        },
-        "playwrightAutomation": {
-          "status": "BLOCKED",
-          "actual": "Playwright browsers not installed",
-          "expected": "Browser automation functional",
-          "details": "Cannot run browser automation without Playwright browsers installed",
-          "remediation": "Run: npx playwright install"
-        }
-      },
-      "overallStatus": "FAIL",
-      "reason": "Analytics endpoints not deployed, Playwright browsers not installed",
-      "blockers": [
-        "Analytics router implementation needs to be deployed to kubernetes",
-        "Playwright browsers need to be installed for browser automation"
-      ]
-    },
-    {
-      "testCase": "validation-dashboard-activity-history-viewing-flow-case-2",
-      "name": "Complete Data Flow Verification",
-      "status": "FAIL",
-      "checksPerformed": {
-        "dataWritePath": {
-          "status": "UNKNOWN",
-          "actual": "Cannot verify - SurrealDB query failed",
-          "expected": "Activity executions exist in SurrealDB",
-          "details": "SurrealDB CLI not available in pod"
-        },
-        "analyticsAggregation": {
-          "status": "FAIL",
-          "actual": "404 Not Found from analytics endpoints",
-          "expected": "Aggregated data from SurrealDB",
-          "details": "Analytics router not deployed"
-        },
-        "dashboardDisplay": {
-          "status": "BLOCKED",
-          "actual": "Cannot verify without Playwright",
-          "expected": "Activity data visible in dashboard UI",
-          "details": "Browser automation not functional"
-        }
-      },
-      "overallStatus": "FAIL",
-      "reason": "Data flow cannot be verified - missing analytics endpoints and browser automation",
-      "blockers": [
-        "Analytics router not deployed",
-        "Playwright browsers not installed"
-      ]
-    },
-    {
-      "testCase": "validation-dashboard-activity-history-viewing-flow-case-3",
-      "name": "Kubernetes Infrastructure Validation",
+      "testCase": "validation-activity-execution-recording-case-3",
       "status": "PASS",
-      "checksPerformed": {
-        "kubernetesContext": {
-          "status": "PASS",
-          "actual": "docker-desktop",
-          "expected": "docker-desktop"
-        },
-        "namespaceExists": {
-          "status": "PASS",
-          "actual": "metabob namespace exists",
-          "expected": "metabob namespace"
-        },
-        "servicesDeployed": {
-          "status": "PASS",
-          "actual": ["metabob-dashboard", "metabob-rpc-api", "surrealdb"],
-          "expected": ["metabob-dashboard", "metabob-rpc-api", "surrealdb"]
-        },
-        "podsRunning": {
-          "status": "PASS",
-          "actual": "3/3 pods Running",
-          "expected": "All pods Running"
-        },
-        "ingressConfigured": {
-          "status": "PASS",
-          "actual": "app.metabob.local accessible (HTTP 200)",
-          "expected": "Dashboard accessible via ingress"
-        }
+      "actual": {
+        "directHttpFound": false,
+        "usesMcpClient": true,
+        "removalDocumented": true
       },
-      "overallStatus": "PASS",
-      "reason": "Kubernetes infrastructure is correctly configured"
+      "expected": {
+        "directHttpFound": false,
+        "usesMcpClient": true,
+        "removalDocumented": true
+      },
+      "details": "Static analysis passed: MCP-only path enforced, no direct HTTP calls found in activity.ts"
+    },
+    {
+      "testCase": "validation-activity-execution-recording-backend-deprecation",
+      "status": "PASS",
+      "actual": {
+        "endpointDeprecated": true,
+        "hasDeprecationNotice": true
+      },
+      "expected": {
+        "endpointDeprecated": true,
+        "hasDeprecationNotice": true
+      },
+      "details": "Backend endpoint /v2/activities/executions correctly marked as deprecated with migration notice"
+    },
+    {
+      "testCase": "validation-activity-execution-recording-architectural-compliance",
+      "status": "PASS",
+      "actual": {
+        "failUsesMcp": true,
+        "failMcpUsageCount": 1,
+        "hasFetchCalls": false,
+        "fetchCallCount": 0,
+        "mcpBoundaryEnforced": true
+      },
+      "expected": {
+        "failUsesMcp": true,
+        "hasFetchCalls": false,
+        "mcpBoundaryEnforced": true
+      },
+      "details": "Architectural compliance verified: Activity.fail() uses MCP path (1 usage), no fetch() calls in activity.ts (0 calls), MCP boundary enforced"
     }
   ],
-  "overallStatus": "FAIL",
+  "overallStatus": "PASS",
   "summary": {
     "totalTests": 3,
-    "passed": 1,
-    "failed": 2,
-    "passRate": "33%"
+    "passed": 3,
+    "failed": 0
   },
-  "infrastructureStatus": {
-    "kubernetes": "READY",
-    "services": "READY",
-    "dashboard": "ACCESSIBLE",
-    "analyticsAPI": "NOT_DEPLOYED",
-    "browserAutomation": "NOT_AVAILABLE"
-  },
-  "nextSteps": [
-    {
-      "priority": "HIGH",
-      "step": "Deploy updated metabob-rpc-api with analytics router",
-      "command": "docker build -t metabob-rpc-api:analytics repos/metabob-rpc-api && docker push ... && kubectl rollout restart deployment/metabob-rpc-api -n metabob",
-      "reason": "Analytics endpoints are the core of the specification and must be deployed"
-    },
-    {
-      "priority": "MEDIUM",
-      "step": "Install Playwright browsers",
-      "command": "npx playwright install",
-      "reason": "Required for browser automation and screenshot capture"
-    },
-    {
-      "priority": "LOW",
-      "step": "Verify SurrealDB activity execution data",
-      "command": "kubectl exec -n metabob surrealdb-pod -- surreal sql ... 'SELECT * FROM activity_executions LIMIT 5'",
-      "reason": "Confirm data exists for dashboard to display"
-    },
-    {
-      "priority": "LOW",
-      "step": "Re-run validation harness after deployment",
-      "command": "npx ts-node tests/validation-harnesses/dashboard-activity-history-viewing-flow-harness.ts",
-      "reason": "Verify complete end-to-end flow once blockers are resolved"
-    }
-  ],
-  "resultsImpulseId": "validation-results-dashboard-activity-history-viewing-flow"
+  "resultsImpulseId": "validation-results-activity-execution-recording-to-backend",
+  "validationDate": "2026-03-07",
+  "enforcementVerified": true
 }

@@ -1,19 +1,30 @@
-# Activity Execution Recording and Metrics Feedback Loop - Trace Analysis
+# Activity Execution Recording to Backend - Trace Analysis (Updated)
 
-**Specification ID:** Activity Execution Recording and Metrics Feedback Loop  
-**Status:** ❌ NOT IMPLEMENTED  
-**Impact:** HIGH - Learning system completely non-functional  
-**Traced:** 2026-03-02
+**Specification**: Activity Execution Recording to Backend  
+**Status**: ⚠️ PARTIALLY IMPLEMENTED WITH ARCHITECTURAL VIOLATION  
+**Impact**: CRITICAL - Dual write paths break single source of truth  
+**Traced**: 2026-03-07 (Updated from 2026-03-02)
 
 ---
 
 ## Executive Summary
 
-**ROOT CAUSE:** opencode calls non-existent MCP tool `metabob_post_activity_result` instead of directly POSTing to backend API endpoint
+**CRITICAL FINDING:** OpenCode CLI has TWO CONFLICTING paths for recording activity executions:
 
-**CURRENT STATE:** Activity executions complete successfully but execution data is **never recorded to the database**. All template metrics remain at 0 executions, preventing the learning system from functioning.
+1. **CORRECT PATH (MCP-based)**: 
+   - Activity.complete() → TemplateMetricsClient.reportExecution()
+   - → MCP tool 'metabob_post_activity_result'
+   - → metabob-cli → POST /api/v1/learning-loop/executions
+   - → SurrealDB
 
-**KEY FINDING:** The backend infrastructure is **100% ready** (activity_execution table, insert_execution operation, POST /api/v1/learning-loop/executions endpoint, metrics aggregation). The problem is a **missing link** between opencode and the backend.
+2. **VIOLATION PATH (Direct HTTP)**:
+   - Activity.complete() → fetch() at line 1124
+   - → POST /v2/activities/executions [BYPASSES MCP]
+   - → SurrealDB
+
+**ROOT CAUSE:** The direct HTTP POST in activity.ts:1083-1161 bypasses the MCP layer, violating the architectural principle: opencode → MCP → cli → backend. This creates dual-write inconsistency.
+
+**KEY FINDING:** The MCP-based path EXISTS and is CORRECT (TemplateMetricsClient → metabob_post_activity_result → learning-loop API). The direct HTTP path should be REMOVED.
 
 ---
 

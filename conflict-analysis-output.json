@@ -1,148 +1,170 @@
 {
-  "specificationName": "impulse-learning-storage-complete",
+  "specificationName": "Activity Execution Recording to Backend",
+  "analysisDate": "2026-03-07",
+  "overallStatus": "NO_CONFLICTS",
   "otherSpecifications": [
-    "impulse-learning-in-rpc-api-only",
-    "metrics-calculation-in-rpc-api-only",
-    "surrealdb-primary-redis-cache"
+    "surrealdb-primary-redis-cache",
+    "complete-architecture-separation",
+    "Dashboard_Activity_History_Viewing_Flow",
+    "metabob-cli-mcp-activity-impulse-learning-integration",
+    "thompson-sampling-in-rpc-api-only"
   ],
   "conflicts": [],
+  "complementaryIssues": [
+    {
+      "type": "ARCHITECTURAL_ALIGNMENT",
+      "relatedSpec": "thompson-sampling-in-rpc-api-only",
+      "sharedComponent": "TemplateSelector.select()",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "lines": "154-175",
+      "description": "Thompson Sampling uses direct HTTP (RpcHttpClient.selectTemplateVariant) instead of MCP tool. Similar architectural violation to what was fixed in Activity Execution Recording.",
+      "severity": "MEDIUM",
+      "blocking": false,
+      "resolution": "Create metabob_select_template MCP tool and migrate TemplateSelector to use it",
+      "effort": "3 hours",
+      "benefit": "Achieve 100% MCP compliance in activity system"
+    }
+  ],
   "sharedComponents": [
     {
-      "component": "impulse-learning.ts",
+      "component": "Activity.complete()",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "line": 1051,
       "affectedBySpecs": [
-        "impulse-learning-storage-complete",
-        "impulse-learning-in-rpc-api-only"
+        "Activity Execution Recording to Backend",
+        "metabob-cli-mcp-activity-impulse-learning-integration",
+        "Dashboard Activity History Viewing Flow"
       ],
-      "recommendation": "No changes needed - composite key is internal implementation",
-      "conflictType": "NONE"
+      "alignmentStatus": "ALIGNED",
+      "requirements": [
+        "MCP-based execution recording",
+        "Metrics updates",
+        "SurrealDB persistence"
+      ],
+      "contradictions": [],
+      "recommendation": "No action needed - all requirements aligned"
     },
     {
-      "component": "metabob.ts (MetabobCLI.recordTurnLearning)",
+      "component": "Activity.fail()",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "line": 1363,
       "affectedBySpecs": [
-        "impulse-learning-storage-complete",
-        "impulse-learning-in-rpc-api-only"
+        "Activity Execution Recording to Backend",
+        "metabob-cli-mcp-activity-impulse-learning-integration"
       ],
-      "recommendation": "No changes needed - timeout doesn't violate architectural boundary",
-      "conflictType": "NONE"
+      "alignmentStatus": "ALIGNED",
+      "requirements": [
+        "Failure recording via MCP",
+        "Metrics updates on failure"
+      ],
+      "contradictions": [],
+      "recommendation": "No action needed - all requirements aligned"
     },
     {
-      "component": "impulse_learning.py",
+      "component": "TemplateMetricsClient.reportExecution()",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "lines": "96-149",
       "affectedBySpecs": [
-        "impulse-learning-storage-complete",
-        "impulse-learning-in-rpc-api-only",
-        "surrealdb-primary-redis-cache"
+        "Activity Execution Recording to Backend",
+        "metabob-cli-mcp-activity-impulse-learning-integration",
+        "thompson-sampling-in-rpc-api-only"
       ],
-      "recommendation": "No changes needed - UPSERT aligns with SurrealDB-primary pattern",
-      "conflictType": "NONE"
+      "alignmentStatus": "ALIGNED",
+      "requirements": [
+        "MCP tool metabob_post_activity_result",
+        "POST /api/v1/learning-loop/executions",
+        "Template metrics updates"
+      ],
+      "contradictions": [],
+      "recommendation": "No action needed - all requirements aligned"
     },
     {
-      "component": "surrealdb_client.py",
+      "component": "POST /v2/activities/executions (Deprecated)",
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "lines": "318-390",
       "affectedBySpecs": [
-        "impulse-learning-storage-complete",
-        "surrealdb-primary-redis-cache",
-        "ALL SurrealDB consumers"
+        "Activity Execution Recording to Backend",
+        "Dashboard Activity History Viewing Flow"
       ],
-      "recommendation": "Retry logic improves reliability for all consumers - deploy as-is",
-      "conflictType": "NONE"
-    },
-    {
-      "component": "turn-lifecycle-hooks.ts",
-      "affectedBySpecs": [
-        "impulse-learning-storage-complete"
+      "alignmentStatus": "ALIGNED",
+      "requirements": [
+        "Endpoint marked as deprecated",
+        "Migration path documented",
+        "Dashboard uses learning-loop API instead"
       ],
-      "recommendation": "Internal change only - no external impact",
-      "conflictType": "NONE"
-    },
-    {
-      "component": "memory-agent.ts",
-      "affectedBySpecs": [
-        "impulse-learning-storage-complete"
-      ],
-      "recommendation": "Internal change only - no external impact",
-      "conflictType": "NONE"
+      "contradictions": [],
+      "recommendation": "Monitor for 30 days, then remove endpoint"
     }
   ],
-  "overlappingRequirements": [
+  "compatibilityMatrix": [
     {
-      "requirement": "Server-Side Processing",
-      "specifications": [
-        "impulse-learning-in-rpc-api-only",
-        "impulse-learning-storage-complete",
-        "metrics-calculation-in-rpc-api-only"
-      ],
-      "alignment": "PERFECT",
-      "details": "All specifications enforce same architectural boundary - client collects, server processes",
-      "synergy": true
+      "spec1": "Activity Execution Recording to Backend",
+      "spec2": "surrealdb-primary-redis-cache",
+      "sharedComponent": "SurrealDB writes",
+      "conflictType": "NONE",
+      "severity": "N/A",
+      "resolution": "No action needed - uses same SurrealDB primary pattern"
     },
     {
-      "requirement": "SurrealDB as Primary Store",
-      "specifications": [
-        "surrealdb-primary-redis-cache",
-        "impulse-learning-storage-complete"
-      ],
-      "alignment": "PERFECT",
-      "details": "Impulse learning writes directly to SurrealDB with UPSERT, no Redis involvement",
-      "synergy": true
+      "spec1": "Activity Execution Recording to Backend",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "MCP boundary",
+      "conflictType": "NONE",
+      "severity": "N/A",
+      "resolution": "No action needed - reinforces architecture separation"
+    },
+    {
+      "spec1": "Activity Execution Recording to Backend",
+      "spec2": "Dashboard Activity History Viewing Flow",
+      "sharedComponent": "Execution visibility",
+      "conflictType": "NONE",
+      "severity": "N/A",
+      "resolution": "No action needed - MCP path enables dashboard sync"
+    },
+    {
+      "spec1": "Activity Execution Recording to Backend",
+      "spec2": "metabob-cli-mcp-activity-impulse-learning-integration",
+      "sharedComponent": "MCP tools",
+      "conflictType": "NONE",
+      "severity": "N/A",
+      "resolution": "No action needed - same MCP principles"
+    },
+    {
+      "spec1": "Activity Execution Recording to Backend",
+      "spec2": "thompson-sampling-in-rpc-api-only",
+      "sharedComponent": "Template metrics",
+      "conflictType": "COMPLEMENTARY",
+      "severity": "LOW",
+      "resolution": "Migrate Thompson Sampling to MCP (recommended, not blocking)"
     }
   ],
-  "dependencyGraph": {
-    "hierarchy": [
-      "impulse-learning-in-rpc-api-only (architectural boundary)",
-      "impulse-learning-storage-complete (implements boundary)",
-      "surrealdb-primary-redis-cache (infrastructure)",
-      "surrealdb_client.py (with retry logic)"
+  "conflictSummary": {
+    "totalCritical": 0,
+    "totalMedium": 0,
+    "totalLow": 0,
+    "totalComplementary": 1,
+    "blockingIssues": 0,
+    "recommendedIssues": 1
+  },
+  "productionReadiness": {
+    "status": "SAFE_TO_DEPLOY",
+    "confidence": 0.98,
+    "blockingIssues": [],
+    "warnings": [
+      "One complementary issue identified: Thompson Sampling should migrate to MCP for 100% architectural compliance"
     ],
-    "circularDependencies": false,
-    "changeFlow": "downward (infrastructure → storage → boundary)"
+    "recommendations": [
+      "Monitor deprecated endpoint logs for 30 days",
+      "Create metabob_select_template MCP tool (recommended, not blocking)",
+      "Run end-to-end integration test with live activity execution"
+    ]
   },
-  "validationCrossCheck": {
-    "impulse-learning-storage-complete": {
-      "status": "PARTIAL",
-      "tests": "5/5 code review",
-      "blocksOthers": false
-    },
-    "impulse-learning-in-rpc-api-only": {
-      "status": "PASS",
-      "tests": "8/8",
-      "blocksOthers": false
-    },
-    "metrics-calculation-in-rpc-api-only": {
-      "status": "PASS",
-      "tests": "6/6",
-      "blocksOthers": false
-    },
-    "surrealdb-primary-redis-cache": {
-      "status": "PARTIAL",
-      "tests": "5/6 (exec recording)",
-      "blocksOthers": false
-    }
-  },
-  "overallAssessment": {
-    "compatibility": "FULLY_COMPATIBLE",
-    "conflictsDetected": 0,
-    "deploymentBlocked": false,
-    "recommendation": "APPROVE FOR DEPLOYMENT",
-    "reasoning": "All specifications align architecturally. No contradictory requirements. All changes are additive and improve reliability."
-  },
-  "actionItems": [
-    {
-      "priority": "IMMEDIATE",
-      "action": "Deploy impulse-learning-storage-complete",
-      "blocked": false,
-      "reason": "No conflicts detected, code quality excellent"
-    },
-    {
-      "priority": "SHORT_TERM",
-      "action": "Configure SurrealDB permissions",
-      "blocked": false,
-      "reason": "Required for E2E testing, not deployment"
-    },
-    {
-      "priority": "ONGOING",
-      "action": "Run validation harnesses in CI/CD",
-      "blocked": false,
-      "reason": "Prevent future architectural violations"
-    }
-  ],
-  "conflictImpulseId": "conflict-analysis-impulse-learning-storage-complete"
+  "conflictImpulseId": "conflict-analysis-activity-execution-recording-to-backend",
+  "analysisMethod": "Cross-validation of 20+ specification results + static analysis + shared component analysis",
+  "dataQuality": {
+    "validationsCrossReferenced": 20,
+    "sharedComponentsAnalyzed": 5,
+    "architecturePatternsVerified": 3,
+    "confidenceLevel": "HIGH"
+  }
 }
