@@ -1,0 +1,234 @@
+{
+  "specificationName": "Template Loading Persistence and Serialization",
+  "analysisDate": "2026-03-07",
+  "otherSpecifications": [
+    "surrealdb-primary-redis-cache",
+    "activity-template-flow-via-mcp-backend",
+    "surrealdb-async-await-deployment"
+  ],
+  "conflictAnalysis": {
+    "overallStatus": "NO CONFLICTS DETECTED",
+    "totalConflicts": 0,
+    "criticalConflicts": 0,
+    "alignedSpecifications": 3,
+    "summary": "Template Loading Persistence and Serialization specification is fully aligned with all related specifications. No contradictory requirements found."
+  },
+  "conflicts": [],
+  "sharedComponents": [
+    {
+      "component": "template_data.py",
+      "filePath": "repos/metabob-rpc-api/server/db/operations/template_data.py",
+      "affectedBySpecs": [
+        "template-loading-persistence-serialization",
+        "surrealdb-primary-redis-cache"
+      ],
+      "requirements": {
+        "template-loading-persistence-serialization": [
+          "SCHEMALESS schema support",
+          "RecordID sanitization via sanitize_record()",
+          "Flat list parsing with version detection",
+          "Write-first to SurrealDB (primary storage)"
+        ],
+        "surrealdb-primary-redis-cache": [
+          "Write to SurrealDB as primary storage",
+          "No Redis handling in database layer (handled by action layer)",
+          "Cache-aside pattern delegated to action layer"
+        ]
+      },
+      "alignment": "FULLY ALIGNED",
+      "status": "✅ NO CONFLICT",
+      "evidence": "Both specifications require the same behavior: SurrealDB write-first, no Redis coupling in database layer, action layer handles caching"
+    },
+    {
+      "component": "activity.py (action layer)",
+      "filePath": "repos/metabob-rpc-api/server/actions/activity.py",
+      "affectedBySpecs": [
+        "template-loading-persistence-serialization",
+        "surrealdb-primary-redis-cache"
+      ],
+      "requirements": {
+        "template-loading-persistence-serialization": [
+          "Cache-aside pattern for reads (Redis → SurrealDB fallback)",
+          "Write-through pattern for writes (SurrealDB → Redis cache)",
+          "Redis cache with TTL=3600s",
+          "Templates survive Redis cache clears"
+        ],
+        "surrealdb-primary-redis-cache": [
+          "Cache-aside pattern for reads",
+          "Write to SurrealDB first, then Redis cache",
+          "Redis cache failures are non-fatal"
+        ]
+      },
+      "alignment": "FULLY ALIGNED",
+      "status": "✅ NO CONFLICT",
+      "evidence": "Both specifications require identical caching patterns. Implementation in list_templates() (lines 154-287) and create_template() (lines 253-401) matches both specs."
+    },
+    {
+      "component": "surrealdb_client.py (sanitize_record)",
+      "filePath": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+      "affectedBySpecs": [
+        "template-loading-persistence-serialization"
+      ],
+      "requirements": {
+        "template-loading-persistence-serialization": [
+          "Convert RecordID objects to strings for JSON serialization",
+          "Recursive sanitization of dicts and lists",
+          "Applied before all API responses"
+        ]
+      },
+      "alignment": "SINGLE OWNER",
+      "status": "✅ NO CONFLICT",
+      "evidence": "Only affected by one specification. No competing requirements."
+    },
+    {
+      "component": "migrate-activity-template-schema.surql",
+      "filePath": "scripts/migrate-activity-template-schema.surql",
+      "affectedBySpecs": [
+        "template-loading-persistence-serialization"
+      ],
+      "requirements": {
+        "template-loading-persistence-serialization": [
+          "SCHEMALESS table structure",
+          "5 indexes (variant_id UNIQUE, activity_id, scope, org_id, created_at)",
+          "Accept all RPC API fields"
+        ]
+      },
+      "alignment": "SINGLE OWNER",
+      "status": "✅ NO CONFLICT",
+      "evidence": "Schema migration only affects template loading. No other specs modify activity_template schema."
+    }
+  ],
+  "complementaryRelationships": [
+    {
+      "spec1": "template-loading-persistence-serialization",
+      "spec2": "surrealdb-primary-redis-cache",
+      "relationship": "COMPLEMENTARY - Same Phase 1 persistence requirement",
+      "description": "Both specifications enforce the same fundamental architecture: SurrealDB as primary storage, Redis as cache. template-loading-persistence-serialization focuses on template-specific concerns (RecordID serialization, flat list parsing), while surrealdb-primary-redis-cache defines the general caching pattern.",
+      "synergy": "Implementation of template-loading-persistence-serialization automatically satisfies surrealdb-primary-redis-cache requirements for template storage."
+    },
+    {
+      "spec1": "template-loading-persistence-serialization",
+      "spec2": "activity-template-flow-via-mcp-backend",
+      "relationship": "COMPLEMENTARY - Transport layer vs storage layer",
+      "description": "activity-template-flow-via-mcp-backend defines how templates flow from OpenCode CLI → MCP Transport → RPC API. template-loading-persistence-serialization defines what happens inside RPC API (SurrealDB storage + Redis caching).",
+      "synergy": "No overlap - clean separation of concerns. MCP transport layer is agnostic to storage implementation."
+    },
+    {
+      "spec1": "template-loading-persistence-serialization",
+      "spec2": "surrealdb-async-await-deployment",
+      "relationship": "ORTHOGONAL - Deployment vs functionality",
+      "description": "surrealdb-async-await-deployment focuses on deployment strategy (async/await syntax, Kubernetes manifests). template-loading-persistence-serialization focuses on template storage functionality.",
+      "synergy": "Independent concerns - deployment changes don't affect storage logic, storage logic doesn't affect deployment"
+    }
+  ],
+  "validationCrossCheck": {
+    "template-loading-persistence-serialization": {
+      "status": "PASS (4/5 tests)",
+      "criticalBehaviors": [
+        "✅ Templates persist in SurrealDB",
+        "✅ RecordID serialization works",
+        "✅ Templates survive Redis clears",
+        "✅ 27+ templates load successfully"
+      ]
+    },
+    "surrealdb-primary-redis-cache": {
+      "status": "PARTIALLY COMPLIANT (75%)",
+      "criticalBehaviors": [
+        "✅ Template storage follows SurrealDB-first pattern",
+        "✅ Cache-aside pattern implemented",
+        "⚠️  Some violations in metrics_aggregator.py (not template-related)"
+      ],
+      "note": "Template-related code is 100% compliant. Violations are in other domains (metrics aggregation)."
+    }
+  },
+  "potentialRisks": [
+    {
+      "risk": "Schema Migration Rollback",
+      "severity": "LOW",
+      "description": "If SCHEMALESS migration needs to be rolled back, templates would lose data (variant_id, task_steps, etc.)",
+      "mitigation": "SCHEMALESS migration is committed (629f441) and validated in production. No rollback needed.",
+      "status": "MITIGATED"
+    },
+    {
+      "risk": "RecordID Format Change",
+      "severity": "LOW",
+      "description": "If surrealdb-py library changes RecordID format, sanitize_record() might need updates",
+      "mitigation": "sanitize_record() uses isinstance(RecordID) check which is version-agnostic. Handles any RecordID format.",
+      "status": "MITIGATED"
+    },
+    {
+      "risk": "Flat List Parsing Version Detection Failure",
+      "severity": "LOW",
+      "description": "If surrealdb-py introduces a new result format, version detection might fail",
+      "mitigation": "Version detection is defensive: checks isinstance(result[0], list). Falls back gracefully to flat list format.",
+      "status": "MITIGATED"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "NONE REQUIRED",
+      "recommendation": "✅ No conflicts detected - all specifications are aligned",
+      "reasoning": "Comprehensive analysis shows zero conflicts between template-loading-persistence-serialization and related specifications"
+    },
+    {
+      "priority": "LOW",
+      "category": "FUTURE ENHANCEMENT",
+      "recommendation": "Consider registering trace-enforce-validate-loop template for completeness",
+      "reasoning": "Validation case 3 was skipped because this template doesn't exist. Not critical but would enable full validation."
+    },
+    {
+      "priority": "LOW",
+      "category": "MONITORING",
+      "recommendation": "Monitor surrealdb-py library updates for result format changes",
+      "reasoning": "Flat list parsing includes version detection, but monitoring library changes proactively is good practice"
+    }
+  ],
+  "impactAnalysis": {
+    "filesModified": 2,
+    "filesAnalyzed": 7,
+    "specsAnalyzed": 3,
+    "conflictsFound": 0,
+    "sharedComponentsCount": 4,
+    "modifiedComponents": [
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/template_data.py",
+        "changes": [
+          "Added sanitize_record() calls (lines 90, 189, 192)",
+          "Added flat list parsing with version detection (lines 186-192)",
+          "Enhanced debug logging (lines 151-179)"
+        ],
+        "impactedSpecs": [
+          "template-loading-persistence-serialization",
+          "surrealdb-primary-redis-cache"
+        ],
+        "impactLevel": "LOW - Changes are additive, no breaking changes"
+      },
+      {
+        "file": "scripts/migrate-activity-template-schema.surql",
+        "changes": [
+          "Changed from SCHEMAFULL to SCHEMALESS",
+          "Removed field constraints (id, name, category)",
+          "Added 5 indexes for performance"
+        ],
+        "impactedSpecs": [
+          "template-loading-persistence-serialization"
+        ],
+        "impactLevel": "MEDIUM - Schema change, but backward compatible (SCHEMALESS accepts all fields)"
+      }
+    ]
+  },
+  "cpgAnalysisRequested": false,
+  "cpgAnalysisReason": "No conflicts detected, no need for Metabob CPG analysis. Code analysis and git history provide sufficient evidence of alignment.",
+  "conflictImpulseId": "conflict-analysis-template-loading-persistence-serialization",
+  "metadata": {
+    "analysisMethod": "cross-specification-comparison",
+    "evidenceSources": [
+      "TRACE_TEMPLATE_LOADING_PERSISTENCE_SERIALIZATION.json",
+      "TRACE_surrealdb-primary-redis-cache.json",
+      "VALIDATION_RESULTS_TEMPLATE_LOADING_PERSISTENCE_SERIALIZATION.json",
+      "Git commits: 629f441, 683b9e2, 55e0f90, d4a47ff, 2cd1631, b45ef9b"
+    ],
+    "confidence": "HIGH - Multiple specifications analyzed, zero conflicts found, all shared components aligned"
+  }
+}
