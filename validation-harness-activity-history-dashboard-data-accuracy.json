@@ -1,0 +1,208 @@
+{
+  "specificationName": "activity-history-dashboard-data-accuracy",
+  "harnessFile": "tests/validation-harnesses/activity-history-dashboard-data-accuracy-harness.ts",
+  "created": "2026-03-06",
+  "status": "READY_FOR_EXECUTION",
+  "testCases": [
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-1",
+      "name": "Create Test User",
+      "input": {
+        "testUserId": "test-user-validation",
+        "testUserPassword": "test-password-123",
+        "orgId": "test-org",
+        "userName": "Test User"
+      },
+      "expectedOutput": {
+        "created": true,
+        "userId": "test-user-validation"
+      },
+      "validation": "User can authenticate and access dashboard"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-2",
+      "name": "Execute Sample Activities",
+      "input": {
+        "activityTemplates": ["test-simple-activity", "test-complex-activity"],
+        "count": 2
+      },
+      "expectedOutput": {
+        "executed": true,
+        "activityCount": 2
+      },
+      "validation": "Activities appear in SurrealDB activity_executions table"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-3",
+      "name": "Query SurrealDB for Activity Executions",
+      "input": {
+        "rpcApiUrl": "http://localhost:8080",
+        "endpoint": "/analytics/executions",
+        "limit": 50,
+        "offset": 0
+      },
+      "expectedOutput": {
+        "minExecutions": 1,
+        "hasExecutionId": true,
+        "hasTimestamp": true
+      },
+      "validation": "Response contains activity execution records"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-4",
+      "name": "Authenticate to Dashboard",
+      "input": {
+        "dashboardUrl": "http://app.metabob.local:3000",
+        "loginPath": "/login",
+        "testUserId": "test-user-validation",
+        "testUserPassword": "test-password-123"
+      },
+      "expectedOutput": {
+        "authenticated": true,
+        "redirectedTo": "/cloud"
+      },
+      "validation": "User is redirected to /cloud after successful login"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-5",
+      "name": "Navigate to Activity Page",
+      "input": {
+        "targetUrl": "http://app.metabob.local:3000/cloud/activity"
+      },
+      "expectedOutput": {
+        "pageLoaded": true,
+        "urlContains": "/cloud/activity",
+        "noErrors": true
+      },
+      "validation": "Page loads without error messages"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-6",
+      "name": "Validate Summary Cards",
+      "input": {
+        "expectedExecutions": 2,
+        "expectedSuccessRate": 1.0
+      },
+      "expectedOutput": {
+        "allCardsPresent": true,
+        "hasNonZeroValues": true
+      },
+      "validation": "Summary cards display correct aggregated metrics"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-7",
+      "name": "Validate Activity Table",
+      "input": {
+        "expectedMinRows": 2,
+        "expectedColumns": ["Template ID", "Status", "Timestamp", "Duration", "Cost"]
+      },
+      "expectedOutput": {
+        "rowCount": 2,
+        "columnsPresent": true,
+        "dataPopulated": true
+      },
+      "validation": "Table displays activity execution data with correct formatting"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-8",
+      "name": "Validate Expandable Rows",
+      "input": {
+        "rowIndex": 0,
+        "expandAction": "click"
+      },
+      "expectedOutput": {
+        "expanded": true,
+        "nestedDataVisible": true,
+        "hasTasks": true,
+        "hasImpulses": false
+      },
+      "validation": "Expandable row reveals task breakdown and impulse data"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-9",
+      "name": "Validate Data Accuracy",
+      "input": {
+        "minAccuracyRate": 0.8
+      },
+      "expectedOutput": {
+        "accuracyRate": 1.0,
+        "matchCount": 2,
+        "mismatches": []
+      },
+      "validation": "Dashboard displays exactly what's in the database (100% accuracy)"
+    },
+    {
+      "impulseId": "validation-activity-history-dashboard-data-accuracy-case-10",
+      "name": "Screenshot Evidence",
+      "input": {
+        "screenshotDir": "screenshots/validation",
+        "captureSteps": [
+          "auth-success",
+          "dashboard-loaded",
+          "activity-table",
+          "expanded-row",
+          "data-accuracy"
+        ]
+      },
+      "expectedOutput": {
+        "screenshotCount": 5,
+        "allCaptured": true
+      },
+      "validation": "Screenshots saved for each validation step"
+    }
+  ],
+  "harnessImpulseId": "harness-activity-history-dashboard-data-accuracy",
+  "executionInstructions": {
+    "prerequisites": [
+      "Install @playwright/test npm package",
+      "Start RPC API on port 8080",
+      "Start Dashboard on port 3000",
+      "Start SurrealDB on port 8000",
+      "Add app.metabob.local to /etc/hosts"
+    ],
+    "commands": {
+      "direct": "npx ts-node tests/validation-harnesses/activity-history-dashboard-data-accuracy-harness.ts",
+      "withEnv": "DASHBOARD_URL=http://app.metabob.local:3000 RPC_API_URL=http://localhost:8080 npx ts-node tests/validation-harnesses/activity-history-dashboard-data-accuracy-harness.ts"
+    },
+    "exitCodes": {
+      "0": "All validations passed",
+      "1": "Some validations failed"
+    }
+  },
+  "capabilities": [
+    "Create test users via admin CLI",
+    "Execute sample activities",
+    "Authenticate to dashboard",
+    "Navigate to /cloud/activity",
+    "Validate page loads",
+    "Validate summary cards",
+    "Validate activity table",
+    "Validate expandable rows",
+    "Query SurrealDB directly",
+    "Compare dashboard vs database",
+    "Capture screenshot evidence"
+  ],
+  "validationFlow": [
+    "1. Create test user",
+    "2. Execute sample activities to generate data",
+    "3. Query SurrealDB to get expected data",
+    "4. Launch browser and authenticate",
+    "5. Navigate to /cloud/activity",
+    "6. Validate page loads without errors",
+    "7. Validate summary cards show non-zero values",
+    "8. Validate activity table displays data",
+    "9. Validate expandable rows reveal nested data",
+    "10. Validate data accuracy (dashboard matches database)",
+    "11. Capture screenshots at each step"
+  ],
+  "artifacts": {
+    "harnessFile": "tests/validation-harnesses/activity-history-dashboard-data-accuracy-harness.ts",
+    "documentation": "VALIDATION_HARNESS_ACTIVITY_HISTORY_DASHBOARD_DATA_ACCURACY.md",
+    "screenshots": "screenshots/validation/*.png",
+    "testResults": "validation-results.json"
+  },
+  "dependencies": {
+    "npm": ["@playwright/test"],
+    "services": ["metabob-rpc-api", "metabob-dashboard", "surrealdb"]
+  }
+}
