@@ -1,0 +1,16 @@
+{
+  "id": "validation-activity-recommendation-learning-loop-e2e-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 5: MCP Tool Integration (DevBob Container)\n\n## Input\n\n```bash\n# From within devbob container\nkubectl exec devbob-84466fdfff-dd87l -n metabob -- sh -c '\n  opencode mcp call metabob_recommend_activities \\\n    task_description=\"Add REST endpoint\" \\\n    limit=3\n'\n```\n\n## Expected Output\n\n```json\n{\n  \"status\": \"success\",\n  \"recommendations\": [\n    {\n      \"template_id\": \"add-rest-endpoint\",\n      \"variant_id\": \"add-rest-endpoint-v1\",\n      \"selection_metadata\": {\n        \"method\": \"thompson_sampling\",\n        \"alpha\": 5.0,\n        \"beta\": 2.0,\n        \"sample\": 0.742\n      }\n    },\n    {\n      \"template_id\": \"add-feature-complete\",\n      \"variant_id\": \"add-feature-complete-v2\",\n      \"selection_metadata\": {\n        \"method\": \"thompson_sampling\",\n        \"alpha\": 8.0,\n        \"beta\": 1.0,\n        \"sample\": 0.891\n      }\n    },\n    {\n      \"template_id\": \"api-endpoint-with-tests\",\n      \"variant_id\": \"api-endpoint-with-tests-v1\",\n      \"selection_metadata\": {\n        \"method\": \"thompson_sampling\",\n        \"alpha\": 3.0,\n        \"beta\": 3.0,\n        \"sample\": 0.523\n      }\n    }\n  ]\n}\n```\n\n## Validation Rules\n\n1. **MCP Tool Works**: Command executes without error in devbob container\n2. **Returns 3 Recommendations**: Exactly 3 recommendations (limit=3)\n3. **All Have Metadata**: Each recommendation has complete selection_metadata\n4. **OpenCode Integration**: MCP tool correctly calls metabob-cli server\n5. **Backend Communication**: metabob-cli MCP tool communicates with api.metabob.local\n6. **End-to-End MCP Flow**: OpenCode → metabob-cli MCP → RPC API → SurrealDB\n\n## Test Assertions\n\n- `assert_command_success(exit_code == 0)`\n- `assert_equals(response.recommendations.length, 3)`\n- `assert_all_have(recommendations, \"selection_metadata\")`\n- `assert_all_have(recommendations, \"template_id\")`\n\n## Purpose\n\nVerifies that:\n- MCP architecture works end-to-end in production environment (k8s)\n- OpenCode can call metabob_recommend_activities from devbob container\n- Network connectivity: devbob pod → api.metabob.local\n- Activity-driven workflow ready for production use\n- Thompson Sampling recommendation works in real deployment",
+    "source": "test-case"
+  },
+  "budget": 1000,
+  "metadata": {
+    "testCase": 5,
+    "specification": "activity-recommendation-learning-loop-e2e",
+    "priority": "high",
+    "category": "mcp-integration-production"
+  }
+}
