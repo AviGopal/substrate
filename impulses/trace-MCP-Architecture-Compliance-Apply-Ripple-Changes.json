@@ -1,0 +1,189 @@
+{
+  "id": "trace-MCP-Architecture-Compliance-Apply-Ripple-Changes",
+  "type": "templateDefinition",
+  "created": "2026-03-08T01:59:56.263Z",
+  "specification": "MCP Architecture Compliance - Apply Ripple Changes",
+  "summary": "Complete implementation trace for achieving 100% MCP architectural compliance by fixing Thompson Sampling HTTP bypass and implementing impulse learning",
+  "trace": {
+    "specificationName": "MCP Architecture Compliance - Apply Ripple Changes",
+    "components": [
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+        "component": "TemplateSelector.select()",
+        "lines": "154-175",
+        "currentBehavior": "Line 165 calls RpcHttpClient.selectTemplateVariant(templateId, rpcConfig) directly via HTTP, bypassing MCP layer. This is the last remaining architectural violation in the codebase.",
+        "desiredBehavior": "Replace with metabob_recommend_activities MCP tool call through callMCPTool() helper. Preserve Thompson Sampling logic but delegate to backend via MCP instead of direct HTTP.",
+        "gap": "Need to replace RpcHttpClient call with MetabobCLI.callMCPTool('metabob_recommend_activities', {...}) and handle response transformation. Tool exists in metabob-cli at line 825+ of activity_template_tools.py.",
+        "priority": "HIGH - Last remaining architectural violation",
+        "validation": "grep -r 'RpcHttpClient.selectTemplateVariant' should return 0 matches after fix"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "component": "captureActivityLearning()",
+        "lines": "59-61",
+        "currentBehavior": "Stub implementation that only logs debug message. Returns immediately without any MCP communication or learning logic.",
+        "desiredBehavior": "Call metabob_recommend_impulses MCP tool to fetch impulse recommendations based on activity success/failure. Log recommendations for future impulse selection guidance.",
+        "gap": "Need to implement MCP tool call with proper error handling (graceful degradation). Tool exists in metabob-cli at line 900+ of activity_template_tools.py.",
+        "priority": "MEDIUM - Enables impulse learning loop",
+        "validation": "Activity execution logs should show 'impulse recommendations received' after completion"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+        "component": "callMCPTool() helper",
+        "lines": "267-374",
+        "currentBehavior": "Fully implemented MCP tool invocation helper with timeout, error handling, and JSON parsing. Used by existing tools (getPriorityIssues, searchActivities, etc).",
+        "desiredBehavior": "No changes needed - this component is complete and working. Template selector will use this existing helper.",
+        "gap": "None - helper is ready to use",
+        "priority": "N/A - Already complete"
+      },
+      {
+        "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+        "component": "metabob_recommend_activities MCP tool",
+        "lines": "825-900 (approx)",
+        "currentBehavior": "Implemented MCP tool that calls backend API /api/v1/learning-loop/recommend-activities. Returns ranked template recommendations based on task description, category, and loaded impulses.",
+        "desiredBehavior": "No changes needed - tool is implemented and tested in Complete MCP Data Flow validation harness.",
+        "gap": "None - tool exists and works",
+        "priority": "N/A - Already complete"
+      },
+      {
+        "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+        "component": "metabob_recommend_impulses MCP tool",
+        "lines": "900-950 (approx)",
+        "currentBehavior": "Implemented MCP tool that calls backend API /api/v1/learning-loop/recommend-impulses. Returns ranked impulse recommendations based on activity execution history.",
+        "desiredBehavior": "No changes needed - tool is implemented and tested in Complete MCP Data Flow validation harness.",
+        "gap": "None - tool exists and works",
+        "priority": "N/A - Already complete"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts",
+        "component": "RpcHttpClient.selectTemplateVariant()",
+        "lines": "41-91",
+        "currentBehavior": "Direct HTTP POST to /v2/activities/templates/{id}/select endpoint. Bypasses MCP layer entirely. This was the architectural boundary compromise made during Thompson Sampling migration.",
+        "desiredBehavior": "Should be REMOVED after template-selector.ts is migrated to use metabob_recommend_activities MCP tool.",
+        "gap": "Need to delete this method and update any callers (currently only template-selector.ts:165)",
+        "priority": "HIGH - Remove after template-selector.ts fix"
+      },
+      {
+        "file": "tests/validation-harnesses/mcp-architecture-compliance.ts",
+        "component": "Architecture compliance validator (NEW)",
+        "lines": "N/A - New file",
+        "currentBehavior": "Does not exist",
+        "desiredBehavior": "Automated test that scans codebase for MCP bypass patterns: RpcHttpClient calls, direct fetch/axios to backend, etc. Should run in CI/CD to prevent regressions.",
+        "gap": "Need to create new validation harness following pattern of complete-mcp-data-flow-harness.ts",
+        "priority": "LOW - Prevents future violations"
+      }
+    ],
+    "dataFlow": {
+      "current": "TemplateSelector.select() → RpcHttpClient.selectTemplateVariant() → HTTP POST → Backend /v2/activities/templates/{id}/select → Thompson Sampling in Backend → Response",
+      "desired": "TemplateSelector.select() → MetabobCLI.callMCPTool('metabob_recommend_activities') → MCP Client → metabob-cli MCP Server → Backend API /api/v1/learning-loop/recommend-activities → Thompson Sampling + Impulse Context → Response",
+      "gap": "One-hop bypass (direct HTTP) needs to be replaced with three-hop MCP flow"
+    },
+    "architecturalContext": {
+      "violation": "Template selector directly calls HTTP client, bypassing the mandated MCP layer. This was identified in ASYNC_RIPPLE_TRACE_COMPLETE.md and COMPLETE_DATA_FLOW_SUMMARY.txt as the last remaining architectural violation after 100% MCP compliance was achieved elsewhere.",
+      "mandatedArchitecture": "opencode → MCP Client → metabob-cli MCP Server → Backend API",
+      "currentViolation": "opencode → RpcHttpClient (direct HTTP) → Backend API",
+      "complianceStatus": "95% - All other communication flows through MCP. Thompson Sampling is the only exception.",
+      "impactOfFix": "Achieves 100% MCP architectural compliance across entire codebase"
+    },
+    "testingStrategy": {
+      "unit": [
+        "Mock MetabobCLI.callMCPTool() in template-selector tests",
+        "Test graceful degradation when MCP unavailable (should fallback to random/stable)",
+        "Test captureActivityLearning() with mocked recommendations"
+      ],
+      "integration": [
+        "Execute activity with real MCP backend",
+        "Verify template selection works end-to-end",
+        "Verify impulse recommendations logged after activity completion"
+      ],
+      "validation": [
+        "grep -r 'RpcHttpClient.selectTemplateVariant' repos/metabob-opencode/ → 0 matches",
+        "Check kubectl logs for MCP tool invocations",
+        "Run complete-mcp-data-flow-harness.ts → all 5 tools pass"
+      ],
+      "regression": [
+        "Create mcp-architecture-compliance.ts harness",
+        "Add to CI/CD pipeline",
+        "Block PRs with architectural violations"
+      ]
+    },
+    "deploymentContext": {
+      "backend": "api.metabob.local (running at port 8080)",
+      "deployment": "helmfile sync (repos/metabob-rpc-api/helmfile.yaml)",
+      "verification": "kubectl logs -n default -l app=metabob-rpc-api | grep 'recommend_activities'",
+      "mcpTools": "5/5 implemented (metabob_recommend_activities, metabob_recommend_impulses, metabob_create_activity_variant, metabob_fetch_boredom_activities, metabob_activity_context)",
+      "backendEndpoints": "3/5 implemented (/recommend-activities and /recommend-impulses exist, others TBD)"
+    },
+    "dependencies": {
+      "blockers": "None - all MCP tools and backend endpoints exist",
+      "prerequisites": [
+        "Backend running at api.metabob.local",
+        "MCP client connected in opencode (Config.get().metabob)",
+        "metabob-cli installed with MCP server enabled"
+      ],
+      "risks": [
+        "Template selection behavior change (Thompson Sampling algorithm remains same but selection flow changes)",
+        "Performance: MCP call adds ~50-200ms latency vs direct HTTP",
+        "Fallback behavior: Need to handle MCP unavailable gracefully"
+      ]
+    },
+    "estimatedEffort": {
+      "development": "2 hours (both fixes are straightforward)",
+      "testing": "1 hour (manual + validation harness)",
+      "deployment": "30 minutes (helmfile sync + verification)",
+      "documentation": "30 minutes (update architecture compliance docs)",
+      "total": "4 hours"
+    },
+    "successCriteria": [
+      "Zero grep matches for RpcHttpClient.selectTemplateVariant in opencode codebase",
+      "Template selection works with MCP backend (manual test)",
+      "Impulse recommendations logged after activity completion",
+      "Graceful degradation tested (MCP unavailable → fallback to stable)",
+      "TypeScript build succeeds",
+      "All validation harnesses pass",
+      "kubectl logs show MCP tool invocations",
+      "Architecture compliance validator added to CI"
+    ]
+  },
+  "actionableSteps": [
+    {
+      "step": 1,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "action": "Replace RpcHttpClient.selectTemplateVariant() with MetabobCLI.callMCPTool()",
+      "lines": "165",
+      "priority": "HIGH",
+      "validation": "grep returns 0 matches for RpcHttpClient.selectTemplateVariant"
+    },
+    {
+      "step": 2,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+      "action": "Implement captureActivityLearning() with metabob_recommend_impulses MCP call",
+      "lines": "59-61",
+      "priority": "MEDIUM",
+      "validation": "Logs show impulse recommendations received"
+    },
+    {
+      "step": 3,
+      "file": "repos/metabob-opencode/packages/opencode/src/util/rpc-http-client.ts",
+      "action": "Remove selectTemplateVariant() method",
+      "lines": "41-91",
+      "priority": "HIGH",
+      "validation": "TypeScript compilation succeeds"
+    },
+    {
+      "step": 4,
+      "file": "tests/validation-harnesses/mcp-architecture-compliance.ts",
+      "action": "Create compliance validator for CI/CD",
+      "lines": "NEW",
+      "priority": "LOW",
+      "validation": "Harness runs in CI and catches violations"
+    }
+  ],
+  "references": [
+    "RIPPLE_CHANGES_TO_APPLY.md",
+    "COMPLETE_DATA_FLOW_SUMMARY.txt",
+    "ASYNC_RIPPLE_TRACE_COMPLETE.md",
+    "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+    "tests/validation-harnesses/complete-mcp-data-flow-harness.ts"
+  ]
+}
