@@ -1,0 +1,47 @@
+{
+  "id": "validation-Activity Recommendation and Learning Loop End-to-End Validation-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testName": "Activity Execution Recording Updates Metrics",
+      "input": {
+        "endpoint": "POST /api/v1/learning-loop/executions",
+        "requestBody": {
+          "activity_id": "test_exec_12345",
+          "template_id": "[template_id_from_recommendation]",
+          "started_at": "2026-03-07T20:00:00Z",
+          "duration_ms": 5000,
+          "success": true,
+          "tokens": {
+            "input": 1000,
+            "output": 500,
+            "cache": 200
+          },
+          "cost": 0.05,
+          "impulses_used": [],
+          "component_changes": []
+        }
+      },
+      "expectedOutput": {
+        "success": true,
+        "execution_id": "string (generated)",
+        "metrics_updated": true
+      },
+      "validationCriteria": [
+        "Response success is true",
+        "Execution ID is returned",
+        "Metrics updated flag is true",
+        "Background processing completes within 5 seconds",
+        "SurrealDB activity_execution table has new record",
+        "Template_metrics table alpha incremented by 1 (for success)"
+      ]
+    }
+  },
+  "budget": 1000,
+  "metadata": {
+    "specification": "Activity Recommendation and Learning Loop End-to-End Validation",
+    "testCase": 2,
+    "purpose": "Verify execution recording updates metrics in SurrealDB"
+  }
+}

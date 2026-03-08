@@ -1,203 +1,215 @@
 # Validation Harnesses
 
-Automated validation scripts for testing specifications without LLM involvement.
+This directory contains validation harnesses for end-to-end testing of specifications.
 
-## Template Loading Persistence Harness
+## Activity Recommendation and Learning Loop
 
-**Specification**: `template-loading-persistence`
+**Specification**: Activity Recommendation and Learning Loop End-to-End Validation
 
-**File**: `template-loading-persistence-harness.ts`
+### Files
 
-**Purpose**: Validates that activity templates persist in SurrealDB and are accessible after Redis cache is cleared.
-
-### Validation Strategy
-
-1. Create test template (writes to SurrealDB + Redis cache)
-2. Verify template exists in both SurrealDB and Redis
-3. Clear Redis cache (FLUSHDB)
-4. Query template via API (should load from SurrealDB)
-5. Verify template returned successfully
-6. Verify Redis cache repopulated automatically
-
-### Usage
-
-#### CLI (Standalone)
-
-```bash
-# Run with default settings
-tsx tests/validation-harnesses/template-loading-persistence-harness.ts
-
-# Run with custom template name
-TEMPLATE_NAME="My Test Template" tsx tests/validation-harnesses/template-loading-persistence-harness.ts
-
-# Run with custom RPC API URL
-RPC_API_URL="http://metabob-rpc-api:8000" tsx tests/validation-harnesses/template-loading-persistence-harness.ts
-
-# Run with kubectl context
-KUBECTL_CONTEXT="my-k8s-context" tsx tests/validation-harnesses/template-loading-persistence-harness.ts
-```
-
-#### Programmatic (Node.js)
-
-```typescript
-import { runValidation } from './template-loading-persistence-harness';
-
-const input = {
-  templateName: 'Test Template Persistence',
-  templateCategory: 'feature',
-  rpcApiUrl: 'http://localhost:8000',
-  kubectlContext: undefined,
-};
-
-const result = await runValidation(input);
-
-if (result.pass) {
-  console.log('✅ PASS:', result.details);
-} else {
-  console.log('❌ FAIL:', result.details);
-  console.log('Errors:', result.errors);
-}
-```
-
-#### CI/CD Integration
-
-```bash
-# Add to CI pipeline
-npm run test:validation:template-persistence
-
-# Or directly
-tsx tests/validation-harnesses/template-loading-persistence-harness.ts || exit 1
-```
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `TEMPLATE_NAME` | Name of test template | `Test Template Persistence` |
-| `TEMPLATE_CATEGORY` | Template category | `feature` |
-| `RPC_API_URL` | RPC API URL | `http://localhost:8000` |
-| `KUBECTL_CONTEXT` | Kubectl context | (none) |
-
-### Output Format
-
-```json
-{
-  "pass": true,
-  "actual": {
-    "templateCreated": true,
-    "existsInSurrealDB": true,
-    "existsInRedisBeforeClear": true,
-    "redisCleared": true,
-    "loadedAfterClear": true,
-    "existsInRedisAfterClear": true,
-    "cacheRepopulated": true
-  },
-  "expected": {
-    "templateCreated": true,
-    "existsInSurrealDB": true,
-    "existsInRedisBeforeClear": true,
-    "redisCleared": true,
-    "loadedAfterClear": true,
-    "existsInRedisAfterClear": true,
-    "cacheRepopulated": true
-  },
-  "details": "✅ PASS: Template loading persistence validated successfully."
-}
-```
-
-### Exit Codes
-
-- `0`: All checks passed (PASS)
-- `1`: One or more checks failed (FAIL)
-
-### Prerequisites
-
-1. **Runtime Dependencies**:
-   - Node.js (v18+)
-   - TypeScript (`tsx` or `ts-node`)
-   - `kubectl` CLI (for K8s access)
-   - `curl` (for HTTP requests)
-
-2. **K8s Resources**:
-   - Redis pod (`deployment/redis`)
-   - SurrealDB pod (`deployment/surreal`)
-   - RPC API pod (running and accessible)
-
-3. **Network Access**:
-   - Access to RPC API (HTTP)
-   - Access to K8s cluster (kubectl)
+- `activity-recommendation-learning-loop-harness.ts` - TypeScript validation harness
+- `activity-recommendation-learning-loop-harness.sh` - Shell script validation harness
 
 ### Test Cases
 
-Test cases are stored as impulses in `impulses/` directory:
+1. **Recommendation Endpoint** - Verifies POST /v2/activities/recommend returns Thompson Sampling results
+2. **Execution Recording** - Verifies execution results are recorded via learning loop API
+3. **Metrics Update** - Verifies alpha/beta values update after execution
+4. **Graceful Degradation** - Verifies fallback behavior when backend unavailable
 
-1. **Case 1: Basic Template Persistence** (`validation-template-loading-persistence-case-1.json`)
-   - Single template
-   - Basic cache clear → load → verify flow
+### Running in devbob Container
 
-2. **Case 2: TTL Expiration Recovery** (`validation-template-loading-persistence-case-2.json`)
-   - Template with TTL expiration
-   - Manual cache key deletion
-   - Automatic refresh from SurrealDB
+```bash
+# 1. Exec into devbob container
+kubectl exec -it deployment/devbob-agent -n devbob -- bash
 
-3. **Case 3: Multiple Templates Persistence** (`validation-template-loading-persistence-case-3.json`)
-   - 5 templates
-   - Bulk cache clear
-   - Verify all templates load correctly
+# 2. Run shell harness
+bash tests/validation-harnesses/activity-recommendation-learning-loop-harness.sh
+
+# OR run TypeScript harness
+ts-node tests/validation-harnesses/activity-recommendation-learning-loop-harness.ts
+```
+
+### Running Locally
+
+```bash
+# Set backend URL
+export BACKEND_URL=http://api.metabob.local
+
+# Run shell harness
+bash tests/validation-harnesses/activity-recommendation-learning-loop-harness.sh
+
+# OR run TypeScript harness
+ts-node tests/validation-harnesses/activity-recommendation-learning-loop-harness.ts
+```
+
+### Expected Output
+
+```
+===========================================
+Activity Recommendation and Learning Loop
+End-to-End Validation Harness
+===========================================
+
+Backend URL: http://api.metabob.local
+Test Task: Add REST endpoint for user management
+Category: feature
+
+Test 1: Call recommendation endpoint...
+✅ PASS: Recommendation endpoint returns success status
+✅ PASS: Recommendation count is between 1 and 5
+✅ PASS: First recommendation has template_id
+✅ PASS: First recommendation has selection_metadata
+✅ PASS: Selection method is thompson_sampling
+✅ PASS: Selection metadata has alpha > 0
+✅ PASS: Selection metadata has beta > 0
+✅ PASS: Sample value is between 0 and 1
+
+Test 2: Simulate activity execution and record result...
+✅ PASS: Execution recorded successfully
+✅ PASS: Execution ID returned
+
+Test 3: Verify metrics updated in recommendations...
+✅ PASS: Metrics updated (alpha changed or ranking changed)
+
+===========================================
+Test Summary
+===========================================
+Passed: 11
+Failed: 0
+
+✅ ALL TESTS PASSED
+===========================================
+```
+
+### Validation Impulses
+
+Test case definitions are stored as impulses:
+- `impulses/validation-activity-recommendation-learning-loop-case-1.json`
+- `impulses/validation-activity-recommendation-learning-loop-case-2.json`
+- `impulses/validation-activity-recommendation-learning-loop-case-3.json`
+- `impulses/validation-activity-recommendation-learning-loop-case-4.json`
+
+These impulses contain:
+- Input data for each test case
+- Expected output structure
+- Validation criteria
+- Historical test data (can be run without LLM)
+
+### Harness Impulse
+
+The harness itself is tracked as an impulse:
+- `impulses/harness-activity-recommendation-learning-loop.json`
+
+This allows the validation harness to be:
+- Versioned and tracked
+- Loaded by other tools
+- Executed programmatically
+- Referenced in activity templates
+
+### Integration with CI/CD
+
+```yaml
+# Example GitHub Actions workflow
+name: Validate Learning Loop
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run validation harness
+        run: |
+          export BACKEND_URL=${{ secrets.BACKEND_URL }}
+          bash tests/validation-harnesses/activity-recommendation-learning-loop-harness.sh
+```
+
+### Programmatic Usage (TypeScript)
+
+```typescript
+import { runValidation } from './activity-recommendation-learning-loop-harness';
+
+async function main() {
+  const result = await runValidation({
+    backendUrl: 'http://api.metabob.local',
+    taskDescription: 'Add REST endpoint for user management',
+    category: 'feature',
+    limit: 5,
+  });
+
+  console.log(`Tests Passed: ${result.testsPassed}`);
+  console.log(`Tests Failed: ${result.testsFailed}`);
+  console.log(`Overall: ${result.pass ? 'PASS' : 'FAIL'}`);
+
+  if (!result.pass) {
+    console.log('Failed tests:');
+    result.testResults
+      .filter((t) => !t.pass)
+      .forEach((t) => {
+        console.log(`  - ${t.name}: ${t.message}`);
+      });
+  }
+
+  process.exit(result.pass ? 0 : 1);
+}
+
+main();
+```
 
 ### Troubleshooting
 
-#### Template Creation Fails
+**Error: Connection refused**
+- Verify backend is running: `curl http://api.metabob.local/health`
+- Check network connectivity to backend
+- Ensure DNS resolves api.metabob.local
+
+**Error: 404 Not Found on /v2/activities/recommend**
+- Verify backend deployment includes the recommend endpoint
+- Check backend logs: `kubectl logs deployment/metabob-rpc-api -n metabob`
+- Ensure latest code is deployed
+
+**Error: Metrics not updating**
+- Background processing may take longer than 2 seconds
+- Check SurrealDB connectivity
+- Verify learning loop endpoint is functioning: `curl http://api.metabob.local/api/v1/learning-loop/health`
+
+### Manual Validation
+
+For manual validation in devbob container:
 
 ```bash
-# Check RPC API health
-kubectl logs -l app=rpc-api --tail=50
+# 1. Test recommendation endpoint
+curl -X POST http://api.metabob.local/v2/activities/recommend \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_description": "Add REST endpoint for user management",
+    "category": "feature",
+    "limit": 5
+  }' | jq '.'
 
-# Verify RPC API is accessible
-curl http://localhost:8000/
+# 2. Record execution
+curl -X POST http://api.metabob.local/api/v1/learning-loop/executions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "activity_id": "test_exec_12345",
+    "template_id": "[template_id_from_step_1]",
+    "started_at": "2026-03-07T20:00:00Z",
+    "duration_ms": 5000,
+    "success": true,
+    "tokens": {"input": 1000, "output": 500, "cache": 200},
+    "cost": 0.05,
+    "impulses_used": [],
+    "component_changes": []
+  }' | jq '.'
+
+# 3. Call recommendations again and verify metrics changed
+curl -X POST http://api.metabob.local/v2/activities/recommend \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_description": "Add REST endpoint for user management",
+    "category": "feature",
+    "limit": 5
+  }' | jq '.'
 ```
-
-#### SurrealDB Check Fails
-
-```bash
-# Check SurrealDB pod
-kubectl get pods | grep surreal
-
-# Verify SurrealDB connectivity
-kubectl exec -it deployment/surreal -- surreal sql \
-  --conn http://localhost:8000 \
-  --user root --pass root \
-  --ns test --db test \
-  "INFO FOR DB"
-```
-
-#### Redis Check Fails
-
-```bash
-# Check Redis pod
-kubectl get pods | grep redis
-
-# Verify Redis connectivity
-kubectl exec -it deployment/redis -- redis-cli PING
-```
-
-#### Cache Clear Fails
-
-```bash
-# Manually clear Redis
-kubectl exec -it deployment/redis -- redis-cli FLUSHDB
-
-# Verify cache is empty
-kubectl exec -it deployment/redis -- redis-cli DBSIZE
-```
-
-### Related Documentation
-
-- **Specification**: `surrealdb-primary-redis-cache`
-- **Trace Analysis**: `TRACE_TEMPLATE_LOADING_PERSISTENCE.md`
-- **Enforcement Summary**: `ENFORCEMENT_TEMPLATE_LOADING_PERSISTENCE.md`
-- **Impulses**:
-  - `trace-template-loading-persistence`
-  - `enforcement-template-loading-persistence`
-  - `harness-template-loading-persistence`
-
