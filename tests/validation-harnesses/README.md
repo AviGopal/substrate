@@ -1,215 +1,235 @@
-# Validation Harnesses
+# Activity Lifecycle E2E Validation Harness
 
-This directory contains validation harnesses for end-to-end testing of specifications.
+## Overview
 
-## Activity Recommendation and Learning Loop
+This validation harness tests the complete Activity Lifecycle implementation through the full stack:
 
-**Specification**: Activity Recommendation and Learning Loop End-to-End Validation
-
-### Files
-
-- `activity-recommendation-learning-loop-harness.ts` - TypeScript validation harness
-- `activity-recommendation-learning-loop-harness.sh` - Shell script validation harness
-
-### Test Cases
-
-1. **Recommendation Endpoint** - Verifies POST /v2/activities/recommend returns Thompson Sampling results
-2. **Execution Recording** - Verifies execution results are recorded via learning loop API
-3. **Metrics Update** - Verifies alpha/beta values update after execution
-4. **Graceful Degradation** - Verifies fallback behavior when backend unavailable
-
-### Running in devbob Container
-
-```bash
-# 1. Exec into devbob container
-kubectl exec -it deployment/devbob-agent -n devbob -- bash
-
-# 2. Run shell harness
-bash tests/validation-harnesses/activity-recommendation-learning-loop-harness.sh
-
-# OR run TypeScript harness
-ts-node tests/validation-harnesses/activity-recommendation-learning-loop-harness.ts
+```
+TypeScript (metabob-opencode) 
+    ↓ MCP protocol
+Python (metabob-cli)
+    ↓ HTTP/JSON
+FastAPI (metabob-rpc-api)
+    ↓ SurrealDB protocol
+SurrealDB
+    ↓ (back through stack)
+Client
 ```
 
-### Running Locally
+## Test Coverage
+
+### 1. Dynamic Creation Trigger (GAP-1) ✅
+- **Validates**: When no templates match, system suggests `create_activity_goal_seeking`
+- **Tests**: Template search with novel request
+- **Expected**: Empty results with suggestion object
+
+### 2. Activity Storage (GAP-2) ⚠️
+- **Validates**: Activities are stored in backend with org/project scope
+- **Tests**: POST activity, query back, verify presence
+- **Expected**: Activity appears in filtered results
+
+### 3. Multi-Tenant Isolation (GAP-9) ✅
+- **Validates**: Activities are isolated by organization
+- **Tests**: Create for org1, query with org2
+- **Expected**: org2 sees empty results (no leakage)
+
+### 4. Boredom Activity Filtering (GAP-9) ✅
+- **Validates**: Boredom activities filtered by org/project
+- **Tests**: Fetch boredom activities with filter
+- **Expected**: All results match filter criteria
+
+### 5. Type Preservation (Phase 1) ✅
+- **Validates**: Data types preserved through JSON serialization
+- **Tests**: POST with int/bool/float, GET back, compare types
+- **Expected**: Types exactly match (int stays int, not string)
+
+### 6. Pydantic Validation (Phase 1) ✅
+- **Validates**: Invalid data rejected by API
+- **Tests**: POST with wrong types (string instead of int)
+- **Expected**: HTTP 400/422 with validation error
+
+### 7. Random Data Integrity (Phase 1) ✅
+- **Validates**: Complex data structures preserved end-to-end
+- **Tests**: Generate random nested data, POST, GET, compare
+- **Expected**: Exact field-by-field match
+
+## Usage
+
+### Prerequisites
 
 ```bash
-# Set backend URL
-export BACKEND_URL=http://api.metabob.local
+# Install dependencies
+pip install aiohttp
 
-# Run shell harness
-bash tests/validation-harnesses/activity-recommendation-learning-loop-harness.sh
+# Ensure RPC API is running
+kubectl get pods -n metabob | grep metabob-rpc-api
+```
 
-# OR run TypeScript harness
-ts-node tests/validation-harnesses/activity-recommendation-learning-loop-harness.ts
+### Running Tests
+
+```bash
+# From repository root
+python tests/validation-harnesses/e2e-activity-lifecycle-validation.py
+
+# Or from within devbob pod (if needed)
+kubectl exec -it -n metabob deployment/devbob -- \
+  python /workspace/tests/validation-harnesses/e2e-activity-lifecycle-validation.py
 ```
 
 ### Expected Output
 
 ```
-===========================================
-Activity Recommendation and Learning Loop
-End-to-End Validation Harness
-===========================================
+================================================================================
+Activity Lifecycle E2E Validation Harness
+================================================================================
 
-Backend URL: http://api.metabob.local
-Test Task: Add REST endpoint for user management
-Category: feature
+Target: http://api.metabob.local
+API Key: test-api-k...
 
-Test 1: Call recommendation endpoint...
-✅ PASS: Recommendation endpoint returns success status
-✅ PASS: Recommendation count is between 1 and 5
-✅ PASS: First recommendation has template_id
-✅ PASS: First recommendation has selection_metadata
-✅ PASS: Selection method is thompson_sampling
-✅ PASS: Selection metadata has alpha > 0
-✅ PASS: Selection metadata has beta > 0
-✅ PASS: Sample value is between 0 and 1
+Running tests...
+--------------------------------------------------------------------------------
+Running: Test 1: Dynamic Creation Trigger... ✅ PASS
+Running: Test 2: Activity Storage... ✅ PASS
+Running: Test 3: Multi-Tenant Isolation... ✅ PASS
+Running: Test 4: Boredom Activity Filtering... ✅ PASS
+Running: Test 5: Type Preservation... ✅ PASS
+Running: Test 6: Pydantic Validation... ✅ PASS
+Running: Test 7: Random Data Integrity... ✅ PASS
 
-Test 2: Simulate activity execution and record result...
-✅ PASS: Execution recorded successfully
-✅ PASS: Execution ID returned
+================================================================================
+SUMMARY
+================================================================================
+Tests Passed: 7/7 (100.0%)
 
-Test 3: Verify metrics updated in recommendations...
-✅ PASS: Metrics updated (alpha changed or ranking changed)
-
-===========================================
-Test Summary
-===========================================
-Passed: 11
-Failed: 0
-
-✅ ALL TESTS PASSED
-===========================================
+✅ ALL TESTS PASSED - System validated!
 ```
 
-### Validation Impulses
+## Current Status
 
-Test case definitions are stored as impulses:
-- `impulses/validation-activity-recommendation-learning-loop-case-1.json`
-- `impulses/validation-activity-recommendation-learning-loop-case-2.json`
-- `impulses/validation-activity-recommendation-learning-loop-case-3.json`
-- `impulses/validation-activity-recommendation-learning-loop-case-4.json`
+### ✅ Implemented (Ready for Testing)
+- GAP-1: Dynamic creation trigger
+- GAP-9: Multi-tenant scoping
+- Phase 1: Impulse binding foundation
+- Phase 1: Type safety (TypedDict definitions)
+- Phase 1: Pydantic models for validation
 
-These impulses contain:
-- Input data for each test case
-- Expected output structure
-- Validation criteria
-- Historical test data (can be run without LLM)
+### ⏳ Needs Deployment
+- **Current Blocker**: RPC API pod running old Docker image
+- **Fix**: Need to rebuild Docker image with latest commits
+  - metabob-rpc-api@306b1a4 (Phase 1 + GAP-9 changes)
+  - Includes: async/await fixes, new impulse types, multi-tenant scoping
 
-### Harness Impulse
+### ❌ Not Yet Implemented (Next Phase)
+- GAP-3: Pattern extraction service
+- GAP-5: Boredom activity types (split/merge/debug)
+- GAP-6: Activity evolution logic
+- GAP-10: Periodic scheduling mechanism
 
-The harness itself is tracked as an impulse:
-- `impulses/harness-activity-recommendation-learning-loop.json`
+## Troubleshooting
 
-This allows the validation harness to be:
-- Versioned and tracked
-- Loaded by other tools
-- Executed programmatically
-- Referenced in activity templates
+### Test Failures
 
-### Integration with CI/CD
-
-```yaml
-# Example GitHub Actions workflow
-name: Validate Learning Loop
-on: [push, pull_request]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run validation harness
-        run: |
-          export BACKEND_URL=${{ secrets.BACKEND_URL }}
-          bash tests/validation-harnesses/activity-recommendation-learning-loop-harness.sh
+#### Connection Errors
 ```
-
-### Programmatic Usage (TypeScript)
-
-```typescript
-import { runValidation } from './activity-recommendation-learning-loop-harness';
-
-async function main() {
-  const result = await runValidation({
-    backendUrl: 'http://api.metabob.local',
-    taskDescription: 'Add REST endpoint for user management',
-    category: 'feature',
-    limit: 5,
-  });
-
-  console.log(`Tests Passed: ${result.testsPassed}`);
-  console.log(`Tests Failed: ${result.testsFailed}`);
-  console.log(`Overall: ${result.pass ? 'PASS' : 'FAIL'}`);
-
-  if (!result.pass) {
-    console.log('Failed tests:');
-    result.testResults
-      .filter((t) => !t.pass)
-      .forEach((t) => {
-        console.log(`  - ${t.name}: ${t.message}`);
-      });
-  }
-
-  process.exit(result.pass ? 0 : 1);
-}
-
-main();
+Error: aiohttp.ClientConnectorError: Cannot connect to host api.metabob.local
 ```
-
-### Troubleshooting
-
-**Error: Connection refused**
-- Verify backend is running: `curl http://api.metabob.local/health`
-- Check network connectivity to backend
-- Ensure DNS resolves api.metabob.local
-
-**Error: 404 Not Found on /v2/activities/recommend**
-- Verify backend deployment includes the recommend endpoint
-- Check backend logs: `kubectl logs deployment/metabob-rpc-api -n metabob`
-- Ensure latest code is deployed
-
-**Error: Metrics not updating**
-- Background processing may take longer than 2 seconds
-- Check SurrealDB connectivity
-- Verify learning loop endpoint is functioning: `curl http://api.metabob.local/api/v1/learning-loop/health`
-
-### Manual Validation
-
-For manual validation in devbob container:
-
+**Fix**: Ensure RPC API pod is running and accessible
 ```bash
-# 1. Test recommendation endpoint
-curl -X POST http://api.metabob.local/v2/activities/recommend \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task_description": "Add REST endpoint for user management",
-    "category": "feature",
-    "limit": 5
-  }' | jq '.'
-
-# 2. Record execution
-curl -X POST http://api.metabob.local/api/v1/learning-loop/executions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "activity_id": "test_exec_12345",
-    "template_id": "[template_id_from_step_1]",
-    "started_at": "2026-03-07T20:00:00Z",
-    "duration_ms": 5000,
-    "success": true,
-    "tokens": {"input": 1000, "output": 500, "cache": 200},
-    "cost": 0.05,
-    "impulses_used": [],
-    "component_changes": []
-  }' | jq '.'
-
-# 3. Call recommendations again and verify metrics changed
-curl -X POST http://api.metabob.local/v2/activities/recommend \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task_description": "Add REST endpoint for user management",
-    "category": "feature",
-    "limit": 5
-  }' | jq '.'
+kubectl port-forward -n metabob svc/metabob-rpc-api 8080:8080
+# Then update API_BASE_URL to http://localhost:8080
 ```
+
+#### 404 Not Found
+```
+Error: API returned 404: endpoint not found
+```
+**Fix**: Old code deployed without Phase 1 endpoints. Redeploy with latest image:
+```bash
+cd repos/platform/metabob-apps
+./deploy.sh -s metabob-rpc-api -m
+```
+
+#### Type Mismatches (Test 5 fails)
+```
+Error: Type mismatches: int_field: expected int, got str
+```
+**Indicates**: JSON serialization not preserving types
+**Fix**: Check Pydantic models in `metabob-rpc-api/server/routes/impulse.py`
+
+#### Isolation Breach (Test 3 fails)
+```
+Error: Activity leaked to org2 (isolation breach!)
+```
+**CRITICAL**: Multi-tenant isolation broken!
+**Fix**: Check query filters in `metabob-rpc-api/server/routes/activity.py`
+
+### Debugging
+
+Enable verbose output:
+```python
+# Edit e2e-activity-lifecycle-validation.py
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+Check API logs:
+```bash
+kubectl logs -n metabob -l app=metabob-rpc-api --tail=100 -f
+```
+
+## Architecture Validation
+
+This harness validates the **architecture boundaries** defined in:
+- `ARCHITECTURE_BOUNDARIES_metabob-cli-mcp-backend-communication.md`
+- `ARCHITECTURE_SCOPE_ISOLATION_BOUNDARIES.md`
+
+### Boundary 1: TypeScript ↔ Python (MCP)
+- **Validated by**: Tests serialize data via JSON
+- **Key Point**: TypedDict return types in metabob-cli
+- **Evidence**: Test 5 (Type Preservation)
+
+### Boundary 2: Python ↔ FastAPI (HTTP/JSON)
+- **Validated by**: Tests make direct HTTP calls
+- **Key Point**: Pydantic models validate input
+- **Evidence**: Test 6 (Pydantic Validation)
+
+### Boundary 3: FastAPI ↔ SurrealDB
+- **Validated by**: Tests query backend storage
+- **Key Point**: Multi-tenant scoping enforced
+- **Evidence**: Test 3 (Multi-Tenant Isolation)
+
+## Next Steps
+
+### After Validation Passes (7/7)
+
+1. **Deploy to Production** (if needed)
+   ```bash
+   cd repos/platform/metabob-apps
+   ./deploy.sh -e production -s metabob-rpc-api -m -v
+   ```
+
+2. **Implement Remaining Gaps** (Priority: CRITICAL → HIGH → MEDIUM)
+   - GAP-3: Pattern extraction service
+   - GAP-10: Periodic boredom activity scheduler
+   - GAP-5: Boredom activity types
+   - GAP-6: Activity evolution logic
+   - GAP-7: Replay comparison
+   - GAP-8: Auto-promotion of better variants
+
+3. **Create Follow-Up Validation Harnesses**
+   - Pattern extraction validation
+   - Boredom activity generation validation
+   - Evolution logic validation
+
+## References
+
+- **Implementation Summary**: `PHASE1_COMPLETION_SUMMARY_dynamic-task-generation-impulse-binding.md`
+- **Validation Plan**: `ACTIVITY_LIFECYCLE_VALIDATION_PLAN.md`
+- **Architecture**: `ARCHITECTURE_BOUNDARIES_metabob-cli-mcp-backend-communication.md`
+- **Commit History**: metabob-rpc-api@306b1a4, metabob-cli@aa799fa54
+
+---
+
+**Last Updated**: March 8, 2026  
+**Status**: Ready for execution (pending deployment)  
+**Expected Result**: 7/7 tests pass (100%)
