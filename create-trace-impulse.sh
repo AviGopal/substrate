@@ -1,31 +1,27 @@
 #!/bin/bash
-# Create impulse for trace analysis
+# Create impulse JSON for dynamic-task-generation trace
 
-TRACE_CONTENT=$(cat TRACE_IMPLEMENTATION_mcp-activity-flow-existing-validation.md)
-
-# Create impulse using opencode CLI (would need to implement this properly)
-# For now, create a JSON file representing the impulse
-
-cat > impulse-trace-mcp-activity-flow-existing-validation.json << EOF
+cat << 'EOF'
 {
-  "id": "trace-mcp-activity-flow-existing-validation",
+  "id": "trace-dynamic-task-generation-impulse-binding-python-implementation",
   "type": "templateDefinition",
   "pointer": {
-    "type": "file",
-    "path": "TRACE_IMPLEMENTATION_mcp-activity-flow-existing-validation.md",
-    "source": "validation"
+    "type": "memo",
+    "content": "# Trace: Dynamic Task Generation with Impulse Binding (Python Implementation)\n\nSee full trace content in trace-dynamic-task-generation-impulse-binding-python-implementation.md"
   },
   "budget": 5000,
+  "scope": "session",
+  "tags": [
+    "trace",
+    "phase1", 
+    "impulse-binding",
+    "python-implementation",
+    "architecture-correction"
+  ],
   "metadata": {
-    "specificationName": "mcp-activity-flow-existing-validation",
-    "status": "INFRASTRUCTURE_FUNCTIONAL",
-    "validationScript": "validate-mcp-activity-flow.sh",
-    "criticalTests": "4/4 passing (commit be6bed9)",
-    "conclusion": "No code changes needed - system already functional"
-  },
-  "created": "$(date -Iseconds)",
-  "summary": "Trace analysis showing existing MCP activity flow infrastructure is fully functional. Backend deployed with Thompson Sampling, cache fallback fix, and execution recording. Validation script proves system works without code changes."
+    "specification": "dynamic-task-generation-impulse-binding-python-implementation",
+    "components_affected": 7,
+    "new_impulse_types": ["testResults", "taskSummary", "scriptArtifact"]
+  }
 }
 EOF
-
-echo "✅ Created impulse definition: impulse-trace-mcp-activity-flow-existing-validation.json"
