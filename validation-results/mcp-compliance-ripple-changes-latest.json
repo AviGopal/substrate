@@ -1,0 +1,124 @@
+{
+  "specification": "MCP Architecture Compliance - Apply Ripple Changes",
+  "totalTests": 8,
+  "passed": 6,
+  "failed": 2,
+  "results": [
+    {
+      "testCaseId": "validation-mcp-compliance-case-1",
+      "passed": true,
+      "actual": {
+        "matchCount": 0,
+        "matches": []
+      },
+      "expected": {
+        "matchCount": 0,
+        "matches": []
+      },
+      "timestamp": "2026-03-08T02:15:42.013Z"
+    },
+    {
+      "testCaseId": "validation-mcp-compliance-case-2",
+      "passed": false,
+      "actual": {
+        "error": "Command failed: bun run typecheck\n$ bun turbo typecheck\nturbo 2.5.6\n\n WARNING  Unable to calculate transitive closures: No lockfile entry found for '@emnapi/wasi-threads'\nopencode:typecheck: ERROR: command finished with error: command (/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode) /home/avi/.local/share/nvm/v25.2.0/bin/bun run typecheck exited (2)\nopencode#typecheck: command (/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode) /home/avi/.local/share/nvm/v25.2.0/bin/bun run typecheck exited (2)\n ERROR  run failed: command  exited (2)\nerror: \"turbo\" exited with code 2\n"
+      },
+      "expected": {
+        "compilationSuccess": true
+      },
+      "error": "Command failed: bun run typecheck\n$ bun turbo typecheck\nturbo 2.5.6\n\n WARNING  Unable to calculate transitive closures: No lockfile entry found for '@emnapi/wasi-threads'\nopencode:typecheck: ERROR: command finished with error: command (/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode) /home/avi/.local/share/nvm/v25.2.0/bin/bun run typecheck exited (2)\nopencode#typecheck: command (/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode) /home/avi/.local/share/nvm/v25.2.0/bin/bun run typecheck exited (2)\n ERROR  run failed: command  exited (2)\nerror: \"turbo\" exited with code 2\n",
+      "timestamp": "2026-03-08T02:15:42.023Z"
+    },
+    {
+      "testCaseId": "validation-mcp-compliance-case-3",
+      "passed": true,
+      "actual": {
+        "outputIncludes100Percent": true,
+        "outputIncludesPassed": true,
+        "violationCount": "0"
+      },
+      "expected": {
+        "outputIncludes100Percent": true,
+        "outputIncludesPassed": true,
+        "violationCount": "0"
+      },
+      "timestamp": "2026-03-08T02:15:44.465Z"
+    },
+    {
+      "testCaseId": "validation-mcp-compliance-case-4",
+      "passed": false,
+      "actual": {
+        "error": "Unable to connect. Is the computer able to access the url?",
+        "note": "Backend may not be running. This is non-blocking for code validation."
+      },
+      "expected": {
+        "status": 200
+      },
+      "error": "Unable to connect. Is the computer able to access the url?",
+      "timestamp": "2026-03-08T02:15:44.515Z"
+    },
+    {
+      "testCaseId": "validation-mcp-compliance-case-5",
+      "passed": true,
+      "actual": {
+        "hasFunction": true,
+        "hasMCPTool": true,
+        "file": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/util/metabob.ts"
+      },
+      "expected": {
+        "hasFunction": true,
+        "hasMCPTool": true
+      },
+      "timestamp": "2026-03-08T02:15:44.525Z"
+    },
+    {
+      "testCaseId": "validation-mcp-compliance-case-6",
+      "passed": true,
+      "actual": {
+        "hasFunction": true,
+        "hasMCPTool": true,
+        "file": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/util/metabob.ts"
+      },
+      "expected": {
+        "hasFunction": true,
+        "hasMCPTool": true
+      },
+      "timestamp": "2026-03-08T02:15:44.526Z"
+    },
+    {
+      "testCaseId": "validation-mcp-compliance-case-7",
+      "passed": true,
+      "actual": {
+        "importsMetabobCLI": true,
+        "callsRecommendActivities": true,
+        "noRpcHttpClient": true,
+        "file": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/template-selector.ts"
+      },
+      "expected": {
+        "importsMetabobCLI": true,
+        "callsRecommendActivities": true,
+        "noRpcHttpClient": true
+      },
+      "timestamp": "2026-03-08T02:15:44.526Z"
+    },
+    {
+      "testCaseId": "validation-mcp-compliance-case-8",
+      "passed": true,
+      "actual": {
+        "hasTypedSignature": true,
+        "callsRecommendImpulses": true,
+        "hasErrorHandling": true,
+        "logsRecommendations": true,
+        "file": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
+      },
+      "expected": {
+        "hasTypedSignature": true,
+        "callsRecommendImpulses": true,
+        "hasErrorHandling": true,
+        "logsRecommendations": true
+      },
+      "timestamp": "2026-03-08T02:15:44.526Z"
+    }
+  ],
+  "summary": "\n=== Validation Summary ===\n\nTotal Tests: 8\nPassed: 6\nFailed: 2\nSuccess Rate: 75.0%\n\n❌ FAILED TESTS:\n  - validation-mcp-compliance-case-2\n    Error: Command failed: bun run typecheck\n$ bun turbo typecheck\nturbo 2.5.6\n\n WARNING  Unable to calculate transitive closures: No lockfile entry found for '@emnapi/wasi-threads'\nopencode:typecheck: ERROR: command finished with error: command (/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode) /home/avi/.local/share/nvm/v25.2.0/bin/bun run typecheck exited (2)\nopencode#typecheck: command (/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/opencode) /home/avi/.local/share/nvm/v25.2.0/bin/bun run typecheck exited (2)\n ERROR  run failed: command  exited (2)\nerror: \"turbo\" exited with code 2\n\n  - validation-mcp-compliance-case-4\n    Error: Unable to connect. Is the computer able to access the url?\n\n❌ VALIDATION INCOMPLETE\n2 test(s) failed. Review errors above.\n"
+}

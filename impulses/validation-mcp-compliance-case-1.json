@@ -1,0 +1,14 @@
+{
+  "id": "validation-mcp-compliance-case-1",
+  "type": "memo",
+  "testCase": "No RpcHttpClient.selectTemplateVariant calls remain",
+  "input": {
+    "grepPattern": "RpcHttpClient\\.selectTemplateVariant",
+    "searchPath": "repos/metabob-opencode/packages/opencode/src"
+  },
+  "expectedOutput": {
+    "matchCount": 0,
+    "matches": [],
+    "note": "Only documentation comments should remain"
+  }
+}
