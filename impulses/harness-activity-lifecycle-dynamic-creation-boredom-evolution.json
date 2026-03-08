@@ -1,0 +1,47 @@
+{
+  "id": "harness-activity-lifecycle-dynamic-creation-boredom-evolution",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/activity-lifecycle-dynamic-creation-boredom-evolution-harness.py",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specificationName": "activity-lifecycle-dynamic-creation-boredom-evolution",
+    "harnessType": "e2e-validation",
+    "testCases": [
+      {
+        "impulseId": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-1",
+        "testName": "test_dynamic_creation_trigger",
+        "gapsValidated": ["GAP-1"]
+      },
+      {
+        "impulseId": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-2",
+        "testName": "test_boredom_activity_scoping",
+        "gapsValidated": ["GAP-9"]
+      },
+      {
+        "impulseId": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-3",
+        "testName": "test_template_storage",
+        "gapsValidated": ["GAP-2"]
+      }
+    ],
+    "gapsValidated": ["GAP-1", "GAP-2", "GAP-9"],
+    "gapsRemaining": ["GAP-3", "GAP-4", "GAP-5", "GAP-6", "GAP-7", "GAP-8", "GAP-10"],
+    "deploymentRequired": true,
+    "deploymentNotes": "Requires RPC API and metabob-cli deployed to k8s with test org/project data",
+    "usage": "python tests/validation-harnesses/activity-lifecycle-dynamic-creation-boredom-evolution-harness.py",
+    "environment": {
+      "RPC_API_BASE_URL": "http://localhost:8000 or k8s service URL",
+      "METABOB_CLI_MCP_URL": "http://localhost:8001 or k8s service URL",
+      "TEST_ORG_ID_1": "org_test_lifecycle_1",
+      "TEST_ORG_ID_2": "org_test_lifecycle_2",
+      "TEST_PROJECT_ID_1": "proj_test_lifecycle_1",
+      "TEST_PROJECT_ID_2": "proj_test_lifecycle_2",
+      "TEST_SESSION_TOKEN_ORG1": "JWT token for org1",
+      "TEST_SESSION_TOKEN_ORG2": "JWT token for org2"
+    }
+  },
+  "createdAt": "2026-03-08T14:50:00.000Z"
+}

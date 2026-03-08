@@ -1,0 +1,17 @@
+{
+  "id": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Template Storage and Retrieval\n\nTest that dynamically created templates are stored and retrievable with correct scoping.\n\nInput:\n- POST /v2/activities/templates with:\n  - variant_id: test-template-{timestamp}\n  - variant_name: Test Lifecycle Template\n  - category: feature\n  - scope: org\n  - org_id: org_test_lifecycle_1\n  - project_id: proj_test_lifecycle_1\n- GET /v2/activities/templates/{template_id}\n\nExpected Output:\n- POST returns 200 or 201 status\n- GET returns 200 status\n- Retrieved template matches created template:\n  - variant_id matches\n  - org_id matches\n  - scope matches\n\nValidation:\n- Create template via POST\n- Retrieve template via GET\n- Compare template_id, org_id, scope\n- PASS if all fields match\n- FAIL if any mismatch or retrieval fails\n\nNote: Validates GAP-2 (template storage for learning)",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCaseNumber": 3,
+    "testName": "test_template_storage",
+    "gapsValidated": ["GAP-2"],
+    "expectedBehavior": "Template stored and retrievable with correct org/project scoping"
+  },
+  "createdAt": "2026-03-08T14:45:00.000Z"
+}

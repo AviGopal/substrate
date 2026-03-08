@@ -1,0 +1,17 @@
+{
+  "id": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: Dynamic Creation Trigger\n\nTest that searching for non-existent activity triggers create_activity_goal_seeking suggestion.\n\nInput:\n- Query: 'Implement unique feature {timestamp}'\n- Category: 'feature'\n- Endpoint: GET /v2/activities/templates\n\nExpected Output:\n- Status: 200\n- Templates count: 0 (no matching templates)\n- Behavior: RPC API returns empty list, MCP layer adds suggestion\n\nValidation:\n- RPC API should return empty templates array\n- Status should be 'success'\n- Templates count should be 0\n\nNote: GAP-1 fix is in metabob-cli MCP layer (activity_template_tools.py)\nRPC API validation focuses on empty result triggering condition",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCaseNumber": 1,
+    "testName": "test_dynamic_creation_trigger",
+    "gapsValidated": ["GAP-1"],
+    "expectedBehavior": "Empty template list from RPC API (triggers suggestion in MCP layer)"
+  },
+  "createdAt": "2026-03-08T14:45:00.000Z"
+}
