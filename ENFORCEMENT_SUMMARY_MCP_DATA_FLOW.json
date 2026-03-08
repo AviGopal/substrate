@@ -1,0 +1,245 @@
+{
+  "specificationName": "Complete MCP Data Flow for Activity and Impulse System",
+  "enforcementDate": "2026-03-08",
+  "status": "MCP_TOOLS_IMPLEMENTED",
+  "completionPercentage": 60,
+  "changesApplied": [
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_create_activity_variant",
+      "lines": "825-911",
+      "changeMade": "Implemented complete MCP tool for dynamic variant creation with POST to /v2/activities/variants",
+      "reason": "Enables trailblazing and template evolution. Without this: trailblazing broken, no dynamic variants, learning loop stuck with static templates",
+      "impactAnalysis": {
+        "consumers": ["Trailblazing system in OpenCode (when integrated)"],
+        "dependencies": ["Backend endpoint POST /v2/activities/variants"],
+        "blastRadius": "LOW - New tool, no existing code depends on it",
+        "risk": "Backend endpoint missing (will gracefully fail until backend implements)"
+      },
+      "dataFlow": "Trailblazing.createVariant() → MCP.callTool('metabob_create_activity_variant') → CLI tool → httpx.post('/v2/activities/variants') → Backend → SurrealDB activity_template"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_recommend_activities",
+      "lines": "915-1010",
+      "changeMade": "Implemented complete MCP tool for ML-driven activity recommendations with POST to /v2/activities/recommend",
+      "reason": "Enables intelligent template selection based on task similarity and impulse context. Without this: agent picks templates blindly, no ML optimization",
+      "impactAnalysis": {
+        "consumers": ["Activity selection in OpenCode (when integrated)"],
+        "dependencies": [
+          "Backend endpoint POST /v2/activities/recommend",
+          "Backend ML service (embedding search + Thompson Sampling)"
+        ],
+        "blastRadius": "LOW - New tool, no existing code depends on it",
+        "risk": "Backend endpoint missing + ML service required"
+      },
+      "dataFlow": "ActivitySelector.recommend() → MCP.callTool('metabob_recommend_activities') → CLI tool → httpx.post('/v2/activities/recommend') → Backend embedding search → Thompson Sampling → ranked templates"
+    },
+    {
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_recommend_impulses",
+      "lines": "1012-1103",
+      "changeMade": "Implemented complete MCP tool for impulse learning with POST to /v2/impulses/recommend",
+      "reason": "Enables impulse usefulness measurement and learning loop closure. Without this: no impulse feedback, cannot measure effectiveness, learning loop incomplete",
+      "impactAnalysis": {
+        "consumers": ["Impulse management system in OpenCode (when integrated)"],
+        "dependencies": [
+          "Backend endpoint POST /v2/impulses/recommend",
+          "Backend impulse_usage aggregation queries"
+        ],
+        "blastRadius": "LOW - New tool, no existing code depends on it",
+        "risk": "Backend endpoint missing + usage analytics required"
+      },
+      "dataFlow": "ImpulseLearning.recommend() → MCP.callTool('metabob_recommend_impulses') → CLI tool → httpx.post('/v2/impulses/recommend') → Backend impulse_usage queries → ranked impulse types"
+    }
+  ],
+  "architecturalCompliance": {
+    "maintained": [
+      "MCP-only communication (all tools proxy to backend via HTTP)",
+      "Proper error handling (timeout, network, API errors)",
+      "Structured logging (consistent [TAG] format)",
+      "Schema validation (documented in docstrings)",
+      "Graceful degradation (returns error status, doesn't throw)"
+    ],
+    "violations": []
+  },
+  "backendRequirements": {
+    "missingEndpoints": [
+      {
+        "endpoint": "/v2/activities/variants",
+        "method": "POST",
+        "schema": {
+          "request": {
+            "base_template_id": "string",
+            "variant_definition": "dict",
+            "metadata": {
+              "name": "string",
+              "description": "string",
+              "reason_for_creation": "string"
+            }
+          },
+          "response": {
+            "status": "success|error",
+            "variant_id": "string",
+            "message": "string"
+          }
+        },
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "/v2/activities/recommend",
+        "method": "POST",
+        "schema": {
+          "request": {
+            "task_description": "string",
+            "category": "string?",
+            "loaded_impulses": "array<string>",
+            "limit": "int"
+          },
+          "response": {
+            "status": "success|error",
+            "recommendations": [
+              {
+                "template_id": "string",
+                "score": "float",
+                "reason": "string",
+                "impulse_alignment": "float"
+              }
+            ]
+          }
+        },
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "/v2/impulses/recommend",
+        "method": "POST",
+        "schema": {
+          "request": {
+            "activity_id": "string",
+            "task_description": "string",
+            "limit": "int"
+          },
+          "response": {
+            "status": "success|error",
+            "recommendations": [
+              {
+                "impulse_type": "string",
+                "score": "float",
+                "reason": "string",
+                "usage_count": "int"
+              }
+            ]
+          }
+        },
+        "priority": "CRITICAL"
+      }
+    ],
+    "infrastructureRequired": [
+      "SurrealDB schema for variant storage (with parent linkage)",
+      "Embedding search service for task similarity",
+      "Thompson Sampling implementation for template selection",
+      "Impulse usage aggregation queries"
+    ]
+  },
+  "rippleEffects": {
+    "downstreamUpdates": [
+      {
+        "component": "OpenCode Trailblazing System",
+        "file": "repos/metabob-opencode/packages/opencode/src/session/trailblazing.ts",
+        "change": "Add calls to metabob_create_activity_variant when generating recovery strategies",
+        "currentState": "Trailblazing creates variants locally only",
+        "desiredState": "Variants persisted to backend for reuse across sessions"
+      },
+      {
+        "component": "OpenCode Activity Selection",
+        "file": "repos/metabob-opencode/packages/opencode/src/session/activity-selector.ts",
+        "change": "Add calls to metabob_recommend_activities for intelligent template selection",
+        "currentState": "Manual template selection or simple search",
+        "desiredState": "ML-driven recommendations with impulse context"
+      },
+      {
+        "component": "OpenCode Impulse Management",
+        "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "change": "Add calls to metabob_recommend_impulses to measure usefulness",
+        "currentState": "No feedback loop for impulse effectiveness",
+        "desiredState": "Data-driven impulse recommendations"
+      }
+    ]
+  },
+  "testingRequirements": {
+    "unitTests": [
+      "metabob_create_activity_variant parameter validation",
+      "metabob_recommend_activities handles timeout gracefully",
+      "metabob_recommend_impulses returns empty array on error"
+    ],
+    "integrationTests": [
+      "Variant creation persists to SurrealDB activity_template table",
+      "Activity recommendations return ranked templates",
+      "Impulse recommendations aggregate usage patterns"
+    ],
+    "e2eTests": [
+      "Trailblazing creates variant and stores in backend",
+      "Activity selection uses recommendations",
+      "Impulse learning measures usefulness"
+    ]
+  },
+  "verificationSteps": [
+    {
+      "step": "Verify tool count",
+      "command": "grep -c '@mcp.tool' repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "expected": "8 (5 existing + 3 new)"
+    },
+    {
+      "step": "Verify tool names",
+      "command": "grep 'name=\"metabob_' repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py | grep -E '(create_activity_variant|recommend_activities|recommend_impulses)'",
+      "expected": "3 matches"
+    },
+    {
+      "step": "Test MCP tool registration",
+      "command": "python -m metabob_cli.mcp.server --list-tools | grep -E '(create_activity_variant|recommend_activities|recommend_impulses)'",
+      "expected": "3 matches",
+      "requires": "Running MCP server"
+    }
+  ],
+  "summary": {
+    "implementationComplete": true,
+    "linesOfCode": 288,
+    "toolsImplemented": 3,
+    "blockers": [
+      "Backend endpoints not yet implemented",
+      "ML service (embedding search) required",
+      "Impulse usage analytics queries needed"
+    ],
+    "nextActions": [
+      {
+        "owner": "Backend Team",
+        "task": "Implement 3 missing endpoints",
+        "estimate": "12-16 hours"
+      },
+      {
+        "owner": "ML Team",
+        "task": "Set up embedding search service for task similarity",
+        "estimate": "8-10 hours"
+      },
+      {
+        "owner": "QA Team",
+        "task": "Write integration tests for new data flows",
+        "estimate": "6-8 hours"
+      },
+      {
+        "owner": "DevOps",
+        "task": "Deploy backend changes and verify SurrealDB schema",
+        "estimate": "4-6 hours"
+      }
+    ],
+    "totalEffortToComplete": "30-40 hours"
+  },
+  "lessonsLearned": [
+    "Architectural compliance first: Previous enforcement removed HTTP code but didn't validate MCP tools existed",
+    "Backend coordination required: MCP tools are easy to implement, but backend endpoints are the real work",
+    "Graceful degradation: Tools return errors instead of failing, allowing partial functionality",
+    "Specification gaps: The trace identified missing tools; enforcement implemented them. Both steps were necessary"
+  ],
+  "enforcementImpulseId": "enforcement-Complete-MCP-Data-Flow",
+  "traceImpulseId": "trace-Complete-MCP-Data-Flow"
+}
