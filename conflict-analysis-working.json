@@ -1,0 +1,25 @@
+{
+  "currentSpec": "mcp-activity-flow-existing-validation",
+  "relatedSpecs": [
+    {
+      "name": "activity-recommendation-learning-loop-deployment",
+      "status": "FUNCTIONAL (4/7 tests passing)",
+      "overlap": "Both validate Thompson Sampling and recommend endpoint",
+      "potentialConflict": false
+    },
+    {
+      "name": "activity-template-flow-via-mcp-backend",
+      "status": "ALL TESTS PASSED (7/7)",
+      "overlap": "Both validate MCP backend communication for templates",
+      "potentialConflict": false
+    }
+  ],
+  "sharedComponents": [
+    "POST /v2/activities/recommend",
+    "GET /v2/activities/templates",
+    "Thompson Sampling algorithm",
+    "Cache fallback mechanism",
+    "TemplateLoader",
+    "Backend service (metabob-rpc-api)"
+  ]
+}

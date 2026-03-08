@@ -1,0 +1,26 @@
+{
+  "id": "validation-mcp-activity-flow-existing-validation-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: Recommend Endpoint - Count\n\nInput:\n  - Endpoint: POST /v2/activities/recommend?task_description=Add%20REST%20endpoint&limit=3\n  - Method: curl POST from devbob pod to backend service\n  - Backend: http://metabob-rpc-api.metabob.svc.cluster.local:8080\n  - Task description: \"Add REST endpoint\" (URL encoded)\n\nExpected Output:\n  - Recommendation count: exactly 3\n  - Response format: {\"recommendations\": [...]}\n  - Each recommendation has: variant_id, activity_id, selection_metadata\n\nValidation:\n  - Count recommendations in response JSON\n  - Verify count == 3\n  - PASS if exact match, FAIL otherwise",
+    "source": "validation"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": "recommend-endpoint-count",
+    "input": {
+      "endpoint": "/v2/activities/recommend",
+      "method": "POST",
+      "params": {
+        "task_description": "Add REST endpoint",
+        "limit": 3
+      }
+    },
+    "expectedOutput": {
+      "recommendationCount": 3,
+      "responseFormat": "JSON with recommendations array"
+    }
+  },
+  "created": "2026-03-08T07:45:00-08:00"
+}

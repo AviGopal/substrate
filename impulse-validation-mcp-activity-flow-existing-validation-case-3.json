@@ -1,0 +1,30 @@
+{
+  "id": "validation-mcp-activity-flow-existing-validation-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Recommend Endpoint - Thompson Sampling Metadata\n\nInput:\n  - Endpoint: POST /v2/activities/recommend?task_description=Add%20REST%20endpoint&limit=3\n  - Method: curl POST from devbob pod to backend service\n  - Backend: http://metabob-rpc-api.metabob.svc.cluster.local:8080\n  - Focus: Check first recommendation's selection_metadata\n\nExpected Output:\n  - recommendations[0].selection_metadata.alpha: numeric value (e.g., 1.0)\n  - recommendations[0].selection_metadata.beta: numeric value (e.g., 1.0)\n  - recommendations[0].selection_metadata.sample: numeric value (e.g., 0.523)\n  - recommendations[0].selection_metadata.method: \"thompson_sampling\"\n\nValidation:\n  - Extract selection_metadata from first recommendation\n  - Verify alpha field exists and is numeric\n  - Verify beta field exists and is numeric\n  - Verify sample field exists and is numeric\n  - PASS if all three fields present, FAIL otherwise\n\nContext:\n  Thompson Sampling algorithm samples from Beta(alpha, beta) distribution\n  to rank templates by exploration-exploitation trade-off.",
+    "source": "validation"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": "recommend-endpoint-thompson-sampling",
+    "input": {
+      "endpoint": "/v2/activities/recommend",
+      "method": "POST",
+      "params": {
+        "task_description": "Add REST endpoint",
+        "limit": 3
+      }
+    },
+    "expectedOutput": {
+      "metadata": {
+        "alpha": "numeric",
+        "beta": "numeric",
+        "sample": "numeric",
+        "method": "thompson_sampling"
+      }
+    }
+  },
+  "created": "2026-03-08T07:45:00-08:00"
+}

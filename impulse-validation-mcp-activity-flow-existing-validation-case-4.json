@@ -1,0 +1,25 @@
+{
+  "id": "validation-mcp-activity-flow-existing-validation-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Backend Activity Logs\n\nInput:\n  - Command: kubectl logs <backend-pod> --tail=50\n  - Namespace: metabob\n  - Pod selector: app=metabob-rpc-api\n  - Log filter: grep 'POST.*activities'\n\nExpected Output:\n  - Log count: >0 (at least one POST request to /activities endpoints)\n  - Sample log format: \"POST /v2/activities/recommend\"\n  - Indicates backend is processing activity requests\n\nValidation:\n  - Fetch last 50 log lines from backend pod\n  - Count lines matching 'POST.*activities' pattern\n  - Verify count > 0\n  - PASS if logs found (backend active), informational if not found\n\nNote:\n  This test is informational - it verifies backend is actively processing\n  requests but doesn't fail validation if logs are absent (may just need\n  more usage to generate logs).",
+    "source": "validation"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": "backend-activity-logs",
+    "input": {
+      "command": "kubectl logs",
+      "namespace": "metabob",
+      "podSelector": "app=metabob-rpc-api",
+      "tail": 50,
+      "filter": "POST.*activities"
+    },
+    "expectedOutput": {
+      "logCount": ">0",
+      "pattern": "POST requests to /activities endpoints"
+    }
+  },
+  "created": "2026-03-08T07:45:00-08:00"
+}

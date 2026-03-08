@@ -1,0 +1,27 @@
+{
+  "id": "harness-mcp-activity-flow-existing-validation",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/mcp-activity-flow-existing-validation-harness.sh",
+    "source": "validation"
+  },
+  "budget": 2000,
+  "metadata": {
+    "harnessType": "bash",
+    "testCases": [
+      "validation-mcp-activity-flow-existing-validation-case-1",
+      "validation-mcp-activity-flow-existing-validation-case-2",
+      "validation-mcp-activity-flow-existing-validation-case-3",
+      "validation-mcp-activity-flow-existing-validation-case-4"
+    ],
+    "purpose": "Validate existing MCP activity flow infrastructure without requiring rebuilds",
+    "strategy": "Use bash + kubectl + curl to test deployed infrastructure",
+    "exitCodes": {
+      "0": "All core tests passing - infrastructure functional",
+      "1": "Core tests failing - infrastructure needs work"
+    }
+  },
+  "created": "2026-03-08T07:45:00-08:00",
+  "summary": "Bash validation harness for MCP activity flow. Tests templates endpoint, recommend endpoint with Thompson Sampling metadata, and backend activity logs. No LLM needed - runs kubectl and curl commands to validate deployed infrastructure."
+}
