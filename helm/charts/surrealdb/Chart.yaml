@@ -3,5 +3,5 @@ name: surrealdb
 version: 0.1.0
 description: SurrealDB database for Metabob cloud services
 home: https://metabob.com
-appVersion: "2.3.10"
+appVersion: "3.0.0"
 
