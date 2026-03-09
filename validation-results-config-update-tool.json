@@ -1,0 +1,109 @@
+{
+  "specificationName": "Enable Agent-Driven Config Modification via Tool",
+  "validationResults": [
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-1",
+      "testName": "Config.update() exists",
+      "status": "PASS",
+      "actual": true,
+      "expected": true,
+      "difference": null
+    },
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-2",
+      "testName": "Config.updateSafe() exists",
+      "status": "PASS",
+      "actual": true,
+      "expected": true,
+      "difference": null
+    },
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-3",
+      "testName": "config_update tool file exists with Tool.define",
+      "status": "PASS",
+      "actual": true,
+      "expected": true,
+      "difference": null
+    },
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-4",
+      "testName": "ConfigUpdateTool registered in ToolRegistry",
+      "status": "PASS",
+      "actual": {
+        "hasImport": true,
+        "hasRegistration": true
+      },
+      "expected": {
+        "hasImport": true,
+        "hasRegistration": true
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-5",
+      "testName": "MCP.reload() is callable programmatically",
+      "status": "PASS",
+      "actual": {
+        "hasReloadExport": true,
+        "returnsStatus": true
+      },
+      "expected": {
+        "hasReloadExport": true,
+        "returnsStatus": true
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-6",
+      "testName": "ConfigManager has required functions",
+      "status": "PASS",
+      "actual": {
+        "hasUpdateConfig": true,
+        "hasAddMCPServer": true,
+        "hasUpdateBackendUrl": true,
+        "hasSetFeatureFlag": true
+      },
+      "expected": {
+        "hasUpdateConfig": true,
+        "hasAddMCPServer": true,
+        "hasUpdateBackendUrl": true,
+        "hasSetFeatureFlag": true
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-7",
+      "testName": "Tool has correct parameter schema",
+      "status": "PASS",
+      "actual": {
+        "hasSection": true,
+        "hasOperation": true,
+        "hasKey": true,
+        "hasValue": true,
+        "hasReload": true,
+        "hasCreateImpulse": true,
+        "hasReason": true
+      },
+      "expected": {
+        "hasSection": true,
+        "hasOperation": true,
+        "hasKey": true,
+        "hasValue": true,
+        "hasReload": true,
+        "hasCreateImpulse": true,
+        "hasReason": true
+      },
+      "difference": null
+    },
+    {
+      "testCase": "validation-config-update-tool-case-infrastructure-8",
+      "testName": "removeMCPServer() helper exists",
+      "status": "PASS",
+      "actual": true,
+      "expected": true,
+      "difference": null
+    }
+  ],
+  "overallStatus": "PASS",
+  "resultsImpulseId": "validation-results-config-update-tool"
+}
