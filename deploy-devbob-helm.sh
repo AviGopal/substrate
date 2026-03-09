@@ -42,6 +42,20 @@ if [ -z "$ANTHROPIC_KEY" ]; then
 fi
 echo "✓ Anthropic API key: ${ANTHROPIC_KEY:0:20}..."
 
+# Get Metabob API key
+METABOB_KEY=$(kubectl get secret $RELEASE_NAME-secrets -n $NAMESPACE -o jsonpath='{.data.metabob-api-key}' 2>/dev/null | base64 -d || echo "")
+if [ -z "$METABOB_KEY" ]; then
+    if [ -n "${METABOB_API_KEY:-}" ]; then
+        METABOB_KEY="$METABOB_API_KEY"
+        echo "✓ Using METABOB_API_KEY from environment"
+    else
+        echo "Metabob API key required"
+        read -p "Enter METABOB_API_KEY: " -s METABOB_KEY
+        echo
+    fi
+fi
+echo "✓ Metabob API key: ${METABOB_KEY:0:20}..."
+
 # Get GitHub token
 if [ -n "${GITHUB_TOKEN:-}" ]; then
     echo "✓ Using GITHUB_TOKEN from environment"
@@ -76,6 +90,7 @@ HELM_ARGS=(
     "$RELEASE_NAME"
     "$CHART_PATH"
     --set "secrets.anthropicApiKey=$ANTHROPIC_KEY"
+    --set "secrets.metabobApiKey=$METABOB_KEY"
     --set "secrets.githubToken=$GITHUB_TOKEN"
     --set "secrets.gitUserName=$GIT_USER_NAME"
     --set "secrets.gitUserEmail=$GIT_USER_EMAIL"

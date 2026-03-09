@@ -67,6 +67,26 @@ function detectEnvironment(): 'devbob-pod' | 'local-kubectl' | 'unknown' {
 }
 
 /**
+ * Get DevBob pod name dynamically
+ */
+function getDevBobPodName(): string {
+  try {
+    const podName = execSync(
+      "kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[0].metadata.name}'",
+      { encoding: 'utf-8', stdio: 'pipe' }
+    ).trim();
+    
+    if (!podName) {
+      throw new Error('DevBob pod not found in metabob namespace');
+    }
+    
+    return podName;
+  } catch (error: any) {
+    throw new Error(`Failed to get DevBob pod name: ${error.message}`);
+  }
+}
+
+/**
  * Execute command inside DevBob pod or locally
  */
 function execInDevBob(command: string): { stdout: string; stderr: string; exitCode: number } {
@@ -80,8 +100,9 @@ function execInDevBob(command: string): { stdout: string; stderr: string; exitCo
       // Running inside pod, execute directly
       stdout = execSync(command, { encoding: 'utf-8', stdio: 'pipe' });
     } else if (env === 'local-kubectl') {
-      // Running locally, use kubectl exec
-      const kubectlCmd = `kubectl exec devbob -- sh -c '${command.replace(/'/g, "'\\''")}'`;
+      // Running locally, use kubectl exec with dynamic pod name and namespace
+      const podName = getDevBobPodName();
+      const kubectlCmd = `kubectl exec -n metabob ${podName} -- sh -c '${command.replace(/'/g, "'\\''")}'`;
       stdout = execSync(kubectlCmd, { encoding: 'utf-8', stdio: 'pipe' });
     } else {
       throw new Error('Cannot detect execution environment (not in DevBob pod and kubectl not available)');
@@ -124,6 +145,21 @@ function testAnthropicApiKey(): ValidationResult {
     expected: { present: true, exitCode: 0 },
     error: result.stdout !== 'SET' ? 'ANTHROPIC_API_KEY environment variable not set' : undefined,
     details: result.stdout === 'SET' ? 'API key configured' : 'API key missing'
+  };
+}
+
+/**
+ * Test Case 3: Verify METABOB_API_KEY is set
+ */
+function testMetabobApiKey(): ValidationResult {
+  const result = execInDevBob('[ -n "$METABOB_API_KEY" ] && echo "SET" || echo "NOT_SET"');
+  
+  return {
+    pass: result.exitCode === 0 && result.stdout === 'SET',
+    actual: { present: result.stdout === 'SET', exitCode: result.exitCode },
+    expected: { present: true, exitCode: 0 },
+    error: result.stdout !== 'SET' ? 'METABOB_API_KEY environment variable not set' : undefined,
+    details: result.stdout === 'SET' ? 'Metabob API key configured' : 'Metabob API key missing'
   };
 }
 
@@ -277,7 +313,8 @@ function testRpcApiCommunication(): ValidationResult {
   
   // From outside, check recent logs for RPC API activity
   try {
-    const logs = execSync('kubectl logs devbob --tail=100 2>&1', { encoding: 'utf-8' });
+    const podName = getDevBobPodName();
+    const logs = execSync(`kubectl logs -n metabob ${podName} --tail=100 2>&1`, { encoding: 'utf-8' });
     
     const hasRpcActivity = logs.includes('RPC API') || 
                           logs.includes('POST /activity') ||
@@ -345,6 +382,7 @@ export function runValidation(): HarnessReport {
   const testCases: Array<{ name: string; fn: () => ValidationResult }> = [
     { name: 'Git Repository Initialization', fn: testGitRepository },
     { name: 'ANTHROPIC_API_KEY Available', fn: testAnthropicApiKey },
+    { name: 'METABOB_API_KEY Available', fn: testMetabobApiKey },
     { name: 'Activity Templates Accessible', fn: testActivityTemplates },
     { name: 'OpenCode Config with MCP', fn: testOpencodeConfig },
     { name: 'Minimal Activity Execution', fn: testMinimalActivityExecution },
@@ -355,7 +393,7 @@ export function runValidation(): HarnessReport {
   const results = testCases.map(tc => {
     console.log(`\n🧪 Running: ${tc.name}...`);
     const result = tc.fn();
-    const status = result.pass ? 'PASS' : 'FAIL';
+    const status: 'PASS' | 'FAIL' = result.pass ? 'PASS' : 'FAIL';
     console.log(`   ${status === 'PASS' ? '✅' : '❌'} ${status}: ${result.details || ''}`);
     if (result.error) {
       console.log(`   ⚠️  Error: ${result.error}`);

@@ -18,6 +18,7 @@ spec:
       labels:
         {{- include "devbob.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "devbob.fullname" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -56,6 +57,11 @@ spec:
             secretKeyRef:
               name: {{ include "devbob.fullname" . }}-secrets
               key: anthropic-api-key
+        - name: METABOB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devbob.fullname" . }}-secrets
+              key: metabob-api-key
         - name: GITHUB_TOKEN
           valueFrom:
             secretKeyRef:
@@ -125,17 +131,26 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
-        {{- if .Values.persistence.enabled }}
         volumeMounts:
+        {{- if .Values.persistence.enabled }}
         - name: workspace
           mountPath: {{ .Values.persistence.mountPath }}
         {{- end }}
-      {{- if .Values.persistence.enabled }}
+        - name: config
+          mountPath: /workspace/.config/opencode
+          readOnly: true
       volumes:
+      {{- if .Values.persistence.enabled }}
       - name: workspace
         persistentVolumeClaim:
           claimName: {{ include "devbob.fullname" . }}-pvc
       {{- end }}
+      - name: config
+        configMap:
+          name: {{ include "devbob.fullname" . }}
+          items:
+          - key: opencode.json
+            path: opencode.json
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
