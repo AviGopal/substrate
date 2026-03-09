@@ -1,0 +1,15 @@
+{
+  "id": "validation-cross-vessel-type-preservation-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"test_name\": \"Case 2: Edge Case Numbers\",\n  \"description\": \"Validate edge cases: zero, negative numbers, large numbers, very small floats, false boolean\",\n  \"input\": {\n    \"zero\": 0,\n    \"negative_int\": -999,\n    \"large_int\": 2147483647,\n    \"negative_float\": -123.456,\n    \"very_small_float\": 1e-07,\n    \"bool_false\": false\n  },\n  \"expected_output\": {\n    \"zero\": 0,\n    \"negative_int\": -999,\n    \"large_int\": 2147483647,\n    \"negative_float\": -123.456,\n    \"very_small_float\": 1e-07,\n    \"bool_false\": false\n  },\n  \"validation_strategy\": \"field_by_field_comparison\",\n  \"type_check\": \"type(returned_value) == type(original_value)\",\n  \"value_check\": \"returned_value == original_value\"\n}"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "Cross-Vessel Type Preservation and Data Integrity Validation",
+    "test_case": "Case 2: Edge Case Numbers",
+    "created_at": "2026-03-08T18:30:00Z"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "validation-cross-vessel-type-preservation-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"test_name\": \"Case 4: Nested Objects\",\n  \"description\": \"Validate nested object type preservation through 3 levels of nesting\",\n  \"input\": {\n    \"level1\": {\n      \"int_field\": 100,\n      \"bool_field\": false,\n      \"level2\": {\n        \"float_field\": 99.99,\n        \"string_field\": \"nested\",\n        \"level3\": {\n          \"deep_int\": 777,\n          \"deep_bool\": true\n        }\n      }\n    }\n  },\n  \"expected_output\": {\n    \"level1\": {\n      \"int_field\": 100,\n      \"bool_field\": false,\n      \"level2\": {\n        \"float_field\": 99.99,\n        \"string_field\": \"nested\",\n        \"level3\": {\n          \"deep_int\": 777,\n          \"deep_bool\": true\n        }\n      }\n    }\n  },\n  \"validation_strategy\": \"field_by_field_comparison\",\n  \"type_check\": \"type(returned_value) == type(original_value)\",\n  \"value_check\": \"returned_value == original_value\"\n}"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "Cross-Vessel Type Preservation and Data Integrity Validation",
+    "test_case": "Case 4: Nested Objects",
+    "created_at": "2026-03-08T18:30:00Z"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "validation-cross-vessel-type-preservation-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"test_name\": \"Case 1: Basic Types\",\n  \"description\": \"Validate basic JSON types: int, bool, float, string, null\",\n  \"input\": {\n    \"int_field\": 42,\n    \"bool_field\": true,\n    \"float_field\": 3.14,\n    \"string_field\": \"test_string\",\n    \"null_field\": null\n  },\n  \"expected_output\": {\n    \"int_field\": 42,\n    \"bool_field\": true,\n    \"float_field\": 3.14,\n    \"string_field\": \"test_string\",\n    \"null_field\": null\n  },\n  \"validation_strategy\": \"field_by_field_comparison\",\n  \"type_check\": \"type(returned_value) == type(original_value)\",\n  \"value_check\": \"returned_value == original_value\"\n}"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "Cross-Vessel Type Preservation and Data Integrity Validation",
+    "test_case": "Case 1: Basic Types",
+    "created_at": "2026-03-08T18:30:00Z"
+  }
+}

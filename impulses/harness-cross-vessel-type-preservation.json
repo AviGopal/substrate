@@ -1,0 +1,25 @@
+{
+  "id": "harness-cross-vessel-type-preservation",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/cross-vessel-type-preservation-harness.py",
+    "description": "Validation harness for testing type preservation across TypeScript → Python MCP → FastAPI → SurrealDB boundaries"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "metadata": {
+    "specification": "Cross-Vessel Type Preservation and Data Integrity Validation",
+    "harness_type": "end_to_end_validation",
+    "test_coverage": [
+      "basic_types",
+      "edge_case_numbers",
+      "arrays",
+      "nested_objects",
+      "complex_random_structures"
+    ],
+    "validation_strategy": "field_by_field_comparison_with_type_checks",
+    "created_at": "2026-03-08T18:30:00Z",
+    "usage": "python tests/validation-harnesses/cross-vessel-type-preservation-harness.py"
+  }
+}
