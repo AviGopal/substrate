@@ -1,0 +1,123 @@
+{
+  "specificationName": "hierarchical-activity-composition-standard",
+  "otherSpecifications": [
+    "config_update_tool",
+    "mcp-hot-reload",
+    "activity-recommendation-learning-loop-deployment",
+    "backend-variant-tracking-optimization-architecture",
+    "container-development-workflow",
+    "surrealdb-v3-upgrade",
+    "activity-history-dashboard",
+    "devbob-activity-execution-validation"
+  ],
+  "conflicts": [],
+  "conflictCount": 0,
+  "synergisticSpecs": [
+    {
+      "specification": "config_update_tool",
+      "relationship": "SYNERGISTIC",
+      "description": "config_update_tool validates tool infrastructure, hierarchical-activity-composition validates usage pattern. Both specifications complement each other."
+    },
+    {
+      "specification": "mcp-hot-reload",
+      "relationship": "COMPLEMENTARY",
+      "description": "mcp-hot-reload ensures MCP.reload() works, hierarchical-activity-composition ensures config_update triggers it automatically. Dependency: mcp-hot-reload → config_update_tool → hierarchical-activity-composition"
+    },
+    {
+      "specification": "activity-recommendation-learning-loop",
+      "relationship": "SYNERGISTIC",
+      "description": "Learning loop provides success rate metrics for composition decisions (60% threshold). Compose-first paradigm feeds execution data back to learning loop. Backend-only architecture ensures consistent template availability for both specs."
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "TemplateLoader.save()",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
+      "affectedBySpecs": [
+        "hierarchical-activity-composition-standard",
+        "activity-recommendation-learning-loop"
+      ],
+      "requirements": {
+        "hierarchical-activity-composition": "Must reject local storage, force MCP registration, retry logic with exponential backoff",
+        "activity-recommendation-learning": "Must persist to backend for learning loop, cache management"
+      },
+      "compatibility": "COMPATIBLE",
+      "recommendation": "Current implementation satisfies both specs. Retry logic added by hierarchical-activity-composition improves reliability for learning loop."
+    },
+    {
+      "component": "config_update tool",
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/config-update.ts",
+      "affectedBySpecs": [
+        "hierarchical-activity-composition-standard",
+        "config_update_tool"
+      ],
+      "requirements": {
+        "hierarchical-activity-composition": "createImpulse parameter for activity reuse, no CLI usage in agents",
+        "config_update_tool": "All parameters exist with correct types, MCP.reload integration"
+      },
+      "compatibility": "COMPATIBLE",
+      "recommendation": "Consider merging validation tests to avoid duplication. Current implementation satisfies both specs."
+    }
+  ],
+  "dependencyGraph": {
+    "foundation": "mcp-hot-reload",
+    "infrastructure": "config_update_tool",
+    "usagePattern": "hierarchical-activity-composition-standard",
+    "integration": "activity-recommendation-learning-loop"
+  },
+  "validationExecutionOrder": [
+    "mcp-hot-reload",
+    "config_update_tool",
+    "hierarchical-activity-composition-standard",
+    "activity-recommendation-learning-loop"
+  ],
+  "breakingChanges": [],
+  "improvements": [
+    {
+      "change": "Added retry logic in TemplateLoader.save()",
+      "benefitsSpec": "activity-recommendation-learning-loop",
+      "impact": "Improves template persistence reliability"
+    },
+    {
+      "change": "Added circular reference handling in ImpulseResolver",
+      "benefitsSpec": "all activity execution specs",
+      "impact": "Prevents crashes on complex activity state"
+    },
+    {
+      "change": "Added JSON.parse error recovery in GoalSeekingPlanner",
+      "benefitsSpec": "all LLM-driven workflows",
+      "impact": "Improves resilience to malformed LLM output"
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "Merge config_update Validation Tests",
+      "priority": "LOW",
+      "description": "config_update_tool and hierarchical-activity-composition both validate the config_update tool. Merge into single validation suite to reduce CI/CD execution time.",
+      "implementation": "Create tests/validation-harnesses/config-update-tool-complete-harness.ts with combined tests"
+    },
+    {
+      "title": "Establish Validation Dependency Order",
+      "priority": "MEDIUM",
+      "description": "Run validations in dependency order to catch cascading failures early: mcp-hot-reload → config_update_tool → hierarchical-activity-composition → activity-recommendation-learning",
+      "implementation": "Update .github/workflows/validate.yml with needs: dependencies"
+    },
+    {
+      "title": "Document Specification Relationships",
+      "priority": "LOW",
+      "description": "Create central registry of specification dependencies for better visibility and maintenance",
+      "implementation": "Create docs/specifications/REGISTRY.md with dependency matrix"
+    }
+  ],
+  "overallStatus": "NO_CONFLICTS",
+  "productionReadiness": "HIGH",
+  "safeToDeployWith": [
+    "config_update_tool",
+    "mcp-hot-reload",
+    "activity-recommendation-learning-loop",
+    "all other specifications"
+  ],
+  "conflictImpulseId": "conflict-analysis-hierarchical-activity-composition-standard",
+  "analyzedValidationResults": 147,
+  "analyzedOn": "2026-03-09"
+}

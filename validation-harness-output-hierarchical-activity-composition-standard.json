@@ -1,0 +1,113 @@
+{
+  "specificationName": "hierarchical-activity-composition-standard",
+  "harnessFile": "tests/validation-harnesses/hierarchical-activity-composition-standard-harness.ts",
+  "runnerFile": "tests/validation-harnesses/run-hierarchical-composition-validation.ts",
+  "testCases": [
+    {
+      "impulseId": "validation-hierarchical-activity-composition-standard-case-1",
+      "name": "Activity tool description guides composition-first",
+      "input": {
+        "check": "activity tool description file content"
+      },
+      "expectedOutput": {
+        "hasSearchGuidance": true,
+        "hasComposeGuidance": true,
+        "descriptionLength": { "min": 100 },
+        "hasTemplateIdParam": true
+      }
+    },
+    {
+      "impulseId": "validation-hierarchical-activity-composition-standard-case-2",
+      "name": "Goal-seeking defaults to preferComposition: true",
+      "input": {
+        "check": "create-activity-goal-seeking.ts source code"
+      },
+      "expectedOutput": {
+        "hasConstraintsParam": true,
+        "hasPreferCompositionField": true,
+        "sourceHasDefaultTrue": true
+      }
+    },
+    {
+      "impulseId": "validation-hierarchical-activity-composition-standard-case-3",
+      "name": "config_update tool supports createImpulse parameter",
+      "input": {
+        "check": "config-update.ts source code"
+      },
+      "expectedOutput": {
+        "hasCreateImpulseParam": true,
+        "paramIsBoolean": true,
+        "hasImpulseDescription": true
+      }
+    },
+    {
+      "impulseId": "validation-hierarchical-activity-composition-standard-case-4",
+      "name": "Activity coordination supports task dependencies",
+      "input": {
+        "check": "activity-template.ts for dependencies field"
+      },
+      "expectedOutput": {
+        "hasDependenciesField": true,
+        "hasTaskSchema": true,
+        "sourceIncludes": {
+          "dependencies": true,
+          "array": true
+        }
+      }
+    },
+    {
+      "impulseId": "validation-hierarchical-activity-composition-standard-case-5",
+      "name": "Activities can execute nested activities (activities-as-impulses)",
+      "input": {
+        "check": "impulse-resolver.ts for activityOutput case"
+      },
+      "expectedOutput": {
+        "hasActivityOutputCase": true,
+        "hasActivityIdField": true,
+        "hasTaskIdField": true,
+        "hasSafeStringify": true
+      }
+    },
+    {
+      "impulseId": "validation-hierarchical-activity-composition-standard-case-6",
+      "name": "No CLI-dependent config changes in agent code",
+      "input": {
+        "check": "agent files for CLI invocations",
+        "files": [
+          "agent.ts",
+          "subagent.ts",
+          "config-update.ts",
+          "goal-seeking-planner.ts"
+        ]
+      },
+      "expectedOutput": {
+        "violations": [],
+        "violationCount": 0,
+        "filesChecked": { "min": 1 }
+      }
+    },
+    {
+      "impulseId": "validation-hierarchical-activity-composition-standard-case-7",
+      "name": "Error handling for hierarchical composition reliability",
+      "input": {
+        "check": "error handling in planner, resolver, loader"
+      },
+      "expectedOutput": {
+        "hasJSONParseErrorHandling": true,
+        "hasCircularRefHandling": true,
+        "hasRetryLogic": true
+      }
+    }
+  ],
+  "harnessImpulseId": "harness-hierarchical-activity-composition-standard",
+  "totalTestCases": 7,
+  "validationStrategy": "Multi-stage validation without LLM",
+  "cicdReady": true,
+  "documentation": "VALIDATION_HARNESS_hierarchical-activity-composition-standard.md",
+  "usage": {
+    "command": "bun run tests/validation-harnesses/run-hierarchical-composition-validation.ts",
+    "workingDirectory": "repos/metabob-opencode/packages/opencode",
+    "exitCode0": "all tests passed",
+    "exitCode1": "some tests failed"
+  }
+}
