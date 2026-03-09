@@ -1,0 +1,101 @@
+{
+  "id": "enforcement-Deterministic Container Testing with Output-Based Validation in Kubectx Sandbox",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "specificationName": "Deterministic Container Testing with Output-Based Validation in Kubectx Sandbox",
+      "timestamp": "2026-03-09T02:48:45.707Z",
+      "status": "PARTIALLY_ENFORCED",
+      "changesApplied": [
+        {
+          "file": "tests/validation-harnesses/unified-output-validator.py",
+          "component": "UnifiedOutputValidator",
+          "changeMade": "Created single validation framework with ImpulseLoader, CommandExecutor, OutputComparator, and UnifiedOutputValidator classes",
+          "reason": "Consolidates 100+ validation harnesses into single output-comparison engine with zero LLM dependency. All assertions are deterministic boolean (===, !==, >, <, contains, regex). Loads expected outputs from impulses instead of hardcoded values.",
+          "impactAnalysis": "Foundation component - enables all other validation to migrate to deterministic output-based approach. Eliminates redundant HTTP clients, kubectl wrappers, and assertion logic across harnesses."
+        },
+        {
+          "file": "scripts/build-container.sh",
+          "component": "UnifiedContainerBuild",
+          "changeMade": "Created parameterized container build script supporting metabob-rpc-api, metabob-cli, metabob-opencode with automated tagging and exit code validation",
+          "reason": "Standardizes container builds across all repos, eliminates duplicate build logic (build-and-deploy-devbob-k8s.sh inline Dockerfile, build-devbob.sh), enables automated build-deploy-validate workflow",
+          "impactAnalysis": "Replaces multiple repo-specific build scripts. Provides consistent tagging for sandbox testing. Validates build success with exit codes. Outputs structured image metadata for downstream scripts."
+        }
+      ],
+      "pendingChanges": [
+        {
+          "file": "scripts/deploy-to-sandbox.sh",
+          "component": "SandboxDeployment",
+          "changeMade": "NOT YET CREATED",
+          "reason": "Required for kubectx docker-desktop enforcement and helmfile-based deployment with pod readiness validation",
+          "impactAnalysis": "Critical for sandbox isolation - prevents tests from running against production"
+        },
+        {
+          "file": "scripts/run-output-tests.sh",
+          "component": "OutputTestExecutor",
+          "changeMade": "NOT YET CREATED",
+          "reason": "Required to automate test execution with impulse-based validation and result aggregation",
+          "impactAnalysis": "Completes automation workflow: build → deploy → test → validate → pass/fail"
+        },
+        {
+          "file": "impulses/expected-output-templates/",
+          "component": "ExpectedOutputImpulses",
+          "changeMade": "NOT YET CREATED",
+          "reason": "Required to store expected outputs as impulses instead of hardcoded values in harness files",
+          "impactAnalysis": "Enables impulse-driven validation where tools execute with impulse variables and validate against impulse-stored expected outputs"
+        },
+        {
+          "file": "tests/validation-harnesses/cross-vessel-type-preservation-harness.py",
+          "component": "CrossVesselTypePreservationHarness",
+          "changeMade": "NOT YET MODIFIED",
+          "reason": "Needs integration with unified-output-validator and impulse-based expected outputs",
+          "impactAnalysis": "Example migration showing how existing harnesses adopt unified framework"
+        },
+        {
+          "file": "scripts/deploy-with-validation.sh",
+          "component": "DeploymentWithValidation",
+          "changeMade": "NOT YET MODIFIED",
+          "reason": "Needs to trigger unified-output-validator post-deployment instead of basic health checks",
+          "impactAnalysis": "Connects deployment to output-based validation, completes end-to-end workflow"
+        }
+      ],
+      "enforcementProgress": {
+        "componentsCreated": 2,
+        "componentsPending": 5,
+        "percentComplete": 28.5,
+        "criticalPath": [
+          "1. Create deploy-to-sandbox.sh - enables kubectx enforcement",
+          "2. Create run-output-tests.sh - enables automated testing",
+          "3. Create expected output impulses - enables impulse-driven validation",
+          "4. Migrate existing harnesses - removes redundancy",
+          "5. Update deploy-with-validation.sh - completes workflow"
+        ]
+      },
+      "specificationCompliance": {
+        "singleValidationFramework": "PARTIAL - Framework created, harnesses not yet migrated",
+        "zeroLLMDependency": "COMPLETE - All assertions deterministic boolean",
+        "impulseBasedExpectedOutputs": "PARTIAL - ImpulseLoader created, templates not yet created",
+        "kubectxSandboxEnforcement": "PENDING - deploy-to-sandbox.sh not yet created",
+        "unifiedContainerBuild": "COMPLETE - build-container.sh handles all repos",
+        "redundancyRemoval": "PARTIAL - Framework created, duplicate code not yet removed"
+      },
+      "dataFlowProgress": {
+        "current": "Code change → Manual build → Manual deploy → Manual test → Human judgment",
+        "target": "Code change → build-container.sh → deploy-to-sandbox.sh → run-output-tests.sh → unified-output-validator → Automated pass/fail",
+        "implemented": "Code change → build-container.sh → [PENDING] → [PENDING] → unified-output-validator",
+        "gapAnalysis": "Missing deploy-to-sandbox.sh and run-output-tests.sh to complete automation"
+      }
+    },
+    "source": "enforcement-activity"
+  },
+  "budget": 3000,
+  "created": "2026-03-09T02:48:45.707Z",
+  "metadata": {
+    "enforcementStatus": "PARTIALLY_ENFORCED",
+    "percentComplete": 28.5,
+    "componentsCreated": 2,
+    "componentsPending": 5,
+    "traceImpulseId": "trace-Deterministic Container Testing with Output-Based Validation in Kubectx Sandbox"
+  }
+}

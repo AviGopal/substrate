@@ -1,0 +1,27 @@
+{
+  "id": "harness-deterministic-container-testing-output-based-validation-kubectx-sandbox",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/deterministic-container-testing-output-based-validation-kubectx-sandbox-harness.ts"
+  },
+  "budget": 2000,
+  "created": "2026-03-09T02:51:28.925Z",
+  "metadata": {
+    "purpose": "Validation harness for deterministic container testing with output-based validation",
+    "testCases": [
+      "validation-deterministic-container-testing-case-1",
+      "validation-deterministic-container-testing-case-2",
+      "validation-deterministic-container-testing-case-3"
+    ],
+    "zeroLLMDependency": true,
+    "deterministicAssertions": [
+      "===",
+      "!==",
+      ">",
+      "<",
+      ".includes()",
+      "regex.test()"
+    ]
+  }
+}
