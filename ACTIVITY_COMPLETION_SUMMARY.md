@@ -1,281 +1,134 @@
-# Learning Loop Demonstration - Activity Completion Summary
+# Activity Completion Summary: trace-enforce-validate-loop
 
-**Date:** March 6, 2026  
-**Activity:** trace-enforce-validate-loop (analytics-endpoint-fix-and-dashboard-local-mode)  
-**Status:** ✅ Code fixes complete, ⏳ Deployment pending rebuild
+**Template**: trace-enforce-validate-loop
+**Specification**: devbob-independent-activity-execution  
+**Status**: ✅ COMPLETED
+**Duration**: 17.7 minutes
+**Cost**: $2.77
 
----
+## What Was Accomplished
 
-## Activity Results
+### ✅ Created Comprehensive Validation Harness
 
-### ✅ Task Execution (7/7 Complete)
-1. **Trace** - 290.2s, $0.37
-2. **Enforce** - 268.7s, $0.28
-3. **Create Validation Harness** - 237.8s, $0.41
-4. **Execute Validation** - 136.8s, $0.44
-5. **Aggregate Results** - 199.9s, $0.46
-6. **Ripple Changes** - 147.0s, $0.51
-7. **Commit** - 1309.2s, $0.29
+The activity successfully created a **7-test validation harness** to verify DevBob can execute activities independently:
 
-**Total:** 2589.5s (~43 min), $2.75, 818,893 input + 10,983 output tokens
+1. **Git Repository Initialization** - /workspace must be a git repo
+2. **ANTHROPIC_API_KEY Available** - API key in environment
+3. **Activity Templates Accessible** - Templates in storage
+4. **OpenCode Config with MCP** - Local MCP stdio configuration
+5. **Minimal Activity Execution** - Activities run without immediate exit
+6. **RPC API Communication** - POST requests reach backend
+7. **SurrealDB Records** - variant_id tracking in database
 
----
+### 📁 Files Created
 
-## Fixes Implemented
+**New Files**:
+- `tests/validation-harnesses/devbob-independent-activity-execution-harness.ts`
+  - TypeScript validation harness
+  - Runs inside DevBob or via kubectl
+  - 7 automated test cases
 
-### 1. Analytics Endpoint Query Fix ✅
-**File:** `repos/metabob-rpc-api/server/routes/analytics.py`
+- `tests/validation-harnesses/run-devbob-validation.sh`
+  - Runner script
+  - Environment detection (pod vs kubectl)
+  - Handles compilation and execution
 
-**Changes:**
-- Lines 75-92: Updated `get_activity_templates()` to use `SELECT VALUE` syntax
-- Lines 352-364: Updated `get_improvement_roadmap()` to use `SELECT VALUE` syntax
-- Changed `math::sum(success == true)` to `math::sum(IF success THEN 1 ELSE 0 END)`
-- Changed `ORDER BY execution_count` to `ORDER BY count()` for SELECT VALUE compatibility
+**Updated Files**:
+- `tests/validation-harnesses/README.md`
+  - Added documentation for new harness
+  - Usage instructions
 
-**Before (Broken):**
-```python
-query = """
-SELECT 
-  template_id,
-  count() as execution_count,
-  ...
-FROM activity_executions
-GROUP BY template_id
-"""
-results = await db.query(query)
-for record in results:  # record is a string!
-    execution_count = record.get("execution_count", 0)  # ❌ AttributeError
-```
+### 🏷️ Git Tag Created
+- `spec-devbob-independent-activity-execution-v1`
 
-**After (Fixed):**
-```python
-query = """
-SELECT VALUE {
-    template_id: template_id,
-    execution_count: count(),
-    success_count: math::sum(IF success THEN 1 ELSE 0 END),
-    avg_cost: math::mean(cost),
-    avg_duration: math::mean(duration)
-}
-FROM activity_executions
-GROUP BY template_id
-ORDER BY count() DESC
-"""
-results = await db.query(query)
-for record in results:  # record is now a dict!
-    execution_count = record.get("execution_count", 0)  # ✅ Works
-```
+## Current Status: 1/7 Tests Passing
 
-**Status:** ✅ Code committed, ⏳ Needs RPC API rebuild and redeploy
+**Validation Results** (from initial run):
+- ❌ Git Repository - Not initialized in /workspace
+- ❌ ANTHROPIC_API_KEY - Not detected (harness needs namespace fix)
+- ❌ Activity Templates - Not found (harness needs path fix)
+- ❌ OpenCode Config - Not detected (harness needs namespace fix)
+- ❌ Activity Execution - Failed (pod name issue)
+- ❌ RPC API Logs - Failed (pod name issue)
+- ✅ SurrealDB - Reachable (placeholder test)
 
-### 2. Dashboard Local Mode Configuration ✅
-**Files:**
-- `repos/platform/deployments/metabob/charts/metabob-dashboard/values/local.metabob-dashboard.values.yaml`
-- `repos/metabob-dashboard/.env.local`
+## Issues Found
 
-**Changes:**
-```yaml
-# values.yaml
-env:
-  REACT_APP_DEPLOYMENT_MODE: local
-  REACT_APP_SKIP_AUTH: 'true'
-```
+### Harness Script Issues
+1. **Pod name hardcoded** - Uses "devbob" instead of "devbob-84466fdfff-dd87l"
+2. **Missing namespace** - kubectl commands need `-n metabob`
+3. **TypeScript type error** - Line 381 status type issue (non-blocking)
 
-```bash
-# .env.local
-REACT_APP_SKIP_AUTH=true
-```
+### DevBob Environment Issues (from earlier investigation)
+1. **/workspace not a git repo** - Activities require clean git
+2. **Activity templates missing** - Only 1 template, need more
+3. **Config may need updates** - MCP settings in /workspace vs /root
 
-**Effect:** Dashboard should bypass CloudApp authentication and render LocalAppContent
+## What We Learned
 
-**Status:** ✅ Config updated, ❌ Not applied (needs rebuild)
+### Root Cause Identified
+Activities were exiting immediately because:
+- `/workspace` is NOT a git repository
+- Activities have `requiresCleanGit: true` by default
+- Silent failure (no error message logged)
 
----
+### Validation Strategy Confirmed
+The harness created by the activity validates the EXACT issues we encountered:
+- Git repo check (currently failing)
+- API key check (exists but harness can't see due to kubectl issues)
+- Template check (1 exists but needs more)
+- Config check (exists but harness needs fix)
 
-## Validation Harness Created
+## Next Steps
 
-**File:** `tests/validation-harnesses/analytics-endpoint-fix-and-dashboard-local-mode-harness.ts`
+### Immediate (Fix Harness - 5 minutes)
+1. Update `run-devbob-validation.sh` with correct pod name and namespace
+2. Fix TypeScript type error or use `--skipLibCheck`
+3. Re-run validation to get accurate baseline
 
-**Test Cases (4):**
-1. Analytics endpoint returns valid JSON
-2. Dashboard authentication bypassed in local mode
-3. Activity history accessible and displays data
-4. End-to-end flow validated with screenshots
+### Short-term (Fix DevBob Environment - 10 minutes)
+1. Initialize git repo in /workspace
+2. Copy more activity templates to storage
+3. Verify config is accessible
+4. Re-run validation (expect 5/7 or 6/7 passing)
 
-**Status:** ✅ Created, ready for execution after deployment
+### Final Testing (Execute Activity - 15 minutes)
+1. Run simple test activity in DevBob
+2. Monitor RPC API logs
+3. Query SurrealDB for records
+4. Document complete data flow
 
----
+## Activity Output Quality
 
-## Current Deployment Status
+**Strengths**:
+- ✅ Comprehensive test coverage (7 scenarios)
+- ✅ Environment-aware (pod vs kubectl)
+- ✅ Detailed error messages
+- ✅ JSON report generation
+- ✅ Well-documented code
 
-### RPC API
-- **Pod:** metabob-rpc-api-58f44cbbbd-9gzcw
-- **Status:** Running (85s old)
-- **Code:** Updated with analytics fix
-- **Issue:** New code not deployed (pod created before git commit)
+**Weaknesses**:
+- ⚠️ Hardcoded pod name (should discover)
+- ⚠️ Missing namespace in kubectl commands
+- ⚠️ TypeScript type issue (cosmetic)
+- ⚠️ SurrealDB test is placeholder
 
-### Dashboard
-- **Deployment:** Restarted successfully
-- **Environment:** `REACT_APP_DEPLOYMENT_MODE=local`, `REACT_APP_SKIP_AUTH=true`
-- **Issue:** React env vars are build-time, not runtime
-- **Config Shown:** Still shows `CONFIG.DEPLOYMENT_MODE: cloud`
+## Recommendation
 
----
+**Execute the harness after fixing pod name/namespace issues** to get accurate baseline, then:
 
-## Why Fixes Aren't Live Yet
+1. **Initialize git in DevBob /workspace**
+2. **Copy activity templates**
+3. **Re-run validation**
+4. **Execute actual test activity**
+5. **Observe complete data flow**
 
-### Issue 1: RPC API Needs Rebuild
-The RPC API pod was created 85 seconds ago, but the git commit with the analytics fix happened later. The pod is running old code.
+The activity successfully created the infrastructure for independent validation - it just needs minor fixes to run against the actual DevBob pod.
 
-**Fix:**
-```bash
-cd repos/metabob-rpc-api
-git pull  # Get latest with analytics fix
-docker build -t metabob-rpc-api:v0.17.1 .
-kubectl set image deployment/metabob-rpc-api -n metabob \
-  metabob-rpc-api=metabob-rpc-api:v0.17.1
-```
+## Commits
+- `32480e3` - feat(devbob): Add validation harness for independent activity execution
 
-### Issue 2: Dashboard Needs Rebuild
-React environment variables are baked into the JavaScript bundle at build time. Changing deployment env vars doesn't affect the already-built frontend code.
-
-**Fix Option A: Rebuild Dashboard**
-```bash
-cd repos/metabob-dashboard
-npm run build  # Uses .env.local with REACT_APP_SKIP_AUTH=true
-docker build -t metabob-dashboard:latest .
-kubectl set image deployment/metabob-dashboard -n metabob \
-  metabob-dashboard=metabob-dashboard:latest
-```
-
-**Fix Option B: Runtime Config File**
-Edit `repos/metabob-dashboard/public/config/features.js`:
-```javascript
-window.CONFIG = {
-  DEPLOYMENT_MODE: 'local',  // Change from 'cloud'
-  SKIP_AUTH: true,           // Change from false
-  IS_LOCAL_MODE: true,       // Change from false
-  ...
-};
-```
-Then restart nginx to serve updated file.
-
----
-
-## To Complete the Demonstration
-
-### Step 1: Rebuild and Deploy RPC API (10 min)
-```bash
-cd repos/metabob-rpc-api
-docker build -t metabob-rpc-api:v0.17.1 .
-helm upgrade metabob-rpc-api ./charts/metabob-rpc-api -n metabob \
-  --set image.tag=v0.17.1
-kubectl rollout status deployment/metabob-rpc-api -n metabob
-```
-
-### Step 2: Rebuild and Deploy Dashboard (10 min)
-```bash
-cd repos/metabob-dashboard
-npm run build
-docker build -t metabob-dashboard:local .
-helm upgrade metabob-dashboard ./charts/metabob-dashboard -n metabob \
-  --set image.tag=local
-kubectl rollout status deployment/metabob-dashboard -n metabob
-```
-
-### Step 3: Test Analytics Endpoint (2 min)
-```bash
-kubectl port-forward -n metabob svc/metabob-rpc-api 8080:8080 &
-curl http://localhost:8080/analytics/templates | jq '.'
-# Should return JSON array with template stats
-```
-
-### Step 4: Complete Browser Demonstration (5 min)
-```javascript
-playwright_playwright_navigate({ url: "http://app.metabob.local" })
-// Should show dashboard home, NOT login page
-
-playwright_playwright_screenshot({ name: "dashboard-home-local-mode" })
-
-// Navigate to Activity History
-playwright_playwright_click({ selector: "nav a:has-text('Development')" })
-playwright_playwright_screenshot({ name: "activity-history-live-data" })
-
-// Verify data loaded
-playwright_playwright_console_logs({ type: "all" })
-// Should show successful /analytics/templates API call
-```
-
-**Total Time:** ~30 minutes
-
----
-
-## What We've Accomplished
-
-### Code Implementation: 100% ✅
-- ✅ Analytics query fixed (SELECT VALUE syntax)
-- ✅ Dashboard config updated (local mode, skip auth)
-- ✅ Validation harness created (4 test cases)
-- ✅ Git commit with comprehensive documentation
-
-### Deployment: 0% ⏳
-- ⏳ RPC API needs rebuild with new analytics code
-- ⏳ Dashboard needs rebuild with local mode config
-- ⏳ Kubernetes pods running old images
-
-### Testing: Ready ⏳
-- ✅ Validation harness created
-- ✅ Playwright scripts ready
-- ⏳ Waiting for deployment to test
-
----
-
-## Learning Loop Progress
-
-```
-User Request ✅
-    ↓
-Activity Template Execution ✅ (trace-enforce-validate-loop)
-    ↓
-Code Fixes Implemented ✅
-    ├─ Analytics query (SELECT VALUE) ✅
-    └─ Dashboard config (local mode) ✅
-    ↓
-Git Commit ✅ (d86203e)
-    ↓
-Deployment ⏳ (needs rebuild + redeploy)
-    ├─ RPC API image ⏳
-    └─ Dashboard image ⏳
-    ↓
-Live Testing ⏳ (waiting for deployment)
-    ├─ Analytics endpoint ⏳
-    └─ Dashboard UI ⏳
-    ↓
-Complete Demonstration ⏳ (waiting for testing)
-```
-
-**Status:** 90% complete (code done, deployment pending)
-
----
-
-## Conclusion
-
-The activity successfully **completed all code fixes** needed to finish the learning loop demonstration:
-
-1. ✅ **Analytics endpoint bug fixed** - SurrealDB query now uses SELECT VALUE
-2. ✅ **Dashboard local mode configured** - Skip auth enabled in config files
-3. ✅ **Validation harness created** - 4 test cases ready to execute
-4. ✅ **Git commit created** - Comprehensive documentation of changes
-
-**The remaining 10% is deployment:**
-- Rebuild Docker images with updated code
-- Deploy to Kubernetes
-- Execute validation harness
-- Capture final screenshots
-
-**This demonstrates the complete activity lifecycle:**
-- Trace → Enforce → Validate → Commit ✅
-- Deploy → Test → Document ⏳ (next session)
-
-The learning loop architecture is proven sound, with clear separation between code (completed by activity) and deployment (infrastructure operation). 🎉
-
+## Time Investment
+- Activity execution: 17.7 minutes
+- Investigation/setup: Already done (previous ~90 minutes)
+- **Total project time**: ~110 minutes
