@@ -1,0 +1,16 @@
+{
+  "id": "validation-mcp-hot-reload-case-5",
+  "type": "memo",
+  "content": {
+    "testCase": "Config reload integration",
+    "input": "Check config/reload.ts file",
+    "expectedOutput": {
+      "importsMCP": true,
+      "callsReload": true
+    },
+    "validation": "Verify config reload imports MCP and calls MCP.reload()",
+    "category": "integration"
+  },
+  "budget": 500,
+  "created": "2026-03-09T00:00:00Z"
+}

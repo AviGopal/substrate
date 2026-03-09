@@ -1,0 +1,17 @@
+{
+  "id": "validation-mcp-hot-reload-case-4",
+  "type": "memo",
+  "content": {
+    "testCase": "CLI command exists",
+    "input": "Check cli/cmd/mcp.ts file",
+    "expectedOutput": {
+      "hasReloadCommand": true,
+      "hasReloadExport": true,
+      "hasReloadInBuilder": true
+    },
+    "validation": "Verify McpReloadCommand exists and is registered in CLI",
+    "category": "cli-command"
+  },
+  "budget": 500,
+  "created": "2026-03-09T00:00:00Z"
+}
