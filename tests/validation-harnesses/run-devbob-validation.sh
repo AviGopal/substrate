@@ -26,7 +26,7 @@ else
     fi
     
     # Check if devbob pod exists
-    if ! kubectl get pod devbob &> /dev/null; then
+    if ! kubectl get pod -n metabob devbob-84466fdfff-dd87l &> /dev/null; then
         echo "❌ ERROR: DevBob pod not found. Is it running?"
         exit 1
     fi
