@@ -1,0 +1,30 @@
+{
+  "id": "harness-devbob-complete-environment-setup",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/devbob-complete-environment-setup-harness.ts",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specificationName": "devbob-complete-environment-setup",
+    "harnessType": "multi-stage-validation",
+    "totalTests": 9,
+    "criticalTests": 7,
+    "createdAt": "2026-03-09T19:00:00Z",
+    "description": "Comprehensive validation harness for DevBob complete environment setup",
+    "testCategories": [
+      "pod-status",
+      "workspace-setup",
+      "credentials",
+      "activity-execution",
+      "configuration"
+    ],
+    "executionMethod": "local-kubectl",
+    "dependencies": [
+      "kubectl",
+      "jq"
+    ]
+  }
+}
