@@ -299,3 +299,72 @@ helm upgrade devbob helm/charts/devbob -n metabob
 
 **Status**: Infrastructure complete, execution path clear, ready to proceed with ACP delegation approach.
 
+
+---
+
+## 🔧 ACP Delegation Limitation Discovered
+
+### Issue
+Attempted to use `acp_delegate()` tool to connect to DevBob ACP server, but discovered current limitations:
+
+**Error**: `TCP transport not yet implemented`
+
+### Root Cause
+- ACP delegation tool currently only supports `docker://container-name` targets (stdio transport)
+- DevBob runs in Kubernetes pod, not accessible via docker:// 
+- TCP/HTTP transport (`tcp://host:port`) is Phase 2 feature - not yet implemented
+- Cannot delegate to Kubernetes-based ACP servers from host session
+
+### Workaround Options
+
+#### Option 1: Direct kubectl exec (Current)
+```bash
+kubectl exec -n metabob devbob-7d4bfc7557-dglj2 -- \
+  opencode run "test command"
+```
+**Status**: Blocked by ProviderInitError (SDK not bundled in binary)
+
+#### Option 2: Rebuild binary with SDK (Recommended)
+```bash
+# In repos/metabob-opencode
+bun install @ai-sdk/anthropic
+bun run build --standalone
+
+# Rebuild image
+docker build -f configs/Dockerfile.devbob -t devbob:latest .
+
+# Deploy
+helm upgrade devbob helm/charts/devbob -n metabob
+```
+**Outcome**: Fixes `opencode run`, enables direct kubectl exec validation
+
+#### Option 3: Wait for TCP transport Phase 2
+- Requires ACP SDK updates
+- Adds HTTP/TCP listener support
+- Enables `acp_delegate({ target: "tcp://devbob.metabob:8080" })`
+**Timeline**: Future enhancement
+
+### Updated Recommendation
+
+**Short-term** (this session): 
+- Cannot use ACP delegation due to transport limitations
+- Document findings for architecture team
+- Prepare for binary rebuild approach
+
+**Next session**:
+- Rebuild opencode binary with bundled SDK
+- Deploy updated DevBob image  
+- Validate with `kubectl exec` → `opencode run` (will work after rebuild)
+- Test activity execution and variant_id tracking
+
+### Architecture Insight
+
+The current ACP implementation assumes:
+- Agent-to-agent: docker containers on same host (stdio)
+- Not designed for: host-to-kubernetes pod communication
+
+For DevBob validation, the proper execution path is:
+1. ✅ **Direct CLI**: `kubectl exec` → `opencode run` (after rebuild)
+2. ⏸️ **ACP TCP**: When Phase 2 implemented
+3. ❌ **ACP docker**: Not applicable for k8s pods
+
