@@ -1,0 +1,165 @@
+{
+  "specificationName": "devbob-provider-initialization",
+  "description": "Anthropic provider must initialize successfully in DevBob pod to enable activity execution",
+  "expectedBehavior": "opencode run command completes without ProviderInitError, ANTHROPIC_API_KEY accessible, read-only config doesn't block init",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/cli/cmd/run.ts",
+      "component": "RunCommand.handler",
+      "line": 291,
+      "currentBehavior": "Calls bootstrap() which initializes Instance and triggers provider state initialization",
+      "desiredBehavior": "Same - entry point is correct",
+      "gap": "None - this component is working correctly"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/cli/bootstrap.ts",
+      "component": "bootstrap()",
+      "line": 4,
+      "currentBehavior": "Wraps callback with Instance.provide() which initializes InstanceBootstrap",
+      "desiredBehavior": "Same - bootstrapping logic is correct",
+      "gap": "None - this component is working correctly"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/project/bootstrap.ts",
+      "component": "InstanceBootstrap()",
+      "line": 15,
+      "currentBehavior": "Initializes plugins, share, format, LSP, file watcher, and template library. Does NOT explicitly initialize providers",
+      "desiredBehavior": "Same - providers are initialized lazily on first use",
+      "gap": "None - lazy initialization is by design"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/provider/provider.ts",
+      "component": "Provider.state()",
+      "line": 215,
+      "currentBehavior": "Lazy state initialization via Instance.state() - loads config, database, detects env vars (ANTHROPIC_API_KEY), merges providers from env/auth/custom/config sources",
+      "desiredBehavior": "Same - but must successfully detect ANTHROPIC_API_KEY and initialize anthropic provider",
+      "gap": "CRITICAL: Provider state initialization happens during first Provider.getModel() call. If this fails, ProviderInitError is thrown. Need to trace why anthropic provider fails to load despite ANTHROPIC_API_KEY being present."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/provider/provider.ts",
+      "component": "Provider.getSDK()",
+      "line": 486,
+      "currentBehavior": "Dynamically loads SDK via BunProc.install() or preloaded SDK, creates provider SDK instance with options (apiKey, headers, etc.)",
+      "desiredBehavior": "Same - but SDK initialization must succeed",
+      "gap": "CRITICAL: SDK initialization fails and throws error caught at line 560, wrapped as ProviderInitError at line 575. Need to check: (1) BunProc.install() can write to cache directory, (2) SDK module loads correctly, (3) apiKey is properly passed to SDK"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/bun/index.ts",
+      "component": "BunProc.install()",
+      "line": 60,
+      "currentBehavior": "Installs npm packages to Global.Path.cache using 'bun add' command. Requires write access to cache directory.",
+      "desiredBehavior": "Same - must successfully install @ai-sdk/anthropic package",
+      "gap": "POTENTIAL ROOT CAUSE: Global.Path.cache might not be writable in DevBob pod. Need to check directory permissions and whether cache directory is mounted read-only."
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/global/index.ts",
+      "component": "Global.Path",
+      "line": 8,
+      "currentBehavior": "Uses xdg-basedir to determine cache path: /root/.cache/opencode by default. Creates directories with fs.mkdir() at module load time.",
+      "desiredBehavior": "Cache directory must be writable for package installation",
+      "gap": "POTENTIAL ROOT CAUSE: In DevBob pod, /root/.cache might be read-only or not properly initialized. Need to verify: (1) Directory exists and is writable, (2) xdg-basedir resolves correctly in container, (3) No volume mount conflicts"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/config/config.ts",
+      "component": "Config.state()",
+      "line": 32,
+      "currentBehavior": "Loads config from multiple sources: global config, OPENCODE_CONFIG flag, opencode.json/jsonc files in workspace hierarchy, OPENCODE_CONFIG_CONTENT flag, .opencode directories. Merges provider options from config.",
+      "desiredBehavior": "Config loading should not block provider initialization. ANTHROPIC_API_KEY from environment should take precedence.",
+      "gap": "POTENTIAL ISSUE: If .opencode/opencode.json in DevBob workspace has malformed provider config, it could override or conflict with environment variable. Need to check config merge order and validation."
+    },
+    {
+      "file": "configs/devbob-entrypoint.sh",
+      "component": "init_opencode_config()",
+      "line": 422,
+      "currentBehavior": "Creates .opencode/opencode.json with provider config that explicitly sets apiKey from ANTHROPIC_API_KEY environment variable",
+      "desiredBehavior": "Config file should provide apiKey to provider initialization",
+      "gap": "VALIDATION NEEDED: Check if config file is properly created and readable. Verify JSON syntax is valid. Confirm apiKey substitution from environment variable works correctly."
+    },
+    {
+      "file": "configs/devbob-entrypoint.sh",
+      "component": "validate_environment()",
+      "line": 79,
+      "currentBehavior": "Validates ANTHROPIC_API_KEY or OPENAI_API_KEY is set, checks workspace directory exists",
+      "desiredBehavior": "Same - validation passes in DevBob",
+      "gap": "None - environment validation succeeds according to logs"
+    }
+  ],
+  "dataFlow": "opencode run → bootstrap() → Instance.provide() → InstanceBootstrap() → [lazy] Provider.state() → Provider.getModel() → Provider.getSDK() → BunProc.install() → fs.mkdir(Global.Path.cache) → FAILURE",
+  "rootCauseHypotheses": [
+    {
+      "hypothesis": "Cache directory is not writable",
+      "evidence": "BunProc.install() requires write access to Global.Path.cache (/root/.cache/opencode). DevBob pod might have read-only filesystem or volume mount conflicts.",
+      "validation": "Check directory permissions: ls -la /root/.cache && touch /root/.cache/opencode/test.txt",
+      "priority": "HIGH"
+    },
+    {
+      "hypothesis": "Environment variable not accessible during provider initialization",
+      "evidence": "Provider.state() at line 351 checks process.env for apiKey. If ANTHROPIC_API_KEY is not in process.env at initialization time, provider won't load.",
+      "validation": "Add debug logging in provider.ts line 351 to print process.env.ANTHROPIC_API_KEY value",
+      "priority": "HIGH"
+    },
+    {
+      "hypothesis": "Config file overrides environment variable incorrectly",
+      "evidence": "Config loading has complex merge logic (global → custom → workspace → .opencode). Malformed config could break provider initialization.",
+      "validation": "Check .opencode/opencode.json content and validate JSON syntax. Verify provider.anthropic.options.apiKey value.",
+      "priority": "MEDIUM"
+    },
+    {
+      "hypothesis": "Network access blocked for npm registry",
+      "evidence": "BunProc.install() runs 'bun add @ai-sdk/anthropic' which requires network access to npm registry. DevBob pod might have network restrictions.",
+      "validation": "Run: docker exec devbob-pod curl -I https://registry.npmjs.org",
+      "priority": "MEDIUM"
+    },
+    {
+      "hypothesis": "SDK module fails to load after installation",
+      "evidence": "Even if BunProc.install() succeeds, dynamic import at line 518 might fail due to module resolution issues or missing dependencies.",
+      "validation": "Check if @ai-sdk/anthropic is installed: ls -la /root/.cache/opencode/node_modules/@ai-sdk/anthropic",
+      "priority": "LOW"
+    }
+  ],
+  "debuggingSteps": [
+    {
+      "step": 1,
+      "action": "Verify cache directory permissions",
+      "command": "docker exec devbob-pod bash -c 'ls -la /root/.cache && mkdir -p /root/.cache/opencode/test && echo success'",
+      "expectedOutput": "success",
+      "onFailure": "Cache directory is read-only or not accessible - FIX: Mount writable volume or change cache location"
+    },
+    {
+      "step": 2,
+      "action": "Verify ANTHROPIC_API_KEY is in environment",
+      "command": "docker exec devbob-pod bash -c 'env | grep ANTHROPIC_API_KEY'",
+      "expectedOutput": "ANTHROPIC_API_KEY=sk-...",
+      "onFailure": "Environment variable not set - FIX: Check .env.devbob and entrypoint.sh"
+    },
+    {
+      "step": 3,
+      "action": "Check opencode config file",
+      "command": "docker exec devbob-pod bash -c 'cat /workspace/.opencode/opencode.json | jq .provider.anthropic'",
+      "expectedOutput": "Valid JSON with apiKey field",
+      "onFailure": "Config malformed - FIX: Regenerate config in entrypoint.sh"
+    },
+    {
+      "step": 4,
+      "action": "Test npm registry connectivity",
+      "command": "docker exec devbob-pod bash -c 'curl -I https://registry.npmjs.org'",
+      "expectedOutput": "HTTP/2 200",
+      "onFailure": "Network blocked - FIX: Configure network policy or use internal registry"
+    },
+    {
+      "step": 5,
+      "action": "Add debug logging to provider initialization",
+      "command": "Patch provider.ts line 351 to log: log.debug('checking env for provider', { providerID, envVars: provider.env, apiKey: apiKey?.slice(0, 10) })",
+      "expectedOutput": "Debug logs showing apiKey detection",
+      "onFailure": "Provider loading logic broken - FIX: Debug provider.state() initialization"
+    },
+    {
+      "step": 6,
+      "action": "Run opencode with detailed provider logging",
+      "command": "docker exec devbob-pod bash -c 'LOG_LEVEL=debug opencode run \"echo test\" 2>&1 | grep -A 10 \"provider\"'",
+      "expectedOutput": "Provider initialization logs showing anthropic provider loaded",
+      "onFailure": "Review full error stack trace to identify exact failure point"
+    }
+  ],
+  "traceImpulseId": "trace-devbob-provider-initialization"
+}

@@ -23,6 +23,40 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+      - name: setup-config
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Setting up opencode configuration..."
+          mkdir -p /workspace/.config/opencode
+          cp /config-readonly/opencode.json /workspace/.config/opencode/opencode.json
+          # Substitute environment variables in config
+          sed -i "s/\${ANTHROPIC_API_KEY}/$ANTHROPIC_API_KEY/g" /workspace/.config/opencode/opencode.json
+          sed -i "s/\${METABOB_API_KEY}/$METABOB_API_KEY/g" /workspace/.config/opencode/opencode.json
+          echo "Config setup complete. Verifying..."
+          cat /workspace/.config/opencode/opencode.json | head -20
+          echo "Init container finished successfully"
+        env:
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devbob.fullname" . }}-secrets
+              key: anthropic-api-key
+        - name: METABOB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "devbob.fullname" . }}-secrets
+              key: metabob-api-key
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        - name: config
+          mountPath: /config-readonly
+          readOnly: true
       containers:
       - name: devbob
         {{- with .Values.securityContext }}
@@ -136,9 +170,8 @@ spec:
         - name: workspace
           mountPath: {{ .Values.persistence.mountPath }}
         {{- end }}
-        - name: config
-          mountPath: /workspace/.config/opencode
-          readOnly: true
+        # Config is now created by initContainer in /workspace/.config/opencode
+        # No need for separate config mount
       volumes:
       {{- if .Values.persistence.enabled }}
       - name: workspace

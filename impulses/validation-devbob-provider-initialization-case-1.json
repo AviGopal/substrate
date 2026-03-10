@@ -1,0 +1,16 @@
+{
+  "testCaseName": "Provider Initialization - Simple Arithmetic",
+  "description": "Tests that opencode can execute a simple prompt without ProviderInitError",
+  "input": "What is 2+2? Answer in one word.",
+  "expectedOutput": "Command completed successfully",
+  "expectedBehavior": {
+    "noProviderInitError": true,
+    "exitCode": 0,
+    "timeout": 30
+  },
+  "validationCriteria": [
+    "No ProviderInitError in stdout or stderr",
+    "Command completes within 30 seconds",
+    "Exit code is 0"
+  ]
+}
