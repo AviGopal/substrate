@@ -1,160 +1,115 @@
 {
-  "specificationName": "Container Development Workflow and Non-LLM Activity Execution",
+  "specificationName": "devbob-independent-execution-validation",
   "otherSpecifications": [
-    "Clean Environment Activity Execution",
-    "Activity Template MCP-Only Flow",
-    "Activity Execution Recording",
     "devbob-k8s-git-operations",
-    "Kubernetes Deployment Validation",
-    "Activity Recommendation Learning Loop",
-    "Impulse Learning in RPC API",
-    "Thompson Sampling",
-    "Pattern Extraction Service",
-    "Bootstrap Template Filepath Compliance"
+    "devbob-acp-multi-vessel-coordination",
+    "acp-local-network-discovery",
+    "activity-execution-comprehensive-mapping-display",
+    "activity-recommendation-learning-loop",
+    "instance-invariant-storage",
+    "impulse-learning-in-rpc-api-only",
+    "metrics-calculation-in-rpc-api-only"
   ],
-  "totalSpecificationsAnalyzed": 54,
-  "conflicts": [
-    {
-      "type": "CODE_COMPATIBILITY_ISSUE",
-      "severity": "MINOR",
-      "spec1": "Container Development Workflow",
-      "affectedSpecs": [
-        "Clean Environment Activity Execution",
-        "Activity Template MCP-Only Flow",
-        "Activity Execution Recording"
-      ],
-      "sharedComponent": "trailblazing-executor.ts, activity-replay.ts, cli/cmd/activity.ts, template-executor.ts, goal-seeking-planner.ts",
-      "description": "task.prompt access without existence check - TypeScript errors due to optional prompt field",
-      "resolution": "Add execution mode checks or optional chaining before accessing task.prompt.template",
-      "impact": "TypeScript compilation warnings, no runtime errors if prompt exists",
-      "estimatedFixTime": "2.5 hours"
-    },
-    {
-      "type": "CODE_COMPATIBILITY_ISSUE",
-      "severity": "MINOR",
-      "spec1": "Container Development Workflow",
-      "affectedSpecs": ["Goal-Seeking Activity Creation"],
-      "sharedComponent": "goal-seeking-planner.ts",
-      "description": "Goal-seeking planner assumes prompt.variables exists for variable extraction",
-      "resolution": "Check executionMode before accessing prompt.variables",
-      "impact": "Variable extraction may fail for deterministic tasks",
-      "estimatedFixTime": "30 minutes"
-    },
-    {
-      "type": "CODE_COMPATIBILITY_ISSUE",
-      "severity": "MINOR",
-      "spec1": "Container Development Workflow",
-      "affectedSpecs": ["Metabob MCP Backend Integration"],
-      "sharedComponent": "metabob.ts (template conversion)",
-      "description": "Backend template conversion expects required prompt field",
-      "resolution": "Update OpenCodeTask type to make prompt optional, add executionMode and toolSequence fields",
-      "impact": "Templates without prompts cannot be converted from backend format",
-      "estimatedFixTime": "1 hour"
-    }
-  ],
+  "conflicts": [],
   "sharedComponents": [
     {
-      "component": "activity.ts (executeTemplate)",
-      "filePath": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "component": "repos/metabob-opencode/packages/opencode/package.json",
       "affectedBySpecs": [
-        "Container Development Workflow",
-        "Clean Environment Activity Execution",
-        "Activity Execution Recording",
-        "Activity Template MCP-Only Flow"
+        "devbob-independent-execution-validation"
       ],
-      "currentState": "COMPATIBLE",
-      "recommendation": "No changes needed - already implements execution mode branching"
+      "requirements": {
+        "devbob-independent-execution-validation": "Add @ai-sdk/anthropic to dependencies for SDK preload"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "No changes needed - only one spec modifies this component"
     },
     {
-      "component": "activity-template.ts (TaskSchema)",
-      "filePath": "repos/metabob-opencode/packages/opencode/src/session/activity-template.ts",
-      "affectedBySpecs": ["All 54+ specifications"],
-      "currentState": "COMPATIBLE",
-      "recommendation": "No changes needed - backward compatible design with optional fields and defaults"
+      "component": "configs/Dockerfile.devbob",
+      "affectedBySpecs": [
+        "devbob-independent-execution-validation"
+      ],
+      "requirements": {
+        "devbob-independent-execution-validation": "Pre-install @ai-sdk/anthropic in container"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "No changes needed - only one spec modifies this component"
     },
     {
-      "component": "trailblazing-executor.ts",
-      "filePath": "repos/metabob-opencode/packages/opencode/src/session/trailblazing-executor.ts",
+      "component": "DevBob Deployment (k8s)",
       "affectedBySpecs": [
-        "Container Development Workflow",
-        "Activity Template Trailblazing"
+        "devbob-independent-execution-validation",
+        "devbob-k8s-git-operations",
+        "devbob-acp-multi-vessel-coordination",
+        "ALL other DevBob specs"
       ],
-      "currentState": "REQUIRES_FIX",
-      "recommendation": "Add executionMode check before accessing prompt (2 locations)"
-    },
-    {
-      "component": "template-executor.ts",
-      "filePath": "repos/metabob-opencode/packages/opencode/src/session/template-executor.ts",
-      "affectedBySpecs": [
-        "Container Development Workflow",
-        "Template Lifecycle Management"
-      ],
-      "currentState": "REQUIRES_FIX",
-      "recommendation": "Add executionMode check or optional chaining (2 locations)"
-    },
-    {
-      "component": "activity-replay.ts",
-      "filePath": "repos/metabob-opencode/packages/opencode/src/tool/activity-replay.ts",
-      "affectedBySpecs": [
-        "Container Development Workflow",
-        "Activity Replay and Recovery"
-      ],
-      "currentState": "REQUIRES_FIX",
-      "recommendation": "Skip replay for deterministic tasks or add prompt existence check (1 location)"
+      "requirements": {
+        "ALL": "DevBob pod running in metabob namespace with proper service connectivity"
+      },
+      "conflictStatus": "SHARED_BLOCKER",
+      "recommendation": "Single deployment resolves blocker for all specs. Deploy DevBob after rebuild."
     }
   ],
-  "validationResults": {
-    "currentSpec": {
-      "integrationTests": {
-        "total": 5,
-        "passed": 2,
-        "failed": 0,
-        "blocked": 3,
-        "successRate": "40%"
-      },
-      "unitTests": {
-        "total": 28,
-        "passed": 28,
-        "failed": 0,
-        "blocked": 0,
-        "successRate": "100%"
-      },
-      "overallConfidence": "HIGH"
+  "crossSpecDependencies": {
+    "devbob-independent-execution-validation": {
+      "dependsOn": ["DevBob deployment"],
+      "requiredBy": ["All other DevBob specs (fixes provider initialization)"],
+      "blocks": [],
+      "blockedBy": ["DevBob not deployed", "Rebuild required"]
     },
-    "relatedSpecs": {
-      "totalAnalyzed": 54,
-      "compatible": 52,
-      "minorConflicts": 3,
-      "blockingConflicts": 0,
-      "compatibilityRate": "96%"
+    "devbob-k8s-git-operations": {
+      "dependsOn": ["DevBob deployment"],
+      "requiredBy": [],
+      "blocks": [],
+      "blockedBy": ["DevBob not deployed", "gh CLI not in image"]
+    },
+    "devbob-acp-multi-vessel-coordination": {
+      "dependsOn": ["DevBob deployment", "SurrealDB"],
+      "requiredBy": [],
+      "blocks": [],
+      "blockedBy": ["DevBob not deployed", "SurrealDB API content-type issue"]
     }
   },
-  "impactAnalysis": {
-    "breakingChanges": false,
-    "architecturalAlignment": "FULLY_ALIGNED",
-    "mcpCompliance": "MAINTAINED",
-    "backwardCompatibility": "MAINTAINED",
-    "overallImpact": "POSITIVE"
+  "prerequisiteRelationship": {
+    "type": "FOUNDATIONAL",
+    "description": "devbob-independent-execution-validation is a prerequisite for other specs",
+    "reasoning": "Fixes provider initialization required for ALL opencode commands. Other specs cannot validate until provider works."
   },
-  "recommendations": {
-    "immediate": [
-      "Fix TypeScript errors in 5 files (trailblazing-executor.ts, activity-replay.ts, cli/cmd/activity.ts, template-executor.ts, goal-seeking-planner.ts)",
-      "Add executionMode checks before accessing task.prompt",
-      "Update metabob.ts type definitions for optional prompt"
-    ],
-    "longTerm": [
-      "Create discriminated union types for DeterministicTask and LLMAssistedTask",
-      "Add executionMode to recommendation algorithm",
-      "Build template library for common container workflows",
-      "Extend validation coverage for all execution mode combinations"
-    ],
-    "nextPhases": [
-      "Complete Phase 3: CLI Integration (--mode flag)",
-      "Complete Phase 4: Container Workflow Templates",
-      "Add runtime integration tests"
-    ]
+  "riskAssessment": {
+    "overallRisk": "LOW",
+    "deploymentSafety": "SAFE_TO_DEPLOY",
+    "breakingChanges": "NONE",
+    "regressionRisk": "MINIMAL",
+    "conflictSeverity": "NONE"
   },
-  "conflictImpulseId": "conflict-analysis-Container-Development-Workflow-and-Non-LLM-Activity-Execution",
-  "analysisDate": "2026-03-08",
-  "status": "MINOR_CONFLICTS_RESOLVABLE"
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "VALIDATION_PRIORITY",
+      "recommendation": "Validate devbob-independent-execution-validation FIRST",
+      "reasoning": "Fixes foundational provider initialization required by all other specs"
+    },
+    {
+      "priority": "HIGH",
+      "category": "DEPLOYMENT_STRATEGY",
+      "recommendation": "Single deployment resolves all spec blockers",
+      "reasoning": "All specs blocked by 'DevBob not deployed'. One deployment unblocks all validations."
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "CONFLICT_RESOLUTION",
+      "recommendation": "No conflicts to resolve - proceed with deployment",
+      "reasoning": "Zero conflicts detected. All changes are additive and compatible."
+    }
+  ],
+  "summary": {
+    "totalConflicts": 0,
+    "criticalConflicts": 0,
+    "warningConflicts": 0,
+    "sharedComponentsConflicting": 0,
+    "sharedComponentsCompatible": 3,
+    "overallAssessment": "NO_CONFLICTS_DETECTED",
+    "deploymentRecommendation": "APPROVE_FOR_DEPLOYMENT"
+  },
+  "conflictImpulseId": "conflict-analysis-devbob-independent-execution-validation",
+  "timestamp": "2026-03-10T20:45:00.000Z"
 }

@@ -1,0 +1,53 @@
+{
+  "specificationName": "devbob-independent-execution-validation",
+  "rootCause": "Anthropic SDK not preloaded in compiled opencode binary",
+  "components": [
+    {
+      "file": "repos/metabob-opencode/packages/opencode/package.json",
+      "line": 24,
+      "component": "devDependencies",
+      "currentBehavior": "@ai-sdk/anthropic in devDependencies only",
+      "desiredBehavior": "@ai-sdk/anthropic in dependencies for bundling",
+      "gap": "SDK not bundled with compiled binary"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/provider/sdk-loader.ts",
+      "line": 31,
+      "component": "anthropicSDK preload",
+      "currentBehavior": "import fails, catch block logs 'not preloaded'",
+      "desiredBehavior": "SDK imported and registered in preloadedSDKs",
+      "gap": "Import fails because package not in dependencies"
+    },
+    {
+      "file": "repos/metabob-opencode/packages/opencode/src/provider/provider.ts",
+      "line": 486,
+      "component": "getSDK function",
+      "currentBehavior": "Falls back to BunProc.install(), throws InitError",
+      "desiredBehavior": "Uses preloaded SDK directly",
+      "gap": "Fallback triggers ProviderInitError"
+    }
+  ],
+  "dataFlow": "kubectl exec → opencode startup → sdk-loader (0 packages loaded) → provider init → getSDK (preload undefined) → BunProc.install() fails → InitError",
+  "fixStrategy": {
+    "priority1": {
+      "action": "Move @ai-sdk/anthropic to dependencies",
+      "file": "repos/metabob-opencode/packages/opencode/package.json",
+      "impact": "SDK bundled in binary, preload succeeds",
+      "rebuild": "opencode binary"
+    },
+    "priority2": {
+      "action": "Pre-install SDK in container",
+      "file": "configs/Dockerfile.devbob",
+      "impact": "Fallback works even if preload fails",
+      "rebuild": "DevBob image"
+    }
+  },
+  "recommendation": "Implement Priority 1 + Priority 2 (defense in depth)",
+  "validation": {
+    "configSubstitution": "PASS - API keys substituted correctly",
+    "secretsInjection": "PASS - env vars present and correct",
+    "serviceConnectivity": "PASS - k8s service endpoints available",
+    "sdkPreload": "FAIL - 0 packages loaded",
+    "sdkFallback": "FAIL - ProviderInitError"
+  }
+}

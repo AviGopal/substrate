@@ -1,27 +1,27 @@
 {
-  "specificationName": "dashboard-activity-history-viewing-flow",
+  "specificationName": "devbob-independent-execution-validation",
   "changesApplied": [
     {
-      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
-      "component": "Analytics Router (NEW)",
-      "changeMade": "Created complete analytics router with 5 REST endpoints implementing aggregation logic for activity execution data",
-      "reason": "Dashboard UI components (DevelopmentProgressDashboard, LearningView) call /analytics/* endpoints to display activity history. Without this router, all requests return 404, breaking dashboard functionality.",
-      "impactAnalysis": "Zero blast radius - new file with no modifications to existing code. Adds read-only aggregation endpoints querying SurrealDB activity_executions table. No side effects on write paths or other components."
+      "file": "repos/metabob-opencode/packages/opencode/package.json",
+      "component": "dependencies",
+      "changeMade": "Added @ai-sdk/anthropic@2.2.10 to dependencies section (line 50)",
+      "reason": "SDK must be bundled in compiled binary for preload to succeed at runtime, eliminating ProviderInitError. The SDK was completely missing from package.json.",
+      "impactAnalysis": "LOW blast radius - Only affects opencode binary build. Requires rebuild. No breaking changes. Adds ~2-3MB to binary size. Eliminates runtime network calls for SDK loading."
     },
     {
-      "file": "repos/metabob-rpc-api/server/routes/__init__.py",
-      "component": "Router Module Exports",
-      "changeMade": "Added import and export for analytics_router following existing pattern",
-      "reason": "Make analytics_router importable in app.py for registration. Required to mount endpoints into FastAPI application.",
-      "impactAnalysis": "Minimal blast radius - single import line added. No changes to existing imports or exports. Enables app.py to include analytics router."
+      "file": "configs/Dockerfile.devbob",
+      "component": "opencode binary installation",
+      "changeMade": "Added 'RUN bun install @ai-sdk/anthropic@2.2.10' after binary symlink (line 166)",
+      "reason": "Defense in depth - ensures SDK available in container cache for BunProc.install() fallback if binary preload fails. Provides redundant SDK availability.",
+      "impactAnalysis": "LOW blast radius - Only affects DevBob image build. Requires image rebuild. No breaking changes. Adds ~2-3MB to image size, ~5 seconds to build time. No runtime network access needed."
     },
     {
-      "file": "repos/metabob-rpc-api/server/app.py",
-      "component": "FastAPI Application Router Registration",
-      "changeMade": "Registered analytics_router with app.include_router(routes.analytics_router) at line 81",
-      "reason": "Mount /analytics/* endpoints into FastAPI application routing. Completes the data flow chain: Dashboard UI → HTTP Request → FastAPI Router → Analytics Endpoints → SurrealDB → Response.",
-      "impactAnalysis": "Low blast radius - single line added among 14 other router registrations. No modification to existing routers. Analytics endpoints now accessible at /analytics/* URL prefix."
+      "file": "scripts/validate-devbob-execution.sh",
+      "component": "DevBob validation harness",
+      "changeMade": "Created comprehensive validation script with 5 test categories: SDK preload, provider init, service connectivity, secrets/config, activity execution",
+      "reason": "Automated validation for all aspects of devbob-independent-execution-validation specification. Provides immediate deployment feedback and catches regressions.",
+      "impactAnalysis": "NONE - Standalone validation script with no code dependencies. Can run immediately in any DevBob container. Fail-fast design with color-coded output."
     }
   ],
-  "enforcementImpulseId": "enforcement-dashboard-activity-history-viewing-flow"
+  "enforcementImpulseId": "enforcement-devbob-independent-execution-validation"
 }
