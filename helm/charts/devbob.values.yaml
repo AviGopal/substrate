@@ -16,7 +16,7 @@ secrets:
 
 # Environment configuration for docker-desktop
 env:
-  metabobApiUrl: "http://metabob-rpc-api"
+  metabobApiUrl: "http://metabob-rpc-api:8080"
   surrealHost: "surrealdb"
   surrealPort: "8000"
   surrealUser: "root"
