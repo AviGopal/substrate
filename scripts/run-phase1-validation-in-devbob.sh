@@ -8,14 +8,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 NAMESPACE="metabob"
-DEVBOB_POD=$(kubectl get pods -n $NAMESPACE -l app=devbob -o jsonpath='{.items[0].metadata.name}')
+DEVBOB_POD=$(kubectl get pods -n $NAMESPACE -l app=devbob -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' | awk '{print $1}')
 RPC_API_DEPLOYMENT="metabob-rpc-api"
+
+if [ -z "$DEVBOB_POD" ]; then
+  echo "ERROR: No ready DevBob pods found in namespace $NAMESPACE"
+  kubectl get pods -n $NAMESPACE -l app=devbob
+  exit 1
+fi
 
 echo "=========================================="
 echo "Phase 1 Validation Deployment & Execution"
 echo "=========================================="
 echo "Namespace: $NAMESPACE"
-echo "DevBob Pod: $DEVBOB_POD"
+echo "DevBob Pod: $DEVBOB_POD (ready=true)"
 echo ""
 
 # Step 1: Deploy latest code (optional - uncomment if needed)
@@ -68,8 +74,12 @@ echo ""
 # Step 7: Follow RPC API logs (optional)
 if [ "$1" == "--follow-logs" ]; then
     echo "[Step 7] Following RPC API logs (Ctrl+C to stop)..."
-    RPC_API_POD=$(kubectl get pods -n $NAMESPACE -l app=metabob-rpc-api -o jsonpath='{.items[0].metadata.name}')
-    kubectl logs -f $RPC_API_POD -n $NAMESPACE
+    RPC_API_POD=$(kubectl get pods -n $NAMESPACE -l app=metabob-rpc-api -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' | awk '{print $1}')
+    if [ -z "$RPC_API_POD" ]; then
+      echo "WARNING: No ready RPC API pods found"
+    else
+      kubectl logs -f $RPC_API_POD -n $NAMESPACE
+    fi
 fi
 
 # Summary

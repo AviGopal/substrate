@@ -17,6 +17,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PLATFORM_DIR="$PROJECT_ROOT/repos/platform/metabob-apps"
 
+# Source shared pod selection utility
+source "$SCRIPT_DIR/lib/get-ready-pod.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -157,16 +160,22 @@ MAX_ATTEMPTS=60
 ATTEMPT=0
 
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    POD_STATUS=$(kubectl get pods -n "$NAMESPACE" -l "$SELECTOR" -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
-    POD_READY=$(kubectl get pods -n "$NAMESPACE" -l "$SELECTOR" -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+    # Use ready pod selection
+    POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$SELECTOR" \
+        -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' 2>/dev/null | awk '{print $1}')
     
-    if [ "$POD_STATUS" = "Running" ] && [ "$POD_READY" = "True" ]; then
-        log_info "✓ Pod is running and ready"
-        POD_READY=true
-        break
+    if [ -n "$POD_NAME" ]; then
+        POD_STATUS=$(kubectl get pod -n "$NAMESPACE" "$POD_NAME" -o jsonpath='{.status.phase}' 2>/dev/null)
+        POD_READY=$(kubectl get pod -n "$NAMESPACE" "$POD_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+        
+        if [ "$POD_STATUS" = "Running" ] && [ "$POD_READY" = "True" ]; then
+            log_info "✓ Pod is running and ready: $POD_NAME"
+            POD_READY=true
+            break
+        fi
     fi
     
-    log_info "Pod status: $POD_STATUS, Ready: $POD_READY (attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS)"
+    log_info "Waiting for ready pod... (attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS)"
     sleep 2
     ATTEMPT=$((ATTEMPT + 1))
 done
@@ -182,9 +191,6 @@ if [ "$POD_READY" != "true" ]; then
     
     exit 1
 fi
-
-# Get pod name
-POD_NAME=$(kubectl get pods -n "$NAMESPACE" -l "$SELECTOR" -o jsonpath='{.items[0].metadata.name}')
 
 log_info "✓ Deployment successful"
 echo ""

@@ -73,7 +73,11 @@ log "Testing ACP infrastructure..."
 
 # Check if devbob pod is running
 if kubectl get pods -n metabob 2>/dev/null | grep -q "devbob.*Running"; then
-    POD_NAME=$(kubectl get pods -n metabob -l app=devbob -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    POD_NAME=$(kubectl get pods -n metabob -l app=devbob -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' 2>/dev/null | awk '{print $1}')
+    if [ -z "$POD_NAME" ]; then
+        log "⚠️  No ready DevBob pods found, trying any running pod..."
+        POD_NAME=$(kubectl get pods -n metabob -l app=devbob --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    fi
     log "✅ DevBob pod running: ${POD_NAME}"
     
     # Check ACP server port

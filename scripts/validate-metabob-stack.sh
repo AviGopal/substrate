@@ -4,6 +4,10 @@ set -e
 # Metabob Stack End-to-End Validation
 # Validates Redis, SurrealDB, and DevBob are working correctly
 
+# Source shared pod selection utility
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/get-ready-pod.sh"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,7 +27,14 @@ check_pod() {
     local name=$2
     
     echo -n "Checking $name pod... "
-    READY=$(kubectl get pods -n $NAMESPACE -l "$label" -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null)
+    POD=$(kubectl get pods -n $NAMESPACE -l "$label" -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' 2>/dev/null | awk '{print $1}')
+    
+    if [ -z "$POD" ]; then
+        echo -e "${RED}✗ No ready pods found${NC}"
+        return 1
+    fi
+    
+    READY=$(kubectl get pod -n $NAMESPACE $POD -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null)
     
     if [ "$READY" = "true" ]; then
         echo -e "${GREEN}✓ Running${NC}"

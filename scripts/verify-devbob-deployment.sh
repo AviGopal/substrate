@@ -15,7 +15,12 @@ kubectl get svc -n metabob devbob
 echo ""
 
 echo "3. Verifying OpenCode version..."
-POD=$(kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[0].metadata.name}')
+POD=$(kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' | awk '{print $1}')
+if [ -z "$POD" ]; then
+  echo "ERROR: No ready DevBob pods found"
+  exit 1
+fi
+echo "Using pod: $POD (ready=true)"
 kubectl exec -n metabob $POD -- /opt/opencode/bin/opencode --version 2>&1 | grep -v INFO | head -1
 echo ""
 

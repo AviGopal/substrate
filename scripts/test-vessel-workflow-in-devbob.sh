@@ -4,7 +4,13 @@
 
 set -e
 
-POD=$(kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[0].metadata.name}')
+POD=$(kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' | awk '{print $1}')
+if [ -z "$POD" ]; then
+  echo "ERROR: No ready DevBob pods found"
+  kubectl get pods -n metabob -l app.kubernetes.io/name=devbob
+  exit 1
+fi
+
 REPO_URL="https://oauth2:\${GITHUB_TOKEN}@github.com/avigopal/opencode.git"
 VESSEL_NAME="opencode-vessel"
 BRANCH="dev"
@@ -12,7 +18,7 @@ BRANCH="dev"
 echo "=========================================="
 echo "DevBob Vessel Workflow Validation"
 echo "=========================================="
-echo "Pod: $POD"
+echo "Pod: $POD (ready=true)"
 echo "Repository: avigopal/opencode"
 echo "Branch: $BRANCH"
 echo ""

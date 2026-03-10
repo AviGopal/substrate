@@ -4,12 +4,17 @@
 
 set -e
 
-POD=$(kubectl get pods -n metabob -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+POD=$(kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' | awk '{print $1}')
+if [ -z "$POD" ]; then
+  echo "ERROR: No ready DevBob pods found"
+  kubectl get pods -n metabob -l app.kubernetes.io/name=devbob
+  exit 1
+fi
 
 echo "=========================================="
 echo "Parallel Task Execution Demo"
 echo "=========================================="
-echo "Pod: $POD"
+echo "Pod: $POD (ready=true)"
 echo "Tasks: 3 (running in parallel)"
 echo "Method: Background shell jobs"
 echo ""
