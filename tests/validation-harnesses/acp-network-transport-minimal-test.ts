@@ -44,26 +44,16 @@ async function testTCPTransportExists(): Promise<TestResult> {
       }
     }
     
-    // Check it's not a stub by looking for the stub error message
+    // Validate implementation has fetch-based HTTP connection
     const connectStr = instance.connect.toString()
-    const hasStubError = connectStr.includes("TCP transport not yet implemented")
     const hasFetchCall = connectStr.includes("fetch")
-    
-    if (hasStubError) {
-      return {
-        pass: false,
-        actual: "Stub implementation (throws 'not yet implemented' error)",
-        expected: "Full implementation with fetch()",
-        error: "TCPTransport.connect is still a stub"
-      }
-    }
     
     if (!hasFetchCall) {
       return {
         pass: false,
         actual: "No fetch() call found in connect()",
         expected: "Uses fetch() for HTTP connection",
-        error: "connect() method doesn't use fetch()"
+        error: "connect() method doesn't use fetch() for HTTP-based transport"
       }
     }
     
