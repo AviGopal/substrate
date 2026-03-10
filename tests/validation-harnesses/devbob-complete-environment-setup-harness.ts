@@ -50,7 +50,7 @@ interface HarnessReport {
 function getDevBobPodName(): string {
   try {
     const podName = execSync(
-      "kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[0].metadata.name}'",
+      "kubectl get pods -n metabob -l app.kubernetes.io/name=devbob -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}'",
       { encoding: 'utf-8', stdio: 'pipe' }
     ).trim();
     
@@ -356,7 +356,7 @@ function testPodStartupLogs(): ValidationResult {
       { encoding: 'utf-8', stdio: 'pipe' }
     );
     
-    const hasListeningMessage = logs.includes('listening on') || logs.includes('Server running');
+    const hasListeningMessage = logs.includes('service=acp-command setup connection') || logs.includes('bootstrapping');
     const hasErrorMessage = logs.includes('Error:') || logs.includes('ECONNREFUSED');
     const hasCrashMessage = logs.includes('fatal') || logs.includes('crashed');
     

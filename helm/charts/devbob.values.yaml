@@ -8,8 +8,11 @@ image:
 
 # Secrets - IMPORTANT: Set via Helm command or external secret manager
 secrets:
-  # Get from .env file
   anthropicApiKey: "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"
+  metabobApiKey: "mb_devbob_test_simple_2026_v2"
+  gitHubToken: ""
+  gitUserName: "DevBob"
+  gitUserEmail: "devbob@metabob.com"
 
 # Environment configuration for docker-desktop
 env:
@@ -34,4 +37,4 @@ readinessProbe:
 # Persistence
 persistence:
   enabled: true
-  size: 5Gi
+  size: 10Gi
