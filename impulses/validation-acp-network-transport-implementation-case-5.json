@@ -1,0 +1,27 @@
+{
+  "testCase": "Connection Cleanup",
+  "impulseId": "validation-acp-network-transport-implementation-case-5",
+  "type": "memo",
+  "input": {
+    "target": "tcp://localhost:18084",
+    "operation": "connect then close"
+  },
+  "expectedOutput": {
+    "closeSucceeds": true,
+    "noErrorsOnClose": true,
+    "resourcesReleased": true
+  },
+  "validationCriteria": {
+    "mustHave": [
+      "Transport.close() succeeds",
+      "AbortController aborts connection",
+      "No hanging connections",
+      "No memory leaks"
+    ],
+    "mustNotHave": [
+      "Close errors",
+      "Hanging processes",
+      "Resource leaks"
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "testCase": "TCP Transport Connects to Local Server",
+  "impulseId": "validation-acp-network-transport-implementation-case-3",
+  "type": "memo",
+  "input": {
+    "target": "tcp://localhost:18082",
+    "serverPort": 18082,
+    "timeout": 5000
+  },
+  "expectedOutput": {
+    "connectionSucceeds": true,
+    "stdinStreamExists": true,
+    "stdoutStreamExists": true,
+    "streamsAreValid": true
+  },
+  "validationCriteria": {
+    "mustHave": [
+      "Transport.connect() succeeds",
+      "Returns WritableStream for stdin",
+      "Returns ReadableStream for stdout",
+      "No connection errors"
+    ],
+    "mustNotHave": [
+      "Connection timeout",
+      "Network error",
+      "Invalid stream objects"
+    ]
+  }
+}

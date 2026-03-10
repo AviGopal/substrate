@@ -1,0 +1,28 @@
+{
+  "testCase": "TCP Transport Implementation Exists",
+  "impulseId": "validation-acp-network-transport-implementation-case-1",
+  "type": "memo",
+  "input": {
+    "module": "repos/metabob-opencode/packages/opencode/src/acp/transports/tcp-transport.ts",
+    "expectedExports": ["TCPTransport"],
+    "expectedMethods": ["connect", "close", "getMetadata"]
+  },
+  "expectedOutput": {
+    "classExists": true,
+    "isStub": false,
+    "hasConnectMethod": true,
+    "connectUsesHTTP": true
+  },
+  "validationCriteria": {
+    "mustHave": [
+      "TCPTransport class exported",
+      "connect() method implemented",
+      "Uses fetch() for HTTP connection",
+      "Returns stdin/stdout streams"
+    ],
+    "mustNotHave": [
+      "Stub implementation throwing error",
+      "TODO or Phase 2 comments"
+    ]
+  }
+}

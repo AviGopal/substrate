@@ -1,0 +1,259 @@
+{
+  "impulseId": "conflict-analysis-acp-network-transport-implementation",
+  "type": "memo",
+  "specification": "acp-network-transport-implementation",
+  "analysisDate": "2026-03-09T22:15:00Z",
+  "overallConflictStatus": "NO_CONFLICTS",
+  "summary": {
+    "otherSpecificationsAnalyzed": 8,
+    "sharedComponentsIdentified": 4,
+    "conflictsDetected": 0,
+    "compatibilityRating": "HIGH"
+  },
+  "otherSpecifications": [
+    {
+      "name": "acp-local-network-discovery",
+      "relationship": "PARENT_SPEC",
+      "description": "Original ACP transport abstraction specification",
+      "status": "PASS (8/8 tests)",
+      "implementationProgress": "31%"
+    },
+    {
+      "name": "devbob-acp-multi-vessel-coordination",
+      "relationship": "DEPENDENT_SPEC",
+      "description": "Uses acp_delegate for remote coordination",
+      "status": "Depends on TCP transport",
+      "implementationProgress": "Blocked until TCP transport complete"
+    },
+    {
+      "name": "bootstrap-template-filepath-compliance",
+      "relationship": "INDEPENDENT",
+      "description": "Recent change to server.ts for template embedding",
+      "status": "PASS",
+      "conflictPotential": "LOW"
+    },
+    {
+      "name": "mcp-data-flow-local-k8s",
+      "relationship": "COMPLEMENTARY",
+      "description": "MCP data flow validation",
+      "status": "Uses server infrastructure",
+      "conflictPotential": "NONE"
+    },
+    {
+      "name": "devbob-provider-initialization",
+      "relationship": "COMPLEMENTARY",
+      "description": "DevBob setup in Kubernetes",
+      "status": "Needs TCP transport for remote access",
+      "conflictPotential": "NONE"
+    },
+    {
+      "name": "metrics-calculation-in-rpc-api-only",
+      "relationship": "INDEPENDENT",
+      "description": "Backend metrics system",
+      "status": "PASS",
+      "conflictPotential": "NONE"
+    },
+    {
+      "name": "activity-execution-comprehensive-mapping-display",
+      "relationship": "INDEPENDENT",
+      "description": "Activity UI display",
+      "status": "PASS",
+      "conflictPotential": "NONE"
+    },
+    {
+      "name": "surrealdb-async-await-deployment",
+      "relationship": "INDEPENDENT",
+      "description": "Database layer changes",
+      "status": "PASS",
+      "conflictPotential": "NONE"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/server/server.ts",
+      "affectedBySpecs": [
+        "acp-network-transport-implementation",
+        "bootstrap-template-filepath-compliance",
+        "mcp-data-flow-local-k8s"
+      ],
+      "changes": {
+        "acp-network-transport-implementation": "Added POST /acp/stream route at line 2046",
+        "bootstrap-template-filepath-compliance": "Modified template loading (different section)",
+        "mcp-data-flow-local-k8s": "No direct changes, uses existing routes"
+      },
+      "conflictAnalysis": {
+        "hasConflict": false,
+        "reason": "Changes are in different sections of the file. POST /acp/stream is a new route added before catch-all proxy. Template changes are in different middleware.",
+        "validationStatus": "SAFE"
+      },
+      "recommendation": "No action needed - changes are non-overlapping"
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/cli/cmd/acp.ts",
+      "affectedBySpecs": [
+        "acp-network-transport-implementation"
+      ],
+      "changes": {
+        "acp-network-transport-implementation": "Changed default port from 0 to 3000"
+      },
+      "conflictAnalysis": {
+        "hasConflict": false,
+        "reason": "Only this spec modifies acp.ts. Change is backward compatible (users can override with --port 0).",
+        "validationStatus": "SAFE"
+      },
+      "recommendation": "No action needed - no other specs modify this file"
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/acp/transports/tcp-transport.ts",
+      "affectedBySpecs": [
+        "acp-network-transport-implementation",
+        "acp-local-network-discovery"
+      ],
+      "changes": {
+        "acp-network-transport-implementation": "Replaced stub with full HTTP fetch() implementation",
+        "acp-local-network-discovery": "Created stub with 'not yet implemented' error"
+      },
+      "conflictAnalysis": {
+        "hasConflict": false,
+        "reason": "acp-network-transport-implementation completes the work started by acp-local-network-discovery. This is intentional evolution, not a conflict.",
+        "validationStatus": "SAFE - Expected progression"
+      },
+      "recommendation": "No action needed - this spec completes the stub from parent spec"
+    },
+    {
+      "component": "repos/metabob-opencode/packages/opencode/src/tool/acp-delegate.ts",
+      "affectedBySpecs": [
+        "acp-network-transport-implementation",
+        "devbob-acp-multi-vessel-coordination"
+      ],
+      "changes": {
+        "acp-network-transport-implementation": "No changes (uses existing transport factory)",
+        "devbob-acp-multi-vessel-coordination": "Added retryWithBackoff, version negotiation"
+      },
+      "conflictAnalysis": {
+        "hasConflict": false,
+        "reason": "acp-network-transport-implementation only adds TCP transport capability via factory. devbob-acp-multi-vessel-coordination adds retry logic and versioning. Both are compatible.",
+        "validationStatus": "SAFE"
+      },
+      "recommendation": "No action needed - changes are complementary"
+    }
+  ],
+  "conflicts": [],
+  "compatibilityMatrix": {
+    "acp-local-network-discovery": {
+      "status": "COMPATIBLE",
+      "relationship": "Parent → Child (this spec completes stub)",
+      "validationTest": "Both specs pass validation"
+    },
+    "devbob-acp-multi-vessel-coordination": {
+      "status": "COMPATIBLE",
+      "relationship": "Dependent (needs TCP transport)",
+      "validationTest": "TCP transport unblocks DevBob coordination"
+    },
+    "bootstrap-template-filepath-compliance": {
+      "status": "COMPATIBLE",
+      "relationship": "Independent changes to server.ts",
+      "validationTest": "No overlapping code sections"
+    }
+  },
+  "riskAssessment": {
+    "overallRisk": "LOW",
+    "breakingChanges": "NONE",
+    "backwardCompatibility": "FULL",
+    "details": [
+      {
+        "risk": "Port 3000 conflicts",
+        "severity": "LOW",
+        "mitigation": "Users can override with --port flag",
+        "probability": "LOW"
+      },
+      {
+        "risk": "HTTP endpoint security",
+        "severity": "MEDIUM",
+        "mitigation": "Add authentication in future iteration (deferred per MVP scope)",
+        "probability": "N/A - Known deferred feature"
+      },
+      {
+        "risk": "Server route ordering",
+        "severity": "LOW",
+        "mitigation": "POST /acp/stream is before catch-all proxy, correct ordering",
+        "probability": "NONE"
+      }
+    ]
+  },
+  "integrationPoints": {
+    "upstreamDependencies": [
+      {
+        "specification": "acp-local-network-discovery",
+        "dependency": "Transport interface and factory",
+        "status": "SATISFIED"
+      }
+    ],
+    "downstreamConsumers": [
+      {
+        "specification": "devbob-acp-multi-vessel-coordination",
+        "consumes": "TCP transport for remote delegation",
+        "status": "UNBLOCKED"
+      },
+      {
+        "specification": "hierarchical-composition",
+        "consumes": "Network delegation capability",
+        "status": "UNBLOCKED"
+      },
+      {
+        "specification": "variant-tracking",
+        "consumes": "Remote coordination infrastructure",
+        "status": "UNBLOCKED"
+      }
+    ]
+  },
+  "validationCoverage": {
+    "crossSpecValidation": [
+      {
+        "spec1": "acp-network-transport-implementation",
+        "spec2": "acp-local-network-discovery",
+        "testType": "Transport interface compatibility",
+        "status": "PASS",
+        "evidence": "TCPTransport implements Transport interface correctly"
+      },
+      {
+        "spec1": "acp-network-transport-implementation",
+        "spec2": "devbob-acp-multi-vessel-coordination",
+        "testType": "acp_delegate integration",
+        "status": "READY",
+        "evidence": "Factory returns TCPTransport for tcp:// targets"
+      }
+    ]
+  },
+  "resolutionRecommendations": [],
+  "nextSteps": [
+    {
+      "step": 1,
+      "action": "Run runtime validation to confirm no conflicts in practice",
+      "command": "bun run tests/validation-harnesses/acp-network-transport-implementation-harness.ts"
+    },
+    {
+      "step": 2,
+      "action": "Test DevBob coordination spec now that TCP transport is available",
+      "command": "Deploy DevBob pod, test remote delegation"
+    },
+    {
+      "step": 3,
+      "action": "Monitor for port 3000 conflicts in production",
+      "command": "Review deployment logs for port binding errors"
+    }
+  ],
+  "conclusion": {
+    "overallAssessment": "NO CONFLICTS DETECTED",
+    "confidence": "HIGH",
+    "reasoning": [
+      "Changes are additive (new route, new transport implementation)",
+      "No overlapping code sections with other specs",
+      "Completes work started by parent spec (acp-local-network-discovery)",
+      "Unblocks dependent specs (DevBob coordination, hierarchical composition)",
+      "Backward compatible (users can override port default)"
+    ],
+    "approvalStatus": "APPROVED",
+    "blockingIssues": []
+  }
+}
