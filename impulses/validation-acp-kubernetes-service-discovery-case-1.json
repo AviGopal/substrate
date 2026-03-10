@@ -1,0 +1,24 @@
+{
+  "id": "validation-acp-kubernetes-service-discovery-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: DNS Resolution Test\n\nValidates that DevBob service DNS can be resolved within the Kubernetes cluster.\n\nInput:\n- target: tcp://devbob.metabob.svc.cluster.local:8080\n- testType: dns-resolution\n\nExpected Output:\n- resolvable: true (DNS name resolves to ClusterIP)\n- usesServiceDNS: true (target uses k8s service DNS)\n- notLocalhost: true (not using localhost)\n\nValidation Method:\n- Run nslookup from test pod in cluster\n- Verify target format contains service DNS\n- Confirm no localhost reference\n\nSuccess Criteria:\n- DNS resolves to valid ClusterIP\n- Target format is correct\n- No localhost/127.0.0.1 in target",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "loaded": true,
+  "scope": "session",
+  "metadata": {
+    "testCase": "dns-resolution",
+    "input": {
+      "target": "tcp://devbob.metabob.svc.cluster.local:8080",
+      "testType": "dns-resolution"
+    },
+    "expectedOutput": {
+      "resolvable": true,
+      "usesServiceDNS": true,
+      "notLocalhost": true
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "harness-acp-kubernetes-service-discovery",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/acp-kubernetes-service-discovery-harness.ts",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "loaded": true,
+  "scope": "session",
+  "metadata": {
+    "specificationName": "acp-kubernetes-service-discovery",
+    "harnessType": "validation",
+    "testCases": [
+      "validation-acp-kubernetes-service-discovery-case-1",
+      "validation-acp-kubernetes-service-discovery-case-2",
+      "validation-acp-kubernetes-service-discovery-case-3",
+      "validation-acp-kubernetes-service-discovery-case-4",
+      "validation-acp-kubernetes-service-discovery-case-5",
+      "validation-acp-kubernetes-service-discovery-case-6",
+      "validation-acp-kubernetes-service-discovery-case-7"
+    ],
+    "totalTestCases": 7,
+    "validationCriteria": [
+      "K8s service DNS resolution works",
+      "tcp:// transport connects via service name",
+      "Simple prompt execution succeeds",
+      "Impulse sharing works bidirectionally",
+      "Activity execution in DevBob via delegation",
+      "Results return to calling session",
+      "No dependency on kubectl port-forward"
+    ],
+    "executionMethod": "bun run tests/validation-harnesses/acp-kubernetes-service-discovery-harness.ts",
+    "outputFile": "validation-results-acp-k8s-service-discovery.json"
+  }
+}

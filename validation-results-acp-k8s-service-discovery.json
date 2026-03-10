@@ -1,0 +1,125 @@
+{
+  "overallPass": false,
+  "totalTests": 7,
+  "passed": 2,
+  "failed": 5,
+  "results": [
+    {
+      "pass": true,
+      "testCase": "DNS Resolution Test",
+      "actual": {
+        "resolvable": true,
+        "usesServiceDNS": true,
+        "notLocalhost": true,
+        "target": "tcp://devbob.metabob.svc.cluster.local:8080"
+      },
+      "expected": {
+        "resolvable": true,
+        "usesServiceDNS": true,
+        "notLocalhost": true
+      },
+      "duration": 5831
+    },
+    {
+      "pass": false,
+      "testCase": "Simple Prompt Execution",
+      "actual": {
+        "success": false,
+        "responseContains": false,
+        "usedServiceDNS": true,
+        "response": "DevBob service not accessible"
+      },
+      "expected": {
+        "success": true,
+        "responseContains": true,
+        "usedServiceDNS": true
+      },
+      "duration": 5002
+    },
+    {
+      "pass": false,
+      "testCase": "Impulse Sharing Test",
+      "actual": {
+        "success": false,
+        "responseContains": false,
+        "impulseShared": false
+      },
+      "expected": {
+        "success": true,
+        "responseContains": true,
+        "impulseShared": true
+      },
+      "duration": 2642
+    },
+    {
+      "pass": false,
+      "testCase": "Bidirectional Result Return",
+      "actual": {
+        "success": false,
+        "responseIsJSON": false,
+        "responseContainsKey": false,
+        "responseValue": null,
+        "response": "DevBob service not accessible"
+      },
+      "expected": {
+        "success": true,
+        "responseIsJSON": true,
+        "responseContainsKey": true,
+        "responseValue": "bidirectional-result"
+      },
+      "duration": 0
+    },
+    {
+      "pass": false,
+      "testCase": "Activity Execution Test",
+      "actual": {
+        "success": false,
+        "responseContainsNumber": false,
+        "activitySystemAccessible": false,
+        "response": "DevBob service not accessible"
+      },
+      "expected": {
+        "success": true,
+        "responseContainsNumber": true,
+        "activitySystemAccessible": true
+      },
+      "duration": 5001
+    },
+    {
+      "pass": false,
+      "testCase": "No Port-Forward Dependency",
+      "actual": {
+        "noPortForwardRequired": false,
+        "usesDirectServiceAccess": true,
+        "portForwardDetected": true
+      },
+      "expected": {
+        "noPortForwardRequired": true,
+        "usesDirectServiceAccess": true
+      },
+      "duration": 44
+    },
+    {
+      "pass": true,
+      "testCase": "Connection via Service Name",
+      "actual": {
+        "usesServiceDNS": true,
+        "notLocalhost": true,
+        "targetFormat": true,
+        "actualTarget": "tcp://devbob.metabob.svc.cluster.local:8080"
+      },
+      "expected": {
+        "usesServiceDNS": true,
+        "notLocalhost": true,
+        "targetFormat": true
+      },
+      "duration": 0
+    }
+  ],
+  "timestamp": "2026-03-10T06:24:36.584Z",
+  "environment": {
+    "k8sAccessible": true,
+    "serviceResolvable": true,
+    "portForwardDetected": true
+  }
+}

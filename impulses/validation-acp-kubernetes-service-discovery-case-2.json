@@ -1,0 +1,16 @@
+{
+  "id": "validation-acp-kubernetes-service-discovery-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: Simple Prompt Execution",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "loaded": true,
+  "scope": "session",
+  "metadata": {
+    "testCase": "prompt-execution",
+    "testNumber": 2
+  }
+}
