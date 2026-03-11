@@ -1,0 +1,52 @@
+{
+  "testCase": "User Login",
+  "testNumber": 3,
+  "description": "Test login endpoint with credentials from successful registration. Verify response returns 200 OK with token, user data, and organizations array.",
+  "input": {
+    "endpoint": "POST /auth/login",
+    "url": "http://app.metabob.local/auth/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "email": "test{TIMESTAMP}@validation.metabob.com",
+      "password": "ValidTestPass123!"
+    },
+    "prerequisite": "User must be registered first (from Test Case 2)"
+  },
+  "expectedOutput": {
+    "httpStatus": 200,
+    "responseBody": {
+      "token": "string (JWT access token, >100 chars)",
+      "refresh_token": "string (JWT refresh token)",
+      "user": {
+        "user_id": "string (UUID format)",
+        "email": "matches input email",
+        "name": "string",
+        "role": "string"
+      },
+      "organizations": [
+        {
+          "org_id": "string (UUID format)",
+          "name": "string",
+          "role": "owner"
+        }
+      ]
+    }
+  },
+  "passCriteria": [
+    "HTTP status is 200 OK",
+    "Response contains 'token' field with JWT access token",
+    "Response contains 'refresh_token' field",
+    "Response contains 'user' object with correct email",
+    "Response contains 'organizations' array with at least one org",
+    "Email in response matches login email"
+  ],
+  "failureIndicators": [
+    "HTTP status is 401 'Invalid email or password'",
+    "Response missing 'token' field",
+    "Response missing 'user' or 'organizations'",
+    "Email mismatch",
+    "Empty organizations array"
+  ]
+}
