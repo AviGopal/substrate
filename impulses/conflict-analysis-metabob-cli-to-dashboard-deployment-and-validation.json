@@ -1,0 +1,339 @@
+{
+  "id": "conflict-analysis-metabob-cli-to-dashboard-deployment-and-validation",
+  "type": "memo",
+  "title": "Conflict Analysis: metabob-cli-to-dashboard Deployment & Validation",
+  "specificationName": "metabob-cli-to-dashboard-deployment-and-validation",
+  "analysisDate": "2026-03-12T18:45:00Z",
+  "currentStatus": {
+    "phase": "DEPLOYMENT_BLOCKED",
+    "progress": "Code fixes complete, persistence working, but API retrieval broken",
+    "blockingIssue": "list_projects_by_org returns data when called directly, but API endpoint returns empty list",
+    "evidenceOfProgress": {
+      "persistenceFixed": true,
+      "sqlInsertDeployed": true,
+      "dataInDatabase": true,
+      "directQueryWorks": true,
+      "apiEndpointWorks": false
+    }
+  },
+  
+  "otherSpecifications": [
+    "surrealdb-primary-redis-cache",
+    "complete-architecture-separation", 
+    "surrealdb-official-library-integration",
+    "dashboard-authentication-backend-fix",
+    "impulse-learning-storage-complete",
+    "context-optimization-endpoint-complete"
+  ],
+  
+  "conflicts": [
+    {
+      "type": "QUERY_RESULT_FORMAT_INCONSISTENCY",
+      "spec1": "metabob-cli-to-dashboard-deployment-and-validation",
+      "spec2": "surrealdb-official-library-integration",
+      "sharedComponent": "project_ops.py:list_projects_by_org",
+      "severity": "CRITICAL",
+      "description": "HTTP client returns different result format than expected. Query returns [dict, dict, ...] but code expects [{'result': [dict, dict, ...]}] or [[dict, dict, ...]]. Missing branch to handle direct dict list format.",
+      "evidence": {
+        "directPythonCall": "Returns 1 project correctly",
+        "apiEndpointCall": "Returns 0 projects (empty list)",
+        "databaseQuery": "Shows 10+ projects exist",
+        "formatObserved": "result = [{'project': {...}}, {'project': {...}}]",
+        "formatExpected": "result = [{'result': [{'project': {...}}]}] or [[{...}]]"
+      },
+      "resolution": "Added third branch: elif isinstance(result[0], dict): return [sanitize_record(r) for r in result]",
+      "status": "FIX_DEPLOYED_BUT_NOT_WORKING",
+      "nextAction": "Investigate why API endpoint doesn't call the fixed function - possible caching, import issue, or different code path"
+    },
+    
+    {
+      "type": "WRITE_ORDER_CONFLICT",
+      "spec1": "metabob-cli-to-dashboard-deployment-and-validation",
+      "spec2": "surrealdb-primary-redis-cache",
+      "sharedComponent": "project_ops.py:create_project, problem_ops.py:create_problem",
+      "severity": "HIGH",
+      "description": "Persistence fix (SQL INSERT) conflicts with cache-first write order requirement. Current fix writes to SurrealDB using SQL INSERT (correct for persistence), but surrealdb-primary-redis-cache spec requires SurrealDB-first, then Redis cache.",
+      "evidence": {
+        "currentImplementation": "SQL INSERT to SurrealDB (no Redis interaction)",
+        "requiredBySpec2": "SurrealDB write → Redis cache update",
+        "phase1Status": "PASS (template storage correct)",
+        "phase2Status": "FAIL (execution recording write order wrong)"
+      },
+      "impact": "Project/problem creation works but doesn't populate Redis cache, causing performance issues on subsequent reads",
+      "resolution": "Need to add Redis cache population AFTER successful SurrealDB INSERT",
+      "status": "PARTIAL_CONFLICT",
+      "priority": "MEDIUM"
+    },
+    
+    {
+      "type": "DEPLOYMENT_INFRASTRUCTURE_OVERLAP",
+      "spec1": "metabob-cli-to-dashboard-deployment-and-validation",
+      "spec2": "dashboard-authentication-backend-fix",
+      "sharedComponent": "Helm deployment, Docker image build, ConfigMap overrides",
+      "severity": "HIGH",
+      "description": "Both specs modify the same deployment infrastructure (metabob-rpc-api pod, ConfigMaps, image tags). Dashboard auth spec blocked by JWT_SECRET_KEY not being injected. Current spec discovers ConfigMap mounting OLD code over Docker image.",
+      "evidence": {
+        "sharedDeployment": "metabob-rpc-api deployment in metabob namespace",
+        "imageVersionConflict": "Dashboard auth expects 0.23.1, current built 0.28.8",
+        "configMapOverride": "project-ops-fix ConfigMap mounts over /src/app/server/db/operations/project_ops.py",
+        "authBlocker": "JWT_SECRET_KEY not in pod environment",
+        "persistenceBlocker": "API endpoint not calling updated function"
+      },
+      "resolution": "Need unified deployment strategy: rebuild complete image from scratch without ConfigMap workarounds, ensure ALL environment variables injected, test complete flow",
+      "status": "ACTIVE_CONFLICT",
+      "priority": "CRITICAL"
+    },
+    
+    {
+      "type": "ARCHITECTURE_BOUNDARY_COMPLIANCE",
+      "spec1": "metabob-cli-to-dashboard-deployment-and-validation",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "RPC API data flow, database operations",
+      "severity": "LOW",
+      "description": "Current spec operates within architecture boundaries defined by complete-architecture-separation. All changes are in RPC API layer (correct), no direct DB access from CLI/opencode (correct), but need to verify MCP communication path.",
+      "evidence": {
+        "dataFlowCompliant": "opencode → CLI (MCP) → RPC API (HTTP) → SurrealDB",
+        "separationMaintained": "Zero ML in opencode, zero training in CLI, all learning in RPC API",
+        "persistenceLayer": "SurrealDB primary + Redis cache (as specified)"
+      },
+      "resolution": "No action required - spec complies with architecture boundaries",
+      "status": "NO_CONFLICT",
+      "priority": "N/A"
+    }
+  ],
+  
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-deployment-and-validation (create_project, list_projects_by_org)",
+        "surrealdb-primary-redis-cache (write order, cache population)",
+        "surrealdb-official-library-integration (query result format)"
+      ],
+      "currentState": "SQL INSERT deployed, list query fixed, but API endpoint broken",
+      "conflictResolution": "Need to unify: (1) Fix API endpoint routing/caching, (2) Add Redis cache population, (3) Verify result format handling",
+      "recommendation": "Create integration test that exercises full path: API endpoint → function → database → cache",
+      "priority": "CRITICAL"
+    },
+    
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/problem_ops.py",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-deployment-and-validation (create_problem, bulk_create_problems)",
+        "surrealdb-primary-redis-cache (write order)"
+      ],
+      "currentState": "SQL INSERT pattern implemented (commit d5420bf), not yet deployed/tested",
+      "conflictResolution": "Same as project_ops.py - need Redis cache integration",
+      "recommendation": "Deploy and validate after project_ops.py issues resolved",
+      "priority": "HIGH"
+    },
+    
+    {
+      "component": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-deployment-and-validation (get_org_projects endpoint)",
+        "dashboard-authentication-backend-fix (register, login endpoints)"
+      ],
+      "currentState": "Authentication working, project listing broken, duplicate code detected (lines 943-976 and 978-1000)",
+      "conflictResolution": "Remove duplicate code, investigate why function call returns 0 despite working directly",
+      "recommendation": "Debug API request flow: endpoint → auth middleware → function invocation → result serialization",
+      "priority": "CRITICAL"
+    },
+    
+    {
+      "component": "Kubernetes deployment: metabob-rpc-api",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-deployment-and-validation",
+        "dashboard-authentication-backend-fix",
+        "surrealdb-official-library-integration"
+      ],
+      "currentState": "Multiple ConfigMap overrides, image version conflicts, environment variable issues",
+      "conflictResolution": "Rebuild from scratch: single unified image, no ConfigMap workarounds, all env vars in one deployment",
+      "recommendation": "Use Dockerfile.persistence-fix-force as base, ensure clean build, deploy with complete environment",
+      "priority": "CRITICAL"
+    },
+    
+    {
+      "component": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+      "affectedBySpecs": [
+        "surrealdb-primary-redis-cache (cache-aside pattern)",
+        "surrealdb-official-library-integration (official library migration)",
+        "metabob-cli-to-dashboard-deployment-and-validation (HTTP client query format)"
+      ],
+      "currentState": "HTTP client has result format inconsistencies, official library partially integrated",
+      "conflictResolution": "Need unified result format handling across all query types (SELECT, INSERT, UPDATE)",
+      "recommendation": "Create helper function: parse_query_result(result) that handles all formats consistently",
+      "priority": "HIGH"
+    }
+  ],
+  
+  "rootCauseAnalysis": {
+    "primaryIssue": "API endpoint not invoking updated list_projects_by_org function",
+    "possibleCauses": [
+      {
+        "hypothesis": "Python module caching - uvicorn workers have old code cached",
+        "evidence": "Debug logs added to function don't appear in API logs",
+        "investigated": true,
+        "result": "Restarted deployment, cleared __pycache__, still broken"
+      },
+      {
+        "hypothesis": "ConfigMap override timing - file mounted after function loaded",
+        "evidence": "ConfigMap updated, pod restarted, file has fix when inspected",
+        "investigated": true,
+        "result": "File IS correct in pod, but endpoint still returns 0"
+      },
+      {
+        "hypothesis": "Different code path - endpoint imports from different module",
+        "evidence": "Route shows: from server.db.operations.project_ops import list_projects_by_org",
+        "investigated": false,
+        "nextStep": "Add logging to route handler to see if it even calls the function"
+      },
+      {
+        "hypothesis": "Duplicate route definition - second route overrides first",
+        "evidence": "Found duplicate code blocks at lines 943-976 and 978-1000 in cloud_auth.py",
+        "investigated": false,
+        "nextStep": "Check if FastAPI registered both, which one is active"
+      },
+      {
+        "hypothesis": "Result serialization issue - JSONResponse fails on dict format",
+        "evidence": "Function returns data but endpoint returns empty",
+        "investigated": false,
+        "nextStep": "Add try-except around JSONResponse to catch serialization errors"
+      }
+    ],
+    "recommendedInvestigation": "Add logging at multiple points: (1) Route entry, (2) Function call before/after, (3) Result serialization, (4) Response construction"
+  },
+  
+  "deploymentState": {
+    "codeChanges": {
+      "commitAdb858a": "project_ops.py SQL INSERT - COMPLETE",
+      "commitD5420bf": "problem_ops.py SQL INSERT - COMPLETE",
+      "listQueryFix": "Added branch for dict list format - COMPLETE"
+    },
+    "dockerImages": {
+      "built": [
+        "0.28.4-persistence-fix-complete",
+        "0.28.5, 0.28.6 (cache issues)",
+        "0.28.7-persistence-verified", 
+        "0.28.8-force-overwrite (RUN cp -f to override base image)"
+      ],
+      "deployed": "0.28.8-force-overwrite",
+      "verified": "File in pod has SQL INSERT fix"
+    },
+    "configMaps": {
+      "project-ops-fix": "Updated 3 times, currently has list query fix",
+      "surrealdb-client-fix": "Mounted at /src/app/server/db/surrealdb_client.py"
+    },
+    "blockers": [
+      {
+        "blocker": "API endpoint returns 0 projects despite database having data",
+        "severity": "CRITICAL",
+        "status": "UNDER_INVESTIGATION",
+        "workRequired": "Debug API request flow, fix routing/caching issue"
+      }
+    ]
+  },
+  
+  "validationStatus": {
+    "harnessLocation": "tests/validation-harnesses/metabob-cli-to-dashboard-deployment-and-validation-harness.ts",
+    "harnessStatus": "EXISTS - TypeScript compilation errors (type assertions needed)",
+    "manualTestResults": {
+      "projectCreation": "PASS - POST returns 201 with project data",
+      "databasePersistence": "PASS - Direct DB query shows 10+ projects",
+      "directFunctionCall": "PASS - list_projects_by_org() returns 1 project",
+      "apiEndpoint": "FAIL - GET /auth/orgs/{org_id}/projects returns {projects: [], total: 0}"
+    },
+    "expectedAfterFix": {
+      "totalTests": 7,
+      "expectedPass": 5,
+      "expectedFail": 2,
+      "rationale": "Deployment + project retrieval will pass, problem creation likely fails (405 error - endpoint doesn't exist)"
+    }
+  },
+  
+  "crossReferenceFindings": {
+    "relatedIssues": [
+      "CONFLICT_ANALYSIS_metabob-cli-to-dashboard-complete-with-deployment.md - Previous analysis identified deployment blockers",
+      "validation-results-metabob-cli-to-dashboard-complete-data-flow.md - Shows persistence bug confirmed, awaiting deployment",
+      "validation-results-surrealdb-primary-redis-cache.json - Execution recording write order fails",
+      "validation-results-dashboard-authentication-backend-fix.json - JWT_SECRET_KEY not injected, code not deployed"
+    ],
+    "patterns": {
+      "deploymentChallenges": "Multiple specs blocked by deployment infrastructure issues (image builds, ConfigMaps, env vars)",
+      "databaseLayerComplexity": "SurrealDB HTTP client has multiple result format variations causing brittle parsing code",
+      "testingGaps": "Validation harnesses exist but often blocked by deployment state, need better local testing"
+    }
+  },
+  
+  "recommendations": [
+    {
+      "priority": "IMMEDIATE",
+      "action": "Debug API endpoint routing issue",
+      "details": "Add comprehensive logging: route entry, function invocation, result format, serialization. Determine why endpoint doesn't return database results.",
+      "estimatedEffort": "2-4 hours",
+      "blocksValidation": true
+    },
+    {
+      "priority": "HIGH",
+      "action": "Rebuild deployment from clean state",
+      "details": "Create single unified Docker image without relying on base images or ConfigMap overrides. Include all fixes, all environment variables, clean Python cache.",
+      "estimatedEffort": "4-6 hours",
+      "blocksValidation": false
+    },
+    {
+      "priority": "HIGH",
+      "action": "Integrate Redis cache population",
+      "details": "After SurrealDB SQL INSERT succeeds, populate Redis cache to comply with surrealdb-primary-redis-cache spec Phase 1 requirements.",
+      "estimatedEffort": "2-3 hours",
+      "blocksValidation": false
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Create unified result format parser",
+      "details": "Helper function in surrealdb_client.py: parse_query_result(result) that handles all SurrealDB result format variations consistently.",
+      "estimatedEffort": "3-4 hours",
+      "blocksValidation": false
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Fix TypeScript harness compilation",
+      "details": "Add proper type assertions to validation harness to eliminate compilation errors and enable automated testing.",
+      "estimatedEffort": "1-2 hours",
+      "blocksValidation": true
+    },
+    {
+      "priority": "LOW",
+      "action": "Investigate problem creation endpoint",
+      "details": "Determine why POST /api/problems returns 405. Check if endpoint exists, correct path, authentication requirements.",
+      "estimatedEffort": "1 hour",
+      "blocksValidation": false
+    }
+  ],
+  
+  "nextSteps": [
+    "1. Add debug logging to cloud_auth.py:get_org_projects endpoint to trace execution",
+    "2. Check if FastAPI registered duplicate routes (lines 943-976 and 978-1000)",
+    "3. Test direct HTTP request to pod (bypass ingress) to rule out routing issues",
+    "4. If still failing, rebuild image from scratch without base image inheritance",
+    "5. Once retrieval works, run full validation harness",
+    "6. Address Redis cache integration for Phase 1 compliance",
+    "7. Deploy problem_ops.py fixes and validate problem creation"
+  ],
+  
+  "summary": {
+    "overallStatus": "PARTIAL_PROGRESS_BLOCKED",
+    "codeComplete": true,
+    "deploymentComplete": false,
+    "validationComplete": false,
+    "criticalBlocker": "API endpoint returns empty list despite database containing data and function working correctly when called directly",
+    "estimatedResolution": "4-8 hours investigation + fixes + deployment + validation",
+    "confidence": "MEDIUM - root cause unclear, multiple hypotheses to investigate"
+  },
+  
+  "metadata": {
+    "generatedBy": "conflict-analysis-aggregation",
+    "timestamp": "2026-03-12T18:45:00Z",
+    "budget": 3000,
+    "source": "aggregate-validation-results-and-detect-conflicts"
+  }
+}

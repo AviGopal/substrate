@@ -1,0 +1,359 @@
+{
+  "id": "ripple-metabob-cli-to-dashboard-deployment-and-validation",
+  "type": "memo",
+  "title": "Ripple Changes: metabob-cli-to-dashboard Deployment & Validation",
+  "specificationName": "metabob-cli-to-dashboard-deployment-and-validation",
+  "executionDate": "2026-03-12T18:50:00Z",
+  "overallStatus": "PARTIAL_SUCCESS",
+  
+  "componentsUpdated": [
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+      "component": "create_project",
+      "changeMade": "Replaced db.create() with SQL INSERT pattern to fix SurrealDB HTTP client persistence bug",
+      "reason": "SurrealDB HTTP client doesn't persist data with db.create(), need direct SQL INSERT",
+      "status": "DEPLOYED_AND_VERIFIED",
+      "commit": "adb858a",
+      "evidence": "Direct database query shows 10+ projects successfully persisted"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+      "component": "list_projects_by_org",
+      "changeMade": "Added third branch to handle HTTP client result format: elif isinstance(result[0], dict): return [sanitize_record(r) for r in result]",
+      "reason": "HTTP client returns [dict, dict, ...] format instead of [{'result': [...]}], causing empty list returns",
+      "status": "DEPLOYED_BUT_NOT_WORKING_VIA_API",
+      "evidence": {
+        "directFunctionCall": "Returns 2 projects successfully",
+        "apiEndpointCall": "Returns 0 projects (empty list)",
+        "debugLogs": "Branch 3 is being taken, function returns correct data"
+      },
+      "blockingIssue": "Function works when called directly but API endpoint returns empty list - suggests namespace/connection issue or worker caching"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/db/operations/problem_ops.py",
+      "component": "create_problem, bulk_create_problems",
+      "changeMade": "Replaced db.create() with SQL INSERT pattern",
+      "reason": "Same persistence bug as projects",
+      "status": "CODE_COMPLETE_NOT_DEPLOYED",
+      "commit": "d5420bf",
+      "note": "Deployment blocked by project retrieval issue - need to resolve first"
+    },
+    {
+      "file": "repos/metabob-rpc-api/Dockerfile.persistence-fix-force",
+      "component": "Docker image build strategy",
+      "changeMade": "Changed from COPY to RUN cp -f to force file overwrite after base image layers",
+      "reason": "Base image 0.28.2-final-auth-fix was overriding COPY commands, preventing fixes from being included",
+      "status": "SUCCESSFUL",
+      "imagesBuilt": [
+        "0.28.4-persistence-fix-complete",
+        "0.28.7-persistence-verified",
+        "0.28.8-force-overwrite"
+      ],
+      "verification": "Docker run shows SQL INSERT code in image, file has correct size (8070 bytes)"
+    },
+    {
+      "file": "metabob-apps/charts/metabob-rpc-api/values/default.metabob-rpc-api.values.yaml",
+      "component": "Helm deployment configuration",
+      "changeMade": "Updated image tag from 0.28.2-final-auth-fix to 0.28.8-force-overwrite, added pullPolicy: IfNotPresent",
+      "reason": "Enable local image deployment without registry push",
+      "status": "APPLIED",
+      "currentDeployment": "metabobapp/metabob-rpc-api:0.28.8-force-overwrite"
+    },
+    {
+      "file": "Kubernetes ConfigMap: project-ops-fix",
+      "component": "Runtime code injection",
+      "changeMade": "Updated ConfigMap 3 times with latest project_ops.py code including list query fix",
+      "reason": "ConfigMap mounts /src/app/server/db/operations/project_ops.py and overrides Docker image file",
+      "status": "APPLIED_AND_VERIFIED",
+      "verification": "kubectl exec shows file has SQL INSERT and Branch 3 fix in deployed pod"
+    }
+  ],
+  
+  "conflictsResolved": [
+    {
+      "conflict": "QUERY_RESULT_FORMAT_INCONSISTENCY",
+      "resolution": "Added third branch to handle HTTP client dict list format",
+      "status": "CODE_DEPLOYED_BUT_RUNTIME_ISSUE",
+      "details": "Fix is in code and function works directly, but API endpoint doesn't receive correct results"
+    },
+    {
+      "conflict": "WRITE_ORDER_CONFLICT (surrealdb-primary-redis-cache)",
+      "resolution": "NOT_IMPLEMENTED",
+      "status": "DEFERRED",
+      "reason": "Need to add Redis cache population after SQL INSERT, but focusing on getting basic persistence working first",
+      "priority": "MEDIUM",
+      "estimatedEffort": "2-3 hours"
+    },
+    {
+      "conflict": "DEPLOYMENT_INFRASTRUCTURE_OVERLAP",
+      "resolution": "PARTIALLY_RESOLVED",
+      "status": "WORKAROUND_APPLIED",
+      "details": "Using ConfigMap override instead of clean image rebuild. Works for development but not production-ready.",
+      "recommendation": "Rebuild complete image from scratch without base image inheritance or ConfigMap workarounds"
+    }
+  ],
+  
+  "validationStatus": {
+    "thisSpec": "FAIL",
+    "reason": "API endpoint returns empty list despite database containing data and function working directly",
+    "testResults": {
+      "manualTests": {
+        "projectCreation": "PASS - POST returns 201, data persists in database",
+        "databasePersistence": "PASS - Direct query shows 10+ projects",
+        "directFunctionCall": "PASS - list_projects_by_org() returns 2 projects",
+        "apiEndpoint": "FAIL - GET /auth/orgs/{org_id}/projects returns {projects: [], total: 0}"
+      },
+      "automatedHarness": "NOT_RUN",
+      "reason": "TypeScript compilation errors need fixing, and API endpoint must work before harness can pass"
+    },
+    "conflictingSpecs": [
+      {
+        "spec": "surrealdb-primary-redis-cache",
+        "status": "UNCHANGED",
+        "reason": "Redis cache integration not implemented yet"
+      },
+      {
+        "spec": "complete-architecture-separation",
+        "status": "PASS",
+        "reason": "No changes made to architecture boundaries"
+      },
+      {
+        "spec": "surrealdb-official-library-integration",
+        "status": "UNCHANGED",
+        "reason": "Result format fix addresses compatibility but doesn't affect other specs"
+      }
+    ]
+  },
+  
+  "functionalStateTransition": {
+    "before": {
+      "projectCreation": "Creates but doesn't persist (db.create() bug)",
+      "projectRetrieval": "Always returns empty list",
+      "databaseState": "No data stored",
+      "apiEndpoint": "Returns 200 OK with empty array"
+    },
+    "after": {
+      "projectCreation": "Creates AND persists successfully (SQL INSERT)",
+      "projectRetrieval": "Function returns data correctly when called directly, but API endpoint returns empty",
+      "databaseState": "10+ projects stored and queryable",
+      "apiEndpoint": "Returns 200 OK but still empty array (namespace/connection issue suspected)"
+    },
+    "progress": "75% - Persistence fixed, data in database, function works, but API integration broken"
+  },
+  
+  "rootCauseAnalysis": {
+    "symptom": "API endpoint returns 0 projects despite function returning data when called directly",
+    "investigation": {
+      "hypothesis1": {
+        "theory": "Python module caching - uvicorn workers have old code",
+        "tested": true,
+        "result": "Negative - restarted deployment, cleared __pycache__, pod has correct code"
+      },
+      "hypothesis2": {
+        "theory": "ConfigMap timing - file mounted after function loaded",
+        "tested": true,
+        "result": "Negative - file inspection shows correct code, debug logs show Branch 3 being taken"
+      },
+      "hypothesis3": {
+        "theory": "Namespace/database connection difference between direct call and API request",
+        "tested": false,
+        "likelihood": "HIGH",
+        "evidence": "Function works with one DB connection, fails with another. Uvicorn workers may initialize different namespace/database."
+      },
+      "hypothesis4": {
+        "theory": "Duplicate route definition - second route overrides first",
+        "tested": false,
+        "likelihood": "MEDIUM",
+        "evidence": "Found duplicate code blocks at lines 943-976 and 978-1000 in cloud_auth.py"
+      },
+      "hypothesis5": {
+        "theory": "Result serialization silently failing",
+        "tested": false,
+        "likelihood": "LOW",
+        "evidence": "Function returns proper dict format, logs show 0 projects before serialization"
+      }
+    },
+    "mostLikelyRootCause": "Database namespace/connection issue - uvicorn workers initialize with different namespace or the API request creates a new DB client that connects to wrong database",
+    "evidenceSupporting": [
+      "Direct Python call in exec uses get_surreal_client() successfully",
+      "API endpoint call uses same function but gets empty results",
+      "Debug logs show function IS being called and executes query",
+      "Log message 'Retrieved 0 projects' comes from endpoint AFTER function returns",
+      "Multiple namespaces possible: 'metabob' (correct) vs 'default'"
+    ]
+  },
+  
+  "recommendedNextSteps": [
+    {
+      "priority": "IMMEDIATE",
+      "action": "Check database namespace in API request context",
+      "details": "Add logging to surrealdb_client.py to log which namespace/database is being used during API requests. Compare with direct Python exec namespace.",
+      "commands": [
+        "kubectl exec -n metabob deployment/metabob-rpc-api -- env | grep -i surreal",
+        "kubectl describe pod -n metabob -l app=metabob-rpc-api | grep -A 10 'Environment'"
+      ],
+      "estimatedEffort": "1-2 hours"
+    },
+    {
+      "priority": "IMMEDIATE",
+      "action": "Remove duplicate route definition",
+      "details": "cloud_auth.py has duplicate code at lines 943-976 and 978-1000. Remove one and verify FastAPI only registers single route.",
+      "file": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+      "estimatedEffort": "30 minutes"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Add comprehensive debug logging to endpoint",
+      "details": "Log at multiple points: endpoint entry, function call, result count, serialization. Capture exact data flow.",
+      "estimatedEffort": "1 hour"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Test direct pod HTTP request",
+      "details": "curl directly to pod IP (bypass ingress) to rule out ingress/routing issues",
+      "command": "kubectl exec -n metabob deployment/metabob-rpc-api -- curl localhost:8080/auth/orgs/{org_id}/projects",
+      "estimatedEffort": "30 minutes"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Rebuild from clean state",
+      "details": "Create new Dockerfile that doesn't inherit from base image, include all code, deploy without ConfigMaps",
+      "estimatedEffort": "4-6 hours"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Integrate Redis cache population",
+      "details": "After persistence fix is fully working, add Redis cache write after SurrealDB INSERT to comply with surrealdb-primary-redis-cache spec",
+      "estimatedEffort": "2-3 hours",
+      "blockedBy": "API endpoint issue must be resolved first"
+    },
+    {
+      "priority": "LOW",
+      "action": "Fix validation harness TypeScript errors",
+      "details": "Add type assertions to eliminate compilation errors",
+      "file": "tests/validation-harnesses/metabob-cli-to-dashboard-deployment-and-validation-harness.ts",
+      "estimatedEffort": "1-2 hours"
+    }
+  ],
+  
+  "deploymentArtifacts": {
+    "dockerImages": {
+      "location": "local",
+      "registry": "metabobapp",
+      "tags": [
+        "0.28.4-persistence-fix-complete",
+        "0.28.7-persistence-verified",
+        "0.28.8-force-overwrite"
+      ],
+      "currentlyDeployed": "0.28.8-force-overwrite",
+      "verificationStatus": "Image has correct code, pod has correct code, function works"
+    },
+    "kubernetesResources": {
+      "namespace": "metabob",
+      "deployment": "metabob-rpc-api",
+      "configMaps": [
+        "project-ops-fix",
+        "surrealdb-client-fix",
+        "universal-config"
+      ],
+      "secrets": [
+        "metabob-rpc-api-secrets"
+      ],
+      "currentPod": "Running, health checks passing, code verified correct"
+    },
+    "codeCommits": {
+      "persistence": [
+        {
+          "commit": "adb858a",
+          "file": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+          "change": "SQL INSERT for create_project"
+        },
+        {
+          "commit": "d5420bf",
+          "file": "repos/metabob-rpc-api/server/db/operations/problem_ops.py",
+          "change": "SQL INSERT for create_problem"
+        }
+      ],
+      "queryFix": [
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+          "change": "Added Branch 3 for dict list format",
+          "status": "Deployed via ConfigMap"
+        }
+      ]
+    }
+  },
+  
+  "blockers": [
+    {
+      "blocker": "API endpoint returns 0 projects despite function working",
+      "severity": "CRITICAL",
+      "status": "UNDER_INVESTIGATION",
+      "workRequired": "4-8 hours investigation + fixes",
+      "hypotheses": [
+        "Database namespace mismatch (MOST LIKELY)",
+        "Duplicate route definition",
+        "Worker initialization issue",
+        "Result serialization failure"
+      ],
+      "impact": "Prevents validation harness from passing, blocks E2E flow validation"
+    },
+    {
+      "blocker": "Registry access required for production deployment",
+      "severity": "HIGH",
+      "status": "WORKAROUND_APPLIED",
+      "workaround": "Using local images with IfNotPresent pull policy and ConfigMap overrides",
+      "impact": "Works for development/testing but not production-ready"
+    }
+  ],
+  
+  "lessonsLearned": [
+    {
+      "lesson": "Docker layer caching can override COPY commands",
+      "solution": "Use RUN cp -f instead of COPY when building on top of base images",
+      "applicability": "All Dockerfile builds that inherit from base images"
+    },
+    {
+      "lesson": "ConfigMaps can override Docker image files",
+      "solution": "Useful for development patches but should not be used in production. Rebuild images instead.",
+      "applicability": "Kubernetes deployments with code hotfixes"
+    },
+    {
+      "lesson": "SurrealDB HTTP client has result format variations",
+      "solution": "Need comprehensive result parsing that handles all formats: [{'result': [...]}], [[...]], and [{...}, {...}]",
+      "applicability": "All database query functions"
+    },
+    {
+      "lesson": "Function working directly != function working via API",
+      "solution": "Always test through full stack (API → middleware → function → DB) not just direct function calls",
+      "applicability": "All API endpoint validation"
+    }
+  ],
+  
+  "summary": {
+    "overallProgress": "75% complete",
+    "codeComplete": true,
+    "deploymentComplete": false,
+    "validationComplete": false,
+    "criticalBlocker": "API endpoint integration - function works but endpoint returns empty",
+    "estimatedTimeToResolution": "4-8 hours (investigation + fixes + deployment + validation)",
+    "confidence": "MEDIUM - root cause unclear, multiple investigation paths",
+    "readiness": "NOT_READY_FOR_PRODUCTION",
+    "recommendation": "Continue investigation with focus on database namespace/connection differences between direct calls and API requests"
+  },
+  
+  "metadata": {
+    "generatedBy": "ripple-changes-execution",
+    "timestamp": "2026-03-12T18:50:00Z",
+    "budget": 3000,
+    "sessionDuration": "~3 hours",
+    "toolsUsed": [
+      "kubectl",
+      "docker",
+      "curl",
+      "python3 (direct exec)",
+      "ConfigMap updates",
+      "Helm values updates"
+    ]
+  }
+}
