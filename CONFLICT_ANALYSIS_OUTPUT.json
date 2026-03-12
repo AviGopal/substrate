@@ -1,102 +1,201 @@
 {
-  "specificationName": "Correct MCP Tool Name and Parameters",
+  "specificationName": "metabob-cli-to-dashboard-complete-data-flow",
+  "analysisDate": "2026-03-12",
   "otherSpecifications": [
-    "complete-architecture-separation",
-    "metrics-calculation-in-rpc-api-only",
-    "thompson-sampling-in-rpc-api-only",
-    "impulse-learning-in-rpc-api-only",
-    "impulse-learning-storage-complete",
-    "pattern-extraction-service-complete",
-    "context-optimization-endpoint-complete",
-    "surrealdb-primary-redis-cache",
-    "devbob-k8s-git-operations",
-    "bootstrap-template-filepath-compliance",
-    "activity-template-query-filtering",
-    "project-scoped-template-filtering",
-    "ACP-Local-Network-Discovery",
-    "devbob-acp-multi-vessel-coordination",
-    "Kubernetes-Deployment-Validation-Exit-Codes",
-    "Local-Docker-Desktop-Kubernetes-Deployment",
-    "metabob-cli-test-implementation-alignment",
     "surrealdb-official-library-integration",
-    "Instance-Invariant Storage"
+    "complete-architecture-separation",
+    "impulse-learning-storage-complete",
+    "context-optimization-endpoint-complete",
+    "surrealdb-primary-redis-cache"
   ],
-  "conflicts": [],
-  "sharedComponents": [
+  "conflicts": [
     {
-      "component": "template-metrics-client.ts",
-      "affectedBySpecs": [
-        "Correct MCP Tool Name and Parameters",
-        "metrics-calculation-in-rpc-api-only",
-        "complete-architecture-separation"
-      ],
-      "conflictStatus": "NO_CONFLICT",
-      "recommendation": "Specifications are mutually reinforcing. MCP tool fix enables metrics calculation and reinforces architecture separation. No action required."
+      "conflictId": 1,
+      "type": "APPROACH_DIVERGENCE",
+      "severity": "MEDIUM",
+      "spec1": "metabob-cli-to-dashboard-complete-data-flow",
+      "spec2": "surrealdb-official-library-integration",
+      "sharedComponent": "surrealdb_client.py, operations/*.py",
+      "description": "Spec 1 uses SQL INSERT workaround to fix db.create() persistence bug. Spec 2 aims to use official library with native db.create() methods. If official library is deployed, it may reintroduce persistence bug OR fix it (depending on library version and SurrealDB version).",
+      "evidence": {
+        "spec1Validation": "db.create() confirmed NOT to persist (project created but not retrieved)",
+        "spec2Validation": "Official library not installed yet (6/8 tests pass, 2 deployment failures)",
+        "sharedFiles": [
+          "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+          "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+          "repos/metabob-rpc-api/server/db/operations/problem_ops.py"
+        ]
+      },
+      "resolution": {
+        "recommended": "Option A - Wait for official library deployment and test",
+        "options": [
+          {
+            "id": "A",
+            "name": "Test Official Library First",
+            "steps": [
+              "Deploy metabob-cli-to-dashboard fixes (SQL INSERT)",
+              "Deploy surrealdb-official-library-integration",
+              "Test if db.create() persists with official library",
+              "If yes: Migrate SQL INSERT → db.create()",
+              "If no: Keep SQL INSERT pattern"
+            ],
+            "pros": ["Scientific approach", "May leverage official library"],
+            "cons": ["Requires testing time"],
+            "risk": "LOW"
+          },
+          {
+            "id": "B",
+            "name": "Keep SQL INSERT Pattern",
+            "steps": [
+              "Deploy SQL INSERT fixes",
+              "Apply pattern to remaining 9 files",
+              "Document as architectural standard"
+            ],
+            "pros": ["Proven to work", "Explicit", "No library dependency"],
+            "cons": ["More verbose", "Less idiomatic"],
+            "risk": "VERY_LOW"
+          },
+          {
+            "id": "C",
+            "name": "Conditional Pattern",
+            "steps": [
+              "Add library version detection",
+              "Use db.create() if official library",
+              "Fall back to SQL INSERT otherwise"
+            ],
+            "pros": ["Flexible", "Future-proof"],
+            "cons": ["High complexity", "Hard to maintain"],
+            "risk": "MEDIUM"
+          }
+        ]
+      }
+    },
+    {
+      "conflictId": 2,
+      "type": "API_DEFINITION_MISMATCH",
+      "severity": "HIGH",
+      "spec1": "metabob-cli-to-dashboard-complete-data-flow",
+      "spec2": "UNKNOWN (API design not documented)",
+      "sharedComponent": "routes/problems.py or similar",
+      "description": "Validation harness expects problem creation at POST /api/problems, but this returns 405 Method Not Allowed. Endpoint may be at different path (/api/auth/orgs/{org_id}/projects/{project_id}/problems) or not implemented.",
+      "evidence": {
+        "actual": "POST /api/problems → 405 Method Not Allowed",
+        "expected": "POST /api/problems → 201 CREATED",
+        "impact": "Cannot test problem persistence or data hierarchy"
+      },
+      "resolution": {
+        "recommended": "Investigate and document correct endpoint",
+        "steps": [
+          "Search repos/metabob-rpc-api/server/routes/ for problem endpoints",
+          "Document correct API path",
+          "Update validation harness with correct path",
+          "If endpoint doesn't exist, create it with SQL INSERT pattern",
+          "Re-run validation"
+        ],
+        "priority": "P0 - BLOCKING",
+        "owner": "Backend Team"
+      }
     }
   ],
-  "architecturalCompliance": {
-    "boundaryViolations": 0,
-    "reinforcements": 3,
-    "details": [
-      {
-        "boundary": "OpenCode → MCP → CLI → Backend",
-        "status": "REINFORCED",
-        "note": "Fix maintains MCP layer usage, enables correct data flow"
-      },
-      {
-        "boundary": "Metrics Calculation in RPC API Only",
-        "status": "MAINTAINED",
-        "note": "No arithmetic operations added, delegates to RPC API"
-      },
-      {
-        "boundary": "Thompson Sampling in RPC API Only",
-        "status": "MAINTAINED",
-        "note": "No Thompson Sampling code added, enables RPC API learning"
-      }
-    ]
-  },
-  "dependencyAnalysis": {
-    "upstream": [
-      {
-        "component": "MCP Tool Registration",
-        "status": "VERIFIED",
-        "location": "activity_template_tools.py:301"
-      },
-      {
-        "component": "RPC API Endpoint",
-        "status": "VERIFIED",
-        "location": "learning_loop.py:81-104"
-      },
-      {
-        "component": "Database Schema",
-        "status": "VERIFIED",
-        "source": "surrealdb-primary-redis-cache spec"
-      }
-    ],
-    "downstream": [
-      {
-        "component": "Thompson Sampling",
-        "status": "NOW_WORKS",
-        "spec": "thompson-sampling-in-rpc-api-only"
-      },
-      {
-        "component": "Metrics Calculation",
-        "status": "NOW_WORKS",
-        "spec": "metrics-calculation-in-rpc-api-only"
-      },
-      {
-        "component": "Learning System",
-        "status": "NOW_WORKS",
-        "impact": "Boredom activity detection, template selection"
-      }
-    ]
-  },
-  "positiveEffects": [
-    "Enables metrics recording (was broken, now fixed)",
-    "Enables Thompson Sampling learning system",
-    "Reinforces MCP architectural boundary",
-    "Fixes critical silent failure bug",
-    "Enables boredom activity detection"
+  "nonConflicts": [
+    {
+      "aspect": "Temporal Tracking",
+      "specification": "metabob-cli-to-dashboard-complete-data-flow",
+      "requirement": "ISO 8601 timestamps with 'Z' suffix",
+      "status": "NO_CONFLICT",
+      "reason": "Additive change, doesn't break existing functionality, improves interoperability"
+    }
   ],
-  "conflictImpulseId": "conflict-analysis-Correct MCP Tool Name and Parameters"
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-complete-data-flow",
+        "surrealdb-official-library-integration"
+      ],
+      "currentState": "Custom HTTP adapter with AsyncSurrealDBClient",
+      "conflictingRequirements": [
+        "Spec 1: Use SQL INSERT (workaround)",
+        "Spec 2: Use official library methods (db.create)"
+      ],
+      "recommendation": "Deploy Spec 1 fix first, then test Spec 2, decide based on results",
+      "priority": "HIGH"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-complete-data-flow"
+      ],
+      "currentState": "Fixed with SQL INSERT (commit adb858a), not deployed",
+      "recommendation": "Deploy immediately (in Docker image 0.28.4-persistence-fix-complete)",
+      "priority": "CRITICAL"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/problem_ops.py",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-complete-data-flow"
+      ],
+      "currentState": "Fixed with SQL INSERT (commit d5420bf), not deployed",
+      "recommendation": "Deploy immediately (in Docker image 0.28.4-persistence-fix-complete)",
+      "priority": "CRITICAL"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/routes/*.py (problem routes)",
+      "affectedBySpecs": [
+        "metabob-cli-to-dashboard-complete-data-flow"
+      ],
+      "currentState": "Unknown - returns 405 at /api/problems",
+      "recommendation": "Investigate and document correct endpoint path",
+      "priority": "HIGH"
+    }
+  ],
+  "deploymentStrategy": {
+    "phase1": {
+      "name": "Deploy Immediate Fixes",
+      "actions": [
+        "Deploy Docker image 0.28.4-persistence-fix-complete",
+        "Validate project persistence",
+        "Investigate problem endpoint"
+      ],
+      "priority": "P0",
+      "status": "BLOCKED_ON_REGISTRY_ACCESS"
+    },
+    "phase2": {
+      "name": "Complete Official Library Integration",
+      "actions": [
+        "pip install surrealdb in deployment",
+        "Test persistence with official library",
+        "Compare with SQL INSERT pattern"
+      ],
+      "priority": "P1",
+      "status": "PENDING_PHASE1"
+    },
+    "phase3": {
+      "name": "Decide Long-Term Pattern",
+      "actions": [
+        "If library works: Plan migration SQL INSERT → db.create()",
+        "If library fails: Adopt SQL INSERT platform-wide",
+        "Document architectural decision"
+      ],
+      "priority": "P1",
+      "status": "PENDING_PHASE2"
+    },
+    "phase4": {
+      "name": "SurrealDB v3.0 Upgrade",
+      "actions": [
+        "Upgrade SurrealDB deployment to v3.0+",
+        "Re-test all persistence operations",
+        "Final validation"
+      ],
+      "priority": "P2",
+      "status": "LONG_TERM"
+    }
+  },
+  "riskAssessment": {
+    "conflict1Risk": "MEDIUM - May require code changes after library deployment",
+    "conflict2Risk": "HIGH - Blocks E2E validation until endpoint resolved",
+    "overallRisk": "MEDIUM - Conflicts are manageable with phased approach",
+    "mitigation": "Deploy fixes first (proven pattern), then evaluate library migration"
+  },
+  "conflictImpulseId": "conflict-analysis-metabob-cli-to-dashboard-complete-data-flow"
 }
