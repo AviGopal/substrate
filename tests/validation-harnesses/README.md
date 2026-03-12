@@ -1,255 +1,179 @@
-# DevBob Independent Activity Execution - Validation Harness
+# Validation Harnesses
 
-## Overview
+This directory contains automated validation harnesses for testing specification compliance without requiring LLM execution.
 
-This validation harness tests the complete end-to-end capability of DevBob to independently execute activities without manual intervention.
+## metabob-cli-to-dashboard-e2e-data-flow-harness.ts
 
-## Test Coverage
+**Specification**: metabob-cli-to-dashboard-e2e-data-flow  
+**Purpose**: Validate complete E2E data flow from metabob-cli to dashboard  
+**Test Cases**: 6 (V1-V6)
 
-The harness validates 7 critical aspects:
+### Test Coverage
 
-1. **Git Repository Initialization** - Verifies `/workspace` is a valid git repository
-2. **ANTHROPIC_API_KEY Available** - Confirms API credentials are properly mounted
-3. **Activity Templates Accessible** - Ensures templates are loaded and available
-4. **OpenCode Config with MCP** - Validates configuration file and MCP settings
-5. **Minimal Activity Execution** - Tests that activities can start without git errors
-6. **RPC API Communication** - Monitors logs for backend communication
-7. **SurrealDB Records** - Verifies data persistence with variant_id tracking
+| Test | Description | Validates |
+|------|-------------|-----------|
+| V1 | CLI Project Registration | POST /auth/orgs/{org_id}/projects endpoint |
+| V2 | Session-Project Linking | POST /v2/submit with project_id |
+| V3 | SurrealDB Problem Persistence | Problems persist with correct schema |
+| V4 | Dashboard Problem Query | GET /auth/orgs/{org_id}/projects/{project_id}/problems |
+| V5 | Temporal Tracking | ORDER BY created_at DESC works |
+| V6 | Stats Updates | Project stats update correctly |
 
-## Usage
+### Usage
 
-### Quick Start
-
-```bash
-# From local machine (uses kubectl exec)
-./run-devbob-validation.sh
-
-# Inside DevBob pod
-tsx devbob-independent-activity-execution-harness.ts
-# or
-ts-node devbob-independent-activity-execution-harness.ts
-```
-
-### Manual Execution
+#### Standalone Execution
 
 ```bash
-# Compile and run
-tsc devbob-independent-activity-execution-harness.ts
-node devbob-independent-activity-execution-harness.js
+# Set required environment variables
+export TEST_ORG_ID="your-org-uuid"
+export JWT_TOKEN="your-jwt-token"
+export RPC_API_URL="http://localhost:8000"
 
-# Or use npx
-npx tsx devbob-independent-activity-execution-harness.ts
+# Optional: SurrealDB configuration
+export SURREALDB_URL="http://localhost:8000"
+export SURREALDB_NS="test"
+export SURREALDB_DB="test"
+
+# Run validation
+cd /path/to/metabob-devbob
+npx ts-node tests/validation-harnesses/metabob-cli-to-dashboard-e2e-data-flow-harness.ts
 ```
 
-### From Kubernetes
+#### Programmatic Usage
 
-```bash
-# Copy harness to pod
-kubectl cp devbob-independent-activity-execution-harness.ts devbob:/tmp/
-
-# Execute inside pod
-kubectl exec devbob -- npx tsx /tmp/devbob-independent-activity-execution-harness.ts
-
-# View results
-kubectl exec devbob -- cat /tmp/validation-report-*.json
-```
-
-## Output
-
-The harness produces:
-
-1. **Console Output** - Real-time test results with ✅/❌ indicators
-2. **JSON Report** - Detailed results saved to `/tmp/validation-report-<timestamp>.json`
-3. **Exit Code** - 0 for all tests passed, 1 for any failures
-
-### Sample Output
-
-```
-═══════════════════════════════════════════════════════════
-  DevBob Independent Activity Execution - Validation Harness
-═══════════════════════════════════════════════════════════
-
-🧪 Running: Git Repository Initialization...
-   ✅ PASS: Git repository detected in /workspace
-
-🧪 Running: ANTHROPIC_API_KEY Available...
-   ✅ PASS: API key configured
-
-🧪 Running: Activity Templates Accessible...
-   ✅ PASS: Found 5 templates at /app/templates
-
-🧪 Running: OpenCode Config with MCP...
-   ✅ PASS: OpenCode config has MCP settings
-
-🧪 Running: Minimal Activity Execution...
-   ✅ PASS: Activity execution started (git checks passed)
-
-🧪 Running: RPC API Communication...
-   ✅ PASS: RPC API communication detected in logs
-
-🧪 Running: SurrealDB Records...
-   ✅ PASS: SurrealDB reachable (record query not yet implemented)
-
-═══════════════════════════════════════════════════════════
-  Results: 7/7 PASSED
-  Environment: devbob-pod
-  Timestamp: 2024-01-15T10:30:45.123Z
-═══════════════════════════════════════════════════════════
-
-📄 Detailed report written to: /tmp/validation-report-1705318245123.json
-```
-
-## Test Cases
-
-### Case 1: Git Repository
-- **Input**: `git rev-parse --is-inside-work-tree`
-- **Expected**: `stdout="true", exitCode=0`
-- **Validates**: Git initialization in /workspace
-
-### Case 2: API Key
-- **Input**: `[ -n "$ANTHROPIC_API_KEY" ] && echo "SET" || echo "NOT_SET"`
-- **Expected**: `stdout="SET", exitCode=0`
-- **Validates**: Anthropic API credentials mounted
-
-### Case 3: Templates
-- **Input**: Check `/app/templates`, `/workspace/.config/opencode/templates`, `~/.local/share/opencode/storage/activity-template`
-- **Expected**: `templatesFound=true, templateCount>0`
-- **Validates**: Activity templates available
-
-### Case 4: Config
-- **Input**: `cat /workspace/.config/opencode/opencode.json`
-- **Expected**: `exists=true, hasMCP=true, valid=true`
-- **Validates**: OpenCode configuration with MCP
-
-### Case 5: Activity Execution
-- **Input**: `opencode activity test-validation-simple`
-- **Expected**: `hasGitError=false, hasPreFlightError=false`
-- **Validates**: Activities can execute without git errors
-
-### Case 6: RPC Communication
-- **Input**: `kubectl logs devbob --tail=100`
-- **Expected**: `hasRpcActivity=true` (logs contain "RPC API", "POST /activity", or "variant_id")
-- **Validates**: Backend communication active
-
-### Case 7: Database
-- **Input**: `curl -sf http://localhost:8000/health`
-- **Expected**: `reachable=true`
-- **Validates**: SurrealDB connectivity
-
-## Environment Detection
-
-The harness automatically detects its execution environment:
-
-- **`devbob-pod`**: Running inside DevBob container (has `/workspace/.config/opencode`)
-- **`local-kubectl`**: Running locally with kubectl access
-- **`unknown`**: Cannot determine environment (tests will fail gracefully)
-
-## Integration with CI/CD
-
-### GitHub Actions
-
-```yaml
-- name: Validate DevBob Activity Execution
-  run: |
-    kubectl wait --for=condition=ready pod -l app=devbob --timeout=120s
-    ./tests/validation-harnesses/run-devbob-validation.sh
-```
-
-### GitLab CI
-
-```yaml
-validate-devbob:
-  script:
-    - kubectl wait --for=condition=ready pod -l app=devbob --timeout=120s
-    - ./tests/validation-harnesses/run-devbob-validation.sh
-  artifacts:
-    paths:
-      - /tmp/validation-report-*.json
-    when: always
-```
-
-## Troubleshooting
-
-### Test Failures
-
-**Git Repository Test Fails**
-- Check if initContainer ran successfully: `kubectl logs devbob -c setup-config`
-- Verify .git exists: `kubectl exec devbob -- ls -la /workspace/.git`
-
-**API Key Test Fails**
-- Verify secret exists: `kubectl get secret devbob-secrets`
-- Check environment: `kubectl exec devbob -- env | grep ANTHROPIC`
-
-**Templates Test Fails**
-- Check template directory: `kubectl exec devbob -- ls -la /app/templates`
-- Verify build includes templates: Check Dockerfile COPY commands
-
-**Config Test Fails**
-- Verify ConfigMap: `kubectl get configmap devbob -o yaml`
-- Check file copied: `kubectl exec devbob -- cat /workspace/.config/opencode/opencode.json`
-
-**Activity Execution Fails**
-- Check full logs: `kubectl logs devbob --tail=200`
-- Run manually: `kubectl exec devbob -- opencode activity --list`
-
-## Dependencies
-
-- Node.js 16+ (for TypeScript execution)
-- TypeScript runtime (tsx, ts-node, or tsc)
-- kubectl (for local execution)
-- Access to DevBob pod
-
-## File Structure
-
-```
-tests/validation-harnesses/
-├── README.md                                          # This file
-├── devbob-independent-activity-execution-harness.ts  # Main harness
-├── run-devbob-validation.sh                          # Runner script
-└── test-cases.json                                   # Test case definitions
-```
-
-## Maintenance
-
-### Adding New Test Cases
-
-1. Add test function to harness:
 ```typescript
-function testNewFeature(): ValidationResult {
-  const result = execInDevBob('your-command-here');
-  return {
-    pass: /* your condition */,
-    actual: /* actual output */,
-    expected: /* expected output */,
-    details: /* human-readable result */
-  };
-}
+import { runValidation } from './tests/validation-harnesses/metabob-cli-to-dashboard-e2e-data-flow-harness';
+
+const config = {
+  rpcApiUrl: 'http://localhost:8000',
+  surrealDbUrl: 'http://localhost:8000',
+  surrealDbNamespace: 'test',
+  surrealDbDatabase: 'test',
+  testOrgId: 'your-org-uuid',
+  jwtToken: 'your-jwt-token'
+};
+
+const result = await runValidation(config);
+
+console.log(`Pass: ${result.pass}`);
+console.log(`Passed: ${result.summary.passed}/${result.summary.total}`);
+console.log(`Failed: ${result.summary.failed}`);
+console.log(`Duration: ${result.summary.duration}ms`);
+
+// Access individual test results
+result.results.forEach(r => {
+  console.log(`${r.testCase}: ${r.pass ? 'PASS' : 'FAIL'}`);
+  if (!r.pass) {
+    console.log(`  Error: ${r.error}`);
+    console.log(`  Expected:`, r.expected);
+    console.log(`  Actual:`, r.actual);
+  }
+});
 ```
 
-2. Register in `testCases` array:
-```typescript
-const testCases = [
-  // ... existing tests
-  { name: 'New Feature Test', fn: testNewFeature }
-];
-```
+### Output Format
 
-3. Add test case definition to impulse:
 ```json
 {
-  "impulseId": "validation-devbob-independent-activity-execution-case-N",
-  "name": "New Feature Test",
-  "input": { /* test input */ },
-  "expectedOutput": { /* expected output */ }
+  "pass": true,
+  "results": [
+    {
+      "pass": true,
+      "testCase": "V1: CLI Project Registration",
+      "actual": {
+        "hasProjectId": true,
+        "hasOrgId": true,
+        "nameMatches": true,
+        "project_id": "uuid"
+      },
+      "expected": {
+        "hasProjectId": true,
+        "hasOrgId": true,
+        "nameMatches": true
+      },
+      "duration": 250
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "duration": 15000
+  }
 }
 ```
 
-### Updating Expected Values
+### Exit Codes
 
-Edit `test-cases.json` to update expected outputs without modifying harness code.
+- `0`: All tests passed
+- `1`: One or more tests failed or validation error
 
-## Related Documentation
+### Dependencies
 
-- [Activity Execution Architecture](../../docs/activity-execution.md)
-- [DevBob Deployment Guide](../../docs/devbob-deployment.md)
-- [Trace-Enforce-Validate Loop](../../docs/trace-enforce-validate.md)
+```bash
+npm install axios form-data
+# or
+yarn add axios form-data
+```
+
+### Test Case Impulses
+
+Each test case has a corresponding impulse with expected inputs/outputs:
+
+- `validation-metabob-cli-to-dashboard-e2e-data-flow-case-1` (V1)
+- `validation-metabob-cli-to-dashboard-e2e-data-flow-case-2` (V2)
+- `validation-metabob-cli-to-dashboard-e2e-data-flow-case-3` (V3)
+- `validation-metabob-cli-to-dashboard-e2e-data-flow-case-4` (V4)
+- `validation-metabob-cli-to-dashboard-e2e-data-flow-case-5` (V5)
+- `validation-metabob-cli-to-dashboard-e2e-data-flow-case-6` (V6)
+
+### Harness Impulse
+
+The harness itself is tracked via impulse:
+- `harness-metabob-cli-to-dashboard-e2e-data-flow`
+
+### Integration with CI/CD
+
+```yaml
+# .github/workflows/e2e-validation.yml
+name: E2E Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm install
+      - name: Run E2E Validation
+        env:
+          TEST_ORG_ID: ${{ secrets.TEST_ORG_ID }}
+          JWT_TOKEN: ${{ secrets.JWT_TOKEN }}
+          RPC_API_URL: ${{ secrets.RPC_API_URL }}
+        run: |
+          npx ts-node tests/validation-harnesses/metabob-cli-to-dashboard-e2e-data-flow-harness.ts
+```
+
+### Troubleshooting
+
+**V1 Fails**: Check JWT token validity and org_id  
+**V2 Fails**: Verify /v2/submit endpoint accepts multipart/form-data  
+**V3 Fails**: Ensure Celery worker is running and SurrealDB is accessible  
+**V4 Fails**: Verify GET /auth/orgs/{org_id}/projects/{project_id}/problems endpoint exists  
+**V5 Fails**: Check temporal ordering in SurrealDB query (ORDER BY created_at DESC)  
+**V6 Fails**: Verify project stats are updated via project_ops.update_project_stats  
+
+### Historical Context
+
+These test cases are **HISTORICAL** and can be run without LLM:
+- Input/output expectations are stored in impulses
+- Validation logic is deterministic (no LLM required)
+- Can be executed in CI/CD pipelines
+- Provides regression testing for specification compliance

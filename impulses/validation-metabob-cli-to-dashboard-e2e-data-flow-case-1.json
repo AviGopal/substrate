@@ -1,0 +1,36 @@
+{
+  "id": "validation-metabob-cli-to-dashboard-e2e-data-flow-case-1",
+  "type": "memo",
+  "createdAt": "2026-03-12T00:00:00Z",
+  "budget": 500,
+  "metadata": {
+    "testCase": "V1: CLI Project Registration",
+    "specification": "metabob-cli-to-dashboard-e2e-data-flow"
+  },
+  "content": {
+    "testCase": "V1: CLI Project Registration",
+    "description": "Tests CLI project registration via POST /auth/orgs/{org_id}/projects",
+    "input": {
+      "endpoint": "POST /auth/orgs/{org_id}/projects",
+      "payload": {
+        "name": "test-validation-project",
+        "repository_url": "https://github.com/test/validation",
+        "branch": "main",
+        "git_root_hash": "abc123def456",
+        "settings": {}
+      },
+      "authentication": "JWT Bearer token"
+    },
+    "expectedOutput": {
+      "hasProjectId": true,
+      "hasOrgId": true,
+      "nameMatches": true,
+      "repoUrlMatches": true,
+      "branchMatches": true,
+      "gitHashMatches": true,
+      "hasStats": true,
+      "hasTimestamps": true
+    },
+    "validationLogic": "Verify response contains project_id, org_id matches request, all fields match input, stats object present, created_at and updated_at timestamps present"
+  }
+}

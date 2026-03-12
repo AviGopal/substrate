@@ -1,0 +1,284 @@
+{
+  "id": "conflict-analysis-metabob-cli-to-dashboard-e2e-data-flow",
+  "type": "memo",
+  "createdAt": "2026-03-12T03:00:00Z",
+  "budget": 3000,
+  "metadata": {
+    "specification": "metabob-cli-to-dashboard-e2e-data-flow",
+    "purpose": "Conflict analysis with other specifications",
+    "analysisDate": "2026-03-12T03:00:00Z",
+    "totalSpecificationsAnalyzed": 60,
+    "conflictsFound": 1,
+    "complementarySpecs": 2
+  },
+  "content": {
+    "currentSpecification": {
+      "name": "metabob-cli-to-dashboard-e2e-data-flow",
+      "status": "AWAITING_LIVE_SYSTEM",
+      "modifiedComponents": [
+        {
+          "file": "repos/metabob-cli/src/metabob_cli/core/analysis_api_client.py",
+          "changes": "Gap 1 - CLI project registration (register_project method)",
+          "commit": "28da1c375"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/routes/analysis.py",
+          "changes": "Gap 2 - Session-project linking (POST /v2/submit accepts project_id)"
+        },
+        {
+          "file": "repos/metabob-rpc-api/tasks/jobs/analysis.py",
+          "changes": "Gap 3 - SurrealDB persistence (_store_results dual-write, _persist_to_surrealdb_sync)"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/routes/projects.py",
+          "changes": "Gap 4 - Project API endpoints (POST/GET /auth/orgs/{org_id}/projects)"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/routes/projects.py",
+          "changes": "NEW ENDPOINT - Dashboard problem query (GET /auth/orgs/{org_id}/projects/{project_id}/problems)",
+          "lines": "209-337"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/problem_ops.py",
+          "changes": "Problem CRUD operations (bulk_create_problems, list_problems_by_project)"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+          "changes": "Project CRUD operations (create_project, get_project, list_projects_by_org, update_project_stats)"
+        }
+      ]
+    },
+    "relatedSpecifications": [
+      {
+        "name": "rpc-api-endpoint-database-integration",
+        "status": "PARTIAL_PASS (4/5 tests passed)",
+        "relationship": "COMPLEMENTARY",
+        "sharedComponents": [
+          "repos/metabob-rpc-api/server/routes/* (REST API endpoints)",
+          "SurrealDB integration"
+        ],
+        "analysis": {
+          "overlap": "Both specifications work with RPC API endpoints and SurrealDB",
+          "conflict": "NONE",
+          "synergy": "rpc-api-endpoint-database-integration validated RecordID serialization fix which benefits metabob-cli-to-dashboard problem query endpoint",
+          "compatibility": "COMPATIBLE - Both specs enhance RPC API with proper SurrealDB integration"
+        }
+      },
+      {
+        "name": "surrealdb-primary-redis-cache",
+        "status": "FAIL (1/6 tests failed - Phase 2 execution recording)",
+        "relationship": "POTENTIAL_CONFLICT",
+        "sharedComponents": [
+          "repos/metabob-rpc-api/tasks/jobs/analysis.py (Gap 3 dual-write)",
+          "SurrealDB write patterns",
+          "Redis cache patterns"
+        ],
+        "analysis": {
+          "overlap": "Both specifications modify problem persistence in tasks/jobs/analysis.py",
+          "conflict": "ORDERING_CONFLICT",
+          "details": {
+            "currentSpec": "Gap 3 implements dual-write: Redis (7-day TTL) + SurrealDB (permanent) in _store_results()",
+            "otherSpec": "surrealdb-primary-redis-cache requires SurrealDB-first write pattern (SurrealDB before Redis)",
+            "currentImplementation": "Gap 3 writes to both Redis and SurrealDB in _store_results(), but order is not explicitly specified",
+            "requiredPattern": "SurrealDB write MUST happen before Redis write to ensure data durability"
+          },
+          "severity": "MEDIUM",
+          "impact": "If Gap 3 writes to Redis before SurrealDB, there's a risk of cache inconsistency during failures",
+          "requiresResolution": true
+        }
+      },
+      {
+        "name": "dashboard-authentication-backend-fix",
+        "status": "N/A",
+        "relationship": "COMPLEMENTARY",
+        "sharedComponents": [
+          "Dashboard backend API",
+          "JWT authentication"
+        ],
+        "analysis": {
+          "overlap": "Both specs work with dashboard authentication and backend APIs",
+          "conflict": "NONE",
+          "synergy": "dashboard-authentication-backend-fix ensures JWT authentication works for new problem query endpoint",
+          "compatibility": "COMPATIBLE - Authentication fixes enable secure access to problem query endpoint"
+        }
+      }
+    ],
+    "conflicts": [
+      {
+        "id": "CONFLICT-001",
+        "type": "WRITE_ORDER_INCONSISTENCY",
+        "severity": "MEDIUM",
+        "spec1": "metabob-cli-to-dashboard-e2e-data-flow",
+        "spec2": "surrealdb-primary-redis-cache",
+        "sharedComponent": {
+          "file": "repos/metabob-rpc-api/tasks/jobs/analysis.py",
+          "function": "_store_results()",
+          "lines": "181-299"
+        },
+        "description": "Gap 3 dual-write pattern may not comply with SurrealDB-first write order requirement",
+        "currentImplementation": {
+          "spec1": "Dual-write to Redis + SurrealDB in _store_results(), order not specified",
+          "codeSnippet": "redis.hset(...problems...) AND bulk_create_problems(...)",
+          "writeOrder": "UNSPECIFIED (may be Redis-first or SurrealDB-first depending on implementation)"
+        },
+        "requiredImplementation": {
+          "spec2": "SurrealDB write MUST happen BEFORE Redis write",
+          "pattern": "SurrealDB-first write pattern",
+          "rationale": "Ensures data durability - SurrealDB is source of truth, Redis is cache"
+        },
+        "resolutionRequired": true,
+        "resolutionStrategy": "ENFORCEMENT",
+        "resolution": {
+          "recommendation": "Enforce SurrealDB-first write order in Gap 3 implementation",
+          "implementation": {
+            "step1": "In _store_results(), call bulk_create_problems() FIRST",
+            "step2": "Only write to Redis AFTER SurrealDB write succeeds",
+            "step3": "Handle SurrealDB failures gracefully (log but don't fail task)",
+            "step4": "Add timing logs to verify write order"
+          },
+          "codeChange": {
+            "file": "repos/metabob-rpc-api/tasks/jobs/analysis.py",
+            "function": "_store_results()",
+            "before": "# Write to Redis\nredis.hset(...)\n# Write to SurrealDB\nbulk_create_problems(...)",
+            "after": "# Write to SurrealDB FIRST (source of truth)\ntry:\n    bulk_create_problems(...)\n    logger.info('SurrealDB write succeeded')\nexcept Exception as e:\n    logger.error(f'SurrealDB write failed: {e}')\n\n# Write to Redis SECOND (cache)\nredis.hset(...)"
+          },
+          "validation": "Verify write order via logs or instrumentation",
+          "effort": "LOW (1-2 hours)",
+          "blocking": false,
+          "priority": "MEDIUM",
+          "assignee": "Backend Team"
+        }
+      }
+    ],
+    "sharedComponents": [
+      {
+        "component": "repos/metabob-rpc-api/tasks/jobs/analysis.py",
+        "affectedBySpecs": [
+          "metabob-cli-to-dashboard-e2e-data-flow (Gap 3)",
+          "surrealdb-primary-redis-cache (Phase 2)"
+        ],
+        "currentState": "Dual-write pattern implemented (Redis + SurrealDB)",
+        "requirements": {
+          "spec1": "Store problems to SurrealDB with org/project hierarchy",
+          "spec2": "Write to SurrealDB BEFORE Redis"
+        },
+        "recommendation": "Ensure SurrealDB-first write order to satisfy both specifications",
+        "priority": "MEDIUM",
+        "effort": "LOW"
+      },
+      {
+        "component": "repos/metabob-rpc-api/server/routes/projects.py",
+        "affectedBySpecs": [
+          "metabob-cli-to-dashboard-e2e-data-flow (Gap 4 + new endpoint)"
+        ],
+        "currentState": "Project CRUD + problem query endpoint deployed",
+        "requirements": {
+          "spec1": "Provide project registration and problem query endpoints"
+        },
+        "recommendation": "No conflicts - this is a new file/endpoint",
+        "priority": "N/A",
+        "effort": "N/A"
+      },
+      {
+        "component": "SurrealDB Schema (problems table)",
+        "affectedBySpecs": [
+          "metabob-cli-to-dashboard-e2e-data-flow",
+          "rpc-api-endpoint-database-integration",
+          "surrealdb-primary-redis-cache"
+        ],
+        "currentState": "Schema with org_id, project_id, timestamps deployed",
+        "requirements": {
+          "spec1": "Problems table with org/project hierarchy",
+          "spec2": "RecordID serialization fix",
+          "spec3": "SurrealDB as primary data store"
+        },
+        "recommendation": "All specifications are aligned on SurrealDB schema",
+        "priority": "N/A",
+        "effort": "N/A"
+      }
+    ],
+    "nonConflictingSpecs": [
+      "activity-execution-comprehensive-mapping-display",
+      "activity-lifecycle-dynamic-creation-boredom-evolution",
+      "activity-recommendation-learning-loop-e2e",
+      "bootstrap-template-filepath-compliance",
+      "clean-environment-activity-execution-end-to-end",
+      "dashboard-authentication-backend-fix",
+      "rpc-api-endpoint-database-integration"
+    ],
+    "complementarySpecs": [
+      {
+        "name": "rpc-api-endpoint-database-integration",
+        "benefit": "Validated RecordID serialization which helps problem query endpoint",
+        "synergy": "Ensures API endpoints return valid JSON without serialization errors"
+      },
+      {
+        "name": "dashboard-authentication-backend-fix",
+        "benefit": "Ensures JWT authentication works for new problem query endpoint",
+        "synergy": "Enables secure access to dashboard problem queries"
+      }
+    ],
+    "crossComponentAnalysis": {
+      "filesModifiedByMultipleSpecs": 1,
+      "details": [
+        {
+          "file": "repos/metabob-rpc-api/tasks/jobs/analysis.py",
+          "specs": [
+            "metabob-cli-to-dashboard-e2e-data-flow (Gap 3)",
+            "surrealdb-primary-redis-cache (Phase 2)"
+          ],
+          "conflict": "WRITE_ORDER_INCONSISTENCY",
+          "resolution": "Enforce SurrealDB-first write order"
+        }
+      ]
+    },
+    "overallAssessment": {
+      "conflictCount": 1,
+      "conflictSeverity": "MEDIUM",
+      "blockingConflicts": 0,
+      "resolvableConflicts": 1,
+      "compatibilityScore": 0.98,
+      "recommendation": "Proceed with deployment after resolving write order conflict",
+      "riskLevel": "LOW",
+      "deploymentRecommendation": "CONDITIONAL_APPROVAL",
+      "conditions": [
+        "Verify SurrealDB-first write order in Gap 3 implementation",
+        "Add instrumentation to log write timestamps",
+        "Monitor SurrealDB write failures in production"
+      ]
+    },
+    "actionItems": [
+      {
+        "id": "AI-001",
+        "priority": "MEDIUM",
+        "action": "Verify write order in tasks/jobs/analysis.py _store_results()",
+        "owner": "Backend Team",
+        "effort": "1 hour",
+        "blocking": false
+      },
+      {
+        "id": "AI-002",
+        "priority": "MEDIUM",
+        "action": "Add logging to verify SurrealDB-first write pattern",
+        "owner": "Backend Team",
+        "effort": "30 minutes",
+        "blocking": false
+      },
+      {
+        "id": "AI-003",
+        "priority": "LOW",
+        "action": "Update surrealdb-primary-redis-cache validation to test Gap 3 dual-write",
+        "owner": "QA Team",
+        "effort": "2 hours",
+        "blocking": false
+      }
+    ],
+    "references": {
+      "currentSpec": "metabob-cli-to-dashboard-e2e-data-flow",
+      "conflictingSpec": "surrealdb-primary-redis-cache",
+      "traceDocument": "TRACE_METABOB_CLI_TO_DASHBOARD_E2E_DATA_FLOW.md",
+      "enforcementDocument": "ENFORCEMENT_METABOB_CLI_TO_DASHBOARD_E2E_DATA_FLOW.md",
+      "validationResults": "validation-results-metabob-cli-to-dashboard-e2e-data-flow"
+    }
+  }
+}
