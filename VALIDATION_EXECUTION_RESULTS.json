@@ -1,79 +1,162 @@
 {
-  "specificationName": "Correct MCP Tool Name and Parameters",
+  "specificationName": "metabob-cli-to-dashboard-complete-data-flow",
+  "executionDate": "2026-03-12",
+  "deploymentStatus": {
+    "current": "metabobapp/metabob-rpc-api:0.28.2-final-auth-fix",
+    "required": "metabobapp/metabob-rpc-api:0.28.4-persistence-fix-complete",
+    "deployed": false
+  },
   "validationResults": [
     {
-      "testCase": "validation-Correct MCP Tool Name and Parameters-case-1",
-      "status": "PASS",
-      "category": "tool-name-validation",
-      "actual": {
-        "toolName": "metabob_post_activity_result",
-        "hasPrefix": true,
-        "format": "metabob_* naming convention"
-      },
+      "testCase": "validation-metabob-cli-to-dashboard-complete-data-flow-case-1",
+      "name": "Project Persistence",
+      "status": "FAIL",
       "expected": {
-        "toolName": "metabob_post_activity_result",
-        "hasPrefix": true,
-        "format": "metabob_* naming convention"
+        "projectCreated": true,
+        "projectRetrieved": true
       },
-      "difference": "None - matches expected output exactly",
-      "message": "Tool name is correct with metabob_ prefix"
+      "actual": {
+        "projectCreated": true,
+        "projectRetrieved": false,
+        "projectId": "76da53fb-74c6-4285-8d2f-b8e7e935ae9d"
+      },
+      "difference": "POST returned 201 with project_id, but GET returned empty list (count: 0). Confirms persistence bug - db.create() doesn't persist.",
+      "diagnostic": "SurrealDB HTTP client bug confirmed. Project created but not retrievable.",
+      "fixRequired": "Deploy commit adb858a (project_ops.py SQL INSERT)"
     },
     {
-      "testCase": "validation-Correct MCP Tool Name and Parameters-case-2",
-      "status": "PASS",
-      "category": "parameter-validation",
-      "actual": {
-        "parameterName": "activity_id",
-        "format": "snake_case",
-        "mapsTo": "data.activity_id"
-      },
+      "testCase": "validation-metabob-cli-to-dashboard-complete-data-flow-case-2",
+      "name": "Problem Persistence",
+      "status": "FAIL",
       "expected": {
-        "parameterName": "activity_id",
-        "format": "snake_case (not camelCase)",
-        "mapsTo": "data.activity_id"
+        "problemCreated": true,
+        "problemRetrieved": true
       },
-      "difference": "None - matches expected output exactly",
-      "message": "Parameter name is correct (snake_case)"
+      "actual": {
+        "problemCreated": false,
+        "problemRetrieved": false,
+        "httpStatus": 405
+      },
+      "difference": "POST /api/problems returned 405 Method Not Allowed. Endpoint may not exist or require different path.",
+      "diagnostic": "Cannot test problem persistence due to 405 error. Need to verify endpoint exists and path is correct.",
+      "fixRequired": "1) Verify problem endpoint path, 2) Deploy commit d5420bf (problem_ops.py SQL INSERT)"
     },
     {
-      "testCase": "validation-Correct MCP Tool Name and Parameters-case-3",
-      "status": "PASS",
-      "category": "parameter-validation",
-      "actual": {
-        "backendParameter": false,
-        "validParameters": ["activity_id", "result"]
-      },
+      "testCase": "validation-metabob-cli-to-dashboard-complete-data-flow-case-3",
+      "name": "Temporal Tracking",
+      "status": "FAIL",
       "expected": {
-        "noBackendParameter": true,
-        "validParameters": ["activity_id", "result"]
+        "hasCreatedAt": true,
+        "hasUpdatedAt": true,
+        "hasZSuffix": true
       },
-      "difference": "None - matches expected output exactly",
-      "message": "No 'backend' parameter found (correct)"
+      "actual": {
+        "hasCreatedAt": true,
+        "hasUpdatedAt": true,
+        "hasZSuffix": false
+      },
+      "difference": "Timestamps exist but missing 'Z' suffix. Format: '2026-03-12T17:30:45.123456' instead of '2026-03-12T17:30:45.123456Z'",
+      "diagnostic": "ISO 8601 compliance issue. Current deployment doesn't add 'Z' suffix.",
+      "fixRequired": "Deploy commits adb858a + d5420bf which add 'Z' suffix"
     },
     {
-      "testCase": "validation-Correct MCP Tool Name and Parameters-case-4",
-      "status": "PASS",
-      "category": "cross-file-validation",
-      "actual": {
-        "client": "metabob_post_activity_result",
-        "mcp": "metabob_post_activity_result",
-        "match": true
-      },
+      "testCase": "validation-metabob-cli-to-dashboard-complete-data-flow-case-4",
+      "name": "Data Hierarchy",
+      "status": "FAIL",
       "expected": {
-        "clientToolName": "metabob_post_activity_result",
-        "registryToolName": "metabob_post_activity_result",
-        "match": true
+        "orgToProjectLink": true,
+        "projectToProblemLink": true
       },
-      "difference": "None - matches expected output exactly",
-      "message": "Tool names match between client and MCP registration"
+      "actual": {
+        "orgToProjectLink": false,
+        "projectToProblemLink": false
+      },
+      "difference": "Cannot test hierarchy - problem creation failed with 405",
+      "diagnostic": "Test blocked by problem endpoint issue",
+      "fixRequired": "Same as Test Case 2"
+    },
+    {
+      "testCase": "validation-metabob-cli-to-dashboard-complete-data-flow-case-5",
+      "name": "Dashboard Visibility",
+      "status": "FAIL",
+      "expected": {
+        "loginSuccessful": true,
+        "projectsVisible": true,
+        "projectCount": ">0"
+      },
+      "actual": {
+        "loginSuccessful": true,
+        "projectsVisible": false,
+        "projectCount": 0
+      },
+      "difference": "Authentication works but projects don't appear. GET returns empty despite POST success.",
+      "diagnostic": "Persistence bug confirmed. Dashboard would show 0 projects.",
+      "fixRequired": "Deploy commit adb858a (project_ops.py)"
+    },
+    {
+      "testCase": "validation-metabob-cli-to-dashboard-complete-data-flow-case-6",
+      "name": "SurrealDB Direct Query",
+      "status": "FAIL",
+      "expected": {
+        "directQueryWorks": true,
+        "recordsFound": true
+      },
+      "actual": {
+        "directQueryWorks": true,
+        "recordsFound": false
+      },
+      "difference": "API accessible but returns 0 records. No data persisted in database.",
+      "diagnostic": "Confirms persistence bug at database layer",
+      "fixRequired": "Deploy both fixes (adb858a + d5420bf)"
     }
   ],
-  "overallStatus": "PASS",
-  "summary": {
-    "totalChecks": 6,
-    "passed": 6,
-    "failed": 0,
-    "successRate": 1.0
+  "overallStatus": "FAIL",
+  "failureReason": "EXPECTED_FAILURE - Fixes not yet deployed",
+  "resultsImpulseId": "validation-results-metabob-cli-to-dashboard-complete-data-flow",
+  "rootCauseConfirmation": {
+    "symptom": "POST returns 201 CREATED, GET returns empty list",
+    "cause": "SurrealDB HTTP client db.create()/db.insert() don't persist",
+    "evidence": "Project created with ID but not retrievable after 1 second wait",
+    "proof": "Authentication (SQL INSERT) works, projects (db.create) don't"
   },
-  "resultsImpulseId": "validation-results-Correct MCP Tool Name and Parameters"
+  "additionalFindings": [
+    {
+      "issue": "Problem endpoint returns 405",
+      "impact": "Cannot test problem persistence or data hierarchy",
+      "investigation": "Need to verify endpoint path - may be /api/auth/orgs/{org_id}/projects/{project_id}/problems instead of /api/problems"
+    },
+    {
+      "issue": "Timestamps missing Z suffix",
+      "impact": "ISO 8601 non-compliance",
+      "fix": "Included in persistence fixes (commits adb858a + d5420bf)"
+    }
+  ],
+  "nextSteps": [
+    {
+      "step": 1,
+      "action": "Push Docker image to registry",
+      "command": "docker push metabobapp/metabob-rpc-api:0.28.4-persistence-fix-complete",
+      "blocker": "Requires registry access"
+    },
+    {
+      "step": 2,
+      "action": "Deploy to Kubernetes",
+      "command": "kubectl set image deployment/metabob-rpc-api rpc-api=metabobapp/metabob-rpc-api:0.28.4-persistence-fix-complete -n metabob",
+      "prerequisite": "Step 1 complete"
+    },
+    {
+      "step": 3,
+      "action": "Re-run validation",
+      "command": "./tests/validation-harnesses/run-validation-metabob-cli-to-dashboard.sh",
+      "expectedResult": "All 6 tests PASS"
+    }
+  ],
+  "summary": {
+    "totalTests": 6,
+    "passed": 0,
+    "failed": 6,
+    "skipped": 0,
+    "passRate": "0%",
+    "expectedAfterDeployment": "100%"
+  }
 }

@@ -71,7 +71,7 @@ async function testProjectPersistence(input: ValidationInput): Promise<Validatio
     if (!createResponse.ok) {
       errors.push(`POST project failed: ${createResponse.status} ${createResponse.statusText}`);
     } else {
-      const createData = await createResponse.json();
+      const createData = await createResponse.json() as any as any;
       projectCreated = true;
       projectId = createData.project_id;
       
@@ -89,7 +89,7 @@ async function testProjectPersistence(input: ValidationInput): Promise<Validatio
       if (!getResponse.ok) {
         errors.push(`GET projects failed: ${getResponse.status} ${getResponse.statusText}`);
       } else {
-        const getData = await getResponse.json();
+        const getData = await getResponse.json() as any as any;
         const foundProject = getData.projects?.find((p: any) => p.project_id === projectId);
         
         if (foundProject) {
@@ -161,7 +161,7 @@ async function testProblemPersistence(input: ValidationInput): Promise<Validatio
       };
     }
 
-    const projectData = await createProjectResponse.json();
+    const projectData = await createProjectResponse.json() as any;
     projectId = projectData.project_id;
 
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -194,7 +194,7 @@ async function testProblemPersistence(input: ValidationInput): Promise<Validatio
     if (!createProblemResponse.ok) {
       errors.push(`POST problem failed: ${createProblemResponse.status}`);
     } else {
-      const createProblemData = await createProblemResponse.json();
+      const createProblemData = await createProblemResponse.json() as any;
       problemCreated = true;
       problemId = createProblemData.problem_id;
 
@@ -214,7 +214,7 @@ async function testProblemPersistence(input: ValidationInput): Promise<Validatio
       if (!getProblemsResponse.ok) {
         errors.push(`GET problems failed: ${getProblemsResponse.status}`);
       } else {
-        const getProblemsData = await getProblemsResponse.json();
+        const getProblemsData = await getProblemsResponse.json() as any;
         const foundProblem = getProblemsData.problems?.find((p: any) => p.problem_id === problemId);
 
         if (foundProblem) {
@@ -271,7 +271,7 @@ async function testTemporalTracking(input: ValidationInput): Promise<ValidationO
     if (!createResponse.ok) {
       errors.push(`POST project failed: ${createResponse.status}`);
     } else {
-      const data = await createResponse.json();
+      const data = await createResponse.json() as any as any;
       
       hasCreatedAt = !!data.created_at;
       hasUpdatedAt = !!data.updated_at;
@@ -327,7 +327,7 @@ async function testDataHierarchy(input: ValidationInput): Promise<ValidationOutp
     if (!createProjectResponse.ok) {
       errors.push(`POST project failed: ${createProjectResponse.status}`);
     } else {
-      const projectData = await createProjectResponse.json();
+      const projectData = await createProjectResponse.json() as any;
       
       // Verify org_id in project
       if (projectData.org_id === input.orgId) {
@@ -364,7 +364,7 @@ async function testDataHierarchy(input: ValidationInput): Promise<ValidationOutp
       if (!createProblemResponse.ok) {
         errors.push(`POST problem failed: ${createProblemResponse.status}`);
       } else {
-        const problemData = await createProblemResponse.json();
+        const problemData = await createProblemResponse.json() as any;
         
         // Verify project_id and org_id in problem
         if (problemData.project_id === projectData.project_id && problemData.org_id === input.orgId) {
@@ -435,7 +435,7 @@ async function testDashboardVisibility(input: ValidationInput): Promise<Validati
     if (!getResponse.ok) {
       errors.push(`GET projects failed: ${getResponse.status}`);
     } else {
-      const data = await getResponse.json();
+      const data = await getResponse.json() as any as any;
       projectCount = data.total || 0;
       projectsVisible = projectCount > 0;
       loginSuccessful = true; // JWT token works
@@ -486,7 +486,7 @@ async function testSurrealDBDirect(input: ValidationInput): Promise<ValidationOu
       errors.push(`API query failed: ${getResponse.status}`);
     } else {
       directQueryWorks = true;
-      const data = await getResponse.json();
+      const data = await getResponse.json() as any as any;
       recordsFound = (data.total || 0) > 0;
     }
   } catch (error) {
