@@ -1,220 +1,280 @@
-# Cross-Vessel Type Preservation Validation Harness - Summary
+# Validation Harness Summary: metabob-cli-to-dashboard-complete-data-flow
+
+## Overview
+Created comprehensive validation harness to verify complete E2E data flow from metabob-cli to Dashboard UI after deploying persistence fixes.
 
 ## Files Created
 
-### 1. Primary Validation Harness
-**File**: `tests/validation-harnesses/cross-vessel-type-preservation-harness.py`
-- **Purpose**: End-to-end validation of type preservation across TypeScript → Python MCP → FastAPI → SurrealDB
-- **Language**: Python 3.11+
-- **Dependencies**: aiohttp, asyncio
-- **Usage**: `python tests/validation-harnesses/cross-vessel-type-preservation-harness.py`
+### 1. Validation Harness (TypeScript)
+**File**: `tests/validation-harnesses/metabob-cli-to-dashboard-complete-data-flow-harness.ts`  
+**Lines**: ~580  
+**Purpose**: Automated testing of all persistence, temporal, and hierarchy requirements
 
-### 2. Test Case Impulses (5 files)
-**Location**: `impulses/validation-cross-vessel-type-preservation-case-{1-5}.json`
+**Features**:
+- ✅ No LLM required - pure input/output validation
+- ✅ Loads credentials from /tmp/e2e-test-creds.sh
+- ✅ 6 comprehensive test cases
+- ✅ Detailed error reporting
+- ✅ PASS/FAIL exit codes
+- ✅ Can run standalone or as module
 
-- **Case 1**: Basic Types (int, bool, float, string, null)
-- **Case 2**: Edge Cases (zero, negative, large numbers, very small floats, false boolean)
-- **Case 3**: Arrays (int[], bool[], float[], string[], mixed[])
-- **Case 4**: Nested Objects (3 levels deep)
-- **Case 5**: Complex Random Structures (generated at runtime, 3 iterations)
+### 2. Shell Script Runner
+**File**: `tests/validation-harnesses/run-validation-metabob-cli-to-dashboard.sh`  
+**Purpose**: Convenient CLI wrapper with credential loading
 
-### 3. Harness Impulse
-**File**: `impulses/harness-cross-vessel-type-preservation.json`
-- **ID**: `harness-cross-vessel-type-preservation`
-- **Type**: file
-- **Budget**: 2000 tokens
-- **Pointer**: Points to validation harness Python file
-
-### 4. Database Cleanup Script
-**File**: `tests/validation-harnesses/cleanup-test-impulses.sh`
-- **Purpose**: Remove test impulses from SurrealDB to enable fresh test runs
-- **Usage**: `./tests/validation-harnesses/cleanup-test-impulses.sh`
-
-## Validation Strategy
-
-The harness implements a comprehensive 8-step validation flow:
-
-1. **Generate Test Data**: Create data structure for specific test case
-2. **POST to API**: Send impulse to `/v2/impulses` endpoint with nested schema
-3. **GET from API**: Retrieve impulse from `/v2/impulses/{impulse_id}` endpoint
-4. **Extract Data**: Navigate nested structure to extract `impulse_data.pointer.data`
-5. **Recursive Comparison**: Compare original and returned values recursively
-6. **Type Check**: Assert `type(returned) == type(original)` for all fields
-7. **Value Check**: Assert `returned == original` for all field values
-8. **Report Results**: Return PASS/FAIL with detailed error reporting
-
-## Test Coverage
-
-### Type Coverage
-- ✅ **Integer**: 42, 0, -999, 2147483647
-- ✅ **Boolean**: True, False
-- ✅ **Float**: 3.14, -123.456, 0.0000001
-- ✅ **String**: "test_string", "nested", random strings
-- ✅ **Null**: None/null
-- ✅ **Array**: [int], [bool], [float], [string], [mixed]
-- ✅ **Object**: Nested up to 3 levels deep
-
-### Edge Cases
-- Zero values
-- Negative numbers
-- Large integers (2^31-1)
-- Very small floats (1e-7)
-- False boolean (not just True)
-- Empty arrays
-- Mixed-type arrays
-- Deep nesting
-
-## Validation Features
-
-1. **UUID-Based Unique IDs**: Prevents collisions across test runs
-2. **Recursive Comparison**: Handles nested objects and arrays
-3. **Type Preservation Check**: `type(returned) == type(original)`
-4. **Value Equality Check**: `returned == original`
-5. **Detailed Error Reporting**:
-   - Type mismatches: "int_field: expected int, got str"
-   - Value mismatches: "int_field: expected 42, got 43"
-   - Path tracking: "level1.level2.deep_int: ..."
-6. **Pass/Fail Summary**: Shows X/Y tests passed (Z%)
-
-## Current Status
-
-### ✅ Completed
-- Validation harness created and executable
-- 5 test case impulses created
-- Harness impulse created
-- Cleanup script created
-- Schema correctly matches metabob-rpc-api (nested structure)
-- Recursive comparison logic implemented
-- All JSON types supported
-
-### ⚠️ Blockers
-- **Database Persistence**: Old test impulses prevent new tests from running
-- **Solution**: Run cleanup script before executing validation harness
-
-### 🔄 Ready for Validation
-The harness is fully functional and ready to validate type preservation once database is cleaned.
-
-## Usage Instructions
-
-### Step 1: Clean Database (if needed)
+**Usage**:
 ```bash
-./tests/validation-harnesses/cleanup-test-impulses.sh
+./tests/validation-harnesses/run-validation-metabob-cli-to-dashboard.sh
 ```
 
-### Step 2: Run Validation Harness
+### 3. Test Case Impulses
+Historical test cases stored as impulses (can run without LLM):
+
+1. **validation-metabob-cli-to-dashboard-complete-data-flow-case-1**: Project Persistence
+   - Input: API base URL, JWT token, org ID, project name
+   - Expected: POST creates, GET retrieves
+   - Validates: Commit adb858a (project_ops.py)
+
+2. **validation-metabob-cli-to-dashboard-complete-data-flow-case-2**: Problem Persistence
+   - Input: API credentials, problem data
+   - Expected: POST creates, GET retrieves
+   - Validates: Commit d5420bf (problem_ops.py)
+
+3. **validation-metabob-cli-to-dashboard-complete-data-flow-case-3**: Temporal Tracking
+   - Input: API credentials
+   - Expected: created_at and updated_at with 'Z' suffix
+   - Validates: ISO 8601 compliance
+
+4. **validation-metabob-cli-to-dashboard-complete-data-flow-case-4**: Data Hierarchy
+   - Input: API credentials
+   - Expected: org → project → problem linkage
+   - Validates: Data hierarchy integrity
+
+### 4. Harness Impulse
+**ID**: harness-metabob-cli-to-dashboard-complete-data-flow  
+**Type**: file  
+**Budget**: 2000 tokens  
+**Purpose**: Reference to validation harness for activity integration
+
+## Test Cases
+
+### Test Case 1: Project Persistence
+**What it tests**: POST project → wait → GET projects → verify appears  
+**Validates**: Commit adb858a (project_ops.py SQL INSERT)  
+**Success criteria**: Project created AND retrieved
+
+### Test Case 2: Problem Persistence
+**What it tests**: POST problem → wait → GET problems → verify appears  
+**Validates**: Commit d5420bf (problem_ops.py SQL INSERT)  
+**Success criteria**: Problem created AND retrieved
+
+### Test Case 3: Temporal Tracking
+**What it tests**: Response has created_at and updated_at with 'Z' suffix  
+**Validates**: ISO 8601 compliance  
+**Success criteria**: Both fields exist with 'Z' suffix
+
+### Test Case 4: Data Hierarchy
+**What it tests**: Project has correct org_id, problem has correct project_id and org_id  
+**Validates**: Org → Project → Problem linkage  
+**Success criteria**: All IDs match correctly
+
+### Test Case 5: Dashboard Visibility
+**What it tests**: GET projects returns count > 0 (simulates Dashboard)  
+**Validates**: Dashboard would display data  
+**Success criteria**: Project count > 0
+
+### Test Case 6: SurrealDB Direct Query
+**What it tests**: API queries return data (verifies DB persistence)  
+**Validates**: SurrealDB persistence layer  
+**Success criteria**: Records found via API
+
+## Running the Harness
+
+### Prerequisites
+1. Deploy Docker image: `metabobapp/metabob-rpc-api:0.28.4-persistence-fix-complete`
+2. Credentials file exists: `/tmp/e2e-test-creds.sh`
+3. API accessible: `http://app.metabob.local`
+
+### Option 1: Shell Script (Recommended)
 ```bash
-python tests/validation-harnesses/cross-vessel-type-preservation-harness.py
+cd /home/avi/documents/work/exp-repo/metabob-devbob
+./tests/validation-harnesses/run-validation-metabob-cli-to-dashboard.sh
 ```
 
-### Expected Output (Success)
-```
-================================================================================
-Cross-Vessel Type Preservation Validation Harness
-================================================================================
-
-Target: http://api.metabob.local
-API Key: test-api-k...
-
-Test Org: test-org-xxxxxxxx
-Test Project: test-project-xxxxxxxx
-
-Running validation tests...
---------------------------------------------------------------------------------
-Running: Case 1: Basic Types... ✅ PASS
-Running: Case 2: Edge Case Numbers... ✅ PASS
-Running: Case 3: Arrays... ✅ PASS
-Running: Case 4: Nested Objects... ✅ PASS
-Running: Case 5: Complex Random Structure... ✅ PASS
-Running: Case 6: Complex Random Structure (Iteration 2)... ✅ PASS
-Running: Case 7: Complex Random Structure (Iteration 3)... ✅ PASS
-
-================================================================================
-SUMMARY
-================================================================================
-Tests Passed: 7/7 (100.0%)
-
-✅ ALL TESTS PASSED - Type preservation working correctly!
+### Option 2: Direct TypeScript
+```bash
+cd tests/validation-harnesses
+npx ts-node metabob-cli-to-dashboard-complete-data-flow-harness.ts
 ```
 
-## Validation Goals
+### Option 3: Programmatic
+```typescript
+import { runValidation } from './metabob-cli-to-dashboard-complete-data-flow-harness';
 
-This harness validates the specification:
+const input = {
+  apiBaseUrl: 'http://app.metabob.local',
+  jwtToken: process.env.JWT_TOKEN,
+  orgId: process.env.ORG_ID
+};
 
-> "Validate that data types are preserved across all vessel boundaries when testing endpoints with random data. Specific focus on: (1) TypeScript → Python MCP communication preserving int/bool/float types (not converting to strings), (2) Python → FastAPI HTTP requests maintaining type integrity through Pydantic validation, (3) FastAPI → SurrealDB storage preserving types in database round-trip, (4) Random data generation and field-by-field comparison to confirm sent data matches received data exactly."
+const result = await runValidation(input);
+if (result.pass) {
+  console.log('✅ All tests passed');
+} else {
+  console.error('❌ Tests failed:', result.errors);
+}
+```
 
-### Success Criteria
-- ✅ `int=42` stays `int=42` (not `"42"`)
-- ✅ `bool=True` stays `bool=True` (not `"true"`)
-- ✅ `float=3.14` stays `float=3.14` (not `"3.14"`)
-- ✅ Nested objects preserve structure
-- ✅ Arrays preserve element types
-- ✅ Field-by-field comparison passes for all test cases
+## Expected Outcomes
 
-## Architecture Validated
+### When Tests Pass ✅
+```
+Running validation harness: metabob-cli-to-dashboard-complete-data-flow
 
-The harness validates type preservation across these boundaries:
+Running: Project Persistence...
+  ✅ PASS
 
-1. **TypeScript → JSON**: Serialization preserves types
-2. **JSON → Python MCP**: Deserialization maintains types
-3. **Python → FastAPI**: aiohttp JSON parameter preserves types
-4. **FastAPI → Pydantic**: Validation accepts and preserves correct types
-5. **Pydantic → SurrealDB**: AsyncSurreal client preserves types
-6. **SurrealDB Storage**: Database stores types correctly
-7. **SurrealDB → Response**: Retrieval preserves types
-8. **Response → Client**: Full round-trip maintains type integrity
+Running: Problem Persistence...
+  ✅ PASS
+
+Running: Temporal Tracking...
+  ✅ PASS
+
+Running: Data Hierarchy...
+  ✅ PASS
+
+Running: Dashboard Visibility...
+  ✅ PASS
+
+Running: SurrealDB Direct...
+  ✅ PASS
+
+============================================================
+Validation Summary:
+  Overall: ✅ PASS
+  Project Persistence: ✅
+  Problem Persistence: ✅
+  Dashboard Visible: ✅
+  Temporal Tracking: ✅
+  Data Hierarchy: ✅
+============================================================
+```
+
+### When Tests Fail ❌
+Each test reports specific errors:
+- POST failed: HTTP status code
+- GET returned empty: No records found
+- Timestamp missing: Field not present
+- Wrong format: Z suffix missing
+- Hierarchy broken: ID mismatch
+
+## Integration Points
+
+### CI/CD Pipeline
+Add to `.github/workflows/test.yml`:
+```yaml
+- name: Validate E2E Data Flow
+  run: ./tests/validation-harnesses/run-validation-metabob-cli-to-dashboard.sh
+  env:
+    API_BASE_URL: ${{ secrets.API_BASE_URL }}
+```
+
+### Activity Validation
+Reference harness in activity tasks:
+```typescript
+const result = await executeValidation({
+  harnessId: 'harness-metabob-cli-to-dashboard-complete-data-flow',
+  input: { apiBaseUrl, jwtToken, orgId }
+});
+```
+
+### Manual Testing
+Run after any deployment to verify data flow integrity.
+
+## What Gets Validated
+
+### ✅ Persistence Layer
+- Projects persist in SurrealDB (not lost on GET)
+- Problems persist in SurrealDB (not lost on GET)
+- SQL INSERT pattern works correctly
+
+### ✅ API Layer
+- POST endpoints return 201 CREATED
+- GET endpoints return persisted data
+- No empty arrays when data exists
+
+### ✅ Data Integrity
+- Temporal fields (created_at, updated_at) populated
+- ISO 8601 format with 'Z' suffix
+- Org → Project → Problem hierarchy maintained
+
+### ✅ End-to-End Flow
+- metabob-cli → API → SurrealDB → API → Dashboard (simulated)
+- All components in chain working
+- No data loss at any layer
+
+## Validation Strategy (from Specification)
+
+1. ✅ Deploy project_ops.py fix (commit adb858a) - CODED, IMAGE BUILT
+2. ✅ Fix problem_ops.py (commit d5420bf) - CODED, IMAGE BUILT
+3. ✅ Create validation harness - COMPLETE
+4. ⏳ Deploy Docker image to k8s - PENDING
+5. ⏳ Run validation harness - PENDING DEPLOYMENT
+6. ⏳ Verify Dashboard UI displays data - PENDING VALIDATION
 
 ## Next Steps
 
-1. ✅ Validation harness created
-2. ✅ Test case impulses created  
-3. ✅ Harness impulse created
-4. ✅ Cleanup script created
-5. ⏳ Run cleanup script
-6. ⏳ Execute validation harness
-7. ⏳ Verify 7/7 tests pass
-8. ⏳ Document any type conversion issues discovered
-9. ⏳ Fix issues in appropriate layer (MCP, HTTP, Pydantic, or DB)
-10. ⏳ Re-run until 100% pass rate achieved
+1. **Deploy Image** (requires registry access or k8s update):
+   ```bash
+   kubectl set image deployment/metabob-rpc-api \
+     rpc-api=metabobapp/metabob-rpc-api:0.28.4-persistence-fix-complete \
+     -n metabob
+   ```
 
-## Troubleshooting
+2. **Wait for Rollout**:
+   ```bash
+   kubectl rollout status deployment/metabob-rpc-api -n metabob
+   ```
 
-### Issue: "Impulse already exists" errors
-**Solution**: Run cleanup script to remove old test data
-```bash
-./tests/validation-harnesses/cleanup-test-impulses.sh
-```
+3. **Run Validation**:
+   ```bash
+   ./tests/validation-harnesses/run-validation-metabob-cli-to-dashboard.sh
+   ```
 
-### Issue: Type mismatch detected
-**Location**: Check error report for specific field path
-**Fix**: Trace the vessel boundary where conversion occurs:
-- If TypeScript → Python: Check JSON serialization
-- If Python → FastAPI: Check aiohttp JSON parameter
-- If FastAPI → Pydantic: Check model definitions
-- If Pydantic → SurrealDB: Check AsyncSurreal client
-- If DB round-trip: Check SurrealDB type handling
+4. **Verify Dashboard** (manual or Playwright):
+   - Login to http://app.metabob.local
+   - Navigate to Projects page
+   - Verify count > 0 and projects visible
 
-### Issue: Value mismatch but types match
-**Possible Causes**:
-- Floating point precision issues
-- Timezone conversions
-- String encoding issues
-- Array ordering changes
+5. **Document Results**:
+   - Update validation criteria in specification
+   - Mark enforcement as validated
+   - Close specification loop
 
-## Files Summary
+## Historical Context
 
-| File | Purpose | Type | Lines |
-|------|---------|------|-------|
-| `cross-vessel-type-preservation-harness.py` | Main validation harness | Python | ~330 |
-| `validation-cross-vessel-type-preservation-case-1.json` | Basic types test case | Impulse | ~30 |
-| `validation-cross-vessel-type-preservation-case-2.json` | Edge cases test case | Impulse | ~30 |
-| `validation-cross-vessel-type-preservation-case-3.json` | Arrays test case | Impulse | ~30 |
-| `validation-cross-vessel-type-preservation-case-4.json` | Nested objects test case | Impulse | ~30 |
-| `validation-cross-vessel-type-preservation-case-5.json` | Random structures test case | Impulse | ~30 |
-| `harness-cross-vessel-type-preservation.json` | Harness metadata impulse | Impulse | ~25 |
-| `cleanup-test-impulses.sh` | Database cleanup script | Bash | ~40 |
+### Commits Validated
+- **d61fa57**: User registration persistence (authentication) - DEPLOYED & WORKING
+- **adb858a**: Project creation persistence - CODED, IN IMAGE
+- **d5420bf**: Problem creation persistence - CODED, IN IMAGE
 
-**Total**: 8 files, ~545 lines of code/configuration
+### Root Cause
+SurrealDB HTTP client bug: `db.create()` and `db.insert()` don't persist records.
 
-## Conclusion
+### Fix Pattern
+Replace all `db.create/insert` with SQL INSERT statements with parameterized queries.
 
-The Cross-Vessel Type Preservation Validation Harness is **complete and ready for execution**. It provides comprehensive validation of type preservation across all architectural boundaries (TypeScript → Python MCP → FastAPI → SurrealDB → Response). Once the database is cleaned, it can validate that `int` stays `int`, `bool` stays `bool`, and `float` stays `float` through the entire stack with field-by-field comparison including nested objects and arrays.
+### Proof
+Authentication fix (d61fa57) deployed and working - proves SQL INSERT pattern is correct.
+
+## References
+
+- **Specification**: metabob-cli-to-dashboard-complete-data-flow
+- **Trace Impulse**: trace-metabob-cli-to-dashboard-complete-data-flow
+- **Enforcement Impulse**: enforcement-metabob-cli-to-dashboard-complete-data-flow
+- **Docker Image**: metabobapp/metabob-rpc-api:0.28.4-persistence-fix-complete
+- **Test Credentials**: /tmp/e2e-test-creds.sh
+
+---
+
+**Validation Harness Ready - Awaiting Deployment to Execute**
