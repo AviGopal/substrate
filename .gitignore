@@ -106,3 +106,22 @@ validation-harness-creation-summary.json
 validation-harness-rpc-api-endpoint-database-integration-summary.json
 .metabob/state.lock
 create-mcp-timeout-trace-impulse.ts
+
+# Session documentation (keep latest only)
+*AUTHENTICATION*.md
+*PLAYWRIGHT*.md
+*SESSION*.md
+*STATUS*.md
+PLATFORM_E2E*.md
+READY_TO_BUILD*.md
+
+# Build scripts (project-specific)
+build-and-deploy-*.sh
+build-deploy-test-*.sh
+
+# Test artifacts
+playwright-e2e-test.js
+test-python-project/
+screenshots/error-screenshot.png
+screenshots/final-test-*.png
+
