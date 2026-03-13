@@ -1,0 +1,156 @@
+{
+  "id": "trace-RPC_API_Data_Display_Endpoints",
+  "type": "templateDefinition",
+  "pointer": {
+    "type": "templateDefinition",
+    "definition": {
+      "specificationName": "RPC API Data Display Endpoints",
+      "traceDate": "2026-03-12",
+      "overview": {
+        "purpose": "Fix critical data display bugs preventing dashboard from showing project information and activity",
+        "currentStatus": "TRACED - READY FOR FIX",
+        "priority": "CRITICAL",
+        "blocksFeatures": [
+          "Dashboard project listing",
+          "Dashboard activity timeline",
+          "Project-scoped metrics"
+        ]
+      },
+      "executiveSummary": "Traced two critical data display bugs in the RPC API: (1) Project Listing returns field names ['branch', 'created_at', ...] instead of project objects, (2) Activity Listing returns error message instead of empty array when no activity exists. Both issues stem from incorrect SurrealDB result parsing in the data operations layer.",
+      "components": [
+        {
+          "file": "repos/metabob-rpc-api/server/routes/projects.py",
+          "component": "get_org_projects",
+          "lineNumbers": "121-224",
+          "currentBehavior": "Calls list_projects_by_org and returns projects array. Router endpoint properly structured.",
+          "desiredBehavior": "Should return array of project objects with all fields (project_id, name, org_id, etc.)",
+          "gap": "Data layer issue - list_projects_by_org returns field names instead of project objects",
+          "status": "NEEDS_FIX"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+          "component": "get_org_projects (duplicate)",
+          "lineNumbers": "883-1028",
+          "currentBehavior": "Duplicate endpoint implementation with same bug",
+          "desiredBehavior": "Should be removed - projects.py has the correct endpoint location",
+          "gap": "Code duplication causing confusion",
+          "status": "NEEDS_REMOVAL"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+          "component": "list_projects_by_org",
+          "lineNumbers": "127-193",
+          "currentBehavior": "Returns field names ['branch', 'created_at', ...] instead of actual project objects. Has complex branching logic with print statements for debugging. Code shows multiple parsing attempts (Branch 0, Branch 1, Branch 2) but all fail.",
+          "desiredBehavior": "Should parse SurrealDB result using the EXACT pattern from api_key_ops.py:130-163",
+          "gap": "Missing proper SurrealDB result parsing - needs to handle 3 cases: dict with 'result' key, list format, direct dict",
+          "status": "CRITICAL_BUG"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/routes/cloud_auth.py",
+          "component": "get_organization_activity",
+          "lineNumbers": "1031-1152",
+          "currentBehavior": "Calls get_organization_activity from activity_execution.py. Returns error message instead of empty array when no activity exists.",
+          "desiredBehavior": "Should return {activities: [], hasMore: false, total: 0} when no activity exists",
+          "gap": "Error handling in data layer - activity_execution.py needs to return empty structure instead of error",
+          "status": "NEEDS_FIX"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+          "component": "get_organization_activity",
+          "lineNumbers": "303-495",
+          "currentBehavior": "Returns empty_result when no data (lines 412-419), but may be returning error in some cases. Has proper empty result structure.",
+          "desiredBehavior": "Always return {activities: [], hasMore: false, total: 0} for no data, never error message",
+          "gap": "Verify error handling - may need to add try-catch to ensure empty result on query failure",
+          "status": "NEEDS_VERIFICATION"
+        },
+        {
+          "file": "repos/metabob-rpc-api/server/db/operations/api_key_ops.py",
+          "component": "list_api_keys_by_org",
+          "lineNumbers": "130-163",
+          "currentBehavior": "WORKING PATTERN - Correctly parses SurrealDB results with 3-case handling",
+          "desiredBehavior": "This is the reference implementation",
+          "gap": "N/A - This is the fix pattern to copy to project_ops.py",
+          "status": "REFERENCE_IMPLEMENTATION"
+        }
+      ],
+      "dataFlow": {
+        "projectListing": "Dashboard -> GET /auth/orgs/{org_id}/projects -> projects.py:get_org_projects -> project_ops.py:list_projects_by_org -> SurrealDB query -> BROKEN: returns field names instead of objects",
+        "activityListing": "Dashboard -> GET /auth/orgs/{org_id}/activity -> cloud_auth.py:get_organization_activity -> activity_execution.py:get_organization_activity -> SurrealDB query -> PARTIAL: returns error instead of empty array"
+      },
+      "rootCause": {
+        "projectListing": "list_projects_by_org in project_ops.py:127-193 uses incorrect SurrealDB result parsing. The query returns [[{...}]] format but code doesn't handle it properly. Lines 149-154 show debug code added but parsing still fails.",
+        "activityListing": "activity_execution.py:409-419 has correct empty result logic, but may be throwing exception before reaching that code. Need to verify query execution error handling."
+      },
+      "fixPattern": {
+        "source": "repos/metabob-rpc-api/server/db/operations/api_key_ops.py:130-163",
+        "description": "Handle 3 SurrealDB result formats: (1) {'result': [...]} - Official library format, (2) [[{...}]] - List of records, (3) [{...}] - Direct list of dicts (HTTP protocol)",
+        "codeTemplate": "if result and len(result) > 0:\n    first_elem = result[0]\n    if isinstance(first_elem, dict) and 'result' in first_elem:\n        records = first_elem.get('result', [])\n        return [sanitize_record(r) for r in records]\n    elif isinstance(first_elem, list):\n        return [sanitize_record(r) for r in first_elem]\n    elif isinstance(first_elem, dict):\n        return [sanitize_record(r) for r in result]\nreturn []",
+        "applyTo": [
+          "repos/metabob-rpc-api/server/db/operations/project_ops.py:list_projects_by_org"
+        ]
+      },
+      "validationSteps": [
+        {
+          "step": 1,
+          "action": "Apply SurrealDB result parsing fix to project_ops.py:list_projects_by_org",
+          "expected": "Function returns list of project objects with all fields"
+        },
+        {
+          "step": 2,
+          "action": "Test GET /auth/orgs/{org_id}/projects via curl or Playwright",
+          "expected": "Response: {projects: [{project_id, name, org_id, ...}], total: N, hasMore: bool}"
+        },
+        {
+          "step": 3,
+          "action": "Verify activity_execution.py error handling for empty results",
+          "expected": "GET /auth/orgs/{org_id}/activity returns {activities: []} when no data, never error string"
+        },
+        {
+          "step": 4,
+          "action": "Remove duplicate endpoint in cloud_auth.py:883-1028",
+          "expected": "Only projects.py contains project listing endpoint"
+        },
+        {
+          "step": 5,
+          "action": "Dashboard Playwright test: Login -> Projects page -> Verify project names display",
+          "expected": "Dashboard shows project names, not field names"
+        },
+        {
+          "step": 6,
+          "action": "Dashboard Playwright test: Login -> Home -> Verify activity count",
+          "expected": "Dashboard shows 0 activities (not error) when no activity exists"
+        }
+      ],
+      "impactAnalysis": {
+        "filesAffected": [
+          "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+          "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+          "repos/metabob-rpc-api/server/routes/cloud_auth.py"
+        ],
+        "riskLevel": "LOW",
+        "reason": "Fix applies proven pattern from api_key_ops.py. Only changes data parsing logic, no schema changes.",
+        "testingRequired": [
+          "API endpoint testing via curl",
+          "Dashboard Playwright E2E test",
+          "Verify SurrealDB query result handling"
+        ]
+      },
+      "metadata": {
+        "specificationSource": "Fix critical data display bugs preventing dashboard from showing project information and activity",
+        "relatedSpecs": [
+          "metabob-cli-to-dashboard-data-flow",
+          "surrealdb-primary-redis-cache",
+          "dashboard-login-flow-e2e-validation"
+        ],
+        "priority": "CRITICAL"
+      }
+    },
+    "source": "trace-data-flow-single-feature"
+  },
+  "budget": 5000,
+  "metadata": {
+    "createdAt": "2026-03-12T00:00:00Z",
+    "createdBy": "trace-data-flow-single-feature",
+    "purpose": "Provide traced implementation analysis for downstream validation and enforcement tasks"
+  }
+}
