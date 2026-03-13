@@ -1,0 +1,29 @@
+{
+  "id": "harness-surrealdb-datetime-serialization-api-key-creation",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/surrealdb-datetime-serialization-api-key-creation-harness.ts",
+    "source": "validation harness"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "SurrealDB datetime serialization for API key creation",
+    "harnessType": "integration",
+    "description": "End-to-end validation harness that tests API key persistence with proper datetime serialization",
+    "testCases": [
+      "validation-surrealdb-datetime-serialization-api-key-creation-case-1"
+    ],
+    "dependencies": [
+      "RPC API running on http://localhost:8080",
+      "SurrealDB accessible",
+      "kubectl port-forward configured"
+    ],
+    "usage": "npx ts-node tests/validation-harnesses/surrealdb-datetime-serialization-api-key-creation-harness.ts",
+    "relatedSpecs": [
+      "GAP-9: Multi-tenant learning loop",
+      "CLI-to-dashboard data flow",
+      "API key authentication for CLI"
+    ]
+  }
+}
