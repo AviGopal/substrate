@@ -1,0 +1,17 @@
+{
+  "id": "harness-api-key-org-id-injection",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/api-key-org-id-injection-harness.ts",
+    "source": "validation-harness-creation"
+  },
+  "budget": 2000,
+  "created": "2026-03-13T10:30:00Z",
+  "metadata": {
+    "specificationName": "API Key org_id Injection for Multi-Tenancy",
+    "testCasesCount": 5,
+    "harnessType": "external-validation",
+    "dependencies": ["fetch API", "execSync", "environment variables"]
+  }
+}
