@@ -47,6 +47,11 @@ spec:
                 secretKeyRef:
                   name: postgres-client
                   key: postgresql-password
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-config
+                  key: JWT_SECRET_KEY
           volumeMounts:
             - mountPath: /usr/app
               name: universal-config

@@ -79,6 +79,11 @@ spec:
               value: "metabob"
             - name: SURREALDB_DATABASE
               value: "{{ .Values.surrealdb.database | default "production" }}"
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-config
+                  key: JWT_SECRET_KEY
           volumeMounts:
             - mountPath: /usr/app
               name: universal-config
