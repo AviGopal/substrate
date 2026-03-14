@@ -1,6 +1,4 @@
 {
-  "specificationName": "User Activity Tracking - CLI to Dashboard Data Flow",
-  "harnessFile": "tests/validation-harnesses/user-activity-tracking-harness.ts",
   "testCases": [
     {
       "impulseId": "validation-user-activity-tracking-case-1",
@@ -127,41 +125,5 @@
         "multiTenantIsolation": true
       }
     }
-  ],
-  "harnessImpulseId": "harness-User Activity Tracking - CLI to Dashboard Data Flow",
-  "validationSteps": [
-    {
-      "step": "Post Activity",
-      "description": "Send activity data to backend with API key or JWT authentication"
-    },
-    {
-      "step": "Verify Database Storage",
-      "description": "Query database to confirm user_email field is stored"
-    },
-    {
-      "step": "Check API Response",
-      "description": "Verify actor.email field in organization activity response"
-    },
-    {
-      "step": "Validate Multi-tenant Isolation",
-      "description": "Ensure org_id filtering prevents cross-organization data leakage"
-    }
-  ],
-  "usage": {
-    "runAllTests": "npx tsx tests/validation-harnesses/run-validation.ts",
-    "runSingleTest": "npx tsx tests/validation-harnesses/run-validation.ts --case 1",
-    "useCustomUrl": "npx tsx tests/validation-harnesses/run-validation.ts --base-url http://staging.metabob.com"
-  },
-  "features": {
-    "noLLMRequired": true,
-    "historicalValidation": true,
-    "cicdReady": true,
-    "comprehensiveCoverage": true
-  },
-  "filesCreated": [
-    "tests/validation-harnesses/user-activity-tracking-harness.ts",
-    "tests/validation-harnesses/test-cases.json",
-    "tests/validation-harnesses/run-validation.ts",
-    "tests/validation-harnesses/README.md"
   ]
 }

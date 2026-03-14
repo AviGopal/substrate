@@ -1,61 +1,63 @@
 {
-  "specificationName": "Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "specificationName": "User Activity Tracking - CLI to Dashboard Data Flow",
   "components": [
     {
-      "file": "repos/platform/metabob-apps/charts/surrealdb/values/default.surrealdb.values.yaml",
-      "component": "initSchema.enabled",
-      "currentBehavior": "Set to false - schema initialization hook is completely disabled",
-      "desiredBehavior": "Set to true - schema initialization should run automatically after SurrealDB deployment",
-      "gap": "Need to fix namespace/database configuration mismatch before re-enabling"
+      "file": "metabob-cli (external)",
+      "component": "CLI Activity Posting",
+      "currentBehavior": "Posts activities using API key authentication (mb_tJhNPb5ZycOp5SH42MyaJNlbBU6nN5nk4E_S-ZJI2DM)",
+      "desiredBehavior": "Same - working correctly",
+      "gap": "None"
     },
     {
-      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/init-schema-job.yaml",
-      "component": "Kubernetes Job - init-schema",
-      "currentBehavior": "Job is defined but never runs because initSchema.enabled=false. When enabled, job fails with BackoffLimitExceeded due to namespace/database mismatch",
-      "desiredBehavior": "Job should run as post-install/post-upgrade hook and successfully create all required tables with PERMISSIONS FULL",
-      "gap": "Environment variables SURREAL_NAMESPACE and SURREAL_DATABASE must match what SurrealDB server actually uses"
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "User Email Extraction (API Key) - lines 444-454",
+      "currentBehavior": "Extracts user_email from API key by: api_keys.user_id → users.email lookup",
+      "desiredBehavior": "Same - extraction logic complete",
+      "gap": "None - deployed to Kubernetes pod"
     },
     {
-      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/deployment.yaml",
-      "component": "SurrealDB Deployment (in-memory mode)",
-      "currentBehavior": "Starts SurrealDB with 'memory' storage mode, no namespace/database specified in args",
-      "desiredBehavior": "Should explicitly set namespace/database that matches init-schema Job expectations",
-      "gap": "Missing args: --ns {{ .Values.database.namespace }} --db {{ .Values.database.name }}"
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "User Email Extraction (JWT Token) - lines 464-468",
+      "currentBehavior": "Extracts user_email from JWT token: user.email. Used for dashboard-initiated activities.",
+      "desiredBehavior": "Same - extraction logic complete",
+      "gap": "None - deployed to Kubernetes pod"
     },
     {
-      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/statefulset.yaml",
-      "component": "SurrealDB StatefulSet (persistent mode)",
-      "currentBehavior": "Starts SurrealDB with RocksDB storage, no namespace/database specified in args",
-      "desiredBehavior": "Should explicitly set namespace/database that matches init-schema Job expectations",
-      "gap": "Missing args: --ns {{ .Values.database.namespace }} --db {{ .Values.database.name }}"
+      "file": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "component": "insert_execution() - Database Write - lines 88-111",
+      "currentBehavior": "Stores user_email in activity_executions table. Field added to data dict at line 94.",
+      "desiredBehavior": "Same - storage logic complete",
+      "gap": "None - deployed to Kubernetes pod"
     },
     {
-      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/values.yaml",
-      "component": "database.namespace and database.name",
-      "currentBehavior": "Defines database.namespace=metabob and database.name=production in values, but these are not passed to SurrealDB server",
-      "desiredBehavior": "These values should be used by both SurrealDB server and init-schema Job",
-      "gap": "Values exist but not applied to server startup args"
+      "file": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "component": "get_organization_activity() - Query - lines 390-411",
+      "currentBehavior": "SELECT query includes user_email field (line 403). Returns activities filtered by org_id with user attribution.",
+      "desiredBehavior": "Same - query complete",
+      "gap": "None - deployed to Kubernetes pod"
     },
     {
-      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/init-schema-configmap.yaml",
-      "component": "init_schema.py script",
-      "currentBehavior": "Python script that creates 13 tables with PERMISSIONS FULL and 8 indexes. Connects using SURREAL_NAMESPACE and SURREAL_DATABASE env vars",
-      "desiredBehavior": "Script is correct - it should work once namespace/database configuration is fixed",
-      "gap": "No gap in script itself - the issue is in configuration"
+      "file": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "component": "Activity Event Formatting - lines 450-492",
+      "currentBehavior": "Returns actor.email from execution.get('user_email', 'system@metabob.local') at line 462. Falls back to system email if null.",
+      "desiredBehavior": "Same - response formatting complete",
+      "gap": "None - deployed to Kubernetes pod"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/api/OrganizationApi.js",
+      "component": "getOrganizationActivity Query - lines 284-292",
+      "currentBehavior": "Fetches activities from /auth/orgs/{organizationId}/activity with limit parameter. RTK Query endpoint configured.",
+      "desiredBehavior": "Same - API client ready",
+      "gap": "None - already expects actor.email in response"
+    },
+    {
+      "file": "repos/metabob-dashboard/src/cloud/pages/CloudDashboard/components/RecentActivity.js",
+      "component": "Recent Activity Display - lines 220-228",
+      "currentBehavior": "Displays activity.actor.email in secondary text (line 226). Component already expects this field.",
+      "desiredBehavior": "Display actual user emails instead of 'system@metabob.local'",
+      "gap": "Dashboard authentication preventing login - once fixed, will automatically display user emails"
     }
   ],
-  "dataFlow": "helmfile apply → SurrealDB starts (missing ns/db args) → init-schema SKIPPED (disabled) → RPC API starts → implicit schema creation → UNKNOWN STATE ⚠️",
-  "traceImpulseId": "trace-Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
-  "rootCause": "Namespace/Database configuration mismatch between SurrealDB server startup and init-schema Job",
-  "fixStrategy": {
-    "step1": "Add --ns and --db args to SurrealDB deployment.yaml and statefulset.yaml",
-    "step2": "Re-enable initSchema.enabled=true in values file",
-    "step3": "Test fresh deployment with helmfile destroy && apply",
-    "step4": "Verify Job completion and schema creation via kubectl logs"
-  },
-  "impact": {
-    "tablesAffected": 13,
-    "indexesAffected": 8,
-    "deploymentsAffected": "All fresh deployments have unknown schema state"
-  }
+  "dataFlow": "CLI (API Key) → POST /api/v1/learning-loop/executions → Extract user_email (api_keys.user_id → users.email OR JWT user.email) → Store in activity_executions.user_email → Query with org_id filter → Format as actor.email → GET /auth/orgs/{org_id}/activity → RecentActivity component → Display user email",
+  "traceImpulseId": "trace-User Activity Tracking - CLI to Dashboard Data Flow"
 }

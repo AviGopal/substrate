@@ -25,6 +25,38 @@ Validates:
 - Database name alignment (SurrealDB ↔ RPC API)
 - End-to-end data flow (GAP-9 test)
 
+### User Activity Tracking - CLI to Dashboard Data Flow
+**File:** `user-activity-tracking-harness.ts`  
+**Specification:** User Activity Tracking - CLI to Dashboard Data Flow  
+**Checks:** 5 test cases with 4 validation steps each  
+**Impulse:** harness-User Activity Tracking - CLI to Dashboard Data Flow
+
+Validates:
+- CLI activity posting with API key authentication
+- User email extraction from API keys and JWT tokens
+- Database storage of user_email field
+- API response formatting (actor.email)
+- Multi-tenant isolation (org_id filtering)
+
+**Usage:**
+```bash
+# Run all test cases
+npx tsx tests/validation-harnesses/run-validation.ts
+
+# Run specific test case
+npx tsx tests/validation-harnesses/run-validation.ts --case 1
+
+# Use custom base URL
+npx tsx tests/validation-harnesses/run-validation.ts --base-url http://staging.metabob.com
+```
+
+**Test Cases:**
+1. CLI User Tracking - API Key Authentication
+2. JWT User Tracking - Dashboard Authentication
+3. Multi-User Attribution - Different API Keys
+4. Multi-Tenant Isolation - Different Organizations
+5. Fallback Behavior - No User Email
+
 ## Usage
 
 ### Run Validation (Human Output)
@@ -75,6 +107,10 @@ fi
   run: |
     ./tests/validation-harnesses/surrealdb-v3-schema-init-harness.sh --json > results.json
     jq -e '.pass == true' results.json
+
+- name: Run User Activity Tracking Validation
+  run: |
+    npx tsx tests/validation-harnesses/run-validation.ts --base-url ${{ secrets.API_BASE_URL }}
 ```
 
 ### GitLab CI
@@ -106,7 +142,7 @@ These impulses enable:
 
 ## Best Practices
 
-1. **No LLM Required** - Harnesses should be pure shell/Python scripts
+1. **No LLM Required** - Harnesses should be pure shell/Python/TypeScript scripts
 2. **Deterministic** - Same input always produces same output
 3. **Fast** - Should complete in < 60 seconds
 4. **Isolated** - No side effects, idempotent
@@ -134,6 +170,7 @@ These impulses enable:
 ```bash
 # Make harness executable
 chmod +x surrealdb-v3-schema-init-harness.sh
+chmod +x run-validation.ts
 ```
 
 ## Related Documentation
