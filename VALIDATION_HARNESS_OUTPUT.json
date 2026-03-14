@@ -1,72 +1,102 @@
 {
-  "specificationName": "Activity System Runtime Validation with Complete Log Confirmation",
-  "harnessFile": "tests/validation-harnesses/activity-system-runtime-validation-harness.sh",
-  "harnessFileTs": "tests/validation-harnesses/activity-system-runtime-validation-harness.ts",
+  "specificationName": "Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "harnessFile": "tests/validation-harnesses/schema-init-harness.sh",
+  "readmeFile": "tests/validation-harnesses/README-schema-init.md",
   "testCases": [
     {
-      "impulseId": "validation-activity-system-runtime-validation-case-1",
-      "input": "Analyze the test directory structure and create a summary file named analysis.txt",
-      "expectedOutput": "All 8 lifecycle log patterns visible in kubectl logs output",
-      "patterns": [
-        "Activity.*starting",
-        "Memory agent initializing",
-        "Memory agent gathered.*impulses",
-        "Task starting:",
-        "Task completed:",
-        "storage write confirmed",
-        "Git commit created:",
-        "Activity completed:"
-      ]
+      "impulseId": "validation-schema-init-case-1",
+      "name": "Verify initSchema enabled",
+      "input": "charts/surrealdb/values/default.surrealdb.values.yaml",
+      "expectedOutput": "initSchema.enabled: true"
     },
     {
-      "impulseId": "validation-activity-system-runtime-validation-case-2",
-      "input": "List the files in the current directory",
-      "expectedOutput": "All 8 patterns with minimal execution time (<30s)"
+      "impulseId": "validation-schema-init-case-2",
+      "name": "Verify Deployment args",
+      "input": "charts/surrealdb/charts/templates/deployment.yaml",
+      "expectedOutput": "Args include --ns and --db flags"
     },
     {
-      "impulseId": "validation-activity-system-runtime-validation-case-3",
-      "input": "Create a test file named validation-test.txt with content 'Test passed at $(date)'",
-      "expectedOutput": "All 8 patterns with focus on git commit and storage write"
+      "impulseId": "validation-schema-init-case-3",
+      "name": "Verify StatefulSet args",
+      "input": "charts/surrealdb/charts/templates/statefulset.yaml",
+      "expectedOutput": "Args include --ns and --db flags"
+    },
+    {
+      "impulseId": "validation-schema-init-case-4",
+      "name": "Clean deployment succeeds",
+      "input": "helmfile destroy && helmfile apply",
+      "expectedOutput": "Exit code 0"
+    },
+    {
+      "impulseId": "validation-schema-init-case-5",
+      "name": "init-schema Job exists",
+      "input": "kubectl get jobs -n metabob",
+      "expectedOutput": "Job *init-schema* found"
+    },
+    {
+      "impulseId": "validation-schema-init-case-6",
+      "name": "Job completes successfully",
+      "input": "kubectl wait --for=condition=complete",
+      "expectedOutput": "status.succeeded=1 within 5min"
+    },
+    {
+      "impulseId": "validation-schema-init-case-7",
+      "name": "Job logs show success",
+      "input": "kubectl logs job/init-schema",
+      "expectedOutput": "Schema initialization successful, 13/13 tables"
+    },
+    {
+      "impulseId": "validation-schema-init-case-8",
+      "name": "SurrealDB pod running",
+      "input": "kubectl get pods -l app=surrealdb",
+      "expectedOutput": "Pod ready within 2min"
+    },
+    {
+      "impulseId": "validation-schema-init-case-9",
+      "name": "All 13 tables exist",
+      "input": "surreal sql 'INFO FOR DB;'",
+      "expectedOutput": "activity_template, activity_execution, activity_variants, variant_performance_metrics, vessel_registry, users, sessions, organizations, projects, subscriptions, api_keys, audit_logs, schema_versions"
+    },
+    {
+      "impulseId": "validation-schema-init-case-10",
+      "name": "All 8 indexes exist",
+      "input": "surreal sql 'INFO FOR DB;'",
+      "expectedOutput": "activity_template_id_idx, activity_template_category_idx, activity_template_org_idx, activity_execution_id_idx, activity_execution_template_idx, activity_execution_status_idx, vessel_registry_pod_name_idx, vessel_registry_status_idx"
     }
   ],
-  "harnessImpulseId": "harness-activity-system-runtime-validation-complete-log-confirmation",
-  "implementation": {
-    "status": "COMPLETE",
-    "filesCreated": [
-      "tests/validation-harnesses/activity-system-runtime-validation-harness.sh",
-      "tests/validation-harnesses/activity-system-runtime-validation-harness.ts",
-      "tests/validation-harnesses/test-cases.md",
-      "VALIDATION_HARNESS_ACTIVITY_SYSTEM_RUNTIME_COMPLETE.md"
-    ],
-    "linesOfCode": {
-      "bash": 266,
-      "typescript": 275,
-      "documentation": 423,
-      "total": 964
-    }
+  "harnessImpulseId": "harness-Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "commitHash": "7ff2003",
+  "usage": {
+    "command": "./tests/validation-harnesses/schema-init-harness.sh",
+    "interactive": "User confirms before destructive tests",
+    "automated": "echo 'yes' | ./tests/validation-harnesses/schema-init-harness.sh",
+    "requirements": [
+      "kubectl configured",
+      "helmfile installed",
+      "metabob-apps cloned",
+      "cluster access"
+    ]
   },
   "validationStrategy": {
-    "step1": "Verify pod is running",
-    "step2": "Start log capture in background",
-    "step3": "Execute test activity via kubectl exec",
-    "step4": "Wait for completion with timeout",
-    "step5": "Stop log capture and flush",
-    "step6": "Validate all 8 patterns present",
-    "step7": "Generate JSON validation report",
-    "step8": "Return PASS/FAIL"
+    "phase1": {
+      "name": "Configuration validation",
+      "type": "non-destructive",
+      "tests": [1, 2, 3]
+    },
+    "phase2": {
+      "name": "Deployment tests",
+      "type": "destructive",
+      "requiresConfirmation": true,
+      "tests": [4, 5, 6, 7]
+    },
+    "phase3": {
+      "name": "Runtime validation",
+      "type": "read-only",
+      "tests": [8, 9, 10]
+    }
   },
-  "executionCommand": "./tests/validation-harnesses/activity-system-runtime-validation-harness.sh [POD] [NAMESPACE]",
-  "expectedResult": {
-    "pass": true,
-    "patternsFound": 8,
-    "patternsTotal": 8,
-    "reportFormat": "JSON"
-  },
-  "nextSteps": [
-    "Execute validation harness",
-    "Verify all 8 lifecycle log patterns are visible",
-    "If validation fails, rebuild and redeploy pod with commit 305a9ab6",
-    "Re-run validation to confirm success",
-    "Document final results and mark specification 100% complete"
-  ]
+  "exitCodes": {
+    "0": "All tests passed - specification is VALID",
+    "1": "One or more tests failed - specification is INVALID"
+  }
 }

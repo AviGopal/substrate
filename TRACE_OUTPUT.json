@@ -1,0 +1,61 @@
+{
+  "specificationName": "Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "components": [
+    {
+      "file": "repos/platform/metabob-apps/charts/surrealdb/values/default.surrealdb.values.yaml",
+      "component": "initSchema.enabled",
+      "currentBehavior": "Set to false - schema initialization hook is completely disabled",
+      "desiredBehavior": "Set to true - schema initialization should run automatically after SurrealDB deployment",
+      "gap": "Need to fix namespace/database configuration mismatch before re-enabling"
+    },
+    {
+      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/init-schema-job.yaml",
+      "component": "Kubernetes Job - init-schema",
+      "currentBehavior": "Job is defined but never runs because initSchema.enabled=false. When enabled, job fails with BackoffLimitExceeded due to namespace/database mismatch",
+      "desiredBehavior": "Job should run as post-install/post-upgrade hook and successfully create all required tables with PERMISSIONS FULL",
+      "gap": "Environment variables SURREAL_NAMESPACE and SURREAL_DATABASE must match what SurrealDB server actually uses"
+    },
+    {
+      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/deployment.yaml",
+      "component": "SurrealDB Deployment (in-memory mode)",
+      "currentBehavior": "Starts SurrealDB with 'memory' storage mode, no namespace/database specified in args",
+      "desiredBehavior": "Should explicitly set namespace/database that matches init-schema Job expectations",
+      "gap": "Missing args: --ns {{ .Values.database.namespace }} --db {{ .Values.database.name }}"
+    },
+    {
+      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/statefulset.yaml",
+      "component": "SurrealDB StatefulSet (persistent mode)",
+      "currentBehavior": "Starts SurrealDB with RocksDB storage, no namespace/database specified in args",
+      "desiredBehavior": "Should explicitly set namespace/database that matches init-schema Job expectations",
+      "gap": "Missing args: --ns {{ .Values.database.namespace }} --db {{ .Values.database.name }}"
+    },
+    {
+      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/values.yaml",
+      "component": "database.namespace and database.name",
+      "currentBehavior": "Defines database.namespace=metabob and database.name=production in values, but these are not passed to SurrealDB server",
+      "desiredBehavior": "These values should be used by both SurrealDB server and init-schema Job",
+      "gap": "Values exist but not applied to server startup args"
+    },
+    {
+      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/init-schema-configmap.yaml",
+      "component": "init_schema.py script",
+      "currentBehavior": "Python script that creates 13 tables with PERMISSIONS FULL and 8 indexes. Connects using SURREAL_NAMESPACE and SURREAL_DATABASE env vars",
+      "desiredBehavior": "Script is correct - it should work once namespace/database configuration is fixed",
+      "gap": "No gap in script itself - the issue is in configuration"
+    }
+  ],
+  "dataFlow": "helmfile apply → SurrealDB starts (missing ns/db args) → init-schema SKIPPED (disabled) → RPC API starts → implicit schema creation → UNKNOWN STATE ⚠️",
+  "traceImpulseId": "trace-Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "rootCause": "Namespace/Database configuration mismatch between SurrealDB server startup and init-schema Job",
+  "fixStrategy": {
+    "step1": "Add --ns and --db args to SurrealDB deployment.yaml and statefulset.yaml",
+    "step2": "Re-enable initSchema.enabled=true in values file",
+    "step3": "Test fresh deployment with helmfile destroy && apply",
+    "step4": "Verify Job completion and schema creation via kubectl logs"
+  },
+  "impact": {
+    "tablesAffected": 13,
+    "indexesAffected": 8,
+    "deploymentsAffected": "All fresh deployments have unknown schema state"
+  }
+}

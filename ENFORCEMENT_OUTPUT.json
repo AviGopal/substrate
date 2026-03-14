@@ -1,94 +1,40 @@
 {
-  "specificationName": "template-loading-persistence",
-  "changesApplied": [],
-  "enforcementImpulseId": "enforcement-template-loading-persistence",
-  "status": "COMPLETE",
-  "enforcementResult": "NO_CHANGES_NEEDED",
-  "finding": "All 6 components analyzed show NO GAPS - specification is already correctly implemented",
-  "componentsAnalyzed": [
+  "specificationName": "Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "changesApplied": [
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/session/template-loader.ts",
-      "component": "TemplateLoader.load()",
-      "changeMade": "NONE",
-      "reason": "Correct 3-tier fallback already implemented: in-memory cache → MCP backend → embedded bootstrap",
-      "impactAnalysis": "N/A - no changes needed"
+      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/deployment.yaml",
+      "component": "SurrealDB Deployment args",
+      "changeMade": "Added --ns '{{ .Values.database.namespace }}' and --db '{{ .Values.database.name }}' args to SurrealDB server startup",
+      "reason": "SurrealDB server must use the same namespace/database that init-schema Job connects to. Without these args, server uses default namespace/database causing BackoffLimitExceeded errors in init-schema Job.",
+      "impactAnalysis": "Low risk - additive change only. Blast radius: init-schema Job (will now succeed), RPC API (already configured for metabob/production). No downstream changes required."
     },
     {
-      "file": "repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts",
-      "component": "TemplateServiceClient.getTemplate()",
-      "changeMade": "NONE",
-      "reason": "Correct MCP client implementation already in place",
-      "impactAnalysis": "N/A - no changes needed"
+      "file": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/statefulset.yaml",
+      "component": "SurrealDB StatefulSet args",
+      "changeMade": "Added --ns '{{ .Values.database.namespace }}' and --db '{{ .Values.database.name }}' args to SurrealDB server startup",
+      "reason": "StatefulSet used when persistence enabled (production mode). Same namespace/database configuration needed for consistency with Deployment mode and init-schema Job expectations.",
+      "impactAnalysis": "Low risk - additive change mirroring Deployment. Ensures persistent and in-memory modes use identical configuration. No downstream impact."
     },
     {
-      "file": "repos/metabob-rpc-api/server/actions/activity.py",
-      "component": "get_template_by_id()",
-      "changeMade": "NONE",
-      "reason": "Textbook cache-aside pattern already implemented: Redis check → SurrealDB fallback → cache repopulation (lines 305-354)",
-      "impactAnalysis": "N/A - no changes needed"
-    },
-    {
-      "file": "repos/metabob-rpc-api/server/db/operations/template_data.py",
-      "component": "get_template_by_variant_id()",
-      "changeMade": "NONE",
-      "reason": "Direct SurrealDB query for primary storage already implemented (lines 67-92)",
-      "impactAnalysis": "N/A - no changes needed"
-    },
-    {
-      "file": "repos/metabob-rpc-api/server/actions/activity.py",
-      "component": "create_template()",
-      "changeMade": "NONE",
-      "reason": "Correct write-through pattern already implemented: SurrealDB first (mandatory) → Redis cache (optional) (lines 467-485)",
-      "impactAnalysis": "N/A - no changes needed"
-    },
-    {
-      "file": "repos/metabob-rpc-api/server/actions/activity.py",
-      "component": "list_templates()",
-      "changeMade": "NONE",
-      "reason": "Cache-aside pattern for listing already implemented: Redis miss → SurrealDB query → cache population (lines 182-221)",
-      "impactAnalysis": "N/A - no changes needed"
+      "file": "repos/platform/metabob-apps/charts/surrealdb/values/default.surrealdb.values.yaml",
+      "component": "initSchema.enabled",
+      "changeMade": "Changed initSchema.enabled from false to true, updated comment to reflect fix",
+      "reason": "Re-enable automatic schema initialization now that namespace/database mismatch is resolved. Ensures 13 tables and 8 indexes are created automatically on fresh deployments without manual intervention.",
+      "impactAnalysis": "Medium risk - enables previously disabled Job. Job will run on helmfile apply as post-install hook. Success depends on namespace/database args (fixed in changes 1-2). Expected outcome: Job completes successfully, creating all required tables."
     }
   ],
-  "deploymentValidation": {
-    "status": "VALIDATED",
-    "rpcApiRunning": true,
-    "podName": "metabob-rpc-api-6d6d5d8c9d-8rmxs",
-    "podStatus": "Running (8m51s)",
-    "logsVerified": true,
-    "evidenceFromLogs": [
-      "Template list cache miss, loading from SurrealDB",
-      "Metrics initialized in SurrealDB (primary)",
-      "201 Created responses for template creation",
-      "200 OK responses for health checks"
-    ],
-    "cacheAsidePatternConfirmed": true,
-    "surrealDBPrimaryStorageConfirmed": true
+  "enforcementImpulseId": "enforcement-Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "commitHash": "b9e55b4",
+  "dataFlowFixed": true,
+  "rippleEffectsSummary": {
+    "upstreamChanges": "None - values.yaml already defined database.namespace and database.name",
+    "downstreamChanges": "init-schema Job will succeed, RPC API unchanged, Dashboard unchanged",
+    "crossCuttingConcerns": "All SurrealDB clients use same namespace/database from values.yaml"
   },
-  "specificationCompliance": {
-    "templates_persist_in_surrealdb": true,
-    "redis_is_cache_only_with_ttl": true,
-    "cache_aside_pattern_on_reads": true,
-    "write_through_on_writes": true,
-    "templates_accessible_after_redis_clear": true
-  },
-  "documentation": {
-    "traceAnalysis": "TRACE_TEMPLATE_LOADING_PERSISTENCE.md",
-    "enforcementSummary": "ENFORCEMENT_TEMPLATE_LOADING_PERSISTENCE.md",
-    "traceImpulse": "impulses/trace-template-loading-persistence.json",
-    "enforcementImpulse": "impulses/enforcement-template-loading-persistence.json"
-  },
-  "nextSteps": [
-    "Execute end-to-end validation tests from ENFORCEMENT_TEMPLATE_LOADING_PERSISTENCE.md",
-    "Test Scenario 1: Redis Cache Clear Recovery",
-    "Test Scenario 2: TTL Expiration Recovery",
-    "Test Scenario 3: Redis Failure Handling (optional)"
-  ],
-  "references": {
-    "specification": "surrealdb-primary-redis-cache",
-    "relatedSpecs": [
-      "template-loading-fallback-chain",
-      "activity-template-query-filtering",
-      "dynamic-activity-creation-devbob-e2e-validation"
-    ]
-  }
+  "validationSteps": [
+    "helmfile -e default destroy && helmfile -e default apply",
+    "kubectl get jobs -n metabob | grep init-schema",
+    "kubectl logs -n metabob job/surrealdb-init-schema",
+    "Verify: 13/13 tables with PERMISSIONS FULL"
+  ]
 }
