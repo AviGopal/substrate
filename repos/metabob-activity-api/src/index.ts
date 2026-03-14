@@ -13,6 +13,7 @@ import { config } from './config';
 import { logger } from './utils/logger';
 import { authMiddleware } from './middleware/auth';
 import sessionRoutes from './routes/session';
+import activitiesRoutes from './routes/activities';
 
 const app = new Hono();
 
@@ -52,8 +53,7 @@ app.get('/health', (c) => {
 app.route('/v2/session', sessionRoutes);
 
 // Activity routes (GET /v2/activities/templates, etc.)
-// TODO: Implement in Phase 2
-// app.route('/v2/activities', activitiesRoutes);
+app.route('/v2/activities', activitiesRoutes);
 
 // Execution routes (POST /v2/activities/executions)
 // TODO: Implement in Phase 3

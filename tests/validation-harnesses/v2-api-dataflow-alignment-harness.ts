@@ -18,7 +18,7 @@
  */
 
 import { RedisClient } from '../../repos/metabob-activity-api/src/db/redis';
-import { SurrealDBClient } from '../../repos/metabob-activity-api/src/db/surreal';
+import { surrealDB } from '../../repos/metabob-activity-api/src/db/surreal';
 
 // ============================================================================
 // Configuration
@@ -287,17 +287,6 @@ async function testTemplateList(bearerToken: string): Promise<ValidationResult> 
     });
     
     if (!response.ok) {
-      // If not implemented yet, mark as skip
-      if (response.status === 404) {
-        return {
-          pass: true,
-          testCase,
-          actual: { status: 404, note: "Endpoint not implemented yet" },
-          expected: { status: 200, note: "Will be implemented in Phase 2" },
-          details: "SKIP: Endpoint not implemented (expected for Phase 1 completion)"
-        };
-      }
-      
       return {
         pass: false,
         testCase,
@@ -429,8 +418,7 @@ async function testExecutionRecording(bearerToken: string): Promise<ValidationRe
     }
     
     // Verify execution was written to SurrealDB
-    const surreal = SurrealDBClient.getInstance();
-    const executions = await surreal.query(
+    const executions = await surrealDB.query(
       `SELECT * FROM activity_execution WHERE execution_id = $execution_id LIMIT 1`,
       { execution_id: data.execution_id }
     );
