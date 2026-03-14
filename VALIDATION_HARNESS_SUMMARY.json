@@ -1,65 +1,91 @@
 {
-  "specificationName": "Activity Execution Recording and Metrics Feedback Loop",
-  "harnessFile": "tests/validation-harnesses/execution-recording-harness.ts",
-  "harnessReadme": "tests/validation-harnesses/execution-recording-README.md",
-  "created": "2026-03-02",
-  
+  "specificationName": "Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "harnessFile": "tests/validation-harnesses/schema-init-harness.sh",
   "testCases": [
     {
-      "impulseId": "validation-execution-recording-case-1",
-      "description": "Single successful execution recorded",
-      "input": {
-        "templateId": "execution-recording-test-template",
-        "executeCount": 1,
-        "expectedSuccess": [true]
-      },
-      "expectedOutput": {
-        "executionRecordsCount": 1,
-        "totalExecutions": 1,
-        "successfulExecutions": 1,
-        "successRate": 1.0,
-        "metricsUpdated": true,
-        "thompsonAlpha": 2.0,
-        "thompsonBeta": 1.0
-      }
+      "impulseId": "validation-schema-init-case-1",
+      "name": "Verify initSchema enabled in values",
+      "input": "charts/surrealdb/values/default.surrealdb.values.yaml",
+      "expectedOutput": "initSchema.enabled: true",
+      "testFunction": "test_init_schema_enabled"
     },
     {
-      "impulseId": "validation-execution-recording-case-2",
-      "description": "Multiple successful executions aggregate correctly",
-      "input": {
-        "templateId": "execution-recording-test-template",
-        "executeCount": 3,
-        "expectedSuccess": [true, true, true]
-      },
-      "expectedOutput": {
-        "executionRecordsCount": 3,
-        "totalExecutions": 3,
-        "successfulExecutions": 3,
-        "successRate": 1.0,
-        "metricsUpdated": true,
-        "thompsonAlpha": 4.0,
-        "thompsonBeta": 1.0
-      }
+      "impulseId": "validation-schema-init-case-2",
+      "name": "Verify Deployment has namespace/database args",
+      "input": "charts/surrealdb/charts/templates/deployment.yaml",
+      "expectedOutput": "Args include --ns and --db flags",
+      "testFunction": "test_deployment_args"
     },
     {
-      "impulseId": "validation-execution-recording-case-3",
-      "description": "Mixed success/failure executions calculate correct success_rate",
-      "input": {
-        "templateId": "execution-recording-test-template",
-        "executeCount": 4,
-        "expectedSuccess": [true, false, true, true]
-      },
-      "expectedOutput": {
-        "executionRecordsCount": 4,
-        "totalExecutions": 4,
-        "successfulExecutions": 3,
-        "successRate": 0.75,
-        "metricsUpdated": true,
-        "thompsonAlpha": 4.0,
-        "thompsonBeta": 2.0
-      }
+      "impulseId": "validation-schema-init-case-3",
+      "name": "Verify StatefulSet has namespace/database args",
+      "input": "charts/surrealdb/charts/templates/statefulset.yaml",
+      "expectedOutput": "Args include --ns and --db flags",
+      "testFunction": "test_statefulset_args"
+    },
+    {
+      "impulseId": "validation-schema-init-case-4",
+      "name": "Clean deployment succeeds",
+      "input": "helmfile destroy && helmfile apply",
+      "expectedOutput": "Exit code 0, all resources created",
+      "testFunction": "test_clean_deployment"
+    },
+    {
+      "impulseId": "validation-schema-init-case-5",
+      "name": "init-schema Job exists",
+      "input": "kubectl get jobs -n metabob",
+      "expectedOutput": "Job named *init-schema* exists",
+      "testFunction": "test_init_schema_job_exists"
+    },
+    {
+      "impulseId": "validation-schema-init-case-6",
+      "name": "init-schema Job completes successfully",
+      "input": "kubectl wait --for=condition=complete job/init-schema",
+      "expectedOutput": "Job status.succeeded=1 within 5 minutes",
+      "testFunction": "test_init_schema_job_completion"
+    },
+    {
+      "impulseId": "validation-schema-init-case-7",
+      "name": "init-schema Job logs show success",
+      "input": "kubectl logs job/init-schema",
+      "expectedOutput": "Schema initialization successful, 13/13 tables with PERMISSIONS FULL",
+      "testFunction": "test_init_schema_job_logs"
+    },
+    {
+      "impulseId": "validation-schema-init-case-8",
+      "name": "SurrealDB pod is running",
+      "input": "kubectl get pods -l app=surrealdb",
+      "expectedOutput": "Pod status=Running and ready",
+      "testFunction": "test_surrealdb_pod_running"
+    },
+    {
+      "impulseId": "validation-schema-init-case-9",
+      "name": "All 13 tables exist in SurrealDB",
+      "input": "surreal sql 'INFO FOR DB;'",
+      "expectedOutput": "13 tables: activity_template, activity_execution, activity_variants, variant_performance_metrics, vessel_registry, users, sessions, organizations, projects, subscriptions, api_keys, audit_logs, schema_versions",
+      "testFunction": "test_surrealdb_tables_exist"
+    },
+    {
+      "impulseId": "validation-schema-init-case-10",
+      "name": "All 8 indexes exist in SurrealDB",
+      "input": "surreal sql 'INFO FOR DB;'",
+      "expectedOutput": "8 indexes: activity_template_id_idx, activity_template_category_idx, activity_template_org_idx, activity_execution_id_idx, activity_execution_template_idx, activity_execution_status_idx, vessel_registry_pod_name_idx, vessel_registry_status_idx",
+      "testFunction": "test_surrealdb_indexes_exist"
     }
   ],
-  
-  "harnessImpulseId": "harness-execution-recording"
+  "harnessImpulseId": "harness-Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "validationStrategy": {
+    "phase1": "Configuration validation (non-destructive)",
+    "phase2": "Clean deployment test (destructive, requires confirmation)",
+    "phase3": "Runtime validation (Job completion, logs, database state)"
+  },
+  "usage": {
+    "command": "./tests/validation-harnesses/schema-init-harness.sh",
+    "requirements": [
+      "kubectl configured for target cluster",
+      "helmfile CLI installed",
+      "metabob-apps repository cloned",
+      "User confirmation for destructive tests"
+    ]
+  }
 }
