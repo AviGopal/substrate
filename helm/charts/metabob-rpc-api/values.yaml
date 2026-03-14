@@ -19,3 +19,9 @@ service:
 
 surrealdb:
   database: production
+
+# Application environment (development, staging, production)
+environment: production
+
+# JWT secret key for token signing (override per environment)
+jwtSecretKey: ""

@@ -58,6 +58,13 @@ surrealdb:
   tls:
     enabled: true
 
+# Metabob RPC API configuration
+metabobRpcApi:
+  environment: production
+  # JWT secret should be provided via Kubernetes Secret in production
+  # jwtSecretKey is required and should be overridden with actual secret value
+  jwtSecretKey: ${JWT_SECRET_KEY}  # Set via secret or CI/CD
+
 # Feature flags
 features:
   enableMetrics: true

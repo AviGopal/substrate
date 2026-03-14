@@ -23,3 +23,8 @@ surrealdb:
 features:
   enableMetrics: true
   enableMCP: true
+
+# Metabob RPC API configuration
+metabobRpcApi:
+  environment: development
+  jwtSecretKey: "dev-secret-key-change-in-production-12345"
