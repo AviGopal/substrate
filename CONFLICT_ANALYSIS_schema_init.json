@@ -1,0 +1,183 @@
+{
+  "specificationName": "Database Schema Initialization - Automatic Schema Creation on Fresh Deployment",
+  "analysisTimestamp": "2026-03-13T20:45:00Z",
+  "otherSpecifications": [
+    "surrealdb-primary-redis-cache",
+    "local-docker-k8s-deployment", 
+    "surrealdb-async-await-deployment",
+    "complete-architecture-separation"
+  ],
+  "conflicts": [],
+  "compatibilities": [
+    {
+      "type": "COMPLEMENTARY",
+      "spec1": "Database Schema Initialization",
+      "spec2": "surrealdb-primary-redis-cache",
+      "sharedComponent": "SurrealDB database",
+      "description": "Schema initialization ensures tables exist before Redis cache-aside pattern queries them",
+      "relationship": "Schema init is prerequisite for cache pattern to work correctly",
+      "risk": "LOW",
+      "resolution": "COMPATIBLE - No action needed. Init-schema Job creates tables, cache pattern uses them."
+    },
+    {
+      "type": "COMPLEMENTARY",
+      "spec1": "Database Schema Initialization",
+      "spec2": "local-docker-k8s-deployment",
+      "sharedComponent": "Helmfile deployment configuration",
+      "description": "Both specs use helmfile for deployment. Schema init adds post-install hook to existing deployment flow.",
+      "relationship": "Schema init enhances deployment with guaranteed database state",
+      "risk": "LOW",
+      "resolution": "COMPATIBLE - Schema init hook runs after SurrealDB deployment completes."
+    },
+    {
+      "type": "COMPLEMENTARY",
+      "spec1": "Database Schema Initialization",
+      "spec2": "surrealdb-async-await-deployment",
+      "sharedComponent": "SurrealDB connection configuration",
+      "description": "Both specs configure SurrealDB connection parameters. Async-await fixes how RPC API connects, schema init fixes server startup args.",
+      "relationship": "Independent improvements to different parts of SurrealDB integration",
+      "risk": "LOW",
+      "resolution": "COMPATIBLE - No overlap in changed components."
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/deployment.yaml",
+      "affectedBySpecs": [
+        "Database Schema Initialization",
+        "surrealdb v3.0.0 upgrade (commit 9d1a48d)"
+      ],
+      "changes": {
+        "Database Schema Initialization": "Added --ns and --db args to startup",
+        "v3.0.0 upgrade": "Updated image version to surrealdb/surrealdb:v3.0.0"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Both changes are additive and independent. Args are new, version is existing field."
+    },
+    {
+      "component": "repos/platform/metabob-apps/charts/surrealdb/charts/templates/statefulset.yaml",
+      "affectedBySpecs": [
+        "Database Schema Initialization",
+        "surrealdb v3.0.0 upgrade"
+      ],
+      "changes": {
+        "Database Schema Initialization": "Added --ns and --db args to startup",
+        "v3.0.0 upgrade": "Updated image version to surrealdb/surrealdb:v3.0.0"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Both changes are additive and independent."
+    },
+    {
+      "component": "repos/platform/metabob-apps/charts/surrealdb/values/default.surrealdb.values.yaml",
+      "affectedBySpecs": [
+        "Database Schema Initialization"
+      ],
+      "changes": {
+        "Database Schema Initialization": "Re-enabled initSchema.enabled=true (was disabled in commit 731c717)"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "This spec reverses a previous workaround (731c717) by fixing the root cause."
+    },
+    {
+      "component": "SurrealDB database tables",
+      "affectedBySpecs": [
+        "Database Schema Initialization",
+        "surrealdb-primary-redis-cache",
+        "complete-architecture-separation"
+      ],
+      "usage": {
+        "Database Schema Initialization": "Creates 13 tables with PERMISSIONS FULL",
+        "surrealdb-primary-redis-cache": "Reads/writes activity_template table",
+        "complete-architecture-separation": "Defines table schemas in RPC API"
+      },
+      "conflictStatus": "NO_CONFLICT",
+      "recommendation": "Init-schema Job creates tables that other specs expect to exist. This is the correct dependency order."
+    }
+  ],
+  "dependencyAnalysis": {
+    "upstreamDependencies": [
+      {
+        "spec": "local-docker-k8s-deployment",
+        "relationship": "Database Schema Initialization depends on helmfile deployment being functional",
+        "status": "SATISFIED",
+        "evidence": "local-docker-k8s-deployment validation passed 4/4 tests"
+      },
+      {
+        "spec": "surrealdb v3.0.0 upgrade",
+        "relationship": "Schema init requires SurrealDB v3.0.0 (commit 9d1a48d)",
+        "status": "SATISFIED",
+        "evidence": "SurrealDB upgraded to v3.0.0 in deployment templates"
+      }
+    ],
+    "downstreamDependencies": [
+      {
+        "spec": "surrealdb-primary-redis-cache",
+        "relationship": "Cache pattern depends on activity_template table existing",
+        "status": "WILL_BE_SATISFIED",
+        "evidence": "Init-schema Job will create activity_template on next deployment"
+      },
+      {
+        "spec": "complete-architecture-separation",
+        "relationship": "RPC API expects database tables to exist at startup",
+        "status": "WILL_BE_SATISFIED",
+        "evidence": "Init-schema Job runs before RPC API starts"
+      }
+    ]
+  },
+  "riskAssessment": {
+    "conflictRisk": "NONE",
+    "integrationRisk": "LOW",
+    "deploymentRisk": "MEDIUM",
+    "rollbackRisk": "LOW",
+    "details": {
+      "conflictRisk": "No contradictory requirements found with other specifications",
+      "integrationRisk": "All specs are complementary. Schema init provides foundation for other specs.",
+      "deploymentRisk": "Requires fresh deployment (destroy && apply) to test. Cluster downtime during migration.",
+      "rollbackRisk": "Git history preserves previous configuration (commit before b9e55b4). Easy rollback."
+    }
+  },
+  "deploymentSequence": {
+    "correctOrder": [
+      "1. SurrealDB Deployment starts (with --ns metabob --db production)",
+      "2. init-schema Job runs as post-install hook",
+      "3. Job creates 13 tables + 8 indexes",
+      "4. RPC API starts (expects tables to exist)",
+      "5. Redis cache pattern initializes (expects activity_template)",
+      "6. Dashboard connects (expects API to be ready)"
+    ],
+    "criticalDependencies": [
+      "SurrealDB must start with namespace/database args before init-schema Job runs",
+      "init-schema Job must complete before RPC API starts",
+      "Tables must exist before cache pattern queries them"
+    ]
+  },
+  "testingImpact": {
+    "affectedSpecs": [
+      "surrealdb-primary-redis-cache",
+      "complete-architecture-separation"
+    ],
+    "requiredRevalidation": [
+      {
+        "spec": "surrealdb-primary-redis-cache",
+        "reason": "After fresh deployment, verify cache pattern works with auto-created tables",
+        "priority": "MEDIUM"
+      },
+      {
+        "spec": "complete-architecture-separation",
+        "reason": "Verify RPC API starts correctly with guaranteed schema state",
+        "priority": "LOW"
+      }
+    ]
+  },
+  "conclusion": {
+    "overallStatus": "NO_CONFLICTS_DETECTED",
+    "compatibilityLevel": "HIGH",
+    "readyForDeployment": true,
+    "recommendations": [
+      "Deploy Database Schema Initialization (no conflicts with existing specs)",
+      "After deployment, optionally re-run surrealdb-primary-redis-cache validation to confirm cache pattern works",
+      "Monitor init-schema Job logs on first deployment to ensure successful table creation"
+    ]
+  },
+  "conflictImpulseId": "conflict-analysis-Database Schema Initialization - Automatic Schema Creation on Fresh Deployment"
+}
