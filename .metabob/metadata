@@ -1,9 +1,9 @@
 {
-  "session_id": "c2Vzc2lvbnMuY2M5MmI0NGItNDliNi00ZjZhLWEwZjUtMzE2YzAxZjc1YzM3",
+  "session_id": "c2Vzc2lvbnMuMTJjYWIwN2ItZmJlMC00YzRmLWJiMzUtMzRjZGM2NmI3Y2Yy",
   "session_token": "c2Vzc2lv...",
   "state_file": ".metabob/state",
-  "created_at": "2026-03-10T12:08:15.008312",
-  "last_updated": "2026-03-11T00:14:04.850382",
+  "created_at": "2026-03-11T00:50:21.280999",
+  "last_updated": "2026-03-14T00:07:04.493819",
   "format_version": "4.0",
   "interrupted": false,
   "clean_shutdown": true,
@@ -16,8 +16,8 @@
     "state_file_exists": true,
     "session_file_exists": true,
     "was_interrupted": false,
-    "state_file_age": 0.4186131954193115
+    "state_file_age": 0.0002830028533935547
   },
-  "timestamp": 1773213247.186635,
-  "timestamp_iso": "2026-03-11 00:14:07"
+  "timestamp": 1773472025.8954701,
+  "timestamp_iso": "2026-03-14 00:07:05"
 }
