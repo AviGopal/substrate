@@ -7,8 +7,16 @@ import Redis from 'ioredis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
-class RedisClient {
+export class RedisClient {
+  private static instance: RedisClient;
   private client: Redis | null = null;
+
+  static getInstance(): RedisClient {
+    if (!RedisClient.instance) {
+      RedisClient.instance = new RedisClient();
+    }
+    return RedisClient.instance;
+  }
 
   getClient(): Redis {
     if (!this.client) {
@@ -94,6 +102,40 @@ class RedisClient {
       return members;
     } catch (error) {
       logger.error('Redis SMEMBERS failed', { key, error });
+      throw error;
+    }
+  }
+
+  async hget(key: string, field: string): Promise<string | null> {
+    const client = this.getClient();
+    try {
+      const value = await client.hget(key, field);
+      logger.debug('Redis HGET', { key, field, found: !!value });
+      return value;
+    } catch (error) {
+      logger.error('Redis HGET failed', { key, field, error });
+      throw error;
+    }
+  }
+
+  async hset(key: string, field: string, value: string): Promise<void> {
+    const client = this.getClient();
+    try {
+      await client.hset(key, field, value);
+      logger.debug('Redis HSET', { key, field });
+    } catch (error) {
+      logger.error('Redis HSET failed', { key, field, error });
+      throw error;
+    }
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    const client = this.getClient();
+    try {
+      await client.expire(key, seconds);
+      logger.debug('Redis EXPIRE', { key, seconds });
+    } catch (error) {
+      logger.error('Redis EXPIRE failed', { key, error });
       throw error;
     }
   }
