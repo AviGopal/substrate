@@ -1,0 +1,18 @@
+FROM metabobapp/metabob-rpc-api:0.30.2-gap9-complete-hotfix
+
+# Fix RecordID JSON serialization
+RUN python3 << 'PYTHON'
+with open("/src/app/server/db/operations/activity_execution.py", "r") as f:
+    content = f.read()
+
+# Fix the id field to convert RecordID to string
+old = '            "id": execution.get("id", execution.get("activity_id")),'
+new = '''            # Convert RecordID to string for JSON serialization
+            exec_id = execution.get("id", execution.get("activity_id"))
+            "id": str(exec_id) if exec_id else execution.get("activity_id"),'''
+
+content = content.replace(old, new)
+
+with open("/src/app/server/db/operations/activity_execution.py", "w") as f:
+    f.write(content)
+PYTHON
