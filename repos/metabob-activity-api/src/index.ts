@@ -14,6 +14,7 @@ import { logger } from './utils/logger';
 import { authMiddleware } from './middleware/auth';
 import sessionRoutes from './routes/session';
 import activitiesRoutes from './routes/activities';
+import impulsesRoutes from './routes/impulses';
 
 const app = new Hono();
 
@@ -54,6 +55,9 @@ app.route('/v2/session', sessionRoutes);
 
 // Activity routes (GET /v2/activities/templates, etc.)
 app.route('/v2/activities', activitiesRoutes);
+
+// Impulse routes (POST /v2/impulses, GET /v2/impulses/:id, GET /v2/impulses)
+app.route('/v2/impulses', impulsesRoutes);
 
 // Execution routes (POST /v2/activities/executions)
 // TODO: Implement in Phase 3

@@ -122,3 +122,51 @@ export type TemplateListResponse = z.infer<typeof TemplateListResponseSchema>;
 export type ExecutionTokens = z.infer<typeof ExecutionTokensSchema>;
 export type ExecutionRecord = z.infer<typeof ExecutionRecordSchema>;
 export type ExecutionRecordResponse = z.infer<typeof ExecutionRecordResponseSchema>;
+
+// Impulse schemas
+export const ImpulsePointerSchema = z.object({
+  type: z.string(), // file, memo, component, activityOutput, etc.
+  content: z.string().optional(), // memo content
+  file_path: z.string().optional(), // file pointer
+  component_id: z.string().optional(), // component pointer
+  source: z.string().optional(), // source identifier
+});
+
+export const ImpulseDataSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  pointer: ImpulsePointerSchema,
+  budget: z.number(),
+  priority: z.number().optional(),
+  scope: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const ImpulseCreateRequestSchema = z.object({
+  impulse_id: z.string(),
+  project_id: z.string(),
+  impulse_data: ImpulseDataSchema,
+});
+
+export const ImpulseResponseSchema = z.object({
+  impulse_id: z.string(),
+  api_key: z.string(),
+  project_id: z.string(),
+  impulse_data: ImpulseDataSchema,
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const ImpulseListResponseSchema = z.object({
+  impulses: z.array(ImpulseResponseSchema),
+  total: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+});
+
+// Type exports for impulses
+export type ImpulsePointer = z.infer<typeof ImpulsePointerSchema>;
+export type ImpulseData = z.infer<typeof ImpulseDataSchema>;
+export type ImpulseCreateRequest = z.infer<typeof ImpulseCreateRequestSchema>;
+export type ImpulseResponse = z.infer<typeof ImpulseResponseSchema>;
+export type ImpulseListResponse = z.infer<typeof ImpulseListResponseSchema>;

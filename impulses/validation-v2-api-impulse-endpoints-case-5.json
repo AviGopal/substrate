@@ -1,0 +1,16 @@
+{
+  "id": "validation-v2-api-impulse-endpoints-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 5: Authentication Required - 401 if Bearer Token Missing\n\nInput:\n  endpoint: POST /v2/impulses\n  headers: { Content-Type: application/json }\n  body: {...}\n  NO BEARER TOKEN\n\nExpected Output:\n  status: 401\n  error: Unauthorized\n  authRequired: true",
+    "source": "validation harness"
+  },
+  "budget": 500,
+  "scope": "session",
+  "metadata": {
+    "specification": "v2-api-impulse-endpoints",
+    "testCase": 5,
+    "validation": "authentication"
+  }
+}
