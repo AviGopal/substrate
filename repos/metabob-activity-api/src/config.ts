@@ -60,9 +60,9 @@ export function loadConfig(): Config {
     surrealdb: {
       url: process.env.SURREALDB_URL || 'http://localhost:8000',
       namespace: process.env.SURREALDB_NAMESPACE || 'metabob',
-      database: process.env.SURREALDB_DATABASE || 'devbob',
+      database: process.env.SURREALDB_DATABASE || 'learning_loop',
       username: process.env.SURREALDB_USERNAME || 'root',
-      password: process.env.SURREALDB_PASSWORD || 'root',
+      password: process.env.SURREALDB_PASSWORD || 'changeme',
     },
     
     redis: {
