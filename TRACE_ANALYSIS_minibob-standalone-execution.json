@@ -1,0 +1,285 @@
+{
+  "specificationName": "minibob-standalone-execution",
+  "traceDate": "2026-03-14",
+  "components": [
+    {
+      "file": "repos/minibob/index.ts",
+      "component": "startServer()",
+      "currentBehavior": "HTTP server initializes and exposes /run, /acp, /health endpoints. Starts boredom task executor. Registers with backend via fire-and-forget POST.",
+      "desiredBehavior": "Same as current, but needs input validation (Zod schemas), graceful shutdown handling (SIGTERM), and request body size limits.",
+      "gap": "Missing: Input validation, graceful shutdown, request body size limits, security hardening."
+    },
+    {
+      "file": "repos/minibob/src/activity.ts",
+      "component": "ActivityExecutor",
+      "currentBehavior": "Executes activity templates with impulse loading, topological task ordering, LLM+tool calling loop, task validation, and basic retry (max 3 attempts with error context). Reports metrics to backend.",
+      "desiredBehavior": "Add: True trailblazing mode with AI-generated recovery prompts, activity-level token budget, configurable retry policy, checkpoint/resume for long-running activities.",
+      "gap": "Missing: Trailblazing mode, activity token budget, configurable retry, checkpoint/resume. Has race condition in activityOutputs Map."
+    },
+    {
+      "file": "repos/minibob/src/boredom.ts",
+      "component": "BoredomTaskExecutor",
+      "currentBehavior": "Polls backend every 30s when idle (60s threshold). Executes highest priority task, reports result. Fixed poll interval regardless of backend state.",
+      "desiredBehavior": "Add: Exponential backoff on empty polls, circuit breaker for backend failures, adaptive idle threshold, task timeout enforcement.",
+      "gap": "Missing: Exponential backoff, circuit breaker, adaptive polling, task timeouts."
+    },
+    {
+      "file": "repos/minibob/src/mcp.ts",
+      "component": "MCPClient",
+      "currentBehavior": "Fire-and-forget REST API client for backend communication. No retries, 30s timeout, logs errors but never throws. Template fallback to local filesystem.",
+      "desiredBehavior": "Add: Exponential backoff retry (3 attempts), circuit breaker pattern, LRU cache for templates, API versioning support.",
+      "gap": "Missing: Retry logic, circuit breaker, template caching, API versioning."
+    },
+    {
+      "file": "repos/minibob/src/impulse.ts",
+      "component": "ImpulseStore",
+      "currentBehavior": "Lazy loading with token budget enforcement (chars/4 estimation, 90% safety margin, naive truncation). Supports file, memo, activityOutput, custom pointers. No garbage collection.",
+      "desiredBehavior": "Add: Intelligent truncation (keep imports+signatures), real tokenizer (tiktoken), LRU cache with max size, truncation indicators in XML.",
+      "gap": "Missing: Intelligent truncation, real tokenizer, LRU cache, truncation metadata."
+    },
+    {
+      "file": "repos/minibob/src/tools.ts",
+      "component": "Tool Handlers",
+      "currentBehavior": "Executes bash, read, write, edit, git tools via Bun APIs. No path validation, no command whitelist, no input sanitization.",
+      "desiredBehavior": "Add: Path validation (prevent traversal), command whitelist, argument sanitization, working directory restriction.",
+      "gap": "CRITICAL SECURITY GAP: Command injection, path traversal, no input validation."
+    },
+    {
+      "file": "repos/minibob/src/llm.ts",
+      "component": "LLMClient",
+      "currentBehavior": "Supports Anthropic and OpenAI providers. Tool calling loop (max 20 iterations), no total token budget.",
+      "desiredBehavior": "Add: Activity-level token budget, cost tracking, rate limiting, timeout per LLM call.",
+      "gap": "Missing: Activity token budget, cost tracking, rate limiting."
+    },
+    {
+      "file": "helm/minibob/",
+      "component": "Kubernetes Deployment",
+      "currentBehavior": "Helm chart deploys minibob to testing-minibob namespace with ConfigMap for environment variables, Service for HTTP, no PodSecurityPolicy.",
+      "desiredBehavior": "Add: PodSecurityPolicy (restricted), NetworkPolicy (egress only to backend), ResourceLimits (CPU/memory), SecurityContext (non-root).",
+      "gap": "Missing: Security policies, network policies, resource limits, security context."
+    },
+    {
+      "file": "N/A (not implemented)",
+      "component": "ACP Gossip Discovery",
+      "currentBehavior": "Not implemented. ACP communication exists (POST /acp) but no gossip network for vessel discovery.",
+      "desiredBehavior": "Implement: Gossip protocol for vessel discovery, health monitoring, capability advertisement, task delegation routing.",
+      "gap": "MISSING FEATURE: ACP gossip network not implemented."
+    },
+    {
+      "file": "N/A (not implemented)",
+      "component": "Nested Activity Execution",
+      "currentBehavior": "ActivityExecutor can call itself recursively (activity tool), but no isolation between parent/child executions (shared activityOutputs Map).",
+      "desiredBehavior": "Add: Execution context isolation, parent-child traceability, nested execution limits (prevent infinite recursion), cost tracking across nesting.",
+      "gap": "PARTIAL: Works but has race conditions, no isolation, no limits."
+    },
+    {
+      "file": "N/A (backend-only)",
+      "component": "Activity Variant Creation",
+      "currentBehavior": "Not implemented in minibob. Backend handles variant creation via Thompson Sampling based on execution metrics.",
+      "desiredBehavior": "Current approach is correct (centralized learning). No change needed.",
+      "gap": "No gap - correctly delegated to backend."
+    },
+    {
+      "file": "N/A (not implemented)",
+      "component": "Activity Debugging",
+      "currentBehavior": "Console logging only. No execution history, no task replay, no breakpoints.",
+      "desiredBehavior": "Add: Execution history storage (local SQLite), task replay endpoint (POST /debug/replay), structured logging with redaction, breakpoint support.",
+      "gap": "MISSING FEATURE: No debugging capabilities beyond console logs."
+    },
+    {
+      "file": "N/A (backend-only)",
+      "component": "Learning Loops",
+      "currentBehavior": "Minibob reports execution metrics (POST /activity-executions). Backend implements Thompson Sampling. One-way flow (no feedback to vessel).",
+      "desiredBehavior": "Add: Feedback loop (backend recommends templates), impulse usage tracking, learned parameter reuse.",
+      "gap": "PARTIAL: Metrics reported but no feedback loop, no impulse tracking."
+    },
+    {
+      "file": "repos/minibob/src/config.ts",
+      "component": "Configuration Loading",
+      "currentBehavior": "Cascade: ENV vars > file config > defaults. No validation, crashes on malformed config.",
+      "desiredBehavior": "Add: Zod schema validation, friendly error messages, config reload endpoint (POST /config/reload).",
+      "gap": "Missing: Schema validation, error handling, hot reload."
+    }
+  ],
+  "dataFlow": {
+    "userInitiated": "HTTP POST /run → handleRunActivity → loadTemplate (MCP/local) → ActivityExecutor.execute → createImpulses (unloaded) → topologicalSort → executeTask (load impulses → format XML → LLM complete → tool loop → validate) → reportExecution (MCP) → HTTP Response",
+    "autonomous": "Timer (30s) → checkIdle (60s threshold) → fetchTasks (MCP) → sortByPriority → executeBoredomTask (ActivityExecutor) → reportResult (MCP) → resetIdleTimer",
+    "acpDelegation": "HTTP POST /acp → handleACPRequest → ACPSession.handleMessage → LLM complete → ACP Response",
+    "impulseLoading": "ContextRequirement → interpolate → create (unloaded) → task references → load (resolve pointer → estimate tokens → truncate if over budget → cache) → formatXML → LLM context"
+  },
+  "architecturalBoundaries": [
+    {
+      "boundary": "Kubernetes → Process",
+      "type": "deployment",
+      "contract": "Environment variables, health probes, SIGTERM",
+      "resilience": "Health checks restart unhealthy pods"
+    },
+    {
+      "boundary": "HTTP → Application",
+      "type": "network",
+      "contract": "JSON over HTTP/1.1",
+      "resilience": "Try-catch per request, 500 on error"
+    },
+    {
+      "boundary": "Application → LLM API",
+      "type": "external service",
+      "contract": "Provider-specific REST APIs (Anthropic/OpenAI)",
+      "resilience": "No retry, timeout via fetch signal"
+    },
+    {
+      "boundary": "Application → MCP Backend",
+      "type": "internal service",
+      "contract": "REST API (GET/POST JSON)",
+      "resilience": "Fire-and-forget, graceful degradation"
+    },
+    {
+      "boundary": "Application → Filesystem",
+      "type": "data store",
+      "contract": "Bun.file() API",
+      "resilience": "File not found returns error ToolResult"
+    },
+    {
+      "boundary": "Vessel → Vessel (ACP)",
+      "type": "protocol",
+      "contract": "ACPMessage JSON protocol",
+      "resilience": "Session isolation, error messages in protocol"
+    }
+  ],
+  "capabilities": {
+    "implemented": [
+      "Activity execution (POST /run)",
+      "Boredom tasks (autonomous polling)",
+      "MCP backend integration (templates, executions, vessels, tasks)",
+      "Impulse system (file, memo, activityOutput, custom)",
+      "ACP communication (POST /acp)",
+      "Basic retry with error context (max 3 attempts)",
+      "Kubernetes deployment (Helm chart)"
+    ],
+    "partial": [
+      "Trailblazing (simple retry only, no AI recovery)",
+      "Learning loops (metrics reported, no feedback loop)",
+      "Nested activities (works but has race conditions)",
+      "Configuration management (works but no validation)"
+    ],
+    "missing": [
+      "ACP gossip discovery",
+      "Activity debugging (history, replay, breakpoints)",
+      "Security hardening (input validation, path validation, command whitelist)",
+      "Cost control (activity token budget, cost tracking)",
+      "Reliability (exponential backoff, circuit breaker, graceful shutdown)",
+      "Observability (structured logging, metrics export)",
+      "Impulse usage tracking",
+      "Learned parameter reuse",
+      "Intelligent impulse truncation",
+      "Template schema validation"
+    ]
+  },
+  "criticalRisks": [
+    {
+      "severity": "HIGH",
+      "category": "Security",
+      "issue": "Command Injection",
+      "location": "repos/minibob/src/tools.ts (bash handler)",
+      "impact": "LLM can execute arbitrary shell commands (rm -rf /)",
+      "mitigation": "Command whitelist, argument validation, sandboxing"
+    },
+    {
+      "severity": "HIGH",
+      "category": "Security",
+      "issue": "Path Traversal",
+      "location": "repos/minibob/src/tools.ts (read/write handlers)",
+      "impact": "Can access ../../etc/passwd, modify sensitive files",
+      "mitigation": "Path canonicalization, working directory restriction"
+    },
+    {
+      "severity": "HIGH",
+      "category": "Security",
+      "issue": "Input Validation Missing",
+      "location": "repos/minibob/index.ts (HTTP handlers)",
+      "impact": "Server crashes, prototype pollution, DoS",
+      "mitigation": "Zod schema validation, size limits"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "Cost",
+      "issue": "Unbounded Token Usage",
+      "location": "repos/minibob/src/llm.ts",
+      "impact": "Runaway costs ($100+ per activity possible)",
+      "mitigation": "Activity-level token budget, cost tracking, alerts"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "Reliability",
+      "issue": "No Error Recovery in Boredom Loop",
+      "location": "repos/minibob/src/boredom.ts",
+      "impact": "Resource waste, log spam, thundering herd",
+      "mitigation": "Exponential backoff, circuit breaker"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "Reliability",
+      "issue": "Race Condition in activityOutputs",
+      "location": "repos/minibob/src/activity.ts",
+      "impact": "Nested activities corrupt parent state",
+      "mitigation": "Namespace by execution instance, immutable outputs"
+    }
+  ],
+  "productionReadiness": {
+    "readyForTesting": true,
+    "readyForProduction": false,
+    "blockers": [
+      "Security vulnerabilities (command injection, path traversal)",
+      "Cost control missing (unbounded token usage)",
+      "Reliability issues (no retry/circuit breaker)",
+      "Observability gaps (console logs only)",
+      "Input validation missing"
+    ],
+    "recommendedPhases": [
+      {
+        "phase": 1,
+        "name": "Security Hardening",
+        "duration": "Weeks 1-2",
+        "tasks": [
+          "Add path validation to file tools",
+          "Add command whitelist to bash tool",
+          "Add request body schema validation",
+          "Add K8s security context"
+        ]
+      },
+      {
+        "phase": 2,
+        "name": "Reliability",
+        "duration": "Weeks 3-4",
+        "tasks": [
+          "Add exponential backoff to boredom loop",
+          "Add circuit breaker for backend",
+          "Add activity-level token budget",
+          "Add graceful shutdown handling"
+        ]
+      },
+      {
+        "phase": 3,
+        "name": "Observability",
+        "duration": "Weeks 5-6",
+        "tasks": [
+          "Add structured logging with redaction",
+          "Add metrics export (Prometheus)",
+          "Add execution history storage",
+          "Add cost tracking/alerting"
+        ]
+      },
+      {
+        "phase": 4,
+        "name": "Enhancement",
+        "duration": "Weeks 7-8",
+        "tasks": [
+          "Implement true trailblazing mode",
+          "Add intelligent impulse truncation",
+          "Add template schema validation",
+          "Add feedback loop from backend"
+        ]
+      }
+    ]
+  },
+  "traceImpulseId": "trace-minibob-standalone-execution"
+}
