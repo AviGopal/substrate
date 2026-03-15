@@ -1,0 +1,116 @@
+{
+  "specificationName": "minibob-standalone-execution",
+  "harnessFile": "tests/validation-harnesses/minibob-standalone-execution-harness.ts",
+  "deploymentScript": "scripts/deploy-testing-minibob.sh",
+  "helmValues": "helm/testing-minibob-values.yaml",
+  "testCases": [
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-1",
+      "testCase": "Pod Health and Readiness",
+      "input": {"namespace": "testing-minibob", "expectedReplicas": 3},
+      "expectedOutput": {"replicas": 3, "readyReplicas": 3, "allRunning": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-2",
+      "testCase": "Activity Execution and Tracking",
+      "input": {"template": "test-activity-validation"},
+      "expectedOutput": {"status": 200, "activityStatus": "completed"}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-3",
+      "testCase": "Dynamic Activity Creation",
+      "input": {"impulseCreate": true},
+      "expectedOutput": {"impulseCreated": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-4",
+      "testCase": "Trailblazing - Success After Retry",
+      "input": {"retryMaxAttempts": 3},
+      "expectedOutput": {"retriesAttempted": true, "eventualSuccess": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-5",
+      "testCase": "Trailblazing - Failure After Limit",
+      "input": {"alwaysFails": true, "retryMaxAttempts": 3},
+      "expectedOutput": {"status": "failed", "attempts": 3}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-6",
+      "testCase": "ACP Gossip Discovery",
+      "input": {"minPods": 2},
+      "expectedOutput": {"acpEndpoint": true, "gossipDiscovery": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-7",
+      "testCase": "Nested Activity Execution",
+      "input": {"parentActivity": true, "nestedTemplateId": "nested-test"},
+      "expectedOutput": {"nestedExecutionAttempted": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-8",
+      "testCase": "Boredom Task Execution",
+      "input": {"idleThreshold": 60000, "pollInterval": 30000},
+      "expectedOutput": {"boredomInitialized": true, "autonomousPolling": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-9",
+      "testCase": "Impulse Agent Execution",
+      "input": {"activityReferencesImpulse": true},
+      "expectedOutput": {"impulseCreated": true, "impulseLoaded": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-10",
+      "testCase": "Learning Loop Metrics",
+      "input": {"backendUrl": "http://api.metabob.local"},
+      "expectedOutput": {"status": 200, "metricsReported": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-11",
+      "testCase": "Learned Parameter Reuse",
+      "input": {"reExecuteSameActivity": true},
+      "expectedOutput": {"impulseAgentSkipped": true, "learnedParamsUsed": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-12",
+      "testCase": "Activity Variant Creation",
+      "input": {"successfulExecution": true},
+      "expectedOutput": {"status": 200, "variantsCreated": true}
+    },
+    {
+      "impulseId": "validation-minibob-standalone-execution-case-13",
+      "testCase": "Activity Debugging Capabilities",
+      "input": {"activityWithError": true},
+      "expectedOutput": {"errorCaptured": true, "debugInfoAvailable": true}
+    }
+  ],
+  "harnessImpulseId": "harness-minibob-standalone-execution",
+  "deployment": {
+    "namespace": "testing-minibob",
+    "helmRelease": "minibob",
+    "replicas": 3,
+    "backendUrl": "http://api.metabob.local",
+    "prerequisites": ["kubectl", "helm", "bun", "ANTHROPIC_API_KEY"]
+  },
+  "validation": {
+    "noLLMDependency": true,
+    "exitCode": {"pass": 0, "fail": 1},
+    "expectedResults": {
+      "totalTests": 13,
+      "expectedPasses": 12,
+      "expectedFailures": 1,
+      "failureReason": "Learned Parameter Reuse not yet implemented"
+    }
+  },
+  "knownLimitations": [
+    "Learned Parameter Reuse (Test 11) - Backend feedback loop not implemented",
+    "ACP Gossip Discovery (Test 6) - Gossip protocol not implemented (ACP endpoint only)",
+    "Task Replay (Test 13) - Execution history storage not implemented",
+    "Nested Activity Isolation (Test 7) - Race condition in activityOutputs Map"
+  ],
+  "relatedImpulses": [
+    "trace-minibob-standalone-execution",
+    "enforcement-minibob-standalone-execution",
+    "harness-minibob-standalone-execution"
+  ],
+  "createdDate": "2026-03-14"
+}
