@@ -1,0 +1,16 @@
+{
+  "id": "validation-minibob-complete-system-integration-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\"testCase\": \"Full validation (including autonomous behavior)\", \"input\": {\"repoPath\": \"./repos/minibob\", \"helmPath\": \"./helm\", \"environment\": \"testing\", \"layer\": \"testing-cluster\", \"skipLongRunning\": false}, \"expectedOutput\": {\"pass\": true, \"stepsCompleted\": 8, \"minPassedSteps\": 7}}",
+    "source": "validation-harness-test-case"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCaseNumber": 2,
+    "description": "Full validation including autonomous execution and git commits",
+    "skipLongRunning": false,
+    "expectedSteps": 8
+  }
+}

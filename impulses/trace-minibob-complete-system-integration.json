@@ -1,0 +1,21 @@
+{
+  "id": "trace-minibob-complete-system-integration",
+  "type": "templateDefinition",
+  "pointer": {
+    "type": "file",
+    "path": "/tmp/minibob-complete-system-integration-trace.json",
+    "source": "trace-data-flow-single-feature analysis"
+  },
+  "budget": 5000,
+  "metadata": {
+    "specificationName": "minibob Complete System Integration - End-to-End Vessel Development Workflow",
+    "category": "system-integration",
+    "workflow": "deploy-and-validate.sh → helmfile deployment → auto-configuration → validation tests → metrics collection → feedback analysis → boredom-driven refinement → loop restart",
+    "componentCount": 11,
+    "observationPoints": 11,
+    "validationSteps": 8,
+    "createdBy": "trace-enforce-validate-loop activity",
+    "createdAt": "2026-03-16T04:32:00Z",
+    "purpose": "Enable downstream validation and enforcement of complete minibob system integration"
+  }
+}

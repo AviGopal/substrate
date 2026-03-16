@@ -1,0 +1,22 @@
+{
+  "id": "harness-minibob-complete-system-integration",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/minibob-complete-system-integration-harness.ts",
+    "source": "validation-harness-implementation"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specificationName": "minibob Complete System Integration - End-to-End Vessel Development Workflow",
+    "harnessType": "end-to-end-integration",
+    "testSteps": 8,
+    "quickValidationSteps": 6,
+    "requiresCluster": true,
+    "requiresBackend": true,
+    "testCaseCount": 4,
+    "createdBy": "trace-enforce-validate-loop activity",
+    "purpose": "Automated validation of complete minibob system integration without LLM",
+    "usage": "import runValidation from './minibob-complete-system-integration-harness'; const result = await runValidation(input);"
+  }
+}

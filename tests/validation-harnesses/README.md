@@ -1,163 +1,226 @@
 # Validation Harnesses
 
-This directory contains validation harnesses for testing specifications through external observation.
+Automated validation harnesses for testing specifications without requiring an LLM.
 
-## minibob Testing Infrastructure Harness
+## minibob Complete System Integration Harness
 
-**File**: `minibob-testing-infrastructure-harness.ts`
+**File**: `minibob-complete-system-integration-harness.ts`  
+**Specification**: minibob Complete System Integration - End-to-End Vessel Development Workflow  
+**Impulse**: `harness-minibob-complete-system-integration`
 
-**Purpose**: Validates the minibob Testing Infrastructure Development-Deployment-Runtime-Refinement Loop specification through external observation of the closed feedback loop.
+### Purpose
 
-### Validation Phases
+Validates the complete minibob vessel development workflow end-to-end:
+- deployment → auto-configuration → validation → observation → refinement → repeat
 
-1. **Deployment State** - kubectl namespace and pod status validation
-2. **Activity Validation** - test-vessel-capabilities.sh execution and results
-3. **Backend Records** - API queries for execution records and metrics
-4. **Boredom System** - Pod logs and environment variable validation
-5. **Metrics Collection** - Local metrics files validation
-6. **Infrastructure Visualization** - visualize-testing-infrastructure.sh output
-7. **Helmfile Orchestration** - Multi-namespace release state validation
+This harness proves that "minibob is a vessel for developing vessels" by verifying the complete autonomous development cycle.
 
-### Usage
+### Validation Steps
 
-#### CLI Execution
+The harness executes 8 validation steps:
 
-```bash
-# Validate testing-minibob namespace (single pod, boredom disabled)
-ts-node tests/validation-harnesses/minibob-testing-infrastructure-harness.ts testing-minibob
+1. **Local Development Phase** - Tests pass, type check passes, Docker image ready
+2. **Deployment Phase** - Helmfile deployment successful, pods running
+3. **Self-Configuration** - Environment detected, capabilities match expected
+4. **Capability Tests** - Activity execution, ACP delegation, boredom system
+5. **Metrics Collection** - Metrics files exist with valid structure
+6. **Boredom Task Queue** - Backend endpoint accessible, tasks queryable
+7. **Autonomous Execution** - Boredom system executes tasks (optional, requires time)
+8. **Autonomous Commits** - Git log shows vessel commits (optional, requires time)
 
-# Validate minibob-cluster namespace (3 pods, boredom enabled)
-ts-node tests/validation-harnesses/minibob-testing-infrastructure-harness.ts minibob-cluster
-
-# Validate with custom backend namespace
-ts-node tests/validation-harnesses/minibob-testing-infrastructure-harness.ts testing-minibob custom-backend
-```
-
-#### TypeScript Import
-
-```typescript
-import { runValidation } from './tests/validation-harnesses/minibob-testing-infrastructure-harness';
-
-const result = await runValidation({
-  namespace: 'testing-minibob',
-  backendNamespace: 'metabob',
-  skipBoredomValidation: true,
-  metricsDir: 'repos/minibob/metrics'
-});
-
-if (result.pass) {
-  console.log('✅ All validation phases passed');
-} else {
-  console.error('❌ Validation failed');
-  console.error(`Failed phases: ${result.summary.failedPhases}`);
-}
-```
+Steps 7-8 are optional and can be skipped with `skipLongRunning: true` for quick validation.
 
 ### Test Cases
 
-Three test case impulses are provided for different deployment scenarios:
+Four test cases are provided as impulses:
 
-1. **validation-minibob-testing-infrastructure-case-1**: Single Pod (testing-minibob)
-   - 1 pod, boredom disabled
-   - Expected: 6 phases pass, 1 phase skipped (boredom)
-   - Activity tests: 3/4 pass (ACP delegation skipped)
+#### Test Case 1: Quick Validation (testing-cluster)
+- **Impulse**: `validation-minibob-complete-system-integration-case-1`
+- **Layer**: `testing-cluster` (3 pods, boredom + gossip enabled)
+- **Skip Long Running**: Yes
+- **Steps**: 6
+- **Expected**: All 6 steps pass
 
-2. **validation-minibob-testing-infrastructure-case-2**: Cluster (minibob-cluster)
-   - 3 pods, boredom enabled
-   - Expected: 7 phases pass, 0 phases skipped
-   - Activity tests: 4/4 pass (including ACP delegation)
+#### Test Case 2: Full Validation (testing-cluster)
+- **Impulse**: `validation-minibob-complete-system-integration-case-2`
+- **Layer**: `testing-cluster` (3 pods, boredom + gossip enabled)
+- **Skip Long Running**: No
+- **Steps**: 8
+- **Expected**: At least 7 steps pass (autonomous behavior may take time)
 
-3. **validation-minibob-testing-infrastructure-case-3**: Development Layer (minibob-dev)
-   - 1 pod, minimal resources, boredom disabled
-   - Expected: 6 phases pass, 1 phase skipped (boredom)
-   - Activity tests: 3/4 pass (ACP delegation skipped)
+#### Test Case 3: Single Pod Validation (dev)
+- **Impulse**: `validation-minibob-complete-system-integration-case-3`
+- **Layer**: `dev` (1 pod, no boredom, no gossip)
+- **Skip Long Running**: Yes
+- **Steps**: 6
+- **Expected**: All 6 steps pass, capabilities = [activities, impulses, git, acp]
 
-### Return Value
+#### Test Case 4: Staging Validation
+- **Impulse**: `validation-minibob-complete-system-integration-case-4`
+- **Layer**: `staging` (3 pods, production simulation)
+- **Skip Long Running**: Yes
+- **Steps**: 6
+- **Expected**: All 6 steps pass, capabilities = [activities, impulses, git, acp, acp-gossip, boredom]
+
+### Usage
+
+#### As TypeScript Module
 
 ```typescript
-interface ValidationOutput {
-  pass: boolean;  // Overall result
-  phase1_deploymentState: PhaseResult;
-  phase2_activityValidation: PhaseResult;
-  phase3_backendRecords: PhaseResult;
-  phase4_boredomSystem: PhaseResult;
-  phase5_metricsCollection: PhaseResult;
-  phase6_infrastructureVisualization: PhaseResult;
-  phase7_helmfileOrchestration: PhaseResult;
-  summary: {
-    totalPhases: number;      // Non-skipped phases
-    passedPhases: number;     // Phases that passed
-    failedPhases: number;     // Phases that failed
-    skippedPhases: number;    // Phases that were skipped
-  };
-}
+import runValidation from "./minibob-complete-system-integration-harness"
 
-interface PhaseResult {
-  pass: boolean;
-  skipped?: boolean;
-  actual: unknown;     // Actual values observed
-  expected: unknown;   // Expected values
-  error?: string;      // Error message if failed
+const result = await runValidation({
+  repoPath: "./repos/minibob",
+  helmPath: "./helm",
+  environment: "testing",
+  layer: "testing-cluster",
+  skipLongRunning: true
+})
+
+if (result.pass) {
+  console.log("✅ Validation passed!")
+  console.log(result.summary)
+} else {
+  console.log("❌ Validation failed")
+  for (const step of result.steps) {
+    if (!step.pass) {
+      console.log(`Failed step ${step.step}: ${step.name}`)
+      console.log(`  ${step.message}`)
+    }
+  }
 }
 ```
 
-### External Observation Points
+#### As CLI Script
 
-The harness validates the infrastructure through **external observation only** (no LLM required):
+```bash
+# Quick validation (test case 1)
+bun run tests/validation-harnesses/run-minibob-validation.ts 1
 
-- **kubectl commands** - Pod status, logs, environment variables
-- **Backend API queries** - Execution records, metrics endpoints
-- **File system checks** - Metrics files, script outputs
-- **Script execution** - test-vessel-capabilities.sh, visualize-testing-infrastructure.sh
-- **Helmfile state** - Release list, deployment orchestration
+# Full validation (test case 2)
+bun run tests/validation-harnesses/run-minibob-validation.ts 2
 
-### Integration with Specification
+# Dev layer validation (test case 3)
+bun run tests/validation-harnesses/run-minibob-validation.ts 3
 
-This harness validates the specification requirements:
-
-| Requirement | Validated By |
-|-------------|--------------|
-| Progressive K8s Layers | Phase 1 (deployment state) + Phase 7 (helmfile) |
-| Activity Validation | Phase 2 (activity validation) |
-| Backend Integration | Phase 3 (backend records) |
-| Metrics Collection | Phase 5 (metrics collection) |
-| Boredom System | Phase 4 (boredom system) |
-| Closed Loop | All phases combined |
-| Traceability | Phase 3 + Phase 5 (partial - git SHA traceability is enhancement) |
+# Staging layer validation (test case 4)
+bun run tests/validation-harnesses/run-minibob-validation.ts 4
+```
 
 ### Prerequisites
 
-- kubectl configured with access to K8s cluster
-- Deployed minibob infrastructure (via helmfile)
-- Backend API accessible (metabob-rpc-api pod running)
-- Metrics directory exists (repos/minibob/metrics/)
+- Kind cluster running with minibob deployed
+- Helm and helmfile installed
+- kubectl configured for cluster access
+- Backend (metabob-rpc-api) deployed and accessible
+- bun runtime installed
 
-### Exit Codes
-
-- **0**: All validation phases passed
-- **1**: One or more validation phases failed
-
-### Example Output
+### Expected Output
 
 ```
-=== Validating minibob Testing Infrastructure ===
-Namespace: testing-minibob
-Backend Namespace: metabob
-Skip Boredom Validation: true
-Metrics Directory: repos/minibob/metrics
+================================================================================
+VALIDATION RESULTS
+================================================================================
+Status: ✅ PASS
+Summary: ✅ ALL VALIDATION STEPS PASSED (6/6)
+Timestamp: 2026-03-16T10:30:00.000Z
 
-Phase 1 (Deployment State): ✅ PASS
-Phase 2 (Activity Validation): ✅ PASS
-Phase 3 (Backend Records): ✅ PASS
-Phase 4 (Boredom System): ⏭️ SKIPPED
-Phase 5 (Metrics Collection): ✅ PASS
-Phase 6 (Infrastructure Visualization): ✅ PASS
-Phase 7 (Helmfile Orchestration): ✅ PASS
+Step Results:
+================================================================================
 
-=== Validation Summary ===
-Total Phases: 6
-Passed: 6
-Failed: 0
-Skipped: 1
-Overall: ✅ PASS
+✅ Step 1: Local Development Phase
+   Tests pass, types check, Docker ready
+
+✅ Step 2: Deployment Phase
+   Deployed to minibob-cluster, pods running
+
+✅ Step 3: Self-Configuration Verification
+   Environment detected, capabilities: activities, impulses, git, acp, acp-gossip, boredom
+
+✅ Step 4: Capability Tests
+   4 tests passed (>= 4 expected)
+
+✅ Step 5: Metrics Collection
+   Metrics file found: metrics-20260316-103000.json, 42 executions
+
+✅ Step 6: Boredom Task Queue
+   Boredom task queue accessible, 3 tasks
+
+================================================================================
+Final Status: ✅ PASS
+================================================================================
 ```
+
+### Architecture
+
+The harness is designed to be:
+
+- **LLM-Free**: No language model required for validation
+- **Deterministic**: Same inputs always produce same pass/fail results
+- **Observable**: Detailed step-by-step output for debugging
+- **Historical**: Test cases stored as impulses can be replayed anytime
+- **Fast**: Quick mode (6 steps) completes in ~2 minutes
+- **Comprehensive**: Full mode (8 steps) validates autonomous behavior
+
+### Integration with CI/CD
+
+Add to your CI/CD pipeline:
+
+```yaml
+# .github/workflows/validate-minibob.yml
+name: Validate minibob System Integration
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+      - name: Setup kind cluster
+        run: ./scripts/setup-kind-cluster.sh
+      - name: Deploy minibob
+        run: cd helm && helmfile -e testing sync -l namespace=minibob-cluster
+      - name: Run validation
+        run: bun run tests/validation-harnesses/run-minibob-validation.ts 1
+      - name: Collect results
+        if: always()
+        run: |
+          kubectl logs -n minibob-cluster minibob-0 > validation-logs.txt
+          ls -la repos/minibob/metrics/
+```
+
+### Extending the Harness
+
+To add new validation steps:
+
+1. Add a new `validateXYZ()` function following the pattern
+2. Return a `StepResult` with pass/fail status
+3. Add the step to `runValidation()` steps array
+4. Update test case impulses with new expected step count
+5. Document the new step in this README
+
+### Troubleshooting
+
+**Step 1 fails**: Check that bun test and bun typecheck work locally
+**Step 2 fails**: Verify helmfile is installed and cluster is accessible
+**Step 3 fails**: Check pod logs for startup errors
+**Step 4 fails**: Run test-vessel-capabilities.sh manually to see which test fails
+**Step 5 fails**: Check if metrics/ directory exists in repos/minibob
+**Step 6 fails**: Verify backend is deployed and /boredom-tasks endpoint works
+**Step 7 fails**: Wait longer or check boredom system is enabled in cluster mode
+**Step 8 fails**: Requires boredom to execute and commit - may take time
+
+### Related Files
+
+- **Harness**: `minibob-complete-system-integration-harness.ts`
+- **Runner**: `run-minibob-validation.ts`
+- **Test Cases**: `impulses/validation-minibob-complete-system-integration-case-*.json`
+- **Harness Impulse**: `impulses/harness-minibob-complete-system-integration.json`
+- **Trace**: `MINIBOB_COMPLETE_SYSTEM_INTEGRATION_TRACE.md`
+- **Enforcement**: `MINIBOB_COMPLETE_SYSTEM_INTEGRATION_ENFORCEMENT.md`
+
+---
+
+*"Validation without LLM proves the specification through observable, deterministic outcomes."*
