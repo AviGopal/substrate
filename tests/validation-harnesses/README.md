@@ -1,181 +1,163 @@
 # Validation Harnesses
 
-This directory contains automated validation harnesses for verifying specification compliance without requiring LLM inference.
+This directory contains validation harnesses for testing specifications through external observation.
 
-## Purpose
+## minibob Testing Infrastructure Harness
 
-Validation harnesses provide:
-1. **Regression Detection** - Catch specification violations after code changes
-2. **Deployment Validation** - Verify deployments meet architectural requirements
-3. **Historical Validation** - Re-run tests without LLM using stored expected values
-4. **CI/CD Integration** - Automated pass/fail checks in pipelines
+**File**: `minibob-testing-infrastructure-harness.ts`
 
-## Available Harnesses
+**Purpose**: Validates the minibob Testing Infrastructure Development-Deployment-Runtime-Refinement Loop specification through external observation of the closed feedback loop.
 
-### SurrealDB v3.0.0 Schema Initialization
-**File:** `surrealdb-v3-schema-init-harness.sh`  
-**Specification:** SurrealDB v3.0.0 Schema Initialization on K8s Deployment  
-**Checks:** 11 validation checks  
-**Impulse:** harness-surrealdb-v3-schema-init
+### Validation Phases
 
-Validates:
-- SurrealDB v3.0.0 deployment with correct flags
-- StatefulSet with RocksDB persistence
-- Schema initialization with PERMISSIONS FULL
-- Database name alignment (SurrealDB ↔ RPC API)
-- End-to-end data flow (GAP-9 test)
+1. **Deployment State** - kubectl namespace and pod status validation
+2. **Activity Validation** - test-vessel-capabilities.sh execution and results
+3. **Backend Records** - API queries for execution records and metrics
+4. **Boredom System** - Pod logs and environment variable validation
+5. **Metrics Collection** - Local metrics files validation
+6. **Infrastructure Visualization** - visualize-testing-infrastructure.sh output
+7. **Helmfile Orchestration** - Multi-namespace release state validation
 
-### User Activity Tracking - CLI to Dashboard Data Flow
-**File:** `user-activity-tracking-harness.ts`  
-**Specification:** User Activity Tracking - CLI to Dashboard Data Flow  
-**Checks:** 5 test cases with 4 validation steps each  
-**Impulse:** harness-User Activity Tracking - CLI to Dashboard Data Flow
+### Usage
 
-Validates:
-- CLI activity posting with API key authentication
-- User email extraction from API keys and JWT tokens
-- Database storage of user_email field
-- API response formatting (actor.email)
-- Multi-tenant isolation (org_id filtering)
+#### CLI Execution
 
-**Usage:**
 ```bash
-# Run all test cases
-npx tsx tests/validation-harnesses/run-validation.ts
+# Validate testing-minibob namespace (single pod, boredom disabled)
+ts-node tests/validation-harnesses/minibob-testing-infrastructure-harness.ts testing-minibob
 
-# Run specific test case
-npx tsx tests/validation-harnesses/run-validation.ts --case 1
+# Validate minibob-cluster namespace (3 pods, boredom enabled)
+ts-node tests/validation-harnesses/minibob-testing-infrastructure-harness.ts minibob-cluster
 
-# Use custom base URL
-npx tsx tests/validation-harnesses/run-validation.ts --base-url http://staging.metabob.com
+# Validate with custom backend namespace
+ts-node tests/validation-harnesses/minibob-testing-infrastructure-harness.ts testing-minibob custom-backend
 ```
 
-**Test Cases:**
-1. CLI User Tracking - API Key Authentication
-2. JWT User Tracking - Dashboard Authentication
-3. Multi-User Attribution - Different API Keys
-4. Multi-Tenant Isolation - Different Organizations
-5. Fallback Behavior - No User Email
+#### TypeScript Import
 
-## Usage
+```typescript
+import { runValidation } from './tests/validation-harnesses/minibob-testing-infrastructure-harness';
 
-### Run Validation (Human Output)
-```bash
-./surrealdb-v3-schema-init-harness.sh
+const result = await runValidation({
+  namespace: 'testing-minibob',
+  backendNamespace: 'metabob',
+  skipBoredomValidation: true,
+  metricsDir: 'repos/minibob/metrics'
+});
+
+if (result.pass) {
+  console.log('✅ All validation phases passed');
+} else {
+  console.error('❌ Validation failed');
+  console.error(`Failed phases: ${result.summary.failedPhases}`);
+}
 ```
 
-### Run Validation (JSON Output for CI/CD)
-```bash
-./surrealdb-v3-schema-init-harness.sh --json
+### Test Cases
+
+Three test case impulses are provided for different deployment scenarios:
+
+1. **validation-minibob-testing-infrastructure-case-1**: Single Pod (testing-minibob)
+   - 1 pod, boredom disabled
+   - Expected: 6 phases pass, 1 phase skipped (boredom)
+   - Activity tests: 3/4 pass (ACP delegation skipped)
+
+2. **validation-minibob-testing-infrastructure-case-2**: Cluster (minibob-cluster)
+   - 3 pods, boredom enabled
+   - Expected: 7 phases pass, 0 phases skipped
+   - Activity tests: 4/4 pass (including ACP delegation)
+
+3. **validation-minibob-testing-infrastructure-case-3**: Development Layer (minibob-dev)
+   - 1 pod, minimal resources, boredom disabled
+   - Expected: 6 phases pass, 1 phase skipped (boredom)
+   - Activity tests: 3/4 pass (ACP delegation skipped)
+
+### Return Value
+
+```typescript
+interface ValidationOutput {
+  pass: boolean;  // Overall result
+  phase1_deploymentState: PhaseResult;
+  phase2_activityValidation: PhaseResult;
+  phase3_backendRecords: PhaseResult;
+  phase4_boredomSystem: PhaseResult;
+  phase5_metricsCollection: PhaseResult;
+  phase6_infrastructureVisualization: PhaseResult;
+  phase7_helmfileOrchestration: PhaseResult;
+  summary: {
+    totalPhases: number;      // Non-skipped phases
+    passedPhases: number;     // Phases that passed
+    failedPhases: number;     // Phases that failed
+    skippedPhases: number;    // Phases that were skipped
+  };
+}
+
+interface PhaseResult {
+  pass: boolean;
+  skipped?: boolean;
+  actual: unknown;     // Actual values observed
+  expected: unknown;   // Expected values
+  error?: string;      // Error message if failed
+}
 ```
+
+### External Observation Points
+
+The harness validates the infrastructure through **external observation only** (no LLM required):
+
+- **kubectl commands** - Pod status, logs, environment variables
+- **Backend API queries** - Execution records, metrics endpoints
+- **File system checks** - Metrics files, script outputs
+- **Script execution** - test-vessel-capabilities.sh, visualize-testing-infrastructure.sh
+- **Helmfile state** - Release list, deployment orchestration
+
+### Integration with Specification
+
+This harness validates the specification requirements:
+
+| Requirement | Validated By |
+|-------------|--------------|
+| Progressive K8s Layers | Phase 1 (deployment state) + Phase 7 (helmfile) |
+| Activity Validation | Phase 2 (activity validation) |
+| Backend Integration | Phase 3 (backend records) |
+| Metrics Collection | Phase 5 (metrics collection) |
+| Boredom System | Phase 4 (boredom system) |
+| Closed Loop | All phases combined |
+| Traceability | Phase 3 + Phase 5 (partial - git SHA traceability is enhancement) |
+
+### Prerequisites
+
+- kubectl configured with access to K8s cluster
+- Deployed minibob infrastructure (via helmfile)
+- Backend API accessible (metabob-rpc-api pod running)
+- Metrics directory exists (repos/minibob/metrics/)
 
 ### Exit Codes
-- `0` - All checks passed
-- `1` - One or more checks failed
 
-## Creating New Harnesses
+- **0**: All validation phases passed
+- **1**: One or more validation phases failed
 
-1. **Define Test Cases** - Create impulses with expected inputs/outputs
-2. **Write Harness Script** - Implement validation logic (no LLM needed)
-3. **Document Harness** - Create impulse with file pointer and usage
-4. **Store in Git** - Commit harness script to this directory
+### Example Output
 
-### Template Structure
-```bash
-#!/bin/bash
-# Validation Harness: [Specification Name]
-# Purpose: [Brief description]
-# Usage: ./[harness-name].sh [--json]
-
-set -euo pipefail
-
-# ... validation checks ...
-
-# Output results (human or JSON)
-if [[ "$JSON_OUTPUT" == "true" ]]; then
-    # JSON format
-else
-    # Human-readable format
-fi
 ```
+=== Validating minibob Testing Infrastructure ===
+Namespace: testing-minibob
+Backend Namespace: metabob
+Skip Boredom Validation: true
+Metrics Directory: repos/minibob/metrics
 
-## Integration with CI/CD
+Phase 1 (Deployment State): ✅ PASS
+Phase 2 (Activity Validation): ✅ PASS
+Phase 3 (Backend Records): ✅ PASS
+Phase 4 (Boredom System): ⏭️ SKIPPED
+Phase 5 (Metrics Collection): ✅ PASS
+Phase 6 (Infrastructure Visualization): ✅ PASS
+Phase 7 (Helmfile Orchestration): ✅ PASS
 
-### GitHub Actions
-```yaml
-- name: Run Validation Harness
-  run: |
-    ./tests/validation-harnesses/surrealdb-v3-schema-init-harness.sh --json > results.json
-    jq -e '.pass == true' results.json
-
-- name: Run User Activity Tracking Validation
-  run: |
-    npx tsx tests/validation-harnesses/run-validation.ts --base-url ${{ secrets.API_BASE_URL }}
+=== Validation Summary ===
+Total Phases: 6
+Passed: 6
+Failed: 0
+Skipped: 1
+Overall: ✅ PASS
 ```
-
-### GitLab CI
-```yaml
-validate:
-  script:
-    - ./tests/validation-harnesses/surrealdb-v3-schema-init-harness.sh --json > results.json
-    - test "$(jq -r '.pass' results.json)" = "true"
-```
-
-## Impulse System Integration
-
-Each harness has associated impulses:
-
-- **Harness Impulse** - File pointer and documentation
-  - ID: `harness-[spec-name]`
-  - Type: file
-  - Purpose: Reference to harness script
-
-- **Test Case Impulses** - Expected inputs/outputs
-  - ID: `validation-[spec-name]-case-N`
-  - Type: memo
-  - Purpose: Historical test data (no LLM needed)
-
-These impulses enable:
-- Rerunning tests without LLM inference
-- Historical validation against past specifications
-- Cross-agent validation sharing
-
-## Best Practices
-
-1. **No LLM Required** - Harnesses should be pure shell/Python/TypeScript scripts
-2. **Deterministic** - Same input always produces same output
-3. **Fast** - Should complete in < 60 seconds
-4. **Isolated** - No side effects, idempotent
-5. **Clear Output** - Both human and machine-readable formats
-6. **Documented** - Each check has clear expected vs actual values
-
-## Troubleshooting
-
-### Harness Fails After Deployment
-1. Check if deployment completed: `kubectl get pods -n metabob`
-2. Review harness output for specific failed check
-3. Compare actual vs expected values
-4. Check impulse for expected behavior
-
-### JSON Output Parsing Errors
-```bash
-# Validate JSON output
-./harness.sh --json | jq '.'
-
-# Pretty print for debugging
-./harness.sh --json | jq '.checks'
-```
-
-### Permission Errors
-```bash
-# Make harness executable
-chmod +x surrealdb-v3-schema-init-harness.sh
-chmod +x run-validation.ts
-```
-
-## Related Documentation
-
-- Trace Impulses: `impulses/trace-*.md`
-- Enforcement Impulses: `impulses/enforcement-*.md`
-- Validation Cases: `impulses/validation-*-case-*.md`
-- Harness Impulses: `impulses/harness-*.md`
