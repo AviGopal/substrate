@@ -1,0 +1,234 @@
+# Helmfile for minibob Testing Infrastructure
+# 
+# This helmfile deploys a comprehensive testing environment for minibob vessel development
+# with progressive validation layers:
+#   - testing-minibob: Single pod validation
+#   - minibob-cluster: Multi-vessel coordination
+#   - minibob-staging: Production simulation
+#   - minibob-dev: Rapid development iteration
+
+environments:
+  dev:
+    values:
+      - environments/minibob-dev.values.yaml
+    kubeContext: docker-desktop
+  
+  testing:
+    values:
+      - environments/minibob-testing.values.yaml
+    kubeContext: docker-desktop
+  
+  staging:
+    values:
+      - environments/minibob-staging.values.yaml
+    # Set kubeContext via --kube-context for production cluster
+
+---
+helmDefaults:
+  createNamespace: true
+  wait: true
+  timeout: 600
+  force: false
+  atomic: true
+  cleanupOnFail: true
+
+repositories:
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
+
+releases:
+  # ==========================================================================
+  # BACKEND DEPENDENCIES (Shared across all minibob namespaces)
+  # ==========================================================================
+  
+  - name: redis
+    chart: bitnami/redis
+    version: 20.5.0
+    namespace: metabob
+    condition: backend.enabled
+    labels:
+      component: backend
+      tier: infrastructure
+    values:
+      - charts/redis.values.yaml
+    set:
+      - name: auth.enabled
+        value: false
+      - name: master.persistence.enabled
+        value: true
+      - name: master.persistence.size
+        value: 8Gi
+
+  - name: surrealdb
+    chart: ./charts/surrealdb
+    namespace: metabob
+    condition: backend.enabled
+    labels:
+      component: backend
+      tier: infrastructure
+    values:
+      - charts/surrealdb.values.yaml
+    needs:
+      - metabob/redis
+
+  - name: metabob-rpc-api
+    chart: ./charts/metabob-rpc-api
+    namespace: metabob
+    condition: backend.enabled
+    labels:
+      component: backend
+      tier: api
+    values:
+      - charts/metabob-rpc-api.values.yaml
+    needs:
+      - metabob/redis
+      - metabob/surrealdb
+
+  # ==========================================================================
+  # LAYER 2: Single Pod Validation (testing-minibob namespace)
+  # ==========================================================================
+  
+  - name: minibob-single
+    chart: repos/minibob/helm/minibob-cluster
+    namespace: testing-minibob
+    condition: testing.singlePod.enabled
+    labels:
+      namespace: testing-minibob
+      tier: validation
+      layer: "2"
+    values:
+      - repos/minibob/helm/minibob-cluster/values-testing-cluster.yaml
+    set:
+      - name: replicaCount
+        value: 1
+      - name: minibob.mcpEndpoint
+        value: "http://metabob-rpc-api.metabob.svc.cluster.local:3000/mcp"
+      - name: minibob.boredom.enabled
+        value: false
+      - name: minibob.acp.enabled
+        value: false
+      - name: service.headless.enabled
+        value: false
+      - name: resources.requests.cpu
+        value: "250m"
+      - name: resources.requests.memory
+        value: "512Mi"
+      - name: resources.limits.cpu
+        value: "1000m"
+      - name: resources.limits.memory
+        value: "2Gi"
+    needs:
+      - metabob/metabob-rpc-api
+
+  # ==========================================================================
+  # LAYER 3: Cluster Validation (minibob-cluster namespace)
+  # ==========================================================================
+  
+  - name: minibob-cluster
+    chart: repos/minibob/helm/minibob-cluster
+    namespace: minibob-cluster
+    condition: testing.cluster.enabled
+    labels:
+      namespace: minibob-cluster
+      tier: integration
+      layer: "3"
+    values:
+      - repos/minibob/helm/minibob-cluster/values-testing-cluster.yaml
+    set:
+      - name: replicaCount
+        value: 3
+      - name: minibob.mcpEndpoint
+        value: "http://metabob-rpc-api.metabob.svc.cluster.local:3000/mcp"
+      - name: minibob.boredom.enabled
+        value: true
+      - name: minibob.boredom.pollInterval
+        value: "30000"  # 30 seconds
+      - name: minibob.boredom.idleThreshold
+        value: "60000"  # 60 seconds
+      - name: minibob.acp.enabled
+        value: true
+      - name: minibob.acp.discoveryInterval
+        value: "60000"
+      - name: service.headless.enabled
+        value: true
+      - name: resources.requests.cpu
+        value: "500m"
+      - name: resources.requests.memory
+        value: "1Gi"
+      - name: resources.limits.cpu
+        value: "2000m"
+      - name: resources.limits.memory
+        value: "4Gi"
+    needs:
+      - metabob/metabob-rpc-api
+
+  # ==========================================================================
+  # LAYER 4: Production Simulation (minibob-staging namespace)
+  # ==========================================================================
+  
+  - name: minibob-staging
+    chart: repos/minibob/helm/minibob-cluster
+    namespace: minibob-staging
+    condition: staging.enabled
+    labels:
+      namespace: minibob-staging
+      tier: staging
+      layer: "4"
+    values:
+      - repos/minibob/helm/minibob-cluster/values-production.yaml
+    set:
+      - name: replicaCount
+        value: 3
+      - name: minibob.mcpEndpoint
+        value: "https://api.metabob.com/mcp"
+      - name: minibob.boredom.enabled
+        value: true
+      - name: minibob.boredom.pollInterval
+        value: "60000"  # 1 minute
+      - name: minibob.boredom.idleThreshold
+        value: "300000"  # 5 minutes
+      - name: minibob.acp.enabled
+        value: true
+      - name: autoscaling.enabled
+        value: true
+      - name: autoscaling.minReplicas
+        value: 3
+      - name: autoscaling.maxReplicas
+        value: 10
+      - name: autoscaling.targetCPUUtilizationPercentage
+        value: 70
+    needs:
+      - metabob/metabob-rpc-api
+
+  # ==========================================================================
+  # DEVELOPMENT: Rapid Iteration Sandbox (minibob-dev namespace)
+  # ==========================================================================
+  
+  - name: minibob-dev
+    chart: repos/minibob/helm/minibob-cluster
+    namespace: minibob-dev
+    condition: dev.enabled
+    labels:
+      namespace: minibob-dev
+      tier: development
+      layer: "1"
+    values:
+      - repos/minibob/helm/minibob-cluster/values-local.yaml
+    set:
+      - name: replicaCount
+        value: 1
+      - name: minibob.mcpEndpoint
+        value: "http://localhost:3000/mcp"  # Port-forward to local
+      - name: minibob.boredom.enabled
+        value: false
+      - name: minibob.acp.enabled
+        value: false
+      - name: resources.requests.cpu
+        value: "100m"
+      - name: resources.requests.memory
+        value: "256Mi"
+      - name: resources.limits.cpu
+        value: "500m"
+      - name: resources.limits.memory
+        value: "1Gi"
+    # No dependencies for dev (can run standalone)

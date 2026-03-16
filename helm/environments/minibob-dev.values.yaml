@@ -1,0 +1,17 @@
+# Environment configuration for minibob development namespace
+# Layer 1: Rapid iteration sandbox for vessel feature development
+
+backend:
+  enabled: false  # Dev can use port-forwarded backend
+
+dev:
+  enabled: true  # Enable minibob-dev deployment
+
+testing:
+  singlePod:
+    enabled: false
+  cluster:
+    enabled: false
+
+staging:
+  enabled: false
