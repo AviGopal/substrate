@@ -3,17 +3,29 @@
  * Test Runner for minibob Complete System Integration Validation
  * 
  * Usage:
- *   bun run tests/validation-harnesses/run-minibob-validation.ts [testCase]
+ *   bun run tests/validation-harnesses/run-minibob-validation.ts [flags] [testCase]
+ * 
+ * Flags:
+ *   --dry-run              Validate prerequisites without running tests
+ *   --check-prerequisites  Check if system is ready for validation
+ *   --verbose             Show detailed output
  * 
  * Examples:
- *   bun run tests/validation-harnesses/run-minibob-validation.ts 1   # Quick validation
- *   bun run tests/validation-harnesses/run-minibob-validation.ts 2   # Full validation
- *   bun run tests/validation-harnesses/run-minibob-validation.ts 3   # Dev layer
- *   bun run tests/validation-harnesses/run-minibob-validation.ts 4   # Staging layer
+ *   bun run tests/validation-harnesses/run-minibob-validation.ts 1              # Quick validation
+ *   bun run tests/validation-harnesses/run-minibob-validation.ts --dry-run 1    # Check prerequisites only
+ *   bun run tests/validation-harnesses/run-minibob-validation.ts 2              # Full validation
+ *   bun run tests/validation-harnesses/run-minibob-validation.ts 3              # Dev layer
+ *   bun run tests/validation-harnesses/run-minibob-validation.ts 4              # Staging layer
  */
 
 import runValidation, { type ValidationInput } from "./minibob-complete-system-integration-harness"
 import * as path from "path"
+import { 
+  validatePrerequisites, 
+  printPrerequisiteReport,
+  COMMON_CHECKS,
+  type PrerequisiteCheck 
+} from "./lib/prerequisites"
 
 // Test cases matching impulses
 const testCases: Record<string, ValidationInput> = {
@@ -47,8 +59,50 @@ const testCases: Record<string, ValidationInput> = {
   }
 }
 
+/**
+ * Parse command line arguments
+ */
+function parseArgs(args: string[]): { flags: string[], testCase: string } {
+  const flags: string[] = []
+  let testCase = "1"
+
+  for (const arg of args) {
+    if (arg.startsWith('--')) {
+      flags.push(arg)
+    } else if (testCases[arg]) {
+      testCase = arg
+    }
+  }
+
+  return { flags, testCase }
+}
+
+/**
+ * Get prerequisite checks for a test case
+ */
+function getPrerequisiteChecks(input: ValidationInput): PrerequisiteCheck[] {
+  const namespace = input.layer === 'dev' ? 'metabob' : 
+                   input.layer === 'staging' ? 'staging-minibob' : 
+                   'testing-minibob'
+
+  return [
+    COMMON_CHECKS.kubectl(),
+    COMMON_CHECKS.helmfile(),
+    COMMON_CHECKS.bun(),
+    COMMON_CHECKS.docker(),
+    COMMON_CHECKS.cluster(),
+    COMMON_CHECKS.namespace(namespace),
+    COMMON_CHECKS.namespace('metabob'), // Backend namespace
+    COMMON_CHECKS.path(input.repoPath, 'minibob repository'),
+    COMMON_CHECKS.path(input.helmPath, 'helm directory'),
+    COMMON_CHECKS.path(path.join(input.repoPath, 'metrics'), 'metrics directory'),
+    COMMON_CHECKS.deployment('metabob', 'metabob-rpc-api'),
+    COMMON_CHECKS.pods(namespace, 'app=minibob'),
+  ]
+}
+
 async function main() {
-  const testCaseArg = process.argv[2] || "1"
+  const { flags, testCase: testCaseArg } = parseArgs(process.argv.slice(2))
   
   if (!testCases[testCaseArg]) {
     console.error(`Invalid test case: ${testCaseArg}`)
@@ -57,6 +111,30 @@ async function main() {
   }
 
   const input = testCases[testCaseArg]
+  const dryRun = flags.includes('--dry-run') || flags.includes('--check-prerequisites')
+  const verbose = flags.includes('--verbose')
+
+  // If dry-run, validate prerequisites and exit
+  if (dryRun) {
+    console.log(`\n${"=".repeat(80)}`)
+    console.log(`Prerequisite Check - Test Case ${testCaseArg}`)
+    console.log(`Environment: ${input.environment}, Layer: ${input.layer}`)
+    console.log(`${"=".repeat(80)}\n`)
+
+    const checks = getPrerequisiteChecks(input)
+    const report = await validatePrerequisites(checks)
+    printPrerequisiteReport(report)
+
+    if (!report.readyForValidation) {
+      console.log('❌ System is NOT ready for validation')
+      console.log('Please fix the failed checks above before running validation.\n')
+      process.exit(1)
+    }
+
+    console.log('✅ System is ready for validation')
+    console.log(`Run validation with: bun run tests/validation-harnesses/run-minibob-validation.ts ${testCaseArg}\n`)
+    process.exit(0)
+  }
 
   console.log(`\n${"=".repeat(80)}`)
   console.log(`Running Test Case ${testCaseArg}`)

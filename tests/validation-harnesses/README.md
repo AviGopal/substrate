@@ -62,6 +62,87 @@ Four test cases are provided as impulses:
 - **Steps**: 6
 - **Expected**: All 6 steps pass, capabilities = [activities, impulses, git, acp, acp-gossip, boredom]
 
+## Quickstart Guide for New Users
+
+Complete setup guide from scratch:
+
+### Step 1: Install Dependencies (5 minutes)
+
+```bash
+# Install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+
+# Install helmfile
+curl -LO https://github.com/helmfile/helmfile/releases/download/v0.150.0/helmfile_linux_amd64
+chmod +x helmfile_linux_amd64 && sudo mv helmfile_linux_amd64 /usr/local/bin/helmfile
+
+# Install bun
+curl -fsSL https://bun.sh/install | bash
+
+# Install kind
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind
+```
+
+### Step 2: Setup Cluster (2 minutes)
+
+```bash
+# Create kind cluster
+kind create cluster --name minibob-test
+
+# Verify cluster is running
+kubectl cluster-info
+
+# Create namespaces
+kubectl create namespace testing-minibob
+kubectl create namespace metabob
+```
+
+### Step 3: Deploy Backend (5 minutes)
+
+```bash
+cd helm
+helmfile -e testing sync -l app=metabob-rpc-api
+
+# Wait for backend to be ready
+kubectl wait --for=condition=ready pod -l app=metabob-rpc-api -n metabob --timeout=300s
+```
+
+### Step 4: Deploy minibob (3 minutes)
+
+```bash
+cd helm
+helmfile -e testing sync -l namespace=testing-minibob
+
+# Wait for pods to be ready
+kubectl wait --for=condition=ready pod -l app=minibob -n testing-minibob --timeout=300s
+```
+
+### Step 5: Verify Deployment (1 minute)
+
+```bash
+# Check prerequisites
+bun run tests/validation-harnesses/run-minibob-validation.ts --dry-run 1
+
+# Should show all checks passing
+```
+
+### Step 6: Run Validation (5 minutes)
+
+```bash
+# Run quick validation (6 steps)
+bun run tests/validation-harnesses/run-minibob-validation.ts 1
+
+# Should complete with ✅ PASS
+```
+
+### Step 7: Interpret Results
+
+- ✅ **PASS** = All validation steps succeeded - system is working correctly
+- ⚠️ **PARTIAL** = Some steps failed - check step details for issues
+- ❌ **FAIL** = Critical failures - deployment or configuration issue
+
 ### Usage
 
 #### As TypeScript Module
@@ -94,6 +175,9 @@ if (result.pass) {
 #### As CLI Script
 
 ```bash
+# Check prerequisites first (recommended)
+bun run tests/validation-harnesses/run-minibob-validation.ts --dry-run 1
+
 # Quick validation (test case 1)
 bun run tests/validation-harnesses/run-minibob-validation.ts 1
 
@@ -105,15 +189,75 @@ bun run tests/validation-harnesses/run-minibob-validation.ts 3
 
 # Staging layer validation (test case 4)
 bun run tests/validation-harnesses/run-minibob-validation.ts 4
+
+# Check prerequisites for staging
+bun run tests/validation-harnesses/run-minibob-validation.ts --check-prerequisites 4
 ```
 
 ### Prerequisites
 
-- Kind cluster running with minibob deployed
-- Helm and helmfile installed
-- kubectl configured for cluster access
-- Backend (metabob-rpc-api) deployed and accessible
-- bun runtime installed
+Before running validation, ensure these dependencies are installed:
+
+#### Required Dependencies
+- **kubectl** >= 1.25 - [Install Guide](https://kubernetes.io/docs/tasks/tools/)
+- **helmfile** >= 0.150 - [Install Guide](https://helmfile.readthedocs.io/en/latest/#installation)
+- **bun** >= 1.0 - [Install Guide](https://bun.sh/docs/installation)
+- **docker** >= 20.10 - [Install Guide](https://docs.docker.com/get-docker/)
+
+#### Cluster Setup
+1. **Kubernetes cluster** - Running kind cluster or similar
+2. **Namespace** - `testing-minibob` (or appropriate for your layer)
+3. **Backend namespace** - `metabob` (for metabob-rpc-api)
+4. **Backend deployed** - metabob-rpc-api running and accessible
+5. **minibob deployed** - At least 1 pod running (3 for cluster mode)
+
+#### File Structure
+- `repos/minibob` - minibob repository clone
+- `helm` - Helm charts and helmfile configuration
+- `repos/minibob/metrics` - Metrics directory (auto-created if missing)
+
+### Validation Readiness Check
+
+Before running the full validation, check if your system is ready:
+
+```bash
+# Check prerequisites without running tests
+bun run tests/validation-harnesses/run-minibob-validation.ts --dry-run 1
+```
+
+Expected output:
+```
+=== Pre-flight Checks ===
+
+DEPENDENCY:
+  ✓ kubectl installed: PASS
+    Version: Client Version: v1.28.0
+  ✓ helmfile installed: PASS
+    Version: helmfile version 0.150.0
+  ✓ bun installed: PASS
+    Version: 1.0.15
+  ✓ docker running: PASS
+    Version: Docker version 24.0.5
+
+INFRASTRUCTURE:
+  ✓ kubernetes cluster accessible: PASS
+  ✓ namespace 'testing-minibob' exists: PASS
+  ✓ namespace 'metabob' exists: PASS
+  ✗ deployment 'metabob-rpc-api' exists: FAIL
+    Fix: Deploy backend: cd helm && helmfile -e testing sync -l app=metabob-rpc-api
+  ✗ pods exist in namespace 'testing-minibob': FAIL
+    Fix: Deploy minibob: cd helm && helmfile -e testing sync -l namespace=testing-minibob
+
+FILESYSTEM:
+  ✓ minibob repository exists: PASS
+  ✓ helm directory exists: PASS
+  ✓ metrics directory exists: PASS
+
+Pre-flight: 10/12 checks passed
+Ready to run validation: NO
+```
+
+If checks fail, follow the fix suggestions before running validation.
 
 ### Expected Output
 
@@ -203,14 +347,62 @@ To add new validation steps:
 
 ### Troubleshooting
 
-**Step 1 fails**: Check that bun test and bun typecheck work locally
-**Step 2 fails**: Verify helmfile is installed and cluster is accessible
-**Step 3 fails**: Check pod logs for startup errors
-**Step 4 fails**: Run test-vessel-capabilities.sh manually to see which test fails
-**Step 5 fails**: Check if metrics/ directory exists in repos/minibob
-**Step 6 fails**: Verify backend is deployed and /boredom-tasks endpoint works
-**Step 7 fails**: Wait longer or check boredom system is enabled in cluster mode
-**Step 8 fails**: Requires boredom to execute and commit - may take time
+#### Common Errors and Solutions
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `kubectl: command not found` | kubectl not installed | Install from https://kubernetes.io/docs/tasks/tools/ |
+| `Unable to connect to cluster` | Cluster not running | Run `kubectl cluster-info` to verify or start cluster |
+| `namespace 'testing-minibob' not found` | Namespace not created | `kubectl create namespace testing-minibob` |
+| `No pods found` | minibob not deployed | Deploy with `cd helm && helmfile -e testing sync -l namespace=testing-minibob` |
+| `Backend unreachable` | Backend not deployed | Deploy with `cd helm && helmfile -e testing sync -l app=metabob-rpc-api` |
+| `Metrics directory not found` | Directory doesn't exist | `mkdir -p repos/minibob/metrics` |
+| `Port-forward failed` | Pod not running | Check with `kubectl get pods -n testing-minibob` |
+| `Script not executable` | Missing execute permission | `chmod +x scripts/*.sh` |
+
+#### Validation Step Failures
+
+**Step 1 fails (Local Development)**: 
+- Check that `bun test` works in repos/minibob
+- Verify `bun run typecheck` passes
+- Ensure Docker is running
+
+**Step 2 fails (Deployment)**: 
+- Verify helmfile is installed: `helmfile version`
+- Check cluster is accessible: `kubectl cluster-info`
+- Run helmfile manually: `cd helm && helmfile -e testing list`
+
+**Step 3 fails (Self-Configuration)**: 
+- Check pod logs: `kubectl logs -n testing-minibob minibob-0`
+- Verify pods are running: `kubectl get pods -n testing-minibob`
+- Check /health endpoint accessibility
+
+**Step 4 fails (Capability Tests)**: 
+- Run test script manually: `./scripts/test-vessel-capabilities.sh`
+- Check which specific test failed
+- Verify pod can execute activities
+
+**Step 5 fails (Metrics Collection)**: 
+- Verify metrics directory exists: `ls -la repos/minibob/metrics/`
+- Create if missing: `mkdir -p repos/minibob/metrics`
+- Check pod has write permissions
+
+**Step 6 fails (Boredom Task Queue)**: 
+- Verify backend is deployed: `kubectl get deployment metabob-rpc-api -n metabob`
+- Check backend /boredom-tasks endpoint
+- Ensure cluster mode is enabled (3 pods)
+
+**Step 7 fails (Autonomous Execution)**: 
+- This step requires time (15-30 minutes)
+- Verify boredom system is enabled
+- Check pod logs for boredom activity
+- Skip with `skipLongRunning: true` for quick validation
+
+**Step 8 fails (Autonomous Commits)**: 
+- Requires Step 7 to complete first
+- Check git log in pod: `kubectl exec -it minibob-0 -n testing-minibob -- git log`
+- Verify git is configured in pod
+- Skip with `skipLongRunning: true` for quick validation
 
 ### Related Files
 
@@ -220,6 +412,88 @@ To add new validation steps:
 - **Harness Impulse**: `impulses/harness-minibob-complete-system-integration.json`
 - **Trace**: `MINIBOB_COMPLETE_SYSTEM_INTEGRATION_TRACE.md`
 - **Enforcement**: `MINIBOB_COMPLETE_SYSTEM_INTEGRATION_ENFORCEMENT.md`
+
+---
+
+## All Available Harnesses
+
+### 1. Complete System Integration Harness (Recommended)
+
+**File**: `minibob-complete-system-integration-harness.ts`  
+**Purpose**: End-to-end workflow validation (development → deployment → execution → observation)  
+**Validation Steps**: 8 (6 quick + 2 optional)  
+**Use Case**: Primary validation harness for full system testing
+
+**Quick Check**:
+```bash
+bun run tests/validation-harnesses/run-minibob-validation.ts --dry-run 1
+```
+
+**Run Validation**:
+```bash
+bun run tests/validation-harnesses/run-minibob-validation.ts 1
+```
+
+### 2. Self-Configuration System Harness
+
+**File**: `minibob-self-configuration-system-harness.ts`  
+**Purpose**: Validates environment auto-detection (local, docker, k8s-single, k8s-cluster)  
+**Validation Steps**: Environment detection, capability configuration, DNS discovery  
+**Use Case**: Testing self-configuration logic independent of full deployment
+
+**Usage**:
+```typescript
+import { validateSelfConfiguration } from "./minibob-self-configuration-system-harness"
+
+const result = await validateSelfConfiguration({
+  environment: "k8s-cluster",
+  namespace: "testing-minibob",
+  expectedCapabilities: ["activities", "impulses", "git", "acp", "acp-gossip", "boredom"]
+})
+```
+
+### 3. Testing Infrastructure Harness
+
+**File**: `minibob-testing-infrastructure-harness.ts`  
+**Purpose**: Validates feedback loop (deployment → execution → metrics → refinement)  
+**Validation Steps**: 7 phases covering deployment state, activity execution, backend records, metrics collection  
+**Use Case**: Testing the development-to-deployment feedback loop
+
+**Usage**:
+```typescript
+import { validateTestingInfrastructure } from "./minibob-testing-infrastructure-harness"
+
+const result = await validateTestingInfrastructure({
+  namespace: "testing-minibob",
+  helmPath: "./helm",
+  environment: "testing"
+})
+```
+
+### 4. Standalone Execution Harness
+
+**File**: `minibob-standalone-execution-harness.ts`  
+**Purpose**: Validates individual capabilities with 13 specific tests  
+**Validation Steps**: Pod health, activity execution, dynamic creation, trailblazing, ACP, boredom, learning loop  
+**Use Case**: Testing specific capabilities in isolation
+
+**Usage**:
+```typescript
+import { validateStandaloneExecution } from "./minibob-standalone-execution-harness"
+
+const result = await validateStandaloneExecution({
+  namespace: "testing-minibob",
+  backendUrl: "http://localhost:8080",
+  expectedTestsPassing: 10 // out of 13
+})
+```
+
+### Choosing the Right Harness
+
+- **Start here**: Use **Complete System Integration** for initial validation
+- **Environment issues**: Use **Self-Configuration** to debug auto-detection
+- **Feedback loop**: Use **Testing Infrastructure** to validate development workflow
+- **Specific capabilities**: Use **Standalone Execution** for focused testing
 
 ---
 
