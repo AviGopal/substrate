@@ -3,7 +3,7 @@
  * Manages connection to SurrealDB and provides query interface
  */
 
-import Surreal from 'surrealdb.js';
+import { Surreal } from 'surrealdb';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
@@ -31,6 +31,7 @@ class SurrealDBClient {
         this.db = new Surreal();
         await this.db.connect(config.surrealdb.url);
         
+        // SurrealDB v3.0.0: Use RootAuth for root user, then switch namespace
         await this.db.signin({
           username: config.surrealdb.username,
           password: config.surrealdb.password,

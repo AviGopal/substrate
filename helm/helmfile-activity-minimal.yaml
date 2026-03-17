@@ -106,7 +106,7 @@ releases:
           size: 5Gi
           accessMode: ReadWriteOnce
         database:
-          namespace: metabob
+          namespace: activity-system
           name: learning_loop
           storage:
             backend: file
