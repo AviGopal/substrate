@@ -41,13 +41,62 @@ app.use('/v2/*', authMiddleware);
 // ============================================================================
 
 // Health check endpoint (no auth required)
-app.get('/health', (c) => {
-  return c.json({ 
-    status: 'ok', 
+// Deep health check: verifies Redis and SurrealDB connectivity
+app.get('/health', async (c) => {
+  const healthStatus: any = {
     service: 'metabob-activity-api',
     version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
+    timestamp: new Date().toISOString(),
+    checks: {
+      redis: { status: 'unknown', latency_ms: 0 },
+      surrealdb: { status: 'unknown', latency_ms: 0 }
+    }
+  };
+
+  let allHealthy = true;
+
+  // Check Redis connectivity
+  try {
+    const redisStart = Date.now();
+    const { RedisClient } = await import('./db/redis');
+    const redis = RedisClient.getInstance();
+    await redis.getClient().ping();
+    healthStatus.checks.redis = {
+      status: 'healthy',
+      latency_ms: Date.now() - redisStart
+    };
+  } catch (error: any) {
+    logger.error('Redis health check failed', { error: error.message });
+    healthStatus.checks.redis = {
+      status: 'unhealthy',
+      error: error.message
+    };
+    allHealthy = false;
+  }
+
+  // Check SurrealDB connectivity
+  try {
+    const surrealStart = Date.now();
+    const { surrealDB } = await import('./db/surreal');
+    await surrealDB.query('SELECT * FROM variant_performance_metrics LIMIT 1');
+    healthStatus.checks.surrealdb = {
+      status: 'healthy',
+      latency_ms: Date.now() - surrealStart
+    };
+  } catch (error: any) {
+    logger.error('SurrealDB health check failed', { error: error.message });
+    healthStatus.checks.surrealdb = {
+      status: 'unhealthy',
+      error: error.message
+    };
+    allHealthy = false;
+  }
+
+  healthStatus.status = allHealthy ? 'healthy' : 'unhealthy';
+
+  // Return 503 Service Unavailable if any dependency is unhealthy
+  // This signals Kubernetes to remove pod from load balancer
+  return c.json(healthStatus, allHealthy ? 200 : 503);
 });
 
 // Session routes (POST /v2/session, GET /v2/session)

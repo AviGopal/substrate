@@ -188,36 +188,50 @@ app.get('/templates', async (c) => {
     }
 
     if (!cacheHit) {
-      // CACHE MISS - Load from SurrealDB
+      // CACHE MISS - Load from SurrealDB with distributed lock (cache stampede prevention)
       logger.info('Template list cache miss, loading from SurrealDB');
       
-      templates = await listAllTemplatesFromDB(limit * 2, orgId, projectId);
+      const lockKey = 'lock:templates:refresh';
+      const cacheKey = CACHE_LIST_KEY;
+      
+      // Use distributed lock to prevent cache stampede
+      templates = await redis.withLock(
+        lockKey,
+        cacheKey,
+        async () => {
+          // Load templates from database
+          const dbTemplates = await listAllTemplatesFromDB(limit * 2, orgId, projectId);
 
-      // Populate Redis cache
-      if (templates.length > 0) {
-        const cachePromises: Promise<any>[] = [];
+          // Populate Redis cache
+          if (dbTemplates.length > 0) {
+            const cachePromises: Promise<any>[] = [];
 
-        for (const template of templates) {
-          const variantId = template.variant_id;
-          
-          // Store template data with TTL
-          cachePromises.push(
-            redis.set(
-              `${CACHE_KEY_PREFIX}${variantId}`,
-              JSON.stringify(template),
-              TEMPLATE_CACHE_TTL
-            )
-          );
+            for (const template of dbTemplates) {
+              const variantId = template.variant_id;
+              
+              // Store template data with TTL
+              cachePromises.push(
+                redis.set(
+                  `${CACHE_KEY_PREFIX}${variantId}`,
+                  JSON.stringify(template),
+                  TEMPLATE_CACHE_TTL
+                )
+              );
 
-          // Add to template list set
-          cachePromises.push(
-            redis.sadd(CACHE_LIST_KEY, variantId)
-          );
-        }
+              // Add to template list set
+              cachePromises.push(
+                redis.sadd(CACHE_LIST_KEY, variantId)
+              );
+            }
 
-        await Promise.all(cachePromises);
-        logger.info(`Cached ${templates.length} templates from SurrealDB`);
-      }
+            await Promise.all(cachePromises);
+            logger.info(`Cached ${dbTemplates.length} templates from SurrealDB`);
+          }
+
+          return dbTemplates;
+        },
+        30 // Lock TTL: 30 seconds
+      );
     }
 
     // Filter by category if specified
@@ -418,42 +432,24 @@ app.post('/executions', async (c) => {
     // Thompson Sampling uses Beta distribution: Beta(alpha, beta)
     // - alpha: number of successes + 1
     // - beta: number of failures + 1
+    //
+    // ATOMIC UPDATE: Uses SurrealDB += operator for race-condition-free concurrent updates
+    // Previous implementation had read-modify-write race condition
+    
+    const success_delta = validated.success ? 1 : 0;
+    const failure_delta = validated.success ? 0 : 1;
     
     const updateMetricsQuery = `
-      LET $current_metrics = (
-        SELECT * FROM variant_performance_metrics 
-        WHERE variant_id = $variant_id 
-        LIMIT 1
-      )[0];
-      
-      LET $total_executions = $current_metrics.total_executions OR 0;
-      LET $successful_executions = $current_metrics.successful_executions OR 0;
-      LET $failed_executions = $current_metrics.failed_executions OR 0;
-      
-      LET $new_total = $total_executions + 1;
-      LET $new_successes = $successful_executions + (IF $success THEN 1 ELSE 0 END);
-      LET $new_failures = $failed_executions + (IF $success THEN 0 ELSE 1 END);
-      LET $new_success_rate = $new_successes / $new_total;
-      
-      LET $prev_avg_duration = $current_metrics.avg_duration_ms OR 0;
-      LET $prev_avg_cost = $current_metrics.avg_cost_usd OR 0;
-      
-      LET $new_avg_duration = (($prev_avg_duration * $total_executions) + $duration_ms) / $new_total;
-      LET $new_avg_cost = (($prev_avg_cost * $total_executions) + $cost) / $new_total;
-      
-      LET $thompson_alpha = $new_successes + 1;
-      LET $thompson_beta = $new_failures + 1;
-      
       UPDATE variant_performance_metrics 
       SET 
-        total_executions = $new_total,
-        successful_executions = $new_successes,
-        failed_executions = $new_failures,
-        success_rate = $new_success_rate,
-        avg_duration_ms = $new_avg_duration,
-        avg_cost_usd = $new_avg_cost,
-        thompson_alpha = $thompson_alpha,
-        thompson_beta = $thompson_beta,
+        total_executions += 1,
+        successful_executions += $success_delta,
+        failed_executions += $failure_delta,
+        success_rate = successful_executions / total_executions,
+        avg_duration_ms = ((avg_duration_ms * (total_executions - 1)) + $duration_ms) / total_executions,
+        avg_cost_usd = ((avg_cost_usd * (total_executions - 1)) + $cost) / total_executions,
+        thompson_alpha = successful_executions + 1,
+        thompson_beta = failed_executions + 1,
         last_executed_at = time::now(),
         updated_at = time::now()
       WHERE variant_id = $variant_id
@@ -462,7 +458,8 @@ app.post('/executions', async (c) => {
 
     const metricsResult = await surrealDB.query(updateMetricsQuery, {
       variant_id: validated.variant_id,
-      success: validated.success,
+      success_delta,
+      failure_delta,
       duration_ms: validated.duration_ms,
       cost: validated.cost,
     });
