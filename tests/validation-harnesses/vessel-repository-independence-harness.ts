@@ -188,9 +188,9 @@ function checkFilesExist(filePaths: string[]): { allExist: boolean; existingCoun
  * Validate no cross-vessel imports
  */
 function validateNoCrossVesselImports(testCase: TestCase): ValidationResult {
-  const { searchPattern, searchPaths, excludePaths } = testCase.input;
+  const { searchPattern: pattern, searchPaths, excludePaths } = testCase.input;
   
-  if (!searchPattern || !searchPaths) {
+  if (!pattern || !searchPaths) {
     return {
       pass: false,
       actual: null,
@@ -199,7 +199,7 @@ function validateNoCrossVesselImports(testCase: TestCase): ValidationResult {
     };
   }
 
-  const { matchCount, matches } = searchPattern(searchPattern, searchPaths, excludePaths);
+  const { matchCount, matches } = searchPattern(pattern, searchPaths, excludePaths);
 
   const actual = {
     matchCount,
@@ -293,9 +293,9 @@ function validateDockerfilesExist(testCase: TestCase): ValidationResult {
  * Validate HTTP-based communication
  */
 function validateHttpCommunication(testCase: TestCase): ValidationResult {
-  const { searchPattern, searchPaths, excludePaths, minimumMatches = 1 } = testCase.input;
+  const { searchPattern: pattern, searchPaths, excludePaths, minimumMatches = 1 } = testCase.input;
   
-  if (!searchPattern || !searchPaths) {
+  if (!pattern || !searchPaths) {
     return {
       pass: false,
       actual: null,
@@ -304,7 +304,7 @@ function validateHttpCommunication(testCase: TestCase): ValidationResult {
     };
   }
 
-  const { matchCount, matches } = searchPattern(searchPattern, searchPaths, excludePaths);
+  const { matchCount, matches } = searchPattern(pattern, searchPaths, excludePaths);
 
   const actual = {
     hasHttpCalls: matchCount >= minimumMatches,

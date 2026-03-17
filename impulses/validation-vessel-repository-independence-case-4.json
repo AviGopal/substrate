@@ -6,8 +6,8 @@
     "testName": "Self-contained Helm charts exist",
     "input": {
       "helmChartPaths": [
-        "repos/metabob-activity-api/helm/activity-api/Chart.yaml",
-        "repos/activity-dashboard/helm/Chart.yaml",
+        "repos/metabob-activity-api/helm/metabob-activity-api/Chart.yaml",
+        "repos/activity-dashboard/helm/activity-dashboard/Chart.yaml",
         "repos/minibob/helm/minibob-cluster/Chart.yaml"
       ]
     },
