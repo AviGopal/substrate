@@ -40,7 +40,7 @@
   "provider": {
     "anthropic": {
       "options": {
-        "apiKey": "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"
+        "apiKey": "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"
       }
     },
     "openai": {}

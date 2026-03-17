@@ -14,20 +14,25 @@ service:
 resources:
   requests:
     memory: "512Mi"
-    cpu: "100m"
+    cpu: "250m"
   limits:
-    memory: "2Gi"
-    cpu: "1000m"
+    memory: "4Gi"
+    cpu: "2000m"
 
 persistence:
-  enabled: false
+  enabled: true
   storageClass: ""
   size: 10Gi
+  accessMode: ReadWriteOnce
 
 # Database configuration
 database:
   namespace: metabob
-  name: production
+  name: learning_loop
+  # Storage backend: memory, file, tikv
+  storage:
+    backend: file
+    path: /data/surrealdb
 
 # Credentials - set via helmfile from SOPS-encrypted secrets
 # When existingSecret is empty, chart creates the secret
@@ -37,4 +42,10 @@ auth:
   password: "changeme"
   usernameKey: username
   passwordKey: password
+
+# Health check configuration
+healthCheck:
+  enabled: true
+  path: /health
+  port: 8000
 
