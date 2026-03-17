@@ -102,17 +102,10 @@ logger.info('Starting Metabob Activity API', {
   surrealdb: config.surrealdb.url
 });
 
-export default {
+// Start server
+const server = Bun.serve({
   port,
   fetch: app.fetch,
-};
+});
 
-// CLI execution
-if (import.meta.main) {
-  const server = Bun.serve({
-    port,
-    fetch: app.fetch,
-  });
-
-  logger.info(`Server running at http://localhost:${server.port}`);
-}
+logger.info(`Server running at http://localhost:${server.port}`);
