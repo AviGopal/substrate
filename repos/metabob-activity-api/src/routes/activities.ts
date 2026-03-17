@@ -14,6 +14,7 @@ import { surrealDB } from '../db/surreal';
 import { RedisClient } from '../db/redis';
 import { logger } from '../utils/logger';
 import type { SessionData } from '../models/schemas';
+import { ExecutionRecordSchema, type ExecutionRecord, type ExecutionRecordResponse } from '../models/schemas';
 
 const app = new Hono();
 
@@ -133,7 +134,13 @@ app.get('/templates', async (c) => {
     // Extract query parameters
     const category = c.req.query('category') || null;
     const limitStr = c.req.query('limit') || '50';
-    const limit = Math.min(parseInt(limitStr, 10), 100);
+    let limit = parseInt(limitStr, 10);
+    
+    // Validate limit (consistent with impulses.ts pattern)
+    if (isNaN(limit) || limit < 1) {
+      limit = 50;
+    }
+    limit = Math.min(limit, 100);
 
     logger.info('GET /v2/activities/templates', {
       category,
@@ -327,6 +334,179 @@ app.get('/templates/:variantId', async (c) => {
 
     return c.json({
       error: 'Failed to fetch template',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * POST /v2/activities/executions
+ * Record activity execution and update Thompson Sampling metrics
+ * 
+ * This endpoint closes the learning loop by:
+ * 1. Recording execution result in activity_executions table
+ * 2. Updating variant_performance_metrics with Thompson Sampling parameters
+ * 3. Invalidating Redis cache for updated template
+ */
+app.post('/executions', async (c) => {
+  try {
+    // Extract session from context (set by auth middleware)
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = session?.org_id || null;
+    const projectId = session?.project_id || null;
+
+    // Parse and validate request body
+    const body = await c.req.json();
+    const validated = ExecutionRecordSchema.parse(body);
+
+    logger.info('POST /v2/activities/executions', {
+      variant_id: validated.variant_id,
+      success: validated.success,
+      duration_ms: validated.duration_ms,
+      cost: validated.cost,
+      orgId,
+      projectId,
+    });
+
+    // Generate execution ID
+    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
+    // Step 1: Record execution in activity_executions table
+    const insertExecutionQuery = `
+      INSERT INTO activity_executions {
+        execution_id: $execution_id,
+        variant_id: $variant_id,
+        org_id: $org_id,
+        project_id: $project_id,
+        success: $success,
+        duration_ms: $duration_ms,
+        cost_usd: $cost,
+        tokens_input: $tokens_input,
+        tokens_output: $tokens_output,
+        tokens_cache: $tokens_cache,
+        error_message: $error_message,
+        error_type: $error_type,
+        failed_task_id: $failed_task_id,
+        impulses_used: $impulses_used,
+        component_changes: $component_changes,
+        executed_at: time::now(),
+        created_at: time::now()
+      }
+    `;
+
+    await surrealDB.query(insertExecutionQuery, {
+      execution_id: executionId,
+      variant_id: validated.variant_id,
+      org_id: orgId,
+      project_id: projectId,
+      success: validated.success,
+      duration_ms: validated.duration_ms,
+      cost: validated.cost,
+      tokens_input: validated.tokens.input,
+      tokens_output: validated.tokens.output,
+      tokens_cache: validated.tokens.cache,
+      error_message: validated.error_message || null,
+      error_type: validated.error_type || null,
+      failed_task_id: validated.failed_task_id || null,
+      impulses_used: validated.impulses_used || [],
+      component_changes: validated.component_changes || [],
+    });
+
+    logger.debug('Execution recorded in activity_executions', { executionId });
+
+    // Step 2: Update Thompson Sampling metrics in variant_performance_metrics
+    // Thompson Sampling uses Beta distribution: Beta(alpha, beta)
+    // - alpha: number of successes + 1
+    // - beta: number of failures + 1
+    
+    const updateMetricsQuery = `
+      LET $current_metrics = (
+        SELECT * FROM variant_performance_metrics 
+        WHERE variant_id = $variant_id 
+        LIMIT 1
+      )[0];
+      
+      LET $total_executions = $current_metrics.total_executions OR 0;
+      LET $successful_executions = $current_metrics.successful_executions OR 0;
+      LET $failed_executions = $current_metrics.failed_executions OR 0;
+      
+      LET $new_total = $total_executions + 1;
+      LET $new_successes = $successful_executions + (IF $success THEN 1 ELSE 0 END);
+      LET $new_failures = $failed_executions + (IF $success THEN 0 ELSE 1 END);
+      LET $new_success_rate = $new_successes / $new_total;
+      
+      LET $prev_avg_duration = $current_metrics.avg_duration_ms OR 0;
+      LET $prev_avg_cost = $current_metrics.avg_cost_usd OR 0;
+      
+      LET $new_avg_duration = (($prev_avg_duration * $total_executions) + $duration_ms) / $new_total;
+      LET $new_avg_cost = (($prev_avg_cost * $total_executions) + $cost) / $new_total;
+      
+      LET $thompson_alpha = $new_successes + 1;
+      LET $thompson_beta = $new_failures + 1;
+      
+      UPDATE variant_performance_metrics 
+      SET 
+        total_executions = $new_total,
+        successful_executions = $new_successes,
+        failed_executions = $new_failures,
+        success_rate = $new_success_rate,
+        avg_duration_ms = $new_avg_duration,
+        avg_cost_usd = $new_avg_cost,
+        thompson_alpha = $thompson_alpha,
+        thompson_beta = $thompson_beta,
+        last_executed_at = time::now(),
+        updated_at = time::now()
+      WHERE variant_id = $variant_id
+      RETURN AFTER;
+    `;
+
+    const metricsResult = await surrealDB.query(updateMetricsQuery, {
+      variant_id: validated.variant_id,
+      success: validated.success,
+      duration_ms: validated.duration_ms,
+      cost: validated.cost,
+    });
+
+    logger.info('Thompson Sampling metrics updated', {
+      variant_id: validated.variant_id,
+      metricsUpdated: metricsResult.length > 0,
+    });
+
+    // Step 3: Invalidate Redis cache for this template
+    const redis = RedisClient.getInstance();
+    await redis.del(`${CACHE_KEY_PREFIX}${validated.variant_id}`);
+    await redis.srem(CACHE_LIST_KEY, validated.variant_id);
+
+    logger.debug('Redis cache invalidated for template', {
+      variant_id: validated.variant_id,
+    });
+
+    // Return response with updated metrics
+    const response: ExecutionRecordResponse = {
+      success: true,
+      execution_id: executionId,
+      metrics: metricsResult.length > 0 ? metricsResult[0] : undefined,
+    };
+
+    return c.json(response, 201);
+
+  } catch (error: any) {
+    logger.error('POST /v2/activities/executions failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    // Check if it's a validation error
+    if (error.name === 'ZodError') {
+      return c.json({
+        error: 'Validation failed',
+        message: error.message,
+        details: error.errors,
+      }, 400);
+    }
+
+    return c.json({
+      error: 'Failed to record execution',
       message: error.message,
     }, 500);
   }

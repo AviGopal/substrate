@@ -106,6 +106,17 @@ export class RedisClient {
     }
   }
 
+  async srem(key: string, ...members: string[]): Promise<void> {
+    const client = this.getClient();
+    try {
+      await client.srem(key, ...members);
+      logger.debug('Redis SREM', { key, count: members.length });
+    } catch (error) {
+      logger.error('Redis SREM failed', { key, error });
+      throw error;
+    }
+  }
+
   async hget(key: string, field: string): Promise<string | null> {
     const client = this.getClient();
     try {

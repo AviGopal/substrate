@@ -1,0 +1,15 @@
+{
+  "id": "validation-activity-system-minimal-deployment-case-1",
+  "type": "memo",
+  "testName": "Namespace Existence",
+  "description": "Verify activity-system namespace exists in Kubernetes cluster",
+  "input": {
+    "command": "kubectl get namespace activity-system",
+    "expectedExitCode": 0
+  },
+  "expectedOutput": {
+    "namespaceExists": true,
+    "namespaceName": "activity-system",
+    "status": "Active"
+  }
+}

@@ -498,3 +498,185 @@ const result = await validateStandaloneExecution({
 ---
 
 *"Validation without LLM proves the specification through observable, deterministic outcomes."*
+
+---
+
+## activity-system-minimal-deployment Harness
+
+**File**: `activity-system-minimal-deployment-harness.ts`  
+**Specification**: activity-system-minimal-deployment - Complete infrastructure deployment for activity system  
+**Impulse**: `harness-activity-system-minimal-deployment`
+
+### Overview
+
+Validates the complete activity system infrastructure deployment including Kubernetes resources, health endpoints, and API functionality. Tests all 11 requirements from the specification plus Thompson Sampling learning loop closure.
+
+### Tests (11 total)
+
+1. **Namespace Existence** - Verify activity-system namespace exists and is Active
+2. **Service Creation Verification** - Verify all 4 services exist (redis-master, surrealdb, metabob-activity-api, minibob)
+3. **Persistent Volume Binding** - Verify at least 1 PVC is bound (for SurrealDB storage)
+4. **Pod Running Status** - Verify all 5 pods are Running (redis, surrealdb, 2x activity-api, minibob)
+5. **SurrealDB Health Endpoint** - Test /health endpoint via port-forward on 8000
+6. **Activity API Health Endpoint** - Test /health endpoint via port-forward on 8080
+7. **Minibob Health Endpoint** - Test /health endpoint via port-forward on 8081
+8. **Session Creation API** - Test POST /v2/session returns Bearer token
+9. **Template Listing API** - Test GET /v2/activities/templates returns templates with Thompson metrics
+10. **Execution Recording API** - Test POST /v2/activities/executions records execution and updates metrics
+11. **SurrealDB Database Query** - Test SQL query via HTTP API returns database metadata
+
+### Prerequisites
+
+- `kubectl` installed and configured
+- Kubernetes cluster running (Docker Desktop recommended for local testing)
+- Activity system deployed: `ENVIRONMENT=local bash scripts/deploy-activity-system.sh`
+- Bun runtime installed (`curl -fsSL https://bun.sh/install | bash`)
+
+### Usage
+
+```bash
+# Run validation harness
+bun run tests/validation-harnesses/activity-system-minimal-deployment-harness.ts
+
+# Check exit code
+echo $?  # 0 = all tests passed, 1 = one or more tests failed
+```
+
+### Expected Output
+
+```
+[INFO] Starting Activity System Validation
+[INFO] Namespace: activity-system
+
+[✓] Namespace Existence (125ms)
+[✓] Service Creation Verification (89ms)
+[✓] Persistent Volume Binding (76ms)
+[✓] Pod Running Status - All 5 Pods (112ms)
+[✓] SurrealDB Health Endpoint (2345ms)
+[✓] Activity API Health Endpoint (2156ms)
+[✓] Minibob Health Endpoint (2234ms)
+[✓] Session Creation API (398ms)
+[✓] Template Listing API (456ms)
+[✓] Execution Recording API (512ms)
+[✓] SurrealDB Database Query (289ms)
+
+[INFO] ==========================================
+[INFO] Validation Summary
+[INFO] ==========================================
+[✓] Passed: 11
+[✓] All tests passed!
+[INFO] Activity System is fully operational
+```
+
+### Test Case Impulses
+
+Each test case is stored as an impulse in `impulses/validation-cases/`:
+
+- `validation-activity-system-minimal-deployment-case-1.json` - Namespace existence
+- `validation-activity-system-minimal-deployment-case-2.json` - Service creation
+- `validation-activity-system-minimal-deployment-case-3.json` - PVC binding
+- `validation-activity-system-minimal-deployment-case-4.json` - Pod running status
+- `validation-activity-system-minimal-deployment-case-5.json` - SurrealDB health
+- `validation-activity-system-minimal-deployment-case-6.json` - Activity API health
+- `validation-activity-system-minimal-deployment-case-7.json` - Minibob health
+- `validation-activity-system-minimal-deployment-case-8.json` - Session creation
+- `validation-activity-system-minimal-deployment-case-9.json` - Template listing
+- `validation-activity-system-minimal-deployment-case-10.json` - Execution recording
+- `validation-activity-system-minimal-deployment-case-11.json` - SurrealDB query
+
+### Implementation Details
+
+**Test Categories**:
+- **Infrastructure** (4 tests): namespace, services, PVCs, pods
+- **Health Endpoints** (3 tests): SurrealDB, Activity API, minibob
+- **API Endpoints** (4 tests): session, templates, executions, database
+
+**Retry Strategy**:
+- 5 retries with 3-second delay for HTTP requests
+- 2-second startup delay for port-forwarding
+- Automatic cleanup of port-forward processes
+
+**Port-Forwarding**:
+- SurrealDB: localhost:8000 → svc/surrealdb:8000
+- Activity API: localhost:8080 → svc/metabob-activity-api:8080
+- Minibob: localhost:8081 → svc/minibob:8080
+
+### Troubleshooting
+
+**Port-forward failures**:
+```bash
+# Check if services are running
+kubectl get svc -n activity-system
+
+# Kill stale port-forwards
+pkill -f "kubectl port-forward"
+```
+
+**Pod not running**:
+```bash
+# Check pod status
+kubectl get pods -n activity-system
+
+# View logs
+kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api --tail=50
+
+# Describe pod for events
+kubectl describe pod -n activity-system <pod-name>
+```
+
+**API endpoint failures**:
+```bash
+# Port-forward manually and test
+kubectl port-forward -n activity-system svc/metabob-activity-api 8080:8080 &
+curl http://localhost:8080/health
+
+# Check API logs
+kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api
+```
+
+**SurrealDB query failures**:
+```bash
+# Verify SurrealDB is accessible
+kubectl port-forward -n activity-system svc/surrealdb 8000:8000 &
+curl -u root:surrealdb123 http://localhost:8000/health
+
+# Check SurrealDB logs
+kubectl logs -n activity-system -l app=surrealdb
+```
+
+### CI/CD Integration
+
+```yaml
+# .github/workflows/validate-activity-system.yml
+name: Validate Activity System
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+      
+      - name: Setup Kubernetes (kind)
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: activity-system-test
+      
+      - name: Deploy Activity System
+        run: |
+          ENVIRONMENT=local bash scripts/deploy-activity-system.sh
+      
+      - name: Run Validation Harness
+        run: |
+          bun run tests/validation-harnesses/activity-system-minimal-deployment-harness.ts
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          kubectl delete namespace activity-system
+```

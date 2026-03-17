@@ -1,0 +1,21 @@
+{
+  "id": "validation-activity-system-minimal-deployment-case-2",
+  "type": "memo",
+  "testName": "Service Creation Verification",
+  "description": "Verify all 4 required services exist: redis-master, surrealdb, metabob-activity-api, minibob",
+  "input": {
+    "namespace": "activity-system",
+    "requiredServices": ["redis-master", "surrealdb", "metabob-activity-api", "minibob"]
+  },
+  "expectedOutput": {
+    "servicesFound": 4,
+    "servicesExpected": 4,
+    "allServicesExist": true,
+    "services": {
+      "redis-master": { "exists": true, "type": "ClusterIP" },
+      "surrealdb": { "exists": true, "type": "ClusterIP" },
+      "metabob-activity-api": { "exists": true, "type": "ClusterIP" },
+      "minibob": { "exists": true, "type": "ClusterIP" }
+    }
+  }
+}

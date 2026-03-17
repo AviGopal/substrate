@@ -1,0 +1,20 @@
+{
+  "id": "validation-activity-system-minimal-deployment-case-5",
+  "type": "memo",
+  "testName": "SurrealDB Health Endpoint",
+  "description": "Verify SurrealDB /health endpoint responds via port-forward on 8000",
+  "input": {
+    "service": "surrealdb",
+    "namespace": "activity-system",
+    "port": 8000,
+    "endpoint": "/health",
+    "method": "GET",
+    "retries": 5,
+    "retryDelay": 3000
+  },
+  "expectedOutput": {
+    "statusCode": 200,
+    "healthy": true,
+    "responseTime": "< 1000ms"
+  }
+}
