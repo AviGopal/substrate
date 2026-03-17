@@ -111,7 +111,7 @@ releases:
         persistence:
           enabled: false  # In-memory for dev (faster resets)
         database:
-          namespace: metabob
+          namespace: activity-dev
           name: learning_loop
           storage:
             backend: memory  # Fast development iteration
@@ -147,7 +147,7 @@ releases:
           host: "0.0.0.0"
           surrealdb:
             url: "http://surrealdb.activity-dev.svc.cluster.local:8000"
-            namespace: "metabob"
+            namespace: "activity-dev"
             database: "learning_loop"
             username: "{{ env \"SURREALDB_USERNAME\" | default \"root\" }}"
             password: "{{ env \"SURREALDB_PASSWORD\" | default \"surrealdb-dev-123\" }}"

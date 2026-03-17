@@ -24,8 +24,8 @@ config:
   
   # SurrealDB connection
   surrealdb:
-    url: "http://surrealdb.metabob.svc.cluster.local:8000"
-    namespace: "metabob"
+    url: "http://surrealdb.activity-system.svc.cluster.local:8000"
+    namespace: "activity-system"
     database: "learning_loop"
     username: "root"
     password: "changeme"  # Override in production
