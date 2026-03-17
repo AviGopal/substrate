@@ -6,16 +6,26 @@
 #   - minibob - Autonomous vessel for testing
 #
 # Purpose: Close the learning loop and test activity execution in isolated environment
+#
+# Usage:
+#   export ANTHROPIC_API_KEY="sk-ant-..."
+#   helmfile -f helm/helmfile-activity-minimal.yaml \
+#     --state-values-file helm/secrets/local.yaml \
+#     -e local apply
 
 environments:
   local:
     values:
-      - helm/environments/activity-minimal-local.values.yaml
+      - environments/activity-minimal-local.values.yaml
+    secrets:
+      - secrets/local.yaml
     kubeContext: docker-desktop
   
   testing:
     values:
-      - helm/environments/activity-minimal-testing.values.yaml
+      - environments/activity-minimal-testing.values.yaml
+    secrets:
+      - secrets/testing.yaml
     kubeContext: docker-desktop
 
 ---
@@ -105,8 +115,8 @@ releases:
             path: /data/surrealdb
         auth:
           existingSecret: ""
-          username: "root"
-          password: "surrealdb123"
+          username: {{ .Values.surrealdb.username | quote }}
+          password: {{ .Values.surrealdb.password | quote }}
           usernameKey: username
           passwordKey: password
     needs:
@@ -139,8 +149,8 @@ releases:
             url: "http://surrealdb.activity-system.svc.cluster.local:8000"
             namespace: "metabob"
             database: "learning_loop"
-            username: "root"
-            password: "surrealdb123"
+            username: {{ requiredEnv "SURREALDB_USERNAME" | default "root" | quote }}
+            password: {{ requiredEnv "SURREALDB_PASSWORD" | default "surrealdb-local-123" | quote }}
           redis:
             url: "redis://redis-master.activity-system.svc.cluster.local:6379"
             sessionTtl: 86400
@@ -169,13 +179,13 @@ releases:
   # ==========================================================================
   
   - name: minibob
-    chart: ./repos/minibob/helm/minibob-cluster
+    chart: ../repos/minibob/helm/minibob-cluster
     namespace: activity-system
     labels:
       component: vessel
       tier: application
     values:
-      - ./repos/minibob/helm/minibob-cluster/values-testing-cluster.yaml
+      - ../repos/minibob/helm/minibob-cluster/values-testing-cluster.yaml
     set:
       - name: replicaCount
         value: 1
@@ -196,6 +206,8 @@ releases:
         value: "60000"  # 60 seconds
       - name: minibob.acp.enabled
         value: false  # Disabled for minimal single-vessel deployment
+      - name: minibob.anthropicApiKey
+        value: {{ requiredEnv "ANTHROPIC_API_KEY" | quote }}
       - name: service.type
         value: ClusterIP
       - name: service.port
