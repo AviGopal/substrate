@@ -84,7 +84,7 @@ function checkKubectlAccess(): ValidationResult {
 function checkPodRunning(): ValidationResult {
   try {
     const output = exec(
-      'kubectl get pods -n activity-system -l app=metabob-activity-api -o jsonpath="{.items[0].status.phase}"',
+      'kubectl get pods -n activity-system -l app.kubernetes.io/name=metabob-activity-api -o jsonpath="{.items[0].status.phase}"',
       { silent: true }
     );
     
