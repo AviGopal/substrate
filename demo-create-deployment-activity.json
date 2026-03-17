@@ -1,0 +1,134 @@
+{
+  "name": "deploy-k8s-application",
+  "description": "Deploy a Kubernetes application using Helm with validation and health checks",
+  "category": "infrastructure",
+  "variables": [
+    {
+      "name": "appName",
+      "type": "string",
+      "required": true,
+      "description": "Name of the application to deploy"
+    },
+    {
+      "name": "namespace",
+      "type": "string",
+      "required": true,
+      "description": "Kubernetes namespace for deployment"
+    },
+    {
+      "name": "chartPath",
+      "type": "string",
+      "required": true,
+      "description": "Path to Helm chart"
+    },
+    {
+      "name": "values",
+      "type": "object",
+      "required": false,
+      "description": "Helm values to override"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "validate-prerequisites",
+      "description": "Validate kubectl and helm are available",
+      "subagent": "general",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check that kubectl and helm are installed and accessible. Verify kubernetes cluster connectivity by running 'kubectl cluster-info'. Report the cluster context and verify it's correct for deployment.",
+        "maxTokens": 2000
+      },
+      "validation": {
+        "commands": [
+          {"cmd": "kubectl cluster-info", "expectation": "exit code 0"}
+        ]
+      }
+    },
+    {
+      "id": "create-namespace",
+      "description": "Create Kubernetes namespace if it doesn't exist",
+      "subagent": "general",
+      "dependencies": ["validate-prerequisites"],
+      "prompt": {
+        "template": "Create Kubernetes namespace {{namespace}} if it doesn't already exist. Use 'kubectl create namespace {{namespace}}' or verify it exists with 'kubectl get namespace {{namespace}}'.",
+        "maxTokens": 2000,
+        "variables": [
+          {"name": "namespace", "type": "string", "required": true}
+        ]
+      },
+      "validation": {
+        "commands": [
+          {"cmd": "kubectl get namespace {{namespace}}", "expectation": "namespace exists"}
+        ]
+      }
+    },
+    {
+      "id": "helm-install",
+      "description": "Deploy application using Helm",
+      "subagent": "general",
+      "dependencies": ["create-namespace"],
+      "prompt": {
+        "template": "Deploy {{appName}} using Helm chart at {{chartPath}} to namespace {{namespace}}. Use 'helm install {{appName}} {{chartPath}} --namespace {{namespace}} --create-namespace --wait --timeout=5m'. If values are provided, pass them with --set flags.",
+        "maxTokens": 4000,
+        "variables": [
+          {"name": "appName", "type": "string", "required": true},
+          {"name": "chartPath", "type": "string", "required": true},
+          {"name": "namespace", "type": "string", "required": true}
+        ]
+      },
+      "validation": {
+        "commands": [
+          {"cmd": "helm list -n {{namespace}}", "expectation": "contains {{appName}}"}
+        ]
+      }
+    },
+    {
+      "id": "verify-pods",
+      "description": "Verify all pods are running",
+      "subagent": "general",
+      "dependencies": ["helm-install"],
+      "prompt": {
+        "template": "Verify that all pods for {{appName}} in namespace {{namespace}} are in Running status. Use 'kubectl get pods -n {{namespace}} -l app={{appName}}' and check that all pods show STATUS as Running. Wait up to 3 minutes for pods to become ready.",
+        "maxTokens": 3000,
+        "variables": [
+          {"name": "appName", "type": "string", "required": true},
+          {"name": "namespace", "type": "string", "required": true}
+        ]
+      },
+      "validation": {
+        "commands": [
+          {"cmd": "kubectl get pods -n {{namespace}}", "expectation": "all Running"}
+        ]
+      }
+    },
+    {
+      "id": "health-check",
+      "description": "Perform health check on deployed application",
+      "subagent": "general",
+      "dependencies": ["verify-pods"],
+      "prompt": {
+        "template": "Perform health check on {{appName}}. Get the service endpoint using 'kubectl get svc -n {{namespace}} {{appName}}'. If there's a /health endpoint, port-forward and test it with curl. Report the health status.",
+        "maxTokens": 3000,
+        "variables": [
+          {"name": "appName", "type": "string", "required": true},
+          {"name": "namespace", "type": "string", "required": true}
+        ]
+      },
+      "validation": {
+        "commands": [
+          {"cmd": "kubectl get svc -n {{namespace}}", "expectation": "service exists"}
+        ]
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      {"type": "command", "value": "which kubectl"},
+      {"type": "command", "value": "which helm"}
+    ],
+    "postChecks": [
+      {"type": "command", "value": "kubectl get pods -n {{namespace}}"},
+      {"type": "command", "value": "helm list -n {{namespace}}"}
+    ]
+  }
+}
