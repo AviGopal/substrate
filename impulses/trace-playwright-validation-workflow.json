@@ -1,0 +1,20 @@
+{
+  "id": "trace-playwright-validation-workflow",
+  "type": "templateDefinition",
+  "version": "1.0.0",
+  "created": "2026-03-16T00:00:00Z",
+  "budget": 5000,
+  "metadata": {
+    "specification": "playwright-validation-workflow",
+    "traceStatus": "PARTIALLY_IMPLEMENTED",
+    "automationLevel": "30%",
+    "priority": "HIGH",
+    "effort": "2-3 hours",
+    "impact": "HIGH"
+  },
+  "pointer": {
+    "type": "templateDefinition",
+    "source": "trace-data-flow-single-feature",
+    "definition": "See TRACE_ANALYSIS_playwright-validation-workflow.md for full details"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "id": "validation-playwright-validation-workflow-case-1",
+  "type": "memo",
+  "version": "1.0.0",
+  "created": "2026-03-16T00:00:00Z",
+  "budget": 1000,
+  "metadata": {
+    "testCase": "successful-deployment-validation",
+    "specification": "playwright-validation-workflow"
+  },
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case",
+    "content": {
+      "input": {
+        "namespace": "activity-system",
+        "apiPort": 8080,
+        "healthEndpoint": "/health",
+        "sessionEndpoint": "/v2/session",
+        "screenshotsDir": "screenshots"
+      },
+      "expectedOutput": {
+        "scriptExitCode": 0,
+        "overallStatus": "PASS",
+        "passRate": "100%",
+        "testsExecuted": 2,
+        "reportGenerated": true,
+        "screenshotsCaptured": 2,
+        "screenshotNaming": [
+          "01-activity-api-health-{timestamp}.png",
+          "02-session-creation-{timestamp}.png"
+        ],
+        "healthCheckStatus": "PASS",
+        "sessionCreationStatus": "PASS",
+        "reportSections": [
+          "Overall Status",
+          "Deployment Status",
+          "Validation Tests",
+          "Success Criteria",
+          "Architecture Notes"
+        ]
+      },
+      "description": "Test case for successful deployment validation with all pods running and all endpoints responding correctly"
+    }
+  }
+}

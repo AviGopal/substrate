@@ -269,6 +269,7 @@ main() {
         echo "  1. Test activity execution via minibob"
         echo "  2. Access API endpoints via port-forwarding"
         echo "  3. Query SurrealDB for learning loop data"
+        echo "  4. Run Playwright validation: ./scripts/validate-deployment-playwright.sh"
         exit 0
     fi
 }

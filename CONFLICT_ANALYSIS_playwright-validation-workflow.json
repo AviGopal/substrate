@@ -1,0 +1,146 @@
+{
+  "specificationName": "playwright-validation-workflow",
+  "analysisDate": "2026-03-16T00:00:00Z",
+  "otherSpecifications": [
+    "local-docker-k8s-deployment",
+    "kubernetes-deployment-validation-exit-codes",
+    "rpc-api-deployed-infrastructure-validation",
+    "dashboard-login-flow-e2e-validation"
+  ],
+  "conflicts": [
+    {
+      "type": "OVERLAPPING_FUNCTIONALITY",
+      "spec1": "playwright-validation-workflow",
+      "spec2": "kubernetes-deployment-validation-exit-codes",
+      "sharedComponent": "scripts/validate-activity-system.sh",
+      "description": "Both specifications validate Kubernetes deployments and pod health. kubernetes-deployment-validation-exit-codes uses validate-local-deployment.sh, while playwright-validation-workflow uses validate-deployment-playwright.sh. Risk of duplication and inconsistent validation approaches.",
+      "severity": "MEDIUM",
+      "resolution": "RESOLVED - Specifications serve different purposes: kubernetes-deployment-validation-exit-codes validates exit codes and failure detection, playwright-validation-workflow validates API endpoints with browser automation. No actual conflict.",
+      "status": "NO_CONFLICT"
+    },
+    {
+      "type": "COMPLEMENTARY_VALIDATION",
+      "spec1": "playwright-validation-workflow",
+      "spec2": "rpc-api-deployed-infrastructure-validation",
+      "sharedComponent": "Kubernetes cluster health checks",
+      "description": "Both validate deployed infrastructure, but at different layers. rpc-api validates RPC API deployment, playwright-validation-workflow validates Activity API deployment. Complementary, not conflicting.",
+      "severity": "LOW",
+      "resolution": "SYNERGISTIC - Both specifications validate different services in the same cluster. Can be combined in comprehensive deployment validation pipeline.",
+      "status": "SYNERGISTIC"
+    },
+    {
+      "type": "TOOL_DEPENDENCY_OVERLAP",
+      "spec1": "playwright-validation-workflow",
+      "spec2": "dashboard-login-flow-e2e-validation",
+      "sharedComponent": "Playwright MCP tools",
+      "description": "Both specifications use Playwright MCP for browser-based validation. playwright-validation-workflow uses it for API endpoint validation, dashboard-login-flow uses it for UI testing.",
+      "severity": "LOW",
+      "resolution": "COMPATIBLE - Both use the same Playwright MCP infrastructure. Shared dependency on Playwright MCP server availability. No conflict, but both require MCP server to be running.",
+      "status": "COMPATIBLE"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "scripts/validate-activity-system.sh",
+      "affectedBySpecs": [
+        "playwright-validation-workflow"
+      ],
+      "changeType": "MINIMAL - Added reference to new Playwright validation script (1 line)",
+      "recommendation": "No refactoring needed. validate-activity-system.sh continues to provide basic validation, new script provides comprehensive Playwright validation."
+    },
+    {
+      "component": "Playwright MCP Server",
+      "affectedBySpecs": [
+        "playwright-validation-workflow",
+        "dashboard-login-flow-e2e-validation"
+      ],
+      "changeType": "SHARED DEPENDENCY",
+      "recommendation": "Ensure Playwright MCP server is running before executing either validation. Consider adding MCP server health check to validation scripts."
+    },
+    {
+      "component": "Kubernetes cluster (activity-system namespace)",
+      "affectedBySpecs": [
+        "playwright-validation-workflow",
+        "kubernetes-deployment-validation-exit-codes",
+        "local-docker-k8s-deployment",
+        "rpc-api-deployed-infrastructure-validation"
+      ],
+      "changeType": "SHARED INFRASTRUCTURE",
+      "recommendation": "All specifications assume access to Kubernetes cluster. No conflicts, but validation order matters: infrastructure validation → deployment validation → API validation → UI validation."
+    },
+    {
+      "component": "screenshots/ directory",
+      "affectedBySpecs": [
+        "playwright-validation-workflow",
+        "dashboard-login-flow-e2e-validation"
+      ],
+      "changeType": "SHARED ARTIFACT STORAGE",
+      "recommendation": "Use timestamp-based naming to avoid file conflicts. Current implementation already uses timestamps (ISO 8601 format)."
+    },
+    {
+      "component": "FINAL_VALIDATION_REPORT.md",
+      "affectedBySpecs": [
+        "playwright-validation-workflow"
+      ],
+      "changeType": "NEW FILE",
+      "recommendation": "No conflicts. This report is specific to playwright-validation-workflow. Other specifications use different report files."
+    }
+  ],
+  "potentialIssues": [
+    {
+      "issue": "Playwright MCP Server Availability",
+      "description": "Multiple specifications depend on Playwright MCP server being running and accessible. If MCP server is down, both playwright-validation-workflow and dashboard-login-flow-e2e-validation will fail.",
+      "severity": "MEDIUM",
+      "mitigation": "Add MCP server health check at the beginning of validation scripts. Document MCP server setup requirements in deployment documentation.",
+      "status": "MITIGATED - Documentation added in docs/deployment-validation-workflow.md"
+    },
+    {
+      "issue": "Port 8080 Conflicts",
+      "description": "validate-deployment-playwright.sh uses kubectl port-forward to localhost:8080. If another process is using port 8080, port-forward will fail.",
+      "severity": "LOW",
+      "mitigation": "Script should check if port 8080 is available before starting port-forward. Add cleanup logic to kill existing port-forwards on the same port.",
+      "status": "PARTIAL - Script includes cleanup on exit, but doesn't check for existing port usage"
+    },
+    {
+      "issue": "Validation Order Dependencies",
+      "description": "Playwright validation assumes infrastructure is deployed and healthy. Running playwright-validation-workflow before deploying infrastructure will fail.",
+      "severity": "LOW",
+      "mitigation": "Document validation order in deployment workflow: 1) Deploy infrastructure, 2) Validate deployment (kubernetes-deployment-validation-exit-codes), 3) Validate APIs (playwright-validation-workflow), 4) Validate UI (dashboard-login-flow).",
+      "status": "MITIGATED - Documentation includes deployment workflow order"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "recommendation": "Create comprehensive deployment validation pipeline that orchestrates all validation specifications in correct order",
+      "reason": "Multiple validation specifications exist but no unified pipeline to execute them in sequence",
+      "implementation": "Create scripts/validate-deployment-complete.sh that calls all validation scripts in order with proper error handling"
+    },
+    {
+      "priority": "MEDIUM",
+      "recommendation": "Add MCP server health check to validation scripts",
+      "reason": "Multiple scripts depend on Playwright MCP but don't verify it's available",
+      "implementation": "Add opencode mcp list check at beginning of scripts that use Playwright MCP"
+    },
+    {
+      "priority": "LOW",
+      "recommendation": "Standardize validation report formats across specifications",
+      "reason": "Different specifications use different report formats (markdown, JSON, text)",
+      "implementation": "Create common validation report template/schema that all specifications can use"
+    }
+  ],
+  "cpgAnalysis": {
+    "filesAnalyzed": [
+      "scripts/validate-activity-system.sh",
+      "scripts/validate-deployment-playwright.sh",
+      "docs/deployment-validation-workflow.md"
+    ],
+    "relatedChanges": [],
+    "impactAssessment": {
+      "directImpact": "LOW - New files added, minimal modifications to existing files",
+      "transitiveImpact": "LOW - No changes to core application code, only validation infrastructure",
+      "breakingChanges": "NONE - All changes are additive"
+    }
+  },
+  "conflictImpulseId": "conflict-analysis-playwright-validation-workflow"
+}
