@@ -1,0 +1,49 @@
+{
+  "id": "minibob-find-bugs",
+  "name": "MiniBob Bug Discovery",
+  "description": "MiniBob searches for bugs in its own code",
+  "category": "tool",
+  "tasks": [
+    {
+      "id": "analyze-llm-integration",
+      "subagent": "general",
+      "description": "Analyze the LLM integration for potential issues",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze your LLM integration code for bugs or issues.\n\nRead /app/src/llm.ts carefully and look for:\n1. **Message Format Issues**: How are conversation messages formatted for the Anthropic API?\n2. **Tool Result Handling**: How are tool results added to the conversation?\n3. **Assistant Messages**: When the assistant uses tools, how is that represented in the next API call?\n\nPay special attention to the `complete()` function around lines 33-50 where messages are converted to Anthropic format.\n\nQuestion to investigate: When an assistant message contains tool calls, and you send a tool_result in the next message, does the Anthropic API have all the information it needs?\n\nProvide:\n- Any bugs you find\n- Explanation of why it's a bug\n- Suggested fix",
+        "maxTokens": 4096,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {},
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "document-findings",
+      "subagent": "general",
+      "description": "Document the bug findings",
+      "dependencies": ["analyze-llm-integration"],
+      "prompt": {
+        "template": "Based on your analysis, create a structured bug report.\n\nFormat:\n```markdown\n# Bug Report: [Title]\n\n## Description\n[What's wrong?]\n\n## Location\nFile: [file path]\nLines: [line numbers]\n\n## Root Cause\n[Why does this happen?]\n\n## Impact\n[What breaks because of this?]\n\n## Proposed Fix\n```[language]\n[code fix]\n```\n\n## Test Case\n[How to reproduce/test]\n```\n\nBe specific and technical.",
+        "maxTokens": 2048,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {},
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "contextRequirements": [],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  }
+}
