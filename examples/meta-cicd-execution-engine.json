@@ -1,0 +1,222 @@
+{
+  "id": "meta-cicd-execution-engine",
+  "name": "Meta-Level CI/CD Execution Engine",
+  "description": "Self-composing CI/CD engine built entirely from activity templates",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "analyze-change-scope",
+      "subagent": "general",
+      "description": "Determine what changed and what needs to run",
+      "dependencies": [],
+      "prompt": {
+        "template": "Search for activities to analyze git changes:\nsearch_activities({ category: 'infrastructure', verbose: true })\n\nLook for templates like:\n- 'analyze-git-diff'\n- 'detect-affected-services'\n- 'determine-test-scope'\n\nExecute the best match with:\n- branch: {{branch}}\n- baseBranch: {{baseBranch}}\n\nThis determines the CI/CD pipeline scope.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "branch",
+            "type": "string",
+            "required": true,
+            "description": "Git branch being built"
+          },
+          {
+            "name": "baseBranch",
+            "type": "string",
+            "required": true,
+            "description": "Base branch to compare against"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "build-affected-services",
+      "subagent": "general",
+      "description": "Build only the services that changed",
+      "dependencies": ["analyze-change-scope"],
+      "impulseReferences": ["changeAnalysis"],
+      "prompt": {
+        "template": "Based on the change analysis impulse, search for build activities:\nsearch_activities({ category: 'infrastructure' })\n\nLook for templates matching the affected services.\n\nFor each affected service:\n  activity({\n    templateId: '<build-template-id>',\n    variables: {\n      serviceName: '<service>',\n      version: '{{version}}',\n      buildEnv: '{{buildEnv}}'\n    },\n    reason: 'Building service affected by changes'\n  })\n\nThis composes multiple build activities dynamically.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "version",
+            "type": "string",
+            "required": true,
+            "description": "Version to build"
+          },
+          {
+            "name": "buildEnv",
+            "type": "string",
+            "required": false,
+            "description": "Build environment (dev/staging/prod)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "run-test-suite",
+      "subagent": "general",
+      "description": "Execute appropriate test activities based on scope",
+      "dependencies": ["build-affected-services"],
+      "impulseReferences": ["buildResults"],
+      "prompt": {
+        "template": "Search for test activities:\nsearch_activities({ category: 'infrastructure' })\n\nBased on change scope and build results:\n\nIf {{testScope}} == 'full':\n  - Run: 'run-full-test-suite'\n  - Includes: unit, integration, e2e\n\nIf {{testScope}} == 'affected':\n  - Run: 'run-affected-tests' \n  - Only tests for changed services\n\nIf {{testScope}} == 'smoke':\n  - Run: 'run-smoke-tests'\n  - Quick validation only\n\nCompose test activities sequentially with results chaining.",
+        "maxTokens": 10000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testScope",
+            "type": "string",
+            "required": true,
+            "description": "Test scope: full, affected, or smoke"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "deploy-if-passing",
+      "subagent": "general",
+      "description": "Deploy to target environment if all checks pass",
+      "dependencies": ["run-test-suite"],
+      "impulseReferences": ["testResults"],
+      "prompt": {
+        "template": "Review test results impulse.\n\nIf all tests passed:\n  Search for deployment activities:\n  search_activities({ category: 'infrastructure' })\n  \n  Execute deployment based on {{targetEnvironment}}:\n  \n  If 'staging':\n    activity({\n      templateId: 'deploy-to-staging',\n      variables: { version: '{{version}}', services: '<affected>' },\n      reason: 'Automated staging deployment after tests pass'\n    })\n  \n  If 'production':\n    - Require manual approval impulse\n    - Execute: 'deploy-to-production-with-canary'\n    - Monitor: 'validate-production-health'\n\nIf tests failed:\n  - Skip deployment\n  - Create failure report impulse\n  - Notify team\n\nThis implements conditional composition based on results.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "targetEnvironment",
+            "type": "string",
+            "required": true,
+            "description": "Deployment target: staging or production"
+          },
+          {
+            "name": "version",
+            "type": "string",
+            "required": true,
+            "description": "Version to deploy"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "record-and-evolve",
+      "subagent": "general",
+      "description": "Record execution metrics and evolve the pipeline",
+      "dependencies": ["deploy-if-passing"],
+      "impulseReferences": ["executionMetrics"],
+      "prompt": {
+        "template": "Analyze the complete pipeline execution:\n\n1. Calculate metrics:\n   - Total duration\n   - Total cost\n   - Success/failure rate\n   - Bottlenecks identified\n\n2. Pattern detection:\n   If this pipeline configuration is novel:\n     create_activity_goal_seeking({\n       goalDescription: 'CI/CD for {{branch}} pattern',\n       templateName: 'cicd-{{pattern-name}}',\n       category: 'infrastructure',\n       variables: { extracted from this execution }\n     })\n   \n   Then register the new template:\n     register_activity_template({\n       file_path: '<generated-template>',\n       validate_before_register: true,\n       test_variables: { sample test case }\n     })\n\n3. Report to backend:\n   - Execution recorded for Thompson sampling\n   - Template success rate updated\n   - Pipeline evolves automatically\n\nThis creates a SELF-IMPROVING CI/CD ENGINE!",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "contextRequirements": [
+    {
+      "key": "changeAnalysis",
+      "hint": "Git diff analysis and affected service detection",
+      "impulseTypes": ["activityOutput"],
+      "required": true,
+      "budgetRange": [2000, 4000]
+    },
+    {
+      "key": "buildResults",
+      "hint": "Build status and artifacts from affected services",
+      "impulseTypes": ["activityOutput"],
+      "required": true,
+      "budgetRange": [1000, 3000]
+    },
+    {
+      "key": "testResults",
+      "hint": "Test execution results and coverage data",
+      "impulseTypes": ["activityOutput"],
+      "required": true,
+      "budgetRange": [3000, 5000]
+    },
+    {
+      "key": "executionMetrics",
+      "hint": "Complete pipeline execution metrics for learning",
+      "impulseTypes": ["activityOutput", "memo"],
+      "required": false,
+      "budgetRange": [1000, 2000]
+    }
+  ],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [
+      "Verify MCP backend connectivity",
+      "Check template registry availability",
+      "Validate git repository access"
+    ],
+    "postChecks": [
+      "Verify all stages completed",
+      "Check execution metrics recorded",
+      "Validate new templates registered (if applicable)"
+    ],
+    "qualityGates": [
+      "All builds must succeed before testing",
+      "All tests must pass before deployment",
+      "Production deployments require manual approval"
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "generate-timestamp",
+  "name": "Generate Timestamp",
+  "description": "Simple activity that generates a timestamp",
+  "category": "tool",
+  "tasks": [
+    {
+      "id": "timestamp",
+      "subagent": "general",
+      "description": "Generate current timestamp",
+      "dependencies": [],
+      "prompt": {
+        "template": "Generate a timestamp in ISO 8601 format for the current moment. Output only the timestamp.",
+        "maxTokens": 128,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "contextRequirements": [],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  }
+}

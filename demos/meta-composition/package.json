@@ -1,0 +1,16 @@
+{
+  "name": "meta-composition-proof",
+  "version": "1.0.0",
+  "description": "Proof-of-concept demonstration for meta-level activity composition",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "demo": "./run-demonstration.sh",
+    "show-report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "harness-vessel-tools-architecture-and-typescript-fixes",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "repos/metabob-opencode/tests/validation-harnesses/vessel-tools-architecture-and-typescript-fixes-harness.ts"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "loaded": true,
+  "scope": "session",
+  "metadata": {
+    "specification": "vessel-tools-architecture-and-typescript-fixes",
+    "purpose": "Validation harness for TypeScript fixes and vessel architecture implementation",
+    "testCases": 7,
+    "executionMode": "standalone",
+    "requirements": [
+      "Node.js with TypeScript",
+      "Access to repos/metabob-opencode source files",
+      "npx tsc command available"
+    ],
+    "usage": {
+      "runAll": "ts-node vessel-tools-architecture-and-typescript-fixes-harness.ts",
+      "runSpecific": "ts-node vessel-tools-architecture-and-typescript-fixes-harness.ts case-1-typescript-compilation",
+      "exitCodes": {
+        "0": "All tests pass",
+        "1": "One or more tests failed"
+      }
+    }
+  }
+}
