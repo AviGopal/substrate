@@ -1,0 +1,168 @@
+{
+  "id": "validation-results-external-e2e-activity-lifecycle-validation",
+  "type": "memo",
+  "description": "Validation results for external E2E activity lifecycle validation - execution summary",
+  "timestamp": "2026-03-18T04:00:00Z",
+  "specificationName": "external-e2e-activity-lifecycle-validation",
+  "executionStatus": "PREREQUISITES_NOT_MET",
+  "note": "Validation harness is ready but prerequisites not available in current environment. Documented expected behavior and setup requirements.",
+  "testCases": [
+    {
+      "testCaseId": "validation-external-e2e-activity-lifecycle-validation-case-1",
+      "description": "Basic E2E validation: verify templates exist, execute one, verify execution stored",
+      "status": "NOT_RUN",
+      "reason": "OpenCode binary not built (requires: cd repos/metabob-opencode && bun run build)",
+      "expectedBehavior": {
+        "phase1": {
+          "action": "Query SurrealDB: SELECT * FROM activity_template LIMIT 10",
+          "expected": "Find >= 1 template with fields: id, name, category, tasks",
+          "validates": "Templates can be stored in database"
+        },
+        "phase2": {
+          "action": "Execute: ./opencode activity <template-id> --variables '{}' --reason 'E2E test'",
+          "query": "SELECT * FROM activity_execution WHERE template_id = '<id>'",
+          "expected": "Execution record found with matching template_id and required fields",
+          "validates": "Templates can be executed and executions are recorded"
+        },
+        "phase3": {
+          "action": "Analyze validation logs",
+          "expected": "Error count <= 5, lifecycle indicators present",
+          "validates": "System tracks lifecycle correctly"
+        }
+      },
+      "prerequisites": [
+        "OpenCode binary built: cd repos/metabob-opencode && bun run build",
+        "SurrealDB accessible at http://localhost:8000 (or configured URL)",
+        "Database contains at least 1 activity template",
+        "TypeScript/Node.js runtime available"
+      ]
+    },
+    {
+      "testCaseId": "validation-external-e2e-activity-lifecycle-validation-case-2",
+      "description": "E2E validation with custom DB connection (devbob k8s environment)",
+      "status": "NOT_RUN",
+      "reason": "Requires k8s environment with SurrealDB service",
+      "expectedBehavior": {
+        "phase1": {
+          "expected": "Find >= 5 templates",
+          "validates": "K8s environment has sufficient templates"
+        },
+        "phase2": {
+          "expected": "Execution record with extended fields: duration_ms, cost",
+          "validates": "K8s environment records complete execution data"
+        }
+      },
+      "prerequisites": [
+        "Running in devbob k8s pod",
+        "SurrealDB service accessible at http://surrealdb-service:8000",
+        "OpenCode binary at /workspace/repos/metabob-opencode/dist/opencode-linux-x64/bin/opencode"
+      ]
+    },
+    {
+      "testCaseId": "validation-external-e2e-activity-lifecycle-validation-case-3",
+      "description": "E2E validation with strict requirements (all fields, low error tolerance)",
+      "status": "NOT_RUN",
+      "reason": "OpenCode binary not built",
+      "expectedBehavior": {
+        "phase2": {
+          "expected": "Execution record with all 11 fields: id, template_id, status, agent_id, variables, start_time, end_time, duration_ms, cost, tokens, created_at",
+          "validates": "Complete execution data structure"
+        },
+        "phase3": {
+          "expected": "Zero errors (strict validation)",
+          "validates": "Perfect execution with no errors"
+        }
+      },
+      "prerequisites": [
+        "OpenCode binary built",
+        "SurrealDB accessible",
+        "Clean environment for strict validation"
+      ]
+    }
+  ],
+  "overallStatus": "HARNESS_READY_PREREQUISITES_PENDING",
+  "summary": {
+    "totalTestCases": 3,
+    "run": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 3,
+    "reason": "Prerequisites not met in current environment"
+  },
+  "harnessStatus": {
+    "harnessFile": "tests/validation-harnesses/external-e2e-activity-lifecycle-validation-harness.ts",
+    "exists": true,
+    "executable": true,
+    "validated": false,
+    "note": "Harness is properly implemented and ready to run once prerequisites are met"
+  },
+  "prerequisites": {
+    "required": [
+      {
+        "item": "OpenCode Binary",
+        "status": "MISSING",
+        "location": "repos/metabob-opencode/dist/opencode-linux-x64/bin/opencode",
+        "action": "Build: cd repos/metabob-opencode && bun run build"
+      },
+      {
+        "item": "SurrealDB",
+        "status": "UNKNOWN",
+        "location": "http://localhost:8000 or http://surrealdb-service:8000",
+        "action": "Ensure SurrealDB is running and accessible"
+      },
+      {
+        "item": "Activity Templates in DB",
+        "status": "UNKNOWN",
+        "action": "Verify: surreal sql 'SELECT COUNT(*) FROM activity_template'"
+      },
+      {
+        "item": "TypeScript Runtime",
+        "status": "AVAILABLE",
+        "note": "npx ts-node is available"
+      }
+    ]
+  },
+  "nextSteps": {
+    "immediate": [
+      "Build OpenCode binary: cd repos/metabob-opencode && bun run build",
+      "Verify SurrealDB accessibility",
+      "Run validation: ./scripts/run-validation-harness.sh case-1"
+    ],
+    "validation": [
+      "Execute test case 1 (basic validation)",
+      "Verify results match expected output",
+      "Execute test case 2 if in k8s environment",
+      "Execute test case 3 for strict validation"
+    ],
+    "reporting": [
+      "Capture actual results",
+      "Compare with expected results",
+      "Update this impulse with actual outcomes",
+      "Create evidence report with DB queries and logs"
+    ]
+  },
+  "runInstructions": {
+    "local": {
+      "setup": [
+        "cd /home/avi/documents/work/exp-repo/metabob-devbob",
+        "cd repos/metabob-opencode && bun run build && cd ../..",
+        "export SURREAL_URL=http://localhost:8000",
+        "export SURREAL_USER=root",
+        "export SURREAL_PASS=root"
+      ],
+      "execute": [
+        "./scripts/run-validation-harness.sh case-1"
+      ]
+    },
+    "k8s": {
+      "setup": [
+        "kubectl exec -n metabob <devbob-pod> -- bash"
+      ],
+      "execute": [
+        "cd /workspace",
+        "./scripts/run-validation-harness.sh case-2"
+      ]
+    }
+  },
+  "budget": 2000
+}
