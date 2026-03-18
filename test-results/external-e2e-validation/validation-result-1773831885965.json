@@ -1,0 +1,51 @@
+{
+  "pass": false,
+  "actual": {
+    "phase1": {
+      "templateCount": 0,
+      "hasRequiredFields": false
+    },
+    "phase2": {
+      "executionRecordFound": false,
+      "executionHasRequiredFields": false,
+      "templateIdMatches": false
+    },
+    "phase3": {
+      "errorCount": 0,
+      "hasLifecycleIndicators": false
+    }
+  },
+  "expected": {
+    "phase1": {
+      "minTemplateCount": 1,
+      "requiredFields": [
+        "id",
+        "name",
+        "category",
+        "tasks"
+      ]
+    },
+    "phase2": {
+      "executionExists": true,
+      "requiredFields": [
+        "id",
+        "template_id",
+        "status"
+      ]
+    },
+    "phase3": {
+      "maxErrors": 5,
+      "hasLifecycleIndicators": true
+    }
+  },
+  "errors": [
+    "DB query failed: spawn surreal ENOENT",
+    "Skipped due to Phase 1 failure"
+  ],
+  "evidence": [
+    "Log file: /home/avi/documents/work/exp-repo/metabob-devbob/test-results/external-e2e-validation/validation-1773831885959.log (45 chars)",
+    "Error-level keywords: 0",
+    "Lifecycle indicators: started=false, completed=false, tasks=false"
+  ],
+  "timestamp": "2026-03-18T11:04:45.959Z"
+}
