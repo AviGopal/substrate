@@ -8,19 +8,10 @@
       "command": [
         "npx",
         "-y",
-        "@executeautomation/playwright-mcp-server"
+        "@playwright/mcp@latest"
       ],
       "enabled": true,
       "timeout": 60000
-    },
-    "metabob": {
-      "type": "local",
-      "command": ["metabob-cli", "mcp", "--transport", "stdio"],
-      "environment": {
-        "METABOB_API_KEY": "local-dev-key",
-        "METABOB_API_URL": "http://api.metabob.local"
-      },
-      "enabled": true
     }
   },
   "metabob": {
