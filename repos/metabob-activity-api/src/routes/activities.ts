@@ -14,7 +14,14 @@ import { surrealDB } from '../db/surreal';
 import { RedisClient } from '../db/redis';
 import { logger } from '../utils/logger';
 import type { SessionData } from '../models/schemas';
-import { ExecutionRecordSchema, type ExecutionRecord, type ExecutionRecordResponse } from '../models/schemas';
+import { 
+  ExecutionRecordSchema, 
+  CreateTemplateRequestSchema,
+  type ExecutionRecord, 
+  type ExecutionRecordResponse,
+  type CreateTemplateRequest,
+  type CreateTemplateResponse,
+} from '../models/schemas';
 
 const app = new Hono();
 
@@ -119,6 +126,150 @@ async function listAllTemplatesFromDB(
 
   return result;
 }
+
+/**
+ * POST /v2/activities/templates
+ * Register a new activity template variant
+ * 
+ * This endpoint enables template registration from:
+ * - MiniBob executing local JSON templates
+ * - OpenCode creating new templates
+ * - External systems registering custom templates
+ * 
+ * Automatically creates initial performance metrics with Thompson Sampling parameters
+ */
+app.post('/templates', async (c) => {
+  try {
+    // Extract session from context (set by auth middleware)
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = session?.org_id || null;
+    const projectId = session?.project_id || null;
+
+    // Parse and validate request body
+    const body = await c.req.json();
+    const validated = CreateTemplateRequestSchema.parse(body);
+
+    logger.info('POST /v2/activities/templates', {
+      variant_id: validated.variant_id,
+      activity_id: validated.activity_id,
+      variant_name: validated.variant_name,
+      category: validated.category,
+      scope: validated.scope,
+    });
+
+    // Check if template already exists
+    const existingQuery = `
+      SELECT * FROM activity_template
+      WHERE variant_id = $variant_id
+      LIMIT 1
+    `;
+    
+    const existing = await surrealDB.query<ActivityTemplate>(existingQuery, {
+      variant_id: validated.variant_id,
+    });
+
+    if (existing.length > 0) {
+      logger.warn('Template already exists', { variant_id: validated.variant_id });
+      return c.json({
+        success: false,
+        variant_id: validated.variant_id,
+        message: 'Template variant already exists',
+      } as CreateTemplateResponse, 409);
+    }
+
+    // Build template record, only include fields with values (SurrealDB doesn't accept null)
+    const templateRecord: Record<string, any> = {
+      variant_id: validated.variant_id,
+      activity_id: validated.activity_id,
+      variant_name: validated.variant_name,
+      description: validated.description,
+      category: validated.category,
+      scope: validated.scope || 'global',
+    };
+
+    // Only add optional fields if they have values
+    if (validated.task_steps && validated.task_steps.length > 0) {
+      templateRecord.task_steps = validated.task_steps;
+    }
+    if (validated.org_id || orgId) {
+      templateRecord.org_id = validated.org_id || orgId;
+    }
+    if (validated.project_id || projectId) {
+      templateRecord.project_id = validated.project_id || projectId;
+    }
+    if (validated.genealogy && Object.keys(validated.genealogy).length > 0) {
+      templateRecord.genealogy = validated.genealogy;
+    }
+
+    // Build dynamic query with only provided fields
+    const fields = Object.keys(templateRecord).map(k => `${k}: $${k}`).join(',\n        ');
+    const insertTemplateQuery = `
+      INSERT INTO activity_template {
+        ${fields},
+        created_at: time::now(),
+        updated_at: time::now()
+      }
+    `;
+
+    await surrealDB.query(insertTemplateQuery, templateRecord);
+
+    logger.debug('Template inserted into activity_template');
+
+    // Create initial performance metrics
+    const insertMetricsQuery = `
+      INSERT INTO variant_performance_metrics {
+        variant_id: $variant_id,
+        activity_id: $activity_id,
+        total_executions: 0,
+        successful_executions: 0,
+        failed_executions: 0,
+        success_rate: 0.0,
+        avg_duration_ms: 0.0,
+        avg_cost_usd: 0.0,
+        thompson_alpha: 1.0,
+        thompson_beta: 1.0,
+        total_selections: 0,
+        created_at: time::now(),
+        updated_at: time::now()
+      }
+    `;
+
+    await surrealDB.query(insertMetricsQuery, {
+      variant_id: validated.variant_id,
+      activity_id: validated.activity_id,
+    });
+
+    logger.info('Template registered successfully', {
+      variant_id: validated.variant_id,
+    });
+
+    return c.json({
+      success: true,
+      variant_id: validated.variant_id,
+      message: 'Template registered successfully',
+    } as CreateTemplateResponse, 201);
+
+  } catch (error: any) {
+    logger.error('POST /v2/activities/templates failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    // Check if it's a validation error
+    if (error.name === 'ZodError') {
+      return c.json({
+        error: 'Validation failed',
+        message: error.message,
+        details: error.errors,
+      }, 400);
+    }
+
+    return c.json({
+      error: 'Failed to register template',
+      message: error.message,
+    }, 500);
+  }
+});
 
 /**
  * GET /v2/activities/templates
@@ -385,46 +536,52 @@ app.post('/executions', async (c) => {
     // Generate execution ID
     const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 
-    // Step 1: Record execution in activity_executions table
+    // Build execution record, only include fields with values (SurrealDB doesn't accept null)
+    const executionRecord: Record<string, any> = {
+      execution_id: executionId,
+      variant_id: validated.variant_id,
+      success: validated.success,
+      duration_ms: validated.duration_ms,
+      cost_usd: validated.cost,
+      tokens_input: validated.tokens.input,
+      tokens_output: validated.tokens.output,
+      tokens_cache: validated.tokens.cache,
+    };
+
+    // Only add optional fields if they have values
+    if (orgId) {
+      executionRecord.org_id = orgId;
+    }
+    if (projectId) {
+      executionRecord.project_id = projectId;
+    }
+    if (validated.error_message) {
+      executionRecord.error_message = validated.error_message;
+    }
+    if (validated.error_type) {
+      executionRecord.error_type = validated.error_type;
+    }
+    if (validated.failed_task_id) {
+      executionRecord.failed_task_id = validated.failed_task_id;
+    }
+    if (validated.impulses_used && validated.impulses_used.length > 0) {
+      executionRecord.impulses_used = validated.impulses_used;
+    }
+    if (validated.component_changes && validated.component_changes.length > 0) {
+      executionRecord.component_changes = validated.component_changes;
+    }
+
+    // Build dynamic query with only provided fields
+    const execFields = Object.keys(executionRecord).map(k => `${k}: $${k}`).join(',\n        ');
     const insertExecutionQuery = `
       INSERT INTO activity_executions {
-        execution_id: $execution_id,
-        variant_id: $variant_id,
-        org_id: $org_id,
-        project_id: $project_id,
-        success: $success,
-        duration_ms: $duration_ms,
-        cost_usd: $cost,
-        tokens_input: $tokens_input,
-        tokens_output: $tokens_output,
-        tokens_cache: $tokens_cache,
-        error_message: $error_message,
-        error_type: $error_type,
-        failed_task_id: $failed_task_id,
-        impulses_used: $impulses_used,
-        component_changes: $component_changes,
+        ${execFields},
         executed_at: time::now(),
         created_at: time::now()
       }
     `;
 
-    await surrealDB.query(insertExecutionQuery, {
-      execution_id: executionId,
-      variant_id: validated.variant_id,
-      org_id: orgId,
-      project_id: projectId,
-      success: validated.success,
-      duration_ms: validated.duration_ms,
-      cost: validated.cost,
-      tokens_input: validated.tokens.input,
-      tokens_output: validated.tokens.output,
-      tokens_cache: validated.tokens.cache,
-      error_message: validated.error_message || null,
-      error_type: validated.error_type || null,
-      failed_task_id: validated.failed_task_id || null,
-      impulses_used: validated.impulses_used || [],
-      component_changes: validated.component_changes || [],
-    });
+    await surrealDB.query(insertExecutionQuery, executionRecord);
 
     logger.debug('Execution recorded in activity_executions', { executionId });
 
