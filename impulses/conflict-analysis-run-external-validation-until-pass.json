@@ -1,0 +1,193 @@
+{
+  "impulseId": "conflict-analysis-run-external-validation-until-pass",
+  "type": "memo",
+  "description": "Conflict analysis for run-external-validation-until-pass specification",
+  "content": {
+    "specificationName": "run-external-validation-until-pass",
+    "analysisTimestamp": "2026-03-18T03:00:00Z",
+    "totalSpecificationsAnalyzed": 73,
+    "otherSpecifications": [
+      "Clean-Environment-Activity-Execution-End-to-End-FINAL",
+      "activity-system-minimal-deployment",
+      "bootstrap-template-filepath-compliance",
+      "local-docker-k8s-deployment",
+      "external-activity-system-validation"
+    ],
+    "relatedSpecifications": [
+      {
+        "name": "external-activity-system-validation",
+        "relationship": "DIRECT_DEPENDENCY",
+        "description": "The run-external-validation-until-pass script wraps and iteratively runs the external-activity-system-validation-harness.ts",
+        "sharedComponents": [
+          "tests/validation-harnesses/external-activity-system-validation-harness.ts",
+          "repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode",
+          "test-results/external-validation-harness/"
+        ]
+      },
+      {
+        "name": "Clean-Environment-Activity-Execution-End-to-End",
+        "relationship": "COMPLEMENTARY",
+        "description": "Both validate activity system but at different layers: CEAEE validates internal architecture, run-external validates external behavior",
+        "sharedComponents": [
+          "Activity execution system",
+          "Activity template system",
+          "MCP backend communication"
+        ]
+      },
+      {
+        "name": "activity-system-minimal-deployment",
+        "relationship": "PREREQUISITE",
+        "description": "Kubernetes deployment must succeed before external validation can run (requires deployed services)",
+        "sharedComponents": [
+          "Activity API service",
+          "SurrealDB backend",
+          "Redis cache"
+        ]
+      }
+    ],
+    "conflicts": [],
+    "potentialConflicts": [
+      {
+        "type": "ENVIRONMENT_DEPENDENCY",
+        "description": "Script assumes OpenCode builds successfully, but build may fail if dependencies are not installed",
+        "affectedComponents": [
+          "repos/metabob-opencode/packages/opencode/script/build.ts",
+          "Bun runtime"
+        ],
+        "severity": "MEDIUM",
+        "resolution": "Add pre-flight check for Bun runtime and build dependencies before attempting build",
+        "status": "MONITORED"
+      },
+      {
+        "type": "BINARY_LOCATION_ASSUMPTION",
+        "description": "Script hardcodes expected binary path (dist/opencode-linux-x64/bin/opencode), may fail on non-Linux platforms",
+        "affectedComponents": [
+          "scripts/run-external-validation-until-pass.sh:line 50",
+          "tests/validation-harnesses/external-activity-system-validation-harness.ts:line 85"
+        ],
+        "severity": "LOW",
+        "resolution": "Detect platform and adjust binary path accordingly, or make path configurable",
+        "status": "DOCUMENTED"
+      },
+      {
+        "type": "TEST_ISOLATION",
+        "description": "External validation creates activity templates that persist in backend, may affect subsequent test runs",
+        "affectedComponents": [
+          "Activity template storage",
+          "Backend template registry"
+        ],
+        "severity": "LOW",
+        "resolution": "Add cleanup step to remove test-created templates, or use isolated test namespace",
+        "status": "ACCEPTABLE"
+      }
+    ],
+    "sharedComponents": [
+      {
+        "component": "repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode",
+        "type": "BINARY",
+        "affectedBySpecs": [
+          "run-external-validation-until-pass",
+          "external-activity-system-validation"
+        ],
+        "usagePattern": "Both specs require compiled binary, not dev code",
+        "conflictRisk": "NONE",
+        "recommendation": "Maintain consistent build process"
+      },
+      {
+        "component": "tests/validation-harnesses/external-activity-system-validation-harness.ts",
+        "type": "TEST_HARNESS",
+        "affectedBySpecs": [
+          "run-external-validation-until-pass",
+          "external-activity-system-validation"
+        ],
+        "usagePattern": "run-external-validation-until-pass wraps this harness iteratively",
+        "conflictRisk": "NONE",
+        "recommendation": "Keep harness stable, changes should be backwards compatible"
+      },
+      {
+        "component": "test-results/external-validation-harness/",
+        "type": "OUTPUT_DIRECTORY",
+        "affectedBySpecs": [
+          "run-external-validation-until-pass",
+          "external-activity-system-validation"
+        ],
+        "usagePattern": "Both write timestamped results to same directory",
+        "conflictRisk": "NONE",
+        "recommendation": "Timestamped files prevent collisions"
+      },
+      {
+        "component": "Activity template system",
+        "type": "SYSTEM",
+        "affectedBySpecs": [
+          "run-external-validation-until-pass",
+          "Clean-Environment-Activity-Execution-End-to-End",
+          "bootstrap-template-filepath-compliance",
+          "activity-system-minimal-deployment"
+        ],
+        "usagePattern": "Multiple specs validate different aspects of the same system",
+        "conflictRisk": "LOW",
+        "recommendation": "Ensure specs test orthogonal concerns, avoid duplicate validation"
+      }
+    ],
+    "architectureCompliance": {
+      "activityFirstPrinciple": {
+        "compliant": true,
+        "evidence": [
+          "Script wraps external validation harness",
+          "No direct code dependencies - only CLI interaction",
+          "Tests verify NO direct tool calls in root session",
+          "Meta-validation ensures activity-first architecture"
+        ]
+      },
+      "separationOfConcerns": {
+        "compliant": true,
+        "evidence": [
+          "Iterative runner is separate from validation harness",
+          "Build process is separate from validation process",
+          "Results storage is timestamped and isolated"
+        ]
+      },
+      "testability": {
+        "compliant": true,
+        "evidence": [
+          "Meta-validation harness validates the validator",
+          "Deterministic PASS/FAIL without LLM",
+          "Evidence-based validation with log analysis"
+        ]
+      }
+    },
+    "crossReferenceAnalysis": {
+      "cpgAnalysisPerformed": false,
+      "reason": "This specification creates wrapper script and documentation - no code modifications to existing components. CPG analysis not required.",
+      "affectedFiles": [
+        "scripts/run-external-validation-until-pass.sh (NEW)",
+        "scripts/run-external-validation-until-pass.README.md (NEW)",
+        "tests/validation-harnesses/run-external-validation-until-pass-harness.ts (NEW)"
+      ],
+      "existingFilesModified": 0,
+      "newFilesCreated": 3
+    },
+    "summary": {
+      "conflictCount": 0,
+      "potentialConflictCount": 3,
+      "sharedComponentCount": 4,
+      "riskLevel": "LOW",
+      "overallStatus": "SAFE",
+      "recommendations": [
+        "Add pre-flight check for Bun runtime",
+        "Document platform-specific binary paths",
+        "Consider cleanup step for test-created templates",
+        "Monitor for build failures and improve error messaging"
+      ]
+    },
+    "conclusions": [
+      "✅ No actual conflicts detected with other specifications",
+      "✅ All potential conflicts are low severity and well-understood",
+      "✅ Shared components have clear ownership and usage patterns",
+      "✅ Architecture compliance is maintained",
+      "✅ Safe to proceed with implementation"
+    ]
+  },
+  "budget": 3000,
+  "timestamp": "2026-03-18T03:00:00Z"
+}
