@@ -1,0 +1,18 @@
+{
+  "id": "validation-fix-validation-tests-final-pass-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: Verify Expected Patterns Match Actual CLI Output\n\nInput: Execute 'opencode activity list' command\n\nExpected Output:\n- Output contains: 'Activity Summary'\n- Output contains: 'Total:'\n- Output contains: 'Completed:'\n- Output does NOT contain: 'search_activities'\n- Output does NOT contain: 'templates.*returned'\n- Execution time: <30 seconds\n- Exit code: 0\n\nValidation Method:\n1. Execute binary: repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode activity list\n2. Capture stdout and stderr\n3. Check for expected patterns (user-facing text)\n4. Check for absence of LLM tool names (internal implementation)\n5. Measure execution time\n6. Return PASS if all checks pass, FAIL otherwise\n\nHistorical: YES - This test can run without LLM by executing binary and checking output",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testCase": "validateTestCase2_PatternsMatchOutput",
+    "input": "opencode activity list",
+    "expectedPatterns": {
+      "mustContain": ["Activity Summary", "Total:", "Completed:"],
+      "mustNotContain": ["search_activities", "templates.*returned"]
+    }
+  },
+  "budget": 500
+}

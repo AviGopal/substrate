@@ -1,0 +1,20 @@
+{
+  "id": "validation-fix-validation-tests-final-pass-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Run External Validation Harness\n\nInput: Execute external-activity-system-validation-harness.ts\n\nExpected Output:\n- 3/3 tests pass\n- 0 failures\n- Execution time: <60 seconds\n- Exit code: 0\n\nValidation Method:\n1. Execute: npx ts-node tests/validation-harnesses/external-activity-system-validation-harness.ts\n2. Capture output and parse results\n3. Extract pass count, fail count from output (format: 'X/Y tests passed')\n4. Measure execution time\n5. Check exit code\n6. Return PASS if 3/3 tests passed and exit code 0, FAIL otherwise\n\nHistorical: YES - This test can run without LLM by executing harness and parsing output",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testCase": "validateTestCase4_RunExternalHarness",
+    "input": "external-activity-system-validation-harness.ts",
+    "expectedResult": {
+      "passCount": 3,
+      "failCount": 0,
+      "executionTime": "<60s",
+      "exitCode": 0
+    }
+  },
+  "budget": 500
+}
