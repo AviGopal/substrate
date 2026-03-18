@@ -1,0 +1,35 @@
+{
+  "id": "validation-fix-opencode-cli-subcommand-parsing-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testName": "All registered subcommands should work",
+      "input": {
+        "command": "Test all 10 registered subcommands",
+        "subcommands": [
+          "list",
+          "template",
+          "run",
+          "init",
+          "clear",
+          "metrics",
+          "recommend",
+          "search",
+          "promote",
+          "evolve"
+        ],
+        "expectedToRequireVariables": false
+      },
+      "expectedOutput": {
+        "exitCode": 0,
+        "errorShouldNotContain": "--variables is required",
+        "shouldExecute": true,
+        "description": "All 10 subcommands should pass validation without --variables"
+      }
+    },
+    "source": "validation-harness-creation"
+  },
+  "budget": 500,
+  "createdAt": "2026-03-18T00:00:00.000Z"
+}

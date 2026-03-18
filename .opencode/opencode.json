@@ -8,7 +8,9 @@
       "command": [
         "npx",
         "-y",
-        "@playwright/mcp@latest"
+        "@playwright/mcp@latest",
+	"--executable-path",
+	"firefox"
       ],
       "enabled": true,
       "timeout": 60000
