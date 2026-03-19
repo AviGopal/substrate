@@ -7,28 +7,23 @@
       "type": "local",
       "command": [
         "npx",
-        "-y",
         "@playwright/mcp@latest",
-	"--executable-path",
+	"--browser",
 	"firefox"
       ],
-      "enabled": true,
-      "timeout": 60000
+      "enabled": true
+    },
+    "shadcn": {
+       "type": "local",
+       "command": ["npx", "shadcn@latest", "mcp"],
+       "enabled": true
     }
   },
   "metabob": {
     "cli_path": "metabob-cli",
     "base_url": "http://api.metabob.local",
-    "api_key": "local-dev-key",
-    "auto_inject": true,
-    "template_registration": {
-      "auto_register": false,
-      "default_category": "feature"
-    },
-    "activity_learning": {
-      "enabled": true,
-      "min_confidence": 0.7
-    }
+    "api_key": "mb_GJVL9aNpNmlwDBND5o4vWhEln9KAsN6T3rDJhsDQS0s",
+    "include_paths": ["*.qqq"]
   },
   "provider": {
     "anthropic": {
