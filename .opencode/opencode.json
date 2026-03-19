@@ -21,7 +21,7 @@
   },
   "metabob": {
     "cli_path": "metabob-cli",
-    "base_url": "http://api.metabob.local",
+    "base_url": "http://api.minibob.local",
     "api_key": "mb_GJVL9aNpNmlwDBND5o4vWhEln9KAsN6T3rDJhsDQS0s",
     "include_paths": ["*.qqq"]
   },
