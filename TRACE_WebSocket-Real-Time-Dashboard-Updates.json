@@ -1,0 +1,163 @@
+{
+  "specificationName": "WebSocket-Real-Time-Dashboard-Updates",
+  "status": "TRACED",
+  "priority": "MEDIUM",
+  "estimatedEffort": "4-6 hours",
+  "components": [
+    {
+      "file": "repos/metabob-activity-api/src/index.ts",
+      "component": "Bun Server",
+      "lineNumber": 155,
+      "currentBehavior": "Basic HTTP server with Hono framework, no WebSocket upgrade handling",
+      "desiredBehavior": "WebSocket server with upgrade handler for /ws endpoint, maintains Set of connected clients",
+      "gap": "Add WebSocket configuration to Bun.serve() with websocket handler object",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "file": "repos/metabob-activity-api/src/routes/activities.ts",
+      "component": "POST /executions Handler",
+      "lineNumber": 599,
+      "currentBehavior": "Records execution in DB and updates Thompson Sampling metrics, no event emission",
+      "desiredBehavior": "After DB update, broadcast execution_started and execution_completed events to all WebSocket clients",
+      "gap": "Add WebSocketBroadcaster.emit() calls at start and completion of execution",
+      "status": "PARTIAL - Execution logic works, missing WebSocket emission"
+    },
+    {
+      "file": "repos/activity-dashboard/src/lib/api-client.ts",
+      "component": "WebSocket Client",
+      "lineNumber": 274,
+      "currentBehavior": "WebSocket client fully implemented with connect/disconnect/sendMessage, connects to ws://host/ws",
+      "desiredBehavior": "Same - already working, needs server to connect to",
+      "gap": "None - client side is ready",
+      "status": "COMPLETE"
+    },
+    {
+      "file": "repos/activity-dashboard/src/lib/types.ts",
+      "component": "WebSocket Message Types",
+      "lineNumber": 252,
+      "currentBehavior": "TypeScript types defined for execution_started, execution_completed, template_updated, pod_status_changed",
+      "desiredBehavior": "Same - types match specification",
+      "gap": "None - types are correct",
+      "status": "COMPLETE"
+    },
+    {
+      "file": "repos/activity-dashboard/src/hooks/useWebSocket.ts",
+      "component": "React WebSocket Hook",
+      "lineNumber": 24,
+      "currentBehavior": "React hook with connection state management, auto-reconnect, message handling",
+      "desiredBehavior": "Same - already working",
+      "gap": "None - hook is ready",
+      "status": "COMPLETE"
+    }
+  ],
+  "dataFlow": {
+    "current": "MiniBob executes activity → POST /executions → DB update → Dashboard polls GET /executions",
+    "desired": "MiniBob executes activity → POST /executions → DB update → WebSocket broadcast → Dashboard receives real-time event",
+    "entry": "repos/metabob-activity-api/src/routes/activities.ts:599 (execution handler)",
+    "transform": "Execution result → WebSocketMessage { type, timestamp, data }",
+    "broadcast": "WebSocketBroadcaster.emit() → all connected clients",
+    "exit": "Dashboard useWebSocket hook onMessage callback"
+  },
+  "implementationPlan": {
+    "step1": {
+      "task": "Create WebSocket server infrastructure",
+      "files": [
+        "repos/metabob-activity-api/src/websocket/server.ts",
+        "repos/metabob-activity-api/src/websocket/broadcaster.ts"
+      ],
+      "details": "WebSocketServer class to manage connections, WebSocketBroadcaster singleton for event emission",
+      "estimate": "1-2 hours"
+    },
+    "step2": {
+      "task": "Integrate WebSocket with Bun server",
+      "files": ["repos/metabob-activity-api/src/index.ts"],
+      "details": "Add websocket config to Bun.serve(), handle upgrade, open, message, close events",
+      "estimate": "1 hour"
+    },
+    "step3": {
+      "task": "Emit events from execution handler",
+      "files": ["repos/metabob-activity-api/src/routes/activities.ts"],
+      "details": "Call broadcaster.emit() at execution start and completion",
+      "estimate": "30 minutes"
+    },
+    "step4": {
+      "task": "Update dashboard to use WebSocket",
+      "files": [
+        "repos/activity-dashboard/src/pages/Dashboard.tsx",
+        "repos/activity-dashboard/src/components/ActivityList.tsx"
+      ],
+      "details": "Connect WebSocket on mount, handle execution events, update UI reactively",
+      "estimate": "1-2 hours"
+    },
+    "step5": {
+      "task": "Test end-to-end real-time updates",
+      "details": "Run MiniBob execution, verify dashboard updates without refresh",
+      "estimate": "1 hour"
+    }
+  },
+  "eventTypes": {
+    "execution_started": {
+      "type": "execution_started",
+      "data": {
+        "execution_id": "string",
+        "variant_id": "string",
+        "pod_name": "string (optional)",
+        "timestamp": "ISO8601"
+      },
+      "triggerPoint": "repos/metabob-activity-api/src/routes/activities.ts (before DB insert)"
+    },
+    "execution_completed": {
+      "type": "execution_completed",
+      "data": {
+        "execution_id": "string",
+        "variant_id": "string",
+        "success": "boolean",
+        "duration_ms": "number",
+        "cost": "number",
+        "metrics": "object",
+        "completed_at": "ISO8601"
+      },
+      "triggerPoint": "repos/metabob-activity-api/src/routes/activities.ts (after Thompson Sampling update)"
+    },
+    "template_metrics_updated": {
+      "type": "template_metrics_updated",
+      "data": {
+        "variant_id": "string",
+        "metrics": {
+          "success_rate": "number",
+          "avg_duration_ms": "number",
+          "avg_cost_usd": "number",
+          "thompson_alpha": "number",
+          "thompson_beta": "number"
+        }
+      },
+      "triggerPoint": "repos/metabob-activity-api/src/routes/activities.ts (after metrics update)"
+    }
+  },
+  "techStack": {
+    "server": "Bun native WebSocket (built-in, no library needed)",
+    "client": "Browser WebSocket API (built-in)",
+    "framework": "Hono.js (HTTP), React (dashboard)",
+    "messageFormat": "JSON"
+  },
+  "dependencies": {
+    "blocking": [
+      "Execution history endpoint must exist for events to have data to broadcast"
+    ],
+    "nonBlocking": [
+      "Dashboard can work with polling until WebSocket server is ready",
+      "WebSocket is enhancement, not core requirement"
+    ]
+  },
+  "risks": {
+    "scalability": "Many concurrent dashboard clients could create broadcast overhead",
+    "reconnection": "Dashboard must handle auto-reconnect on connection loss",
+    "authentication": "WebSocket connections need auth token validation",
+    "multiTenant": "Must filter events by session/org to prevent data leaks"
+  },
+  "testingStrategy": {
+    "unit": "Test WebSocketBroadcaster emit() with mock clients",
+    "integration": "Test Bun WebSocket server with real client connections",
+    "e2e": "MiniBob execution → verify dashboard receives events in real-time"
+  }
+}

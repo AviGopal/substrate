@@ -22,6 +22,7 @@ import {
   type CreateTemplateRequest,
   type CreateTemplateResponse,
 } from '../models/schemas';
+import { broadcaster } from '../websocket/broadcaster';
 
 const app = new Hono();
 
@@ -536,6 +537,21 @@ app.post('/executions', async (c) => {
     // Generate execution ID
     const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 
+    // Emit execution_started event via WebSocket
+    const executionStartedData: any = {
+      execution_id: executionId,
+      variant_id: validated.variant_id,
+    };
+    // Add pod_name if available (MiniBob execution context)
+    if ((validated as any).pod_name) {
+      executionStartedData.pod_name = (validated as any).pod_name;
+    }
+    broadcaster.emit({
+      type: 'execution_started',
+      timestamp: new Date().toISOString(),
+      data: executionStartedData,
+    });
+
     // Build execution record, only include fields with values (SurrealDB doesn't accept null)
     const executionRecord: Record<string, any> = {
       execution_id: executionId,
@@ -635,11 +651,46 @@ app.post('/executions', async (c) => {
       variant_id: validated.variant_id,
     });
 
+    // Extract updated metrics from result
+    const updatedMetrics = metricsResult.length > 0 ? metricsResult[0] : undefined;
+
+    // Emit execution_completed event via WebSocket
+    broadcaster.emit({
+      type: 'execution_completed',
+      timestamp: new Date().toISOString(),
+      data: {
+        execution_id: executionId,
+        variant_id: validated.variant_id,
+        success: validated.success,
+        duration_ms: validated.duration_ms,
+        cost: validated.cost,
+        completed_at: new Date().toISOString(),
+      },
+    });
+
+    // Emit template_metrics_updated event via WebSocket
+    if (updatedMetrics) {
+      broadcaster.emit({
+        type: 'template_updated',
+        timestamp: new Date().toISOString(),
+        data: {
+          variant_id: validated.variant_id,
+          metrics: {
+            success_rate: updatedMetrics.success_rate || 0,
+            avg_duration_ms: updatedMetrics.avg_duration_ms || 0,
+            avg_cost_usd: updatedMetrics.avg_cost_usd || 0,
+            thompson_alpha: updatedMetrics.thompson_alpha || 1,
+            thompson_beta: updatedMetrics.thompson_beta || 1,
+          },
+        },
+      });
+    }
+
     // Return response with updated metrics
     const response: ExecutionRecordResponse = {
       success: true,
       execution_id: executionId,
-      metrics: metricsResult.length > 0 ? metricsResult[0] : undefined,
+      metrics: updatedMetrics,
     };
 
     return c.json(response, 201);

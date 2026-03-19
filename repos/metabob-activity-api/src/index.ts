@@ -15,6 +15,8 @@ import { authMiddleware } from './middleware/auth';
 import sessionRoutes from './routes/session';
 import activitiesRoutes from './routes/activities';
 import impulsesRoutes from './routes/impulses';
+import { broadcaster } from './websocket/broadcaster';
+import type { ServerWebSocket } from 'bun';
 
 const app = new Hono();
 
@@ -151,10 +153,88 @@ logger.info('Starting Metabob Activity API', {
   surrealdb: config.surrealdb.url
 });
 
-// Start server
-const server = Bun.serve({
+// WebSocket data type
+interface WebSocketData {
+  sessionId?: string;
+  orgId?: string;
+  authenticated: boolean;
+}
+
+// Start server with WebSocket support
+const server = Bun.serve<WebSocketData>({
   port,
-  fetch: app.fetch,
+  fetch(req, server) {
+    // Handle WebSocket upgrade for /ws endpoint
+    const url = new URL(req.url);
+    if (url.pathname === '/ws') {
+      const success = server.upgrade(req, {
+        data: { authenticated: false }
+      });
+      if (success) {
+        return undefined; // Upgrade successful, handled by websocket handlers
+      }
+      return new Response('WebSocket upgrade failed', { status: 500 });
+    }
+    
+    // Regular HTTP requests
+    return app.fetch(req, server);
+  },
+  websocket: {
+    open(ws) {
+      broadcaster.addClient(ws as any);
+      logger.info('[WebSocket] Client connected, awaiting authentication');
+    },
+    
+    message(ws, message) {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Handle authentication
+        if (data.type === 'authenticate' && data.token) {
+          // TODO: Validate token against session store
+          // For now, mark as authenticated (will implement proper auth in next iteration)
+          ws.data.authenticated = true;
+          ws.data.sessionId = data.sessionId || 'default';
+          ws.data.orgId = data.orgId || 'default';
+          
+          logger.info('[WebSocket] Client authenticated', {
+            sessionId: ws.data.sessionId,
+            orgId: ws.data.orgId,
+          });
+          
+          // Send auth confirmation
+          ws.send(JSON.stringify({
+            type: 'authenticated',
+            timestamp: new Date().toISOString(),
+          }));
+        }
+        
+        // Handle ping/pong for keepalive
+        if (data.type === 'ping') {
+          ws.send(JSON.stringify({
+            type: 'pong',
+            timestamp: new Date().toISOString(),
+          }));
+        }
+      } catch (error: any) {
+        logger.error('[WebSocket] Failed to parse message', {
+          error: error.message,
+        });
+      }
+    },
+    
+    close(ws) {
+      broadcaster.removeClient(ws as any);
+    },
+    
+    drain(ws) {
+      // Handle backpressure (optional, for high-volume scenarios)
+      logger.debug('[WebSocket] Drain event', {
+        bufferedAmount: ws.getBufferedAmount?.() || 0,
+      });
+    },
+  },
 });
 
 logger.info(`Server running at http://localhost:${server.port}`);
+logger.info(`WebSocket endpoint available at ws://localhost:${server.port}/ws`);

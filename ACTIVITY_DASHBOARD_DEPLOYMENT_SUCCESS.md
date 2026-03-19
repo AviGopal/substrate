@@ -396,3 +396,84 @@ kubectl exec -it -n activity-system redis-master-0 -- redis-cli ping
 **Status:** 🎉 **DEPLOYMENT SUCCESSFUL** - All components operational, ready for template registration and testing
 **Date:** 2026-03-19
 **Session:** Resume from previous activity dashboard deployment
+
+---
+
+## Latest Deployment Update - Thu Mar 19, 2026 11:38 PDT
+
+### Deployment Status: ✅ CONFIRMED RUNNING
+
+Redeployed and verified all components:
+
+**Docker Images Rebuilt:**
+- `activity-dashboard:latest` - Built successfully
+- `metabob-activity-api:latest` - Built successfully
+
+**Helmfile Deployment:**
+```
+UPDATED RELEASES:
+NAME                   NAMESPACE         VERSION   STATUS
+redis                  activity-system   20.5.0    deployed
+surrealdb              activity-system   0.1.0     deployed
+metabob-activity-api   activity-system   1.0.0     deployed (revision 12)
+activity-dashboard     activity-system   1.0.0     deployed (revision 4)
+```
+
+**Pod Status:**
+```
+NAME                                      READY   STATUS
+activity-dashboard-658d44bbf6-mq9xw       2/2     Running
+metabob-activity-api-6fc79c98d4-rjpv9     2/2     Running
+redis-master-0                            2/2     Running
+surrealdb-594c98c599-lj2wz                2/2     Running
+```
+
+**Health Checks:**
+- Dashboard: http://dashboard.minibob.local/health → ✅ 200 OK
+- API: http://api.minibob.local/health → ✅ 200 OK
+- API Templates: http://api.minibob.local/v2/activities/templates → ✅ Returns template data
+
+**Istio Configuration:**
+- Gateway: `activity-system-gateway` → ✅ Applied
+- VirtualService: `activity-dashboard` → dashboard.minibob.local:3000 ✅
+- VirtualService: `metabob-activity-api` → api.minibob.local:8080 ✅
+- DestinationRules: Applied with connection pooling and load balancing ✅
+
+**Access Verified:**
+```bash
+# Dashboard UI
+curl http://dashboard.minibob.local | grep -o "<title>.*</title>"
+# Returns: <title>Bun + React</title> ✅
+
+# API Health
+curl http://api.minibob.local/health | jq .status
+# Returns: "healthy" ✅
+
+# API Templates
+curl http://api.minibob.local/v2/activities/templates | jq '.templates | length'
+# Returns: 2 templates available ✅
+```
+
+### Configuration Summary
+
+**Dashboard Environment:**
+- PORT: 3000
+- ACTIVITY_API_URL: http://metabob-activity-api.activity-system.svc.cluster.local:8080
+- WS_ENABLED: true
+- REFRESH_INTERVAL: 5000ms
+- NODE_ENV: production
+
+**API Configuration:**
+- PORT: 8080
+- SURREALDB_URL: http://surrealdb.activity-system.svc.cluster.local:8000
+- REDIS_URL: redis://redis-master.activity-system.svc.cluster.local:6379
+- CORS_ORIGINS: * (allowing dashboard access)
+- REQUIRE_AUTH: false (local development)
+
+### All Services Ready ✅
+
+The activity dashboard and API are fully operational and accessible via Istio at:
+- **Dashboard UI**: http://dashboard.minibob.local
+- **API Endpoints**: http://api.minibob.local/v2/*
+
+Deployment completed successfully with all health checks passing.
