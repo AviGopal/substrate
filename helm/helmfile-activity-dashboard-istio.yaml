@@ -1,0 +1,205 @@
+# Helmfile for Activity Dashboard + API with Istio
+#
+# Deploys activity-dashboard and metabob-activity-api to Docker Desktop with Istio
+#
+# Setup:
+#   1. Add to /etc/hosts:
+#      127.0.0.1  dashboard.minibob.local api.minibob.local
+#
+#   2. Deploy Istio (if not already installed):
+#      istioctl install --set profile=demo -y
+#      kubectl label namespace activity-system istio-injection=enabled
+#
+#   3. Deploy:
+#      cd helm
+#      helmfile -f helmfile-activity-dashboard-istio.yaml apply
+#
+#   4. Access:
+#      - Dashboard: http://dashboard.minibob.local
+#      - API: http://api.minibob.local
+
+environments:
+  default:
+    kubeContext: docker-desktop
+
+---
+helmDefaults:
+  createNamespace: true
+  wait: true
+  timeout: 600
+  force: false
+  atomic: false
+
+repositories:
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
+
+releases:
+  # ==========================================================================
+  # INFRASTRUCTURE: Redis (for activity-api caching)
+  # ==========================================================================
+  
+  - name: redis
+    chart: bitnami/redis
+    version: 20.5.0
+    namespace: activity-system
+    labels:
+      component: infrastructure
+      tier: cache
+    values:
+      - auth:
+          enabled: false
+      - image:
+          tag: "latest"
+      - master:
+          persistence:
+            enabled: false  # In-memory for local dev
+      - replica:
+          replicaCount: 0
+      - metrics:
+          enabled: false
+    set:
+      - name: master.resources.requests.cpu
+        value: "50m"
+      - name: master.resources.requests.memory
+        value: "128Mi"
+      - name: master.resources.limits.cpu
+        value: "250m"
+      - name: master.resources.limits.memory
+        value: "256Mi"
+
+  # ==========================================================================
+  # DATABASE: SurrealDB for activity storage
+  # ==========================================================================
+  
+  - name: surrealdb
+    chart: ./charts/surrealdb
+    namespace: activity-system
+    labels:
+      component: infrastructure
+      tier: database
+    values:
+      - name: surrealdb
+        namespace: activity-system
+        release: local
+        image:
+          repository: surrealdb/surrealdb
+          tag: "v3.0.0"
+          pullPolicy: IfNotPresent
+        service:
+          type: ClusterIP
+          port: 8000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        persistence:
+          enabled: false  # In-memory for local dev
+        database:
+          namespace: activity-system
+          name: learning_loop
+          storage:
+            backend: memory
+        auth:
+          username: "root"
+          password: "surrealdb-local-123"
+    needs:
+      - activity-system/redis
+
+  # ==========================================================================
+  # API: Activity System Backend
+  # ==========================================================================
+  
+  - name: metabob-activity-api
+    chart: ./charts/metabob-activity-api
+    namespace: activity-system
+    labels:
+      component: api
+      tier: application
+    values:
+      - replicaCount: 1
+        image:
+          repository: metabob-activity-api
+          pullPolicy: IfNotPresent
+          tag: "latest"
+        service:
+          type: ClusterIP
+          port: 8080
+          targetPort: 8080
+        config:
+          port: 8080
+          host: "0.0.0.0"
+          surrealdb:
+            url: "http://surrealdb.activity-system.svc.cluster.local:8000"
+            namespace: "activity-system"
+            database: "learning_loop"
+            username: "root"
+            password: "surrealdb-local-123"
+          redis:
+            url: "redis://redis-master.activity-system.svc.cluster.local:6379"
+            sessionTtl: 86400
+            templateTtl: 3600
+            metricsTtl: 300
+          auth:
+            requireAuth: false
+          logLevel: "info"
+          logFormat: "json"
+          corsOrigins: "*"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        ingress:
+          enabled: false  # We'll use Istio VirtualService instead
+    needs:
+      - activity-system/redis
+      - activity-system/surrealdb
+
+  # ==========================================================================
+  # DASHBOARD: Activity Dashboard UI
+  # ==========================================================================
+  
+  - name: activity-dashboard
+    chart: ../repos/activity-dashboard/helm/activity-dashboard
+    namespace: activity-system
+    labels:
+      component: ui
+      tier: application
+    values:
+      - replicaCount: 1
+        image:
+          repository: activity-dashboard
+          pullPolicy: IfNotPresent
+          tag: "latest"
+        service:
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        config:
+          activityApiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
+          wsEnabled: true
+          refreshInterval: 5000
+          port: 3000
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        ingress:
+          enabled: false  # We'll use Istio VirtualService instead
+    needs:
+      - activity-system/metabob-activity-api
+
+# ==========================================================================
+# ISTIO CONFIGURATION
+# ==========================================================================
+# Note: Istio Gateway and VirtualServices are deployed separately
+# See: kubernetes/istio-activity-system.yaml
