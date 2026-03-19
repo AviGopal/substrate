@@ -1,0 +1,137 @@
+{
+  "id": "harness-WebSocket-Real-Time-Dashboard-Updates",
+  "type": "file",
+  "specificationName": "WebSocket-Real-Time-Dashboard-Updates",
+  "budget": 2000,
+  "createdAt": "2026-03-19T14:00:00Z",
+  "description": "Validation harness for WebSocket real-time dashboard updates. Automated test suite with 5 test cases covering connection, events, metrics, reconnection, and multi-client scenarios.",
+  
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/WebSocket-Real-Time-Dashboard-Updates-harness.ts",
+    "language": "typescript",
+    "size": "~600 lines",
+    "exports": ["runValidation", "ValidationInput", "ValidationOutput"]
+  },
+  
+  "testCases": [
+    {
+      "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-1",
+      "name": "connection-establishment",
+      "description": "Verify WebSocket connection establishment and authentication"
+    },
+    {
+      "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-2",
+      "name": "execution-events",
+      "description": "Verify all execution events are broadcast in correct order"
+    },
+    {
+      "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-3",
+      "name": "metrics-updates",
+      "description": "Verify metrics updates contain all required fields"
+    },
+    {
+      "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-4",
+      "name": "auto-reconnect",
+      "description": "Verify WebSocket auto-reconnects after connection drop"
+    },
+    {
+      "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-5",
+      "name": "multi-client",
+      "description": "Verify events broadcast to all connected clients"
+    }
+  ],
+  
+  "usage": {
+    "programmatic": {
+      "import": "import { runValidation } from './WebSocket-Real-Time-Dashboard-Updates-harness'",
+      "execute": "const result = await runValidation({ testCase: 'connection-establishment', apiUrl: 'ws://localhost:8080/ws' })",
+      "checkResult": "if (result.pass) { console.log('PASS'); } else { console.log('FAIL'); }"
+    },
+    "cli": {
+      "install": "cd tests/validation-harnesses && npm install",
+      "runSingle": "npm run test:connection",
+      "runAll": "npm run test:all",
+      "customUrl": "API_URL=ws://production:8080/ws ts-node WebSocket-Real-Time-Dashboard-Updates-harness.ts connection-establishment"
+    }
+  },
+  
+  "features": {
+    "noLlmRequired": true,
+    "deterministicResults": true,
+    "historicalReplayable": true,
+    "standaloneCli": true,
+    "programmaticApi": true,
+    "detailedErrorReporting": true,
+    "timeoutHandling": true,
+    "cleanupOnExit": true
+  },
+  
+  "validationCoverage": {
+    "requirement1": {
+      "requirement": "Dashboard establishes WebSocket connection to API",
+      "testCases": ["connection-establishment"],
+      "coverage": "100%"
+    },
+    "requirement2": {
+      "requirement": "API broadcasts activity state changes to connected clients",
+      "testCases": ["execution-events", "multi-client"],
+      "coverage": "100%"
+    },
+    "requirement3": {
+      "requirement": "Dashboard updates UI in real-time showing task progress, status, and metrics",
+      "testCases": ["execution-events", "metrics-updates"],
+      "coverage": "100%"
+    },
+    "requirement4": {
+      "requirement": "Connection resilience with automatic reconnection on disconnect",
+      "testCases": ["auto-reconnect"],
+      "coverage": "100%"
+    },
+    "requirement5": {
+      "requirement": "No polling required - all updates pushed via WebSocket events",
+      "testCases": ["execution-events"],
+      "coverage": "100%"
+    }
+  },
+  
+  "implementation": {
+    "language": "TypeScript",
+    "runtime": "Node.js or Bun",
+    "dependencies": ["ws@^8.14.2"],
+    "testFramework": "Custom (no external framework)",
+    "assertionStyle": "Expected vs Actual comparison",
+    "errorHandling": "Try-catch with detailed error messages",
+    "cleanup": "WebSocket connections closed on exit"
+  },
+  
+  "expectedBehavior": {
+    "passConditions": "All test assertions pass, no errors",
+    "failConditions": "Any assertion fails or timeout occurs",
+    "exitCode": {
+      "pass": 0,
+      "fail": 1
+    },
+    "output": {
+      "format": "JSON",
+      "fields": ["pass", "actual", "expected", "errors", "details"]
+    }
+  },
+  
+  "integrationPoints": {
+    "apiServer": "ws://metabob-activity-api:8080/ws",
+    "dashboard": "Not directly tested (harness tests API only)",
+    "database": "Indirect (API records to DB)",
+    "k8s": "Can be run in K8s Job for continuous validation"
+  },
+  
+  "futureEnhancements": [
+    "Add UI interaction tests with Playwright",
+    "Add latency measurements (<100ms requirement)",
+    "Add load testing (100+ concurrent clients)",
+    "Add network disruption simulation (packet loss, latency)",
+    "Add authentication token validation tests",
+    "Add multi-org filtering tests",
+    "Add event replay tests (ensure no duplicates on reconnect)"
+  ]
+}

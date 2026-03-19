@@ -1,0 +1,37 @@
+{
+  "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-4",
+  "type": "memo",
+  "testCase": "auto-reconnect",
+  "description": "Verify WebSocket auto-reconnects after connection drop",
+  "input": {
+    "testCase": "auto-reconnect",
+    "apiUrl": "ws://localhost:8080/ws",
+    "timeout": 15000
+  },
+  "expectedOutput": {
+    "initialConnection": true,
+    "reconnectSuccessful": true,
+    "reconnectTime": "<10000ms"
+  },
+  "validationCriteria": [
+    "Initial connection established successfully",
+    "Connection can be dropped programmatically",
+    "Reconnection attempted after connection drop",
+    "Reconnection successful within 10 seconds",
+    "No data loss during reconnection"
+  ],
+  "reconnectionStrategy": {
+    "algorithm": "exponential backoff",
+    "initialDelay": "1000ms",
+    "maxDelay": "10000ms",
+    "maxAttempts": 10,
+    "backoffMultiplier": 2
+  },
+  "passingConditions": {
+    "initialConnection": true,
+    "connectionDropped": true,
+    "reconnectAttempted": true,
+    "reconnectSuccessful": true,
+    "reconnectTime_lt": 10000
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "specificationName": "WebSocket-Real-Time-Dashboard-Updates",
+  "components": [
+    {
+      "file": "repos/metabob-activity-api/src/index.ts",
+      "component": "Bun Server WebSocket Configuration",
+      "currentBehavior": "HTTP-only server with Hono framework. No WebSocket upgrade handling. Server configured with basic Bun.serve() without websocket option.",
+      "desiredBehavior": "WebSocket-enabled server that accepts upgrade requests on /ws endpoint. Maintains Set<ServerWebSocket> of connected clients. Handles open, message, close, and error events.",
+      "gap": "Need to add websocket configuration object to Bun.serve() with handlers for open (add client to set), close (remove client), message (handle ping/pong). Export WebSocketBroadcaster instance."
+    },
+    {
+      "file": "repos/metabob-activity-api/src/routes/activities.ts",
+      "component": "POST /executions Handler - Event Broadcasting",
+      "currentBehavior": "Records execution results in SurrealDB via RPC HTTP client. Updates Thompson Sampling metrics (alpha/beta). Returns success response to caller. No event emission to external listeners.",
+      "desiredBehavior": "After database operations: (1) Emit execution_started before DB insert with execution_id, variant_id, pod_name. (2) Emit execution_completed after Thompson update with success, duration, cost, metrics. (3) Emit template_metrics_updated with new success_rate, avg_duration, avg_cost, thompson_alpha, thompson_beta.",
+      "gap": "Import WebSocketBroadcaster. Add broadcaster.emit('execution_started', data) at line ~605 before DB insert. Add broadcaster.emit('execution_completed', data) at line ~650 after metrics update. Add broadcaster.emit('template_metrics_updated', data) at line ~655."
+    },
+    {
+      "file": "repos/activity-dashboard/src/lib/api-client.ts",
+      "component": "WebSocket Client Implementation",
+      "currentBehavior": "Fully implemented WebSocket client class with connect(), disconnect(), sendMessage() methods. Connects to ws://{host}/ws. Has connection state tracking, message handlers, error handling, and automatic reconnection with exponential backoff.",
+      "desiredBehavior": "Exactly as currently implemented - no changes needed.",
+      "gap": "None - client is production-ready and waiting for server to be available."
+    },
+    {
+      "file": "repos/activity-dashboard/src/lib/types.ts",
+      "component": "WebSocket Message Type Definitions",
+      "currentBehavior": "Complete TypeScript type definitions for WebSocketMessage union type including execution_started, execution_completed, template_updated, pod_status_changed. Types match specification exactly with correct data shapes.",
+      "desiredBehavior": "Same as current - types are correctly defined.",
+      "gap": "None - types are specification-compliant."
+    },
+    {
+      "file": "repos/activity-dashboard/src/hooks/useWebSocket.ts",
+      "component": "React WebSocket Hook",
+      "currentBehavior": "React hook providing WebSocket connection management with: connection state (connected/disconnected), auto-reconnect on disconnect, message event handling via callbacks, sendMessage wrapper, cleanup on unmount. Fully functional.",
+      "desiredBehavior": "Same as current - hook is production-ready.",
+      "gap": "None - hook works correctly."
+    },
+    {
+      "file": "repos/activity-dashboard/src/pages/Dashboard.tsx",
+      "component": "Dashboard WebSocket Integration (NEW)",
+      "currentBehavior": "Currently polls GET /executions every 5 seconds to fetch execution history. No WebSocket connection established.",
+      "desiredBehavior": "Connect to WebSocket on component mount using useWebSocket hook. Listen for execution_started, execution_completed, template_metrics_updated events. Update local state reactively without polling. Maintain polling as fallback if WebSocket unavailable.",
+      "gap": "Need to: (1) Import useWebSocket hook. (2) Call useWebSocket() with message handlers. (3) Handle 3 event types to update executions list and template metrics. (4) Add connection status indicator. (5) Keep GET /executions for initial load only."
+    },
+    {
+      "file": "repos/metabob-activity-api/src/websocket/broadcaster.ts",
+      "component": "WebSocket Broadcaster Service (NEW)",
+      "currentBehavior": "File does not exist.",
+      "desiredBehavior": "Singleton WebSocketBroadcaster class that maintains reference to connected clients Set. Provides emit(eventType, data) method that constructs WebSocketMessage and broadcasts to all clients via ws.send(). Handles JSON serialization and error logging.",
+      "gap": "Create new file with: (1) WebSocketBroadcaster class with clients: Set<ServerWebSocket> property. (2) emit(type: string, data: any) method. (3) Export singleton instance."
+    }
+  ],
+  "dataFlow": "Entry: repos/metabob-activity-api/src/routes/activities.ts:599 (POST /executions handler) → Transform: Execution result object → WebSocketMessage with type, timestamp, data → Broadcast: WebSocketBroadcaster.emit() iterates clients Set, calls ws.send(JSON.stringify(message)) → Exit: Dashboard useWebSocket hook onMessage callback receives parsed event, updates React state",
+  "traceImpulseId": "trace-WebSocket-Real-Time-Dashboard-Updates",
+  "summary": {
+    "currentState": "Activity execution system records results to database and updates Thompson Sampling metrics. Dashboard polls GET /executions every 5 seconds for updates. WebSocket client infrastructure exists but server not implemented.",
+    "desiredState": "Real-time event-driven updates where activity executions immediately broadcast events to all connected dashboard clients via WebSocket. Dashboard receives updates within 100ms without polling.",
+    "completionPercentage": 60,
+    "estimatedEffort": "4-6 hours",
+    "blockers": [
+      "WebSocket server infrastructure (broadcaster.ts) not implemented",
+      "Bun server not configured to accept WebSocket upgrades",
+      "Execution handler not emitting events to broadcaster"
+    ],
+    "dependencies": {
+      "ready": [
+        "Dashboard WebSocket client fully implemented",
+        "Dashboard useWebSocket hook production-ready",
+        "TypeScript types defined correctly",
+        "Execution history endpoint exists for initial data load"
+      ],
+      "needed": [
+        "WebSocket server configuration in Bun",
+        "WebSocketBroadcaster singleton service",
+        "Event emission at 3 trigger points in execution handler"
+      ]
+    }
+  },
+  "implementationOrder": [
+    "Step 1: Create repos/metabob-activity-api/src/websocket/broadcaster.ts with WebSocketBroadcaster class",
+    "Step 2: Add WebSocket configuration to repos/metabob-activity-api/src/index.ts Bun.serve() call",
+    "Step 3: Import broadcaster in repos/metabob-activity-api/src/routes/activities.ts and emit 3 event types",
+    "Step 4: Update repos/activity-dashboard/src/pages/Dashboard.tsx to use useWebSocket hook",
+    "Step 5: Test end-to-end: MiniBob execution → verify dashboard updates in real-time"
+  ],
+  "validationCriteria": [
+    "WebSocket connection established on dashboard mount with status indicator showing 'connected'",
+    "MiniBob activity execution triggers execution_started event received by dashboard within 100ms",
+    "Dashboard UI updates immediately showing new execution in progress",
+    "Upon completion, execution_completed event updates status and metrics without page refresh",
+    "Template metrics (success rate, avg duration, avg cost) update in real-time",
+    "Multiple dashboard clients receive same events simultaneously",
+    "Disconnected clients auto-reconnect within 5 seconds and resume receiving events",
+    "No polling requests to GET /executions after initial load"
+  ],
+  "risks": [
+    {
+      "risk": "Broadcast scalability - many clients create O(n) overhead per event",
+      "mitigation": "Limit to 100 concurrent clients, add rate limiting, consider Redis pub/sub for horizontal scaling"
+    },
+    {
+      "risk": "Reconnection storms if many clients disconnect simultaneously",
+      "mitigation": "Exponential backoff with jitter already implemented in useWebSocket hook"
+    },
+    {
+      "risk": "Authentication bypass if WebSocket accepts unauthenticated connections",
+      "mitigation": "Validate JWT token on WebSocket upgrade, disconnect invalid clients immediately"
+    },
+    {
+      "risk": "Multi-tenant data leak if events not filtered by session/org",
+      "mitigation": "Add session.orgId filter in broadcaster, only emit to clients with matching orgId"
+    }
+  ],
+  "relatedDocuments": [
+    "TRACE_WebSocket-Real-Time-Dashboard-Updates.json - Full trace analysis",
+    "TRACE_COMPLETE_WebSocket-Real-Time-Dashboard-Updates.md - Human-readable summary",
+    "docs/data-flows/WebSocket-Real-Time-Dashboard-Updates-flow.md - Mermaid diagrams and flow documentation",
+    "impulses/trace-WebSocket-Real-Time-Dashboard-Updates.json - Impulse for downstream tasks"
+  ]
+}
