@@ -666,4 +666,108 @@ app.post('/executions', async (c) => {
   }
 });
 
+/**
+ * GET /v2/activities/executions
+ * 
+ * List execution history with filtering.
+ * 
+ * Query Parameters:
+ * - variant_id: Filter by variant ID (optional)
+ * - success: Filter by success status (true/false, optional)
+ * - limit: Maximum number of results (1-100, default 50)
+ * - offset: Pagination offset (default 0)
+ * 
+ * Returns:
+ * - executions: Array of execution records
+ * - total: Number of results returned
+ * - limit: Applied limit
+ * - offset: Applied offset
+ * 
+ * Data Flow: Dashboard → GET /executions → SurrealDB query → execution history
+ */
+app.get('/executions', async (c) => {
+  try {
+    // Extract session from context for multi-tenant filtering
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = session?.org_id || null;
+    const projectId = session?.project_id || null;
+
+    // Parse query parameters
+    const variantId = c.req.query('variant_id') || null;
+    const successParam = c.req.query('success');
+    const limitStr = c.req.query('limit') || '50';
+    const offsetStr = c.req.query('offset') || '0';
+    
+    const limit = Math.min(Math.max(parseInt(limitStr, 10), 1), 100);
+    const offset = Math.max(parseInt(offsetStr, 10), 0);
+    
+    logger.info('GET /v2/activities/executions', {
+      variant_id: variantId,
+      success: successParam,
+      limit,
+      offset,
+      orgId,
+      projectId,
+    });
+
+    // Build query with filters
+    let query = 'SELECT * FROM activity_executions WHERE 1=1';
+    const params: Record<string, any> = {};
+    
+    // Multi-tenant filtering (same as templates)
+    if (orgId) {
+      query += ' AND (org_id = $org_id OR org_id = NONE)';
+      params.org_id = orgId;
+    }
+    if (projectId) {
+      query += ' AND (project_id = $project_id OR project_id = NONE OR org_id = $org_id)';
+      params.project_id = projectId;
+    }
+    
+    // Filter by variant_id
+    if (variantId) {
+      query += ' AND variant_id = $variant_id';
+      params.variant_id = variantId;
+    }
+    
+    // Filter by success status
+    if (successParam !== undefined) {
+      query += ' AND success = $success';
+      params.success = successParam === 'true';
+    }
+    
+    // Order by most recent first
+    query += ' ORDER BY executed_at DESC';
+    
+    // Pagination
+    query += ' LIMIT $limit START $offset';
+    params.limit = limit;
+    params.offset = offset;
+    
+    logger.debug('Execution history query', { query, params });
+    
+    const result = await surrealDB.query(query, params);
+    const executions = result[0] || [];
+    
+    logger.debug('Execution history results', { count: executions.length });
+
+    return c.json({
+      executions,
+      total: executions.length,
+      limit,
+      offset,
+    });
+  } catch (error: any) {
+    logger.error('GET /v2/activities/executions failed', { 
+      error: error.message,
+      stack: error.stack,
+    });
+    
+    return c.json({
+      error: 'Failed to fetch execution history',
+      message: error.message,
+    }, 500);
+  }
+});
+
 export default app;
