@@ -220,3 +220,46 @@ releases:
         value: "4Gi"
     needs:
       - activity-system/metabob-activity-api
+
+  # ==========================================================================
+  # UI: Activity Dashboard
+  # ==========================================================================
+  
+  - name: activity-dashboard
+    chart: ../repos/activity-dashboard/helm/activity-dashboard
+    namespace: activity-system
+    labels:
+      component: ui
+      tier: application
+    values:
+      - replicaCount: 1
+        image:
+          repository: activity-dashboard
+          pullPolicy: IfNotPresent
+          tag: "latest"
+        service:
+          type: ClusterIP
+          port: 3000
+        config:
+          activityApiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
+          wsEnabled: true
+          refreshInterval: 5000
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        ingress:
+          enabled: true
+          className: "nginx"
+          annotations:
+            nginx.ingress.kubernetes.io/rewrite-target: /
+          hosts:
+            - host: dashboard.minibob.local
+              paths:
+                - path: /
+                  pathType: Prefix
+    needs:
+      - activity-system/metabob-activity-api
