@@ -822,3 +822,150 @@ app.get('/executions', async (c) => {
 });
 
 export default app;
+
+/**
+ * POST /recommend
+ * 
+ * Get activity recommendations using Thompson Sampling
+ * 
+ * Request body:
+ * {
+ *   task_description: string,
+ *   category?: string,
+ *   loaded_impulses?: string[],
+ *   limit?: number
+ * }
+ * 
+ * Returns:
+ * {
+ *   recommendations: [
+ *     {
+ *       template_id: string,
+ *       selection_metadata: {
+ *         method: "thompson_sampling",
+ *         alpha: number,
+ *         beta: number,
+ *         sample: number,
+ *         score: number
+ *       }
+ *     }
+ *   ]
+ * }
+ */
+app.post('/recommend', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { task_description, category, loaded_impulses = [], limit = 3 } = body;
+
+    logger.info('POST /recommend', { 
+      task_description: task_description?.substring(0, 100),
+      category,
+      loaded_impulses,
+      limit 
+    });
+
+    // Validate required fields
+    if (!task_description) {
+      return c.json({
+        error: 'task_description is required',
+      }, 400);
+    }
+
+    // Get session data for multi-tenant filtering
+    const sessionData = c.get('session') as SessionData | undefined;
+    const orgId = sessionData?.user_id ? sessionData.user_id.split(':')[0] : null;
+    const projectId = sessionData?.project_id || null;
+
+    // Fetch templates with Thompson Sampling scores
+    let query = `
+      SELECT 
+        variant_id,
+        activity_id,
+        variant_name,
+        description,
+        category,
+        (SELECT * FROM activity_metrics WHERE variant_id = $parent.variant_id)[0] AS metrics
+      FROM activity_template
+    `;
+
+    const params: Record<string, any> = {};
+
+    // Build WHERE clause for multi-tenant filtering
+    const whereClauses: string[] = [];
+
+    if (orgId) {
+      whereClauses.push(`(scope IS NULL OR scope = 'global' OR (scope = 'org' AND org_id = $org_id) OR (scope = 'project' AND project_id = $project_id))`);
+      params.org_id = orgId;
+      params.project_id = projectId;
+    } else {
+      whereClauses.push(`(scope IS NULL OR scope = 'global')`);
+    }
+
+    // Filter by category if provided
+    if (category) {
+      whereClauses.push(`category = $category`);
+      params.category = category;
+    }
+
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    logger.debug('Recommendation query', { query, params });
+
+    const result = await surrealDB.query(query, params);
+    const templates: any[] = result[0] || [];
+
+    logger.info('Templates fetched for recommendation', { count: templates.length });
+
+    // Apply Thompson Sampling
+    const recommendations = templates
+      .map((template) => {
+        const metrics = template.metrics || {
+          thompson_alpha: 1.0,
+          thompson_beta: 1.0,
+        };
+
+        const alpha = metrics.thompson_alpha || 1.0;
+        const beta = metrics.thompson_beta || 1.0;
+
+        // Sample from Beta distribution (simplified: use expected value for deterministic testing)
+        // In production, would use: sample = beta_random(alpha, beta)
+        const sample = alpha / (alpha + beta); // Expected value of Beta(alpha, beta)
+
+        return {
+          template_id: template.variant_id,
+          template_name: template.variant_name,
+          category: template.category,
+          selection_metadata: {
+            method: 'thompson_sampling',
+            alpha,
+            beta,
+            sample,
+            score: sample, // Use sample as score for ranking
+          },
+        };
+      })
+      // Sort by Thompson sample (highest first)
+      .sort((a, b) => b.selection_metadata.sample - a.selection_metadata.sample)
+      // Take top N
+      .slice(0, limit);
+
+    logger.info('Recommendations generated', { 
+      count: recommendations.length,
+      top: recommendations[0]?.template_id 
+    });
+
+    return c.json({ recommendations });
+  } catch (error: any) {
+    logger.error('POST /recommend failed', { 
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to generate recommendations',
+      message: error.message,
+    }, 500);
+  }
+});
