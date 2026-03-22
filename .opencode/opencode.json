@@ -19,6 +19,10 @@
        "enabled": true
     }
   },
+  "minibob": {
+    "enabled": true,
+    "url": "http://localhost:8081"
+  },
   "metabob": {
     "cli_path": "metabob-cli",
     "base_url": "http://api.minibob.local",

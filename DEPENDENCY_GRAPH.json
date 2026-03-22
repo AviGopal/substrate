@@ -1,0 +1,961 @@
+{
+  "files": [
+    {
+      "path": "session/activity.ts",
+      "imports": [
+        "zod",
+        "../bus",
+        "../storage/storage",
+        "./todo",
+        "./prompts-stats",
+        "../util/log",
+        "crypto",
+        "./activity-template",
+        "./template-metrics-client",
+        "./activity-failure-analysis",
+        "../mcp",
+        "../project/instance"
+      ],
+      "importedBy": [
+        "cli/cmd/init.ts",
+        "cli/cmd/metabob.ts",
+        "cli/cmd/activity.ts",
+        "cli/cmd/stats.ts",
+        "server/server.ts",
+        "server/template-service-client.ts",
+        "session/activity-git.ts",
+        "tool/list-activity-templates.ts",
+        "tool/activity.ts",
+        "tool/impulse-unload.ts",
+        "tool/create-activity-goal-seeking.ts",
+        "tool/post-activity-result.ts",
+        "tool/activity-error-inspector.ts",
+        "tool/impulse-load.ts",
+        "tool/memory-budget.ts",
+        "tool/activity-replay.ts",
+        "tool/memory-outline.ts",
+        "tool/memory-optimize.ts",
+        "tool/search-activities.ts",
+        "tool/config-update.ts",
+        "tool/register-activity-template.ts",
+        "tool/impulse-create.ts",
+        "tool/impulse-update.ts",
+        "tool/get-activity-template.ts",
+        "tool/task.ts",
+        "tool/acp-delegate.ts",
+        "util/metabob.ts",
+        "api/activity-client.ts"
+      ],
+      "category": "activity",
+      "loc": 1618
+    },
+    {
+      "path": "session/activity-template.ts",
+      "imports": [
+        "zod",
+        "../storage/storage",
+        "../util/log",
+        "./template-version",
+        "./template-genealogy"
+      ],
+      "importedBy": [
+        "cli/cmd/metabob.ts",
+        "cli/cmd/activity.ts",
+        "server/server.ts",
+        "server/template-service-client.ts",
+        "tool/list-activity-templates.ts",
+        "tool/activity.ts",
+        "tool/impulse-unload.ts",
+        "tool/create-activity-goal-seeking.ts",
+        "tool/post-activity-result.ts",
+        "tool/activity-error-inspector.ts",
+        "tool/impulse-load.ts",
+        "tool/activity-replay.ts",
+        "tool/search-activities.ts",
+        "tool/config-update.ts",
+        "tool/register-activity-template.ts",
+        "tool/impulse-create.ts",
+        "tool/impulse-update.ts",
+        "tool/get-activity-template.ts",
+        "tool/acp-delegate.ts",
+        "util/metabob.ts"
+      ],
+      "category": "activity",
+      "loc": 2068
+    },
+    {
+      "path": "session/activity-template-repository.ts",
+      "imports": [
+        "./activity-template",
+        "./template-loader",
+        "./template-cache",
+        "../util/log"
+      ],
+      "importedBy": [
+        "cli/cmd/activity.ts",
+        "tool/list-activity-templates.ts",
+        "tool/activity.ts",
+        "tool/create-activity-goal-seeking.ts",
+        "tool/post-activity-result.ts",
+        "tool/activity-error-inspector.ts",
+        "tool/activity-replay.ts",
+        "tool/search-activities.ts",
+        "tool/register-activity-template.ts",
+        "tool/get-activity-template.ts"
+      ],
+      "category": "activity",
+      "loc": 324
+    },
+    {
+      "path": "session/impulse-sync.ts",
+      "imports": [
+        "./activity",
+        "./index",
+        "./session-memory",
+        "./activity-template",
+        "../util/log"
+      ],
+      "importedBy": [
+        "tool/impulse-delete.ts",
+        "tool/impulse-unload.ts",
+        "tool/impulse-load.ts",
+        "tool/config-update.ts",
+        "tool/impulse-create.ts",
+        "tool/impulse-update.ts"
+      ],
+      "category": "impulse",
+      "loc": 102
+    },
+    {
+      "path": "session/impulse-resolver.ts",
+      "imports": [
+        "./activity-template",
+        "../storage/storage",
+        "../util/log",
+        "../tool/read",
+        "../tool/bash",
+        "../mcp",
+        "../id/id",
+        "./artifact-storage",
+        "../project/instance",
+        "fs",
+        "path"
+      ],
+      "importedBy": [
+        "tool/activity.ts",
+        "tool/impulse-unload.ts",
+        "tool/impulse-load.ts",
+        "tool/acp-request-impulse-content.ts",
+        "tool/acp-delegate.ts"
+      ],
+      "category": "impulse",
+      "loc": 835
+    },
+    {
+      "path": "tool/activity.ts",
+      "imports": [
+        "./tool",
+        "./activity.txt",
+        "zod",
+        "../session/activity-template-repository",
+        "../session/template-selector",
+        "../session/activity-template",
+        "../util/log",
+        "../session",
+        "../session/prompt",
+        "../id/id",
+        "../agent/agent",
+        "../session/message-v2",
+        "../session/activity",
+        "../config/config",
+        "../session/trailblazing-executor",
+        "../session/impulse-resolver",
+        "./task",
+        "../session/memory-agent",
+        "../provider/provider",
+        "../util/metabob",
+        "../session/activity-git",
+        "../session/activity-complete",
+        "../session/activity-state-capture",
+        "../api/activity-client",
+        "../util/safe-debug-log",
+        "../session/activity-message-forwarder"
+      ],
+      "importedBy": [
+        "session/boredom-manager.ts",
+        "session/activity-state-capture.ts",
+        "session/activity-git.ts",
+        "session/turn-lifecycle-hooks.ts",
+        "api/activity-client.ts"
+      ],
+      "category": "activity",
+      "loc": 3877
+    },
+    {
+      "path": "acp/agent.ts",
+      "imports": [
+        "../util/log",
+        "./session",
+        "../provider/provider",
+        "@/installation",
+        "@/session/message-v2",
+        "@/config/config",
+        "@/mcp",
+        "@/session/todo",
+        "zod",
+        "ai",
+        "@opencode-ai/sdk"
+      ],
+      "importedBy": [
+        "cli/cmd/acp.ts",
+        "server/server.ts"
+      ],
+      "category": "other",
+      "loc": 999
+    },
+    {
+      "path": "session/activity-state-capture.ts",
+      "imports": [
+        "bun",
+        "../util/log",
+        "../snapshot",
+        "../project/instance",
+        "./activity",
+        "./index",
+        "./session-memory"
+      ],
+      "importedBy": [
+        "tool/activity.ts",
+        "api/activity-client.ts"
+      ],
+      "category": "activity",
+      "loc": 302
+    },
+    {
+      "path": "acp/registry.ts",
+      "imports": [
+        "zod",
+        "../util/log"
+      ],
+      "importedBy": [
+        "session/session-state.ts"
+      ],
+      "category": "other",
+      "loc": 123
+    },
+    {
+      "path": "acp/transports/factory.ts",
+      "imports": [
+        "./transport",
+        "./transport",
+        "./docker-transport",
+        "./tcp-transport",
+        "./discovery-transport",
+        "../../util/log"
+      ],
+      "importedBy": [
+        "tool/acp-delegate.ts"
+      ],
+      "category": "other",
+      "loc": 55
+    },
+    {
+      "path": "acp/transports/transport.ts",
+      "imports": [
+        "bun"
+      ],
+      "importedBy": [
+        "tool/acp-delegate.ts"
+      ],
+      "category": "other",
+      "loc": 103
+    },
+    {
+      "path": "session/activity-complete.ts",
+      "imports": [
+        "./activity",
+        "./activity-git",
+        "../util/log",
+        "../project/instance",
+        "../util/metabob",
+        "bun",
+        "path"
+      ],
+      "importedBy": [
+        "tool/activity.ts"
+      ],
+      "category": "activity",
+      "loc": 442
+    },
+    {
+      "path": "session/activity-generator.ts",
+      "imports": [
+        "zod",
+        "ai",
+        "../provider/provider",
+        "./system",
+        "./activity-generator.txt"
+      ],
+      "importedBy": [
+        "cli/cmd/init.ts"
+      ],
+      "category": "activity",
+      "loc": 68
+    },
+    {
+      "path": "session/activity-correctness.ts",
+      "imports": [
+        "./activity",
+        "../util/log",
+        "path"
+      ],
+      "importedBy": [
+        "tool/activity.ts"
+      ],
+      "category": "activity",
+      "loc": 250
+    },
+    {
+      "path": "session/memory-lifecycle.ts",
+      "imports": [
+        "../util/log",
+        "./session-memory",
+        "./session-memory-metrics",
+        "./activity-template",
+        "../bus"
+      ],
+      "importedBy": [
+        "session/turn-lifecycle-hooks.ts"
+      ],
+      "category": "memory",
+      "loc": 348
+    },
+    {
+      "path": "session/impulse-cache.ts",
+      "imports": [
+        "../util/log"
+      ],
+      "importedBy": [
+        "tool/acp-request-impulse-content.ts"
+      ],
+      "category": "impulse",
+      "loc": 320
+    },
+    {
+      "path": "session/activity-schema-adapter.ts",
+      "imports": [
+        "zod",
+        "./template-version",
+        "./template-genealogy"
+      ],
+      "importedBy": [
+        "util/metabob.ts"
+      ],
+      "category": "activity",
+      "loc": 558
+    },
+    {
+      "path": "session/impulse-serializer.ts",
+      "imports": [
+        "../util/log",
+        "./activity-template"
+      ],
+      "importedBy": [
+        "tool/acp-delegate.ts"
+      ],
+      "category": "impulse",
+      "loc": 218
+    },
+    {
+      "path": "session/memory-agent.ts",
+      "imports": [
+        "../util/log",
+        ".",
+        "./session-memory",
+        "./activity-template",
+        "../agent/agent",
+        "../provider/provider",
+        "ai",
+        "./system",
+        "zod",
+        "./message-v2",
+        "../project/instance",
+        "../file/ripgrep",
+        "../util/safe-debug-log"
+      ],
+      "importedBy": [
+        "tool/activity.ts"
+      ],
+      "category": "memory",
+      "loc": 1292
+    },
+    {
+      "path": "session/activity-git.ts",
+      "imports": [
+        "bun",
+        "path",
+        "@/project/instance",
+        "@/util/log",
+        "@/tool/activity-errors"
+      ],
+      "importedBy": [
+        "tool/activity.ts"
+      ],
+      "category": "activity",
+      "loc": 386
+    },
+    {
+      "path": "session/activity-lifecycle-logger.ts",
+      "imports": [
+        "../util/log"
+      ],
+      "importedBy": [
+        "tool/activity.ts"
+      ],
+      "category": "activity",
+      "loc": 204
+    },
+    {
+      "path": "session/activity-message-forwarder.ts",
+      "imports": [
+        "zod",
+        "../util/log",
+        "../bus",
+        "./message-v2",
+        "../permission",
+        "../project/instance"
+      ],
+      "importedBy": [
+        "tool/activity.ts"
+      ],
+      "category": "activity",
+      "loc": 389
+    },
+    {
+      "path": "tool/activity-errors.ts",
+      "imports": [],
+      "importedBy": [
+        "session/activity-git.ts"
+      ],
+      "category": "activity",
+      "loc": 593
+    },
+    {
+      "path": "acp/types.ts",
+      "imports": [
+        "@agentclientprotocol/sdk",
+        "@opencode-ai/sdk"
+      ],
+      "importedBy": [],
+      "category": "other",
+      "loc": 85
+    },
+    {
+      "path": "acp/session.ts",
+      "imports": [
+        "@agentclientprotocol/sdk",
+        "./types",
+        "@/util/log",
+        "@opencode-ai/sdk"
+      ],
+      "importedBy": [],
+      "category": "other",
+      "loc": 73
+    },
+    {
+      "path": "acp/transports/discovery-transport.ts",
+      "imports": [
+        "./transport",
+        "./tcp-transport",
+        "../../util/log"
+      ],
+      "importedBy": [],
+      "category": "other",
+      "loc": 67
+    },
+    {
+      "path": "acp/transports/docker-transport.ts",
+      "imports": [
+        "bun",
+        "./transport",
+        "../../util/log"
+      ],
+      "importedBy": [],
+      "category": "other",
+      "loc": 187
+    },
+    {
+      "path": "acp/transports/tcp-transport.ts",
+      "imports": [
+        "./transport",
+        "../../util/log"
+      ],
+      "importedBy": [],
+      "category": "other",
+      "loc": 119
+    },
+    {
+      "path": "session/activity-prefix.ts",
+      "imports": [
+        "../util/log",
+        "./activity-autocomplete"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 151
+    },
+    {
+      "path": "session/activity-todo.ts",
+      "imports": [
+        "ulid",
+        "./todo",
+        "./activity"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 105
+    },
+    {
+      "path": "session/impulse-learning.ts",
+      "imports": [
+        "../util/log",
+        "./memory-agent"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 116
+    },
+    {
+      "path": "session/activity-autocomplete.ts",
+      "imports": [
+        "./activity-template",
+        "./activity-template-repository",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 149
+    },
+    {
+      "path": "session/activity-coordination.ts",
+      "imports": [
+        "../util/log",
+        "../storage/storage"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 165
+    },
+    {
+      "path": "session/impulse-formatter.ts",
+      "imports": [
+        "./session-memory",
+        "./activity-template",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 184
+    },
+    {
+      "path": "session/memory-manager.ts",
+      "imports": [
+        "./session-memory",
+        "../util/log",
+        "../provider/provider",
+        "./prompt"
+      ],
+      "importedBy": [],
+      "category": "memory",
+      "loc": 272
+    },
+    {
+      "path": "session/activity-failure-analysis.ts",
+      "imports": [
+        "../util/log",
+        "../mcp",
+        "./session-memory",
+        "./activity",
+        "./activity-template",
+        "crypto"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 396
+    },
+    {
+      "path": "session/activity-enforcement-gate.ts",
+      "imports": [
+        "../util/log",
+        "./recommendation-engine"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 153
+    },
+    {
+      "path": "session/impulse-binding.ts",
+      "imports": [
+        "./activity-template",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 243
+    },
+    {
+      "path": "tool/impulse-delete.ts",
+      "imports": [
+        "./tool",
+        "./impulse-delete.txt",
+        "../session/session-memory",
+        "../session",
+        "../bus",
+        "../session/impulse-sync",
+        "zod",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 66
+    },
+    {
+      "path": "tool/impulse-unload.ts",
+      "imports": [
+        "./tool",
+        "./impulse-unload.txt",
+        "../session/activity-template",
+        "../session/session-memory",
+        "../session/impulse-resolver",
+        "../session",
+        "../bus",
+        "../session/impulse-sync",
+        "zod",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 77
+    },
+    {
+      "path": "tool/memory-health.ts",
+      "imports": [
+        "./tool",
+        "../session/session-memory-metrics",
+        "../session/session-memory",
+        "zod"
+      ],
+      "importedBy": [],
+      "category": "memory",
+      "loc": 208
+    },
+    {
+      "path": "tool/activity-error-inspector.ts",
+      "imports": [
+        "./tool",
+        "./activity-error-inspector.txt",
+        "zod",
+        "../session/activity",
+        "../session",
+        "../session/message-v2",
+        "../util/log",
+        "../session/activity-template",
+        "../session/activity-template-repository",
+        "./activity-errors"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 1209
+    },
+    {
+      "path": "tool/impulse-load.ts",
+      "imports": [
+        "./tool",
+        "./impulse-load.txt",
+        "../session/activity",
+        "../session/activity-template",
+        "../session/session-memory",
+        "../session/impulse-resolver",
+        "../session",
+        "../bus",
+        "../session/impulse-sync",
+        "zod",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 104
+    },
+    {
+      "path": "tool/memory-budget.ts",
+      "imports": [
+        "./tool",
+        "../session/activity",
+        "../session/session-memory",
+        "zod",
+        "./memory-budget.txt"
+      ],
+      "importedBy": [],
+      "category": "memory",
+      "loc": 99
+    },
+    {
+      "path": "tool/acp-request-impulse-content.ts",
+      "imports": [
+        "zod",
+        "./tool",
+        "../util/log",
+        "../session/session-memory",
+        "../session/impulse-resolver",
+        "../session/impulse-cache"
+      ],
+      "importedBy": [],
+      "category": "acp",
+      "loc": 178
+    },
+    {
+      "path": "tool/activity-replay.ts",
+      "imports": [
+        "./tool",
+        "./activity-replay.txt",
+        "zod",
+        "../session/activity",
+        "../session/activity-template-repository",
+        "../session/activity-template",
+        "../util/log",
+        "../session",
+        "../id/id",
+        "../agent/agent",
+        "../session/message-v2",
+        "./task"
+      ],
+      "importedBy": [],
+      "category": "activity",
+      "loc": 756
+    },
+    {
+      "path": "tool/memory-outline.ts",
+      "imports": [
+        "./tool",
+        "../session/activity",
+        "../session/session-memory",
+        "zod",
+        "./memory-outline.txt"
+      ],
+      "importedBy": [],
+      "category": "memory",
+      "loc": 107
+    },
+    {
+      "path": "tool/memory-optimize.ts",
+      "imports": [
+        "./tool",
+        "../session/activity",
+        "../session/session-memory",
+        "zod",
+        "./memory-optimize.txt"
+      ],
+      "importedBy": [],
+      "category": "memory",
+      "loc": 147
+    },
+    {
+      "path": "tool/impulse-list.ts",
+      "imports": [
+        "./tool",
+        "./impulse-list.txt",
+        "../session/session-memory",
+        "zod",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 93
+    },
+    {
+      "path": "tool/impulse-create.ts",
+      "imports": [
+        "./tool",
+        "./impulse-create.txt",
+        "../session/activity-template",
+        "../session/activity",
+        "../session/session-memory",
+        "../session",
+        "../bus",
+        "../session/impulse-sync",
+        "zod",
+        "../util/log",
+        "../mcp",
+        "../project/instance"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 204
+    },
+    {
+      "path": "tool/impulse-update.ts",
+      "imports": [
+        "./tool",
+        "./impulse-update.txt",
+        "../session/activity-template",
+        "../session/session-memory",
+        "../session",
+        "../bus",
+        "../session/impulse-sync",
+        "zod",
+        "../util/log"
+      ],
+      "importedBy": [],
+      "category": "impulse",
+      "loc": 99
+    },
+    {
+      "path": "tool/acp-delegate.ts",
+      "imports": [
+        "zod",
+        "./tool",
+        "./acp-delegate.txt",
+        "../util/log",
+        "bun",
+        "@agentclientprotocol/sdk",
+        "@agentclientprotocol/sdk",
+        "../session/session-memory",
+        "../session/activity",
+        "../session/impulse-resolver",
+        "../session/impulse-serializer",
+        "../session/activity-template",
+        "../project/instance",
+        "../acp/transports/factory",
+        "../acp/transports/transport"
+      ],
+      "importedBy": [],
+      "category": "acp",
+      "loc": 655
+    }
+  ],
+  "circularDeps": [],
+  "stats": {
+    "totalFiles": 52,
+    "totalLOC": 21941,
+    "byCategory": {
+      "other": {
+        "count": 9,
+        "loc": 1811
+      },
+      "activity": {
+        "count": 21,
+        "loc": 14163
+      },
+      "impulse": {
+        "count": 13,
+        "loc": 2661
+      },
+      "memory": {
+        "count": 7,
+        "loc": 2473
+      },
+      "acp": {
+        "count": 2,
+        "loc": 833
+      }
+    }
+  },
+  "analysis": {
+    "highImpactFiles": [
+      {
+        "file": "session/activity.ts",
+        "importedByCount": 28
+      },
+      {
+        "file": "session/activity-template.ts",
+        "importedByCount": 20
+      },
+      {
+        "file": "session/activity-template-repository.ts",
+        "importedByCount": 10
+      },
+      {
+        "file": "session/impulse-sync.ts",
+        "importedByCount": 6
+      },
+      {
+        "file": "session/impulse-resolver.ts",
+        "importedByCount": 5
+      },
+      {
+        "file": "tool/activity.ts",
+        "importedByCount": 5
+      },
+      {
+        "file": "acp/agent.ts",
+        "importedByCount": 2
+      },
+      {
+        "file": "session/activity-state-capture.ts",
+        "importedByCount": 2
+      },
+      {
+        "file": "acp/registry.ts",
+        "importedByCount": 1
+      },
+      {
+        "file": "acp/transports/factory.ts",
+        "importedByCount": 1
+      }
+    ],
+    "circularDependencyCount": 0,
+    "filesWithNoDependents": [
+      "acp/types.ts",
+      "acp/session.ts",
+      "acp/transports/discovery-transport.ts",
+      "acp/transports/docker-transport.ts",
+      "acp/transports/tcp-transport.ts",
+      "session/activity-prefix.ts",
+      "session/activity-todo.ts",
+      "session/impulse-learning.ts",
+      "session/activity-autocomplete.ts",
+      "session/activity-coordination.ts",
+      "session/impulse-formatter.ts",
+      "session/memory-manager.ts",
+      "session/activity-failure-analysis.ts",
+      "session/activity-enforcement-gate.ts",
+      "session/impulse-binding.ts",
+      "tool/impulse-delete.ts",
+      "tool/impulse-unload.ts",
+      "tool/memory-health.ts",
+      "tool/activity-error-inspector.ts",
+      "tool/impulse-load.ts",
+      "tool/memory-budget.ts",
+      "tool/acp-request-impulse-content.ts",
+      "tool/activity-replay.ts",
+      "tool/memory-outline.ts",
+      "tool/memory-optimize.ts",
+      "tool/impulse-list.ts",
+      "tool/impulse-create.ts",
+      "tool/impulse-update.ts",
+      "tool/acp-delegate.ts"
+    ],
+    "filesWithMostDependents": [
+      {
+        "path": "session/activity.ts",
+        "dependents": 28
+      },
+      {
+        "path": "session/activity-template.ts",
+        "dependents": 20
+      },
+      {
+        "path": "session/activity-template-repository.ts",
+        "dependents": 10
+      },
+      {
+        "path": "session/impulse-sync.ts",
+        "dependents": 6
+      },
+      {
+        "path": "session/impulse-resolver.ts",
+        "dependents": 5
+      }
+    ]
+  }
+}

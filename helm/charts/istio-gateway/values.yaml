@@ -1,0 +1,188 @@
+# =============================================================================
+# Istio Gateway Configuration
+# =============================================================================
+
+# Gateway selector - should match your Istio Ingress Gateway
+gateway:
+  name: activity-system-gateway
+  namespace: activity-system
+  selector:
+    istio: ingressgateway
+
+# Port configuration for external access
+port:
+  number: 80
+  name: http
+  protocol: HTTP
+
+# Virtual Services configuration
+virtualServices:
+  # Dashboard service routing
+  dashboard:
+    name: activity-dashboard
+    enabled: true
+    host: activity-dashboard.activity-system.svc.cluster.local
+    port: 3000
+    hostname: dashboard.minibob.local
+    # Metrics tracking for dashboard
+    metrics:
+      enabled: true
+      labels:
+        service: dashboard
+        component: ui
+    # CORS configuration
+    cors:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowHeaders:
+        - content-type
+        - authorization
+      maxAge: 24h
+    # Traffic policy
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+
+  # Activity API service routing
+  api:
+    name: metabob-activity-api
+    enabled: true
+    host: metabob-activity-api.activity-system.svc.cluster.local
+    port: 8080
+    hostname: api.minibob.local
+    # Metrics tracking for API
+    metrics:
+      enabled: true
+      labels:
+        service: api
+        component: backend
+    # CORS configuration
+    cors:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowHeaders:
+        - content-type
+        - authorization
+        - x-api-key
+      maxAge: 24h
+    # Traffic policy
+    timeout: 60s
+    retries:
+      attempts: 3
+      perTryTimeout: 20s
+
+  # MiniBob (devbob) service routing
+  devbob:
+    name: minibob-devbob
+    enabled: false  # Disabled by default, enabled via helmfile values
+    host: minibob-devbob.activity-system.svc.cluster.local
+    port: 8080
+    hostname: devbob.minibob.local
+    # Metrics tracking for MiniBob
+    metrics:
+      enabled: true
+      labels:
+        service: devbob
+        component: vessel
+    # CORS configuration
+    cors:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowHeaders:
+        - content-type
+        - authorization
+      maxAge: 24h
+    # Traffic policy (longer timeout for LLM operations)
+    timeout: 300s
+    retries:
+      attempts: 2
+      perTryTimeout: 100s
+
+# Destination Rules - traffic policies for services
+destinationRules:
+  dashboard:
+    name: activity-dashboard
+    enabled: true
+    host: activity-dashboard.activity-system.svc.cluster.local
+    loadBalancer: ROUND_ROBIN
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 100
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      enabled: true
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+
+  api:
+    name: metabob-activity-api
+    enabled: true
+    host: metabob-activity-api.activity-system.svc.cluster.local
+    loadBalancer: LEAST_REQUEST
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 200
+        http2MaxRequests: 200
+        maxRequestsPerConnection: 5
+    outlierDetection:
+      enabled: true
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+
+# Metrics and monitoring configuration
+metrics:
+  # Enable metrics collection on all virtual services
+  enabled: true
+  # Prometheus scrape labels
+  prometheus:
+    enabled: true
+    namespace: monitoring
+    serviceMonitor:
+      enabled: false
+      interval: 30s
+  # Traffic metrics to track
+  tracking:
+    - request_count
+    - request_duration
+    - request_size
+    - response_size
+    - error_rate
+
+# Namespace configuration
+namespace: activity-system
+# Enable Istio injection on namespace
+istioInjection:
+  enabled: true
+
+# Labels to apply to all resources
+labels:
+  app: activity-system
+  component: networking
+  version: "1.0"
+
+# Pod annotations for Prometheus metrics
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8883"
+  prometheus.io/path: "/stats/prometheus"

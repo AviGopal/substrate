@@ -12,6 +12,8 @@ RUN bun install --frozen-lockfile --production
 
 # Copy source code
 COPY src ./src
+COPY scripts ./scripts
+COPY sql ./sql
 COPY tsconfig.json ./
 
 # Verify TypeScript compilation
@@ -23,6 +25,8 @@ WORKDIR /app
 # Copy dependencies and source from build stage
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/src ./src
+COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/sql ./sql
 COPY --from=build /app/tsconfig.json ./
 COPY --from=build /app/package.json ./
 

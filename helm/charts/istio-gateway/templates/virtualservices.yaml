@@ -1,0 +1,115 @@
+{{- if .Values.virtualServices.dashboard.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.virtualServices.dashboard.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.virtualServices.dashboard.hostname }}
+  gateways:
+    - {{ .Values.gateway.name }}
+  http:
+    # WebSocket route for /ws path (long timeout, no retries)
+    - match:
+        - uri:
+            prefix: /ws
+      route:
+        - destination:
+            host: {{ .Values.virtualServices.dashboard.host }}
+            port:
+              number: {{ .Values.virtualServices.dashboard.port }}
+      timeout: 3600s  # 1 hour timeout for WebSocket connections
+    # Default HTTP route for all other paths
+    - route:
+        - destination:
+            host: {{ .Values.virtualServices.dashboard.host }}
+            port:
+              number: {{ .Values.virtualServices.dashboard.port }}
+      timeout: {{ .Values.virtualServices.dashboard.timeout }}
+      retries:
+        attempts: {{ .Values.virtualServices.dashboard.retries.attempts }}
+        perTryTimeout: {{ .Values.virtualServices.dashboard.retries.perTryTimeout }}
+      {{- if .Values.virtualServices.dashboard.cors }}
+      corsPolicy:
+        {{- toYaml .Values.virtualServices.dashboard.cors | nindent 8 }}
+      {{- end }}
+      {{- if .Values.virtualServices.dashboard.metrics.enabled }}
+      metadata:
+        labels:
+          {{- toYaml .Values.virtualServices.dashboard.metrics.labels | nindent 10 }}
+      {{- end }}
+{{- end }}
+
+{{- if .Values.virtualServices.api.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.virtualServices.api.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.virtualServices.api.hostname }}
+  gateways:
+    - {{ .Values.gateway.name }}
+  http:
+    - route:
+        - destination:
+            host: {{ .Values.virtualServices.api.host }}
+            port:
+              number: {{ .Values.virtualServices.api.port }}
+      timeout: {{ .Values.virtualServices.api.timeout }}
+      retries:
+        attempts: {{ .Values.virtualServices.api.retries.attempts }}
+        perTryTimeout: {{ .Values.virtualServices.api.retries.perTryTimeout }}
+      {{- if .Values.virtualServices.api.cors }}
+      corsPolicy:
+        {{- toYaml .Values.virtualServices.api.cors | nindent 8 }}
+      {{- end }}
+      {{- if .Values.virtualServices.api.metrics.enabled }}
+      metadata:
+        labels:
+          {{- toYaml .Values.virtualServices.api.metrics.labels | nindent 10 }}
+      {{- end }}
+{{- end }}
+
+{{- if .Values.virtualServices.devbob.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.virtualServices.devbob.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.virtualServices.devbob.hostname }}
+  gateways:
+    - {{ .Values.gateway.name }}
+  http:
+    - route:
+        - destination:
+            host: {{ .Values.virtualServices.devbob.host }}
+            port:
+              number: {{ .Values.virtualServices.devbob.port }}
+      timeout: {{ .Values.virtualServices.devbob.timeout }}
+      retries:
+        attempts: {{ .Values.virtualServices.devbob.retries.attempts }}
+        perTryTimeout: {{ .Values.virtualServices.devbob.retries.perTryTimeout }}
+      {{- if .Values.virtualServices.devbob.cors }}
+      corsPolicy:
+        {{- toYaml .Values.virtualServices.devbob.cors | nindent 8 }}
+      {{- end }}
+      {{- if .Values.virtualServices.devbob.metrics.enabled }}
+      metadata:
+        labels:
+          {{- toYaml .Values.virtualServices.devbob.metrics.labels | nindent 10 }}
+      {{- end }}
+{{- end }}

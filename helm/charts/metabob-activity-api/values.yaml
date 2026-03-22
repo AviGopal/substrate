@@ -4,11 +4,22 @@ replicaCount: 2
 image:
   repository: metabob-activity-api
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: ""  # Defaults to Chart.AppVersion
 
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
+# Database initialization
+initDatabase:
+  enabled: false  # Disabled until image caching issue resolved
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
 
 # Service configuration
 service:
@@ -24,8 +35,8 @@ config:
   
   # SurrealDB connection
   surrealdb:
-    url: "http://surrealdb.activity-system.svc.cluster.local:8000"
-    namespace: "activity-system"
+    url: "http://surrealdb.metabob.svc.cluster.local:8000"
+    namespace: "metabob"
     database: "learning_loop"
     username: "root"
     password: "changeme"  # Override in production
@@ -93,13 +104,7 @@ readinessProbe:
   timeoutSeconds: 3
   failureThreshold: 3
 
-# Service monitor for Prometheus (optional)
-serviceMonitor:
-  enabled: false
-  interval: 30s
-  scrapeTimeout: 10s
-
-# Ingress configuration (optional)
+# Ingress configuration
 ingress:
   enabled: false
   className: ""
@@ -110,3 +115,9 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+
+# Development configuration
+dev:
+  enabled: false
+  hotReload: false
+  volumeMounts: []

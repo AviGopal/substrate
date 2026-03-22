@@ -1,0 +1,387 @@
+# =============================================================================
+# Activity System - Minimal Deployment
+# Single Helmfile for MiniBob boredom activities system
+# =============================================================================
+#
+# Components: Valkey, SurrealDB, Activity API, Dashboard, MiniBob, Istio Gateway
+#
+# Requirements:
+#   - Docker images built
+#   - /etc/hosts: 127.0.0.1 api.minibob.local dashboard.minibob.local devbob.minibob.local
+#   - Istio installed: istioctl install --set profile=demo -y
+#   - Environment: export ANTHROPIC_API_KEY="sk-ant-..."
+#
+# Deploy: helmfile -f helm/activity-system-minimal.yaml sync
+# =============================================================================
+
+helmDefaults:
+  createNamespace: true
+  wait: false
+  timeout: 600
+  atomic: true
+  cleanupOnFail: true
+
+repositories:
+  - name: valkey
+    url: https://valkey.io/valkey-helm/
+
+releases:
+
+  # ===========================================================================
+  # VALKEY - Redis-compatible cache (in-memory, no persistence)
+  # ===========================================================================
+  - name: redis
+    chart: valkey/valkey
+    version: 0.9.3
+    namespace: activity-system
+    labels:
+      component: infrastructure
+      tier: cache
+    values:
+      - architecture: standalone
+        auth:
+          enabled: false
+        image:
+          registry: docker.io
+          repository: valkey/valkey
+          tag: "9.0.3-alpine"
+          pullPolicy: Always  # Always pull latest for local development
+
+        master:
+          persistence:
+            enabled: false  # In-memory only for local dev
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+        service:
+          type: ClusterIP
+          port: 6379
+
+        metrics:
+          enabled: false
+
+  # ===========================================================================
+  # SURREALDB - Learning database
+  # ===========================================================================
+  - name: surrealdb
+    chart: ./charts/surrealdb
+    namespace: activity-system
+    labels:
+      component: infrastructure
+      tier: database
+    values:
+      - name: surrealdb
+        namespace: activity-system
+        image:
+          repository: surrealdb/surrealdb
+          tag: "v3.0.0"
+          pullPolicy: Always  # Always pull latest for local development
+        service:
+          type: ClusterIP
+          port: 8000
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        persistence:
+          enabled: true
+          storageClass: ""
+          size: 10Gi
+        database:
+          namespace: activity-system
+          name: learning_loop
+          storage:
+            backend: file
+            path: /data/surrealdb
+        auth:
+          username: {{ env "SURREALDB_USERNAME" | default "root" }}
+          password: {{ env "SURREALDB_PASSWORD" | default "surrealdb-local-dev-123" }}
+        healthCheck:
+          enabled: true
+          path: /health
+          port: 8000
+    needs:
+      - activity-system/redis
+
+  # ===========================================================================
+  # METABOB ACTIVITY API - Backend for activity management
+  # ===========================================================================
+  - name: metabob-activity-api
+    chart: ./charts/metabob-activity-api
+    namespace: activity-system
+    labels:
+      component: api
+      tier: application
+    values:
+      - replicaCount: 2
+        image:
+          repository: metabob-activity-api
+          pullPolicy: Always  # Always pull latest for local development
+          tag: "v2-fixed"  # Fixed maxTokens bug
+        service:
+          type: ClusterIP
+          port: 8080
+          targetPort: 8080
+          name: http
+        config:
+          port: 8080
+          host: "0.0.0.0"
+          surrealdb:
+            url: "http://surrealdb.activity-system.svc.cluster.local:8000"
+            namespace: "activity-system"
+            database: "learning_loop"
+            username: {{ env "SURREALDB_USERNAME" | default "root" }}
+            password: {{ env "SURREALDB_PASSWORD" | default "surrealdb-local-dev-123" }}
+          redis:
+            url: "redis://redis-valkey.activity-system.svc.cluster.local:6379"
+            sessionTtl: 86400
+            templateTtl: 3600
+            metricsTtl: 300
+          auth:
+            requireAuth: false
+          logLevel: "info"
+          logFormat: "json"
+          corsOrigins: "*"
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+    needs:
+      - activity-system/redis
+      - activity-system/surrealdb
+
+  # ===========================================================================
+  # MINIBOB - AI agent for boredom activities
+  # ===========================================================================
+  - name: minibob
+    chart: ./charts/devbob
+    namespace: activity-system
+    labels:
+      component: vessel
+      tier: agent
+    values:
+      - replicaCount: 3  # Need 3+ for cluster mode and boredom polling
+        image:
+          repository: minibob
+          pullPolicy: Always  # Always pull to get latest code changes
+          tag: "v2-fixed"  # Fixed maxTokens bug
+
+        # MiniBob runs with Bun, not opencode
+        command:
+          - bun
+        args:
+          - run
+          - index.ts
+
+        service:
+          type: ClusterIP
+          port: 8080
+          targetPort: 8080
+        env:
+          metabobApiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
+          minibobMcpEndpoint: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
+          minibobServiceName: "minibob-devbob-cluster.activity-system.svc.cluster.local"
+          surrealHost: "surrealdb.activity-system.svc.cluster.local"
+          surrealPort: "8000"
+          surrealUser: {{ env "SURREALDB_USERNAME" | default "root" | quote }}
+          surrealPass: {{ env "SURREALDB_PASSWORD" | default "surrealdb-local-dev-123" | quote }}
+          surrealNamespace: "activity-system"
+          surrealDatabase: "learning_loop"
+          llmProvider: {{ env "LLM_PROVIDER" | default "anthropic" | quote }}
+          llmModel: {{ env "LLM_MODEL" | default "claude-sonnet-4-20250514" | quote }}
+          waitForBackend: "true"
+          skipConfig: "false"
+          logLevel: "INFO"
+          home: "/workspace"
+          gitUserName: "MiniBob Agent"
+          gitUserEmail: "minibob@metabob.local"
+
+        # LLM API Key from environment
+        secrets:
+          existingSecret: minibob-api-keys
+          anthropicApiKeyKey: anthropic-api-key
+          githubTokenKey: github-token
+
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+
+        persistence:
+          enabled: true
+          storageClass: ""
+          size: 10Gi
+          mountPath: /workspace
+
+        livenessProbe:
+          enabled: true
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 3
+
+        readinessProbe:
+          enabled: true
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 3
+
+        podAnnotations:
+          minibob.metabob.com/boredom-enabled: "true"
+          minibob.metabob.com/boredom-poll-interval: "30000"
+          minibob.metabob.com/boredom-idle-threshold: "60000"
+          minibob.metabob.com/capabilities: "activities,impulses,git,boredom,learning"
+    needs:
+      - activity-system/metabob-activity-api
+
+  # ===========================================================================
+  # ACTIVITY DASHBOARD - React UI
+  # ===========================================================================
+  - name: activity-dashboard
+    chart: ../repos/activity-dashboard/helm/activity-dashboard
+    namespace: activity-system
+    labels:
+      component: ui
+      tier: frontend
+    values:
+      - replicaCount: 1
+        image:
+          repository: activity-dashboard
+          pullPolicy: Always  # Always pull latest for local development
+          tag: "v2-fixed"  # Fixed maxTokens bug
+        service:
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        config:
+          activityApiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
+          wsEnabled: true
+          refreshInterval: 5000
+          port: 3000
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+    needs:
+      - activity-system/metabob-activity-api
+
+  # ===========================================================================
+  # ISTIO GATEWAY - Networking and external access configuration
+  # ===========================================================================
+  - name: istio-gateway
+    chart: ./charts/istio-gateway
+    namespace: activity-system
+    labels:
+      component: networking
+      tier: infrastructure
+    values:
+      - gateway:
+          name: activity-system-gateway
+          namespace: activity-system
+          selector:
+            istio: ingressgateway
+
+        port:
+          number: 80
+          name: http
+          protocol: HTTP
+
+        virtualServices:
+          dashboard:
+            enabled: true
+            hostname: dashboard.minibob.local
+            host: activity-dashboard.activity-system.svc.cluster.local
+            port: 3000
+            metrics:
+              enabled: true
+              labels:
+                service: dashboard
+
+          api:
+            enabled: true
+            hostname: api.minibob.local
+            host: metabob-activity-api.activity-system.svc.cluster.local
+            port: 8080
+            metrics:
+              enabled: true
+              labels:
+                service: api
+
+          devbob:
+            enabled: true
+            hostname: devbob.minibob.local
+            host: minibob-devbob.activity-system.svc.cluster.local
+            port: 8080
+            metrics:
+              enabled: true
+              labels:
+                service: devbob
+
+        destinationRules:
+          dashboard:
+            enabled: true
+          api:
+            enabled: true
+
+        metrics:
+          enabled: true
+          prometheus:
+            enabled: true
+
+        istioInjection:
+          enabled: true
+    needs:
+      - activity-system/activity-dashboard
+      - activity-system/metabob-activity-api

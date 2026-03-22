@@ -65,8 +65,17 @@ spec:
         {{- end }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        {{- if .Values.command }}
+        command:
+          {{- toYaml .Values.command | nindent 10 }}
+        {{- else }}
         command:
         - opencode
+        {{- end }}
+        {{- if .Values.args }}
+        args:
+          {{- toYaml .Values.args | nindent 10 }}
+        {{- else }}
         args:
         - acp
         - --hostname
@@ -76,6 +85,7 @@ spec:
         - --print-logs
         - --log-level
         - "{{ .Values.env.logLevel }}"
+        {{- end }}
         ports:
         - name: http
           containerPort: {{ .Values.service.targetPort }}
@@ -113,6 +123,14 @@ spec:
               key: git-user-email
         - name: METABOB_API_URL
           value: {{ .Values.env.metabobApiUrl | quote }}
+        {{- if .Values.env.minibobMcpEndpoint }}
+        - name: MINIBOB_MCP_ENDPOINT
+          value: {{ .Values.env.minibobMcpEndpoint | quote }}
+        {{- end }}
+        {{- if .Values.env.minibobServiceName }}
+        - name: MINIBOB_SERVICE_NAME
+          value: {{ .Values.env.minibobServiceName | quote }}
+        {{- end }}
         - name: SURREAL_HOST
           value: {{ .Values.env.surrealHost | quote }}
         - name: SURREAL_PORT

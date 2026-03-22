@@ -3,7 +3,7 @@ name: metabob-activity-api
 description: Lightweight TypeScript activity system API vessel
 type: application
 version: 1.0.0
-appVersion: "1.0.0"
+appVersion: "1.0.0"  # Docker image tag
 keywords:
   - metabob
   - activity-system
@@ -12,3 +12,7 @@ keywords:
 maintainers:
   - name: Metabob Team
 home: https://metabob.com
+
+# Database schema version
+annotations:
+  metabob.com/schema-version: "004"  # Latest migration: 004-execution-traces.surql

@@ -1,0 +1,52 @@
+{{- if .Values.destinationRules.dashboard.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.destinationRules.dashboard.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
+spec:
+  host: {{ .Values.destinationRules.dashboard.host }}
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: {{ .Values.destinationRules.dashboard.connectionPool.http.http1MaxPendingRequests }}
+        maxRequestsPerConnection: {{ .Values.destinationRules.dashboard.connectionPool.http.maxRequestsPerConnection }}
+    loadBalancer:
+      simple: {{ .Values.destinationRules.dashboard.loadBalancer }}
+    {{- if .Values.destinationRules.dashboard.outlierDetection.enabled }}
+    outlierDetection:
+      consecutiveErrors: {{ .Values.destinationRules.dashboard.outlierDetection.consecutiveErrors }}
+      interval: {{ .Values.destinationRules.dashboard.outlierDetection.interval }}
+      baseEjectionTime: {{ .Values.destinationRules.dashboard.outlierDetection.baseEjectionTime }}
+    {{- end }}
+{{- end }}
+
+{{- if .Values.destinationRules.api.enabled }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.destinationRules.api.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
+spec:
+  host: {{ .Values.destinationRules.api.host }}
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: {{ .Values.destinationRules.api.connectionPool.http.http1MaxPendingRequests }}
+        http2MaxRequests: {{ .Values.destinationRules.api.connectionPool.http.http2MaxRequests }}
+        maxRequestsPerConnection: {{ .Values.destinationRules.api.connectionPool.http.maxRequestsPerConnection }}
+    loadBalancer:
+      simple: {{ .Values.destinationRules.api.loadBalancer }}
+    {{- if .Values.destinationRules.api.outlierDetection.enabled }}
+    outlierDetection:
+      consecutiveErrors: {{ .Values.destinationRules.api.outlierDetection.consecutiveErrors }}
+      interval: {{ .Values.destinationRules.api.outlierDetection.interval }}
+      baseEjectionTime: {{ .Values.destinationRules.api.outlierDetection.baseEjectionTime }}
+    {{- end }}
+{{- end }}

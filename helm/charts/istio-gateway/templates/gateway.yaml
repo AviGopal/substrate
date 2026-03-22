@@ -1,0 +1,27 @@
+{{- if .Values.gateway }}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
+spec:
+  selector:
+    {{- toYaml .Values.gateway.selector | nindent 4 }}
+  servers:
+    - port:
+        number: {{ .Values.port.number }}
+        name: {{ .Values.port.name }}
+        protocol: {{ .Values.port.protocol }}
+      hosts:
+        {{- if .Values.virtualServices.dashboard.enabled }}
+        - {{ .Values.virtualServices.dashboard.hostname }}
+        {{- end }}
+        {{- if .Values.virtualServices.api.enabled }}
+        - {{ .Values.virtualServices.api.hostname }}
+        {{- end }}
+        {{- if .Values.virtualServices.devbob.enabled }}
+        - {{ .Values.virtualServices.devbob.hostname }}
+        {{- end }}
+{{- end }}
