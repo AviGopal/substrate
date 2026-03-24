@@ -1,0 +1,114 @@
+# metabob-mcp Repository Spec (Orchestration)
+# Source of truth: metabob-devbob/openspec/
+# This file coordinates mcp development from metabob-devbob
+
+name: metabob-mcp
+version: 1.0.0
+status: draft
+owner: mcp-agent
+
+# Repository location
+repository:
+  path: repos/metabob-mcp
+  git_remote: none (separate git repo without remote yet, likely to be created during implementation, potentially git@github.com:MetabobProject/metabob-mcp.git)
+  branch: main
+  language: typescript
+  runtime: bun
+  framework: none (MCP server)
+  size_estimate: 1000-2000 LOC
+
+# What this repo provides
+provides:
+  - id: mcp-analysis-tools
+    version: 1.0.0
+    contract: openspec/contracts/mcp-analysis-tools.md
+    stability: stable
+    description: MCP server exposing 7 analysis tools to AI agents
+
+# What this repo depends on
+depends_on:
+  - id: http-api-v2-analysis
+    version: ^1.0.0
+    contract: openspec/contracts/http-api-v2-analysis.md
+    critical: true
+    endpoints:
+      - GET /v2/analysis/priority
+      - POST /v2/analysis/codebase/search
+      - POST /v2/analysis/annotate
+      - POST /v2/analysis/suggest-changes
+      - POST /v2/analysis/impact
+      - POST /v2/analysis/complete
+      - POST /v2/analysis/spec/generate
+    description: Analysis API backend
+
+# Deployment configuration
+deployment:
+  type: mcp-server
+  runtime: stdio
+  package_name: "@metabob/mcp-analysis"
+  configuration:
+    mcpServers:
+      metabob-analysis:
+        command: bun
+        args: [run, index.ts]
+        env:
+          ANALYSIS_API_URL: http://metabob-analysis-api.activity-system.svc.cluster.local:8080
+
+# Validation configuration
+validation:
+  unit_tests:
+    command: bun test
+    required_coverage: 80%
+  integration_tests:
+    command: bun run test-integration.ts
+    dependencies:
+      - analysis-api running
+    test_cases:
+      - All 7 tools registered
+      - get_priority_issues returns data
+      - search_codebase_issues works
+      - annotate_component persists
+      - suggest_related_changes returns suggestions
+      - analyze_change_impact returns graph
+      - mark_problem_complete updates status
+      - generate_implementation_spec returns spec
+  mcp_validation:
+    - Test with actual AI agent (Claude/Cursor)
+    - Verify tool schemas match contract
+    - Verify error handling and suggestions
+    - Test all input/output schemas
+
+# Commit traceability
+commit_convention:
+  format: "type: description (refs: change-id#task-id spec: contract@version)"
+  types: [feat, fix, refactor, docs, test, chore]
+  examples:
+    - "feat: add get_priority_issues tool (refs: analysis-api-extraction#MCP-2 spec: mcp-analysis-tools@1.0.0)"
+    - "fix: error handling in annotate (refs: analysis-api-extraction#MCP-5 spec: mcp-analysis-tools@1.0.0)"
+
+# Delegation prerequisites
+delegation:
+  can_delegate: true
+  agent_type: repo-agent
+  prerequisites:
+    - Understand MCP protocol (stdio transport)
+    - Read openspec/contracts/mcp-analysis-tools.md
+    - Read openspec/contracts/http-api-v2-analysis.md
+    - Understand tool schema definitions
+
+# Ripple configuration
+ripple:
+  notify_on_change:
+    - openspec/repos/metabob-cloud-dashboard.yaml
+  check_before_complete:
+    - Verify all 7 tools match openspec/contracts/mcp-analysis-tools.md
+    - Test with actual AI agent (Claude/Cursor)
+    - Verify error handling matches contract
+    - Publish to npm registry
+    - Update cloud-dashboard documentation if new tools added
+
+metadata:
+  created: 2026-03-23
+  last_updated: 2026-03-23
+  change_id: analysis-api-extraction
+  tasks_file: repos/metabob-mcp/openspec/tasks.md
