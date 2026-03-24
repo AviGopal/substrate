@@ -108,6 +108,14 @@ releases:
           enabled: true
           path: /health
           port: 8000
+        migrations:
+          enabled: false  # Disabled due to memory constraints - schema already exists
+          image:
+            repository: metabob-activity-api
+            tag: "latest"
+            pullPolicy: Always
+          namespace: activity-system
+          database: learning_loop
     needs:
       - activity-system/redis
 
@@ -121,11 +129,11 @@ releases:
       component: api
       tier: application
     values:
-      - replicaCount: 2
+      - replicaCount: 1
         image:
           repository: metabob-activity-api
           pullPolicy: Always  # Always pull latest for local development
-          tag: "v2-fixed"  # Fixed maxTokens bug
+          tag: "latest"  # Unified activity model with vessel functions
         service:
           type: ClusterIP
           port: 8080
@@ -150,13 +158,7 @@ releases:
           logLevel: "info"
           logFormat: "json"
           corsOrigins: "*"
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 1Gi
-          requests:
-            cpu: 250m
-            memory: 512Mi
+        resources: {}  # Removed due to cluster memory constraints
         livenessProbe:
           httpGet:
             path: /health
@@ -187,7 +189,7 @@ releases:
       component: vessel
       tier: agent
     values:
-      - replicaCount: 3  # Need 3+ for cluster mode and boredom polling
+      - replicaCount: 1  # Single replica for local dev (ReadWriteOnce PVC)
         image:
           repository: minibob
           pullPolicy: Always  # Always pull to get latest code changes
@@ -223,25 +225,33 @@ releases:
           gitUserName: "MiniBob Agent"
           gitUserEmail: "minibob@metabob.local"
 
-        # LLM API Key from environment
+        # LLM API Key from environment (passed to chart, which creates secret)
         secrets:
-          existingSecret: minibob-api-keys
-          anthropicApiKeyKey: anthropic-api-key
+          anthropicApiKey: {{ env "ANTHROPIC_API_KEY" | default "" | quote }}
+          metabobApiKey: {{ env "METABOB_API_KEY" | default "dummy-key" | quote }}
+          githubToken: {{ env "GITHUB_TOKEN" | default "" | quote }}
+          gitUserName: {{ env "GIT_USER_NAME" | default "MiniBob Agent" | quote }}
+          gitUserEmail: {{ env "GIT_USER_EMAIL" | default "minibob@metabob.local" | quote }}
           githubTokenKey: github-token
 
         resources:
           limits:
-            cpu: 1000m
+            cpu: 500m
             memory: 1Gi
           requests:
-            cpu: 250m
-            memory: 512Mi
+            cpu: 100m
+            memory: 256Mi
 
         persistence:
           enabled: true
-          storageClass: ""
+          storageClass: "standard"  # WaitForFirstConsumer binding (local-path provisioner)
           size: 10Gi
           mountPath: /workspace
+
+        # Disable repository persistence (would need ReadWriteMany)
+        repositories:
+          persistence:
+            enabled: false
 
         livenessProbe:
           enabled: true
