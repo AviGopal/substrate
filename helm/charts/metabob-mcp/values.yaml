@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: metabobapp/metabob-mcp
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: "dev-0.1.0-62be7a9-1774470652"
 
 service:
   type: ClusterIP

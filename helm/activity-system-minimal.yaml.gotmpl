@@ -170,8 +170,8 @@ releases:
       - replicaCount: 2
         image:
           repository: metabobapp/metabob-activity-api
-          pullPolicy: IfNotPresent
-          tag: "latest"
+          pullPolicy: Never  # Use local images for development
+          tag: "dev"
         service:
           type: ClusterIP
           port: 8080
@@ -364,8 +364,8 @@ releases:
       - replicaCount: 3  # Need 3+ for cluster mode and boredom polling
         image:
           repository: metabobapp/minibob
-          pullPolicy: IfNotPresent
-          tag: "latest"
+          pullPolicy: Never  # Use local images for development
+          tag: "dev"
 
         # MiniBob runs with Bun, not opencode
         command:
@@ -509,8 +509,8 @@ releases:
       - replicaCount: 1
         image:
           repository: metabobapp/metabob-internal-dashboard
-          pullPolicy: IfNotPresent
-          # tag is set by pre-commit hook in values.yaml - don't override here
+          pullPolicy: Never  # Use local images for development
+          tag: "dev"
         service:
           type: ClusterIP
           port: 3001

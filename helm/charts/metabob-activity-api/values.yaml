@@ -4,7 +4,7 @@ replicaCount: 2
 image:
   repository: metabobapp/metabob-activity-api
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: "dev-1.0.0-62be7a9-1774470652"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -58,6 +58,12 @@ config:
   
   # CORS
   corsOrigins: "*"        # Comma-separated list
+
+  # Rate limiting (higher values for dev/testing)
+  rateLimit:
+    auth: 100             # Requests per window for /v2/auth/* (default: 10)
+    signin: 50            # Requests per window for signin endpoints (default: 5)
+    windowMs: 60000       # Window in milliseconds (1 minute)
 
 # Resource limits
 resources:
