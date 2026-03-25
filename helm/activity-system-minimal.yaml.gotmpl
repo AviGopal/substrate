@@ -497,18 +497,60 @@ releases:
       - activity-system/metabob-activity-api
 
   # ===========================================================================
+  # METABOB INTERNAL DASHBOARD - Development observability UI
+  # ===========================================================================
+  - name: metabob-internal-dashboard
+    chart: ./charts/metabob-internal-dashboard
+    namespace: activity-system
+    labels:
+      component: ui
+      tier: frontend
+    values:
+      - replicaCount: 1
+        image:
+          repository: metabobapp/metabob-internal-dashboard
+          pullPolicy: IfNotPresent
+          # tag is set by pre-commit hook in values.yaml - don't override here
+        service:
+          type: ClusterIP
+          port: 3001
+        minibob:
+          apiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        probes:
+          liveness:
+            path: /health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readiness:
+            path: /health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+    needs:
+      - activity-system/metabob-activity-api
+
+  # ===========================================================================
   # ISTIO GATEWAY - DRY Networking Configuration
   # ===========================================================================
-  # Environment-based routing:
+  # Environment-based routing (domain set by environment variable):
   #   Development: *.metabob.local
   #   Production:  *.metabob.com
   #
   # Service Mapping:
-  #   app.{domain}      -> metabob-cloud-dashboard (dashboard)
-  #   activity.{domain} -> metabob-activity-api
-  #   api.{domain}      -> metabob-analysis-api
-  #   surql.{domain}    -> surrealdb (dev only)
-  #   minibob.{domain}  -> minibob-devbob (dev only)
+  #   app.{domain}      -> metabob-cloud-dashboard    (dev+prod)
+  #   activity.{domain} -> metabob-activity-api      (dev+prod)
+  #   api.{domain}      -> metabob-analysis-api      (dev+prod)
+  #   internal.{domain} -> internal-dashboard        (dev only)
+  #   surql.{domain}    -> surrealdb                 (dev only)
+  #
+  # Internal only (no external access):
+  #   valkey/redis - cluster internal only
   # ===========================================================================
   - name: istio-gateway
     chart: ./charts/istio-gateway
@@ -519,23 +561,28 @@ releases:
     values:
       - environment: development  # Switch to "production" for prod deployment
 
-        # Service overrides for this deployment
-        # (chart has defaults, override what's different)
+        # Service configuration (inherits defaults from chart values.yaml)
+        # Only override what differs from defaults
         services:
+          # Cloud Dashboard - user-facing SaaS UI
           dashboard:
-            # Use metabob-cloud-dashboard for user-facing UI
             service: metabob-cloud-dashboard
+            # enabled: dev=true, prod=true (from defaults)
 
-          # activity and analysis APIs use defaults from chart
+          # Activity API - learning system backend
+          # activity: uses defaults (metabob-activity-api:8080)
 
-          # Enable surrealdb external access in dev
+          # Analysis API - code analysis backend
+          # analysis: uses defaults (metabob-analysis-api:8080)
+
+          # SurrealDB - dev access only
           surrealdb:
             enabled:
               development: true
               production: false
 
-          # Enable minibob external access in dev
-          minibob:
+          # Internal Dashboard - dev access only
+          internal:
             enabled:
               development: true
               production: false
