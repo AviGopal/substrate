@@ -10,9 +10,32 @@
  */
 
 import { Hono } from 'hono';
+import beta from '@stdlib/random-base-beta';
 import { surrealDB, queryWithAuth } from '../db/surreal';
 import { RedisClient } from '../db/redis';
 import { logger } from '../utils/logger';
+
+/**
+ * Thompson Sampling Beta distribution sampler.
+ *
+ * Uses @stdlib/random-base-beta to sample from Beta(alpha, beta) distribution.
+ * When THOMPSON_SAMPLING_SEED env var is set, uses seeded RNG for reproducible tests.
+ *
+ * @param alpha - Success count + 1 (prior)
+ * @param betaParam - Failure count + 1 (prior)
+ * @returns Sample from Beta(alpha, beta) distribution, value between 0 and 1
+ */
+const betaSample: (alpha: number, betaParam: number) => number = (() => {
+  const seed = process.env.THOMPSON_SAMPLING_SEED;
+  if (seed) {
+    const seedNum = parseInt(seed, 10);
+    if (!isNaN(seedNum)) {
+      logger.info('Thompson Sampling initialized with seed', { seed: seedNum });
+      return beta.factory({ seed: seedNum });
+    }
+  }
+  return beta;
+})();
 import type { SessionData } from '../models/schemas';
 import { getJwtAuthFromContext, hasJwtAuth, type JwtAuthContext } from '../middleware/jwtAuth';
 import { generateActivity } from '../services/activity-generator';
@@ -1558,13 +1581,14 @@ app.post('/recommend', async (c) => {
     // Apply Thompson Sampling
     const recommendations = templates
       .map((template) => {
-        // Get alpha/beta from enriched metrics
+        // Get alpha/beta from enriched metrics (defaults: Beta(1,1) = uniform prior)
         const alpha = template.metrics?.thompson_alpha || 1.0;
-        const beta = template.metrics?.thompson_beta || 1.0;
+        const betaVal = template.metrics?.thompson_beta || 1.0;
 
-        // Sample from Beta distribution (simplified: use expected value for deterministic testing)
-        // In production, would use: sample = beta_random(alpha, beta)
-        const sample = alpha / (alpha + beta); // Expected value of Beta(alpha, beta)
+        // Sample from Beta(alpha, beta) distribution for Thompson Sampling
+        // This enables exploration (high variance for uncertain templates) and
+        // exploitation (high mean for proven templates) tradeoff
+        const sample = betaSample(alpha, betaVal);
 
         return {
           template_id: template.variant_id,
