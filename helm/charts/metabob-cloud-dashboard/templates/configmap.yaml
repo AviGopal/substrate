@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "metabob-cloud-dashboard.fullname" . }}
+  labels:
+    {{- include "metabob-cloud-dashboard.labels" . | nindent 4 }}
+data:
+  ANALYSIS_API_URL: {{ .Values.config.analysisApiUrl | quote }}
+  ACTIVITY_API_URL: {{ .Values.config.activityApiUrl | quote }}
+  PORT: {{ .Values.config.port | quote }}

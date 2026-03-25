@@ -3,15 +3,27 @@
 # Single Helmfile for MiniBob boredom activities system
 # =============================================================================
 #
-# Components: Valkey, SurrealDB, Activity API, Dashboard, MiniBob, Istio Gateway
+# Components: Valkey, SurrealDB, Activity API, Analysis API, MCP, Cloud Dashboard, MiniBob, Istio Gateway
 #
 # Requirements:
 #   - Docker images built
-#   - /etc/hosts: 127.0.0.1 api.minibob.local dashboard.minibob.local devbob.minibob.local
+#   - /etc/hosts (development):
+#       127.0.0.1 app.metabob.local activity.metabob.local api.metabob.local
+#       127.0.0.1 surql.metabob.local minibob.metabob.local
 #   - Istio installed: istioctl install --set profile=demo -y
 #   - Environment: export ANTHROPIC_API_KEY="sk-ant-..."
 #
-# Deploy: helmfile -f helm/activity-system-minimal.yaml sync
+# Service Routing:
+#   app.metabob.local      -> Cloud Dashboard (metabob-cloud-dashboard)
+#   activity.metabob.local -> Activity API
+#   api.metabob.local      -> Analysis API
+#   surql.metabob.local    -> SurrealDB (dev only)
+#   minibob.metabob.local  -> MiniBob vessel (dev only)
+#
+# Deploy (idempotent): helmfile -f helm/activity-system-minimal.yaml.gotmpl sync
+# Destroy (full cleanup): helmfile -f helm/activity-system-minimal.yaml.gotmpl destroy
+#
+# NOTE: On destroy, PVCs are auto-cleaned by postuninstall hooks
 # =============================================================================
 
 helmDefaults:
@@ -66,14 +78,41 @@ releases:
           enabled: false
 
   # ===========================================================================
-  # SURREALDB - Learning database
+  # SURREALDB - Learning database with automated schema migration
   # ===========================================================================
   - name: surrealdb
     chart: ./charts/surrealdb
     namespace: activity-system
+    wait: true  # Wait for migration Job to complete before marking ready
+    timeout: 900  # 15 minutes for database + migration
     labels:
       component: infrastructure
       tier: database
+    hooks:
+      # Clean up PVCs on destroy (StatefulSet PVCs are NOT auto-deleted by Helm)
+      - events: ["postuninstall"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "delete"
+          - "pvc"
+          - "-n"
+          - "activity-system"
+          - "-l"
+          - "app=surrealdb"
+          - "--ignore-not-found=true"
+      # Clean up any orphaned migration jobs
+      - events: ["postuninstall"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "delete"
+          - "jobs"
+          - "-n"
+          - "activity-system"
+          - "-l"
+          - "app.kubernetes.io/component=migration"
+          - "--ignore-not-found=true"
     values:
       - name: surrealdb
         namespace: activity-system
@@ -108,14 +147,13 @@ releases:
           enabled: true
           path: /health
           port: 8000
-        migrations:
-          enabled: false  # Disabled due to memory constraints - schema already exists
+        # Schema migration (runs after SurrealDB is ready)
+        migration:
+          enabled: true  # Enable automated schema deployment
           image:
             repository: metabob-activity-api
-            tag: "latest"
+            tag: "v2-fixed"
             pullPolicy: Always
-          namespace: activity-system
-          database: learning_loop
     needs:
       - activity-system/redis
 
@@ -129,11 +167,11 @@ releases:
       component: api
       tier: application
     values:
-      - replicaCount: 1
+      - replicaCount: 2
         image:
           repository: metabob-activity-api
           pullPolicy: Always  # Always pull latest for local development
-          tag: "latest"  # Unified activity model with vessel functions
+          tag: "v2-fixed"  # Fixed maxTokens bug
         service:
           type: ClusterIP
           port: 8080
@@ -158,7 +196,13 @@ releases:
           logLevel: "info"
           logFormat: "json"
           corsOrigins: "*"
-        resources: {}  # Removed due to cluster memory constraints
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
         livenessProbe:
           httpGet:
             path: /health
@@ -180,6 +224,121 @@ releases:
       - activity-system/surrealdb
 
   # ===========================================================================
+  # METABOB ANALYSIS API - Code analysis, auth, projects, problems
+  # ===========================================================================
+  - name: metabob-analysis-api
+    chart: ./charts/metabob-analysis-api
+    namespace: activity-system
+    labels:
+      component: api
+      tier: application
+    values:
+      - replicaCount: 1
+        image:
+          repository: metabob-analysis-api
+          pullPolicy: Always
+          tag: "latest"
+        service:
+          type: ClusterIP
+          port: 8080
+          targetPort: 8080
+          name: http
+        config:
+          port: 8080
+          host: "0.0.0.0"
+          surrealdb:
+            url: "http://surrealdb.activity-system.svc.cluster.local:8000"
+            namespace: "activity-system"
+            database: "learning_loop"
+            username: {{ env "SURREALDB_USERNAME" | default "root" }}
+            password: {{ env "SURREALDB_PASSWORD" | default "surrealdb-local-dev-123" }}
+          redis:
+            url: "redis://redis-valkey.activity-system.svc.cluster.local:6379"
+          jwt:
+            secret: "metabob-jwt-secret-key-change-in-production"
+            expiresIn: "12h"
+          logLevel: "info"
+          corsOrigins: "*"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+    needs:
+      - activity-system/redis
+      - activity-system/surrealdb
+
+  # ===========================================================================
+  # METABOB MCP - MCP server interface for coding agents
+  # ===========================================================================
+  - name: metabob-mcp
+    chart: ./charts/metabob-mcp
+    namespace: activity-system
+    labels:
+      component: api
+      tier: interface
+    values:
+      - replicaCount: 1
+        image:
+          repository: metabob-mcp
+          pullPolicy: Always
+          tag: "latest"
+        service:
+          type: ClusterIP
+          port: 8080
+          targetPort: 8080
+          name: http
+        config:
+          analysisApiUrl: "http://metabob-analysis-api.activity-system.svc.cluster.local:8080"
+          sessionId: "mcp-server-session"
+          logLevel: "info"
+          healthPort: 8080
+          maxRequestsPerMinute: 60
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+    needs:
+      - activity-system/metabob-analysis-api
+
+  # ===========================================================================
   # MINIBOB - AI agent for boredom activities
   # ===========================================================================
   - name: minibob
@@ -188,8 +347,21 @@ releases:
     labels:
       component: vessel
       tier: agent
+    hooks:
+      # Clean up workspace PVCs on destroy
+      - events: ["postuninstall"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "delete"
+          - "pvc"
+          - "-n"
+          - "activity-system"
+          - "-l"
+          - "app.kubernetes.io/name=minibob"
+          - "--ignore-not-found=true"
     values:
-      - replicaCount: 1  # Single replica for local dev (ReadWriteOnce PVC)
+      - replicaCount: 3  # Need 3+ for cluster mode and boredom polling
         image:
           repository: minibob
           pullPolicy: Always  # Always pull to get latest code changes
@@ -225,30 +397,27 @@ releases:
           gitUserName: "MiniBob Agent"
           gitUserEmail: "minibob@metabob.local"
 
-        # LLM API Key from environment (passed to chart, which creates secret)
+        # LLM API Key from environment
         secrets:
-          anthropicApiKey: {{ env "ANTHROPIC_API_KEY" | default "" | quote }}
-          metabobApiKey: {{ env "METABOB_API_KEY" | default "dummy-key" | quote }}
-          githubToken: {{ env "GITHUB_TOKEN" | default "" | quote }}
-          gitUserName: {{ env "GIT_USER_NAME" | default "MiniBob Agent" | quote }}
-          gitUserEmail: {{ env "GIT_USER_EMAIL" | default "minibob@metabob.local" | quote }}
+          existingSecret: minibob-api-keys
+          anthropicApiKeyKey: anthropic-api-key
           githubTokenKey: github-token
 
         resources:
           limits:
-            cpu: 500m
+            cpu: 1000m
             memory: 1Gi
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: 250m
+            memory: 512Mi
 
         persistence:
           enabled: true
-          storageClass: "standard"  # WaitForFirstConsumer binding (local-path provisioner)
+          storageClass: ""
           size: 10Gi
           mountPath: /workspace
 
-        # Disable repository persistence (would need ReadWriteMany)
+        # Disable shared repos PVC for local dev (requires ReadWriteMany)
         repositories:
           persistence:
             enabled: false
@@ -280,10 +449,10 @@ releases:
       - activity-system/metabob-activity-api
 
   # ===========================================================================
-  # ACTIVITY DASHBOARD - React UI
+  # METABOB CLOUD DASHBOARD - User-facing React UI
   # ===========================================================================
-  - name: activity-dashboard
-    chart: ../repos/activity-dashboard/helm/activity-dashboard
+  - name: metabob-cloud-dashboard
+    chart: ./charts/metabob-cloud-dashboard
     namespace: activity-system
     labels:
       component: ui
@@ -291,17 +460,16 @@ releases:
     values:
       - replicaCount: 1
         image:
-          repository: activity-dashboard
+          repository: metabob-cloud-dashboard
           pullPolicy: Always  # Always pull latest for local development
-          tag: "v2-fixed"  # Fixed maxTokens bug
+          tag: "latest"
         service:
           type: ClusterIP
           port: 3000
           targetPort: 3000
         config:
+          analysisApiUrl: "http://metabob-analysis-api.activity-system.svc.cluster.local:8080"
           activityApiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
-          wsEnabled: true
-          refreshInterval: 5000
           port: 3000
         resources:
           limits:
@@ -325,10 +493,22 @@ releases:
           periodSeconds: 5
           failureThreshold: 3
     needs:
+      - activity-system/metabob-analysis-api
       - activity-system/metabob-activity-api
 
   # ===========================================================================
-  # ISTIO GATEWAY - Networking and external access configuration
+  # ISTIO GATEWAY - DRY Networking Configuration
+  # ===========================================================================
+  # Environment-based routing:
+  #   Development: *.metabob.local
+  #   Production:  *.metabob.com
+  #
+  # Service Mapping:
+  #   app.{domain}      -> metabob-cloud-dashboard (dashboard)
+  #   activity.{domain} -> metabob-activity-api
+  #   api.{domain}      -> metabob-analysis-api
+  #   surql.{domain}    -> surrealdb (dev only)
+  #   minibob.{domain}  -> minibob-devbob (dev only)
   # ===========================================================================
   - name: istio-gateway
     chart: ./charts/istio-gateway
@@ -337,53 +517,28 @@ releases:
       component: networking
       tier: infrastructure
     values:
-      - gateway:
-          name: activity-system-gateway
-          namespace: activity-system
-          selector:
-            istio: ingressgateway
+      - environment: development  # Switch to "production" for prod deployment
 
-        port:
-          number: 80
-          name: http
-          protocol: HTTP
-
-        virtualServices:
+        # Service overrides for this deployment
+        # (chart has defaults, override what's different)
+        services:
           dashboard:
-            enabled: true
-            hostname: dashboard.minibob.local
-            host: activity-dashboard.activity-system.svc.cluster.local
-            port: 3000
-            metrics:
-              enabled: true
-              labels:
-                service: dashboard
+            # Use metabob-cloud-dashboard for user-facing UI
+            service: metabob-cloud-dashboard
 
-          api:
-            enabled: true
-            hostname: api.minibob.local
-            host: metabob-activity-api.activity-system.svc.cluster.local
-            port: 8080
-            metrics:
-              enabled: true
-              labels:
-                service: api
+          # activity and analysis APIs use defaults from chart
 
-          devbob:
-            enabled: true
-            hostname: devbob.minibob.local
-            host: minibob-devbob.activity-system.svc.cluster.local
-            port: 8080
-            metrics:
-              enabled: true
-              labels:
-                service: devbob
+          # Enable surrealdb external access in dev
+          surrealdb:
+            enabled:
+              development: true
+              production: false
 
-        destinationRules:
-          dashboard:
-            enabled: true
-          api:
-            enabled: true
+          # Enable minibob external access in dev
+          minibob:
+            enabled:
+              development: true
+              production: false
 
         metrics:
           enabled: true
@@ -393,5 +548,5 @@ releases:
         istioInjection:
           enabled: true
     needs:
-      - activity-system/activity-dashboard
+      - activity-system/metabob-cloud-dashboard
       - activity-system/metabob-activity-api

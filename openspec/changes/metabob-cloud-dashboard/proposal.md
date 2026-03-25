@@ -50,8 +50,15 @@ Build fresh dashboard using modern stack aligned with new architecture.
 **1. Federated APIs** - Dashboard talks to 3 independent backends
 **2. Shared Auth** - JWT from analysis-api, validated by all services
 **3. WebSocket Primary** - Real-time updates with polling fallback
-**4. Shadcn Minimalism** - Clean UI, Metabob color scheme
+**4. Simple & Transparent** - shadcn/ui with Metabob dark theme, unobtrusive design
 **5. Type Safety** - Shared TypeScript interfaces
+
+### Design Philosophy
+
+- **Transparency over decoration** - subtle backgrounds, clear typography
+- **Information density where needed** - tables for data, cards for summaries
+- **Progressive disclosure** - show summaries first, details on demand
+- **Not overbearing** - professional, helpful, focused on the user's work
 
 ## Dependencies
 
@@ -101,3 +108,4 @@ Build fresh dashboard using modern stack aligned with new architecture.
 - Starter: `repos/metabob-cloud-dashboard/` (11 files exist)
 - Tasks: [tasks.md](./tasks.md)
 - Design: [design.md](./design.md)
+- Query Topology: [specs/query-topology.md](./specs/query-topology.md)
