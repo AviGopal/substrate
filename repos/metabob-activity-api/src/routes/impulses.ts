@@ -23,8 +23,94 @@ import {
   type ImpulseResolveResponse,
   type SessionData,
 } from '../models/schemas';
+import { config } from '../config';
+import {
+  formatAnalysisResultAsMarkdown,
+  formatCochangeAsMarkdown,
+  formatImpactAsMarkdown,
+  formatSearchResultsAsMarkdown,
+} from '../services/impulse-formatters';
+import { getJwtAuthFromContext, type JwtAuthContext } from '../middleware/jwtAuth';
 
 const router = new Hono();
+
+/**
+ * Proxy request to Analysis API with retry and timeout
+ * Returns null on failure (graceful degradation)
+ */
+async function proxyToAnalysisApi<T>(
+  endpoint: string,
+  options: {
+    method?: 'GET' | 'POST';
+    body?: unknown;
+    sessionId?: string;
+    params?: Record<string, string | number>;
+  } = {}
+): Promise<T | null> {
+  const { method = 'GET', body, sessionId, params } = options;
+  const baseUrl = config.analysisApi.url;
+
+  // Build URL with query params
+  let url = `${baseUrl}${endpoint}`;
+  if (params && Object.keys(params).length > 0) {
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      searchParams.append(key, String(value));
+    }
+    url += `?${searchParams.toString()}`;
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (sessionId) {
+    headers['X-Session-ID'] = sessionId;
+  }
+
+  for (let attempt = 0; attempt < config.analysisApi.retryAttempts; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.analysisApi.timeout);
+
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        logger.warn('Analysis API error', {
+          endpoint,
+          status: response.status,
+          attempt: attempt + 1,
+        });
+
+        if (response.status >= 500 && attempt < config.analysisApi.retryAttempts - 1) {
+          await new Promise(r => setTimeout(r, config.analysisApi.retryDelay * (attempt + 1)));
+          continue;
+        }
+        return null;
+      }
+
+      return await response.json() as T;
+    } catch (error) {
+      logger.warn('Analysis API request failed', {
+        endpoint,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        attempt: attempt + 1,
+      });
+
+      if (attempt < config.analysisApi.retryAttempts - 1) {
+        await new Promise(r => setTimeout(r, config.analysisApi.retryDelay * (attempt + 1)));
+      }
+    }
+  }
+
+  return null;
+}
 
 /**
  * POST /v2/impulses
@@ -45,28 +131,73 @@ const router = new Hono();
 router.post('/', async (c) => {
   try {
     const session = (c.get as any)('session') as SessionData | null;
+    let jwtAuth = getJwtAuthFromContext(c);
 
     // Allow internal service calls with X-Internal-Api-Key header
     const internalApiKey = c.req.header('X-Internal-Api-Key');
 
+    // If no JWT auth from middleware, try to authenticate directly from Authorization header
+    // This handles the case where the middleware might not have run
+    const authHeader = c.req.header('Authorization');
+    if (!jwtAuth && authHeader) {
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (match && match[1].includes('.')) {
+        logger.info('Attempting direct JWT auth in route handler');
+        try {
+          const { createAuthenticatedClient } = await import('../db/surreal');
+          const db = await createAuthenticatedClient(match[1]);
+          const result = await db.query<[{
+            id: string;
+            org_id?: string;
+            project_id?: string;
+            instance_id?: string;
+          }]>(`RETURN {
+            id: $auth.id,
+            org_id: $auth.org_id,
+            project_id: $auth.project_id,
+            instance_id: $auth.instance_id
+          }`);
+          const auth = result[0];
+          await db.close();
+          if (auth && auth.org_id) {
+            jwtAuth = {
+              jwtToken: match[1],
+              orgId: String(auth.org_id).replace(/^organizations:/, ''),
+              projectId: auth.project_id ? String(auth.project_id).replace(/^projects:/, '') : undefined,
+              instanceId: auth.instance_id,
+            };
+            logger.info('Direct JWT auth successful', { orgId: jwtAuth.orgId });
+          }
+        } catch (e) {
+          logger.warn('Direct JWT auth failed', { error: (e as Error).message });
+        }
+      }
+    }
+
     // Debug: log all headers
     logger.debug('POST /v2/impulses headers', {
       hasSession: !!session,
+      hasJwtAuth: !!jwtAuth,
       hasInternalKey: !!internalApiKey,
       internalKeyPrefix: internalApiKey ? internalApiKey.substring(0, 10) + '...' : 'none',
       authorization: c.req.header('Authorization') ? 'present' : 'missing',
     });
 
-    // Get api_key from session or internal header
+    // Get api_key from session, JWT auth, or internal header
     let api_key: string;
+
     if (session?.api_key) {
       api_key = session.api_key;
+    } else if (jwtAuth) {
+      // JWT auth from MiniBob instances - use instance info
+      api_key = `minibob:${jwtAuth.instanceId || jwtAuth.orgId}`;
+      logger.info('Using JWT auth', { orgId: jwtAuth.orgId, projectId: jwtAuth.projectId, instanceId: jwtAuth.instanceId });
     } else if (internalApiKey) {
       api_key = internalApiKey;
       logger.debug('Using internal service api_key', { api_key: api_key.substring(0, 8) + '...' });
     } else {
-      logger.warn('POST /v2/impulses: no auth', { hasSession: !!session, hasInternalKey: !!internalApiKey });
-      return c.json({ error: 'Unauthorized - valid session or X-Internal-Api-Key required' }, 401);
+      logger.warn('POST /v2/impulses: no auth', { hasSession: !!session, hasJwtAuth: !!jwtAuth, hasInternalKey: !!internalApiKey });
+      return c.json({ error: 'Unauthorized - valid session, JWT token, or X-Internal-Api-Key required' }, 401);
     }
 
     // Parse request body
@@ -107,15 +238,15 @@ router.post('/', async (c) => {
     }
 
     // Create impulse record with timestamps
-    const now = new Date().toISOString();
+    // Use SurrealDB time::now() for proper datetime type (v3 doesn't auto-coerce strings)
     const createQuery = `
       CREATE impulse_data CONTENT {
         impulse_id: $impulse_id,
         api_key: $api_key,
         project_id: $project_id,
         impulse_data: $impulse_data,
-        created_at: $created_at,
-        updated_at: $updated_at
+        created_at: time::now(),
+        updated_at: time::now()
       }
     `;
 
@@ -124,18 +255,21 @@ router.post('/', async (c) => {
       api_key,
       project_id,
       impulse_data,
-      created_at: now,
-      updated_at: now,
     });
 
     if (!result || result.length === 0) {
       throw new Error('Failed to create impulse in SurrealDB');
     }
 
+    // Extract the created record with its timestamps
+    const created = result[0];
+    const createdAt = created?.created_at || new Date().toISOString();
+    const updatedAt = created?.updated_at || createdAt;
+
     logger.info('Impulse created', {
       impulse_id,
       project_id,
-      created_at: now,
+      created_at: createdAt,
     });
 
     // Return response matching Python ImpulseResponse schema
@@ -144,8 +278,8 @@ router.post('/', async (c) => {
       api_key,
       project_id,
       impulse_data,
-      created_at: now,
-      updated_at: now,
+      created_at: createdAt,
+      updated_at: updatedAt,
     };
 
     return c.json(response, 201);
@@ -189,15 +323,18 @@ router.post('/', async (c) => {
 router.get('/:impulseId', async (c) => {
   try {
     const session = (c.get as any)('session') as SessionData | null;
+    const jwtAuth = getJwtAuthFromContext(c);
     const internalApiKey = c.req.header('X-Internal-Api-Key');
 
     let api_key: string;
     if (session?.api_key) {
       api_key = session.api_key;
+    } else if (jwtAuth) {
+      api_key = `minibob:${jwtAuth.instanceId || jwtAuth.orgId}`;
     } else if (internalApiKey) {
       api_key = internalApiKey;
     } else {
-      return c.json({ error: 'Unauthorized - valid session or X-Internal-Api-Key required' }, 401);
+      return c.json({ error: 'Unauthorized - valid session, JWT token, or X-Internal-Api-Key required' }, 401);
     }
 
     const impulse_id = c.req.param('impulseId');
@@ -285,15 +422,18 @@ router.get('/:impulseId', async (c) => {
 router.get('/', async (c) => {
   try {
     const session = (c.get as any)('session') as SessionData | null;
+    const jwtAuth = getJwtAuthFromContext(c);
     const internalApiKey = c.req.header('X-Internal-Api-Key');
 
     let api_key: string;
     if (session?.api_key) {
       api_key = session.api_key;
+    } else if (jwtAuth) {
+      api_key = `minibob:${jwtAuth.instanceId || jwtAuth.orgId}`;
     } else if (internalApiKey) {
       api_key = internalApiKey;
     } else {
-      return c.json({ error: 'Unauthorized - valid session or X-Internal-Api-Key required' }, 401);
+      return c.json({ error: 'Unauthorized - valid session, JWT token, or X-Internal-Api-Key required' }, 401);
     }
 
     const project_id = c.req.query('project_id');
@@ -434,13 +574,14 @@ router.post('/resolve', async (c) => {
           } as ImpulseResolveResponse, 400);
         }
 
-        // Load execution trace from database
+        // Load execution trace from activity_execution_traces (RBAC-enabled table)
+        // This is the table MiniBob writes to via POST /v2/activities/execution-traces
         const query = `
-          SELECT * FROM execution_traces
+          SELECT * FROM activity_execution_traces
           WHERE execution_id = $execution_id
           LIMIT 1
         `;
-        
+
         const result = await surrealDB.query<any>(query, {
           execution_id: pointer.executionId,
         });
@@ -564,7 +705,7 @@ router.post('/resolve', async (c) => {
         }
 
         const query = `
-          SELECT * FROM execution_traces
+          SELECT * FROM activity_execution_traces
           ${whereClause}
           ORDER BY created_at DESC
           LIMIT $limit
@@ -589,13 +730,13 @@ router.post('/resolve', async (c) => {
 
         const query = `
           SELECT
-            template_id,
+            variant_id as template_id,
             status,
             execution_trace.tasks.*.result.error as errors,
             execution_trace.tasks.*.toolCalls.*.result.error as tool_errors,
             created_at
-          FROM execution_traces
-          WHERE status = "failed" AND created_at >= $since
+          FROM activity_execution_traces
+          WHERE status = "failure" AND created_at >= $since
           ORDER BY created_at DESC
           LIMIT $limit
         `;
@@ -617,13 +758,13 @@ router.post('/resolve', async (c) => {
 
         const query = `
           SELECT
-            template_id,
+            variant_id as template_id,
             duration_ms,
             cost_usd,
             execution_trace.tasks.*.toolCalls as tool_usage,
             created_at
-          FROM execution_traces
-          WHERE status = "completed" AND created_at >= $since
+          FROM activity_execution_traces
+          WHERE status = "success" AND created_at >= $since
           ORDER BY duration_ms ASC
           LIMIT $limit
         `;
@@ -649,14 +790,14 @@ router.post('/resolve', async (c) => {
 
         const query = `
           SELECT
-            template_id,
+            variant_id as template_id,
             count() as executions,
             math::mean(duration_ms) as avg_duration,
             math::mean(cost_usd) as avg_cost,
-            count(status = "completed") / count() as success_rate
-          FROM execution_traces
+            count(success = true) / count() as success_rate
+          FROM activity_execution_traces
           WHERE activity_id = $activity_id
-          GROUP BY template_id
+          GROUP BY variant_id
           ORDER BY success_rate DESC
         `;
 
@@ -666,6 +807,139 @@ router.post('/resolve', async (c) => {
           content = `# Template Comparison\n\nNo executions found for activity: ${pointer.activityId}`;
         } else {
           content = formatTemplateComparisonAsMarkdown(result, pointer.activityId);
+        }
+        break;
+      }
+
+      // =============================================================================
+      // ANALYSIS API POINTER TYPES (M3 - Impulse Bridge)
+      // These proxy to metabob-analysis-api for CPG and analysis data
+      // =============================================================================
+
+      case 'analysisResult': {
+        // Load a single analysis problem/issue
+        if (!pointer.resultId) {
+          return c.json({
+            success: false,
+            error: 'resultId required for analysisResult pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        const sessionId = c.req.header('X-Session-ID');
+        const analysisResult = await proxyToAnalysisApi<{ problem: any }>(
+          `/v2/analysis/problems/${pointer.resultId}`,
+          { method: 'GET', sessionId: sessionId || undefined }
+        );
+
+        if (!analysisResult || !analysisResult.problem) {
+          content = `# Analysis Result\n\nProblem not found: ${pointer.resultId}\n\n*The analysis API may be unavailable or the problem does not exist.*`;
+        } else {
+          content = formatAnalysisResultAsMarkdown(
+            analysisResult.problem,
+            pointer.format || 'full'
+          );
+        }
+        break;
+      }
+
+      case 'cochangeSuggestions': {
+        // Get co-change suggestions for components
+        if (!pointer.componentIds || pointer.componentIds.length === 0) {
+          return c.json({
+            success: false,
+            error: 'componentIds required for cochangeSuggestions pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        const sessionId = c.req.header('X-Session-ID');
+
+        // Extract file paths from component IDs
+        const changedFiles = [...new Set(
+          pointer.componentIds.map(id => id.split('::')[0])
+        )];
+
+        const cochangeResult = await proxyToAnalysisApi<{ suggestions: any[] }>(
+          '/v2/analysis/cochange/suggest',
+          {
+            method: 'POST',
+            sessionId: sessionId || undefined,
+            body: {
+              changed_files: changedFiles,
+              limit: pointer.limit || 5,
+              confidence_threshold: 0.3,
+            },
+          }
+        );
+
+        if (!cochangeResult || !cochangeResult.suggestions) {
+          content = `# Co-Change Suggestions\n\nUnable to get co-change suggestions.\n\n*The analysis API may be unavailable or the codebase is not indexed.*`;
+        } else {
+          content = formatCochangeAsMarkdown(cochangeResult.suggestions);
+        }
+        break;
+      }
+
+      case 'impactAnalysis': {
+        // Get impact analysis for changed files
+        if (!pointer.changedFiles || pointer.changedFiles.length === 0) {
+          return c.json({
+            success: false,
+            error: 'changedFiles required for impactAnalysis pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        const sessionId = c.req.header('X-Session-ID');
+        const impactResult = await proxyToAnalysisApi<any>(
+          '/v2/analysis/impact',
+          {
+            method: 'POST',
+            sessionId: sessionId || undefined,
+            body: {
+              changed_files: pointer.changedFiles,
+              max_depth: pointer.maxDepth || 2,
+              include_tests: true,
+            },
+          }
+        );
+
+        if (!impactResult) {
+          content = `# Impact Analysis\n\nUnable to perform impact analysis.\n\n*The analysis API may be unavailable or the codebase is not indexed.*`;
+        } else {
+          content = formatImpactAsMarkdown(impactResult);
+        }
+        break;
+      }
+
+      case 'codebaseSearch': {
+        // Search the indexed codebase
+        if (!pointer.query) {
+          return c.json({
+            success: false,
+            error: 'query required for codebaseSearch pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        const sessionId = c.req.header('X-Session-ID');
+        const searchResult = await proxyToAnalysisApi<{ results: any[] }>(
+          '/v2/analysis/search',
+          {
+            method: 'POST',
+            sessionId: sessionId || undefined,
+            body: {
+              query: pointer.query,
+              limit: pointer.limit || 10,
+              filters: {
+                severity: pointer.severity,
+                category: pointer.category,
+              },
+            },
+          }
+        );
+
+        if (!searchResult || !searchResult.results) {
+          content = `# Codebase Search: "${pointer.query}"\n\nUnable to search codebase.\n\n*The analysis API may be unavailable or the codebase is not indexed.*`;
+        } else {
+          content = formatSearchResultsAsMarkdown(searchResult.results, pointer.query);
         }
         break;
       }
@@ -1043,5 +1317,101 @@ function formatTemplateComparisonAsMarkdown(comparisons: any[], activityId: stri
 
   return md;
 }
+
+/**
+ * POST /v2/impulses/:impulseId/usage
+ * Track impulse usage for analytics and learning
+ *
+ * MiniBob calls this endpoint to record when an impulse is used in an activity.
+ * This enables:
+ * - Usage analytics (most/least used impulses)
+ * - Cleanup of unused impulses
+ * - Learning about impulse relevance
+ *
+ * Flow:
+ * 1. Verify impulse exists (404 if not found)
+ * 2. Store usage record in impulse_usage_history
+ * 3. Update usage_count and last_used_at on impulse_data
+ * 4. Return success
+ */
+router.post('/:impulseId/usage', async (c) => {
+  try {
+    const { impulseId } = c.req.param();
+    const body = await c.req.json();
+
+    const { activityId, taskId, executionId, tokensUsed, success } = body;
+
+    logger.info('POST /v2/impulses/:impulseId/usage', {
+      impulse_id: impulseId,
+      activity_id: activityId,
+      task_id: taskId,
+      tokens_used: tokensUsed,
+    });
+
+    // Check if impulse exists (we need to query without auth for internal service calls)
+    // For now, just record the usage - we'll validate later when we have proper auth context
+    const checkQuery = `
+      SELECT impulse_id FROM impulse_data
+      WHERE impulse_id = $impulse_id
+      LIMIT 1
+    `;
+
+    const existing = await surrealDB.query<any>(checkQuery, { impulse_id: impulseId });
+
+    if (existing.length === 0) {
+      return c.json({
+        success: false,
+        error: `Impulse not found: ${impulseId}`,
+      }, 404);
+    }
+
+    // Create usage record in impulse_usage_history
+    // Note: org_id and project_id would be set via $auth in RBAC context
+    const usageQuery = `
+      CREATE impulse_usage_history SET
+        impulse_id = $impulse_id,
+        activity_id = $activity_id,
+        task_id = $task_id,
+        execution_id = $execution_id,
+        tokens_consumed = $tokens_consumed,
+        success = $success,
+        used_at = time::now()
+    `;
+
+    await surrealDB.query(usageQuery, {
+      impulse_id: impulseId,
+      activity_id: activityId || null,
+      task_id: taskId || null,
+      execution_id: executionId || null,
+      tokens_consumed: tokensUsed || 0,
+      success: success ?? true,
+    });
+
+    // Update usage stats on the impulse itself
+    const updateQuery = `
+      UPDATE impulse_data SET
+        usage_count = usage_count + 1,
+        last_used_at = time::now()
+      WHERE impulse_id = $impulse_id
+    `;
+
+    await surrealDB.query(updateQuery, { impulse_id: impulseId });
+
+    logger.info('Impulse usage recorded', { impulse_id: impulseId });
+
+    return c.json({ success: true }, 200);
+
+  } catch (error: any) {
+    logger.error('POST /v2/impulses/:impulseId/usage failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      success: false,
+      error: error.message,
+    }, 500);
+  }
+});
 
 export default router;
