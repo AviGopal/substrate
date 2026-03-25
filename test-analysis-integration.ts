@@ -321,16 +321,11 @@ async function testM3_ImpulseResolve() {
         'X-Session-ID': 'test-m3'
       },
       body: JSON.stringify({
-        impulses: [{
-          id: 'test-cochange',
-          pointer: {
-            type: 'cochangeSuggestions',
-            componentIds: ['test/auth.ts::function::login::1'],
-            limit: 3
-          },
-          budget: 1000,
-          priority: 'medium'
-        }]
+        pointer: {
+          type: 'cochangeSuggestions',
+          componentIds: ['test/auth.ts::function::login::1'],
+          limit: 3
+        }
       })
     });
 
@@ -347,8 +342,8 @@ async function testM3_ImpulseResolve() {
       addResult({
         name: 'M3.1 Impulse Resolve (cochangeSuggestions)',
         milestone: 'M3',
-        passed: data.resolved !== undefined,
-        message: `Resolved ${data.resolved?.length || 0} impulses`,
+        passed: data.success === true,
+        message: data.success ? `Content length: ${data.content?.length || 0}` : `Error: ${data.error}`,
         response: data
       });
     } else {
