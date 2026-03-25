@@ -65,21 +65,16 @@
 - [x] **DASH-11c: Toast notifications** - Add toast system for user feedback
 - [x] **DASH-12a: Responsive design** - Ensure mobile/tablet compatibility with hamburger menu
 - [x] **DASH-12b: Keyboard navigation** - Add keyboard shortcuts for common actions
-- [ ] **DASH-14a: E2E test setup** - Set up Playwright test infrastructure
-- [ ] **DASH-14b: Critical path tests** - Write tests for login, overview, projects, issues
-- [ ] **DASH-15a: Bundle optimization** - Implement code splitting and lazy loading
-- [ ] **DASH-15b: Performance monitoring** - Add performance metrics collection
+- [x] **DASH-14a: E2E test setup** - Set up Playwright test infrastructure
+- [x] **DASH-14b: Critical path tests** - Write tests for login, overview, projects, issues
+- [x] **DASH-15a: Bundle optimization** - Implement code splitting and lazy loading
+- [x] **DASH-15b: Performance monitoring** - Add performance metrics collection
 
 ---
 
 ## Summary
 
 **Total Tasks:** 38
-**Completed:** 34
-**Remaining:** 4 (E2E tests and performance optimization)
+**Completed:** 38 ✓
 
-**Remaining Tasks:**
-- DASH-14a: E2E test setup with Playwright
-- DASH-14b: Critical path tests
-- DASH-15a: Bundle optimization
-- DASH-15b: Performance monitoring
+All tasks complete. Ready for archive.
