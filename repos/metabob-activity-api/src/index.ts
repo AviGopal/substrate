@@ -12,11 +12,17 @@ import { logger as honoLogger } from 'hono/logger';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { authMiddleware } from './middleware/auth';
+import { jwtAuthMiddleware } from './middleware/jwtAuth';
+import authRoutes from './routes/auth';
 import sessionRoutes from './routes/session';
 import activitiesRoutes from './routes/activities';
 import impulsesRoutes from './routes/impulses';
 import goalPathsRoutes from './routes/goal-paths';
 import boredomRoutes from './routes/boredom';
+import ciRoutes from './routes/ci';
+import executionTracesRoutes from './routes/execution-traces';
+import codeVariantsRoutes from './routes/code-variants';
+import vesselsRoutes from './routes/vessels';
 import { broadcaster } from './websocket/broadcaster';
 import type { ServerWebSocket } from 'bun';
 
@@ -37,8 +43,20 @@ app.use('/*', cors({
 // Request logging
 app.use('/*', honoLogger());
 
-// Authentication middleware (applies to all routes except /health)
-app.use('/v2/*', authMiddleware);
+// Authentication middleware (applies to all routes except /health and /v2/auth)
+// JWT auth runs first, then falls back to Redis session auth
+app.use('/v2/*', async (c, next) => {
+  // Skip auth middleware for authentication endpoints
+  if (c.req.path.startsWith('/v2/auth/')) {
+    await next();
+    return;
+  }
+  // Try JWT auth first (for MiniBob instances)
+  await jwtAuthMiddleware(c, async () => {
+    // Then try Redis session auth (for dashboard/web clients)
+    await authMiddleware(c, next);
+  });
+});
 
 // ============================================================================
 // Routes
@@ -103,6 +121,9 @@ app.get('/health', async (c) => {
   return c.json(healthStatus, allHealthy ? 200 : 503);
 });
 
+// Authentication routes (no auth middleware - handles authentication itself)
+app.route('/v2/auth', authRoutes);
+
 // Session routes (POST /v2/session, GET /v2/session)
 app.route('/v2/session', sessionRoutes);
 
@@ -118,12 +139,17 @@ app.route('/v2/impulses', impulsesRoutes);
 // Boredom queue routes (GET /boredom-tasks, POST /v2/activities/boredom/enqueue, POST /v2/vessels/register)
 app.route('/', boredomRoutes);
 
-// Execution routes (POST /v2/activities/executions)
-// TODO: Implement in Phase 3
-// app.route('/v2/activities/executions', executionsRoutes);
+// CI/CD integration routes (POST /v2/activities/ci-result, GET /v2/activities/ci-results)
+app.route('/v2/activities', ciRoutes);
 
-// Goal paths routes (Phase 1.7: Thompson Sampling over paths)
-app.route('/v2/activities/goal-paths', goalPathsRoutes);
+// Execution traces routes (GET /v2/activities/execution-traces)
+app.route('/v2/activities/execution-traces', executionTracesRoutes);
+
+// Code variants routes (GET /v2/activities/code-variants)
+app.route('/v2/activities/code-variants', codeVariantsRoutes);
+
+// Vessel status routes (GET /v2/vessels/status, POST /v2/vessels/heartbeat)
+app.route('/v2/vessels', vesselsRoutes);
 
 // ============================================================================
 // Error Handling

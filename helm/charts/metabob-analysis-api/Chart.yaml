@@ -1,0 +1,19 @@
+apiVersion: v2
+name: metabob-analysis-api
+description: Code analysis API with CPG integration and MCP backend
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - metabob
+  - analysis
+  - cpg
+  - mcp
+  - typescript
+maintainers:
+  - name: Metabob Team
+home: https://metabob.com
+
+annotations:
+  metabob.com/service-type: "analysis"
+  metabob.com/integrates-with: "cpg-inference-ts"

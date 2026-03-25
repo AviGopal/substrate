@@ -1,52 +1,68 @@
-{{- if .Values.destinationRules.dashboard.enabled }}
+{{/*
+DestinationRule template - creates Istio DestinationRules for each enabled service
+Configures load balancing, connection pools, and circuit breakers
+*/}}
+{{- $env := .Values.environment | default "development" }}
+{{- $gatewayNamespace := .Values.gateway.namespace }}
+{{- $globalLabels := .Values.labels }}
+
+{{- range $name, $service := .Values.services }}
+{{- $enabled := index $service.enabled $env }}
+{{- if $enabled }}
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: {{ .Values.destinationRules.dashboard.name }}
-  namespace: {{ .Values.gateway.namespace }}
+  name: {{ $name }}-dr
+  namespace: {{ $gatewayNamespace }}
   labels:
-    {{- toYaml .Values.labels | nindent 4 }}
+    {{- toYaml $globalLabels | nindent 4 }}
+    app.kubernetes.io/service: {{ $name }}
 spec:
-  host: {{ .Values.destinationRules.dashboard.host }}
+  host: {{ $service.service }}.{{ $service.namespace }}.svc.cluster.local
   trafficPolicy:
-    connectionPool:
-      http:
-        http1MaxPendingRequests: {{ .Values.destinationRules.dashboard.connectionPool.http.http1MaxPendingRequests }}
-        maxRequestsPerConnection: {{ .Values.destinationRules.dashboard.connectionPool.http.maxRequestsPerConnection }}
+    {{- if and $service.settings $service.settings.loadBalancer }}
     loadBalancer:
-      simple: {{ .Values.destinationRules.dashboard.loadBalancer }}
-    {{- if .Values.destinationRules.dashboard.outlierDetection.enabled }}
-    outlierDetection:
-      consecutiveErrors: {{ .Values.destinationRules.dashboard.outlierDetection.consecutiveErrors }}
-      interval: {{ .Values.destinationRules.dashboard.outlierDetection.interval }}
-      baseEjectionTime: {{ .Values.destinationRules.dashboard.outlierDetection.baseEjectionTime }}
+      simple: {{ $service.settings.loadBalancer }}
     {{- end }}
+    {{- if and $service.settings $service.settings.connectionPool }}
+    connectionPool:
+      {{- if $service.settings.connectionPool.tcp }}
+      tcp:
+        {{- toYaml $service.settings.connectionPool.tcp | nindent 8 }}
+      {{- end }}
+      {{- if $service.settings.connectionPool.http }}
+      http:
+        {{- toYaml $service.settings.connectionPool.http | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+{{- end }}
 {{- end }}
 
-{{- if .Values.destinationRules.api.enabled }}
+{{/*
+Internal services - always use mTLS within the mesh
+*/}}
+{{- range $name, $service := .Values.internalServices }}
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: {{ .Values.destinationRules.api.name }}
-  namespace: {{ .Values.gateway.namespace }}
+  name: {{ $name }}-internal-dr
+  namespace: {{ $gatewayNamespace }}
   labels:
-    {{- toYaml .Values.labels | nindent 4 }}
+    {{- toYaml $globalLabels | nindent 4 }}
+    app.kubernetes.io/service: {{ $name }}
+    app.kubernetes.io/scope: internal
 spec:
-  host: {{ .Values.destinationRules.api.host }}
+  host: {{ $service.service }}.{{ $service.namespace }}.svc.cluster.local
   trafficPolicy:
-    connectionPool:
-      http:
-        http1MaxPendingRequests: {{ .Values.destinationRules.api.connectionPool.http.http1MaxPendingRequests }}
-        http2MaxRequests: {{ .Values.destinationRules.api.connectionPool.http.http2MaxRequests }}
-        maxRequestsPerConnection: {{ .Values.destinationRules.api.connectionPool.http.maxRequestsPerConnection }}
-    loadBalancer:
-      simple: {{ .Values.destinationRules.api.loadBalancer }}
-    {{- if .Values.destinationRules.api.outlierDetection.enabled }}
-    outlierDetection:
-      consecutiveErrors: {{ .Values.destinationRules.api.outlierDetection.consecutiveErrors }}
-      interval: {{ .Values.destinationRules.api.outlierDetection.interval }}
-      baseEjectionTime: {{ .Values.destinationRules.api.outlierDetection.baseEjectionTime }}
+    {{- if $service.mtls }}
+    tls:
+      mode: ISTIO_MUTUAL
     {{- end }}
 {{- end }}

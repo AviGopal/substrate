@@ -16,7 +16,8 @@ const app = new Hono()
 
 export interface BoredomTask {
   id: string
-  templateId: string
+  goal?: string          // Goal-based execution (preferred)
+  templateId?: string    // Template-based execution (legacy)
   priority: "critical" | "high" | "medium" | "low"
   variables: Record<string, unknown>
   reason?: string
@@ -25,7 +26,8 @@ export interface BoredomTask {
 }
 
 interface EnqueueRequest {
-  templateId: string
+  goal?: string           // Goal-based execution (preferred)
+  templateId?: string     // Template-based execution (legacy)
   priority?: "critical" | "high" | "medium" | "low"
   variables?: Record<string, unknown>
   reason?: string
@@ -169,12 +171,14 @@ app.post("/v2/activities/boredom/enqueue", async (c) => {
   try {
     const body = await c.req.json() as EnqueueRequest
 
-    if (!body.templateId) {
-      return c.json({ error: "templateId required" }, 400)
+    // Require either goal or templateId
+    if (!body.goal && !body.templateId) {
+      return c.json({ error: "Either 'goal' or 'templateId' is required" }, 400)
     }
 
     const task: BoredomTask = {
       id: `boredom_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      goal: body.goal,
       templateId: body.templateId,
       priority: body.priority || "medium",
       variables: body.variables || {},
@@ -184,9 +188,12 @@ app.post("/v2/activities/boredom/enqueue", async (c) => {
 
     await enqueueTask(task)
 
+    console.log(`[Boredom] Enqueued ${body.goal ? 'goal' : 'template'}-based task: ${task.id}`)
+
     return c.json({
       success: true,
-      taskId: task.id
+      taskId: task.id,
+      type: body.goal ? 'goal' : 'template'
     })
   } catch (error) {
     console.error("[Boredom] Error enqueuing task:", error)

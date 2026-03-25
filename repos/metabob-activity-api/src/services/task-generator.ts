@@ -24,7 +24,8 @@ import { logger } from '../utils/logger';
 
 export interface BoredomTask {
   id: string;
-  templateId: string;
+  goal?: string;          // Goal-based execution (preferred)
+  templateId?: string;    // Template-based execution (legacy fallback)
   priority: 'critical' | 'high' | 'medium' | 'low';
   variables: Record<string, unknown>;
   reason?: string;
@@ -116,6 +117,10 @@ export class TaskGenerator {
       const improveTasks = await this.generateSelfImprovementTasks();
       tasks.push(...improveTasks);
 
+      // 4. System inspection tasks (probabilistic)
+      const inspectionTasks = await this.generateInspectionTasks();
+      tasks.push(...inspectionTasks);
+
       // Limit total tasks per cycle
       const limitedTasks = tasks.slice(0, CONFIG.maxTasksPerCycle);
 
@@ -125,6 +130,7 @@ export class TaskGenerator {
         failing: failingTasks.length,
         slow: slowTasks.length,
         selfImprove: improveTasks.length,
+        inspection: inspectionTasks.length,
       });
 
       return limitedTasks;
@@ -228,9 +234,17 @@ export class TaskGenerator {
         // Table might not exist or be empty
       }
 
+      // Generate a goal instead of using a template
+      const errorSummary = recentFailures
+        .map(f => f.execution_trace?.tasks?.find(t => t.status === 'failed')?.error)
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('; ') || 'Unknown errors';
+
       tasks.push({
         id: `task_${Date.now()}_debug_${template.variant_id.slice(-8)}`,
-        templateId: 'debug-low-success-template',
+        // Goal-based execution: describe what needs to be done
+        goal: `Investigate why activity "${template.variant_id}" has ${Math.round(template.success_rate * 100)}% success rate after ${template.total_executions} executions. Recent errors: ${errorSummary}. Analyze the failure patterns, identify root causes, and suggest specific fixes.`,
         priority: template.success_rate < 0.3 ? 'critical' : 'high',
         variables: {
           failingTemplateId: template.variant_id,
@@ -238,10 +252,6 @@ export class TaskGenerator {
           successRate: template.success_rate,
           totalExecutions: template.total_executions,
           failedExecutions: template.failed_executions,
-          recentFailures: recentFailures.map(f => ({
-            executionId: f.execution_id,
-            error: f.execution_trace?.tasks?.find(t => t.status === 'failed')?.error,
-          })),
         },
         reason: `Template ${template.variant_id} has ${Math.round(template.success_rate * 100)}% success rate (${template.failed_executions} failures)`,
         createdAt: Date.now(),
@@ -302,14 +312,14 @@ export class TaskGenerator {
     for (const template of slowTemplates) {
       tasks.push({
         id: `task_${Date.now()}_optimize_${template.variant_id.slice(-8)}`,
-        templateId: 'optimize-slow-template',
+        // Goal-based: describe optimization needed
+        goal: `Optimize activity "${template.variant_id}" which takes ${Math.round(template.avg_duration_ms / 1000)}s on average (${(template.avg_duration_ms / globalAvg).toFixed(1)}x slower than system average of ${Math.round(globalAvg / 1000)}s). Analyze the activity steps, identify bottlenecks, and suggest optimizations to reduce execution time.`,
         priority: 'medium',
         variables: {
           templateId: template.variant_id,
           activityId: template.activity_id,
           currentDurationMs: template.avg_duration_ms,
           globalAvgMs: globalAvg,
-          slowdownFactor: (template.avg_duration_ms / globalAvg).toFixed(2),
         },
         reason: `Template ${template.variant_id} is ${(template.avg_duration_ms / globalAvg).toFixed(1)}x slower than average`,
         createdAt: Date.now(),
@@ -347,7 +357,8 @@ export class TaskGenerator {
 
     tasks.push({
       id: `task_${Date.now()}_improve_${targetRepo.split('/')[1]}`,
-      templateId: 'self-improve-codebase',
+      // Goal-based self-improvement
+      goal: `Review ${targetRepo} and identify opportunities to improve ${focusArea}. Look for specific issues, propose concrete fixes, and implement up to 3 small improvements. Focus on code quality and maintainability.`,
       priority: 'low',
       variables: {
         targetRepo,
@@ -357,6 +368,66 @@ export class TaskGenerator {
       reason: `Periodic self-improvement: ${focusArea} in ${targetRepo}`,
       createdAt: Date.now(),
     });
+
+    return tasks;
+  }
+
+  /**
+   * Generate system inspection tasks
+   * These review the activity system itself
+   */
+  async generateInspectionTasks(): Promise<BoredomTask[]> {
+    const tasks: BoredomTask[] = [];
+
+    // Probabilistic - 10% chance per cycle
+    if (Math.random() > 0.1) {
+      return tasks;
+    }
+
+    // Rotate through inspection types
+    const inspectionTypes = [
+      {
+        id: 'validation-audit',
+        goal: 'Audit the activity system validation: Fetch templates from the backend API, analyze which activities have validation criteria in their task_steps, identify activities with weak or missing validation, and write a report to /workspace/validation-audit.md with recommendations.',
+        priority: 'medium' as const,
+        reason: 'Periodic validation audit',
+      },
+      {
+        id: 'metrics-review',
+        goal: 'Review activity system metrics: Fetch performance data from the backend, identify top-performing activities (high success rate, low duration), identify struggling activities, and write a system health report to /workspace/system-health.md.',
+        priority: 'low' as const,
+        reason: 'Periodic metrics review',
+      },
+      {
+        id: 'capability-gaps',
+        goal: 'Analyze capability gaps in the activity system: Review existing activities by category, identify missing capabilities or categories with few activities, suggest new activities that would improve system coverage, and write recommendations to /workspace/capability-gaps.md.',
+        priority: 'low' as const,
+        reason: 'Capability gap analysis',
+      },
+      {
+        id: 'thompson-sampling-health',
+        goal: 'Review Thompson Sampling health: Fetch activity metrics, identify activities with extreme alpha/beta ratios that may indicate stale or biased data, suggest metric resets or adjustments, and write findings to /workspace/thompson-health.md.',
+        priority: 'low' as const,
+        reason: 'Thompson Sampling health check',
+      },
+    ];
+
+    const typeIndex = Math.floor(Date.now() / (1000 * 60 * 60)) % inspectionTypes.length; // Rotate hourly
+    const inspection = inspectionTypes[typeIndex];
+
+    if (inspection) {
+      tasks.push({
+        id: `task_${Date.now()}_inspect_${inspection.id}`,
+        goal: inspection.goal,
+        priority: inspection.priority,
+        variables: {
+          inspectionType: inspection.id,
+          timestamp: new Date().toISOString(),
+        },
+        reason: inspection.reason,
+        createdAt: Date.now(),
+      });
+    }
 
     return tasks;
   }

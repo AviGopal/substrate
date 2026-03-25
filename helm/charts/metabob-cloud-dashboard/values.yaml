@@ -2,7 +2,7 @@
 replicaCount: 1
 
 image:
-  repository: metabob-cloud-dashboard
+  repository: metabobapp/metabob-cloud-dashboard
   pullPolicy: IfNotPresent
   tag: "latest"
 

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: metabob-mcp
+description: MCP server exposing Metabob Analysis API tools to AI agents
+type: application
+version: 1.0.0
+appVersion: "0.1.0"
+keywords:
+  - metabob
+  - mcp
+  - analysis
+  - ai-agents
+  - code-analysis
+maintainers:
+  - name: Metabob Team
+home: https://metabob.com
+
+annotations:
+  metabob.com/service-type: "mcp-server"
+  metabob.com/integrates-with: "metabob-analysis-api"

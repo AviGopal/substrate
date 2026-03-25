@@ -1,188 +1,237 @@
 # =============================================================================
-# Istio Gateway Configuration
+# Istio Gateway Configuration - DRY & Environment-Aware
+# =============================================================================
+#
+# Usage:
+#   Development: Uses .metabob.local TLD
+#   Production:  Uses .metabob.com TLD
+#
+# Service Mapping (Production - *.metabob.com):
+#   app.metabob.com       -> metabob-cloud-dashboard
+#   activity.metabob.com  -> metabob-activity-api
+#   api.metabob.com       -> metabob-analysis-api
+#
+# Service Mapping (Development - *.metabob.local):
+#   app.metabob.local       -> metabob-cloud-dashboard
+#   activity.metabob.local  -> metabob-activity-api
+#   api.metabob.local       -> metabob-analysis-api
+#   internal.metabob.local  -> metabob-internal-dashboard (dev only)
+#   surql.metabob.local     -> surrealdb (dev only)
+#
 # =============================================================================
 
-# Gateway selector - should match your Istio Ingress Gateway
+# Environment configuration
+environment: development  # development | production
+
+# Domain configuration per environment
+domains:
+  development: metabob.local
+  production: metabob.com
+
+# Gateway configuration
 gateway:
-  name: activity-system-gateway
+  name: metabob-gateway
   namespace: activity-system
   selector:
     istio: ingressgateway
+  # Port configuration
+  port:
+    number: 80
+    name: http
+    protocol: HTTP
+  # TLS configuration (production only)
+  tls:
+    enabled: false  # Enable in production
+    mode: SIMPLE
+    credentialName: metabob-tls-cert
 
-# Port configuration for external access
-port:
-  number: 80
-  name: http
-  protocol: HTTP
+# =============================================================================
+# Service Definitions (DRY - define once, use everywhere)
+# =============================================================================
+# Each service is defined with:
+#   - subdomain: prefix for the hostname (e.g., "app" -> app.metabob.local)
+#   - service: Kubernetes service name
+#   - namespace: service namespace (default: activity-system)
+#   - port: service port
+#   - enabled: per-environment enable/disable
+#   - settings: traffic policies, cors, timeouts, etc.
 
-# Virtual Services configuration
-virtualServices:
-  # Dashboard service routing
+services:
+  # Cloud Dashboard (SaaS frontend)
   dashboard:
-    name: activity-dashboard
-    enabled: true
-    host: activity-dashboard.activity-system.svc.cluster.local
+    subdomain: app
+    service: metabob-cloud-dashboard
+    namespace: activity-system
     port: 3000
-    hostname: dashboard.minibob.local
-    # Metrics tracking for dashboard
-    metrics:
-      enabled: true
-      labels:
-        service: dashboard
-        component: ui
-    # CORS configuration
-    cors:
-      allowOrigins:
-        - exact: "*"
-      allowMethods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-      allowHeaders:
-        - content-type
-        - authorization
-      maxAge: 24h
-    # Traffic policy
-    timeout: 30s
-    retries:
-      attempts: 3
-      perTryTimeout: 10s
+    enabled:
+      development: true
+      production: true
+    settings:
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization"]
+        maxAge: 24h
+      # WebSocket support for real-time updates
+      websocket:
+        enabled: true
+        path: /ws
+        timeout: 3600s
+      loadBalancer: ROUND_ROBIN
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 100
+          maxRequestsPerConnection: 2
 
-  # Activity API service routing
-  api:
-    name: metabob-activity-api
-    enabled: true
-    host: metabob-activity-api.activity-system.svc.cluster.local
+  # Activity API (learning system backend)
+  activity:
+    subdomain: activity
+    service: metabob-activity-api
+    namespace: activity-system
     port: 8080
-    hostname: api.minibob.local
-    # Metrics tracking for API
-    metrics:
-      enabled: true
-      labels:
-        service: api
-        component: backend
-    # CORS configuration
-    cors:
-      allowOrigins:
-        - exact: "*"
-      allowMethods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-      allowHeaders:
-        - content-type
-        - authorization
-        - x-api-key
-      maxAge: 24h
-    # Traffic policy
-    timeout: 60s
-    retries:
-      attempts: 3
-      perTryTimeout: 20s
+    enabled:
+      development: true
+      production: true
+    settings:
+      timeout: 60s
+      retries:
+        attempts: 3
+        perTryTimeout: 20s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "x-api-key", "x-org-id"]
+        maxAge: 24h
+      loadBalancer: LEAST_REQUEST
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 200
+          http2MaxRequests: 200
+          maxRequestsPerConnection: 5
 
-  # MiniBob (devbob) service routing
-  devbob:
-    name: minibob-devbob
-    enabled: false  # Disabled by default, enabled via helmfile values
-    host: minibob-devbob.activity-system.svc.cluster.local
+  # Analysis API (code analysis, problem resolution)
+  analysis:
+    subdomain: api
+    service: metabob-analysis-api
+    namespace: activity-system
     port: 8080
-    hostname: devbob.minibob.local
-    # Metrics tracking for MiniBob
-    metrics:
-      enabled: true
-      labels:
-        service: devbob
-        component: vessel
-    # CORS configuration
-    cors:
-      allowOrigins:
-        - exact: "*"
-      allowMethods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-      allowHeaders:
-        - content-type
-        - authorization
-      maxAge: 24h
-    # Traffic policy (longer timeout for LLM operations)
-    timeout: 300s
-    retries:
-      attempts: 2
-      perTryTimeout: 100s
+    enabled:
+      development: true
+      production: true
+    settings:
+      timeout: 120s  # Longer for analysis operations
+      retries:
+        attempts: 2
+        perTryTimeout: 60s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "x-api-key", "x-org-id"]
+        maxAge: 24h
+      loadBalancer: LEAST_REQUEST
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 100
+          http2MaxRequests: 100
+          maxRequestsPerConnection: 5
 
-# Destination Rules - traffic policies for services
-destinationRules:
-  dashboard:
-    name: activity-dashboard
-    enabled: true
-    host: activity-dashboard.activity-system.svc.cluster.local
-    loadBalancer: ROUND_ROBIN
-    connectionPool:
-      http:
-        http1MaxPendingRequests: 100
-        maxRequestsPerConnection: 2
-    outlierDetection:
-      enabled: true
-      consecutiveErrors: 5
-      interval: 30s
-      baseEjectionTime: 30s
+  # SurrealDB (development access only)
+  surrealdb:
+    subdomain: surql
+    service: surrealdb
+    namespace: activity-system
+    port: 8000
+    enabled:
+      development: true
+      production: false  # NO external access in production
+    settings:
+      timeout: 30s
+      retries:
+        attempts: 1
+        perTryTimeout: 30s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "ns", "db", "accept"]
+        maxAge: 24h
+      loadBalancer: ROUND_ROBIN
 
-  api:
-    name: metabob-activity-api
-    enabled: true
-    host: metabob-activity-api.activity-system.svc.cluster.local
-    loadBalancer: LEAST_REQUEST
-    connectionPool:
-      http:
-        http1MaxPendingRequests: 200
-        http2MaxRequests: 200
-        maxRequestsPerConnection: 5
-    outlierDetection:
-      enabled: true
-      consecutiveErrors: 5
-      interval: 30s
-      baseEjectionTime: 30s
+  # Internal Dashboard (internal observability UI)
+  internal:
+    subdomain: internal
+    service: metabob-internal-dashboard
+    namespace: activity-system
+    port: 3001
+    enabled:
+      development: true
+      production: false  # Internal dashboard not exposed externally in production
+    settings:
+      timeout: 60s
+      retries:
+        attempts: 2
+        perTryTimeout: 30s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization"]
+        maxAge: 24h
+      # WebSocket support for MiniBob communication
+      websocket:
+        enabled: true
+        path: /ws
+        timeout: 3600s
+      loadBalancer: ROUND_ROBIN
 
-# Metrics and monitoring configuration
+# =============================================================================
+# Internal Services (cluster-internal only, no external gateway)
+# =============================================================================
+# These are accessible within the mesh but not exposed externally
+
+internalServices:
+  redis:
+    service: redis-valkey
+    namespace: activity-system
+    port: 6379
+    mtls: true
+
+  surrealdb-internal:
+    service: surrealdb
+    namespace: activity-system
+    port: 8000
+    mtls: true
+
+# =============================================================================
+# Metrics & Monitoring
+# =============================================================================
+
 metrics:
-  # Enable metrics collection on all virtual services
   enabled: true
-  # Prometheus scrape labels
   prometheus:
     enabled: true
-    namespace: monitoring
-    serviceMonitor:
-      enabled: false
-      interval: 30s
-  # Traffic metrics to track
-  tracking:
-    - request_count
-    - request_duration
-    - request_size
-    - response_size
-    - error_rate
+    scrape: true
+    port: 15020
+    path: /stats/prometheus
 
-# Namespace configuration
+# =============================================================================
+# Namespace & Labels
+# =============================================================================
+
 namespace: activity-system
-# Enable Istio injection on namespace
+
+labels:
+  app.kubernetes.io/name: metabob-gateway
+  app.kubernetes.io/component: networking
+  app.kubernetes.io/part-of: metabob
+
+# Istio injection
 istioInjection:
   enabled: true
-
-# Labels to apply to all resources
-labels:
-  app: activity-system
-  component: networking
-  version: "1.0"
-
-# Pod annotations for Prometheus metrics
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8883"
-  prometheus.io/path: "/stats/prometheus"

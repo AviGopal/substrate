@@ -1,20 +1,26 @@
 # metabob-activity-api Dockerfile
 # Build lightweight TypeScript activity system vessel
+#
+# Build context: repos/ (parent directory)
+# Usage: docker build -f metabob-activity-api/Dockerfile -t metabob-activity-api:latest .
 
 FROM oven/bun:1 as build
 WORKDIR /app
 
-# Copy package files
-COPY package.json bun.lock* ./
+# Copy activity-api package files
+COPY metabob-activity-api/package.json metabob-activity-api/bun.lock* ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile --production
 
-# Copy source code
-COPY src ./src
-COPY scripts ./scripts
-COPY sql ./sql
-COPY tsconfig.json ./
+# Copy activity-api source code
+COPY metabob-activity-api/src ./src
+COPY metabob-activity-api/scripts ./scripts
+COPY metabob-activity-api/sql ./sql
+COPY metabob-activity-api/tsconfig.json ./
+
+# Copy metabob-proto for schema migrations
+COPY metabob-proto ./repos/metabob-proto
 
 # Verify TypeScript compilation
 RUN bun build src/index.ts --target bun --outdir dist
@@ -29,6 +35,9 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/sql ./sql
 COPY --from=build /app/tsconfig.json ./
 COPY --from=build /app/package.json ./
+
+# Copy metabob-proto for migrations
+COPY --from=build /app/repos ./repos
 
 # Environment configuration
 ENV NODE_ENV=production

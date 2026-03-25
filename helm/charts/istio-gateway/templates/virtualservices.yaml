@@ -1,115 +1,76 @@
-{{- if .Values.virtualServices.dashboard.enabled }}
+{{/*
+VirtualService template - creates Istio VirtualServices for each enabled service
+Iterates over services and creates routing based on environment
+*/}}
+{{- $env := .Values.environment | default "development" }}
+{{- $domain := index .Values.domains $env }}
+{{- $gatewayName := .Values.gateway.name }}
+{{- $gatewayNamespace := .Values.gateway.namespace }}
+{{- $globalLabels := .Values.labels }}
+
+{{- range $name, $service := .Values.services }}
+{{- $enabled := index $service.enabled $env }}
+{{- if $enabled }}
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: {{ .Values.virtualServices.dashboard.name }}
-  namespace: {{ .Values.gateway.namespace }}
+  name: {{ $name }}-vs
+  namespace: {{ $gatewayNamespace }}
   labels:
-    {{- toYaml .Values.labels | nindent 4 }}
+    {{- toYaml $globalLabels | nindent 4 }}
+    app.kubernetes.io/service: {{ $name }}
 spec:
   hosts:
-    - {{ .Values.virtualServices.dashboard.hostname }}
+    - {{ $service.subdomain }}.{{ $domain }}
   gateways:
-    - {{ .Values.gateway.name }}
+    - {{ $gatewayName }}
   http:
-    # WebSocket route for /ws path (long timeout, no retries)
+    {{- if and $service.settings (index $service.settings "websocket") $service.settings.websocket.enabled }}
+    # WebSocket route (long timeout, no retries)
     - match:
         - uri:
-            prefix: /ws
+            prefix: {{ $service.settings.websocket.path }}
       route:
         - destination:
-            host: {{ .Values.virtualServices.dashboard.host }}
+            host: {{ $service.service }}.{{ $service.namespace }}.svc.cluster.local
             port:
-              number: {{ .Values.virtualServices.dashboard.port }}
-      timeout: 3600s  # 1 hour timeout for WebSocket connections
-    # Default HTTP route for all other paths
+              number: {{ $service.port }}
+      timeout: {{ $service.settings.websocket.timeout }}
+    {{- end }}
+    # Default HTTP route
     - route:
         - destination:
-            host: {{ .Values.virtualServices.dashboard.host }}
+            host: {{ $service.service }}.{{ $service.namespace }}.svc.cluster.local
             port:
-              number: {{ .Values.virtualServices.dashboard.port }}
-      timeout: {{ .Values.virtualServices.dashboard.timeout }}
-      retries:
-        attempts: {{ .Values.virtualServices.dashboard.retries.attempts }}
-        perTryTimeout: {{ .Values.virtualServices.dashboard.retries.perTryTimeout }}
-      {{- if .Values.virtualServices.dashboard.cors }}
-      corsPolicy:
-        {{- toYaml .Values.virtualServices.dashboard.cors | nindent 8 }}
+              number: {{ $service.port }}
+      {{- if and $service.settings $service.settings.timeout }}
+      timeout: {{ $service.settings.timeout }}
+      {{- else }}
+      timeout: 30s
       {{- end }}
-      {{- if .Values.virtualServices.dashboard.metrics.enabled }}
-      metadata:
-        labels:
-          {{- toYaml .Values.virtualServices.dashboard.metrics.labels | nindent 10 }}
+      {{- if and $service.settings $service.settings.retries }}
+      retries:
+        attempts: {{ $service.settings.retries.attempts }}
+        perTryTimeout: {{ $service.settings.retries.perTryTimeout }}
+      {{- end }}
+      {{- if and $service.settings $service.settings.cors }}
+      corsPolicy:
+        {{- if $service.settings.cors.allowOrigins }}
+        allowOrigins:
+          {{- toYaml $service.settings.cors.allowOrigins | nindent 10 }}
+        {{- end }}
+        {{- if $service.settings.cors.allowMethods }}
+        allowMethods:
+          {{- toYaml $service.settings.cors.allowMethods | nindent 10 }}
+        {{- end }}
+        {{- if $service.settings.cors.allowHeaders }}
+        allowHeaders:
+          {{- toYaml $service.settings.cors.allowHeaders | nindent 10 }}
+        {{- end }}
+        {{- if $service.settings.cors.maxAge }}
+        maxAge: {{ $service.settings.cors.maxAge }}
+        {{- end }}
       {{- end }}
 {{- end }}
-
-{{- if .Values.virtualServices.api.enabled }}
----
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
-metadata:
-  name: {{ .Values.virtualServices.api.name }}
-  namespace: {{ .Values.gateway.namespace }}
-  labels:
-    {{- toYaml .Values.labels | nindent 4 }}
-spec:
-  hosts:
-    - {{ .Values.virtualServices.api.hostname }}
-  gateways:
-    - {{ .Values.gateway.name }}
-  http:
-    - route:
-        - destination:
-            host: {{ .Values.virtualServices.api.host }}
-            port:
-              number: {{ .Values.virtualServices.api.port }}
-      timeout: {{ .Values.virtualServices.api.timeout }}
-      retries:
-        attempts: {{ .Values.virtualServices.api.retries.attempts }}
-        perTryTimeout: {{ .Values.virtualServices.api.retries.perTryTimeout }}
-      {{- if .Values.virtualServices.api.cors }}
-      corsPolicy:
-        {{- toYaml .Values.virtualServices.api.cors | nindent 8 }}
-      {{- end }}
-      {{- if .Values.virtualServices.api.metrics.enabled }}
-      metadata:
-        labels:
-          {{- toYaml .Values.virtualServices.api.metrics.labels | nindent 10 }}
-      {{- end }}
-{{- end }}
-
-{{- if .Values.virtualServices.devbob.enabled }}
----
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
-metadata:
-  name: {{ .Values.virtualServices.devbob.name }}
-  namespace: {{ .Values.gateway.namespace }}
-  labels:
-    {{- toYaml .Values.labels | nindent 4 }}
-spec:
-  hosts:
-    - {{ .Values.virtualServices.devbob.hostname }}
-  gateways:
-    - {{ .Values.gateway.name }}
-  http:
-    - route:
-        - destination:
-            host: {{ .Values.virtualServices.devbob.host }}
-            port:
-              number: {{ .Values.virtualServices.devbob.port }}
-      timeout: {{ .Values.virtualServices.devbob.timeout }}
-      retries:
-        attempts: {{ .Values.virtualServices.devbob.retries.attempts }}
-        perTryTimeout: {{ .Values.virtualServices.devbob.retries.perTryTimeout }}
-      {{- if .Values.virtualServices.devbob.cors }}
-      corsPolicy:
-        {{- toYaml .Values.virtualServices.devbob.cors | nindent 8 }}
-      {{- end }}
-      {{- if .Values.virtualServices.devbob.metrics.enabled }}
-      metadata:
-        labels:
-          {{- toYaml .Values.virtualServices.devbob.metrics.labels | nindent 10 }}
-      {{- end }}
 {{- end }}

@@ -10,10 +10,11 @@
  */
 
 import { Hono } from 'hono';
-import { surrealDB } from '../db/surreal';
+import { surrealDB, queryWithAuth } from '../db/surreal';
 import { RedisClient } from '../db/redis';
 import { logger } from '../utils/logger';
 import type { SessionData } from '../models/schemas';
+import { getJwtAuthFromContext, hasJwtAuth, type JwtAuthContext } from '../middleware/jwtAuth';
 import { generateActivity } from '../services/activity-generator';
 import { 
   ExecutionRecordSchema, 
@@ -59,6 +60,7 @@ interface ActivityTemplate {
   category: string;
   task_steps?: any[];
   scope: string | null;
+  public?: boolean;
   org_id: string | null;
   project_id: string | null;
   genealogy?: Record<string, any>;
@@ -96,6 +98,11 @@ async function enrichTemplatesWithMetrics(
     // Extract variant IDs
     const variantIds = templates.map(t => t.variant_id);
     
+    logger.info('Enriching templates with metrics', { 
+      templateCount: templates.length,
+      sampleVariantIds: variantIds.slice(0, 3)
+    });
+    
     // Query metrics for all variants in one go
     const metricsQuery = `
       SELECT * FROM variant_performance_metrics
@@ -104,6 +111,15 @@ async function enrichTemplatesWithMetrics(
     
     const metricsResult = await surrealDB.query<any>(metricsQuery, {
       variant_ids: variantIds
+    });
+
+    logger.info('Metrics query result', {
+      metricsFound: metricsResult?.length || 0,
+      sampleMetrics: metricsResult?.slice(0, 2).map((m: any) => ({ 
+        variant_id: m.variant_id, 
+        alpha: m.thompson_alpha, 
+        beta: m.thompson_beta 
+      }))
     });
 
     // Create a map of variant_id -> metrics
@@ -128,14 +144,74 @@ async function enrichTemplatesWithMetrics(
 }
 /**
  * Fetch all templates from SurrealDB with multi-tenant filtering
+ *
+ * When jwtToken is provided, uses queryWithAuth() which authenticates with
+ * SurrealDB and lets PERMISSIONS clauses enforce org_id filtering via $auth.
+ * This is the RBAC-enforced path for MiniBob instances.
+ *
+ * When jwtToken is not provided, uses application-level filtering with
+ * explicit WHERE clauses. This is the legacy path for Redis session auth.
  */
 async function listAllTemplatesFromDB(
   limit: number,
   orgId?: string | null,
-  projectId?: string | null
+  projectId?: string | null,
+  jwtToken?: string | null,
+  scopeFilter?: string | null
 ): Promise<ActivityTemplate[]> {
   let query: string;
   let params: Record<string, any>;
+
+  if (jwtToken) {
+    // JWT AUTH PATH: Use RBAC-enforced query
+    // The PERMISSIONS clause on activity_template uses $auth.org_id to filter
+    // We just need to query all templates - SurrealDB will filter automatically
+    let whereClause = '';
+    params = { limit };
+
+    // Apply scope filter if specified
+    if (scopeFilter) {
+      if (scopeFilter === 'global') {
+        whereClause = 'WHERE (scope IS NULL OR scope = "global")';
+      } else if (scopeFilter === 'org') {
+        whereClause = 'WHERE scope = "org"';
+      } else if (scopeFilter === 'project') {
+        whereClause = 'WHERE scope = "project"';
+      }
+    }
+
+    query = `
+      SELECT * FROM activity_template
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $limit
+    `;
+
+    logger.debug('Fetching templates with JWT auth (RBAC enforced)', { limit, scopeFilter });
+    const result = await queryWithAuth<ActivityTemplate>(jwtToken, query, params);
+
+    logger.info('SurrealDB templates fetched (RBAC)', {
+      count: result.length,
+      authMethod: 'jwt',
+      scopeFilter
+    });
+
+    // Enrich templates with metrics before returning
+    const enrichedTemplates = await enrichTemplatesWithMetrics(result);
+    logger.info('Templates enriched with metrics', { enrichedCount: enrichedTemplates.length });
+    return enrichedTemplates;
+  }
+
+  // LEGACY PATH: Application-level filtering for Redis session auth
+  // Build scope filter clause if specified
+  let scopeClause = '';
+  if (scopeFilter === 'global') {
+    scopeClause = 'AND (scope IS NULL OR scope = "global")';
+  } else if (scopeFilter === 'org') {
+    scopeClause = 'AND scope = "org"';
+  } else if (scopeFilter === 'project') {
+    scopeClause = 'AND scope = "project"';
+  }
 
   if (orgId) {
     if (projectId) {
@@ -147,7 +223,7 @@ async function listAllTemplatesFromDB(
           OR scope = 'global'
           OR (scope = 'org' AND org_id = $org_id)
           OR (scope = 'project' AND project_id = $project_id)
-        )
+        ) ${scopeClause}
         ORDER BY created_at DESC
         LIMIT $limit
       `;
@@ -160,7 +236,7 @@ async function listAllTemplatesFromDB(
           scope IS NULL
           OR scope = 'global'
           OR (scope = 'org' AND org_id = $org_id)
-        )
+        ) ${scopeClause}
         ORDER BY created_at DESC
         LIMIT $limit
       `;
@@ -173,7 +249,7 @@ async function listAllTemplatesFromDB(
       WHERE (
         scope IS NULL
         OR scope = 'global'
-      )
+      ) ${scopeClause}
       ORDER BY created_at DESC
       LIMIT $limit
     `;
@@ -253,6 +329,7 @@ app.post('/templates', async (c) => {
       description: validated.description,
       category: validated.category,
       scope: validated.scope || 'global',
+      public: validated.public || false,
     };
 
     // Only add optional fields if they have values
@@ -284,10 +361,36 @@ app.post('/templates', async (c) => {
     logger.debug('Template inserted into activity_template');
 
     // Create initial performance metrics
-    const insertMetricsQuery = `
+    // org_id is required by schema - use session org or default to metabob_internal for global templates
+    const metricsOrgId = validated.org_id || orgId || 'organizations:metabob_internal';
+    const metricsProjectId = validated.project_id || projectId;
+
+    // Build metrics query with conditional project_id
+    const insertMetricsQuery = metricsProjectId
+      ? `
       INSERT INTO variant_performance_metrics {
         variant_id: $variant_id,
         activity_id: $activity_id,
+        org_id: $org_id,
+        project_id: $project_id,
+        total_executions: 0,
+        successful_executions: 0,
+        failed_executions: 0,
+        success_rate: 0.0,
+        avg_duration_ms: 0.0,
+        avg_cost_usd: 0.0,
+        thompson_alpha: 1.0,
+        thompson_beta: 1.0,
+        total_selections: 0,
+        created_at: time::now(),
+        updated_at: time::now()
+      }
+    `
+      : `
+      INSERT INTO variant_performance_metrics {
+        variant_id: $variant_id,
+        activity_id: $activity_id,
+        org_id: $org_id,
         total_executions: 0,
         successful_executions: 0,
         failed_executions: 0,
@@ -305,6 +408,8 @@ app.post('/templates', async (c) => {
     await surrealDB.query(insertMetricsQuery, {
       variant_id: validated.variant_id,
       activity_id: validated.activity_id,
+      org_id: metricsOrgId,
+      ...(metricsProjectId ? { project_id: metricsProjectId } : {}),
     });
 
     logger.info('Template registered successfully', {
@@ -342,19 +447,28 @@ app.post('/templates', async (c) => {
 /**
  * GET /v2/activities/templates
  * List all activity templates with Thompson Sampling scores
+ *
+ * Auth modes:
+ * 1. JWT auth (MiniBob): RBAC enforced by SurrealDB PERMISSIONS via $auth.org_id
+ * 2. Redis session auth (Dashboard): Application-level filtering via WHERE clauses
  */
 app.get('/templates', async (c) => {
   try {
-    // Extract session from context (set by auth middleware)
+    // Check for JWT auth first (MiniBob instances)
+    const jwtAuth = getJwtAuthFromContext(c);
+    const useJwtAuth = hasJwtAuth(c);
+
+    // Fall back to Redis session auth for org/project context
     const session = (c.get as any)('session') as SessionData | undefined;
-    const orgId = session?.org_id || null;
-    const projectId = session?.project_id || null;
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+    const projectId = jwtAuth?.projectId || session?.project_id || null;
 
     // Extract query parameters
     const category = c.req.query('category') || null;
+    const scopeFilter = c.req.query('scope') || null; // Filter by scope: global, org, project
     const limitStr = c.req.query('limit') || '50';
     let limit = parseInt(limitStr, 10);
-    
+
     // Validate limit (consistent with impulses.ts pattern)
     if (isNaN(limit) || limit < 1) {
       limit = 50;
@@ -363,9 +477,11 @@ app.get('/templates', async (c) => {
 
     logger.info('GET /v2/activities/templates', {
       category,
+      scopeFilter,
       limit,
       orgId,
       projectId,
+      authMethod: useJwtAuth ? 'jwt' : 'session',
     });
 
     // CACHE-ASIDE PATTERN
@@ -419,15 +535,23 @@ app.get('/templates', async (c) => {
         cacheKey,
         async () => {
           // Load templates from database
-          const dbTemplates = await listAllTemplatesFromDB(limit * 2, orgId, projectId);
+          // Pass JWT token for RBAC enforcement when available
+          const dbTemplates = await listAllTemplatesFromDB(
+            limit * 2,
+            orgId,
+            projectId,
+            jwtAuth?.jwtToken || null,
+            scopeFilter
+          );
 
-          // Populate Redis cache
-          if (dbTemplates.length > 0) {
+          // Populate Redis cache (only for non-JWT queries to avoid polluting global cache)
+          // JWT queries are already RBAC-filtered, so caching would leak isolation
+          if (dbTemplates.length > 0 && !useJwtAuth) {
             const cachePromises: Promise<any>[] = [];
 
             for (const template of dbTemplates) {
               const variantId = template.variant_id;
-              
+
               // Store template data with TTL
               cachePromises.push(
                 redis.set(
@@ -461,33 +585,38 @@ app.get('/templates', async (c) => {
     // Apply limit
     templates = templates.slice(0, limit);
 
-    // Filter by scope and org_id/project_id (client-side filtering)
-    // This enforces multi-tenant isolation
-    templates = templates.filter((template) => {
-      const scope = template.scope;
-      
-      // Global templates visible to all
-      if (!scope || scope === 'global') {
-        return true;
-      }
+    // Skip client-side org/project filtering when using JWT auth
+    // SurrealDB PERMISSIONS clauses already enforce isolation via $auth.org_id
+    if (!useJwtAuth) {
+      // LEGACY PATH: Filter by scope and org_id/project_id (client-side filtering)
+      // This enforces multi-tenant isolation for Redis session auth
+      templates = templates.filter((template) => {
+        const scope = template.scope;
 
-      // Org-scoped templates visible only to users in that org
-      if (scope === 'org') {
-        return orgId && template.org_id === orgId;
-      }
+        // Global templates visible to all
+        if (!scope || scope === 'global') {
+          return true;
+        }
 
-      // Project-scoped templates visible only to users in that project
-      if (scope === 'project') {
-        return projectId && template.project_id === projectId;
-      }
+        // Org-scoped templates visible only to users in that org
+        if (scope === 'org') {
+          return orgId && template.org_id === orgId;
+        }
 
-      return false;
-    });
+        // Project-scoped templates visible only to users in that project
+        if (scope === 'project') {
+          return projectId && template.project_id === projectId;
+        }
+
+        return false;
+      });
+    }
 
     logger.info('Templates filtered and ready', {
       count: templates.length,
       category,
-      scope: { orgId, projectId }
+      scope: { orgId, projectId },
+      rbacEnforced: useJwtAuth,
     });
 
     // Enrich templates with execution metrics
@@ -947,6 +1076,9 @@ app.get('/executions', async (c) => {
  *   message?: string
  * }
  */
+// DEPRECATED: This handler moved to src/routes/execution-traces.ts
+// Commenting out to prevent duplicate handler conflict
+/*
 app.post('/execution-traces', async (c) => {
   try {
     const body = await c.req.json();
@@ -1070,6 +1202,7 @@ app.post('/execution-traces', async (c) => {
     } as StoreExecutionTraceResponse, 500);
   }
 });
+*/
 
 /**
  * GET /v2/activities/execution-traces/:executionId
@@ -1083,10 +1216,12 @@ app.post('/execution-traces', async (c) => {
  * 
  * Returns full trace with all tasks, tool calls, state transitions.
  */
+// DEPRECATED: Moved to src/routes/execution-traces.ts
+/*
 app.get('/execution-traces/:executionId', async (c) => {
   try {
     const executionId = c.req.param('executionId');
-    
+
     logger.info('GET /v2/activities/execution-traces/:executionId', { executionId });
 
     const query = `
@@ -1094,7 +1229,7 @@ app.get('/execution-traces/:executionId', async (c) => {
       WHERE execution_id = $execution_id
       LIMIT 1
     `;
-    
+
     const result = await surrealDB.query<any>(query, {
       execution_id: executionId,
     });
@@ -1124,33 +1259,20 @@ app.get('/execution-traces/:executionId', async (c) => {
     }, 500);
   }
 });
+*/
 
-/**
- * GET /v2/activities/execution-traces
- * 
- * List execution traces with filtering.
- * 
- * Query parameters:
- * - template_id: Filter by template
- * - status: Filter by status (success/failure/partial)
- * - limit: Maximum results (default: 50, max: 100)
- * - offset: Pagination offset
- * 
- * Use cases:
- * - Find all failed executions for debugging
- * - Find successful executions for pattern extraction
- * - Analyze template performance over time
- */
+// DEPRECATED: Moved to src/routes/execution-traces.ts
+/*
 app.get('/execution-traces', async (c) => {
   try {
     const templateId = c.req.query('template_id');
     const status = c.req.query('status');
     const limitStr = c.req.query('limit') || '50';
     const offsetStr = c.req.query('offset') || '0';
-    
+
     const limit = Math.min(Math.max(parseInt(limitStr, 10), 1), 100);
     const offset = Math.max(parseInt(offsetStr, 10), 0);
-    
+
     logger.info('GET /v2/activities/execution-traces', {
       template_id: templateId,
       status,
@@ -1161,29 +1283,29 @@ app.get('/execution-traces', async (c) => {
     // Build query with filters
     let query = 'SELECT * FROM execution_traces WHERE 1=1';
     const params: Record<string, any> = {};
-    
+
     if (templateId) {
       query += ' AND template_id = $template_id';
       params.template_id = templateId;
     }
-    
+
     if (status) {
       query += ' AND status = $status';
       params.status = status;
     }
-    
+
     query += ' ORDER BY stored_at DESC';
     query += ' LIMIT $limit START $offset';
     params.limit = limit;
     params.offset = offset;
-    
+
     const result = await surrealDB.query(query, params);
     const traces = Array.isArray(result) ? result : [];
-    
+
     logger.info('Execution traces retrieved', { count: traces.length });
 
     return c.json({
-      traces,
+      executions: traces,
       total: traces.length,
       limit,
       offset,
@@ -1197,6 +1319,139 @@ app.get('/execution-traces', async (c) => {
 
     return c.json({
       error: 'Failed to list execution traces',
+      message: error.message,
+    }, 500);
+  }
+});
+*/
+
+/**
+ * GET /v2/activities/metrics/trend
+ *
+ * Returns daily execution metrics for charting quality trends.
+ *
+ * Query Parameters:
+ * - days: Number of days to return (default: 30, max: 90)
+ *
+ * Returns:
+ * {
+ *   trend: [
+ *     { date: "2026-03-25", success_count: 45, failure_count: 5, total_cost: 12.50 },
+ *     ...
+ *   ]
+ * }
+ */
+app.get('/metrics/trend', async (c) => {
+  try {
+    // Parse query parameters
+    const daysParam = c.req.query('days') || '30';
+    const days = Math.min(Math.max(parseInt(daysParam, 10) || 30, 1), 90);
+
+    logger.info('GET /v2/activities/metrics/trend', { days });
+
+    // Query execution metrics grouped by day
+    const query = `
+      SELECT
+        time::format(created_at, '%Y-%m-%d') AS date,
+        count() AS total_executions,
+        count(IF success = true THEN 1 ELSE NONE END) AS success_count,
+        count(IF success = false THEN 1 ELSE NONE END) AS failure_count,
+        math::sum(cost_usd) AS total_cost
+      FROM execution_record
+      WHERE created_at > time::now() - duration::from::days($days)
+      GROUP BY time::format(created_at, '%Y-%m-%d')
+      ORDER BY date ASC
+    `;
+
+    const result = await surrealDB.query(query, { days });
+    const trends = Array.isArray(result) ? result : [];
+
+    // Transform to response format
+    const trendData = trends.map((row: any) => ({
+      date: row.date,
+      success_count: row.success_count || 0,
+      failure_count: row.failure_count || 0,
+      total_executions: row.total_executions || 0,
+      total_cost: parseFloat(row.total_cost || 0).toFixed(2),
+    }));
+
+    logger.info('Metrics trend retrieved', { days, dataPoints: trendData.length });
+
+    return c.json({
+      trend: trendData,
+      days,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/metrics/trend failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch metrics trend',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /v2/activities/metrics/summary
+ *
+ * Returns summary metrics for the dashboard.
+ *
+ * Returns:
+ * {
+ *   total_templates: number,
+ *   total_executions: number,
+ *   executions_today: number,
+ *   average_success_rate: number,
+ *   average_duration_ms: number,
+ *   total_cost_usd: number,
+ * }
+ */
+app.get('/metrics/summary', async (c) => {
+  try {
+    logger.info('GET /v2/activities/metrics/summary');
+
+    // Query aggregate metrics
+    const templateCountResult = await surrealDB.query('SELECT count() AS count FROM activity_template GROUP ALL');
+    const totalTemplates = (templateCountResult[0] as any)?.count || 0;
+
+    const executionStatsResult = await surrealDB.query(`
+      SELECT
+        count() AS total_executions,
+        count(IF created_at > time::now() - 1d THEN 1 ELSE NONE END) AS executions_today,
+        math::mean(IF success = true THEN 1.0 ELSE 0.0 END) AS success_rate,
+        math::mean(duration_ms) AS avg_duration,
+        math::sum(cost_usd) AS total_cost
+      FROM execution_record
+      GROUP ALL
+    `);
+
+    const stats = executionStatsResult[0] as any || {};
+
+    const summary = {
+      total_templates: totalTemplates,
+      total_executions: stats.total_executions || 0,
+      executions_today: stats.executions_today || 0,
+      average_success_rate: parseFloat((stats.success_rate || 0) * 100).toFixed(1),
+      average_duration_ms: Math.round(stats.avg_duration || 0),
+      total_cost_usd: parseFloat(stats.total_cost || 0).toFixed(2),
+    };
+
+    logger.info('Metrics summary retrieved', summary);
+
+    return c.json(summary);
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/metrics/summary failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch metrics summary',
       message: error.message,
     }, 500);
   }
@@ -1257,7 +1512,7 @@ app.post('/recommend', async (c) => {
     const orgId = sessionData?.org_id || null;
     const projectId = sessionData?.project_id || null;
 
-    // Fetch templates with Thompson Sampling scores
+    // Fetch templates for Thompson Sampling recommendations
     let query = `
       SELECT 
         variant_id,
@@ -1293,20 +1548,19 @@ app.post('/recommend', async (c) => {
     logger.debug('Recommendation query', { query, params });
 
     const result = await surrealDB.query(query, params);
-    const templates: any[] = result || [];
+    let templates: any[] = result || [];
 
     logger.info('Templates fetched for recommendation', { count: templates.length });
+
+    // Enrich templates with metrics (thompson_alpha, thompson_beta)
+    templates = await enrichTemplatesWithMetrics(templates);
 
     // Apply Thompson Sampling
     const recommendations = templates
       .map((template) => {
-        const metrics = template.metrics || {
-          thompson_alpha: 1.0,
-          thompson_beta: 1.0,
-        };
-
-        const alpha = metrics.thompson_alpha || 1.0;
-        const beta = metrics.thompson_beta || 1.0;
+        // Get alpha/beta from enriched metrics
+        const alpha = template.metrics?.thompson_alpha || 1.0;
+        const beta = template.metrics?.thompson_beta || 1.0;
 
         // Sample from Beta distribution (simplified: use expected value for deterministic testing)
         // In production, would use: sample = beta_random(alpha, beta)

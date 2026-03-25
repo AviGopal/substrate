@@ -94,6 +94,10 @@ export const CreateTemplateRequestSchema = z.object({
   category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']),
   task_steps: z.array(TemplateTaskSchema),
   scope: z.enum(['global', 'org', 'project']).default('global'),
+  // Public templates are visible in template marketplace regardless of scope
+  // scope=global + public=true = visible to everyone
+  // scope=org + public=true = visible to org members + discoverable in marketplace
+  public: z.boolean().default(false),
   org_id: z.string().nullable().optional(),
   project_id: z.string().nullable().optional(),
   genealogy: z.record(z.any()).optional(),
@@ -630,3 +634,96 @@ export type StoreExecutionTraceRequest = z.infer<typeof StoreExecutionTraceReque
 export type StoreExecutionTraceResponse = z.infer<typeof StoreExecutionTraceResponseSchema>;
 export type ImpulseResolveRequest = z.infer<typeof ImpulseResolveRequestSchema>;
 export type ImpulseResolveResponse = z.infer<typeof ImpulseResolveResponseSchema>;
+
+// =============================================================================
+// CI/CD INTEGRATION SCHEMAS
+// =============================================================================
+
+/**
+ * CI/CD result schemas for webhook integration
+ */
+
+export const CIArtifactSchema = z.object({
+  name: z.string(),
+  type: z.enum(['docker_image', 'npm_package', 'binary', 'coverage_report', 'test_report', 'other']),
+  url: z.string().optional(),
+  size_bytes: z.number().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const CIStageResultSchema = z.object({
+  success: z.boolean(),
+  duration_ms: z.number().optional(),
+  error: z.string().optional(),
+});
+
+export const CITestStageResultSchema = CIStageResultSchema.extend({
+  tests_passed: z.number().optional(),
+  tests_failed: z.number().optional(),
+  coverage_percent: z.number().optional(),
+});
+
+export const CILintStageResultSchema = CIStageResultSchema.extend({
+  errors: z.number().optional(),
+  warnings: z.number().optional(),
+});
+
+export const CIResultRequestSchema = z.object({
+  execution_id: z.string(),
+  template_id: z.string().optional(),
+  branch: z.string(),
+  commit: z.string(),
+  success: z.boolean(),
+  duration_ms: z.number(),
+  ci_provider: z.enum(['github_actions', 'gitlab_ci', 'jenkins', 'circleci', 'other']).default('github_actions'),
+  workflow_name: z.string().optional(),
+  run_id: z.string().optional(),
+  run_url: z.string().optional(),
+  stages: z.object({
+    build: CIStageResultSchema.optional(),
+    typecheck: CIStageResultSchema.optional(),
+    test: CITestStageResultSchema.optional(),
+    lint: CILintStageResultSchema.optional(),
+  }).optional(),
+  artifacts: z.array(CIArtifactSchema).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const CIResultResponseSchema = z.object({
+  success: z.boolean(),
+  execution_id: z.string(),
+  ci_status_updated: z.boolean(),
+  metrics_updated: z.boolean(),
+  deployment_enqueued: z.boolean().optional(),
+  message: z.string().optional(),
+});
+
+export const CIResultsListResponseSchema = z.object({
+  ci_results: z.array(z.object({
+    execution_id: z.string(),
+    template_id: z.string().optional(),
+    status: z.string(),
+    duration_ms: z.number(),
+    cost_usd: z.number(),
+    ci_status: z.object({
+      success: z.boolean(),
+      branch: z.string(),
+      commit: z.string(),
+      provider: z.string(),
+      completed_at: z.string(),
+    }).passthrough(),
+    created_at: z.union([z.string(), z.object({}).passthrough()]),
+  })),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+
+// Type exports
+export type CIArtifact = z.infer<typeof CIArtifactSchema>;
+export type CIStageResult = z.infer<typeof CIStageResultSchema>;
+export type CITestStageResult = z.infer<typeof CITestStageResultSchema>;
+export type CILintStageResult = z.infer<typeof CILintStageResultSchema>;
+export type CIResultRequest = z.infer<typeof CIResultRequestSchema>;
+export type CIResultResponse = z.infer<typeof CIResultResponseSchema>;
+export type CIResultsListResponse = z.infer<typeof CIResultsListResponseSchema>;

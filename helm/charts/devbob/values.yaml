@@ -2,9 +2,9 @@
 
 # Image configuration
 image:
-  repository: devbob
-  tag: latest
-  pullPolicy: Never  # Use local image
+  repository: metabobapp/minibob
+  tag: "latest"
+  pullPolicy: IfNotPresent
 
 # Replica count
 replicaCount: 1
@@ -42,8 +42,8 @@ env:
   surrealPort: "8000"
   surrealUser: "root"
   surrealPass: "root"
-  surrealNamespace: "metabob"
-  surrealDatabase: "devbob"
+  surrealNamespace: "activity-system"
+  surrealDatabase: "learning_loop"
   
   # Container configuration
   waitForBackend: "false"
@@ -93,6 +93,35 @@ persistence:
   accessMode: ReadWriteOnce
   size: 10Gi
   mountPath: /workspace
+
+# Repository access configuration
+repositories:
+  # Enable repository cloning and shared storage
+  persistence:
+    enabled: true
+    storageClass: ""  # Use default
+    accessMode: ReadWriteMany  # Shared across MiniBob pods
+    size: 20Gi
+    mountPath: /repos
+
+  # Git configuration for authentication
+  git:
+    enabled: true
+    username: "MiniBob Agent"
+    email: "minibob@metabob.local"
+    token: ""  # GitHub/GitLab personal access token (override via --set)
+    sshKey: ""  # Optional SSH private key (override via --set)
+
+  # List of repositories to clone on initialization
+  # Format: { url: "https://github.com/org/repo.git", branch: "main", path: "repo-name" }
+  repos:
+    - url: "https://github.com/metabob/metabob-devbob.git"
+      branch: "main"
+      path: "metabob-devbob"
+    # Add more repositories as needed
+    # - url: "https://github.com/org/another-repo.git"
+    #   branch: "develop"
+    #   path: "another-repo"
 
 # Pod annotations
 podAnnotations: {}

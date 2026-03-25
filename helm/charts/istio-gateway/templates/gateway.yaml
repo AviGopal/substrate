@@ -1,27 +1,45 @@
-{{- if .Values.gateway }}
+{{/*
+Gateway template - creates Istio Gateway for external traffic
+Iterates over services to build the hosts list based on environment
+*/}}
+{{- $env := .Values.environment | default "development" }}
+{{- $domain := index .Values.domains $env }}
+
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
   name: {{ .Values.gateway.name }}
   namespace: {{ .Values.gateway.namespace }}
   labels:
-    {{- toYaml .Values.labels | nindent 4 }}
+    {{- include "istio-gateway.labels" . | nindent 4 }}
 spec:
   selector:
     {{- toYaml .Values.gateway.selector | nindent 4 }}
   servers:
     - port:
-        number: {{ .Values.port.number }}
-        name: {{ .Values.port.name }}
-        protocol: {{ .Values.port.protocol }}
+        number: {{ .Values.gateway.port.number }}
+        name: {{ .Values.gateway.port.name }}
+        protocol: {{ .Values.gateway.port.protocol }}
       hosts:
-        {{- if .Values.virtualServices.dashboard.enabled }}
-        - {{ .Values.virtualServices.dashboard.hostname }}
+        {{- range $name, $service := .Values.services }}
+        {{- $enabled := index $service.enabled $env }}
+        {{- if $enabled }}
+        - {{ $service.subdomain }}.{{ $domain }}
         {{- end }}
-        {{- if .Values.virtualServices.api.enabled }}
-        - {{ .Values.virtualServices.api.hostname }}
         {{- end }}
-        {{- if .Values.virtualServices.devbob.enabled }}
-        - {{ .Values.virtualServices.devbob.hostname }}
+    {{- if and .Values.gateway.tls.enabled (eq $env "production") }}
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: {{ .Values.gateway.tls.mode }}
+        credentialName: {{ .Values.gateway.tls.credentialName }}
+      hosts:
+        {{- range $name, $service := .Values.services }}
+        {{- $enabled := index $service.enabled $env }}
+        {{- if $enabled }}
+        - {{ $service.subdomain }}.{{ $domain }}
         {{- end }}
-{{- end }}
+        {{- end }}
+    {{- end }}
