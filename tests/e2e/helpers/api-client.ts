@@ -213,13 +213,28 @@ export async function createExecutionTrace(
     error_type?: string;
   }
 ): Promise<{ execution_id: string; metrics?: object }> {
+  // Generate unique execution_id
+  const execution_id = `exec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
   const response = await fetch(`${API_URL}/v2/activities/execution-traces`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify(trace)
+    body: JSON.stringify({
+      execution_id,
+      template_id: trace.variant_id,  // API expects template_id, maps to variant_id
+      activity_id: trace.variant_id,
+      success: trace.success,
+      duration_ms: trace.duration_ms,
+      cost_usd: trace.cost,
+      tokens_input: trace.tokens.input,
+      tokens_output: trace.tokens.output,
+      tokens_cache: trace.tokens.cache,
+      error_message: trace.error_message,
+      error_type: trace.error_type,
+    })
   });
 
   if (!response.ok) {

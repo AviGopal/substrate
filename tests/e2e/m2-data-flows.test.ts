@@ -41,7 +41,7 @@ const ANALYSIS_API_URL = process.env.ANALYSIS_API_URL || 'http://api.metabob.loc
 // Test configuration
 const DEFAULT_INSTANCE_ID = 'minibob-local-001';
 const DEFAULT_INSTANCE_KEY = 'test-api-key-123';
-const DEFAULT_API_KEY = 'mk_test_user_key_123';
+const DEFAULT_API_KEY = 'mb_test_alpha_key_001';
 
 test.describe('M2: Data Flow Validation', () => {
 
@@ -139,7 +139,7 @@ test.describe('M2: Data Flow Validation', () => {
     test('M2.1.4: MCP handles auth failure gracefully', async () => {
       // Test with invalid API key
       try {
-        await authenticateWithApiKey('mk_invalid_key_12345');
+        await authenticateWithApiKey('mb_invalid_key_12345');
         expect(true).toBe(false); // Should have thrown
       } catch (error) {
         expect(error).toBeDefined();

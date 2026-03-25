@@ -110,12 +110,18 @@ auth.post('/minibob/signin', async (c) => {
     // SurrealDB returns specific error messages for auth failures
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    // Match various auth failure patterns:
+    // - "No access method found" - invalid access name
+    // - "Signin failed" - general auth failure
+    // - "Invalid credentials" - wrong password/key
+    // - "No record was returned" - instance not found OR inactive (is_active=false)
     if (errorMessage.includes('No access method found') ||
         errorMessage.includes('Signin failed') ||
-        errorMessage.includes('Invalid credentials')) {
+        errorMessage.includes('Invalid credentials') ||
+        errorMessage.includes('No record was returned')) {
       return c.json({
         error: 'Authentication failed',
-        message: 'Invalid instance_id or api_key'
+        message: 'Invalid instance_id or api_key, or instance is inactive'
       }, 401)
     }
 
@@ -262,11 +268,13 @@ auth.post('/apikey', async (c) => {
 
     const errorMessage = error instanceof Error ? error.message : String(error)
 
-    // SurrealDB auth error messages
+    // SurrealDB auth error messages - various patterns for auth failures
+    // "No record was returned" means key doesn't exist or is filtered out (expired/revoked)
     if (errorMessage.includes('No access method found') ||
         errorMessage.includes('Signin failed') ||
         errorMessage.includes('Invalid credentials') ||
-        errorMessage.includes('No record found')) {
+        errorMessage.includes('No record found') ||
+        errorMessage.includes('No record was returned')) {
       return c.json({
         error: 'invalid_api_key',
         message: 'API key is invalid, expired, or revoked'

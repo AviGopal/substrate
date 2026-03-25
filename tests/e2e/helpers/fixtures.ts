@@ -29,8 +29,8 @@ export const TEST_PROJECT_BETA = 'test_project_beta';
 export const TEST_MINIBOB_ALPHA = 'mb-test-alpha-001';
 export const TEST_MINIBOB_BETA = 'mb-test-beta-001';
 
-export const TEST_API_KEY_ALPHA = 'mk_test_alpha_key_001';
-export const TEST_API_KEY_BETA = 'mk_test_beta_key_001';
+export const TEST_API_KEY_ALPHA = 'mb_test_alpha_key_001';
+export const TEST_API_KEY_BETA = 'mb_test_beta_key_001';
 
 /**
  * Create database connection with root credentials
@@ -221,7 +221,7 @@ export async function setupApiKeys(db: Surreal): Promise<void> {
   // Expired API key (for testing)
   await db.query(`
     CREATE api_keys:test_expired_key SET
-      key_hash = crypto::argon2::generate('mk_expired_key_123'),
+      key_hash = crypto::argon2::generate('mb_expired_key_123'),
       org_id = organizations:${TEST_ORG_ALPHA},
       user_id = users:${TEST_USER_ALPHA_ADMIN},
       scopes = ['read'],
@@ -233,7 +233,7 @@ export async function setupApiKeys(db: Surreal): Promise<void> {
   // Revoked API key (for testing)
   await db.query(`
     CREATE api_keys:test_revoked_key SET
-      key_hash = crypto::argon2::generate('mk_revoked_key_123'),
+      key_hash = crypto::argon2::generate('mb_revoked_key_123'),
       org_id = organizations:${TEST_ORG_ALPHA},
       user_id = users:${TEST_USER_ALPHA_ADMIN},
       scopes = ['read'],
@@ -386,8 +386,8 @@ export const testCredentials = {
   },
   alphaApiKey: TEST_API_KEY_ALPHA,
   betaApiKey: TEST_API_KEY_BETA,
-  expiredApiKey: 'mk_expired_key_123',
-  revokedApiKey: 'mk_revoked_key_123',
+  expiredApiKey: 'mb_expired_key_123',
+  revokedApiKey: 'mb_revoked_key_123',
   alphaAdmin: {
     email: 'admin@alpha.test',
     password: 'test-password',

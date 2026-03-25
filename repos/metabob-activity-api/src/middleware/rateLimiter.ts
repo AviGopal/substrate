@@ -90,24 +90,29 @@ export function createRateLimiter(config: RateLimiterConfig) {
   };
 }
 
+// Environment-configurable rate limits (higher values for testing)
+const AUTH_RATE_LIMIT = parseInt(process.env.AUTH_RATE_LIMIT || '10', 10);
+const SIGNIN_RATE_LIMIT = parseInt(process.env.SIGNIN_RATE_LIMIT || '5', 10);
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
+
 /**
  * Pre-configured rate limiter for auth endpoints
  *
- * Limits: 10 requests per minute per IP
- * This prevents brute force attacks while allowing legitimate retries
+ * Default: 10 requests per minute per IP
+ * Configure via AUTH_RATE_LIMIT and RATE_LIMIT_WINDOW_MS env vars
  */
 export const authRateLimiter = createRateLimiter({
-  maxRequests: 10,
-  windowMs: 60 * 1000, // 1 minute
+  maxRequests: AUTH_RATE_LIMIT,
+  windowMs: RATE_LIMIT_WINDOW_MS,
 });
 
 /**
  * Stricter rate limiter for signin endpoints
  *
- * Limits: 5 requests per minute per IP
- * More restrictive for actual authentication attempts
+ * Default: 5 requests per minute per IP
+ * Configure via SIGNIN_RATE_LIMIT and RATE_LIMIT_WINDOW_MS env vars
  */
 export const signinRateLimiter = createRateLimiter({
-  maxRequests: 5,
-  windowMs: 60 * 1000, // 1 minute
+  maxRequests: SIGNIN_RATE_LIMIT,
+  windowMs: RATE_LIMIT_WINDOW_MS,
 });

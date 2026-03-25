@@ -74,6 +74,14 @@ spec:
           value: {{ .Values.config.logFormat | quote }}
         - name: CORS_ORIGINS
           value: {{ .Values.config.corsOrigins | quote }}
+        {{- if .Values.config.rateLimit }}
+        - name: AUTH_RATE_LIMIT
+          value: {{ .Values.config.rateLimit.auth | default "10" | quote }}
+        - name: SIGNIN_RATE_LIMIT
+          value: {{ .Values.config.rateLimit.signin | default "5" | quote }}
+        - name: RATE_LIMIT_WINDOW_MS
+          value: {{ .Values.config.rateLimit.windowMs | default "60000" | quote }}
+        {{- end }}
         livenessProbe:
           {{- toYaml .Values.livenessProbe | nindent 12 }}
         readinessProbe:
