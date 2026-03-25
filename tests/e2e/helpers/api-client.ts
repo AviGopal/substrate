@@ -296,6 +296,43 @@ export async function getExecutionTraces(
 // Impulse Functions
 // ============================================================================
 
+export interface Impulse {
+  impulse_id: string;
+  impulse_type: string;
+  impulse_data: object;
+  org_id?: string;
+  project_id?: string;
+  created_at?: string;
+}
+
+/**
+ * Get impulses with optional filters
+ * Note: project_id is required by the API
+ */
+export async function getImpulses(
+  token: string,
+  options: { project_id: string; limit?: number; offset?: number; impulse_type?: string }
+): Promise<Impulse[]> {
+  const params = new URLSearchParams();
+  params.set('project_id', options.project_id); // Required
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.offset) params.set('offset', String(options.offset));
+  if (options.impulse_type) params.set('impulse_type', options.impulse_type);
+
+  const url = `${API_URL}/v2/impulses?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Get impulses failed: ${response.status} ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  return data.impulses || [];
+}
+
 /**
  * Create an impulse
  */
