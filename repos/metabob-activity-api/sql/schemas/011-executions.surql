@@ -109,6 +109,12 @@ DEFINE FIELD IF NOT EXISTS component_changes ON activity_execution_traces TYPE o
 DEFINE FIELD IF NOT EXISTS execution_trace ON activity_execution_traces TYPE option<object>
   COMMENT "Full execution trace data (task-by-task details)";
 
+DEFINE FIELD IF NOT EXISTS state_snapshot ON activity_execution_traces TYPE option<object> FLEXIBLE
+  COMMENT "State snapshot with any nested structure (input_state, output_state, stateTransition)";
+
+DEFINE FIELD IF NOT EXISTS tasks ON activity_execution_traces TYPE option<array<object>> FLEXIBLE
+  COMMENT "Array of task execution details with any nested structure";
+
 DEFINE FIELD IF NOT EXISTS parent_execution_id ON activity_execution_traces TYPE option<string>
   COMMENT "Parent execution ID (for composition tracking)";
 

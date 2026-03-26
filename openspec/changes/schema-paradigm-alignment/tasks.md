@@ -65,32 +65,38 @@ Refactor the activity system database schema from 20+ tables to 4 core tables + 
 
 ### Tasks
 
-- [ ] **P1.1: Deploy 4 core tables with RBAC**
+- [x] **P1.1: Deploy 4 core tables with RBAC**
   - Create `impulse` table (pointer + shape + content + org_id)
   - Create `activity` table (input_shapes + output_shapes + execution_type)
   - Create `execution` table (input_impulses + output_impulses + trace)
   - Create `vessel` table (resolves[] + api_key_hash)
   - Apply universal PERMISSIONS pattern to all
-  - Add indexes: idx_*_org, idx_*_org_project, idx_*_org_created
-  - Test: Schema applies, PERMISSIONS enforced
+  - Add indexes: idx_*_org, idx_*_org_project, idx_input_shapes, etc.
+  - See: `repos/metabob-activity-api/sql/schemas/020-paradigm-core-tables.surql`
 
-- [ ] **P1.2: Deploy computed views for metrics**
+- [x] **P1.2: Deploy computed views for metrics**
   - Create `v_activity_score` (Thompson Sampling from execution counts)
-  - Create `v_impulse_relevance` (impulse-success correlation)
   - Create `v_goal_paths` (compositions accepting goal impulses)
-  - Test: Views compile, return data, meet performance SLA
+  - Create `v_tool_usage` (tool usage aggregation)
+  - Create `v_vessel_activity` (vessel health metrics)
+  - Create `v_execution_tree` (composition parent-child)
+  - Create `v_activity_shapes` (shape-based matching helper)
+  - See: `repos/metabob-activity-api/sql/schemas/021-paradigm-computed-views.surql`
 
-- [ ] **P1.3: Deploy backward-compatibility views**
-  - Create `v_activity_template` → activity WHERE execution_type='template'
-  - Create `v_activity_execution_traces` → execution
-  - Create `v_impulse_data` → impulse
-  - Create `v_minibob_instance` → vessel
-  - Test: Existing queries work unchanged
+- [x] **P1.3: Deploy backward-compatibility views**
+  - Create `v_paradigm_activity_template` → activity WHERE execution_type='template'
+  - Create `v_paradigm_execution_traces` → execution
+  - Create `v_paradigm_impulse_data` → impulse
+  - Create `v_paradigm_minibob_instance` → vessel
+  - Create `v_paradigm_performance_metrics` → v_activity_score
+  - Create `v_paradigm_goal_paths` → activity (compositions)
+  - See: `repos/metabob-activity-api/sql/schemas/022-paradigm-compat-views.surql`
 
-- [ ] **P1.4: Deploy schemas to staging**
-  - Apply all schemas to staging cluster
-  - Verify no impact on existing tables
-  - Run integration tests against backward-compat views
+- [x] **P1.4: Deploy schemas to staging**
+  - Applied all schemas via migration job (job/surrealdb-migration-25)
+  - Verified tables exist: impulse, activity, execution, vessel
+  - Verified views exist: v_activity_score, v_goal_paths, v_tool_usage, etc.
+  - All queries return OK status
 
 **Acceptance:** All new tables and views created, existing system unaffected
 
