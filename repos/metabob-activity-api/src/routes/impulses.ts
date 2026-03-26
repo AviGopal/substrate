@@ -62,6 +62,8 @@ async function proxyToAnalysisApi<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    // Internal service key for service-to-service calls
+    'X-Internal-Api-Key': process.env.INTERNAL_API_KEY || 'metabob-internal-service-key-dev',
   };
   if (sessionId) {
     headers['X-Session-ID'] = sessionId;
@@ -971,6 +973,8 @@ router.post('/resolve', async (c) => {
         logger.info('problemCluster impulse resolved with metadata', {
           rowCount: impulseResult.metadata?.rowCount,
           summary: impulseResult.metadata?.summary,
+          filterParams: impulseResult.metadata?.filterParams,
+          pointer: impulseResult.pointer,
         });
 
         return c.json({
