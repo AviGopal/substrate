@@ -131,48 +131,10 @@ async function proxyToAnalysisApi<T>(
 router.post('/', async (c) => {
   try {
     const session = (c.get as any)('session') as SessionData | null;
-    let jwtAuth = getJwtAuthFromContext(c);
+    const jwtAuth = getJwtAuthFromContext(c);
 
     // Allow internal service calls with X-Internal-Api-Key header
     const internalApiKey = c.req.header('X-Internal-Api-Key');
-
-    // If no JWT auth from middleware, try to authenticate directly from Authorization header
-    // This handles the case where the middleware might not have run
-    const authHeader = c.req.header('Authorization');
-    if (!jwtAuth && authHeader) {
-      const match = authHeader.match(/^Bearer\s+(.+)$/i);
-      if (match && match[1].includes('.')) {
-        logger.info('Attempting direct JWT auth in route handler');
-        try {
-          const { createAuthenticatedClient } = await import('../db/surreal');
-          const db = await createAuthenticatedClient(match[1]);
-          const result = await db.query<[{
-            id: string;
-            org_id?: string;
-            project_id?: string;
-            instance_id?: string;
-          }]>(`RETURN {
-            id: $auth.id,
-            org_id: $auth.org_id,
-            project_id: $auth.project_id,
-            instance_id: $auth.instance_id
-          }`);
-          const auth = result[0];
-          await db.close();
-          if (auth && auth.org_id) {
-            jwtAuth = {
-              jwtToken: match[1],
-              orgId: String(auth.org_id).replace(/^organizations:/, ''),
-              projectId: auth.project_id ? String(auth.project_id).replace(/^projects:/, '') : undefined,
-              instanceId: auth.instance_id,
-            };
-            logger.info('Direct JWT auth successful', { orgId: jwtAuth.orgId });
-          }
-        } catch (e) {
-          logger.warn('Direct JWT auth failed', { error: (e as Error).message });
-        }
-      }
-    }
 
     // Debug: log all headers
     logger.debug('POST /v2/impulses headers', {
@@ -191,7 +153,7 @@ router.post('/', async (c) => {
     } else if (jwtAuth) {
       // JWT auth from MiniBob instances - use instance info
       api_key = `minibob:${jwtAuth.instanceId || jwtAuth.orgId}`;
-      logger.info('Using JWT auth', { orgId: jwtAuth.orgId, projectId: jwtAuth.projectId, instanceId: jwtAuth.instanceId });
+      logger.debug('Using JWT auth', { orgId: jwtAuth.orgId, projectId: jwtAuth.projectId });
     } else if (internalApiKey) {
       api_key = internalApiKey;
       logger.debug('Using internal service api_key', { api_key: api_key.substring(0, 8) + '...' });
@@ -238,15 +200,15 @@ router.post('/', async (c) => {
     }
 
     // Create impulse record with timestamps
-    // Use SurrealDB time::now() for proper datetime type (v3 doesn't auto-coerce strings)
+    const now = new Date().toISOString();
     const createQuery = `
       CREATE impulse_data CONTENT {
         impulse_id: $impulse_id,
         api_key: $api_key,
         project_id: $project_id,
         impulse_data: $impulse_data,
-        created_at: time::now(),
-        updated_at: time::now()
+        created_at: $created_at,
+        updated_at: $updated_at
       }
     `;
 
@@ -255,21 +217,18 @@ router.post('/', async (c) => {
       api_key,
       project_id,
       impulse_data,
+      created_at: now,
+      updated_at: now,
     });
 
     if (!result || result.length === 0) {
       throw new Error('Failed to create impulse in SurrealDB');
     }
 
-    // Extract the created record with its timestamps
-    const created = result[0];
-    const createdAt = created?.created_at || new Date().toISOString();
-    const updatedAt = created?.updated_at || createdAt;
-
     logger.info('Impulse created', {
       impulse_id,
       project_id,
-      created_at: createdAt,
+      created_at: now,
     });
 
     // Return response matching Python ImpulseResponse schema
@@ -278,8 +237,8 @@ router.post('/', async (c) => {
       api_key,
       project_id,
       impulse_data,
-      created_at: createdAt,
-      updated_at: updatedAt,
+      created_at: now,
+      updated_at: now,
     };
 
     return c.json(response, 201);
@@ -942,6 +901,99 @@ router.post('/resolve', async (c) => {
           content = formatSearchResultsAsMarkdown(searchResult.results, pointer.query);
         }
         break;
+      }
+
+      case 'problemCluster': {
+        // Impulse-driven problem investigation - returns METADATA not content
+        // This enables LLM to reason about problem shape before loading full data
+        const sessionId = c.req.header('X-Session-ID');
+        if (!sessionId) {
+          return c.json({
+            success: false,
+            error: 'X-Session-ID header required for problemCluster pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        // Call analysis-api impulse endpoint with filter params from pointer
+        const impulseResult = await proxyToAnalysisApi<{
+          success: boolean;
+          loaded: boolean;
+          metadata: {
+            shape: string;
+            rowCount: number;
+            summary: string;
+            bySeverity: Record<string, number>;
+            byCategory: Record<string, number>;
+            topIssue?: {
+              category: string;
+              brief: string;
+              impactScore?: number;
+              severity: string;
+            };
+            availableOps: string[];
+            filterParams: {
+              severity?: string[];
+              category?: string[];
+              status?: string;
+              sessionId: string;
+            };
+          };
+          pointer: {
+            type: string;
+            sessionId: string;
+            severity?: string[];
+            category?: string[];
+            status?: string;
+          };
+          query_time_ms: number;
+        }>(
+          '/v2/analysis/problems/impulse',
+          {
+            method: 'POST',
+            sessionId,
+            body: {
+              severity: pointer.severity ? (Array.isArray(pointer.severity) ? pointer.severity : [pointer.severity]) : undefined,
+              category: pointer.category ? (Array.isArray(pointer.category) ? pointer.category : [pointer.category]) : undefined,
+              status: pointer.status,
+            },
+          }
+        );
+
+        if (!impulseResult || !impulseResult.success) {
+          return c.json({
+            success: false,
+            error: 'Unable to get problem cluster metadata from analysis API',
+          } as ImpulseResolveResponse, 500);
+        }
+
+        // Return metadata response directly - NOT markdown content
+        // This is the impulse-driven pattern: metadata first, drill down via process_impulse
+        logger.info('problemCluster impulse resolved with metadata', {
+          rowCount: impulseResult.metadata?.rowCount,
+          summary: impulseResult.metadata?.summary,
+        });
+
+        return c.json({
+          success: true,
+          loaded: false, // Metadata only, not full content
+          metadata: {
+            shape: impulseResult.metadata?.shape,
+            rowCount: impulseResult.metadata?.rowCount,
+            summary: impulseResult.metadata?.summary,
+            bySeverity: impulseResult.metadata?.bySeverity,
+            byCategory: impulseResult.metadata?.byCategory,
+            topIssue: impulseResult.metadata?.topIssue,
+            availableOps: impulseResult.metadata?.availableOps || ['filter', 'expand', 'group', 'resolve'],
+            // Lineage tracking for investigation chains
+            producedBy: 'problemCluster',
+            producedAt: new Date().toISOString(),
+          },
+          // Include pointer for process_impulse operations
+          content: JSON.stringify({
+            pointer: impulseResult.pointer,
+            filterParams: impulseResult.metadata?.filterParams,
+          }),
+        } as ImpulseResolveResponse, 200);
       }
 
       default:
