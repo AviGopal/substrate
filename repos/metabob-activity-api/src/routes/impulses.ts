@@ -535,29 +535,82 @@ router.post('/resolve', async (c) => {
           } as ImpulseResolveResponse, 400);
         }
 
-        // Load execution trace from activity_execution_traces (RBAC-enabled table)
-        // This is the table MiniBob writes to via POST /v2/activities/execution-traces
-        const query = `
-          SELECT * FROM activity_execution_traces
-          WHERE execution_id = $execution_id
-          LIMIT 1
-        `;
+        // PARADIGM PATH: Try new execution table first (schema-paradigm-alignment)
+        let trace: any = null;
+        let queryPath: 'new' | 'legacy' = 'legacy';
 
-        const result = await surrealDB.query<any>(query, {
-          execution_id: pointer.executionId,
-        });
+        try {
+          const newQuery = `
+            SELECT * FROM execution
+            WHERE id = $execution_id
+            LIMIT 1
+          `;
 
-        if (result.length === 0) {
+          const newResult = await surrealDB.query<any>(newQuery, {
+            execution_id: pointer.executionId,
+          });
+
+          if (newResult && newResult.length > 0) {
+            trace = newResult[0];
+            queryPath = 'new';
+
+            // Load referenced impulses if includeImpulses=true
+            if (pointer.includeImpulses && trace.input_impulses?.length > 0) {
+              const impulseQuery = `
+                SELECT id, shape, summary, content FROM impulse
+                WHERE id IN $impulse_ids
+              `;
+              const impulses = await surrealDB.query<any>(impulseQuery, {
+                impulse_ids: trace.input_impulses,
+              });
+              trace.resolved_impulses = impulses;
+            }
+
+            logger.debug('[paradigm] Execution trace resolved from new schema', {
+              execution_id: pointer.executionId,
+              path: queryPath,
+              has_impulses: !!trace.resolved_impulses,
+            });
+          }
+        } catch (error) {
+          logger.warn('[paradigm] New execution table query failed, falling back', {
+            execution_id: pointer.executionId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+
+        // Fall back to legacy activity_execution_traces table
+        if (!trace) {
+          const legacyQuery = `
+            SELECT * FROM activity_execution_traces
+            WHERE execution_id = $execution_id
+            LIMIT 1
+          `;
+
+          const legacyResult = await surrealDB.query<any>(legacyQuery, {
+            execution_id: pointer.executionId,
+          });
+
+          if (legacyResult && legacyResult.length > 0) {
+            trace = legacyResult[0];
+            queryPath = 'legacy';
+          }
+        }
+
+        if (!trace) {
           return c.json({
             success: false,
             error: `Execution trace not found: ${pointer.executionId}`,
           } as ImpulseResolveResponse, 404);
         }
 
-        const trace = result[0];
-        
+        logger.info('Execution trace resolved', {
+          execution_id: pointer.executionId,
+          path: queryPath,
+        });
+
         // Format execution trace as markdown
-        content = formatExecutionTraceAsMarkdown(trace);
+        content = formatExecutionTraceAsMarkdown(trace, queryPath === 'new');
         break;
       }
 
@@ -1039,75 +1092,202 @@ router.post('/resolve', async (c) => {
 
 /**
  * Format execution trace as markdown for LLM consumption
+ *
+ * Supports both legacy activity_execution_traces schema and new execution table schema.
+ *
+ * @param trace - The execution trace record
+ * @param isNewSchema - If true, trace is from new `execution` table (paradigm schema)
  */
-function formatExecutionTraceAsMarkdown(trace: any): string {
+function formatExecutionTraceAsMarkdown(trace: any, isNewSchema: boolean = false): string {
+  if (isNewSchema) {
+    // Format new paradigm schema execution
+    return formatParadigmExecutionAsMarkdown(trace);
+  }
+
+  // Format legacy activity_execution_traces schema
   const { execution_id, template_id, status, duration_ms, cost_usd, execution_trace } = trace;
-  
+
   let md = `# Execution Trace: ${execution_id}\n\n`;
   md += `**Template**: ${template_id}\n`;
   md += `**Status**: ${status}\n`;
   md += `**Duration**: ${duration_ms}ms\n`;
-  md += `**Cost**: $${cost_usd.toFixed(4)}\n\n`;
-  
+  md += `**Cost**: $${cost_usd?.toFixed?.(4) || cost_usd || 0}\n\n`;
+
+  if (!execution_trace) {
+    md += `_No detailed trace available_\n`;
+    return md;
+  }
+
   if (execution_trace.goalContext) {
     md += `## Goal Context\n\n`;
     md += `**Goal**: ${execution_trace.goalContext.goal}\n`;
     md += `**Intent**: ${execution_trace.goalContext.intent}\n\n`;
   }
-  
-  md += `## Task Execution\n\n`;
-  
-  for (const task of execution_trace.tasks) {
-    md += `### Task: ${task.id}\n\n`;
-    md += `**Description**: ${task.description}\n\n`;
-    
-    if (task.inputState) {
-      md += `**Input State**:\n`;
-      md += `- Files available: ${task.inputState.filesAvailable.length}\n`;
-      md += `- Impulses: ${task.inputState.impulses.join(', ') || 'none'}\n\n`;
-    }
-    
-    md += `**Prompt**: \n\`\`\`\n${task.actualPrompt}\n\`\`\`\n\n`;
-    
-    if (task.toolCalls.length > 0) {
-      md += `**Tool Calls**:\n`;
-      for (const toolCall of task.toolCalls) {
-        md += `- ${toolCall.name}(${JSON.stringify(toolCall.arguments).substring(0, 100)}...)\n`;
-        if (toolCall.result) {
-          md += `  - Success: ${toolCall.result.success}\n`;
-          if (toolCall.result.error) {
-            md += `  - Error: ${toolCall.result.error}\n`;
+
+  if (execution_trace.tasks && execution_trace.tasks.length > 0) {
+    md += `## Task Execution\n\n`;
+
+    for (const task of execution_trace.tasks) {
+      md += `### Task: ${task.id || task.task_id}\n\n`;
+      md += `**Description**: ${task.description}\n\n`;
+
+      if (task.inputState) {
+        md += `**Input State**:\n`;
+        md += `- Files available: ${task.inputState.filesAvailable?.length || 0}\n`;
+        md += `- Impulses: ${task.inputState.impulses?.join(', ') || 'none'}\n\n`;
+      }
+
+      if (task.actualPrompt) {
+        md += `**Prompt**: \n\`\`\`\n${task.actualPrompt}\n\`\`\`\n\n`;
+      }
+
+      if (task.toolCalls && task.toolCalls.length > 0) {
+        md += `**Tool Calls**:\n`;
+        for (const toolCall of task.toolCalls) {
+          md += `- ${toolCall.name}(${JSON.stringify(toolCall.arguments || {}).substring(0, 100)}...)\n`;
+          if (toolCall.result) {
+            md += `  - Success: ${toolCall.result.success}\n`;
+            if (toolCall.result.error) {
+              md += `  - Error: ${toolCall.result.error}\n`;
+            }
           }
         }
+        md += `\n`;
       }
-      md += `\n`;
-    }
-    
-    md += `**Response**: \n\`\`\`\n${task.response.substring(0, 500)}...\n\`\`\`\n\n`;
-    
-    if (task.outputState) {
-      md += `**Output State**:\n`;
-      md += `- Files modified: ${task.outputState.filesModified.join(', ') || 'none'}\n`;
-      md += `- Files created: ${task.outputState.filesCreated.join(', ') || 'none'}\n`;
-      if (task.outputState.stderr) {
-        md += `- Stderr: ${task.outputState.stderr}\n`;
+
+      if (task.response) {
+        md += `**Response**: \n\`\`\`\n${task.response.substring(0, 500)}...\n\`\`\`\n\n`;
       }
-      md += `\n`;
+
+      if (task.outputState) {
+        md += `**Output State**:\n`;
+        md += `- Files modified: ${task.outputState.filesModified?.join(', ') || 'none'}\n`;
+        md += `- Files created: ${task.outputState.filesCreated?.join(', ') || 'none'}\n`;
+        if (task.outputState.stderr) {
+          md += `- Stderr: ${task.outputState.stderr}\n`;
+        }
+        md += `\n`;
+      }
+
+      if (task.result) {
+        md += `**Result**: ${task.result.status}\n`;
+        if (task.result.error) {
+          md += `**Error**: ${task.result.error}\n`;
+        }
+      }
+      md += `\n---\n\n`;
     }
-    
-    md += `**Result**: ${task.result.status}\n`;
-    if (task.result.error) {
-      md += `**Error**: ${task.result.error}\n`;
-    }
-    md += `\n---\n\n`;
   }
-  
-  if (execution_trace.filesModified.length > 0) {
+
+  if (execution_trace.filesModified && execution_trace.filesModified.length > 0) {
     md += `## Files Modified\n\n`;
     md += execution_trace.filesModified.map((f: string) => `- ${f}`).join('\n');
     md += `\n\n`;
   }
-  
+
+  return md;
+}
+
+/**
+ * Format new paradigm execution schema as markdown
+ * Handles: execution table with input_impulses, output_impulses, trace, etc.
+ */
+function formatParadigmExecutionAsMarkdown(exec: any): string {
+  const { id, activity_id, success, duration_ms, cost_usd, trace, error, executed_at } = exec;
+
+  let md = `# Execution: ${id}\n\n`;
+  md += `**Activity**: ${activity_id}\n`;
+  md += `**Success**: ${success ? '✓' : '✗'}\n`;
+  md += `**Duration**: ${duration_ms}ms\n`;
+  md += `**Cost**: $${cost_usd?.toFixed?.(4) || cost_usd || 0}\n`;
+  md += `**Executed**: ${executed_at}\n\n`;
+
+  // Error details
+  if (error) {
+    md += `## Error\n\n`;
+    md += `**Type**: ${error.type || 'unknown'}\n`;
+    md += `**Message**: ${error.message || 'No message'}\n`;
+    if (error.task_id) {
+      md += `**Failed Task**: ${error.task_id}\n`;
+    }
+    md += `\n`;
+  }
+
+  // Input/Output impulses
+  if (exec.input_impulses && exec.input_impulses.length > 0) {
+    md += `## Input Impulses\n\n`;
+    for (const impulseId of exec.input_impulses) {
+      md += `- ${impulseId}\n`;
+    }
+    md += `\n`;
+  }
+
+  if (exec.output_impulses && exec.output_impulses.length > 0) {
+    md += `## Output Impulses\n\n`;
+    for (const impulseId of exec.output_impulses) {
+      md += `- ${impulseId}\n`;
+    }
+    md += `\n`;
+  }
+
+  // Resolved impulses (if loaded via includeImpulses=true)
+  if (exec.resolved_impulses && exec.resolved_impulses.length > 0) {
+    md += `## Resolved Impulse Content\n\n`;
+    for (const impulse of exec.resolved_impulses) {
+      md += `### ${impulse.id} (${impulse.shape})\n\n`;
+      if (impulse.summary) {
+        md += `_${impulse.summary}_\n\n`;
+      }
+      if (impulse.content) {
+        md += `\`\`\`\n${impulse.content.substring(0, 1000)}${impulse.content.length > 1000 ? '\n...(truncated)' : ''}\n\`\`\`\n\n`;
+      }
+    }
+  }
+
+  // Trace details (task-by-task)
+  if (trace?.tasks && trace.tasks.length > 0) {
+    md += `## Task Execution\n\n`;
+
+    for (const task of trace.tasks) {
+      md += `### Task: ${task.task_id || task.id}\n\n`;
+      if (task.description) {
+        md += `**Description**: ${task.description}\n`;
+      }
+      md += `**Status**: ${task.status}\n`;
+      if (task.duration_ms) {
+        md += `**Duration**: ${task.duration_ms}ms\n`;
+      }
+      md += `\n`;
+
+      if (task.tool_calls && task.tool_calls.length > 0) {
+        md += `**Tool Calls**:\n`;
+        for (const call of task.tool_calls) {
+          md += `- ${call.tool}: ${call.success ? '✓' : '✗'} (${call.duration_ms}ms)\n`;
+        }
+        md += `\n`;
+      }
+
+      md += `---\n\n`;
+    }
+  }
+
+  // State transition
+  if (trace?.state_snapshot) {
+    md += `## State Transition\n\n`;
+    const { input_state, output_state, stateTransition } = trace.state_snapshot;
+
+    if (input_state?.filesAvailable?.length > 0) {
+      md += `**Input Files**: ${input_state.filesAvailable.length} files\n`;
+    }
+    if (output_state?.filesModified?.length > 0) {
+      md += `**Modified**: ${output_state.filesModified.join(', ')}\n`;
+    }
+    if (output_state?.filesCreated?.length > 0) {
+      md += `**Created**: ${output_state.filesCreated.join(', ')}\n`;
+    }
+    md += `\n`;
+  }
+
   return md;
 }
 

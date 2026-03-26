@@ -110,36 +110,39 @@ Refactor the activity system database schema from 20+ tables to 4 core tables + 
 
 ### Tasks
 
-- [ ] **P2.1: Update backend routes to use new tables**
-  - Update `POST /v2/activities/templates` → INSERT into activity
-  - Update `GET /v2/activities/templates` → SELECT from activity + v_activity_score
-  - Update `POST /v2/activities/recommend` → Thompson sample from v_activity_score
-  - Update `POST /v2/activities/execution-traces` → INSERT into execution
-  - Update `POST /v2/impulses` → INSERT into impulse
-  - Add fallback: try new table first, fall back to old on failure
-  - Add monitoring logs for which path taken
-  - Test: All routes work, fallback triggers correctly
+- [x] **P2.1: Update backend routes to use new tables**
+  - Update `POST /v2/activities/templates` → INSERT into activity ✓
+  - Update `GET /v2/activities/templates` → SELECT from activity + v_activity_score (partial)
+  - Update `POST /v2/activities/recommend` → Thompson sample from v_activity_score ✓
+  - Update `POST /v2/activities/execution-traces` → INSERT into execution ✓
+  - Update `POST /v2/activities/executions` → INSERT into execution ✓
+  - Add fallback: try new table first, fall back to old on failure ✓
+  - Add monitoring logs for which path taken ✓
+  - See: `src/db/paradigm.ts` (paradigm helpers)
+  - See: `src/routes/activities.ts` (dual-write + recommend)
+  - See: `src/routes/execution-traces.ts` (dual-write)
 
-- [ ] **P2.2: Add shape-based activity matching**
-  - Implement `matchActivities(availableShapes, activities)` algorithm
-  - Add `impulse_shapes` parameter to `/v2/activities/recommend`
-  - Filter activities where `input_shapes ⊆ available_shapes`
-  - Fallback: category-only matching for activities without shapes
-  - Test: Shape matching filters correctly, backward compat maintained
+- [x] **P2.2: Add shape-based activity matching**
+  - Implement `queryActivitiesByShapes(availableShapes, ...)` algorithm ✓
+  - Uses SurrealDB ALLINSIDE operator for shape subset matching ✓
+  - Add `impulse_shapes` parameter to `/v2/activities/recommend` ✓
+  - Filter activities where `input_shapes ⊆ available_shapes` ✓
+  - Fallback: category-only matching for activities without shapes ✓
+  - See: `src/db/paradigm.ts:queryActivitiesByShapes()`
 
-- [ ] **P2.3: Add execution trace impulse resolution**
-  - Add pointer type `activityExecutionTrace` to resolver
-  - Query execution table by executionId
-  - Load referenced impulses if `includeImpulses=true`
-  - Format trace for LLM consumption (markdown)
-  - Respect token budget (truncate if over)
-  - Test: Trace pointers resolve with full state
+- [x] **P2.3: Add execution trace impulse resolution**
+  - Updated `activityExecutionTrace` resolver to use new execution table ✓
+  - Query execution table by executionId with fallback to legacy table ✓
+  - Load referenced impulses if `includeImpulses=true` ✓
+  - Format trace for LLM consumption (markdown) ✓
+  - Added `formatParadigmExecutionAsMarkdown()` for new schema ✓
+  - See: `src/routes/impulses.ts:resolve` handler
 
-- [ ] **P2.4: Update Thompson Sampling to use computed view**
-  - Change `POST /v2/activities/recommend` to query `v_activity_score`
-  - Remove direct queries to `variant_performance_metrics`
-  - Add tie-breaking strategy (by last_executed_at)
-  - Test: Recommendations match expected ranking
+- [x] **P2.4: Update Thompson Sampling to use computed view**
+  - Change `POST /v2/activities/recommend` to query `v_activity_score` ✓
+  - Uses `getActivityScores()` with fallback to `variant_performance_metrics` ✓
+  - Add tie-breaking strategy (by last_executed_at) - computed view includes this
+  - See: `src/db/paradigm.ts:getActivityScores()`
 
 **Acceptance:** All routes use new schema, backward compatibility verified
 

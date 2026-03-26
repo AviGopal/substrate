@@ -1,0 +1,553 @@
+/**
+ * Paradigm Schema Helpers (schema-paradigm-alignment)
+ *
+ * Provides dual-path query functions that:
+ * 1. Try the new 4-table paradigm schema first (activity, execution, impulse, vessel)
+ * 2. Fall back to legacy tables if new tables fail or are empty
+ * 3. Log which path is taken for monitoring
+ *
+ * This enables gradual migration from legacy schema to unified paradigm schema.
+ */
+
+import { surrealDB, queryWithAuth } from './surreal';
+import { logger } from '../utils/logger';
+
+// Field mapping: legacy -> new schema
+const ACTIVITY_FIELD_MAP = {
+  variant_id: 'id',
+  activity_id: 'id', // In new schema, activity_id is just id
+  variant_name: 'name',
+  description: 'description',
+  category: 'category',
+  task_steps: 'tasks',
+  scope: 'scope',
+  org_id: 'org_id',
+  project_id: 'project_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at',
+} as const;
+
+// Reverse mapping for compatibility
+const ACTIVITY_REVERSE_MAP = {
+  id: 'variant_id',
+  name: 'variant_name',
+  tasks: 'task_steps',
+} as const;
+
+export interface ParadigmActivity {
+  id: string;
+  name: string;
+  description?: string;
+  input_shapes: string[];
+  output_shapes: string[];
+  execution_type: 'template' | 'tool' | 'composition' | 'vessel_function';
+  category?: string;
+  tasks?: any[];
+  tool_name?: string;
+  child_activities?: string[];
+  scope: string;
+  public: boolean;
+  org_id: string;
+  project_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ParadigmExecution {
+  id: string;
+  activity_id: string;
+  input_impulses: string[];
+  output_impulses: string[];
+  success: boolean;
+  error?: {
+    message?: string;
+    type?: string;
+    task_id?: string;
+    stack?: string;
+  };
+  duration_ms: number;
+  cost_usd: number;
+  tokens_in: number;
+  tokens_out: number;
+  parent_execution_id?: string;
+  trace?: any;
+  org_id: string;
+  project_id?: string;
+  vessel_id?: string;
+  executed_at: string;
+  created_at: string;
+}
+
+export interface ActivityScore {
+  activity_id: string;
+  org_id: string;
+  total_executions: number;
+  alpha: number;  // Thompson Sampling: successes + 1
+  beta: number;   // Thompson Sampling: failures + 1
+  successes: number;
+  failures: number;
+  avg_duration_ms: number;
+  avg_cost_usd: number;
+  total_cost_usd: number;
+  total_tokens_in: number;
+  total_tokens_out: number;
+  last_executed_at?: string;
+  first_executed_at?: string;
+}
+
+/**
+ * Query path result for monitoring
+ */
+export interface QueryPathResult<T> {
+  data: T[];
+  path: 'new' | 'legacy';
+  latency_ms: number;
+}
+
+/**
+ * Insert into activity table (new paradigm schema)
+ * Returns the inserted record or null on failure
+ */
+export async function insertActivity(
+  activity: Partial<ParadigmActivity>,
+  jwtToken?: string | null
+): Promise<ParadigmActivity | null> {
+  const startTime = Date.now();
+
+  try {
+    // Build insert query
+    const record: Record<string, any> = {
+      id: activity.id,
+      name: activity.name,
+      description: activity.description,
+      input_shapes: activity.input_shapes || [],
+      output_shapes: activity.output_shapes || [],
+      execution_type: activity.execution_type || 'template',
+      category: activity.category,
+      tasks: activity.tasks,
+      scope: activity.scope || 'org',
+      public: activity.public || false,
+    };
+
+    // Optional fields
+    if (activity.org_id) record.org_id = activity.org_id;
+    if (activity.project_id) record.project_id = activity.project_id;
+    if (activity.tool_name) record.tool_name = activity.tool_name;
+    if (activity.child_activities) record.child_activities = activity.child_activities;
+
+    // Build dynamic field list
+    const fields = Object.keys(record)
+      .filter(k => record[k] !== undefined)
+      .map(k => `${k}: $${k}`)
+      .join(',\n        ');
+
+    const query = `
+      INSERT INTO activity {
+        ${fields},
+        created_at: time::now(),
+        updated_at: time::now()
+      }
+    `;
+
+    const result = jwtToken
+      ? await queryWithAuth<ParadigmActivity>(jwtToken, query, record)
+      : await surrealDB.query<ParadigmActivity>(query, record);
+
+    logger.info('[paradigm] Activity inserted into new schema', {
+      id: activity.id,
+      path: 'new',
+      latency_ms: Date.now() - startTime,
+    });
+
+    return result?.[0] || null;
+
+  } catch (error) {
+    logger.error('[paradigm] Failed to insert activity into new schema', {
+      id: activity.id,
+      error: error instanceof Error ? error.message : String(error),
+      latency_ms: Date.now() - startTime,
+    });
+    return null;
+  }
+}
+
+/**
+ * Insert into execution table (new paradigm schema)
+ * Returns the inserted record or null on failure
+ */
+export async function insertExecution(
+  execution: Partial<ParadigmExecution>,
+  jwtToken?: string | null
+): Promise<ParadigmExecution | null> {
+  const startTime = Date.now();
+
+  try {
+    const record: Record<string, any> = {
+      id: execution.id,
+      activity_id: execution.activity_id,
+      input_impulses: execution.input_impulses || [],
+      output_impulses: execution.output_impulses || [],
+      success: execution.success,
+      duration_ms: execution.duration_ms || 0,
+      cost_usd: execution.cost_usd || 0,
+      tokens_in: execution.tokens_in || 0,
+      tokens_out: execution.tokens_out || 0,
+    };
+
+    // Optional fields
+    if (execution.error) record.error = execution.error;
+    if (execution.parent_execution_id) record.parent_execution_id = execution.parent_execution_id;
+    if (execution.trace) record.trace = execution.trace;
+    if (execution.org_id) record.org_id = execution.org_id;
+    if (execution.project_id) record.project_id = execution.project_id;
+    if (execution.vessel_id) record.vessel_id = execution.vessel_id;
+
+    const fields = Object.keys(record)
+      .filter(k => record[k] !== undefined)
+      .map(k => `${k}: $${k}`)
+      .join(',\n        ');
+
+    const query = `
+      INSERT INTO execution {
+        ${fields},
+        executed_at: time::now(),
+        created_at: time::now()
+      }
+    `;
+
+    const result = jwtToken
+      ? await queryWithAuth<ParadigmExecution>(jwtToken, query, record)
+      : await surrealDB.query<ParadigmExecution>(query, record);
+
+    logger.info('[paradigm] Execution inserted into new schema', {
+      id: execution.id,
+      activity_id: execution.activity_id,
+      success: execution.success,
+      path: 'new',
+      latency_ms: Date.now() - startTime,
+    });
+
+    return result?.[0] || null;
+
+  } catch (error) {
+    logger.error('[paradigm] Failed to insert execution into new schema', {
+      id: execution.id,
+      error: error instanceof Error ? error.message : String(error),
+      latency_ms: Date.now() - startTime,
+    });
+    return null;
+  }
+}
+
+/**
+ * Get activity scores from v_activity_score view
+ * Falls back to variant_performance_metrics on failure
+ */
+export async function getActivityScores(
+  orgId: string,
+  activityIds?: string[],
+  jwtToken?: string | null
+): Promise<QueryPathResult<ActivityScore>> {
+  const startTime = Date.now();
+
+  // Try new v_activity_score view first
+  try {
+    let query = `SELECT * FROM v_activity_score WHERE org_id = $org_id`;
+    const params: Record<string, any> = { org_id: orgId };
+
+    if (activityIds && activityIds.length > 0) {
+      query += ` AND activity_id IN $activity_ids`;
+      params.activity_ids = activityIds;
+    }
+
+    const result = jwtToken
+      ? await queryWithAuth<ActivityScore>(jwtToken, query, params)
+      : await surrealDB.query<ActivityScore>(query, params);
+
+    if (result && result.length > 0) {
+      logger.debug('[paradigm] Activity scores fetched from new view', {
+        count: result.length,
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      });
+
+      return {
+        data: result,
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      };
+    }
+  } catch (error) {
+    logger.warn('[paradigm] v_activity_score query failed, falling back', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Fall back to legacy variant_performance_metrics
+  try {
+    let query = `SELECT
+      variant_id AS activity_id,
+      org_id,
+      total_executions,
+      thompson_alpha AS alpha,
+      thompson_beta AS beta,
+      successful_executions AS successes,
+      failed_executions AS failures,
+      avg_duration_ms,
+      avg_cost_usd,
+      0.0 AS total_cost_usd,
+      0 AS total_tokens_in,
+      0 AS total_tokens_out,
+      last_executed_at
+    FROM variant_performance_metrics`;
+
+    const params: Record<string, any> = {};
+
+    if (orgId) {
+      query += ` WHERE org_id = $org_id`;
+      params.org_id = orgId;
+    }
+
+    if (activityIds && activityIds.length > 0) {
+      query += ` AND variant_id IN $activity_ids`;
+      params.activity_ids = activityIds;
+    }
+
+    const result = await surrealDB.query<ActivityScore>(query, params);
+
+    logger.info('[paradigm] Activity scores fetched from legacy table', {
+      count: result?.length || 0,
+      path: 'legacy',
+      latency_ms: Date.now() - startTime,
+    });
+
+    return {
+      data: result || [],
+      path: 'legacy',
+      latency_ms: Date.now() - startTime,
+    };
+
+  } catch (error) {
+    logger.error('[paradigm] Both new and legacy activity score queries failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      data: [],
+      path: 'legacy',
+      latency_ms: Date.now() - startTime,
+    };
+  }
+}
+
+/**
+ * Query activities with shape-based filtering
+ * Uses ALLINSIDE operator for shape matching
+ *
+ * @param availableShapes - Shapes the caller has available (impulse_shapes)
+ * @param orgId - Organization ID for multi-tenant filtering
+ * @param category - Optional category filter
+ * @param jwtToken - Optional JWT token for RBAC
+ */
+export async function queryActivitiesByShapes(
+  availableShapes: string[],
+  orgId?: string | null,
+  category?: string | null,
+  limit: number = 50,
+  jwtToken?: string | null
+): Promise<QueryPathResult<ParadigmActivity>> {
+  const startTime = Date.now();
+
+  // Try new activity table with shape matching
+  try {
+    const whereClauses: string[] = [];
+    const params: Record<string, any> = { limit };
+
+    // Shape matching: activity.input_shapes must be subset of availableShapes
+    if (availableShapes && availableShapes.length > 0) {
+      whereClauses.push(`input_shapes ALLINSIDE $available_shapes`);
+      params.available_shapes = availableShapes;
+    }
+
+    // Include activities with empty input_shapes (backward compat)
+    if (availableShapes && availableShapes.length > 0) {
+      whereClauses.push(`(input_shapes = [] OR input_shapes ALLINSIDE $available_shapes)`);
+    }
+
+    if (category) {
+      whereClauses.push(`category = $category`);
+      params.category = category;
+    }
+
+    // Multi-tenant filtering
+    if (!jwtToken && orgId) {
+      whereClauses.push(`(scope = 'global' OR org_id = $org_id)`);
+      params.org_id = orgId;
+    }
+
+    const whereClause = whereClauses.length > 0
+      ? `WHERE ${whereClauses.join(' AND ')}`
+      : '';
+
+    const query = `
+      SELECT * FROM activity
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $limit
+    `;
+
+    const result = jwtToken
+      ? await queryWithAuth<ParadigmActivity>(jwtToken, query, params)
+      : await surrealDB.query<ParadigmActivity>(query, params);
+
+    if (result && result.length > 0) {
+      logger.info('[paradigm] Activities fetched with shape matching', {
+        count: result.length,
+        path: 'new',
+        availableShapes,
+        latency_ms: Date.now() - startTime,
+      });
+
+      return {
+        data: result,
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      };
+    }
+  } catch (error) {
+    logger.warn('[paradigm] Shape-based query failed, falling back to legacy', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Fall back to legacy activity_template table
+  // (no shape matching, just category filtering)
+  try {
+    const whereClauses: string[] = [];
+    const params: Record<string, any> = { limit };
+
+    if (category) {
+      whereClauses.push(`category = $category`);
+      params.category = category;
+    }
+
+    if (orgId) {
+      whereClauses.push(`(scope IS NULL OR scope = 'global' OR (scope = 'org' AND org_id = $org_id))`);
+      params.org_id = orgId;
+    } else {
+      whereClauses.push(`(scope IS NULL OR scope = 'global')`);
+    }
+
+    const whereClause = whereClauses.length > 0
+      ? `WHERE ${whereClauses.join(' AND ')}`
+      : '';
+
+    const query = `
+      SELECT
+        variant_id AS id,
+        variant_name AS name,
+        description,
+        category,
+        task_steps AS tasks,
+        scope,
+        org_id,
+        project_id,
+        input_schema,
+        output_schema,
+        created_at,
+        updated_at
+      FROM activity_template
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $limit
+    `;
+
+    const result = await surrealDB.query<any>(query, params);
+
+    // Transform legacy results to paradigm format
+    const transformed = (result || []).map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      input_shapes: [], // Legacy templates don't have shapes
+      output_shapes: [],
+      execution_type: 'template' as const,
+      category: t.category,
+      tasks: t.tasks,
+      scope: t.scope || 'global',
+      public: t.scope === 'global',
+      org_id: t.org_id,
+      project_id: t.project_id,
+      created_at: t.created_at,
+      updated_at: t.updated_at,
+    }));
+
+    logger.info('[paradigm] Activities fetched from legacy table (no shape matching)', {
+      count: transformed.length,
+      path: 'legacy',
+      latency_ms: Date.now() - startTime,
+    });
+
+    return {
+      data: transformed,
+      path: 'legacy',
+      latency_ms: Date.now() - startTime,
+    };
+
+  } catch (error) {
+    logger.error('[paradigm] Both activity queries failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      data: [],
+      path: 'legacy',
+      latency_ms: Date.now() - startTime,
+    };
+  }
+}
+
+/**
+ * Transform legacy template format to paradigm Activity format
+ */
+export function transformLegacyTemplate(legacy: any): ParadigmActivity {
+  return {
+    id: legacy.variant_id,
+    name: legacy.variant_name,
+    description: legacy.description,
+    input_shapes: legacy.input_schema?.required_shapes || [],
+    output_shapes: legacy.output_schema?.produces_shapes || [],
+    execution_type: 'template',
+    category: legacy.category,
+    tasks: legacy.task_steps,
+    scope: legacy.scope || 'global',
+    public: legacy.scope === 'global' || !legacy.scope,
+    org_id: legacy.org_id,
+    project_id: legacy.project_id,
+    created_at: legacy.created_at,
+    updated_at: legacy.updated_at,
+  };
+}
+
+/**
+ * Transform paradigm Activity to legacy template format (for backward compat)
+ */
+export function transformToLegacyTemplate(activity: ParadigmActivity): any {
+  return {
+    variant_id: activity.id,
+    activity_id: activity.id,
+    variant_name: activity.name,
+    description: activity.description,
+    category: activity.category,
+    task_steps: activity.tasks,
+    scope: activity.scope,
+    org_id: activity.org_id,
+    project_id: activity.project_id,
+    input_schema: activity.input_shapes.length > 0
+      ? { required_shapes: activity.input_shapes }
+      : undefined,
+    output_schema: activity.output_shapes.length > 0
+      ? { produces_shapes: activity.output_shapes }
+      : undefined,
+    created_at: activity.created_at,
+    updated_at: activity.updated_at,
+  };
+}

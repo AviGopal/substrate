@@ -11,6 +11,7 @@ import { logger } from '../utils/logger';
 import type { SessionData } from '../models/schemas';
 import { getJwtAuthFromContext, hasJwtAuth } from '../middleware/jwtAuth';
 import { config } from '../config';
+import { insertExecution, type ParadigmExecution } from '../db/paradigm';
 
 const app = new Hono();
 
@@ -515,6 +516,50 @@ app.post('/', async (c) => {
       task_count: body.execution_trace?.tasks?.length || 0,
       db_result: result[0],
     });
+
+    // DUAL-WRITE: Also insert into new paradigm execution table (schema-paradigm-alignment)
+    // v_activity_score view computes Thompson Sampling from execution table automatically
+    try {
+      const paradigmExecution: Partial<ParadigmExecution> = {
+        id: trace.execution_id,
+        activity_id: trace.variant_id,
+        input_impulses: trace.impulses_used || [],
+        output_impulses: [], // Will be populated by MiniBob in Phase 3
+        success: trace.success,
+        error: trace.error_message ? {
+          message: trace.error_message,
+          type: trace.error_type,
+          task_id: trace.failed_task_id,
+        } : undefined,
+        duration_ms: trace.duration_ms,
+        cost_usd: trace.cost_usd,
+        tokens_in: trace.tokens_input,
+        tokens_out: trace.tokens_output,
+        parent_execution_id: body.parent_execution_id,
+        trace: {
+          tasks: trace.tasks,
+          state_snapshot: trace.state_snapshot,
+        },
+        org_id: typeof trace.org_id === 'string' ? trace.org_id : undefined,
+        project_id: typeof trace.project_id === 'string' ? trace.project_id : undefined,
+        vessel_id: body.vessel_id || body.pod_name,
+      };
+
+      const paradigmResult = await insertExecution(paradigmExecution, jwtAuth?.jwtToken);
+      if (paradigmResult) {
+        logger.info('[paradigm] Execution trace also written to execution table', {
+          id: trace.execution_id,
+          activity_id: trace.variant_id,
+          path: 'dual-write',
+        });
+      }
+    } catch (paradigmError) {
+      // Don't fail the request if paradigm write fails - legacy write succeeded
+      logger.warn('[paradigm] Dual-write to execution table failed (non-blocking)', {
+        execution_id: trace.execution_id,
+        error: paradigmError instanceof Error ? paradigmError.message : String(paradigmError),
+      });
+    }
 
     // M4.2: Forward to learning service (async/non-blocking)
     // Extract modified files from execution trace
