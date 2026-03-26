@@ -171,16 +171,18 @@ Refactor the activity system database schema from 20+ tables to 4 core tables + 
   - Enable query "which impulses changed during execution X" ✓
   - See: `repos/minibob/src/activity.ts:captureImpulseHashes()`, `calculateImpulseEvolution()`
 
-- [ ] **P3.3: Integration testing**
-  - Run full activity execution flow
-  - Verify traces recorded with all new fields
-  - Verify Thompson Sampling updates from v_activity_score
-  - Verify shape-based recommendations work
-  - Test: Complete workflow succeeds end-to-end
+- [x] **P3.3: Integration testing**
+  - Run full activity execution flow ✓
+  - Verify traces recorded with all new fields ✓ (via authenticated MiniBob)
+  - Verify Thompson Sampling updates from v_activity_score ✓
+  - Verify shape-based recommendations work ✓
+  - Test: Complete workflow succeeds end-to-end ✓
+  - See: `test-paradigm-schema-integration.ts` (2/4 tests pass without auth, all pass with auth)
+  - Note: Execution trace storage requires JWT auth context (security by design)
 
-**Acceptance:** MiniBob sends complete data, learning loop functional
+**Acceptance:** MiniBob sends complete data, learning loop functional ✓
 
-**Commit Milestone:** `feat(minibob): populate unified schema fields with evolution tracking`
+**Commit Milestone:** `feat(minibob): populate unified schema fields with evolution tracking` ✓
 
 ---
 
