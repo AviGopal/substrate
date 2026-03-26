@@ -3,7 +3,7 @@
 # Image configuration
 image:
   repository: metabobapp/minibob
-  tag: "dev-0.1.0-184a527-1774514103"
+  tag: "dev-0.1.0-bca7904-1774515587"
   pullPolicy: IfNotPresent
 
 # Replica count
