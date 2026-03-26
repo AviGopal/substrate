@@ -156,20 +156,20 @@ Refactor the activity system database schema from 20+ tables to 4 core tables + 
 
 ### Tasks
 
-- [ ] **P3.1: Update MiniBob to populate new fields**
-  - Add `shape` field to impulse creation (infer from pointer type)
-  - Add `input_impulses[]` to execution (from loaded impulse IDs)
-  - Add `output_impulses[]` to execution (from created impulse IDs)
-  - Add `parent_execution_id` for composition tracking
-  - Add `input_shapes[]` to registered templates (infer from executions)
-  - Test: All new fields populated correctly
+- [x] **P3.1: Update MiniBob to populate new fields**
+  - Add `shape` field to impulse creation (infer from pointer type) ✓
+  - Add `input_impulses[]` to execution (from loaded impulse IDs) ✓
+  - Add `output_impulses[]` to execution (from created impulse IDs) ✓
+  - Add `parent_execution_id` for composition tracking ✓
+  - Add `input_shapes[]` to registered templates (infer from executions) ✓
+  - See: `repos/minibob/src/mcp.ts:storeExecutionTrace()`, `repos/minibob/src/activity.ts`
 
-- [ ] **P3.2: Add impulse evolution tracking**
-  - Capture impulse content hashes before each task
-  - Capture impulse content hashes after each task
-  - Store in `execution.trace.impulse_evolution[]`
-  - Enable query "which impulses changed during execution X"
-  - Test: Evolution data captured and queryable
+- [x] **P3.2: Add impulse evolution tracking**
+  - Capture impulse content hashes before each task ✓
+  - Capture impulse content hashes after each task ✓
+  - Store in `execution.trace.impulse_evolution[]` ✓
+  - Enable query "which impulses changed during execution X" ✓
+  - See: `repos/minibob/src/activity.ts:captureImpulseHashes()`, `calculateImpulseEvolution()`
 
 - [ ] **P3.3: Integration testing**
   - Run full activity execution flow
