@@ -94,10 +94,6 @@ export const CreateTemplateRequestSchema = z.object({
   category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']),
   task_steps: z.array(TemplateTaskSchema),
   scope: z.enum(['global', 'org', 'project']).default('global'),
-  // Public templates are visible in template marketplace regardless of scope
-  // scope=global + public=true = visible to everyone
-  // scope=org + public=true = visible to org members + discoverable in marketplace
-  public: z.boolean().default(false),
   org_id: z.string().nullable().optional(),
   project_id: z.string().nullable().optional(),
   genealogy: z.record(z.any()).optional(),
@@ -630,10 +626,55 @@ export const ImpulseResolveRequestSchema = z.object({
   }),
 });
 
+// =============================================================================
+// IMPULSE METADATA SCHEMA (Analysis Integration)
+// =============================================================================
+// Enables impulse-driven investigation: LLM sees metadata, hypothesizes,
+// then drills down via process_impulse operations.
+// =============================================================================
+
+export const ImpulseMetadataSchema = z.object({
+  // Shape describes the data structure
+  shape: z.string().optional(), // "problem_list", "cpg", "impact_graph", "cochange_list"
+
+  // Count information for reasoning
+  rowCount: z.number().int().optional(),
+
+  // Human-readable summary for LLM context
+  summary: z.string().optional(),
+
+  // Available operations for process_impulse
+  availableOps: z.array(z.string()).optional(), // ["filter", "expand", "group", "resolve"]
+
+  // Breakdown by category (for problemCluster)
+  bySeverity: z.record(z.number()).optional(), // { "CRITICAL": 2, "HIGH": 5 }
+  byCategory: z.record(z.number()).optional(), // { "security": 3, "complexity": 6 }
+
+  // Top item for quick context
+  topIssue: z.object({
+    category: z.string(),
+    brief: z.string(),
+    impactScore: z.number().optional(),
+  }).optional(),
+
+  // Lineage tracking for investigation chains
+  producedBy: z.string().optional(), // Parent impulse ID
+  operation: z.string().optional(), // Operation that created this
+  operationParams: z.record(z.any()).optional(), // Params used
+  producedAt: z.string().optional(), // ISO timestamp
+
+  // Extensible for domain-specific metadata
+}).passthrough();
+
 export const ImpulseResolveResponseSchema = z.object({
   success: z.boolean(),
   content: z.string().optional(),
   error: z.string().optional(),
+  // NEW: Metadata for impulse-driven investigation
+  // When present, LLM sees metadata summary instead of full content
+  metadata: ImpulseMetadataSchema.optional(),
+  // Whether content is loaded or just metadata
+  loaded: z.boolean().optional(),
 });
 
 // Type exports
@@ -645,6 +686,7 @@ export type StoreExecutionTraceRequest = z.infer<typeof StoreExecutionTraceReque
 export type StoreExecutionTraceResponse = z.infer<typeof StoreExecutionTraceResponseSchema>;
 export type ImpulseResolveRequest = z.infer<typeof ImpulseResolveRequestSchema>;
 export type ImpulseResolveResponse = z.infer<typeof ImpulseResolveResponseSchema>;
+export type ImpulseMetadata = z.infer<typeof ImpulseMetadataSchema>;
 
 // =============================================================================
 // CI/CD INTEGRATION SCHEMAS

@@ -83,7 +83,6 @@ interface ActivityTemplate {
   category: string;
   task_steps?: any[];
   scope: string | null;
-  public?: boolean;
   org_id: string | null;
   project_id: string | null;
   genealogy?: Record<string, any>;
@@ -352,7 +351,6 @@ app.post('/templates', async (c) => {
       description: validated.description,
       category: validated.category,
       scope: validated.scope || 'global',
-      public: validated.public || false,
     };
 
     // Only add optional fields if they have values
