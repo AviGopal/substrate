@@ -150,8 +150,8 @@ DEFINE FIELD IF NOT EXISTS org_id ON minibob_instance TYPE record<organizations>
   ASSERT $value != NONE
   VALUE $value;
 
-DEFINE FIELD IF NOT EXISTS project_id ON minibob_instance TYPE record<projects>
-  ASSERT $value != NONE
+-- project_id is optional - MiniBob instances can operate at org level without project scope
+DEFINE FIELD IF NOT EXISTS project_id ON minibob_instance TYPE option<record<projects>>
   VALUE $value;
 
 DEFINE FIELD IF NOT EXISTS api_key_hash ON minibob_instance TYPE string

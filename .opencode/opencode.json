@@ -19,16 +19,6 @@
        "enabled": true
     }
   },
-  "minibob": {
-    "enabled": true,
-    "url": "http://localhost:8081"
-  },
-  "metabob": {
-    "cli_path": "metabob-cli",
-    "base_url": "http://api.minibob.local",
-    "api_key": "mb_GJVL9aNpNmlwDBND5o4vWhEln9KAsN6T3rDJhsDQS0s",
-    "include_paths": ["*.qqq"]
-  },
   "provider": {
     "anthropic": {
       "options": {
@@ -36,17 +26,5 @@
       }
     },
     "openai": {}
-  },
-  "sessionMemory": {
-    "enabled": true,
-    "analysis": {
-      "provider": "anthropic",
-      "model": "claude-haiku-4-5",
-      "timeout": 30000
-    },
-    "budgets": {
-      "perImpulse": 2000
-    },
-    "maxImpulsesPerTurn": 5
   }
 }
