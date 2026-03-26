@@ -20,6 +20,7 @@ import {
   getActivityScores,
   queryActivitiesByShapes,
   transformToLegacyTemplate,
+  isDualWriteEnabled,
   type ParadigmActivity,
   type ParadigmExecution,
   type ActivityScore,
@@ -434,8 +435,10 @@ app.post('/templates', async (c) => {
 
     // DUAL-WRITE: Also insert into new paradigm activity table (schema-paradigm-alignment)
     // This enables gradual migration to the 4-table schema
-    try {
-      const paradigmActivity: Partial<ParadigmActivity> = {
+    // P4.1: Feature flag controlled
+    if (isDualWriteEnabled()) {
+      try {
+        const paradigmActivity: Partial<ParadigmActivity> = {
         id: validated.variant_id,
         name: validated.variant_name,
         description: validated.description,
@@ -457,13 +460,14 @@ app.post('/templates', async (c) => {
           path: 'dual-write',
         });
       }
-    } catch (paradigmError) {
-      // Don't fail the request if paradigm write fails - legacy write succeeded
-      logger.warn('[paradigm] Dual-write to activity table failed (non-blocking)', {
-        variant_id: validated.variant_id,
-        error: paradigmError instanceof Error ? paradigmError.message : String(paradigmError),
-      });
-    }
+      } catch (paradigmError) {
+        // Don't fail the request if paradigm write fails - legacy write succeeded
+        logger.warn('[paradigm] Dual-write to activity table failed (non-blocking)', {
+          variant_id: validated.variant_id,
+          error: paradigmError instanceof Error ? paradigmError.message : String(paradigmError),
+        });
+      }
+    } // end isDualWriteEnabled()
 
     // Create initial performance metrics
     // org_id is optional - use session org or request value if provided
@@ -926,8 +930,10 @@ app.post('/executions', async (c) => {
 
     // DUAL-WRITE: Also insert into new paradigm execution table (schema-paradigm-alignment)
     // v_activity_score view computes Thompson Sampling from execution table automatically
-    try {
-      const paradigmExecution: Partial<ParadigmExecution> = {
+    // P4.1: Feature flag controlled
+    if (isDualWriteEnabled()) {
+      try {
+        const paradigmExecution: Partial<ParadigmExecution> = {
         id: executionId,
         activity_id: validated.variant_id,
         input_impulses: validated.impulses_used || [],
@@ -954,13 +960,14 @@ app.post('/executions', async (c) => {
           path: 'dual-write',
         });
       }
-    } catch (paradigmError) {
-      // Don't fail the request if paradigm write fails - legacy write succeeded
-      logger.warn('[paradigm] Dual-write to execution table failed (non-blocking)', {
-        execution_id: executionId,
-        error: paradigmError instanceof Error ? paradigmError.message : String(paradigmError),
-      });
-    }
+      } catch (paradigmError) {
+        // Don't fail the request if paradigm write fails - legacy write succeeded
+        logger.warn('[paradigm] Dual-write to execution table failed (non-blocking)', {
+          execution_id: executionId,
+          error: paradigmError instanceof Error ? paradigmError.message : String(paradigmError),
+        });
+      }
+    } // end isDualWriteEnabled()
 
     // Step 2: Update Thompson Sampling metrics in variant_performance_metrics
     // Thompson Sampling uses Beta distribution: Beta(alpha, beta)

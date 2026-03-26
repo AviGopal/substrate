@@ -12,6 +12,42 @@
 import { surrealDB, queryWithAuth } from './surreal';
 import { logger } from '../utils/logger';
 
+// =============================================================================
+// FEATURE FLAGS (P4.1: Dual-write control)
+// =============================================================================
+
+/**
+ * Check if dual-write to new paradigm tables is enabled.
+ * Controlled via DUAL_WRITE_ENABLED environment variable.
+ * Default: true (enabled) during migration period.
+ */
+export function isDualWriteEnabled(): boolean {
+  const envValue = process.env.DUAL_WRITE_ENABLED;
+  // Default to true unless explicitly disabled
+  return envValue !== 'false' && envValue !== '0';
+}
+
+/**
+ * Check if reads should prefer new paradigm tables.
+ * Controlled via PARADIGM_READ_ENABLED environment variable.
+ * Default: true (try new tables first, fall back to legacy)
+ */
+export function isParadigmReadEnabled(): boolean {
+  const envValue = process.env.PARADIGM_READ_ENABLED;
+  // Default to true unless explicitly disabled
+  return envValue !== 'false' && envValue !== '0';
+}
+
+/**
+ * Log dual-write configuration on startup
+ */
+export function logDualWriteConfig(): void {
+  logger.info('[paradigm] Feature flags:', {
+    DUAL_WRITE_ENABLED: isDualWriteEnabled(),
+    PARADIGM_READ_ENABLED: isParadigmReadEnabled(),
+  });
+}
+
 // Field mapping: legacy -> new schema
 const ACTIVITY_FIELD_MAP = {
   variant_id: 'id',

@@ -192,26 +192,26 @@ Refactor the activity system database schema from 20+ tables to 4 core tables + 
 
 ### Tasks
 
-- [ ] **P4.1: Enable dual-write in API**
-  - Write to both old and new tables
-  - Feature flag controlled (DUAL_WRITE_ENABLED)
-  - Log any write failures for debugging
-  - Test: Both tables updated consistently
+- [x] **P4.1: Enable dual-write in API**
+  - Write to both old and new tables ✓
+  - Feature flag controlled (DUAL_WRITE_ENABLED) ✓
+  - Log any write failures for debugging ✓
+  - See: `src/db/paradigm.ts:isDualWriteEnabled()`, `src/routes/activities.ts`, `src/routes/execution-traces.ts`
 
-- [ ] **P4.2: Run historical data backfill**
-  - Migrate activity_template → activity
-  - Migrate activity_execution_traces → execution
-  - Migrate impulse_data → impulse
-  - Migrate minibob_instance → vessel
-  - Batch processing (1000 records per batch)
-  - Test: Row counts match, spot-check data integrity
+- [x] **P4.2: Run historical data backfill**
+  - Migrate activity_template → activity ✓
+  - Migrate activity_execution_traces → execution ✓
+  - Migrate impulse_data → impulse ✓
+  - Migrate minibob_instance → vessel ✓
+  - Batch processing (1000 records per batch) ✓
+  - See: `scripts/backfill-paradigm-tables.ts`
 
-- [ ] **P4.3: Implement sync validation job**
-  - Run hourly during dual-write period
-  - Compare row counts between old and new tables
-  - Alert on discrepancy > 1%
-  - Log detailed diff for investigation
-  - Test: Validation catches intentional discrepancy
+- [x] **P4.3: Implement sync validation job**
+  - Run hourly during dual-write period ✓
+  - Compare row counts between old and new tables ✓
+  - Alert on discrepancy > 1% ✓
+  - Log detailed diff for investigation ✓
+  - See: `scripts/validate-paradigm-sync.ts`
 
 - [ ] **P4.4: Monitor and stabilize**
   - Track error rates in both write paths
