@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Foundational Reference
+
+> **CRITICAL**: Before implementing anything, read [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
+>
+> This is the canonical document that defines the entire system. All other architecture documents, implementations, and changes must align with it. If you find yourself adding endpoints, creating single-use access patterns, or treating the backend as a universal resolver, you are drifting from the foundation.
+
+**The Core Model (summary):**
+- **Impulses** = Data in any form (text, structured data, signals, commands) with metadata for reasoning
+- **Activities** = Constrained state transitions that link input impulse sets to output impulse sets
+- **Vessels** = Bundles of activities + resolvers that provide capabilities where data lives
+- **Backend** = Trace store + pattern learner (NOT a universal resolver)
+- **Learning** = Thompson Sampling for activities, relevance scores for impulses, ribosome for extraction
+- **LLMs** = One resolver type among many, used only when reasoning about ambiguous input is needed
+
 ## Project Overview
 
 **metabob-devbob** is a self-improving AI development system built on the **process-of-becoming** - a continuous transformation that exists primarily in the transient state. The goal is to use MiniBob to develop MiniBob itself, demonstrating continuous autonomous development visible through the activity dashboard.
@@ -341,21 +355,30 @@ bun test               # Run tests
 
 **Build Docker Images:**
 
-Each component has its own Dockerfile and must be built separately:
+Use the build script to build all vessels with correct contexts:
 
 ```bash
-# MiniBob vessel
-cd repos/minibob
-docker build -t minibob:latest .
+# Build all vessels
+./scripts/build-vessels.sh
 
-# Activity API backend
-cd repos/metabob-activity-api
-docker build -t metabob-activity-api:latest .
-
-# Activity Dashboard frontend
-cd repos/activity-dashboard
-docker build -t activity-dashboard:latest .
+# Or build specific vessel
+./scripts/build-vessels.sh minibob
+./scripts/build-vessels.sh metabob-activity-api
+./scripts/build-vessels.sh activity-dashboard
 ```
+
+**Important:** The `metabob-activity-api` image requires a multi-repo build context:
+
+```bash
+# Automated (recommended)
+./scripts/build-vessels.sh metabob-activity-api
+
+# Manual
+cd repos
+docker build -f metabob-activity-api/Dockerfile -t metabob-activity-api:latest .
+```
+
+This includes metabob-proto schemas for automated database migrations. **Do not build from `repos/metabob-activity-api/`** - the Dockerfile requires access to the parent repos/ directory.
 
 **Deploy to Development Cluster:**
 
@@ -366,22 +389,51 @@ cd helm
 helmfile -f activity-system-minimal.yaml.gotmpl sync
 ```
 
-This deploys:
-- **Valkey** (Redis-compatible cache) in `activity-system` namespace
-- **SurrealDB 3.x** (persistent learning database)
-- **metabob-activity-api** (MCP backend with Thompson Sampling)
-- **MiniBob** (3 replicas for boredom activities)
-- **Activity Dashboard** (React UI)
-- **Istio Gateway** (networking with virtual services)
+This deploys (in order):
+1. **Valkey** (Redis-compatible cache) in `activity-system` namespace
+2. **SurrealDB 3.x** (persistent learning database)
+3. **Schema Migration Job** (hook-weight: 5) - Applies all database schemas automatically
+4. **Init-Data Job** (hook-weight: 10) - Creates default org and MiniBob instance
+5. **metabob-activity-api** (MCP backend with Thompson Sampling)
+6. **MiniBob** (3 replicas for boredom activities)
+7. **Activity Dashboard** (React UI)
+8. **Istio Gateway** (networking with virtual services)
+
+**Automated Schema Deployment:**
+- Schemas are applied automatically via Helm hooks
+- No manual schema application required
+- Migration Job creates namespace, applies core + activity schemas, backfills org_id
+- Init-Data Job creates organizations:metabob_internal and minibob-local-001 instance
+- Both Jobs are idempotent (safe to redeploy)
 
 **Verify Deployment:**
 
 ```bash
+# Check Helm hook Jobs completed
+kubectl get jobs -n activity-system
+# Expected: surrealdb-schema-migration (1/1), surrealdb-init-data (1/1)
+
+# View migration logs
+kubectl logs -n activity-system job/surrealdb-schema-migration
+# Expected: ✓ Applied core schemas, ✓ Applied activity schemas, ✓ Data migrations completed
+
+# View init-data logs
+kubectl logs -n activity-system job/surrealdb-init-data
+# Expected: ✓ Organization metabob_internal created, ✓ MiniBob instance minibob-local-001 created
+
 # Check all pods are running
 kubectl get pods -n activity-system
+# Expected: surrealdb-0, metabob-activity-api, minibob-x3, activity-dashboard, redis-valkey
 
 # Check API health
 curl http://api.minibob.local/health
+# Expected: {"status": "ok"}
+
+# Verify MiniBob authentication
+curl -X POST http://api.minibob.local/v2/auth/minibob/signin \
+  -H "Content-Type: application/json" \
+  -d '{"instance_id":"minibob-local-001","api_key":"test-api-key-123"}' | jq
+# Expected: {"token": "eyJ...", "org_id": "metabob_internal"}
 
 # Access dashboard
 open http://dashboard.minibob.local
@@ -492,6 +544,54 @@ MCP_ENDPOINT=http://api.minibob.local bun run test-learning-system-integration.t
 node test-goal-processor.mjs
 ```
 
+## Commit Practices
+
+**Commit early and often once a feature is working.** Don't accumulate large uncommitted changes.
+
+### When to Commit
+
+1. **After demonstrating a working codepath in the deployed environment**
+   - You've verified the feature works via API calls, tests, or the dashboard
+   - The deployment is healthy and the feature behaves as expected
+
+2. **After completing a logical unit of work**
+   - A new route or endpoint is functional
+   - A schema migration has been deployed and verified
+   - A bug fix has been tested
+
+3. **Before making destructive changes**
+   - Before deleting a namespace and redeploying
+   - Before major refactoring
+   - Before switching to a different approach
+
+### Commit Scope
+
+Keep commits reasonably sized and focused:
+- **One feature per commit** (e.g., "Add API key auth endpoint")
+- **Related changes together** (e.g., route + middleware + schema)
+- **Separate concerns** (don't mix unrelated features)
+
+### Commit Message Format
+
+```
+<type>(<scope>): <subject>
+
+<body - explain why, not what>
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+Scopes: `activity-api`, `analysis-api`, `minibob`, `dashboard`, `helm`, `schema`
+
+### Before Redeploying from Scratch
+
+Always audit before `helmfile destroy` or namespace deletion:
+1. Check `git status` for uncommitted changes
+2. Verify schema files match deployed database (`INFO FOR DB`)
+3. Ensure no manual database workarounds that aren't in migration scripts
+
 ## Common Operations
 
 ### Troubleshooting Deployments
@@ -576,21 +676,77 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 - `RIBOSOME_ARCHITECTURE.md`: Self-replicating pattern
 - `DEPLOYMENT_GUIDE.md`: Deployment procedures
 
+**Multi-tenant & RBAC:**
+- `docs/MULTI_TENANT_ARCHITECTURE.md`: Tenancy model and authentication
+- `docs/RBAC_GUIDE.md`: PERMISSIONS patterns and best practices
+- `docs/AUTH_JWT_CLAIMS.md`: JWT token structure
+- `docs/SCHEMA_OWNERSHIP.md`: Service-to-table ownership
+
 **Integration and progress:**
 - `MINIBOB_LIBRARY_INTEGRATION_COMPLETE.md`: OpenCode integration
 - `PHASE_1_8_COMPLETE.md`: Learning system phases
 - `LEARNING_SYSTEM_PROGRESS.md`: Current status
 
+## RBAC and Multi-Tenant Isolation
+
+The system uses SurrealDB PERMISSIONS for database-level RBAC enforcement:
+
+**Authentication Methods:**
+- **JWT External**: Dashboard users (15 min tokens)
+- **API Key**: IDE integrations like metabob-mcp (auto-refresh)
+- **MiniBob Record**: Autonomous vessel instances (24h tokens)
+
+**Data Isolation:**
+- All multi-tenant tables have `org_id` field
+- PERMISSIONS clauses enforce `WHERE org_id = $auth.org_id`
+- No application-level filtering needed - SurrealDB handles it
+
+**Usage Pattern:**
+```typescript
+// Use authenticated connection - PERMISSIONS enforced automatically
+const db = await createAuthenticatedClient(jwtToken);
+const templates = await db.query(`SELECT * FROM activity_template`);
+// Returns only templates for $auth.org_id
+```
+
+**Key Points:**
+- Never bypass PERMISSIONS with root credentials
+- Always use `createAuthenticatedClient()` or `queryWithAuth()`
+- The `$auth` variable is populated from JWT claims
+- Public templates have `public = true` and are visible to all orgs
+
 ## Key Design Principles
 
-1. **Activity-Centric**: All work flows through activity templates
-2. **Impulse-Driven**: Context injection via flexible pointer system
-3. **Self-Improving**: Continuous learning based on execution data
-4. **Separation of Concerns**: MiniBob executes, backend stores/learns
-5. **Vessel-Agnostic**: Core patterns work in any vessel implementation
-6. **Thompson Sampling**: Probabilistic learning for template selection
-7. **Measured Behavior**: Optimize based on data, not reasoning
-8. **Continuous Becoming**: Never complete - always transforming
+> See [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) for the complete foundational model.
+
+1. **Impulses Are Universal Data**: Everything is an impulse (text, structured data, signals, commands). Metadata describes shape; resolvers access content.
+2. **Activities Constrain Search**: Without activities, infinite options. With activities, ranked finite options. Learning improves ranking.
+3. **Resolvers Live Where Data Lives**: Don't centralize resolution. Vessels resolve what they have access to. Backend only stores traces.
+4. **Metadata First, Content Later**: Reasoners see metadata to decide. Resolvers load content to execute.
+5. **Record Everything**: Every execution is traced. This is the raw material for learning.
+6. **Learn From Traces**: Thompson Sampling for activities. Relevance scores for impulses. Ribosome for extraction.
+7. **Reserve Improvisation**: When nothing matches, try something new. But record it. Learn from it.
+8. **LLMs Are Tools, Not Controllers**: Use LLMs for reasoning and generation. Use deterministic resolvers for everything else.
+
+### Implementation Alignment Checklist
+
+Before implementing any feature, verify alignment with the foundation:
+
+- [ ] Does it treat data as impulses with metadata?
+- [ ] Does it use activities to constrain the search space?
+- [ ] Do resolvers live where the data is?
+- [ ] Does it record traces for learning?
+- [ ] Does it avoid unnecessary LLM usage?
+- [ ] Does it allow improvisation with recording?
+- [ ] Is the backend limited to trace storage and pattern learning?
+- [ ] Can this pattern be extracted and reused?
+
+**Red flags** (signs of drift):
+- Adding new REST endpoints for single-use queries
+- Treating the backend as a universal resolver
+- LLM processing raw data instead of reasoning about metadata
+- Activities that don't record traces
+- Resolvers that don't live where data lives
 
 ## Development Focus
 
