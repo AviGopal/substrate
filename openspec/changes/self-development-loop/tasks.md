@@ -73,13 +73,13 @@ M6: Integration Testing
 
 ### Tasks
 
-#### M1.1: Add impulse tracking types
+#### M1.1: Add impulse tracking types ✅ COMPLETE
 **File**: `src/types.ts`
 
-- [ ] Add `ImpulseLoadEvent` interface
-- [ ] Add `ImpulseCreateEvent` interface
-- [ ] Add `ImpulseReference` interface
-- [ ] Extend `ImprovisationTrace` with new fields:
+- [x] Add `ImpulseLoadEvent` interface
+- [x] Add `ImpulseCreateEvent` interface
+- [x] Add `ImpulseReference` interface
+- [x] Extend `ImprovisationTrace` with new fields:
   - `impulses_available: ImpulseReference[]`
   - `impulses_loaded: ImpulseLoadEvent[]`
   - `impulses_created: ImpulseCreateEvent[]`
@@ -97,11 +97,11 @@ const event: ImpulseLoadEvent = {
 }
 ```
 
-#### M1.2: Add shape inference utilities
+#### M1.2: Add shape inference utilities ✅ COMPLETE
 **File**: `src/improviser.ts`
 
-- [ ] Add `inferShape(impulse: Impulse): string` method
-- [ ] Add `inferShapeFromPath(path: string): string` method
+- [x] Add `inferShape(impulse: Impulse): string` method
+- [x] Add `inferShapeFromPath(path: string): string` method
 - [ ] Add canonical shape mappings:
   - `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.go`, `.rs` -> `source_code`
   - `.log`, `error*` -> `error_log`
@@ -116,16 +116,16 @@ expect(inferShapeFromPath('error.log')).toBe('error_log')
 expect(inferShapeFromPath('foo.test.ts')).toBe('test_file')
 ```
 
-#### M1.3: Track impulse loads during execution
+#### M1.3: Track impulse loads during execution ✅ COMPLETE
 **File**: `src/improviser.ts`
 
-- [ ] Add `loadedImpulses: Map<string, ImpulseLoadEvent>` to GoalImproviser
-- [ ] Create `recordImpulseLoad(event: ImpulseLoadEvent)` method
-- [ ] Intercept tool calls to detect file reads:
+- [x] Add `loadedImpulses: Map<string, ImpulseLoadEvent>` to GoalImproviser
+- [x] Create `recordImpulseLoad(event: ImpulseLoadEvent)` method
+- [x] Intercept tool calls to detect file reads:
   - `read` tool -> record as load
   - `glob` tool -> record each matched file as potential load
   - `grep` tool -> record searched file as load
-- [ ] Assign `usage: 'essential'` to impulses loaded before LLM decision
+- [x] Track via `executeToolWithTracking()` wrapper method
 
 **Acceptance Criteria**:
 ```typescript
@@ -139,15 +139,15 @@ expect(trace.impulses_loaded).toContainEqual(
 )
 ```
 
-#### M1.4: Track impulse creates during execution
+#### M1.4: Track impulse creates during execution ✅ COMPLETE
 **File**: `src/improviser.ts`
 
-- [ ] Add `createdImpulses: ImpulseCreateEvent[]` to GoalImproviser
-- [ ] Create `recordImpulseCreate(event: ImpulseCreateEvent)` method
-- [ ] Intercept tool calls to detect file writes:
+- [x] Add `createdImpulses: ImpulseCreateEvent[]` to GoalImproviser
+- [x] Create `recordImpulseCreate(event: ImpulseCreateEvent)` method
+- [x] Intercept tool calls to detect file writes:
   - `write` tool -> record as create
   - `edit` tool -> record as create (modified file)
-- [ ] Include pointer information in created impulse
+- [x] Include pointer information in created impulse
 
 **Acceptance Criteria**:
 ```typescript
@@ -160,12 +160,12 @@ expect(trace.impulses_created).toContainEqual(
 )
 ```
 
-#### M1.5: Include impulse data in saved traces
+#### M1.5: Include impulse data in saved traces ✅ COMPLETE
 **File**: `src/improviser.ts`
 
-- [ ] Update `saveTrace()` to include new fields
-- [ ] Ensure ActivityExecution format includes impulse arrays
-- [ ] Add impulse data to MCP trace storage call
+- [x] Update `saveTrace()` to include new fields
+- [x] Ensure ActivityExecution format includes impulse arrays
+- [x] Add impulse data to MCP trace storage call
 
 **Acceptance Criteria**:
 ```bash

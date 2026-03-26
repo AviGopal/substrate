@@ -107,6 +107,42 @@ interface ActivityTemplate {
 }
 
 /**
+ * Filter templates by input schema compatibility
+ * A template matches if ALL required shapes in its inputSchema are present in providedShapes
+ * Templates without inputSchema match anything (backwards compatible)
+ */
+function filterByInputSchema(
+  templates: any[],
+  providedShapes: string[]
+): any[] {
+  if (!providedShapes || providedShapes.length === 0) {
+    return templates;
+  }
+
+  const providedSet = new Set(providedShapes);
+
+  return templates.filter(template => {
+    const inputSchema = template.input_schema;
+
+    // Templates without inputSchema match anything (backwards compatible)
+    if (!inputSchema || !inputSchema.required || !Array.isArray(inputSchema.required)) {
+      return true;
+    }
+
+    // Check if all required shapes are provided
+    const requiredShapes = inputSchema.required.map((s: any) =>
+      typeof s === 'string' ? s : s.shape
+    ).filter(Boolean);
+
+    const allRequiredPresent = requiredShapes.every((shape: string) =>
+      providedSet.has(shape)
+    );
+
+    return allRequiredPresent;
+  });
+}
+
+/**
  * Enrich templates with execution metrics from variant_performance_metrics table
  */
 async function enrichTemplatesWithMetrics(
@@ -1512,13 +1548,20 @@ export default app;
 app.post('/recommend', async (c) => {
   try {
     const body = await c.req.json();
-    const { task_description, category, loaded_impulses = [], limit = 3 } = body;
+    const {
+      task_description,
+      category,
+      loaded_impulses = [],
+      impulse_shapes = [],  // NEW: Array of impulse shapes for schema filtering
+      limit = 3
+    } = body;
 
-    logger.info('POST /recommend', { 
+    logger.info('POST /recommend', {
       task_description: task_description?.substring(0, 100),
       category,
       loaded_impulses,
-      limit 
+      impulse_shapes,
+      limit
     });
 
     // Validate required fields
@@ -1534,12 +1577,15 @@ app.post('/recommend', async (c) => {
     const projectId = sessionData?.project_id || null;
 
     // Fetch templates for Thompson Sampling recommendations
+    // Include input_schema for schema-based filtering
     let query = `
-      SELECT 
+      SELECT
         variant_id,
         activity_id,
         variant_name,
-        category
+        category,
+        input_schema,
+        output_schema
       FROM activity_template
     `;
 
@@ -1573,6 +1619,18 @@ app.post('/recommend', async (c) => {
 
     logger.info('Templates fetched for recommendation', { count: templates.length });
 
+    // Apply schema-based filtering if impulse_shapes provided
+    if (impulse_shapes && impulse_shapes.length > 0) {
+      const beforeCount = templates.length;
+      templates = filterByInputSchema(templates, impulse_shapes);
+      logger.info('Schema filtering applied', {
+        before: beforeCount,
+        after: templates.length,
+        providedShapes: impulse_shapes,
+        reduction: `${Math.round((1 - templates.length / beforeCount) * 100)}%`
+      });
+    }
+
     // Enrich templates with metrics (thompson_alpha, thompson_beta)
     templates = await enrichTemplatesWithMetrics(templates);
 
@@ -1592,6 +1650,8 @@ app.post('/recommend', async (c) => {
           template_id: template.variant_id,
           template_name: template.variant_name,
           category: template.category,
+          input_schema: template.input_schema || null,
+          output_schema: template.output_schema || null,
           selection_metadata: {
             method: 'thompson_sampling',
             alpha,
