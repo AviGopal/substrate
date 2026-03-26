@@ -43,24 +43,26 @@
 
 ## 7. Integration Testing
 
-- [ ] 7.1 Deploy to local Kubernetes cluster using helmfile
+- [x] 7.1 Deploy to local Kubernetes cluster using helmfile
 - [ ] 7.2 Call /v2/activities/recommend endpoint multiple times with same criteria
 - [ ] 7.3 Verify that different templates are selected across calls (probabilistic behavior)
 - [ ] 7.4 Check logs for sample values in selection_metadata
 - [ ] 7.5 Verify that templates with high uncertainty are explored in practice
 
+**Note:** Integration testing blocked by schema mismatch - `public` field exists in API but not in SurrealDB schema. Core implementation is complete and unit tested.
+
 ## 8. Documentation and Cleanup
 
-- [ ] 8.1 Update inline comments to document that actual Beta sampling is now used
-- [ ] 8.2 Add JSDoc comment explaining betaSample initialization and seeding
-- [ ] 8.3 Document THOMPSON_SAMPLING_SEED environment variable in repos/metabob-activity-api/README.md
-- [ ] 8.4 Remove "simplified for deterministic testing" comment since that no longer applies
+- [x] 8.1 Update inline comments to document that actual Beta sampling is now used
+- [x] 8.2 Add JSDoc comment explaining betaSample initialization and seeding
+- [x] 8.3 Document THOMPSON_SAMPLING_SEED environment variable in repos/metabob-activity-api/README.md
+- [x] 8.4 Remove "simplified for deterministic testing" comment since that no longer applies
 
 ## 9. Verification and Deployment
 
-- [ ] 9.1 Run full test suite: `bun test` in repos/metabob-activity-api
+- [x] 9.1 Run full test suite: `bun test` in repos/metabob-activity-api
 - [ ] 9.2 Run type checking: `bun run typecheck` in repos/metabob-activity-api
-- [ ] 9.3 Build Docker image for metabob-activity-api
+- [x] 9.3 Build Docker image for metabob-activity-api
 - [ ] 9.4 Deploy to staging environment and monitor for 24 hours
 - [ ] 9.5 Check dashboard for template selection frequency distribution
 - [ ] 9.6 Verify that exploration is happening (uncertain templates selected occasionally)
