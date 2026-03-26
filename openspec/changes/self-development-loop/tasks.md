@@ -5,6 +5,39 @@
 
 ---
 
+## Implementation Approach
+
+**Use the `/minibob` skill for implementation.** This creates a self-referential loop where MiniBob develops its own self-development capabilities.
+
+### Setup (Run Once Per Session)
+```bash
+# Get auth token
+./scripts/minibob-auth.sh login
+eval $(./scripts/minibob-auth.sh export)
+
+# Verify
+./scripts/minibob-auth.sh verify
+```
+
+### Running Tasks
+```bash
+cd repos/minibob
+MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
+  bun run index.ts goal "M1.1: Add impulse tracking types to types.ts"
+```
+
+### After Each Milestone
+```bash
+# Verify changes
+bun run typecheck
+bun test
+
+# Backup learning data
+./scripts/minibob-data.sh export "m1-complete"
+```
+
+---
+
 ## Dependency Graph
 
 ```

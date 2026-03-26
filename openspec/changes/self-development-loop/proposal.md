@@ -1,8 +1,9 @@
 # Self-Development Loop
 
-> **Status**: Proposed
+> **Status**: Ready for Implementation
 > **Scope**: minibob + metabob-activity-api
 > **Goal**: Enable minibob to develop itself through the activity system
+> **Implementation**: Use `/minibob` skill to implement - MiniBob develops itself
 
 ---
 
