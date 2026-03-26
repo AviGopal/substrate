@@ -49,7 +49,12 @@
 - [ ] 7.4 Check logs for sample values in selection_metadata
 - [ ] 7.5 Verify that templates with high uncertainty are explored in practice
 
-**Note:** Integration testing blocked by schema mismatch - `public` field exists in API but not in SurrealDB schema. Core implementation is complete and unit tested.
+**Note:** Integration testing blocked by multiple schema mismatches (separate from Thompson Sampling fix):
+- `task_steps[*].dependencies` - SCHEMAFULL table doesn't support nested structure
+- `org_id` type - schema expects `record<organizations>`, API sends string
+- These are pre-existing schema alignment issues, not related to Thompson Sampling
+
+**Core Thompson Sampling implementation is complete and unit tested (14 tests pass).**
 
 ## 8. Documentation and Cleanup
 
