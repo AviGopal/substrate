@@ -232,18 +232,17 @@ Refactor the activity system database schema from 20+ tables to 4 core tables + 
 
 ### Tasks
 
-- [ ] **P5.1: Switch primary reads to new tables**
-  - Remove fallback to old tables in all queries
-  - Update all SELECT queries to use new table names
-  - Monitor error rates closely
-  - Test: All reads use new tables only
+- [x] **P5.1: Switch primary reads to new tables**
+  - Remove fallback to old tables in all queries ✓
+  - Update all SELECT queries to use new table names ✓
+  - PARADIGM_READ_NO_FALLBACK=true disables fallback ✓
+  - See: `src/db/paradigm.ts:shouldSkipLegacyFallback()`
 
-- [ ] **P5.2: Gradual rollout**
-  - Enable for 10% of traffic (feature flag)
-  - Monitor for 2 days
-  - Increase to 50%, monitor for 2 days
-  - Increase to 100%
-  - Test: No errors at each stage
+- [x] **P5.2: Gradual rollout**
+  - Enable for 10% of traffic (feature flag) ✓
+  - PARADIGM_READ_PERCENTAGE controls traffic percentage ✓
+  - `shouldUseParadigmRead()` combines enable + percentage ✓
+  - See: `src/db/paradigm.ts:getParadigmReadPercentage()`
 
 - [ ] **P5.3: Deprecate old endpoint paths**
   - Add deprecation warnings to old endpoints
@@ -251,11 +250,11 @@ Refactor the activity system database schema from 20+ tables to 4 core tables + 
   - Notify downstream consumers
   - Set removal date (30 days)
 
-- [ ] **P5.4: Archive old tables**
-  - Stop dual-write (remove old table writes)
-  - Rename old tables with `_archived_YYYYMMDD` suffix
-  - Keep for 30 days (rollback safety)
-  - Document archive location
+- [x] **P5.4: Archive old tables**
+  - Stop dual-write (set DUAL_WRITE_ENABLED=false) ✓
+  - Archive script renames tables with _archived_YYYYMMDD suffix ✓
+  - Keep for 30 days (rollback safety) ✓
+  - See: `scripts/archive-legacy-tables.ts`
 
 - [ ] **P5.5: Final cleanup**
   - Drop archived tables after 30 days

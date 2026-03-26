@@ -39,12 +39,64 @@ export function isParadigmReadEnabled(): boolean {
 }
 
 /**
+ * P5.2: Get percentage of traffic that should use new paradigm tables.
+ * Controlled via PARADIGM_READ_PERCENTAGE environment variable.
+ * Default: 100 (all traffic uses new tables when enabled)
+ *
+ * Use this for gradual rollout:
+ * - 10: 10% of requests use new tables
+ * - 50: 50% of requests use new tables
+ * - 100: All requests use new tables
+ */
+export function getParadigmReadPercentage(): number {
+  const envValue = process.env.PARADIGM_READ_PERCENTAGE;
+  if (!envValue) return 100;
+  const parsed = parseInt(envValue, 10);
+  if (isNaN(parsed) || parsed < 0) return 0;
+  if (parsed > 100) return 100;
+  return parsed;
+}
+
+/**
+ * P5.1: Check if this specific request should use new paradigm tables.
+ * Combines isParadigmReadEnabled() with percentage-based rollout.
+ *
+ * @returns true if this request should read from new tables
+ */
+export function shouldUseParadigmRead(): boolean {
+  if (!isParadigmReadEnabled()) {
+    return false;
+  }
+  const percentage = getParadigmReadPercentage();
+  if (percentage >= 100) {
+    return true;
+  }
+  if (percentage <= 0) {
+    return false;
+  }
+  // Random selection based on percentage
+  return Math.random() * 100 < percentage;
+}
+
+/**
+ * P5.1: Check if fallback to legacy tables should be skipped.
+ * When PARADIGM_READ_NO_FALLBACK=true, errors from new tables are not caught.
+ * Use this after gradual rollout is complete (100%) to ensure clean reads.
+ */
+export function shouldSkipLegacyFallback(): boolean {
+  const envValue = process.env.PARADIGM_READ_NO_FALLBACK;
+  return envValue === 'true' || envValue === '1';
+}
+
+/**
  * Log dual-write configuration on startup
  */
 export function logDualWriteConfig(): void {
   logger.info('[paradigm] Feature flags:', {
     DUAL_WRITE_ENABLED: isDualWriteEnabled(),
     PARADIGM_READ_ENABLED: isParadigmReadEnabled(),
+    PARADIGM_READ_PERCENTAGE: getParadigmReadPercentage(),
+    PARADIGM_READ_NO_FALLBACK: shouldSkipLegacyFallback(),
   });
 }
 
@@ -277,7 +329,9 @@ export async function insertExecution(
 
 /**
  * Get activity scores from v_activity_score view
- * Falls back to variant_performance_metrics on failure
+ * Falls back to variant_performance_metrics on failure (unless no-fallback mode)
+ *
+ * P5.1/P5.2: Respects PARADIGM_READ_PERCENTAGE for gradual rollout
  */
 export async function getActivityScores(
   orgId: string,
@@ -285,38 +339,62 @@ export async function getActivityScores(
   jwtToken?: string | null
 ): Promise<QueryPathResult<ActivityScore>> {
   const startTime = Date.now();
+  const useParadigm = shouldUseParadigmRead();
+  const noFallback = shouldSkipLegacyFallback();
 
-  // Try new v_activity_score view first
-  try {
-    let query = `SELECT * FROM v_activity_score WHERE org_id = $org_id`;
-    const params: Record<string, any> = { org_id: orgId };
+  // P5.1: Try new v_activity_score view if paradigm read is enabled for this request
+  if (useParadigm) {
+    try {
+      let query = `SELECT * FROM v_activity_score WHERE org_id = $org_id`;
+      const params: Record<string, any> = { org_id: orgId };
 
-    if (activityIds && activityIds.length > 0) {
-      query += ` AND activity_id IN $activity_ids`;
-      params.activity_ids = activityIds;
-    }
+      if (activityIds && activityIds.length > 0) {
+        query += ` AND activity_id IN $activity_ids`;
+        params.activity_ids = activityIds;
+      }
 
-    const result = jwtToken
-      ? await queryWithAuth<ActivityScore>(jwtToken, query, params)
-      : await surrealDB.query<ActivityScore>(query, params);
+      const result = jwtToken
+        ? await queryWithAuth<ActivityScore>(jwtToken, query, params)
+        : await surrealDB.query<ActivityScore>(query, params);
 
-    if (result && result.length > 0) {
-      logger.debug('[paradigm] Activity scores fetched from new view', {
-        count: result.length,
-        path: 'new',
-        latency_ms: Date.now() - startTime,
+      if (result && result.length > 0) {
+        logger.debug('[paradigm] Activity scores fetched from new view', {
+          count: result.length,
+          path: 'new',
+          latency_ms: Date.now() - startTime,
+        });
+
+        return {
+          data: result,
+          path: 'new',
+          latency_ms: Date.now() - startTime,
+        };
+      }
+
+      // P5.1: If no fallback mode and empty result, return empty (don't try legacy)
+      if (noFallback) {
+        logger.debug('[paradigm] Activity scores empty from new view (no fallback)', {
+          path: 'new',
+          latency_ms: Date.now() - startTime,
+        });
+        return {
+          data: [],
+          path: 'new',
+          latency_ms: Date.now() - startTime,
+        };
+      }
+    } catch (error) {
+      // P5.1: If no fallback mode, propagate error
+      if (noFallback) {
+        logger.error('[paradigm] v_activity_score query failed (no fallback)', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+      logger.warn('[paradigm] v_activity_score query failed, falling back', {
+        error: error instanceof Error ? error.message : String(error),
       });
-
-      return {
-        data: result,
-        path: 'new',
-        latency_ms: Date.now() - startTime,
-      };
     }
-  } catch (error) {
-    logger.warn('[paradigm] v_activity_score query failed, falling back', {
-      error: error instanceof Error ? error.message : String(error),
-    });
   }
 
   // Fall back to legacy variant_performance_metrics
@@ -392,9 +470,12 @@ export async function queryActivitiesByShapes(
   jwtToken?: string | null
 ): Promise<QueryPathResult<ParadigmActivity>> {
   const startTime = Date.now();
+  const useParadigm = shouldUseParadigmRead();
+  const noFallback = shouldSkipLegacyFallback();
 
-  // Try new activity table with shape matching
-  try {
+  // P5.1: Try new activity table with shape matching if paradigm read is enabled
+  if (useParadigm) {
+    try {
     const whereClauses: string[] = [];
     const params: Record<string, any> = { limit };
 
@@ -449,10 +530,31 @@ export async function queryActivitiesByShapes(
         latency_ms: Date.now() - startTime,
       };
     }
-  } catch (error) {
-    logger.warn('[paradigm] Shape-based query failed, falling back to legacy', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+
+    // P5.1: If no fallback mode and empty result, return empty
+    if (noFallback) {
+      logger.debug('[paradigm] Activities empty from new table (no fallback)', {
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      });
+      return {
+        data: [],
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      };
+    }
+    } catch (error) {
+      // P5.1: If no fallback mode, propagate error
+      if (noFallback) {
+        logger.error('[paradigm] Shape-based query failed (no fallback)', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+      logger.warn('[paradigm] Shape-based query failed, falling back to legacy', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   // Fall back to legacy activity_template table
