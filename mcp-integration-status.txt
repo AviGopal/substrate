@@ -1,0 +1,166 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    MCP Integration Test Results                            ║
+║                         2026-03-24                                         ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                          COMPONENT STATUS                                  │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  metabob-analysis-api (Kubernetes)                      ✅ UP    │   │
+│  │  ┌────────────────────────────────────────────────────────────┐ │   │
+│  │  │  Pod: metabob-analysis-api-5bc897686b-ljmcl            │ │   │
+│  │  │  Status: Running (1/1 Ready)                          ⚫ │ │   │
+│  │  │  Uptime: 36+ minutes, 0 restarts                        │ │   │
+│  │  └────────────────────────────────────────────────────────────┘ │   │
+│  │                                                                  │   │
+│  │  Endpoints:                                                      │   │
+│  │  • Internal: http://metabob-analysis-api.activity-system:8080   │   │
+│  │  • External: http://api.metabob.local (Istio)                   │   │
+│  │                                                                  │   │
+│  │  Endpoint Status:                                                │   │
+│  │  ✅ GET  /health                           (18ms)              │   │
+│  │  ✅ GET  /v2/analysis/priority             (4ms)               │   │
+│  │  ✅ POST /v2/analysis/search                (465ms)             │   │
+│  │  ❌ POST /v2/analysis/annotations          (400 schema)        │   │
+│  │  ✅ POST /v2/analysis/cochange/suggest     (3ms)               │   │
+│  │  ⚠️  POST /v2/analysis/impact               (works, test issue) │   │
+│  │  ❌ PUT  /v2/analysis/problems/:id/complete (404 not mounted)  │   │
+│  │  ❌ POST /v2/analysis/implementation-spec   (404 not impl)     │   │
+│  │                                                                  │   │
+│  │  Performance: avg 2ms (10 requests) ⚡                          │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                            │
+│                                  │                                         │
+│                                  │ HTTP/JSON                               │
+│                                  │ ✅ WORKING                              │
+│                                  │                                         │
+│  ┌──────────────────────────────▼───────────────────────────────────┐   │
+│  │  metabob-mcp (Local MCP Server)                     ⚠️ ISSUES   │   │
+│  │  ┌────────────────────────────────────────────────────────────┐ │   │
+│  │  │  Status: Starts successfully                           │ │   │
+│  │  │  Tools Registered: 7 tools                              │ │   │
+│  │  │  Health Server: :8080 ✅                               │ │   │
+│  │  │  API Health Check: ✅ Passed                           │ │   │
+│  │  │                                                            │ │   │
+│  │  │  ❌ stdio Communication: TIMEOUT                        │ │   │
+│  │  │     • No response to JSON-RPC requests                  │ │   │
+│  │  │     • All tool calls timeout after 30s                  │ │   │
+│  │  │     • Blocks AI agent integration                       │ │   │
+│  │  └────────────────────────────────────────────────────────────┘ │   │
+│  │                                                                  │   │
+│  │  Tools:                                                          │   │
+│  │  1. get_priority_issues           ❌ (timeout)                  │   │
+│  │  2. search_codebase               ❌ (timeout)                  │   │
+│  │  3. annotate_component            ❌ (timeout)                  │   │
+│  │  4. suggest_related_changes       ❌ (timeout)                  │   │
+│  │  5. analyze_change_impact         ❌ (timeout)                  │   │
+│  │  6. mark_problem_complete         ❌ (timeout)                  │   │
+│  │  7. generate_implementation_spec  ❌ (timeout)                  │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                            │
+│                                  │                                         │
+│                                  │ JSON-RPC stdio                          │
+│                                  │ ❌ TIMEOUT                              │
+│                                  │                                         │
+│  ┌──────────────────────────────▼───────────────────────────────────┐   │
+│  │  AI Agents (Claude Desktop, Cursor)                ⏸️ BLOCKED   │   │
+│  │  ┌────────────────────────────────────────────────────────────┐ │   │
+│  │  │  Cannot launch MCP tools                               │ │   │
+│  │  │  Waiting for stdio fix                                  │ │   │
+│  │  └────────────────────────────────────────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         ISSUES SUMMARY                                     │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  🔴 CRITICAL (Blocking)                                                    │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │  1. MCP Server stdio Communication Timeout                          │ │
+│  │     Impact: AI agents cannot use any tools                           │ │
+│  │     Component: metabob-mcp                                            │ │
+│  │     Fix Time: 1-2 days                                                │ │
+│  │     Action: Investigate @modelcontextprotocol/sdk transport          │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+│  🟡 HIGH (Should Fix Soon)                                                 │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │  2. Missing Route: Mark Problem Complete                             │ │
+│  │     Status: 404 - Route not mounted                                   │ │
+│  │     Component: metabob-analysis-api                                   │ │
+│  │     Fix Time: 1 hour                                                  │ │
+│  │     Action: Add app.route('/v2/analysis/problems', problemsRoutes)   │ │
+│  │                                                                         │ │
+│  │  3. Missing Implementation: Generate Spec                            │ │
+│  │     Status: 404 - Not implemented                                     │ │
+│  │     Component: metabob-analysis-api                                   │ │
+│  │     Fix Time: 2-3 days (if implementing) or 10 min (if removing)     │ │
+│  │     Action: Implement endpoint or remove from MCP registry           │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+│  🟢 MEDIUM (Can Wait)                                                      │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │  4. Annotation Schema Mismatch                                        │ │
+│  │     Status: 400 - API expects "content", MCP sends "text"            │ │
+│  │     Component: Both                                                   │ │
+│  │     Fix Time: 2 hours                                                 │ │
+│  │     Action: Align field names                                         │ │
+│  │                                                                         │ │
+│  │  5. Impact Analysis Test Schema                                       │ │
+│  │     Status: Test expects nested structure, API returns flat          │ │
+│  │     Component: Test suite                                             │ │
+│  │     Fix Time: 1 hour                                                  │ │
+│  │     Action: Update test expectations                                  │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                       PERFORMANCE METRICS                                  │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  Response Times (10 requests):                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │  Average:  2ms  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0.04%│ │
+│  │  Minimum:  2ms  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0.04%│ │
+│  │  Maximum:  4ms  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0.08%│ │
+│  │  Threshold: 5000ms                                          100.00% │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                            │
+│  Status: ✅ EXCELLENT - Well below threshold                              │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                     TIMELINE TO PRODUCTION                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  Day 1-2: Fix MCP stdio communication          [🔴 CRITICAL]             │
+│  Day 3:   Mount missing routes                 [🟡 HIGH]                 │
+│  Day 4:   Fix schema issues                    [🟢 MEDIUM]               │
+│                                                                            │
+│  Total: 3-4 days to production-ready                                      │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                          OVERALL STATUS                                    ║
+║                                                                            ║
+║                     ⚠️ PARTIAL SUCCESS (5/9)                              ║
+║                                                                            ║
+║  ✅ API Deployment: Working                                               ║
+║  ✅ API Performance: Excellent (avg 2ms)                                  ║
+║  ✅ 5/9 Endpoints: Passing tests                                          ║
+║  ❌ MCP stdio: Blocking AI integration                                    ║
+║  ❌ 3/9 Endpoints: Have issues                                            ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+Legend:
+  ✅ Working      ❌ Failing      ⚠️ Partial      ⏸️ Blocked
+  🔴 Critical     🟡 High         🟢 Medium       ⚫ Ready
+  ⚡ Fast

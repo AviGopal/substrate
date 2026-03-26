@@ -1,7 +1,7 @@
 # SurrealDB configuration for local deployment
 
 name: surrealdb
-namespace: metabob
+namespace: activity-system
 release: local
 
 image:
@@ -27,8 +27,8 @@ persistence:
 
 # Database configuration
 database:
-  namespace: metabob
-  name: devbob
+  namespace: activity-system
+  name: learning_loop
 
 # Credentials for local development
 auth:

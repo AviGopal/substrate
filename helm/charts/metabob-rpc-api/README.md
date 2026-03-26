@@ -15,7 +15,7 @@ recommendation-api for metabob
 | image.recommendation_api.repo | string | `"recommendation-api"` |  |
 | image.recommendation_api.tag | string | `"0.1.0"` |  |
 | name | string | `"recommendation-api"` |  |
-| namespace | string | `"metabob"` |  |
+| namespace | string | `"activity-system"` |  |
 | release | string | `"production"` |  |
 
 ----------------------------------------------

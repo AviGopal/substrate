@@ -6,17 +6,21 @@
 #   Development: Uses .metabob.local TLD
 #   Production:  Uses .metabob.com TLD
 #
-# Service Mapping (Production - *.metabob.com):
-#   app.metabob.com       -> metabob-cloud-dashboard
-#   activity.metabob.com  -> metabob-activity-api
-#   api.metabob.com       -> metabob-analysis-api
+# Service Mapping Matrix:
+# ┌─────────────────────────┬─────────────────────────┬────────────────────────────┐
+# │ Service                 │ Development             │ Production                 │
+# ├─────────────────────────┼─────────────────────────┼────────────────────────────┤
+# │ metabob-activity-api    │ activity.metabob.local  │ activity.metabob.com       │
+# │ metabob-analysis-api    │ api.metabob.local       │ api.metabob.com            │
+# │ metabob-cloud-dashboard │ app.metabob.local       │ app.metabob.com            │
+# │ internal-dashboard      │ internal.metabob.local  │ (no external access)       │
+# │ surrealdb               │ surql.metabob.local     │ (no external access)       │
+# │ valkey/redis            │ (cluster internal only) │ (cluster internal only)    │
+# └─────────────────────────┴─────────────────────────┴────────────────────────────┘
 #
-# Service Mapping (Development - *.metabob.local):
-#   app.metabob.local       -> metabob-cloud-dashboard
-#   activity.metabob.local  -> metabob-activity-api
-#   api.metabob.local       -> metabob-analysis-api
-#   internal.metabob.local  -> metabob-internal-dashboard (dev only)
-#   surql.metabob.local     -> surrealdb (dev only)
+# /etc/hosts (development):
+#   127.0.0.1 app.metabob.local activity.metabob.local api.metabob.local
+#   127.0.0.1 internal.metabob.local surql.metabob.local
 #
 # =============================================================================
 

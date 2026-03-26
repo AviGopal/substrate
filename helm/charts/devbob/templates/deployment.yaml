@@ -57,6 +57,70 @@ spec:
         - name: config
           mountPath: /config-readonly
           readOnly: true
+      {{- if .Values.repositories.persistence.enabled }}
+      - name: clone-repos
+        image: alpine/git:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=== Repository Initialization ==="
+
+          {{- if .Values.repositories.git.enabled }}
+          # Setup git credentials
+          if [ -f /git-config/.gitconfig ]; then
+            cp /git-config/.gitconfig /root/.gitconfig
+            echo "Git config installed"
+          fi
+
+          if [ -f /git-config/.git-credentials ]; then
+            cp /git-config/.git-credentials /root/.git-credentials
+            chmod 600 /root/.git-credentials
+            echo "Git credentials installed"
+          fi
+
+          if [ -f /git-config/id_rsa ]; then
+            mkdir -p /root/.ssh
+            cp /git-config/id_rsa /root/.ssh/id_rsa
+            chmod 600 /root/.ssh/id_rsa
+            ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null || true
+            echo "SSH key installed"
+          fi
+          {{- end }}
+
+          # Clone repositories if not already present
+          {{- range .Values.repositories.repos }}
+          REPO_PATH="{{ $.Values.repositories.persistence.mountPath }}/{{ .path }}"
+          if [ ! -d "$REPO_PATH/.git" ]; then
+            echo "Cloning {{ .url }} into $REPO_PATH..."
+            git clone --branch {{ .branch }} {{ .url }} $REPO_PATH
+            echo "Successfully cloned {{ .path }}"
+          else
+            echo "Repository {{ .path }} already exists, pulling latest changes..."
+            cd $REPO_PATH
+            git fetch origin
+            git checkout {{ .branch }}
+            git pull origin {{ .branch }}
+            echo "Updated {{ .path }} to latest"
+          fi
+          {{- end }}
+
+          echo "=== Repository initialization complete ==="
+          ls -la {{ .Values.repositories.persistence.mountPath }}
+        {{- if .Values.repositories.git.enabled }}
+        volumeMounts:
+        - name: repos
+          mountPath: {{ .Values.repositories.persistence.mountPath }}
+        - name: git-credentials
+          mountPath: /git-config
+          readOnly: true
+        {{- else }}
+        volumeMounts:
+        - name: repos
+          mountPath: {{ .Values.repositories.persistence.mountPath }}
+        {{- end }}
+      {{- end }}
       containers:
       - name: devbob
         {{- with .Values.securityContext }}
@@ -151,6 +215,10 @@ spec:
           value: {{ .Values.env.logLevel | quote }}
         - name: HOME
           value: {{ .Values.env.home | quote }}
+        {{- if .Values.repositories.persistence.enabled }}
+        - name: REPOS_PATH
+          value: {{ .Values.repositories.persistence.mountPath | quote }}
+        {{- end }}
         {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
           {{- if .Values.livenessProbe.httpGet }}
@@ -188,6 +256,10 @@ spec:
         - name: workspace
           mountPath: {{ .Values.persistence.mountPath }}
         {{- end }}
+        {{- if .Values.repositories.persistence.enabled }}
+        - name: repos
+          mountPath: {{ .Values.repositories.persistence.mountPath }}
+        {{- end }}
         # Config is now created by initContainer in /workspace/.config/opencode
         # No need for separate config mount
       volumes:
@@ -195,6 +267,17 @@ spec:
       - name: workspace
         persistentVolumeClaim:
           claimName: {{ include "devbob.fullname" . }}-pvc
+      {{- end }}
+      {{- if .Values.repositories.persistence.enabled }}
+      - name: repos
+        persistentVolumeClaim:
+          claimName: {{ include "devbob.fullname" . }}-repos-pvc
+      {{- end }}
+      {{- if .Values.repositories.git.enabled }}
+      - name: git-credentials
+        secret:
+          secretName: {{ include "devbob.fullname" . }}-git-credentials
+          defaultMode: 0600
       {{- end }}
       - name: config
         configMap:

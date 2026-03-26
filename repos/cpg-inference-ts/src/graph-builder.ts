@@ -343,6 +343,10 @@ export class GraphBuilder {
       // First child is usually the callee
       const callee = node.children[0];
 
+      if (!callee) {
+        return null;
+      }
+
       if (callee.type === 'identifier') {
         return callee.text;
       }
@@ -366,6 +370,9 @@ export class GraphBuilder {
     // Fallback to named children
     if (node.namedChildren && node.namedChildren.length > 0) {
       const callee = node.namedChildren[0];
+      if (!callee) {
+        return null;
+      }
       if (callee.type === 'identifier') {
         return callee.text;
       }

@@ -1,0 +1,67 @@
+{{- if .Values.initData.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.name }}-init-data
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"  # Run after migrations (weight 1-5)
+    "helm.sh/hook-delete-policy": before-hook-creation
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    app.kubernetes.io/component: init-data
+    app.kubernetes.io/part-of: metabob-learning-system
+spec:
+  backoffLimit: {{ .Values.initData.backoffLimit | default 3 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.name }}
+        app.kubernetes.io/component: init-data
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: init-data
+          image: "{{ .Values.initData.image.repository }}:{{ .Values.initData.image.tag }}"
+          imagePullPolicy: {{ .Values.initData.image.pullPolicy | default "IfNotPresent" }}
+          command: ["bun", "run", "sql/init-test-data.ts"]
+          env:
+            - name: SURREALDB_URL
+              value: "http://{{ .Values.name }}.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.service.port }}"
+            - name: SURREALDB_NAMESPACE
+              value: "{{ .Values.database.namespace }}"
+            - name: SURREALDB_DATABASE
+              value: "{{ .Values.database.name }}"
+            - name: SURREALDB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default (printf "%s-credentials" .Values.name) }}
+                  key: {{ .Values.auth.usernameKey }}
+            - name: SURREALDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default (printf "%s-credentials" .Values.name) }}
+                  key: {{ .Values.auth.passwordKey }}
+            - name: DEFAULT_ORG_ID
+              value: "{{ .Values.initData.defaultOrg.id | default "metabob_internal" }}"
+            - name: DEFAULT_ORG_NAME
+              value: "{{ .Values.initData.defaultOrg.name | default "Metabob Internal" }}"
+            - name: MINIBOB_INSTANCE_ID
+              value: "{{ .Values.initData.minibob.instanceId | default "minibob-local-001" }}"
+            - name: MINIBOB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.initData.minibob.secretName | default "minibob-instance-credentials" }}
+                  key: {{ .Values.initData.minibob.secretKey | default "api-key" }}
+                  optional: true
+            - name: MINIBOB_VESSEL_ID
+              value: "{{ .Values.initData.minibob.vesselId | default "minibob-cli-local" }}"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+{{- end }}

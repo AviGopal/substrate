@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: reset-views-tables
+  namespace: activity-system
+spec:
+  restartPolicy: Never
+  containers:
+    - name: reset
+      image: curlimages/curl:latest
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Dropping views and tables..."
+
+          DB_USER=$(cat /secrets/username)
+          DB_PASS=$(cat /secrets/password)
+
+          # Drop views first
+          curl -X POST http://surrealdb.activity-system.svc.cluster.local:8000/sql \
+            -H "surreal-ns: activity-system" \
+            -H "surreal-db: learning_loop" \
+            -u "$DB_USER:$DB_PASS" \
+            -d "REMOVE TABLE view_activity_template;
+                REMOVE TABLE view_high_performing_activities;
+                REMOVE TABLE view_template_activities;
+                REMOVE TABLE view_unused_vessel_functions;
+                REMOVE TABLE view_vessel_functions;"
+
+          # Now drop activity_registry
+          curl -X POST http://surrealdb.activity-system.svc.cluster.local:8000/sql \
+            -H "surreal-ns: activity-system" \
+            -H "surreal-db: learning_loop" \
+            -u "$DB_USER:$DB_PASS" \
+            -d "REMOVE TABLE activity_registry;"
+
+          echo "Views and tables dropped"
+      volumeMounts:
+        - name: db-credentials
+          mountPath: /secrets
+          readOnly: true
+  volumes:
+    - name: db-credentials
+      secret:
+        secretName: surrealdb-credentials

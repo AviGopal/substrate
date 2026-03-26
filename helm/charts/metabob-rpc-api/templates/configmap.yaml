@@ -14,8 +14,8 @@ data:
     
     # Database configuration
     SURREALDB_URL=http://surrealdb:8000
-    SURREALDB_NAMESPACE=metabob
-    SURREALDB_DATABASE={{ .Values.surrealdb.database | default "production" }}
+    SURREALDB_NAMESPACE=activity-system
+    SURREALDB_DATABASE={{ .Values.surrealdb.database | default "learning_loop" }}
     
     # Redis configuration
     REDIS_URI=redis://redis-master:6379

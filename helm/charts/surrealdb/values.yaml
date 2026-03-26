@@ -1,5 +1,5 @@
 name: surrealdb
-namespace: metabob
+namespace: activity-system
 release: production
 
 image:
@@ -27,7 +27,7 @@ persistence:
 
 # Database configuration
 database:
-  namespace: metabob
+  namespace: activity-system
   name: learning_loop
   # Storage backend: memory, file, tikv
   storage:
@@ -48,4 +48,32 @@ healthCheck:
   enabled: true
   path: /health
   port: 8000
+
+# Schema migration (regular Job, NOT Helm hook)
+# Runs after SurrealDB is ready via health check wait
+migration:
+  enabled: false  # Set to true in helmfile to run migrations
+  image:
+    repository: metabob-activity-api
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# Test data initialization (Helm hook - runs after migrations)
+# WARNING: Helm hooks can run before SurrealDB is ready
+# Consider using migration.enabled instead for reliability
+initData:
+  enabled: false  # Disabled by default for reliability
+  backoffLimit: 3
+  image:
+    repository: metabob-activity-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  defaultOrg:
+    id: metabob_internal
+    name: "Metabob Internal"
+  minibob:
+    instanceId: minibob-local-001
+    vesselId: minibob-cli-local
+    secretName: minibob-instance-credentials
+    secretKey: api-key
 

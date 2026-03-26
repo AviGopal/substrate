@@ -1,6 +1,159 @@
+# Deployment Guide
+
+This guide covers deploying the Metabob ecosystem to Kubernetes.
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Deployment Activities](#deployment-activities)
+- [Manual Deployment](#manual-deployment)
+- [Multi-Tenant Configuration](#multi-tenant-configuration)
+- [Troubleshooting](#troubleshooting)
+- [Learning System Specifics](#learning-system-deployment-guide---phases-11-16)
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+1. Kubernetes cluster (Docker Desktop, minikube, or cloud)
+2. Helm 3.x, kubectl, istioctl
+3. Required secrets configured
+
+```bash
+# Create namespace and secrets
+kubectl create namespace activity-system
+kubectl label namespace activity-system istio-injection=enabled
+
+kubectl create secret generic minibob-api-keys \
+  --from-literal=anthropic-api-key=$ANTHROPIC_API_KEY \
+  -n activity-system
+
+kubectl create secret generic surrealdb-credentials \
+  --from-literal=username=root \
+  --from-literal=password=$SURREALDB_PASSWORD \
+  -n activity-system
+```
+
+### Deploy Full Stack
+
+```bash
+cd helm
+helmfile -f activity-system-minimal.yaml.gotmpl sync
+```
+
+### Verify Deployment
+
+```bash
+kubectl get pods -n activity-system
+curl http://api.minibob.local/health
+```
+
+---
+
+## Deployment Activities
+
+MiniBob can execute automated deployment activities:
+
+### deploy-stack-from-scratch
+
+Deploys complete stack to new cluster:
+```bash
+minibob execute --activity deploy-stack-from-scratch
+```
+
+Tasks: Check resources → Deploy SurrealDB → Run migrations → Deploy services → Validate
+
+### rollback-stack
+
+Rolls back to previous version:
+```bash
+minibob execute --activity rollback-stack \
+  --var target_version=1.2.0 \
+  --var reason="Performance regression"
+```
+
+### upgrade-stack
+
+Upgrades with safety checks:
+```bash
+minibob execute --activity upgrade-stack \
+  --var target_version=1.3.0 \
+  --var blue_green=true
+```
+
+See `repos/minibob/activities/` for activity definitions.
+
+---
+
+## Multi-Tenant Configuration
+
+### Authentication Setup
+
+1. **Core schemas** (run once per cluster):
+```bash
+cd repos/metabob-proto
+bun run surrealdb/lib/migrate.ts
+```
+
+2. **Create default organization**:
+```bash
+# Via init-data job (automatic with Helm)
+# Or manually via API after deployment
+```
+
+3. **Configure MiniBob instances**:
+```bash
+kubectl create secret generic minibob-instance-credentials \
+  --from-literal=instance-id=mb-001 \
+  --from-literal=api-key=$(openssl rand -base64 32) \
+  -n activity-system
+```
+
+### API Key Authentication
+
+Users authenticate via API keys:
+```bash
+# Get API key from dashboard
+# Configure in Claude Desktop:
+{
+  "mcpServers": {
+    "metabob": {
+      "command": "npx",
+      "args": ["@metabob/metabob-mcp@latest"],
+      "env": {
+        "METABOB_API_KEY": "mk_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Service Endpoints
+
+| Service | Internal | External |
+|---------|----------|----------|
+| Activity API | `metabob-activity-api.activity-system.svc:8080` | `api.minibob.local` |
+| Analysis API | `metabob-analysis-api.activity-system.svc:8081` | - |
+| SurrealDB | `surrealdb.activity-system.svc:8000` | - |
+| Dashboard | `activity-dashboard.activity-system.svc:3000` | `dashboard.minibob.local` |
+
+---
+
+## Related Documentation
+
+- `docs/MULTI_TENANT_ARCHITECTURE.md` - Tenancy model
+- `docs/RBAC_GUIDE.md` - PERMISSIONS patterns
+- `repos/metabob-proto/surrealdb/MIGRATION_GUIDE.md` - Schema migrations
+
+---
+
 # Learning System Deployment Guide - Phases 1.1-1.6
 
-**Status:** Ready for Deployment  
+**Status:** Ready for Deployment
 **Image:** metabob-activity-api:learning-v1.1-1.6
 
 ---

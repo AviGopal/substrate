@@ -104,7 +104,7 @@ kubectl port-forward -n activity-system svc/redis-master 6379:6379
 config:
   surrealdb:
     url: "http://surrealdb.activity-system.svc.cluster.local:8000"
-    namespace: "metabob"
+    namespace: "activity-system"
     database: "learning_loop"
   redis:
     url: "redis://redis-master.activity-system.svc.cluster.local:6379"
@@ -118,7 +118,7 @@ persistence:
   enabled: true
   size: 5Gi
 database:
-  namespace: metabob
+  namespace: activity-system
   name: learning_loop
 ```
 

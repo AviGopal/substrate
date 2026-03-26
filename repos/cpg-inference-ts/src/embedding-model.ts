@@ -146,7 +146,14 @@ export class ONNXEmbeddingModel {
       const results = await this.session.run(feeds);
 
       // Extract embeddings from first output
-      const outputTensor = results[this.outputNames[0]];
+      const outputName = this.outputNames[0];
+      if (!outputName) {
+        throw new Error('No output names found in model');
+      }
+      const outputTensor = results[outputName];
+      if (!outputTensor) {
+        throw new Error(`Output tensor '${outputName}' not found in results`);
+      }
       const embeddings = new Float32Array(outputTensor.data as ArrayLike<number>);
 
       // Normalize embeddings (L2 normalization)
@@ -225,9 +232,13 @@ export class ONNXEmbeddingModel {
     let normB = 0;
 
     for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      const aVal = a[i];
+      const bVal = b[i];
+      if (aVal !== undefined && bVal !== undefined) {
+        dotProduct += aVal * bVal;
+        normA += aVal * aVal;
+        normB += bVal * bVal;
+      }
     }
 
     const denominator = Math.sqrt(normA) * Math.sqrt(normB);
@@ -242,7 +253,12 @@ export class ONNXEmbeddingModel {
       throw new Error('Cannot average empty embeddings array');
     }
 
-    const dim = embeddings[0].length;
+    const firstEmbedding = embeddings[0];
+    if (!firstEmbedding) {
+      throw new Error('First embedding is undefined');
+    }
+
+    const dim = firstEmbedding.length;
     const result = new Float32Array(dim);
 
     for (const embedding of embeddings) {
@@ -250,13 +266,22 @@ export class ONNXEmbeddingModel {
         throw new Error('All embeddings must have same dimension');
       }
       for (let i = 0; i < dim; i++) {
-        result[i] += embedding[i];
+        const val = embedding[i];
+        if (val !== undefined) {
+          const current = result[i];
+          if (current !== undefined) {
+            result[i] = current + val;
+          }
+        }
       }
     }
 
     // Average
     for (let i = 0; i < dim; i++) {
-      result[i] /= embeddings.length;
+      const val = result[i];
+      if (val !== undefined) {
+        result[i] = val / embeddings.length;
+      }
     }
 
     // Normalize the averaged embedding
@@ -321,7 +346,9 @@ export class ONNXEmbeddingModel {
       let norm = 0;
       for (let j = 0; j < this.embeddingDim; j++) {
         const val = embeddings[offset + j];
-        norm += val * val;
+        if (val !== undefined) {
+          norm += val * val;
+        }
       }
       norm = Math.sqrt(norm);
 
@@ -330,7 +357,10 @@ export class ONNXEmbeddingModel {
 
       // Normalize
       for (let j = 0; j < this.embeddingDim; j++) {
-        normalized[offset + j] = embeddings[offset + j] / norm;
+        const val = embeddings[offset + j];
+        if (val !== undefined) {
+          normalized[offset + j] = val / norm;
+        }
       }
     }
 

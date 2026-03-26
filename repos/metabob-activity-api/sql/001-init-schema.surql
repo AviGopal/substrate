@@ -38,8 +38,8 @@ DEFINE FIELD category ON activity_template TYPE string
   ASSERT $value IN ['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']
   COMMENT "Template category";
 
-DEFINE FIELD task_steps ON activity_template TYPE option<array>
-  COMMENT "Array of task definitions (flexible structure)";
+DEFINE FIELD task_steps ON activity_template TYPE option<array<object>> FLEXIBLE
+  COMMENT "Array of task definitions (flexible structure - no nested validation)";
 
 DEFINE FIELD scope ON activity_template TYPE option<string>
   VALUE $value OR 'global'

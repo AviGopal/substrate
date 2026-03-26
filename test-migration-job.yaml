@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-migration
+  namespace: activity-system
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrations
+          image: metabob-activity-api:rbac-v3
+          imagePullPolicy: IfNotPresent  # Use local image
+          command: ["bun", "sql/migrate.ts", "--verbose"]
+          env:
+            - name: SURREALDB_URL
+              value: "http://surrealdb.activity-system.svc.cluster.local:8000"
+            - name: SURREALDB_NAMESPACE
+              value: "activity-system"
+            - name: SURREALDB_DATABASE
+              value: "learning_loop"
+            - name: SURREALDB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: surrealdb-credentials
+                  key: username
+            - name: SURREALDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: surrealdb-credentials
+                  key: password
+            - name: METABOB_PROTO_PATH
+              value: "/app/node_modules/@metabob/proto/surrealdb/core"
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+            requests:
+              memory: "128Mi"
+              cpu: "100m"

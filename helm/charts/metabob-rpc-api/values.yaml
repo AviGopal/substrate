@@ -1,5 +1,5 @@
 name: rpc-api
-namespace: metabob
+namespace: activity-system
 release: production
 
 config: "universal-config"

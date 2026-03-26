@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: metabobapp/metabob-cloud-dashboard
   pullPolicy: IfNotPresent
-  tag: "dev-0.1.0-62be7a9-1774470652"
+  tag: "dev-0.1.0-1cc4805-1774511480"
 
 imagePullSecrets: []
 nameOverride: ""

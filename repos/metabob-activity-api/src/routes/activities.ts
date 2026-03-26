@@ -382,8 +382,8 @@ app.post('/templates', async (c) => {
     logger.debug('Template inserted into activity_template');
 
     // Create initial performance metrics
-    // org_id is required by schema - use session org or default to metabob_internal for global templates
-    const metricsOrgId = validated.org_id || orgId || 'organizations:metabob_internal';
+    // org_id is optional - use session org or request value if provided
+    const metricsOrgId = validated.org_id || orgId || 'metabob_internal';
     const metricsProjectId = validated.project_id || projectId;
 
     // Build metrics query with conditional project_id
@@ -1595,7 +1595,7 @@ app.post('/recommend', async (c) => {
           selection_metadata: {
             method: 'thompson_sampling',
             alpha,
-            beta,
+            beta: betaVal,
             sample,
             score: sample, // Use sample as score for ranking
           },

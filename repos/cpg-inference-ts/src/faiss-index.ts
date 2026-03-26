@@ -77,6 +77,14 @@ export class FAISSIndex {
       const componentId = componentIds[i];
       const embedding = embeddings[i];
 
+      if (!componentId) {
+        throw new Error(`Component ID at index ${i} is undefined`);
+      }
+
+      if (!embedding) {
+        throw new Error(`Embedding at index ${i} is undefined`);
+      }
+
       if (this.reverseIdMap.has(componentId)) {
         throw new Error(`Component ${componentId} already exists in index`);
       }
@@ -115,8 +123,16 @@ export class FAISSIndex {
     const output: SimilarityResult[] = [];
 
     for (let i = 0; i < results.keys.length; i++) {
-      const internalId = Number(results.keys[i]);
-      const distance = Math.sqrt(results.distances[i]); // USearch returns squared distance
+      const key = results.keys[i];
+      const dist = results.distances[i];
+
+      if (key === undefined || dist === undefined) {
+        console.warn(`Undefined key or distance at index ${i}`);
+        continue;
+      }
+
+      const internalId = Number(key);
+      const distance = Math.sqrt(dist); // USearch returns squared distance
 
       const componentId = this.idMap.get(internalId);
       if (!componentId) {

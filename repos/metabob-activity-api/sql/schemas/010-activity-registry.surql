@@ -202,13 +202,12 @@ DEFINE FIELD IF NOT EXISTS activity_id ON variant_performance_metrics TYPE strin
   ASSERT $value != NONE
   COMMENT "Base activity identifier";
 
-DEFINE FIELD IF NOT EXISTS org_id ON variant_performance_metrics TYPE record<organizations>
-  ASSERT $value != NONE
+DEFINE FIELD IF NOT EXISTS org_id ON variant_performance_metrics TYPE option<string>
   VALUE $value OR $auth.org_id
-  COMMENT "Organization ID (required for RBAC)";
+  COMMENT "Organization ID (string identifier)";
 
-DEFINE FIELD IF NOT EXISTS project_id ON variant_performance_metrics TYPE option<record<projects>>
-  COMMENT "Project ID (optional)";
+DEFINE FIELD IF NOT EXISTS project_id ON variant_performance_metrics TYPE option<string>
+  COMMENT "Project ID (string identifier, optional)";
 
 DEFINE FIELD IF NOT EXISTS total_executions ON variant_performance_metrics TYPE int
   VALUE $value OR 0

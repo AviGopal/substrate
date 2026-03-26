@@ -34,7 +34,10 @@ ROOT_DIR="$(pwd)"
 declare -A VESSELS=(
   ["minibob"]="repos/minibob"
   ["metabob-activity-api"]="repos/metabob-activity-api"
+  ["metabob-analysis-api"]="repos/metabob-analysis-api"
+  ["metabob-cloud-dashboard"]="repos/metabob-cloud-dashboard"
   ["activity-dashboard"]="repos/activity-dashboard"
+  ["metabob-internal-dashboard"]="repos/metabob-internal-dashboard"
 )
 
 # Function to build a vessel
@@ -56,25 +59,41 @@ build_vessel() {
     return 1
   fi
 
-  cd "$full_path"
-
-  # Build image
+  # Build image with appropriate context
   info "Building Docker image: $vessel_name:dev"
-  if docker build -t "$vessel_name:dev" . ; then
-    info "✓ Built $vessel_name:dev"
-    
-    # Also tag as latest
-    docker tag "$vessel_name:dev" "$vessel_name:latest"
-    info "✓ Tagged $vessel_name:latest"
-    
-    # Show image info
-    docker images "$vessel_name" --format "  {{.Repository}}:{{.Tag}} ({{.Size}})"
-    
-    return 0
+
+  # Some vessels need repos/ as build context for shared dependencies
+  # - metabob-activity-api and metabob-analysis-api: need metabob-proto schemas
+  # - metabob-internal-dashboard: needs @metabob/minibob library
+  if [ "$vessel_name" = "metabob-activity-api" ] || [ "$vessel_name" = "metabob-analysis-api" ] || [ "$vessel_name" = "metabob-internal-dashboard" ]; then
+    cd "$ROOT_DIR/repos"
+    if docker build -f "$vessel_name/Dockerfile" -t "$vessel_name:dev" . ; then
+      info "✓ Built $vessel_name:dev (with shared dependencies)"
+    else
+      error "Failed to build $vessel_name"
+      return 1
+    fi
   else
-    error "Failed to build $vessel_name"
-    return 1
+    cd "$full_path"
+    if docker build -t "$vessel_name:dev" . ; then
+      info "✓ Built $vessel_name:dev"
+    else
+      error "Failed to build $vessel_name"
+      return 1
+    fi
   fi
+
+  # Also tag as latest and with metabobapp/ prefix for helm compatibility
+  docker tag "$vessel_name:dev" "$vessel_name:latest"
+  docker tag "$vessel_name:dev" "metabobapp/$vessel_name:dev"
+  docker tag "$vessel_name:dev" "metabobapp/$vessel_name:latest"
+  info "✓ Tagged $vessel_name:latest and metabobapp/$vessel_name:dev"
+
+  # Show image info
+  docker images "$vessel_name" --format "  {{.Repository}}:{{.Tag}} ({{.Size}})"
+  docker images "metabobapp/$vessel_name" --format "  {{.Repository}}:{{.Tag}} ({{.Size}})"
+
+  return 0
 }
 
 # Main execution
