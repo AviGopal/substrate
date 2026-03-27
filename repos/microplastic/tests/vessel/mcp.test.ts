@@ -53,7 +53,6 @@ const createImpulse = (
   options: Partial<Impulse> = {}
 ): Impulse => ({
   id: `imp_${Math.random().toString(36).slice(2, 8)}`,
-  label: "test",
   pointer,
   budget: 2000,
   priority: "medium",
@@ -62,7 +61,7 @@ const createImpulse = (
   ...options,
 });
 
-// Mock fetch helper
+// Mock fetch helper - cast to avoid preconnect type issues
 const mockFetch = (response: unknown, ok = true, status = 200) => {
   return mock(() =>
     Promise.resolve({
@@ -71,7 +70,7 @@ const mockFetch = (response: unknown, ok = true, status = 200) => {
       json: () => Promise.resolve(response),
       text: () => Promise.resolve(JSON.stringify(response)),
     } as Response)
-  );
+  ) as unknown as typeof fetch;
 };
 
 // =============================================================================
@@ -185,7 +184,7 @@ describe("MCPVessel", () => {
           json: () => Promise.resolve({}),
           text: () => Promise.resolve("error"),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       const health = await vessel.healthCheck();
 
@@ -196,7 +195,7 @@ describe("MCPVessel", () => {
       await vessel.initialize(context);
 
       // Services return false (not throw) when health check fails
-      globalThis.fetch = mock(() => Promise.reject(new Error("Connection refused")));
+      globalThis.fetch = mock(() => Promise.reject(new Error("Connection refused"))) as unknown as typeof fetch;
 
       const health = await vessel.healthCheck();
 
@@ -361,7 +360,7 @@ describe("MCPVessel", () => {
             json: () => Promise.resolve(response),
             text: () => Promise.resolve(JSON.stringify(response)),
           } as Response);
-        });
+        }) as unknown as typeof fetch;
 
         const impulse = createImpulse({
           type: "impact_analysis",

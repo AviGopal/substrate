@@ -16,7 +16,7 @@ const mockOptions: MCPClientOptions = {
   cacheTtlMs: 1000, // Short TTL for testing
 };
 
-// Mock fetch
+// Mock fetch - cast to avoid preconnect type issues
 const mockFetch = (response: unknown, ok = true, status = 200) => {
   return mock(() =>
     Promise.resolve({
@@ -25,7 +25,7 @@ const mockFetch = (response: unknown, ok = true, status = 200) => {
       json: () => Promise.resolve(response),
       text: () => Promise.resolve(JSON.stringify(response)),
     } as Response)
-  );
+  ) as unknown as typeof fetch;
 };
 
 // =============================================================================
@@ -162,7 +162,7 @@ describe("EmbeddingsClient", () => {
           json: () => Promise.resolve([]),
           text: () => Promise.resolve("[]"),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       await client.findTests("myFunction");
 
@@ -181,7 +181,7 @@ describe("EmbeddingsClient", () => {
           json: () => Promise.resolve([{ file_path: `src/file${callCount}.ts`, content: "test", score: 0.8 }]),
           text: () => Promise.resolve("[]"),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       const results = await client.batchSearch(["query1", "query2", "query3"]);
 
@@ -218,7 +218,7 @@ describe("EmbeddingsClient", () => {
           json: () => Promise.resolve(results),
           text: () => Promise.resolve("[]"),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       const results = await client.findRelated(["concept1", "concept2"]);
 
@@ -234,7 +234,7 @@ describe("EmbeddingsClient", () => {
           json: () => Promise.resolve([{ file_path: "src/common.ts", content: "code", score: 0.9, start_line: 10 }]),
           text: () => Promise.resolve("[]"),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       const results = await client.findRelated(["concept1", "concept2"]);
 
@@ -256,7 +256,7 @@ describe("EmbeddingsClient", () => {
           json: () => Promise.resolve(results),
           text: () => Promise.resolve("[]"),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       const results = await client.findRelated(["concept1", "concept2"]);
 
@@ -315,7 +315,7 @@ describe("EmbeddingsClient", () => {
     });
 
     test("throws on network error", async () => {
-      globalThis.fetch = mock(() => Promise.reject(new Error("Connection refused")));
+      globalThis.fetch = mock(() => Promise.reject(new Error("Connection refused"))) as unknown as typeof fetch;
 
       await expect(client.search("test")).rejects.toThrow("Embedding search failed");
     });
@@ -338,7 +338,7 @@ describe("EmbeddingsClient", () => {
       globalThis.fetch = mockFetch([]);
       await client.search("test"); // Success
 
-      globalThis.fetch = mock(() => Promise.reject(new Error("Network error")));
+      globalThis.fetch = mock(() => Promise.reject(new Error("Network error"))) as unknown as typeof fetch;
 
       try {
         await client.search("other");

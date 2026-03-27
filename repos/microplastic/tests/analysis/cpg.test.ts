@@ -16,7 +16,7 @@ const mockOptions: MCPClientOptions = {
   cacheTtlMs: 1000, // Short TTL for testing
 };
 
-// Mock fetch
+// Mock fetch - cast to avoid preconnect type issues
 const mockFetch = (response: unknown, ok = true, status = 200) => {
   return mock(() =>
     Promise.resolve({
@@ -25,7 +25,7 @@ const mockFetch = (response: unknown, ok = true, status = 200) => {
       json: () => Promise.resolve(response),
       text: () => Promise.resolve(JSON.stringify(response)),
     } as Response)
-  );
+  ) as unknown as typeof fetch;
 };
 
 // =============================================================================
@@ -205,7 +205,7 @@ describe("CPGClient", () => {
           json: () => Promise.resolve(response),
           text: () => Promise.resolve(JSON.stringify(response)),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       const result = await client.getCallGraph("main", 2);
 
@@ -243,7 +243,7 @@ describe("CPGClient", () => {
           json: () => Promise.resolve(response),
           text: () => Promise.resolve(JSON.stringify(response)),
         } as Response);
-      });
+      }) as unknown as typeof fetch;
 
       // Should not hang due to cycle
       const result = await client.getCallGraph("a", 5);
@@ -297,7 +297,7 @@ describe("CPGClient", () => {
     });
 
     test("throws on network error", async () => {
-      globalThis.fetch = mock(() => Promise.reject(new Error("Network error")));
+      globalThis.fetch = mock(() => Promise.reject(new Error("Network error"))) as unknown as typeof fetch;
 
       await expect(client.findCallers("main")).rejects.toThrow("CPG query failed");
     });
@@ -320,7 +320,7 @@ describe("CPGClient", () => {
       globalThis.fetch = mockFetch({ nodes: [], edges: [] });
       await client.findCallers("main"); // Success
 
-      globalThis.fetch = mock(() => Promise.reject(new Error("Network error")));
+      globalThis.fetch = mock(() => Promise.reject(new Error("Network error"))) as unknown as typeof fetch;
 
       try {
         await client.findCallers("other");
