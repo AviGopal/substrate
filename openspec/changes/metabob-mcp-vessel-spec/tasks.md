@@ -122,35 +122,39 @@
 **Target:** Week 4 | **State After:** Tool usage improves future suggestions
 
 ### Task 4.1: Report Tool Usage to Learning Backend
-- [ ] **File:** `repos/metabob-mcp/src/api-client.ts`
-- [ ] Add `reportCochange(sessionId, changedFiles)` method
-- [ ] Call `/v2/analysis/learning/cochange` endpoint
-- [ ] **File:** `repos/metabob-mcp/src/tools/suggest-related-changes.ts`
-- [ ] After handler returns, call `apiClient.reportCochange()`
-- [ ] Non-blocking (don't wait for response)
+- [x] **File:** `repos/metabob-mcp/src/api-client.ts`
+- [x] Add `reportCochange(sessionId, changedFiles, suggestedFiles)` method
+- [x] Add `reportToolUsage(sessionId, toolName, input, outputSummary)` method
+- [x] Call `/v2/analysis/learning/cochange` and `/v2/analysis/learning/tool-usage`
+- [x] **File:** `repos/metabob-mcp/src/tools/suggest-related-changes.ts`
+- [x] After handler returns, call `apiClient.reportCochange()` and `reportToolUsage()`
+- [x] Non-blocking (fire and forget with error logging)
 - [ ] **Test:** Tool call creates `cochange_patterns` entry
 
 **Commit:** `feat(mcp): report tool usage to learning backend`
 
 ### Task 4.2: Track Predictions for Feedback
-- [ ] **File:** `repos/metabob-mcp/src/session-manager.ts`
-- [ ] Add `trackPrediction(sessionId, { tool, predicted_files, timestamp })`
-- [ ] Add `recordActualChanges(sessionId, actual_files)`
-- [ ] Compare predicted vs actual, calculate accuracy
-- [ ] **File:** `repos/metabob-mcp/src/tools/mark-problem-complete.ts`
-- [ ] After marking complete, call `sessionManager.recordActualChanges()`
-- [ ] Send feedback to `/v2/analysis/learning/feedback`
+- [x] **File:** `repos/metabob-mcp/src/api-client.ts`
+- [x] Add `trackPrediction(sessionId, tool, predictedFiles)` method
+- [x] Add `recordActualChangesAndSubmitFeedback(sessionId, actualFiles)` method
+- [x] Compare predicted vs actual, calculate accuracy
+- [x] Add `submitFeedback()` to send to `/v2/analysis/learning/feedback`
+- [x] **File:** `repos/metabob-mcp/src/tools/mark-problem-complete.ts`
+- [x] After marking complete, call `apiClient.recordActualChangesAndSubmitFeedback()`
+- [x] Report tool usage (non-blocking)
 - [ ] **Test:** Feedback updates pattern confidence
 
 **Commit:** `feat(mcp): track predictions and send feedback`
 
 ### Task 4.3: Output Quality Signals
-- [ ] **File:** `repos/metabob-mcp/src/tools/*.ts` (all formatters)
-- [ ] Check `cpg_status` in response
-- [ ] If `'empty'`, add warning: "CPG not indexed - run init_workspace first"
-- [ ] Show `components_analyzed` count
-- [ ] Show `historical_patterns_found` for cochange tool
-- [ ] Add guidance when data quality is low
+- [x] **File:** `repos/metabob-mcp/src/quality-signals.ts` (new)
+- [x] Create `formatQualitySignals()` utility
+- [x] Create `extractQualitySignals()` to extract from API response
+- [x] **File:** `repos/metabob-mcp/src/tools/suggest-related-changes.ts`
+- [x] Add cpg_status warning: "CPG not indexed - run init_workspace first"
+- [x] Add historical_patterns_found guidance
+- [x] **File:** `repos/metabob-mcp/src/tools/search-codebase.ts`
+- [x] Add cpg_status and components_searched signals
 - [ ] **Test:** Empty CPG shows helpful message
 
 **Commit:** `feat(mcp): output quality signals in tool responses`
