@@ -536,6 +536,54 @@ releases:
       - activity-system/metabob-activity-api
 
   # ===========================================================================
+  # ACTIVITY DASHBOARD - MiniBob Monitoring & Learning Visualization
+  # ===========================================================================
+  # Development only - no production equivalent
+  # Hostname: graph.metabob.local
+  - name: activity-dashboard
+    chart: ./charts/activity-dashboard
+    namespace: activity-system
+    labels:
+      component: ui
+      tier: frontend
+    values:
+      - replicaCount: 1
+        image:
+          repository: metabobapp/activity-dashboard
+          pullPolicy: Never  # Use local images for development
+          tag: "dev"
+        service:
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        config:
+          activityApiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
+          port: 3000
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+    needs:
+      - activity-system/metabob-activity-api
+
+  # ===========================================================================
   # ISTIO GATEWAY - DRY Networking Configuration
   # ===========================================================================
   # Environment-based routing (domain set by environment variable):
@@ -546,6 +594,7 @@ releases:
   #   app.{domain}      -> metabob-cloud-dashboard    (dev+prod)
   #   activity.{domain} -> metabob-activity-api      (dev+prod)
   #   api.{domain}      -> metabob-analysis-api      (dev+prod)
+  #   graph.{domain}    -> activity-dashboard        (dev only)
   #   internal.{domain} -> internal-dashboard        (dev only)
   #   surql.{domain}    -> surrealdb                 (dev only)
   #
@@ -583,6 +632,12 @@ releases:
 
           # Internal Dashboard - dev access only
           internal:
+            enabled:
+              development: true
+              production: false
+
+          # Activity Dashboard (graph.metabob.local) - dev only
+          graph:
             enabled:
               development: true
               production: false
