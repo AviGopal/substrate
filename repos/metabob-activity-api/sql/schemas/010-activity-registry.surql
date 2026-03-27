@@ -277,6 +277,14 @@ DEFINE INDEX IF NOT EXISTS idx_variant_performance_org
 DEFINE INDEX IF NOT EXISTS idx_variant_performance_project
   ON variant_performance_metrics FIELDS project_id;
 
+-- Index for Thompson Sampling belief queries (dashboard convergence metrics)
+DEFINE INDEX IF NOT EXISTS idx_variant_performance_thompson
+  ON variant_performance_metrics FIELDS thompson_alpha, thompson_beta;
+
+-- Composite index for success rate filtering
+DEFINE INDEX IF NOT EXISTS idx_variant_performance_success_rate
+  ON variant_performance_metrics FIELDS org_id, success_rate;
+
 -- =============================================================================
 -- Table: activity_template (DEPRECATED)
 -- =============================================================================

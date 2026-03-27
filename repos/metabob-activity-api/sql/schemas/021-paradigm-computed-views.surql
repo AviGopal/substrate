@@ -171,3 +171,89 @@ DEFINE TABLE IF NOT EXISTS v_activity_shapes AS
 --   };
 -- };
 -- Note: Function disabled - complex subqueries may cause issues. Use query-time computation.
+
+-- ============================================================================
+-- View: v_impulse_relevance
+-- ============================================================================
+-- Purpose: Compute relevance of impulses for activities based on execution success
+-- Used by: Graph Dashboard - Impulse Contribution Analysis
+-- ============================================================================
+
+DEFINE TABLE IF NOT EXISTS v_impulse_relevance AS
+  SELECT
+    impulse_id,
+    activity_id,
+    org_id,
+    count() AS times_loaded,
+    count(IF success = true THEN 1 ELSE NONE END) AS times_succeeded,
+    count(IF success = false THEN 1 ELSE NONE END) AS times_failed,
+    -- Relevance score: proportion of successful executions when this impulse was loaded
+    <float> count(IF success = true THEN 1 ELSE NONE END) / <float> count() AS relevance_score
+  FROM execution, execution.input_impulses AS impulse_id
+  GROUP BY impulse_id, activity_id, org_id
+PERMISSIONS
+  FOR select WHERE org_id = $auth.org_id;
+
+-- Index for efficient impulse relevance lookups
+DEFINE INDEX IF NOT EXISTS idx_v_impulse_relevance_activity
+  ON v_impulse_relevance FIELDS activity_id;
+DEFINE INDEX IF NOT EXISTS idx_v_impulse_relevance_impulse
+  ON v_impulse_relevance FIELDS impulse_id;
+
+-- ============================================================================
+-- View: v_composition_graph
+-- ============================================================================
+-- Purpose: Aggregate parent→child execution relationships with success rates
+-- Used by: Graph Dashboard - Composition Strength Visualization
+-- ============================================================================
+
+DEFINE TABLE IF NOT EXISTS v_composition_graph AS
+  SELECT
+    parent.activity_id AS parent_activity_id,
+    child.activity_id AS child_activity_id,
+    parent.org_id AS org_id,
+    count() AS execution_count,
+    count(IF child.success = true THEN 1 ELSE NONE END) AS success_count,
+    count(IF child.success = false THEN 1 ELSE NONE END) AS failure_count,
+    -- Weight: success rate for this edge
+    <float> count(IF child.success = true THEN 1 ELSE NONE END) / <float> count() AS weight,
+    time::max(child.executed_at) AS last_executed_at
+  FROM execution AS child
+  JOIN execution AS parent ON child.parent_execution_id = parent.id
+  GROUP BY parent.activity_id, child.activity_id, parent.org_id
+PERMISSIONS
+  FOR select WHERE org_id = $auth.org_id;
+
+-- Indexes for composition graph traversal
+DEFINE INDEX IF NOT EXISTS idx_v_composition_parent
+  ON v_composition_graph FIELDS parent_activity_id;
+DEFINE INDEX IF NOT EXISTS idx_v_composition_child
+  ON v_composition_graph FIELDS child_activity_id;
+DEFINE INDEX IF NOT EXISTS idx_v_composition_weight
+  ON v_composition_graph FIELDS org_id, weight;
+
+-- ============================================================================
+-- View: v_convergence_metrics
+-- ============================================================================
+-- Purpose: Aggregate convergence indicators for dashboard overview
+-- Used by: Graph Dashboard - Convergence Overview
+-- ============================================================================
+
+DEFINE TABLE IF NOT EXISTS v_convergence_metrics AS
+  SELECT
+    org_id,
+    count() AS total_activities,
+    -- Exploration: activities with <5 executions (high uncertainty)
+    count(IF total_executions < 5 THEN 1 ELSE NONE END) AS exploration_count,
+    -- Transition: activities with 5-9 executions
+    count(IF total_executions >= 5 AND total_executions < 10 THEN 1 ELSE NONE END) AS transition_count,
+    -- Exploitation: activities with ≥10 executions (low uncertainty)
+    count(IF total_executions >= 10 THEN 1 ELSE NONE END) AS exploitation_count,
+    -- Average belief across all activities: alpha / (alpha + beta)
+    math::mean(<float> alpha / (<float> alpha + <float> beta)) AS avg_belief,
+    -- Total executions across all activities
+    math::sum(total_executions) AS total_executions_all
+  FROM v_activity_score
+  GROUP BY org_id
+PERMISSIONS
+  FOR select WHERE org_id = $auth.org_id;

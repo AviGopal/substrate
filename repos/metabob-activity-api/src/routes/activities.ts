@@ -2090,10 +2090,51 @@ app.post('/recommend', async (c) => {
       // Take top N
       .slice(0, limit);
 
-    logger.info('Recommendations generated', { 
+    logger.info('Recommendations generated', {
       count: recommendations.length,
-      top: recommendations[0]?.template_id 
+      top: recommendations[0]?.template_id
     });
+
+    // Log Thompson Sampling selections for explainability (non-blocking)
+    // Only log if we have an org context and recommendations
+    if (orgId && recommendations.length > 0) {
+      // Log each selection to thompson_selection_log for explainability
+      const selectionLogs = recommendations.map((rec: any, index: number) => ({
+        execution_id: `recommend-${Date.now()}-${index}`, // Placeholder until actual execution
+        activity_id: rec.template_id,
+        thompson_sample: rec.selection_metadata.sample,
+        alpha: rec.selection_metadata.alpha,
+        beta: rec.selection_metadata.beta,
+        selection_method: 'thompson_sampling',
+        candidates_count: templates.length,
+        org_id: orgId,
+        project_id: projectId,
+      }));
+
+      // Insert selection logs (fire-and-forget for performance)
+      surrealDB.query(`
+        INSERT INTO thompson_selection_log $logs
+      `, { logs: selectionLogs }).catch((err: any) => {
+        logger.warn('Failed to log Thompson selections', { error: err.message });
+      });
+
+      // Increment total_selections for recommended activities
+      const activityIds = recommendations.map((r: any) => r.template_id);
+      surrealDB.query(`
+        UPDATE variant_performance_metrics
+        SET total_selections = total_selections + 1,
+            updated_at = time::now()
+        WHERE variant_id IN $activity_ids
+          AND org_id = $org_id
+      `, { activity_ids: activityIds, org_id: orgId }).catch((err: any) => {
+        logger.warn('Failed to update total_selections', { error: err.message });
+      });
+
+      logger.debug('Selection metrics queued for persistence', {
+        selectionCount: selectionLogs.length,
+        activityIds,
+      });
+    }
 
     return c.json({ recommendations });
   } catch (error: any) {
