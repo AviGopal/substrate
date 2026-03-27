@@ -27,7 +27,7 @@ milestones:
 
   - id: M3
     name: Convergence Overview View
-    status: pending
+    status: complete
     commit: "feat(dashboard): add convergence overview view"
     depends_on: [M2]
 

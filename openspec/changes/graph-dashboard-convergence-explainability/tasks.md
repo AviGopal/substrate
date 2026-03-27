@@ -93,33 +93,33 @@
 
 ### Tasks
 
-- [ ] **3.1** Create `useConvergence` hook
+- [x] **3.1** Create `useConvergence` hook
   - Location: `repos/activity-dashboard/src/hooks/useConvergence.ts`
   - Fetches: corpus-summary, activity-scores, execution-traces (for trends)
   - Returns: `{ metrics, trends, loading, error, refresh }`
 
-- [ ] **3.2** Create `ConvergenceOverview` component
+- [x] **3.2** Create `ConvergenceOverview` component
   - Location: `repos/activity-dashboard/src/components/ConvergenceOverview.tsx`
   - Layout: 4-card grid + trend chart
 
-- [ ] **3.3** Implement Belief Stability Gauge
+- [x] **3.3** Implement Belief Stability Gauge
   - Metric: `% activities with uncertainty < 10%`
   - Calculation: `sqrt((α*β) / ((α+β)² * (α+β+1))) * 100`
   - Visual: Progress bar with color (red/yellow/green)
 
-- [ ] **3.4** Implement Exploration/Exploitation Balance
+- [x] **3.4** Implement Exploration/Exploitation Balance
   - Metric: Stacked bar (exploration <5 exec, exploitation ≥10 exec)
   - Visual: Horizontal stacked bar with trend arrow
 
-- [ ] **3.5** Implement Success Rate Trend
+- [x] **3.5** Implement Success Rate Trend
   - Data: Rolling 7-day success rate from execution traces
   - Visual: Line chart using HistoricalTrendsChart
 
-- [ ] **3.6** Implement Composition Pattern Counter
+- [x] **3.6** Implement Composition Pattern Counter
   - Metric: Count of edges with reliability >0.8
   - Visual: Number card with trend indicator
 
-- [ ] **3.7** Add Convergence tab to App.tsx navigation
+- [x] **3.7** Add Convergence tab to App.tsx navigation
   - Position: After "Overview", before "Activity"
 
 **Testable State**: Convergence view loads, shows real metrics, auto-refreshes
