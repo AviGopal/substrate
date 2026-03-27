@@ -3,6 +3,7 @@ export * from './types';
 export * from './ai-provider';
 export * from './stream';
 export * from './tools';
+export * from './context';
 
 interface ParsedArgs {
   command?: string;

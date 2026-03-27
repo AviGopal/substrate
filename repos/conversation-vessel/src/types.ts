@@ -62,3 +62,29 @@ export interface Impulse {
   };
   loadingState: 'pending' | 'loading' | 'loaded' | 'error';
 }
+
+// ImpulseRef interface for referencing and resolving impulses
+export interface ImpulseRef {
+  id: string;
+  type: 'file' | 'memo';
+  budget: number;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  content?: string; // For memo type or resolved file content
+  metadata?: {
+    summary?: string;
+    shape?: Record<string, any>;
+    rowCount?: number;
+    availableOps?: string[];
+  };
+}
+
+export interface ResolveResult {
+  success: boolean;
+  data?: string;
+  error?: string;
+  metadata?: {
+    size?: number;
+    encoding?: string;
+    lastModified?: Date;
+  };
+}

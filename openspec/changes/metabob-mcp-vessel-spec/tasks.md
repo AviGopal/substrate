@@ -43,24 +43,24 @@
 **Target:** Week 2 | **State After:** CPG has real data after workspace init
 
 ### Task 2.1: Implement File Indexing Endpoint
-- [ ] **File:** `repos/metabob-analysis-api/src/routes/indexing.ts`
-- [ ] Complete POST `/v2/analysis/index` implementation
-- [ ] Accept JSON body: `{ files: Record<string, string> }` (filename → content)
-- [ ] Call `cpgService.addFiles(sessionId, files)`
-- [ ] Return: `{ indexed: number, components: number, status: string }`
-- [ ] Add GET `/v2/analysis/status` for indexing progress
+- [x] **File:** `repos/metabob-analysis-api/src/routes/indexing.ts`
+- [x] Complete POST `/v2/analysis/index` implementation
+- [x] Accept JSON body: `{ files: Record<string, string> }` (filename → content)
+- [x] Call `cpgService.addFiles(sessionId, files)`
+- [x] Return: `{ indexed: number, components: number, status: string }`
+- [x] Add GET `/v2/analysis/status` for indexing progress
 - [ ] **Test:** POST files, verify CPG status shows components
 
 **Commit:** `feat(indexing): implement file indexing endpoint`
 
 ### Task 2.2: Add Workspace Initialization Tool
-- [ ] **File:** `repos/metabob-mcp/src/tools/init-workspace.ts` (new)
-- [ ] Input: `{ root_path?: string, patterns?: string[] }`
-- [ ] Default patterns: `["**/*.ts", "**/*.tsx", "**/*.js"]`
-- [ ] Exclude: `node_modules`, `.git`, `dist`
-- [ ] Read file contents, call `/v2/analysis/index`
-- [ ] Report progress and final component count
-- [ ] Register in `TOOL_REGISTRY`
+- [x] **File:** `repos/metabob-mcp/src/tools/init-workspace.ts` (new)
+- [x] Input: `{ root_path?: string, patterns?: string[] }`
+- [x] Default patterns: `["**/*.ts", "**/*.tsx", "**/*.js"]`
+- [x] Exclude: `node_modules`, `.git`, `dist`
+- [x] Read file contents, call `/v2/analysis/index`
+- [x] Report progress and final component count
+- [x] Register in `TOOL_REGISTRY`
 - [ ] **Test:** Tool indexes workspace, subsequent CPG queries work
 
 **Commit:** `feat(mcp): add workspace initialization tool`
