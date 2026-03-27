@@ -21,7 +21,7 @@ milestones:
 
   - id: M2
     name: Shared UI Components
-    status: pending
+    status: complete
     commit: "feat(dashboard): add shared components for convergence views"
     depends_on: [M1]
 

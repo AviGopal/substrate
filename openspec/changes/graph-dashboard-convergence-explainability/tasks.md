@@ -52,32 +52,32 @@
 
 ### Tasks
 
-- [ ] **2.1** Create `DateRangePicker` component
+- [x] **2.1** Create `DateRangePicker` component
   - Location: `repos/activity-dashboard/src/components/ui/date-range-picker.tsx`
   - Uses: shadcn Calendar component
   - Props: `{ startDate, endDate, onChange, presets: ['7d', '30d', '90d'] }`
   - Test: Renders, date selection works, presets work
 
-- [ ] **2.2** Create `InteractiveGraph` base component
+- [x] **2.2** Create `InteractiveGraph` base component
   - Location: `repos/activity-dashboard/src/components/ui/interactive-graph.tsx`
   - Uses: React Flow or D3.js
   - Features: Zoom, pan, node click, edge hover
   - Props: `{ nodes, edges, onNodeClick, onEdgeHover }`
   - Test: Renders graph, interactions work
 
-- [ ] **2.3** Create `ExportUtility` component
+- [x] **2.3** Create `ExportUtility` component
   - Location: `repos/activity-dashboard/src/components/ui/export-button.tsx`
   - Formats: CSV, JSON
   - Props: `{ data, filename, columns? }`
   - Test: Downloads correct file format
 
-- [ ] **2.4** Create `HistoricalTrendsChart` component
+- [x] **2.4** Create `HistoricalTrendsChart` component
   - Location: `repos/activity-dashboard/src/components/ui/historical-trends-chart.tsx`
   - Uses: Recharts LineChart
   - Props: `{ data, xKey, yKey, dateRange }`
   - Test: Renders time-series with correct data
 
-- [ ] **2.5** Create `SparklineChart` component for inline trends
+- [x] **2.5** Create `SparklineChart` component for inline trends
   - Location: `repos/activity-dashboard/src/components/ui/sparkline.tsx`
   - Uses: Recharts (minimal)
   - Props: `{ data, width, height, color }`
