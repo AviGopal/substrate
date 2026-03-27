@@ -206,36 +206,36 @@
 **Target:** Week 6 | **State After:** Full multi-tenant isolation
 
 ### Task 6.1: Add Project-Scoped Filtering
-- [ ] **File:** `repos/metabob-activity-api/src/middleware/auth.ts`
-- [ ] Extract `project_ids` array from JWT claims
-- [ ] **File:** SQL schemas
-- [ ] Add PERMISSIONS: `WHERE project_id IN $auth.project_ids`
-- [ ] Apply to `activity_execution_traces`, `cochange_patterns`
+- [x] **File:** `repos/metabob-activity-api/src/middleware/jwtAuth.ts`
+- [x] Extract `project_ids` array from JWT claims (already implemented)
+- [x] **File:** SQL schemas
+- [x] Add PERMISSIONS: `WHERE project_id IN $auth.project_ids` (already in schemas)
+- [x] Apply to `activity_execution_traces`, `cochange_patterns` (verified)
 - [ ] **Test:** Cross-project queries return empty
 
-**Commit:** `feat(auth): add project-scoped filtering`
+**Commit:** `feat(auth): add project-scoped filtering` (pre-existing infrastructure)
 
 ### Task 6.2: Implement Public Template Sharing
-- [ ] **File:** `repos/metabob-activity-api/src/routes/activities.ts`
-- [ ] Add field: `public: boolean` to activity_registry
-- [ ] Add GET `/v2/activities/public` endpoint (no auth required)
-- [ ] Query: `WHERE scope = 'global' AND public = true`
-- [ ] **File:** SQL schema
-- [ ] Update PERMISSIONS: `FOR select WHERE org_id = $auth.org_id OR public = true`
+- [x] **File:** `repos/metabob-activity-api/src/routes/activities.ts`
+- [x] Add field: `public: boolean` to activity_registry (already in schema)
+- [x] Add GET `/v2/activities/public` endpoint (no auth required)
+- [x] Query: `WHERE scope = 'global' AND public = true`
+- [x] **File:** SQL schema (already has `public` field and PERMISSIONS)
+- [x] Update PERMISSIONS: `FOR select WHERE org_id = $auth.org_id OR public = true`
 - [ ] **Test:** Public templates visible without auth
 
-**Commit:** `feat(public): implement public template sharing`
+**Commit:** `feat(multi-tenant): add public templates endpoint and documentation`
 
 ### Task 6.3: Update Multi-Tenant Documentation
-- [ ] **File:** `docs/MULTI_TENANT_ARCHITECTURE.md`
-- [ ] Document scoping hierarchy (global → org → project → session)
-- [ ] RBAC patterns with code examples
-- [ ] API key provisioning flow
-- [ ] Session management
-- [ ] Learning data isolation constraints
+- [x] **File:** `docs/MULTI_TENANT_ARCHITECTURE.md`
+- [x] Document scoping hierarchy (global → org → project → session)
+- [x] RBAC patterns with code examples
+- [x] API key provisioning flow
+- [x] Session management
+- [x] Learning data isolation constraints
 - [ ] **Test:** N/A (documentation)
 
-**Commit:** `docs: update multi-tenant architecture guide`
+**Commit:** `feat(multi-tenant): add public templates endpoint and documentation`
 
 ---
 
