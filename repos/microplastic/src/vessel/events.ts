@@ -8,34 +8,37 @@ import type { VesselEvents, VesselEventEmitter } from "./types.ts";
 
 type EventHandler<T> = (data: T) => void;
 
-/**
- * Simple typed event emitter implementation
- */
-export class VesselEventEmitterImpl implements VesselEventEmitter {
-  private handlers = new Map<keyof VesselEvents, Set<EventHandler<unknown>>>();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EventMap = Record<string, any>;
 
-  on<K extends keyof VesselEvents>(event: K, handler: (data: VesselEvents[K]) => void): void {
+/**
+ * Generic typed event emitter implementation
+ */
+export class TypedEventEmitter<TEvents extends EventMap> {
+  private handlers = new Map<keyof TEvents, Set<EventHandler<unknown>>>();
+
+  on<K extends keyof TEvents>(event: K, handler: (data: TEvents[K]) => void): void {
     if (!this.handlers.has(event)) {
       this.handlers.set(event, new Set());
     }
     this.handlers.get(event)!.add(handler as EventHandler<unknown>);
   }
 
-  off<K extends keyof VesselEvents>(event: K, handler: (data: VesselEvents[K]) => void): void {
+  off<K extends keyof TEvents>(event: K, handler: (data: TEvents[K]) => void): void {
     const handlers = this.handlers.get(event);
     if (handlers) {
       handlers.delete(handler as EventHandler<unknown>);
     }
   }
 
-  emit<K extends keyof VesselEvents>(event: K, data: VesselEvents[K]): void {
+  emit<K extends keyof TEvents>(event: K, data: TEvents[K]): void {
     const handlers = this.handlers.get(event);
     if (handlers) {
       for (const handler of handlers) {
         try {
           handler(data);
         } catch (error) {
-          console.error(`[VesselEvents] Error in handler for ${event}:`, error);
+          console.error(`[EventEmitter] Error in handler for ${String(event)}:`, error);
         }
       }
     }
@@ -44,7 +47,7 @@ export class VesselEventEmitterImpl implements VesselEventEmitter {
   /**
    * Remove all handlers for an event
    */
-  removeAllListeners(event?: keyof VesselEvents): void {
+  removeAllListeners(event?: keyof TEvents): void {
     if (event) {
       this.handlers.delete(event);
     } else {
@@ -55,7 +58,12 @@ export class VesselEventEmitterImpl implements VesselEventEmitter {
   /**
    * Get the number of listeners for an event
    */
-  listenerCount(event: keyof VesselEvents): number {
+  listenerCount(event: keyof TEvents): number {
     return this.handlers.get(event)?.size ?? 0;
   }
 }
+
+/**
+ * Vessel-specific event emitter (for backwards compatibility)
+ */
+export class VesselEventEmitterImpl extends TypedEventEmitter<VesselEvents> implements VesselEventEmitter {}
