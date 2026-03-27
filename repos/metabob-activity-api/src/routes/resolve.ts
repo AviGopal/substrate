@@ -107,7 +107,7 @@ resolve.post('/resolve', async (c) => {
       }, 401);
     }
 
-    const jwtAuth = getJwtAuthFromContext(c);
+    const jwtAuth = getJwtAuthFromContext(c)!;
     const body = await c.req.json() as ResolveRequest;
     const { impulse, execution_context, prefer_tier, messages, system, max_tokens } = body;
 
@@ -390,9 +390,8 @@ function executePatternTemplate(template: any, impulse: Impulse): any {
 function buildMessagesFromImpulse(impulse: Impulse): Anthropic.MessageParam[] {
   // Convert impulse to a user message
   const content = JSON.stringify({
-    type: impulse.pointer.type,
-    metadata: impulse.metadata,
-    ...impulse.pointer
+    ...impulse.pointer,
+    metadata: impulse.metadata
   }, null, 2);
 
   return [
@@ -419,7 +418,7 @@ async function recordResolution(
   jwtToken: string
 ): Promise<string> {
   try {
-    const result = await queryWithAuth<{ id: string }[]>(
+    const result = await queryWithAuth<{ id: string }>(
       jwtToken,
       `CREATE llm_resolution_log CONTENT {
         org_id: $orgId,

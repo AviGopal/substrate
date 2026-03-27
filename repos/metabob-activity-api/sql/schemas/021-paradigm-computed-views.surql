@@ -33,7 +33,9 @@ DEFINE TABLE IF NOT EXISTS v_activity_score AS
     time::max(executed_at) AS last_executed_at,
     time::min(executed_at) AS first_executed_at
   FROM execution
-  GROUP BY activity_id, org_id;
+  GROUP BY activity_id, org_id
+PERMISSIONS
+  FOR select WHERE org_id = $auth.org_id;
 
 -- Note: Thompson Sampling selection happens application-side
 -- SurrealDB doesn't have native Beta distribution sampling

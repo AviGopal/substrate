@@ -2,6 +2,7 @@
 export * from './types';
 export * from './ai-provider';
 export * from './stream';
+export * from './tools';
 
 interface ParsedArgs {
   command?: string;

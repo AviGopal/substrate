@@ -26,6 +26,8 @@ interface Connection {
   id: string;
   api_key_id: string;
   org_id: string;
+  session_token: string;
+  connected_at: string;
   status: 'active' | 'grace' | 'disconnected';
   last_heartbeat: string;
   grace_until?: string;
@@ -43,7 +45,7 @@ async function processHeartbeats(): Promise<void> {
 
   try {
     // Find active connections that missed heartbeat
-    const staleConnections = await surrealDB.query<Connection[]>(
+    const staleConnections = await surrealDB.query<Connection>(
       `SELECT * FROM connection
        WHERE status = 'active'
        AND last_heartbeat < $threshold`,
@@ -92,7 +94,7 @@ async function processHeartbeats(): Promise<void> {
     }
 
     // Find grace periods that have expired
-    const expiredConnections = await surrealDB.query<Connection[]>(
+    const expiredConnections = await surrealDB.query<Connection>(
       `SELECT * FROM connection
        WHERE status = 'grace'
        AND grace_until < $now`,
@@ -172,7 +174,7 @@ async function cleanupOldConnections(): Promise<void> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   try {
-    const deleted = await surrealDB.query<{ count: number }[]>(
+    const deleted = await surrealDB.query<{ count: number }>(
       `DELETE connection WHERE status = 'disconnected' AND disconnected_at < $cutoff RETURN COUNT()`
     , { cutoff });
 

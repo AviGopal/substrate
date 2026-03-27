@@ -44,6 +44,14 @@ spec:
             host: {{ $service.service }}.{{ $service.namespace }}.svc.cluster.local
             port:
               number: {{ $service.port }}
+      {{- if and $service.settings $service.settings.requestHeaders }}
+      headers:
+        request:
+          set:
+            {{- range $header, $value := $service.settings.requestHeaders }}
+            {{ $header }}: {{ $value | quote }}
+            {{- end }}
+      {{- end }}
       {{- if and $service.settings $service.settings.timeout }}
       timeout: {{ $service.settings.timeout }}
       {{- else }}

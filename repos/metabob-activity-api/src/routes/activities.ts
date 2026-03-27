@@ -1619,9 +1619,9 @@ app.get('/metrics/summary', async (c) => {
       total_templates: totalTemplates,
       total_executions: stats.total_executions || 0,
       executions_today: stats.executions_today || 0,
-      average_success_rate: parseFloat((stats.success_rate || 0) * 100).toFixed(1),
+      average_success_rate: ((stats.success_rate || 0) * 100).toFixed(1),
       average_duration_ms: Math.round(stats.avg_duration || 0),
-      total_cost_usd: parseFloat(stats.total_cost || 0).toFixed(2),
+      total_cost_usd: (stats.total_cost || 0).toFixed(2),
     };
 
     logger.info('Metrics summary retrieved', summary);

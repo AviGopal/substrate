@@ -89,8 +89,8 @@ Vessels are **collections of ideas and intent in the instructional state** that 
 - **Dependencies** (other vessels, services)
 
 **Two execution modes:**
-1. **User-Directed Sessions** (active work): User provides instructions, activities execute
-2. **Boredom Activities** (autonomous improvement): System improves itself when idle (5+ min threshold)
+1. **Discussions** (active work): User provides instructions, activities execute
+2. **Boredom** (autonomous improvement): System improves itself when idle (5+ min threshold)
 
 **No explicit stages**: Vessels exist on a continuous spectrum of decomposition and maturity. There's no "graduation" - just continuous evolution through measured outcomes.
 
@@ -344,7 +344,8 @@ bun test               # Run tests
 2. Istio installed: `istioctl install --set profile=demo -y`
 3. Configure `/etc/hosts`:
    ```
-   127.0.0.1  api.minibob.local dashboard.minibob.local
+   127.0.0.1  api.metabob.local app.metabob.local activity.metabob.local
+   127.0.0.1  graph.metabob.local internal.metabob.local surql.metabob.local minibob.metabob.local
    ```
 4. Set environment variables:
    ```bash
@@ -465,7 +466,7 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 
 ### Service Endpoints
 
-**Backend API:** `http://api.minibob.local` (external) / `http://metabob-activity-api.activity-system.svc.cluster.local:8080` (internal)
+**Backend API:** `http://activity.metabob.local` (external) / `http://metabob-activity-api.activity-system.svc.cluster.local:8080` (internal)
 - `GET /health`: Health check
 - `POST /v2/activities/recommend`: Thompson Sampling recommendations
 - `GET /v2/activities/templates`: List templates
@@ -476,16 +477,62 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 - `POST /v2/activities/tool-usage`: Record tool usage patterns
 - `POST /v2/activities/execution-sequences`: Store execution sequences
 
-**Dashboard:** `http://dashboard.minibob.local` (external) / `http://activity-dashboard.activity-system.svc.cluster.local:3000` (internal)
-
-**SurrealDB:** `http://surrealdb.activity-system.svc.cluster.local:8000`
+**SurrealDB:** `http://surql.metabob.local` (external) / `http://surrealdb.activity-system.svc.cluster.local:8000` (internal)
 - Namespace: `activity-system`
 - Database: `learning_loop`
 - Auth: Username and password from environment variables
 
-**Valkey/Redis:** `redis://redis-valkey.activity-system.svc.cluster.local:6379`
-- No authentication (local dev)
-- In-memory only (no persistence)
+### Development Network Mapping
+
+All services use the `.metabob.local` TLD for local development. Traffic routes through Istio ingress gateway on port 80.
+
+**Service Hostname Matrix:**
+
+| Hostname | Service | Port | Purpose | Notes |
+|----------|---------|------|---------|-------|
+| `app.metabob.local` | metabob-cloud-dashboard | 3000 | SaaS frontend | WebSocket at `/ws` |
+| `activity.metabob.local` | metabob-activity-api | 8080 | Learning backend | Thompson Sampling, traces |
+| `api.metabob.local` | metabob-analysis-api | 8080 | Code analysis | Problem detection |
+| `graph.metabob.local` | activity-dashboard | 3000 | Observability UI | Dev only |
+| `internal.metabob.local` | metabob-internal-dashboard | 3001 | Internal UI | WebSocket at `/ws` |
+| `surql.metabob.local` | surrealdb | 8000 | Database | Headers auto-injected |
+| `minibob.metabob.local` | minibob | 8080 | Autonomous vessel | 3 replicas |
+
+**SurrealDB Access Notes:**
+
+Istio automatically injects headers for `surql.metabob.local`:
+```yaml
+headers:
+  request:
+    set:
+      surreal-ns: activity-system
+      surreal-db: learning_loop
+      Accept: application/json
+```
+
+This means API calls work without specifying namespace/database:
+```bash
+# Works - headers injected by Istio
+curl -X POST http://surql.metabob.local/sql \
+  -u 'root:surrealdb-local-dev-123' \
+  -d 'SELECT * FROM activity LIMIT 5'
+
+# Root path redirects to Surrealist (intentional SurrealDB behavior)
+# Use https://surrealdb.com/surrealist for browser-based DB access
+```
+
+**`.local` TLD Considerations:**
+
+The `.local` TLD is reserved for mDNS (Multicast DNS). On some systems:
+- mDNS may intercept `.local` queries before checking `/etc/hosts`
+- Linux with `systemd-resolved`: Check `resolvectl status` for mDNS settings
+- macOS: May have conflicts with Bonjour
+
+If resolution fails, verify with:
+```bash
+getent hosts surql.metabob.local  # Should return 127.0.0.1
+resolvectl query surql.metabob.local  # Check resolver path
+```
 
 ## Configuration
 

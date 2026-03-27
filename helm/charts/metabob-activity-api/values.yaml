@@ -4,7 +4,7 @@ replicaCount: 2
 image:
   repository: metabobapp/metabob-activity-api
   pullPolicy: IfNotPresent
-  tag: "dev-1.0.0-fe2f1c4-1774587854"
+  tag: "dev-1.0.0-b07c1f9-1774595346"
 
 imagePullSecrets: []
 nameOverride: ""

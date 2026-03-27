@@ -633,6 +633,8 @@ export const ImpulseResolveRequestSchema = z.object({
     severity: z.array(z.string()).optional(), // For codebaseSearch filters
     category: z.array(z.string()).optional(), // For codebaseSearch filters
     status: z.enum(['open', 'in_progress', 'resolved', 'ignored']).optional(), // For problemCluster filter
+    // For activityExecutionTrace pointer type
+    includeImpulses: z.boolean().optional(), // Include referenced impulses in response
   }),
 });
 

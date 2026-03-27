@@ -460,7 +460,9 @@ export async function getActivityScores(
 
     if (orgId) {
       query += ` WHERE org_id = $org_id`;
-      params.org_id = orgId;
+      // Legacy table stores org_id as plain string (e.g., "metabob_internal")
+      // Strip organizations: prefix if present
+      params.org_id = orgId.startsWith('organizations:') ? orgId.replace('organizations:', '') : orgId;
     }
 
     if (activityIds && activityIds.length > 0) {

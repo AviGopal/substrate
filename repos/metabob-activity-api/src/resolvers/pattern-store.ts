@@ -380,7 +380,7 @@ export async function createPattern(
   try {
     const now = new Date().toISOString();
 
-    const result = await surrealDB.query<Pattern[]>(
+    const result = await surrealDB.query<Pattern>(
       `CREATE pattern CONTENT {
         pattern_id: $patternId,
         org_id: $orgId,

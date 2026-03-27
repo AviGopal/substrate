@@ -161,11 +161,16 @@ services:
       retries:
         attempts: 1
         perTryTimeout: 30s
+      # Inject default headers so browser/Surrealist access works without redirect
+      requestHeaders:
+        surreal-ns: activity-system
+        surreal-db: learning_loop
+        Accept: application/json
       cors:
         allowOrigins:
           - exact: "*"
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-        allowHeaders: ["content-type", "authorization", "ns", "db", "accept"]
+        allowHeaders: ["content-type", "authorization", "ns", "db", "accept", "surreal-ns", "surreal-db"]
         maxAge: 24h
       loadBalancer: ROUND_ROBIN
 

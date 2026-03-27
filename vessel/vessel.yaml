@@ -1,0 +1,23 @@
+name: "example-vessel"
+version: "1.0.0"
+description: "A simple example vessel for MiniBob"
+type: "service"
+
+metadata:
+  author: "MiniBob Team"
+  created: "2024-01-01"
+  tags:
+    - "example"
+    - "tutorial"
+
+configuration:
+  port: 8080
+  environment: "development"
+
+dependencies: []
+
+resources:
+  - type: "dockerfile"
+    path: "Dockerfile"
+  - type: "config"
+    path: "config/"

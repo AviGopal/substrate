@@ -163,7 +163,7 @@ async function callLLM(
       for (const block of response.content) {
         if (block.type === 'text') {
           content += block.text;
-        } else if (block.type === 'thinking') {
+        } else if ((block as any).type === 'thinking') {
           thinking += (block as any).thinking || '';
         }
       }
