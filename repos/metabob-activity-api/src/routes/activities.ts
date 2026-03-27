@@ -341,6 +341,36 @@ async function listAllTemplatesFromDB(
 }
 
 /**
+ * List public templates from SurrealDB.
+ *
+ * Public templates are globally scoped templates with public=true.
+ * No authentication required - these are visible to all users.
+ */
+async function listPublicTemplatesFromDB(
+  limit: number
+): Promise<ActivityTemplate[]> {
+  const query = `
+    SELECT * FROM activity_template
+    WHERE scope = 'global' AND public = true
+    ORDER BY created_at DESC
+    LIMIT $limit
+  `;
+  const params = { limit };
+
+  logger.debug('Fetching public templates from SurrealDB', { limit });
+  const result = await surrealDB.query<ActivityTemplate>(query, params);
+
+  logger.info('SurrealDB public templates fetched', {
+    count: result.length
+  });
+
+  // Enrich templates with metrics before returning
+  const enrichedTemplates = await enrichTemplatesWithMetrics(result);
+  logger.info('Public templates enriched with metrics', { enrichedCount: enrichedTemplates.length });
+  return enrichedTemplates;
+}
+
+/**
  * POST /v2/activities/templates
  * Register a new activity template variant
  * 
@@ -528,6 +558,13 @@ app.post('/templates', async (c) => {
     });
 
     logger.info('Template registered successfully', {
+      variant_id: validated.variant_id,
+    });
+
+    // Invalidate Redis cache so the new template appears in list queries
+    const redis = RedisClient.getInstance();
+    await redis.del(CACHE_LIST_KEY);
+    logger.debug('Redis template list cache invalidated after template registration', {
       variant_id: validated.variant_id,
     });
 
@@ -758,13 +795,61 @@ app.get('/templates', async (c) => {
 });
 
 /**
+ * GET /v2/activities/public
+ * List public templates visible to all users (no auth required)
+ *
+ * Public templates are globally scoped templates with public=true.
+ * This endpoint is unauthenticated - anyone can browse public templates.
+ *
+ * Query parameters:
+ * - limit: Maximum number of templates to return (default: 50, max: 100)
+ */
+app.get('/public', async (c) => {
+  try {
+    const limitStr = c.req.query('limit') || '50';
+    let limit = parseInt(limitStr, 10);
+
+    // Validate limit
+    if (isNaN(limit) || limit < 1) {
+      limit = 50;
+    }
+    limit = Math.min(limit, 100);
+
+    logger.info('GET /v2/activities/public', { limit });
+
+    // Load public templates from SurrealDB (no auth required)
+    const templates = await listPublicTemplatesFromDB(limit);
+
+    logger.info('Public templates fetched', {
+      count: templates.length,
+      limit,
+    });
+
+    return c.json({
+      templates,
+      total: templates.length,
+    });
+  } catch (error: any) {
+    logger.error('GET /v2/activities/public failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch public templates',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
  * GET /v2/activities/templates/:variantId
  * Get specific template variant by ID
  */
 app.get('/templates/:variantId', async (c) => {
   try {
     const variantId = c.req.param('variantId');
-    
+
     logger.info('GET /v2/activities/templates/:variantId', { variantId });
 
     // Check Redis cache first
@@ -851,8 +936,16 @@ app.post('/executions', async (c) => {
     const session = (c.get as any)('session') as SessionData | undefined;
 
     // Use JWT auth claims if available, otherwise fall back to session
-    const orgId = jwtAuth?.orgId || session?.org_id || null;
-    const projectId = jwtAuth?.projectId || session?.project_id || null;
+    // Ensure record format (organizations:xxx) for SurrealDB schema requirements
+    const rawOrgId = jwtAuth?.orgId || session?.org_id || null;
+    const rawProjectId = jwtAuth?.projectId || session?.project_id || null;
+
+    const orgId = rawOrgId
+      ? (rawOrgId.startsWith('organizations:') ? rawOrgId : `organizations:${rawOrgId}`)
+      : null;
+    const projectId = rawProjectId
+      ? (rawProjectId.startsWith('projects:') ? rawProjectId : `projects:${rawProjectId}`)
+      : null;
 
     // Parse and validate request body
     const body = await c.req.json();
@@ -869,6 +962,13 @@ app.post('/executions', async (c) => {
 
     // Generate execution ID
     const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
+    // Look up template to get activity_id (required for activity_execution_traces table)
+    const templateLookup = await surrealDB.query<{ activity_id: string }>(
+      'SELECT activity_id FROM activity_template WHERE variant_id = $variant_id LIMIT 1',
+      { variant_id: validated.variant_id }
+    );
+    const activityId = templateLookup[0]?.activity_id || validated.variant_id;
 
     // Emit execution_started event via WebSocket
     const executionStartedData: any = {
@@ -888,8 +988,10 @@ app.post('/executions', async (c) => {
     // Build execution record, only include fields with values (SurrealDB doesn't accept null)
     const executionRecord: Record<string, any> = {
       execution_id: executionId,
+      activity_id: activityId,
       variant_id: validated.variant_id,
       success: validated.success,
+      status: validated.success ? 'success' : 'failure',
       duration_ms: validated.duration_ms,
       cost_usd: validated.cost,
       tokens_input: validated.tokens.input,
@@ -938,7 +1040,13 @@ app.post('/executions', async (c) => {
     }
 
     // Build dynamic query with only provided fields
-    const execFields = Object.keys(executionRecord).map(k => `${k}: $${k}`).join(',\n        ');
+    // org_id and project_id need type::record() casting for SurrealDB
+    const execFields = Object.keys(executionRecord).map(k => {
+      if (k === 'org_id' || k === 'project_id') {
+        return `${k}: type::record($${k})`;
+      }
+      return `${k}: $${k}`;
+    }).join(',\n        ');
     const insertExecutionQuery = `
       INSERT INTO activity_execution_traces {
         ${execFields},

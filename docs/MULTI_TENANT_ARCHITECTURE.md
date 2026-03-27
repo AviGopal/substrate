@@ -172,19 +172,157 @@ FOR update WHERE user_id = $auth.id OR $auth.role = 'admin'
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
 │  GLOBAL (scope='global', public=true)                         │
-│  └── Visible to all authenticated users                       │
+│  └── Visible to ALL users (including unauthenticated)         │
+│      Endpoint: GET /v2/activities/public                       │
 │      Example: Metabob official activity templates              │
+│                                                                │
+│  GLOBAL (scope='global', public=false)                        │
+│  └── Visible to all authenticated users                       │
+│      Example: Internal shared templates                        │
 │                                                                │
 │  ORG (scope='org')                                            │
 │  └── Visible only within organization                         │
+│      PERMISSIONS: WHERE org_id = $auth.org_id                 │
 │      Example: Company-specific templates                       │
 │                                                                │
 │  PROJECT (scope='project')                                    │
 │  └── Visible only to project members                          │
+│      PERMISSIONS: WHERE project_id IN $auth.project_ids       │
 │      Example: Project-specific execution traces                │
+│                                                                │
+│  SESSION (transient)                                          │
+│  └── Exists only for the duration of a session                │
+│      Not persisted; used for real-time analysis               │
 │                                                                │
 └────────────────────────────────────────────────────────────────┘
 ```
+
+### Project-Scoped Filtering
+
+Project-scoped data uses `$auth.project_ids` (array) from JWT claims:
+
+```surql
+-- SQL Schema PERMISSIONS example
+DEFINE TABLE activity_execution_traces SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE
+      org_id = $auth.org_id
+      AND (project_id IS NULL OR project_id IN $auth.project_ids)
+    FOR create WHERE
+      org_id = $auth.org_id
+      AND (project_id IS NULL OR project_id IN $auth.project_ids)
+    FOR update, delete WHERE
+      org_id = $auth.org_id
+      AND $auth.role = 'admin';
+```
+
+**JWT Claims with project_ids:**
+```json
+{
+  "sub": "users:alice",
+  "org_id": "organizations:acme",
+  "project_ids": ["projects:proj-abc", "projects:proj-xyz"],
+  "role": "developer",
+  "iat": 1711361400,
+  "exp": 1711362300
+}
+```
+
+**Middleware extraction (jwtAuth.ts):**
+```typescript
+projectIds: Array.isArray(auth.project_ids)
+  ? auth.project_ids.map((p: unknown) => String(p).replace(/^projects:/, ''))
+  : undefined
+```
+
+## Session Management
+
+### Session Types
+
+The system uses different session types depending on the client:
+
+| Session Type | Client | Storage | Duration | Use Case |
+|--------------|--------|---------|----------|----------|
+| **JWT Session** | Dashboard | SurrealDB | 12h | Human users via web UI |
+| **API Key Session** | metabob-mcp | SurrealDB | 1h | IDE integrations with auto-refresh |
+| **MiniBob Session** | MiniBob vessels | SurrealDB | 7d | Autonomous execution with long-lived tokens |
+| **Redis Session** | Legacy clients | Redis | 24h | Session data caching (deprecated path) |
+
+### Session Lifecycle
+
+```
+┌─────────────────┐       ┌──────────────────┐       ┌─────────────────┐
+│   Authenticate  │──────▶│  Create Session  │──────▶│  Execute Query  │
+│  (signin route) │       │  (token issued)  │       │  (RBAC active)  │
+└─────────────────┘       └──────────────────┘       └─────────────────┘
+                                   │                          │
+                                   ▼                          ▼
+                          ┌──────────────────┐       ┌─────────────────┐
+                          │  Token Refresh   │◀──────│   Auto-Refresh  │
+                          │  (before expiry) │       │  (clients poll) │
+                          └──────────────────┘       └─────────────────┘
+```
+
+### API Key Auto-Refresh
+
+metabob-mcp implements automatic token refresh:
+
+```typescript
+// Token refresh happens 3 minutes before expiry
+const REFRESH_THRESHOLD_MS = 3 * 60 * 1000;
+
+async function ensureValidToken(): Promise<string> {
+  const now = Date.now();
+  if (tokenExpiry && now < tokenExpiry - REFRESH_THRESHOLD_MS) {
+    return currentToken;
+  }
+  return await refreshToken();
+}
+```
+
+## Learning Data Isolation
+
+Learning data requires special consideration because it builds patterns over time that could leak information across tenants.
+
+### Learning Tables and Their Isolation
+
+| Table | Isolation Level | Notes |
+|-------|-----------------|-------|
+| `cochange_patterns` | org + project | Patterns derived from commits within org/project |
+| `tool_usage` | org + project | Tool call patterns from executions |
+| `activity_performance_metrics` | org | Performance data per org |
+| `execution_sequences` | org + project | Execution ordering patterns |
+| `impulse_relevance` | org | Context effectiveness tracking |
+
+### Cross-Org Learning Constraints
+
+**CRITICAL: Learning data MUST NOT cross org boundaries.**
+
+1. **Cochange patterns** - Only derived from changes within the same org
+2. **Tool usage patterns** - Only aggregated within org scope
+3. **Similarity searches** - Only compare within org's execution history
+4. **Thompson Sampling** - Separate alpha/beta parameters per org
+
+### Implementation Pattern
+
+```surql
+-- Cochange patterns are strictly org + project scoped
+DEFINE TABLE cochange_patterns SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE
+      org_id = $auth.org_id
+      AND (project_id IS NULL OR project_id IN $auth.project_ids)
+    FOR create WHERE org_id = $auth.org_id
+    FOR update, delete WHERE org_id = $auth.org_id AND $auth.role = 'admin';
+```
+
+### Public Data Exception
+
+Only data explicitly marked `public = true` and `scope = 'global'` can be shared:
+- Public activity templates (GET /v2/activities/public)
+- Official Metabob patterns (curated by platform)
+
+**Learning data is NEVER public** - even "public" templates track performance metrics separately per org.
 
 ## Data Model
 
