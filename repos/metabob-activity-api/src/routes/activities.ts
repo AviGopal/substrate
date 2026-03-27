@@ -894,16 +894,20 @@ app.get('/templates/:variantId', async (c) => {
 
     const template = result[0];
 
-    // Cache the result
+    // Enrich with metrics before caching
+    const enrichedTemplates = await enrichTemplatesWithMetrics([template]);
+    const enrichedTemplate = enrichedTemplates[0] || template;
+
+    // Cache the enriched result
     await redis.set(
       `${CACHE_KEY_PREFIX}${variantId}`,
-      JSON.stringify(template),
+      JSON.stringify(enrichedTemplate),
       TEMPLATE_CACHE_TTL
     );
 
-    logger.info('Template fetched from SurrealDB', { variantId });
+    logger.info('Template fetched from SurrealDB', { variantId, hasMetrics: !!enrichedTemplate.metrics });
 
-    return c.json(template);
+    return c.json(enrichedTemplate);
 
   } catch (error: any) {
     logger.error('GET /v2/activities/templates/:variantId failed', {
