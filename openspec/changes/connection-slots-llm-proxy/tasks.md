@@ -87,46 +87,46 @@
 
 ---
 
-## Phase 3: LLM Proxy Backend
+## Phase 3: LLM Proxy Backend ✅ COMPLETE (P3.1-P3.5)
 
-### P3.1: Resolver router
+### P3.1: Resolver router ✅
 **Files**: `repos/metabob-activity-api/src/resolvers/router.ts`
-- [ ] Create `selectResolver()` function per design
-- [ ] Implement `hashImpulseShape()` for pattern matching
-- [ ] Implement `estimateComplexity()` for tier selection
-- [ ] Add confidence scoring logic
+- [x] Create `selectResolver()` function per design
+- [x] Implement `hashImpulseShape()` for pattern matching
+- [x] Implement `estimateComplexity()` for tier selection
+- [x] Add confidence scoring logic
 
-### P3.2: Pattern store
+### P3.2: Pattern store ✅
 **Files**: `repos/metabob-activity-api/src/resolvers/pattern-store.ts`
-- [ ] Create `findExact(impulseHash)` function
-- [ ] Create `findSimilar(impulseHash, threshold)` function
-- [ ] Add Redis caching for hot patterns
-- [ ] Implement cache invalidation on pattern update
+- [x] Create `findExact(impulseHash)` function
+- [x] Create `findSimilar(impulseHash, threshold)` function
+- [x] Add Redis caching for hot patterns
+- [x] Implement cache invalidation on pattern update
 
-### P3.3: LLM proxy client
+### P3.3: LLM proxy client ✅
 **Files**: `repos/metabob-activity-api/src/resolvers/llm-proxy.ts`
-- [ ] Create Anthropic API client wrapper
-- [ ] Implement `callHaiku()`, `callSonnet()`, `callOpus()`
-- [ ] Capture full request/response for tracing
-- [ ] Handle rate limiting and retries
-- [ ] Track token usage
+- [x] Create Anthropic API client wrapper
+- [x] Implement `callHaiku()`, `callSonnet()`, `callOpus()`
+- [x] Capture full request/response for tracing
+- [x] Handle rate limiting and retries
+- [x] Track token usage
 
-### P3.4: Resolution endpoint
+### P3.4: Resolution endpoint ✅
 **Files**: `repos/metabob-activity-api/src/routes/resolve.ts`
-- [ ] Create `POST /v2/resolve` endpoint
-- [ ] Route through resolver selection
-- [ ] Execute pattern match or LLM call
-- [ ] Record resolution in llm_resolution_log
-- [ ] Check and deduct token budget
+- [x] Create `POST /v2/resolve` endpoint
+- [x] Route through resolver selection
+- [x] Execute pattern match or LLM call
+- [x] Record resolution in llm_resolution_log
+- [x] Check and deduct token budget
 
-### P3.5: Token budget management
+### P3.5: Token budget management ✅
 **Files**: `repos/metabob-activity-api/src/resolvers/budget.ts`
-- [ ] Implement `checkAndDeductBudget()` with Redis
-- [ ] Create `syncBudgetToDatabase()` periodic job
-- [ ] Create `resetBudgets()` monthly job
-- [ ] Add budget exceeded error handling
+- [x] Implement `checkAndDeductBudget()` with Redis
+- [x] Create `syncBudgetToDatabase()` periodic job
+- [x] Create `resetBudgets()` monthly job
+- [x] Add budget exceeded error handling
 
-### P3.6: Pattern extraction (ribosome integration)
+### P3.6: Pattern extraction (ribosome integration) - DEFERRED
 **Files**: `repos/metabob-activity-api/src/resolvers/pattern-extractor.ts`
 - [ ] Implement `maybeExtractPattern()` function
 - [ ] Calculate result consistency across resolutions

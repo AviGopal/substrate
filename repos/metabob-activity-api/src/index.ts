@@ -24,6 +24,7 @@ import executionTracesRoutes from './routes/execution-traces';
 import codeVariantsRoutes from './routes/code-variants';
 import vesselsRoutes from './routes/vessels';
 import connectionsRoutes from './routes/connections';
+import resolveRoutes from './routes/resolve';
 import { broadcaster } from './websocket/broadcaster';
 import type { ServerWebSocket } from 'bun';
 
@@ -164,6 +165,9 @@ app.route('/v2/vessels', vesselsRoutes);
 // Connection slot routes (POST /v2/connections/acquire, heartbeat, reconnect, release)
 app.route('/v2/connections', connectionsRoutes);
 
+// Resolution routes (POST /v2/resolve - tiered resolver system)
+app.route('/v2', resolveRoutes);
+
 // ============================================================================
 // Error Handling
 // ============================================================================
@@ -300,6 +304,20 @@ if (heartbeatWorkerEnabled) {
     logger.info('[Server] Heartbeat worker started');
   }).catch(err => {
     logger.error('[Server] Failed to start heartbeat worker', { error: err.message });
+  });
+}
+
+// ============================================================================
+// Budget Sync Worker (Token Budget Management)
+// ============================================================================
+
+const budgetWorkerEnabled = process.env.BUDGET_WORKER_ENABLED !== 'false';
+if (budgetWorkerEnabled) {
+  import('./resolvers/budget').then(({ startBudgetWorker }) => {
+    startBudgetWorker();
+    logger.info('[Server] Budget sync worker started');
+  }).catch(err => {
+    logger.error('[Server] Failed to start budget worker', { error: err.message });
   });
 }
 
