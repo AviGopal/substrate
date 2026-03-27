@@ -45,3 +45,6 @@ export { createVesselLogger } from "./logger.ts";
 // Registry
 export { VesselRegistry } from "./registry.ts";
 export type { VesselRegistryConfig } from "./registry.ts";
+
+// Vessel implementations
+export { MCPVessel } from "./mcp.ts";
