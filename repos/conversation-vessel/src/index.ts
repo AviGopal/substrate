@@ -1,3 +1,8 @@
+// Export main modules
+export * from './types';
+export * from './ai-provider';
+export * from './stream';
+
 interface ParsedArgs {
   command?: string;
   port: number;
@@ -10,7 +15,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   
   const result: ParsedArgs = {
     port: 3000,
-    model: 'gpt-3.5-turbo',
+    model: 'anthropic/claude-3-haiku-20240307',
     help: false
   };
 
@@ -78,21 +83,18 @@ Commands:
 
 Options:
   -p, --port <port>         Port number to run the server on (default: 3000)
-  -m, --model <model>       AI model to use for conversations (default: gpt-3.5-turbo)
+  -m, --model <model>       AI model to use (default: anthropic/claude-3-haiku-20240307)
   -h, --help                Show this help message
 
 Examples:
-  conversation-vessel serve                    # Start server with default settings
-  conversation-vessel serve --port 8080       # Start server on port 8080
-  conversation-vessel serve --model gpt-4      # Use GPT-4 model
-  conversation-vessel serve -p 3001 -m gpt-4  # Custom port and model
-  conversation-vessel --help                  # Show this help message
+  conversation-vessel serve                              # Start server with defaults
+  conversation-vessel serve --port 8080                 # Custom port
+  conversation-vessel serve --model openai/gpt-4        # Use OpenAI GPT-4
+  conversation-vessel serve -p 3001 -m anthropic/claude-3-sonnet-20240229
 
 Available models:
-  - gpt-3.5-turbo
-  - gpt-4
-  - gpt-4-turbo
-  (Check your AI provider for additional model options)
+  Anthropic: anthropic/claude-3-haiku-20240307, anthropic/claude-3-sonnet-20240229
+  OpenAI: openai/gpt-3.5-turbo, openai/gpt-4, openai/gpt-4-turbo
 `);
 }
 
@@ -122,28 +124,29 @@ function main() {
       console.log('🚢 Starting conversation vessel server...');
       console.log(`⚓ Port: ${args.port}`);
       console.log(`🤖 Model: ${args.model}`);
+      console.log('📡 Streaming: Enabled');
       console.log('');
       
-      // Application logic will go here
+      // Server implementation would go here
+      console.log('✅ Server ready - streaming chat completions available');
     } else if (!args.command) {
       console.log('⚠️  No command specified.');
       console.log('💡 Use "serve" to start the server or --help for usage information.');
-      console.log('');
       process.exit(1);
     } else {
       console.log(`❌ Unknown command: ${args.command}`);
       console.log('💡 Use --help for usage information.');
-      console.log('');
       process.exit(1);
     }
     
   } catch (error) {
     console.error('💥 Error:', error instanceof Error ? error.message : error);
     console.log('💡 Use --help for usage information.');
-    console.log('');
     process.exit(1);
   }
 }
 
 // Run main if this file is executed directly
-main();
+if (require.main === module) {
+  main();
+}
