@@ -82,6 +82,35 @@ spec:
         - name: RATE_LIMIT_WINDOW_MS
           value: {{ .Values.config.rateLimit.windowMs | default "60000" | quote }}
         {{- end }}
+        {{- if .Values.config.llmProxy.enabled }}
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.config.llmProxy.anthropicApiKeySecret }}
+              key: {{ .Values.config.llmProxy.anthropicApiKeySecretKey }}
+        - name: HAIKU_MODEL
+          value: {{ .Values.config.llmProxy.haikuModel | quote }}
+        - name: SONNET_MODEL
+          value: {{ .Values.config.llmProxy.sonnetModel | quote }}
+        - name: OPUS_MODEL
+          value: {{ .Values.config.llmProxy.opusModel | quote }}
+        {{- end }}
+        {{- if .Values.config.heartbeatWorker.enabled }}
+        - name: HEARTBEAT_WORKER_ENABLED
+          value: "true"
+        - name: HEARTBEAT_INTERVAL_MS
+          value: {{ .Values.config.heartbeatWorker.intervalMs | quote }}
+        - name: GRACE_PERIOD_BASE_MS
+          value: {{ .Values.config.heartbeatWorker.gracePeriodBaseMs | quote }}
+        - name: GRACE_PERIOD_MAX_MS
+          value: {{ .Values.config.heartbeatWorker.gracePeriodMaxMs | quote }}
+        {{- end }}
+        {{- if .Values.config.budgetWorker.enabled }}
+        - name: BUDGET_WORKER_ENABLED
+          value: "true"
+        - name: BUDGET_SYNC_INTERVAL_MS
+          value: {{ .Values.config.budgetWorker.syncIntervalMs | quote }}
+        {{- end }}
         livenessProbe:
           {{- toYaml .Values.livenessProbe | nindent 12 }}
         readinessProbe:

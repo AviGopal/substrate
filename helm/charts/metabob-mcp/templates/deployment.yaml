@@ -30,6 +30,8 @@ spec:
         env:
         - name: ANALYSIS_API_URL
           value: "{{ .Values.config.analysisApiUrl }}"
+        - name: ACTIVITY_API_URL
+          value: "{{ .Values.config.activityApiUrl }}"
         - name: SESSION_ID
           value: "{{ .Values.config.sessionId }}"
         - name: LOG_LEVEL
@@ -38,6 +40,16 @@ spec:
           value: "{{ .Values.config.healthPort }}"
         - name: MAX_REQUESTS_PER_MINUTE
           value: "{{ .Values.config.maxRequestsPerMinute }}"
+        - name: USE_CONNECTION_SLOTS
+          value: "{{ .Values.config.useConnectionSlots }}"
+        {{- if .Values.config.apiKeySecret }}
+        - name: METABOB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.config.apiKeySecret }}
+              key: {{ .Values.config.apiKeySecretKey }}
+              optional: true
+        {{- end }}
         {{- if .Values.livenessProbe }}
         livenessProbe:
           {{- toYaml .Values.livenessProbe | nindent 10 }}

@@ -4,7 +4,7 @@ replicaCount: 2
 image:
   repository: metabobapp/metabob-activity-api
   pullPolicy: IfNotPresent
-  tag: "dev-1.0.0-bca7904-1774515587"
+  tag: "dev-1.0.0-fe2f1c4-1774587854"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -64,6 +64,29 @@ config:
     auth: 100             # Requests per window for /v2/auth/* (default: 10)
     signin: 50            # Requests per window for signin endpoints (default: 5)
     windowMs: 60000       # Window in milliseconds (1 minute)
+
+  # LLM Proxy configuration (for tiered resolver)
+  llmProxy:
+    enabled: true
+    # Anthropic API key from secret (required for LLM calls)
+    anthropicApiKeySecret: "anthropic-api-key"
+    anthropicApiKeySecretKey: "api-key"
+    # Default model for each tier
+    haikuModel: "claude-3-haiku-20240307"
+    sonnetModel: "claude-sonnet-4-20250514"
+    opusModel: "claude-opus-4-5-20251101"
+
+  # Heartbeat worker configuration
+  heartbeatWorker:
+    enabled: true
+    intervalMs: 10000     # Check every 10 seconds
+    gracePeriodBaseMs: 60000  # Base grace period (1 minute)
+    gracePeriodMaxMs: 300000  # Max grace period during execution (5 minutes)
+
+  # Budget worker configuration
+  budgetWorker:
+    enabled: true
+    syncIntervalMs: 300000  # Sync to DB every 5 minutes
 
 # Resource limits
 resources:

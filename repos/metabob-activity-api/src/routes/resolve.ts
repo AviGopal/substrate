@@ -95,7 +95,7 @@ interface LLMResolutionLog {
 // POST /v2/resolve
 // ============================================================================
 
-resolve.post('/', async (c) => {
+resolve.post('/resolve', async (c) => {
   const startTime = Date.now();
 
   try {

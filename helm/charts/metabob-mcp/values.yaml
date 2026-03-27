@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: metabobapp/metabob-mcp
   pullPolicy: IfNotPresent
-  tag: "dev-0.1.0-bca7904-1774515587"
+  tag: "dev-0.1.0-fe2f1c4-1774587854"
 
 service:
   type: ClusterIP
@@ -13,10 +13,16 @@ service:
 
 config:
   analysisApiUrl: "http://metabob-analysis-api.activity-system.svc.cluster.local:8080"
+  activityApiUrl: "http://metabob-activity-api.activity-system.svc.cluster.local:8080"
   sessionId: "mcp-server-session"
   logLevel: "info"
   healthPort: 8080
   maxRequestsPerMinute: 60
+  # Connection slot configuration
+  useConnectionSlots: true
+  # API key authentication (from secret)
+  apiKeySecret: "metabob-api-keys"
+  apiKeySecretKey: "mcp-api-key"
 
 resources:
   requests:
