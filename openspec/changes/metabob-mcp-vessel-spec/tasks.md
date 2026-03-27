@@ -165,35 +165,37 @@
 **Target:** Week 5 | **State After:** Clean separation, no code duplication
 
 ### Task 5.1: Extract @metabob/shared-types
-- [ ] Create `libs/shared-types/` package structure
-- [ ] Move from `metabob-analysis-api/src/models/types.ts`:
-  - `AnalysisProblem`, `Severity`, `ProblemCategory`, `ProblemStatus`
-  - `ComponentAnnotation`, `AnnotationType`
-  - `ImpactAnalysisResult`, `ImpactedComponent`, `RiskLevel`
+- [x] Create `libs/shared-types/` package structure
+- [x] Extract type definitions:
+  - `Severity`, `ProblemCategory`, `ProblemStatus`, `RiskLevel`
+  - `AnalysisProblem`, `ComponentAnnotation`, `AnnotationType`
+  - `ImpactAnalysisResult`, `ImpactedComponent`
   - `CochangeSuggestion`, `CochangePattern`
-- [ ] Move from `metabob-mcp/src/session-manager.ts`:
   - `SessionContext`, `Scope`, `ResolvedScope`
-- [ ] Update imports in both services
+  - `QualitySignals`, `CPGStatus`
+- [ ] Update imports in both services (future task)
 - [ ] **Test:** Both services build and pass tests
 
 **Commit:** `refactor(types): extract @metabob/shared-types package`
 
 ### Task 5.2: Extract @metabob/auth
-- [ ] Create `libs/auth/` package structure
-- [ ] Move rate limiter with pluggable backends
-- [ ] Move circuit breaker
-- [ ] Move token refresh logic
-- [ ] Create factory functions
-- [ ] Update both services to use package
+- [x] Create `libs/auth/` package structure
+- [x] Extract rate limiter with pluggable backends (`RateLimiterBackend` interface)
+- [x] Extract circuit breaker with factory function
+- [x] Create `InMemoryRateLimiterBackend` default implementation
+- [x] Create factory functions (`createRateLimiter`, `createCircuitBreaker`)
+- [ ] Update both services to use package (future task)
 - [ ] **Test:** Equivalent behavior after refactor
 
 **Commit:** `refactor(auth): extract @metabob/auth package`
 
 ### Task 5.3: Extract @metabob/validation
-- [ ] Create `libs/validation/` package structure
-- [ ] Base schemas: `PaginationSchema`, `SeverityFilterSchema`, `CategoryFilterSchema`
-- [ ] Error formatters for Zod errors
-- [ ] Update tool and route schemas to extend base
+- [x] Create `libs/validation/` package structure
+- [x] Base schemas: `PaginationSchema`, `SeverityFilterSchema`, `CategoryFilterSchema`
+- [x] Additional schemas: `ScopeSchema`, `FilePatternSchema`, `BaseFilterSchema`
+- [x] Error formatters: `formatZodError`, `formatZodErrorDetails`, `createValidationError`
+- [x] Validation utilities: `safeParse`, `validate`
+- [ ] Update tool and route schemas to extend base (future task)
 - [ ] **Test:** Validation behavior unchanged
 
 **Commit:** `refactor(validation): extract @metabob/validation package`
