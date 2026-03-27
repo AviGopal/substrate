@@ -135,44 +135,44 @@
 
 ---
 
-## Phase 4: metabob-mcp Integration
+## Phase 4: metabob-mcp Integration ✅ COMPLETE
 
-### P4.1: Connection manager
+### P4.1: Connection manager ✅
 **Files**: `repos/metabob-mcp/src/connection-manager.ts`
-- [ ] Create `ConnectionManager` class
-- [ ] Implement `connect()` with slot acquisition
-- [ ] Implement heartbeat loop (30s interval)
-- [ ] Implement `reconnect()` for grace period recovery
-- [ ] Implement `disconnect()` for clean release
-- [ ] Track current execution state
+- [x] Create `ConnectionManager` class
+- [x] Implement `connect()` with slot acquisition
+- [x] Implement heartbeat loop (30s interval)
+- [x] Implement `reconnect()` for grace period recovery
+- [x] Implement `disconnect()` for clean release
+- [x] Track current execution state
 
-### P4.2: Update API client
+### P4.2: Update API client ✅
 **Files**: `repos/metabob-mcp/src/api-client.ts`
-- [ ] Integrate ConnectionManager
-- [ ] Add `X-Connection-ID` header to requests
-- [ ] Handle 429 (slot limit) errors gracefully
-- [ ] Handle reconnection on auth failures
-- [ ] Route LLM calls through `/v2/resolve`
+- [x] Integrate ConnectionManager
+- [x] Add `X-Connection-ID` header to requests
+- [x] Handle 429 (slot limit) errors gracefully
+- [x] Handle reconnection on auth failures
+- [x] Route LLM calls through `/v2/resolve`
 
-### P4.3: Activity tools
+### P4.3: Activity tools ✅
 **Files**: `repos/metabob-mcp/src/tools/activity.ts`
-- [ ] Create `run_goal` tool
-- [ ] Create `get_recommendations` tool
-- [ ] Create `submit_trace` tool
-- [ ] Create `resolve_impulse` tool
-- [ ] Wire tools to resolver endpoint
+- [x] Create `run_goal` tool
+- [x] Create `get_recommendations` tool
+- [x] Create `submit_trace` tool
+- [x] Create `resolve_impulse` tool
+- [x] Wire tools to resolver endpoint
 
-### P4.4: Update tool registration
+### P4.4: Update tool registration ✅
 **Files**: `repos/metabob-mcp/src/index.ts`
-- [ ] Register activity tools alongside analysis tools
-- [ ] Update capabilities advertisement
-- [ ] Add activity API URL configuration
+- [x] Register activity tools alongside analysis tools
+- [x] Update capabilities advertisement
+- [x] Add activity API URL configuration
 
-### P4.5: Remove direct LLM dependency
-**Files**: `repos/metabob-mcp/src/config.ts`
-- [ ] Make ANTHROPIC_API_KEY optional
-- [ ] Add METABOB_API_KEY as primary auth
-- [ ] Update environment variable documentation
+### P4.5: Remove direct LLM dependency ✅
+**Files**: `repos/metabob-mcp/src/index.ts` (config integrated)
+- [x] Make ANTHROPIC_API_KEY optional (not required when using connection slots)
+- [x] Add METABOB_API_KEY as primary auth
+- [x] Update environment variable documentation (USE_CONNECTION_SLOTS, ACTIVITY_API_URL)
 
 ---
 
