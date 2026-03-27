@@ -4,35 +4,35 @@
 **Target:** Week 1 | **State After:** Annotations persist, specs work, problems creatable
 
 ### Task 1.1: Implement Annotation Persistence
-- [ ] **File:** `repos/metabob-analysis-api/src/routes/annotations.ts`
-- [ ] Uncomment/implement INSERT at line 64
-- [ ] Add RELATE clause for bidirectional problem linking (line 60)
-- [ ] Extract `created_by` from `$auth.id` instead of hardcoded `'system'`
-- [ ] Add component validation against CPG (optional, with fallback)
+- [x] **File:** `repos/metabob-analysis-api/src/routes/annotations.ts`
+- [x] Uncomment/implement INSERT at line 64
+- [x] Add RELATE clause for bidirectional problem linking (line 60)
+- [x] Extract `created_by` from `$auth.id` instead of hardcoded `'system'`
+- [x] Add component validation against CPG (optional, with fallback)
 - [ ] **Test:** Create annotation via API, verify in SurrealDB
 
 **Commit:** `fix(annotations): implement database persistence`
 
 ### Task 1.2: Fix Spec Response Types
-- [ ] **File:** `repos/metabob-analysis-api/src/routes/specs.ts`
-- [ ] Change `implementation_order: string[]` to `steps: ImplementationStep[]`
-- [ ] Generate `spec_id` with `crypto::random::uuid()`
-- [ ] Add `overview` field (summary of goal analysis)
-- [ ] Add `estimated_effort` calculation
-- [ ] Add `risks` array extraction
-- [ ] **File:** `repos/metabob-mcp/src/tools/generate-implementation-spec.ts`
-- [ ] Update `formatAsText` to handle new structure
+- [x] **File:** `repos/metabob-analysis-api/src/routes/specs.ts`
+- [x] Change `implementation_order: string[]` to `steps: ImplementationStep[]`
+- [x] Generate `spec_id` with `crypto::random::uuid()`
+- [x] Add `overview` field (summary of goal analysis)
+- [x] Add `estimated_effort` calculation
+- [x] Add `risks` array extraction
+- [x] **File:** `repos/metabob-mcp/src/tools/generate-implementation-spec.ts`
+- [x] Update `formatAsText` to handle new structure
 - [ ] **Test:** Tool returns formatted steps, not raw component IDs
 
 **Commit:** `fix(specs): align response types between backend and tool`
 
 ### Task 1.3: Add Problem Creation Endpoint
-- [ ] **File:** `repos/metabob-analysis-api/src/routes/problems.ts`
-- [ ] Add POST `/` route for problem creation
-- [ ] Input schema: `{ component_id, severity, category, message, impact_score? }`
-- [ ] Auto-populate `org_id` from `$auth.org_id`
-- [ ] Auto-populate `session_id`, `created_at`, `status='open'`
-- [ ] Return created problem with ID
+- [x] **File:** `repos/metabob-analysis-api/src/routes/problems.ts`
+- [x] Add POST `/` route for problem creation
+- [x] Input schema: `{ component_id, severity, category, message, impact_score? }`
+- [x] Auto-populate `org_id` from `$auth.org_id`
+- [x] Auto-populate `session_id`, `created_at`, `status='open'`
+- [x] Return created problem with ID
 - [ ] **Test:** POST creates problem, GET returns it
 
 **Commit:** `feat(problems): add problem creation endpoint`

@@ -490,3 +490,426 @@ libs/
 - `src/predictor.ts` - Co-change prediction
 - `src/graph.ts` - Graph traversal
 - `src/graph-builder.ts` - AST parsing
+
+---
+
+# Part 2: Vessel Architecture Transformation
+
+> **Addition Date:** 2026-03-27
+> **Purpose:** Transform metabob-mcp into a full vessel that provides activities, impulses, and lifecycle hooks
+
+## Vessel Transformation Overview
+
+The existing spec above focuses on fixing data pipelines. This section adds the **vessel layer** that makes MCP tools operate as activities within the impulse-driven architecture.
+
+**Key Insight**: MCP tools ARE activities. Tool inputs ARE impulses. Tool outputs ARE impulses. The "double duty" pattern means:
+- External: `run_goal` MCP tool → returns analysis results to IDE
+- Internal: `run_goal` activity execution → produces impulses → recorded as traces → enables learning
+
+---
+
+## Consolidated Pattern Analysis
+
+### Patterns to Colocate (from Subagent Analysis)
+
+Based on exploration of MiniBob, metabob-activity-api, and existing metabob-mcp:
+
+#### Pattern A: Activity Execution Wrapper
+**Source**: MiniBob's `activity.ts`, `goal-processor.ts`
+**Target**: `src/vessel/activity-wrapper.ts`
+- Wraps MCP tool calls as activity executions
+- Records execution traces automatically
+- Handles improvisation fallback
+
+#### Pattern B: Impulse Management Layer
+**Source**: MiniBob's `impulse.ts`, `mcp.ts` (storeImpulse, resolveImpulse)
+**Target**: `src/vessel/impulse-manager.ts`
+- Creates impulses from tool inputs (goals, file paths, analysis results)
+- Stores impulses in backend via MCPClient
+- Resolves impulses for context injection
+
+#### Pattern C: Session & Lifecycle Tracking
+**Source**: MiniBob's `session.ts`, `lifecycle-hooks.ts`
+**Target**: `src/vessel/session.ts`
+- Tracks IDE session (start/end, tools used, traces)
+- Lifecycle hooks: pre-tool, post-tool, session-complete
+- Records execution sequences for learning
+
+#### Pattern D: MCP Client Reuse
+**Source**: MiniBob's `mcp.ts` (MCPClient class)
+**Strategy**: Import from `@metabob/minibob` library
+- Reuse MCPClient for backend communication
+- Authentication via instance API key
+- All trace submission, impulse storage, recommendations
+
+---
+
+## Vessel Architecture Layers
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     MCP Tool Interface                        │
+│  (run_goal, get_problems, suggest_fixes, find_similar, ...)  │
+└─────────────────────────────┬────────────────────────────────┘
+                              │ Tool calls become activities
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    Vessel Core Layer                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐  │
+│  │ ActivityWrapper │  │ ImpulseManager  │  │SessionManager│  │
+│  │ (wraps tools)   │  │ (context mgmt)  │  │ (lifecycle)  │  │
+│  └────────┬────────┘  └────────┬────────┘  └──────┬───────┘  │
+│           └──────────────┬─────┴──────────────────┘          │
+│                          ▼                                    │
+│              ┌───────────────────────┐                       │
+│              │   MCPClient (shared)  │                       │
+│              │   from @metabob/minibob│                      │
+│              └───────────┬───────────┘                       │
+└──────────────────────────┼───────────────────────────────────┘
+                           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  metabob-activity-api                         │
+│  (traces, impulses, Thompson Sampling, pattern learning)     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Tool → Activity → Impulse Mapping
+
+| MCP Tool | Input Impulse Shape | Output Impulse Shape | Activity Category |
+|----------|---------------------|---------------------|-------------------|
+| `run_goal` | `goal` | `trace`, `analysis` | feature/bugfix/refactor |
+| `get_priority_issues` | `source_code`, `file_path` | `problem_list` | analysis |
+| `suggest_related_changes` | `source_code`, `file_path` | `cochange_suggestion` | analysis |
+| `analyze_change_impact` | `source_code`, `file_path` | `impact_graph` | analysis |
+| `search_codebase` | `query`, `context` | `search_results` | exploration |
+| `generate_implementation_spec` | `requirement`, `context` | `spec` | planning |
+| `annotate_component` | `component`, `annotation` | `annotation` | documentation |
+| `mark_problem_complete` | `problem_id` | `resolution` | bugfix |
+
+---
+
+## Data Flow: Tool Call → Activity → Impulses
+
+```
+1. IDE calls MCP tool (e.g., run_goal)
+   ↓
+2. Tool handler creates input impulse(s)
+   - shape: "goal" with user's intent
+   - shape: "source_code" with file context
+   ↓
+3. ActivityWrapper wraps as activity execution
+   - template_id: "mcp-tool/run_goal"
+   - variables: { goal, workspace_path, ... }
+   ↓
+4. Execute tool logic (existing implementation)
+   ↓
+5. Create output impulse(s) from results
+   - shape: "trace" with execution details
+   - shape: "analysis" with findings
+   ↓
+6. Store trace in backend
+   - MCPClient.storeExecutionTrace()
+   - Enables Thompson Sampling for future recommendations
+   ↓
+7. Return result to IDE
+```
+
+---
+
+## Session Lifecycle
+
+```
+Session Start (IDE connects)
+├── Create session record
+├── Load relevant impulses from backend
+│   └── Recent traces, patterns, user preferences
+├── Register lifecycle hooks
+│   └── pre-tool, post-tool, error handlers
+│
+Tool Execution (repeated)
+├── pre-tool hook: Create input impulses
+├── Execute tool
+├── post-tool hook: Create output impulses, store trace
+│
+Session End (IDE disconnects)
+├── Record execution sequence
+├── Persist session statistics
+└── Archive low-priority impulses
+```
+
+---
+
+## Vessel Implementation Components
+
+### Reuse from @metabob/minibob (Import)
+
+| Component | Module | Purpose |
+|-----------|--------|---------|
+| `MCPClient` | mcp.ts | Backend communication |
+| `createImpulse` | impulse.ts | Create impulse objects |
+| `formatImpulsesForContext` | impulse.ts | Format for LLM context |
+| `LifecycleHooks` | lifecycle-hooks.ts | Hook registration/execution |
+| `ActivityExecution` type | types.ts | Execution trace structure |
+| `Impulse` type | types.ts | Impulse structure |
+
+### New Components for metabob-mcp (Create)
+
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| `VesselCore` | src/vessel/core.ts | Initialize vessel, manage lifecycle |
+| `ActivityWrapper` | src/vessel/activity-wrapper.ts | Wrap tool calls as activities |
+| `ImpulseManager` | src/vessel/impulse-manager.ts | Create/resolve impulses |
+| `SessionManager` | src/vessel/session.ts | Track IDE sessions (enhanced) |
+| `ToolActivityRegistry` | src/vessel/registry.ts | Map tools to activity templates |
+
+### Modified Existing Files
+
+| File | Modification |
+|------|--------------|
+| `src/tools/*.ts` | Add activity wrapper calls |
+| `src/index.ts` | Initialize vessel on startup |
+| `src/types.ts` | Add vessel-related types |
+
+---
+
+## Vessel Commit Milestones
+
+### Milestone V1: Foundation (Testable State)
+**Commit**: `feat(metabob-mcp): add vessel foundation with MCPClient integration`
+
+**Tasks**:
+1. Add `@metabob/minibob` dependency to package.json
+2. Create `src/vessel/core.ts` - VesselCore initialization
+3. Create `src/vessel/types.ts` - Vessel-specific types
+4. Create `src/vessel/index.ts` - Barrel exports
+5. Modify `src/index.ts` - Initialize vessel on server start
+6. Add authentication via instance API key
+
+**Test**: Server starts, authenticates with backend, registers as vessel
+
+**Estimated LOC**: ~200 new lines
+
+---
+
+### Milestone V2: Impulse Management (Testable State)
+**Commit**: `feat(metabob-mcp): add impulse management for tool inputs/outputs`
+
+**Tasks**:
+1. Create `src/vessel/impulse-manager.ts`
+   - `createToolInputImpulse(tool, params)`
+   - `createToolOutputImpulse(tool, result)`
+   - `resolveImpulse(pointer)`
+2. Create `src/vessel/shapes.ts` - Shape definitions for MCP tools
+3. Add impulse creation to one handler (e.g., `run_goal`)
+
+**Test**: `run_goal` creates input/output impulses, visible in backend
+
+**Estimated LOC**: ~250 new lines
+
+---
+
+### Milestone V3: Activity Wrapper (Testable State)
+**Commit**: `feat(metabob-mcp): wrap tool calls as activity executions`
+
+**Tasks**:
+1. Create `src/vessel/activity-wrapper.ts`
+   - `wrapToolCall(tool, params, handler)`
+   - `recordExecution(execution)`
+2. Create `src/vessel/registry.ts` - Tool → Activity mapping
+3. Wrap `run_goal` handler with activity tracking
+4. Store execution traces to backend
+
+**Test**: `run_goal` execution appears in activity-dashboard
+
+**Estimated LOC**: ~300 new lines
+
+---
+
+### Milestone V4: Session Tracking (Testable State)
+**Commit**: `feat(metabob-mcp): add session lifecycle management`
+
+**Tasks**:
+1. Enhance `src/vessel/session.ts`
+   - `createSession()`
+   - `recordToolExecution()`
+   - `completeSession()`
+2. Add session ID to all tool executions
+3. Record execution sequences on session end
+
+**Test**: Session creates, tools execute within session, sequence recorded
+
+**Estimated LOC**: ~200 new lines
+
+---
+
+### Milestone V5: Lifecycle Hooks (Testable State)
+**Commit**: `feat(metabob-mcp): add lifecycle hooks for tool execution`
+
+**Tasks**:
+1. Import `LifecycleHooks` from @metabob/minibob
+2. Register hooks in VesselCore
+3. Call `onBeforePrompt` before tool execution
+4. Call `onAfterPrompt` after tool execution
+5. Call `onActivityComplete` for successful tools
+
+**Test**: Hooks fire, can observe in logs, metrics captured
+
+**Estimated LOC**: ~150 new lines
+
+---
+
+### Milestone V6: Full Integration (All Tools)
+**Commit**: `feat(metabob-mcp): integrate all MCP tools with vessel system`
+
+**Tasks**:
+1. Wrap all tool handlers with activity wrapper
+2. Define shapes for each tool's input/output
+3. Add tool-specific activity templates
+4. Enable Thompson Sampling recommendations
+
+**Test**: All tools create traces, recommendations work
+
+**Estimated LOC**: ~400 new lines (mostly boilerplate per tool)
+
+---
+
+### Milestone V7: Learning Integration (Complete)
+**Commit**: `feat(metabob-mcp): enable learning from tool executions`
+
+**Tasks**:
+1. Record impulse relevance for tool contexts
+2. Record tool usage patterns
+3. Record composition (tool → tool sequences)
+4. Test recommendation improvements
+
+**Test**: Repeated tool use improves recommendations
+
+**Estimated LOC**: ~200 new lines
+
+---
+
+## Reorganized Master Task List
+
+Combining the original milestones (M1-M6) with vessel milestones (V1-V7):
+
+### Phase 1: Critical Fixes (Must Complete First)
+| ID | Task | Milestone | Effort | Dependencies |
+|----|------|-----------|--------|--------------|
+| 1 | Implement annotation persistence | M1 | Trivial | None |
+| 2 | Fix spec response types | M1 | Trivial | None |
+| 3 | Add problem creation endpoint | M1 | Moderate | None |
+
+### Phase 2: Vessel Foundation (Enables Learning)
+| ID | Task | Milestone | Effort | Dependencies |
+|----|------|-----------|--------|--------------|
+| 4 | Add @metabob/minibob dependency | V1 | Trivial | None |
+| 5 | Create VesselCore initialization | V1 | Moderate | Task 4 |
+| 6 | Add vessel authentication | V1 | Moderate | Task 5 |
+| 7 | Create ImpulseManager | V2 | Moderate | Task 5 |
+| 8 | Define tool impulse shapes | V2 | Moderate | Task 7 |
+| 9 | Create ActivityWrapper | V3 | Moderate | Task 7 |
+| 10 | Create ToolActivityRegistry | V3 | Moderate | Task 9 |
+
+### Phase 3: CPG & Data Pipeline (Parallel Track)
+| ID | Task | Milestone | Effort | Dependencies |
+|----|------|-----------|--------|--------------|
+| 11 | Implement file indexing endpoint | M2 | Moderate | None |
+| 12 | Add workspace initialization tool | M2 | Moderate | Task 11 |
+| 13 | Progressive sync on file change | M2 | Moderate | Task 11 |
+| 14 | Integrate ONNX model | M3 | Significant | Task 11 |
+| 15 | Implement real semantic search | M3 | Moderate | Task 14 |
+
+### Phase 4: Full Vessel Integration
+| ID | Task | Milestone | Effort | Dependencies |
+|----|------|-----------|--------|--------------|
+| 16 | Enhance session lifecycle | V4 | Moderate | Task 9 |
+| 17 | Add lifecycle hooks | V5 | Moderate | Task 16 |
+| 18 | Wrap all tools with activity | V6 | Moderate | Task 17 |
+| 19 | Enable Thompson Sampling | V6 | Moderate | Task 18 |
+| 20 | Record impulse relevance | V7 | Moderate | Task 19 |
+| 21 | Record tool usage patterns | V7 | Moderate | Task 19 |
+
+### Phase 5: Learning Loop & Polish
+| ID | Task | Milestone | Effort | Dependencies |
+|----|------|-----------|--------|--------------|
+| 22 | Report tool usage to learning | M4 | Moderate | Task 21 |
+| 23 | Track predictions for feedback | M4 | Moderate | Task 22 |
+| 24 | Output quality signals | M4 | Trivial | None |
+| 25 | Extract @metabob/shared-types | M5 | Moderate | None |
+| 26 | Extract @metabob/auth | M5 | Moderate | Task 25 |
+| 27 | Add project-scoped filtering | M6 | Moderate | None |
+| 28 | Implement public template sharing | M6 | Moderate | None |
+
+---
+
+## Success Criteria (Vessel Layer)
+
+### Milestone V1 Complete When:
+- [ ] metabob-mcp starts and authenticates with metabob-activity-api
+- [ ] Vessel registration appears in activity-dashboard
+- [ ] MCPClient from minibob library is properly initialized
+
+### Milestone V2 Complete When:
+- [ ] `run_goal` creates input impulse with shape="goal"
+- [ ] `run_goal` creates output impulse with shape="trace"
+- [ ] Impulses visible in backend via /v2/impulses endpoint
+
+### Milestone V3 Complete When:
+- [ ] `run_goal` execution appears in activity_execution_traces table
+- [ ] Execution visible in activity-dashboard
+- [ ] template_id is "mcp-tool/run_goal"
+
+### Milestone V4 Complete When:
+- [ ] Sessions have unique IDs persisted across tool calls
+- [ ] Execution sequences recorded on session end
+- [ ] Session statistics visible in backend
+
+### Milestone V5 Complete When:
+- [ ] onBeforePrompt fires before tool execution
+- [ ] onAfterPrompt fires after tool execution
+- [ ] Hook errors are non-blocking (tool still completes)
+
+### Milestone V6 Complete When:
+- [ ] All 8 MCP tools create execution traces
+- [ ] All tools have defined input/output shapes
+- [ ] Thompson Sampling can recommend tools for goals
+
+### Milestone V7 Complete When:
+- [ ] Impulse relevance scores update with tool usage
+- [ ] Tool usage patterns recorded in tool_usage table
+- [ ] Repeated tool use shows improved recommendations
+
+---
+
+## Risk Mitigation
+
+### Risk 1: Circular Dependencies
+**Mitigation**: Import MCPClient directly from minibob, don't import MiniBob wholesale
+
+### Risk 2: Performance Overhead
+**Mitigation**: Async trace recording, don't block tool responses
+
+### Risk 3: Backend Unavailability
+**Mitigation**: Graceful degradation - tools work without vessel features
+
+### Risk 4: Type Mismatches
+**Mitigation**: Share types via @metabob/minibob package exports
+
+### Risk 5: Breaking Existing Tools
+**Mitigation**: Activity wrapper is additive, no changes to tool logic
+
+---
+
+## Total Estimates
+
+| Metric | Value |
+|--------|-------|
+| New lines of code (vessel) | ~1,700 LOC |
+| New lines of code (fixes) | ~1,500 LOC |
+| Reused from MiniBob | ~3,500+ LOC |
+| Files created | ~15 files |
+| Files modified | ~15 files |
+| Commit milestones | 13 total (6 original + 7 vessel) |
+| Test coverage | Each milestone testable |
