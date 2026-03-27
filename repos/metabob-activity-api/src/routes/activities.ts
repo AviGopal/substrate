@@ -356,6 +356,12 @@ app.post('/templates', async (c) => {
     // Check for JWT auth first (MiniBob instances)
     const jwtAuth = getJwtAuthFromContext(c);
 
+    logger.info('POST /templates - JWT auth context', {
+      hasJwtAuth: !!jwtAuth,
+      jwtAuthOrgId: jwtAuth?.orgId,
+      hasJwtToken: !!jwtAuth?.jwtToken,
+    });
+
     // Extract session from context (set by auth middleware)
     const session = (c.get as any)('session') as SessionData | undefined;
 
@@ -914,6 +920,23 @@ app.post('/executions', async (c) => {
       executionRecord.component_changes = validated.component_changes;
     }
 
+    // Edge learning fields (from improvisation traces)
+    if (validated.improvisation) {
+      executionRecord.improvisation = validated.improvisation;
+    }
+    if (validated.input_impulse_shapes && validated.input_impulse_shapes.length > 0) {
+      executionRecord.input_impulse_shapes = validated.input_impulse_shapes;
+    }
+    if (validated.output_impulse_shapes && validated.output_impulse_shapes.length > 0) {
+      executionRecord.output_impulse_shapes = validated.output_impulse_shapes;
+    }
+    if (validated.output_impulses && validated.output_impulses.length > 0) {
+      executionRecord.output_impulses = validated.output_impulses;
+    }
+    if (validated.metadata) {
+      executionRecord.metadata = validated.metadata;
+    }
+
     // Build dynamic query with only provided fields
     const execFields = Object.keys(executionRecord).map(k => `${k}: $${k}`).join(',\n        ');
     const insertExecutionQuery = `
@@ -937,7 +960,8 @@ app.post('/executions', async (c) => {
         id: executionId,
         activity_id: validated.variant_id,
         input_impulses: validated.impulses_used || [],
-        output_impulses: [],
+        // Use output_impulses from improvisation traces if available
+        output_impulses: validated.output_impulses?.map((imp: any) => imp.shape) || [],
         success: validated.success,
         error: validated.error_message ? {
           message: validated.error_message,
@@ -950,6 +974,11 @@ app.post('/executions', async (c) => {
         tokens_out: validated.tokens.output,
         org_id: orgId || undefined,
         project_id: projectId || undefined,
+        // Edge learning fields
+        ...(validated.improvisation && { improvisation: validated.improvisation }),
+        ...(validated.input_impulse_shapes && { input_impulse_shapes: validated.input_impulse_shapes }),
+        ...(validated.output_impulse_shapes && { output_impulse_shapes: validated.output_impulse_shapes }),
+        ...(validated.metadata && { metadata: validated.metadata }),
       };
 
       const paradigmResult = await insertExecution(paradigmExecution, jwtAuth?.jwtToken);
@@ -1607,6 +1636,139 @@ app.get('/metrics/summary', async (c) => {
 
     return c.json({
       error: 'Failed to fetch metrics summary',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /scores
+ *
+ * Get Thompson Sampling scores for all activities in the learned corpus.
+ * Used by the Learned Corpus Dashboard to visualize activity beliefs.
+ *
+ * Query params:
+ * - limit: number (default 100, max 500)
+ * - min_executions: number (optional, filter activities with minimum executions)
+ *
+ * Returns: ActivityScoresResponse
+ */
+app.get('/scores', async (c) => {
+  try {
+    const jwtAuth = getJwtAuthFromContext(c);
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    if (!orgId) {
+      return c.json({ error: 'Organization ID required' }, 401);
+    }
+
+    const limitStr = c.req.query('limit') || '100';
+    let limit = parseInt(limitStr, 10);
+    if (isNaN(limit) || limit < 1) limit = 100;
+    limit = Math.min(limit, 500);
+
+    const minExecutionsStr = c.req.query('min_executions');
+    const minExecutions = minExecutionsStr ? parseInt(minExecutionsStr, 10) : undefined;
+
+    logger.info('GET /v2/activities/scores', {
+      orgId,
+      limit,
+      minExecutions,
+    });
+
+    // Use existing getActivityScores function from paradigm.ts
+    const result = await getActivityScores(orgId, undefined, jwtAuth?.jwtToken);
+
+    // Filter by min_executions if specified
+    let scores = result.data;
+    if (minExecutions && !isNaN(minExecutions)) {
+      scores = scores.filter(s => s.total_executions >= minExecutions);
+    }
+
+    // Apply limit
+    scores = scores.slice(0, limit);
+
+    return c.json({
+      scores,
+      total: result.data.length,
+      path: result.path === 'new' ? 'paradigm' : 'legacy',
+    });
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/scores failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch activity scores',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /corpus-summary
+ *
+ * Get aggregate metrics for the learned corpus.
+ * Used by the Learned Corpus Dashboard to show corpus statistics.
+ *
+ * Returns: CorpusSummaryResponse
+ */
+app.get('/corpus-summary', async (c) => {
+  try {
+    const jwtAuth = getJwtAuthFromContext(c);
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    if (!orgId) {
+      return c.json({ error: 'Organization ID required' }, 401);
+    }
+
+    logger.info('GET /v2/activities/corpus-summary', { orgId });
+
+    // Query aggregate metrics from v_activity_score
+    const summaryResult = await surrealDB.query(`
+      SELECT
+        count() AS total_activities,
+        math::sum(total_executions) AS total_executions,
+        math::sum(successes) AS total_successes,
+        math::sum(failures) AS total_failures,
+        math::sum(total_cost_usd) AS total_cost_usd,
+        math::mean(<float> alpha / (<float> alpha + <float> beta)) AS avg_belief,
+        count(IF total_executions < 5 THEN 1 ELSE NONE END) AS exploration_count,
+        count(IF total_executions >= 10 THEN 1 ELSE NONE END) AS exploitation_count
+      FROM v_activity_score
+      WHERE org_id = $org_id
+      GROUP ALL
+    `, { org_id: orgId });
+
+    const stats = summaryResult[0] as any || {};
+
+    const totalExecutions = stats.total_executions || 0;
+    const totalSuccesses = stats.total_successes || 0;
+
+    return c.json({
+      total_activities: stats.total_activities || 0,
+      total_executions: totalExecutions,
+      total_successes: totalSuccesses,
+      total_failures: stats.total_failures || 0,
+      overall_success_rate: totalExecutions > 0 ? totalSuccesses / totalExecutions : 0,
+      total_cost_usd: stats.total_cost_usd || 0,
+      avg_belief: stats.avg_belief || 0.5,
+      exploration_count: stats.exploration_count || 0,
+      exploitation_count: stats.exploitation_count || 0,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/corpus-summary failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch corpus summary',
       message: error.message,
     }, 500);
   }

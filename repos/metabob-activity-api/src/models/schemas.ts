@@ -123,6 +123,15 @@ export const ExecutionRecordSchema = z.object({
   failed_task_id: z.string().optional(),
   impulses_used: z.array(z.string()).optional(),
   component_changes: z.array(z.string()).optional(),
+  // Edge learning fields (from improvisation traces)
+  improvisation: z.boolean().optional(),
+  input_impulse_shapes: z.array(z.string()).optional(),
+  output_impulse_shapes: z.array(z.string()).optional(),
+  output_impulses: z.array(z.object({
+    shape: z.string(),
+    pointer: z.record(z.unknown()),
+  })).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export const ExecutionRecordResponseSchema = z.object({
@@ -781,3 +790,57 @@ export type CILintStageResult = z.infer<typeof CILintStageResultSchema>;
 export type CIResultRequest = z.infer<typeof CIResultRequestSchema>;
 export type CIResultResponse = z.infer<typeof CIResultResponseSchema>;
 export type CIResultsListResponse = z.infer<typeof CIResultsListResponseSchema>;
+
+// =============================================================================
+// LEARNED CORPUS DASHBOARD SCHEMAS
+// =============================================================================
+
+/**
+ * ActivityScore - Thompson Sampling data from v_activity_score view
+ * Used for visualizing learned corpus beliefs
+ */
+export const ActivityScoreSchema = z.object({
+  activity_id: z.string(),
+  org_id: z.string(),
+  total_executions: z.number().int(),
+  alpha: z.number(), // Thompson: successes + 1
+  beta: z.number(), // Thompson: failures + 1
+  successes: z.number().int(),
+  failures: z.number().int(),
+  avg_duration_ms: z.number(),
+  avg_cost_usd: z.number(),
+  total_cost_usd: z.number(),
+  total_tokens_in: z.number().int(),
+  total_tokens_out: z.number().int(),
+  last_executed_at: z.string().optional(),
+  first_executed_at: z.string().optional(),
+});
+
+/**
+ * ActivityScoresResponse - Response for GET /v2/activities/scores
+ */
+export const ActivityScoresResponseSchema = z.object({
+  scores: z.array(ActivityScoreSchema),
+  total: z.number().int(),
+  path: z.enum(['paradigm', 'legacy']),
+});
+
+/**
+ * CorpusSummaryResponse - Aggregate metrics for GET /v2/activities/corpus-summary
+ */
+export const CorpusSummaryResponseSchema = z.object({
+  total_activities: z.number().int(),
+  total_executions: z.number().int(),
+  total_successes: z.number().int(),
+  total_failures: z.number().int(),
+  overall_success_rate: z.number(),
+  total_cost_usd: z.number(),
+  avg_belief: z.number(), // Mean of all alpha/(alpha+beta)
+  exploration_count: z.number().int(), // Activities with <5 executions
+  exploitation_count: z.number().int(), // Activities with >=10 executions
+});
+
+// Type exports for Learned Corpus Dashboard
+export type ActivityScore = z.infer<typeof ActivityScoreSchema>;
+export type ActivityScoresResponse = z.infer<typeof ActivityScoresResponseSchema>;
+export type CorpusSummaryResponse = z.infer<typeof CorpusSummaryResponseSchema>;

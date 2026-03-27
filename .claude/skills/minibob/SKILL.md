@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires bun installed. MiniBob source is in repos/minibob
 metadata:
   author: metabob
-  version: "2.0"
+  version: "3.0"
 ---
 
 Use MiniBob to achieve development goals autonomously. MiniBob will automatically choose the best approach: trying routine activities, recovering from issues, or improvising solutions.
@@ -27,16 +27,25 @@ Use MiniBob to achieve development goals autonomously. MiniBob will automaticall
 
 ## Quick Start
 
-### 1. Ensure Authentication
+### 1. Environment Setup
 
-Before using MiniBob, ensure you have a valid JWT token:
+MiniBob uses **built-in instance authentication** - no external scripts needed. Set up your environment:
 
 ```bash
-# Get token (auto-detects API endpoint)
-./scripts/minibob-auth.sh login
+# Required: LLM access
+export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Export to environment (do this once per session)
-eval $(./scripts/minibob-auth.sh export)
+# Required for backend connection (learning, templates, traces)
+export MINIBOB_MCP_ENDPOINT="http://activity.metabob.local"
+
+# Instance authentication (MiniBob authenticates automatically)
+export MINIBOB_INSTANCE_ID="minibob-local-001"
+export MINIBOB_INSTANCE_API_KEY="test-api-key-123"
+
+# Optional: Configuration
+export MINIBOB_WORKDIR="/path/to/project"
+export MINIBOB_MODEL="claude-sonnet-4-20250514"
+export MINIBOB_AUTO_COMMIT="false"
 ```
 
 ### 2. Run MiniBob Goals
@@ -49,34 +58,15 @@ bun run index.ts goal "your goal description"
 # With specific working directory
 MINIBOB_WORKDIR=/path/to/project bun run index.ts goal "fix the bug"
 
-# With backend connection (uses authenticated token)
+# With backend connection (authenticates automatically)
 MINIBOB_MCP_ENDPOINT=http://activity.metabob.local bun run index.ts goal "add feature"
-```
-
----
-
-## Environment Setup
-
-MiniBob needs these environment variables:
-
-```bash
-# Required: LLM access
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Optional: Backend connection (for learning)
-export MINIBOB_MCP_ENDPOINT="http://activity.metabob.local"
-export MINIBOB_JWT="$(./scripts/minibob-auth.sh token)"
-
-# Optional: Configuration
-export MINIBOB_WORKDIR="/path/to/project"
-export MINIBOB_MODEL="claude-sonnet-4-20250514"
-export MINIBOB_AUTO_COMMIT="false"
 ```
 
 **One-liner for full setup:**
 ```bash
-eval $(./scripts/minibob-auth.sh export) && \
-export MINIBOB_MCP_ENDPOINT="http://activity.metabob.local"
+export MINIBOB_MCP_ENDPOINT="http://activity.metabob.local" \
+  MINIBOB_INSTANCE_ID="minibob-local-001" \
+  MINIBOB_INSTANCE_API_KEY="test-api-key-123"
 ```
 
 ---
@@ -126,9 +116,10 @@ When using MiniBob to develop MiniBob (self-development), follow this pattern:
 
 ### 1. Setup Session
 ```bash
-# Get auth token
-./scripts/minibob-auth.sh login
-eval $(./scripts/minibob-auth.sh export)
+# Set environment (MiniBob authenticates automatically on first API call)
+export MINIBOB_MCP_ENDPOINT="http://activity.metabob.local"
+export MINIBOB_INSTANCE_ID="minibob-local-001"
+export MINIBOB_INSTANCE_API_KEY="test-api-key-123"
 
 # Verify backend access
 curl -s http://activity.metabob.local/health | jq .
@@ -137,17 +128,16 @@ curl -s http://activity.metabob.local/health | jq .
 ### 2. Run Development Tasks
 ```bash
 cd repos/minibob
-MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
-  bun run index.ts goal "implement impulse tracking in improviser"
+bun run index.ts goal "implement impulse tracking in improviser"
 ```
 
 ### 3. Check Results
 ```bash
-# View execution traces
-./scripts/minibob-data.sh summary
+# View execution traces via API
+curl -s "http://activity.metabob.local/v2/activities/execution-traces?limit=5" | jq .
 
-# Export learned data
-./scripts/minibob-data.sh export dev-session-$(date +%Y%m%d)
+# View in dashboard
+open http://graph.metabob.local
 ```
 
 ### 4. Verify Changes
@@ -169,24 +159,33 @@ Extract the core goal from the user's request:
 - What's the desired outcome?
 - Are there any constraints or requirements?
 
-### Step 2: Ensure Auth
-Before running MiniBob, check auth is set up:
+### Step 2: Check Authentication (Only If Needed)
+**IMPORTANT:** Only prompt for credentials if backend learning is needed AND credentials are missing.
+
 ```bash
-# Quick check
-if [ -f ~/.minibob/token ]; then
-  ./scripts/minibob-auth.sh verify || ./scripts/minibob-auth.sh login
+# Check if already authenticated (silent check)
+if [ -n "$MINIBOB_INSTANCE_ID" ] && [ -n "$MINIBOB_INSTANCE_API_KEY" ]; then
+  echo "✓ Instance credentials already set"
+elif [ -n "$MINIBOB_MCP_ENDPOINT" ]; then
+  # Backend configured but no credentials - prompt user
+  echo "Backend configured but missing credentials."
+  echo "Set MINIBOB_INSTANCE_ID and MINIBOB_INSTANCE_API_KEY"
 else
-  ./scripts/minibob-auth.sh login
+  # No backend - MiniBob works offline (no learning)
+  echo "Running without backend connection (offline mode)"
 fi
-eval $(./scripts/minibob-auth.sh export)
 ```
+
+**Decision tree:**
+1. **Credentials set?** → Run MiniBob (auto-authenticates on first call)
+2. **Backend configured but no creds?** → Ask user for credentials
+3. **No backend configured?** → Run MiniBob in offline mode (no learning)
 
 ### Step 3: Execute MiniBob
 Run the appropriate command:
 ```bash
 cd repos/minibob
-MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
-  bun run index.ts goal "extracted goal description"
+bun run index.ts goal "extracted goal description"
 ```
 
 ### Step 4: Report Results
@@ -206,10 +205,8 @@ After MiniBob completes:
 
 **Action:**
 ```bash
-eval $(./scripts/minibob-auth.sh export)
 cd repos/minibob
-MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
-  bun run index.ts diagnose "Dashboard crashes when clicking Executions tab"
+bun run index.ts diagnose "Dashboard crashes when clicking Executions tab"
 ```
 
 ### Example 2: Add a Feature
@@ -217,10 +214,8 @@ MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
 
 **Action:**
 ```bash
-eval $(./scripts/minibob-auth.sh export)
 cd repos/minibob
 MINIBOB_WORKDIR=../metabob-cloud-dashboard \
-MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
   bun run index.ts goal "Add a logout button to the header"
 ```
 
@@ -229,10 +224,8 @@ MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
 
 **Action:**
 ```bash
-eval $(./scripts/minibob-auth.sh export)
 cd repos/minibob
 MINIBOB_WORKDIR=. \
-MINIBOB_MCP_ENDPOINT=http://activity.metabob.local \
   bun run index.ts goal "Implement impulse tracking in improviser - track which impulses are loaded and created during execution"
 ```
 
@@ -250,24 +243,27 @@ kubectl port-forward -n activity-system svc/metabob-activity-api 8080:8080 &
 export MINIBOB_MCP_ENDPOINT="http://localhost:8080"
 ```
 
-### Auth Token Management
-Tokens are valid for 24 hours. The auth script caches them at `~/.minibob/token`.
+### Authentication
+MiniBob uses **RECORD-based instance authentication**:
+- Authentication happens automatically on first API call
+- Tokens are valid for 24 hours
+- MiniBob handles token refresh internally
+- No manual token management required
 
+**How it works:**
+1. MiniBob reads `MINIBOB_INSTANCE_ID` and `MINIBOB_INSTANCE_API_KEY`
+2. On first backend call, it POSTs to `/v2/auth/minibob/signin`
+3. Receives JWT token with `org_id` claim
+4. Caches token and uses for subsequent calls
+5. Token auto-refreshes before expiry
+
+**Verify authentication:**
 ```bash
-# Check token status
-./scripts/minibob-auth.sh verify
-
-# Refresh if needed
-./scripts/minibob-auth.sh refresh
-
-# View current token
-./scripts/minibob-auth.sh token
-```
-
-### Data Backup
-Before making major changes, backup learning data:
-```bash
-./scripts/minibob-data.sh export pre-change-backup
+# Test signin endpoint directly
+curl -X POST http://activity.metabob.local/v2/auth/minibob/signin \
+  -H "Content-Type: application/json" \
+  -d '{"instance_id":"minibob-local-001","api_key":"test-api-key-123"}' | jq .
+# Expected: {"token": "eyJ...", "org_id": "metabob_internal"}
 ```
 
 ### Execution Traces
@@ -325,11 +321,14 @@ Next steps: [suggestions]
 
 ### Auth Errors
 ```bash
-# Re-login
-./scripts/minibob-auth.sh login
+# Check instance credentials are set
+echo "Instance: $MINIBOB_INSTANCE_ID"
+echo "API Key: ${MINIBOB_INSTANCE_API_KEY:0:10}..."
 
-# Check token is exported
-echo $MINIBOB_JWT | head -c 20
+# Test authentication directly
+curl -X POST http://activity.metabob.local/v2/auth/minibob/signin \
+  -H "Content-Type: application/json" \
+  -d "{\"instance_id\":\"$MINIBOB_INSTANCE_ID\",\"api_key\":\"$MINIBOB_INSTANCE_API_KEY\"}"
 ```
 
 ### Backend Unreachable
@@ -363,10 +362,11 @@ bun run typecheck
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | - | Required for Claude |
-| `MINIBOB_MCP_ENDPOINT` | - | Activity API URL |
-| `MINIBOB_JWT` | - | Auth token (from auth script) |
-| `MINIBOB_WORKDIR` | `.` | Working directory |
+| `ANTHROPIC_API_KEY` | - | Required for Claude LLM access |
+| `MINIBOB_MCP_ENDPOINT` | - | Activity API URL for backend connection |
+| `MINIBOB_INSTANCE_ID` | - | Instance ID for RECORD-based auth |
+| `MINIBOB_INSTANCE_API_KEY` | - | API key for instance authentication |
+| `MINIBOB_WORKDIR` | `.` | Working directory for goals |
 | `MINIBOB_MODEL` | claude-sonnet-4-20250514 | Model to use |
 | `MINIBOB_AUTO_COMMIT` | false | Auto-commit changes |
 | `MINIBOB_PORT` | 8080 | Server port (for serve mode) |
