@@ -66,12 +66,14 @@
 **Commit:** `feat(mcp): add workspace initialization tool`
 
 ### Task 2.3: Progressive Sync on File Change
-- [ ] **File:** `repos/metabob-analysis-api/src/services/cpg-service.ts`
-- [ ] Track file hashes in `progressive_sync_state` table
-- [ ] On `addFiles()`, compare hashes to detect changes
-- [ ] Only re-index changed files
-- [ ] **File:** `repos/metabob-analysis-api/sql/schemas/022-annotations.surql`
-- [ ] Verify `progressive_sync_state` schema is complete
+- [x] **File:** `repos/metabob-analysis-api/src/services/cpg-service.ts`
+- [x] Track file hashes in memory per session (SHA-256, 16-char prefix)
+- [x] On `addFilesProgressive()`, compare hashes to detect changes
+- [x] Only re-index changed files
+- [x] **File:** `repos/metabob-analysis-api/src/routes/indexing.ts`
+- [x] Add `progressive` parameter to IndexFilesRequestSchema
+- [x] Route to `cpgService.addFilesProgressive()` when enabled
+- [x] Return detailed sync statistics (changed/unchanged/skipped)
 - [ ] **Test:** Edit file, re-index, verify only changed file processed
 
 **Commit:** `feat(indexing): progressive sync on file change`
