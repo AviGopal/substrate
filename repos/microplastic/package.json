@@ -1,0 +1,60 @@
+{
+  "name": "@metabob/microplastic",
+  "version": "0.1.0",
+  "description": "Composite vessel agent-IDE - a Claude Code replacement that gains capabilities through use",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "microplastic": "./src/index.ts",
+    "mp": "./src/index.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node --format esm --sourcemap=external && tsc --project tsconfig.build.json --emitDeclarationOnly",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "bunx @biomejs/biome check src",
+    "format": "bunx @biomejs/biome format --write src"
+  },
+  "keywords": [
+    "vessel",
+    "agent-ide",
+    "cli",
+    "ai",
+    "development",
+    "autonomous",
+    "microplastic"
+  ],
+  "author": "Metabob",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/metabob/microplastic"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.10"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@metabob/minibob": "file:../minibob",
+    "@opentui/core": "^0.1.90",
+    "zod": "^3.23.8"
+  }
+}
