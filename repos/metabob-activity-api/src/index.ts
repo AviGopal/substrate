@@ -23,6 +23,7 @@ import ciRoutes from './routes/ci';
 import executionTracesRoutes from './routes/execution-traces';
 import codeVariantsRoutes from './routes/code-variants';
 import vesselsRoutes from './routes/vessels';
+import connectionsRoutes from './routes/connections';
 import { broadcaster } from './websocket/broadcaster';
 import type { ServerWebSocket } from 'bun';
 
@@ -160,6 +161,9 @@ app.route('/v2/activities/code-variants', codeVariantsRoutes);
 // Vessel status routes (GET /v2/vessels/status, POST /v2/vessels/heartbeat)
 app.route('/v2/vessels', vesselsRoutes);
 
+// Connection slot routes (POST /v2/connections/acquire, heartbeat, reconnect, release)
+app.route('/v2/connections', connectionsRoutes);
+
 // ============================================================================
 // Error Handling
 // ============================================================================
@@ -284,6 +288,20 @@ const server = Bun.serve<WebSocketData>({
 
 logger.info(`Server running at http://localhost:${server.port}`);
 logger.info(`WebSocket endpoint available at ws://localhost:${server.port}/ws`);
+
+// ============================================================================
+// Heartbeat Worker (Connection Slot Management)
+// ============================================================================
+
+const heartbeatWorkerEnabled = process.env.HEARTBEAT_WORKER_ENABLED !== 'false';
+if (heartbeatWorkerEnabled) {
+  import('./workers/heartbeat').then(({ startHeartbeatWorker }) => {
+    startHeartbeatWorker();
+    logger.info('[Server] Heartbeat worker started');
+  }).catch(err => {
+    logger.error('[Server] Failed to start heartbeat worker', { error: err.message });
+  });
+}
 
 // ============================================================================
 // Scheduled Task Generation (Self-Development Loop)

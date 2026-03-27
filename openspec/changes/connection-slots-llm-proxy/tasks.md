@@ -37,53 +37,53 @@
 
 ---
 
-## Phase 2: Connection Slot Backend (metabob-activity-api)
+## Phase 2: Connection Slot Backend (metabob-activity-api) ✅ COMPLETE
 
-### P2.1: Connection acquisition endpoint
+### P2.1: Connection acquisition endpoint ✅
 **Files**: `repos/metabob-activity-api/src/routes/connections.ts`
-- [ ] Create `POST /v2/connections/acquire` endpoint
-- [ ] Validate API key via argon2 hash comparison
-- [ ] Check slot availability (count active + grace connections)
-- [ ] Create connection record with session_token
-- [ ] Generate JWT for connection
-- [ ] Return connection details or 429 if limit reached
+- [x] Create `POST /v2/connections/acquire` endpoint
+- [x] Validate API key via argon2 hash comparison
+- [x] Check slot availability (count active + grace connections)
+- [x] Create connection record with session_token
+- [x] Generate JWT for connection
+- [x] Return connection details or 429 if limit reached
 
-### P2.2: Heartbeat endpoint
+### P2.2: Heartbeat endpoint ✅
 **Files**: `repos/metabob-activity-api/src/routes/connections.ts`
-- [ ] Create `POST /v2/connections/heartbeat` endpoint
-- [ ] Update last_heartbeat timestamp
-- [ ] Accept optional current_execution state
-- [ ] Calculate and return grace period info
+- [x] Create `POST /v2/connections/heartbeat` endpoint
+- [x] Update last_heartbeat timestamp
+- [x] Accept optional current_execution state
+- [x] Calculate and return grace period info
 
-### P2.3: Reconnection endpoint
+### P2.3: Reconnection endpoint ✅
 **Files**: `repos/metabob-activity-api/src/routes/connections.ts`
-- [ ] Create `POST /v2/connections/reconnect` endpoint
-- [ ] Validate session_token
-- [ ] Check if within grace period
-- [ ] Restore connection to active state
-- [ ] Return new JWT or 410 if expired
+- [x] Create `POST /v2/connections/reconnect` endpoint
+- [x] Validate session_token
+- [x] Check if within grace period
+- [x] Restore connection to active state
+- [x] Return new JWT or 410 if expired
 
-### P2.4: Release endpoint
+### P2.4: Release endpoint ✅
 **Files**: `repos/metabob-activity-api/src/routes/connections.ts`
-- [ ] Create `POST /v2/connections/release` endpoint
-- [ ] Mark connection as disconnected
-- [ ] Clear from Redis slot count
+- [x] Create `POST /v2/connections/release` endpoint
+- [x] Mark connection as disconnected
+- [x] Clear from Redis slot count
 
-### P2.5: Heartbeat worker
+### P2.5: Heartbeat worker ✅
 **Files**: `repos/metabob-activity-api/src/workers/heartbeat.ts`
-- [ ] Create background worker (runs every 10s)
-- [ ] Find connections that missed heartbeat
-- [ ] Calculate grace period based on execution state
-- [ ] Transition to grace status
-- [ ] Expire grace periods and mark disconnected
-- [ ] Handle orphaned executions
+- [x] Create background worker (runs every 10s)
+- [x] Find connections that missed heartbeat
+- [x] Calculate grace period based on execution state
+- [x] Transition to grace status
+- [x] Expire grace periods and mark disconnected
+- [x] Handle orphaned executions
 
-### P2.6: Redis slot management
-**Files**: `repos/metabob-activity-api/src/db/redis.ts`
-- [ ] Add `acquireSlot(apiKeyId)` function
-- [ ] Add `releaseSlot(apiKeyId, connectionId)` function
-- [ ] Add `getSlotCount(apiKeyId)` function
-- [ ] Add `refreshSlotTTL(apiKeyId)` function
+### P2.6: Redis slot management ✅
+**Files**: `repos/metabob-activity-api/src/routes/connections.ts` (integrated into connections module)
+- [x] Add `acquireSlot(apiKeyId)` function
+- [x] Add `releaseSlot(apiKeyId, connectionId)` function
+- [x] Add `getSlotCount(apiKeyId)` function
+- [x] Add `refreshSlotTTL(apiKeyId)` function
 
 ---
 
