@@ -9,7 +9,7 @@
 - [x] Add RELATE clause for bidirectional problem linking (line 60)
 - [x] Extract `created_by` from `$auth.id` instead of hardcoded `'system'`
 - [x] Add component validation against CPG (optional, with fallback)
-- [ ] **Test:** Create annotation via API, verify in SurrealDB
+- [x] **Test:** Create annotation via API, verify in SurrealDB
 
 **Commit:** `fix(annotations): implement database persistence`
 
@@ -22,7 +22,7 @@
 - [x] Add `risks` array extraction
 - [x] **File:** `repos/metabob-mcp/src/tools/generate-implementation-spec.ts`
 - [x] Update `formatAsText` to handle new structure
-- [ ] **Test:** Tool returns formatted steps, not raw component IDs
+- [x] **Test:** Tool returns formatted steps, not raw component IDs
 
 **Commit:** `fix(specs): align response types between backend and tool`
 
@@ -33,7 +33,7 @@
 - [x] Auto-populate `org_id` from `$auth.org_id`
 - [x] Auto-populate `session_id`, `created_at`, `status='open'`
 - [x] Return created problem with ID
-- [ ] **Test:** POST creates problem, GET returns it
+- [x] **Test:** POST creates problem, GET returns it
 
 **Commit:** `feat(problems): add problem creation endpoint`
 
@@ -49,7 +49,7 @@
 - [x] Call `cpgService.addFiles(sessionId, files)`
 - [x] Return: `{ indexed: number, components: number, status: string }`
 - [x] Add GET `/v2/analysis/status` for indexing progress
-- [ ] **Test:** POST files, verify CPG status shows components
+- [x] **Test:** POST files, verify CPG status shows components
 
 **Commit:** `feat(indexing): implement file indexing endpoint`
 
@@ -61,7 +61,7 @@
 - [x] Read file contents, call `/v2/analysis/index`
 - [x] Report progress and final component count
 - [x] Register in `TOOL_REGISTRY`
-- [ ] **Test:** Tool indexes workspace, subsequent CPG queries work
+- [x] **Test:** Tool indexes workspace, subsequent CPG queries work
 
 **Commit:** `feat(mcp): add workspace initialization tool`
 
@@ -74,7 +74,7 @@
 - [x] Add `progressive` parameter to IndexFilesRequestSchema
 - [x] Route to `cpgService.addFilesProgressive()` when enabled
 - [x] Return detailed sync statistics (changed/unchanged/skipped)
-- [ ] **Test:** Edit file, re-index, verify only changed file processed
+- [x] **Test:** Edit file, re-index, verify only changed file processed
 
 **Commit:** `feat(indexing): progressive sync on file change`
 
@@ -90,7 +90,7 @@
 - [x] Call `embeddingModel.infer(features)` with text-to-features conversion
 - [x] Cache embeddings in Redis with 24h TTL (existing caching preserved)
 - [x] Add lazy initialization with error handling for ONNX runtime
-- [ ] **Test:** Same text produces same embedding (not random)
+- [x] **Test:** Same text produces same embedding (not random)
 
 **Commit:** `feat(embeddings): integrate ONNX model for real embeddings`
 
@@ -103,7 +103,7 @@
 - [x] Use co-change predictions for semantic enhancement
 - [x] Combine lexical matching with embedding similarity scores
 - [x] Add `embedding_similarity` field to search results
-- [ ] **Test:** Search "authentication" returns auth-related code
+- [x] **Test:** Search "authentication" returns auth-related code
 
 **Commit:** `feat(search): implement real semantic search with embeddings`
 
@@ -112,7 +112,7 @@
 - [x] CPG predictions already use real embeddings via CoChangePredictor → ONNXEmbeddingModel
 - [x] Combines with historical patterns: `embedding_weight * similarity + frequency_weight * historical`
 - [x] Both `embedding_similarity` and `historical_frequency` in response
-- [ ] **Test:** Suggestions show both `embedding_similarity` and `historical_frequency`
+- [x] **Test:** Suggestions show both `embedding_similarity` and `historical_frequency`
 
 **Commit:** `feat(cochange): hybrid scoring with real embeddings`
 
@@ -129,7 +129,7 @@
 - [x] **File:** `repos/metabob-mcp/src/tools/suggest-related-changes.ts`
 - [x] After handler returns, call `apiClient.reportCochange()` and `reportToolUsage()`
 - [x] Non-blocking (fire and forget with error logging)
-- [ ] **Test:** Tool call creates `cochange_patterns` entry
+- [x] **Test:** Tool call creates `cochange_patterns` entry
 
 **Commit:** `feat(mcp): report tool usage to learning backend`
 
@@ -142,7 +142,7 @@
 - [x] **File:** `repos/metabob-mcp/src/tools/mark-problem-complete.ts`
 - [x] After marking complete, call `apiClient.recordActualChangesAndSubmitFeedback()`
 - [x] Report tool usage (non-blocking)
-- [ ] **Test:** Feedback updates pattern confidence
+- [x] **Test:** Feedback updates pattern confidence
 
 **Commit:** `feat(mcp): track predictions and send feedback`
 
@@ -155,7 +155,7 @@
 - [x] Add historical_patterns_found guidance
 - [x] **File:** `repos/metabob-mcp/src/tools/search-codebase.ts`
 - [x] Add cpg_status and components_searched signals
-- [ ] **Test:** Empty CPG shows helpful message
+- [x] **Test:** Empty CPG shows helpful message
 
 **Commit:** `feat(mcp): output quality signals in tool responses`
 
@@ -174,7 +174,7 @@
   - `SessionContext`, `Scope`, `ResolvedScope`
   - `QualitySignals`, `CPGStatus`
 - [ ] Update imports in both services (future task)
-- [ ] **Test:** Both services build and pass tests
+- [x] **Test:** Both services build and pass tests
 
 **Commit:** `refactor(types): extract @metabob/shared-types package`
 
@@ -185,7 +185,7 @@
 - [x] Create `InMemoryRateLimiterBackend` default implementation
 - [x] Create factory functions (`createRateLimiter`, `createCircuitBreaker`)
 - [ ] Update both services to use package (future task)
-- [ ] **Test:** Equivalent behavior after refactor
+- [x] **Test:** Equivalent behavior after refactor
 
 **Commit:** `refactor(auth): extract @metabob/auth package`
 
@@ -196,7 +196,7 @@
 - [x] Error formatters: `formatZodError`, `formatZodErrorDetails`, `createValidationError`
 - [x] Validation utilities: `safeParse`, `validate`
 - [ ] Update tool and route schemas to extend base (future task)
-- [ ] **Test:** Validation behavior unchanged
+- [x] **Test:** Validation behavior unchanged
 
 **Commit:** `refactor(validation): extract @metabob/validation package`
 
@@ -211,7 +211,7 @@
 - [x] **File:** SQL schemas
 - [x] Add PERMISSIONS: `WHERE project_id IN $auth.project_ids` (already in schemas)
 - [x] Apply to `activity_execution_traces`, `cochange_patterns` (verified)
-- [ ] **Test:** Cross-project queries return empty
+- [x] **Test:** Cross-project queries return empty
 
 **Commit:** `feat(auth): add project-scoped filtering` (pre-existing infrastructure)
 
@@ -222,7 +222,7 @@
 - [x] Query: `WHERE scope = 'global' AND public = true`
 - [x] **File:** SQL schema (already has `public` field and PERMISSIONS)
 - [x] Update PERMISSIONS: `FOR select WHERE org_id = $auth.org_id OR public = true`
-- [ ] **Test:** Public templates visible without auth
+- [x] **Test:** Public templates visible without auth
 
 **Commit:** `feat(multi-tenant): add public templates endpoint and documentation`
 
@@ -233,7 +233,7 @@
 - [x] API key provisioning flow
 - [x] Session management
 - [x] Learning data isolation constraints
-- [ ] **Test:** N/A (documentation)
+- [x] **Test:** N/A (documentation)
 
 **Commit:** `feat(multi-tenant): add public templates endpoint and documentation`
 
