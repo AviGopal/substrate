@@ -217,9 +217,7 @@ export async function insertActivity(
       public: activity.public || false,
     };
 
-    // Optional fields
-    if (activity.org_id) record.org_id = activity.org_id;
-    if (activity.project_id) record.project_id = activity.project_id;
+    // Optional fields (non-record types)
     if (activity.tool_name) record.tool_name = activity.tool_name;
     if (activity.child_activities) record.child_activities = activity.child_activities;
 
@@ -229,13 +227,33 @@ export async function insertActivity(
       .map(k => `${k}: $${k}`)
       .join(',\n        ');
 
+    // For org_id: if JWT token is provided, use <record> $auth.org_id to convert
+    // string to record type. Otherwise, convert string parameter to record type.
+    // Note: $auth.org_id is a string like "organizations:metabob_internal" that needs conversion.
+    const orgIdClause = jwtToken
+      ? `,\n        org_id: <record> $auth.org_id` // Convert $auth.org_id string to record
+      : (activity.org_id ? `,\n        org_id: type::record('organizations', $org_id)` : '');
+    if (!jwtToken && activity.org_id) record.org_id = activity.org_id;
+
+    // For project_id: similar logic, but $auth.project_id may be null
+    const projectIdClause = jwtToken
+      ? '' // project_id is optional, let schema handle it
+      : (activity.project_id ? `,\n        project_id: type::record('projects', $project_id)` : '');
+    if (!jwtToken && activity.project_id) record.project_id = activity.project_id;
+
     const query = `
       INSERT INTO activity {
-        ${fields},
+        ${fields}${orgIdClause}${projectIdClause},
         created_at: time::now(),
         updated_at: time::now()
       }
     `;
+
+    logger.info('[paradigm] insertActivity query', {
+      hasJwtToken: !!jwtToken,
+      orgIdClause,
+      query: query.substring(0, 200),
+    });
 
     const result = jwtToken
       ? await queryWithAuth<ParadigmActivity>(jwtToken, query, record)
@@ -286,22 +304,43 @@ export async function insertExecution(
     if (execution.error) record.error = execution.error;
     if (execution.parent_execution_id) record.parent_execution_id = execution.parent_execution_id;
     if (execution.trace) record.trace = execution.trace;
-    if (execution.org_id) record.org_id = execution.org_id;
-    if (execution.project_id) record.project_id = execution.project_id;
+    // org_id and project_id are handled separately - they need record type conversion
+    // or should be populated from $auth context
     if (execution.vessel_id) record.vessel_id = execution.vessel_id;
 
+    // Build field list - org_id/project_id are special: use $auth if JWT, or convert to record type
     const fields = Object.keys(record)
       .filter(k => record[k] !== undefined)
       .map(k => `${k}: $${k}`)
       .join(',\n        ');
 
+    // For org_id: if JWT token is provided, use <record> $auth.org_id to convert
+    // string to record type. Otherwise, convert string parameter to record type.
+    // Note: $auth.org_id is a string like "organizations:metabob_internal" that needs conversion.
+    const orgIdClause = jwtToken
+      ? `,\n        org_id: <record> $auth.org_id` // Convert $auth.org_id string to record
+      : (execution.org_id ? `,\n        org_id: type::record('organizations', $org_id)` : '');
+    if (!jwtToken && execution.org_id) record.org_id = execution.org_id;
+
+    // For project_id: similar logic, but $auth.project_id may be null
+    const projectIdClause = jwtToken
+      ? '' // project_id is optional, let schema handle it
+      : (execution.project_id ? `,\n        project_id: type::record('projects', $project_id)` : '');
+    if (!jwtToken && execution.project_id) record.project_id = execution.project_id;
+
     const query = `
       INSERT INTO execution {
-        ${fields},
+        ${fields}${orgIdClause}${projectIdClause},
         executed_at: time::now(),
         created_at: time::now()
       }
     `;
+
+    logger.info('[paradigm] insertExecution query', {
+      hasJwtToken: !!jwtToken,
+      orgIdClause,
+      query: query.substring(0, 200),
+    });
 
     const result = jwtToken
       ? await queryWithAuth<ParadigmExecution>(jwtToken, query, record)
@@ -346,7 +385,9 @@ export async function getActivityScores(
   if (useParadigm) {
     try {
       let query = `SELECT * FROM v_activity_score WHERE org_id = $org_id`;
-      const params: Record<string, any> = { org_id: orgId };
+      // org_id in v_activity_score is stored as record ID (e.g., "organizations:metabob_internal")
+      const fullOrgId = orgId.startsWith('organizations:') ? orgId : `organizations:${orgId}`;
+      const params: Record<string, any> = { org_id: fullOrgId };
 
       if (activityIds && activityIds.length > 0) {
         query += ` AND activity_id IN $activity_ids`;

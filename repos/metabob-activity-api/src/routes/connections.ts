@@ -717,6 +717,68 @@ connections.post('/release', async (c) => {
 });
 
 // ============================================================================
+// GET /v2/connections/count - Get connection count for an API key
+// ============================================================================
+
+connections.get('/count', async (c) => {
+  try {
+    const apiKeyId = c.req.query('api_key_id');
+
+    if (!apiKeyId) {
+      return c.json({
+        error: 'missing_api_key_id',
+        message: 'api_key_id query parameter is required'
+      }, 400);
+    }
+
+    // Get count from Redis (fast path)
+    const redisCount = await getSlotCount(apiKeyId);
+
+    // Also get from SurrealDB for accuracy (in case Redis is stale)
+    const dbConnections = await surrealDB.query<{ count: number }[]>(
+      `SELECT count() as count FROM connection
+       WHERE api_key_id = $apiKeyId AND status IN ['active', 'grace']
+       GROUP ALL`,
+      { apiKeyId }
+    );
+
+    const dbCount = dbConnections[0]?.count || 0;
+
+    // Get max_connections from the API key
+    const apiKeyInfo = await surrealDB.query<ApiKey[]>(
+      `SELECT max_connections, tier FROM $apiKeyId`,
+      { apiKeyId }
+    );
+
+    const maxConnections = apiKeyInfo[0]?.max_connections || 1;
+    const tier = apiKeyInfo[0]?.tier || 'starter';
+
+    logger.debug('Connection count query', {
+      apiKeyId,
+      redisCount,
+      dbCount,
+      maxConnections
+    });
+
+    return c.json({
+      api_key_id: apiKeyId,
+      current_connections: Math.max(redisCount, dbCount), // Use higher count for safety
+      max_connections: maxConnections,
+      tier,
+      slots_available: maxConnections - Math.max(redisCount, dbCount)
+    });
+
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Failed to get connection count', { error: err.message });
+    return c.json({
+      error: 'internal_error',
+      message: 'Failed to get connection count'
+    }, 500);
+  }
+});
+
+// ============================================================================
 // GET /v2/connections/status (for debugging/dashboard)
 // ============================================================================
 

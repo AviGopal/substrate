@@ -838,7 +838,7 @@ app.get('/templates/:variantId', async (c) => {
  * Record activity execution and update Thompson Sampling metrics
  * 
  * This endpoint closes the learning loop by:
- * 1. Recording execution result in activity_executions table
+ * 1. Recording execution result in activity_execution_traces table
  * 2. Updating variant_performance_metrics with Thompson Sampling parameters
  * 3. Invalidating Redis cache for updated template
  */
@@ -940,7 +940,7 @@ app.post('/executions', async (c) => {
     // Build dynamic query with only provided fields
     const execFields = Object.keys(executionRecord).map(k => `${k}: $${k}`).join(',\n        ');
     const insertExecutionQuery = `
-      INSERT INTO activity_executions {
+      INSERT INTO activity_execution_traces {
         ${execFields},
         executed_at: time::now(),
         created_at: time::now()
@@ -949,7 +949,7 @@ app.post('/executions', async (c) => {
 
     await surrealDB.query(insertExecutionQuery, executionRecord);
 
-    logger.debug('Execution recorded in activity_executions', { executionId });
+    logger.debug('Execution recorded in activity_execution_traces', { executionId });
 
     // DUAL-WRITE: Also insert into new paradigm execution table (schema-paradigm-alignment)
     // v_activity_score view computes Thompson Sampling from execution table automatically
@@ -1159,7 +1159,7 @@ app.get('/executions', async (c) => {
     });
 
     // Build query with filters
-    let query = 'SELECT * FROM activity_executions WHERE 1=1';
+    let query = 'SELECT * FROM activity_execution_traces WHERE 1=1';
     const params: Record<string, any> = {};
     
     // Multi-tenant filtering (same as templates)
@@ -1728,6 +1728,9 @@ app.get('/corpus-summary', async (c) => {
 
     logger.info('GET /v2/activities/corpus-summary', { orgId });
 
+    // org_id in v_activity_score is stored as record ID (e.g., "organizations:metabob_internal")
+    const fullOrgId = orgId.startsWith('organizations:') ? orgId : `organizations:${orgId}`;
+
     // Query aggregate metrics from v_activity_score
     const summaryResult = await surrealDB.query(`
       SELECT
@@ -1742,7 +1745,7 @@ app.get('/corpus-summary', async (c) => {
       FROM v_activity_score
       WHERE org_id = $org_id
       GROUP ALL
-    `, { org_id: orgId });
+    `, { org_id: fullOrgId });
 
     const stats = summaryResult[0] as any || {};
 

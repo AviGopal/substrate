@@ -132,8 +132,11 @@ DEFINE FIELD IF NOT EXISTS execution_type ON activity TYPE string
 DEFINE FIELD IF NOT EXISTS category ON activity TYPE option<string>;
 
 -- Template-specific: Task steps for LLM execution
-DEFINE FIELD IF NOT EXISTS tasks ON activity TYPE option<array>
+-- Both tasks and tasks.* must be FLEXIBLE to allow arbitrary nested task objects
+DEFINE FIELD IF NOT EXISTS tasks ON activity TYPE option<array<object>> FLEXIBLE
   COMMENT "Task steps array for template execution";
+DEFINE FIELD IF NOT EXISTS tasks.* ON activity TYPE object FLEXIBLE
+  COMMENT "Individual task objects with arbitrary nested fields (dependencies, prompt, etc.)";
 
 -- Tool-specific: Tool name for tool invocation
 DEFINE FIELD IF NOT EXISTS tool_name ON activity TYPE option<string>;
@@ -267,6 +270,19 @@ DEFINE FIELD IF NOT EXISTS vessel_id ON execution TYPE option<string>
 
 DEFINE FIELD IF NOT EXISTS created_by ON execution TYPE option<record<users> | record<minibob_instance>>
   VALUE $value OR $auth.id;
+
+-- Edge Learning Fields (from improvisation traces)
+DEFINE FIELD IF NOT EXISTS improvisation ON execution TYPE option<bool>
+  COMMENT "Whether this was an LLM improvisation (no template matched)";
+
+DEFINE FIELD IF NOT EXISTS input_impulse_shapes ON execution TYPE option<array<string>>
+  COMMENT "Shapes of input impulses for edge learning";
+
+DEFINE FIELD IF NOT EXISTS output_impulse_shapes ON execution TYPE option<array<string>>
+  COMMENT "Shapes of output impulses for edge learning";
+
+DEFINE FIELD IF NOT EXISTS metadata ON execution TYPE option<object> FLEXIBLE
+  COMMENT "Extensible metadata for learning";
 
 -- Timestamps
 DEFINE FIELD IF NOT EXISTS executed_at ON execution TYPE datetime

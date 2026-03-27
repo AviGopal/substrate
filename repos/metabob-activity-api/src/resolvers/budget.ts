@@ -79,7 +79,7 @@ export async function checkAndDeductBudget(
   // First, we need to find the API key for this org
   // In a real system, we'd pass the API key ID directly
   // For now, get the first active API key for the org
-  const apiKeys = await queryWithAuth<ApiKey[]>(
+  const apiKeys = await queryWithAuth<ApiKey>(
     jwtToken,
     `SELECT * FROM api_keys WHERE org_id = $orgId AND is_active = true LIMIT 1`,
     { orgId: `organizations:${orgId}` }
@@ -137,7 +137,7 @@ export async function checkAndDeductBudget(
   const tokensLimit = result[3];
 
   logger.debug('[Budget] Check result', {
-    apiKeyId: apiKey.id,
+    apiKeyId: apiKey!.id,
     allowed,
     tokensNeeded,
     remaining,
@@ -239,7 +239,7 @@ export async function resetBudgets(): Promise<void> {
 
   try {
     // Find API keys that need reset
-    const keysToReset = await surrealDB.query<ApiKey[]>(
+    const keysToReset = await surrealDB.query<ApiKey>(
       `SELECT * FROM api_keys
        WHERE llm_budget.reset_at < time::now()
          AND is_active = true`

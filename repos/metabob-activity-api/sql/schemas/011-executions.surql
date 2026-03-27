@@ -118,6 +118,26 @@ DEFINE FIELD IF NOT EXISTS tasks ON activity_execution_traces TYPE option<array<
 DEFINE FIELD IF NOT EXISTS parent_execution_id ON activity_execution_traces TYPE option<string>
   COMMENT "Parent execution ID (for composition tracking)";
 
+-- Edge Learning Fields (from improvisation traces)
+DEFINE FIELD IF NOT EXISTS improvisation ON activity_execution_traces TYPE option<bool>
+  COMMENT "Whether this was an LLM improvisation (no template matched)";
+
+DEFINE FIELD IF NOT EXISTS input_impulse_shapes ON activity_execution_traces TYPE option<array<string>>
+  COMMENT "Shapes of input impulses (goal, task, previous_result, error_context, etc.)";
+
+DEFINE FIELD IF NOT EXISTS output_impulse_shapes ON activity_execution_traces TYPE option<array<string>>
+  COMMENT "Shapes of output impulses produced (documentation, source_code, command_result, etc.)";
+
+DEFINE FIELD IF NOT EXISTS output_impulses ON activity_execution_traces TYPE option<array<object>> FLEXIBLE
+  COMMENT "Full output impulse data [{shape, pointer}] for ribosome extraction";
+
+-- Nested field definitions for output_impulses array elements (FLEXIBLE required for arbitrary nested structure)
+DEFINE FIELD IF NOT EXISTS output_impulses.* ON activity_execution_traces TYPE object FLEXIBLE
+  COMMENT "Individual output impulse with shape and pointer (allows arbitrary nested fields)";
+
+DEFINE FIELD IF NOT EXISTS metadata ON activity_execution_traces TYPE option<object> FLEXIBLE
+  COMMENT "Extensible metadata for edge learning (inputShapes, outputShapes, producedImpulses, etc.)";
+
 -- Timestamps
 DEFINE FIELD IF NOT EXISTS executed_at ON activity_execution_traces TYPE datetime
   VALUE $value OR time::now()

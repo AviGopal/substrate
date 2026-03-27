@@ -73,6 +73,12 @@ interface ExecutionTrace {
   project_id: string | null;
   executed_at: string;
   created_at: string;
+  // Edge learning fields
+  improvisation?: boolean;
+  input_impulse_shapes?: string[];
+  output_impulse_shapes?: string[];
+  output_impulses?: Array<{ shape: string; pointer: Record<string, unknown> }>;
+  metadata?: Record<string, unknown>;
 }
 
 interface ListExecutionTracesResponse {
@@ -449,6 +455,16 @@ app.post('/', async (c) => {
       // Timestamps (SurrealDB datetime type)
       executed_at: new Date(),
       created_at: new Date(),
+
+      // Edge learning fields (from improvisation traces)
+      ...(body.improvisation ? { improvisation: body.improvisation } : {}),
+      ...(body.input_impulse_shapes && body.input_impulse_shapes.length > 0
+        ? { input_impulse_shapes: body.input_impulse_shapes } : {}),
+      ...(body.output_impulse_shapes && body.output_impulse_shapes.length > 0
+        ? { output_impulse_shapes: body.output_impulse_shapes } : {}),
+      ...(body.output_impulses && body.output_impulses.length > 0
+        ? { output_impulses: body.output_impulses } : {}),
+      ...(body.metadata ? { metadata: body.metadata } : {}),
     };
 
     // Insert into database
@@ -463,6 +479,12 @@ app.post('/', async (c) => {
     if (trace.component_changes) optionalFields.push('component_changes: $component_changes');
     if (trace.tasks) optionalFields.push('tasks: $tasks');
     if (trace.state_snapshot) optionalFields.push('state_snapshot: $state_snapshot');
+    // Edge learning fields
+    if (trace.improvisation) optionalFields.push('improvisation: $improvisation');
+    if (trace.input_impulse_shapes) optionalFields.push('input_impulse_shapes: $input_impulse_shapes');
+    if (trace.output_impulse_shapes) optionalFields.push('output_impulse_shapes: $output_impulse_shapes');
+    if (trace.output_impulses) optionalFields.push('output_impulses: $output_impulses');
+    if (trace.metadata) optionalFields.push('metadata: $metadata');
 
     const optionalFieldsStr = optionalFields.length > 0 ? `,\n        ${optionalFields.join(',\n        ')}` : '';
 
@@ -524,7 +546,12 @@ app.post('/', async (c) => {
       try {
         // Use new fields from MiniBob (P3.1) or fallback to legacy extraction
       const inputImpulses = body.input_impulses || trace.impulses_used || [];
-      const outputImpulses = body.output_impulses || body.execution_trace?.impulsesCreated || [];
+      // Paradigm table expects array<string> for output_impulses (impulse IDs)
+      // Convert full impulse objects to shape strings for compatibility
+      const rawOutputImpulses = body.output_impulses || body.execution_trace?.impulsesCreated || [];
+      const outputImpulses: string[] = rawOutputImpulses.map((imp: any) =>
+        typeof imp === 'string' ? imp : (imp?.shape || 'unknown')
+      );
 
       const paradigmExecution: Partial<ParadigmExecution> = {
         id: trace.execution_id,

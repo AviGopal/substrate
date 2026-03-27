@@ -203,6 +203,22 @@ DEFINE FIELD impulses_used ON activity_executions TYPE option<array<string>>
 DEFINE FIELD component_changes ON activity_executions TYPE option<array<string>>
   COMMENT "Array of component IDs changed in this execution";
 
+-- Edge Learning Fields (from improvisation traces)
+DEFINE FIELD improvisation ON activity_executions TYPE option<bool>
+  COMMENT "Whether this was an LLM improvisation (no template matched)";
+
+DEFINE FIELD input_impulse_shapes ON activity_executions TYPE option<array<string>>
+  COMMENT "Shapes of input impulses (goal, task, previous_result, error_context, etc.)";
+
+DEFINE FIELD output_impulse_shapes ON activity_executions TYPE option<array<string>>
+  COMMENT "Shapes of output impulses produced (documentation, source_code, command_result, etc.)";
+
+DEFINE FIELD output_impulses ON activity_executions TYPE option<array<object>>
+  COMMENT "Full output impulse data [{shape, pointer}] for ribosome extraction";
+
+DEFINE FIELD metadata ON activity_executions TYPE option<object>
+  COMMENT "Extensible metadata for edge learning";
+
 DEFINE FIELD executed_at ON activity_executions TYPE datetime
   VALUE $value OR time::now()
   COMMENT "Execution timestamp";

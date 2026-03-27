@@ -12,7 +12,7 @@ import { logger as honoLogger } from 'hono/logger';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { authMiddleware } from './middleware/auth';
-import { jwtAuthMiddleware } from './middleware/jwtAuth';
+import { jwtAuthMiddleware, JwtAuthContext } from './middleware/jwtAuth';
 import authRoutes from './routes/auth';
 import sessionRoutes from './routes/session';
 import activitiesRoutes from './routes/activities';
@@ -28,7 +28,14 @@ import resolveRoutes from './routes/resolve';
 import { broadcaster } from './websocket/broadcaster';
 import type { ServerWebSocket } from 'bun';
 
-const app = new Hono();
+// Define app-wide environment type with jwtAuth context variable
+type AppEnv = {
+  Variables: {
+    jwtAuth: JwtAuthContext | null;
+  };
+};
+
+const app = new Hono<AppEnv>();
 
 // ============================================================================
 // Middleware
