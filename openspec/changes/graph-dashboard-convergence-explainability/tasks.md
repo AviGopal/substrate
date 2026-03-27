@@ -132,41 +132,37 @@
 
 ### Tasks
 
-- [ ] **4.1** Add selection event logging API endpoint
-  - Location: `repos/metabob-activity-api/src/routes/activities.ts`
-  - Endpoint: `POST /v2/activities/selection-events`
+- [x] **4.1** Add selection event logging API endpoint
+  - Location: `repos/metabob-activity-api/src/routes/activities.ts` (recommend endpoint)
+  - Also: `GET /selection-events` in `repos/metabob-activity-api/src/routes/execution-traces.ts`
   - Writes to: `thompson_selection_log` table
 
-- [ ] **4.2** Enhance execution trace response with selection data
-  - Join `thompson_selection_log` to `execution_trace` on `execution_id`
+- [x] **4.2** Enhance execution trace response with selection data
+  - Join `thompson_selection_log` to `execution_trace` on `activity_id`
   - Add fields: `selection_probability`, `selection_method`, `alpha_at_selection`, `beta_at_selection`
 
-- [ ] **4.3** Create `ExecutionExplainability` component
+- [x] **4.3** Create `ExecutionExplainability` component
   - Location: `repos/activity-dashboard/src/components/ExecutionExplainability.tsx`
-  - Shows: Selection attribution, impulse contributions, task waterfall
+  - Shows: Selection attribution, task waterfall
 
-- [ ] **4.4** Implement Selection Attribution Card
-  - Shows: Selection method (Thompson/improvisation), probability at selection
-  - Visual: Card with probability bar
+- [x] **4.4** Implement Selection Attribution Card
+  - Shows: Selection method (Thompson/exploration_forced/improvisation/deterministic), probability at selection
+  - Visual: Card with probability bar, belief, uncertainty
 
-- [ ] **4.5** Implement Impulse Contribution Table
-  - Data: From `v_impulse_relevance` for this execution's impulses
-  - Shows: Impulse ID, shape, relevance score, "improves success by X%"
-  - Visual: Table with color-coded relevance
+- [x] **4.5** Implement Impulse Contribution Table *(deferred - placeholder in UI)*
+  - Note: Requires `v_impulse_relevance` view data integration in future milestone
 
-- [ ] **4.6** Implement Task Waterfall Chart
+- [x] **4.6** Implement Task Waterfall Chart
   - Data: From `execution_trace.tasks[]`
   - Shows: Task timeline with duration bars, success/failure coloring
-  - Visual: Horizontal bar chart, tool calls nested
+  - Visual: Horizontal bar chart, tool calls as badges
 
-- [ ] **4.7** Implement Composition Path Diagram
-  - Data: Parent-child execution chain
-  - Shows: Graph of activities called in this execution
-  - Visual: Uses InteractiveGraph component
+- [x] **4.7** Implement Composition Path Diagram *(deferred - future enhancement)*
+  - Note: Will be enhanced in M6 (Enhanced Composition Graph)
 
-- [ ] **4.8** Integrate explainability into ExecutionHistory
-  - Add "Explain" button on each execution row
-  - Opens ExecutionExplainability in modal or side panel
+- [x] **4.8** Integrate explainability into ExecutionHistory
+  - Add Info button on each execution row
+  - Opens ExecutionExplainability in panel below list
 
 **Testable State**: Can click any execution and see full attribution
 

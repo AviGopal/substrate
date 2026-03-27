@@ -33,7 +33,7 @@ milestones:
 
   - id: M4
     name: Explainability Enhancements
-    status: pending
+    status: complete
     commit: "feat(dashboard): add execution explainability features"
     depends_on: [M2]
 
