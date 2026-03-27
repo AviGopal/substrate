@@ -1,0 +1,356 @@
+# Connection Slots and LLM Proxy: Implementation Tasks
+
+## Phase 1: Database Schema ✅ COMPLETE
+
+### P1.1: Extend api_keys table with connection slot fields ✅
+**Files**: `repos/metabob-proto/surrealdb/core/007-api-keys-connection-slots.surql`
+- [x] Add `max_connections` field (1-1000, default 1)
+- [x] Add `tier` field (starter, pro, enterprise)
+- [x] Add `llm_budget` object with nested fields
+- [x] Add `billing_email` optional field
+- [x] Add indexes for tier and budget_reset_at
+
+### P1.2: Create connection table ✅
+**Files**: `repos/metabob-proto/surrealdb/core/006-connection-slots.surql`
+- [x] Define `connection` table with all fields per design
+- [x] Add indexes for api_key_id, status, session_token (UNIQUE)
+- [x] Add RBAC permissions (org scoped)
+- [x] Add foreign key relationship to api_keys
+- [x] Add execution tracking fields for grace period calculation
+- [x] Add metadata field for extensibility
+
+### P1.3: Create llm_resolution_log table ✅
+**Files**: `repos/metabob-activity-api/sql/schemas/017-llm-resolution.surql`
+- [x] Define `llm_resolution_log` table with full trace capture
+- [x] Add indexes for org_id, resolver_tier, impulse_hash
+- [x] Link to connection and execution_traces tables
+- [x] Add RBAC permissions (org scoped)
+- [x] Add pattern extraction tracking fields
+
+### P1.4: Create pattern table ✅
+**Files**: `repos/metabob-activity-api/sql/schemas/018-patterns.surql`
+- [x] Define `pattern` table for extracted patterns
+- [x] Add indexes for impulse_hash, success_rate
+- [x] Add RBAC permissions (org scoped + public visibility)
+- [x] Add performance metrics fields
+- [x] Add extraction provenance tracking
+
+---
+
+## Phase 2: Connection Slot Backend (metabob-activity-api)
+
+### P2.1: Connection acquisition endpoint
+**Files**: `repos/metabob-activity-api/src/routes/connections.ts`
+- [ ] Create `POST /v2/connections/acquire` endpoint
+- [ ] Validate API key via argon2 hash comparison
+- [ ] Check slot availability (count active + grace connections)
+- [ ] Create connection record with session_token
+- [ ] Generate JWT for connection
+- [ ] Return connection details or 429 if limit reached
+
+### P2.2: Heartbeat endpoint
+**Files**: `repos/metabob-activity-api/src/routes/connections.ts`
+- [ ] Create `POST /v2/connections/heartbeat` endpoint
+- [ ] Update last_heartbeat timestamp
+- [ ] Accept optional current_execution state
+- [ ] Calculate and return grace period info
+
+### P2.3: Reconnection endpoint
+**Files**: `repos/metabob-activity-api/src/routes/connections.ts`
+- [ ] Create `POST /v2/connections/reconnect` endpoint
+- [ ] Validate session_token
+- [ ] Check if within grace period
+- [ ] Restore connection to active state
+- [ ] Return new JWT or 410 if expired
+
+### P2.4: Release endpoint
+**Files**: `repos/metabob-activity-api/src/routes/connections.ts`
+- [ ] Create `POST /v2/connections/release` endpoint
+- [ ] Mark connection as disconnected
+- [ ] Clear from Redis slot count
+
+### P2.5: Heartbeat worker
+**Files**: `repos/metabob-activity-api/src/workers/heartbeat.ts`
+- [ ] Create background worker (runs every 10s)
+- [ ] Find connections that missed heartbeat
+- [ ] Calculate grace period based on execution state
+- [ ] Transition to grace status
+- [ ] Expire grace periods and mark disconnected
+- [ ] Handle orphaned executions
+
+### P2.6: Redis slot management
+**Files**: `repos/metabob-activity-api/src/db/redis.ts`
+- [ ] Add `acquireSlot(apiKeyId)` function
+- [ ] Add `releaseSlot(apiKeyId, connectionId)` function
+- [ ] Add `getSlotCount(apiKeyId)` function
+- [ ] Add `refreshSlotTTL(apiKeyId)` function
+
+---
+
+## Phase 3: LLM Proxy Backend
+
+### P3.1: Resolver router
+**Files**: `repos/metabob-activity-api/src/resolvers/router.ts`
+- [ ] Create `selectResolver()` function per design
+- [ ] Implement `hashImpulseShape()` for pattern matching
+- [ ] Implement `estimateComplexity()` for tier selection
+- [ ] Add confidence scoring logic
+
+### P3.2: Pattern store
+**Files**: `repos/metabob-activity-api/src/resolvers/pattern-store.ts`
+- [ ] Create `findExact(impulseHash)` function
+- [ ] Create `findSimilar(impulseHash, threshold)` function
+- [ ] Add Redis caching for hot patterns
+- [ ] Implement cache invalidation on pattern update
+
+### P3.3: LLM proxy client
+**Files**: `repos/metabob-activity-api/src/resolvers/llm-proxy.ts`
+- [ ] Create Anthropic API client wrapper
+- [ ] Implement `callHaiku()`, `callSonnet()`, `callOpus()`
+- [ ] Capture full request/response for tracing
+- [ ] Handle rate limiting and retries
+- [ ] Track token usage
+
+### P3.4: Resolution endpoint
+**Files**: `repos/metabob-activity-api/src/routes/resolve.ts`
+- [ ] Create `POST /v2/resolve` endpoint
+- [ ] Route through resolver selection
+- [ ] Execute pattern match or LLM call
+- [ ] Record resolution in llm_resolution_log
+- [ ] Check and deduct token budget
+
+### P3.5: Token budget management
+**Files**: `repos/metabob-activity-api/src/resolvers/budget.ts`
+- [ ] Implement `checkAndDeductBudget()` with Redis
+- [ ] Create `syncBudgetToDatabase()` periodic job
+- [ ] Create `resetBudgets()` monthly job
+- [ ] Add budget exceeded error handling
+
+### P3.6: Pattern extraction (ribosome integration)
+**Files**: `repos/metabob-activity-api/src/resolvers/pattern-extractor.ts`
+- [ ] Implement `maybeExtractPattern()` function
+- [ ] Calculate result consistency across resolutions
+- [ ] Extract template from successful resolutions
+- [ ] Store pattern and update source resolutions
+
+---
+
+## Phase 4: metabob-mcp Integration
+
+### P4.1: Connection manager
+**Files**: `repos/metabob-mcp/src/connection-manager.ts`
+- [ ] Create `ConnectionManager` class
+- [ ] Implement `connect()` with slot acquisition
+- [ ] Implement heartbeat loop (30s interval)
+- [ ] Implement `reconnect()` for grace period recovery
+- [ ] Implement `disconnect()` for clean release
+- [ ] Track current execution state
+
+### P4.2: Update API client
+**Files**: `repos/metabob-mcp/src/api-client.ts`
+- [ ] Integrate ConnectionManager
+- [ ] Add `X-Connection-ID` header to requests
+- [ ] Handle 429 (slot limit) errors gracefully
+- [ ] Handle reconnection on auth failures
+- [ ] Route LLM calls through `/v2/resolve`
+
+### P4.3: Activity tools
+**Files**: `repos/metabob-mcp/src/tools/activity.ts`
+- [ ] Create `run_goal` tool
+- [ ] Create `get_recommendations` tool
+- [ ] Create `submit_trace` tool
+- [ ] Create `resolve_impulse` tool
+- [ ] Wire tools to resolver endpoint
+
+### P4.4: Update tool registration
+**Files**: `repos/metabob-mcp/src/index.ts`
+- [ ] Register activity tools alongside analysis tools
+- [ ] Update capabilities advertisement
+- [ ] Add activity API URL configuration
+
+### P4.5: Remove direct LLM dependency
+**Files**: `repos/metabob-mcp/src/config.ts`
+- [ ] Make ANTHROPIC_API_KEY optional
+- [ ] Add METABOB_API_KEY as primary auth
+- [ ] Update environment variable documentation
+
+---
+
+## Phase 5: MiniBob Integration (Optional)
+
+### P5.1: MCP client update
+**Files**: `repos/minibob/src/mcp.ts`
+- [ ] Add connection lifecycle management
+- [ ] Implement heartbeat during executions
+- [ ] Report current_execution in heartbeat
+- [ ] Handle reconnection on connection loss
+
+### P5.2: LLM routing
+**Files**: `repos/minibob/src/llm.ts`
+- [ ] Add option to route through MCP resolve endpoint
+- [ ] Fall back to direct LLM for local development
+- [ ] Capture resolver tier in execution trace
+
+### P5.3: Configuration
+**Files**: `repos/minibob/src/config.ts`
+- [ ] Add `MINIBOB_USE_LLM_PROXY` config option
+- [ ] Document direct vs proxy modes
+- [ ] Default to proxy when MCP endpoint configured
+
+---
+
+## Phase 6: Helm and Deployment
+
+### P6.1: Update activity-api deployment
+**Files**: `helm/charts/metabob-activity-api/values.yaml`
+- [ ] Add ANTHROPIC_API_KEY secret mount (for proxy)
+- [ ] Add environment variables for LLM proxy config
+- [ ] Add Redis URL configuration
+- [ ] Configure heartbeat worker
+
+### P6.2: Update metabob-mcp deployment
+**Files**: `helm/charts/metabob-mcp/values.yaml`
+- [ ] Remove ANTHROPIC_API_KEY requirement
+- [ ] Add METABOB_API_KEY configuration
+- [ ] Add ACTIVITY_API_URL configuration
+- [ ] Update health check endpoints
+
+### P6.3: Schema migration job
+**Files**: `helm/charts/surrealdb-init/templates/migration-job.yaml`
+- [ ] Add new schema files to migration
+- [ ] Ensure proper ordering (api_key before connection)
+
+### P6.4: Secrets management
+**Files**: `helm/environments/local.values.yaml`
+- [ ] Add anthropic-api-key secret for activity-api
+- [ ] Document secret creation in README
+
+---
+
+## Phase 7: Testing and Validation
+
+### P7.1: Unit tests - connection slots
+**Files**: `repos/metabob-activity-api/test/connections.test.ts`
+- [ ] Test slot acquisition
+- [ ] Test heartbeat updates
+- [ ] Test grace period calculation
+- [ ] Test slot release
+- [ ] Test FIFO enforcement
+
+### P7.2: Unit tests - resolver
+**Files**: `repos/metabob-activity-api/test/resolver.test.ts`
+- [ ] Test tier selection logic
+- [ ] Test pattern matching
+- [ ] Test complexity estimation
+- [ ] Test budget enforcement
+
+### P7.3: Integration tests
+**Files**: `repos/metabob-activity-api/test/integration/`
+- [ ] Test full connection lifecycle
+- [ ] Test reconnection within grace
+- [ ] Test reconnection after grace expires
+- [ ] Test LLM proxy end-to-end
+- [ ] Test pattern extraction after N successes
+
+### P7.4: metabob-mcp tests
+**Files**: `repos/metabob-mcp/test/`
+- [ ] Test connection manager lifecycle
+- [ ] Test activity tools
+- [ ] Test error handling for 429/410
+- [ ] Test heartbeat resilience
+
+---
+
+## Phase 8: Documentation and Monitoring
+
+### P8.1: API documentation
+**Files**: `docs/api/connections.md`, `docs/api/resolve.md`
+- [ ] Document connection slot endpoints
+- [ ] Document resolve endpoint
+- [ ] Add examples for common flows
+- [ ] Document error codes
+
+### P8.2: Architecture documentation
+**Files**: `docs/architecture/CONNECTION_SLOTS.md`, `docs/architecture/LLM_PROXY.md`
+- [ ] Document connection slot model
+- [ ] Document resolver tier system
+- [ ] Document learning flywheel
+- [ ] Add diagrams
+
+### P8.3: Dashboard queries
+**Files**: `repos/activity-dashboard/src/queries/`
+- [ ] Add connection slot utilization query
+- [ ] Add resolver tier distribution query
+- [ ] Add pattern extraction progress query
+- [ ] Add budget utilization query
+
+### P8.4: Alerts
+**Files**: `helm/charts/metabob-activity-api/templates/alerts.yaml`
+- [ ] Alert on high slot utilization
+- [ ] Alert on high grace period entries
+- [ ] Alert on low pattern match rate
+- [ ] Alert on budget exhaustion
+
+---
+
+## Task Summary
+
+| Phase | Tasks | Description |
+|-------|-------|-------------|
+| P1 | 4 | Database schema |
+| P2 | 6 | Connection slot backend |
+| P3 | 6 | LLM proxy backend |
+| P4 | 5 | metabob-mcp integration |
+| P5 | 3 | MiniBob integration (optional) |
+| P6 | 4 | Helm and deployment |
+| P7 | 4 | Testing |
+| P8 | 4 | Documentation |
+| **Total** | **36** | |
+
+## Recommended Order
+
+1. **P1** (Schema) - Foundation for everything
+2. **P2.1-P2.4** (Connection endpoints) - Core slot management
+3. **P2.5-P2.6** (Workers, Redis) - Background processing
+4. **P3.1-P3.2** (Router, Pattern store) - Resolution infrastructure
+5. **P3.3-P3.5** (LLM proxy, Budget) - Proxy functionality
+6. **P4.1-P4.2** (Connection manager, API client) - MCP integration
+7. **P4.3-P4.5** (Activity tools) - Complete MCP tools
+8. **P6** (Deployment) - Get it running
+9. **P7** (Testing) - Validate everything
+10. **P3.6** (Pattern extraction) - Enable learning
+11. **P5** (MiniBob) - Optional direct integration
+12. **P8** (Docs) - Final documentation
+
+## Dependencies
+
+```
+P1 ──────────────────────────────────────┐
+                                         │
+P2.1-P2.4 ◀──────────────────────────────┤
+    │                                    │
+    ▼                                    │
+P2.5-P2.6                                │
+    │                                    │
+    ▼                                    │
+P3.1-P3.2 ◀──────────────────────────────┘
+    │
+    ▼
+P3.3-P3.5
+    │
+    ├───────────────────┐
+    │                   │
+    ▼                   ▼
+P4.1-P4.2           P3.6
+    │
+    ▼
+P4.3-P4.5
+    │
+    ├───────────┬───────────┐
+    │           │           │
+    ▼           ▼           ▼
+   P5          P6          P7
+                           │
+                           ▼
+                          P8
+```
