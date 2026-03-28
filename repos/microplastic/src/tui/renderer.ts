@@ -452,6 +452,9 @@ export class RegionRenderer {
   // Viewport scrolling
   private scrollOffset = 0;
 
+  // Event handler reference for cleanup
+  private renderHandler = () => this.scheduleRender();
+
   constructor(
     regionManager: RegionManager,
     options: { mode?: RenderMode; stdout?: NodeJS.WriteStream } = {}
@@ -487,10 +490,10 @@ export class RegionRenderer {
     this.render();
 
     // Subscribe to region changes
-    this.regionManager.on("region:added", () => this.scheduleRender());
-    this.regionManager.on("region:updated", () => this.scheduleRender());
-    this.regionManager.on("region:removed", () => this.scheduleRender());
-    this.regionManager.on("layout:changed", () => this.scheduleRender());
+    this.regionManager.on("region:added", this.renderHandler);
+    this.regionManager.on("region:updated", this.renderHandler);
+    this.regionManager.on("region:removed", this.renderHandler);
+    this.regionManager.on("layout:changed", this.renderHandler);
 
     // Start tick interval for animation
     if (this.mode === "ansi") {
@@ -510,6 +513,13 @@ export class RegionRenderer {
       clearInterval(this.tickInterval);
       this.tickInterval = null;
     }
+
+    // Remove event listeners
+    this.regionManager.off("region:added", this.renderHandler);
+    this.regionManager.off("region:updated", this.renderHandler);
+    this.regionManager.off("region:removed", this.renderHandler);
+    this.regionManager.off("layout:changed", this.renderHandler);
+
     // Final render
     this.render();
   }

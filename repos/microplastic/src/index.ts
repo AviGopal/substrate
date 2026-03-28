@@ -172,7 +172,7 @@ async function runGoalWithRegions(goal: string, options: Options) {
   });
 
   // Create execution bridge to wire impulses to regions
-  createExecutionBridge(regionManager, executor, {
+  const bridge = createExecutionBridge(regionManager, executor, {
     showToolCalls: true,
     showImpulses: true,
     collapseDelay: 0, // Don't collapse for single-shot execution
@@ -197,9 +197,17 @@ async function runGoalWithRegions(goal: string, options: Options) {
   // Execute
   await executor.execute(context);
 
-  // Give renderer time to show final state
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  // Give renderer time to show final state and process all events
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Stop renderer (will do final render)
   renderer.stop();
+
+  // Clean up bridge subscriptions
+  bridge.shutdown();
+
+  // Force exit for single-shot execution (minibob ActivityExecutor may leave handles open)
+  process.exit(0);
 }
 
 /**
