@@ -304,36 +304,75 @@ async function runGoalClassic(goal: string, options: Options) {
  * Run interactive mode with region-based TUI (new style)
  */
 async function runInteractiveWithRegions(options: Options) {
+  // Create shared impulse store
+  const impulseStore = new ImpulseStore();
+
   // Initialize region manager and renderer
   const regionManager = new RegionManager();
   const renderer = new RegionRenderer(regionManager, {
     mode: process.stdout.isTTY ? "ansi" : "text",
   });
 
-  // Create executor
+  // Create executor with impulse store
   const executor = new GoalExecutor({
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     apiBaseUrl: process.env.ACTIVITY_API_URL ?? "http://localhost:8080",
     captureTraces: true,
+    impulseStore, // Pass impulse store for impulse-driven execution
   });
 
-  // Create execution bridge
+  // Create execution bridge with impulse store
   const bridge = createExecutionBridge(regionManager, executor, {
     showToolCalls: true,
     showImpulses: true,
     collapseDelay: 3000, // Collapse completed regions after 3 seconds
+    impulseStore, // Pass impulse store for impulse subscriptions
   });
 
   // Seed primordials
   executor.seedPrimordials().catch(() => {});
 
-  // Start rendering
-  renderer.start();
-
   // Track current input state
   let inputValue = "";
   let cursorPosition = 0;
   let isExecuting = false;
+
+  // Subscribe to user_goal impulses and execute them
+  impulseStore.subscribe(
+    async (event) => {
+      if (event.type !== "create") return;
+
+      const impulse = event.impulse;
+      if (!impulse.content) return;
+
+      try {
+        const goalData = JSON.parse(impulse.content);
+        const context: ExecutionContext = {
+          goal: goalData.goal,
+          workdir: options.workdir,
+          impulses: [],
+          verbose: options.verbose,
+          dryRun: options.dryRun,
+        };
+
+        await executor.execute(context);
+
+        // After completion, clear old regions and show input for next goal
+        setTimeout(() => {
+          bridge.clearCompleted();
+          bridge.showInput();
+          isExecuting = false; // Reset flag
+        }, 2000);
+      } catch (error) {
+        console.error("[Interactive] Error executing goal from impulse:", error);
+        isExecuting = false; // Reset flag on error
+      }
+    },
+    { shape: "user_goal" }
+  );
+
+  // Start rendering
+  renderer.start();
 
   // Show initial input region
   bridge.showInput();
@@ -374,23 +413,21 @@ async function runInteractiveWithRegions(options: Options) {
           cursorPosition = 0;
           bridge.submitInput();
 
-          // Execute the goal
-          const context: ExecutionContext = {
-            goal,
-            workdir: options.workdir,
-            impulses: [],
-            verbose: options.verbose,
-            dryRun: options.dryRun,
-          };
-
-          await executor.execute(context);
-
-          // After completion, clear old regions and show input for next goal
-          setTimeout(() => {
-            bridge.clearCompleted();
-            bridge.showInput();
-            isExecuting = false;
-          }, 2000);
+          // Create user_goal impulse instead of directly executing
+          impulseStore.create({
+            pointer: { type: "user_input", value: goal },
+            budget: 2000,
+            priority: "high",
+            shape: "user_goal",
+            content: JSON.stringify({
+              goal,
+              timestamp: Date.now(),
+            }),
+            metadata: {
+              source: "interactive",
+              timestamp: Date.now(),
+            },
+          });
         }
       } else if (key === "\x7f") {
         // Backspace
