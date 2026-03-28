@@ -3,20 +3,40 @@
  *
  * Central store for impulses shared across all vessels.
  * Vessels read/write impulses here; resolver routing happens at the registry level.
+ *
+ * Key features:
+ * - Subscription predicates: Filter events by type, shape, priority, or custom logic
+ * - Query method: Find impulses matching a predicate
+ * - Shape field: Semantic categorization independent of pointer type
  */
 
 import type { Impulse, ImpulsePointer } from "./types.ts";
+import {
+  type ExtendedImpulse,
+  type SubscriptionPredicate,
+  type ImpulseShape,
+  matchesPredicate,
+} from "./types.ts";
 import type { ImpulseStore as IImpulseStore, ImpulseStoreEvent, VesselProvider } from "../vessel/types.ts";
 import { NoResolverError } from "../vessel/errors.ts";
 
 /**
- * ImpulseStore implementation
+ * Subscription entry with optional predicate filter
+ */
+interface SubscriptionEntry {
+  listener: (event: ImpulseStoreEvent) => void;
+  predicate?: SubscriptionPredicate;
+}
+
+/**
+ * ImpulseStore implementation - Shared Impulse State Space
  *
  * Manages impulses and routes resolution requests to the appropriate vessel.
+ * Supports filtered subscriptions via predicates.
  */
 export class ImpulseStore implements IImpulseStore {
-  private impulses = new Map<string, Impulse>();
-  private listeners = new Set<(event: ImpulseStoreEvent) => void>();
+  private impulses = new Map<string, ExtendedImpulse>();
+  private subscriptions = new Map<symbol, SubscriptionEntry>();
   private idCounter = 0;
 
   // Resolver registry - set by VesselRegistry
@@ -37,12 +57,22 @@ export class ImpulseStore implements IImpulseStore {
   }
 
   /**
-   * Notify listeners of an event
+   * Notify subscribers of an event, filtering by predicate
    */
   private notify(event: ImpulseStoreEvent): void {
-    for (const listener of this.listeners) {
+    for (const [, entry] of this.subscriptions) {
       try {
-        listener(event);
+        // If no predicate, always notify
+        if (!entry.predicate) {
+          entry.listener(event);
+          continue;
+        }
+
+        // Check if impulse matches the subscription predicate
+        const impulse = event.impulse as ExtendedImpulse;
+        if (matchesPredicate(impulse, entry.predicate)) {
+          entry.listener(event);
+        }
       } catch (error) {
         console.error("[ImpulseStore] Listener error:", error);
       }
@@ -51,10 +81,13 @@ export class ImpulseStore implements IImpulseStore {
 
   /**
    * Create a new impulse
+   *
+   * @param impulse - Impulse data (can include optional shape field)
+   * @returns The created impulse with id and timestamps
    */
-  create(impulse: Omit<Impulse, "loaded" | "createdAt">): Impulse {
+  create(impulse: Omit<ExtendedImpulse, "loaded" | "createdAt"> & { shape?: ImpulseShape }): ExtendedImpulse {
     const id = impulse.id || this.generateId();
-    const fullImpulse: Impulse = {
+    const fullImpulse: ExtendedImpulse = {
       ...impulse,
       id,
       loaded: false,
@@ -165,13 +198,63 @@ export class ImpulseStore implements IImpulseStore {
   }
 
   /**
-   * Subscribe to store events
+   * Subscribe to store events with optional predicate filtering.
+   *
+   * @param listener - Callback for matching events
+   * @param predicate - Optional filter (type, shape, priority, custom)
+   * @returns Unsubscribe function
+   *
+   * @example
+   * // Subscribe to all events
+   * store.subscribe((event) => console.log(event))
+   *
+   * @example
+   * // Subscribe only to file impulses
+   * store.subscribe(
+   *   (event) => console.log("File:", event.impulse.id),
+   *   { type: "file" }
+   * )
+   *
+   * @example
+   * // Subscribe to high-priority source code
+   * store.subscribe(
+   *   (event) => handleCode(event.impulse),
+   *   { type: "file", shape: "source_code", minPriority: 750 }
+   * )
    */
-  subscribe(listener: (event: ImpulseStoreEvent) => void): () => void {
-    this.listeners.add(listener);
+  subscribe(
+    listener: (event: ImpulseStoreEvent) => void,
+    predicate?: SubscriptionPredicate
+  ): () => void {
+    const key = Symbol("subscription");
+    this.subscriptions.set(key, { listener, predicate });
     return () => {
-      this.listeners.delete(listener);
+      this.subscriptions.delete(key);
     };
+  }
+
+  /**
+   * Query impulses matching a predicate.
+   *
+   * @param predicate - Filter criteria
+   * @returns Array of matching impulses
+   *
+   * @example
+   * // Find all error impulses
+   * const errors = store.query({ shape: "error" })
+   *
+   * @example
+   * // Find high-priority file impulses
+   * const important = store.query({ type: "file", minPriority: 750 })
+   */
+  query(predicate: SubscriptionPredicate): ExtendedImpulse[] {
+    const results: ExtendedImpulse[] = [];
+    for (const impulse of this.impulses.values()) {
+      if (matchesPredicate(impulse, predicate)) {
+        results.push(impulse);
+      }
+    }
+    return results;
   }
 
   /**

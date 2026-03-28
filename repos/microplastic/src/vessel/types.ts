@@ -193,7 +193,29 @@ export interface ImpulseStore {
   update(id: string, updates: Partial<Impulse>): Impulse | undefined;
   delete(id: string): boolean;
   list(): Impulse[];
-  subscribe(listener: (event: ImpulseStoreEvent) => void): () => void;
+  /**
+   * Subscribe to store events with optional predicate filtering.
+   * @param listener - Callback for matching events
+   * @param predicate - Optional filter (type, shape, priority, custom)
+   */
+  subscribe(
+    listener: (event: ImpulseStoreEvent) => void,
+    predicate?: {
+      type?: string | string[];
+      shape?: string | string[];
+      minPriority?: number;
+      custom?: (impulse: Impulse) => boolean;
+    }
+  ): () => void;
+  /**
+   * Query impulses matching a predicate.
+   */
+  query?(predicate: {
+    type?: string | string[];
+    shape?: string | string[];
+    minPriority?: number;
+    custom?: (impulse: Impulse) => boolean;
+  }): Impulse[];
 }
 
 /**
