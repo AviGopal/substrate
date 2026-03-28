@@ -1,0 +1,275 @@
+{
+  "activity_id": "test-validation-hello-world",
+  "name": "Test Validation Hello World",
+  "description": "Simple hello world template to verify Handlebars syntax validation works. Uses only Mustache variable interpolation to demonstrate the 15x validation improvement.",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "validate-input-variables",
+      "subagent": "general",
+      "description": "Verify that the required message variable is provided and non-empty, and that the optional outputPath variable (if provided) is a valid path format",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate the input variables for this hello world test:\n- message: \"{{message}}\"\n- outputPath: \"{{outputPath}}\"\n\nVerify:\n1. message is a non-empty string\n2. outputPath (if provided) is a valid file path format\n\nReport validation results and fail if any checks fail.",
+        "variables": [
+          {
+            "name": "message",
+            "type": "string",
+            "required": true,
+            "description": "The message to include in the hello world output"
+          },
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path where the hello world file should be created",
+            "default": "/tmp/hello-world-output.txt"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-hello-world-file",
+      "subagent": "general",
+      "description": "Write a text file at the specified outputPath containing the interpolated message variable",
+      "dependencies": [
+        "validate-input-variables"
+      ],
+      "prompt": {
+        "template": "Create a hello world output file:\n- Path: {{outputPath}}\n- Content: {{message}}\n\nWrite the message to the file and confirm the file was created successfully.\nUse the Write tool to create the file.",
+        "variables": [
+          {
+            "name": "message",
+            "type": "string",
+            "required": true,
+            "description": "The message to write to the file"
+          },
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path where the hello world file should be created",
+            "default": "/tmp/hello-world-output.txt"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -f {{outputPath}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-output-content",
+      "subagent": "general",
+      "description": "Read the created file and verify it contains the exact message text with no template syntax remaining (all variables properly interpolated)",
+      "dependencies": [
+        "create-hello-world-file"
+      ],
+      "prompt": {
+        "template": "Verify the hello world output file:\n- Path: {{outputPath}}\n- Expected content: {{message}}\n\nRead the file and confirm:\n1. Content matches the expected message exactly\n2. No template syntax remains (all variables interpolated)\n3. No errors occurred\n\nUse the Read tool to read the file and compare content.",
+        "variables": [
+          {
+            "name": "message",
+            "type": "string",
+            "required": true,
+            "description": "The expected message content"
+          },
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to the hello world file to verify",
+            "default": "/tmp/hello-world-output.txt"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -r {{outputPath}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "validate-input-variables",
+      "subagent": "general",
+      "description": "Verify that the required message variable is provided and non-empty, and that the optional outputPath variable (if provided) is a valid path format",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate the input variables for this hello world test:\n- message: \"{{message}}\"\n- outputPath: \"{{outputPath}}\"\n\nVerify:\n1. message is a non-empty string\n2. outputPath (if provided) is a valid file path format\n\nReport validation results and fail if any checks fail.",
+        "variables": [
+          {
+            "name": "message",
+            "type": "string",
+            "required": true,
+            "description": "The message to include in the hello world output"
+          },
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path where the hello world file should be created",
+            "default": "/tmp/hello-world-output.txt"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-hello-world-file",
+      "subagent": "general",
+      "description": "Write a text file at the specified outputPath containing the interpolated message variable",
+      "dependencies": [
+        "validate-input-variables"
+      ],
+      "prompt": {
+        "template": "Create a hello world output file:\n- Path: {{outputPath}}\n- Content: {{message}}\n\nWrite the message to the file and confirm the file was created successfully.\nUse the Write tool to create the file.",
+        "variables": [
+          {
+            "name": "message",
+            "type": "string",
+            "required": true,
+            "description": "The message to write to the file"
+          },
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path where the hello world file should be created",
+            "default": "/tmp/hello-world-output.txt"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -f {{outputPath}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-output-content",
+      "subagent": "general",
+      "description": "Read the created file and verify it contains the exact message text with no template syntax remaining (all variables properly interpolated)",
+      "dependencies": [
+        "create-hello-world-file"
+      ],
+      "prompt": {
+        "template": "Verify the hello world output file:\n- Path: {{outputPath}}\n- Expected content: {{message}}\n\nRead the file and confirm:\n1. Content matches the expected message exactly\n2. No template syntax remains (all variables interpolated)\n3. No errors occurred\n\nUse the Read tool to read the file and compare content.",
+        "variables": [
+          {
+            "name": "message",
+            "type": "string",
+            "required": true,
+            "description": "The expected message content"
+          },
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path to the hello world file to verify",
+            "default": "/tmp/hello-world-output.txt"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -r {{outputPath}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-24T06:12:35.166Z",
+  "metadata": {}
+}

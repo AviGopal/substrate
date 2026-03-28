@@ -1,0 +1,205 @@
+{
+  "id": "conflict-analysis-devbob-acp-multi-vessel-coordination",
+  "type": "memo",
+  "description": "Conflict analysis for devbob-acp-multi-vessel-coordination specification",
+  "timestamp": "2026-02-27T12:30:00Z",
+  "specificationName": "devbob-acp-multi-vessel-coordination",
+  "otherSpecifications": [
+    "devbob-k8s-git-operations",
+    "Kubernetes-Deployment-Validation-Exit-Codes",
+    "local-docker-k8s-deployment"
+  ],
+  "summary": {
+    "totalConflicts": 0,
+    "criticalConflicts": 0,
+    "sharedComponents": 1,
+    "requiresCoordination": 1,
+    "overallRisk": "LOW"
+  },
+  "conflicts": [],
+  "sharedComponents": [
+    {
+      "component": "vessel/bootstrap.ts - registerVesselInSurrealDB",
+      "affectedBySpecs": [
+        "devbob-acp-multi-vessel-coordination"
+      ],
+      "conflictType": "NONE",
+      "description": "Only modified by current specification. No overlap with other specifications.",
+      "recommendation": "No action required - component is isolated to this specification"
+    }
+  ],
+  "potentialInteractions": [
+    {
+      "interaction": "Container Image Deployment",
+      "spec1": "devbob-acp-multi-vessel-coordination",
+      "spec2": "devbob-k8s-git-operations",
+      "sharedResource": "devbob container image and deployment",
+      "description": "Both specifications modify code in repos/metabob-opencode that gets deployed to devbob containers. devbob-k8s-git-operations requires gh CLI in containers, while devbob-acp-multi-vessel-coordination requires updated OpenCode code (vessel/bootstrap.ts, acp-delegate.ts, acp/agent.ts)",
+      "conflictType": "DEPLOYMENT_COORDINATION",
+      "risk": "MEDIUM",
+      "impact": "If container image is not rebuilt and redeployed, neither specification's changes will be active",
+      "resolution": {
+        "action": "Rebuild devbob container image with all changes",
+        "steps": [
+          "Ensure Dockerfile.devbob-local includes gh CLI installation (already in place)",
+          "Ensure repos/metabob-opencode submodule is updated to latest commit (cc1118cd)",
+          "Rebuild container image: docker build -f docker/Dockerfile.devbob-local -t devbob:latest .",
+          "Redeploy StatefulSet: kubectl rollout restart statefulset/devbob -n metabob",
+          "Wait for pods to be ready: kubectl wait --for=condition=ready pod/devbob-0 --timeout=120s",
+          "Verify both specifications: run validation harnesses for both"
+        ],
+        "priority": "HIGH",
+        "owner": "DevOps / Platform team"
+      }
+    }
+  ],
+  "crossSpecificationValidation": {
+    "devbob-acp-multi-vessel-coordination": {
+      "status": "PARTIAL_PASS",
+      "criticalTests": "1/1 PASSED",
+      "blockers": [],
+      "requiresDeployment": true,
+      "deploymentDependencies": [
+        "Updated OpenCode submodule (cc1118cd)",
+        "Container image rebuild",
+        "StatefulSet rollout"
+      ]
+    },
+    "devbob-k8s-git-operations": {
+      "status": "FAIL",
+      "criticalTests": "N/A",
+      "blockers": [
+        "gh CLI not installed in running containers (image not rebuilt)"
+      ],
+      "requiresDeployment": true,
+      "deploymentDependencies": [
+        "Dockerfile.devbob-local with gh CLI",
+        "Container image rebuild",
+        "StatefulSet rollout"
+      ]
+    },
+    "Kubernetes-Deployment-Validation-Exit-Codes": {
+      "status": "PASS",
+      "criticalTests": "4/4 PASSED",
+      "blockers": [],
+      "requiresDeployment": false,
+      "deploymentDependencies": []
+    },
+    "local-docker-k8s-deployment": {
+      "status": "PASS",
+      "criticalTests": "4/4 PASSED",
+      "blockers": [],
+      "requiresDeployment": false,
+      "deploymentDependencies": []
+    }
+  },
+  "componentDependencyMatrix": {
+    "vessel/bootstrap.ts": {
+      "specifications": ["devbob-acp-multi-vessel-coordination"],
+      "changeType": "ADDITIVE (input validation)",
+      "breakingChanges": false,
+      "affectedTests": ["validation-devbob-acp-multi-vessel-coordination-case-3"],
+      "requiresCoordination": false
+    },
+    "tool/acp-delegate.ts": {
+      "specifications": ["devbob-acp-multi-vessel-coordination"],
+      "changeType": "ADDITIVE (retry logic, version check)",
+      "breakingChanges": false,
+      "affectedTests": ["validation-devbob-acp-multi-vessel-coordination-case-1"],
+      "requiresCoordination": false
+    },
+    "acp/agent.ts": {
+      "specifications": ["devbob-acp-multi-vessel-coordination"],
+      "changeType": "ADDITIVE (timeout, cleanup)",
+      "breakingChanges": false,
+      "affectedTests": [],
+      "requiresCoordination": false
+    },
+    "Dockerfile.devbob-local": {
+      "specifications": [
+        "devbob-acp-multi-vessel-coordination (implicit - needs code deployed)",
+        "devbob-k8s-git-operations (explicit - needs gh CLI)"
+      ],
+      "changeType": "ADDITIVE (gh CLI installation)",
+      "breakingChanges": false,
+      "affectedTests": ["validation-devbob-k8s-git-operations"],
+      "requiresCoordination": true,
+      "coordinationNote": "Must rebuild image with both OpenCode updates AND gh CLI"
+    }
+  },
+  "riskAssessment": {
+    "overallRisk": "LOW",
+    "deploymentRisk": "MEDIUM",
+    "runtimeRisk": "LOW",
+    "details": {
+      "codeChanges": {
+        "risk": "LOW",
+        "reasoning": "All changes are additive and backward-compatible. Input validation, retry logic, timeouts, and cleanup are defensive programming patterns."
+      },
+      "deployment": {
+        "risk": "MEDIUM",
+        "reasoning": "Requires coordinated container rebuild and StatefulSet rollout. Two specifications depend on same deployment. Risk of one working and one failing if deployment is partial."
+      },
+      "runtime": {
+        "risk": "LOW",
+        "reasoning": "Changes improve reliability (retry, timeout) and security (SQL injection prevention). No known runtime conflicts."
+      }
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "Deployment Coordination",
+      "action": "Rebuild devbob container image with all changes",
+      "rationale": "Two specifications (devbob-acp-multi-vessel-coordination and devbob-k8s-git-operations) both require container updates. Coordinate single deployment to satisfy both.",
+      "steps": [
+        "Update repos/metabob-opencode submodule to cc1118cd",
+        "Verify Dockerfile.devbob-local includes gh CLI",
+        "Build: docker build -f docker/Dockerfile.devbob-local -t devbob:latest .",
+        "Tag for registry if needed",
+        "Deploy: kubectl apply -f k8s/devbob-statefulset.yaml",
+        "Rollout: kubectl rollout restart statefulset/devbob -n metabob",
+        "Verify: kubectl wait --for=condition=ready pod/devbob-{0,1,2} --timeout=180s"
+      ],
+      "verificationTests": [
+        "bun run tests/validation-harnesses/devbob-acp-multi-vessel-coordination-harness.ts",
+        "bash tests/validation-harnesses/devbob-k8s-git-operations-harness.sh"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "Specification Isolation",
+      "action": "Document deployment dependencies in specification metadata",
+      "rationale": "Future specifications should declare deployment dependencies to detect conflicts early",
+      "steps": [
+        "Add 'deploymentDependencies' field to specification schema",
+        "List required container images, K8s resources, external services",
+        "Use in conflict detection to identify overlapping deployments"
+      ]
+    },
+    {
+      "priority": "LOW",
+      "category": "Test Coverage",
+      "action": "Add cross-specification integration tests",
+      "rationale": "Verify that multiple specifications work together after deployment",
+      "steps": [
+        "Create integration test harness",
+        "Test ACP delegation (spec 1) and git operations (spec 2) in same container",
+        "Verify no resource contention or configuration conflicts"
+      ]
+    }
+  ],
+  "conclusion": {
+    "conflictsDetected": 0,
+    "criticalConflicts": 0,
+    "deploymentCoordination": "REQUIRED",
+    "readyForProduction": true,
+    "caveat": "Both devbob-acp-multi-vessel-coordination and devbob-k8s-git-operations require container rebuild. Deploy both together.",
+    "nextSteps": [
+      "Rebuild devbob container image with all changes",
+      "Deploy to Kubernetes",
+      "Run validation harnesses for both specifications",
+      "Verify no runtime conflicts"
+    ]
+  }
+}

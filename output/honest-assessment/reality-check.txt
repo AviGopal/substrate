@@ -1,0 +1,175 @@
+=== HONEST ASSESSMENT: What Actually Works vs What Doesn't ===
+
+Let's test each requirement with actual execution, not just 'files exist'...
+=== TEST 1: Can we actually pull a repository into a vessel? ===
+Cloning into 'test-clone'...
+fatal: could not read Username for 'https://github.com': No such device or address
+FAILED: Cannot clone
+
+Reality: We have a pre-loaded bundle, but can we dynamically pull new repos? Let's see...
+=== TEST 2: Can we actually execute an activity template end-to-end? ===
+INFO  2026-03-02T00:03:26 +8ms service=template-cache intervalMs=60000 cleanup started
+INFO  2026-03-02T00:03:26 +13ms service=sdk-loader total=2 loaded=0 packages=[] SDK loader initialized
+INFO  2026-03-02T00:03:26 +72ms service=turn-lifecycle name=memory-management priority=10 totalHooks=1 hook registered
+INFO  2026-03-02T00:03:26 +0ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=2 hook registered
+INFO  2026-03-02T00:03:26 +0ms service=turn-lifecycle name=metabob-context-preparation priority=20 totalHooks=3 hook registered
+INFO  2026-03-02T00:03:26 +0ms service=turn-lifecycle name=post-turn-cleanup priority=100 totalHooks=4 hook registered
+INFO  2026-03-02T00:03:26 +0ms service=turn-lifecycle name=session-memory-optimization priority=110 totalHooks=5 hook registered
+INFO  2026-03-02T00:03:26 +0ms service=turn-lifecycle name=impulse-learning-init priority=1 totalHooks=6 hook registered
+INFO  2026-03-02T00:03:26 +0ms service=turn-lifecycle name=impulse-learning-flush priority=120 totalHooks=7 hook registered
+ERROR 2026-03-02T00:03:27 +314ms service=default message=Unknown argument: prompt timestamp=2026-03-02T00:03:27.216Z cli_error
+opencode run [message..]
+
+run opencode with a message
+
+Positionals:
+  message  message to send                                 [array] [default: []]
+
+Options:
+  -h, --help        show help                                          [boolean]
+  -v, --version     show version number                                [boolean]
+      --print-logs  print logs to stderr                               [boolean]
+      --log-level   log level
+                            [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
+      --command     the command to run, use message for args            [string]
+  -c, --continue    continue the last session                          [boolean]
+  -s, --session     session id to continue                              [string]
+      --share       share the session                                  [boolean]
+  -m, --model       model to use in the format of provider/model        [string]
+      --agent       agent to use                                        [string]
+      --format      format: default (formatted) or json (raw JSON events)
+                      [string] [choices: "default", "json"] [default: "default"]
+  -f, --file        file(s) to attach to message                         [array]
+      --title       title for the session (uses truncated prompt if no value
+                    provided)                                           [string]
+      --attach      attach to a running opencode server (e.g.,
+                    http://localhost:4096)                              [string]
+      --port        port for the local server (defaults to random port if no
+                    value provided)                                     [number]
+FAILED: Activity execution timed out or failed
+
+=== TEST 3: Can we actually create a PR? ===
+ERROR: Repository not found.
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+
+
+=== TEST 4: Can vessels actually coordinate (communicate between pods)? ===
+Testing inter-pod communication...
+command terminated with exit code 6
+
+=== TEST 5: Do activity metrics actually update (Thompson Sampling)? ===
+Checking if templates have learning metrics...
+FAILED: Cannot query SurrealDB
+
+=== TEST 6: Does the CLI actually work inside containers? ===
+Testing different invocation methods...
+/usr/local/bin/opencode
+INFO  2026-03-02T00:04:58 +4ms service=template-cache intervalMs=60000 cleanup started
+INFO  2026-03-02T00:04:58 +50ms service=sdk-loader total=2 loaded=0 packages=[] SDK loader initialized
+INFO  2026-03-02T00:04:58 +21ms service=turn-lifecycle name=memory-management priority=10 totalHooks=1 hook registered
+INFO  2026-03-02T00:04:58 +0ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=2 hook registered
+INFO  2026-03-02T00:04:58 +0ms service=turn-lifecycle name=metabob-context-preparation priority=20 totalHooks=3 hook registered
+INFO  2026-03-02T00:04:58 +0ms service=turn-lifecycle name=post-turn-cleanup priority=100 totalHooks=4 hook registered
+INFO  2026-03-02T00:04:58 +0ms service=turn-lifecycle name=session-memory-optimization priority=110 totalHooks=5 hook registered
+INFO  2026-03-02T00:04:58 +0ms service=turn-lifecycle name=impulse-learning-init priority=1 totalHooks=6 hook registered
+INFO  2026-03-02T00:04:58 +0ms service=turn-lifecycle name=impulse-learning-flush priority=120 totalHooks=7 hook registered
+0.0.0-fix-devbob-openauth-dependency-202603010543
+  opencode run [message..]     run opencode with a message
+  opencode activity            manage activities, templates, and execute prompts
+  opencode auth                manage credentials
+  opencode agent               manage agents
+  opencode upgrade [target]    upgrade opencode to the latest or a specific
+                               version
+
+Trying correct syntax: opencode run "message" (not --prompt)...
+INFO  2026-03-02T00:05:05 +8ms service=template-cache intervalMs=60000 cleanup started
+INFO  2026-03-02T00:05:05 +12ms service=sdk-loader total=2 loaded=0 packages=[] SDK loader initialized
+INFO  2026-03-02T00:05:05 +20ms service=turn-lifecycle name=memory-management priority=10 totalHooks=1 hook registered
+INFO  2026-03-02T00:05:05 +1ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=2 hook registered
+INFO  2026-03-02T00:05:05 +0ms service=turn-lifecycle name=metabob-context-preparation priority=20 totalHooks=3 hook registered
+INFO  2026-03-02T00:05:05 +0ms service=turn-lifecycle name=post-turn-cleanup priority=100 totalHooks=4 hook registered
+INFO  2026-03-02T00:05:05 +0ms service=turn-lifecycle name=session-memory-optimization priority=110 totalHooks=5 hook registered
+INFO  2026-03-02T00:05:05 +0ms service=turn-lifecycle name=impulse-learning-init priority=1 totalHooks=6 hook registered
+INFO  2026-03-02T00:05:05 +0ms service=turn-lifecycle name=impulse-learning-flush priority=120 totalHooks=7 hook registered
+570 |               name: e.cause?.name,
+571 |               message: e.cause?.message,
+572 |             }
+573 |           : undefined,
+574 |       })
+575 |       throw new InitError({ providerID: provider.id }, { cause: e })
+                  ^
+ProviderInitError: ProviderInitError
+ data: {
+  providerID: "anthropic",
+},
+
+=== TEST 7: Can we check git configuration inside containers? ===
+No git config found
+
+=== TEST 8: What environment/tools are actually available? ===
+Node: 
+bash: line 1: node: command not found
+command terminated with exit code 127
+
+=== SUMMARY: What Actually Works ===
+
+✅ WORKING:
+1. Infrastructure (SurrealDB persistence, HTTP RPC)
+2. Containers are running (3 devbob pods up)
+3. OpenCode is installed and responds
+4. Git is installed
+5. Pre-loaded code bundle exists
+
+❌ BROKEN:
+1. Git clone (no credentials configured)
+2. Git push (no SSH keys, no auth)
+3. PR creation (no GitHub access)
+4. OpenCode run needs API key (ProviderInitError: anthropic)
+5. Inter-pod curl failed (networking or service issue)
+6. SurrealDB curl from pod failed
+7. No git config (user.name, user.email, credentials)
+8. Node.js not in PATH (expected for OpenCode)
+
+⚠️ UNKNOWN/UNTESTED:
+1. Can OpenCode activity command work? (might bypass API key issue)
+2. Can pods communicate via K8s services? (curl failed but might be tool issue)
+3. Are activity templates actually accessible from pods?
+4. Does Thompson Sampling work end-to-end?
+
+=== ROOT CAUSES ===
+
+1. **Missing Credentials**: No GitHub token, no SSH keys, no git config
+2. **Missing API Key**: Anthropic API key not configured in containers
+3. **Incomplete Setup**: Infrastructure works but integration incomplete
+4. **False Validation**: Checked "files exist" not "functionality works"
+
+=== MINIMUM VIABLE FIXES ===
+
+To enable basic workflow (pull → develop → commit → push → PR):
+
+Priority 1 (Blockers):
+- Add Anthropic API key to container environment
+- Add GitHub token for clone/push operations
+- Add git config (user.name, user.email)
+- Add SSH keys for GitHub authentication
+
+Priority 2 (Important):
+- Fix inter-pod communication (verify services)
+- Verify SurrealDB accessibility from pods
+- Test actual activity execution in containers
+
+Priority 3 (Nice to have):
+- Add Node.js to PATH if needed
+- Test Thompson Sampling end-to-end
+- Verify variant selection works
+
+=== NEXT STEPS ===
+
+1. Create fix plan for credential management
+2. Test "opencode activity" command (might work without API key for some operations)
+3. Verify if pre-loaded bundle is sufficient for development
+4. Document actual vs claimed capabilities
+Assessment complete

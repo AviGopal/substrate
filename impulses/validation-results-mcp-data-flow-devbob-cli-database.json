@@ -1,0 +1,26 @@
+{
+  "id": "validation-results-mcp-data-flow-devbob-cli-database",
+  "pointer": {
+    "type": "memo",
+    "content": "# MCP Data Flow Enforcement Verification Results\n\n**Overall Status**: ✅ PASS\n\n## validation-mcp-data-flow-devbob-cli-database-case-1\n**Status**: ✅ PASS\n\n- ✅ ImpulseUsageData interface defined\n  Interface found with impulse_id, tokens_used, was_useful fields\n- ✅ ComponentChangeData interface defined\n  Interface found with file_path, component_name, component_type fields\n- ✅ ActivityExecutionData has impulses_used field\n  Field added to interface\n- ✅ ActivityExecutionData has component_changes field\n  Field added to interface\n\n## validation-mcp-data-flow-devbob-cli-database-case-2\n**Status**: ✅ PASS\n\n- ✅ Impulse collection from activity.impulses registry\n  Code extracts loaded impulses with token counts\n- ✅ Component extraction via ActivityComplete.identifyKeyComponents\n  Code calls ActivityComplete.identifyKeyComponents(activity)\n- ✅ Data passed to reportExecution in success case\n  impulses_used and component_changes passed to reportExecution\n- ✅ Data passed to reportExecution in failure case\n  Failure case also collects and passes learning data\n\n## validation-mcp-data-flow-devbob-cli-database-case-2-mcp\n**Status**: ✅ PASS\n\n- ✅ MCP tool call includes impulses_used\n  impulses_used forwarded to MCP tool\n- ✅ MCP tool call includes component_changes\n  component_changes forwarded to MCP tool\n- ✅ Debug logging for data transmission\n  Logging added to track impulse/component counts\n\n## validation-mcp-data-flow-devbob-cli-database-case-3\n**Status**: ✅ PASS\n\n- ✅ CLI tool accepts impulses_used from result\n  Code checks for and extracts impulses_used\n- ✅ CLI tool accepts component_changes from result\n  Code checks for and extracts component_changes\n- ✅ Data added to backend request payload\n  impulses_used and component_changes added to request_data\n- ✅ Debug logging for data forwarding\n  Logging added to track data forwarding\n",
+    "source": "validation-harness-verification"
+  },
+  "scope": "session",
+  "budget": 2000,
+  "tags": [
+    "validation",
+    "results",
+    "mcp-data-flow",
+    "pass"
+  ],
+  "priority": 10,
+  "metadata": {
+    "created_by": "validation-harness-verification",
+    "specification": "MCP Data Flow: Devbob → Metabob-CLI → Database",
+    "overall_status": "PASS",
+    "test_cases_run": 4,
+    "passed": 4,
+    "failed": 0,
+    "timestamp": "2026-03-04T01:55:26.274Z"
+  }
+}

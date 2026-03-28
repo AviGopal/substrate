@@ -1,0 +1,19 @@
+{
+  "id": "validation-activity-template-mcp-only-flow-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Validation Test Case 3: Clean Environment Fresh Install\n\n## Input\n\n```json\n{\n  \"activityId\": \"evolve-activity-self-contained\",\n  \"variables\": {\n    \"templateId\": \"test-template\",\n    \"improvementReason\": \"Add better error handling\"\n  },\n  \"reason\": \"Validation test: Verify fresh installation can execute without local template files\"\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"pass\": true,\n  \"actual\": {\n    \"mcpSearchRequest\": true,\n    \"mcpGetRequest\": true,\n    \"surrealdbTemplateRead\": true,\n    \"activityExecutionComplete\": true,\n    \"mcpPostResultRequest\": true,\n    \"surrealdbLearningWrite\": true,\n    \"noLocalDirectoryReads\": true,\n    \"noMetabobActivitiesDirectory\": true\n  },\n  \"expected\": {\n    \"mcpSearchRequest\": true,\n    \"mcpGetRequest\": true,\n    \"surrealdbTemplateRead\": true,\n    \"activityExecutionComplete\": true,\n    \"mcpPostResultRequest\": true,\n    \"surrealdbLearningWrite\": true,\n    \"noLocalDirectoryReads\": true,\n    \"noMetabobActivitiesDirectory\": true\n  },\n  \"errors\": []\n}\n```\n\n## Validation Criteria\n\n1. **Clean Environment**: .metabob/activities directory does NOT exist\n2. **MCP Flow**: Complete template retrieval from backend via MCP\n3. **Execution Success**: Activity completes without local templates\n4. **Learning Data**: Results posted back to backend\n5. **No Local Directory**: ZERO access to .metabob/activities\n\n## Test Description\n\nThis test validates the system works in a fresh installation scenario:\n\n- No local template files exist\n- All templates retrieved from backend via MCP\n- Activity executes successfully\n- Learning data flows back to backend\n\n**Test Environment**: Fresh devbob-k8s container with .metabob/activities removed\n\n**Expected Behavior**: Complete MCP flow, no local file dependency\n\n**Pre-Test Setup**:\n```bash\ndocker exec devbob-opencode rm -rf /workspace/.metabob/activities\n```\n\n**Post-Test Verification**:\n```bash\ndocker exec devbob-opencode test -d /workspace/.metabob/activities && echo FAIL || echo PASS\n```\n",
+    "source": "validation-test-case"
+  },
+  "budget": 1000,
+  "priority": "high",
+  "loaded": true,
+  "metadata": {
+    "testCase": 3,
+    "specification": "activity-template-mcp-only-flow",
+    "activityId": "evolve-activity-self-contained",
+    "category": "clean-install",
+    "requiresPreTestCleanup": true
+  }
+}

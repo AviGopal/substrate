@@ -1,0 +1,33 @@
+{
+  "impulseId": "harness-devbob-provider-initialization",
+  "type": "file",
+  "description": "Validation harness for devbob-provider-initialization specification",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/devbob-provider-initialization-harness.ts",
+    "purpose": "Automated validation of provider initialization in DevBob pod"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specificationName": "devbob-provider-initialization",
+    "validationType": "kubectl-exec",
+    "testCases": [
+      "validation-devbob-provider-initialization-case-1",
+      "validation-devbob-provider-initialization-case-2",
+      "validation-devbob-provider-initialization-case-3",
+      "validation-devbob-provider-initialization-case-4"
+    ],
+    "validationStrategy": "kubectl exec test showing successful provider init and command execution",
+    "automated": true,
+    "requiresLLM": false
+  },
+  "usage": {
+    "cli": "bun tests/validation-harnesses/devbob-provider-initialization-harness.ts",
+    "programmatic": "import { runValidation } from './tests/validation-harnesses/devbob-provider-initialization-harness.ts'; await runValidation(testCase);"
+  },
+  "outputs": {
+    "exitCode": "0 for pass, 1 for fail",
+    "results": "Record<string, ValidationResult> with detailed test results",
+    "summary": "Human-readable summary of validation outcome"
+  }
+}

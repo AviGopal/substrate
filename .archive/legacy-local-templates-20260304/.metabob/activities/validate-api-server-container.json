@@ -1,0 +1,331 @@
+{
+  "activity_id": "validate-api-server-container",
+  "name": "Validate API Server Container",
+  "description": "Validate Metabob API server Docker container configuration (service health, endpoints, database connectivity)",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "check-container-status",
+      "subagent": "general",
+      "description": "Check API server container status (running, healthy, uptime)",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check the Docker container status for Metabob API server:\n\n1. Run: docker ps --filter name=api-server --format '{{.Names}}\\t{{.Status}}\\t{{.State}}'\n2. Check logs: docker logs api-server --tail 50\n3. Report:\n   - Container state (running/stopped)\n   - Health status\n   - Uptime duration\n   - Recent log entries\n   - Any startup errors\n\nProvide a clear status summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-service-health",
+      "subagent": "general",
+      "description": "Verify API server health endpoint responds",
+      "dependencies": [
+        "check-container-status"
+      ],
+      "prompt": {
+        "template": "Verify API server health endpoint:\n\n1. Run: curl -f http://localhost:8080/health || echo \"Health endpoint failed\"\n2. Run: curl -f http://localhost:8080/api/health || echo \"API health endpoint failed\"\n3. Check:\n   - HTTP status code (200 OK expected)\n   - Response body\n   - Response time\n4. Report:\n   - Health status (healthy/unhealthy)\n   - Endpoint URL that worked\n   - Response details\n   - Any errors\n\nProvide health check verification summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-database-connectivity",
+      "subagent": "general",
+      "description": "Verify API server can connect to database",
+      "dependencies": [
+        "verify-service-health"
+      ],
+      "prompt": {
+        "template": "Verify database connectivity from API server:\n\n1. Check logs for database connection: docker logs api-server 2>&1 | grep -i 'database\\|redis\\|surreal'\n2. Check environment variables: docker exec api-server env | grep -i 'db\\|redis\\|surreal'\n3. Report:\n   - Database type detected\n   - Connection status (connected/failed)\n   - Connection string (redacted)\n   - Any connection errors\n\nProvide database connectivity summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-network-connectivity",
+      "subagent": "general",
+      "description": "Verify API server network connectivity to other containers",
+      "dependencies": [
+        "verify-database-connectivity"
+      ],
+      "prompt": {
+        "template": "Verify network connectivity from API server:\n\n1. Check Docker network: docker network inspect metabob-network | grep api-server\n2. Test Redis: docker exec api-server ping -c 2 redis || echo \"Redis unreachable\"\n3. Test SurrealDB: docker exec api-server ping -c 2 surrealdb || echo \"SurrealDB unreachable\"\n4. Report:\n   - Network name\n   - Redis connectivity (reachable/unreachable)\n   - SurrealDB connectivity (reachable/unreachable)\n   - Any network issues\n\nProvide network connectivity summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-api-endpoints",
+      "subagent": "general",
+      "description": "Test key API endpoints functionality",
+      "dependencies": [
+        "verify-network-connectivity"
+      ],
+      "prompt": {
+        "template": "Test API server endpoints:\n\n1. Test version endpoint: curl -s http://localhost:8080/api/version\n2. Test activities endpoint: curl -s http://localhost:8080/api/activities | head -20\n3. Report:\n   - Version endpoint status\n   - Activities endpoint status\n   - Response format (JSON/other)\n   - Any errors\n\nProvide API endpoints test summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-validation-report",
+      "subagent": "general",
+      "description": "Generate comprehensive API server validation report",
+      "dependencies": [
+        "test-api-endpoints"
+      ],
+      "prompt": {
+        "template": "Generate validation report for API server container:\n\nSummarize all validation results:\n1. Container Status: [running/stopped, healthy/unhealthy]\n2. Service Health: [healthy/unhealthy, endpoint URL]\n3. Database Connectivity: [connected/failed]\n4. Network Connectivity: [Redis status, SurrealDB status]\n5. API Endpoints: [working/failed]\n\nOverall Assessment:\n- ✅ PASS: All checks successful\n- ⚠️ WARNING: Minor issues found\n- ❌ FAIL: Critical issues found\n\nRecommendations:\n- List any required fixes\n- Suggest improvements\n\nCreate report file: test-results/api-server-container-validation.md",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/api-server-container-validation.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "check-container-status",
+      "subagent": "general",
+      "description": "Check API server container status (running, healthy, uptime)",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check the Docker container status for Metabob API server:\n\n1. Run: docker ps --filter name=api-server --format '{{.Names}}\\t{{.Status}}\\t{{.State}}'\n2. Check logs: docker logs api-server --tail 50\n3. Report:\n   - Container state (running/stopped)\n   - Health status\n   - Uptime duration\n   - Recent log entries\n   - Any startup errors\n\nProvide a clear status summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-service-health",
+      "subagent": "general",
+      "description": "Verify API server health endpoint responds",
+      "dependencies": [
+        "check-container-status"
+      ],
+      "prompt": {
+        "template": "Verify API server health endpoint:\n\n1. Run: curl -f http://localhost:8080/health || echo \"Health endpoint failed\"\n2. Run: curl -f http://localhost:8080/api/health || echo \"API health endpoint failed\"\n3. Check:\n   - HTTP status code (200 OK expected)\n   - Response body\n   - Response time\n4. Report:\n   - Health status (healthy/unhealthy)\n   - Endpoint URL that worked\n   - Response details\n   - Any errors\n\nProvide health check verification summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-database-connectivity",
+      "subagent": "general",
+      "description": "Verify API server can connect to database",
+      "dependencies": [
+        "verify-service-health"
+      ],
+      "prompt": {
+        "template": "Verify database connectivity from API server:\n\n1. Check logs for database connection: docker logs api-server 2>&1 | grep -i 'database\\|redis\\|surreal'\n2. Check environment variables: docker exec api-server env | grep -i 'db\\|redis\\|surreal'\n3. Report:\n   - Database type detected\n   - Connection status (connected/failed)\n   - Connection string (redacted)\n   - Any connection errors\n\nProvide database connectivity summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-network-connectivity",
+      "subagent": "general",
+      "description": "Verify API server network connectivity to other containers",
+      "dependencies": [
+        "verify-database-connectivity"
+      ],
+      "prompt": {
+        "template": "Verify network connectivity from API server:\n\n1. Check Docker network: docker network inspect metabob-network | grep api-server\n2. Test Redis: docker exec api-server ping -c 2 redis || echo \"Redis unreachable\"\n3. Test SurrealDB: docker exec api-server ping -c 2 surrealdb || echo \"SurrealDB unreachable\"\n4. Report:\n   - Network name\n   - Redis connectivity (reachable/unreachable)\n   - SurrealDB connectivity (reachable/unreachable)\n   - Any network issues\n\nProvide network connectivity summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-api-endpoints",
+      "subagent": "general",
+      "description": "Test key API endpoints functionality",
+      "dependencies": [
+        "verify-network-connectivity"
+      ],
+      "prompt": {
+        "template": "Test API server endpoints:\n\n1. Test version endpoint: curl -s http://localhost:8080/api/version\n2. Test activities endpoint: curl -s http://localhost:8080/api/activities | head -20\n3. Report:\n   - Version endpoint status\n   - Activities endpoint status\n   - Response format (JSON/other)\n   - Any errors\n\nProvide API endpoints test summary.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-validation-report",
+      "subagent": "general",
+      "description": "Generate comprehensive API server validation report",
+      "dependencies": [
+        "test-api-endpoints"
+      ],
+      "prompt": {
+        "template": "Generate validation report for API server container:\n\nSummarize all validation results:\n1. Container Status: [running/stopped, healthy/unhealthy]\n2. Service Health: [healthy/unhealthy, endpoint URL]\n3. Database Connectivity: [connected/failed]\n4. Network Connectivity: [Redis status, SurrealDB status]\n5. API Endpoints: [working/failed]\n\nOverall Assessment:\n- ✅ PASS: All checks successful\n- ⚠️ WARNING: Minor issues found\n- ❌ FAIL: Critical issues found\n\nRecommendations:\n- List any required fixes\n- Suggest improvements\n\nCreate report file: test-results/api-server-container-validation.md",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/api-server-container-validation.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-21T21:26:30.914Z",
+  "metadata": {}
+}

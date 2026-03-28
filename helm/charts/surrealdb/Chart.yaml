@@ -1,0 +1,7 @@
+apiVersion: v2
+name: surrealdb
+version: 0.1.0
+description: SurrealDB database for Metabob cloud services
+home: https://metabob.com
+appVersion: "3.0.0"
+

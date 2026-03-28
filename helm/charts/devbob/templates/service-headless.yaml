@@ -1,0 +1,18 @@
+{{- if gt (int .Values.replicaCount) 1 }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "devbob.fullname" . }}-cluster
+  labels:
+    {{- include "devbob.labels" . | nindent 4 }}
+spec:
+  clusterIP: None  # Headless service for pod discovery
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "devbob.selectorLabels" . | nindent 4 }}
+  publishNotReadyAddresses: false  # Only return ready pods
+{{- end }}

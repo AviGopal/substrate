@@ -1,0 +1,13 @@
+{
+  "input": {
+    "acpTarget": "docker://devbob-pod",
+    "prompt": "Execute create-activity template",
+    "timeout": 300
+  },
+  "expectedOutput": {
+    "delegationSucceeds": true,
+    "activityExecuted": true,
+    "responseReceived": true
+  },
+  "description": "Verifies ACP delegation to devbob executes activities successfully"
+}

@@ -1,0 +1,179 @@
+{
+  "specificationName": "surrealdb-async-await-deployment",
+  "timestamp": "2026-03-03T02:40:00Z",
+  "blockingIssue": {
+    "type": "VALIDATION_BLOCKER",
+    "severity": "HIGH",
+    "description": "SurrealDB record ID naming prevents template creation, blocking full validation",
+    "component": "generate_template_id() function in server/actions/activity.py:53",
+    "rootCause": "Function generates template_id with hyphens (e.g., 'add-feature'), but SurrealDB record IDs cannot contain hyphens",
+    "impact": "Cannot create templates via API, preventing validation of async/await persistence to SurrealDB",
+    "evidence": {
+      "errorMessage": "Parse error: Unexpected token '-', expected Eof",
+      "failedEndpoint": "POST /v2/activities/templates",
+      "codeLocation": "repos/metabob-rpc-api/server/actions/activity.py:53-55",
+      "currentImplementation": "return name.lower().replace(' ', '-').replace('_', '-')"
+    }
+  },
+  "scopeChange": {
+    "previous": "OUT OF SCOPE - Noted as separate issue",
+    "current": "IN SCOPE - User directive: 'Nothing is passing if there is an issue'",
+    "justification": "Validation cannot proceed without fixing record ID naming. Must fix, rebuild, and redeploy."
+  },
+  "otherSpecifications": [
+    "surrealdb-official-library-integration",
+    "surrealdb-primary-redis-cache",
+    "activity-template-query-filtering",
+    "project-scoped-template-filtering",
+    "metrics-calculation-in-rpc-api-only",
+    "thompson-sampling-in-rpc-api-only"
+  ],
+  "conflicts": [
+    {
+      "type": "IMPLEMENTATION_CONSTRAINT",
+      "spec1": "surrealdb-async-await-deployment",
+      "spec2": "surrealdb-official-library-integration",
+      "sharedComponent": "generate_template_id() - server/actions/activity.py:53",
+      "description": "Template ID generation uses hyphens, but SurrealDB record IDs cannot contain hyphens (parser limitation)",
+      "severity": "HIGH",
+      "impact": "Blocks template creation, breaks validation harness",
+      "resolution": "Replace hyphens with underscores in template_id generation",
+      "requiredChanges": [
+        "Update generate_template_id() to use underscores instead of hyphens",
+        "Ensure variant_id generation also uses underscores",
+        "Test that SurrealDB accepts underscore-based record IDs",
+        "Rebuild Docker image with fix",
+        "Redeploy to Kubernetes cluster",
+        "Re-run validation harness"
+      ]
+    },
+    {
+      "type": "DATA_CONSISTENCY",
+      "spec1": "surrealdb-async-await-deployment",
+      "spec2": "activity-template-query-filtering",
+      "sharedComponent": "Template record structure in SurrealDB",
+      "description": "Query filtering expects specific record ID format, must remain consistent",
+      "severity": "MEDIUM",
+      "impact": "Changing ID format could break existing queries",
+      "resolution": "Use underscores consistently across all components",
+      "validation": "Verify queries work with underscore-based IDs"
+    },
+    {
+      "type": "CACHE_KEY_CONSISTENCY",
+      "spec1": "surrealdb-async-await-deployment",
+      "spec2": "surrealdb-primary-redis-cache",
+      "sharedComponent": "Redis cache keys: activity:template:{variant_id}",
+      "description": "Cache keys use variant_id which includes template_id",
+      "severity": "LOW",
+      "impact": "Cache keys will change format (hyphens → underscores)",
+      "resolution": "Accept new cache key format, no migration needed (cache is volatile)",
+      "note": "Redis cache expires naturally, no backward compatibility required"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "generate_template_id()",
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "lineNumber": 53,
+      "affectedBySpecs": [
+        "surrealdb-async-await-deployment",
+        "surrealdb-official-library-integration",
+        "activity-template-query-filtering",
+        "project-scoped-template-filtering"
+      ],
+      "currentImplementation": "return name.lower().replace(' ', '-').replace('_', '-')",
+      "recommendation": "return name.lower().replace(' ', '_').replace('-', '_')",
+      "rationale": "SurrealDB record IDs support underscores but not hyphens"
+    },
+    {
+      "component": "generate_variant_id()",
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "lineNumber": 69,
+      "affectedBySpecs": [
+        "surrealdb-async-await-deployment",
+        "surrealdb-primary-redis-cache",
+        "metrics-calculation-in-rpc-api-only"
+      ],
+      "currentImplementation": "return f'{template_id}-{content_hash}'",
+      "recommendation": "return f'{template_id}_{content_hash}'",
+      "rationale": "Maintain consistency with underscore-based naming"
+    },
+    {
+      "component": "create_template()",
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "lineNumber": 303,
+      "affectedBySpecs": [
+        "surrealdb-async-await-deployment",
+        "surrealdb-official-library-integration",
+        "surrealdb-primary-redis-cache"
+      ],
+      "currentBehavior": "Generates IDs with hyphens, fails to persist to SurrealDB",
+      "desiredBehavior": "Generates IDs with underscores, successfully persists to SurrealDB",
+      "validationRequired": true
+    }
+  ],
+  "impactAnalysis": {
+    "breakingChanges": false,
+    "reason": "Redis cache is volatile, no persistent data uses hyphenated IDs yet (creation was blocked)",
+    "affectedServices": [
+      "metabob-rpc-api"
+    ],
+    "affectedAPIs": [
+      "POST /v2/activities/templates",
+      "GET /v2/activities/templates",
+      "GET /v2/activities/templates/{variant_id}"
+    ],
+    "backwardCompatibility": "NOT REQUIRED - System was non-functional for template creation",
+    "migrationRequired": false
+  },
+  "resolutionPlan": {
+    "step1": {
+      "action": "Fix generate_template_id() function",
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "change": "Replace hyphens with underscores in line 55",
+      "validation": "Unit test with template names containing spaces and special characters"
+    },
+    "step2": {
+      "action": "Fix generate_variant_id() function",
+      "file": "repos/metabob-rpc-api/server/actions/activity.py",
+      "change": "Replace hyphen separator with underscore in line 71",
+      "validation": "Verify variant_id format matches SurrealDB requirements"
+    },
+    "step3": {
+      "action": "Commit changes to repos/metabob-rpc-api",
+      "command": "git add server/actions/activity.py && git commit -m 'Fix: Replace hyphens with underscores in template ID generation for SurrealDB compatibility'",
+      "note": "Creates new commit on top of 9756fa5"
+    },
+    "step4": {
+      "action": "Rebuild Docker image with fix",
+      "command": "docker build -f docker/Dockerfile.server -t metabob-rpc-api:record-id-fix .",
+      "expectedTime": "2-5 minutes"
+    },
+    "step5": {
+      "action": "Tag image for deployment",
+      "command": "docker tag metabob-rpc-api:record-id-fix metabob-rpc-api:latest",
+      "note": "Update latest tag to include fix"
+    },
+    "step6": {
+      "action": "Update Kubernetes deployment",
+      "command": "kubectl set image deployment/metabob-rpc-api -n metabob rpc-api=metabob-rpc-api:record-id-fix",
+      "expectedTime": "30 seconds rollout"
+    },
+    "step7": {
+      "action": "Wait for rollout completion",
+      "command": "kubectl rollout status deployment/metabob-rpc-api -n metabob --timeout=5m",
+      "validation": "New pod running with fixed image"
+    },
+    "step8": {
+      "action": "Run full validation harness",
+      "command": "RPC_API_URL=http://api.metabob.local/api NAMESPACE=metabob ./tests/validation-harnesses/surrealdb-async-await-enforcement-harness.sh",
+      "expectedResult": "All 8 tests PASS",
+      "criticalTests": [
+        "Test 2: Create Template - Should now succeed",
+        "Test 5: SurrealDB Persistence - Should find template in database",
+        "Test 7: SurrealDB Fallback - Should load from database after cache flush"
+      ]
+    }
+  },
+  "conflictImpulseId": "conflict-analysis-surrealdb-async-await-deployment"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "harness-playwright-validation-workflow",
+  "type": "file",
+  "version": "1.0.0",
+  "created": "2026-03-16T00:00:00Z",
+  "budget": 2000,
+  "metadata": {
+    "specification": "playwright-validation-workflow",
+    "harnessType": "validation",
+    "testCases": 3,
+    "executable": true
+  },
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/playwright-validation-workflow-harness.ts",
+    "description": "Validation harness that executes validate-deployment-playwright.sh and verifies all outputs meet specification requirements including pod status, health check validation, session creation validation, screenshot capture, and report generation"
+  }
+}

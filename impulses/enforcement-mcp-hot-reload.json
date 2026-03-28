@@ -1,0 +1,131 @@
+{
+  "id": "enforcement-mcp-hot-reload",
+  "type": "memo",
+  "content": {
+    "specificationName": "Enable Hot-Reload for MCP Clients in Development Mode",
+    "purpose": "Enable testing metabob-cli code changes without restarting opencode session",
+    "enforcementDate": "2026-03-09",
+    "traceImpulseRef": "trace-mcp-hot-reload",
+    "changesApplied": [
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/mcp/index.ts",
+        "component": "MCP.reload() function",
+        "lineRange": "217-307",
+        "changeMade": "Added export async function reload() that: (1) Gets current state, (2) Closes all existing clients, (3) Clears state, (4) Re-reads config via Config.get(), (5) Re-initializes clients using create(), (6) Returns success status and errors per client",
+        "reason": "Enables hot-reload of MCP connections without restarting entire opencode session. Allows developers to test metabob-cli code changes immediately after restarting the vessel.",
+        "impactAnalysis": "New export function - no breaking changes. Only called explicitly via CLI command or config reload. Selective disposal (only MCP clients) preserves other cached state.",
+        "designDecisions": [
+          "Selective disposal: Only MCP clients, not full Instance.dispose()",
+          "Graceful error handling: Continues reload even if individual clients fail",
+          "State manipulation: Directly updates state object rather than disposing",
+          "Reuses create(): Leverages existing initialization logic"
+        ]
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/config/reload.ts",
+        "component": "Config reload integration",
+        "lineRange": "1-8, 93-107, 176-184",
+        "changeMade": "Added: (1) Import MCP module and Log utility, (2) Log instance creation, (3) MCP.reload() call after Instance.dispose() in reload() function, (4) MCP.reload() call in performDeferredReload() function",
+        "reason": "Ensures MCP clients are re-initialized immediately when config changes, not lazily on next access. Provides automatic hot-reload when opencode.json MCP config changes.",
+        "impactAnalysis": "Low risk: Only adds logging and MCP reload call after existing Instance.dispose(). Errors are caught and logged, won't break config reload flow.",
+        "designDecisions": [
+          "Call after Instance.dispose(): Ensures fresh config is loaded",
+          "Error handling: Logs errors but doesn't fail entire reload",
+          "Applied to both: reload() and performDeferredReload() functions"
+        ]
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/cli/cmd/mcp.ts",
+        "component": "MCP CLI reload command",
+        "lineRange": "6, 10, 83-131",
+        "changeMade": "Added: (1) Import MCP module, (2) McpReloadCommand with 'opencode mcp reload' command, (3) Updated McpCommand builder to include McpReloadCommand, (4) Command handler that calls MCP.reload() and displays formatted results with status per client",
+        "reason": "Provides manual trigger for hot-reload during development. User can run 'opencode mcp reload' after restarting MCP vessel to reconnect without restarting opencode session.",
+        "impactAnalysis": "Zero risk: New CLI command only. No changes to existing commands. Uses prompts/spinner for user feedback. Displays success/failure per client with errors.",
+        "designDecisions": [
+          "User-friendly: Spinner, color-coded status, detailed error messages",
+          "Non-breaking: Graceful failure - shows partial success if some clients fail",
+          "Informative: Shows status per client (connected/failed/disabled)"
+        ]
+      }
+    ],
+    "dataFlowValidation": {
+      "manualReloadFlow": "User runs 'opencode mcp reload' → McpReloadCommand → MCP.reload() → close clients → Config.get() → create() → return status → CLI displays results",
+      "automaticReloadFlow": "User edits opencode.json → config/reload.ts detects → canReloadSafely() → Instance.dispose() → MCP.reload() → new clients ready",
+      "deferredReloadFlow": "User edits opencode.json → reload deferred → next session → performDeferredReload() → Instance.dispose() → MCP.reload() → new clients ready",
+      "verifiedRipples": [
+        "MCP.reload() calls create() - existing function, no changes needed",
+        "MCP.reload() calls Config.get() - existing function, re-reads config correctly",
+        "Config.reload() calls MCP.reload() - new integration point, tested",
+        "CLI command calls MCP.reload() - new integration point, tested"
+      ]
+    },
+    "testScenario": {
+      "setup": "metabob-opencode running with metabob-cli as MCP vessel",
+      "steps": [
+        "Modify metabob-cli code (e.g., add logging to search_activities tool)",
+        "Restart metabob-cli vessel to pick up code changes",
+        "Run 'opencode mcp reload' command",
+        "Verify: New logging appears when calling metabob_search_activities",
+        "Alternative: Use test_metabob_mcp tool to verify connection and tools updated"
+      ],
+      "expectedResult": "MCP clients reconnected with new vessel code, no opencode restart required"
+    },
+    "componentsWithNoChanges": [
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/mcp/index.ts",
+        "component": "MCP.create() function",
+        "reason": "Already handles client initialization gracefully - reused by reload()"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/config/impact-analysis.ts",
+        "component": "MCP impact detection",
+        "reason": "Already detects MCP config changes - no changes needed"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/tool/test-metabob-mcp.ts",
+        "component": "MCP health check tool",
+        "reason": "Already functional for verifying reload success - no changes needed"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/config/reload.ts",
+        "component": "Safety checks",
+        "reason": "canReloadSafely() stub acceptable for MVP - manual reload gives user control"
+      }
+    ],
+    "risksMitigated": [
+      {
+        "risk": "State manipulation complexity",
+        "mitigation": "Followed Instance.state() pattern carefully. Direct state manipulation tested."
+      },
+      {
+        "risk": "Connection leaks",
+        "mitigation": "All clients closed before re-initialization. Error handling ensures cleanup."
+      },
+      {
+        "risk": "Breaking active operations",
+        "mitigation": "Manual reload gives user control. Future: implement safety checks in canReloadSafely()."
+      },
+      {
+        "risk": "Circuit breaker reset",
+        "mitigation": "Circuit breaker state preserved (lives outside MCP state) - correct behavior."
+      }
+    ],
+    "architectureCompliance": {
+      "instanceStatePattern": "✓ Used Instance.state() correctly - direct state manipulation without full dispose",
+      "disposalVsReload": "✓ MCP.reload() is selective - only MCP clients, preserves other state",
+      "createReusability": "✓ Reused existing create() function - no duplication",
+      "errorHandling": "✓ Graceful error handling - continues on individual client failures",
+      "logging": "✓ Detailed logging at each step for debugging"
+    },
+    "implementationSummary": {
+      "totalFilesModified": 3,
+      "totalLinesAdded": 120,
+      "newExportFunctions": 1,
+      "newCLICommands": 1,
+      "breakingChanges": 0,
+      "backwardsCompatible": true
+    }
+  },
+  "budget": 3000,
+  "created": "2026-03-09T00:00:00Z"
+}

@@ -1,0 +1,53 @@
+{
+  "id": "trace-metabob-cli-mcp-backend-communication",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": null,
+    "source": "trace-data-flow-single-feature activity"
+  },
+  "metadata": {
+    "specificationName": "metabob-cli-mcp-backend-communication",
+    "rootCause": "Silent configuration failure at callMCPTool (metabob.ts:265-271) when mcp.metabob missing from opencode.json",
+    "dataFlow": "LLM → SearchActivitiesTool → TemplateRepository → TemplateLoader → TemplateServiceClient → MetabobCLI → callMCPTool → [BREAKS HERE if mcp.metabob missing] → MCP Client → JSON-RPC → search_activities_tool → ActivityManager → HTTP GET → Backend API → Redis",
+    "generatedFiles": [
+      "docs/data-flows/metabob-cli-mcp-backend-communication-flow.md",
+      "COMPONENT_ANNOTATIONS_metabob-cli-mcp-backend-communication.md",
+      "CODE_QUALITY_ANALYSIS_metabob-cli-mcp-backend-communication.md"
+    ],
+    "criticalIssues": [
+      {
+        "priority": "BLOCKING",
+        "issue": "Silent configuration failure",
+        "location": "metabob.ts:265-271",
+        "impact": "Prevents all HTTP traffic to backend",
+        "fix": "Throw MCPClientNotFoundError instead of returning undefined"
+      },
+      {
+        "priority": "HIGH",
+        "issue": "Silent authentication failure",
+        "location": "activity_manager.py:202-244",
+        "impact": "User sees only global templates, missing org templates",
+        "fix": "Throw AuthenticationError on 401 instead of returning []"
+      },
+      {
+        "priority": "HIGH",
+        "issue": "N+1 query problem",
+        "location": "template-service-client.ts:190-202",
+        "impact": "2-5 second latency for 20 templates",
+        "fix": "Add include_full=true parameter to backend API"
+      }
+    ],
+    "components": [
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+        "component": "callMCPTool",
+        "currentBehavior": "Returns undefined when mcp.metabob client not found (line 265-271)",
+        "desiredBehavior": "Should throw MCPClientNotFoundError with clear message",
+        "gap": "BLOCKING: This is the root cause - prevents all HTTP traffic to backend"
+      }
+    ]
+  },
+  "budget": 5000,
+  "createdAt": "2026-03-03T19:49:00.000Z"
+}

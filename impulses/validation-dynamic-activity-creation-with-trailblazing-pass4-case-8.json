@@ -1,0 +1,13 @@
+{
+  "input": {
+    "namespace": "metabob",
+    "podSelector": "app=devbob",
+    "command": "opencode activity --help"
+  },
+  "expectedOutput": {
+    "podRunning": true,
+    "cliWorks": true,
+    "hasLatestCode": true
+  },
+  "description": "Verifies devbob pod is running with latest code (CLI works without errors)"
+}

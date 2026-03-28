@@ -1,0 +1,17 @@
+{
+  "id": "validation-mcp-communication-timeout-runtime-validation-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case",
+    "content": "Test Case 3: Timeout Precision Measurement\n\nThis test validates that the withTimeout utility is accurate across different timeout durations.\n\n**Input:**\n```json\n{\n  \"testCase\": \"timeout-precision\",\n  \"timeouts\": [1000, 2000, 5000],\n  \"tolerance\": 100\n}\n```\n\n**Expected Output:**\n```json\n{\n  \"allTimeoutsAccurate\": true,\n  \"maxDeviation\": \"<100ms\"\n}\n```\n\n**Validation Strategy:**\n1. Test withTimeout with 1s, 2s, and 5s timeouts\n2. Each test uses a slow operation that would take timeout + 5s\n3. Measure actual time when timeout triggers\n4. Calculate deviation from expected timeout\n5. Verify all deviations are within 100ms tolerance\n\n**Success Criteria:**\n- 1000ms timeout: actual within 900-1100ms\n- 2000ms timeout: actual within 1900-2100ms\n- 5000ms timeout: actual within 4900-5100ms\n- All tests pass tolerance check\n\n**Historical Result:**\n✅ PASSED - Max deviation: 1ms (far better than 100ms target)"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 3,
+    "testType": "timeout",
+    "specification": "MCP Communication Timeout Runtime Validation",
+    "historical": true,
+    "canRunWithoutLLM": true
+  }
+}

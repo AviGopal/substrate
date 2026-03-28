@@ -1,0 +1,99 @@
+{
+  "activity_id": "test-optimize-performance-mediocre",
+  "name": "Test Optimize Performance (Mediocre Results)",
+  "description": "Mock template for testing boredom system - performance optimization with moderate improvement gradient",
+  "category": "refactor",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Profile performance bottleneck",
+      "dependencies": [],
+      "prompt": {
+        "template": "Profile and optimize {{component_name}} for better performance",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "component_name",
+            "type": "string",
+            "required": true,
+            "description": "Component to optimize"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": ["npm run benchmark"]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Apply optimization",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": "Apply the optimization strategy identified in previous task",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": ["npm run benchmark"]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": ["npm run benchmark"],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "estimated_metrics": {
+    "execution_count": 6,
+    "success_count": 3,
+    "success_rate": 0.5,
+    "avg_duration_ms": 120000,
+    "avg_cost": 0.78,
+    "improvement_gradient": 0.42,
+    "performance_trends": {
+      "duration": "stable",
+      "cost": "increasing",
+      "success_rate": "stable"
+    },
+    "failure_patterns": [
+      {
+        "task_id": "task-2",
+        "error_type": "validation",
+        "error_message": "Benchmark command failed - performance regression detected",
+        "count": 2,
+        "last_seen": "2026-02-24T08:45:00Z"
+      },
+      {
+        "task_id": "task-1",
+        "error_type": "execution",
+        "error_message": "Could not identify clear bottleneck",
+        "count": 1,
+        "last_seen": "2026-02-23T22:10:00Z"
+      }
+    ]
+  }
+}

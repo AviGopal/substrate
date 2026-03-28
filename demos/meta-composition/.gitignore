@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Test results
+test-results/
+playwright-report/
+screenshots/
+*.log
+*.txt
+
+# Generated files
+meta-executor-output.log
+execution-logs.txt

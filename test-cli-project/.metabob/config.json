@@ -1,0 +1,10 @@
+{
+  "api": {
+    "base_url": "http://api.metabob.local",
+    "email": "testcli@metabob.com"
+  },
+  "project": {
+    "name": "test-cli-project",
+    "root": "."
+  }
+}

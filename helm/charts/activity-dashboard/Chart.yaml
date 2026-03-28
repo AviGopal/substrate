@@ -1,0 +1,15 @@
+apiVersion: v2
+name: activity-dashboard
+description: Activity Dashboard - MiniBob Instance Monitoring & Learning System
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - activity
+  - dashboard
+  - minibob
+  - monitoring
+  - learning-system
+maintainers:
+  - name: Metabob Team
+    email: dev@metabob.com

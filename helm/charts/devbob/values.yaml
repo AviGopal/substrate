@@ -1,0 +1,156 @@
+# DevBob Helm Chart Values
+
+# Image configuration
+image:
+  repository: metabobapp/minibob
+  tag: "dev-0.2.0-d901a7b-1774708643"
+  pullPolicy: IfNotPresent
+
+# Replica count
+replicaCount: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  annotations: {}
+
+# Dashboard configuration
+dashboard:
+  dataBridge:
+    enabled: true
+    port: 8083
+    targetPort: 8083
+
+# Resource limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Environment variables
+env:
+  # Metabob API URL (internal service)
+  metabobApiUrl: "http://metabob-rpc-api"
+  
+  # SurrealDB configuration
+  surrealHost: "surrealdb"
+  surrealPort: "8000"
+  surrealUser: "root"
+  surrealPass: "root"
+  surrealNamespace: "activity-system"
+  surrealDatabase: "learning_loop"
+  
+  # Container configuration
+  waitForBackend: "false"
+  skipConfig: "true"
+  logLevel: "INFO"
+  home: "/workspace"
+
+# Secrets (provide via Helm values or external secrets)
+secrets:
+  # REQUIRED: Anthropic API key
+  anthropicApiKey: ""  # Override via --set secrets.anthropicApiKey=xxx
+  
+  # REQUIRED: Metabob API key for backend communication
+  metabobApiKey: ""    # Override via --set secrets.metabobApiKey=xxx
+  
+  # Git credentials for autonomous operations
+  # REQUIRED for distributed devbob git workflows (clone, commit, push, PR operations)
+  githubToken: ""      # GitHub Personal Access Token (classic) with repo, workflow, write:packages scopes
+  gitUserName: "Devbob Agent"     # Git user.name for commit attribution
+  gitUserEmail: "devbob@metabob.local"  # Git user.email for commit attribution
+
+# Instance authentication for MiniBob
+# Enables JWT-based auth with org_id for execution trace recording
+instance:
+  # Instance ID registered in SurrealDB minibob_instance table
+  instanceId: "minibob-local-001"
+  # Secret containing the API key
+  secretName: "minibob-instance-credentials"
+  secretKey: "api-key"
+  # Optional: Override org_id (normally comes from JWT)
+  # orgId: "metabob_internal"
+
+# Health checks
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Persistence for workspace
+persistence:
+  enabled: true
+  storageClass: ""  # Use default
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /workspace
+
+# Repository access configuration
+repositories:
+  # Enable repository cloning and shared storage
+  persistence:
+    enabled: true
+    storageClass: ""  # Use default
+    accessMode: ReadWriteMany  # Shared across MiniBob pods
+    size: 20Gi
+    mountPath: /repos
+
+  # Git configuration for authentication
+  git:
+    enabled: true
+    username: "MiniBob Agent"
+    email: "minibob@metabob.local"
+    token: ""  # GitHub/GitLab personal access token (override via --set)
+    sshKey: ""  # Optional SSH private key (override via --set)
+
+  # List of repositories to clone on initialization
+  # Format: { url: "https://github.com/org/repo.git", branch: "main", path: "repo-name" }
+  repos:
+    - url: "https://github.com/metabob/metabob-devbob.git"
+      branch: "main"
+      path: "metabob-devbob"
+    # Add more repositories as needed
+    # - url: "https://github.com/org/another-repo.git"
+    #   branch: "develop"
+    #   path: "another-repo"
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

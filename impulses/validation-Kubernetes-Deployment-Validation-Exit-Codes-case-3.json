@@ -1,0 +1,25 @@
+{
+  "id": "validation-Kubernetes-Deployment-Validation-Exit-Codes-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Verify script detects ImagePullBackOff status in pods\n\nInput:\n- scriptPath: repos/platform/scripts/validate-local-deployment.sh\n- deploymentState: current (with ImagePullBackOff pod)\n\nExpected Output:\n- exitCode: 1\n- shouldDetectFailures: true\n- outputPattern: ❌ VALIDATION FAILED\n- minPodsExpected: 1\n\nValidation Logic:\nThe current deployment has a redis pod in ImagePullBackOff state. The script MUST detect this as a non-Running pod state using 'grep -v Running|Completed', count it in PODS_NOT_READY variable, and return exit code 1.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "metadata": {
+    "testCaseId": "case-3",
+    "specificationName": "Kubernetes-Deployment-Validation-Exit-Codes",
+    "testType": "detect-imagepullbackoff",
+    "input": {
+      "scriptPath": "repos/platform/scripts/validate-local-deployment.sh",
+      "deploymentState": "current"
+    },
+    "expectedOutput": {
+      "exitCode": 1,
+      "shouldDetectFailures": true,
+      "outputPattern": "❌ VALIDATION FAILED",
+      "minPodsExpected": 1
+    }
+  }
+}

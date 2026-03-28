@@ -1,0 +1,16 @@
+{
+  "id": "validation-activity-recommendation-learning-loop-e2e-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 1: Recommendation Endpoint Returns Results\n\n## Input\n\n```json\n{\n  \"endpoint\": \"POST /v2/activities/recommend\",\n  \"payload\": {\n    \"task_description\": \"Add REST endpoint for user management\",\n    \"category\": \"feature\",\n    \"limit\": 5\n  },\n  \"headers\": {\n    \"Content-Type\": \"application/json\"\n  }\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"status\": \"success\",\n  \"recommendations\": [\n    {\n      \"template_id\": \"<non-empty string>\",\n      \"variant_id\": \"<non-empty string>\",\n      \"selection_metadata\": {\n        \"method\": \"thompson_sampling\",\n        \"alpha\": \"<number > 0>\",\n        \"beta\": \"<number > 0>\",\n        \"sample\": \"<number between 0 and 1>\"\n      }\n    }\n  ],\n  \"timestamp\": \"<ISO 8601 timestamp>\"\n}\n```\n\n## Validation Rules\n\n1. **Response Status**: `status` field must equal `\"success\"`\n2. **Recommendations Count**: `recommendations` array must have 1-5 items\n3. **Template ID**: Each recommendation must have non-empty `template_id`\n4. **Variant ID**: Each recommendation must have non-empty `variant_id`\n5. **Selection Metadata**: Must be present for each recommendation\n6. **Thompson Sampling Method**: `selection_metadata.method` must equal `\"thompson_sampling\"`\n7. **Alpha Parameter**: `selection_metadata.alpha` must be > 0\n8. **Beta Parameter**: `selection_metadata.beta` must be > 0\n9. **Sample Value**: `selection_metadata.sample` must be between 0 and 1\n10. **Timestamp**: Response must include ISO 8601 timestamp\n\n## Test Assertions\n\n- `assert_equals(response.status, \"success\")`\n- `assert_range(response.recommendations.length, 1, 5)`\n- `assert_not_empty(response.recommendations[0].template_id)`\n- `assert_not_empty(response.recommendations[0].variant_id)`\n- `assert_equals(response.recommendations[0].selection_metadata.method, \"thompson_sampling\")`\n- `assert_greater_than(response.recommendations[0].selection_metadata.alpha, 0)`\n- `assert_greater_than(response.recommendations[0].selection_metadata.beta, 0)`\n- `assert_range(response.recommendations[0].selection_metadata.sample, 0, 1)`\n\n## Purpose\n\nVerifies that the recommendation endpoint:\n- Returns well-formed Thompson Sampling recommendations\n- Includes all required metadata for learning loop traceability\n- Does not return empty results when templates exist in SurrealDB",
+    "source": "test-case"
+  },
+  "budget": 1000,
+  "metadata": {
+    "testCase": 1,
+    "specification": "activity-recommendation-learning-loop-e2e",
+    "priority": "critical",
+    "category": "recommendation-endpoint"
+  }
+}

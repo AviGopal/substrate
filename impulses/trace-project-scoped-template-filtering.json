@@ -1,0 +1,142 @@
+{
+  "id": "trace-Project-Scoped Template Filtering Implementation",
+  "type": "dataFlow",
+  "description": "Complete trace of project-scoped template filtering implementation showing current state, desired state, and gaps to close for 100% multi-tenant isolation compliance",
+  "content": {
+    "specification": "Project-Scoped Template Filtering Implementation",
+    "overview": "Complete multi-tenant isolation by implementing project-scoped template filtering. Currently supports global and org-scoped templates. This adds the final layer: project-level isolation within organizations.",
+    "components": [
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/template_data.py",
+        "component": "list_all_templates",
+        "lineNumbers": "95-144",
+        "currentBehavior": "Filters templates by scope: (scope=NULL OR scope='global') for unauthenticated, (scope=NULL OR scope='global' OR (scope='org' AND org_id=$org_id)) for authenticated users. Line 106 has TODO comment about project-scoped filtering.",
+        "desiredBehavior": "Should filter: (scope=NULL OR scope='global') OR (scope='org' AND org_id=$org_id) OR (scope='project' AND project_id=$project_id). Requires project_id parameter extracted from user authentication context.",
+        "gap": "Missing project_id parameter in function signature and SurrealDB query WHERE clause. Need to add: 'OR (scope=\"project\" AND project_id = $project_id)' to query lines 126 and 138."
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "component": "list_templates",
+        "lineNumbers": "88-219",
+        "currentBehavior": "Filters templates by org_id and scope. Lines 186-189 explicitly skip project-scoped templates with TODO comment. Calls list_all_templates(limit, org_id).",
+        "desiredBehavior": "Should pass project_id to list_all_templates() and remove the project-scope skip logic (lines 185-188). Templates with scope='project' should be included if user's project_id matches.",
+        "gap": "Missing project_id parameter in list_templates function signature and list_all_templates call. Remove filtering logic that skips project-scoped templates."
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/activity.py",
+        "component": "list_activity_templates",
+        "lineNumbers": "64-120",
+        "currentBehavior": "Extracts org_id from Bearer token (lines 105-114) using session_id_from_token helper. Passes org_id to list_templates(). No project_id extraction.",
+        "desiredBehavior": "Should extract both org_id AND project_id from Bearer token authentication context. Pass both to list_templates(redis, category, limit, org_id, project_id).",
+        "gap": "Missing project_id extraction from authentication token. Need to decode/lookup session data to get project_id field."
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/activity.py",
+        "component": "create_activity_template",
+        "lineNumbers": "164-254",
+        "currentBehavior": "Extracts org_id from Bearer token (lines 234-248). Creates template with scope (default='org') and org_id. No project_id support.",
+        "desiredBehavior": "Should extract project_id from Bearer token when scope='project'. Store project_id in template record alongside scope and org_id.",
+        "gap": "Missing project_id extraction and parameter passing to create_template(). Need to add project_id to create_template function signature."
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "component": "create_template",
+        "lineNumbers": "301-454",
+        "currentBehavior": "Accepts scope and org_id parameters (line 304-305). Stores them in template record (lines 386-387). No project_id field.",
+        "desiredBehavior": "Should accept project_id parameter and store it in template record when scope='project'. Template object should include 'project_id': project_id field.",
+        "gap": "Missing project_id parameter in function signature and template object construction."
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/models/auth.py",
+        "component": "SessionData",
+        "currentBehavior": "Contains session_id. Used as placeholder for org_id (lines 112-114 in routes/activity.py).",
+        "desiredBehavior": "Should include org_id and project_id fields in SessionData model. Bearer tokens should contain full authentication context.",
+        "gap": "SessionData model likely missing org_id and project_id fields. Need to extend model and populate from authentication system."
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/auth.py",
+        "component": "session_id_from_token",
+        "currentBehavior": "Decodes base64 Bearer token to extract session_id. Returns session_id as string.",
+        "desiredBehavior": "Should be extended to fetch full SessionData including org_id and project_id from session storage. Or provide helper functions get_org_id_from_token() and get_project_id_from_token().",
+        "gap": "Only returns session_id. Need to fetch and return full session context with org_id and project_id."
+      },
+      {
+        "file": "tests/validation-harnesses/activity-template-scope-assignment-harness.ts",
+        "component": "Test Suite",
+        "lineNumbers": "1-488",
+        "currentBehavior": "Tests org-scoped template creation and filtering. Validates scope='org' and org_id extraction from Bearer token.",
+        "desiredBehavior": "Should include test cases for project-scoped templates: (1) Create template with scope='project' and project_id, (2) Verify User 1 (Project A) can see template, (3) Verify User 2 (Project B, same org) CANNOT see template, (4) Verify User 3 (different org) CANNOT see template.",
+        "gap": "Missing project-scope test cases. Need to add testProjectScopeIsolationWithinOrg() and testProjectScopeIsolationAcrossOrgs()."
+      }
+    ],
+    "dataFlow": {
+      "entry": "POST /v2/activities/templates OR GET /v2/activities/templates",
+      "authExtraction": "Bearer token → session_id_from_token() → SessionData lookup → extract org_id + project_id",
+      "templateCreation": "create_activity_template() → extract scope, org_id, project_id → create_template(redis, template_data, scope, org_id, project_id) → SurrealDB write with scope/org_id/project_id fields",
+      "templateQuery": "list_activity_templates() → extract org_id, project_id → list_templates(redis, category, limit, org_id, project_id) → list_all_templates(limit, org_id, project_id) → SurrealDB query with WHERE clause filtering by scope/org_id/project_id",
+      "validation": "Validation harness creates templates with different scopes, queries as different users, verifies isolation"
+    },
+    "implementationPhases": [
+      {
+        "phase": "1",
+        "title": "Extend SessionData Model",
+        "tasks": [
+          "Add org_id field to SessionData model in server/models/auth.py",
+          "Add project_id field to SessionData model",
+          "Update create_session_model() to populate org_id and project_id from request context",
+          "Update fetch_session_model() to return full SessionData with org_id and project_id"
+        ]
+      },
+      {
+        "phase": "2",
+        "title": "Update Template Data Operations",
+        "tasks": [
+          "Add project_id parameter to list_all_templates() in template_data.py:95",
+          "Update SurrealDB query at line 122-129 to include: OR (scope = 'project' AND project_id = $project_id)",
+          "Update SurrealDB query at line 132-138 for unauthenticated case (no project filtering needed)",
+          "Test SurrealDB query with project_id parameter"
+        ]
+      },
+      {
+        "phase": "3",
+        "title": "Update Template Actions",
+        "tasks": [
+          "Add project_id parameter to list_templates() in activity.py:88",
+          "Remove project-scope skip logic at lines 185-188",
+          "Pass project_id to list_all_templates() call at line 120",
+          "Add project_id parameter to create_template() at line 301",
+          "Add project_id to template object construction at lines 373-394",
+          "Pass project_id to create_template_record() at line 398"
+        ]
+      },
+      {
+        "phase": "4",
+        "title": "Update API Routes",
+        "tasks": [
+          "Update list_activity_templates() in routes/activity.py:64 to extract project_id from Bearer token",
+          "Pass project_id to list_templates() call at line 116",
+          "Update create_activity_template() at line 164 to extract project_id from Bearer token",
+          "Pass project_id to create_template() call at line 250",
+          "Handle scope='project' validation (require project_id when scope is 'project')"
+        ]
+      },
+      {
+        "phase": "5",
+        "title": "Extend Validation Harness",
+        "tasks": [
+          "Add testProjectScopeCreation() test case",
+          "Add testProjectScopeIsolationWithinOrg() - User 1 (Project A) vs User 2 (Project B, same org)",
+          "Add testProjectScopeIsolationAcrossOrgs() - User 1 (Org A, Project A) vs User 3 (Org B, Project C)",
+          "Update test Bearer tokens to include project_id in session data",
+          "Run validation harness and verify all tests pass"
+        ]
+      }
+    ]
+  },
+  "budget": 5000,
+  "metadata": {
+    "createdAt": "2026-03-02T12:00:00Z",
+    "source": "trace-data-flow-single-feature activity",
+    "purpose": "Enable downstream validation and enforcement tasks to close 5% compliance gap"
+  }
+}

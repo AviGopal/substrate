@@ -1,0 +1,51 @@
+{
+  "name": "Fresh Context Test After Rebuild",
+  "description": "Test contextRequirements preservation after full rebuild",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "successMessage",
+      "hint": "Provide a success message if context requirements work",
+      "impulseTypes": ["memo"],
+      "required": true,
+      "budgetRange": [100, 500]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "test-context",
+      "subagent": "general",
+      "description": "Test that context variable is available",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write a file to /tmp/fresh-context-{{testId}}.txt\n\nInclude this message from context: {{successMessage}}\n\nAnd this from user: {{userName}}",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test identifier"
+          },
+          {
+            "name": "userName",
+            "type": "string",
+            "required": true,
+            "description": "User name"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/fresh-context-{{testId}}.txt"],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ]
+}

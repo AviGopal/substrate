@@ -1,0 +1,50 @@
+{
+  "name": "Test Deterministic Activity",
+  "description": "Test activity using deterministic execution",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Test task with deterministic execution",
+      "dependencies": [],
+      "executionMode": "deterministic",
+      "toolSequence": [
+        {
+          "tool": "bash",
+          "params": {
+            "command": "echo 'Testing {{variable}}'",
+            "description": "Echo test variable"
+          }
+        }
+      ],
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "successRate": 0,
+        "avgTokens": 0,
+        "avgDuration": 0,
+        "commonFailures": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "investigation": "SurrealDB pod status and connectivity",
+  "timestamp": "2026-03-01T18:XX:XX",
+  "status": "CRITICAL ISSUE IDENTIFIED",
+  "pod_status": {
+    "name": "surrealdb-d7f986df-jhg9c",
+    "phase": "Running",
+    "ready": "2/2",
+    "restarts": 3,
+    "age": "7h24m",
+    "ip": "10.1.0.151",
+    "node": "docker-desktop"
+  },
+  "service_status": {
+    "name": "surrealdb",
+    "type": "ClusterIP",
+    "cluster_ip": "10.99.198.243",
+    "port": 8000,
+    "endpoint": "http://surrealdb.metabob.svc.cluster.local:8000"
+  },
+  "critical_finding": {
+    "issue": "In-Memory Storage Mode",
+    "severity": "CRITICAL",
+    "description": "SurrealDB is running with in-memory storage. All data is lost on pod restart.",
+    "evidence": [
+      "Log line: 'Starting kvs store in memory'",
+      "Log line: 'Started kvs store in memory'",
+      "Pod has restarted 3 times (most recent: 53m ago)"
+    ],
+    "root_cause": "HTTP RPC correctly registers templates, but data is ephemeral and lost on restart",
+    "impact": [
+      "Activity templates lost on restart",
+      "Activity instances lost on restart",
+      "Impulse storage lost on restart",
+      "Learning metrics lost on restart"
+    ]
+  },
+  "connectivity": {
+    "surrealdb_pod_health": "healthy",
+    "service_endpoint": "properly configured",
+    "rpc_api_connectivity": "cannot test - RPC API pods in CrashLoopBackOff",
+    "expected_network_status": "should work when RPC API is fixed"
+  },
+  "required_fix": {
+    "action": "Configure persistent storage",
+    "options": [
+      "file://data (file-based storage)",
+      "rocksdb://data (RocksDB storage)"
+    ],
+    "helm_changes_needed": [
+      "Update command to use persistent backend",
+      "Add PersistentVolumeClaim",
+      "Mount volume at /data"
+    ],
+    "priority": "HIGH - blocks all data persistence"
+  },
+  "files_created": [
+    "output/surrealdb-investigation/surrealdb-logs.txt",
+    "output/surrealdb-investigation/surrealdb-status.json",
+    "output/surrealdb-investigation/critical-findings.md",
+    "output/surrealdb-investigation/investigation-summary.json"
+  ]
+}

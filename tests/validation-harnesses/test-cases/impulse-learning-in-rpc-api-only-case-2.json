@@ -1,0 +1,16 @@
+{
+  "testCaseId": "validation-impulse-learning-in-rpc-api-only-case-2",
+  "description": "Verify no learning algorithms in opencode",
+  "input": {
+    "filePath": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+    "forbiddenFunctions": ["normalizePattern", "calculateResponseQuality", "trackImpulseUsage"]
+  },
+  "expectedOutput": {
+    "normalizePattern": "NOT FOUND",
+    "calculateResponseQuality": "NOT FOUND",
+    "trackImpulseUsage": "NOT FOUND",
+    "status": "PASS",
+    "reason": "Learning algorithms must be in rpc-api only"
+  },
+  "category": "forbidden-functions-check"
+}

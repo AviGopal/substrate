@@ -1,0 +1,319 @@
+{
+  "activity_id": "configure-vessel-for-environment",
+  "name": "Configure Vessel For Environment",
+  "description": "Boredom activity: Adapt vessel config based on detected environment. Detects dev/staging/prod from hostname/backend URL, updates Metabob base_url, adjusts token budgets, sets feature flags using ConfigManager.",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "task_id": "detect-environment",
+      "subagent": "general",
+      "description": "Analyze system context to determine environment type (development, staging, or production) by checking hostname patterns, backend URLs, environment variables, and container status",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Detect Environment\n\nYou are detecting which environment this vessel is running in: development, staging, or production.\n\n## Detection Strategy\n\n1. **Check Hostname**:\n   - Run `hostname` command\n   - Patterns:\n     - localhost, 127.0.0.1, *.local → development\n     - *dev*, *development* → development\n     - *staging*, *stage* → staging\n     - *prod*, *production* → production\n\n2. **Check Environment Variables**:\n   - Read NODE_ENV, ENVIRONMENT, DEPLOY_ENV, APP_ENV\n   - Values: development/dev → development, staging/stage → staging, production/prod → production\n\n3. **Check Container Status**:\n   - Test if running in Docker: check for /.dockerenv or /proc/1/cgroup\n   - Container names often include environment (devbob-dev, devbob-prod, etc.)\n\n4. **Check Existing Config** (if available):\n   - Read {{config_path}} if it exists\n   - Inspect metabob.baseUrl for clues:\n     - localhost:8000, host.docker.internal → development\n     - staging.metabob.com → staging\n     - api.metabob.com, metabob.com → production\n\n5. **Manual Override**:\n   - If {{force_environment}} is provided, use that value directly\n\n## Decision Logic\n\n- If {{force_environment}} is set: Use that value (highest priority)\n- Otherwise, score each signal and choose highest confidence\n- If ambiguous or no clear signals: Default to 'development' (safest)\n\n## Required Output\n\nYou MUST output a JSON object with this structure:\n\n```json\n{\n  \"environment\": \"development|staging|production\",\n  \"confidence\": \"high|medium|low\",\n  \"signals\": {\n    \"hostname\": \"detected hostname\",\n    \"env_vars\": {\"NODE_ENV\": \"value\", ...},\n    \"container\": true|false,\n    \"existing_config_url\": \"url or null\",\n    \"override\": \"value or null\"\n  },\n  \"reasoning\": \"Explain why this environment was chosen\"\n}\n```\n\n## Validation\n\n- Environment MUST be one of: development, staging, production\n- Never output \"unknown\" or \"undefined\"\n- Include at least one detection signal\n- Log all signals for transparency\n\n## Variables\n\n- {{force_environment}}: Optional manual override (dev/staging/prod)\n- {{config_path}}: Path to opencode.json (default: ./opencode.json)\n\nBegin detection now.",
+        "variables": [
+          {
+            "name": "force_environment",
+            "type": "string",
+            "required": false,
+            "description": "Manual override for environment detection (values: dev, staging, prod)",
+            "default": ""
+          },
+          {
+            "name": "config_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to vessel config file",
+            "default": "./opencode.json"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      },
+      "id": "detect-environment"
+    },
+    {
+      "task_id": "load-and-backup-config",
+      "subagent": "config",
+      "description": "Load current vessel configuration from opencode.json using ConfigManager and create a backup before making changes",
+      "dependencies": [
+        "detect-environment"
+      ],
+      "prompt": {
+        "template": "# Task: Load and Backup Configuration\n\nYou are loading the current vessel configuration and creating a backup before modifications.\n\n## Environment Context\n\nFrom the previous task, the detected environment is:\n- Environment: {{detected_environment}}\n- Confidence: {{detection_confidence}}\n\n## Your Tasks\n\n1. **Locate Config File**:\n   - Path: {{config_path}}\n   - Check if file exists\n   - If not found: Create a minimal valid opencode.json with default structure\n\n2. **Parse Configuration**:\n   - Read the JSON file\n   - Validate JSON syntax (must be valid JSON)\n   - Check for required structure (should have a metabob section)\n   - If metabob section missing: Add empty metabob object\n\n3. **Create Backup**:\n   - Copy config to {{config_path}}.backup\n   - Add timestamp to backup if possible\n   - CRITICAL: Do NOT proceed if backup fails\n   - If backup fails at primary location, try /tmp/opencode.json.backup\n\n4. **Extract Current Values**:\n   - Read metabob.baseUrl (if present)\n   - Read activity.defaultBudget (if present)\n   - Read impulse.maxTokens (if present)\n   - Read logging.level (if present)\n   - Read any feature flags\n\n## Minimal Config Template\n\nIf creating new config:\n\n```json\n{\n  \"metabob\": {\n    \"baseUrl\": \"http://localhost:8000\",\n    \"enabled\": true\n  },\n  \"activity\": {\n    \"defaultBudget\": 100000\n  },\n  \"impulse\": {\n    \"maxTokens\": 20000\n  },\n  \"logging\": {\n    \"level\": \"info\"\n  },\n  \"features\": {\n    \"verboseErrors\": false,\n    \"debugMode\": false\n  }\n}\n```\n\n## Error Handling\n\n- Config not found: Create from template (don't fail)\n- Invalid JSON: STOP immediately, report parse error, do NOT overwrite\n- Backup fails: Try /tmp, then STOP if that fails too\n- Permission denied: STOP, report required permissions\n\n## Required Output\n\nOutput a JSON object:\n\n```json\n{\n  \"config_loaded\": true,\n  \"backup_created\": true,\n  \"backup_path\": \"path/to/backup\",\n  \"current_values\": {\n    \"metabob_base_url\": \"current URL or null\",\n    \"default_budget\": 100000,\n    \"max_tokens\": 20000,\n    \"log_level\": \"info\"\n  }\n}\n```\n\n## Variables\n\n- {{detected_environment}}: Environment from previous task\n- {{detection_confidence}}: Confidence level from previous task\n- {{config_path}}: Path to config file\n\nBegin loading configuration now.",
+        "variables": [
+          {
+            "name": "detected_environment",
+            "type": "string",
+            "required": true,
+            "description": "Environment detected in previous task (dev/staging/prod)"
+          },
+          {
+            "name": "detection_confidence",
+            "type": "string",
+            "required": false,
+            "description": "Confidence level from environment detection",
+            "default": "medium"
+          },
+          {
+            "name": "config_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to vessel config file",
+            "default": "./opencode.json"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "test -f opencode.json.backup || test -f /tmp/opencode.json.backup",
+            "expected_exit_code": 0,
+            "name": "test -f opencode.json.backup || test -f /tmp/opencode.json.backup",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      },
+      "id": "load-and-backup-config"
+    },
+    {
+      "task_id": "calculate-environment-settings",
+      "subagent": "general",
+      "description": "Calculate environment-specific configuration values including Metabob base_url, token budgets, feature flags, timeout values, and MCP endpoints based on detected environment",
+      "dependencies": [
+        "load-and-backup-config"
+      ],
+      "prompt": {
+        "template": "# Task: Calculate Environment-Specific Settings\n\nYou are calculating optimal configuration values for the {{detected_environment}} environment.\n\n## Current Configuration\n\nFrom the previous task:\n- Current metabob.baseUrl: {{current_base_url}}\n- Current defaultBudget: {{current_budget}}\n- Current maxTokens: {{current_max_tokens}}\n- Current logLevel: {{current_log_level}}\n\n## Environment-Specific Defaults\n\n### Development Environment\n- **Metabob base_url**:\n  - If in container: http://host.docker.internal:8000\n  - Otherwise: http://localhost:8000\n- **Token budgets**:\n  - defaultBudget: 200000\n  - maxTokens: 50000\n- **Feature flags**:\n  - verboseErrors: true\n  - debugMode: true\n  - logLevel: \"debug\"\n- **Timeouts**: 300s\n\n### Staging Environment\n- **Metabob base_url**: https://staging.metabob.com\n- **Token budgets**:\n  - defaultBudget: 100000\n  - maxTokens: 25000\n- **Feature flags**:\n  - verboseErrors: true\n  - debugMode: false\n  - logLevel: \"info\"\n- **Timeouts**: 180s\n\n### Production Environment\n- **Metabob base_url**: https://api.metabob.com\n- **Token budgets**:\n  - defaultBudget: 50000\n  - maxTokens: 10000\n- **Feature flags**:\n  - verboseErrors: false\n  - debugMode: false\n  - logLevel: \"warn\"\n- **Timeouts**: 120s\n\n## Overrides and Adjustments\n\n1. **Manual URL Override**:\n   - If {{metabob_base_url}} is provided, use that instead of environment default\n\n2. **Token Budget Multiplier**:\n   - Apply {{token_budget_multiplier}} to both defaultBudget and maxTokens\n   - Example: multiplier=2.0 → double the budgets\n   - CRITICAL: Clamp final values to range [1000, 500000]\n\n3. **Verbose Logging Override**:\n   - If {{enable_verbose_logging}} is true: force debugMode=true, logLevel=\"debug\"\n   - If {{enable_verbose_logging}} is false: force debugMode=false, logLevel=\"warn\"\n\n## Calculations\n\n1. Start with environment defaults\n2. Apply multiplier to token budgets\n3. Clamp budgets to [1000, 500000]\n4. Apply manual overrides\n5. Validate all values\n\n## Required Output\n\nOutput a JSON object with calculated settings:\n\n```json\n{\n  \"new_settings\": {\n    \"metabob\": {\n      \"baseUrl\": \"calculated URL\"\n    },\n    \"activity\": {\n      \"defaultBudget\": 200000\n    },\n    \"impulse\": {\n      \"maxTokens\": 50000\n    },\n    \"logging\": {\n      \"level\": \"debug\"\n    },\n    \"features\": {\n      \"verboseErrors\": true,\n      \"debugMode\": true\n    },\n    \"timeouts\": {\n      \"default\": 300\n    }\n  },\n  \"changes\": [\n    {\n      \"field\": \"metabob.baseUrl\",\n      \"old\": \"old value\",\n      \"new\": \"new value\",\n      \"reason\": \"Environment is development\"\n    }\n  ]\n}\n```\n\n## Validation\n\n- base_url must be valid HTTP/HTTPS URL\n- Token budgets must be positive integers in range [1000, 500000]\n- Feature flags must be booleans\n- No null or undefined values\n\n## Variables\n\n- {{detected_environment}}: Environment from task 1\n- {{current_base_url}}: Current Metabob URL\n- {{current_budget}}: Current default budget\n- {{current_max_tokens}}: Current max tokens\n- {{current_log_level}}: Current log level\n- {{metabob_base_url}}: Optional manual override\n- {{token_budget_multiplier}}: Budget scaling factor\n- {{enable_verbose_logging}}: Optional logging override\n\nBegin calculating settings now.",
+        "variables": [
+          {
+            "name": "detected_environment",
+            "type": "string",
+            "required": true,
+            "description": "Environment detected in task 1"
+          },
+          {
+            "name": "current_base_url",
+            "type": "string",
+            "required": false,
+            "description": "Current Metabob base URL from config",
+            "default": ""
+          },
+          {
+            "name": "current_budget",
+            "type": "number",
+            "required": false,
+            "description": "Current default budget from config",
+            "default": 100000
+          },
+          {
+            "name": "current_max_tokens",
+            "type": "number",
+            "required": false,
+            "description": "Current max tokens from config",
+            "default": 20000
+          },
+          {
+            "name": "current_log_level",
+            "type": "string",
+            "required": false,
+            "description": "Current log level from config",
+            "default": "info"
+          },
+          {
+            "name": "metabob_base_url",
+            "type": "string",
+            "required": false,
+            "description": "Manual override for Metabob URL",
+            "default": ""
+          },
+          {
+            "name": "token_budget_multiplier",
+            "type": "number",
+            "required": false,
+            "description": "Scale token budgets (0.5=half, 2.0=double)",
+            "default": 1
+          },
+          {
+            "name": "enable_verbose_logging",
+            "type": "boolean",
+            "required": false,
+            "description": "Force verbose logging on/off",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      },
+      "id": "calculate-environment-settings"
+    },
+    {
+      "task_id": "apply-and-validate-config",
+      "subagent": "config",
+      "description": "Apply calculated settings using ConfigManager, then validate by reading back values, testing Metabob connectivity (if enabled), and verifying all changes",
+      "dependencies": [
+        "calculate-environment-settings"
+      ],
+      "prompt": {
+        "template": "# Task: Apply and Validate Configuration\n\nYou are applying the calculated configuration settings and validating they work correctly.\n\n## Calculated Settings\n\nFrom the previous task, apply these settings:\n\n```json\n{{new_settings}}\n```\n\n## Application Process\n\n1. **Check Dry Run Mode**:\n   - If {{dry_run}} is true: Display changes but DO NOT write to file\n   - Otherwise: Proceed with writing\n\n2. **Apply Settings**:\n   - Read current config from {{config_path}}\n   - Merge new settings (deep merge, preserve other fields)\n   - Write updated config back to {{config_path}}\n   - Preserve file permissions\n   - Ensure valid JSON formatting (pretty-print with 2-space indent)\n\n3. **Read-Back Verification**:\n   - Read config file again\n   - Parse JSON to ensure it's valid\n   - Verify each setting matches expected value\n   - Compare: actual vs. expected for each field\n\n4. **Connectivity Test** (if {{validate_connectivity}} is true):\n   - Extract base_url from new config\n   - Make GET request to: {base_url}/health OR {base_url}/api/v1/health\n   - Acceptable responses: 200, 204, or valid JSON response\n   - Retry up to 2 times with 5 second delay between attempts\n   - If all retries fail: Restore backup and report error\n\n5. **Range Validation**:\n   - Verify defaultBudget is in range [1000, 500000]\n   - Verify maxTokens is in range [1000, 500000]\n   - Verify all feature flags are boolean\n   - Verify log level is valid (debug/info/warn/error)\n\n## Error Handling and Rollback\n\n- **Write fails**: Restore from backup, report error, STOP\n- **Read-back mismatch**: Restore from backup, report discrepancy, STOP\n- **Connectivity fails** (all retries): Restore from backup, report network error\n- **Invalid JSON after write**: Restore from backup immediately, report corruption\n\n## Restoration Process\n\nIf restoration needed:\n1. Copy backup file back to {{config_path}}\n2. Verify restored file is valid JSON\n3. Report restoration success\n4. Fail the task with clear error message\n\n## Required Output\n\nOutput a JSON object:\n\n```json\n{\n  \"applied\": true,\n  \"dry_run\": false,\n  \"validation\": {\n    \"read_back\": \"success\",\n    \"connectivity\": \"success|skipped|failed\",\n    \"range_check\": \"success\",\n    \"json_valid\": true\n  },\n  \"verified_values\": {\n    \"metabob_base_url\": \"actual URL from file\",\n    \"default_budget\": 200000,\n    \"max_tokens\": 50000\n  },\n  \"connectivity_test\": {\n    \"url\": \"tested URL\",\n    \"status\": 200,\n    \"response_time_ms\": 150\n  }\n}\n```\n\n## Variables\n\n- {{new_settings}}: Calculated settings from previous task (JSON object)\n- {{config_path}}: Path to config file\n- {{dry_run}}: If true, don't write changes\n- {{validate_connectivity}}: If true, test Metabob connection\n\nBegin applying configuration now.",
+        "variables": [
+          {
+            "name": "new_settings",
+            "type": "string",
+            "required": true,
+            "description": "JSON string of calculated settings from previous task"
+          },
+          {
+            "name": "config_path",
+            "type": "string",
+            "required": false,
+            "description": "Path to vessel config file",
+            "default": "./opencode.json"
+          },
+          {
+            "name": "dry_run",
+            "type": "boolean",
+            "required": false,
+            "description": "Show changes without applying them",
+            "default": false
+          },
+          {
+            "name": "validate_connectivity",
+            "type": "boolean",
+            "required": false,
+            "description": "Test Metabob connection after config update",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python3 -m json.tool opencode.json > /dev/null 2>&1 || node -e \"JSON.parse(require('fs').readFileSync('opencode.json', 'utf8'))\"",
+            "expected_exit_code": 0,
+            "name": "python3 -m json.tool opencode.json > /dev/null 2>&1 || node -e \"JSON.parse(require('fs').readFileSync('opencode.json', 'utf8'))\"",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      },
+      "id": "apply-and-validate-config"
+    },
+    {
+      "task_id": "generate-configuration-report",
+      "subagent": "general",
+      "description": "Create a comprehensive report showing detected environment, old vs. new configuration values, validation results, and any warnings or recommendations",
+      "dependencies": [
+        "apply-and-validate-config"
+      ],
+      "prompt": {
+        "template": "# Task: Generate Configuration Report\n\nYou are creating a comprehensive report documenting the configuration changes.\n\n## Context from Previous Tasks\n\n- **Detected Environment**: {{detected_environment}}\n- **Detection Signals**: {{detection_signals}}\n- **Configuration Changes**: {{config_changes}}\n- **Validation Results**: {{validation_results}}\n\n## Report Generation\n\n1. **Create JSON Report File**:\n   - Path: config-report.json\n   - Include all context from previous tasks\n   - Add timestamps (ISO 8601 format)\n   - Add success/failure status\n   - Include warnings and recommendations\n\n2. **Report Structure**:\n\n```json\n{\n  \"timestamp\": \"2026-02-24T10:30:00Z\",\n  \"activity\": \"Configure Vessel For Environment\",\n  \"status\": \"success\",\n  \"environment\": {\n    \"detected\": \"development\",\n    \"confidence\": \"high\",\n    \"signals\": {\n      \"hostname\": \"localhost\",\n      \"env_vars\": {\"NODE_ENV\": \"development\"},\n      \"container\": false\n    }\n  },\n  \"changes\": [\n    {\n      \"field\": \"metabob.baseUrl\",\n      \"old_value\": \"http://prod.metabob.com\",\n      \"new_value\": \"http://localhost:8000\",\n      \"reason\": \"Development environment detected\"\n    },\n    {\n      \"field\": \"activity.defaultBudget\",\n      \"old_value\": 50000,\n      \"new_value\": 200000,\n      \"reason\": \"Development: 4x budget multiplier\"\n    }\n  ],\n  \"validation\": {\n    \"config_written\": true,\n    \"json_valid\": true,\n    \"backup_created\": true,\n    \"connectivity_tested\": true,\n    \"connectivity_status\": \"success\"\n  },\n  \"warnings\": [],\n  \"recommendations\": [\n    \"Consider setting validate_connectivity=true for production deployments\"\n  ]\n}\n```\n\n3. **Generate User-Friendly Console Output**:\n\nDisplay formatted summary:\n\n```\n==============================================\nConfiguration Update Summary\n==============================================\n\nEnvironment Detection:\n  Detected: development\n  Confidence: high\n  Hostname: localhost\n  NODE_ENV: development\n  Container: false\n\nConfiguration Changes:\n  metabob.baseUrl:\n    Old: http://prod.metabob.com\n    New: http://localhost:8000\n    \n  activity.defaultBudget:\n    Old: 50000\n    New: 200000 (4x for development)\n    \n  impulse.maxTokens:\n    Old: 10000\n    New: 50000 (5x for development)\n    \n  logging.level:\n    Old: info\n    New: debug\n    \n  features.verboseErrors:\n    Old: false\n    New: true\n\nValidation Results:\n  ✓ Config file updated successfully\n  ✓ Backup created: opencode.json.backup\n  ✓ JSON syntax valid\n  ✓ Metabob connectivity verified\n  ✓ Token budgets within limits\n  ✓ Feature flags set correctly\n\nWarnings:\n  (none)\n\nRecommendations:\n  • Review token budgets if running resource-intensive activities\n  • Consider periodic environment re-detection for dynamic environments\n\nStatus: SUCCESS ✓\n==============================================\n```\n\n## Error Reporting\n\nIf previous tasks failed:\n- Set status to \"failed\"\n- Include error details in report\n- Add troubleshooting recommendations\n- Still create the report (best-effort)\n\n## Output Requirements\n\n- Report file must be created (config-report.json)\n- Console output must be user-friendly\n- Include all changes (even if 0 changes)\n- Timestamp in ISO 8601 format\n- Clear success/failure indication\n\n## Variables\n\n- {{detected_environment}}: Environment from task 1\n- {{detection_signals}}: Detection signals JSON from task 1\n- {{config_changes}}: Changes JSON from task 3\n- {{validation_results}}: Validation JSON from task 4\n\nBegin generating report now.",
+        "variables": [
+          {
+            "name": "detected_environment",
+            "type": "string",
+            "required": true,
+            "description": "Environment detected in task 1"
+          },
+          {
+            "name": "detection_signals",
+            "type": "string",
+            "required": false,
+            "description": "JSON string of detection signals from task 1",
+            "default": "{}"
+          },
+          {
+            "name": "config_changes",
+            "type": "string",
+            "required": false,
+            "description": "JSON string of configuration changes from task 3",
+            "default": "[]"
+          },
+          {
+            "name": "validation_results",
+            "type": "string",
+            "required": false,
+            "description": "JSON string of validation results from task 4",
+            "default": "{}"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "python3 -m json.tool config-report.json > /dev/null 2>&1 || node -e \"JSON.parse(require('fs').readFileSync('config-report.json', 'utf8'))\"",
+            "expected_exit_code": 0,
+            "name": "python3 -m json.tool config-report.json > /dev/null 2>&1 || node -e \"JSON.parse(require('fs').readFileSync('config-report.json', 'utf8'))\"",
+            "required": false
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      },
+      "id": "generate-configuration-report"
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": "AGENT",
+  "created_at": "2026-02-24T13:46:56.675Z",
+  "metadata": {}
+}

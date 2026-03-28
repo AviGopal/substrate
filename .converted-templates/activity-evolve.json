@@ -1,0 +1,151 @@
+{
+  "name": "v1-baseline",
+  "description": "Evolve activities by merging, refining, or separating based on performance data",
+  "category": "feature",
+  "variables": {
+    "source_activities": {
+      "type": "[]",
+      "required": true,
+      "description": "Variable: source_activities"
+    },
+    "evolution_type": {
+      "type": "",
+      "required": true,
+      "description": "Variable: evolution_type"
+    },
+    "rationale": {
+      "type": "",
+      "required": true,
+      "description": "Variable: rationale"
+    }
+  },
+  "context_requirements": [],
+  "task_steps": [
+    {
+      "id": "review-performance",
+      "order": 0,
+      "subagent": "general",
+      "description": "Review Activity Performance: Analyze performance across all active activities",
+      "dependencies": [],
+      "prompt": {
+        "template": "Review Activity Performance: Analyze performance across all active activities",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "identify-evolution",
+      "order": 1,
+      "subagent": "general",
+      "description": "Identify Evolution Opportunity: Determine what type of evolution is needed",
+      "dependencies": [],
+      "prompt": {
+        "template": "Identify Evolution Opportunity: Determine what type of evolution is needed",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "plan-evolution",
+      "order": 2,
+      "subagent": "general",
+      "description": "Plan Evolution: Design the target state for the evolution",
+      "dependencies": [],
+      "prompt": {
+        "template": "Plan Evolution: Design the target state for the evolution",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "execute-evolution",
+      "order": 3,
+      "subagent": "general",
+      "description": "Execute Evolution: Create new activities and deprecate old ones",
+      "dependencies": [],
+      "prompt": {
+        "template": "Execute Evolution: Create new activities and deprecate old ones",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "validate-evolution",
+      "order": 4,
+      "subagent": "general",
+      "description": "Validate Evolution: Ensure evolved activities work correctly",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate Evolution: Ensure evolved activities work correctly",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple",
+        "fallback_prompt": ""
+      },
+      "impulse_refs": []
+    }
+  ],
+  "_original_activity_id": "activity-evolve"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "harness-structured-logging-data-flow-tracing",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/structured-logging-data-flow-tracing-harness.ts",
+    "reason": "Validation harness for structured logging implementation"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "structured-logging-data-flow-tracing",
+    "test_count": 3,
+    "test_scenarios": [
+      "valid_login_success",
+      "user_not_found_failure",
+      "invalid_password_failure"
+    ],
+    "validation_checks": [
+      "correlation_id_in_header",
+      "correlation_id_consistency",
+      "expected_stages_present",
+      "auth_start_has_email",
+      "db_query_has_timing",
+      "password_verify_has_timing",
+      "auth_failure_has_reason",
+      "auth_success_has_user_id"
+    ]
+  }
+}

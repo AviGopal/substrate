@@ -1,0 +1,219 @@
+{
+  "specificationName": "MCP Data Flow Validation in Local Kubernetes",
+  "analysisDate": "2026-03-04T07:00:00Z",
+  "otherSpecifications": [
+    "mcp-data-flow-devbob-cli-database",
+    "impulse-learning-storage-complete",
+    "impulse-learning-in-rpc-api-only",
+    "dynamic-activity-creation-devbob-e2e-validation",
+    "surrealdb-primary-redis-cache",
+    "complete-architecture-separation"
+  ],
+  "conflicts": [],
+  "compatibilities": [
+    {
+      "type": "COMPLEMENTARY",
+      "relatedSpec": "mcp-data-flow-devbob-cli-database",
+      "relationship": "This spec validates deployment of the same changes in local k8s environment",
+      "sharedComponents": [
+        "repos/metabob-rpc-api/server/routes/learning_loop.py",
+        "repos/metabob-rpc-api/server/db/operations/activity_execution.py"
+      ],
+      "compatibility": "FULL - Same enforcement changes, different validation environment",
+      "notes": "mcp-data-flow-devbob-cli-database validates code changes, this spec validates deployment"
+    },
+    {
+      "type": "COMPLEMENTARY",
+      "relatedSpec": "impulse-learning-storage-complete",
+      "relationship": "Both specs work with impulse_usage and impulse_registry tables",
+      "sharedComponents": [
+        "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "SurrealDB impulse_usage table",
+        "SurrealDB impulse_registry table"
+      ],
+      "compatibility": "FULL - Different aspects of same learning system",
+      "notes": "impulse-learning-storage-complete focuses on turn-level learning, this spec on activity-level learning"
+    },
+    {
+      "type": "DEPENDENCY_SATISFIED",
+      "relatedSpec": "impulse-learning-in-rpc-api-only",
+      "relationship": "This spec builds on impulse learning infrastructure",
+      "sharedComponents": [
+        "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "impulse_usage table schema",
+        "impulse_registry table schema"
+      ],
+      "compatibility": "FULL - Uses established patterns from impulse-learning-in-rpc-api-only",
+      "notes": "This spec extends impulse learning to activity executions"
+    },
+    {
+      "type": "COMPLEMENTARY",
+      "relatedSpec": "dynamic-activity-creation-devbob-e2e-validation",
+      "relationship": "Both validate different aspects of activity execution workflow",
+      "sharedComponents": [
+        "SurrealDB activity_executions table",
+        "DevBob Kubernetes environment"
+      ],
+      "compatibility": "FULL - Non-overlapping fields in activity_executions",
+      "notes": "dynamic-activity-creation focuses on trailblazing/lifecycle, this spec on learning data"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "affectedBySpecs": [
+        "mcp-data-flow-local-k8s",
+        "mcp-data-flow-devbob-cli-database",
+        "impulse-learning-in-rpc-api-only"
+      ],
+      "modifications": [
+        {
+          "spec": "mcp-data-flow-local-k8s",
+          "change": "Added impulses_used and component_changes processing in record_execution",
+          "lines": "245-329"
+        },
+        {
+          "spec": "impulse-learning-in-rpc-api-only",
+          "change": "Original impulse learning endpoint implementation",
+          "lines": "Various"
+        }
+      ],
+      "conflictRisk": "LOW",
+      "recommendation": "All changes are additive - no conflicts",
+      "reasoning": "Each spec adds new fields/functionality without removing or contradicting existing code"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "affectedBySpecs": [
+        "mcp-data-flow-local-k8s",
+        "mcp-data-flow-devbob-cli-database",
+        "dynamic-activity-creation-devbob-e2e-validation"
+      ],
+      "modifications": [
+        {
+          "spec": "mcp-data-flow-local-k8s",
+          "change": "Added impulses_used and component_changes parameters to insert_execution",
+          "lines": "20-90"
+        },
+        {
+          "spec": "dynamic-activity-creation-devbob-e2e-validation",
+          "change": "Existing activity execution recording",
+          "lines": "Various"
+        }
+      ],
+      "conflictRisk": "LOW",
+      "recommendation": "Parameters are optional with None defaults - backward compatible",
+      "reasoning": "New parameters don't affect existing callers"
+    },
+    {
+      "component": "SurrealDB activity_executions table",
+      "affectedBySpecs": [
+        "mcp-data-flow-local-k8s",
+        "dynamic-activity-creation-devbob-e2e-validation",
+        "impulse-learning-storage-complete",
+        "surrealdb-primary-redis-cache"
+      ],
+      "modifications": [
+        {
+          "spec": "mcp-data-flow-local-k8s",
+          "change": "Added fields: impulses_used (array), component_changes (array)"
+        },
+        {
+          "spec": "dynamic-activity-creation-devbob-e2e-validation",
+          "change": "Uses fields: activity_id, template_id, status, recovery_attempts, state_delta"
+        },
+        {
+          "spec": "surrealdb-primary-redis-cache",
+          "change": "Cache layer for activity_executions queries"
+        }
+      ],
+      "conflictRisk": "NONE",
+      "recommendation": "Schema is additive - all specs can coexist",
+      "reasoning": "Different specs use different fields, no overlap in field ownership"
+    },
+    {
+      "component": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "affectedBySpecs": [
+        "mcp-data-flow-local-k8s",
+        "impulse-learning-storage-complete",
+        "impulse-learning-in-rpc-api-only"
+      ],
+      "modifications": [
+        {
+          "spec": "mcp-data-flow-local-k8s",
+          "change": "Added create_impulse_usage_records helper function",
+          "lines": "485-600"
+        },
+        {
+          "spec": "impulse-learning-storage-complete",
+          "change": "Turn-level impulse learning operations"
+        },
+        {
+          "spec": "impulse-learning-in-rpc-api-only",
+          "change": "Core impulse learning infrastructure"
+        }
+      ],
+      "conflictRisk": "NONE",
+      "recommendation": "New function is additive - no conflicts",
+      "reasoning": "Function operates on different data source (activity executions vs turn-level data)"
+    }
+  ],
+  "riskAssessment": {
+    "overallRisk": "LOW",
+    "conflictsPotential": "NONE",
+    "breakingChanges": "NONE",
+    "backwardCompatibility": "MAINTAINED",
+    "details": "All changes are additive and use optional parameters. No existing functionality is removed or contradicted."
+  },
+  "dataFlowAnalysis": {
+    "thisSpec": {
+      "entry": "OpenCode Activity.ts",
+      "flow": "OpenCode → CLI MCP → Backend API → SurrealDB",
+      "tables": [
+        "activity_executions (impulses_used, component_changes)",
+        "impulse_usage (activity-impulse relationships)",
+        "impulse_registry (aggregated stats)"
+      ]
+    },
+    "relatedSpecs": {
+      "impulse-learning-storage-complete": {
+        "flow": "Turn-level impulse tracking → impulse_usage table",
+        "overlap": "Both use impulse_usage and impulse_registry tables",
+        "differentiation": "Different data sources (turn vs activity execution)"
+      },
+      "mcp-data-flow-devbob-cli-database": {
+        "flow": "Same flow as this spec",
+        "overlap": "Same code changes, different validation focus",
+        "differentiation": "Code validation vs deployment validation"
+      }
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "INFO",
+      "recommendation": "No conflicts detected - safe to proceed with validation",
+      "reasoning": "All changes are additive and backward compatible"
+    },
+    {
+      "priority": "INFO",
+      "recommendation": "Coordinate with mcp-data-flow-devbob-cli-database spec",
+      "reasoning": "Both validate same changes in different contexts (code vs deployment)"
+    },
+    {
+      "priority": "LOW",
+      "recommendation": "Monitor impulse_usage table for data from multiple sources",
+      "reasoning": "Table receives data from both turn-level and activity-level learning"
+    }
+  ],
+  "validationStatus": {
+    "infrastructureReady": true,
+    "codeChangesDeployed": true,
+    "awaitingActivityExecution": true,
+    "manualVerificationRequired": true,
+    "blockers": [
+      "No test activity executed yet",
+      "Manual database verification required"
+    ]
+  },
+  "conflictImpulseId": "conflict-analysis-mcp-data-flow-local-k8s"
+}

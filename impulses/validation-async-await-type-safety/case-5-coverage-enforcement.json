@@ -1,0 +1,15 @@
+{
+  "impulseId": "validation-async-await-type-safety-case-5",
+  "testCase": "CI enforces 80% coverage threshold",
+  "input": {
+    "file": "repos/metabob-rpc-api/.github/workflows/run-tests.yaml",
+    "checkType": "pytest_flag_exists"
+  },
+  "expectedOutput": {
+    "flag": "--cov-fail-under=80",
+    "command": "pytest --cov --cov-fail-under=80",
+    "validation": "CI fails if coverage drops below 80%"
+  },
+  "validationMethod": "grep",
+  "purpose": "Ensures test coverage cannot regress below 80%"
+}

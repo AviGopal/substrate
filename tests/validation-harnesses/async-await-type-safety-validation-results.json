@@ -1,0 +1,12 @@
+{
+  "specificationName": "async-await-type-safety",
+  "validationDate": "2026-03-05T06:19:52Z",
+  "totalChecks": 9,
+  "passedChecks": 7,
+  "failedChecks": 2,
+  "successRate": 77.8,
+  "overallStatus": "FAIL",
+  "checks": [
+    {"name":"pyrightconfig.json exists with reportUnawaited: error","status":"PASS","details":"Configuration file found with correct settings","expected":"reportUnawaited: error","actual":"reportUnawaited: error"},{"name":"pyright in dev dependencies","status":"PASS","details":"pyright found in pyproject.toml","expected":"pyright>=1.1.350","actual":"    "pyright>=1.1.350""},{"name":"pyright pre-commit hook exists","status":"PASS","details":"pyright hook found in .pre-commit-config.yaml","expected":"pyright hook configured","actual":"pyright hook configured"},{"name":"CI includes type checking step","status":"PASS","details":"pyright step found in run-tests.yaml","expected":"Run Type Checking step exists","actual":"Found"},{"name":"CI enforces coverage threshold","status":"PASS","details":"Coverage threshold enforcement found","expected":"--cov-fail-under=80","actual":"      run: pytest --cov --cov-fail-under=80"},{"name":"Build workflow includes type-check job","status":"PASS","details":"type-check job found in build.yaml","expected":"type-check job exists","actual":"Found"},{"name":"test_routes_learning_loop.py exists","status":"PASS","details":"Test suite found with 548 lines","expected":">400 lines","actual":"548 lines"},{"name":"pyright type checking","status":"SKIP","details":"pyright not installed","expected":"0 errors","actual":"Not installed"},{"name":"pytest execution","status":"FAIL","details":"Tests failed to run","expected":"Tests pass","actual":"Tests failed"}
+  ]
+}

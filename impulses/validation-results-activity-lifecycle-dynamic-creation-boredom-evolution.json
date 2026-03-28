@@ -1,0 +1,58 @@
+{
+  "id": "validation-results-activity-lifecycle-dynamic-creation-boredom-evolution",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Activity Lifecycle Validation Results\n\n**Specification**: activity-lifecycle-dynamic-creation-boredom-evolution\n**Validation Date**: 2026-03-08\n**Status**: PENDING - Services Not Deployed\n\n## Validation Summary\n\n**Total Tests**: 3\n**Passed**: 0\n**Pending**: 3 (services not deployed)\n**Failed**: 0\n\n**Overall Status**: PENDING\n\n## Test Results\n\n### Test 1: Dynamic Creation Trigger (GAP-1)\n**Status**: PENDING\n**Reason**: Requires RPC API deployed to k8s or running locally on port 8000\n\n**Expected Behavior**:\n- Query for non-existent activity\n- RPC API returns: status=200, templates_count=0\n- Empty list triggers suggestion in MCP layer (metabob_search_activities)\n\n**Actual**: Service not available (Connection refused to http://localhost:8000)\n\n**Next Action**: Deploy RPC API and run test\n\n---\n\n### Test 2: Boredom Activity Scoping (GAP-9)\n**Status**: PENDING\n**Reason**: Requires RPC API with authentication and test org/project data\n\n**Expected Behavior**:\n- Request boredom activities with org1 token → filtered by org_id=org_test_lifecycle_1\n- Request boredom activities with org2 token → filtered by org_id=org_test_lifecycle_2\n- No org-scoped templates leak between organizations\n- Global templates visible to all orgs (allowed)\n\n**Actual**: Service not available (Connection refused to http://localhost:8000)\n\n**Next Action**: Deploy RPC API, create test orgs, generate JWT tokens, run test\n\n---\n\n### Test 3: Template Storage (GAP-2)\n**Status**: PENDING\n**Reason**: Requires RPC API with write access and test org/project data\n\n**Expected Behavior**:\n- POST template with org/project scope → returns 200/201\n- GET template by ID → returns 200\n- Retrieved template matches created template (template_id, org_id, scope)\n\n**Actual**: Service not available (Connection refused to http://localhost:8000)\n\n**Next Action**: Deploy RPC API, create test orgs, run test\n\n---\n\n## Deployment Requirements\n\n### Services Needed\n1. **RPC API**: http://localhost:8000 (or k8s service URL)\n   - Command: `cd repos/metabob-rpc-api && uvicorn server.main:app --reload`\n   - Or: `cd repos/metabob-rpc-api && helmfile sync`\n\n2. **Metabob CLI MCP**: http://localhost:8001 (or k8s service URL)\n   - Command: `cd repos/metabob-cli && python -m metabob_cli.mcp.server`\n   - Or: `cd repos/metabob-cli && helmfile sync`\n\n### Test Data Needed\n1. **Test Organizations**:\n   - org_test_lifecycle_1\n   - org_test_lifecycle_2\n\n2. **Test Projects**:\n   - proj_test_lifecycle_1\n   - proj_test_lifecycle_2\n\n3. **JWT Tokens**:\n   - Session token for org1 with claim: org_id=org_test_lifecycle_1\n   - Session token for org2 with claim: org_id=org_test_lifecycle_2\n\n### Environment Variables\n```bash\nexport RPC_API_BASE_URL=\"http://localhost:8000\"\nexport METABOB_CLI_MCP_URL=\"http://localhost:8001\"\nexport TEST_ORG_ID_1=\"org_test_lifecycle_1\"\nexport TEST_ORG_ID_2=\"org_test_lifecycle_2\"\nexport TEST_PROJECT_ID_1=\"proj_test_lifecycle_1\"\nexport TEST_PROJECT_ID_2=\"proj_test_lifecycle_2\"\nexport TEST_SESSION_TOKEN_ORG1=\"<JWT_token_for_org1>\"\nexport TEST_SESSION_TOKEN_ORG2=\"<JWT_token_for_org2>\"\n```\n\n---\n\n## Next Steps\n\n1. **Deploy Services**:\n   ```bash\n   # Option 1: Local development\n   cd repos/metabob-rpc-api && uvicorn server.main:app --reload\n   cd repos/metabob-cli && python -m metabob_cli.mcp.server\n   \n   # Option 2: Kubernetes\n   cd repos/metabob-rpc-api && helmfile sync\n   cd repos/metabob-cli && helmfile sync\n   ```\n\n2. **Create Test Data**:\n   ```bash\n   # Create test orgs in SurrealDB\n   # Generate JWT tokens with org_id claims\n   ```\n\n3. **Run Validation**:\n   ```bash\n   cd tests/validation-harnesses\n   python activity-lifecycle-dynamic-creation-boredom-evolution-harness.py\n   ```\n\n4. **Expected Outcome**:\n   - All 3 tests should PASS if GAP-1, GAP-2, and GAP-9 fixes are deployed correctly\n   - Test 1 validates dynamic creation trigger\n   - Test 2 validates multi-tenant isolation (critical security fix)\n   - Test 3 validates template storage with scoping\n\n---\n\n## Validation Readiness\n\n**Code Changes**: ✅ DEPLOYED (GAP-1 and GAP-9 fixes committed)\n**Services**: ❌ NOT RUNNING\n**Test Data**: ❌ NOT CREATED\n**Environment**: ❌ NOT CONFIGURED\n\n**Overall Readiness**: 25% (1/4 prerequisites met)\n\n---\n\n## Gaps Validated (When Tests Run)\n\n| Gap ID | Description | Test Case | Status |\n|--------|-------------|-----------|--------|\n| GAP-1 | Dynamic Creation Trigger | Test 1 | PENDING |\n| GAP-2 | Activity Storage Hook | Test 3 | PENDING |\n| GAP-9 | Boredom Scoping | Test 2 | PENDING |\n| GAP-3 | Pattern Extraction Scheduler | N/A | NOT IMPLEMENTED |\n| GAP-4 | Split/Merge Detection | N/A | NOT IMPLEMENTED |\n| GAP-5 | Boredom Activity Types | N/A | NOT IMPLEMENTED |\n| GAP-6 | Evolution Logic | N/A | NOT IMPLEMENTED |\n| GAP-7 | Replay Comparison | N/A | NOT IMPLEMENTED |\n| GAP-8 | Auto-Promotion | N/A | NOT IMPLEMENTED |\n| GAP-10 | Periodic Scheduling | N/A | NOT IMPLEMENTED |\n\n**Gaps with Tests Ready**: 3/10 (30%)\n**Gaps Implemented**: 2/10 (20%) - GAP-1, GAP-9\n**Gaps Validated**: 0/10 (0%) - pending service deployment",
+    "source": "validation-harness-execution"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specificationName": "activity-lifecycle-dynamic-creation-boredom-evolution",
+    "validationDate": "2026-03-08",
+    "validationType": "dry-run",
+    "deploymentStatus": "services_not_deployed",
+    "totalTests": 3,
+    "passedTests": 0,
+    "pendingTests": 3,
+    "failedTests": 0,
+    "overallStatus": "PENDING",
+    "results": [
+      {
+        "testCase": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-1",
+        "testName": "test_dynamic_creation_trigger",
+        "status": "PENDING",
+        "gapsValidated": ["GAP-1"],
+        "reason": "Service not available: Connection refused to http://localhost:8000"
+      },
+      {
+        "testCase": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-2",
+        "testName": "test_boredom_activity_scoping",
+        "status": "PENDING",
+        "gapsValidated": ["GAP-9"],
+        "reason": "Service not available: Connection refused to http://localhost:8000"
+      },
+      {
+        "testCase": "validation-activity-lifecycle-dynamic-creation-boredom-evolution-case-3",
+        "testName": "test_template_storage",
+        "status": "PENDING",
+        "gapsValidated": ["GAP-2"],
+        "reason": "Service not available: Connection refused to http://localhost:8000"
+      }
+    ],
+    "deploymentRequirements": {
+      "rpc_api": "http://localhost:8000 or k8s service URL",
+      "metabob_cli_mcp": "http://localhost:8001 or k8s service URL",
+      "test_data_needed": true,
+      "environment_variables_needed": true
+    },
+    "validationReadiness": {
+      "codeChanges": "deployed",
+      "services": "not_running",
+      "testData": "not_created",
+      "environment": "not_configured",
+      "overallReadiness": "25%"
+    }
+  },
+  "createdAt": "2026-03-08T06:40:00.000Z"
+}

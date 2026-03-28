@@ -1,0 +1,17 @@
+{
+  "id": "validation-activity-template-flow-via-mcp-backend-case-7",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Validation Test Case: TemplateServiceClient Delegation\n\n## Input\n```json\n{\n  \"file\": \"repos/metabob-opencode/packages/opencode/src/server/template-service-client.ts\",\n  \"check\": \"TemplateServiceClient delegates to MetabobCLI\"\n}\n```\n\n## Expected Output\n```json\n{\n  \"fileExists\": true,\n  \"callsSearchActivities\": true,\n  \"callsGetActivity\": true,\n  \"callsRegisterActivityTemplate\": true\n}\n```\n\n## Test Description\nThis test case validates that TemplateServiceClient delegates to MetabobCLI meets the specification requirements for Activity Template Flow via MCP Backend.\n\n## Validation Type\nStatic code analysis - no LLM required\n",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "Activity Template Flow via MCP Backend",
+    "testName": "TemplateServiceClient Delegation",
+    "testCaseNumber": 7,
+    "totalTestCases": 7
+  }
+}

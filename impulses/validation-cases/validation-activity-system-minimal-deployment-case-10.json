@@ -1,0 +1,41 @@
+{
+  "id": "validation-activity-system-minimal-deployment-case-10",
+  "type": "memo",
+  "testName": "Execution Recording API",
+  "description": "Verify POST /v2/activities/executions records execution and updates Thompson Sampling metrics",
+  "input": {
+    "service": "metabob-activity-api",
+    "port": 8080,
+    "endpoint": "/v2/activities/executions",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer {{session_token}}",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "variant_id": "test-variant-validation",
+      "success": true,
+      "duration_ms": 5000,
+      "cost": 0.05,
+      "tokens": {
+        "input": 1000,
+        "output": 500,
+        "cache": 200
+      }
+    },
+    "requiresSession": true
+  },
+  "expectedOutput": {
+    "statusCode": 201,
+    "body": {
+      "success": true,
+      "execution_id": "{{string}}",
+      "metrics": {
+        "thompson_alpha": "{{number}}",
+        "thompson_beta": "{{number}}",
+        "total_executions": "{{number}}"
+      }
+    },
+    "executionIdPattern": "^exec_[0-9]+_[a-z0-9]+$"
+  }
+}

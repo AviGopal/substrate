@@ -1,0 +1,26 @@
+{
+  "impulseId": "validation-context-requirements-evolution-case-3",
+  "description": "Negative correlation test: Harmful impulse reduces success",
+  "input": {
+    "templateId": "test-template-harmful-impulse",
+    "testImpulseId": "outdated-dependencies",
+    "executionCount": 25,
+    "withImpulseCount": 15,
+    "withoutImpulseCount": 10,
+    "expectedWithSuccessRate": 0.27,
+    "expectedWithoutSuccessRate": 0.70,
+    "expectedCorrelationDelta": -0.43
+  },
+  "expectedOutput": {
+    "pass": true,
+    "actual": {
+      "withImpulseSuccessRate": 0.27,
+      "withoutImpulseSuccessRate": 0.70,
+      "correlationDelta": -0.43,
+      "templateEvolved": true,
+      "impulseInContextRequirements": false
+    },
+    "errors": [],
+    "warnings": []
+  }
+}

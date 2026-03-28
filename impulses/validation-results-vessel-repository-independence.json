@@ -1,0 +1,177 @@
+{
+  "id": "validation-results-vessel-repository-independence",
+  "type": "memo",
+  "description": "Validation results for vessel-repository-independence specification - all tests PASSED",
+  "content": {
+    "specificationName": "vessel-repository-independence",
+    "executionDate": "2026-03-16T23:55:00Z",
+    "overallStatus": "PASS",
+    "summary": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "passRate": 100.0
+    },
+    "testResults": [
+      {
+        "testCase": "validation-vessel-repository-independence-case-1",
+        "testName": "No imports from Activity API in other vessels",
+        "severity": "CRITICAL",
+        "status": "PASS",
+        "input": {
+          "searchPattern": "from.*metabob-activity-api|import.*metabob-activity-api",
+          "searchPaths": ["repos/minibob", "repos/activity-dashboard"]
+        },
+        "expected": {
+          "matchCount": 0,
+          "reason": "No vessel should import code from Activity API - must use HTTP/REST only"
+        },
+        "actual": {
+          "matchCount": 0,
+          "matches": [],
+          "totalMatches": 0
+        },
+        "details": "✅ No cross-vessel imports found (expected: 0, actual: 0)",
+        "violation": null
+      },
+      {
+        "testCase": "validation-vessel-repository-independence-case-2",
+        "testName": "No imports from MiniBob in other vessels",
+        "severity": "CRITICAL",
+        "status": "PASS",
+        "input": {
+          "searchPattern": "from.*minibob|import.*minibob",
+          "searchPaths": ["repos/metabob-activity-api", "repos/activity-dashboard"]
+        },
+        "expected": {
+          "matchCount": 0,
+          "reason": "No vessel should import code from MiniBob - vessels must be independent"
+        },
+        "actual": {
+          "matchCount": 0,
+          "matches": [],
+          "totalMatches": 0
+        },
+        "details": "✅ No cross-vessel imports found (expected: 0, actual: 0)",
+        "violation": null
+      },
+      {
+        "testCase": "validation-vessel-repository-independence-case-3",
+        "testName": "No imports from Dashboard in other vessels",
+        "severity": "CRITICAL",
+        "status": "PASS",
+        "input": {
+          "searchPattern": "from.*activity-dashboard|import.*activity-dashboard",
+          "searchPaths": ["repos/metabob-activity-api", "repos/minibob"]
+        },
+        "expected": {
+          "matchCount": 0,
+          "reason": "No vessel should import code from Dashboard - vessels must be independent"
+        },
+        "actual": {
+          "matchCount": 0,
+          "matches": [],
+          "totalMatches": 0
+        },
+        "details": "✅ No cross-vessel imports found (expected: 0, actual: 0)",
+        "violation": null
+      },
+      {
+        "testCase": "validation-vessel-repository-independence-case-4",
+        "testName": "Self-contained Helm charts exist",
+        "severity": "CRITICAL",
+        "status": "PASS",
+        "input": {
+          "helmChartPaths": [
+            "repos/metabob-activity-api/helm/metabob-activity-api/Chart.yaml",
+            "repos/activity-dashboard/helm/activity-dashboard/Chart.yaml",
+            "repos/minibob/helm/minibob-cluster/Chart.yaml"
+          ]
+        },
+        "expected": {
+          "allChartsExist": true,
+          "chartCount": 3,
+          "reason": "Each vessel must have self-contained Helm chart in its own repository"
+        },
+        "actual": {
+          "allChartsExist": true,
+          "chartCount": 3,
+          "missingCharts": []
+        },
+        "details": "✅ All 3 Helm charts exist",
+        "violation": null
+      },
+      {
+        "testCase": "validation-vessel-repository-independence-case-5",
+        "testName": "Dashboard HTTP-only communication",
+        "severity": "CRITICAL",
+        "status": "PASS",
+        "input": {
+          "searchPattern": "fetch\\(|axios\\.|http\\.",
+          "searchPaths": ["repos/activity-dashboard/src"],
+          "minimumMatches": 1
+        },
+        "expected": {
+          "hasHttpCalls": true,
+          "reason": "Dashboard must use HTTP/REST API calls, not direct code imports"
+        },
+        "actual": {
+          "hasHttpCalls": true,
+          "matchCount": 2,
+          "sampleMatches": [
+            "repos/activity-dashboard/src/lib/api-client.ts:15:    const response = await fetch(`${API_URL}/activities/templates`, {",
+            "repos/activity-dashboard/src/lib/api-client.ts:31:    const response = await fetch(`${API_URL}/activities/executions`, {"
+          ]
+        },
+        "details": "✅ Found 2 HTTP/REST API calls (minimum: 1)",
+        "violation": null
+      },
+      {
+        "testCase": "validation-vessel-repository-independence-case-6",
+        "testName": "Independent Dockerfiles exist",
+        "severity": "HIGH",
+        "status": "PASS",
+        "input": {
+          "dockerfilePaths": [
+            "repos/metabob-activity-api/Dockerfile",
+            "repos/activity-dashboard/Dockerfile",
+            "repos/minibob/Dockerfile"
+          ]
+        },
+        "expected": {
+          "allDockerfilesExist": true,
+          "dockerfileCount": 3,
+          "reason": "Each vessel must have independent Dockerfile for isolated builds"
+        },
+        "actual": {
+          "allDockerfilesExist": true,
+          "dockerfileCount": 3,
+          "missingDockerfiles": []
+        },
+        "details": "✅ All 3 Dockerfiles exist",
+        "violation": null
+      }
+    ],
+    "architecturalValidation": {
+      "vesselIndependence": "VERIFIED - No cross-vessel code imports detected",
+      "httpOnlyCommunication": "VERIFIED - Dashboard uses fetch() for HTTP/REST API calls",
+      "selfContainedDeployment": "VERIFIED - All vessels have independent Helm charts and Dockerfiles",
+      "autonomousEvolution": "ENABLED - Vessels can evolve independently without circular dependencies"
+    },
+    "conclusion": "All 6 test cases passed. Vessel-repository-independence specification is FULLY ENFORCED. MiniBob can now begin autonomous self-development activities without risk of circular dependencies.",
+    "recommendations": [
+      "Integrate validation harness into CI/CD pipeline (GitHub Actions)",
+      "Add pre-commit hook to prevent architectural violations",
+      "Run validation before every deployment to production",
+      "Monitor for regressions as vessels evolve independently"
+    ]
+  },
+  "metadata": {
+    "created": "2026-03-16T23:55:00Z",
+    "budget": 2000,
+    "source": "validation harness execution",
+    "harnessFile": "tests/validation-harnesses/vessel-repository-independence-harness.ts",
+    "executionDuration": "<5 seconds",
+    "llmRequired": false
+  }
+}

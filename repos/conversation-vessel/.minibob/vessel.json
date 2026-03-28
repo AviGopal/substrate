@@ -1,0 +1,21 @@
+{
+  "id": "conversation-vessel",
+  "name": "Conversational Vessel",
+  "version": "0.1.0",
+  "description": "Lightweight vessel for LLM conversations using ai-sdk",
+  "development": {
+    "enabled": true,
+    "cacheStrategy": "local-first",
+    "promotion": {
+      "minExecutions": 5,
+      "minSuccessRate": 0.8,
+      "autoPromote": true
+    }
+  },
+  "capabilities": {
+    "tools": ["bash", "read", "write", "edit", "glob", "grep"],
+    "impulses": ["file", "memo"],
+    "activities": ["conversation:turn"]
+  },
+  "resolves": ["file", "memo"]
+}

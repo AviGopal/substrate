@@ -1,0 +1,49 @@
+{
+  "id": "validation-impulse-learning-storage-complete-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "case-1-simple-file-fix",
+      "description": "Tests basic file path and line number pattern extraction with successful task outcome",
+      "input": {
+        "session_id": "test_session_001",
+        "turn_number": 1,
+        "user_message": "Fix the bug in src/auth.ts line 42",
+        "intent": {
+          "type": "code_fix",
+          "confidence": 0.95,
+          "reasoning": "User requests code fix with specific file and line number"
+        },
+        "impulses_created": [
+          {
+            "id": "imp_file_auth",
+            "type": "file",
+            "pointer": {"type": "file", "path": "src/auth.ts"},
+            "priority": "high",
+            "budget": 2000
+          }
+        ],
+        "response_text": "I've fixed the authentication issue in src/auth.ts by updating the token validation logic.",
+        "task_succeeded": true,
+        "duration_ms": 45000
+      },
+      "expectedOutput": {
+        "normalized_pattern": "fix the bug in {file0} line {num0}",
+        "quality_score": 1.0,
+        "quality_reasoning": "Success (0.6) + impulse used (0.4) = 1.0",
+        "record_created": true,
+        "record_fields": ["userIntent", "context", "impulses", "outcome", "metadata"]
+      }
+    },
+    "source": "validation harness"
+  },
+  "priority": "medium",
+  "budget": 1500,
+  "metadata": {
+    "specification": "impulse-learning-storage-complete",
+    "testType": "pattern_extraction",
+    "historical": true,
+    "noLLMRequired": true
+  }
+}

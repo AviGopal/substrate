@@ -1,0 +1,86 @@
+{
+  "id": "validation-minibob-testing-infrastructure-case-1",
+  "type": "memo",
+  "content": {
+    "testCase": "Single Pod Deployment (testing-minibob namespace)",
+    "description": "Validates minibob deployment in testing-minibob namespace with single pod, boredom disabled, and 3/4 activity tests passing (ACP delegation skipped)",
+    "input": {
+      "namespace": "testing-minibob",
+      "backendNamespace": "metabob",
+      "skipBoredomValidation": true,
+      "metricsDir": "repos/minibob/metrics"
+    },
+    "expectedOutput": {
+      "pass": true,
+      "phase1_deploymentState": {
+        "pass": true,
+        "actual": {
+          "namespaceStatus": "Active",
+          "minibobPodCount": 1,
+          "runningPods": 1,
+          "backendRunning": ">= 1"
+        }
+      },
+      "phase2_activityValidation": {
+        "pass": true,
+        "actual": {
+          "passedTests": ">= 3",
+          "totalTests": 4,
+          "testResults": {
+            "test-activity-impulse": "PASS",
+            "test-acp-delegation": "SKIP",
+            "test-self-improvement": "PASS",
+            "test-nested-activities": "PASS"
+          }
+        }
+      },
+      "phase3_backendRecords": {
+        "pass": true,
+        "actual": {
+          "totalExecutions": "> 0",
+          "hasSuccessRate": true,
+          "recentExecutionsAvailable": true
+        }
+      },
+      "phase4_boredomSystem": {
+        "pass": true,
+        "skipped": true,
+        "actual": {
+          "skipped": true
+        }
+      },
+      "phase5_metricsCollection": {
+        "pass": true,
+        "actual": {
+          "metricsFilesFound": "> 0",
+          "metricsStructureValid": true,
+          "totalExecutions": "> 0"
+        }
+      },
+      "phase6_infrastructureVisualization": {
+        "pass": true,
+        "actual": {
+          "sectionsFound": ">= 3"
+        }
+      },
+      "phase7_helmfileOrchestration": {
+        "pass": true,
+        "actual": {
+          "hasMinibobRelease": true,
+          "hasBackendRelease": true,
+          "minibobReleaseCount": ">= 2"
+        }
+      },
+      "summary": {
+        "totalPhases": 6,
+        "passedPhases": 6,
+        "failedPhases": 0,
+        "skippedPhases": 1
+      }
+    }
+  },
+  "budget": 1000,
+  "priority": "high",
+  "tags": ["validation", "test-case", "minibob", "testing-infrastructure", "single-pod"],
+  "createdAt": "2026-03-15T13:00:00Z"
+}

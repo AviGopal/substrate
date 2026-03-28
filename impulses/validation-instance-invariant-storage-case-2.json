@@ -1,0 +1,16 @@
+{
+  "id": "validation-Instance-Invariant Storage for Impulses and Activities-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: Cross-Instance Retrieval\n\nInput:\n  - Run two separate opencode processes (Instance A and Instance B)\n  - Use same (api_key, project_id) credentials\n  - Create impulse in Instance A\n  - Retrieve impulse from Instance B\n\nExpected Output:\n  - storeSuccess: true (Instance A stores impulse successfully)\n  - retrieveSuccess: true (Instance B retrieves impulse successfully)\n  - dataIntegrity: true (Retrieved data matches stored data exactly)\n\nValidation:\n  - Store impulse via Instance A using metabob_impulse_store\n  - Load impulse via Instance B using metabob_impulse_load\n  - Compare impulse data byte-for-byte\n  - Verify metadata (created_at, project_id, api_key scope)"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "scope": "global",
+  "metadata": {
+    "testCaseId": "case-2",
+    "testName": "Cross-Instance Retrieval",
+    "category": "cross-instance-access"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "impulseId": "harness-acp-network-transport-implementation",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/acp-network-transport-implementation-harness.ts",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "acp-network-transport-implementation",
+    "purpose": "Validate TCP/HTTP transport implementation for ACP delegation",
+    "testCases": [
+      "validation-acp-network-transport-implementation-case-1",
+      "validation-acp-network-transport-implementation-case-2",
+      "validation-acp-network-transport-implementation-case-3",
+      "validation-acp-network-transport-implementation-case-4",
+      "validation-acp-network-transport-implementation-case-5",
+      "validation-acp-network-transport-implementation-case-6"
+    ],
+    "coverage": {
+      "implementation": "TCPTransport class with connect() implementation",
+      "server": "POST /acp/stream HTTP endpoint",
+      "connection": "Local TCP connection via localhost",
+      "delegation": "End-to-end acp_delegate with tcp:// target",
+      "cleanup": "Connection lifecycle and cleanup",
+      "errorHandling": "Invalid host/port error handling"
+    },
+    "usage": {
+      "command": "bun run tests/validation-harnesses/acp-network-transport-implementation-harness.ts",
+      "exitCode": "0 on success, 1 on failure",
+      "output": "Detailed test results with pass/fail for each case"
+    }
+  }
+}

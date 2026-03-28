@@ -1,0 +1,16 @@
+{
+  "id": "validation-context-optimization-endpoint-complete-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Reject invalid activity_type\n\nInput:\n{\n  \"activity_type\": \"invalid_type\"\n}\n\nExpected Output:\n{\n  \"shouldFail\": true,\n  \"statusCode\": 422,\n  \"errorType\": \"validation_error\",\n  \"errorMessage\": \"activity_type must match pattern: feature|bugfix|refactor|test|infrastructure\"\n}\n\nExpected Behavior:\n- Endpoint MUST reject invalid activity_type values\n- Returns HTTP 422 Unprocessable Entity\n- Error message explains valid options\n- Does NOT query database with invalid category\n\nValidation Logic:\n- activity_type parameter validated with regex: ^(feature|bugfix|refactor|test|infrastructure)$\n- Case-sensitive validation\n- No fallback to default (explicit rejection)\n\nKey Validation:\n- Proves input validation is enforced\n- Prevents invalid data from reaching database layer",
+    "source": "validation-test-case"
+  },
+  "budget": 1000,
+  "createdAt": "2026-02-28T00:00:00.000Z",
+  "metadata": {
+    "testCaseNumber": 3,
+    "shouldFail": true,
+    "expectedStatusCode": 422
+  }
+}

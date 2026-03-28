@@ -1,0 +1,167 @@
+{
+  "activity_id": "setup-docker-compose-testing-environment-simplified",
+  "name": "Setup Docker Compose Testing Environment (Simplified)",
+  "description": "Simplified Docker Compose setup that assumes services may already be running and focuses on health validation",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "check-and-start-services",
+      "task_id": "check-and-start-services",
+      "subagent": "general",
+      "description": "Check Docker environment and start/restart services as needed",
+      "dependencies": [],
+      "prompt": {
+        "template": "Set up the Docker Compose testing environment:\n\n1. Verify Docker and Docker Compose are installed:\n   - Run: docker --version\n   - Run: docker-compose --version\n\n2. Check current service status:\n   - Run: docker-compose ps\n   - Note which services are already running\n\n3. Start backend services (stable profile):\n   - Run: docker-compose --profile stable up -d\n   - This starts: redis, surreal, surrealist, metabob-rpc-api-server\n   - Services already running will not be recreated\n\n4. Start devbob container:\n   {{#if useDevProfile}}\n   - Run: docker-compose --profile stable --profile devbob-dev up -d\n   {{else}}\n   - Run: docker-compose --profile stable --profile devbob up -d\n   {{/if}}\n\n5. Wait for services to initialize:\n   - Wait 10 seconds\n   - Run: docker-compose ps\n\nProvide a summary:\n- ✅ Services started (new or already running)\n- 📊 Container status\n- ⏱️  Initialization complete",
+        "variables": [
+          {
+            "name": "useDevProfile",
+            "type": "boolean",
+            "required": false,
+            "description": "Use devbob-dev profile instead of clean devbob",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker --version",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "docker-compose --version",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "run-health-checks",
+      "task_id": "run-health-checks",
+      "subagent": "general",
+      "description": "Verify all services are healthy and accessible",
+      "dependencies": [
+        "check-and-start-services"
+      ],
+      "prompt": {
+        "template": "Run comprehensive health checks:\n\n1. Check container status:\n   - Run: docker-compose ps\n   - Verify expected containers are running\n\n2. Test backend services:\n   - Redis: docker-compose exec -T redis redis-cli ping\n   - SurrealDB: curl -sf http://localhost:8000/health\n   - API Server: curl -sf http://localhost:8080/health\n\n3. Test devbob container:\n   - Check container health: docker ps --filter name=devbob-clean --format \"{{{{.Status}}}}\"\n   - Note: ACP server may take 30+ seconds to start\n\n4. Check resource usage:\n   - Run: docker stats --no-stream --format \"table {{{{.Container}}}}\\t{{{{.CPUPerc}}}}\\t{{{{.MemUsage}}}}\"\n\n5. Check for errors:\n   - Run: docker-compose logs --since=2m --tail=20\n\nProvide comprehensive report:\n- ✅ All services healthy\n- ✅ Health endpoints accessible\n- 📊 Resource usage normal\n- 🚀 Environment ready for testing\n- ⚠️  Any warnings or issues",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker-compose ps --services --filter status=running | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "check-and-start-services",
+      "task_id": "check-and-start-services",
+      "subagent": "general",
+      "description": "Check Docker environment and start/restart services as needed",
+      "dependencies": [],
+      "prompt": {
+        "template": "Set up the Docker Compose testing environment:\n\n1. Verify Docker and Docker Compose are installed:\n   - Run: docker --version\n   - Run: docker-compose --version\n\n2. Check current service status:\n   - Run: docker-compose ps\n   - Note which services are already running\n\n3. Start backend services (stable profile):\n   - Run: docker-compose --profile stable up -d\n   - This starts: redis, surreal, surrealist, metabob-rpc-api-server\n   - Services already running will not be recreated\n\n4. Start devbob container:\n   {{#if useDevProfile}}\n   - Run: docker-compose --profile stable --profile devbob-dev up -d\n   {{else}}\n   - Run: docker-compose --profile stable --profile devbob up -d\n   {{/if}}\n\n5. Wait for services to initialize:\n   - Wait 10 seconds\n   - Run: docker-compose ps\n\nProvide a summary:\n- ✅ Services started (new or already running)\n- 📊 Container status\n- ⏱️  Initialization complete",
+        "variables": [
+          {
+            "name": "useDevProfile",
+            "type": "boolean",
+            "required": false,
+            "description": "Use devbob-dev profile instead of clean devbob",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker --version",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "docker-compose --version",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "run-health-checks",
+      "task_id": "run-health-checks",
+      "subagent": "general",
+      "description": "Verify all services are healthy and accessible",
+      "dependencies": [
+        "check-and-start-services"
+      ],
+      "prompt": {
+        "template": "Run comprehensive health checks:\n\n1. Check container status:\n   - Run: docker-compose ps\n   - Verify expected containers are running\n\n2. Test backend services:\n   - Redis: docker-compose exec -T redis redis-cli ping\n   - SurrealDB: curl -sf http://localhost:8000/health\n   - API Server: curl -sf http://localhost:8080/health\n\n3. Test devbob container:\n   - Check container health: docker ps --filter name=devbob-clean --format \"{{{{.Status}}}}\"\n   - Note: ACP server may take 30+ seconds to start\n\n4. Check resource usage:\n   - Run: docker stats --no-stream --format \"table {{{{.Container}}}}\\t{{{{.CPUPerc}}}}\\t{{{{.MemUsage}}}}\"\n\n5. Check for errors:\n   - Run: docker-compose logs --since=2m --tail=20\n\nProvide comprehensive report:\n- ✅ All services healthy\n- ✅ Health endpoints accessible\n- 📊 Resource usage normal\n- 🚀 Environment ready for testing\n- ⚠️  Any warnings or issues",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker-compose ps --services --filter status=running | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-17T20:03:40.362Z",
+  "metadata": {}
+}

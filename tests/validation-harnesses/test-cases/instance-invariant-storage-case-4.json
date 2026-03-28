@@ -1,0 +1,15 @@
+{
+  "impulseId": "validation-instance-invariant-storage-case-4",
+  "name": "Impulse Learning Storage Scoping",
+  "description": "Impulse learning records are project-scoped",
+  "input": {
+    "projectId": "proj_learning",
+    "recordId": "rec_mapping_001"
+  },
+  "expectedOutput": {
+    "storageKeyFormat": ["learning", "proj_learning", "impulse-mappings", "rec_mapping_001"],
+    "containsProjectId": true
+  },
+  "type": "memo",
+  "budget": 500
+}

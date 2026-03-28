@@ -1,0 +1,133 @@
+# minibob Repository Spec (Orchestration)
+# Source of truth: metabob-devbob/openspec/
+# This file coordinates minibob development from metabob-devbob
+
+name: minibob
+version: 1.0.0
+status: operational
+owner: minibob-vessel-agent
+
+# Repository location
+repository:
+  path: repos/minibob
+  git_remote: git@github.com:AviGopal/minibob.git
+  branch: main
+  language: typescript
+  runtime: bun
+  framework: none (vanilla TypeScript)
+  size_estimate: 3000-4000 LOC
+
+# What this repo provides
+provides:
+  - id: activity-execution-vessel
+    version: 1.0.0
+    contract: openspec/contracts/vessel-api.md
+    stability: beta
+    description: Lightweight autonomous vessel for activity execution with LLM integration
+
+  - id: local-impulse-resolver
+    version: 1.0.0
+    contract: openspec/contracts/impulse-local.md
+    stability: stable
+    description: Resolves local impulse types (memo, file)
+
+# What this repo depends on
+depends_on:
+  - id: http-api-v2-activity
+    version: ^1.0.0
+    contract: openspec/contracts/http-api-v2-activity.md
+    critical: true
+    endpoints:
+      - POST /v2/impulses/resolve
+      - POST /v2/activities/execution-traces
+      - POST /v2/activities/recommend
+      - GET /v2/activities/templates
+    description: Activity API for execution traces, Thompson Sampling, remote impulse resolution
+
+  - id: surrealdb-schema
+    version: ^1.0.0
+    contract: openspec/contracts/surrealdb-schema.md
+    critical: true
+    tables:
+      - activity_execution_traces
+      - activity_templates
+      - impulse_data
+    description: Database schema for activity execution state
+
+# Deployment configuration
+deployment:
+  helm_chart: helm/charts/devbob
+  namespace: activity-system
+  service_name: minibob
+  replicas: 3
+  port: 8080
+  health_check:
+    path: /health
+    interval: 10s
+    timeout: 5s
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  environment:
+    MINIBOB_MCP_ENDPOINT: http://metabob-activity-api.activity-system.svc.cluster.local:8080
+    MINIBOB_SERVICE_NAME: minibob
+    LOG_LEVEL: INFO
+
+# Validation configuration
+validation:
+  unit_tests:
+    command: bun test
+    required_coverage: 70%
+  integration_tests:
+    command: ./run-integration-tests.sh
+    dependencies:
+      - activity-api running
+      - surrealdb available
+  e2e_tests:
+    - openspec/contracts/e2e-tests.md#e2e-1-full-analysis-flow
+    - openspec/contracts/e2e-tests.md#e2e-4-developer-journey
+  health_validation:
+    - GET /health returns 200
+    - Activity execution completes
+    - Impulse resolution works
+
+# Commit traceability
+commit_convention:
+  format: "type: description (refs: change-id#task-id spec: contract@version)"
+  types: [feat, fix, refactor, docs, test, chore]
+  examples:
+    - "feat: add impulse resolution (refs: analysis-api-extraction#MB-4 spec: http-api-v2-activity@1.0.0)"
+    - "fix: handle memo impulse edge case (refs: analysis-api-extraction#MB-8 spec: http-api-v2-activity@1.0.0)"
+
+# Delegation prerequisites
+delegation:
+  can_delegate: true
+  agent_type: repo-agent
+  prerequisites:
+    - Understand activity execution lifecycle
+    - Review impulse resolution patterns (local vs remote)
+    - Read openspec/contracts/http-api-v2-activity.md
+    - Understand LLM tool calling (Anthropic/OpenAI)
+    - Review openspec/repos/metabob-activity-api.yaml for backend contract
+
+# Ripple configuration
+ripple:
+  notify_on_change:
+    - openspec/repos/metabob-activity-api.yaml
+  check_before_complete:
+    - Verify all activity executions trace to backend
+    - Test local impulse resolution (memo, file)
+    - Test remote impulse delegation to backend
+    - Verify Thompson Sampling integration
+    - Verify goal processor works with backend recommendations
+    - Run E2E tests with live data
+    - Ensure system remains operational (helm deployment healthy)
+
+metadata:
+  created: 2026-03-23
+  last_updated: 2026-03-23
+  change_id: analysis-api-extraction

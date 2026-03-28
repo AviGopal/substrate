@@ -1,0 +1,169 @@
+{
+  "name": "Fix Bug Complete",
+  "version": 1,
+  "description": "Complete bug fix workflow: reproduce, analyze root cause, fix, test, commit, and annotate. Systematic debugging approach for reliable fixes.",
+  "category": "bugfix",
+  "contextRequirements": [
+    {
+      "key": "errorContext",
+      "hint": "Provide error messages, stack traces, or failure logs",
+      "impulseTypes": ["memo", "bashOutput"],
+      "required": false,
+      "budgetRange": [500, 1500]
+    },
+    {
+      "key": "affectedCode",
+      "hint": "Share the code files where the bug occurs",
+      "impulseTypes": ["file", "component"],
+      "required": false,
+      "budgetRange": [1000, 2500]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "reproduce-and-analyze",
+      "subagent": "general",
+      "description": "Reproduce the bug and analyze root cause",
+      "dependencies": [],
+      "prompt": {
+        "template": "Reproduce and analyze this bug:\n\n**Bug Description**: {{bugDescription}}\n\n## Your Task\n\n1. **Understand the Bug**:\n   - What is the expected behavior?\n   - What is the actual behavior?\n   - When does it occur? (conditions, inputs, environment)\n\n2. **Reproduce the Bug**:\n   - Create a minimal reproduction if possible\n   - Document the exact steps to trigger it\n   - Verify you can reproduce it consistently\n\n3. **Analyze Root Cause**:\n   - Where in the code does the bug originate?\n   - What is the underlying cause? (logic error, race condition, missing validation, etc.)\n   - Why did this bug occur? (missing test, edge case, etc.)\n\n4. **Check for Metabob Issues**:\n   - Use `metabob_search_codebase_issues` to find related issues\n   - Check if this bug was flagged by code quality analysis\n   - Review similar patterns in the codebase\n\n5. **Write Analysis Document**:\n   Create /tmp/bug-analysis-{{bugId}}.md:\n   ```markdown\n   # Bug Analysis: {{bugDescription}}\n\n   ## Expected vs Actual Behavior\n   - Expected: What should happen\n   - Actual: What actually happens\n\n   ## Reproduction Steps\n   1. Step one\n   2. Step two\n   ...\n\n   ## Root Cause\n   [Detailed explanation of WHY the bug occurs]\n\n   ## Affected Files\n   - file1.ts: How it's affected\n   - file2.ts: How it's affected\n\n   ## Fix Strategy\n   [How we'll fix it]\n   ```\n\n## Guidelines\n\n- Be specific about root cause\n- Don't jump to solutions before understanding the problem\n- Check for similar bugs in the codebase\n- Document reproduction steps clearly",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": [
+          {
+            "name": "bugDescription",
+            "type": "string",
+            "required": true,
+            "description": "Description of the bug to fix"
+          },
+          {
+            "name": "bugId",
+            "type": "string",
+            "required": false,
+            "description": "Unique identifier for this bug (defaults to generated ID)",
+            "default": "{{bugId}}"
+          }
+        ]
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/bug-analysis-{{bugId}}.md"
+        ],
+        "required_patterns": [
+          "## Root Cause",
+          "## Fix Strategy",
+          "## Reproduction Steps"
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "implement-fix",
+      "subagent": "general",
+      "description": "Implement the bug fix",
+      "dependencies": ["reproduce-and-analyze"],
+      "prompt": {
+        "template": "Implement the fix based on /tmp/bug-analysis-{{bugId}}.md\n\n## Your Task\n\n1. **Review Analysis**: Read the bug analysis carefully\n\n2. **Implement Fix**:\n   - Make the minimal change necessary to fix the bug\n   - Don't refactor unrelated code\n   - Add defensive checks if missing\n   - Handle edge cases properly\n\n3. **Verify Fix Addresses Root Cause**:\n   - Does this fix address the root cause?\n   - Or is it just masking the symptom?\n   - Are there similar bugs elsewhere?\n\n4. **Add Regression Prevention**:\n   - Consider what prevented this bug from being caught\n   - Add validation, assertions, or guards if appropriate\n\n5. **Create Fix Summary**:\n   Create /tmp/bug-fix-{{bugId}}.md:\n   ```markdown\n   # Bug Fix Summary\n\n   ## Changes Made\n   - file1.ts: What changed and why\n   - file2.ts: What changed and why\n\n   ## Root Cause Addressed\n   [How this fix addresses the root cause]\n\n   ## Regression Prevention\n   [What we added to prevent this bug from recurring]\n\n   ## Ready for Testing\n   Yes\n   ```\n\n## Guidelines\n\n- Minimal, focused changes\n- Fix the root cause, not symptoms\n- Add safeguards to prevent recurrence\n- Document your reasoning",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/bug-fix-{{bugId}}.md"
+        ],
+        "required_patterns": [
+          "## Changes Made",
+          "## Root Cause Addressed",
+          "Ready for Testing"
+        ],
+        "forbidden_patterns": [
+          "TODO",
+          "FIXME"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-and-verify",
+      "subagent": "general",
+      "description": "Test the fix and verify bug is resolved",
+      "dependencies": ["implement-fix"],
+      "prompt": {
+        "template": "Test the fix and verify the bug is resolved.\n\n## Your Task\n\n1. **Test the Fix**:\n   - Follow reproduction steps from /tmp/bug-analysis-{{bugId}}.md\n   - Verify bug no longer occurs\n   - Test edge cases\n\n2. **Write Regression Test**:\n   - Write a test that would have caught this bug\n   - Test should fail on the buggy code\n   - Test should pass on the fixed code\n\n3. **Run Full Test Suite**:\n   - Ensure fix doesn't break existing functionality\n   - Verify all tests pass\n   - Check for new failures\n\n4. **Quality Check**:\n   - Run type checker if applicable\n   - Check for HIGH severity Metabob issues in changed files\n   - Fix any critical problems\n\n5. **Create Test Summary**:\n   Create /tmp/bug-testing-{{bugId}}.md:\n   ```markdown\n   # Testing Summary\n\n   ## Bug Verification\n   ✅ Bug is fixed - verified by: [how you verified]\n\n   ## Regression Test\n   ✅ Added test: [test name and what it checks]\n\n   ## Test Suite\n   ✅ All tests passing (X total)\n\n   ## Quality\n   ✅ Type check: Pass\n   ✅ Metabob: No HIGH severity issues\n\n   ## Status\n   Ready for commit\n   ```\n\n## Guidelines\n\n- Verify the original bug is actually fixed\n- Write a test that prevents regression\n- Ensure no new bugs introduced\n- Fix all HIGH severity issues",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/bug-testing-{{bugId}}.md"
+        ],
+        "required_patterns": [
+          "✅ Bug is fixed",
+          "✅ Added test",
+          "Ready for commit"
+        ],
+        "forbidden_patterns": [
+          "❌"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "commit-and-document",
+      "subagent": "general",
+      "description": "Commit the fix and document the resolution",
+      "dependencies": ["test-and-verify"],
+      "prompt": {
+        "template": "Commit the bug fix and document the resolution.\n\n## Your Task\n\n1. **Review Changes**:\n   - `git status` to see changed files\n   - `git diff` to review all changes\n\n2. **Commit the Fix**:\n   - Clear commit message: \"fix: {{bugDescription}} - [why it was happening]\"\n   - Include issue/ticket number if applicable\n   - Keep commit focused on the fix\n\n3. **Document the Fix**:\n   Use `metabob_annotate_component` for changed components (2-3 max):\n   - Explain what the bug was\n   - Why the fix works\n   - What we learned\n\n   Example:\n   ```typescript\n   metabob_annotate_component({\n     file_path: \"src/parser.ts\",\n     component_name: \"parseInput\",\n     component_type: \"function\",\n     reason: \"Fixed null pointer bug when input is empty. Added null check before accessing properties. Bug occurred because we didn't validate input assumptions. Now fails fast with clear error.\"\n   })\n   ```\n\n4. **Mark Metabob Issue Complete** (if applicable):\n   If this bug was a Metabob issue, use `metabob_mark_problem_complete`:\n   ```typescript\n   metabob_mark_problem_complete({\n     problem_id: \"the-metabob-issue-id\",\n     file_path: \"src/file.ts\",\n     resolution_notes: \"Fixed by [detailed explanation of fix approach]\"\n   })\n   ```\n\n5. **Create Completion Summary**:\n   Create /tmp/bug-complete-{{bugId}}.md:\n   ```markdown\n   # Bug Fix Complete\n\n   ## Bug\n   {{bugDescription}}\n\n   ## Root Cause\n   [Brief summary]\n\n   ## Fix\n   [Brief summary of changes]\n\n   ## Deliverables\n   ✅ Bug fixed and verified\n   ✅ Regression test added\n   ✅ All tests passing\n   ✅ Changes committed\n   ✅ Resolution documented\n   ```\n\n## Guidelines\n\n- Commit message explains WHY the bug happened\n- Annotate only components directly related to the fix\n- Document learnings to prevent similar bugs\n- Keep annotations focused on the fix rationale",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/bug-complete-{{bugId}}.md"
+        ],
+        "required_patterns": [
+          "## Deliverables",
+          "✅ Bug fixed and verified",
+          "✅ Changes committed"
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  },
+  "id": "fix-bug-complete",
+  "variant_id": "fix-bug-complete",
+  "activity_id": "fix-bug-complete"
+}

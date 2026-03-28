@@ -1,0 +1,211 @@
+{
+  "activity_id": "debug-activity-self-contained",
+  "name": "Debug Activity Execution (Self-Contained)",
+  "description": "Debug failed activity executions using activity_error_inspector MCP tool - follows architecture compliance",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "inspect-execution-errors",
+      "subagent": "general",
+      "description": "Use activity_error_inspector tool to get comprehensive error analysis",
+      "dependencies": [],
+      "prompt": {
+        "template": "Debug a failed activity execution using the MCP-provided activity_error_inspector tool.\n\n**Execution ID**: {{executionId}}\n\n**Your Task**: Use the activity_error_inspector tool to analyze the failure.\n\n**CRITICAL**: You MUST use the `activity_error_inspector` tool. Do NOT attempt to call APIs directly.\n\n**Steps**:\n\n1. Call activity_error_inspector with:\n   - activityId: {{executionId}}\n   - includeSessionLogs: true\n   - includeToolCalls: true\n   - maxMessagesPerTask: 30\n\n2. The tool will return:\n   - Activity summary (status, template, timing, cost)\n   - Task-level error breakdown\n   - Session logs and tool call traces\n   - Recommendations for fixes\n\n3. Create a file called `EXECUTION_ANALYSIS.md` that summarizes:\n   - What failed (which task, what error)\n   - Why it failed (root cause analysis)\n   - How to fix it (concrete recommendations)\n   - Related patterns (if this is a known issue)\n\n**Output Format**:\n\n```markdown\n# Execution Analysis: {{executionId}}\n\n## Summary\n- **Template**: [name]\n- **Status**: [status]\n- **Failed Task**: [task-id]\n- **Error Type**: [validation/execution/timeout]\n\n## Root Cause\n[Clear explanation of why it failed]\n\n## Error Details\n```\n[Error message from inspector]\n```\n\n## Recommendations\n1. [Specific fix]\n2. [Another fix]\n3. [Testing strategy]\n\n## Tool Calls\n[Summary of what tools were called and what failed]\n```\n\n**Remember**: Use activity_error_inspector, not curl or API calls.",
+        "variables": [
+          {
+            "name": "executionId",
+            "type": "string",
+            "required": true,
+            "description": "Activity execution ID to debug"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "EXECUTION_ANALYSIS.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Root Cause",
+            "description": ""
+          },
+          {
+            "pattern": "## Recommendations",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "curl",
+            "description": ""
+          },
+          {
+            "pattern": "http://",
+            "description": ""
+          },
+          {
+            "pattern": "GET /",
+            "description": ""
+          },
+          {
+            "pattern": "POST /",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-fix-recommendations",
+      "subagent": "general",
+      "description": "Generate concrete fixes based on error analysis",
+      "dependencies": [
+        "inspect-execution-errors"
+      ],
+      "prompt": {
+        "template": "Based on the execution analysis, generate concrete fixes.\n\n**Your Task**: Read EXECUTION_ANALYSIS.md and create actionable fixes.\n\n**Fix Categories**:\n\n1. **Template Fixes**: If the template itself has issues\n   - Schema problems (missing fields, wrong types)\n   - Prompt clarity issues\n   - Validation rules too strict/loose\n   - Variable defaults incorrect\n\n2. **Input Fixes**: If the inputs were wrong\n   - Missing required variables\n   - Invalid variable values\n   - Better defaults needed\n\n3. **System Fixes**: If it's a system integration issue\n   - Tool availability\n   - Permission problems\n   - MCP connectivity\n\n**Output**: Create `FIX_RECOMMENDATIONS.md` with:\n\n```markdown\n# Fix Recommendations\n\n## Immediate Fixes (Apply Now)\n1. **Fix**: [Specific change]\n   - **File**: [file to edit]\n   - **Change**: [exact change]\n   - **Why**: [explanation]\n\n## Template Improvements (For Next Version)\n1. **Improvement**: [enhancement]\n   - **Benefit**: [why this helps]\n\n## Testing Strategy\n1. Test with: [test scenario]\n2. Expect: [expected outcome]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "FIX_RECOMMENDATIONS.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Immediate Fixes",
+            "description": ""
+          },
+          {
+            "pattern": "## Testing Strategy",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "inspect-execution-errors",
+      "subagent": "general",
+      "description": "Use activity_error_inspector tool to get comprehensive error analysis",
+      "dependencies": [],
+      "prompt": {
+        "template": "Debug a failed activity execution using the MCP-provided activity_error_inspector tool.\n\n**Execution ID**: {{executionId}}\n\n**Your Task**: Use the activity_error_inspector tool to analyze the failure.\n\n**CRITICAL**: You MUST use the `activity_error_inspector` tool. Do NOT attempt to call APIs directly.\n\n**Steps**:\n\n1. Call activity_error_inspector with:\n   - activityId: {{executionId}}\n   - includeSessionLogs: true\n   - includeToolCalls: true\n   - maxMessagesPerTask: 30\n\n2. The tool will return:\n   - Activity summary (status, template, timing, cost)\n   - Task-level error breakdown\n   - Session logs and tool call traces\n   - Recommendations for fixes\n\n3. Create a file called `EXECUTION_ANALYSIS.md` that summarizes:\n   - What failed (which task, what error)\n   - Why it failed (root cause analysis)\n   - How to fix it (concrete recommendations)\n   - Related patterns (if this is a known issue)\n\n**Output Format**:\n\n```markdown\n# Execution Analysis: {{executionId}}\n\n## Summary\n- **Template**: [name]\n- **Status**: [status]\n- **Failed Task**: [task-id]\n- **Error Type**: [validation/execution/timeout]\n\n## Root Cause\n[Clear explanation of why it failed]\n\n## Error Details\n```\n[Error message from inspector]\n```\n\n## Recommendations\n1. [Specific fix]\n2. [Another fix]\n3. [Testing strategy]\n\n## Tool Calls\n[Summary of what tools were called and what failed]\n```\n\n**Remember**: Use activity_error_inspector, not curl or API calls.",
+        "variables": [
+          {
+            "name": "executionId",
+            "type": "string",
+            "required": true,
+            "description": "Activity execution ID to debug"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "EXECUTION_ANALYSIS.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Root Cause",
+            "description": ""
+          },
+          {
+            "pattern": "## Recommendations",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "curl",
+            "description": ""
+          },
+          {
+            "pattern": "http://",
+            "description": ""
+          },
+          {
+            "pattern": "GET /",
+            "description": ""
+          },
+          {
+            "pattern": "POST /",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-fix-recommendations",
+      "subagent": "general",
+      "description": "Generate concrete fixes based on error analysis",
+      "dependencies": [
+        "inspect-execution-errors"
+      ],
+      "prompt": {
+        "template": "Based on the execution analysis, generate concrete fixes.\n\n**Your Task**: Read EXECUTION_ANALYSIS.md and create actionable fixes.\n\n**Fix Categories**:\n\n1. **Template Fixes**: If the template itself has issues\n   - Schema problems (missing fields, wrong types)\n   - Prompt clarity issues\n   - Validation rules too strict/loose\n   - Variable defaults incorrect\n\n2. **Input Fixes**: If the inputs were wrong\n   - Missing required variables\n   - Invalid variable values\n   - Better defaults needed\n\n3. **System Fixes**: If it's a system integration issue\n   - Tool availability\n   - Permission problems\n   - MCP connectivity\n\n**Output**: Create `FIX_RECOMMENDATIONS.md` with:\n\n```markdown\n# Fix Recommendations\n\n## Immediate Fixes (Apply Now)\n1. **Fix**: [Specific change]\n   - **File**: [file to edit]\n   - **Change**: [exact change]\n   - **Why**: [explanation]\n\n## Template Improvements (For Next Version)\n1. **Improvement**: [enhancement]\n   - **Benefit**: [why this helps]\n\n## Testing Strategy\n1. Test with: [test scenario]\n2. Expect: [expected outcome]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "FIX_RECOMMENDATIONS.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Immediate Fixes",
+            "description": ""
+          },
+          {
+            "pattern": "## Testing Strategy",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-03-02T19:01:44.198Z",
+  "metadata": {}
+}

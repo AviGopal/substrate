@@ -1,0 +1,45 @@
+{{/*
+Gateway template - creates Istio Gateway for external traffic
+Iterates over services to build the hosts list based on environment
+*/}}
+{{- $env := .Values.environment | default "development" }}
+{{- $domain := index .Values.domains $env }}
+
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    {{- include "istio-gateway.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- toYaml .Values.gateway.selector | nindent 4 }}
+  servers:
+    - port:
+        number: {{ .Values.gateway.port.number }}
+        name: {{ .Values.gateway.port.name }}
+        protocol: {{ .Values.gateway.port.protocol }}
+      hosts:
+        {{- range $name, $service := .Values.services }}
+        {{- $enabled := index $service.enabled $env }}
+        {{- if $enabled }}
+        - {{ $service.subdomain }}.{{ $domain }}
+        {{- end }}
+        {{- end }}
+    {{- if and .Values.gateway.tls.enabled (eq $env "production") }}
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: {{ .Values.gateway.tls.mode }}
+        credentialName: {{ .Values.gateway.tls.credentialName }}
+      hosts:
+        {{- range $name, $service := .Values.services }}
+        {{- $enabled := index $service.enabled $env }}
+        {{- if $enabled }}
+        - {{ $service.subdomain }}.{{ $domain }}
+        {{- end }}
+        {{- end }}
+    {{- end }}

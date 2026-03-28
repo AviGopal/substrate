@@ -1,0 +1,156 @@
+{
+  "specificationName": "activity-template-scope-assignment",
+  "rippleAnalysisDate": "2026-03-01T09:40:00Z",
+  "componentsUpdated": [],
+  "additionalRippleChangesRequired": 0,
+  "validationStatus": {
+    "thisSpec": {
+      "name": "activity-template-scope-assignment",
+      "status": "FAIL",
+      "reason": "Deployment required - code changes not yet deployed to K8s cluster",
+      "lastRun": "2026-03-01T09:32:00Z",
+      "testsPassed": 0,
+      "testsFailed": 2,
+      "testsSkipped": 2,
+      "totalTests": 4
+    },
+    "conflictingSpecs": [],
+    "relatedSpecs": [
+      {
+        "spec": "surrealdb-primary-redis-cache",
+        "status": "FAIL",
+        "reason": "Unrelated to current spec",
+        "impactAssessment": "None - changes are compatible with dual-write pattern"
+      },
+      {
+        "spec": "thompson-sampling-in-rpc-api-only",
+        "status": "PASS",
+        "impactAssessment": "None - changes are orthogonal"
+      },
+      {
+        "spec": "complete-architecture-separation",
+        "status": "PASS",
+        "impactAssessment": "None - no architectural violations"
+      }
+    ]
+  },
+  "functionalStateTransition": {
+    "before": {
+      "state": "Templates stored WITHOUT scope and org_id fields",
+      "dataFlow": "POST /templates → create_template() → template dict (no scope/org_id) → SurrealDB (scope=null, org_id=null)",
+      "multiTenantIsolation": false
+    },
+    "after": {
+      "state": "Templates stored WITH scope and org_id fields (code complete, deployment pending)",
+      "dataFlow": "POST /templates → extract scope + org_id → create_template(scope, org_id) → template dict (scope='org', org_id='uuid') → SurrealDB (scope='org', org_id='uuid')",
+      "multiTenantIsolation": true
+    },
+    "deploymentRequired": true,
+    "deploymentStatus": "pending"
+  },
+  "blastRadiusAnalysis": {
+    "primaryComponents": [
+      {
+        "file": "scripts/init-surrealdb-devbob-schema.sql",
+        "changeType": "schema",
+        "rippleEffect": "none",
+        "downstreamImpact": "Database layer only"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "changeType": "business-logic",
+        "rippleEffect": "none",
+        "downstreamImpact": "All callers updated (1 caller: route handler)"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/activity.py",
+        "changeType": "api-route",
+        "rippleEffect": "none",
+        "downstreamImpact": "API contract change (backward compatible)"
+      }
+    ],
+    "sharedComponents": [
+      {
+        "file": "repos/metabob-rpc-api/server/actions/activity.py",
+        "sharedWith": [
+          "surrealdb-primary-redis-cache",
+          "thompson-sampling-in-rpc-api-only"
+        ],
+        "conflictStatus": "none",
+        "additionalRippleRequired": false
+      }
+    ],
+    "unaffectedComponents": [
+      "repos/metabob-rpc-api/server/db/operations/template_data.py",
+      "repos/metabob-cli/",
+      "repos/metabob-opencode/"
+    ]
+  },
+  "rippleChangesSummary": {
+    "totalChangesRequired": 0,
+    "changesMade": 0,
+    "changesPending": 0,
+    "changesSkipped": 0
+  },
+  "analysisConclusion": {
+    "rippleStatus": "COMPLETE",
+    "additionalChangesRequired": false,
+    "conflictsDetected": false,
+    "readyForDeployment": true,
+    "blockers": []
+  },
+  "deploymentGuidance": {
+    "prerequisite": "Apply SurrealDB schema migration first",
+    "steps": [
+      "Apply schema: DEFINE FIELD scope ON activity_template TYPE string DEFAULT 'org'",
+      "Apply schema: DEFINE FIELD org_id ON activity_template TYPE string",
+      "Apply schema: DEFINE INDEX activity_template_org_idx ON activity_template FIELDS org_id",
+      "Build new Docker image for metabob-rpc-api",
+      "Deploy updated image to K8s cluster",
+      "Restart RPC API pods",
+      "Re-run validation harness"
+    ],
+    "postDeploymentVerification": [
+      "Re-run activity-template-scope-assignment validation harness",
+      "Verify scope='org' and org_id populated in responses",
+      "Re-run surrealdb-primary-redis-cache validation",
+      "Re-run thompson-sampling-in-rpc-api-only validation",
+      "Re-run complete-architecture-separation validation",
+      "Monitor for regressions"
+    ]
+  },
+  "futureEnhancements": [
+    {
+      "feature": "org_id-based template filtering",
+      "priority": "HIGH",
+      "scope": "Multi-tenant isolation (Phase 2)",
+      "requiredChanges": [
+        "Update list_templates() to accept org_id parameter",
+        "Modify SurrealDB queries to filter by org_id",
+        "Update route handler to pass user's org_id"
+      ]
+    },
+    {
+      "feature": "SessionData model extension",
+      "priority": "MEDIUM",
+      "scope": "Authentication enhancement",
+      "requiredChanges": [
+        "Add org_id field to SessionData model",
+        "Update session creation logic",
+        "Replace session_id placeholder with proper org_id"
+      ]
+    },
+    {
+      "feature": "JWT token decoding",
+      "priority": "MEDIUM",
+      "scope": "Production security",
+      "requiredChanges": [
+        "Implement JWT decoding utility",
+        "Extract org_id from token payload",
+        "Replace current session_id placeholder"
+      ]
+    }
+  ],
+  "rippleImpulseId": "ripple-activity-template-scope-assignment",
+  "rippleImpulseLocation": "impulses/ripple-activity-template-scope-assignment.md"
+}

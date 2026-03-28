@@ -1,0 +1,415 @@
+{
+  "activity_id": "update-mcp-learning-loop-tools",
+  "name": "update-mcp-learning-loop-tools",
+  "description": "Update metabob-cli MCP tools to use new SurrealDB-backed learning loop API: modify metabob_post_activity_result to POST to rpc-api, update metabob_fetch_boredom_activities to GET from rpc-api, ensure all calls go through HTTP to backend (no direct DB access)",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "create-api-client-infrastructure",
+      "subagent": "general",
+      "description": "Create API client configuration and HTTP helper with retry logic for proxying MCP calls to rpc-api backend",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a new API client module for metabob-cli MCP tools to proxy requests to the rpc-api backend.\n\n**Your Task**: Create `repos/metabob-cli/src/metabob_cli/mcp/api_client.py` with the following:\n\n## Architecture Context\n\n**MCP-Only Architecture**: All backend communication must go through the MCP layer. The MCP tools will proxy HTTP requests to metabob-rpc-api, which handles SurrealDB operations.\n\n```\nopencode → MCP tools → HTTP REST → metabob-rpc-api → SurrealDB\n```\n\n## Implementation Requirements\n\n### 1. Configuration Constants\n\nDefine configuration constants at module level:\n\n```python\nAPI_BASE_URL = \"{{api_base_url}}\"\nAPI_TIMEOUT = {{api_timeout}}  # seconds\nAPI_RETRY_ATTEMPTS = {{api_retry_attempts}}\nAPI_RETRY_DELAY = {{api_retry_delay}}  # seconds\nENABLE_FALLBACK = {{enable_fallback}}\n```\n\n### 2. HTTP Client Helper Function\n\nImplement `async def call_api(method: str, endpoint: str, **kwargs) -> Dict[str, Any]`:\n\n**Function Signature**:\n- `method`: HTTP method (\"GET\" or \"POST\")\n- `endpoint`: API endpoint path (e.g., \"/api/activity-execution\")\n- `**kwargs`: Additional parameters (json, params, headers)\n\n**Behavior**:\n1. Build full URL from `API_BASE_URL + endpoint`\n2. Inject authentication header from `METABOB_API_TOKEN` env var (if set)\n3. Make HTTP request using `aiohttp.ClientSession`\n4. Implement retry logic with exponential backoff for transient failures\n5. Handle errors gracefully:\n   - Connection errors → log and return error dict\n   - Timeouts → retry up to `API_RETRY_ATTEMPTS` times\n   - HTTP 4xx → log and return error dict (no retry)\n   - HTTP 5xx → retry up to `API_RETRY_ATTEMPTS` times\n   - Invalid JSON response → log and return error dict\n6. Return response as dict with status information\n\n**Return Format**:\n```python\n# Success\n{\"status\": \"success\", \"data\": {...}, \"http_status\": 200}\n\n# Error\n{\"status\": \"error\", \"error\": \"error message\", \"error_type\": \"ConnectionError\"}\n```\n\n### 3. Error Handling\n\n**Retry Strategy**:\n- Retry on: network errors, timeouts, HTTP 5xx\n- Don't retry on: HTTP 4xx, connection refused, invalid response format\n- Exponential backoff: 1s, 2s, 4s (multiply by 2 each attempt)\n- Log each retry attempt with attempt number\n\n**Graceful Degradation**:\n- If `ENABLE_FALLBACK` is true, return safe error dicts instead of raising exceptions\n- Never let exceptions bubble up to MCP layer\n- Always return a dict with `status` field\n\n### 4. Logging\n\nAdd detailed logging:\n- Log request method, URL, attempt number\n- Log response status code and elapsed time\n- Log errors with full context (error type, message)\n- Exclude auth token from logs (security)\n\n### 5. Documentation\n\nAdd module docstring explaining:\n- Purpose: HTTP client for proxying MCP calls to rpc-api backend\n- Architecture: MCP-only architecture (no direct DB access)\n- Usage: Called by metabob_post_activity_result and metabob_fetch_boredom_activities\n\n## Example Usage\n\n```python\n# POST request\nresult = await call_api(\n    method=\"POST\",\n    endpoint=\"/api/activity-execution\",\n    json={\n        \"activity_id\": \"act_abc123\",\n        \"template_id\": \"test-template\",\n        \"success\": True,\n        \"duration\": 45000,\n        \"cost\": 0.35\n    }\n)\n\nif result[\"status\"] == \"success\":\n    print(f\"Posted successfully: {result['data']}\")\nelse:\n    print(f\"Failed: {result['error']}\")\n\n# GET request\nresult = await call_api(\n    method=\"GET\",\n    endpoint=\"/api/boredom-activities\",\n    params={\"max_activities\": 5, \"priority_threshold\": 0.5}\n)\n```\n\n## Validation\n\nYour implementation must:\n- Use `async with aiohttp.ClientSession()` for HTTP requests\n- Inject `Authorization: Bearer {token}` header if `METABOB_API_TOKEN` env var set\n- Implement retry logic with exponential backoff\n- Handle `ConnectionError`, `TimeoutError`, `ClientError` exceptions\n- Return dict with `status` field (never raise exceptions)\n- Include detailed logging for debugging\n\n**Create the file now**.",
+        "variables": [
+          {
+            "name": "api_base_url",
+            "type": "string",
+            "required": false,
+            "description": "Base URL for metabob-rpc-api backend",
+            "default": "http://localhost:5002"
+          },
+          {
+            "name": "api_timeout",
+            "type": "number",
+            "required": false,
+            "description": "HTTP request timeout in seconds",
+            "default": "30"
+          },
+          {
+            "name": "api_retry_attempts",
+            "type": "number",
+            "required": false,
+            "description": "Number of retry attempts for failed requests",
+            "default": "3"
+          },
+          {
+            "name": "api_retry_delay",
+            "type": "number",
+            "required": false,
+            "description": "Initial delay between retries in seconds",
+            "default": "1.0"
+          },
+          {
+            "name": "enable_fallback",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to enable graceful degradation when API unavailable",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "ruff check repos/metabob-cli/src/metabob_cli/mcp/api_client.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "update-post-activity-result-tool",
+      "subagent": "general",
+      "description": "Refactor metabob_post_activity_result to proxy POST requests to /api/activity-execution endpoint instead of writing JSON files",
+      "dependencies": [
+        "create-api-client-infrastructure"
+      ],
+      "prompt": {
+        "template": "Refactor the `metabob_post_activity_result` MCP tool to proxy requests to the rpc-api backend.\n\n**Your Task**: Update `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` (around lines 255-292) to use the new HTTP API client.\n\n## Current Implementation\n\nThe current implementation writes activity results to JSON files:\n\n```python\n@tool(\n    annotations={...}\n)\nasync def metabob_post_activity_result(\n    activity_id: str,\n    result: Dict[str, Any],\n    backend: str = \"all\"\n) -> Dict[str, Any]:\n    \"\"\"Post execution results for activity templates.\"\"\"\n    try:\n        # Currently calls activity_templates.update_metrics()\n        # which writes to JSON files\n        result = activity_templates.update_metrics(...)\n        return {\"status\": \"success\", ...}\n    except Exception as e:\n        return {\"status\": \"error\", \"error\": str(e)}\n```\n\n## Required Changes\n\n### 1. Import API Client\n\nAdd import at top of file:\n```python\nfrom .api_client import call_api\n```\n\n### 2. Refactor Implementation\n\nReplace the JSON file writing logic with HTTP API call:\n\n```python\n@tool(\n    annotations={...}  # Keep existing annotations\n)\nasync def metabob_post_activity_result(\n    activity_id: str,\n    result: Dict[str, Any],\n    backend: str = \"all\"\n) -> Dict[str, Any]:\n    \"\"\"Post execution results for activity templates (non-agentic access).\n    \n    ARCHITECTURE: This tool proxies requests to metabob-rpc-api backend.\n    All backend communication goes through HTTP REST API (MCP-only architecture).\n    \"\"\"\n    \n    # Extract template_id from result or activity_id\n    template_id = result.get(\"template_id\") or activity_id.split(\"-\")[0]\n    \n    # Build request body for /api/activity-execution endpoint\n    request_body = {\n        \"activity_id\": activity_id,\n        \"template_id\": template_id,\n        \"success\": result.get(\"success\", False),\n        \"duration\": result.get(\"duration\", 0),\n        \"cost\": result.get(\"cost\", 0.0),\n        \"tokens\": result.get(\"tokens\", {\"input\": 0, \"output\": 0, \"cache\": 0}),\n        \"failure_reason\": result.get(\"failure_reason\"),\n        \"failed_task_id\": result.get(\"failed_task_id\"),\n        \"error_type\": result.get(\"error_type\")\n    }\n    \n    # Make HTTP POST request to rpc-api\n    api_result = await call_api(\n        method=\"POST\",\n        endpoint=\"/api/activity-execution\",\n        json=request_body\n    )\n    \n    if api_result[\"status\"] == \"success\":\n        return {\n            \"status\": \"success\",\n            \"message\": \"Activity result posted successfully\",\n            \"data\": api_result.get(\"data\", {})\n        }\n    else:\n        # Graceful degradation: return error but don't raise exception\n        return {\n            \"status\": \"error\",\n            \"error\": api_result.get(\"error\", \"Unknown error\"),\n            \"error_type\": api_result.get(\"error_type\", \"APIError\")\n        }\n```\n\n### 3. Remove Old Code\n\n**REMOVE** the call to `activity_templates.update_metrics()` - this is deprecated.\n\n### 4. Error Handling\n\n**CRITICAL**: Never raise exceptions in MCP tool functions. Always return error dicts:\n```python\n# ❌ BAD\nraise Exception(\"API failed\")\n\n# ✅ GOOD\nreturn {\"status\": \"error\", \"error\": \"API failed\"}\n```\n\n## API Endpoint Specification\n\n**POST /api/activity-execution**\n\nRequest body:\n```json\n{\n  \"activity_id\": \"act_abc123\",\n  \"template_id\": \"validate-and-fix-docker\",\n  \"success\": true,\n  \"duration\": 658300,\n  \"cost\": 1.05,\n  \"tokens\": {\"input\": 327751, \"output\": 2758, \"cache\": 0},\n  \"failure_reason\": null,\n  \"failed_task_id\": null,\n  \"error_type\": null\n}\n```\n\nResponse:\n```json\n{\n  \"success\": true,\n  \"execution_id\": \"exec_xyz789\",\n  \"metrics_updated\": true\n}\n```\n\n## Validation\n\nYour implementation must:\n- Import `call_api` from api_client module\n- Make HTTP POST to `/api/activity-execution`\n- NOT call `activity_templates.update_metrics()` (deprecated)\n- NOT use `with open(...)` or file I/O (deprecated)\n- Return error dict on failure (no raised exceptions)\n- Pass mypy type checking\n\n**Update the file now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "mypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "update-fetch-boredom-activities-tool",
+      "subagent": "general",
+      "description": "Refactor metabob_fetch_boredom_activities to proxy GET requests to /api/boredom-activities endpoint instead of reading JSON files",
+      "dependencies": [
+        "create-api-client-infrastructure"
+      ],
+      "prompt": {
+        "template": "Refactor the `metabob_fetch_boredom_activities` MCP tool to proxy requests to the rpc-api backend.\n\n**Your Task**: Update `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` (around lines 326-370) to use the new HTTP API client.\n\n## Current Implementation\n\nThe current implementation reads boredom activities from JSON files:\n\n```python\n@tool(\n    annotations={...}\n)\nasync def metabob_fetch_boredom_activities(\n    max_activities: int = 5,\n    priority_threshold: float = 0.5,\n    types: Optional[List[str]] = None,\n    exclude_recent_hours: int = 24\n) -> Dict[str, Any]:\n    \"\"\"Fetch boredom-driven activity suggestions.\"\"\"\n    try:\n        # Currently calls activity_templates.metabob_fetch_boredom_activities()\n        # which reads from JSON files\n        activities = activity_templates.metabob_fetch_boredom_activities(...)\n        return {\"status\": \"success\", \"activities\": activities, ...}\n    except Exception as e:\n        return {\"status\": \"error\", \"error\": str(e)}\n```\n\n## Required Changes\n\n### 1. Import API Client\n\nEnsure import is present (should already be added by previous task):\n```python\nfrom .api_client import call_api\n```\n\n### 2. Refactor Implementation\n\nReplace the JSON file reading logic with HTTP API call:\n\n```python\n@tool(\n    annotations={...}  # Keep existing annotations\n)\nasync def metabob_fetch_boredom_activities(\n    max_activities: int = 5,\n    priority_threshold: float = 0.5,\n    types: Optional[List[str]] = None,\n    exclude_recent_hours: int = 24\n) -> Dict[str, Any]:\n    \"\"\"Fetch boredom-driven activity suggestions (non-agentic access).\n    \n    ARCHITECTURE: This tool proxies requests to metabob-rpc-api backend.\n    All backend communication goes through HTTP REST API (MCP-only architecture).\n    \"\"\"\n    \n    # Build query parameters\n    params = {\n        \"max_activities\": max_activities,\n        \"priority_threshold\": priority_threshold,\n        \"exclude_recent_hours\": exclude_recent_hours\n    }\n    \n    if types:\n        params[\"types\"] = \",\".join(types)  # Comma-separated list\n    \n    # Make HTTP GET request to rpc-api\n    api_result = await call_api(\n        method=\"GET\",\n        endpoint=\"/api/boredom-activities\",\n        params=params\n    )\n    \n    if api_result[\"status\"] == \"success\":\n        data = api_result.get(\"data\", {})\n        return {\n            \"status\": \"success\",\n            \"activities\": data.get(\"activities\", []),\n            \"total_count\": data.get(\"total_count\", 0)\n        }\n    else:\n        # Graceful degradation: return empty activities list\n        # (boredom activities are non-critical, don't block on API failure)\n        return {\n            \"status\": \"success\",\n            \"activities\": [],\n            \"total_count\": 0,\n            \"warning\": \"API unavailable, returning empty activities list\"\n        }\n```\n\n### 3. Remove Old Code\n\n**REMOVE** the call to `activity_templates.metabob_fetch_boredom_activities()` - this is deprecated.\n\n### 4. Graceful Degradation\n\n**IMPORTANT**: For boredom activities, graceful degradation means returning an empty list when API fails. This is non-critical functionality - the user can continue working even if boredom activities are unavailable.\n\n```python\n# On API failure, return empty list (not an error)\nreturn {\n    \"status\": \"success\",\n    \"activities\": [],\n    \"total_count\": 0\n}\n```\n\n## API Endpoint Specification\n\n**GET /api/boredom-activities**\n\nQuery parameters:\n- `max_activities`: Maximum number of activities to return (default: 5)\n- `priority_threshold`: Minimum priority score (0.0-1.0, default: 0.5)\n- `types`: Comma-separated list of activity types (optional)\n- `exclude_recent_hours`: Exclude activities executed in last N hours (default: 24)\n\nResponse:\n```json\n{\n  \"status\": \"success\",\n  \"activities\": [\n    {\n      \"template_id\": \"low-quality-template\",\n      \"activity_type\": \"improve-template\",\n      \"priority\": 0.85,\n      \"improvement_gradient\": 0.42,\n      \"reason\": \"Success rate declining (60% → 40%)\",\n      \"estimated_effort\": \"30-60 minutes\",\n      \"metrics\": {\n        \"execution_count\": 10,\n        \"success_rate\": 0.4,\n        \"avg_duration\": 45000,\n        \"avg_cost\": 0.35\n      }\n    }\n  ],\n  \"total_count\": 3\n}\n```\n\n## Validation\n\nYour implementation must:\n- Import `call_api` from api_client module\n- Make HTTP GET to `/api/boredom-activities`\n- NOT call `activity_templates.metabob_fetch_boredom_activities()` (deprecated)\n- NOT use `with open(...)` or file I/O (deprecated)\n- Return empty activities list on API failure (graceful degradation)\n- Pass mypy type checking\n\n**Update the file now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "mypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-mcp-api-tests",
+      "subagent": "test",
+      "description": "Create comprehensive test suite for MCP API proxy behavior with mocked HTTP responses and error handling scenarios",
+      "dependencies": [
+        "update-post-activity-result-tool",
+        "update-fetch-boredom-activities-tool"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive test suite for the refactored MCP API proxy tools.\n\n**Your Task**: Create `repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py` with tests for the HTTP API integration.\n\n## Test Requirements\n\n### 1. Test Structure\n\nUse `pytest` with async support:\n\n```python\nimport pytest\nfrom aioresponses import aioresponses\nimport json\nfrom metabob_cli.mcp.activity_template_tools import (\n    metabob_post_activity_result,\n    metabob_fetch_boredom_activities\n)\n\n@pytest.mark.asyncio\nclass TestActivityTemplateToolsAPI:\n    \"\"\"Test suite for MCP API proxy behavior.\"\"\"\n    \n    # Tests go here\n```\n\n### 2. Test Cases for metabob_post_activity_result\n\n**Test 1: Successful POST**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_success(self):\n    \"\"\"Test successful activity result posting to API.\"\"\"\n    with aioresponses() as mocked:\n        # Mock successful API response\n        mocked.post(\n            \"http://localhost:5002/api/activity-execution\",\n            status=200,\n            payload={\"success\": True, \"execution_id\": \"exec_123\"}\n        )\n        \n        result = await metabob_post_activity_result(\n            activity_id=\"act_test123\",\n            result={\n                \"template_id\": \"test-template\",\n                \"success\": True,\n                \"duration\": 45000,\n                \"cost\": 0.35,\n                \"tokens\": {\"input\": 5000, \"output\": 500, \"cache\": 0}\n            }\n        )\n        \n        assert result[\"status\"] == \"success\"\n        assert \"execution_id\" in result.get(\"data\", {})\n```\n\n**Test 2: API Connection Error**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_connection_error(self):\n    \"\"\"Test graceful handling of connection errors.\"\"\"\n    with aioresponses() as mocked:\n        mocked.post(\n            \"http://localhost:5002/api/activity-execution\",\n            exception=ConnectionRefusedError(\"Connection refused\")\n        )\n        \n        result = await metabob_post_activity_result(\n            activity_id=\"act_test123\",\n            result={\"success\": True}\n        )\n        \n        assert result[\"status\"] == \"error\"\n        assert \"error\" in result\n```\n\n**Test 3: API Timeout**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_timeout(self):\n    \"\"\"Test timeout handling with retry.\"\"\"\n    # Similar to connection error test\n```\n\n**Test 4: HTTP 4xx Error**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_client_error(self):\n    \"\"\"Test HTTP 4xx error handling (no retry).\"\"\"\n    with aioresponses() as mocked:\n        mocked.post(\n            \"http://localhost:5002/api/activity-execution\",\n            status=400,\n            payload={\"error\": \"Invalid request\"}\n        )\n        \n        result = await metabob_post_activity_result(\n            activity_id=\"act_test123\",\n            result={\"success\": True}\n        )\n        \n        assert result[\"status\"] == \"error\"\n```\n\n**Test 5: HTTP 5xx Error with Retry**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_server_error_retry(self):\n    \"\"\"Test HTTP 5xx error retry logic.\"\"\"\n    # Mock multiple retry attempts\n```\n\n### 3. Test Cases for metabob_fetch_boredom_activities\n\n**Test 1: Successful GET**\n```python\n@pytest.mark.asyncio\nasync def test_fetch_boredom_activities_success(self):\n    \"\"\"Test successful boredom activities fetch.\"\"\"\n    with aioresponses() as mocked:\n        mocked.get(\n            \"http://localhost:5002/api/boredom-activities\",\n            status=200,\n            payload={\n                \"status\": \"success\",\n                \"activities\": [\n                    {\n                        \"template_id\": \"test-template\",\n                        \"activity_type\": \"improve-template\",\n                        \"priority\": 0.85\n                    }\n                ],\n                \"total_count\": 1\n            }\n        )\n        \n        result = await metabob_fetch_boredom_activities(\n            max_activities=5,\n            priority_threshold=0.5\n        )\n        \n        assert result[\"status\"] == \"success\"\n        assert len(result[\"activities\"]) == 1\n        assert result[\"total_count\"] == 1\n```\n\n**Test 2: API Unavailable (Graceful Degradation)**\n```python\n@pytest.mark.asyncio\nasync def test_fetch_boredom_activities_graceful_degradation(self):\n    \"\"\"Test graceful degradation when API unavailable.\"\"\"\n    with aioresponses() as mocked:\n        mocked.get(\n            \"http://localhost:5002/api/boredom-activities\",\n            exception=ConnectionRefusedError(\"Connection refused\")\n        )\n        \n        result = await metabob_fetch_boredom_activities()\n        \n        # Should return empty list, not error\n        assert result[\"status\"] == \"success\"\n        assert result[\"activities\"] == []\n        assert result[\"total_count\"] == 0\n```\n\n**Test 3: Query Parameters**\n```python\n@pytest.mark.asyncio\nasync def test_fetch_boredom_activities_query_params(self):\n    \"\"\"Test query parameter formatting.\"\"\"\n    # Verify max_activities, priority_threshold, types, exclude_recent_hours\n```\n\n**Test 4: Authentication Header**\n```python\n@pytest.mark.asyncio\nasync def test_api_authentication_header(self, monkeypatch):\n    \"\"\"Test authentication header injection from env var.\"\"\"\n    monkeypatch.setenv(\"METABOB_API_TOKEN\", \"test-token-123\")\n    # Verify Authorization header is included\n```\n\n### 4. Additional Test Cases\n\n- Test invalid JSON response handling\n- Test empty response handling\n- Test retry backoff timing (if measurable)\n- Test request body format validation\n\n## Test Configuration\n\nUse `pytest.ini` or `pyproject.toml` for async support:\n\n```toml\n[tool.pytest.ini_options]\nasyncio_mode = \"auto\"\n```\n\n## Mock Library\n\nUse `aioresponses` for mocking HTTP responses:\n```bash\npip install aioresponses\n```\n\n## Validation\n\nYour test suite must:\n- Use `@pytest.mark.asyncio` for async tests\n- Mock HTTP responses with `aioresponses`\n- Test successful requests (200 OK)\n- Test error scenarios (connection errors, timeouts, HTTP errors)\n- Test graceful degradation (empty responses on failure)\n- Verify request format (method, URL, headers, body)\n- Verify response parsing\n- All tests pass when run with `pytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v`\n\n**Create the test file now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-and-document-changes",
+      "subagent": "general",
+      "description": "Run full test suite, lint checks, and type checks to validate the MCP API proxy implementation and document the architecture change",
+      "dependencies": [
+        "create-mcp-api-tests"
+      ],
+      "prompt": {
+        "template": "Validate the complete MCP API proxy implementation and add documentation.\n\n**Your Task**: Run validation checks and add architecture documentation.\n\n## Validation Steps\n\n### 1. Run Lint Checks\n\n```bash\nruff check repos/metabob-cli/src/metabob_cli/mcp/\n```\n\n**Expected**: All checks pass, no errors.\n\n### 2. Run Type Checks\n\n```bash\nmypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\n```\n\n**Expected**: All checks pass, no type errors.\n\n### 3. Run Test Suite\n\n```bash\npytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v\n```\n\n**Expected**: All tests pass.\n\n### 4. Verify Forbidden Patterns\n\nCheck that deprecated code has been removed:\n\n```bash\n# Should find NO matches\ngrep -r \"activity_templates\\.update_metrics(\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"activity_templates\\.metabob_fetch_boredom_activities(\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"with open.*\\.json\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"fcntl\\.flock\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\n```\n\n**Expected**: No matches found (exit code 1).\n\n### 5. Verify Required Patterns\n\nCheck that new code is present:\n\n```bash\n# Should find matches\ngrep -r \"from.*api_client import call_api\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"async with aiohttp.ClientSession()\" repos/metabob-cli/src/metabob_cli/mcp/api_client.py\ngrep -r \"Authorization.*Bearer\" repos/metabob-cli/src/metabob_cli/mcp/api_client.py\n```\n\n**Expected**: Matches found (exit code 0).\n\n## Documentation Tasks\n\n### 1. Add Module Docstring to api_client.py\n\nAdd comprehensive module docstring explaining:\n\n```python\n\"\"\"\nHTTP API Client for MCP Tools\n\nThis module provides an HTTP client for proxying MCP tool requests to the\nmetabob-rpc-api backend. It implements the MCP-only architecture where all\nbackend communication goes through HTTP REST API calls.\n\nArchitecture:\n    opencode → MCP tools → HTTP REST → metabob-rpc-api → SurrealDB\n\nThe HTTP client handles:\n- Authentication via METABOB_API_TOKEN env var\n- Retry logic with exponential backoff for transient failures\n- Graceful degradation when API unavailable\n- Error handling (connection errors, timeouts, HTTP errors)\n\nUsage:\n    result = await call_api(\n        method=\"POST\",\n        endpoint=\"/api/activity-execution\",\n        json={\"activity_id\": \"act_123\", ...}\n    )\n    \n    if result[\"status\"] == \"success\":\n        print(result[\"data\"])\n    else:\n        print(result[\"error\"])\n\"\"\"\n```\n\n### 2. Add Deprecation Comments to activity_templates.py\n\nFind the old helper functions `update_metrics()` and `metabob_fetch_boredom_activities()` in `activity_templates.py` and add deprecation comments:\n\n```python\n# DEPRECATED: This function is deprecated and should not be used.\n# MCP tools now proxy directly to metabob-rpc-api via HTTP REST API.\n# See: api_client.py and activity_template_tools.py\ndef update_metrics(...):\n    ...\n\n# DEPRECATED: This function is deprecated and should not be used.\n# MCP tools now proxy directly to metabob-rpc-api via HTTP REST API.\n# See: api_client.py and activity_template_tools.py\ndef metabob_fetch_boredom_activities(...):\n    ...\n```\n\n### 3. Log Summary\n\nOutput a summary of changes:\n\n```\n=== MCP Learning Loop Tools Update Complete ===\n\nArchitecture Change:\n  BEFORE: opencode → MCP tools → JSON files\n  AFTER:  opencode → MCP tools → HTTP REST → rpc-api → SurrealDB\n\nFiles Modified:\n  - repos/metabob-cli/src/metabob_cli/mcp/api_client.py (created)\n  - repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py (updated)\n  - repos/metabob-cli/src/metabob_cli/mcp/activity_templates.py (deprecated functions)\n  - repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py (created)\n\nValidation Results:\n  ✓ Lint checks passed\n  ✓ Type checks passed\n  ✓ All tests passed\n  ✓ No deprecated code patterns found\n  ✓ Required patterns verified\n\nNext Steps:\n  1. Start metabob-rpc-api: cd repos/metabob-rpc-api && python -m app\n  2. Execute test activity in opencode to verify integration\n  3. Check rpc-api logs to confirm metrics are being posted\n  4. Verify boredom activities are fetched from API when idle\n```\n\n## Validation Criteria\n\nAll of the following must be true:\n- Lint checks pass (`ruff check`)\n- Type checks pass (`mypy`)\n- Tests pass (`pytest`)\n- Forbidden patterns NOT found (deprecated code removed)\n- Required patterns found (new code present)\n- Documentation added to api_client.py\n- Deprecation comments added to activity_templates.py\n- Summary logged\n\n**Run validation and add documentation now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "ruff check repos/metabob-cli/src/metabob_cli/mcp/",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "mypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "pytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "create-api-client-infrastructure",
+      "subagent": "general",
+      "description": "Create API client configuration and HTTP helper with retry logic for proxying MCP calls to rpc-api backend",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a new API client module for metabob-cli MCP tools to proxy requests to the rpc-api backend.\n\n**Your Task**: Create `repos/metabob-cli/src/metabob_cli/mcp/api_client.py` with the following:\n\n## Architecture Context\n\n**MCP-Only Architecture**: All backend communication must go through the MCP layer. The MCP tools will proxy HTTP requests to metabob-rpc-api, which handles SurrealDB operations.\n\n```\nopencode → MCP tools → HTTP REST → metabob-rpc-api → SurrealDB\n```\n\n## Implementation Requirements\n\n### 1. Configuration Constants\n\nDefine configuration constants at module level:\n\n```python\nAPI_BASE_URL = \"{{api_base_url}}\"\nAPI_TIMEOUT = {{api_timeout}}  # seconds\nAPI_RETRY_ATTEMPTS = {{api_retry_attempts}}\nAPI_RETRY_DELAY = {{api_retry_delay}}  # seconds\nENABLE_FALLBACK = {{enable_fallback}}\n```\n\n### 2. HTTP Client Helper Function\n\nImplement `async def call_api(method: str, endpoint: str, **kwargs) -> Dict[str, Any]`:\n\n**Function Signature**:\n- `method`: HTTP method (\"GET\" or \"POST\")\n- `endpoint`: API endpoint path (e.g., \"/api/activity-execution\")\n- `**kwargs`: Additional parameters (json, params, headers)\n\n**Behavior**:\n1. Build full URL from `API_BASE_URL + endpoint`\n2. Inject authentication header from `METABOB_API_TOKEN` env var (if set)\n3. Make HTTP request using `aiohttp.ClientSession`\n4. Implement retry logic with exponential backoff for transient failures\n5. Handle errors gracefully:\n   - Connection errors → log and return error dict\n   - Timeouts → retry up to `API_RETRY_ATTEMPTS` times\n   - HTTP 4xx → log and return error dict (no retry)\n   - HTTP 5xx → retry up to `API_RETRY_ATTEMPTS` times\n   - Invalid JSON response → log and return error dict\n6. Return response as dict with status information\n\n**Return Format**:\n```python\n# Success\n{\"status\": \"success\", \"data\": {...}, \"http_status\": 200}\n\n# Error\n{\"status\": \"error\", \"error\": \"error message\", \"error_type\": \"ConnectionError\"}\n```\n\n### 3. Error Handling\n\n**Retry Strategy**:\n- Retry on: network errors, timeouts, HTTP 5xx\n- Don't retry on: HTTP 4xx, connection refused, invalid response format\n- Exponential backoff: 1s, 2s, 4s (multiply by 2 each attempt)\n- Log each retry attempt with attempt number\n\n**Graceful Degradation**:\n- If `ENABLE_FALLBACK` is true, return safe error dicts instead of raising exceptions\n- Never let exceptions bubble up to MCP layer\n- Always return a dict with `status` field\n\n### 4. Logging\n\nAdd detailed logging:\n- Log request method, URL, attempt number\n- Log response status code and elapsed time\n- Log errors with full context (error type, message)\n- Exclude auth token from logs (security)\n\n### 5. Documentation\n\nAdd module docstring explaining:\n- Purpose: HTTP client for proxying MCP calls to rpc-api backend\n- Architecture: MCP-only architecture (no direct DB access)\n- Usage: Called by metabob_post_activity_result and metabob_fetch_boredom_activities\n\n## Example Usage\n\n```python\n# POST request\nresult = await call_api(\n    method=\"POST\",\n    endpoint=\"/api/activity-execution\",\n    json={\n        \"activity_id\": \"act_abc123\",\n        \"template_id\": \"test-template\",\n        \"success\": True,\n        \"duration\": 45000,\n        \"cost\": 0.35\n    }\n)\n\nif result[\"status\"] == \"success\":\n    print(f\"Posted successfully: {result['data']}\")\nelse:\n    print(f\"Failed: {result['error']}\")\n\n# GET request\nresult = await call_api(\n    method=\"GET\",\n    endpoint=\"/api/boredom-activities\",\n    params={\"max_activities\": 5, \"priority_threshold\": 0.5}\n)\n```\n\n## Validation\n\nYour implementation must:\n- Use `async with aiohttp.ClientSession()` for HTTP requests\n- Inject `Authorization: Bearer {token}` header if `METABOB_API_TOKEN` env var set\n- Implement retry logic with exponential backoff\n- Handle `ConnectionError`, `TimeoutError`, `ClientError` exceptions\n- Return dict with `status` field (never raise exceptions)\n- Include detailed logging for debugging\n\n**Create the file now**.",
+        "variables": [
+          {
+            "name": "api_base_url",
+            "type": "string",
+            "required": false,
+            "description": "Base URL for metabob-rpc-api backend",
+            "default": "http://localhost:5002"
+          },
+          {
+            "name": "api_timeout",
+            "type": "number",
+            "required": false,
+            "description": "HTTP request timeout in seconds",
+            "default": "30"
+          },
+          {
+            "name": "api_retry_attempts",
+            "type": "number",
+            "required": false,
+            "description": "Number of retry attempts for failed requests",
+            "default": "3"
+          },
+          {
+            "name": "api_retry_delay",
+            "type": "number",
+            "required": false,
+            "description": "Initial delay between retries in seconds",
+            "default": "1.0"
+          },
+          {
+            "name": "enable_fallback",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to enable graceful degradation when API unavailable",
+            "default": "true"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "ruff check repos/metabob-cli/src/metabob_cli/mcp/api_client.py",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "update-post-activity-result-tool",
+      "subagent": "general",
+      "description": "Refactor metabob_post_activity_result to proxy POST requests to /api/activity-execution endpoint instead of writing JSON files",
+      "dependencies": [
+        "create-api-client-infrastructure"
+      ],
+      "prompt": {
+        "template": "Refactor the `metabob_post_activity_result` MCP tool to proxy requests to the rpc-api backend.\n\n**Your Task**: Update `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` (around lines 255-292) to use the new HTTP API client.\n\n## Current Implementation\n\nThe current implementation writes activity results to JSON files:\n\n```python\n@tool(\n    annotations={...}\n)\nasync def metabob_post_activity_result(\n    activity_id: str,\n    result: Dict[str, Any],\n    backend: str = \"all\"\n) -> Dict[str, Any]:\n    \"\"\"Post execution results for activity templates.\"\"\"\n    try:\n        # Currently calls activity_templates.update_metrics()\n        # which writes to JSON files\n        result = activity_templates.update_metrics(...)\n        return {\"status\": \"success\", ...}\n    except Exception as e:\n        return {\"status\": \"error\", \"error\": str(e)}\n```\n\n## Required Changes\n\n### 1. Import API Client\n\nAdd import at top of file:\n```python\nfrom .api_client import call_api\n```\n\n### 2. Refactor Implementation\n\nReplace the JSON file writing logic with HTTP API call:\n\n```python\n@tool(\n    annotations={...}  # Keep existing annotations\n)\nasync def metabob_post_activity_result(\n    activity_id: str,\n    result: Dict[str, Any],\n    backend: str = \"all\"\n) -> Dict[str, Any]:\n    \"\"\"Post execution results for activity templates (non-agentic access).\n    \n    ARCHITECTURE: This tool proxies requests to metabob-rpc-api backend.\n    All backend communication goes through HTTP REST API (MCP-only architecture).\n    \"\"\"\n    \n    # Extract template_id from result or activity_id\n    template_id = result.get(\"template_id\") or activity_id.split(\"-\")[0]\n    \n    # Build request body for /api/activity-execution endpoint\n    request_body = {\n        \"activity_id\": activity_id,\n        \"template_id\": template_id,\n        \"success\": result.get(\"success\", False),\n        \"duration\": result.get(\"duration\", 0),\n        \"cost\": result.get(\"cost\", 0.0),\n        \"tokens\": result.get(\"tokens\", {\"input\": 0, \"output\": 0, \"cache\": 0}),\n        \"failure_reason\": result.get(\"failure_reason\"),\n        \"failed_task_id\": result.get(\"failed_task_id\"),\n        \"error_type\": result.get(\"error_type\")\n    }\n    \n    # Make HTTP POST request to rpc-api\n    api_result = await call_api(\n        method=\"POST\",\n        endpoint=\"/api/activity-execution\",\n        json=request_body\n    )\n    \n    if api_result[\"status\"] == \"success\":\n        return {\n            \"status\": \"success\",\n            \"message\": \"Activity result posted successfully\",\n            \"data\": api_result.get(\"data\", {})\n        }\n    else:\n        # Graceful degradation: return error but don't raise exception\n        return {\n            \"status\": \"error\",\n            \"error\": api_result.get(\"error\", \"Unknown error\"),\n            \"error_type\": api_result.get(\"error_type\", \"APIError\")\n        }\n```\n\n### 3. Remove Old Code\n\n**REMOVE** the call to `activity_templates.update_metrics()` - this is deprecated.\n\n### 4. Error Handling\n\n**CRITICAL**: Never raise exceptions in MCP tool functions. Always return error dicts:\n```python\n# ❌ BAD\nraise Exception(\"API failed\")\n\n# ✅ GOOD\nreturn {\"status\": \"error\", \"error\": \"API failed\"}\n```\n\n## API Endpoint Specification\n\n**POST /api/activity-execution**\n\nRequest body:\n```json\n{\n  \"activity_id\": \"act_abc123\",\n  \"template_id\": \"validate-and-fix-docker\",\n  \"success\": true,\n  \"duration\": 658300,\n  \"cost\": 1.05,\n  \"tokens\": {\"input\": 327751, \"output\": 2758, \"cache\": 0},\n  \"failure_reason\": null,\n  \"failed_task_id\": null,\n  \"error_type\": null\n}\n```\n\nResponse:\n```json\n{\n  \"success\": true,\n  \"execution_id\": \"exec_xyz789\",\n  \"metrics_updated\": true\n}\n```\n\n## Validation\n\nYour implementation must:\n- Import `call_api` from api_client module\n- Make HTTP POST to `/api/activity-execution`\n- NOT call `activity_templates.update_metrics()` (deprecated)\n- NOT use `with open(...)` or file I/O (deprecated)\n- Return error dict on failure (no raised exceptions)\n- Pass mypy type checking\n\n**Update the file now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "mypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "update-fetch-boredom-activities-tool",
+      "subagent": "general",
+      "description": "Refactor metabob_fetch_boredom_activities to proxy GET requests to /api/boredom-activities endpoint instead of reading JSON files",
+      "dependencies": [
+        "create-api-client-infrastructure"
+      ],
+      "prompt": {
+        "template": "Refactor the `metabob_fetch_boredom_activities` MCP tool to proxy requests to the rpc-api backend.\n\n**Your Task**: Update `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` (around lines 326-370) to use the new HTTP API client.\n\n## Current Implementation\n\nThe current implementation reads boredom activities from JSON files:\n\n```python\n@tool(\n    annotations={...}\n)\nasync def metabob_fetch_boredom_activities(\n    max_activities: int = 5,\n    priority_threshold: float = 0.5,\n    types: Optional[List[str]] = None,\n    exclude_recent_hours: int = 24\n) -> Dict[str, Any]:\n    \"\"\"Fetch boredom-driven activity suggestions.\"\"\"\n    try:\n        # Currently calls activity_templates.metabob_fetch_boredom_activities()\n        # which reads from JSON files\n        activities = activity_templates.metabob_fetch_boredom_activities(...)\n        return {\"status\": \"success\", \"activities\": activities, ...}\n    except Exception as e:\n        return {\"status\": \"error\", \"error\": str(e)}\n```\n\n## Required Changes\n\n### 1. Import API Client\n\nEnsure import is present (should already be added by previous task):\n```python\nfrom .api_client import call_api\n```\n\n### 2. Refactor Implementation\n\nReplace the JSON file reading logic with HTTP API call:\n\n```python\n@tool(\n    annotations={...}  # Keep existing annotations\n)\nasync def metabob_fetch_boredom_activities(\n    max_activities: int = 5,\n    priority_threshold: float = 0.5,\n    types: Optional[List[str]] = None,\n    exclude_recent_hours: int = 24\n) -> Dict[str, Any]:\n    \"\"\"Fetch boredom-driven activity suggestions (non-agentic access).\n    \n    ARCHITECTURE: This tool proxies requests to metabob-rpc-api backend.\n    All backend communication goes through HTTP REST API (MCP-only architecture).\n    \"\"\"\n    \n    # Build query parameters\n    params = {\n        \"max_activities\": max_activities,\n        \"priority_threshold\": priority_threshold,\n        \"exclude_recent_hours\": exclude_recent_hours\n    }\n    \n    if types:\n        params[\"types\"] = \",\".join(types)  # Comma-separated list\n    \n    # Make HTTP GET request to rpc-api\n    api_result = await call_api(\n        method=\"GET\",\n        endpoint=\"/api/boredom-activities\",\n        params=params\n    )\n    \n    if api_result[\"status\"] == \"success\":\n        data = api_result.get(\"data\", {})\n        return {\n            \"status\": \"success\",\n            \"activities\": data.get(\"activities\", []),\n            \"total_count\": data.get(\"total_count\", 0)\n        }\n    else:\n        # Graceful degradation: return empty activities list\n        # (boredom activities are non-critical, don't block on API failure)\n        return {\n            \"status\": \"success\",\n            \"activities\": [],\n            \"total_count\": 0,\n            \"warning\": \"API unavailable, returning empty activities list\"\n        }\n```\n\n### 3. Remove Old Code\n\n**REMOVE** the call to `activity_templates.metabob_fetch_boredom_activities()` - this is deprecated.\n\n### 4. Graceful Degradation\n\n**IMPORTANT**: For boredom activities, graceful degradation means returning an empty list when API fails. This is non-critical functionality - the user can continue working even if boredom activities are unavailable.\n\n```python\n# On API failure, return empty list (not an error)\nreturn {\n    \"status\": \"success\",\n    \"activities\": [],\n    \"total_count\": 0\n}\n```\n\n## API Endpoint Specification\n\n**GET /api/boredom-activities**\n\nQuery parameters:\n- `max_activities`: Maximum number of activities to return (default: 5)\n- `priority_threshold`: Minimum priority score (0.0-1.0, default: 0.5)\n- `types`: Comma-separated list of activity types (optional)\n- `exclude_recent_hours`: Exclude activities executed in last N hours (default: 24)\n\nResponse:\n```json\n{\n  \"status\": \"success\",\n  \"activities\": [\n    {\n      \"template_id\": \"low-quality-template\",\n      \"activity_type\": \"improve-template\",\n      \"priority\": 0.85,\n      \"improvement_gradient\": 0.42,\n      \"reason\": \"Success rate declining (60% → 40%)\",\n      \"estimated_effort\": \"30-60 minutes\",\n      \"metrics\": {\n        \"execution_count\": 10,\n        \"success_rate\": 0.4,\n        \"avg_duration\": 45000,\n        \"avg_cost\": 0.35\n      }\n    }\n  ],\n  \"total_count\": 3\n}\n```\n\n## Validation\n\nYour implementation must:\n- Import `call_api` from api_client module\n- Make HTTP GET to `/api/boredom-activities`\n- NOT call `activity_templates.metabob_fetch_boredom_activities()` (deprecated)\n- NOT use `with open(...)` or file I/O (deprecated)\n- Return empty activities list on API failure (graceful degradation)\n- Pass mypy type checking\n\n**Update the file now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "mypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-mcp-api-tests",
+      "subagent": "test",
+      "description": "Create comprehensive test suite for MCP API proxy behavior with mocked HTTP responses and error handling scenarios",
+      "dependencies": [
+        "update-post-activity-result-tool",
+        "update-fetch-boredom-activities-tool"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive test suite for the refactored MCP API proxy tools.\n\n**Your Task**: Create `repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py` with tests for the HTTP API integration.\n\n## Test Requirements\n\n### 1. Test Structure\n\nUse `pytest` with async support:\n\n```python\nimport pytest\nfrom aioresponses import aioresponses\nimport json\nfrom metabob_cli.mcp.activity_template_tools import (\n    metabob_post_activity_result,\n    metabob_fetch_boredom_activities\n)\n\n@pytest.mark.asyncio\nclass TestActivityTemplateToolsAPI:\n    \"\"\"Test suite for MCP API proxy behavior.\"\"\"\n    \n    # Tests go here\n```\n\n### 2. Test Cases for metabob_post_activity_result\n\n**Test 1: Successful POST**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_success(self):\n    \"\"\"Test successful activity result posting to API.\"\"\"\n    with aioresponses() as mocked:\n        # Mock successful API response\n        mocked.post(\n            \"http://localhost:5002/api/activity-execution\",\n            status=200,\n            payload={\"success\": True, \"execution_id\": \"exec_123\"}\n        )\n        \n        result = await metabob_post_activity_result(\n            activity_id=\"act_test123\",\n            result={\n                \"template_id\": \"test-template\",\n                \"success\": True,\n                \"duration\": 45000,\n                \"cost\": 0.35,\n                \"tokens\": {\"input\": 5000, \"output\": 500, \"cache\": 0}\n            }\n        )\n        \n        assert result[\"status\"] == \"success\"\n        assert \"execution_id\" in result.get(\"data\", {})\n```\n\n**Test 2: API Connection Error**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_connection_error(self):\n    \"\"\"Test graceful handling of connection errors.\"\"\"\n    with aioresponses() as mocked:\n        mocked.post(\n            \"http://localhost:5002/api/activity-execution\",\n            exception=ConnectionRefusedError(\"Connection refused\")\n        )\n        \n        result = await metabob_post_activity_result(\n            activity_id=\"act_test123\",\n            result={\"success\": True}\n        )\n        \n        assert result[\"status\"] == \"error\"\n        assert \"error\" in result\n```\n\n**Test 3: API Timeout**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_timeout(self):\n    \"\"\"Test timeout handling with retry.\"\"\"\n    # Similar to connection error test\n```\n\n**Test 4: HTTP 4xx Error**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_client_error(self):\n    \"\"\"Test HTTP 4xx error handling (no retry).\"\"\"\n    with aioresponses() as mocked:\n        mocked.post(\n            \"http://localhost:5002/api/activity-execution\",\n            status=400,\n            payload={\"error\": \"Invalid request\"}\n        )\n        \n        result = await metabob_post_activity_result(\n            activity_id=\"act_test123\",\n            result={\"success\": True}\n        )\n        \n        assert result[\"status\"] == \"error\"\n```\n\n**Test 5: HTTP 5xx Error with Retry**\n```python\n@pytest.mark.asyncio\nasync def test_post_activity_result_server_error_retry(self):\n    \"\"\"Test HTTP 5xx error retry logic.\"\"\"\n    # Mock multiple retry attempts\n```\n\n### 3. Test Cases for metabob_fetch_boredom_activities\n\n**Test 1: Successful GET**\n```python\n@pytest.mark.asyncio\nasync def test_fetch_boredom_activities_success(self):\n    \"\"\"Test successful boredom activities fetch.\"\"\"\n    with aioresponses() as mocked:\n        mocked.get(\n            \"http://localhost:5002/api/boredom-activities\",\n            status=200,\n            payload={\n                \"status\": \"success\",\n                \"activities\": [\n                    {\n                        \"template_id\": \"test-template\",\n                        \"activity_type\": \"improve-template\",\n                        \"priority\": 0.85\n                    }\n                ],\n                \"total_count\": 1\n            }\n        )\n        \n        result = await metabob_fetch_boredom_activities(\n            max_activities=5,\n            priority_threshold=0.5\n        )\n        \n        assert result[\"status\"] == \"success\"\n        assert len(result[\"activities\"]) == 1\n        assert result[\"total_count\"] == 1\n```\n\n**Test 2: API Unavailable (Graceful Degradation)**\n```python\n@pytest.mark.asyncio\nasync def test_fetch_boredom_activities_graceful_degradation(self):\n    \"\"\"Test graceful degradation when API unavailable.\"\"\"\n    with aioresponses() as mocked:\n        mocked.get(\n            \"http://localhost:5002/api/boredom-activities\",\n            exception=ConnectionRefusedError(\"Connection refused\")\n        )\n        \n        result = await metabob_fetch_boredom_activities()\n        \n        # Should return empty list, not error\n        assert result[\"status\"] == \"success\"\n        assert result[\"activities\"] == []\n        assert result[\"total_count\"] == 0\n```\n\n**Test 3: Query Parameters**\n```python\n@pytest.mark.asyncio\nasync def test_fetch_boredom_activities_query_params(self):\n    \"\"\"Test query parameter formatting.\"\"\"\n    # Verify max_activities, priority_threshold, types, exclude_recent_hours\n```\n\n**Test 4: Authentication Header**\n```python\n@pytest.mark.asyncio\nasync def test_api_authentication_header(self, monkeypatch):\n    \"\"\"Test authentication header injection from env var.\"\"\"\n    monkeypatch.setenv(\"METABOB_API_TOKEN\", \"test-token-123\")\n    # Verify Authorization header is included\n```\n\n### 4. Additional Test Cases\n\n- Test invalid JSON response handling\n- Test empty response handling\n- Test retry backoff timing (if measurable)\n- Test request body format validation\n\n## Test Configuration\n\nUse `pytest.ini` or `pyproject.toml` for async support:\n\n```toml\n[tool.pytest.ini_options]\nasyncio_mode = \"auto\"\n```\n\n## Mock Library\n\nUse `aioresponses` for mocking HTTP responses:\n```bash\npip install aioresponses\n```\n\n## Validation\n\nYour test suite must:\n- Use `@pytest.mark.asyncio` for async tests\n- Mock HTTP responses with `aioresponses`\n- Test successful requests (200 OK)\n- Test error scenarios (connection errors, timeouts, HTTP errors)\n- Test graceful degradation (empty responses on failure)\n- Verify request format (method, URL, headers, body)\n- Verify response parsing\n- All tests pass when run with `pytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v`\n\n**Create the test file now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "pytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-and-document-changes",
+      "subagent": "general",
+      "description": "Run full test suite, lint checks, and type checks to validate the MCP API proxy implementation and document the architecture change",
+      "dependencies": [
+        "create-mcp-api-tests"
+      ],
+      "prompt": {
+        "template": "Validate the complete MCP API proxy implementation and add documentation.\n\n**Your Task**: Run validation checks and add architecture documentation.\n\n## Validation Steps\n\n### 1. Run Lint Checks\n\n```bash\nruff check repos/metabob-cli/src/metabob_cli/mcp/\n```\n\n**Expected**: All checks pass, no errors.\n\n### 2. Run Type Checks\n\n```bash\nmypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\n```\n\n**Expected**: All checks pass, no type errors.\n\n### 3. Run Test Suite\n\n```bash\npytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v\n```\n\n**Expected**: All tests pass.\n\n### 4. Verify Forbidden Patterns\n\nCheck that deprecated code has been removed:\n\n```bash\n# Should find NO matches\ngrep -r \"activity_templates\\.update_metrics(\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"activity_templates\\.metabob_fetch_boredom_activities(\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"with open.*\\.json\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"fcntl\\.flock\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\n```\n\n**Expected**: No matches found (exit code 1).\n\n### 5. Verify Required Patterns\n\nCheck that new code is present:\n\n```bash\n# Should find matches\ngrep -r \"from.*api_client import call_api\" repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\ngrep -r \"async with aiohttp.ClientSession()\" repos/metabob-cli/src/metabob_cli/mcp/api_client.py\ngrep -r \"Authorization.*Bearer\" repos/metabob-cli/src/metabob_cli/mcp/api_client.py\n```\n\n**Expected**: Matches found (exit code 0).\n\n## Documentation Tasks\n\n### 1. Add Module Docstring to api_client.py\n\nAdd comprehensive module docstring explaining:\n\n```python\n\"\"\"\nHTTP API Client for MCP Tools\n\nThis module provides an HTTP client for proxying MCP tool requests to the\nmetabob-rpc-api backend. It implements the MCP-only architecture where all\nbackend communication goes through HTTP REST API calls.\n\nArchitecture:\n    opencode → MCP tools → HTTP REST → metabob-rpc-api → SurrealDB\n\nThe HTTP client handles:\n- Authentication via METABOB_API_TOKEN env var\n- Retry logic with exponential backoff for transient failures\n- Graceful degradation when API unavailable\n- Error handling (connection errors, timeouts, HTTP errors)\n\nUsage:\n    result = await call_api(\n        method=\"POST\",\n        endpoint=\"/api/activity-execution\",\n        json={\"activity_id\": \"act_123\", ...}\n    )\n    \n    if result[\"status\"] == \"success\":\n        print(result[\"data\"])\n    else:\n        print(result[\"error\"])\n\"\"\"\n```\n\n### 2. Add Deprecation Comments to activity_templates.py\n\nFind the old helper functions `update_metrics()` and `metabob_fetch_boredom_activities()` in `activity_templates.py` and add deprecation comments:\n\n```python\n# DEPRECATED: This function is deprecated and should not be used.\n# MCP tools now proxy directly to metabob-rpc-api via HTTP REST API.\n# See: api_client.py and activity_template_tools.py\ndef update_metrics(...):\n    ...\n\n# DEPRECATED: This function is deprecated and should not be used.\n# MCP tools now proxy directly to metabob-rpc-api via HTTP REST API.\n# See: api_client.py and activity_template_tools.py\ndef metabob_fetch_boredom_activities(...):\n    ...\n```\n\n### 3. Log Summary\n\nOutput a summary of changes:\n\n```\n=== MCP Learning Loop Tools Update Complete ===\n\nArchitecture Change:\n  BEFORE: opencode → MCP tools → JSON files\n  AFTER:  opencode → MCP tools → HTTP REST → rpc-api → SurrealDB\n\nFiles Modified:\n  - repos/metabob-cli/src/metabob_cli/mcp/api_client.py (created)\n  - repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py (updated)\n  - repos/metabob-cli/src/metabob_cli/mcp/activity_templates.py (deprecated functions)\n  - repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py (created)\n\nValidation Results:\n  ✓ Lint checks passed\n  ✓ Type checks passed\n  ✓ All tests passed\n  ✓ No deprecated code patterns found\n  ✓ Required patterns verified\n\nNext Steps:\n  1. Start metabob-rpc-api: cd repos/metabob-rpc-api && python -m app\n  2. Execute test activity in opencode to verify integration\n  3. Check rpc-api logs to confirm metrics are being posted\n  4. Verify boredom activities are fetched from API when idle\n```\n\n## Validation Criteria\n\nAll of the following must be true:\n- Lint checks pass (`ruff check`)\n- Type checks pass (`mypy`)\n- Tests pass (`pytest`)\n- Forbidden patterns NOT found (deprecated code removed)\n- Required patterns found (new code present)\n- Documentation added to api_client.py\n- Deprecation comments added to activity_templates.py\n- Summary logged\n\n**Run validation and add documentation now**.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "ruff check repos/metabob-cli/src/metabob_cli/mcp/",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "mypy repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+            "expected_exit_code": 1
+          },
+          {
+            "command": "pytest repos/metabob-cli/tests/mcp/test_activity_template_tools_api.py -v",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-22T02:24:21.638Z",
+  "metadata": {}
+}

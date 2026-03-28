@@ -1,0 +1,214 @@
+{
+  "specificationName": "devbob-acp-multi-vessel-coordination",
+  "traceComplete": true,
+  "documentLocation": "docs/data-flows/devbob-acp-multi-vessel-coordination-flow.md",
+  "summary": {
+    "businessPurpose": "Enable distributed multi-agent coordination for horizontal scaling, workload distribution, and isolated task execution across vessel fleet",
+    "keyMetrics": {
+      "costReduction": "95% (pointer serialization: $3.00 → $0.15 per delegation)",
+      "latency": "10ms local resolution vs 50-200ms host fetch",
+      "ioReduction": "95% (throttled updates: 100 writes/sec → 2 writes/sec)",
+      "scalability": "Supports 100+ vessels with current architecture"
+    }
+  },
+  "components": [
+    {
+      "file": "packages/opencode/src/tool/acp-delegate.ts",
+      "component": "ACPDelegateTool.execute",
+      "lineNumber": 148,
+      "currentBehavior": "Entry point for delegation - validates target, collects impulses, serializes pointers, spawns docker exec, manages ACP connection, relays events, tracks status",
+      "desiredBehavior": "Same functionality with added: retry logic for docker exec, timeout on permission requests, version negotiation in handshake, impulse ID validation",
+      "gap": "Missing: retry (3 attempts), 30s permission timeout, version check, impulse validation"
+    },
+    {
+      "file": "packages/opencode/src/impulse/impulse-serializer.ts",
+      "component": "ImpulseSerializer.serializeForRemote",
+      "lineNumber": 70,
+      "currentBehavior": "Strips content from impulses to create pointer-only representation (95% size reduction)",
+      "desiredBehavior": "Same - working as designed",
+      "gap": "No gap - optimized and functional"
+    },
+    {
+      "file": "packages/opencode/src/impulse/impulse-resolver.ts",
+      "component": "ImpulseResolver.resolve",
+      "lineNumber": 207,
+      "currentBehavior": "Local-first resolution with fallback to host via acp_request_impulse_content",
+      "desiredBehavior": "Same with added: LRU cache with mtime-based invalidation, circuit breaker for MCP",
+      "gap": "Missing: caching layer, circuit breaker pattern"
+    },
+    {
+      "file": "packages/opencode/src/acp/agent.ts",
+      "component": "setupEventSubscriptions",
+      "lineNumber": 71,
+      "currentBehavior": "Subscribes to SDK events and relays to ACP protocol via connection.sessionUpdate",
+      "desiredBehavior": "Same with added: unsubscribe on session close, event buffer limits, delivery guarantees",
+      "gap": "Missing: cleanup handlers, memory leak prevention, event buffering"
+    },
+    {
+      "file": "packages/opencode/src/acp/agent.ts",
+      "component": "permission.updated handler",
+      "lineNumber": 71,
+      "currentBehavior": "Forwards permission requests to host, blocks execution until approval (no timeout)",
+      "desiredBehavior": "Same with 30s timeout and auto-reject on timeout",
+      "gap": "Missing: timeout implementation, fallback behavior"
+    },
+    {
+      "file": "vessel/bootstrap.ts",
+      "component": "registerVesselInSurrealDB",
+      "lineNumber": 446,
+      "currentBehavior": "Registers vessel metadata in SurrealDB using string concatenation (SQL injection risk)",
+      "desiredBehavior": "Use parameterized queries with input validation",
+      "gap": "CRITICAL: SQL injection vulnerability, no input validation"
+    },
+    {
+      "file": "packages/opencode/src/session/session-memory.ts",
+      "component": "SessionMemory.updateImpulse",
+      "lineNumber": 114,
+      "currentBehavior": "Updates impulse in session memory with throttling logic",
+      "desiredBehavior": "Same with atomic transactions and write-ahead log",
+      "gap": "Missing: transaction support, WAL for durability"
+    }
+  ],
+  "dataFlow": "acp_delegate (entry) → ImpulseSerializer (strip content) → buildPromptWithImpulses (XML wrap) → Docker Exec (transport) → ACP Handshake (protocol) → ImpulseResolver (local-first) → Agent.prompt (execution) → Event Relay (status tracking) → updateRemoteSessionStatus (throttled updates) → Tool Result (exit)",
+  "architecturalBoundaries": [
+    {
+      "boundary": "External Package - ACP SDK",
+      "type": "Repository Boundary",
+      "coupling": "Medium (protocol-based, but SDK bugs impact functionality)",
+      "risk": "SDK streaming bug (agent_message_chunk not received)"
+    },
+    {
+      "boundary": "Transport Layer - Docker Exec",
+      "type": "Service Boundary (Process Communication)",
+      "coupling": "Tight (Docker-specific, container name hardcoded)",
+      "risk": "No retry logic, no health check"
+    },
+    {
+      "boundary": "Layer - Tool → SessionMemory → Storage",
+      "type": "Layer Boundary (Vertical)",
+      "coupling": "Loose (clean abstraction, type-safe)",
+      "risk": "No transactions (partial failures possible)"
+    },
+    {
+      "boundary": "Data Store - File System",
+      "type": "Data Store Boundary",
+      "coupling": "Medium (file path convention hardcoded, JSON format)",
+      "risk": "No backup, no durability guarantee"
+    },
+    {
+      "boundary": "Service - SurrealDB HTTP API",
+      "type": "Service Boundary (Database)",
+      "coupling": "Loose (HTTP REST, SurrealQL)",
+      "risk": "SQL injection, no connection pooling"
+    },
+    {
+      "boundary": "Event Stream - SDK → ACP Protocol",
+      "type": "Service Boundary (Event-Driven)",
+      "coupling": "Tight (direct SDK event handling, no abstraction)",
+      "risk": "No delivery guarantee, no buffering, no reconnection"
+    }
+  ],
+  "criticalRisks": [
+    {
+      "priority": "HIGH",
+      "risk": "SQL Injection in Vessel Registry",
+      "location": "vessel/bootstrap.ts:446",
+      "impact": "Attacker can delete entire vessel registry",
+      "mitigation": "Use parameterized queries, validate inputs",
+      "urgency": "Must fix before production"
+    },
+    {
+      "priority": "HIGH",
+      "risk": "No Permission Request Timeout",
+      "location": "acp/agent.ts:71-160",
+      "impact": "Remote agent hangs indefinitely on host crash",
+      "mitigation": "Add 30s timeout, auto-reject on timeout",
+      "urgency": "Must fix before production"
+    },
+    {
+      "priority": "HIGH",
+      "risk": "No Version Negotiation",
+      "location": "acp-delegate.ts:275 + acp/agent.ts:391",
+      "impact": "Incompatible OpenCode versions cause silent failures",
+      "mitigation": "Add version handshake, validate compatibility",
+      "urgency": "Must fix before production"
+    },
+    {
+      "priority": "HIGH",
+      "risk": "No Docker Exec Retry",
+      "location": "acp-delegate.ts:185",
+      "impact": "Transient failures (container restart) cause permanent delegation failure",
+      "mitigation": "Implement exponential backoff retry (3 attempts)",
+      "urgency": "Should fix before production"
+    }
+  ],
+  "reusablePatterns": [
+    {
+      "pattern": "Local-First Resolution with Fallback",
+      "description": "Try local resolution first (fast), fallback to remote fetch (slow)",
+      "canBeAbstracted": true,
+      "activityTemplateName": "resolve-with-fallback"
+    },
+    {
+      "pattern": "Throttled Status Updates",
+      "description": "Limit non-terminal updates to max frequency, always allow terminal updates",
+      "canBeAbstracted": true,
+      "utilityName": "ThrottledUpdater"
+    },
+    {
+      "pattern": "Event-Driven Relay",
+      "description": "Subscribe to local events, relay to remote protocol",
+      "canBeAbstracted": true,
+      "middlewareName": "EventRelayMiddleware"
+    },
+    {
+      "pattern": "Non-Fatal Operations",
+      "description": "Log failure, continue execution (graceful degradation)",
+      "canBeAbstracted": true,
+      "wrapperName": "withNonFatalHandling"
+    }
+  ],
+  "validationRequirements": {
+    "functional": [
+      "Docker exec spawns successfully",
+      "ACP handshake completes",
+      "Remote session created",
+      "Impulse serialization reduces size 90%+",
+      "Local resolution succeeds for file pointers",
+      "Fallback to host succeeds when local fails",
+      "Event relay updates remoteSession impulse",
+      "Permission forwarding blocks execution",
+      "Final response returned to user",
+      "Vessel registry registration succeeds"
+    ],
+    "nonFunctional": [
+      "Delegation latency < 5s (typical case)",
+      "Memory usage stable (no leaks)",
+      "I/O throttling limits writes to 2/sec",
+      "No zombie processes after delegation",
+      "Graceful failure when container unavailable"
+    ]
+  },
+  "enforcementConstraints": {
+    "security": [
+      "SQL injection protection (parameterized queries)",
+      "Permission approval required for sensitive operations",
+      "Version compatibility check in handshake"
+    ],
+    "reliability": [
+      "Retry logic for docker exec (3 attempts)",
+      "Timeout on permission requests (30s)",
+      "Event subscription cleanup on session close"
+    ],
+    "performance": [
+      "Throttled updates (max 2/sec)",
+      "Pointer-only serialization by default",
+      "Local-first resolution strategy"
+    ],
+    "dataIntegrity": [
+      "Impulse ID validation (all IDs must exist)",
+      "Atomic status updates (no partial writes)",
+      "Vessel registry schema validation"
+    ]
+  }
+}

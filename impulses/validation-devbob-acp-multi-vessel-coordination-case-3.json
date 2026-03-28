@@ -1,0 +1,20 @@
+{
+  "id": "validation-devbob-acp-multi-vessel-coordination-case-3",
+  "type": "memo",
+  "description": "Input validation prevents SQL injection in vessel registration",
+  "input": {
+    "maliciousVesselName": "devbob-0'; DELETE FROM vessel_registry; --",
+    "pod_ip": "10.1.0.63",
+    "acp_port": 3000
+  },
+  "expectedOutput": {
+    "success": false,
+    "error": "Invalid vessel_name format",
+    "registrationAttempted": false,
+    "sqlInjectionPrevented": true
+  },
+  "testType": "security",
+  "validationType": "negative-test",
+  "criticalityLevel": "CRITICAL",
+  "noLLMRequired": true
+}

@@ -1,0 +1,203 @@
+{
+  "specificationName": "devbob-k8s-git-operations",
+  "description": "Validation test cases for DevBob Kubernetes git operations capabilities",
+  "testStrategy": "kubectl-exec-commands",
+  "targetPods": ["devbob-0", "devbob-1", "devbob-2"],
+  "namespace": "metabob",
+  
+  "testCases": [
+    {
+      "id": "validation-devbob-k8s-git-operations-case-1",
+      "name": "git-config-present",
+      "category": "configuration",
+      "destructive": false,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- git config --list",
+        "pod": "{POD}"
+      },
+      "expectedOutput": {
+        "contains": ["user.name=", "user.email="],
+        "exitCode": 0
+      },
+      "description": "Verify git is configured with user.name and user.email"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-2",
+      "name": "gh-cli-installed",
+      "category": "installation",
+      "destructive": false,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- which gh",
+        "pod": "{POD}"
+      },
+      "expectedOutput": {
+        "contains": ["/usr/bin/gh"],
+        "exitCode": 0
+      },
+      "description": "Verify GitHub CLI (gh) is installed"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-3",
+      "name": "git-credentials-present",
+      "category": "configuration",
+      "destructive": false,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- env | grep -E '(GIT_USER|GITHUB_TOKEN)'",
+        "pod": "{POD}"
+      },
+      "expectedOutput": {
+        "contains": ["GIT_USER_NAME=", "GIT_USER_EMAIL=", "GITHUB_TOKEN="],
+        "exitCode": 0
+      },
+      "description": "Verify git credentials are in environment variables"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-4",
+      "name": "gh-cli-authenticated",
+      "category": "authentication",
+      "destructive": false,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- gh auth status",
+        "pod": "{POD}"
+      },
+      "expectedOutput": {
+        "contains": ["Logged in to github.com"],
+        "exitCode": 0
+      },
+      "description": "Verify GitHub CLI is authenticated with valid token"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-5",
+      "name": "workspace-accessible",
+      "category": "environment",
+      "destructive": false,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- ls -la /workspace",
+        "pod": "{POD}"
+      },
+      "expectedOutput": {
+        "contains": ["/workspace"],
+        "exitCode": 0
+      },
+      "description": "Verify workspace directory is accessible"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-6",
+      "name": "git-clone-success",
+      "category": "git-operations",
+      "destructive": true,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- bash -c 'cd /workspace && rm -rf test-clone-{POD} && git clone https://github.com/metabob-labs/metabob-opencode.git test-clone-{POD} --depth 1'",
+        "pod": "{POD}",
+        "repo": "https://github.com/metabob-labs/metabob-opencode.git"
+      },
+      "expectedOutput": {
+        "notContains": ["fatal", "Authentication failed"],
+        "exitCode": 0
+      },
+      "description": "Verify git clone from GitHub works with authentication"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-7",
+      "name": "git-commit-success",
+      "category": "git-operations",
+      "destructive": true,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- bash -c 'cd /workspace/test-clone-{POD} && echo \"test\" > test-file.txt && git add test-file.txt && git commit -m \"Test commit from {POD}\"'",
+        "pod": "{POD}",
+        "workingDir": "/workspace/test-clone-{POD}"
+      },
+      "expectedOutput": {
+        "notContains": ["fatal", "Please tell me who you are"],
+        "exitCode": 0
+      },
+      "description": "Verify git commit works with proper attribution"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-8",
+      "name": "git-push-success",
+      "category": "git-operations",
+      "destructive": true,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- bash -c 'cd /workspace/test-clone-{POD} && git checkout -b test-branch-{POD}-{TIMESTAMP} && git push -u origin test-branch-{POD}-{TIMESTAMP}'",
+        "pod": "{POD}",
+        "workingDir": "/workspace/test-clone-{POD}",
+        "branch": "test-branch-{POD}-{TIMESTAMP}"
+      },
+      "expectedOutput": {
+        "notContains": ["fatal", "Authentication failed", "Permission denied"],
+        "contains": ["new branch"],
+        "exitCode": 0
+      },
+      "description": "Verify git push to remote works with authentication"
+    },
+    {
+      "id": "validation-devbob-k8s-git-operations-case-9",
+      "name": "gh-pr-create",
+      "category": "github-operations",
+      "destructive": true,
+      "input": {
+        "command": "kubectl exec -n metabob {POD} -- bash -c 'cd /workspace/test-clone-{POD} && gh pr create --title \"Test PR from {POD}\" --body \"Automated test PR\" --base main --head test-branch-{POD}-{TIMESTAMP}'",
+        "pod": "{POD}",
+        "workingDir": "/workspace/test-clone-{POD}"
+      },
+      "expectedOutput": {
+        "contains": ["https://github.com", "pull request"],
+        "notContains": ["authentication failed"],
+        "exitCode": 0,
+        "allowAlreadyExists": true
+      },
+      "description": "Verify GitHub PR creation works with gh CLI"
+    }
+  ],
+  
+  "validationWorkflow": {
+    "nonDestructiveTests": [
+      "git-config-present",
+      "gh-cli-installed",
+      "git-credentials-present",
+      "gh-cli-authenticated",
+      "workspace-accessible"
+    ],
+    "destructiveTests": [
+      "git-clone-success",
+      "git-commit-success",
+      "git-push-success",
+      "gh-pr-create"
+    ],
+    "executionOrder": [
+      "Run non-destructive tests on all pods",
+      "If all pass, run destructive tests on one pod",
+      "Clean up test artifacts"
+    ]
+  },
+  
+  "expectedResults": {
+    "allPods": {
+      "gitInstalled": true,
+      "ghCliInstalled": true,
+      "gitConfigured": true,
+      "credentialsPresent": true,
+      "ghAuthenticated": true,
+      "workspaceAccessible": true
+    },
+    "gitOperations": {
+      "canClone": true,
+      "canCommit": true,
+      "canPush": true,
+      "canCreatePR": true
+    }
+  },
+  
+  "currentKnownState": {
+    "asOf": "2026-02-27",
+    "gitInstalled": true,
+    "ghCliInstalled": true,
+    "gitConfigured": true,
+    "credentialsPresent": true,
+    "ghAuthenticated": false,
+    "blocker": "GITHUB_TOKEN secret is empty (0 bytes)",
+    "testsPassing": "12/15 (non-destructive only)",
+    "testsBlocked": "3/15 (gh-cli-authenticated on all 3 pods)"
+  }
+}

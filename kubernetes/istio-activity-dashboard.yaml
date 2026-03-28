@@ -1,0 +1,135 @@
+# Istio Gateway and VirtualServices for Activity System
+# Maps dashboard.minibob.local -> activity-dashboard
+# Maps api.minibob.local -> metabob-activity-api
+#
+# Prerequisites:
+#   - Istio installed (istioctl install --set profile=demo -y)
+#   - activity-system namespace with istio-injection=enabled
+#
+# Apply:
+#   kubectl apply -f kubernetes/istio-activity-dashboard.yaml
+#
+# /etc/hosts entry required:
+#   127.0.0.1  dashboard.minibob.local api.minibob.local
+
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: activity-system-gateway
+  namespace: activity-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "dashboard.minibob.local"
+        - "api.minibob.local"
+
+---
+# VirtualService for Activity Dashboard
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: activity-dashboard
+  namespace: activity-system
+spec:
+  hosts:
+    - "dashboard.minibob.local"
+  gateways:
+    - activity-system-gateway
+  http:
+    - match:
+        - uri:
+            prefix: "/"
+      route:
+        - destination:
+            host: activity-dashboard
+            port:
+              number: 3000
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+
+---
+# VirtualService for Activity API
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: metabob-activity-api
+  namespace: activity-system
+spec:
+  hosts:
+    - "api.minibob.local"
+  gateways:
+    - activity-system-gateway
+  http:
+    - match:
+        - uri:
+            prefix: "/"
+      route:
+        - destination:
+            host: metabob-activity-api
+            port:
+              number: 8080
+      timeout: 60s
+      retries:
+        attempts: 3
+        perTryTimeout: 20s
+      corsPolicy:
+        allowOrigins:
+          - exact: "http://dashboard.minibob.local"
+        allowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        allowHeaders:
+          - content-type
+          - authorization
+        maxAge: "24h"
+
+---
+# DestinationRule for Activity Dashboard
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: activity-dashboard
+  namespace: activity-system
+spec:
+  host: activity-dashboard
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 2
+    loadBalancer:
+      simple: ROUND_ROBIN
+
+---
+# DestinationRule for Activity API
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: metabob-activity-api
+  namespace: activity-system
+spec:
+  host: metabob-activity-api
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 200
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+        maxRequestsPerConnection: 5
+    loadBalancer:
+      simple: ROUND_ROBIN

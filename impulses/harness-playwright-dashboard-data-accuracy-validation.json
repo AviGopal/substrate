@@ -1,0 +1,13 @@
+{
+  "id": "harness-playwright-dashboard-data-accuracy-validation",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/playwright-dashboard-data-accuracy-validation-harness.ts",
+    "startLine": 1,
+    "endLine": 999,
+    "excerpt": "Comprehensive Playwright-based validation harness for three-way verification (devbob → SurrealDB → Dashboard UI). Implements multi-stage validation: Stage 1 - Execute activity on devbob via kubectl exec, Stage 2 - Query SurrealDB for ground truth, Stage 3 - Navigate to dashboard via Playwright, Stage 4 - Extract UI data, Stage 5 - Compare with variance assertions, Stage 6 - Capture screenshots, Stage 7 - Verify console clean. Returns pass/fail with detailed checks.",
+    "source": "create-validation-harness activity"
+  },
+  "budget": 2000
+}

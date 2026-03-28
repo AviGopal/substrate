@@ -1,0 +1,186 @@
+{
+  "id": "conflict-analysis-complete-architecture-separation",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "specificationName": "complete-architecture-separation",
+      "timestamp": "2026-02-28T21:18:00-08:00",
+      "analysisScope": {
+        "totalSpecifications": 14,
+        "relatedSpecifications": 8,
+        "specificationsAnalyzed": [
+          "thompson-sampling-in-rpc-api-only",
+          "impulse-learning-in-rpc-api-only",
+          "metrics-calculation-in-rpc-api-only",
+          "pattern-extraction-service-complete",
+          "surrealdb-primary-redis-cache",
+          "impulse-learning-storage-complete",
+          "instance-invariant-storage",
+          "devbob-acp-multi-vessel-coordination"
+        ]
+      },
+      "conflictSummary": {
+        "totalConflicts": 0,
+        "criticalConflicts": 0,
+        "minorConflicts": 0,
+        "alignedSpecifications": 8,
+        "status": "NO_CONFLICTS"
+      },
+      "conflicts": [],
+      "alignedSpecifications": [
+        {
+          "specification": "thompson-sampling-in-rpc-api-only",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/activity.py",
+            "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts"
+          ],
+          "alignment": "Both require Thompson Sampling in RPC API only",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "impulse-learning-in-rpc-api-only",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/"
+          ],
+          "alignment": "Both require impulse learning logic in RPC API",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "metrics-calculation-in-rpc-api-only",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/activity.py"
+          ],
+          "alignment": "Both require metrics calculation in RPC API",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "pattern-extraction-service-complete",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/"
+          ],
+          "alignment": "Pattern extraction service resides in RPC API per architecture",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "surrealdb-primary-redis-cache",
+          "relationship": "DEPENDENCY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/actions/activity.py"
+          ],
+          "alignment": "complete-architecture-separation requires surrealdb-primary-redis-cache storage pattern",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "impulse-learning-storage-complete",
+          "relationship": "COMPLEMENTARY",
+          "sharedComponents": [
+            "repos/metabob-rpc-api/server/"
+          ],
+          "alignment": "Impulse learning storage in RPC API aligns with architecture separation",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "instance-invariant-storage",
+          "relationship": "ORTHOGONAL",
+          "sharedComponents": [],
+          "alignment": "Storage invariants apply across all components, no conflict",
+          "riskLevel": "NONE"
+        },
+        {
+          "specification": "devbob-acp-multi-vessel-coordination",
+          "relationship": "ORTHOGONAL",
+          "sharedComponents": [
+            "repos/metabob-cli/src/metabob_cli/mcp/"
+          ],
+          "alignment": "ACP coordination uses CLI MCP tools as gateway, compatible with architecture",
+          "riskLevel": "NONE"
+        }
+      ],
+      "sharedComponents": [
+        {
+          "component": "repos/metabob-rpc-api/server/actions/activity.py",
+          "affectedBySpecs": [
+            "complete-architecture-separation",
+            "thompson-sampling-in-rpc-api-only",
+            "metrics-calculation-in-rpc-api-only",
+            "surrealdb-primary-redis-cache"
+          ],
+          "requirementsAlignment": "ALIGNED",
+          "description": "All specifications require ML logic and storage in this file",
+          "recommendation": "No changes needed - requirements are complementary",
+          "riskLevel": "LOW"
+        },
+        {
+          "component": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+          "affectedBySpecs": [
+            "complete-architecture-separation",
+            "thompson-sampling-in-rpc-api-only"
+          ],
+          "requirementsAlignment": "ALIGNED",
+          "description": "Both specs require delegation to RPC API for template selection",
+          "recommendation": "No changes needed - delegation pattern correct",
+          "riskLevel": "LOW"
+        },
+        {
+          "component": "repos/metabob-cli/src/metabob_cli/mcp/",
+          "affectedBySpecs": [
+            "complete-architecture-separation",
+            "devbob-acp-multi-vessel-coordination"
+          ],
+          "requirementsAlignment": "ALIGNED",
+          "description": "MCP gateway pattern supports both architecture separation and ACP coordination",
+          "recommendation": "No changes needed - compatible requirements",
+          "riskLevel": "LOW"
+        }
+      ],
+      "dependencyGraph": {
+        "complete-architecture-separation": {
+          "requires": [
+            "surrealdb-primary-redis-cache",
+            "thompson-sampling-in-rpc-api-only",
+            "impulse-learning-in-rpc-api-only",
+            "metrics-calculation-in-rpc-api-only"
+          ],
+          "requiredBy": [],
+          "relationshipType": "PARENT",
+          "description": "High-level architecture specification that encompasses component-specific specs"
+        }
+      },
+      "validationCrossCheck": {
+        "complete-architecture-separation": "PASS (7/7)",
+        "surrealdb-primary-redis-cache": "FAIL (5/6) - Not a blocker for architecture",
+        "devbob-acp-multi-vessel-coordination": "PARTIAL_PASS",
+        "note": "surrealdb-primary-redis-cache failure does not impact architecture separation validation"
+      },
+      "recommendations": [
+        {
+          "type": "NO_ACTION_REQUIRED",
+          "priority": "INFO",
+          "description": "All specifications are aligned with no conflicts detected",
+          "reasoning": "complete-architecture-separation is validated successfully and compatible with all related specifications"
+        },
+        {
+          "type": "MONITORING",
+          "priority": "LOW",
+          "description": "Monitor surrealdb-primary-redis-cache specification",
+          "reasoning": "One test case failing but does not impact architecture separation requirements"
+        }
+      ],
+      "conclusion": "NO CONFLICTS DETECTED. The complete-architecture-separation specification is fully compatible with all related specifications. All shared components have aligned requirements. The specification can be safely enforced without impacting other validated specifications."
+    },
+    "source": "conflict-analysis"
+  },
+  "budget": 3000,
+  "metadata": {
+    "specification": "complete-architecture-separation",
+    "analysisDate": "2026-02-28",
+    "conflictsDetected": 0,
+    "specificationsAnalyzed": 14,
+    "alignedSpecifications": 8
+  }
+}

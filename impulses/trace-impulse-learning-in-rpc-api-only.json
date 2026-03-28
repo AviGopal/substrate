@@ -1,0 +1,285 @@
+{
+  "id": "trace-impulse-learning-in-rpc-api-only",
+  "type": "templateDefinition",
+  "priority": "high",
+  "budget": 5000,
+  "pointer": {
+    "type": "memo",
+    "source": "trace-data-flow-analysis"
+  },
+  "metadata": {
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "traceType": "architectural-boundary-enforcement",
+    "complianceStatus": "FULLY_COMPLIANT",
+    "createdBy": "trace-data-flow-single-feature",
+    "purpose": "Document current implementation for downstream validation and enforcement",
+    "createdAt": "2026-02-28T00:00:00Z"
+  },
+  "content": {
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "description": "Impulse learning (pattern extraction, quality scoring, learning buffer management) must ONLY exist in metabob-rpc-api. metabob-opencode must only collect raw data and send to rpc-api.",
+    "currentState": {
+      "summary": "COMPLIANT - Learning algorithms successfully moved to rpc-api. Opencode reduced to data collection only (35 lines).",
+      "opencode": {
+        "impulse_learning_file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "line_count": 35,
+        "compliance": "PASS (<50 lines)",
+        "functions": [
+          "initializeTurnBuffer() - Buffer initialization only",
+          "captureIntent() - Data capture only",
+          "captureImpulsesCreated() - Data capture only",
+          "captureResponse() - Data capture only",
+          "captureOutcome() - Data capture only",
+          "flushToDatabase() - Calls MetabobCLI.recordTurnLearning()",
+          "captureActivityLearning() - Stub (logs only)"
+        ],
+        "no_learning_algorithms": true,
+        "learning_removed": [
+          "normalizePattern() - REMOVED",
+          "calculateResponseQuality() - REMOVED",
+          "trackImpulseUsage() - REMOVED"
+        ]
+      },
+      "metabob_client": {
+        "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+        "function": "MetabobCLI.recordTurnLearning()",
+        "location": "lines 1695-1753",
+        "behavior": "Sends raw turn data to POST /api/v1/learning-loop/record-turn",
+        "payload": {
+          "session_id": "string",
+          "turn_number": "number",
+          "user_message": "string (raw)",
+          "intent": "object (raw)",
+          "impulses_created": "array (raw)",
+          "response_text": "string (optional)",
+          "task_succeeded": "boolean (optional)",
+          "duration_ms": "number (optional)"
+        },
+        "compliance": "PASS - No learning algorithms, only HTTP POST"
+      },
+      "rpc_api": {
+        "endpoint": "POST /api/v1/learning-loop/record-turn",
+        "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+        "location": "lines 459-532",
+        "handler": "record_turn_learning()",
+        "learning_functions": {
+          "normalize_pattern": {
+            "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+            "location": "lines 28-79",
+            "purpose": "Extract normalized pattern from user message",
+            "logic": "Replaces file paths with {file0}, numbers with {num0}, normalizes whitespace",
+            "compliance": "PASS - Server-side only"
+          },
+          "calculate_quality": {
+            "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+            "location": "lines 82-122",
+            "purpose": "Calculate response quality score (0-1)",
+            "algorithm": "Base score (0.6 success / 0.3 fail) + utilization bonus (0.4 if impulses used)",
+            "compliance": "PASS - Server-side only"
+          },
+          "track_usage": {
+            "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+            "location": "lines 124-191",
+            "purpose": "Track impulse usage in response text",
+            "logic": "Detects file paths, memo snippets, activity IDs in response text",
+            "compliance": "PASS - Server-side only"
+          },
+          "insert_mapping_record": {
+            "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+            "location": "lines 193-311",
+            "purpose": "Orchestrates learning pipeline and stores to SurrealDB",
+            "pipeline": [
+              "1. Call normalize_pattern(user_message, intent)",
+              "2. Call track_usage(response_text, impulses_created)",
+              "3. Call calculate_quality(task_succeeded, impulses_created, impulses_used)",
+              "4. Build ImpulseMappingRecord structure",
+              "5. Insert into SurrealDB impulse_mapping_record table"
+            ],
+            "compliance": "PASS - All learning server-side"
+          }
+        },
+        "pattern_extraction_service": {
+          "file": "repos/metabob-rpc-api/server/services/pattern_extraction_service.py",
+          "purpose": "Comprehensive pattern analysis for post-execution insights",
+          "functions": [
+            "extract_file_paths() - Regex extraction of file paths",
+            "extract_components() - Identify functions, classes, methods",
+            "identify_common_patterns() - Detect error types, code smells, task types",
+            "calculate_complexity() - Compute complexity indicators",
+            "extract_patterns() - Main entry point"
+          ],
+          "note": "Used for /impulse-mappings endpoint analytics, NOT for turn recording"
+        },
+        "storage": "SurrealDB impulse_mapping_record table",
+        "compliance": "PASS - All learning server-side"
+      }
+    },
+    "dataFlow": {
+      "entry": "session/impulse-learning.ts::flushToDatabase()",
+      "diagram": "opencode::flushToDatabase → opencode::MetabobCLI.recordTurnLearning → HTTP POST → rpc-api::/record-turn → rpc-api::insert_mapping_record → [normalize_pattern, track_usage, calculate_quality] → SurrealDB",
+      "steps": [
+        {
+          "step": 1,
+          "location": "opencode: session/impulse-learning.ts:24-32",
+          "action": "flushToDatabase() retrieves buffer and calls MetabobCLI.recordTurnLearning()",
+          "data": "Raw turn data (session_id, turn_number, user_message, intent, impulses_created, response_text, task_succeeded, duration)"
+        },
+        {
+          "step": 2,
+          "location": "opencode: util/metabob.ts:1695-1753",
+          "action": "MetabobCLI.recordTurnLearning() POSTs to /api/v1/learning-loop/record-turn",
+          "data": "JSON payload with raw turn data (no processing)"
+        },
+        {
+          "step": 3,
+          "location": "rpc-api: routes/learning_loop.py:459-532",
+          "action": "record_turn_learning() receives request and calls insert_mapping_record()",
+          "data": "TurnLearningRequest parsed by Pydantic"
+        },
+        {
+          "step": 4,
+          "location": "rpc-api: db/operations/impulse_learning.py:193-311",
+          "action": "insert_mapping_record() orchestrates learning pipeline",
+          "substeps": [
+            "4a. normalize_pattern(user_message, intent) → normalized_pattern",
+            "4b. track_usage(response_text, impulses_created) → impulses_used map",
+            "4c. calculate_quality(task_succeeded, impulses_created, impulses_used) → quality score",
+            "4d. Build ImpulseMappingRecord structure",
+            "4e. db.create('impulse_mapping_record', record)"
+          ]
+        },
+        {
+          "step": 5,
+          "location": "rpc-api: routes/learning_loop.py:521-528",
+          "action": "Return TurnLearningResponse with record_id, normalized_pattern, quality_score",
+          "data": "Success confirmation sent back to opencode"
+        }
+      ]
+    },
+    "components": [
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "component": "impulse-learning.ts (entire file)",
+        "currentBehavior": "Data collection only - 35 lines with buffer management and database flush",
+        "desiredBehavior": "<50 lines OR deleted, no learning algorithms",
+        "gap": "NONE - Already compliant (35 lines, no learning algorithms)",
+        "status": "COMPLIANT"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+        "component": "MetabobCLI.recordTurnLearning()",
+        "currentBehavior": "POSTs raw turn data to /api/v1/learning-loop/record-turn",
+        "desiredBehavior": "Send raw data only, no client-side learning",
+        "gap": "NONE - Already compliant",
+        "status": "COMPLIANT"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+        "component": "record_turn_learning() endpoint",
+        "currentBehavior": "Receives raw turn data, calls insert_mapping_record() for server-side processing",
+        "desiredBehavior": "Receive data and perform all learning server-side",
+        "gap": "NONE - Already compliant",
+        "status": "COMPLIANT"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "component": "normalize_pattern()",
+        "currentBehavior": "Server-side pattern normalization (file paths → {file0}, numbers → {num0})",
+        "desiredBehavior": "Pattern extraction in rpc-api only",
+        "gap": "NONE - Already compliant",
+        "status": "COMPLIANT"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "component": "calculate_quality()",
+        "currentBehavior": "Server-side quality scoring (base + utilization bonus)",
+        "desiredBehavior": "Quality calculation in rpc-api only",
+        "gap": "NONE - Already compliant",
+        "status": "COMPLIANT"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "component": "track_usage()",
+        "currentBehavior": "Server-side impulse usage tracking in response text",
+        "desiredBehavior": "Usage tracking in rpc-api only",
+        "gap": "NONE - Already compliant",
+        "status": "COMPLIANT"
+      }
+    ],
+    "validationCriteria": [
+      {
+        "criterion": "impulse-learning.ts is <50 lines OR deleted",
+        "status": "PASS",
+        "actual": "35 lines",
+        "expected": "<50 lines"
+      },
+      {
+        "criterion": "No normalizePattern() in opencode",
+        "status": "PASS",
+        "actual": "Function not found in opencode",
+        "expected": "Not present"
+      },
+      {
+        "criterion": "No calculateResponseQuality() in opencode",
+        "status": "PASS",
+        "actual": "Function not found in opencode",
+        "expected": "Not present"
+      },
+      {
+        "criterion": "No trackImpulseUsage() in opencode",
+        "status": "PASS",
+        "actual": "Function not found in opencode",
+        "expected": "Not present"
+      },
+      {
+        "criterion": "RPC API has POST /record-turn endpoint",
+        "status": "PASS",
+        "actual": "Endpoint exists at routes/learning_loop.py:459",
+        "expected": "Endpoint present"
+      },
+      {
+        "criterion": "RPC API has normalize_pattern() function",
+        "status": "PASS",
+        "actual": "Function exists at db/operations/impulse_learning.py:28",
+        "expected": "Function present"
+      },
+      {
+        "criterion": "RPC API has calculate_quality() function",
+        "status": "PASS",
+        "actual": "Function exists at db/operations/impulse_learning.py:82",
+        "expected": "Function present"
+      },
+      {
+        "criterion": "RPC API has track_usage() function",
+        "status": "PASS",
+        "actual": "Function exists at db/operations/impulse_learning.py:124",
+        "expected": "Function present"
+      }
+    ],
+    "architecturalBoundary": {
+      "rule": "Learning algorithms belong in rpc-api, NOT in opencode",
+      "enforcement": "ENFORCED",
+      "opencode_responsibility": [
+        "Capture raw turn data (user message, intent, impulses created, response, outcome)",
+        "Buffer turn data in memory",
+        "Flush buffered data to rpc-api endpoint",
+        "NO pattern extraction, NO quality calculation, NO usage tracking"
+      ],
+      "rpc_api_responsibility": [
+        "Receive raw turn data via POST /record-turn",
+        "Extract normalized patterns (normalize_pattern)",
+        "Calculate quality scores (calculate_quality)",
+        "Track impulse usage (track_usage)",
+        "Persist complete ImpulseMappingRecord to SurrealDB",
+        "Return confirmation with record_id, pattern, quality"
+      ],
+      "separation_achieved": true
+    },
+    "conclusion": {
+      "compliance": "FULLY COMPLIANT",
+      "summary": "The impulse-learning-in-rpc-api-only specification is fully implemented. Learning algorithms have been successfully moved from opencode to rpc-api. Opencode now only collects raw data (35 lines), and all pattern extraction, quality scoring, and usage tracking happens server-side in rpc-api.",
+      "no_gaps": true,
+      "recommendation": "No changes required. Specification is enforced."
+    }
+  }
+}

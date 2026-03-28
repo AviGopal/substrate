@@ -1,0 +1,263 @@
+{
+  "specificationName": "activity-system-minimal-deployment",
+  "otherSpecifications": [
+    "thompson-sampling-in-rpc-api-only",
+    "surrealdb-primary-redis-cache",
+    "activity-recommendation-learning-loop",
+    "impulse-learning-storage-complete",
+    "context-optimization-endpoint-complete",
+    "complete-architecture-separation"
+  ],
+  "analysisTimestamp": "2026-03-16T17:45:00Z",
+  "conflicts": [
+    {
+      "type": "ARCHITECTURAL_BOUNDARY_VIOLATION",
+      "spec1": "activity-system-minimal-deployment",
+      "spec2": "thompson-sampling-in-rpc-api-only",
+      "sharedComponent": "Thompson Sampling Algorithm",
+      "description": "activity-system-minimal-deployment implements Thompson Sampling in metabob-activity-api (TypeScript), but thompson-sampling-in-rpc-api-only requires it ONLY in RPC API (Python). Both implementations exist.",
+      "severity": "HIGH",
+      "actual": {
+        "activityApi": "repos/metabob-activity-api/src/routes/activities.ts implements Thompson Sampling updates (lines 395-410)",
+        "rpcApi": "Python RPC API has sample_beta() and select_variant_thompson_sampling()",
+        "cli": "metabob-cli removed Thompson Sampling algorithm (documented removal)"
+      },
+      "expected": {
+        "thompsonSampling": "Should exist ONLY in RPC API Python code",
+        "activityApi": "Should delegate to RPC API for Thompson Sampling",
+        "cli": "Should not have Thompson Sampling (CORRECT)"
+      },
+      "resolution": "DECISION REQUIRED: Either (1) Keep Thompson Sampling in activity-api and deprecate RPC API, OR (2) Remove from activity-api and use RPC API endpoint",
+      "impact": "Two implementations may diverge, inconsistent recommendations"
+    },
+    {
+      "type": "ENDPOINT_DUPLICATION",
+      "spec1": "activity-system-minimal-deployment",
+      "spec2": "activity-recommendation-learning-loop",
+      "sharedComponent": "POST /v2/activities/executions",
+      "description": "Both specs implement execution recording endpoint with different deployment status",
+      "severity": "MEDIUM",
+      "actual": {
+        "activitySystemMinimal": "POST /v2/activities/executions implemented in activities.ts (enforcement phase)",
+        "recommendationLoop": "POST /v2/activities/recommend endpoint expected but not deployed (validation blocked)"
+      },
+      "expected": {
+        "executionRecording": "Single endpoint for execution recording",
+        "recommendation": "Separate endpoint for template recommendation"
+      },
+      "resolution": "NO CONFLICT - Different endpoints (/executions vs /recommend). Both needed for complete learning loop.",
+      "impact": "None - complementary functionality"
+    },
+    {
+      "type": "CACHE_STRATEGY_ALIGNMENT",
+      "spec1": "activity-system-minimal-deployment",
+      "spec2": "surrealdb-primary-redis-cache",
+      "sharedComponent": "Redis Cache Invalidation",
+      "description": "Both specs use SurrealDB primary with Redis cache-aside pattern",
+      "severity": "LOW",
+      "actual": {
+        "activitySystemMinimal": "Invalidates Redis cache after execution recording (del + srem)",
+        "surrealdbPrimary": "Validates write order: SurrealDB first, then Redis cache"
+      },
+      "expected": {
+        "writeOrder": "SurrealDB write must precede Redis cache update",
+        "invalidation": "Redis cache invalidation after SurrealDB write"
+      },
+      "resolution": "ALIGNED - Both specs follow same pattern. No conflict detected.",
+      "impact": "None - consistent cache strategy"
+    },
+    {
+      "type": "DEPLOYMENT_DEPENDENCY",
+      "spec1": "activity-system-minimal-deployment",
+      "spec2": "complete-architecture-separation",
+      "sharedComponent": "Repository Boundaries",
+      "description": "activity-system-minimal-deployment deploys activity-api as separate vessel, aligning with architecture separation",
+      "severity": "LOW",
+      "actual": {
+        "activitySystemMinimal": "Deploys metabob-activity-api as standalone Kubernetes service",
+        "architectureSeparation": "Requires separation between CLI and backend (metabob-activity-api)"
+      },
+      "expected": {
+        "separation": "CLI should not contain backend logic",
+        "communication": "HTTP REST for CLI-to-backend communication"
+      },
+      "resolution": "ALIGNED - Deployment reinforces architecture separation. No conflict.",
+      "impact": "Positive - strengthens architectural boundaries"
+    }
+  ],
+  "sharedComponents": [
+    {
+      "component": "repos/metabob-activity-api/src/routes/activities.ts",
+      "affectedBySpecs": [
+        "activity-system-minimal-deployment",
+        "activity-recommendation-learning-loop",
+        "thompson-sampling-in-rpc-api-only",
+        "context-optimization-endpoint-complete"
+      ],
+      "recommendation": "CONFLICT: Thompson Sampling should be in RPC API only, not activity-api. Review architecture decision.",
+      "changesSinceLastValidation": [
+        "Added POST /v2/activities/executions endpoint (178 lines)",
+        "Added Thompson Sampling metric updates (thompson_alpha, thompson_beta)",
+        "Added Redis cache invalidation (srem method)"
+      ]
+    },
+    {
+      "component": "repos/metabob-activity-api/src/db/redis.ts",
+      "affectedBySpecs": [
+        "activity-system-minimal-deployment",
+        "surrealdb-primary-redis-cache",
+        "impulse-learning-storage-complete"
+      ],
+      "recommendation": "ALIGNED - Cache-aside pattern consistent across all specs",
+      "changesSinceLastValidation": [
+        "Added srem() method for set member removal"
+      ]
+    },
+    {
+      "component": "SurrealDB variant_performance_metrics table",
+      "affectedBySpecs": [
+        "activity-system-minimal-deployment",
+        "thompson-sampling-in-rpc-api-only",
+        "activity-recommendation-learning-loop"
+      ],
+      "recommendation": "SCHEMA DEPENDENCY: Ensure table exists before deployment",
+      "changesSinceLastValidation": [
+        "Expects thompson_alpha and thompson_beta columns",
+        "Updated by POST /v2/activities/executions endpoint"
+      ]
+    },
+    {
+      "component": "Kubernetes namespace: activity-system",
+      "affectedBySpecs": [
+        "activity-system-minimal-deployment",
+        "local-docker-k8s-deployment"
+      ],
+      "recommendation": "NO CONFLICT - Dedicated namespace isolates deployment",
+      "changesSinceLastValidation": [
+        "Created by helmfile deployment",
+        "Contains 5 pods: redis, surrealdb, 2x activity-api, minibob"
+      ]
+    }
+  ],
+  "criticalFindings": [
+    {
+      "priority": "CRITICAL",
+      "finding": "Thompson Sampling Architectural Violation",
+      "description": "Thompson Sampling algorithm implemented in TWO places: (1) metabob-activity-api TypeScript code, (2) Python RPC API. Specification 'thompson-sampling-in-rpc-api-only' explicitly requires it ONLY in RPC API.",
+      "evidence": {
+        "activityApi": "repos/metabob-activity-api/src/routes/activities.ts lines 395-410 implement Beta distribution updates",
+        "rpcApi": "Python RPC API has sample_beta() at line 73 and select_variant_thompson_sampling() at line 815",
+        "spec": "thompson-sampling-in-rpc-api-only validation PASSED - RPC API implementation verified"
+      },
+      "impact": "Two independent Thompson Sampling implementations can diverge, causing inconsistent template recommendations",
+      "resolution": "DECISION NEEDED: Choose ONE implementation location",
+      "options": [
+        {
+          "option": "A",
+          "description": "Keep activity-api implementation, deprecate RPC API",
+          "pros": ["TypeScript type safety", "Faster (no Python interop)", "Modern stack"],
+          "cons": ["Breaks thompson-sampling-in-rpc-api-only spec", "Requires migration"]
+        },
+        {
+          "option": "B",
+          "description": "Remove from activity-api, delegate to RPC API",
+          "pros": ["Aligns with existing spec", "Single source of truth", "No migration needed"],
+          "cons": ["Additional HTTP round-trip", "Python dependency", "Slower response"]
+        },
+        {
+          "option": "C",
+          "description": "Keep both, ensure synchronization",
+          "pros": ["Backward compatible", "Gradual migration possible"],
+          "cons": ["Maintenance burden", "Divergence risk", "Violates DRY principle"]
+        }
+      ],
+      "recommendation": "Option B - Remove Thompson Sampling from activity-api, delegate to RPC API endpoint to maintain architectural compliance with thompson-sampling-in-rpc-api-only spec"
+    },
+    {
+      "priority": "HIGH",
+      "finding": "Deployment Prerequisite Not Met",
+      "description": "Validation failed because activity-system namespace not deployed. All 10/11 tests failed due to missing infrastructure.",
+      "evidence": {
+        "validationResults": "validation-results-activity-system-minimal-deployment shows 10 FAIL, 1 PASS",
+        "rootCause": "Namespace 'activity-system' not found in Kubernetes cluster",
+        "clusterStatus": "RUNNING (https://kubernetes.docker.internal:6443)"
+      },
+      "impact": "Cannot validate Phase 3 learning loop closure until deployment executes",
+      "resolution": "Execute deployment: ENVIRONMENT=local bash scripts/deploy-activity-system.sh",
+      "blocksValidation": true
+    },
+    {
+      "priority": "MEDIUM",
+      "finding": "Missing POST /v2/activities/recommend Endpoint",
+      "description": "activity-recommendation-learning-loop spec blocked waiting for recommendation endpoint that doesn't exist in activity-api",
+      "evidence": {
+        "validationResults": "activity-recommendation-learning-loop shows BLOCKED status",
+        "expected": "POST /v2/activities/recommend endpoint",
+        "actual": "Endpoint not implemented or not deployed"
+      },
+      "impact": "Learning loop incomplete - can record executions but cannot get Thompson-weighted recommendations",
+      "resolution": "Implement POST /v2/activities/recommend endpoint in repos/metabob-activity-api/src/routes/activities.ts OR clarify that this is handled by RPC API"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Resolve Thompson Sampling architecture conflict",
+      "rationale": "Two implementations violate single-source-of-truth principle and contradict thompson-sampling-in-rpc-api-only spec",
+      "steps": [
+        "Review architecture decision: Should Thompson Sampling live in activity-api or RPC API?",
+        "If RPC API: Remove Thompson Sampling from repos/metabob-activity-api/src/routes/activities.ts",
+        "If activity-api: Update thompson-sampling-in-rpc-api-only spec to reflect new architecture",
+        "Ensure single implementation with tests"
+      ]
+    },
+    {
+      "priority": 2,
+      "action": "Deploy activity-system infrastructure",
+      "rationale": "Required to unblock validation and confirm Phase 3 learning loop closure",
+      "steps": [
+        "Execute: ENVIRONMENT=local bash scripts/deploy-activity-system.sh",
+        "Monitor: kubectl get pods -n activity-system -w",
+        "Validate: bun run tests/validation-harnesses/activity-system-minimal-deployment-harness.ts",
+        "Expect: All 11 tests PASS"
+      ]
+    },
+    {
+      "priority": 3,
+      "action": "Clarify POST /v2/activities/recommend endpoint ownership",
+      "rationale": "activity-recommendation-learning-loop spec is blocked waiting for this endpoint",
+      "steps": [
+        "Determine if endpoint should be in activity-api or RPC API",
+        "If activity-api: Implement POST /v2/activities/recommend",
+        "If RPC API: Update spec to reference correct endpoint location",
+        "Unblock activity-recommendation-learning-loop validation"
+      ]
+    }
+  ],
+  "compatibilityMatrix": {
+    "activity-system-minimal-deployment": {
+      "thompson-sampling-in-rpc-api-only": "CONFLICT - Duplicate Thompson Sampling implementation",
+      "surrealdb-primary-redis-cache": "COMPATIBLE - Aligned cache strategy",
+      "activity-recommendation-learning-loop": "COMPATIBLE - Complementary endpoints",
+      "complete-architecture-separation": "COMPATIBLE - Reinforces boundaries",
+      "impulse-learning-storage-complete": "COMPATIBLE - Shared Redis patterns"
+    }
+  },
+  "nextSteps": {
+    "immediate": [
+      "Address Thompson Sampling architecture conflict (CRITICAL)",
+      "Deploy activity-system infrastructure (HIGH)",
+      "Re-run validation harness after deployment (HIGH)"
+    ],
+    "shortTerm": [
+      "Implement or clarify POST /v2/activities/recommend endpoint (MEDIUM)",
+      "Update conflicting specs to align with chosen architecture (MEDIUM)",
+      "Add integration tests for cross-spec compatibility (LOW)"
+    ],
+    "longTerm": [
+      "Consolidate validation results into unified dashboard (LOW)",
+      "Automate conflict detection in CI/CD pipeline (LOW)",
+      "Create spec dependency graph for impact analysis (LOW)"
+    ]
+  }
+}

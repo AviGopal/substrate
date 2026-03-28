@@ -1,0 +1,19 @@
+{
+  "id": "validation-fix-validation-tests-final-pass-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: Verify External Harness Commands\n\nInput: Read external-activity-system-validation-harness.ts file\n\nExpected Output:\n- TEST_CASE_1 uses: ['activity', 'list']\n- TEST_CASE_1 does NOT use: 'search'\n- TEST_CASE_2 uses: ['activity', 'template', 'list']\n- TEST_CASE_2 does NOT use: 'create'\n- TEST_CASE_3 uses: ['activity', 'list']\n- All test cases have timeout <= 30000ms\n\nValidation Method:\n1. Read file content\n2. Parse TEST_CASE_1, TEST_CASE_2, TEST_CASE_3 definitions\n3. Extract args arrays\n4. Verify commands match expected (no LLM-dependent commands)\n5. Return PASS if all match, FAIL otherwise\n\nHistorical: YES - This test can run without LLM by parsing file content",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testCase": "validateTestCase1_HarnessCommands",
+    "input": "external-activity-system-validation-harness.ts",
+    "expectedCommands": {
+      "TEST_CASE_1": "activity list",
+      "TEST_CASE_2": "activity template list",
+      "TEST_CASE_3": "activity list"
+    }
+  },
+  "budget": 500
+}

@@ -1,0 +1,145 @@
+{
+  "testCases": [
+    {
+      "impulseId": "validation-activity-state-transformation-tracking-case-1",
+      "name": "Hello World Minimal",
+      "input": {
+        "activityTemplate": "hello-world-minimal",
+        "variables": {
+          "message": "Hello from validation harness"
+        },
+        "reason": "Testing activity state transformation tracking instrumentation",
+        "mockBackendUrl": "http://localhost:9999"
+      },
+      "expectedOutput": {
+        "activityContentPost": {
+          "called": true,
+          "payload": {
+            "activity_id": "string (uuid format)",
+            "template_definition": {
+              "id": "hello-world-minimal",
+              "name": "string",
+              "tasks": [
+                {
+                  "id": "string",
+                  "description": "string",
+                  "prompt": "object or string"
+                }
+              ]
+            },
+            "variable_bindings": {
+              "message": "Hello from validation harness"
+            },
+            "initial_state": {
+              "git_commit": "string (40 char hash) or null",
+              "git_branch": "string (branch name) or null",
+              "git_dirty": "boolean",
+              "modified_files": "array",
+              "impulse_ids": "array",
+              "working_directory": "string (absolute path matching process.cwd())",
+              "timestamp": "number (Date.now())"
+            },
+            "reason": "Testing activity state transformation tracking instrumentation (enhanced with conversation context)",
+            "timestamp": "number (Date.now())"
+          }
+        },
+        "taskStartPosts": [
+          {
+            "taskId": "string (task ID from template)",
+            "payload": {
+              "activity_id": "string (matches activity content POST)",
+              "task_id": "string",
+              "task_definition": {
+                "id": "string",
+                "description": "string",
+                "prompt": "object or string"
+              },
+              "state_before": {
+                "git_commit": "string or null",
+                "modified_files": "array",
+                "impulse_ids": "array",
+                "snapshot_hash": "string or undefined"
+              },
+              "timestamp": "number"
+            }
+          }
+        ],
+        "taskUpdatePatches": [
+          {
+            "taskExecutionId": "string (task_exec_TIMESTAMP)",
+            "status": "completed",
+            "payload": {
+              "status": "completed",
+              "state_after": {
+                "git_commit": "string or null",
+                "modified_files": "array",
+                "impulse_ids": "array",
+                "snapshot_hash": "string or undefined"
+              },
+              "state_delta": {
+                "files_added": "array",
+                "files_modified": "array",
+                "files_deleted": "array",
+                "git_diff": "string",
+                "impulses_created": "array",
+                "lines_changed": {
+                  "additions": "number",
+                  "deletions": "number"
+                }
+              },
+              "validation_results": {
+                "passed": true,
+                "required_files_present": true,
+                "required_patterns_found": true,
+                "forbidden_patterns_absent": true,
+                "commands_succeeded": true
+              },
+              "output": "string or undefined",
+              "duration_ms": "number",
+              "timestamp": "number"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "impulseId": "validation-activity-state-transformation-tracking-case-2",
+      "name": "Multi-Task Activity",
+      "input": {
+        "activityTemplate": "test-multi-task",
+        "variables": {
+          "param1": "value1",
+          "param2": "value2"
+        },
+        "reason": "Testing multi-task state tracking",
+        "mockBackendUrl": "http://localhost:9999"
+      },
+      "expectedOutput": {
+        "activityContentPost": {
+          "called": true,
+          "payload": "same schema as case-1, with 2+ tasks in template_definition.tasks"
+        },
+        "taskStartPosts": "array with length >= 2 (one per task)",
+        "taskUpdatePatches": "array with length >= 2 (one per task)"
+      }
+    },
+    {
+      "impulseId": "validation-activity-state-transformation-tracking-case-3",
+      "name": "Backend Unavailable",
+      "input": {
+        "activityTemplate": "hello-world-minimal",
+        "variables": {
+          "message": "Testing non-blocking behavior"
+        },
+        "reason": "Verify execution continues when backend unavailable",
+        "mockBackendUrl": "http://localhost:8888"
+      },
+      "expectedOutput": {
+        "activityExecution": "succeeds despite backend being unreachable",
+        "apiCalls": "not recorded (backend down)",
+        "activityOutput": "normal completion without errors",
+        "note": "This validates non-blocking design - execution must not fail"
+      }
+    }
+  ]
+}

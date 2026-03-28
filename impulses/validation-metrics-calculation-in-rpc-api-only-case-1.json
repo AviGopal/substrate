@@ -1,0 +1,18 @@
+{
+  "id": "validation-metrics-calculation-in-rpc-api-only-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"input\": \"template-metrics-client.ts static analysis\",\n  \"expectedOutput\": {\n    \"arithmeticOperations\": 0,\n    \"redisWrites\": 0,\n    \"jsonFileWrites\": 0,\n    \"lineCount\": \"< 400\",\n    \"hasHTTPClientCode\": true,\n    \"calculationAssignments\": 0\n  },\n  \"description\": \"Verify template-metrics-client.ts contains no calculation logic\"\n}",
+    "source": "validation harness test case"
+  },
+  "budget": 500,
+  "metadata": {
+    "specification": "metrics-calculation-in-rpc-api-only",
+    "testCaseNumber": 1,
+    "harnessFile": "tests/validation-harnesses/metrics-calculation-in-rpc-api-only-harness.ts"
+  },
+  "created": null,
+  "lastAccessed": null,
+  "loadCount": 0
+}

@@ -1,0 +1,58 @@
+{
+  "id": "harness-mcp-hot-reload",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "repos/metabob-opencode/packages/opencode/tests/validation-harnesses/mcp-hot-reload-harness.ts",
+    "purpose": "Validation harness for MCP hot-reload functionality"
+  },
+  "content": {
+    "specificationName": "Enable Hot-Reload for MCP Clients in Development Mode",
+    "harnessFile": "repos/metabob-opencode/packages/opencode/tests/validation-harnesses/mcp-hot-reload-harness.ts",
+    "purpose": "Automated validation of MCP hot-reload feature implementation",
+    "testCases": [
+      {
+        "id": "validation-mcp-hot-reload-case-1",
+        "name": "MCP.reload() function exists",
+        "validates": "Function existence and type"
+      },
+      {
+        "id": "validation-mcp-hot-reload-case-2",
+        "name": "MCP.reload() return structure",
+        "validates": "Return value has correct structure {success, clients, errors}"
+      },
+      {
+        "id": "validation-mcp-hot-reload-case-3",
+        "name": "MCP.reload() idempotency",
+        "validates": "Can be called multiple times without errors"
+      },
+      {
+        "id": "validation-mcp-hot-reload-case-4",
+        "name": "CLI command exists",
+        "validates": "McpReloadCommand exists in CLI"
+      },
+      {
+        "id": "validation-mcp-hot-reload-case-5",
+        "name": "Config reload integration",
+        "validates": "Config reload imports MCP and calls MCP.reload()"
+      },
+      {
+        "id": "validation-mcp-hot-reload-case-6",
+        "name": "MCP state management",
+        "validates": "State structure correct before and after reload"
+      }
+    ],
+    "usage": {
+      "import": "import { runValidation } from './mcp-hot-reload-harness'",
+      "execute": "const result = await runValidation()",
+      "cli": "ts-node tests/validation-harnesses/mcp-hot-reload-harness.ts"
+    },
+    "outputs": {
+      "pass": "boolean - true if all tests pass",
+      "results": "ValidationResult[] - detailed results per test",
+      "summary": "{ total, passed, failed } - test summary"
+    }
+  },
+  "budget": 2000,
+  "created": "2026-03-09T00:00:00Z"
+}

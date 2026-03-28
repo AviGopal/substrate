@@ -1,0 +1,30 @@
+{
+  "id": "harness-rpc-api-data-display-endpoints",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/rpc-api-data-display-endpoints-harness.ts",
+    "description": "Validation harness for RPC API Data Display Endpoints specification. Tests that project listing returns objects (not field names) and activity endpoint returns empty array (not error messages).",
+    "source": "validation-harness-creation"
+  },
+  "budget": 2000,
+  "metadata": {
+    "createdAt": "2026-03-12T00:00:00Z",
+    "createdBy": "validation-harness-task",
+    "purpose": "Provide automated validation for RPC API Data Display Endpoints specification enforcement",
+    "testCases": [
+      "validation-rpc-api-data-display-endpoints-case-1",
+      "validation-rpc-api-data-display-endpoints-case-2",
+      "validation-rpc-api-data-display-endpoints-case-3"
+    ],
+    "relatedSpec": "RPC API Data Display Endpoints",
+    "relatedImpulses": [
+      "trace-RPC_API_Data_Display_Endpoints",
+      "enforcement-RPC_API_Data_Display_Endpoints"
+    ],
+    "usage": {
+      "standalone": "ORG_ID=<org_id> AUTH_TOKEN=<token> ts-node rpc-api-data-display-endpoints-harness.ts",
+      "programmatic": "import { runValidation } from './rpc-api-data-display-endpoints-harness'; const result = await runValidation({apiBaseUrl, orgId, authToken});"
+    }
+  }
+}

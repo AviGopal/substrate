@@ -1,0 +1,60 @@
+{
+  "id": "validation-rpc-api-data-display-endpoints-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "Activity Endpoint Returns Empty Array",
+      "description": "Validate that GET /auth/orgs/{org_id}/activity returns proper empty array structure when no activity exists, not an error message string",
+      "input": {
+        "endpoint": "GET /auth/orgs/{org_id}/activity",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer {auth_token}",
+          "Content-Type": "application/json"
+        },
+        "urlParams": {
+          "org_id": "test-org-id"
+        },
+        "queryParams": {
+          "limit": 50,
+          "offset": 0
+        }
+      },
+      "expectedOutput": {
+        "status": 200,
+        "bodyStructure": {
+          "activities": {
+            "type": "array",
+            "description": "Empty array when no activity, or array of activity objects when activity exists"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "number",
+            "description": "0 when no activity exists"
+          }
+        },
+        "notExpected": {
+          "errorMessageString": {
+            "type": "string",
+            "examples": [
+              "Error: No activity found",
+              "Query failed"
+            ]
+          }
+        }
+      },
+      "bugBeingTested": "Activity endpoint was returning error message string instead of empty array structure when no activity existed"
+    },
+    "source": "validation-harness-creation"
+  },
+  "budget": 1000,
+  "metadata": {
+    "createdAt": "2026-03-12T00:00:00Z",
+    "createdBy": "validation-harness-task",
+    "purpose": "Historical test case for RPC API Data Display Endpoints specification",
+    "relatedSpec": "RPC API Data Display Endpoints"
+  }
+}

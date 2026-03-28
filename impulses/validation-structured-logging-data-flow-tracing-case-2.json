@@ -1,0 +1,15 @@
+{
+  "id": "validation-structured-logging-data-flow-tracing-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: User Not Found - Failure Case\n\nInput:\n- Email: nonexistent@example.com\n- Password: any-password\n\nExpected Stages (in order):\n1. AUTH_START - Entry point with sanitized email\n2. DB_QUERY_USER_START - Query initiation with full query text\n3. DB_QUERY_USER_COMPLETE - Query result with execution_time_ms, result_count=0\n4. AUTH_FAILURE - Failure with reason='USER_NOT_FOUND'\n\nExpected Output:\n- HTTP Status: 401 Unauthorized\n- Response: {\"detail\": \"Invalid email or password\"}\n- X-Correlation-ID header present\n- All logs have same correlation_id\n- AUTH_FAILURE log contains:\n  * reason: 'USER_NOT_FOUND'\n  * error_stage: 'DB_QUERY_USER'\n  * email: sanitized (****@nonexistent.com)\n  * total_duration_ms: measured time\n\nValidation Checks:\n✓ Correlation ID in response header\n✓ All logs have same correlation_id\n✓ All expected stages present in logs\n✓ AUTH_START has email (sanitized)\n✓ DB_QUERY_USER_COMPLETE has execution_time_ms and result_count=0\n✓ AUTH_FAILURE has reason='USER_NOT_FOUND'\n✓ AUTH_FAILURE has error_stage='DB_QUERY_USER'\n✓ AUTH_FAILURE has total_duration_ms\n✓ No USER_FOUND stage (user doesn't exist)\n✓ No PASSWORD_VERIFY stages (never reached)\n✓ No AUTH_SUCCESS stage (authentication failed)",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "metadata": {
+    "test_case": 2,
+    "scenario": "user_not_found",
+    "expected_status": 401
+  }
+}

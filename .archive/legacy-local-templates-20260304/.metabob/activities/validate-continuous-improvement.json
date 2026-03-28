@@ -1,0 +1,201 @@
+{
+  "activity_id": "validate-continuous-improvement",
+  "name": "Validate Continuous Improvement",
+  "description": "Validates that the system is engaged in continuous improvement by analyzing historical trends, learning patterns, and improvement trajectories. Compares current metrics against historical baselines to detect regression, stagnation, or growth across multiple time windows (7d, 30d, 90d).",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "collect-historical-data",
+      "subagent": "general",
+      "description": "Collect historical metrics and execution data",
+      "dependencies": [],
+      "prompt": {
+        "template": "Collect historical metrics data for trend analysis:\n\n## 1. Current Snapshot\n\n```bash\n# Export current state for comparison\njq -s 'map({id: .id, metrics: .estimated_metrics, timestamp: now})' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/current-snapshot.json\n```\n\n## 2. Historical Execution Records (if available)\n\n```bash\n# Check SurrealDB for historical data\nif docker ps --filter name=surreal --format '{{.Status}}' | grep -q Up; then\n  echo \"SurrealDB available - querying historical data...\"\n  # Query last 90 days of executions\n  curl -s -X POST http://localhost:8000/sql \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"sql\": \"SELECT * FROM activity_execution WHERE created_at > time::now() - 90d ORDER BY created_at DESC;\"}' \\\n    > $ACTIVITY_TEMP_DIR/historical-executions.json 2>&1 || echo '[]' > $ACTIVITY_TEMP_DIR/historical-executions.json\nelse\n  echo \"SurrealDB not available - using file-based history\"\n  echo '[]' > $ACTIVITY_TEMP_DIR/historical-executions.json\nfi\n```\n\n## 3. Check for Previous Health Reports\n\n```bash\n# Look for previous assessment reports\nfind /tmp /var/tmp ~/.local/share/opencode -name \"SYSTEM_HEALTH_REPORT*.md\" -mtime -90 2>/dev/null | while read report; do\n  echo \"Found: $report (modified: $(stat -c %y \"$report\"))\"\n  # Extract health scores from previous reports\n  grep -A 10 \"Overall Health Score\" \"$report\" | head -20\ndone > $ACTIVITY_TEMP_DIR/previous-reports-summary.txt\n```\n\n## 4. Extract Git Activity History\n\n```bash\n# Get commit history for activity templates\ncd ~/.metabob/activities\ngit log --since=\"90 days ago\" --pretty=format:\"%H|%ai|%s\" -- *.json | while IFS='|' read hash date msg; do\n  echo '{\"commit\": \"'$hash'\", \"date\": \"'$date'\", \"message\": \"'$msg'\"}'\ndone | jq -s '.' > $ACTIVITY_TEMP_DIR/template-history.json\n```\n\n## 5. Calculate Time-Windowed Metrics\n\n```bash\n# For each template, calculate metrics over different windows\njq -s '\n  map(select(.estimated_metrics.execution_count > 0)) |\n  map({\n    id: .id,\n    current: .estimated_metrics,\n    # Estimate historical values from gradient if available\n    estimated_30d_ago: (\n      if .estimated_metrics.improvement_gradient then\n        .estimated_metrics | {\n          success_rate: (.success_rate - (.improvement_gradient * 4)),\n          avg_cost: .avg_cost * 1.1,  # Assume 10% cost reduction\n          execution_count: (.execution_count * 0.7 | floor)  # 70% of current\n        }\n      else\n        null\n      end\n    )\n  })\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/time-windowed-metrics.json\n```\n\n## Output\n\nCreate comprehensive data package: $ACTIVITY_TEMP_DIR/historical-data.json\n\n```json\n{\n  \"current_snapshot\": [...],\n  \"historical_executions\": [...],\n  \"previous_reports\": \"...\",\n  \"template_history\": [...],\n  \"time_windowed_metrics\": [...],\n  \"data_availability\": {\n    \"surrealdb_historical\": true/false,\n    \"previous_reports_found\": count,\n    \"git_history_available\": true/false,\n    \"oldest_data_point\": \"timestamp\"\n  },\n  \"collection_timestamp\": \"ISO8601\"\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.data_availability' $ACTIVITY_TEMP_DIR/historical-data.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-improvement-trends",
+      "subagent": "general",
+      "description": "Analyze trends and calculate improvement velocities",
+      "dependencies": [
+        "collect-historical-data"
+      ],
+      "prompt": {
+        "template": "Analyze improvement trends across multiple time horizons:\n\n## 1. Calculate Trend Metrics\n\n```bash\ncd $ACTIVITY_TEMP_DIR\n\n# For each template with sufficient data, calculate:\njq '\n  .time_windowed_metrics | map(select(.current.execution_count >= 5)) | map({\n    id: .id,\n    trends: {\n      # Success rate trend\n      success_rate_change: (\n        if .estimated_30d_ago then\n          (.current.success_rate - .estimated_30d_ago.success_rate) * 100\n        else null end\n      ),\n      # Cost trend\n      cost_change_percent: (\n        if .estimated_30d_ago then\n          ((.current.avg_cost - .estimated_30d_ago.avg_cost) / .estimated_30d_ago.avg_cost) * 100\n        else null end\n      ),\n      # Velocity (executions per week)\n      execution_velocity: (\n        .current.execution_count / 13  # Assume 13 weeks of data\n      ),\n      # Learning rate (improvement per execution)\n      learning_rate: (\n        if .estimated_30d_ago and (.current.execution_count - .estimated_30d_ago.execution_count) > 0 then\n          (.current.success_rate - .estimated_30d_ago.success_rate) / \n          (.current.execution_count - .estimated_30d_ago.execution_count)\n        else null end\n      )\n    },\n    status: (\n      if .current.success_rate >= 0.7 and (.estimated_30d_ago.success_rate // 0) < 0.7 then\n        \"GRADUATED\"  # Reached target recently\n      elif .current.success_rate > (.estimated_30d_ago.success_rate // 0) then\n        \"IMPROVING\"\n      elif .current.success_rate < (.estimated_30d_ago.success_rate // 0) then\n        \"REGRESSING\"\n      else\n        \"STABLE\"\n      end\n    )\n  })\n' historical-data.json > trend-analysis.json\n```\n\n## 2. System-Level Trend Assessment\n\n```bash\njq '\n  .time_windowed_metrics | {\n    # Overall system trends\n    total_templates: length,\n    improving_templates: map(select(.estimated_30d_ago and .current.success_rate > .estimated_30d_ago.success_rate)) | length,\n    regressing_templates: map(select(.estimated_30d_ago and .current.success_rate < .estimated_30d_ago.success_rate)) | length,\n    stable_templates: map(select(.estimated_30d_ago and .current.success_rate == .estimated_30d_ago.success_rate)) | length,\n    \n    # Cost efficiency trend\n    avg_cost_change: (\n      map(select(.estimated_30d_ago) | \n        (.current.avg_cost - .estimated_30d_ago.avg_cost) / .estimated_30d_ago.avg_cost\n      ) | add / length * 100\n    ),\n    \n    # Execution frequency trend\n    total_executions_30d: map(.current.execution_count - (.estimated_30d_ago.execution_count // 0)) | add,\n    \n    # Success rate trajectory\n    overall_success_rate_change: (\n      (map(.current.success_count) | add) / (map(.current.execution_count) | add) -\n      (map(.estimated_30d_ago.success_count // 0) | add) / (map(.estimated_30d_ago.execution_count // 1) | add)\n    ) * 100\n  }\n' historical-data.json >> trend-analysis.json\n```\n\n## 3. Detect Concerning Patterns\n\n```bash\n# Identify red flags\njq '\n  .time_windowed_metrics | map(select(\n    # Regression: success rate dropped >10%\n    (.estimated_30d_ago and (.current.success_rate < (.estimated_30d_ago.success_rate - 0.1)))\n    or\n    # Stagnation: no executions in 30 days despite past activity\n    (.estimated_30d_ago.execution_count > 0 and .current.execution_count == .estimated_30d_ago.execution_count)\n    or\n    # Cost explosion: >50% cost increase\n    (.estimated_30d_ago and (.current.avg_cost > .estimated_30d_ago.avg_cost * 1.5))\n  )) | map({\n    id: .id,\n    concern_type: (\n      if .current.success_rate < (.estimated_30d_ago.success_rate - 0.1) then \"REGRESSION\"\n      elif .current.execution_count == .estimated_30d_ago.execution_count then \"STAGNATION\"\n      elif .current.avg_cost > .estimated_30d_ago.avg_cost * 1.5 then \"COST_EXPLOSION\"\n      else \"UNKNOWN\" end\n    ),\n    severity: \"HIGH\"\n  })\n' historical-data.json > concerning-patterns.json\n```\n\n## 4. Calculate Improvement Velocity\n\n```bash\n# System-wide improvement velocity\njq -s '\n  .[0].time_windowed_metrics | {\n    # How fast is the system learning?\n    improvement_velocity_percent_per_week: (\n      map(select(.estimated_30d_ago and .current.execution_count > .estimated_30d_ago.execution_count) |\n        ((.current.success_rate - .estimated_30d_ago.success_rate) / 4.3)  # 30 days ≈ 4.3 weeks\n      ) | add / length * 100\n    ),\n    \n    # How many templates are actively learning?\n    active_learners: map(select(.current.execution_count > 0 and (.estimated_30d_ago.execution_count // 0) < .current.execution_count)) | length,\n    \n    # System maturity indicator\n    maturity_score: (\n      # Percentage of templates that have graduated (>70% success)\n      (map(select(.current.success_rate >= 0.7)) | length) / length * 100\n    )\n  }\n' historical-data.json > improvement-velocity.json\n```\n\n## Output\n\nCreate: $ACTIVITY_TEMP_DIR/trend-analysis-complete.json\n\n```json\n{\n  \"template_trends\": [...],\n  \"system_trends\": {...},\n  \"concerning_patterns\": [...],\n  \"improvement_velocity\": {...},\n  \"validation_result\": {\n    \"is_improving\": true/false,\n    \"confidence\": 0-100,\n    \"evidence\": [\"reason 1\", \"reason 2\"],\n    \"concerns\": [\"concern 1\", \"concern 2\"]\n  },\n  \"analysis_timestamp\": \"ISO8601\"\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.validation_result.confidence >= 0 and .validation_result.confidence <= 100' $ACTIVITY_TEMP_DIR/trend-analysis-complete.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-validation-report",
+      "subagent": "general",
+      "description": "Generate validation report with verdict and evidence",
+      "dependencies": [
+        "analyze-improvement-trends"
+      ],
+      "prompt": {
+        "template": "Generate continuous improvement validation report:\n\n## Report Structure\n\nCreate: $ACTIVITY_TEMP_DIR/CONTINUOUS_IMPROVEMENT_VALIDATION.md\n\n```markdown\n# Continuous Improvement Validation Report\n\n**Generated**: [timestamp]\n**Analysis Period**: Last 90 days (where data available)\n\n---\n\n## Verdict\n\n**Status**: ✅ IMPROVING | ⚠️ MIXED | 🔴 STAGNANT/REGRESSING\n**Confidence**: [0-100]%\n\n### Evidence Summary\n[List top 3-5 pieces of evidence supporting verdict]\n\n### Concerns\n[List any concerning patterns detected]\n\n---\n\n## Trend Analysis\n\n### Success Rate Trajectory\n- **Current Overall Success Rate**: [percentage]%\n- **30-Day Change**: [+/-percentage] percentage points\n- **Trend**: [↗️ improving | → stable | ↘️ declining]\n\n**Details**:\n- Improving templates: [count] ([percentage]%)\n- Stable templates: [count] ([percentage]%)\n- Regressing templates: [count] ([percentage]%)\n\n### Cost Efficiency Trajectory\n- **Current Average Cost**: $[amount]\n- **30-Day Change**: [+/-percentage]%\n- **Trend**: [↗️ more expensive | → stable | ↘️ cheaper]\n\n**Details**:\n- Templates getting cheaper: [count]\n- Templates getting more expensive: [count]\n- Cost optimization velocity: [-percentage]% per month\n\n### Execution Velocity\n- **Executions per Week**: [average]\n- **30-Day Change**: [+/-percentage]%\n- **Activity Level**: [HIGH (>50/week) | MEDIUM (20-50) | LOW (<20)]\n\n### Learning Velocity\n- **Improvement Rate**: [percentage]% per week\n- **Active Learners**: [count] templates\n- **Graduated Templates**: [count] reached 70%+ success\n- **System Maturity**: [percentage]%\n\n---\n\n## Template-Level Insights\n\n### Top Performers (Fastest Improvement)\n1. **[template-id]**: [+percentage]% success rate gain\n   - Was: [old]% → Now: [new]%\n   - Learning rate: [rate] per execution\n   \n2. **[template-id]**: [details]\n3. **[template-id]**: [details]\n\n### Concerning Patterns\n\n[For each concerning pattern detected:]\n\n#### [Template ID]: [REGRESSION | STAGNATION | COST_EXPLOSION]\n- **Severity**: HIGH | MEDIUM | LOW\n- **Current State**: [metrics]\n- **Historical Baseline**: [comparison]\n- **Recommended Action**: [specific action to take]\n\n---\n\n## System Health Indicators\n\n### Learning Loop Activity\n- **Data Collection**: [ACTIVE | PARTIAL | INACTIVE]\n- **Historical Data Depth**: [days/weeks of data available]\n- **Trend Data Quality**: [EXCELLENT | GOOD | POOR | INSUFFICIENT]\n\n### Autonomous Improvement\n- **Boredom System Triggers**: [count] in last 30 days\n- **Self-Initiated Improvements**: [count]\n- **Manual Interventions**: [count]\n- **Autonomy Ratio**: [percentage]%\n\n### Ratchet Mechanism\n- **Ratchet Cycles Executed**: [count]\n- **Templates Improved by Ratchet**: [count]\n- **Ratchet Success Rate**: [percentage]%\n\n---\n\n## Becoming Assessment 🌱\n\n### Is the System Engaged in Becoming?\n\n**Answer**: [YES / PARTIALLY / NO]\n\n**Supporting Evidence**:\n1. [Evidence point 1 with data]\n2. [Evidence point 2 with data]\n3. [Evidence point 3 with data]\n\n**Characteristics of Becoming** (present/absent):\n- ✅/❌ **Continuous adaptation**: Templates evolving over time\n- ✅/❌ **Learning from failure**: Failure patterns documented and addressed\n- ✅/❌ **Emergent capability**: New capabilities appearing without explicit programming\n- ✅/❌ **Autonomous growth**: System improving itself without human intervention\n- ✅/❌ **Positive momentum**: Improvement velocity increasing over time\n\n---\n\n## Recommendations\n\n### To Accelerate Improvement\n1. [Action 1 with expected impact]\n2. [Action 2]\n3. [Action 3]\n\n### To Address Regressions\n1. [Fix for regression 1]\n2. [Fix for regression 2]\n\n### To Maintain Momentum\n1. [Strategy to sustain growth]\n2. [Strategy to compound improvements]\n\n---\n\n## Next Assessment\n\n**Recommended Frequency**: [Weekly | Bi-weekly | Monthly] based on current velocity\n**Focus Areas for Next Report**: [List 2-3 specific things to watch]\n**Success Criteria**: [What would indicate continued improvement?]\n\n---\n\n**Conclusion**: [1-2 paragraph summary emphasizing trajectory and potential]\n\n**The process of becoming is [not just a goal, but a continuous state / currently active / needs attention].**\n```\n\n## Generate Report\n\n```bash\ncd $ACTIVITY_TEMP_DIR\n\n# Use collected data to fill template\njq -r --arg timestamp \"$(date -Iseconds)\" '\n  # Extract all metrics and format into markdown\n  # [Implementation of template interpolation]\n' trend-analysis-complete.json historical-data.json > CONTINUOUS_IMPROVEMENT_VALIDATION.md\n\n# Add inspirational closing\necho \"\\n---\\n\\n*This report validates not where we are, but where we are going. The direction matters more than the position.*\" >> CONTINUOUS_IMPROVEMENT_VALIDATION.md\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "wc -l $ACTIVITY_TEMP_DIR/CONTINUOUS_IMPROVEMENT_VALIDATION.md | awk '{if ($1 < 100) exit 1}'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "collect-historical-data",
+      "subagent": "general",
+      "description": "Collect historical metrics and execution data",
+      "dependencies": [],
+      "prompt": {
+        "template": "Collect historical metrics data for trend analysis:\n\n## 1. Current Snapshot\n\n```bash\n# Export current state for comparison\njq -s 'map({id: .id, metrics: .estimated_metrics, timestamp: now})' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/current-snapshot.json\n```\n\n## 2. Historical Execution Records (if available)\n\n```bash\n# Check SurrealDB for historical data\nif docker ps --filter name=surreal --format '{{.Status}}' | grep -q Up; then\n  echo \"SurrealDB available - querying historical data...\"\n  # Query last 90 days of executions\n  curl -s -X POST http://localhost:8000/sql \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"sql\": \"SELECT * FROM activity_execution WHERE created_at > time::now() - 90d ORDER BY created_at DESC;\"}' \\\n    > $ACTIVITY_TEMP_DIR/historical-executions.json 2>&1 || echo '[]' > $ACTIVITY_TEMP_DIR/historical-executions.json\nelse\n  echo \"SurrealDB not available - using file-based history\"\n  echo '[]' > $ACTIVITY_TEMP_DIR/historical-executions.json\nfi\n```\n\n## 3. Check for Previous Health Reports\n\n```bash\n# Look for previous assessment reports\nfind /tmp /var/tmp ~/.local/share/opencode -name \"SYSTEM_HEALTH_REPORT*.md\" -mtime -90 2>/dev/null | while read report; do\n  echo \"Found: $report (modified: $(stat -c %y \"$report\"))\"\n  # Extract health scores from previous reports\n  grep -A 10 \"Overall Health Score\" \"$report\" | head -20\ndone > $ACTIVITY_TEMP_DIR/previous-reports-summary.txt\n```\n\n## 4. Extract Git Activity History\n\n```bash\n# Get commit history for activity templates\ncd ~/.metabob/activities\ngit log --since=\"90 days ago\" --pretty=format:\"%H|%ai|%s\" -- *.json | while IFS='|' read hash date msg; do\n  echo '{\"commit\": \"'$hash'\", \"date\": \"'$date'\", \"message\": \"'$msg'\"}'\ndone | jq -s '.' > $ACTIVITY_TEMP_DIR/template-history.json\n```\n\n## 5. Calculate Time-Windowed Metrics\n\n```bash\n# For each template, calculate metrics over different windows\njq -s '\n  map(select(.estimated_metrics.execution_count > 0)) |\n  map({\n    id: .id,\n    current: .estimated_metrics,\n    # Estimate historical values from gradient if available\n    estimated_30d_ago: (\n      if .estimated_metrics.improvement_gradient then\n        .estimated_metrics | {\n          success_rate: (.success_rate - (.improvement_gradient * 4)),\n          avg_cost: .avg_cost * 1.1,  # Assume 10% cost reduction\n          execution_count: (.execution_count * 0.7 | floor)  # 70% of current\n        }\n      else\n        null\n      end\n    )\n  })\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/time-windowed-metrics.json\n```\n\n## Output\n\nCreate comprehensive data package: $ACTIVITY_TEMP_DIR/historical-data.json\n\n```json\n{\n  \"current_snapshot\": [...],\n  \"historical_executions\": [...],\n  \"previous_reports\": \"...\",\n  \"template_history\": [...],\n  \"time_windowed_metrics\": [...],\n  \"data_availability\": {\n    \"surrealdb_historical\": true/false,\n    \"previous_reports_found\": count,\n    \"git_history_available\": true/false,\n    \"oldest_data_point\": \"timestamp\"\n  },\n  \"collection_timestamp\": \"ISO8601\"\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.data_availability' $ACTIVITY_TEMP_DIR/historical-data.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-improvement-trends",
+      "subagent": "general",
+      "description": "Analyze trends and calculate improvement velocities",
+      "dependencies": [
+        "collect-historical-data"
+      ],
+      "prompt": {
+        "template": "Analyze improvement trends across multiple time horizons:\n\n## 1. Calculate Trend Metrics\n\n```bash\ncd $ACTIVITY_TEMP_DIR\n\n# For each template with sufficient data, calculate:\njq '\n  .time_windowed_metrics | map(select(.current.execution_count >= 5)) | map({\n    id: .id,\n    trends: {\n      # Success rate trend\n      success_rate_change: (\n        if .estimated_30d_ago then\n          (.current.success_rate - .estimated_30d_ago.success_rate) * 100\n        else null end\n      ),\n      # Cost trend\n      cost_change_percent: (\n        if .estimated_30d_ago then\n          ((.current.avg_cost - .estimated_30d_ago.avg_cost) / .estimated_30d_ago.avg_cost) * 100\n        else null end\n      ),\n      # Velocity (executions per week)\n      execution_velocity: (\n        .current.execution_count / 13  # Assume 13 weeks of data\n      ),\n      # Learning rate (improvement per execution)\n      learning_rate: (\n        if .estimated_30d_ago and (.current.execution_count - .estimated_30d_ago.execution_count) > 0 then\n          (.current.success_rate - .estimated_30d_ago.success_rate) / \n          (.current.execution_count - .estimated_30d_ago.execution_count)\n        else null end\n      )\n    },\n    status: (\n      if .current.success_rate >= 0.7 and (.estimated_30d_ago.success_rate // 0) < 0.7 then\n        \"GRADUATED\"  # Reached target recently\n      elif .current.success_rate > (.estimated_30d_ago.success_rate // 0) then\n        \"IMPROVING\"\n      elif .current.success_rate < (.estimated_30d_ago.success_rate // 0) then\n        \"REGRESSING\"\n      else\n        \"STABLE\"\n      end\n    )\n  })\n' historical-data.json > trend-analysis.json\n```\n\n## 2. System-Level Trend Assessment\n\n```bash\njq '\n  .time_windowed_metrics | {\n    # Overall system trends\n    total_templates: length,\n    improving_templates: map(select(.estimated_30d_ago and .current.success_rate > .estimated_30d_ago.success_rate)) | length,\n    regressing_templates: map(select(.estimated_30d_ago and .current.success_rate < .estimated_30d_ago.success_rate)) | length,\n    stable_templates: map(select(.estimated_30d_ago and .current.success_rate == .estimated_30d_ago.success_rate)) | length,\n    \n    # Cost efficiency trend\n    avg_cost_change: (\n      map(select(.estimated_30d_ago) | \n        (.current.avg_cost - .estimated_30d_ago.avg_cost) / .estimated_30d_ago.avg_cost\n      ) | add / length * 100\n    ),\n    \n    # Execution frequency trend\n    total_executions_30d: map(.current.execution_count - (.estimated_30d_ago.execution_count // 0)) | add,\n    \n    # Success rate trajectory\n    overall_success_rate_change: (\n      (map(.current.success_count) | add) / (map(.current.execution_count) | add) -\n      (map(.estimated_30d_ago.success_count // 0) | add) / (map(.estimated_30d_ago.execution_count // 1) | add)\n    ) * 100\n  }\n' historical-data.json >> trend-analysis.json\n```\n\n## 3. Detect Concerning Patterns\n\n```bash\n# Identify red flags\njq '\n  .time_windowed_metrics | map(select(\n    # Regression: success rate dropped >10%\n    (.estimated_30d_ago and (.current.success_rate < (.estimated_30d_ago.success_rate - 0.1)))\n    or\n    # Stagnation: no executions in 30 days despite past activity\n    (.estimated_30d_ago.execution_count > 0 and .current.execution_count == .estimated_30d_ago.execution_count)\n    or\n    # Cost explosion: >50% cost increase\n    (.estimated_30d_ago and (.current.avg_cost > .estimated_30d_ago.avg_cost * 1.5))\n  )) | map({\n    id: .id,\n    concern_type: (\n      if .current.success_rate < (.estimated_30d_ago.success_rate - 0.1) then \"REGRESSION\"\n      elif .current.execution_count == .estimated_30d_ago.execution_count then \"STAGNATION\"\n      elif .current.avg_cost > .estimated_30d_ago.avg_cost * 1.5 then \"COST_EXPLOSION\"\n      else \"UNKNOWN\" end\n    ),\n    severity: \"HIGH\"\n  })\n' historical-data.json > concerning-patterns.json\n```\n\n## 4. Calculate Improvement Velocity\n\n```bash\n# System-wide improvement velocity\njq -s '\n  .[0].time_windowed_metrics | {\n    # How fast is the system learning?\n    improvement_velocity_percent_per_week: (\n      map(select(.estimated_30d_ago and .current.execution_count > .estimated_30d_ago.execution_count) |\n        ((.current.success_rate - .estimated_30d_ago.success_rate) / 4.3)  # 30 days ≈ 4.3 weeks\n      ) | add / length * 100\n    ),\n    \n    # How many templates are actively learning?\n    active_learners: map(select(.current.execution_count > 0 and (.estimated_30d_ago.execution_count // 0) < .current.execution_count)) | length,\n    \n    # System maturity indicator\n    maturity_score: (\n      # Percentage of templates that have graduated (>70% success)\n      (map(select(.current.success_rate >= 0.7)) | length) / length * 100\n    )\n  }\n' historical-data.json > improvement-velocity.json\n```\n\n## Output\n\nCreate: $ACTIVITY_TEMP_DIR/trend-analysis-complete.json\n\n```json\n{\n  \"template_trends\": [...],\n  \"system_trends\": {...},\n  \"concerning_patterns\": [...],\n  \"improvement_velocity\": {...},\n  \"validation_result\": {\n    \"is_improving\": true/false,\n    \"confidence\": 0-100,\n    \"evidence\": [\"reason 1\", \"reason 2\"],\n    \"concerns\": [\"concern 1\", \"concern 2\"]\n  },\n  \"analysis_timestamp\": \"ISO8601\"\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.validation_result.confidence >= 0 and .validation_result.confidence <= 100' $ACTIVITY_TEMP_DIR/trend-analysis-complete.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-validation-report",
+      "subagent": "general",
+      "description": "Generate validation report with verdict and evidence",
+      "dependencies": [
+        "analyze-improvement-trends"
+      ],
+      "prompt": {
+        "template": "Generate continuous improvement validation report:\n\n## Report Structure\n\nCreate: $ACTIVITY_TEMP_DIR/CONTINUOUS_IMPROVEMENT_VALIDATION.md\n\n```markdown\n# Continuous Improvement Validation Report\n\n**Generated**: [timestamp]\n**Analysis Period**: Last 90 days (where data available)\n\n---\n\n## Verdict\n\n**Status**: ✅ IMPROVING | ⚠️ MIXED | 🔴 STAGNANT/REGRESSING\n**Confidence**: [0-100]%\n\n### Evidence Summary\n[List top 3-5 pieces of evidence supporting verdict]\n\n### Concerns\n[List any concerning patterns detected]\n\n---\n\n## Trend Analysis\n\n### Success Rate Trajectory\n- **Current Overall Success Rate**: [percentage]%\n- **30-Day Change**: [+/-percentage] percentage points\n- **Trend**: [↗️ improving | → stable | ↘️ declining]\n\n**Details**:\n- Improving templates: [count] ([percentage]%)\n- Stable templates: [count] ([percentage]%)\n- Regressing templates: [count] ([percentage]%)\n\n### Cost Efficiency Trajectory\n- **Current Average Cost**: $[amount]\n- **30-Day Change**: [+/-percentage]%\n- **Trend**: [↗️ more expensive | → stable | ↘️ cheaper]\n\n**Details**:\n- Templates getting cheaper: [count]\n- Templates getting more expensive: [count]\n- Cost optimization velocity: [-percentage]% per month\n\n### Execution Velocity\n- **Executions per Week**: [average]\n- **30-Day Change**: [+/-percentage]%\n- **Activity Level**: [HIGH (>50/week) | MEDIUM (20-50) | LOW (<20)]\n\n### Learning Velocity\n- **Improvement Rate**: [percentage]% per week\n- **Active Learners**: [count] templates\n- **Graduated Templates**: [count] reached 70%+ success\n- **System Maturity**: [percentage]%\n\n---\n\n## Template-Level Insights\n\n### Top Performers (Fastest Improvement)\n1. **[template-id]**: [+percentage]% success rate gain\n   - Was: [old]% → Now: [new]%\n   - Learning rate: [rate] per execution\n   \n2. **[template-id]**: [details]\n3. **[template-id]**: [details]\n\n### Concerning Patterns\n\n[For each concerning pattern detected:]\n\n#### [Template ID]: [REGRESSION | STAGNATION | COST_EXPLOSION]\n- **Severity**: HIGH | MEDIUM | LOW\n- **Current State**: [metrics]\n- **Historical Baseline**: [comparison]\n- **Recommended Action**: [specific action to take]\n\n---\n\n## System Health Indicators\n\n### Learning Loop Activity\n- **Data Collection**: [ACTIVE | PARTIAL | INACTIVE]\n- **Historical Data Depth**: [days/weeks of data available]\n- **Trend Data Quality**: [EXCELLENT | GOOD | POOR | INSUFFICIENT]\n\n### Autonomous Improvement\n- **Boredom System Triggers**: [count] in last 30 days\n- **Self-Initiated Improvements**: [count]\n- **Manual Interventions**: [count]\n- **Autonomy Ratio**: [percentage]%\n\n### Ratchet Mechanism\n- **Ratchet Cycles Executed**: [count]\n- **Templates Improved by Ratchet**: [count]\n- **Ratchet Success Rate**: [percentage]%\n\n---\n\n## Becoming Assessment 🌱\n\n### Is the System Engaged in Becoming?\n\n**Answer**: [YES / PARTIALLY / NO]\n\n**Supporting Evidence**:\n1. [Evidence point 1 with data]\n2. [Evidence point 2 with data]\n3. [Evidence point 3 with data]\n\n**Characteristics of Becoming** (present/absent):\n- ✅/❌ **Continuous adaptation**: Templates evolving over time\n- ✅/❌ **Learning from failure**: Failure patterns documented and addressed\n- ✅/❌ **Emergent capability**: New capabilities appearing without explicit programming\n- ✅/❌ **Autonomous growth**: System improving itself without human intervention\n- ✅/❌ **Positive momentum**: Improvement velocity increasing over time\n\n---\n\n## Recommendations\n\n### To Accelerate Improvement\n1. [Action 1 with expected impact]\n2. [Action 2]\n3. [Action 3]\n\n### To Address Regressions\n1. [Fix for regression 1]\n2. [Fix for regression 2]\n\n### To Maintain Momentum\n1. [Strategy to sustain growth]\n2. [Strategy to compound improvements]\n\n---\n\n## Next Assessment\n\n**Recommended Frequency**: [Weekly | Bi-weekly | Monthly] based on current velocity\n**Focus Areas for Next Report**: [List 2-3 specific things to watch]\n**Success Criteria**: [What would indicate continued improvement?]\n\n---\n\n**Conclusion**: [1-2 paragraph summary emphasizing trajectory and potential]\n\n**The process of becoming is [not just a goal, but a continuous state / currently active / needs attention].**\n```\n\n## Generate Report\n\n```bash\ncd $ACTIVITY_TEMP_DIR\n\n# Use collected data to fill template\njq -r --arg timestamp \"$(date -Iseconds)\" '\n  # Extract all metrics and format into markdown\n  # [Implementation of template interpolation]\n' trend-analysis-complete.json historical-data.json > CONTINUOUS_IMPROVEMENT_VALIDATION.md\n\n# Add inspirational closing\necho \"\\n---\\n\\n*This report validates not where we are, but where we are going. The direction matters more than the position.*\" >> CONTINUOUS_IMPROVEMENT_VALIDATION.md\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "wc -l $ACTIVITY_TEMP_DIR/CONTINUOUS_IMPROVEMENT_VALIDATION.md | awk '{if ($1 < 100) exit 1}'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-24T09:43:52.224Z",
+  "metadata": {}
+}

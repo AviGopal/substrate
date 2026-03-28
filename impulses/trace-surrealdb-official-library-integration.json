@@ -1,0 +1,209 @@
+{
+  "id": "trace-surrealdb-official-library-integration",
+  "type": "trace",
+  "title": "SurrealDB Official Library Integration - Implementation Trace",
+  "description": "Complete trace of current buggy implementation and desired state for replacing custom HTTP client with official surrealdb-py library to fix variant_id persistence bug",
+  "content": {
+    "specification": {
+      "name": "SurrealDB Official Library Integration",
+      "id": "surrealdb-official-library-integration",
+      "problem": "variant_id and activity_id fields becoming NONE in template_metrics, breaking Thompson Sampling",
+      "rootCause": "Custom HTTP RPC client has parameter serialization bugs + using update() instead of merge()",
+      "solution": "Replace with official surrealdb-py (>=1.0.0), upgrade to SurrealDB v3.0+, use merge() for partial updates"
+    },
+    "criticalBugs": [
+      {
+        "id": "bug-1",
+        "location": "repos/metabob-rpc-api/server/db/operations/template_metrics.py:273",
+        "issue": "db.update() replaces ALL fields - must explicitly include variant_id/activity_id or they become NONE",
+        "evidence": "Lines 243-246 have explicit workaround comments",
+        "fix": "Replace db.update() with db.merge() for partial updates",
+        "priority": "CRITICAL"
+      },
+      {
+        "id": "bug-2",
+        "location": "repos/metabob-rpc-api/server/db/surrealdb_client.py:112-178",
+        "issue": "Manual JSON serialization in _execute_rpc() has parameter binding bugs",
+        "evidence": "Lines 153-155 log variant_id for debugging NONE values",
+        "fix": "Replace entire custom client with official surrealdb-py library",
+        "priority": "CRITICAL"
+      },
+      {
+        "id": "bug-3",
+        "location": "repos/metabob-rpc-api/server/routes/activity.py:509",
+        "issue": "Same update() vs merge() issue when updating from endpoint",
+        "evidence": "No explicit variant_id preservation in update_data",
+        "fix": "Use db.merge() instead of db.update()",
+        "priority": "HIGH"
+      }
+    ],
+    "dataFlow": {
+      "entry": "OpenCode -> POST /v2/activities/templates/{template_id}/metrics",
+      "steps": [
+        {
+          "step": 1,
+          "component": "update_template_metrics",
+          "file": "repos/metabob-rpc-api/server/routes/activity.py",
+          "lines": "395-526",
+          "currentBehavior": "Receives metrics, calls get_metrics() then db.update()",
+          "desiredBehavior": "Same but using official async client with db.merge()",
+          "status": "NEEDS_FIX"
+        },
+        {
+          "step": 2,
+          "component": "update_metrics_after_execution",
+          "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+          "lines": "151-276",
+          "currentBehavior": "Uses db.update() with explicit variant_id/activity_id preservation",
+          "desiredBehavior": "Use db.merge() to preserve immutable fields automatically",
+          "status": "NEEDS_FIX"
+        },
+        {
+          "step": 3,
+          "component": "SurrealDBHTTPClient.update",
+          "file": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+          "lines": "287-312",
+          "currentBehavior": "Custom HTTP RPC with manual serialization (buggy)",
+          "desiredBehavior": "Official library's async update() with proper binding",
+          "status": "NEEDS_REPLACEMENT"
+        }
+      ]
+    },
+    "components": [
+      {
+        "file": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+        "component": "SurrealDBHTTPClient",
+        "loc": 481,
+        "currentBehavior": "Custom HTTP RPC, sync operations, manual JSON serialization",
+        "desiredBehavior": "Async wrapper around official surrealdb.Surreal",
+        "gap": "Complete rewrite using official library",
+        "effort": "2-3 hours"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+        "component": "update_metrics_after_execution",
+        "criticalLines": [273, 244, 245, 246],
+        "currentBehavior": "db.update() with workaround",
+        "desiredBehavior": "db.merge() without workaround",
+        "gap": "Change 1 line, remove 3 workaround lines",
+        "effort": "30 minutes"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/activity.py",
+        "component": "update_template_metrics",
+        "criticalLines": [509],
+        "currentBehavior": "db.update() without preservation",
+        "desiredBehavior": "db.merge() for partial updates",
+        "gap": "Change 1 line",
+        "effort": "10 minutes"
+      },
+      {
+        "file": "repos/metabob-rpc-api/requirements.txt",
+        "component": "Dependencies",
+        "criticalLines": [104, 105, 106, 107],
+        "currentBehavior": "surrealdb==1.0.8 commented out",
+        "desiredBehavior": "surrealdb>=1.0.0 enabled",
+        "gap": "Uncomment and update version",
+        "effort": "5 minutes"
+      },
+      {
+        "file": "k8s deployment",
+        "component": "SurrealDB Server",
+        "currentBehavior": "surrealdb/surrealdb:v2.3.10",
+        "desiredBehavior": "surrealdb/surrealdb:v3.0+",
+        "gap": "Update image tag, apply schema",
+        "effort": "1 hour"
+      }
+    ],
+    "implementationPhases": [
+      {
+        "phase": 1,
+        "name": "Replace custom client with official library",
+        "effort": "2-3 hours",
+        "tasks": [
+          "Uncomment surrealdb>=1.0.0 in requirements.txt",
+          "Rewrite surrealdb_client.py as AsyncSurrealDBClient wrapper",
+          "Implement async methods: connect, query, create, select, update, merge, delete",
+          "Update get_surreal_client() to return async client",
+          "Add connection pool management"
+        ],
+        "files": [
+          "repos/metabob-rpc-api/requirements.txt",
+          "repos/metabob-rpc-api/server/db/surrealdb_client.py"
+        ]
+      },
+      {
+        "phase": 2,
+        "name": "Fix update operations to use merge()",
+        "effort": "30 minutes",
+        "tasks": [
+          "Change template_metrics.py:273 from db.update() to db.merge()",
+          "Remove explicit variant_id/activity_id preservation (lines 244-246)",
+          "Change activity.py:509 from db.update() to db.merge()",
+          "Update all operations to be async"
+        ],
+        "files": [
+          "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+          "repos/metabob-rpc-api/server/routes/activity.py"
+        ]
+      },
+      {
+        "phase": 3,
+        "name": "Upgrade SurrealDB deployment",
+        "effort": "1 hour",
+        "tasks": [
+          "Update k8s deployment manifest to surrealdb:v3.0+",
+          "Run unified schema initialization on startup",
+          "Verify schema with SCHEMAFULL enforcement",
+          "Test auth with official library"
+        ],
+        "files": [
+          "k8s manifests",
+          "repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql"
+        ]
+      },
+      {
+        "phase": 4,
+        "name": "End-to-end validation",
+        "effort": "1 hour",
+        "tasks": [
+          "Test variant_id persistence in template_metrics",
+          "Verify activity_id not NONE after updates",
+          "Test Thompson Sampling queries work",
+          "Verify async performance improvements",
+          "Load test with concurrent requests"
+        ]
+      }
+    ],
+    "validationCriteria": {
+      "fieldPersistence": "variant_id and activity_id never NULL after create/update operations",
+      "querySuccess": "SELECT * FROM template_metrics WHERE variant_id = $variant_id returns correct records",
+      "mergeCorrectness": "merge() updates only specified fields, preserves all others",
+      "asyncPerformance": "No blocking in FastAPI event loop, improved throughput",
+      "schemaEnforcement": "SCHEMAFULL tables reject invalid data"
+    },
+    "detailedTraceMarkdown": "/tmp/trace-summary.md",
+    "fullTraceJSON": "/tmp/surrealdb-integration-trace.json"
+  },
+  "metadata": {
+    "createdAt": "2026-03-01T19:30:00Z",
+    "createdBy": "trace-data-flow-single-feature activity",
+    "specificationScope": "repos/metabob-rpc-api/server/db",
+    "impactedSystems": [
+      "Thompson Sampling",
+      "Boredom Activity Detection",
+      "Learning Loop",
+      "Metrics Dashboard"
+    ],
+    "priority": "CRITICAL",
+    "estimatedEffort": "4-5 hours implementation + 1 hour validation = 1 day total"
+  },
+  "references": {
+    "schema": "repos/metabob-rpc-api/docs/schema/activity_learning_loop.surql",
+    "currentClient": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+    "legacyClient": "repos/metabob-rpc-api/server/db/surrealdb_client_legacy.py",
+    "templateMetrics": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+    "activityRoutes": "repos/metabob-rpc-api/server/routes/activity.py",
+    "requirements": "repos/metabob-rpc-api/requirements.txt"
+  }
+}

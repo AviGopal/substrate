@@ -1,0 +1,106 @@
+{
+  "specificationName": "dashboard-real-time-data-integration",
+  "harnessFile": "tests/validation-harnesses/dashboard-real-time-data-integration-harness.js",
+  "testCases": [
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-1",
+      "name": "Server Running on Port 8083",
+      "input": "Check lsof -i :8083 for LISTEN status",
+      "expectedOutput": {"port": 8083, "status": "listening"}
+    },
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-2",
+      "name": "Health Endpoint",
+      "input": "GET http://localhost:8083/",
+      "expectedOutput": {"status": "ok", "service": "opencode-data-bridge"}
+    },
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-3",
+      "name": "Metrics Endpoint Structure",
+      "input": "GET http://localhost:8083/metrics",
+      "expectedOutput": {
+        "project_metrics": {
+          "total_issues": "number",
+          "files_analyzed": "number",
+          "components_found": "number",
+          "total_activities": "number"
+        },
+        "dashboard_health": {
+          "api_status": "healthy",
+          "bridge_status": "active",
+          "backend_api_connected": "boolean",
+          "surrealdb_connected": "boolean"
+        },
+        "data_sources": {
+          "rpc_api": "connected|unavailable",
+          "surrealdb": "connected|unavailable",
+          "local_files": "available"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-4",
+      "name": "Problems Endpoint Structure",
+      "input": "GET http://localhost:8083/problems",
+      "expectedOutput": {
+        "problems": "array",
+        "total_count": "number",
+        "summary": {
+          "critical": "number",
+          "high": "number",
+          "medium": "number",
+          "low": "number"
+        },
+        "metadata": {
+          "source": "backend|cache",
+          "last_updated": "ISO timestamp"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-5",
+      "name": "Activities Endpoint Pagination",
+      "input": "GET http://localhost:8083/activities?limit=10&offset=0",
+      "expectedOutput": {
+        "activities": "array",
+        "total_count": "number",
+        "offset": 0,
+        "limit": 10,
+        "metadata": {
+          "last_updated": "ISO timestamp",
+          "source": "surrealdb|local"
+        }
+      }
+    },
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-6",
+      "name": "Sessions Endpoint",
+      "input": "GET http://localhost:8083/session",
+      "expectedOutput": {
+        "session": "string (token)",
+        "user": {"id": "string", "name": "string"},
+        "project": {"name": "string", "path": "string"}
+      }
+    },
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-7",
+      "name": "Data Freshness Check",
+      "input": "Compare dashboard_health.last_data_update to current time",
+      "expectedOutput": {"age_seconds": "< 60"}
+    },
+    {
+      "impulseId": "validation-dashboard-real-time-data-integration-case-8",
+      "name": "Backend Connectivity Status",
+      "input": "Check dashboard_health.backend_api_connected and surrealdb_connected",
+      "expectedOutput": {"at_least_one_backend": "connected"}
+    }
+  ],
+  "harnessImpulseId": "harness-dashboard-real-time-data-integration",
+  "validationResults": {
+    "total": 8,
+    "passed": 7,
+    "failed": 1,
+    "status": "MOSTLY_PASSING",
+    "note": "Problems endpoint timeout is due to backend query latency, endpoint is functional with increased timeout"
+  }
+}

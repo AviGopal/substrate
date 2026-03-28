@@ -1,0 +1,83 @@
+{
+  "activity_id": "test-activity-artifact-system",
+  "name": "Test Activity Artifact System",
+  "description": "Minimal test to validate artifact system with ACTIVITY_TEMP_DIR",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "test-temp-dir",
+      "subagent": "general",
+      "description": "Test that ACTIVITY_TEMP_DIR interpolates and artifacts can be created",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are testing the activity artifact system.\n\n**Your Task:**\n1. Create a test file at: {{output_dir}}/test-artifact.txt\n2. Write 'Hello from activity artifact system!' to it\n3. Verify the file was created\n4. Output the full path where the file was created\n\n**Success Criteria:**\n- File created successfully\n- File contains the test message\n- Path is reported\n\n**Important**: Use the bash tool to create the file, ensuring the sandbox allows the path.",
+        "variables": [
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory for test artifact",
+            "default": "{{ACTIVITY_TEMP_DIR}}"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "test-temp-dir",
+      "subagent": "general",
+      "description": "Test that ACTIVITY_TEMP_DIR interpolates and artifacts can be created",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are testing the activity artifact system.\n\n**Your Task:**\n1. Create a test file at: {{output_dir}}/test-artifact.txt\n2. Write 'Hello from activity artifact system!' to it\n3. Verify the file was created\n4. Output the full path where the file was created\n\n**Success Criteria:**\n- File created successfully\n- File contains the test message\n- Path is reported\n\n**Important**: Use the bash tool to create the file, ensuring the sandbox allows the path.",
+        "variables": [
+          {
+            "name": "output_dir",
+            "type": "string",
+            "required": false,
+            "description": "Output directory for test artifact",
+            "default": "{{ACTIVITY_TEMP_DIR}}"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-21T03:48:19.058Z",
+  "metadata": {}
+}

@@ -1,0 +1,22 @@
+{
+  "activity_id": "act_demo_cli_001",
+  "template_id": "add-feature-complete",
+  "started_at": "2026-03-14T04:55:00Z",
+  "completed_at": "2026-03-14T04:57:30Z",
+  "duration_ms": 150000,
+  "success": true,
+  "tokens_input": 12500,
+  "tokens_output": 3200,
+  "tokens_cache": 8400,
+  "cost_usd": 0.245,
+  "variables": {
+    "featureName": "User profile endpoint",
+    "files": ["src/api/users.ts", "src/models/user.ts"],
+    "description": "Add GET /api/users/:id endpoint with validation"
+  },
+  "metadata": {
+    "agent": "activity",
+    "model": "claude-3-7-sonnet-20250219",
+    "source": "metabob-cli"
+  }
+}

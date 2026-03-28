@@ -1,0 +1,19 @@
+{
+  "impulseId": "validation-async-await-type-safety-case-1",
+  "testCase": "Pyright configuration exists with reportUnawaited: error",
+  "input": {
+    "file": "repos/metabob-rpc-api/pyrightconfig.json",
+    "checkType": "file_exists_with_content"
+  },
+  "expectedOutput": {
+    "fileExists": true,
+    "contentContains": [
+      "\"reportUnawaited\": \"error\"",
+      "\"pythonVersion\": \"3.10\"",
+      "\"include\": [\"server/routes\", \"server/db/operations\"]"
+    ],
+    "validation": "Configuration enforces async/await correctness"
+  },
+  "validationMethod": "grep",
+  "purpose": "Ensures pyright is configured to catch missing await calls as errors"
+}

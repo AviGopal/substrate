@@ -1,0 +1,26 @@
+{
+  "id": "validation-dynamic-activity-creation-devbob-e2e-validation-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "testCase",
+    "specification": "dynamic-activity-creation-devbob-e2e-validation",
+    "testName": "Lifecycle Hooks and Memory Prediction"
+  },
+  "content": {
+    "input": {
+      "lifecycleHooks": true,
+      "memoryPrediction": true,
+      "expectedHooks": ["onActivityStart", "onTaskComplete", "onActivityComplete"]
+    },
+    "expectedOutput": {
+      "lifecycleHooksExecuted": true,
+      "impulseInjection": true,
+      "contextPrepared": true,
+      "memoryPredictionActive": true
+    },
+    "validationCommand": "kubectl logs -f deployment/devbob-opencode -n metabob --tail=200 | grep -E 'lifecycle.*hook|impulse.*inject|memory.*predict'",
+    "expectedResult": "Logs show lifecycle hook execution and impulse injection events"
+  },
+  "budget": 500,
+  "loaded": true
+}

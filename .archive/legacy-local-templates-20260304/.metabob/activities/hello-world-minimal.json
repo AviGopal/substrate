@@ -1,0 +1,93 @@
+{
+  "activity_id": "hello-world-minimal",
+  "name": "Hello World Minimal",
+  "description": "Minimal test activity with no context requirements - single task that writes a file",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "write-hello",
+      "subagent": "general",
+      "description": "Write hello world message to file",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write a hello world message to /tmp/hello-{{testId}}.txt\n\nThe message should say: Hello from {{name}}!\n\nUse the write tool to create the file.",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Unique test identifier"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true,
+            "description": "Name to include in greeting"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "write-hello",
+      "subagent": "general",
+      "description": "Write hello world message to file",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write a hello world message to /tmp/hello-{{testId}}.txt\n\nThe message should say: Hello from {{name}}!\n\nUse the write tool to create the file.",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Unique test identifier"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true,
+            "description": "Name to include in greeting"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T23:29:29.255Z",
+  "metadata": {}
+}

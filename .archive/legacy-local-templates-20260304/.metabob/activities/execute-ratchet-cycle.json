@@ -1,0 +1,487 @@
+{
+  "activity_id": "execute-ratchet-cycle",
+  "name": "Execute Ratchet Cycle",
+  "description": "Composable self-improving loop that inspects system state, identifies bottlenecks, applies improvements, measures progress, and decides next action",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "inspect-system-state",
+      "subagent": "general",
+      "description": "Collect current system metrics, activity execution data, template success rates, and performance indicators to establish baseline state",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are executing the first phase of a ratchet cycle: inspecting system state to identify improvement opportunities.\n\n## Your Task\n\nCollect comprehensive metrics about the {{domain}} domain to establish a baseline for improvement. This data will be used to identify the highest-priority bottleneck.\n\n## Data to Collect\n\n1. **Activity Execution Metrics** (if domain is activity-system):\n   - Query recent activity runs (last 24-48 hours)\n   - Success rates by template\n   - Failure patterns and common errors\n   - Duration and token usage statistics\n\n2. **Performance Indicators**:\n   - Resource utilization (CPU, memory, disk)\n   - Response times and latency\n   - Error rates and exception patterns\n\n3. **System Configuration**:\n   - Current settings and parameters\n   - Feature flags and optimization toggles\n   - Known technical debt items\n\n4. **Baseline Comparison** (if {{metrics_baseline_file}} is provided):\n   - Load baseline metrics from file\n   - Calculate trends and deltas\n\n{{#if focus_areas}}\n## Focus Areas\n\nPrioritize data collection in these specific areas: {{focus_areas}}\n{{/if}}\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json` with this structure:\n\n```json\n{\n  \"timestamp\": \"ISO-8601 timestamp\",\n  \"domain\": \"{{domain}}\",\n  \"metrics\": {\n    \"success_rate\": 0.85,\n    \"avg_duration_ms\": 45000,\n    \"avg_cost_usd\": 0.23,\n    \"error_rate\": 0.15,\n    \"total_executions\": 120\n  },\n  \"bottleneck_candidates\": [\n    {\n      \"id\": \"candidate-1\",\n      \"description\": \"Brief description of potential bottleneck\",\n      \"severity\": 8,\n      \"frequency\": 0.45,\n      \"estimated_impact\": \"high\"\n    }\n  ],\n  \"trends\": {\n    \"success_rate_trend\": \"improving|declining|stable\",\n    \"cost_trend\": \"improving|declining|stable\"\n  }\n}\n```\n\n## Validation\n\n- File must be valid JSON\n- Must contain at least 3 bottleneck candidates for meaningful analysis\n- All numeric fields must have actual values (no null or \"unknown\")\n- Include timestamp for tracking\n\n## Error Handling\n\nIf metrics collection fails:\n1. Retry with reduced scope (e.g., last 12 hours instead of 48)\n2. Use cached metrics if available\n3. Generate synthetic baseline from code analysis\n4. Document any data collection issues in the output",
+        "variables": [
+          {
+            "name": "domain",
+            "type": "string",
+            "required": false,
+            "description": "System domain to optimize (e.g., activity-system, template-creation, cpg-analysis)",
+            "default": "activity-system"
+          },
+          {
+            "name": "metrics_baseline_file",
+            "type": "string",
+            "required": false,
+            "description": "Path to baseline metrics file for comparison",
+            "default": ""
+          },
+          {
+            "name": "focus_areas",
+            "type": "string",
+            "required": false,
+            "description": "Comma-separated list of specific areas to target",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.bottleneck_candidates | length >= 3' /tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "identify-bottleneck",
+      "subagent": "general",
+      "description": "Analyze collected metrics to identify the single highest-priority bottleneck using severity × frequency × impact heuristics",
+      "dependencies": [
+        "inspect-system-state"
+      ],
+      "prompt": {
+        "template": "You are executing the second phase of a ratchet cycle: identifying the highest-priority bottleneck to address.\n\n## Your Task\n\nAnalyze the metrics collected in the previous phase and select the SINGLE most impactful bottleneck to fix.\n\n## Input Data\n\nRead `/tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json` which contains:\n- Current system metrics\n- List of bottleneck candidates\n- Trend analysis\n\n## Prioritization Algorithm\n\nCalculate priority score for each candidate:\n\n```\npriority_score = (severity × frequency × impact_multiplier) / complexity\n\nwhere:\n- severity: 1-10 (how bad is this issue?)\n- frequency: 0-1 (what % of operations affected?)\n- impact_multiplier: 1 (low), 5 (medium), 10 (high)\n- complexity: 1 (simple), 5 (moderate), 10 (complex)\n```\n\n{{#if focus_areas}}\n## Focus Areas Filter\n\nPrioritize bottlenecks in these areas: {{focus_areas}}\n\nIf a candidate matches a focus area, multiply its priority score by 1.5.\n{{/if}}\n\n## Selection Criteria\n\n1. **Highest Priority Score**: Choose the bottleneck with maximum score\n2. **Implementation Feasibility**: Can be fixed within {{max_cost_per_cycle}} USD budget\n3. **Clear Impact**: Expected improvement > {{improvement_threshold}}%\n4. **No Dependencies**: Can be fixed independently\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/bottleneck-analysis.json`:\n\n```json\n{\n  \"bottleneck_id\": \"unique-identifier\",\n  \"description\": \"Clear description of the bottleneck\",\n  \"priority_score\": 42.5,\n  \"rationale\": \"Why this bottleneck was selected over others\",\n  \"expected_improvement\": 25,\n  \"estimated_effort\": \"low|medium|high\",\n  \"fix_strategy\": \"Brief description of how to fix this\",\n  \"candidates_evaluated\": 5,\n  \"selection_criteria\": {\n    \"severity\": 8,\n    \"frequency\": 0.45,\n    \"impact\": \"high\",\n    \"complexity\": 3\n  }\n}\n```\n\n## Special Case: No Bottleneck Found\n\nIf all candidates have low priority scores or system is already optimized:\n\n```json\n{\n  \"bottleneck_id\": \"none\",\n  \"description\": \"No significant bottlenecks identified\",\n  \"priority_score\": 0,\n  \"rationale\": \"All metrics within acceptable thresholds\",\n  \"decision\": \"no-improvements-needed\"\n}\n```\n\n## Validation\n\n- Output must be valid JSON\n- priority_score must be numeric and >= 0\n- If bottleneck_id != \"none\", must include fix_strategy\n- Rationale must explain why this bottleneck beats alternatives",
+        "variables": [
+          {
+            "name": "focus_areas",
+            "type": "string",
+            "required": false,
+            "description": "Comma-separated list of specific areas to target",
+            "default": ""
+          },
+          {
+            "name": "max_cost_per_cycle",
+            "type": "number",
+            "required": false,
+            "description": "Maximum cost in USD per cycle",
+            "default": 5
+          },
+          {
+            "name": "improvement_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Minimum improvement percentage to continue (0-100)",
+            "default": 10
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.priority_score >= 0' /tmp/activity-template-execute-ratchet-cycle/bottleneck-analysis.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "apply-improvement",
+      "subagent": "general",
+      "description": "Implement the targeted fix, enhancement, or optimization identified in the bottleneck analysis, with validation checks",
+      "dependencies": [
+        "identify-bottleneck"
+      ],
+      "prompt": {
+        "template": "You are executing the third phase of a ratchet cycle: applying the improvement to fix the identified bottleneck.\n\n## Your Task\n\nImplement the fix for the bottleneck identified in the previous phase. This may involve code changes, configuration updates, or template modifications.\n\n## Input Data\n\nRead `/tmp/activity-template-execute-ratchet-cycle/bottleneck-analysis.json` which contains:\n- bottleneck_id: What to fix\n- description: What the problem is\n- fix_strategy: High-level approach\n- expected_improvement: Target improvement percentage\n\n## Implementation Steps\n\n1. **Understand the Bottleneck**: Read the analysis thoroughly\n2. **Locate Affected Code**: Use grep/glob to find relevant files\n3. **Implement Fix**: Make targeted changes following best practices\n4. **Validate Changes**: Run checks to ensure no breakage\n5. **Document**: Explain what changed and why\n\n## Validation Requirements\n\nRun these checks before considering the fix complete:\n\n1. **TypeScript Compilation** (if applicable):\n   ```bash\n   tsc --noEmit\n   ```\n   Must exit with code 0\n\n2. **Linting** (if applicable):\n   ```bash\n   npm run lint --fix\n   ```\n\n3. **Basic Tests** (if applicable):\n   ```bash\n   npm test -- --testPathPattern=affected\n   ```\n\n4. **Code Quality**:\n   - No TODO or FIXME comments in changes\n   - No console.log statements\n   - Follow existing code style\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/improvement-details.md`:\n\n```markdown\n# Improvement Details\n\n## Bottleneck Addressed\n- ID: [bottleneck_id]\n- Description: [what was wrong]\n\n## Changes Made\n\n### Files Modified\n- `path/to/file1.ts` - [what changed]\n- `path/to/file2.ts` - [what changed]\n\n### Implementation Approach\n[Explain the fix strategy used]\n\n### Code Diff Summary\n[Key changes made]\n\n## Validation Results\n\n- TypeScript: ✓ PASS / ✗ FAIL\n- Linting: ✓ PASS / ✗ FAIL\n- Tests: ✓ PASS / ✗ FAIL\n\n## Expected Impact\n\n[What metrics should improve and by how much]\n```\n\n{{#if auto_commit}}\n## Git Commit\n\nCommit the changes with this message format:\n```\nRatchet cycle improvement: [bottleneck_id]\n\n[Brief description of fix]\n\nExpected improvement: [X]%\n```\n{{/if}}\n\n## Error Handling\n\nIf validation fails:\n1. Review error messages carefully\n2. Attempt to fix validation issues\n3. If still failing after 2 attempts, rollback changes\n4. Document failure in `/tmp/activity-template-execute-ratchet-cycle/error-log.json`\n\n## Special Case: No Bottleneck to Fix\n\nIf bottleneck-analysis.json has `bottleneck_id: \"none\"`, skip implementation and document:\n\n```markdown\n# Improvement Details\n\n## No Action Required\n\nNo bottleneck identified in analysis phase. System is operating within acceptable parameters.\n```",
+        "variables": [
+          {
+            "name": "auto_commit",
+            "type": "boolean",
+            "required": false,
+            "description": "Automatically commit improvements after validation",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "measure-progress",
+      "subagent": "general",
+      "description": "Collect new metrics after the improvement and calculate before/after comparison to quantify impact",
+      "dependencies": [
+        "apply-improvement"
+      ],
+      "prompt": {
+        "template": "You are executing the fourth phase of a ratchet cycle: measuring the impact of the improvement.\n\n## Your Task\n\nCollect new metrics after the improvement and calculate before/after deltas to quantify impact.\n\n## Input Data\n\n1. **Before Metrics**: `/tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json`\n2. **Improvement Details**: `/tmp/activity-template-execute-ratchet-cycle/improvement-details.md`\n3. **Expected Impact**: From bottleneck-analysis.json\n\n## Measurement Process\n\n1. **Re-collect Metrics**: Run the same metrics collection as Task 1\n   - Activity execution data\n   - Performance indicators\n   - Error rates\n\n2. **Calculate Deltas**:\n   ```\n   delta = after_value - before_value\n   improvement_percentage = ((after - before) / before) × 100\n   ```\n\n3. **Compare Against Expectations**:\n   - Did improvement meet expected_improvement threshold?\n   - Were there unexpected side effects?\n   - Did any metrics regress?\n\n4. **Run Test Suite** (if applicable):\n   ```bash\n   npm test\n   ```\n   Ensure no regressions introduced\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/progress-measurement.json`:\n\n```json\n{\n  \"timestamp\": \"ISO-8601 timestamp\",\n  \"metrics_before\": {\n    \"success_rate\": 0.85,\n    \"avg_duration_ms\": 45000,\n    \"avg_cost_usd\": 0.23,\n    \"error_rate\": 0.15\n  },\n  \"metrics_after\": {\n    \"success_rate\": 0.92,\n    \"avg_duration_ms\": 38000,\n    \"avg_cost_usd\": 0.19,\n    \"error_rate\": 0.08\n  },\n  \"delta\": {\n    \"success_rate\": 0.07,\n    \"avg_duration_ms\": -7000,\n    \"avg_cost_usd\": -0.04,\n    \"error_rate\": -0.07\n  },\n  \"improvement_percentage\": {\n    \"success_rate\": 8.24,\n    \"avg_duration_ms\": -15.56,\n    \"avg_cost_usd\": -17.39,\n    \"error_rate\": -46.67\n  },\n  \"overall_improvement\": 12.5,\n  \"expected_improvement\": {{improvement_threshold}},\n  \"met_expectations\": true,\n  \"test_results\": {\n    \"tests_run\": 145,\n    \"tests_passed\": 145,\n    \"tests_failed\": 0\n  },\n  \"unexpected_effects\": []\n}\n```\n\n## Improvement Calculation\n\nFor overall_improvement, weight different metrics:\n```\noverall = (success_rate_improvement × 0.4) + \n          (duration_improvement × 0.3) + \n          (cost_improvement × 0.2) + \n          (error_reduction × 0.1)\n```\n\n## Validation\n\n- All metrics must have numeric values (no null or \"unknown\")\n- Improvement percentage can be negative (regression)\n- Test results must show no failures\n- Document any unexpected side effects\n\n## Error Handling\n\nIf metrics collection fails:\n1. Retry with reduced scope\n2. Use qualitative assessment: tests pass, no errors in logs\n3. Set improvement_percentage to 0 and flag as \"measurement-failed\"",
+        "variables": [
+          {
+            "name": "improvement_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Minimum improvement percentage to continue (0-100)",
+            "default": 10
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.overall_improvement' /tmp/activity-template-execute-ratchet-cycle/progress-measurement.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "decide-next-action",
+      "subagent": "general",
+      "description": "Evaluate improvement results against thresholds and budget constraints to determine whether to continue, stop, or escalate",
+      "dependencies": [
+        "measure-progress"
+      ],
+      "prompt": {
+        "template": "You are executing the final phase of a ratchet cycle: deciding the next action based on improvement results.\n\n## Your Task\n\nEvaluate the improvement results and decide whether to:\n- **continue**: Run another cycle\n- **stop-success**: Exit with success\n- **stop-budget**: Exit due to budget/time constraints\n- **escalate**: Exit due to issues requiring manual intervention\n\n## Input Data\n\n1. **Progress Measurement**: `/tmp/activity-template-execute-ratchet-cycle/progress-measurement.json`\n2. **Cycle Context**:\n   - Current cycle number (start at 1)\n   - max_cycles: {{max_cycles}}\n   - improvement_threshold: {{improvement_threshold}}%\n   - max_total_cost: ${{max_total_cost}}\n\n## Decision Logic\n\n```python\nif overall_improvement >= improvement_threshold:\n    if current_cycle < max_cycles and cumulative_cost < max_total_cost:\n        decision = \"continue\"\n    else:\n        decision = \"stop-budget\"\nelse:\n    if overall_improvement < 0:\n        decision = \"escalate\"  # regression detected\n    else:\n        decision = \"stop-success\"  # improvements too small to continue\n```\n\n## Output Requirements\n\n### 1. Cycle Results JSON\n\nCreate/Update `/tmp/activity-template-execute-ratchet-cycle/cycle-results.json`:\n\n```json\n{\n  \"cycles\": [\n    {\n      \"cycle_number\": 1,\n      \"bottleneck\": {\n        \"id\": \"bottleneck-1\",\n        \"description\": \"Brief description\",\n        \"priority_score\": 42.5\n      },\n      \"improvement\": {\n        \"files_modified\": [\"file1.ts\", \"file2.ts\"],\n        \"changes_summary\": \"What was changed\"\n      },\n      \"metrics_before\": {},\n      \"metrics_after\": {},\n      \"improvement_percentage\": 12.5,\n      \"decision\": \"continue\",\n      \"decision_rationale\": \"Improvement exceeded threshold, budget available\",\n      \"cost_usd\": 0.45,\n      \"duration_ms\": 180000\n    }\n  ],\n  \"summary\": {\n    \"total_cycles\": 1,\n    \"cumulative_cost\": 0.45,\n    \"cumulative_improvement\": 12.5,\n    \"final_decision\": \"continue\",\n    \"timestamp\": \"ISO-8601\"\n  }\n}\n```\n\n### 2. Improvement Summary Markdown\n\nCreate/Update `/tmp/activity-template-execute-ratchet-cycle/improvement-summary.md`:\n\n```markdown\n# Ratchet Cycle Summary\n\n## Total Cycles Executed: [N]\n\n## Cumulative Impact\n\n- Success Rate: +8.2% (0.85 → 0.92)\n- Avg Duration: -15.6% (45s → 38s)\n- Cost per Run: -17.4% ($0.23 → $0.19)\n- Error Rate: -46.7% (15% → 8%)\n\n**Overall Improvement: 12.5%**\n\n## Bottlenecks Addressed\n\n### Cycle 1: [Bottleneck Description]\n- Priority Score: 42.5\n- Fix: [What was done]\n- Impact: +12.5%\n\n## Recommendations\n\n{{#if decision == \"continue\"}}\n- Continue with another cycle\n- Focus on: [next highest priority area]\n- Budget remaining: $[X]\n{{/if}}\n\n{{#if decision == \"stop-success\"}}\n- System improvements complete\n- All major bottlenecks addressed\n- Consider revisiting in [timeframe]\n{{/if}}\n\n{{#if decision == \"stop-budget\"}}\n- Budget or time constraints reached\n- Significant progress made\n- Resume improvements in next session\n- Recommended focus: [area]\n{{/if}}\n\n{{#if decision == \"escalate\"}}\n- Manual intervention required\n- Issue: [description]\n- Suggested action: [recommendation]\n{{/if}}\n```\n\n### 3. Bottleneck Log JSON\n\nCreate/Update `/tmp/activity-template-execute-ratchet-cycle/bottleneck-log.json`:\n\n```json\n{\n  \"bottlenecks\": [\n    {\n      \"id\": \"bottleneck-1\",\n      \"description\": \"Brief description\",\n      \"priority_score\": 42.5,\n      \"status\": \"resolved\",\n      \"cycle_addressed\": 1,\n      \"improvement_achieved\": 12.5,\n      \"timestamp\": \"ISO-8601\"\n    }\n  ],\n  \"pending\": [\n    {\n      \"id\": \"bottleneck-2\",\n      \"description\": \"Next bottleneck to address\",\n      \"priority_score\": 38.2,\n      \"status\": \"pending\"\n    }\n  ]\n}\n```\n\n## Validation\n\n- All three output files must exist\n- cycle-results.json must have `.cycles` array with length > 0\n- improvement-summary.md must contain \"Total Cycles Executed:\", \"Cumulative Impact:\", \"Recommendations:\"\n- Decision must be one of: continue, stop-success, stop-budget, escalate\n- If decision is \"escalate\", rationale must explain why\n\n## Decision Communication\n\nClearly state the decision and rationale:\n\n**Decision: [continue/stop-success/stop-budget/escalate]**\n\n**Rationale**: [Explain why this decision was made based on metrics, thresholds, and constraints]",
+        "variables": [
+          {
+            "name": "max_cycles",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of improvement cycles to execute",
+            "default": 3
+          },
+          {
+            "name": "improvement_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Minimum improvement percentage to continue (0-100)",
+            "default": 10
+          },
+          {
+            "name": "max_total_cost",
+            "type": "number",
+            "required": false,
+            "description": "Maximum total cost for all cycles",
+            "default": 15
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.cycles | length > 0' /tmp/activity-template-execute-ratchet-cycle/cycle-results.json",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "grep -q 'Total Cycles Executed:' /tmp/activity-template-execute-ratchet-cycle/improvement-summary.md",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "inspect-system-state",
+      "subagent": "general",
+      "description": "Collect current system metrics, activity execution data, template success rates, and performance indicators to establish baseline state",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are executing the first phase of a ratchet cycle: inspecting system state to identify improvement opportunities.\n\n## Your Task\n\nCollect comprehensive metrics about the {{domain}} domain to establish a baseline for improvement. This data will be used to identify the highest-priority bottleneck.\n\n## Data to Collect\n\n1. **Activity Execution Metrics** (if domain is activity-system):\n   - Query recent activity runs (last 24-48 hours)\n   - Success rates by template\n   - Failure patterns and common errors\n   - Duration and token usage statistics\n\n2. **Performance Indicators**:\n   - Resource utilization (CPU, memory, disk)\n   - Response times and latency\n   - Error rates and exception patterns\n\n3. **System Configuration**:\n   - Current settings and parameters\n   - Feature flags and optimization toggles\n   - Known technical debt items\n\n4. **Baseline Comparison** (if {{metrics_baseline_file}} is provided):\n   - Load baseline metrics from file\n   - Calculate trends and deltas\n\n{{#if focus_areas}}\n## Focus Areas\n\nPrioritize data collection in these specific areas: {{focus_areas}}\n{{/if}}\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json` with this structure:\n\n```json\n{\n  \"timestamp\": \"ISO-8601 timestamp\",\n  \"domain\": \"{{domain}}\",\n  \"metrics\": {\n    \"success_rate\": 0.85,\n    \"avg_duration_ms\": 45000,\n    \"avg_cost_usd\": 0.23,\n    \"error_rate\": 0.15,\n    \"total_executions\": 120\n  },\n  \"bottleneck_candidates\": [\n    {\n      \"id\": \"candidate-1\",\n      \"description\": \"Brief description of potential bottleneck\",\n      \"severity\": 8,\n      \"frequency\": 0.45,\n      \"estimated_impact\": \"high\"\n    }\n  ],\n  \"trends\": {\n    \"success_rate_trend\": \"improving|declining|stable\",\n    \"cost_trend\": \"improving|declining|stable\"\n  }\n}\n```\n\n## Validation\n\n- File must be valid JSON\n- Must contain at least 3 bottleneck candidates for meaningful analysis\n- All numeric fields must have actual values (no null or \"unknown\")\n- Include timestamp for tracking\n\n## Error Handling\n\nIf metrics collection fails:\n1. Retry with reduced scope (e.g., last 12 hours instead of 48)\n2. Use cached metrics if available\n3. Generate synthetic baseline from code analysis\n4. Document any data collection issues in the output",
+        "variables": [
+          {
+            "name": "domain",
+            "type": "string",
+            "required": false,
+            "description": "System domain to optimize (e.g., activity-system, template-creation, cpg-analysis)",
+            "default": "activity-system"
+          },
+          {
+            "name": "metrics_baseline_file",
+            "type": "string",
+            "required": false,
+            "description": "Path to baseline metrics file for comparison",
+            "default": ""
+          },
+          {
+            "name": "focus_areas",
+            "type": "string",
+            "required": false,
+            "description": "Comma-separated list of specific areas to target",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.bottleneck_candidates | length >= 3' /tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "identify-bottleneck",
+      "subagent": "general",
+      "description": "Analyze collected metrics to identify the single highest-priority bottleneck using severity × frequency × impact heuristics",
+      "dependencies": [
+        "inspect-system-state"
+      ],
+      "prompt": {
+        "template": "You are executing the second phase of a ratchet cycle: identifying the highest-priority bottleneck to address.\n\n## Your Task\n\nAnalyze the metrics collected in the previous phase and select the SINGLE most impactful bottleneck to fix.\n\n## Input Data\n\nRead `/tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json` which contains:\n- Current system metrics\n- List of bottleneck candidates\n- Trend analysis\n\n## Prioritization Algorithm\n\nCalculate priority score for each candidate:\n\n```\npriority_score = (severity × frequency × impact_multiplier) / complexity\n\nwhere:\n- severity: 1-10 (how bad is this issue?)\n- frequency: 0-1 (what % of operations affected?)\n- impact_multiplier: 1 (low), 5 (medium), 10 (high)\n- complexity: 1 (simple), 5 (moderate), 10 (complex)\n```\n\n{{#if focus_areas}}\n## Focus Areas Filter\n\nPrioritize bottlenecks in these areas: {{focus_areas}}\n\nIf a candidate matches a focus area, multiply its priority score by 1.5.\n{{/if}}\n\n## Selection Criteria\n\n1. **Highest Priority Score**: Choose the bottleneck with maximum score\n2. **Implementation Feasibility**: Can be fixed within {{max_cost_per_cycle}} USD budget\n3. **Clear Impact**: Expected improvement > {{improvement_threshold}}%\n4. **No Dependencies**: Can be fixed independently\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/bottleneck-analysis.json`:\n\n```json\n{\n  \"bottleneck_id\": \"unique-identifier\",\n  \"description\": \"Clear description of the bottleneck\",\n  \"priority_score\": 42.5,\n  \"rationale\": \"Why this bottleneck was selected over others\",\n  \"expected_improvement\": 25,\n  \"estimated_effort\": \"low|medium|high\",\n  \"fix_strategy\": \"Brief description of how to fix this\",\n  \"candidates_evaluated\": 5,\n  \"selection_criteria\": {\n    \"severity\": 8,\n    \"frequency\": 0.45,\n    \"impact\": \"high\",\n    \"complexity\": 3\n  }\n}\n```\n\n## Special Case: No Bottleneck Found\n\nIf all candidates have low priority scores or system is already optimized:\n\n```json\n{\n  \"bottleneck_id\": \"none\",\n  \"description\": \"No significant bottlenecks identified\",\n  \"priority_score\": 0,\n  \"rationale\": \"All metrics within acceptable thresholds\",\n  \"decision\": \"no-improvements-needed\"\n}\n```\n\n## Validation\n\n- Output must be valid JSON\n- priority_score must be numeric and >= 0\n- If bottleneck_id != \"none\", must include fix_strategy\n- Rationale must explain why this bottleneck beats alternatives",
+        "variables": [
+          {
+            "name": "focus_areas",
+            "type": "string",
+            "required": false,
+            "description": "Comma-separated list of specific areas to target",
+            "default": ""
+          },
+          {
+            "name": "max_cost_per_cycle",
+            "type": "number",
+            "required": false,
+            "description": "Maximum cost in USD per cycle",
+            "default": 5
+          },
+          {
+            "name": "improvement_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Minimum improvement percentage to continue (0-100)",
+            "default": 10
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.priority_score >= 0' /tmp/activity-template-execute-ratchet-cycle/bottleneck-analysis.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "apply-improvement",
+      "subagent": "general",
+      "description": "Implement the targeted fix, enhancement, or optimization identified in the bottleneck analysis, with validation checks",
+      "dependencies": [
+        "identify-bottleneck"
+      ],
+      "prompt": {
+        "template": "You are executing the third phase of a ratchet cycle: applying the improvement to fix the identified bottleneck.\n\n## Your Task\n\nImplement the fix for the bottleneck identified in the previous phase. This may involve code changes, configuration updates, or template modifications.\n\n## Input Data\n\nRead `/tmp/activity-template-execute-ratchet-cycle/bottleneck-analysis.json` which contains:\n- bottleneck_id: What to fix\n- description: What the problem is\n- fix_strategy: High-level approach\n- expected_improvement: Target improvement percentage\n\n## Implementation Steps\n\n1. **Understand the Bottleneck**: Read the analysis thoroughly\n2. **Locate Affected Code**: Use grep/glob to find relevant files\n3. **Implement Fix**: Make targeted changes following best practices\n4. **Validate Changes**: Run checks to ensure no breakage\n5. **Document**: Explain what changed and why\n\n## Validation Requirements\n\nRun these checks before considering the fix complete:\n\n1. **TypeScript Compilation** (if applicable):\n   ```bash\n   tsc --noEmit\n   ```\n   Must exit with code 0\n\n2. **Linting** (if applicable):\n   ```bash\n   npm run lint --fix\n   ```\n\n3. **Basic Tests** (if applicable):\n   ```bash\n   npm test -- --testPathPattern=affected\n   ```\n\n4. **Code Quality**:\n   - No TODO or FIXME comments in changes\n   - No console.log statements\n   - Follow existing code style\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/improvement-details.md`:\n\n```markdown\n# Improvement Details\n\n## Bottleneck Addressed\n- ID: [bottleneck_id]\n- Description: [what was wrong]\n\n## Changes Made\n\n### Files Modified\n- `path/to/file1.ts` - [what changed]\n- `path/to/file2.ts` - [what changed]\n\n### Implementation Approach\n[Explain the fix strategy used]\n\n### Code Diff Summary\n[Key changes made]\n\n## Validation Results\n\n- TypeScript: ✓ PASS / ✗ FAIL\n- Linting: ✓ PASS / ✗ FAIL\n- Tests: ✓ PASS / ✗ FAIL\n\n## Expected Impact\n\n[What metrics should improve and by how much]\n```\n\n{{#if auto_commit}}\n## Git Commit\n\nCommit the changes with this message format:\n```\nRatchet cycle improvement: [bottleneck_id]\n\n[Brief description of fix]\n\nExpected improvement: [X]%\n```\n{{/if}}\n\n## Error Handling\n\nIf validation fails:\n1. Review error messages carefully\n2. Attempt to fix validation issues\n3. If still failing after 2 attempts, rollback changes\n4. Document failure in `/tmp/activity-template-execute-ratchet-cycle/error-log.json`\n\n## Special Case: No Bottleneck to Fix\n\nIf bottleneck-analysis.json has `bottleneck_id: \"none\"`, skip implementation and document:\n\n```markdown\n# Improvement Details\n\n## No Action Required\n\nNo bottleneck identified in analysis phase. System is operating within acceptable parameters.\n```",
+        "variables": [
+          {
+            "name": "auto_commit",
+            "type": "boolean",
+            "required": false,
+            "description": "Automatically commit improvements after validation",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "measure-progress",
+      "subagent": "general",
+      "description": "Collect new metrics after the improvement and calculate before/after comparison to quantify impact",
+      "dependencies": [
+        "apply-improvement"
+      ],
+      "prompt": {
+        "template": "You are executing the fourth phase of a ratchet cycle: measuring the impact of the improvement.\n\n## Your Task\n\nCollect new metrics after the improvement and calculate before/after deltas to quantify impact.\n\n## Input Data\n\n1. **Before Metrics**: `/tmp/activity-template-execute-ratchet-cycle/metrics-snapshot.json`\n2. **Improvement Details**: `/tmp/activity-template-execute-ratchet-cycle/improvement-details.md`\n3. **Expected Impact**: From bottleneck-analysis.json\n\n## Measurement Process\n\n1. **Re-collect Metrics**: Run the same metrics collection as Task 1\n   - Activity execution data\n   - Performance indicators\n   - Error rates\n\n2. **Calculate Deltas**:\n   ```\n   delta = after_value - before_value\n   improvement_percentage = ((after - before) / before) × 100\n   ```\n\n3. **Compare Against Expectations**:\n   - Did improvement meet expected_improvement threshold?\n   - Were there unexpected side effects?\n   - Did any metrics regress?\n\n4. **Run Test Suite** (if applicable):\n   ```bash\n   npm test\n   ```\n   Ensure no regressions introduced\n\n## Output Requirements\n\nCreate `/tmp/activity-template-execute-ratchet-cycle/progress-measurement.json`:\n\n```json\n{\n  \"timestamp\": \"ISO-8601 timestamp\",\n  \"metrics_before\": {\n    \"success_rate\": 0.85,\n    \"avg_duration_ms\": 45000,\n    \"avg_cost_usd\": 0.23,\n    \"error_rate\": 0.15\n  },\n  \"metrics_after\": {\n    \"success_rate\": 0.92,\n    \"avg_duration_ms\": 38000,\n    \"avg_cost_usd\": 0.19,\n    \"error_rate\": 0.08\n  },\n  \"delta\": {\n    \"success_rate\": 0.07,\n    \"avg_duration_ms\": -7000,\n    \"avg_cost_usd\": -0.04,\n    \"error_rate\": -0.07\n  },\n  \"improvement_percentage\": {\n    \"success_rate\": 8.24,\n    \"avg_duration_ms\": -15.56,\n    \"avg_cost_usd\": -17.39,\n    \"error_rate\": -46.67\n  },\n  \"overall_improvement\": 12.5,\n  \"expected_improvement\": {{improvement_threshold}},\n  \"met_expectations\": true,\n  \"test_results\": {\n    \"tests_run\": 145,\n    \"tests_passed\": 145,\n    \"tests_failed\": 0\n  },\n  \"unexpected_effects\": []\n}\n```\n\n## Improvement Calculation\n\nFor overall_improvement, weight different metrics:\n```\noverall = (success_rate_improvement × 0.4) + \n          (duration_improvement × 0.3) + \n          (cost_improvement × 0.2) + \n          (error_reduction × 0.1)\n```\n\n## Validation\n\n- All metrics must have numeric values (no null or \"unknown\")\n- Improvement percentage can be negative (regression)\n- Test results must show no failures\n- Document any unexpected side effects\n\n## Error Handling\n\nIf metrics collection fails:\n1. Retry with reduced scope\n2. Use qualitative assessment: tests pass, no errors in logs\n3. Set improvement_percentage to 0 and flag as \"measurement-failed\"",
+        "variables": [
+          {
+            "name": "improvement_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Minimum improvement percentage to continue (0-100)",
+            "default": 10
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.overall_improvement' /tmp/activity-template-execute-ratchet-cycle/progress-measurement.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "decide-next-action",
+      "subagent": "general",
+      "description": "Evaluate improvement results against thresholds and budget constraints to determine whether to continue, stop, or escalate",
+      "dependencies": [
+        "measure-progress"
+      ],
+      "prompt": {
+        "template": "You are executing the final phase of a ratchet cycle: deciding the next action based on improvement results.\n\n## Your Task\n\nEvaluate the improvement results and decide whether to:\n- **continue**: Run another cycle\n- **stop-success**: Exit with success\n- **stop-budget**: Exit due to budget/time constraints\n- **escalate**: Exit due to issues requiring manual intervention\n\n## Input Data\n\n1. **Progress Measurement**: `/tmp/activity-template-execute-ratchet-cycle/progress-measurement.json`\n2. **Cycle Context**:\n   - Current cycle number (start at 1)\n   - max_cycles: {{max_cycles}}\n   - improvement_threshold: {{improvement_threshold}}%\n   - max_total_cost: ${{max_total_cost}}\n\n## Decision Logic\n\n```python\nif overall_improvement >= improvement_threshold:\n    if current_cycle < max_cycles and cumulative_cost < max_total_cost:\n        decision = \"continue\"\n    else:\n        decision = \"stop-budget\"\nelse:\n    if overall_improvement < 0:\n        decision = \"escalate\"  # regression detected\n    else:\n        decision = \"stop-success\"  # improvements too small to continue\n```\n\n## Output Requirements\n\n### 1. Cycle Results JSON\n\nCreate/Update `/tmp/activity-template-execute-ratchet-cycle/cycle-results.json`:\n\n```json\n{\n  \"cycles\": [\n    {\n      \"cycle_number\": 1,\n      \"bottleneck\": {\n        \"id\": \"bottleneck-1\",\n        \"description\": \"Brief description\",\n        \"priority_score\": 42.5\n      },\n      \"improvement\": {\n        \"files_modified\": [\"file1.ts\", \"file2.ts\"],\n        \"changes_summary\": \"What was changed\"\n      },\n      \"metrics_before\": {},\n      \"metrics_after\": {},\n      \"improvement_percentage\": 12.5,\n      \"decision\": \"continue\",\n      \"decision_rationale\": \"Improvement exceeded threshold, budget available\",\n      \"cost_usd\": 0.45,\n      \"duration_ms\": 180000\n    }\n  ],\n  \"summary\": {\n    \"total_cycles\": 1,\n    \"cumulative_cost\": 0.45,\n    \"cumulative_improvement\": 12.5,\n    \"final_decision\": \"continue\",\n    \"timestamp\": \"ISO-8601\"\n  }\n}\n```\n\n### 2. Improvement Summary Markdown\n\nCreate/Update `/tmp/activity-template-execute-ratchet-cycle/improvement-summary.md`:\n\n```markdown\n# Ratchet Cycle Summary\n\n## Total Cycles Executed: [N]\n\n## Cumulative Impact\n\n- Success Rate: +8.2% (0.85 → 0.92)\n- Avg Duration: -15.6% (45s → 38s)\n- Cost per Run: -17.4% ($0.23 → $0.19)\n- Error Rate: -46.7% (15% → 8%)\n\n**Overall Improvement: 12.5%**\n\n## Bottlenecks Addressed\n\n### Cycle 1: [Bottleneck Description]\n- Priority Score: 42.5\n- Fix: [What was done]\n- Impact: +12.5%\n\n## Recommendations\n\n{{#if decision == \"continue\"}}\n- Continue with another cycle\n- Focus on: [next highest priority area]\n- Budget remaining: $[X]\n{{/if}}\n\n{{#if decision == \"stop-success\"}}\n- System improvements complete\n- All major bottlenecks addressed\n- Consider revisiting in [timeframe]\n{{/if}}\n\n{{#if decision == \"stop-budget\"}}\n- Budget or time constraints reached\n- Significant progress made\n- Resume improvements in next session\n- Recommended focus: [area]\n{{/if}}\n\n{{#if decision == \"escalate\"}}\n- Manual intervention required\n- Issue: [description]\n- Suggested action: [recommendation]\n{{/if}}\n```\n\n### 3. Bottleneck Log JSON\n\nCreate/Update `/tmp/activity-template-execute-ratchet-cycle/bottleneck-log.json`:\n\n```json\n{\n  \"bottlenecks\": [\n    {\n      \"id\": \"bottleneck-1\",\n      \"description\": \"Brief description\",\n      \"priority_score\": 42.5,\n      \"status\": \"resolved\",\n      \"cycle_addressed\": 1,\n      \"improvement_achieved\": 12.5,\n      \"timestamp\": \"ISO-8601\"\n    }\n  ],\n  \"pending\": [\n    {\n      \"id\": \"bottleneck-2\",\n      \"description\": \"Next bottleneck to address\",\n      \"priority_score\": 38.2,\n      \"status\": \"pending\"\n    }\n  ]\n}\n```\n\n## Validation\n\n- All three output files must exist\n- cycle-results.json must have `.cycles` array with length > 0\n- improvement-summary.md must contain \"Total Cycles Executed:\", \"Cumulative Impact:\", \"Recommendations:\"\n- Decision must be one of: continue, stop-success, stop-budget, escalate\n- If decision is \"escalate\", rationale must explain why\n\n## Decision Communication\n\nClearly state the decision and rationale:\n\n**Decision: [continue/stop-success/stop-budget/escalate]**\n\n**Rationale**: [Explain why this decision was made based on metrics, thresholds, and constraints]",
+        "variables": [
+          {
+            "name": "max_cycles",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of improvement cycles to execute",
+            "default": 3
+          },
+          {
+            "name": "improvement_threshold",
+            "type": "number",
+            "required": false,
+            "description": "Minimum improvement percentage to continue (0-100)",
+            "default": 10
+          },
+          {
+            "name": "max_total_cost",
+            "type": "number",
+            "required": false,
+            "description": "Maximum total cost for all cycles",
+            "default": 15
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq -e '.cycles | length > 0' /tmp/activity-template-execute-ratchet-cycle/cycle-results.json",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "grep -q 'Total Cycles Executed:' /tmp/activity-template-execute-ratchet-cycle/improvement-summary.md",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-24T05:48:54.277Z",
+  "metadata": {}
+}

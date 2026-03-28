@@ -1,0 +1,36 @@
+{
+  "testCaseId": "validation-external-e2e-activity-lifecycle-validation-case-1",
+  "type": "memo",
+  "description": "Basic E2E validation: verify templates exist, execute one, verify execution stored",
+  "input": {
+    "testCaseId": "case-1-basic-lifecycle",
+    "description": "Basic E2E validation test with default settings",
+    "surrealUrl": "http://localhost:8000",
+    "surrealUser": "root",
+    "surrealPass": "root",
+    "surrealNs": "metabob",
+    "surrealDb": "devbob",
+    "opencodeBin": "repos/metabob-opencode/dist/opencode-linux-x64/bin/opencode",
+    "expectedTemplateCount": 1,
+    "expectedExecutionFields": ["id", "template_id", "status"]
+  },
+  "expectedOutput": {
+    "pass": true,
+    "actual": {
+      "phase1": {
+        "templateCount": ">= 1",
+        "hasRequiredFields": true
+      },
+      "phase2": {
+        "executionRecordFound": true,
+        "executionHasRequiredFields": true,
+        "templateIdMatches": true
+      },
+      "phase3": {
+        "errorCount": "<= 5",
+        "hasLifecycleIndicators": true
+      }
+    }
+  },
+  "budget": 2000
+}

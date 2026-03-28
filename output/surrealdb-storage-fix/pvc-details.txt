@@ -1,0 +1,21 @@
+Name:          surrealdb-data
+Namespace:     metabob
+StorageClass:  hostpath
+Status:        Bound
+Volume:        pvc-5e27edb9-c979-4efd-8239-eced8d4518ae
+Labels:        <none>
+Annotations:   pv.kubernetes.io/bind-completed: yes
+               pv.kubernetes.io/bound-by-controller: yes
+               volume.beta.kubernetes.io/storage-provisioner: docker.io/hostpath
+               volume.kubernetes.io/storage-provisioner: docker.io/hostpath
+Finalizers:    [kubernetes.io/pvc-protection]
+Capacity:      10Gi
+Access Modes:  RWO
+VolumeMode:    Filesystem
+Used By:       surrealdb-75577cb949-vzmtl
+Events:
+  Type    Reason                 Age   From                                                                         Message
+  ----    ------                 ----  ----                                                                         -------
+  Normal  Provisioning           31s   docker.io/hostpath_storage-provisioner_7fbe2851-befb-443c-b2b7-b6d7883b17d0  External provisioner is provisioning volume for claim "metabob/surrealdb-data"
+  Normal  ExternalProvisioning   31s   persistentvolume-controller                                                  Waiting for a volume to be created either by the external provisioner 'docker.io/hostpath' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
+  Normal  ProvisioningSucceeded  31s   docker.io/hostpath_storage-provisioner_7fbe2851-befb-443c-b2b7-b6d7883b17d0  Successfully provisioned volume pvc-5e27edb9-c979-4efd-8239-eced8d4518ae

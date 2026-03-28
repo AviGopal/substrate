@@ -1,0 +1,16 @@
+{
+  "id": "validation-metrics-calculation-in-rpc-api-only-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"name\": \"complete-activity-execution-deprecated\",\n  \"input\": \"metabob.ts completeActivityExecution() function\",\n  \"expectedOutput\": {\n    \"pass\": true,\n    \"isDeprecated\": true,\n    \"throwsError\": true,\n    \"hasMCPCall\": false,\n    \"message\": \"Function is deprecated and throws error explaining removal\"\n  }\n}",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testName": "complete-activity-execution-deprecated",
+    "specificationName": "metrics-calculation-in-rpc-api-only",
+    "createdAt": "2026-02-28T09:47:19.768Z"
+  },
+  "budget": 500,
+  "status": "active"
+}

@@ -1,0 +1,63 @@
+{
+  "requiredFiles": [
+    "/tmp/activity-template-{{templateId}}/{{templateId}}.json"
+  ],
+  "requiredPatterns": [
+    {
+      "pattern": "\"name\":",
+      "description": ""
+    },
+    {
+      "pattern": "\"category\":",
+      "description": ""
+    },
+    {
+      "pattern": "\"tasks\":",
+      "description": ""
+    },
+    {
+      "pattern": "\"contextRequirements\":",
+      "description": ""
+    }
+  ],
+  "forbiddenPatterns": [
+    {
+      "pattern": "\"preChecks\": [\"git",
+      "description": "Must not include git status checks"
+    },
+    {
+      "pattern": "{{#if",
+      "description": "Handlebars conditionals not supported - use Mustache-only syntax ({{variable}} interpolation)"
+    },
+    {
+      "pattern": "{{/if",
+      "description": "Handlebars conditionals not supported - use Mustache-only syntax"
+    },
+    {
+      "pattern": "{{#each",
+      "description": "Handlebars loops not supported - use Mustache-only syntax"
+    },
+    {
+      "pattern": "{{/each",
+      "description": "Handlebars loops not supported - use Mustache-only syntax"
+    },
+    {
+      "pattern": "{{#unless",
+      "description": "Handlebars conditionals not supported - use Mustache-only syntax"
+    },
+    {
+      "pattern": "{{/unless",
+      "description": "Handlebars conditionals not supported - use Mustache-only syntax"
+    },
+    {
+      "pattern": "{{else",
+      "description": "Handlebars else blocks not supported - use Mustache-only syntax"
+    }
+  ],
+  "commands": [
+    {
+      "command": "cat /tmp/activity-template-{{templateId}}/{{templateId}}.json | jq empty",
+      "expected_exit_code": 0
+    }
+  ]
+}

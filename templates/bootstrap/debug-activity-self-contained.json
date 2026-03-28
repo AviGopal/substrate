@@ -1,0 +1,129 @@
+{
+  "activity_id": "debug-activity-self-contained",
+  "name": "Debug Activity Execution (Self-Contained)",
+  "description": "Diagnose and fix failed activity executions by analyzing error patterns, task failures, and execution context. Proposes recovery tasks and documents resolution steps.",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "analyze-failure",
+      "subagent": "general",
+      "description": "Analyze the failed activity execution to identify root cause",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the failed activity execution to identify the root cause.\n\n**Failed Activity Context**:\n- Activity ID: {{activityId}}\n- Template: {{templateId}}\n- Failed Task: {{failedTaskId}}\n- Error Message: {{errorMessage}}\n- Duration before failure: {{duration}}ms\n- Cost: ${{cost}}\n\n**Your Task**: Create a diagnostic report at `/tmp/debug-{{activityId}}/DIAGNOSIS.md`\n\n**Diagnostic Sections**:\n\n```markdown\n# Activity Failure Diagnosis: {{activityId}}\n\n## Execution Summary\n- Template: {{templateId}}\n- Failed at: {{failedTaskId}}\n- Error: {{errorMessage}}\n- Duration: {{duration}}ms\n- Cost: ${{cost}}\n\n## Root Cause Analysis\n\n### Error Classification\n- Type: [Validation failure / Runtime error / Timeout / Resource exhaustion]\n- Severity: [Critical / High / Medium / Low]\n- Recoverability: [Recoverable / Non-recoverable]\n\n### Contributing Factors\n1. **Immediate Cause**: [What directly caused the failure]\n2. **Upstream Issues**: [Previous task issues that led to this]\n3. **Environmental Factors**: [File system, permissions, dependencies]\n4. **Input Quality**: [Were variables valid and complete?]\n\n## Error Patterns\n\n### Similar Failures\n[List any similar error patterns from execution history]\n\n### Known Issues\n[Any documented issues with this template or task]\n\n## Proposed Solutions\n\n### Solution 1: [Immediate Fix]\n- **Action**: [What to change]\n- **Why**: [How this addresses root cause]\n- **Risk**: [Low/Medium/High]\n- **Effort**: [Minutes to implement]\n\n### Solution 2: [Alternative Approach]\n- **Action**: [What to change]\n- **Why**: [How this addresses root cause]\n- **Risk**: [Low/Medium/High]\n- **Effort**: [Minutes to implement]\n\n## Recovery Strategy\n\n### Recovery Tasks\n1. **Task ID**: recovery-step-1\n   - **Action**: [What to do]\n   - **Success Criteria**: [How to verify]\n\n2. **Task ID**: recovery-step-2\n   - **Action**: [What to do]\n   - **Success Criteria**: [How to verify]\n\n### Manual Steps Required\n[Any manual steps user must take before retrying]\n```\n\n**Note**: Use execution context and error messages to provide specific, actionable diagnosis.",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": [
+          {
+            "name": "activityId",
+            "type": "string",
+            "required": true,
+            "description": "Failed activity execution ID"
+          },
+          {
+            "name": "templateId",
+            "type": "string",
+            "required": true,
+            "description": "Activity template ID"
+          },
+          {
+            "name": "failedTaskId",
+            "type": "string",
+            "required": true,
+            "description": "Task that failed"
+          },
+          {
+            "name": "errorMessage",
+            "type": "string",
+            "required": true,
+            "description": "Error message from failure"
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "required": false,
+            "description": "Duration before failure in milliseconds"
+          },
+          {
+            "name": "cost",
+            "type": "number",
+            "required": false,
+            "description": "Cost incurred before failure in dollars"
+          }
+        ]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": ["## Status", "## Checks Performed"],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-recovery-tasks",
+      "subagent": "general",
+      "description": "Generate executable recovery tasks based on diagnosis",
+      "dependencies": ["analyze-failure"],
+      "prompt": {
+        "template": "Generate recovery tasks to fix the failed activity.\n\n**Input**: Read `/tmp/debug-{{activityId}}/DIAGNOSIS.md`\n\n**Output**: Create `/tmp/debug-{{activityId}}/recovery-tasks.json`\n\n**Your Task**: Generate a mini-template with recovery tasks\n\n**Recovery Template Structure**:\n```json\n{\n  \"activity_id\": \"recovery-{{activityId}}\",\n  \"name\": \"Recovery: {{templateId}}\",\n  \"description\": \"Recovery tasks for failed activity {{activityId}}\",\n  \"category\": \"infrastructure\",\n  \"task_steps\": [\n    {\n      \"id\": \"recovery-step-1\",\n      \"subagent\": \"general\",\n      \"description\": \"Clear, specific recovery action\",\n      \"dependencies\": [],\n      \"prompt\": {\n        \"template\": \"Execute recovery step: [specific action from DIAGNOSIS.md]\\n\\n**Context**: {{errorMessage}}\\n\\n**Action**: [100-150 words with exact steps]\\n\\n**Success Criteria**: [How to verify this fixed the issue]\",\n        \"max_tokens\": 6000,\n        \"compression_strategy\": \"filter\",\n        \"variables\": []\n      },\n      \"validation\": {\n        \"required_files\": [],\n        \"required_patterns\": [],\n        \"forbidden_patterns\": [\"ERROR\", \"FAILED\"],\n        \"commands\": []\n      },\n      \"retry\": {\"max_attempts\": 2, \"strategy\": \"simple\"}\n    },\n    {\n      \"id\": \"verify-fix\",\n      \"subagent\": \"general\",\n      \"description\": \"Verify the recovery fixed the original issue\",\n      \"dependencies\": [\"recovery-step-1\"],\n      \"prompt\": {\n        \"template\": \"Verify the recovery steps fixed the original issue.\\n\\n**Original Error**: {{errorMessage}}\\n**Recovery Applied**: [Describe what was done]\\n\\n**Verification**:\\n1. Check that error condition no longer exists\\n2. Validate files/state are correct\\n3. Run any relevant tests\\n\\n**Output**: Write verification results to `/tmp/debug-{{activityId}}/VERIFICATION.md`\\n\\n```markdown\\n# Recovery Verification\\n\\n## Status\\n- [✅ SUCCESS / ❌ FAILED]\\n\\n## Checks Performed\\n1. [Check description]: [PASS/FAIL]\\n2. [Check description]: [PASS/FAIL]\\n\\n## Conclusion\\n[Can the original activity be retried? What changed?]\\n```\",\n        \"max_tokens\": 6000,\n        \"compression_strategy\": \"filter\",\n        \"variables\": []\n      },\n      \"validation\": {\n        \"required_files\": [\"/tmp/debug-{{activityId}}/VERIFICATION.md\"],\n        \"required_patterns\": [\"## Status\", \"## Checks Performed\"],\n        \"forbidden_patterns\": [],\n        \"commands\": []\n      },\n      \"retry\": {\"max_attempts\": 2, \"strategy\": \"simple\"}\n    }\n  ],\n  \"variables\": {},\n  \"context_requirements\": []\n}\n```\n\n**Guidelines**:\n- Recovery tasks should be specific and actionable\n- Each task: one clear fix\n- Include verification step at the end\n- Keep prompts focused (100-200 words)\n\n**Validate JSON**:\n```bash\ncat /tmp/debug-{{activityId}}/recovery-tasks.json | python3 -m json.tool > /dev/null\n```",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": ["\"activity_id\":", "\"task_steps\":"],
+        "forbidden_patterns": ["TODO", "FIXME"],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "document-resolution",
+      "subagent": "general",
+      "description": "Document the debugging process and resolution for learning",
+      "dependencies": ["generate-recovery-tasks"],
+      "prompt": {
+        "template": "Document the debugging process for future reference.\n\n**Input**: Read DIAGNOSIS.md and recovery-tasks.json\n\n**Output**: Create `/tmp/debug-{{activityId}}/RESOLUTION.md`\n\n**Your Task**: Summarize the debugging process and lessons learned\n\n```markdown\n# Activity Debugging Resolution: {{activityId}}\n\n## Problem Summary\n- Template: {{templateId}}\n- Failed Task: {{failedTaskId}}\n- Root Cause: [From DIAGNOSIS.md]\n\n## Solution Applied\n[Describe recovery tasks generated]\n\n## Resolution Steps\n\n### Step 1: Execute Recovery Tasks\n```bash\nopencode activity \\\n  --file /tmp/debug-{{activityId}}/recovery-tasks.json \\\n  --reason \"Recover from failed activity {{activityId}}\"\n```\n\n### Step 2: Verify Fix\n[Verification steps from recovery-tasks.json]\n\n### Step 3: Retry Original Activity\n```bash\nopencode activity \\\n  --template {{templateId}} \\\n  --reason \"Retry after recovery\" \\\n  [original variables]\n```\n\n## Lessons Learned\n\n### What Went Wrong\n[Root cause analysis summary]\n\n### How to Prevent\n1. [Prevention measure 1]\n2. [Prevention measure 2]\n\n### Template Improvements\n[Suggestions for evolving {{templateId}} template]\n\n## Status\n✅ Recovery tasks generated and ready to execute\n\n## Next Steps\n1. Execute recovery tasks\n2. Verify fix\n3. Retry original activity\n4. If successful, consider template evolution to prevent recurrence\n```\n\n**Output**: Comprehensive resolution documentation with actionable next steps.",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": ["## Problem Summary", "## Solution Applied", "## Resolution Steps", "## Lessons Learned"],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "variables": {},
+  "context_requirements": [
+    "activityExecution: Similar failure patterns for this template",
+    "activityExecution: Successful executions of same template",
+    "activityOutput: Error logs and execution traces"
+  ],
+  "trailblazing": {
+    "enabled": true,
+    "maxRecoveryAttempts": 3,
+    "maxCostPerTask": 1.0,
+    "maxTotalCost": 5.0
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

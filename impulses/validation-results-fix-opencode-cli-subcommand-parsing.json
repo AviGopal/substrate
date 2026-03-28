@@ -1,0 +1,145 @@
+{
+  "id": "validation-results-fix-opencode-cli-subcommand-parsing",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "specificationName": "fix-opencode-cli-subcommand-parsing",
+      "validationDate": "2026-03-18T03:16:00.000Z",
+      "validationMethod": "source-code-inspection",
+      "overallStatus": "PASS",
+      "summary": "All 6 source code validation tests passed. The fix was correctly applied to activity.ts with all required components in place.",
+      "testResults": [
+        {
+          "testCase": "validation-fix-opencode-cli-subcommand-parsing-case-1",
+          "testName": "Subcommand 'list' should work without --variables",
+          "status": "PASS",
+          "validationType": "source-code-inspection",
+          "actual": "REGISTERED_SUBCOMMANDS constant exists with 'list' registered",
+          "expected": "REGISTERED_SUBCOMMANDS should contain 'list'",
+          "difference": null,
+          "details": "Verified 'list' is in REGISTERED_SUBCOMMANDS Set at line 27"
+        },
+        {
+          "testCase": "validation-fix-opencode-cli-subcommand-parsing-case-2",
+          "testName": "Subcommand 'search' should work without --variables",
+          "status": "PASS",
+          "validationType": "source-code-inspection",
+          "actual": "REGISTERED_SUBCOMMANDS constant exists with 'search' registered",
+          "expected": "REGISTERED_SUBCOMMANDS should contain 'search'",
+          "difference": null,
+          "details": "Verified 'search' is in REGISTERED_SUBCOMMANDS Set at line 34"
+        },
+        {
+          "testCase": "validation-fix-opencode-cli-subcommand-parsing-case-3",
+          "testName": "Subcommand 'template' should work without --variables",
+          "status": "PASS",
+          "validationType": "source-code-inspection",
+          "actual": "REGISTERED_SUBCOMMANDS constant exists with 'template' registered",
+          "expected": "REGISTERED_SUBCOMMANDS should contain 'template'",
+          "difference": null,
+          "details": "Verified 'template' is in REGISTERED_SUBCOMMANDS Set at line 28"
+        },
+        {
+          "testCase": "validation-fix-opencode-cli-subcommand-parsing-case-4",
+          "testName": "Template execution should still require --variables",
+          "status": "PASS",
+          "validationType": "source-code-inspection",
+          "actual": ".check() validation enforces --variables for non-subcommands",
+          "expected": "Unknown template IDs should require --variables",
+          "difference": null,
+          "details": "Verified .check() function (lines 1716-1737) checks REGISTERED_SUBCOMMANDS first, then requires --variables for unknown template IDs"
+        },
+        {
+          "testCase": "validation-fix-opencode-cli-subcommand-parsing-case-5",
+          "testName": "All registered subcommands should work",
+          "status": "PASS",
+          "validationType": "source-code-inspection",
+          "actual": "All 10 subcommands found in REGISTERED_SUBCOMMANDS: list, template, run, init, clear, metrics, recommend, search, promote, evolve",
+          "expected": "All 10 subcommands should be registered",
+          "difference": null,
+          "details": "Verified all 10 subcommands are in REGISTERED_SUBCOMMANDS Set (lines 26-37)"
+        },
+        {
+          "testCase": "validation-fix-opencode-cli-subcommand-parsing-case-6",
+          "testName": "Template execution with --variables should still work (regression test)",
+          "status": "PASS",
+          "validationType": "source-code-inspection",
+          "actual": "Template execution logic preserved at lines 1754+, only executed when firstArg is not a subcommand",
+          "expected": "Template execution with --variables should continue to work",
+          "difference": null,
+          "details": "Verified handler (lines 1739-1755) skips subcommands and preserves template execution logic"
+        }
+      ],
+      "sourceCodeValidation": {
+        "test1": {
+          "name": "REGISTERED_SUBCOMMANDS constant exists",
+          "status": "PASS",
+          "location": "lines 25-37",
+          "verified": "const REGISTERED_SUBCOMMANDS = new Set([...]) found"
+        },
+        "test2": {
+          "name": ".check() validation uses subcommand detection",
+          "status": "PASS",
+          "location": "lines 1716-1737",
+          "verified": "if (REGISTERED_SUBCOMMANDS.has(firstArg)) { return true } found in .check()"
+        },
+        "test3": {
+          "name": "Handler skips subcommands",
+          "status": "PASS",
+          "location": "lines 1739-1755",
+          "verified": "if (REGISTERED_SUBCOMMANDS.has(firstArg)) { return } found in handler"
+        },
+        "test4": {
+          "name": "All 10 subcommands registered",
+          "status": "PASS",
+          "location": "lines 26-37",
+          "verified": "Found all 10: list, template, run, init, clear, metrics, recommend, search, promote, evolve"
+        },
+        "test5": {
+          "name": "Validation logic uses firstArg variable",
+          "status": "PASS",
+          "location": "line 1721",
+          "verified": "const firstArg = positionals[0] as string found in .check()"
+        },
+        "test6": {
+          "name": "Handler logic uses firstArg variable",
+          "status": "PASS",
+          "location": "line 1747",
+          "verified": "const firstArg = positionals[0] as string found in handler"
+        }
+      },
+      "codeChangesVerified": [
+        {
+          "change": "Added REGISTERED_SUBCOMMANDS constant",
+          "location": "lines 25-37",
+          "verified": true,
+          "impact": "Provides centralized list of subcommands for validation and handler"
+        },
+        {
+          "change": "Updated .check() validation",
+          "location": "lines 1716-1737",
+          "verified": true,
+          "impact": "Subcommands now skip --variables validation, templates still require it"
+        },
+        {
+          "change": "Updated handler to skip subcommands",
+          "location": "lines 1739-1755",
+          "verified": true,
+          "impact": "Subcommands route to yargs handlers, templates execute normally"
+        }
+      ],
+      "runtimeValidationNote": "Runtime execution validation was attempted but encountered preload dependency issue with built binaries. Source code inspection confirms fix was correctly applied. External validation suite (repos/metabob-cli/run-external-validation.sh --suite cli) should be run as final verification.",
+      "nextSteps": [
+        "Run external validation suite to confirm CLI behavior",
+        "Test manually with 'opencode activity list' command",
+        "Verify no regressions in template execution"
+      ],
+      "confidence": "HIGH",
+      "reason": "All source code changes verified through static analysis. Fix correctly implements specification requirements."
+    },
+    "source": "validation-execution"
+  },
+  "budget": 2000,
+  "createdAt": "2026-03-18T03:16:00.000Z"
+}

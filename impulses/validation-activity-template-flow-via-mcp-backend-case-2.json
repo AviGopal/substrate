@@ -1,0 +1,17 @@
+{
+  "id": "validation-activity-template-flow-via-mcp-backend-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Validation Test Case: TemplateLoader Source Verification\n\n## Input\n```json\n{\n  \"file\": \"repos/metabob-opencode/packages/opencode/src/session/template-loader.ts\",\n  \"check\": \"TemplateLoader returns source=\\\"metabob\\\" for backend templates\"\n}\n```\n\n## Expected Output\n```json\n{\n  \"fileExists\": true,\n  \"sourceMetabob\": true,\n  \"usesTemplateServiceClient\": true,\n  \"hasBootstrapFallback\": true\n}\n```\n\n## Test Description\nThis test case validates that TemplateLoader returns source=\"metabob\" for backend templates meets the specification requirements for Activity Template Flow via MCP Backend.\n\n## Validation Type\nStatic code analysis - no LLM required\n",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "Activity Template Flow via MCP Backend",
+    "testName": "TemplateLoader Source Verification",
+    "testCaseNumber": 2,
+    "totalTestCases": 7
+  }
+}

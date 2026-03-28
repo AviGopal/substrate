@@ -1,0 +1,29 @@
+{
+  "id": "harness-activity-template-mcp-only-flow",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/activity-template-mcp-only-flow-harness.ts",
+    "offset": 0,
+    "length": -1
+  },
+  "budget": 2000,
+  "priority": "high",
+  "loaded": true,
+  "metadata": {
+    "specification": "activity-template-mcp-only-flow",
+    "harnessType": "integration",
+    "testCases": [
+      "validation-activity-template-mcp-only-flow-case-1",
+      "validation-activity-template-mcp-only-flow-case-2",
+      "validation-activity-template-mcp-only-flow-case-3"
+    ],
+    "usage": "bun run tests/validation-harnesses/activity-template-mcp-only-flow-harness.ts <activityId> [variables]",
+    "dependencies": [
+      "docker (devbob-k8s container)",
+      "kubectl (metabob-rpc-api pod)",
+      "opencode CLI in container"
+    ],
+    "validationStrategy": "Execute activity in devbob-k8s, monitor rpc-api logs, verify MCP flow, confirm no local file reads"
+  }
+}

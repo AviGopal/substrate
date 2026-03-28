@@ -1,0 +1,53 @@
+{
+  "id": "validation-impulse-learning-storage-complete-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "case-2-multiple-files",
+      "description": "Tests pattern extraction with multiple file paths",
+      "input": {
+        "session_id": "test_session_002",
+        "turn_number": 1,
+        "user_message": "Refactor src/utils/parser.ts and tests/parser.test.ts to use async/await",
+        "intent": {
+          "type": "refactor",
+          "confidence": 0.88
+        },
+        "impulses_created": [
+          {
+            "id": "imp_file_parser",
+            "type": "file",
+            "pointer": {"type": "file", "path": "src/utils/parser.ts"},
+            "priority": "high",
+            "budget": 3000
+          },
+          {
+            "id": "imp_file_test",
+            "type": "file",
+            "pointer": {"type": "file", "path": "tests/parser.test.ts"},
+            "priority": "medium",
+            "budget": 1500
+          }
+        ],
+        "response_text": "I've refactored both src/utils/parser.ts and tests/parser.test.ts to use async/await pattern.",
+        "task_succeeded": true,
+        "duration_ms": 120000
+      },
+      "expectedOutput": {
+        "normalized_pattern": "refactor {file0} and {file1} to use async/await",
+        "quality_score": 1.0,
+        "quality_reasoning": "Success (0.6) + both impulses used (0.4) = 1.0"
+      }
+    },
+    "source": "validation harness"
+  },
+  "priority": "medium",
+  "budget": 1500,
+  "metadata": {
+    "specification": "impulse-learning-storage-complete",
+    "testType": "multiple_file_pattern",
+    "historical": true,
+    "noLLMRequired": true
+  }
+}

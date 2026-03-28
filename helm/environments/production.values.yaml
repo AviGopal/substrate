@@ -1,0 +1,117 @@
+environmentName: production
+domain: metabob.app
+
+# Istio service mesh configuration (propagated to all services)
+istio:
+  enabled: true
+  sidecarInjection: true
+  mtls: STRICT
+  telemetry: true
+  gateway:
+    enabled: true
+
+# Image versions (production)
+imageVersions:
+  rpcApi: "0.12.6"
+  devbob: "1.0.64"
+  dashboard: "2.2.11"
+
+# Image pull policy for production
+imagePullPolicy: IfNotPresent
+
+# Database configurations
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ${REDIS_PASSWORD}  # Set via secret or environment
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 10Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+surrealdb:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 50Gi
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  # Enable TLS for production
+  tls:
+    enabled: true
+
+# Metabob RPC API configuration
+metabobRpcApi:
+  environment: production
+  # JWT secret should be provided via Kubernetes Secret in production
+  # jwtSecretKey is required and should be overridden with actual secret value
+  jwtSecretKey: ${JWT_SECRET_KEY}  # Set via secret or CI/CD
+
+# Feature flags
+features:
+  enableMetrics: true
+  enableMCP: true
+  enableTracing: true
+  enableLogging: true
+
+# Resource limits (production defaults)
+resources:
+  devbob:
+    replicas: 3
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  rpcApi:
+    replicas: 3
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingressRules:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: istio-system

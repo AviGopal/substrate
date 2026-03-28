@@ -1,0 +1,22 @@
+FROM metabobapp/metabob-rpc-api:0.30.2-gap9-success-v2
+
+# Fix datetime JSON serialization for timestamps
+RUN python3 << 'PYTHON'
+with open("/src/app/server/db/operations/activity_execution.py", "r") as f:
+    lines = f.readlines()
+
+# Find the timestamp line in activity dict and convert datetime to isoformat
+new_lines = []
+for i, line in enumerate(lines):
+    if '"timestamp": execution.get("started_at"),' in line:
+        indent = len(line) - len(line.lstrip())
+        spaces = ' ' * indent
+        # Get started_at and convert to ISO string if it's a datetime
+        new_lines.append(f'{spaces}started_at = execution.get("started_at")\n')
+        new_lines.append(f'{spaces}"timestamp": started_at.isoformat() if hasattr(started_at, "isoformat") else started_at,\n')
+    else:
+        new_lines.append(line)
+
+with open("/src/app/server/db/operations/activity_execution.py", "w") as f:
+    f.writelines(new_lines)
+PYTHON

@@ -1,0 +1,120 @@
+{
+  "id": "trace-Activity Lifecycle Logging Specification",
+  "type": "trace",
+  "category": "specification-implementation",
+  "specificationName": "Activity Lifecycle Logging Specification",
+  "status": "IMPLEMENTED_NOT_VALIDATED",
+  "commitHash": "305a9ab6",
+  
+  "components": [
+    {
+      "id": "activity-start",
+      "sequence": 1,
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "line": 478,
+      "component": "Activity Tool - Template Execution Start",
+      "log": "Activity: ${template.name} starting",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "memory-agent-init",
+      "sequence": 2,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/memory-agent.ts",
+      "line": 470,
+      "component": "MemoryAgent.gatherContext - Initialization",
+      "log": "Memory agent initializing",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "memory-agent-complete",
+      "sequence": 3,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/memory-agent.ts",
+      "line": 619,
+      "component": "MemoryAgent.gatherContext - Completion",
+      "log": "Memory agent gathered ${count} impulses",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "task-start",
+      "sequence": 4,
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "line": 2348,
+      "component": "Activity Tool - Task Execution Start",
+      "log": "Task starting: ${task.id}",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "task-complete",
+      "sequence": 5,
+      "file": "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+      "line": 2511,
+      "component": "Activity Tool - Task Execution Complete",
+      "log": "Task completed: ${taskId}",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "storage-write",
+      "sequence": 6,
+      "file": "repos/metabob-opencode/packages/opencode/src/storage/storage.ts",
+      "line": 275,
+      "component": "Storage.write - Persistence Confirmation",
+      "log": "storage write confirmed",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "git-commit",
+      "sequence": 7,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity-git.ts",
+      "line": 150,
+      "component": "ActivityGit.commitActivity - Git Commit",
+      "log": "Git commit created: ${sha}",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "activity-complete",
+      "sequence": 8,
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "line": 1136,
+      "component": "Activity.complete - Final Summary",
+      "log": "Activity completed: ${activity.title}",
+      "gap": "NONE",
+      "status": "IMPLEMENTED"
+    }
+  ],
+  
+  "dataFlow": "Activity Start → Memory Init → Memory Complete → Task Start → Task Complete → Storage Write → Git Commit → Activity Complete",
+  
+  "validationGap": {
+    "problem": "Code version mismatch in current session",
+    "impact": "Cannot validate lifecycle logs in current session",
+    "resolution": "Execute activity in fresh process (DevBob pod, new local session, or validation harness)"
+  },
+  
+  "validationPatterns": [
+    "Activity.*starting",
+    "Memory agent initializing",
+    "Memory agent gathered.*impulses",
+    "Task starting:",
+    "Task completed:",
+    "storage write confirmed",
+    "Git commit created:",
+    "Activity completed:"
+  ],
+  
+  "nextSteps": [
+    "Execute activity in fresh process",
+    "Capture execution logs",
+    "Validate all 8 patterns",
+    "Document validation results"
+  ],
+  
+  "traceDocument": "TRACE_ACTIVITY_LIFECYCLE_LOGGING.md",
+  "validationHarness": "tests/validation-harnesses/activity-system-runtime-validation-harness.ts"
+}

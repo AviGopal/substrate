@@ -1,0 +1,33 @@
+{
+  "id": "validation-activity-system-minimal-deployment-case-9",
+  "type": "memo",
+  "testName": "Template Listing API",
+  "description": "Verify GET /v2/activities/templates returns template list with Thompson Sampling metrics",
+  "input": {
+    "service": "metabob-activity-api",
+    "port": 8080,
+    "endpoint": "/v2/activities/templates?limit=10",
+    "method": "GET",
+    "headers": {
+      "Authorization": "Bearer {{session_token}}"
+    },
+    "requiresSession": true
+  },
+  "expectedOutput": {
+    "statusCode": 200,
+    "body": {
+      "templates": "{{array}}",
+      "total": "{{number}}"
+    },
+    "templateSchema": {
+      "variant_id": "string",
+      "activity_id": "string",
+      "category": "string",
+      "metrics": {
+        "thompson_alpha": "number",
+        "thompson_beta": "number",
+        "success_rate": "number"
+      }
+    }
+  }
+}

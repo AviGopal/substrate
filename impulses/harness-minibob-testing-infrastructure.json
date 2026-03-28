@@ -1,0 +1,120 @@
+{
+  "id": "harness-minibob-testing-infrastructure",
+  "type": "file",
+  "content": {
+    "description": "Validation harness for minibob Testing Infrastructure Development-Deployment-Runtime-Refinement Loop",
+    "purpose": "Validates the closed feedback loop through external observation across 7 phases: deployment state, activity validation, backend records, boredom system, metrics collection, infrastructure visualization, and helmfile orchestration",
+    "usage": {
+      "typescript": "import { runValidation } from './tests/validation-harnesses/minibob-testing-infrastructure-harness'; const result = await runValidation({ namespace: 'testing-minibob' });",
+      "cli": "ts-node tests/validation-harnesses/minibob-testing-infrastructure-harness.ts testing-minibob metabob",
+      "parameters": {
+        "namespace": "K8s namespace to validate (e.g., testing-minibob, minibob-cluster)",
+        "backendNamespace": "Backend namespace (default: metabob)",
+        "skipBoredomValidation": "Skip boredom system validation (default: true for non-cluster namespaces)",
+        "metricsDir": "Metrics directory path (default: repos/minibob/metrics)"
+      }
+    },
+    "validationPhases": [
+      {
+        "phase": 1,
+        "name": "Deployment State",
+        "description": "Validates K8s namespace, pod status, and backend availability via kubectl",
+        "observationPoints": ["kubectl get namespace", "kubectl get pods", "pod status.phase"]
+      },
+      {
+        "phase": 2,
+        "name": "Activity Validation",
+        "description": "Executes test-vessel-capabilities.sh and validates test results",
+        "observationPoints": ["test harness output", "test summary (X/4 tests passed)", "individual test PASS/FAIL"]
+      },
+      {
+        "phase": 3,
+        "name": "Backend Records",
+        "description": "Queries backend API for execution records and metrics",
+        "observationPoints": ["/api/v1/learning-loop/metrics", "/api/v1/learning-loop/executions/recent", "total_executions count"]
+      },
+      {
+        "phase": 4,
+        "name": "Boredom System",
+        "description": "Validates boredom system configuration and activity via pod logs",
+        "observationPoints": ["MINIBOB_BOREDOM_ENABLED env var", "kubectl logs | grep Boredom", "boredom task executor logs"]
+      },
+      {
+        "phase": 5,
+        "name": "Metrics Collection",
+        "description": "Validates local metrics files exist and have valid structure",
+        "observationPoints": ["repos/minibob/metrics/*.json files", "metrics.result.total_executions", "metrics.result.activities array"]
+      },
+      {
+        "phase": 6,
+        "name": "Infrastructure Visualization",
+        "description": "Validates visualize-testing-infrastructure.sh output",
+        "observationPoints": ["Deployment Status section", "Backend Components section", "Validation Templates section"]
+      },
+      {
+        "phase": 7,
+        "name": "Helmfile Orchestration",
+        "description": "Validates helmfile state shows multi-namespace releases",
+        "observationPoints": ["helmfile list output", "minibob releases count", "metabob-rpc-api release"]
+      }
+    ],
+    "testCases": [
+      {
+        "impulseId": "validation-minibob-testing-infrastructure-case-1",
+        "scenario": "Single Pod Deployment (testing-minibob)",
+        "expectedPasses": 6,
+        "expectedSkips": 1
+      },
+      {
+        "impulseId": "validation-minibob-testing-infrastructure-case-2",
+        "scenario": "Cluster Deployment (minibob-cluster)",
+        "expectedPasses": 7,
+        "expectedSkips": 0
+      },
+      {
+        "impulseId": "validation-minibob-testing-infrastructure-case-3",
+        "scenario": "Development Layer (minibob-dev)",
+        "expectedPasses": 6,
+        "expectedSkips": 1
+      }
+    ],
+    "returnValue": {
+      "pass": "boolean - overall validation result (true if all non-skipped phases pass)",
+      "phase1_deploymentState": "PhaseResult - namespace and pod status validation",
+      "phase2_activityValidation": "PhaseResult - activity template execution validation",
+      "phase3_backendRecords": "PhaseResult - backend API and execution records validation",
+      "phase4_boredomSystem": "PhaseResult - boredom system configuration and logs validation",
+      "phase5_metricsCollection": "PhaseResult - local metrics files validation",
+      "phase6_infrastructureVisualization": "PhaseResult - visualization script output validation",
+      "phase7_helmfileOrchestration": "PhaseResult - helmfile state validation",
+      "summary": {
+        "totalPhases": "number - total non-skipped phases",
+        "passedPhases": "number - phases that passed",
+        "failedPhases": "number - phases that failed",
+        "skippedPhases": "number - phases that were skipped"
+      }
+    },
+    "integrationWithSpecification": {
+      "specification": "minibob Testing Infrastructure Development-Deployment-Runtime-Refinement Loop",
+      "traceImpulse": "trace-minibob-testing-infrastructure-loop",
+      "enforcementImpulse": "enforcement-minibob-testing-infrastructure-loop",
+      "validatesRequirements": [
+        "requirement1_progressiveLayers - via Phase 1 (deployment state) and Phase 7 (helmfile orchestration)",
+        "requirement2_activityValidation - via Phase 2 (activity validation)",
+        "requirement3_backendIntegration - via Phase 3 (backend records)",
+        "requirement4_metricsCollection - via Phase 5 (metrics collection)",
+        "requirement5_boredomSystem - via Phase 4 (boredom system)",
+        "requirement6_closedLoop - via all phases combined (deployment → validation → backend → metrics → boredom)",
+        "requirement7_traceability - partial validation via metrics and backend records (git commit SHA traceability is observability enhancement)"
+      ]
+    }
+  },
+  "budget": 2000,
+  "priority": "critical",
+  "tags": ["validation", "harness", "minibob", "testing-infrastructure", "closed-loop", "external-observation"],
+  "createdAt": "2026-03-15T13:00:00Z",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/minibob-testing-infrastructure-harness.ts"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "conflict-analysis-dashboard-build-deploy-validate-e2e",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"specificationName\": \"dashboard-build-deploy-validate-e2e\",\n  \"validationStatus\": \"PASS\",\n  \"otherSpecifications\": [\n    {\n      \"name\": \"metrics-calculation-in-rpc-api-only\",\n      \"status\": \"PASS\"\n    }\n  ],\n  \"conflicts\": [],\n  \"sharedComponents\": [\n    {\n      \"file\": \"repos/platform/metabob-apps/charts/metabob-dashboard/charts/templates/service.yaml\",\n      \"component\": \"Kubernetes Service Definition\",\n      \"affectedBySpecs\": [\n        \"dashboard-build-deploy-validate-e2e\"\n      ],\n      \"changes\": [\n        \"Created ClusterIP service exposing port 80\"\n      ],\n      \"recommendation\": \"Monitor for conflicts if other specs modify these files\"\n    },\n    {\n      \"file\": \"repos/platform/metabob-apps/charts/istio-application/charts/templates/service.yaml\",\n      \"component\": \"Istio VirtualService\",\n      \"affectedBySpecs\": [\n        \"dashboard-build-deploy-validate-e2e\"\n      ],\n      \"changes\": [\n        \"Changed default route destination port from 8080 to 80\"\n      ],\n      \"recommendation\": \"Monitor for conflicts if other specs modify these files\"\n    },\n    {\n      \"file\": \"repos/platform/metabob-apps/charts/metabob-dashboard/values/local.metabob-dashboard.values.yaml\",\n      \"component\": \"Helm values\",\n      \"affectedBySpecs\": [\n        \"dashboard-build-deploy-validate-e2e\"\n      ],\n      \"changes\": [\n        \"Updated image tag from 0.2.3 to 2.2.1\"\n      ],\n      \"recommendation\": \"Monitor for conflicts if other specs modify these files\"\n    },\n    {\n      \"file\": \"scripts/build-dashboard.sh\",\n      \"component\": \"Build automation\",\n      \"affectedBySpecs\": [\n        \"dashboard-build-deploy-validate-e2e\"\n      ],\n      \"changes\": [\n        \"Created build script\"\n      ],\n      \"recommendation\": \"Monitor for conflicts if other specs modify these files\"\n    },\n    {\n      \"file\": \"scripts/deploy-dashboard.sh\",\n      \"component\": \"Deployment automation\",\n      \"affectedBySpecs\": [\n        \"dashboard-build-deploy-validate-e2e\"\n      ],\n      \"changes\": [\n        \"Created deploy script\"\n      ],\n      \"recommendation\": \"Monitor for conflicts if other specs modify these files\"\n    }\n  ],\n  \"summary\": {\n    \"totalOtherSpecs\": 1,\n    \"passedSpecs\": 1,\n    \"failedSpecs\": 0,\n    \"conflictsDetected\": 0,\n    \"warningsDetected\": 0,\n    \"infoDetected\": 0\n  },\n  \"recommendation\": \"No conflicts detected. Dashboard deployment is isolated and compatible with existing specifications.\"\n}",
+    "source": "conflict detection and analysis"
+  },
+  "metadata": {
+    "createdAt": "2026-03-03T10:58:45.453Z",
+    "purpose": "Conflict analysis for dashboard-build-deploy-validate-e2e specification",
+    "conflictsFound": 0,
+    "severity": "LOW"
+  },
+  "budget": 3000
+}

@@ -1,0 +1,15 @@
+{
+  "id": "validation-structured-logging-data-flow-tracing-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Invalid Password - Failure Case\n\nInput:\n- Email: test@example.com\n- Password: wrong-password\n\nExpected Stages (in order):\n1. AUTH_START - Entry point with sanitized email\n2. DB_QUERY_USER_START - Query initiation with full query text\n3. DB_QUERY_USER_COMPLETE - Query result with execution_time_ms, result_count=1\n4. USER_FOUND - User parsed successfully with user_id, parsing_path\n5. PASSWORD_VERIFY_START - Password verification initiation with hash_length\n6. AUTH_FAILURE - Failure with reason='INVALID_PASSWORD'\n\nExpected Output:\n- HTTP Status: 401 Unauthorized\n- Response: {\"detail\": \"Invalid email or password\"}\n- X-Correlation-ID header present\n- All logs have same correlation_id\n- AUTH_FAILURE log contains:\n  * reason: 'INVALID_PASSWORD'\n  * error_stage: 'PASSWORD_VERIFY'\n  * user_id: (from user_data)\n  * email: sanitized (****@example.com)\n  * verification_time_ms: measured bcrypt time\n  * total_duration_ms: measured total time\n\nValidation Checks:\n✓ Correlation ID in response header\n✓ All logs have same correlation_id\n✓ All expected stages present in logs\n✓ AUTH_START has email (sanitized)\n✓ DB_QUERY_USER_COMPLETE has execution_time_ms and result_count=1\n✓ USER_FOUND has user_id and parsing_path\n✓ PASSWORD_VERIFY_START has user_id and hash_length\n✓ AUTH_FAILURE has reason='INVALID_PASSWORD'\n✓ AUTH_FAILURE has error_stage='PASSWORD_VERIFY'\n✓ AUTH_FAILURE has verification_time_ms (bcrypt timing)\n✓ AUTH_FAILURE has total_duration_ms\n✓ No PASSWORD_VERIFY_COMPLETE (verification failed)\n✓ No TOKEN_CREATE stages (never reached)\n✓ No AUTH_SUCCESS stage (authentication failed)",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "metadata": {
+    "test_case": 3,
+    "scenario": "invalid_password",
+    "expected_status": 401
+  }
+}

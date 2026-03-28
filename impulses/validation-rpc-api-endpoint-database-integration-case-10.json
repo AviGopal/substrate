@@ -1,0 +1,21 @@
+{
+  "id": "validation-rpc-api-endpoint-database-integration-case-10",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"id\": \"validation-rpc-api-endpoint-database-integration-case-10\",\n  \"name\": \"Record Task Start - POST /v2/activities/tasks\",\n  \"input\": {\n    \"method\": \"POST\",\n    \"endpoint\": \"/v2/activities/tasks\",\n    \"data\": {\n      \"activity_id\": \"{activity_id}\",\n      \"task_id\": \"task-1\",\n      \"status\": \"running\",\n      \"started_at\": \"{timestamp}\"\n    }\n  },\n  \"expectedOutput\": {\n    \"statusCode\": 201,\n    \"responseSchema\": {\n      \"id\": \"string\",\n      \"task_id\": \"string\",\n      \"status\": \"string\"\n    },\n    \"validations\": [\n      \"Task execution created\",\n      \"ID returned as string\",\n      \"Response is valid JSON\"\n    ]\n  }\n}",
+    "source": "validation-harness"
+  },
+  "priority": "high",
+  "budget": 1000,
+  "metadata": {
+    "specification": "rpc-api-endpoint-database-integration",
+    "category": "validation-test-case",
+    "testName": "Record Task Start - POST /v2/activities/tasks",
+    "endpoint": "/v2/activities/tasks",
+    "method": "POST",
+    "expectedStatus": 201,
+    "criticalTest": false
+  },
+  "createdAt": "2026-03-03T11:05:11.234Z"
+}

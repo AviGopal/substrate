@@ -1,0 +1,169 @@
+{
+  "pass": false,
+  "timestamp": 1773172205754,
+  "method": "kubectl",
+  "execution": {
+    "command": "kubectl exec -n metabob devbob-794b69b4f4-rhnwg -- opencode activity manage-session-memory",
+    "duration": 867,
+    "exitCode": 0,
+    "logLines": 73
+  },
+  "patterns": {
+    "total": 8,
+    "required": 7,
+    "optional": 1,
+    "foundRequired": 0,
+    "foundOptional": 1,
+    "missingRequired": 7,
+    "results": {
+      "activity_start": {
+        "pattern": "activity_start",
+        "regex": "Activity.*starting",
+        "description": "Activity initialization log",
+        "found": false,
+        "occurrences": 0,
+        "minOccurrences": 1,
+        "optional": false,
+        "pass": false,
+        "matches": []
+      },
+      "memory_init": {
+        "pattern": "memory_init",
+        "regex": "Memory agent initializing",
+        "description": "Memory agent starts gathering context",
+        "found": false,
+        "occurrences": 0,
+        "minOccurrences": 1,
+        "optional": false,
+        "pass": false,
+        "matches": []
+      },
+      "memory_complete": {
+        "pattern": "memory_complete",
+        "regex": "Memory agent gathered.*impulses",
+        "description": "Memory agent completes with impulse count",
+        "found": false,
+        "occurrences": 0,
+        "minOccurrences": 1,
+        "optional": false,
+        "pass": false,
+        "matches": []
+      },
+      "task_start": {
+        "pattern": "task_start",
+        "regex": "Task starting:",
+        "description": "Task execution begins",
+        "found": false,
+        "occurrences": 0,
+        "minOccurrences": 1,
+        "optional": false,
+        "pass": false,
+        "matches": []
+      },
+      "task_complete": {
+        "pattern": "task_complete",
+        "regex": "Task completed:",
+        "description": "Task execution completes with metrics",
+        "found": false,
+        "occurrences": 0,
+        "minOccurrences": 1,
+        "optional": false,
+        "pass": false,
+        "matches": []
+      },
+      "storage_write": {
+        "pattern": "storage_write",
+        "regex": "storage write confirmed",
+        "description": "Storage persistence confirmation",
+        "found": false,
+        "occurrences": 0,
+        "minOccurrences": 1,
+        "optional": false,
+        "pass": false,
+        "matches": []
+      },
+      "git_commit": {
+        "pattern": "git_commit",
+        "regex": "Git commit created:",
+        "description": "Git commit for activity (if git enabled)",
+        "found": true,
+        "occurrences": 0,
+        "minOccurrences": 0,
+        "optional": true,
+        "pass": true,
+        "matches": []
+      },
+      "activity_complete": {
+        "pattern": "activity_complete",
+        "regex": "Activity completed:",
+        "description": "Activity completion with full metrics",
+        "found": false,
+        "occurrences": 0,
+        "minOccurrences": 1,
+        "optional": false,
+        "pass": false,
+        "matches": []
+      }
+    }
+  },
+  "actual": {
+    "logFile": "validation-logs-lifecycle-1773172205754.log",
+    "logContent": "\n\n=== POD LOGS ===\nINFO  2026-03-10T15:30:19 +8ms service=template-cache intervalMs=60000 cleanup started\nINFO  2026-03-10T15:30:19 +8ms service=sdk-loader total=2 loaded=2 packages=[\"@ai-sdk/anthropic\",\"anthropic\"] SDK loader initialized\nINFO  2026-03-10T15:30:19 +31ms service=turn-lifecycle name=memory-management priority=10 totalHooks=1 hook registered\nINFO  2026-03-10T15:30:19 +0ms service=turn-lifecycle name=activity-recommendation-injection priority=15 totalHooks=2 hook registered\nINFO  2026-03-10T15:30:19 +0ms service=turn-lifecycle name=metabob-context-preparation priority=20 totalHooks=3 hook registered\nINFO  2026-03-10T15:30:19 +0ms service=turn-lifecycle name=post-turn-cleanup priority=100 totalHooks=4 hook registered\nINFO  2026-03-10T15:30:19 +0ms service=turn-lifecycle name=session-memory-optimization priority=110 totalHooks=5 hook registered\nINFO  2026-03-10T15:30:19 +0ms service=turn-lifecycle name=impulse-learning-init priority=1 totalHooks=6 hook registered\nINFO  2026-03-10T15:30:19 +0ms service=turn-lifecycle name=impulse-learning-flush priority=120 totalHooks=7 hook registered\nINFO  2026-03-10T15:30:19 +249ms service=default version=0.0.0-dev-202603101418 args=[\"acp\",\"--hostname\",\"0.0.0.0\",\"--port\",\"8080\",\"--print-logs\",\"--log-level\",\"INFO\"] opencode\nINFO  2026-03-10T15:30:19 +1ms service=default directory=/workspace creating instance\nINFO  2026-03-10T15:30:19 +0ms service=project directory=/workspace fromDirectory\nINFO  2026-03-10T15:30:19 +1ms service=project status=started git.rev-parse\nINFO  2026-03-10T15:30:19 +25ms service=project status=completed duration=25 git.rev-parse\nINFO  2026-03-10T15:30:19 +5ms service=default directory=/workspace bootstrapping\nINFO  2026-03-10T15:30:19 +3ms service=config path=/workspace/.config/opencode/config.json loading\nINFO  2026-03-10T15:30:19 +1ms service=config path=/workspace/.config/opencode/opencode.json loading\nINFO  2026-03-10T15:30:19 +13ms service=config path=/workspace/.config/opencode/opencode.jsonc loading\nINFO  2026-03-10T15:30:19 +8ms service=bun cmd=[\"/usr/local/bin/opencode\",\"add\",\"@opencode-ai/plugin@0.0.0-dev-202603101418\",\"--exact\"] cwd=/workspace/.config/opencode running\nINFO  2026-03-10T15:30:19 +3ms service=config path=/workspace/.opencode/opencode.jsonc loading\nINFO  2026-03-10T15:30:19 +0ms service=config path=/workspace/.opencode/opencode.json loading\nINFO  2026-03-10T15:30:19 +1ms service=bun cmd=[\"/usr/local/bin/opencode\",\"add\",\"@opencode-ai/plugin@0.0.0-dev-202603101418\",\"--exact\"] cwd=/workspace/.opencode running\nINFO  2026-03-10T15:30:19 +351ms service=bun code=1 stdout=bun add v1.3.9 (cf6cdbbb)\n stderr=Resolving dependencies\nResolved, downloaded and extracted [2]\nerror: No version matching \"0.0.0-dev-202603101418\" found for specifier \"@opencode-ai/plugin\" (but package exists)\nerror: @opencode-ai/plugin@0.0.0-dev-202603101418 failed to resolve\n done\nINFO  2026-03-10T15:30:19 +55ms service=bun code=1 stdout=bun add v1.3.9 (cf6cdbbb)\n stderr=Resolving dependencies\nResolved, downloaded and extracted [2]\nerror: No version matching \"0.0.0-dev-202603101418\" found for specifier \"@opencode-ai/plugin\" (but package exists)\nerror: @opencode-ai/plugin@0.0.0-dev-202603101418 failed to resolve\n done\nWARN  2026-03-10T15:30:19 +0ms service=config-validation providerID=anthropic recommendation=Set ANTHROPIC_API_KEY environment variable securityRisk=API keys in config files can be accidentally committed to version control Provider 'anthropic' has apiKey in config file. Consider using environment variables instead.\nINFO  2026-03-10T15:30:19 +3ms service=plugin loaded internal plugin: metabob-ui\nINFO  2026-03-10T15:30:19 +0ms service=plugin path=opencode-copilot-auth@0.0.5 loading plugin\nINFO  2026-03-10T15:30:19 +3ms service=plugin path=opencode-anthropic-auth@0.0.13 loading plugin\nINFO  2026-03-10T15:30:19 +1ms service=plugin loaded bundled plugin: opencode-anthropic-auth\nINFO  2026-03-10T15:30:19 +0ms service=bus type=* subscribing\nINFO  2026-03-10T15:30:19 +0ms service=bus type=session.updated subscribing\nINFO  2026-03-10T15:30:19 +0ms service=bus type=message.updated subscribing\nINFO  2026-03-10T15:30:19 +0ms service=bus type=message.part.updated subscribing\nINFO  2026-03-10T15:30:19 +0ms service=format init\nINFO  2026-03-10T15:30:19 +0ms service=bus type=file.edited subscribing\nINFO  2026-03-10T15:30:19 +1ms service=lsp serverIds=deno, typescript, vue, eslint, gopls, ruby-lsp, pyright, elixir-ls, zls, csharp, sourcekit-lsp, rust, clangd, svelte, astro, jdtls, lua-ls enabled LSP servers\nINFO  2026-03-10T15:30:19 +2ms service=template-library options={\"autoRegisterWithMetabob\":true,\"registrationBehavior\":\"best-effort\",\"registrationStrategy\":\"on-install\",\"installNew\":true} initializing bootstrap templates via MCP\nINFO  2026-03-10T15:30:19 +3ms service=bootstrap-templates count=4 source=embedded-imports loaded bootstrap templates from embedded data\nINFO  2026-03-10T15:30:19 +2ms service=mcp key=metabob type=remote found\nINFO  2026-03-10T15:30:19 +7ms service=mcp key=playwright mcp server disabled\nWARN  2026-03-10T15:30:19 +21ms service=template-service-client templateId=evolve-activity-self-contained metabob not available for registerTemplate\nWARN  2026-03-10T15:30:19 +0ms service=bootstrap-templates id=evolve-activity-self-contained error=Metabob TemplateService not available MCP registration failed, using local fallback\nWARN  2026-03-10T15:30:19 +1ms service=template-service-client templateId=manage-session-memory metabob not available for registerTemplate\nWARN  2026-03-10T15:30:19 +0ms service=bootstrap-templates id=manage-session-memory error=Metabob TemplateService not available MCP registration failed, using local fallback\nWARN  2026-03-10T15:30:19 +0ms service=template-service-client templateId=trace-data-flow-single-feature metabob not available for registerTemplate\nWARN  2026-03-10T15:30:19 +0ms service=bootstrap-templates id=trace-data-flow-single-feature error=Metabob TemplateService not available MCP registration failed, using local fallback\nWARN  2026-03-10T15:30:19 +0ms service=template-service-client templateId=trace-enforce-validate-loop metabob not available for registerTemplate\nWARN  2026-03-10T15:30:19 +0ms service=bootstrap-templates id=trace-enforce-validate-loop error=Metabob TemplateService not available MCP registration failed, using local fallback\nINFO  2026-03-10T15:30:19 +0ms service=bootstrap-templates registered=0 skipped=4 failed=0 localFallbackAvailable=true bootstrap registration complete\nINFO  2026-03-10T15:30:19 +0ms service=template-library registered=0 skipped=4 failed=0 ids=[] bootstrap templates registered with MCP\nINFO  2026-03-10T15:30:19 +0ms service=bus type=command.executed subscribing\nINFO  2026-03-10T15:30:19 +34ms service=server method=GET path=/config request\nINFO  2026-03-10T15:30:19 +0ms service=server status=started method=GET path=/config request\nINFO  2026-03-10T15:30:19 +2ms service=server status=completed duration=2 method=GET path=/config request\nINFO  2026-03-10T15:30:19 +2ms service=acp-command setup connection\nINFO  2026-03-10T16:30:19 +3599163ms service=models.dev file={} refreshing\nINFO  2026-03-10T17:30:19 +3599970ms service=models.dev file={} refreshing\nINFO  2026-03-10T18:30:19 +3599966ms service=models.dev file={} refreshing\nINFO  2026-03-10T19:30:19 +3599986ms service=models.dev file={} refreshing\n"
+  },
+  "expected": {
+    "patterns": {
+      "activity_start": {
+        "regex": "Activity.*starting",
+        "description": "Activity initialization log",
+        "minOccurrences": 1,
+        "example": "Activity: Template Name starting"
+      },
+      "memory_init": {
+        "regex": "Memory agent initializing",
+        "description": "Memory agent starts gathering context",
+        "minOccurrences": 1,
+        "example": "Memory agent initializing"
+      },
+      "memory_complete": {
+        "regex": "Memory agent gathered.*impulses",
+        "description": "Memory agent completes with impulse count",
+        "minOccurrences": 1,
+        "example": "Memory agent gathered 3 impulses"
+      },
+      "task_start": {
+        "regex": "Task starting:",
+        "description": "Task execution begins",
+        "minOccurrences": 1,
+        "example": "Task starting: task-id"
+      },
+      "task_complete": {
+        "regex": "Task completed:",
+        "description": "Task execution completes with metrics",
+        "minOccurrences": 1,
+        "example": "Task completed: task-id"
+      },
+      "storage_write": {
+        "regex": "storage write confirmed",
+        "description": "Storage persistence confirmation",
+        "minOccurrences": 1,
+        "example": "storage write confirmed"
+      },
+      "git_commit": {
+        "regex": "Git commit created:",
+        "description": "Git commit for activity (if git enabled)",
+        "minOccurrences": 0,
+        "optional": true,
+        "example": "Git commit created: a1b2c3d"
+      },
+      "activity_complete": {
+        "regex": "Activity completed:",
+        "description": "Activity completion with full metrics",
+        "minOccurrences": 1,
+        "example": "Activity completed: Activity Title"
+      }
+    },
+    "requiredPatternCount": 7,
+    "optionalPatternCount": 1
+  },
+  "summary": "❌ FAIL: 7/7 required patterns missing"
+}

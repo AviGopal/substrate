@@ -1,0 +1,29 @@
+{
+  "id": "validation-surrealdb-primary-redis-cache-case-1",
+  "type": "memo",
+  "testCase": "Template Creation Write Order",
+  "description": "Verify that template creation writes to SurrealDB BEFORE Redis cache",
+  "input": {
+    "template": {
+      "variant_id": "test-template-abc123",
+      "activity_id": "test-template",
+      "variant_name": "Test Template",
+      "description": "Test template for validation",
+      "task_steps": [],
+      "genealogy": { 
+        "content_hash": "abc123", 
+        "parent_hash": null, 
+        "generation": 0 
+      }
+    }
+  },
+  "expectedOutput": {
+    "orderCorrect": true,
+    "surrealWriteFirst": true,
+    "redisWriteSecond": true,
+    "description": "SurrealDB write timestamp must be less than Redis write timestamp"
+  },
+  "specification": "surrealdb-primary-redis-cache",
+  "phase": "Phase 1 - Template Storage",
+  "created_at": "2026-02-28T03:15:00Z"
+}

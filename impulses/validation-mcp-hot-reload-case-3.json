@@ -1,0 +1,17 @@
+{
+  "id": "validation-mcp-hot-reload-case-3",
+  "type": "memo",
+  "content": {
+    "testCase": "MCP.reload() idempotency",
+    "input": "await MCP.reload(); await MCP.reload()",
+    "expectedOutput": {
+      "firstCallSuccess": true,
+      "secondCallSuccess": true,
+      "bothCompleted": true
+    },
+    "validation": "Verify reload can be called multiple times without errors",
+    "category": "idempotency"
+  },
+  "budget": 500,
+  "created": "2026-03-09T00:00:00Z"
+}

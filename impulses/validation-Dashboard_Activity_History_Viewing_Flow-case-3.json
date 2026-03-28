@@ -1,0 +1,36 @@
+{
+  "id": "validation-Dashboard_Activity_History_Viewing_Flow-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "API Validation - Activity List Schema",
+      "input": {
+        "apiUrl": "http://localhost:8081",
+        "endpoint": "/auth/orgs/test-org/activity",
+        "token": "valid-jwt-token"
+      },
+      "expectedOutput": {
+        "status": "PASS",
+        "schema": {
+          "activities": "array",
+          "hasMore": "boolean",
+          "total": "number"
+        },
+        "message": "Activity list API returned valid schema"
+      }
+    },
+    "source": "validation harness specification"
+  },
+  "metadata": {
+    "specificationName": "Dashboard Activity History Viewing Flow",
+    "testCaseNumber": 8,
+    "validationStep": "API: Activity List Schema",
+    "category": "api",
+    "automated": true,
+    "requiresSetup": true,
+    "setupNotes": "Requires valid JWT token from authentication step"
+  },
+  "budget": 500,
+  "lazyLoad": false
+}

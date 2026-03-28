@@ -1,0 +1,81 @@
+{
+  "activity_id": "debug-trace-test",
+  "name": "Debug Trace Test",
+  "description": "Test with debug logging",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "debug",
+      "subagent": "general",
+      "description": "Debug task",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write {{debugTest}} to /tmp/debug-{{id}}.txt",
+        "variables": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true,
+            "description": "ID"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "debug",
+      "subagent": "general",
+      "description": "Debug task",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write {{debugTest}} to /tmp/debug-{{id}}.txt",
+        "variables": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true,
+            "description": "ID"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-20T00:15:33.036Z",
+  "metadata": {}
+}

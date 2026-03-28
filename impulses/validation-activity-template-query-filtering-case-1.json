@@ -1,0 +1,25 @@
+{
+  "id": "validation-activity-template-query-filtering-case-1",
+  "type": "memo",
+  "budget": 1000,
+  "testCase": {
+    "name": "Register Org-Scoped Template",
+    "input": {
+      "action": "POST /v2/activities/templates",
+      "user": "User 1 (devbob-test@local.dev)",
+      "org_id": "3135883c-8be3-4b2b-bdd8-dbe2e427358f",
+      "templateData": {
+        "name": "org-isolation-test-<timestamp>",
+        "scope": "org",
+        "category": "feature"
+      }
+    },
+    "expectedOutput": {
+      "status": "success",
+      "variant_id": "string",
+      "scope": "org",
+      "org_id": "3135883c-8be3-4b2b-bdd8-dbe2e427358f"
+    },
+    "assertion": "Template created with scope='org' and org_id matching User 1's organization"
+  }
+}

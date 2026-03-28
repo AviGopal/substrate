@@ -1,0 +1,36 @@
+{
+  "testCaseId": "validation-external-e2e-activity-lifecycle-validation-case-2",
+  "type": "memo",
+  "description": "E2E validation with custom DB connection (devbob k8s environment)",
+  "input": {
+    "testCaseId": "case-2-k8s-environment",
+    "description": "E2E validation in devbob k8s environment",
+    "surrealUrl": "http://surrealdb-service:8000",
+    "surrealUser": "root",
+    "surrealPass": "root",
+    "surrealNs": "metabob",
+    "surrealDb": "devbob",
+    "opencodeBin": "/workspace/repos/metabob-opencode/dist/opencode-linux-x64/bin/opencode",
+    "expectedTemplateCount": 5,
+    "expectedExecutionFields": ["id", "template_id", "status", "duration_ms", "cost"]
+  },
+  "expectedOutput": {
+    "pass": true,
+    "actual": {
+      "phase1": {
+        "templateCount": ">= 5",
+        "hasRequiredFields": true
+      },
+      "phase2": {
+        "executionRecordFound": true,
+        "executionHasRequiredFields": true,
+        "templateIdMatches": true
+      },
+      "phase3": {
+        "errorCount": "<= 5",
+        "hasLifecycleIndicators": true
+      }
+    }
+  },
+  "budget": 2000
+}

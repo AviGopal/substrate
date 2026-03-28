@@ -1,0 +1,119 @@
+{
+  "activity_id": "test-small-prompt",
+  "name": "Test Small Prompt",
+  "description": "Test with small prompt (~200 chars) with basic Handlebars",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "small-task",
+      "task_id": "small-task",
+      "subagent": "general",
+      "description": "Create a simple file with optional content",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called {{filename}} with this content:\n\n# {{title}}\n\n{{description}}\n\n{{#if notes}}\nNotes: {{notes}}\n{{else}}\nNo additional notes.\n{{/if}}",
+        "variables": [
+          {
+            "name": "filename",
+            "type": "string",
+            "required": true,
+            "description": "Filename"
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true,
+            "description": "Title"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": true,
+            "description": "Description"
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "required": false,
+            "description": "Optional notes"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "small-task",
+      "task_id": "small-task",
+      "subagent": "general",
+      "description": "Create a simple file with optional content",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called {{filename}} with this content:\n\n# {{title}}\n\n{{description}}\n\n{{#if notes}}\nNotes: {{notes}}\n{{else}}\nNo additional notes.\n{{/if}}",
+        "variables": [
+          {
+            "name": "filename",
+            "type": "string",
+            "required": true,
+            "description": "Filename"
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true,
+            "description": "Title"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": true,
+            "description": "Description"
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "required": false,
+            "description": "Optional notes"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-17T18:10:09.685Z",
+  "metadata": {}
+}

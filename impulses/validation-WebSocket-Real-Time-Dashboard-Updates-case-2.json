@@ -1,0 +1,67 @@
+{
+  "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-2",
+  "type": "memo",
+  "testCase": "execution-events",
+  "description": "Verify all execution events are broadcast in correct order",
+  "input": {
+    "testCase": "execution-events",
+    "apiUrl": "ws://localhost:8080/ws",
+    "timeout": 10000
+  },
+  "expectedOutput": {
+    "execution_started": true,
+    "execution_completed": true,
+    "template_updated": true,
+    "eventOrder": ["execution_started", "execution_completed", "template_updated"]
+  },
+  "validationCriteria": [
+    "execution_started event received with execution_id and variant_id",
+    "execution_completed event received with success, duration_ms, cost",
+    "template_updated event received with variant_id and metrics",
+    "Events received in correct order"
+  ],
+  "eventSchemas": {
+    "execution_started": {
+      "type": "execution_started",
+      "timestamp": "ISO8601",
+      "data": {
+        "execution_id": "string",
+        "variant_id": "string",
+        "pod_name": "string (optional)"
+      }
+    },
+    "execution_completed": {
+      "type": "execution_completed",
+      "timestamp": "ISO8601",
+      "data": {
+        "execution_id": "string",
+        "variant_id": "string",
+        "success": "boolean",
+        "duration_ms": "number",
+        "cost": "number",
+        "completed_at": "ISO8601"
+      }
+    },
+    "template_updated": {
+      "type": "template_updated",
+      "timestamp": "ISO8601",
+      "data": {
+        "variant_id": "string",
+        "metrics": {
+          "success_rate": "number",
+          "avg_duration_ms": "number",
+          "avg_cost_usd": "number",
+          "thompson_alpha": "number",
+          "thompson_beta": "number"
+        }
+      }
+    }
+  },
+  "passingConditions": {
+    "execution_started": true,
+    "execution_completed": true,
+    "template_updated": true,
+    "correctEventOrder": true,
+    "noSchemaViolations": true
+  }
+}

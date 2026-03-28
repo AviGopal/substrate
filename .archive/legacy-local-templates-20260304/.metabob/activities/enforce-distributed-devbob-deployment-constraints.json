@@ -1,0 +1,257 @@
+{
+  "activity_id": "enforce-distributed-devbob-deployment-constraints",
+  "name": "Enforce Distributed DevBob Deployment Constraints",
+  "description": "Automatically enforce all deployment constraints for distributed DevBob system - scale vessels to minimum 3, deploy backend services, configure resources, enable health probes, and ensure architectural compliance",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "enforce-backend-services",
+      "subagent": "general",
+      "description": "Ensure all backend coordination services are deployed and healthy",
+      "dependencies": [],
+      "prompt": {
+        "template": "**Task: Enforce Backend Services Deployment**\n\nYou must ensure all required backend services for distributed DevBob coordination are deployed to namespace {{namespace}}.\n\n**REQUIRED SERVICES:**\n1. Redis (master) - Boredom queue, session cache\n2. SurrealDB - Activity state, vessel registry, learning metrics\n3. metabob-rpc-api - Thompson Sampling, improvement gradients\n\n**ENFORCEMENT PROCEDURE:**\n\n1. **Check Current State**\n   ```bash\n   echo \"=== CURRENT BACKEND STATE ===\"\n   kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)'\n   \n   REDIS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=redis --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   SURREAL=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=surrealdb --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   API=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=metabob-rpc-api --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   \n   echo \"Redis: $REDIS | SurrealDB: $SURREAL | API: $API\"\n   ```\n\n2. **Deploy Missing Services via Helmfile**\n   ```bash\n   cd helm\n   \n   # Deploy Redis if missing\n   if [ \"$REDIS\" -eq 0 ]; then\n     echo \"Deploying Redis...\"\n     helmfile -f helmfile.yaml -e local --selector name=redis sync --wait\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n {{namespace}} --timeout=300s\n   else\n     echo \"✅ Redis already running\"\n   fi\n   \n   # Deploy SurrealDB if missing\n   if [ \"$SURREAL\" -eq 0 ]; then\n     echo \"Deploying SurrealDB...\"\n     helmfile -f helmfile.yaml -e local --selector name=surrealdb sync --wait\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=surrealdb -n {{namespace}} --timeout=300s\n   else\n     echo \"✅ SurrealDB already running\"\n   fi\n   \n   # Deploy metabob-rpc-api if missing\n   if [ \"$API\" -eq 0 ]; then\n     echo \"Deploying metabob-rpc-api...\"\n     helmfile -f helmfile.yaml -e local --selector name=metabob-rpc-api sync --wait\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=metabob-rpc-api -n {{namespace}} --timeout=300s\n   else\n     echo \"✅ metabob-rpc-api already running\"\n   fi\n   ```\n\n3. **Verify Health**\n   ```bash\n   echo \"\\n=== HEALTH VERIFICATION ===\"\n   \n   # Test Redis\n   kubectl exec -n {{namespace}} statefulset/redis-master -- redis-cli ping || echo \"⚠️  Redis health check failed\"\n   \n   # Test SurrealDB (port-forward)\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   curl -sf http://localhost:8000/health || echo \"⚠️  SurrealDB health check failed\"\n   kill $PF_PID 2>/dev/null\n   \n   # Test metabob-rpc-api\n   kubectl port-forward -n {{namespace}} svc/metabob-rpc-api 8080:8080 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   curl -sf http://localhost:8080/health || echo \"⚠️  API health check failed\"\n   kill $PF_PID 2>/dev/null\n   ```\n\n4. **Final Status**\n   ```bash\n   echo \"\\n=== FINAL BACKEND STATUS ===\"\n   kubectl get all -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)'\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `backend-enforcement-report.json` with:\n  - Services deployed (Redis, SurrealDB, API)\n  - Deployment actions taken (already running vs newly deployed)\n  - Health check results\n  - Final pod status\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ 3 backend services running (Redis, SurrealDB, metabob-rpc-api)\n✅ All health checks passing\n✅ All services have ClusterIP endpoints",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)' --field-selector=status.phase=Running --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enforce-vessel-count",
+      "subagent": "general",
+      "description": "Scale DevBob deployment to minimum 3 vessels",
+      "dependencies": [
+        "enforce-backend-services"
+      ],
+      "prompt": {
+        "template": "**Task: Enforce Minimum Vessel Count (3)**\n\n**CONSTRAINT**: Minimum {{minVessels}} DevBob vessels must be running\n\n**ENFORCEMENT PROCEDURE:**\n\n1. **Check Current Vessel Count**\n   ```bash\n   echo \"=== CURRENT VESSEL COUNT ===\"\n   CURRENT=$(kubectl get deployment/devbob -n {{namespace}} -o jsonpath='{.spec.replicas}' 2>/dev/null || echo \"0\")\n   RUNNING=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   \n   echo \"Desired replicas: $CURRENT\"\n   echo \"Running vessels: $RUNNING\"\n   echo \"Required minimum: {{minVessels}}\"\n   ```\n\n2. **Scale Deployment if Needed**\n   ```bash\n   if [ \"$CURRENT\" -lt {{minVessels}} ]; then\n     echo \"\\n⚠️  VIOLATION: Only $CURRENT replicas configured (minimum: {{minVessels}})\"\n     echo \"Scaling deployment to {{minVessels}} vessels...\"\n     \n     kubectl scale deployment/devbob -n {{namespace}} --replicas={{minVessels}}\n     \n     echo \"Waiting for vessels to be ready...\"\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=devbob -n {{namespace}} --timeout=600s\n     \n     echo \"✅ Scaled to {{minVessels}} vessels\"\n   else\n     echo \"✅ Vessel count already meets minimum ($CURRENT >= {{minVessels}})\"\n   fi\n   ```\n\n3. **Verify All Vessels Running**\n   ```bash\n   echo \"\\n=== VESSEL STATUS ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,READY:.status.conditions[?(@.type==\\\"Ready\\\")].status,NODE:.spec.nodeName\n   \n   RUNNING=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   \n   if [ \"$RUNNING\" -lt {{minVessels}} ]; then\n     echo \"\\n❌ ERROR: Only $RUNNING vessels running (expected: {{minVessels}})\"\n     echo \"Checking pod events:\"\n     kubectl get events -n {{namespace}} --field-selector involvedObject.kind=Pod --sort-by='.lastTimestamp' | tail -10\n     exit 1\n   fi\n   \n   echo \"\\n✅ All {{minVessels}} vessels running\"\n   ```\n\n4. **Check PVC Allocation**\n   ```bash\n   echo \"\\n=== PVC ALLOCATION ===\"\n   kubectl get pvc -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   PVC_COUNT=$(kubectl get pvc -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Bound --no-headers 2>/dev/null | wc -l)\n   echo \"Bound PVCs: $PVC_COUNT\"\n   \n   if [ \"$PVC_COUNT\" -lt {{minVessels}} ]; then\n     echo \"⚠️  WARNING: Only $PVC_COUNT PVCs bound (expected: {{minVessels}})\"\n     echo \"PVCs may still be provisioning...\"\n   fi\n   ```\n\n5. **Verify ACP Endpoints**\n   ```bash\n   echo \"\\n=== ACP ENDPOINTS ===\"\n   kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   # Check port 3000 is exposed\n   ACP_PORTS=$(kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob -o json | jq -r '.items[].spec.ports[] | select(.port==3000) | .port' | wc -l)\n   \n   if [ \"$ACP_PORTS\" -gt 0 ]; then\n     echo \"✅ ACP endpoints configured (port 3000)\"\n   else\n     echo \"⚠️  WARNING: No ACP services found on port 3000\"\n   fi\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `vessel-enforcement-report.json` with:\n  - Initial vessel count\n  - Scaling action taken\n  - Final vessel count\n  - Pod status (all vessels)\n  - PVC allocation status\n  - ACP endpoint status\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ {{minVessels}} or more vessels running\n✅ All vessels in Ready state\n✅ PVCs bound for workspace isolation\n✅ ACP endpoints exposed on port 3000",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "minVessels",
+            "type": "number",
+            "required": false,
+            "description": "Minimum number of vessels required",
+            "default": 3
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enforce-surrealdb-schema",
+      "subagent": "general",
+      "description": "Initialize SurrealDB schema and register vessels in vessel_registry",
+      "dependencies": [
+        "enforce-vessel-count"
+      ],
+      "prompt": {
+        "template": "**Task: Enforce SurrealDB Schema and Vessel Registry**\n\n**ENFORCEMENT PROCEDURE:**\n\n1. **Initialize SurrealDB Schema**\n   ```bash\n   echo \"=== INITIALIZING SURREALDB SCHEMA ===\"\n   \n   # Port-forward to SurrealDB\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   # Create schema via HTTP POST\n   cat > /tmp/schema.surql <<'EOF'\nDEFINE TABLE IF NOT EXISTS activity_templates SCHEMAFULL;\nDEFINE FIELD IF NOT EXISTS id ON activity_templates TYPE string;\nDEFINE FIELD IF NOT EXISTS name ON activity_templates TYPE string;\nDEFINE FIELD IF NOT EXISTS category ON activity_templates TYPE string;\nDEFINE FIELD IF NOT EXISTS learning.success_rate ON activity_templates TYPE float DEFAULT 0.0;\nDEFINE FIELD IF NOT EXISTS learning.execution_count ON activity_templates TYPE int DEFAULT 0;\nDEFINE FIELD IF NOT EXISTS learning.improvement_gradient ON activity_templates TYPE float DEFAULT 0.0;\n\nDEFINE TABLE IF NOT EXISTS activity_executions SCHEMAFULL;\nDEFINE FIELD IF NOT EXISTS id ON activity_executions TYPE string;\nDEFINE FIELD IF NOT EXISTS template_id ON activity_executions TYPE string;\nDEFINE FIELD IF NOT EXISTS vessel_id ON activity_executions TYPE string;\nDEFINE FIELD IF NOT EXISTS success ON activity_executions TYPE bool;\nDEFINE FIELD IF NOT EXISTS timestamp ON activity_executions TYPE datetime;\n\nDEFINE TABLE IF NOT EXISTS vessel_registry SCHEMAFULL;\nDEFINE FIELD IF NOT EXISTS vessel_id ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS pod_name ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS pod_ip ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS acp_endpoint ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS status ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS last_heartbeat ON vessel_registry TYPE datetime;\nEOF\n   \n   echo \"Executing schema initialization...\"\n   curl -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: text/plain\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     --data-binary @/tmp/schema.surql 2>/dev/null | jq . || echo \"Schema executed (parse may have failed)\"\n   \n   echo \"✅ Schema initialization complete\"\n   ```\n\n2. **Register Vessels in vessel_registry**\n   ```bash\n   echo \"\\n=== REGISTERING VESSELS ===\"\n   \n   # Get vessel information\n   VESSELS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running -o json)\n   \n   # Create registration SQL\n   echo \"$VESSELS\" | jq -r '.items[] | \n     \"INSERT INTO vessel_registry (vessel_id, pod_name, pod_ip, acp_endpoint, status, last_heartbeat) VALUES (\\n  \\\"\\(.metadata.uid)\\\",\\n  \\\"\\(.metadata.name)\\\",\\n  \\\"\\(.status.podIP)\\\",\\n  \\\"http://\\(.status.podIP):3000\\\",\\n  \\\"running\\\",\\n  time::now()\\n) ON DUPLICATE KEY UPDATE last_heartbeat = time::now();\"' \\\n   > /tmp/register-vessels.surql\n   \n   # Execute registration\n   echo \"Registering $(echo \"$VESSELS\" | jq '.items | length') vessels...\"\n   curl -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: text/plain\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     --data-binary @/tmp/register-vessels.surql 2>/dev/null | jq . || echo \"Registration executed\"\n   \n   echo \"✅ Vessels registered\"\n   ```\n\n3. **Verify Registration**\n   ```bash\n   echo \"\\n=== VERIFICATION ===\"\n   \n   # Query registered vessels\n   curl -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: text/plain\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     -d \"SELECT * FROM vessel_registry WHERE status = 'running';\" 2>/dev/null | jq -r '.[] | .result | length' || echo \"0\"\n   \n   # Cleanup port-forward\n   kill $PF_PID 2>/dev/null\n   ```\n\n4. **Create Vessel Registry Report**\n   ```bash\n   echo \"\\n=== VESSEL REGISTRY REPORT ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o json | \\\n     jq '{vessels: [.items[] | {name: .metadata.name, uid: .metadata.uid, ip: .status.podIP, acp_endpoint: (\"http://\" + .status.podIP + \":3000\")}]}' \\\n     > vessel-registry-report.json\n   \n   echo \"✅ Report created: vessel-registry-report.json\"\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `surrealdb-schema-enforcement-report.json` with:\n  - Schema tables created\n  - Vessels registered (count)\n  - Registration details (vessel IDs, endpoints)\n  - Verification results\n  - Timestamp\n\n- Create: `vessel-registry-report.json` with vessel details\n\n**SUCCESS CRITERIA:**\n✅ SurrealDB schema initialized (3 tables)\n✅ All running vessels registered\n✅ vessel_registry table populated\n✅ Verification query returns expected count",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "vessel-registry-report.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "enforce-backend-services",
+      "subagent": "general",
+      "description": "Ensure all backend coordination services are deployed and healthy",
+      "dependencies": [],
+      "prompt": {
+        "template": "**Task: Enforce Backend Services Deployment**\n\nYou must ensure all required backend services for distributed DevBob coordination are deployed to namespace {{namespace}}.\n\n**REQUIRED SERVICES:**\n1. Redis (master) - Boredom queue, session cache\n2. SurrealDB - Activity state, vessel registry, learning metrics\n3. metabob-rpc-api - Thompson Sampling, improvement gradients\n\n**ENFORCEMENT PROCEDURE:**\n\n1. **Check Current State**\n   ```bash\n   echo \"=== CURRENT BACKEND STATE ===\"\n   kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)'\n   \n   REDIS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=redis --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   SURREAL=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=surrealdb --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   API=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=metabob-rpc-api --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   \n   echo \"Redis: $REDIS | SurrealDB: $SURREAL | API: $API\"\n   ```\n\n2. **Deploy Missing Services via Helmfile**\n   ```bash\n   cd helm\n   \n   # Deploy Redis if missing\n   if [ \"$REDIS\" -eq 0 ]; then\n     echo \"Deploying Redis...\"\n     helmfile -f helmfile.yaml -e local --selector name=redis sync --wait\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n {{namespace}} --timeout=300s\n   else\n     echo \"✅ Redis already running\"\n   fi\n   \n   # Deploy SurrealDB if missing\n   if [ \"$SURREAL\" -eq 0 ]; then\n     echo \"Deploying SurrealDB...\"\n     helmfile -f helmfile.yaml -e local --selector name=surrealdb sync --wait\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=surrealdb -n {{namespace}} --timeout=300s\n   else\n     echo \"✅ SurrealDB already running\"\n   fi\n   \n   # Deploy metabob-rpc-api if missing\n   if [ \"$API\" -eq 0 ]; then\n     echo \"Deploying metabob-rpc-api...\"\n     helmfile -f helmfile.yaml -e local --selector name=metabob-rpc-api sync --wait\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=metabob-rpc-api -n {{namespace}} --timeout=300s\n   else\n     echo \"✅ metabob-rpc-api already running\"\n   fi\n   ```\n\n3. **Verify Health**\n   ```bash\n   echo \"\\n=== HEALTH VERIFICATION ===\"\n   \n   # Test Redis\n   kubectl exec -n {{namespace}} statefulset/redis-master -- redis-cli ping || echo \"⚠️  Redis health check failed\"\n   \n   # Test SurrealDB (port-forward)\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   curl -sf http://localhost:8000/health || echo \"⚠️  SurrealDB health check failed\"\n   kill $PF_PID 2>/dev/null\n   \n   # Test metabob-rpc-api\n   kubectl port-forward -n {{namespace}} svc/metabob-rpc-api 8080:8080 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   curl -sf http://localhost:8080/health || echo \"⚠️  API health check failed\"\n   kill $PF_PID 2>/dev/null\n   ```\n\n4. **Final Status**\n   ```bash\n   echo \"\\n=== FINAL BACKEND STATUS ===\"\n   kubectl get all -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)'\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `backend-enforcement-report.json` with:\n  - Services deployed (Redis, SurrealDB, API)\n  - Deployment actions taken (already running vs newly deployed)\n  - Health check results\n  - Final pod status\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ 3 backend services running (Redis, SurrealDB, metabob-rpc-api)\n✅ All health checks passing\n✅ All services have ClusterIP endpoints",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} -l 'app.kubernetes.io/name in (redis,surrealdb,metabob-rpc-api)' --field-selector=status.phase=Running --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enforce-vessel-count",
+      "subagent": "general",
+      "description": "Scale DevBob deployment to minimum 3 vessels",
+      "dependencies": [
+        "enforce-backend-services"
+      ],
+      "prompt": {
+        "template": "**Task: Enforce Minimum Vessel Count (3)**\n\n**CONSTRAINT**: Minimum {{minVessels}} DevBob vessels must be running\n\n**ENFORCEMENT PROCEDURE:**\n\n1. **Check Current Vessel Count**\n   ```bash\n   echo \"=== CURRENT VESSEL COUNT ===\"\n   CURRENT=$(kubectl get deployment/devbob -n {{namespace}} -o jsonpath='{.spec.replicas}' 2>/dev/null || echo \"0\")\n   RUNNING=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   \n   echo \"Desired replicas: $CURRENT\"\n   echo \"Running vessels: $RUNNING\"\n   echo \"Required minimum: {{minVessels}}\"\n   ```\n\n2. **Scale Deployment if Needed**\n   ```bash\n   if [ \"$CURRENT\" -lt {{minVessels}} ]; then\n     echo \"\\n⚠️  VIOLATION: Only $CURRENT replicas configured (minimum: {{minVessels}})\"\n     echo \"Scaling deployment to {{minVessels}} vessels...\"\n     \n     kubectl scale deployment/devbob -n {{namespace}} --replicas={{minVessels}}\n     \n     echo \"Waiting for vessels to be ready...\"\n     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=devbob -n {{namespace}} --timeout=600s\n     \n     echo \"✅ Scaled to {{minVessels}} vessels\"\n   else\n     echo \"✅ Vessel count already meets minimum ($CURRENT >= {{minVessels}})\"\n   fi\n   ```\n\n3. **Verify All Vessels Running**\n   ```bash\n   echo \"\\n=== VESSEL STATUS ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,READY:.status.conditions[?(@.type==\\\"Ready\\\")].status,NODE:.spec.nodeName\n   \n   RUNNING=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)\n   \n   if [ \"$RUNNING\" -lt {{minVessels}} ]; then\n     echo \"\\n❌ ERROR: Only $RUNNING vessels running (expected: {{minVessels}})\"\n     echo \"Checking pod events:\"\n     kubectl get events -n {{namespace}} --field-selector involvedObject.kind=Pod --sort-by='.lastTimestamp' | tail -10\n     exit 1\n   fi\n   \n   echo \"\\n✅ All {{minVessels}} vessels running\"\n   ```\n\n4. **Check PVC Allocation**\n   ```bash\n   echo \"\\n=== PVC ALLOCATION ===\"\n   kubectl get pvc -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   PVC_COUNT=$(kubectl get pvc -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Bound --no-headers 2>/dev/null | wc -l)\n   echo \"Bound PVCs: $PVC_COUNT\"\n   \n   if [ \"$PVC_COUNT\" -lt {{minVessels}} ]; then\n     echo \"⚠️  WARNING: Only $PVC_COUNT PVCs bound (expected: {{minVessels}})\"\n     echo \"PVCs may still be provisioning...\"\n   fi\n   ```\n\n5. **Verify ACP Endpoints**\n   ```bash\n   echo \"\\n=== ACP ENDPOINTS ===\"\n   kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob\n   \n   # Check port 3000 is exposed\n   ACP_PORTS=$(kubectl get svc -n {{namespace}} -l app.kubernetes.io/name=devbob -o json | jq -r '.items[].spec.ports[] | select(.port==3000) | .port' | wc -l)\n   \n   if [ \"$ACP_PORTS\" -gt 0 ]; then\n     echo \"✅ ACP endpoints configured (port 3000)\"\n   else\n     echo \"⚠️  WARNING: No ACP services found on port 3000\"\n   fi\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `vessel-enforcement-report.json` with:\n  - Initial vessel count\n  - Scaling action taken\n  - Final vessel count\n  - Pod status (all vessels)\n  - PVC allocation status\n  - ACP endpoint status\n  - Timestamp\n\n**SUCCESS CRITERIA:**\n✅ {{minVessels}} or more vessels running\n✅ All vessels in Ready state\n✅ PVCs bound for workspace isolation\n✅ ACP endpoints exposed on port 3000",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          },
+          {
+            "name": "minVessels",
+            "type": "number",
+            "required": false,
+            "description": "Minimum number of vessels required",
+            "default": 3
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running --no-headers | wc -l",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enforce-surrealdb-schema",
+      "subagent": "general",
+      "description": "Initialize SurrealDB schema and register vessels in vessel_registry",
+      "dependencies": [
+        "enforce-vessel-count"
+      ],
+      "prompt": {
+        "template": "**Task: Enforce SurrealDB Schema and Vessel Registry**\n\n**ENFORCEMENT PROCEDURE:**\n\n1. **Initialize SurrealDB Schema**\n   ```bash\n   echo \"=== INITIALIZING SURREALDB SCHEMA ===\"\n   \n   # Port-forward to SurrealDB\n   kubectl port-forward -n {{namespace}} svc/surrealdb 8000:8000 >/dev/null 2>&1 &\n   PF_PID=$!\n   sleep 3\n   \n   # Create schema via HTTP POST\n   cat > /tmp/schema.surql <<'EOF'\nDEFINE TABLE IF NOT EXISTS activity_templates SCHEMAFULL;\nDEFINE FIELD IF NOT EXISTS id ON activity_templates TYPE string;\nDEFINE FIELD IF NOT EXISTS name ON activity_templates TYPE string;\nDEFINE FIELD IF NOT EXISTS category ON activity_templates TYPE string;\nDEFINE FIELD IF NOT EXISTS learning.success_rate ON activity_templates TYPE float DEFAULT 0.0;\nDEFINE FIELD IF NOT EXISTS learning.execution_count ON activity_templates TYPE int DEFAULT 0;\nDEFINE FIELD IF NOT EXISTS learning.improvement_gradient ON activity_templates TYPE float DEFAULT 0.0;\n\nDEFINE TABLE IF NOT EXISTS activity_executions SCHEMAFULL;\nDEFINE FIELD IF NOT EXISTS id ON activity_executions TYPE string;\nDEFINE FIELD IF NOT EXISTS template_id ON activity_executions TYPE string;\nDEFINE FIELD IF NOT EXISTS vessel_id ON activity_executions TYPE string;\nDEFINE FIELD IF NOT EXISTS success ON activity_executions TYPE bool;\nDEFINE FIELD IF NOT EXISTS timestamp ON activity_executions TYPE datetime;\n\nDEFINE TABLE IF NOT EXISTS vessel_registry SCHEMAFULL;\nDEFINE FIELD IF NOT EXISTS vessel_id ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS pod_name ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS pod_ip ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS acp_endpoint ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS status ON vessel_registry TYPE string;\nDEFINE FIELD IF NOT EXISTS last_heartbeat ON vessel_registry TYPE datetime;\nEOF\n   \n   echo \"Executing schema initialization...\"\n   curl -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: text/plain\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     --data-binary @/tmp/schema.surql 2>/dev/null | jq . || echo \"Schema executed (parse may have failed)\"\n   \n   echo \"✅ Schema initialization complete\"\n   ```\n\n2. **Register Vessels in vessel_registry**\n   ```bash\n   echo \"\\n=== REGISTERING VESSELS ===\"\n   \n   # Get vessel information\n   VESSELS=$(kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob --field-selector=status.phase=Running -o json)\n   \n   # Create registration SQL\n   echo \"$VESSELS\" | jq -r '.items[] | \n     \"INSERT INTO vessel_registry (vessel_id, pod_name, pod_ip, acp_endpoint, status, last_heartbeat) VALUES (\\n  \\\"\\(.metadata.uid)\\\",\\n  \\\"\\(.metadata.name)\\\",\\n  \\\"\\(.status.podIP)\\\",\\n  \\\"http://\\(.status.podIP):3000\\\",\\n  \\\"running\\\",\\n  time::now()\\n) ON DUPLICATE KEY UPDATE last_heartbeat = time::now();\"' \\\n   > /tmp/register-vessels.surql\n   \n   # Execute registration\n   echo \"Registering $(echo \"$VESSELS\" | jq '.items | length') vessels...\"\n   curl -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: text/plain\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     --data-binary @/tmp/register-vessels.surql 2>/dev/null | jq . || echo \"Registration executed\"\n   \n   echo \"✅ Vessels registered\"\n   ```\n\n3. **Verify Registration**\n   ```bash\n   echo \"\\n=== VERIFICATION ===\"\n   \n   # Query registered vessels\n   curl -X POST http://localhost:8000/sql \\\n     -H \"Content-Type: text/plain\" \\\n     -H \"NS: metabob\" \\\n     -H \"DB: devbob\" \\\n     -u \"root:root\" \\\n     -d \"SELECT * FROM vessel_registry WHERE status = 'running';\" 2>/dev/null | jq -r '.[] | .result | length' || echo \"0\"\n   \n   # Cleanup port-forward\n   kill $PF_PID 2>/dev/null\n   ```\n\n4. **Create Vessel Registry Report**\n   ```bash\n   echo \"\\n=== VESSEL REGISTRY REPORT ===\"\n   kubectl get pods -n {{namespace}} -l app.kubernetes.io/name=devbob -o json | \\\n     jq '{vessels: [.items[] | {name: .metadata.name, uid: .metadata.uid, ip: .status.podIP, acp_endpoint: (\"http://\" + .status.podIP + \":3000\")}]}' \\\n     > vessel-registry-report.json\n   \n   echo \"✅ Report created: vessel-registry-report.json\"\n   ```\n\n**OUTPUT REQUIREMENTS:**\n- Create: `surrealdb-schema-enforcement-report.json` with:\n  - Schema tables created\n  - Vessels registered (count)\n  - Registration details (vessel IDs, endpoints)\n  - Verification results\n  - Timestamp\n\n- Create: `vessel-registry-report.json` with vessel details\n\n**SUCCESS CRITERIA:**\n✅ SurrealDB schema initialized (3 tables)\n✅ All running vessels registered\n✅ vessel_registry table populated\n✅ Verification query returns expected count",
+        "variables": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "required": false,
+            "description": "Kubernetes namespace",
+            "default": "metabob"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "vessel-registry-report.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-27T07:29:44.720Z",
+  "metadata": {}
+}

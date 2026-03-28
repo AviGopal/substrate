@@ -1,0 +1,17 @@
+Create an activity template called "add-logging-statements" with the following specification:
+
+Name: add-logging-statements
+Category: feature
+Description: Add comprehensive logging statements to a function or module to improve debuggability
+
+Tasks:
+1. Analyze the target code to identify key decision points and data flows
+2. Add logging statements at entry points, decision branches, and error paths
+3. Run tests to ensure logging doesn't break functionality
+4. Commit the changes with a clear message
+
+Variables:
+- targetFile: Path to the file to add logging to
+- functionName: Name of the function or module to instrument (optional)
+
+Use the create-activity-self-contained template to create this.

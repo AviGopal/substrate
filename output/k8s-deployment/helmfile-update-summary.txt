@@ -1,0 +1,20 @@
+Helmfile Values Update
+=====================
+
+File: charts/metabob-rpc-api/values/default.metabob-rpc-api.values.yaml
+Image tag: 0.16.18-http-rpc-complete (already set)
+Repository: metabobapp/metabob-rpc-api
+
+Context: docker-desktop
+Namespace: metabob
+
+Fixes Included:
+- activity_id lookup fallback in get_template_by_id
+- Fixed return logic in get_templates_by_activity_id
+
+Status: Values file already configured with correct image tag
+Ready for deployment via helmfile sync
+
+Deployment Command:
+  cd repos/platform/metabob-apps
+  helmfile -e default sync

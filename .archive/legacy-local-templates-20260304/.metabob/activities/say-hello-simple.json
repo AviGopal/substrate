@@ -1,0 +1,149 @@
+{
+  "activity_id": "say-hello-simple",
+  "name": "Say Hello Simple",
+  "description": "Simple template that prints hello world message",
+  "category": "tool",
+  "task_steps": [
+    {
+      "task_id": "print-hello-message",
+      "subagent": "general",
+      "description": "Print a greeting message using the provided name and message variables. Format: Hello {name}! {message}",
+      "dependencies": [],
+      "prompt": {
+        "template": "Print a greeting message to the user.\n\nFormat the message as: \"Hello {{name}}! {{message}}\"\n\nOutput the greeting directly - no files need to be created, just print the message.\n\nThe greeting should be friendly and match the format exactly.",
+        "variables": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": false,
+            "description": "Name to include in the greeting",
+            "default": "World"
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "required": false,
+            "description": "The message to print after the greeting",
+            "default": "Hello World"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-output",
+      "subagent": "general",
+      "description": "Confirm that the greeting was displayed successfully and report completion",
+      "dependencies": [
+        "print-hello-message"
+      ],
+      "prompt": {
+        "template": "Review the output from the previous task and confirm that:\n\n1. The greeting message was displayed\n2. The message contains \"Hello\"\n3. The message includes the name that was provided\n4. No error messages appeared\n\nIf all checks pass, report: \"✅ Greeting displayed successfully!\"\n\nIf any check fails, report which validation failed.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "print-hello-message",
+      "subagent": "general",
+      "description": "Print a greeting message using the provided name and message variables. Format: Hello {name}! {message}",
+      "dependencies": [],
+      "prompt": {
+        "template": "Print a greeting message to the user.\n\nFormat the message as: \"Hello {{name}}! {{message}}\"\n\nOutput the greeting directly - no files need to be created, just print the message.\n\nThe greeting should be friendly and match the format exactly.",
+        "variables": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": false,
+            "description": "Name to include in the greeting",
+            "default": "World"
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "required": false,
+            "description": "The message to print after the greeting",
+            "default": "Hello World"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-output",
+      "subagent": "general",
+      "description": "Confirm that the greeting was displayed successfully and report completion",
+      "dependencies": [
+        "print-hello-message"
+      ],
+      "prompt": {
+        "template": "Review the output from the previous task and confirm that:\n\n1. The greeting message was displayed\n2. The message contains \"Hello\"\n3. The message includes the name that was provided\n4. No error messages appeared\n\nIf all checks pass, report: \"✅ Greeting displayed successfully!\"\n\nIf any check fails, report which validation failed.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-20T18:37:03.437Z",
+  "metadata": {}
+}

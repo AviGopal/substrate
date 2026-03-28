@@ -1,0 +1,21 @@
+{
+  "id": "harness-Instance-Invariant Storage for Impulses and Activities",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/instance-invariant-storage-for-impulses-and-activities-harness.ts",
+    "relativeTo": "workspaceRoot"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "scope": "global",
+  "metadata": {
+    "specificationName": "Instance-Invariant Storage for Impulses and Activities",
+    "harnessType": "validation",
+    "testCaseCount": 6,
+    "requiresBackend": true,
+    "requiresCLI": true,
+    "automated": true,
+    "noLLMRequired": true
+  }
+}

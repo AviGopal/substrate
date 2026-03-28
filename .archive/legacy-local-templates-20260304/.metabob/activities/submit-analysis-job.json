@@ -1,0 +1,284 @@
+{
+  "activity_id": "submit-analysis-job",
+  "name": "Submit and Monitor Analysis Job",
+  "description": "Submit code analysis job to Metabob backend, monitor status, and retrieve results when complete",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "prepare-job-submission",
+      "subagent": "general",
+      "description": "Validate inputs and prepare job submission payload",
+      "dependencies": [],
+      "prompt": {
+        "template": "Prepare for analysis job submission:\n\n**Job Parameters**:\n- Project Path: {{projectPath}}\n- File Patterns: {{filePatterns}}\n- Analysis Type: {{analysisType}}\n- Priority: {{priority}}\n\n**Validation**:\n\n1. **Project Path**:\n   - Verify path exists: {{projectPath}}\n   - Check if it's a git repository\n   - Count files matching patterns\n   - Estimate analysis scope\n\n2. **File Patterns**:\n   - Parse patterns: {{filePatterns}}\n   - Support glob patterns: `**/*.py`, `src/**/*.ts`, etc.\n   - Calculate matching files\n   - Estimate total lines of code\n\n3. **Analysis Configuration**:\n   - Analysis Type: {{analysisType}} (full, incremental, focused)\n   - Priority: {{priority}} (low, normal, high)\n   - Annotations: {{annotations}} (all, security, bugs, style, etc.)\n   - Include tests: {{includeTests}}\n\n4. **Backend Connectivity**:\n   - Check backend URL: {{backendUrl}}\n   - Verify API health: curl {{backendUrl}}/health\n   - Check session token is available\n   - Verify authentication works\n\n5. **Resource Estimation**:\n   - Files: [count]\n   - Lines of code: ~[estimate]\n   - Estimated duration: [minutes]\n   - Expected cost: $[estimate]\n\n**Build Submission Payload**:\n```json\n{\n  \"projectPath\": \"{{projectPath}}\",\n  \"filePatterns\": {{filePatterns}},\n  \"analysisType\": \"{{analysisType}}\",\n  \"priority\": \"{{priority}}\",\n  \"annotations\": \"{{annotations}}\",\n  \"includeTests\": {{includeTests}},\n  \"sessionToken\": \"[from session manager]\"\n}\n```\n\n**Output**: Preparation report:\n- ✅ Ready to submit / ⚠️ Warnings / ❌ Cannot submit\n- Project scope summary\n- Expected analysis characteristics\n- Submission payload preview",
+        "variables": [
+          {
+            "name": "projectPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to project root for analysis"
+          },
+          {
+            "name": "filePatterns",
+            "type": "array",
+            "required": false,
+            "description": "Glob patterns for files to analyze",
+            "default": ["**/*.py", "**/*.ts", "**/*.js", "**/*.tsx", "**/*.jsx"]
+          },
+          {
+            "name": "analysisType",
+            "type": "string",
+            "required": false,
+            "description": "Analysis type: full, incremental, or focused",
+            "default": "full"
+          },
+          {
+            "name": "priority",
+            "type": "string",
+            "required": false,
+            "description": "Job priority: low, normal, or high",
+            "default": "normal"
+          },
+          {
+            "name": "annotations",
+            "type": "string",
+            "required": false,
+            "description": "Annotation types: all, security, bugs, style, performance",
+            "default": "all"
+          },
+          {
+            "name": "includeTests",
+            "type": "boolean",
+            "required": false,
+            "description": "Include test files in analysis",
+            "default": true
+          },
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": false,
+            "description": "Metabob backend URL",
+            "default": "http://localhost:8080"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "test -d {{projectPath}} || echo 'Project path does not exist'",
+          "curl -sf {{backendUrl}}/health || echo 'Backend not accessible'"
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "submit-job",
+      "subagent": "general",
+      "description": "Submit analysis job to backend API",
+      "dependencies": ["prepare-job-submission"],
+      "prompt": {
+        "template": "Submit the analysis job to Metabob backend:\n\n**Submission**:\n\nUse metabob-cli or direct API call:\n\n```bash\n# Option 1: Using metabob-cli (if available)\nmetabob-cli analyze \\\n  --path {{projectPath}} \\\n  --patterns '{{filePatterns}}' \\\n  --type {{analysisType}} \\\n  --priority {{priority}} \\\n  --annotations {{annotations}} \\\n  {{includeTests ? '' : '--exclude-tests'}}\n\n# Option 2: Direct API call\ncurl -X POST {{backendUrl}}/api/analysis/submit \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer [session-token]' \\\n  -d '{\n    \"projectPath\": \"{{projectPath}}\",\n    \"filePatterns\": {{filePatterns}},\n    \"analysisType\": \"{{analysisType}}\",\n    \"priority\": \"{{priority}}\",\n    \"annotations\": \"{{annotations}}\",\n    \"includeTests\": {{includeTests}}\n  }'\n```\n\n**Handle Response**:\n\n1. **Success Response** (200):\n   ```json\n   {\n     \"jobId\": \"job_abc123\",\n     \"status\": \"queued\",\n     \"sessionId\": \"sess_xyz789\",\n     \"estimatedDuration\": 300,\n     \"queuePosition\": 2\n   }\n   ```\n   - Extract jobId and save for monitoring\n   - Report queue position if available\n   - Log estimated duration\n\n2. **Error Response** (4xx/5xx):\n   ```json\n   {\n     \"error\": \"Authentication failed\",\n     \"code\": \"AUTH_ERROR\"\n   }\n   ```\n   - Report error clearly\n   - Suggest remediation\n   - Fail gracefully\n\n3. **Network Error**:\n   - Check backend connectivity\n   - Suggest checking logs\n   - Recommend retry\n\n**Output**: Submission report:\n- ✅ Job submitted successfully\n- Job ID: [id]\n- Session ID: [id]\n- Status: [queued/running]\n- Queue position: [if available]\n- Estimated completion: [time]\n- Next: Monitor job status",
+        "variables": [
+          {
+            "name": "projectPath",
+            "type": "string",
+            "required": true,
+            "description": "Project path"
+          },
+          {
+            "name": "filePatterns",
+            "type": "array",
+            "required": true,
+            "description": "File patterns"
+          },
+          {
+            "name": "analysisType",
+            "type": "string",
+            "required": true,
+            "description": "Analysis type"
+          },
+          {
+            "name": "priority",
+            "type": "string",
+            "required": true,
+            "description": "Priority"
+          },
+          {
+            "name": "annotations",
+            "type": "string",
+            "required": true,
+            "description": "Annotations"
+          },
+          {
+            "name": "includeTests",
+            "type": "boolean",
+            "required": true,
+            "description": "Include tests"
+          },
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": true,
+            "description": "Backend URL"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "monitor-job-progress",
+      "subagent": "general",
+      "description": "Monitor job status until completion or timeout",
+      "dependencies": ["submit-job"],
+      "prompt": {
+        "template": "Monitor analysis job progress:\n\n**Job ID**: {{jobId}}\n**Monitoring Strategy**: {{monitoringMode}}\n\n**Polling Loop**:\n\n```python\nimport time\nimport requests\n\njob_id = \"{{jobId}}\"\nbackend_url = \"{{backendUrl}}\"\ntimeout = {{monitorTimeout}}\nstart_time = time.time()\n\nwhile time.time() - start_time < timeout:\n    # Check job status\n    response = requests.get(\n        f\"{backend_url}/api/analysis/status/{job_id}\",\n        headers={\"Authorization\": f\"Bearer {session_token}\"}\n    )\n    \n    status_data = response.json()\n    status = status_data.get(\"status\")\n    progress = status_data.get(\"progressPercentage\", 0)\n    current_file = status_data.get(\"currentFile\", \"\")\n    \n    print(f\"[{time.strftime('%H:%M:%S')}] Status: {status} | Progress: {progress}% | File: {current_file}\")\n    \n    # Terminal states\n    if status == \"complete\":\n        print(\"✅ Job completed successfully\")\n        break\n    elif status in [\"failed\", \"error\", \"cancelled\"]:\n        print(f\"❌ Job {status}: {status_data.get('errorMessage', 'Unknown error')}\")\n        break\n    \n    # Continue polling\n    time.sleep({{pollInterval}})\nelse:\n    print(\"⏱️ Monitoring timeout reached - job may still be running\")\n```\n\n**Status States**:\n- `queued` / `pending`: Waiting to start\n- `running` / `in_progress`: Actively processing\n- `complete` / `completed`: Finished successfully\n- `failed` / `error`: Failed with error\n- `cancelled` / `canceled`: User cancelled\n\n**Progress Reporting**:\n- Update every {{pollInterval}} seconds\n- Show: status, progress %, current file, elapsed time\n- Report milestones: 25%, 50%, 75%, 100%\n\n**Monitoring Modes**:\n\n1. **Active Monitoring** ({{monitoringMode}}='active'):\n   - Poll continuously until completion\n   - Report progress in real-time\n   - Wait for terminal state or timeout\n\n2. **Background Monitoring** ({{monitoringMode}}='background'):\n   - Check status once\n   - Report current state\n   - Return jobId for later checking\n   - Don't wait for completion\n\n3. **Milestone Monitoring** ({{monitoringMode}}='milestone'):\n   - Check at intervals: 0%, 25%, 50%, 75%, 100%\n   - Reduce polling frequency\n   - Less verbose output\n\n**Timeout Handling**:\n- If {{monitorTimeout}} seconds reached:\n  - Check final status\n  - Report if job is still running\n  - Provide jobId for manual checking\n  - Don't fail - job may complete later\n\n**Output**: Monitoring report:\n- Final status: [complete/failed/timeout]\n- Duration: [seconds]\n- Progress: [percentage]\n- Files processed: [count]\n- Issues found: [count] (if complete)\n- Job ID: [for reference]\n- Next: Retrieve results (if complete)",
+        "variables": [
+          {
+            "name": "jobId",
+            "type": "string",
+            "required": true,
+            "description": "Job ID to monitor"
+          },
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": true,
+            "description": "Backend URL"
+          },
+          {
+            "name": "monitoringMode",
+            "type": "string",
+            "required": false,
+            "description": "Monitoring mode: active, background, or milestone",
+            "default": "active"
+          },
+          {
+            "name": "monitorTimeout",
+            "type": "number",
+            "required": false,
+            "description": "Maximum monitoring time in seconds",
+            "default": 600
+          },
+          {
+            "name": "pollInterval",
+            "type": "number",
+            "required": false,
+            "description": "Poll interval in seconds",
+            "default": 5
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "retrieve-results",
+      "subagent": "general",
+      "description": "Retrieve and process analysis results",
+      "dependencies": ["monitor-job-progress"],
+      "prompt": {
+        "template": "Retrieve analysis results:\n\n**Job ID**: {{jobId}}\n\n**Fetch Results**:\n\n```bash\n# Using metabob-cli\nmetabob-cli results {{jobId}} --format json --output results-{{jobId}}.json\n\n# Or direct API\ncurl {{backendUrl}}/api/analysis/results/{{jobId}} \\\n  -H 'Authorization: Bearer [token]' \\\n  -H 'Accept: application/json' \\\n  > results-{{jobId}}.json\n```\n\n**Process Results**:\n\n1. **Parse Response**:\n   ```json\n   {\n     \"jobId\": \"{{jobId}}\",\n     \"status\": \"complete\",\n     \"results\": [\n       {\n         \"file_path\": \"src/app.py\",\n         \"line\": 42,\n         \"severity\": \"HIGH\",\n         \"category\": \"security\",\n         \"problem_id\": \"prob_123\",\n         \"title\": \"SQL Injection Risk\",\n         \"description\": \"...\",\n         \"recommendation\": \"...\"\n       },\n       ...\n     ],\n     \"summary\": {\n       \"total_issues\": 47,\n       \"by_severity\": {\"CRITICAL\": 2, \"HIGH\": 12, \"MEDIUM\": 23, \"LOW\": 10},\n       \"by_category\": {\"security\": 15, \"bugs\": 20, \"style\": 12},\n       \"files_analyzed\": 156,\n       \"duration\": 245\n     }\n   }\n   ```\n\n2. **Generate Summary Report**:\n   - Total issues by severity\n   - Issues by category\n   - Top 10 critical issues\n   - Files with most issues\n   - Recommendations\n\n3. **Filter Results** (if {{filterSeverity}} specified):\n   - Only show issues >= specified severity\n   - Focus on actionable items\n\n4. **Save Results**:\n   - Raw JSON: `results-{{jobId}}.json`\n   - Summary report: `analysis-summary-{{jobId}}.md`\n   - CSV export (optional): `issues-{{jobId}}.csv`\n\n**Generate Summary Report**:\n\n```markdown\n# Analysis Results: {{jobId}}\n\n## Summary\n- Job ID: {{jobId}}\n- Status: [status]\n- Duration: [seconds]\n- Files Analyzed: [count]\n- Total Issues: [count]\n\n## Issues by Severity\n| Severity | Count |\n|----------|-------|\n| CRITICAL | X |\n| HIGH | X |\n| MEDIUM | X |\n| LOW | X |\n\n## Issues by Category\n| Category | Count |\n|----------|-------|\n| Security | X |\n| Bugs | X |\n| Code Smell | X |\n| Performance | X |\n| Style | X |\n\n## Top Critical Issues\n1. [File:Line] [Title] - [Description]\n2. ...\n\n## Files with Most Issues\n1. path/to/file.py - X issues\n2. ...\n\n## Recommendations\n1. Address X CRITICAL issues immediately\n2. Review X HIGH severity security issues\n3. Fix X bugs in core modules\n4. Consider refactoring X files with >10 issues\n\n## Next Steps\n1. Review critical issues in detail\n2. Create tickets for HIGH severity items\n3. Run incremental analysis after fixes\n4. Track progress over time\n\n## Files Created\n- Raw results: `results-{{jobId}}.json`\n- This report: `analysis-summary-{{jobId}}.md`\n```\n\n**Output**: Results report with:\n- Summary statistics\n- Critical issues highlighted\n- Files created\n- Recommendations\n- Next steps",
+        "variables": [
+          {
+            "name": "jobId",
+            "type": "string",
+            "required": true,
+            "description": "Job ID"
+          },
+          {
+            "name": "backendUrl",
+            "type": "string",
+            "required": true,
+            "description": "Backend URL"
+          },
+          {
+            "name": "filterSeverity",
+            "type": "string",
+            "required": false,
+            "description": "Minimum severity to include: CRITICAL, HIGH, MEDIUM, LOW",
+            "default": "LOW"
+          },
+          {
+            "name": "exportFormats",
+            "type": "array",
+            "required": false,
+            "description": "Export formats: json, markdown, csv",
+            "default": ["json", "markdown"]
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "results-{{jobId}}.json",
+          "analysis-summary-{{jobId}}.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Summary",
+            "description": "Summary report has summary section"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "pre_checks": [
+      "test -d {{projectPath}} || echo 'Project path must exist'",
+      "curl -sf {{backendUrl}}/health || echo 'Backend must be accessible'"
+    ],
+    "post_checks": [
+      "test -f results-{{jobId}}.json || echo 'Results file should exist'"
+    ],
+    "quality_gates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learning_mode": true,
+    "target_context_tokens": 5000,
+    "annotation_strategy": "key-components"
+  }
+}

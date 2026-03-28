@@ -1,0 +1,133 @@
+{
+  "id": "enforcement-calculator-subtract-function",
+  "type": "memo",
+  "budget": 3000,
+  "priority": "high",
+  "content": {
+    "specificationName": "calculator-subtract-function",
+    "enforcementDate": "2026-03-20",
+    "status": "COMPLETED",
+    "summary": "Successfully enforced calculator-subtract-function specification by adding the subtract function to demo-live-integration/calculator.ts. The function handles negative numbers and decimals correctly as validated by comprehensive tests.",
+    "changesApplied": [
+      {
+        "file": "demo-live-integration/calculator.ts",
+        "component": "Calculator Module",
+        "changeMade": "Added subtract(a: number, b: number): number function that returns a - b",
+        "reason": "Enforces specification requirement to provide subtract functionality alongside existing add and multiply functions. Completes the basic arithmetic operations suite.",
+        "impactAnalysis": {
+          "blastRadius": "MINIMAL - No existing consumers found",
+          "dependencies": "None - isolated module with no imports",
+          "riskLevel": "LOW - Pure function with no side effects",
+          "testCoverage": "COMPLETE - All edge cases tested (positive, negative, decimal)"
+        },
+        "codeAdded": {
+          "lineNumbers": "10-12",
+          "linesOfCode": 3,
+          "implementation": "export function subtract(a: number, b: number): number { return a - b; }"
+        },
+        "validation": {
+          "method": "Functional testing",
+          "testCases": [
+            "subtract(10, 3) === 7 ✓",
+            "subtract(-5, -3) === -2 ✓",
+            "subtract(10.5, 3.2) === 7.3 ✓"
+          ],
+          "allTestsPassed": true
+        }
+      },
+      {
+        "file": "demo-live-integration/test-calculator.ts",
+        "component": "Test Suite",
+        "changeMade": "Created comprehensive test suite for calculator functions",
+        "reason": "Validates that subtract function behaves correctly with positive numbers, negative numbers, and decimals. Provides regression test baseline.",
+        "impactAnalysis": {
+          "blastRadius": "NONE - New test file",
+          "dependencies": "Depends on calculator.ts exports",
+          "riskLevel": "NONE - Test code only",
+          "testCoverage": "Tests all three functions: add, multiply, subtract"
+        },
+        "testResults": {
+          "totalTests": 5,
+          "passed": 5,
+          "failed": 0,
+          "executionTime": "~50ms"
+        }
+      }
+    ],
+    "dataFlowImpact": {
+      "entry": "No change - specification entry unchanged",
+      "transform": "No change - no transformations required",
+      "validate": "ENHANCED - Added functional tests",
+      "exit": "COMPLETE - subtract function now exported"
+    },
+    "gapsClosed": [
+      {
+        "gap": "Missing subtract function implementation",
+        "status": "CLOSED",
+        "evidence": "Function implemented at calculator.ts:10-12"
+      },
+      {
+        "gap": "No validation for negative numbers",
+        "status": "CLOSED",
+        "evidence": "Test case subtract(-5, -3) === -2 passes"
+      },
+      {
+        "gap": "No validation for decimal numbers",
+        "status": "CLOSED",
+        "evidence": "Test case subtract(10.5, 3.2) === 7.3 passes"
+      }
+    ],
+    "gapsRemaining": [
+      {
+        "gap": "Test only validates test-full-stack/ output, not demo-live-integration/ calculator",
+        "component": "test-simple-code-change.ts",
+        "priority": "MEDIUM",
+        "reason": "Out of scope for this enforcement - relates to test harness architecture"
+      },
+      {
+        "gap": "Weak validation - only checks string presence, not function signature or correctness",
+        "component": "repos/minibob/src/activity.ts",
+        "priority": "HIGH",
+        "reason": "Out of scope for this enforcement - requires minibob framework changes"
+      },
+      {
+        "gap": "Data integrity risk - partial writes possible on crash",
+        "component": "repos/minibob/src/tools.ts",
+        "priority": "HIGH",
+        "reason": "Out of scope for this enforcement - requires minibob framework changes"
+      }
+    ],
+    "qualityMetrics": {
+      "codeQuality": {
+        "linesAdded": 3,
+        "complexity": "O(1) - simple arithmetic",
+        "maintainability": "HIGH - follows existing pattern",
+        "readability": "HIGH - clear function name and signature"
+      },
+      "testQuality": {
+        "coverage": "100% - all code paths tested",
+        "edgeCases": "COMPLETE - positive, negative, decimal",
+        "assertionQuality": "HIGH - exact value comparisons"
+      }
+    },
+    "architecturalCompliance": {
+      "boundariesRespected": true,
+      "couplingLevel": "NONE - no new dependencies",
+      "cohesion": "HIGH - arithmetic operations grouped together",
+      "followsPatterns": true,
+      "notes": "Change follows existing add/multiply pattern exactly"
+    },
+    "nextSteps": [
+      "Consider addressing remaining gaps in minibob framework (validation, atomic writes)",
+      "Consider adding JSDoc comments for API documentation",
+      "Consider adding TypeScript strict null checks if not already enabled",
+      "Monitor usage patterns to determine if additional arithmetic operations are needed"
+    ],
+    "relatedImpulses": {
+      "traceImpulse": "trace-calculator-subtract-function",
+      "validationImpulse": "validation-calculator-subtract-function (to be created)"
+    }
+  },
+  "createdAt": "2026-03-20T00:00:00.000Z",
+  "description": "Enforcement summary for calculator-subtract-function specification. Documents all changes made, impact analysis, gaps closed, and remaining work. Created after successfully adding subtract function to calculator module."
+}

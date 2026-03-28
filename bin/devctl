@@ -1,0 +1,613 @@
+#!/usr/bin/env bash
+# =============================================================================
+# devctl - DevBob Vessel Development Control CLI
+# =============================================================================
+# Provides host-level control over multi-vessel DevBob development environment.
+#
+# Usage:
+#   devctl <command> [options]
+#
+# Commands:
+#   start       - Start vessel containers
+#   stop        - Stop vessel containers
+#   restart     - Restart vessel containers
+#   status      - Show vessel health status
+#   list        - List all vessels and their ports
+#   logs        - View vessel logs
+#   shell       - Open shell in vessel container
+#   exec        - Execute command in vessel
+#   delegate    - Delegate task to vessel via ACP
+#   run-activity - Execute activity in vessel
+#   health      - Check vessel health endpoints
+#   inspect     - Inspect vessel configuration
+# =============================================================================
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yaml"
+
+# Backend service endpoints  
+SURREAL_HEALTH="http://localhost:8000/health"
+API_HEALTH="http://localhost:8080/"
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+
+# Vessel definitions
+declare -A VESSELS=(
+    ["rpc-api"]="devbob-rpc-api:3001:8081"
+    ["cli"]="devbob-cli:3002:8083"
+    ["opencode"]="devbob-opencode:3003:8084"
+    ["dashboard"]="devbob-dashboard:3004:8085"
+    ["cpg"]="devbob-cpg:3005:8086"
+    ["platform"]="devbob-platform:3006:8087"
+)
+
+# Helper functions
+function print_header() {
+    echo -e "${BOLD}${CYAN}=== $1 ===${NC}"
+}
+
+function print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+function print_error() {
+    echo -e "${RED}✗${NC} $1" >&2
+}
+
+function print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+function print_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+function show_usage() {
+    cat << EOF
+${BOLD}devctl${NC} - DevBob Vessel Development Control
+
+${BOLD}USAGE:${NC}
+    devctl <command> [options]
+
+${BOLD}COMMANDS:${NC}
+    ${CYAN}start${NC} [vessels...]      Start vessel containers (default: all)
+    ${CYAN}stop${NC} [vessels...]       Stop vessel containers (default: all)
+    ${CYAN}restart${NC} [vessels...]    Restart vessel containers
+    ${CYAN}status${NC}                  Show status of all vessels
+    ${CYAN}list${NC}                    List all vessels with ports
+    ${CYAN}logs${NC} <vessel> [opts]    View logs for vessel
+    ${CYAN}shell${NC} <vessel>          Open shell in vessel container
+    ${CYAN}exec${NC} <vessel> -- <cmd>  Execute command in vessel
+    ${CYAN}delegate${NC}                Delegate task to vessel via ACP
+    ${CYAN}activity${NC}                Execute activity in vessel
+    ${CYAN}health${NC} [vessel]         Check vessel health
+    ${CYAN}inspect${NC} <vessel>        Inspect vessel configuration
+
+${BOLD}VESSELS:${NC}
+    rpc-api     - Backend API (Python/FastAPI)
+    cli         - CLI tool (Python/Click)
+    opencode    - OpenCode (TypeScript/Bun)
+    dashboard   - Frontend (TypeScript/Next.js)
+    cpg         - CPG Inference (Python/ML)
+    platform    - Platform services (Multi)
+
+${BOLD}EXAMPLES:${NC}
+    devctl start                      # Start all vessels
+    devctl start rpc-api cli          # Start specific vessels
+    devctl logs opencode -f           # Follow opencode logs
+    devctl shell cli                  # Open shell in CLI vessel
+    devctl exec rpc-api -- pytest     # Run tests in RPC API vessel
+    devctl delegate --to cli --task "Fix bug"  # Delegate task
+    devctl activity --vessel opencode --template fix-bug-complete
+
+${BOLD}OPTIONS:${NC}
+    -h, --help      Show this help message
+    -v, --verbose   Verbose output
+
+EOF
+}
+
+function validate_vessel() {
+    local vessel=$1
+    if [[ ! -v VESSELS[$vessel] ]]; then
+        print_error "Unknown vessel: $vessel"
+        print_info "Available vessels: ${!VESSELS[@]}"
+        exit 1
+    fi
+}
+
+function get_container_name() {
+    local vessel=$1
+    echo "${VESSELS[$vessel]}" | cut -d: -f1
+}
+
+function get_acp_port() {
+    local vessel=$1
+    echo "${VESSELS[$vessel]}" | cut -d: -f2
+}
+
+function get_mcp_port() {
+    local vessel=$1
+    echo "${VESSELS[$vessel]}" | cut -d: -f3
+}
+
+function check_port() {
+    local host=$1
+    local port=$2
+    timeout 1 bash -c "cat < /dev/null > /dev/tcp/$host/$port" 2>/dev/null
+    return $?
+}
+
+function check_backend_health() {
+    local all_healthy=true
+    local missing_services=()
+    
+    # Check SurrealDB port
+    if ! check_port localhost 8000; then
+        missing_services+=("SurrealDB:8000")
+        all_healthy=false
+    fi
+    
+    # Check API Server port
+    if ! check_port localhost 8080; then
+        missing_services+=("API:8080")
+        all_healthy=false
+    fi
+    
+    # Check Redis port
+    if ! check_port localhost 6379; then
+        missing_services+=("Redis:6379")
+        all_healthy=false
+    fi
+    
+    if [ "$all_healthy" = false ]; then
+        for service in "${missing_services[@]}"; do
+            print_warning "$service not accessible"
+        done
+    fi
+    
+    if [ "$all_healthy" = true ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function cmd_start() {
+    local vessels=("$@")
+    
+    print_header "Starting Vessels"
+    
+    # Check backend health first
+    if check_backend_health; then
+        print_success "Backend services are healthy"
+    else
+        print_warning "Backend services not fully accessible"
+        print_info "Attempting to start backend..."
+        
+        cd "$PROJECT_ROOT"
+        
+        # Try to start backend, ignore "already exists" errors
+        if docker-compose --profile stable up -d 2>&1 | grep -v "is already in use" | grep -v "already exists"; then
+            sleep 5
+            if check_backend_health; then
+                print_success "Backend services started"
+            else
+                print_error "Backend services failed to start properly"
+                print_info "Check running containers: docker ps --filter name=metabob"
+                return 1
+            fi
+        fi
+    fi
+    
+    # Start devbob vessels
+    cd "$PROJECT_ROOT"
+    
+    if [[ ${#vessels[@]} -eq 0 ]]; then
+        print_info "Starting all devbob vessels..."
+        
+        # Include stable profile for dependency resolution, but use --no-recreate
+        # to avoid trying to recreate existing backend containers
+        docker-compose --profile stable --profile devbob-dev up -d --no-recreate 2>&1 | \
+            grep -v "is already in use" | grep -v "already exists" | \
+            grep -E "(Creating|Starting|Created|Started|Recreating)" || {
+            print_warning "No new vessels were started (they may already be running)"
+        }
+        
+    else
+        for vessel in "${vessels[@]}"; do
+            validate_vessel "$vessel"
+            local container=$(get_container_name "$vessel")
+            print_info "Starting $vessel..."
+            
+            docker-compose --profile stable --profile devbob-dev up -d --no-recreate "$container" 2>&1 | \
+                grep -v "is already in use" | grep -v "already exists" | \
+                grep -E "(Creating|Starting|Created|Started)" || {
+                print_warning "$vessel may already be running or failed to start"
+            }
+        done
+    fi
+    
+    print_success "Vessels startup complete"
+    print_info "Run 'devctl status' to check health"
+}
+
+function cmd_stop() {
+    local vessels=("$@")
+    
+    print_header "Stopping Vessels"
+    
+    if [[ ${#vessels[@]} -eq 0 ]]; then
+        print_info "Stopping all vessels..."
+        cd "$PROJECT_ROOT"
+        docker-compose --profile stable --profile devbob-dev stop
+    else
+        for vessel in "${vessels[@]}"; do
+            validate_vessel "$vessel"
+            local container=$(get_container_name "$vessel")
+            print_info "Stopping $vessel..."
+            docker stop "$container"
+        done
+    fi
+    
+    print_success "Vessels stopped successfully"
+}
+
+function cmd_restart() {
+    cmd_stop "$@"
+    sleep 2
+    cmd_start "$@"
+}
+
+function cmd_status() {
+    print_header "Vessel Status"
+    
+    printf "${BOLD}%-12s %-25s %-10s %-12s %-10s${NC}\n" \
+        "VESSEL" "CONTAINER" "STATUS" "HEALTH" "ACP PORT"
+    printf "%.0s-" {1..75}
+    echo
+    
+    for vessel in "${!VESSELS[@]}"; do
+        local container=$(get_container_name "$vessel")
+        local acp_port=$(get_acp_port "$vessel")
+        
+        if docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
+            local status=$(docker inspect --format='{{.State.Status}}' "$container")
+            local health=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
+            
+            # Color code status
+            if [[ "$status" == "running" ]]; then
+                status="${GREEN}running${NC}"
+            else
+                status="${RED}${status}${NC}"
+            fi
+            
+            # Color code health
+            if [[ "$health" == "healthy" ]]; then
+                health="${GREEN}healthy${NC}"
+            elif [[ "$health" == "unhealthy" ]]; then
+                health="${RED}unhealthy${NC}"
+            elif [[ "$health" == "starting" ]]; then
+                health="${YELLOW}starting${NC}"
+            else
+                health="${CYAN}none${NC}"
+            fi
+            
+            printf "%-12s %-25s %-19s %-21s %-10s\n" \
+                "$vessel" "$container" "$status" "$health" "$acp_port"
+        else
+            printf "%-12s %-25s ${RED}%-10s${NC} %-21s %-10s\n" \
+                "$vessel" "$container" "stopped" "-" "$acp_port"
+        fi
+    done
+}
+
+function cmd_list() {
+    print_header "Vessel Configuration"
+    
+    printf "${BOLD}%-12s %-25s %-10s %-10s %-15s${NC}\n" \
+        "VESSEL" "CONTAINER" "ACP PORT" "MCP PORT" "WORKSPACE"
+    printf "%.0s-" {1..80}
+    echo
+    
+    for vessel in rpc-api cli opencode dashboard cpg platform; do
+        local info="${VESSELS[$vessel]}"
+        local container=$(echo "$info" | cut -d: -f1)
+        local acp_port=$(echo "$info" | cut -d: -f2)
+        local mcp_port=$(echo "$info" | cut -d: -f3)
+        
+        # Determine workspace path
+        local workspace="/workspace"
+        case "$vessel" in
+            "rpc-api") workspace="repos/metabob-rpc-api" ;;
+            "cli") workspace="repos/metabob-cli" ;;
+            "opencode") workspace="repos/metabob-opencode" ;;
+            "dashboard") workspace="repos/metabob-dashboard" ;;
+            "cpg") workspace="repos/cpg-inference" ;;
+            "platform") workspace="repos/platform" ;;
+        esac
+        
+        printf "%-12s %-25s %-10s %-10s %-15s\n" \
+            "$vessel" "$container" "$acp_port" "$mcp_port" "$workspace"
+    done
+    
+    echo
+    print_info "Use 'devctl start <vessel>' to start a vessel"
+    print_info "Use 'devctl shell <vessel>' to access vessel shell"
+}
+
+function cmd_logs() {
+    local vessel=$1
+    shift
+    local opts=("$@")
+    
+    validate_vessel "$vessel"
+    local container=$(get_container_name "$vessel")
+    
+    print_header "Logs: $vessel"
+    docker logs "${opts[@]}" "$container"
+}
+
+function cmd_shell() {
+    local vessel=$1
+    validate_vessel "$vessel"
+    local container=$(get_container_name "$vessel")
+    
+    print_info "Opening shell in $vessel..."
+    docker exec -it "$container" sh
+}
+
+function cmd_exec() {
+    local vessel=$1
+    validate_vessel "$vessel"
+    shift
+    
+    # Skip '--' separator if present
+    if [[ "$1" == "--" ]]; then
+        shift
+    fi
+    
+    local container=$(get_container_name "$vessel")
+    docker exec -it "$container" "$@"
+}
+
+function cmd_delegate() {
+    local from_vessel=""
+    local to_vessel=""
+    local task=""
+    local share_impulses=()
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --from)
+                from_vessel="$2"
+                shift 2
+                ;;
+            --to)
+                to_vessel="$2"
+                shift 2
+                ;;
+            --task)
+                task="$2"
+                shift 2
+                ;;
+            --share-impulse)
+                share_impulses+=("$2")
+                shift 2
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+    
+    if [[ -z "$to_vessel" ]] || [[ -z "$task" ]]; then
+        print_error "Usage: devctl delegate --to <vessel> --task <task> [--from <vessel>] [--share-impulse <id>]"
+        exit 1
+    fi
+    
+    validate_vessel "$to_vessel"
+    local target="docker://$(get_container_name "$to_vessel")"
+    
+    print_header "Delegating Task"
+    print_info "Target: $to_vessel"
+    print_info "Task: $task"
+    
+    if [[ -n "$from_vessel" ]]; then
+        validate_vessel "$from_vessel"
+        print_info "From: $from_vessel"
+        # TODO: Implement delegation from specific vessel
+        print_warning "Delegation from specific vessel not yet implemented"
+    fi
+    
+    # For now, use local opencode to delegate
+    local impulse_args=""
+    for impulse in "${share_impulses[@]}"; do
+        impulse_args="$impulse_args --share-impulse $impulse"
+    done
+    
+    print_info "Executing delegation..."
+    opencode run --agent activity -- "Delegate to $to_vessel: $task" \
+        --use-activity acp-delegate \
+        --target "$target" \
+        $impulse_args
+}
+
+function cmd_activity() {
+    local vessel=""
+    local template=""
+    local vars="{}"
+    local reason=""
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vessel|-v)
+                vessel="$2"
+                shift 2
+                ;;
+            --template|-t)
+                template="$2"
+                shift 2
+                ;;
+            --vars)
+                vars="$2"
+                shift 2
+                ;;
+            --reason|-r)
+                reason="$2"
+                shift 2
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+    
+    if [[ -z "$vessel" ]] || [[ -z "$template" ]]; then
+        print_error "Usage: devctl activity --vessel <vessel> --template <template> [--vars <json>] [--reason <text>]"
+        exit 1
+    fi
+    
+    validate_vessel "$vessel"
+    local container=$(get_container_name "$vessel")
+    
+    print_header "Executing Activity"
+    print_info "Vessel: $vessel"
+    print_info "Template: $template"
+    print_info "Variables: $vars"
+    
+    if [[ -z "$reason" ]]; then
+        reason="Execute $template activity in $vessel via devctl"
+    fi
+    
+    docker exec -it "$container" opencode run --agent activity -- \
+        "Execute activity: $template" \
+        --template "$template" \
+        --vars "$vars" \
+        --reason "$reason"
+}
+
+function cmd_health() {
+    local vessel=$1
+    
+    print_header "Health Check"
+    
+    if [[ -n "$vessel" ]]; then
+        validate_vessel "$vessel"
+        local container=$(get_container_name "$vessel")
+        local acp_port=$(get_acp_port "$vessel")
+        
+        print_info "Checking $vessel..."
+        
+        if curl -sf "http://localhost:$acp_port/config" > /dev/null 2>&1; then
+            print_success "$vessel is healthy (ACP responding)"
+        else
+            print_error "$vessel is unhealthy (ACP not responding)"
+        fi
+    else
+        for v in "${!VESSELS[@]}"; do
+            local acp_port=$(get_acp_port "$v")
+            
+            if curl -sf "http://localhost:$acp_port/config" > /dev/null 2>&1; then
+                print_success "$v is healthy"
+            else
+                print_warning "$v is unhealthy or not running"
+            fi
+        done
+    fi
+}
+
+function cmd_inspect() {
+    local vessel=$1
+    validate_vessel "$vessel"
+    local container=$(get_container_name "$vessel")
+    
+    print_header "Inspecting: $vessel"
+    docker inspect "$container" | jq '.[0] | {
+        State: .State,
+        Config: {
+            Env: .Config.Env,
+            Labels: .Config.Labels
+        },
+        NetworkSettings: .NetworkSettings.Networks,
+        Mounts: .Mounts
+    }'
+}
+
+# Main command dispatcher
+case "${1:-}" in
+    start)
+        shift
+        cmd_start "$@"
+        ;;
+    stop)
+        shift
+        cmd_stop "$@"
+        ;;
+    restart)
+        shift
+        cmd_restart "$@"
+        ;;
+    status)
+        cmd_status
+        ;;
+    list)
+        cmd_list
+        ;;
+    logs)
+        shift
+        cmd_logs "$@"
+        ;;
+    shell)
+        shift
+        cmd_shell "$@"
+        ;;
+    exec)
+        shift
+        cmd_exec "$@"
+        ;;
+    delegate)
+        shift
+        cmd_delegate "$@"
+        ;;
+    activity)
+        shift
+        cmd_activity "$@"
+        ;;
+    health)
+        shift
+        cmd_health "$@"
+        ;;
+    inspect)
+        shift
+        cmd_inspect "$@"
+        ;;
+    -h|--help|help)
+        show_usage
+        ;;
+    "")
+        show_usage
+        exit 1
+        ;;
+    *)
+        print_error "Unknown command: $1"
+        echo
+        show_usage
+        exit 1
+        ;;
+esac

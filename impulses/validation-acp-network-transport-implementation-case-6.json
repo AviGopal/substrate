@@ -1,0 +1,27 @@
+{
+  "testCase": "Error Handling for Invalid Connection",
+  "impulseId": "validation-acp-network-transport-implementation-case-6",
+  "type": "memo",
+  "input": {
+    "target": "tcp://invalid-host-that-does-not-exist:9999",
+    "expectedBehavior": "throw error"
+  },
+  "expectedOutput": {
+    "throwsError": true,
+    "errorIsDescriptive": true,
+    "noUncaughtExceptions": true
+  },
+  "validationCriteria": {
+    "mustHave": [
+      "Connection attempt throws error",
+      "Error message is helpful",
+      "Error handling is graceful",
+      "No process crash"
+    ],
+    "mustNotHave": [
+      "Unhandled promise rejection",
+      "Process crash",
+      "Silent failure"
+    ]
+  }
+}

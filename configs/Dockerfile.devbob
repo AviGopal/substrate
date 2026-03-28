@@ -162,6 +162,10 @@ RUN ARCH=$(uname -m) && \
     ln -sf /opt/opencode/dist/${OPENCODE_BIN}/bin/opencode /usr/local/bin/opencode && \
     chmod +x /opt/opencode/dist/${OPENCODE_BIN}/bin/opencode
 
+# Pre-install Anthropic SDK for fallback if binary preload fails (defense in depth)
+# This ensures BunProc.install() fallback can succeed even if SDK is not preloaded in binary
+RUN bun install @ai-sdk/anthropic@2.2.10
+
 # -----------------------------------------------------------------------------
 # Environment Configuration
 # -----------------------------------------------------------------------------

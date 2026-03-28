@@ -1,0 +1,19 @@
+{
+  "deployed_at": "2026-03-01T10:41:32-08:00",
+  "context": "docker-desktop",
+  "namespace": "metabob",
+  "image": "metabobapp/metabob-rpc-api:0.16.18-http-rpc-complete",
+  "replicas": 1,
+  "ready_replicas": 1,
+  "pod_name": "metabob-rpc-api-67c75dc674-25f9r",
+  "pod_ip": "10.1.0.181",
+  "status": "deployed",
+  "fixes_included": [
+    "Activity ID lookup fallback in server/actions/activity.py",
+    "Return logic fix in server/db/operations/template_data.py"
+  ],
+  "build_optimizations": [
+    "Removed surrealdb-py dependency",
+    "60-80% faster build times"
+  ]
+}

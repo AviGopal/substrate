@@ -1,0 +1,231 @@
+{
+  "activity_id": "implement-activity-co-change-workflow",
+  "name": "Implement Activity Co-Change Workflow",
+  "description": "Add co-change analysis to activity execution: auto-suggest related files and create follow-up tasks for critical issues",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "analyze-code-structure",
+      "subagent": "general",
+      "description": "Analyze template-executor.ts to understand executeTask flow and identify insertion point",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the file `repos/metabob-opencode/packages/opencode/src/session/template-executor.ts` to understand:\n\n1. Where task execution completes successfully (around line 1150-1200)\n2. The structure of task results and how files are tracked\n3. How to access the activity object to add follow-up tasks\n4. The metabob utility integration points\n\nProvide:\n- Exact line number where co-change analysis should be inserted\n- Data structures needed (task result format, activity.tasks format)\n- How to extract changed files from task results\n- Sample code for the insertion point",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/template-executor.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-cochange-analysis",
+      "subagent": "general",
+      "description": "Implement co-change analysis logic in template-executor.ts",
+      "dependencies": [
+        "analyze-code-structure"
+      ],
+      "prompt": {
+        "template": "Implement the co-change analysis feature in `repos/metabob-opencode/packages/opencode/src/session/template-executor.ts`:\n\n**Requirements:**\n1. After task execution (in executeTask function), add co-change analysis\n2. Extract changed files from task result\n3. Call `metabob.suggestRelatedChanges(changedFiles, { top_k: 3 })`\n4. Filter for critical files: `cochange_score > 0.7 && high_severity_issues > 0`\n5. Dynamically add follow-up tasks to activity.tasks array\n6. Add configuration check: `task.validation?.useCochangePrediction !== false`\n7. Add logging: `log.info('Co-change analysis: Added follow-up task for N related files')`\n8. Graceful degradation if metabob unavailable (try/catch)\n\n**Helper Functions Needed:**\n```typescript\nfunction extractChangedFilesFromResult(result: any): string[] {\n  // Extract file paths from task result\n  // Check result.filesModified, result.changes, or similar\n  return []\n}\n```\n\n**Follow-Up Task Format:**\n```typescript\nconst followUpTask = {\n  id: `cochange-review-${Date.now()}`,\n  description: `Review related files with issues: ${files.join(', ')}`,\n  subagent: task.subagent,\n  dependencies: [task.id],\n  prompt: {\n    template: 'Review the following files that often change together...\\n\\n' + fileList,\n    variables: []\n  },\n  validation: {}\n}\n```\n\nImplement this carefully, test locally, and ensure no breaking changes to existing flow.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/template-executor.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "add-tests",
+      "subagent": "general",
+      "description": "Add unit and integration tests for co-change workflow",
+      "dependencies": [
+        "implement-cochange-analysis"
+      ],
+      "prompt": {
+        "template": "Create comprehensive tests for the co-change workflow:\n\n**Unit Tests** (create or update test file):\n1. Test `extractChangedFilesFromResult()` helper with various result formats\n2. Test co-change analysis logic with mocked `metabob.suggestRelatedChanges()`\n3. Test follow-up task creation when critical files found\n4. Test that no follow-up tasks created when `useCochangePrediction: false`\n5. Test graceful degradation when metabob unavailable\n\n**Integration Test:**\nFull activity execution showing:\n- Task completes successfully\n- Co-change analysis runs\n- Follow-up tasks added to activity\n- Agent receives related file suggestions\n\n**Mock Data:**\n```typescript\nconst mockCochangeResult = [\n  { file_path: 'api/routes.py', cochange_score: 0.85, high_severity_issues: 2 },\n  { file_path: 'utils/helpers.py', cochange_score: 0.65, high_severity_issues: 0 }\n]\n```\n\nUse existing test infrastructure and patterns from the codebase.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "commit-changes",
+      "subagent": "general",
+      "description": "Commit the co-change workflow implementation",
+      "dependencies": [
+        "add-tests"
+      ],
+      "prompt": {
+        "template": "Review all changes made and create a well-structured commit:\n\n**Commit Message Format:**\n```\nfeat(activity): Add co-change workflow to prevent regressions\n\nImplement automatic co-change analysis after activity task execution:\n- Query metabob.suggestRelatedChanges() for changed files\n- Filter for critical files (cochange_score > 0.7, high_severity_issues > 0)\n- Dynamically add follow-up tasks for agent review\n- Add helper extractChangedFilesFromResult()\n- Include configuration flag useCochangePrediction (default: true)\n- Graceful degradation if metabob unavailable\n\nTests:\n- Unit tests for extraction, filtering, and task creation\n- Integration test for full workflow\n- Mock metabob for predictable test results\n\nPart of CPG Quick Win #1 implementation.\n```\n\n**Files to commit:**\n- repos/metabob-opencode/packages/opencode/src/session/template-executor.ts\n- repos/metabob-opencode/packages/opencode/src/session/__tests__/cochange-workflow.test.ts (or similar)\n- Any updated type definitions\n\nRun final checks before committing:\n1. All tests pass\n2. No TypeScript errors\n3. Linting passes\n4. Code formatted correctly",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "analyze-code-structure",
+      "subagent": "general",
+      "description": "Analyze template-executor.ts to understand executeTask flow and identify insertion point",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the file `repos/metabob-opencode/packages/opencode/src/session/template-executor.ts` to understand:\n\n1. Where task execution completes successfully (around line 1150-1200)\n2. The structure of task results and how files are tracked\n3. How to access the activity object to add follow-up tasks\n4. The metabob utility integration points\n\nProvide:\n- Exact line number where co-change analysis should be inserted\n- Data structures needed (task result format, activity.tasks format)\n- How to extract changed files from task results\n- Sample code for the insertion point",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/template-executor.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-cochange-analysis",
+      "subagent": "general",
+      "description": "Implement co-change analysis logic in template-executor.ts",
+      "dependencies": [
+        "analyze-code-structure"
+      ],
+      "prompt": {
+        "template": "Implement the co-change analysis feature in `repos/metabob-opencode/packages/opencode/src/session/template-executor.ts`:\n\n**Requirements:**\n1. After task execution (in executeTask function), add co-change analysis\n2. Extract changed files from task result\n3. Call `metabob.suggestRelatedChanges(changedFiles, { top_k: 3 })`\n4. Filter for critical files: `cochange_score > 0.7 && high_severity_issues > 0`\n5. Dynamically add follow-up tasks to activity.tasks array\n6. Add configuration check: `task.validation?.useCochangePrediction !== false`\n7. Add logging: `log.info('Co-change analysis: Added follow-up task for N related files')`\n8. Graceful degradation if metabob unavailable (try/catch)\n\n**Helper Functions Needed:**\n```typescript\nfunction extractChangedFilesFromResult(result: any): string[] {\n  // Extract file paths from task result\n  // Check result.filesModified, result.changes, or similar\n  return []\n}\n```\n\n**Follow-Up Task Format:**\n```typescript\nconst followUpTask = {\n  id: `cochange-review-${Date.now()}`,\n  description: `Review related files with issues: ${files.join(', ')}`,\n  subagent: task.subagent,\n  dependencies: [task.id],\n  prompt: {\n    template: 'Review the following files that often change together...\\n\\n' + fileList,\n    variables: []\n  },\n  validation: {}\n}\n```\n\nImplement this carefully, test locally, and ensure no breaking changes to existing flow.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 16000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "repos/metabob-opencode/packages/opencode/src/session/template-executor.ts"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "add-tests",
+      "subagent": "general",
+      "description": "Add unit and integration tests for co-change workflow",
+      "dependencies": [
+        "implement-cochange-analysis"
+      ],
+      "prompt": {
+        "template": "Create comprehensive tests for the co-change workflow:\n\n**Unit Tests** (create or update test file):\n1. Test `extractChangedFilesFromResult()` helper with various result formats\n2. Test co-change analysis logic with mocked `metabob.suggestRelatedChanges()`\n3. Test follow-up task creation when critical files found\n4. Test that no follow-up tasks created when `useCochangePrediction: false`\n5. Test graceful degradation when metabob unavailable\n\n**Integration Test:**\nFull activity execution showing:\n- Task completes successfully\n- Co-change analysis runs\n- Follow-up tasks added to activity\n- Agent receives related file suggestions\n\n**Mock Data:**\n```typescript\nconst mockCochangeResult = [\n  { file_path: 'api/routes.py', cochange_score: 0.85, high_severity_issues: 2 },\n  { file_path: 'utils/helpers.py', cochange_score: 0.65, high_severity_issues: 0 }\n]\n```\n\nUse existing test infrastructure and patterns from the codebase.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "commit-changes",
+      "subagent": "general",
+      "description": "Commit the co-change workflow implementation",
+      "dependencies": [
+        "add-tests"
+      ],
+      "prompt": {
+        "template": "Review all changes made and create a well-structured commit:\n\n**Commit Message Format:**\n```\nfeat(activity): Add co-change workflow to prevent regressions\n\nImplement automatic co-change analysis after activity task execution:\n- Query metabob.suggestRelatedChanges() for changed files\n- Filter for critical files (cochange_score > 0.7, high_severity_issues > 0)\n- Dynamically add follow-up tasks for agent review\n- Add helper extractChangedFilesFromResult()\n- Include configuration flag useCochangePrediction (default: true)\n- Graceful degradation if metabob unavailable\n\nTests:\n- Unit tests for extraction, filtering, and task creation\n- Integration test for full workflow\n- Mock metabob for predictable test results\n\nPart of CPG Quick Win #1 implementation.\n```\n\n**Files to commit:**\n- repos/metabob-opencode/packages/opencode/src/session/template-executor.ts\n- repos/metabob-opencode/packages/opencode/src/session/__tests__/cochange-workflow.test.ts (or similar)\n- Any updated type definitions\n\nRun final checks before committing:\n1. All tests pass\n2. No TypeScript errors\n3. Linting passes\n4. Code formatted correctly",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T13:07:54.026Z",
+  "metadata": {}
+}

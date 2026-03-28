@@ -1,0 +1,15 @@
+{
+  "id": "validation-Correct MCP Tool Name and Parameters-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Verify No Invalid Backend Parameter\n\nInput:\n- File: repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts\n- Check: callMCPTool arguments object\n\nExpected Output:\n- No 'backend' parameter in arguments\n- Only valid parameters: activity_id, result\n\nValidation:\n- Parse file for callMCPTool arguments object\n- Check if 'backend' parameter exists in arguments\n- Verify 'backend' is NOT present\n\nPASS Criteria:\n- No 'backend' parameter found in callMCPTool arguments\n\nFAIL Criteria:\n- 'backend' parameter found (e.g., backend: 'all')\n- Any reference to 'backend' in arguments object",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testCase": 3,
+    "category": "parameter-validation",
+    "invalidParameter": "backend"
+  },
+  "budget": 1000
+}

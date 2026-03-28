@@ -1,0 +1,333 @@
+{
+  "activity_id": "implement-bootstrap-manager",
+  "name": "Implement Bootstrap Manager",
+  "description": "Implement BootstrapManager for vessel first-start initialization per DEVBOB_VESSEL_ARCHITECTURE.md Phase 1 Task 3",
+  "category": "feature",
+  "task_steps": [
+    {
+      "task_id": "create-bootstrap-module",
+      "subagent": "general",
+      "description": "Create src/vessel/bootstrap.ts with namespace, interfaces, types, and error code constants following VesselUpdateManager patterns",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create the BootstrapManager module at `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts`.\n\n**Requirements**:\n\n1. **Namespace Structure**: Export a namespace called `BootstrapManager` following the VesselUpdateManager pattern.\n\n2. **Error Code Constants**: Define error code constants at the top of the namespace:\n   - `BOOTSTRAP_FAILED` - General bootstrap failure\n   - `ENVIRONMENT_DETECTION_FAILED` - Cannot detect workspace type\n   - `REGISTRATION_FAILED` - Backend registration error\n   - `CONFIG_FETCH_FAILED` - Cannot fetch configuration\n   - `HEALTH_CHECK_FAILED` - Required services unavailable\n   - `MARKER_WRITE_FAILED` - Cannot create .bootstrapped file\n\n3. **Interfaces**: Define these TypeScript interfaces with JSDoc comments:\n\n   - `Environment`: Workspace environment information\n     - `type`: \"clean\" | \"mounted-codebase\" | \"cloned-repo\" | \"unknown\"\n     - `workspace`: string (path to workspace)\n     - `git_state`: \"none\" | \"clean\" | \"dirty\"\n     - `mounted_repos`: string[] (list of mounted repository names)\n     - `capabilities`: string[] (available commands: \"git\", \"docker\", \"kubectl\")\n\n   - `VesselRegistration`: Registration response from backend\n     - `vessel_id`: string\n     - `registered_at`: string (ISO timestamp)\n     - `backend_url`: string\n\n   - `BootstrapOptions`: Configuration options for bootstrap\n     - `workspace_path?`: string (default: \"/workspace\")\n     - `backend_url?`: string (default: process.env.METABOB_API_URL)\n     - `vessel_name?`: string (default: process.env.HOSTNAME)\n     - `tracking_file?`: string (default: \"/workspace/.bootstrapped\")\n     - `force_bootstrap?`: boolean (default: false)\n     - `skip_registration?`: boolean (default: false, for testing)\n     - `timeout_ms?`: number (default: 30000)\n\n   - `BootstrapResult`: Result of bootstrap operation\n     - `success`: boolean\n     - `vessel_id`: string\n     - `environment`: Environment\n     - `bootstrapped_at`: string (ISO timestamp)\n     - `error?`: UpdateError\n\n   - `UpdateError`: Error details\n     - `code`: string (one of the error constants)\n     - `message`: string\n     - `details?`: any\n\n   - `BootstrapConfig`: Configuration fetched from backend\n     - `vessel_id`: string\n     - `config`: Record<string, any>\n     - `fetched_at`: string (ISO timestamp)\n\n4. **Logger**: Initialize a logger instance at the top of the namespace:\n   ```typescript\n   const logger = Log.create({ service: \"vessel-bootstrap\" })\n   ```\n\n5. **Module Documentation**: Add comprehensive JSDoc comments at the namespace level explaining:\n   - Purpose of BootstrapManager\n   - When it runs (first-start initialization)\n   - Integration with VesselUpdateManager and ConfigManager\n\n**Pattern Reference**: Look at `repos/metabob-opencode/packages/opencode/src/vessel/update.ts` for the VesselUpdateManager namespace structure to follow.\n\n**Validation**:\n- Import statement: `import { Log } from \"../util/log\"`\n- All interfaces must have JSDoc comments\n- Error constants must be exported and typed as string\n- No implementation code yet (functions will be added in next task)\n- TypeScript compilation must succeed\n\n**Output**: Report the file path created and confirm the namespace structure.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-core-functions",
+      "subagent": "general",
+      "description": "Implement detectEnvironment(), registerVessel(), and configureForRole() functions with full error handling, retry logic, and logging",
+      "dependencies": [
+        "create-bootstrap-module"
+      ],
+      "prompt": {
+        "template": "Implement the three core functions in `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts` within the BootstrapManager namespace.\n\n**Function 1: detectEnvironment()**\n\nSignature: `export async function detectEnvironment(workspace_path: string = \"/workspace\"): Promise<Environment>`\n\nImplementation requirements:\n1. Check if workspace_path exists and is a git repository\n2. Detect workspace type:\n   - \"clean\": No git repo, empty workspace\n   - \"mounted-codebase\": Git repo exists in workspace root\n   - \"cloned-repo\": Git repo in subdirectory\n   - \"unknown\": Cannot determine\n3. Detect git state by running `git status --porcelain`:\n   - \"none\": No git repo\n   - \"clean\": Git repo with no changes\n   - \"dirty\": Git repo with uncommitted changes\n4. Find mounted repositories: Check for subdirectories with .git folders\n5. Detect capabilities by checking command availability:\n   - Test `which git` for git capability\n   - Test `which docker` for docker capability\n   - Test `which kubectl` for kubectl capability\n6. Return structured Environment object with all fields\n7. Use try/catch and log errors with `logger.error()`\n8. On error, return conservative defaults (type: \"unknown\", capabilities: [])\n\n**Function 2: registerVessel()**\n\nSignature: `export async function registerVessel(environment: Environment, backend_url: string, vessel_name: string, timeout_ms: number = 10000): Promise<VesselRegistration>`\n\nImplementation requirements:\n1. Create registration payload:\n   ```typescript\n   {\n     container_name: vessel_name,\n     environment: environment,\n     capabilities: environment.capabilities,\n     acp_port: 3000,\n     versions: await getVesselVersions()\n   }\n   ```\n2. Implement exponential backoff retry logic:\n   - 3 attempts with delays: 1s, 2s, 4s\n   - Helper function: `async function retryWithBackoff(fn, attempts, delays)`\n3. Make POST request to `${backend_url}/api/vessels/register`\n4. On success, parse response and return VesselRegistration\n5. On failure after all retries:\n   - Log error with `logger.error()`\n   - Generate fallback UUID with `crypto.randomUUID()`\n   - Return VesselRegistration with local vessel_id\n6. Use fetch() with timeout using AbortController\n7. Handle network errors gracefully (ECONNREFUSED, timeout)\n\n**Function 3: configureForRole()**\n\nSignature: `export async function configureForRole(vessel_id: string, backend_url: string, timeout_ms: number = 10000): Promise<BootstrapConfig>`\n\nImplementation requirements:\n1. Make GET request to `${backend_url}/api/vessels/${vessel_id}/config`\n2. On 200 response:\n   - Parse configuration JSON\n   - Validate schema (basic validation, ensure required fields)\n   - Log configuration received with `logger.info()`\n   - Return BootstrapConfig with config data\n3. On 404 response:\n   - Log warning \"No backend config found, using defaults\"\n   - Return default BootstrapConfig\n4. On other errors:\n   - Log error with `logger.error()`\n   - Return default BootstrapConfig\n5. Use fetch() with timeout using AbortController\n6. Default config structure:\n   ```typescript\n   {\n     vessel_id,\n     config: { workspace: \"/workspace\" },\n     fetched_at: new Date().toISOString()\n   }\n   ```\n\n**Helper Function: getVesselVersions()**\n\nSignature: `async function getVesselVersions(): Promise<Record<string, string>>`\n\nImplementation:\n1. Try to get versions from VesselUpdateManager.getCurrentVersions() if available\n2. On error or if unavailable, return default versions:\n   ```typescript\n   { opencode: \"unknown\", \"metabob-cli\": \"unknown\" }\n   ```\n\n**General Requirements**:\n- All functions must use async/await (no callbacks)\n- All functions must have comprehensive try/catch error handling\n- Use `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()` appropriately\n- No console.log statements\n- Use node:fs/promises for any file operations (async only)\n- Use fetch() from global scope (Node 18+)\n- Add JSDoc comments with @param, @returns, @throws tags\n\n**Validation**:\n- All three functions exported and implemented\n- TypeScript compilation succeeds\n- No console.log, no synchronous fs operations\n- Error handling present in all functions",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-bootstrap-orchestration",
+      "subagent": "general",
+      "description": "Implement main bootstrap() function that orchestrates the full bootstrap flow with marker file management and health checks",
+      "dependencies": [
+        "implement-core-functions"
+      ],
+      "prompt": {
+        "template": "Implement the main `bootstrap()` function in `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts` within the BootstrapManager namespace.\n\n**Function Signature**:\n\n```typescript\nexport async function bootstrap(options?: BootstrapOptions): Promise<BootstrapResult>\n```\n\n**Implementation Requirements**:\n\n1. **Parse Options**: Apply defaults for all optional fields:\n   ```typescript\n   const {\n     workspace_path = \"/workspace\",\n     backend_url = process.env.METABOB_API_URL || \"http://localhost:8080\",\n     vessel_name = process.env.HOSTNAME || \"devbob-vessel\",\n     tracking_file = \"/workspace/.bootstrapped\",\n     force_bootstrap = false,\n     skip_registration = false,\n     timeout_ms = 30000\n   } = options || {}\n   ```\n\n2. **Check Existing Bootstrap Marker**:\n   - Try to read tracking_file (use `fs/promises`)\n   - If file exists and force_bootstrap is false:\n     - Parse JSON content\n     - Log: `logger.info(\"Vessel already bootstrapped, skipping\", { vessel_id })`\n     - Return early with BootstrapResult (success: true, vessel_id from marker)\n   - If file doesn't exist or force_bootstrap is true, continue\n\n3. **Execute Bootstrap Sequence**:\n   \n   a. **Detect Environment**:\n   - Call `detectEnvironment(workspace_path)`\n   - Log result: `logger.info(\"Environment detected\", { environment })`\n   - Store environment in variable\n\n   b. **Register Vessel** (if not skip_registration):\n   - Call `registerVessel(environment, backend_url, vessel_name, timeout_ms)`\n   - Log result: `logger.info(\"Vessel registered\", { vessel_id })`\n   - Store vessel_id in variable\n   - If skip_registration is true, generate local vessel_id with `crypto.randomUUID()`\n\n   c. **Configure Vessel**:\n   - Call `configureForRole(vessel_id, backend_url, timeout_ms)`\n   - Log result: `logger.info(\"Configuration applied\", { config })`\n   - Store config in variable\n\n   d. **Health Check** (optional, don't fail bootstrap):\n   - Try to make GET request to `${backend_url}/api/health`\n   - On success: Log `logger.debug(\"Health check passed\")`\n   - On failure: Log `logger.warn(\"Health check failed, continuing with degraded mode\")`\n\n4. **Create Bootstrap Marker File**:\n   - Prepare marker content:\n     ```typescript\n     {\n       vessel_id,\n       bootstrapped_at: new Date().toISOString(),\n       environment,\n       backend_url,\n       versions: await getVesselVersions()\n     }\n     ```\n   - Try to write to tracking_file using `fs/promises.writeFile()`\n   - On write failure (EACCES, EROFS):\n     - Try fallback location: `/tmp/.bootstrapped`\n     - Log warning: `logger.warn(\"Failed to write bootstrap marker\", { error })`\n   - On success: Log `logger.info(\"Bootstrap marker created\", { tracking_file })`\n\n5. **Optional: Start Boredom Monitoring** (if available):\n   - Try to import and call `BoredomManager.startMonitoring()`\n   - On error: Log debug message, don't fail bootstrap\n\n6. **Return BootstrapResult**:\n   ```typescript\n   return {\n     success: true,\n     vessel_id,\n     environment,\n     bootstrapped_at: new Date().toISOString()\n   }\n   ```\n\n7. **Error Handling**:\n   - Wrap entire function in try/catch\n   - On any error:\n     - Log full error with stack trace: `logger.error(\"Bootstrap failed\", { error })`\n     - Return BootstrapResult with success: false and error details\n   - Use structured errors with error codes (BOOTSTRAP_FAILED, etc.)\n\n**General Requirements**:\n- Use async/await throughout\n- All file operations use `fs/promises` (async)\n- Comprehensive error handling with try/catch\n- Log all major steps (info level) and errors (error level)\n- No console.log statements\n- Add comprehensive JSDoc comments with usage example\n\n**JSDoc Example Section**:\n```typescript\n/**\n * Bootstrap vessel on first start.\n * \n * @example\n * ```typescript\n * const result = await BootstrapManager.bootstrap({\n *   backend_url: \"http://api-server:8080\",\n *   vessel_name: \"devbob-rpc-api\",\n *   force_bootstrap: false\n * })\n * \n * if (result.success) {\n *   console.log(`Vessel ${result.vessel_id} bootstrapped successfully`)\n * }\n * ```\n */\n```\n\n**Validation**:\n- Function exported and implemented\n- TypeScript compilation succeeds\n- Marker file creation logic present\n- Error handling comprehensive\n- No forbidden patterns (console.log, sync fs, TODO)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-comprehensive-tests",
+      "subagent": "test",
+      "description": "Create comprehensive test suite in src/vessel/bootstrap.test.ts with unit and integration tests covering all functions and error scenarios",
+      "dependencies": [
+        "implement-bootstrap-orchestration"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive test suite at `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.test.ts` for the BootstrapManager.\n\n**Test Framework**: Use Bun's built-in test framework (describe, it, expect, mock).\n\n**Test Structure**:\n\n```typescript\nimport { describe, it, expect, beforeEach, afterEach, mock } from \"bun:test\"\nimport { BootstrapManager } from \"./bootstrap\"\n\ndescribe(\"BootstrapManager\", () => {\n  // Test suites here\n})\n```\n\n**Test Suite 1: detectEnvironment()**\n\n1. **Test: Clean workspace (no git, no repos)**\n   - Mock fs checks to return empty workspace\n   - Mock bash commands to return \"command not found\"\n   - Expect: type=\"clean\", git_state=\"none\", capabilities=[]\n\n2. **Test: Mounted codebase (git clean)**\n   - Mock git status to return empty output\n   - Mock which git to succeed\n   - Expect: type=\"mounted-codebase\", git_state=\"clean\", capabilities includes \"git\"\n\n3. **Test: Mounted codebase (git dirty)**\n   - Mock git status to return \"M file.ts\"\n   - Expect: git_state=\"dirty\"\n\n4. **Test: Capability detection**\n   - Mock which git, docker, kubectl to succeed/fail\n   - Expect: capabilities array matches available commands\n\n**Test Suite 2: registerVessel()**\n\n1. **Test: Successful registration**\n   - Mock fetch to return { vessel_id: \"test-vessel-123\", registered_at: \"...\" }\n   - Expect: Returns VesselRegistration with vessel_id\n\n2. **Test: Network timeout**\n   - Mock fetch to throw timeout error\n   - Expect: Retries 3 times, then falls back to UUID\n\n3. **Test: Retry logic with exponential backoff**\n   - Mock fetch to fail twice, succeed on third attempt\n   - Verify: 3 fetch calls made with correct delays\n\n4. **Test: Fallback to local vessel_id**\n   - Mock fetch to always fail\n   - Expect: Returns VesselRegistration with UUID vessel_id\n\n**Test Suite 3: configureForRole()**\n\n1. **Test: Successful config fetch and apply**\n   - Mock fetch to return { config: {...} }\n   - Expect: Returns BootstrapConfig with config data\n\n2. **Test: Missing config (404) fallback to defaults**\n   - Mock fetch to return 404\n   - Expect: Returns default BootstrapConfig\n\n3. **Test: Invalid config (validation failure)**\n   - Mock fetch to return malformed JSON\n   - Expect: Falls back to default config, logs error\n\n**Test Suite 4: bootstrap() - Integration Tests**\n\n1. **Test: Fresh bootstrap (no marker file)**\n   - Mock all functions (detectEnvironment, registerVessel, configureForRole)\n   - Mock fs.readFile to throw ENOENT (file not found)\n   - Mock fs.writeFile to succeed\n   - Expect: Returns BootstrapResult with success=true, marker file created\n\n2. **Test: Skip bootstrap (marker exists, force=false)**\n   - Mock fs.readFile to return existing marker JSON\n   - Expect: Returns early with existing vessel_id, no registration/config calls\n\n3. **Test: Force bootstrap (marker exists, force=true)**\n   - Mock fs.readFile to return existing marker JSON\n   - Mock all bootstrap functions\n   - Expect: Full bootstrap executes, new marker file created\n\n4. **Test: With mock backend (registration + config fetch)**\n   - Mock fetch for both registration and config endpoints\n   - Expect: Both endpoints called, responses processed correctly\n\n5. **Test: With unavailable backend (fallback to defaults)**\n   - Mock fetch to always fail\n   - Expect: Falls back to local UUID and default config, success=true\n\n**Test Suite 5: Error Recovery**\n\n1. **Test: Partial bootstrap (environment detection fails)**\n   - Mock detectEnvironment to throw error\n   - Expect: Bootstrap fails gracefully, returns success=false with error\n\n2. **Test: Health check failures**\n   - Mock health check endpoint to fail\n   - Expect: Bootstrap continues, logs warning, success=true (degraded mode)\n\n3. **Test: Marker write failure (fallback to /tmp)**\n   - Mock fs.writeFile to fail with EACCES for /workspace/.bootstrapped\n   - Mock fs.writeFile to succeed for /tmp/.bootstrapped\n   - Expect: Uses fallback location, logs warning, success=true\n\n**Mocking Guidelines**:\n\n1. **Mock fetch()**:\n   ```typescript\n   mock.module(\"node:fetch\", () => ({\n     default: async (url) => {\n       if (url.includes(\"/register\")) {\n         return { json: async () => ({ vessel_id: \"test-123\" }) }\n       }\n       throw new Error(\"Network error\")\n     }\n   }))\n   ```\n\n2. **Mock fs/promises**:\n   ```typescript\n   mock.module(\"node:fs/promises\", () => ({\n     readFile: async () => { throw { code: \"ENOENT\" } },\n     writeFile: async () => {}\n   }))\n   ```\n\n3. **Mock bash commands** (via exec):\n   - Mock child_process.exec if used for git/which commands\n\n**Test Requirements**:\n- All tests must pass: `bun test src/vessel/bootstrap.test.ts`\n- Use beforeEach/afterEach for setup/cleanup\n- Keep tests isolated (no shared state)\n- Test coverage >90% (aim for 95%)\n- No skipped or pending tests (no it.skip or it.todo)\n\n**Validation**:\n- File exists and has test structure\n- All test suites present (5 suites)\n- Tests pass when run\n- Mocks used appropriately\n- No console.log in tests (use expect assertions)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun test src/vessel/bootstrap.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-and-document",
+      "subagent": "general",
+      "description": "Run final compilation and tests, then add comprehensive JSDoc documentation with usage examples and integration notes",
+      "dependencies": [
+        "create-comprehensive-tests"
+      ],
+      "prompt": {
+        "template": "Finalize the BootstrapManager implementation with comprehensive documentation and final validation.\n\n**Task 1: Run Final Validation**\n\n1. **TypeScript Compilation**:\n   - Run: `cd repos/metabob-opencode && bun run build`\n   - Confirm: No TypeScript errors\n   - If errors exist, fix them before proceeding\n\n2. **Run All Tests**:\n   - Run: `cd repos/metabob-opencode && bun test src/vessel/bootstrap.test.ts`\n   - Confirm: All tests pass\n   - If tests fail, fix implementation issues\n\n**Task 2: Add Comprehensive JSDoc Documentation**\n\nAdd or enhance JSDoc comments in `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts`:\n\n1. **Namespace-Level Documentation**:\n   ```typescript\n   /**\n    * BootstrapManager namespace provides core functionality for vessel first-start initialization.\n    * \n    * This module enables devbob containers to autonomously detect their environment, register with\n    * the backend API, fetch configuration, and mark themselves as bootstrapped. It is the final\n    * component of Phase 1 in the DevBob Vessel Architecture.\n    * \n    * @namespace BootstrapManager\n    * \n    * @example\n    * // Bootstrap vessel on first start\n    * import { BootstrapManager } from \"./vessel/bootstrap\"\n    * \n    * const result = await BootstrapManager.bootstrap({\n    *   backend_url: \"http://api-server:8080\",\n    *   vessel_name: \"devbob-rpc-api\",\n    *   force_bootstrap: false\n    * })\n    * \n    * if (result.success) {\n    *   console.log(`Vessel ${result.vessel_id} bootstrapped successfully`)\n    * } else {\n    *   console.error(`Bootstrap failed: ${result.error?.message}`)\n    * }\n    * \n    * @see VesselUpdateManager for version management\n    * @see ConfigManager for configuration management\n    * @see BoredomManager for idle monitoring\n    */\n   ```\n\n2. **Interface Documentation**:\n   - Add @interface and @property tags to all interfaces\n   - Include field descriptions and examples\n   - Document optional fields with default values\n\n3. **Function Documentation**:\n   - Add @function, @param, @returns, @throws tags to all functions\n   - Include usage examples for main functions (bootstrap, detectEnvironment)\n   - Document error conditions and recovery strategies\n\n4. **Error Code Documentation**:\n   - Add @const tags to error code constants\n   - Include descriptions of when each error occurs\n   - Document recovery strategies for each error type\n\n**Task 3: Add Integration Notes**\n\nAdd comments explaining integration points:\n\n1. **VesselUpdateManager Integration**:\n   ```typescript\n   // Integration: Uses VesselUpdateManager.getCurrentVersions() to include\n   // version info in vessel registration payload. Continues if unavailable.\n   ```\n\n2. **ConfigManager Integration**:\n   ```typescript\n   // Integration: Configuration fetched from backend can be applied using\n   // Config.state. Validates schema before applying to prevent corruption.\n   ```\n\n3. **BoredomManager Integration**:\n   ```typescript\n   // Integration: Optionally starts boredom monitoring after successful\n   // bootstrap. Does not fail bootstrap if BoredomManager unavailable.\n   ```\n\n**Task 4: Verify No Forbidden Patterns**\n\nScan the code for forbidden patterns and fix if found:\n- No TODO or FIXME comments in production code (tests are okay)\n- No console.log statements (use Log utility)\n- No hardcoded secrets or API keys\n- No synchronous fs operations (use fs/promises)\n- No unhandled promise rejections\n\n**Task 5: Consistency Check**\n\nVerify the code follows VesselUpdateManager patterns:\n1. Error codes defined as exported constants\n2. Interfaces use JSDoc comments\n3. Functions use async/await\n4. Logger used consistently (service: \"vessel-bootstrap\")\n5. Error handling with try/catch and structured errors\n\n**Final Report**:\n\nProvide a summary including:\n- TypeScript compilation status (pass/fail)\n- Test results (pass/fail, coverage %)\n- Documentation completeness (all functions documented?)\n- Integration notes added (yes/no)\n- Forbidden patterns found (list or \"none\")\n- Consistency with VesselUpdateManager (yes/no)\n\n**Validation**:\n- All validation commands pass\n- JSDoc comments present on all exported items\n- No forbidden patterns found\n- Code follows established patterns",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd repos/metabob-opencode && bun test src/vessel/bootstrap.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "create-bootstrap-module",
+      "subagent": "general",
+      "description": "Create src/vessel/bootstrap.ts with namespace, interfaces, types, and error code constants following VesselUpdateManager patterns",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create the BootstrapManager module at `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts`.\n\n**Requirements**:\n\n1. **Namespace Structure**: Export a namespace called `BootstrapManager` following the VesselUpdateManager pattern.\n\n2. **Error Code Constants**: Define error code constants at the top of the namespace:\n   - `BOOTSTRAP_FAILED` - General bootstrap failure\n   - `ENVIRONMENT_DETECTION_FAILED` - Cannot detect workspace type\n   - `REGISTRATION_FAILED` - Backend registration error\n   - `CONFIG_FETCH_FAILED` - Cannot fetch configuration\n   - `HEALTH_CHECK_FAILED` - Required services unavailable\n   - `MARKER_WRITE_FAILED` - Cannot create .bootstrapped file\n\n3. **Interfaces**: Define these TypeScript interfaces with JSDoc comments:\n\n   - `Environment`: Workspace environment information\n     - `type`: \"clean\" | \"mounted-codebase\" | \"cloned-repo\" | \"unknown\"\n     - `workspace`: string (path to workspace)\n     - `git_state`: \"none\" | \"clean\" | \"dirty\"\n     - `mounted_repos`: string[] (list of mounted repository names)\n     - `capabilities`: string[] (available commands: \"git\", \"docker\", \"kubectl\")\n\n   - `VesselRegistration`: Registration response from backend\n     - `vessel_id`: string\n     - `registered_at`: string (ISO timestamp)\n     - `backend_url`: string\n\n   - `BootstrapOptions`: Configuration options for bootstrap\n     - `workspace_path?`: string (default: \"/workspace\")\n     - `backend_url?`: string (default: process.env.METABOB_API_URL)\n     - `vessel_name?`: string (default: process.env.HOSTNAME)\n     - `tracking_file?`: string (default: \"/workspace/.bootstrapped\")\n     - `force_bootstrap?`: boolean (default: false)\n     - `skip_registration?`: boolean (default: false, for testing)\n     - `timeout_ms?`: number (default: 30000)\n\n   - `BootstrapResult`: Result of bootstrap operation\n     - `success`: boolean\n     - `vessel_id`: string\n     - `environment`: Environment\n     - `bootstrapped_at`: string (ISO timestamp)\n     - `error?`: UpdateError\n\n   - `UpdateError`: Error details\n     - `code`: string (one of the error constants)\n     - `message`: string\n     - `details?`: any\n\n   - `BootstrapConfig`: Configuration fetched from backend\n     - `vessel_id`: string\n     - `config`: Record<string, any>\n     - `fetched_at`: string (ISO timestamp)\n\n4. **Logger**: Initialize a logger instance at the top of the namespace:\n   ```typescript\n   const logger = Log.create({ service: \"vessel-bootstrap\" })\n   ```\n\n5. **Module Documentation**: Add comprehensive JSDoc comments at the namespace level explaining:\n   - Purpose of BootstrapManager\n   - When it runs (first-start initialization)\n   - Integration with VesselUpdateManager and ConfigManager\n\n**Pattern Reference**: Look at `repos/metabob-opencode/packages/opencode/src/vessel/update.ts` for the VesselUpdateManager namespace structure to follow.\n\n**Validation**:\n- Import statement: `import { Log } from \"../util/log\"`\n- All interfaces must have JSDoc comments\n- Error constants must be exported and typed as string\n- No implementation code yet (functions will be added in next task)\n- TypeScript compilation must succeed\n\n**Output**: Report the file path created and confirm the namespace structure.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-core-functions",
+      "subagent": "general",
+      "description": "Implement detectEnvironment(), registerVessel(), and configureForRole() functions with full error handling, retry logic, and logging",
+      "dependencies": [
+        "create-bootstrap-module"
+      ],
+      "prompt": {
+        "template": "Implement the three core functions in `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts` within the BootstrapManager namespace.\n\n**Function 1: detectEnvironment()**\n\nSignature: `export async function detectEnvironment(workspace_path: string = \"/workspace\"): Promise<Environment>`\n\nImplementation requirements:\n1. Check if workspace_path exists and is a git repository\n2. Detect workspace type:\n   - \"clean\": No git repo, empty workspace\n   - \"mounted-codebase\": Git repo exists in workspace root\n   - \"cloned-repo\": Git repo in subdirectory\n   - \"unknown\": Cannot determine\n3. Detect git state by running `git status --porcelain`:\n   - \"none\": No git repo\n   - \"clean\": Git repo with no changes\n   - \"dirty\": Git repo with uncommitted changes\n4. Find mounted repositories: Check for subdirectories with .git folders\n5. Detect capabilities by checking command availability:\n   - Test `which git` for git capability\n   - Test `which docker` for docker capability\n   - Test `which kubectl` for kubectl capability\n6. Return structured Environment object with all fields\n7. Use try/catch and log errors with `logger.error()`\n8. On error, return conservative defaults (type: \"unknown\", capabilities: [])\n\n**Function 2: registerVessel()**\n\nSignature: `export async function registerVessel(environment: Environment, backend_url: string, vessel_name: string, timeout_ms: number = 10000): Promise<VesselRegistration>`\n\nImplementation requirements:\n1. Create registration payload:\n   ```typescript\n   {\n     container_name: vessel_name,\n     environment: environment,\n     capabilities: environment.capabilities,\n     acp_port: 3000,\n     versions: await getVesselVersions()\n   }\n   ```\n2. Implement exponential backoff retry logic:\n   - 3 attempts with delays: 1s, 2s, 4s\n   - Helper function: `async function retryWithBackoff(fn, attempts, delays)`\n3. Make POST request to `${backend_url}/api/vessels/register`\n4. On success, parse response and return VesselRegistration\n5. On failure after all retries:\n   - Log error with `logger.error()`\n   - Generate fallback UUID with `crypto.randomUUID()`\n   - Return VesselRegistration with local vessel_id\n6. Use fetch() with timeout using AbortController\n7. Handle network errors gracefully (ECONNREFUSED, timeout)\n\n**Function 3: configureForRole()**\n\nSignature: `export async function configureForRole(vessel_id: string, backend_url: string, timeout_ms: number = 10000): Promise<BootstrapConfig>`\n\nImplementation requirements:\n1. Make GET request to `${backend_url}/api/vessels/${vessel_id}/config`\n2. On 200 response:\n   - Parse configuration JSON\n   - Validate schema (basic validation, ensure required fields)\n   - Log configuration received with `logger.info()`\n   - Return BootstrapConfig with config data\n3. On 404 response:\n   - Log warning \"No backend config found, using defaults\"\n   - Return default BootstrapConfig\n4. On other errors:\n   - Log error with `logger.error()`\n   - Return default BootstrapConfig\n5. Use fetch() with timeout using AbortController\n6. Default config structure:\n   ```typescript\n   {\n     vessel_id,\n     config: { workspace: \"/workspace\" },\n     fetched_at: new Date().toISOString()\n   }\n   ```\n\n**Helper Function: getVesselVersions()**\n\nSignature: `async function getVesselVersions(): Promise<Record<string, string>>`\n\nImplementation:\n1. Try to get versions from VesselUpdateManager.getCurrentVersions() if available\n2. On error or if unavailable, return default versions:\n   ```typescript\n   { opencode: \"unknown\", \"metabob-cli\": \"unknown\" }\n   ```\n\n**General Requirements**:\n- All functions must use async/await (no callbacks)\n- All functions must have comprehensive try/catch error handling\n- Use `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()` appropriately\n- No console.log statements\n- Use node:fs/promises for any file operations (async only)\n- Use fetch() from global scope (Node 18+)\n- Add JSDoc comments with @param, @returns, @throws tags\n\n**Validation**:\n- All three functions exported and implemented\n- TypeScript compilation succeeds\n- No console.log, no synchronous fs operations\n- Error handling present in all functions",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-bootstrap-orchestration",
+      "subagent": "general",
+      "description": "Implement main bootstrap() function that orchestrates the full bootstrap flow with marker file management and health checks",
+      "dependencies": [
+        "implement-core-functions"
+      ],
+      "prompt": {
+        "template": "Implement the main `bootstrap()` function in `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts` within the BootstrapManager namespace.\n\n**Function Signature**:\n\n```typescript\nexport async function bootstrap(options?: BootstrapOptions): Promise<BootstrapResult>\n```\n\n**Implementation Requirements**:\n\n1. **Parse Options**: Apply defaults for all optional fields:\n   ```typescript\n   const {\n     workspace_path = \"/workspace\",\n     backend_url = process.env.METABOB_API_URL || \"http://localhost:8080\",\n     vessel_name = process.env.HOSTNAME || \"devbob-vessel\",\n     tracking_file = \"/workspace/.bootstrapped\",\n     force_bootstrap = false,\n     skip_registration = false,\n     timeout_ms = 30000\n   } = options || {}\n   ```\n\n2. **Check Existing Bootstrap Marker**:\n   - Try to read tracking_file (use `fs/promises`)\n   - If file exists and force_bootstrap is false:\n     - Parse JSON content\n     - Log: `logger.info(\"Vessel already bootstrapped, skipping\", { vessel_id })`\n     - Return early with BootstrapResult (success: true, vessel_id from marker)\n   - If file doesn't exist or force_bootstrap is true, continue\n\n3. **Execute Bootstrap Sequence**:\n   \n   a. **Detect Environment**:\n   - Call `detectEnvironment(workspace_path)`\n   - Log result: `logger.info(\"Environment detected\", { environment })`\n   - Store environment in variable\n\n   b. **Register Vessel** (if not skip_registration):\n   - Call `registerVessel(environment, backend_url, vessel_name, timeout_ms)`\n   - Log result: `logger.info(\"Vessel registered\", { vessel_id })`\n   - Store vessel_id in variable\n   - If skip_registration is true, generate local vessel_id with `crypto.randomUUID()`\n\n   c. **Configure Vessel**:\n   - Call `configureForRole(vessel_id, backend_url, timeout_ms)`\n   - Log result: `logger.info(\"Configuration applied\", { config })`\n   - Store config in variable\n\n   d. **Health Check** (optional, don't fail bootstrap):\n   - Try to make GET request to `${backend_url}/api/health`\n   - On success: Log `logger.debug(\"Health check passed\")`\n   - On failure: Log `logger.warn(\"Health check failed, continuing with degraded mode\")`\n\n4. **Create Bootstrap Marker File**:\n   - Prepare marker content:\n     ```typescript\n     {\n       vessel_id,\n       bootstrapped_at: new Date().toISOString(),\n       environment,\n       backend_url,\n       versions: await getVesselVersions()\n     }\n     ```\n   - Try to write to tracking_file using `fs/promises.writeFile()`\n   - On write failure (EACCES, EROFS):\n     - Try fallback location: `/tmp/.bootstrapped`\n     - Log warning: `logger.warn(\"Failed to write bootstrap marker\", { error })`\n   - On success: Log `logger.info(\"Bootstrap marker created\", { tracking_file })`\n\n5. **Optional: Start Boredom Monitoring** (if available):\n   - Try to import and call `BoredomManager.startMonitoring()`\n   - On error: Log debug message, don't fail bootstrap\n\n6. **Return BootstrapResult**:\n   ```typescript\n   return {\n     success: true,\n     vessel_id,\n     environment,\n     bootstrapped_at: new Date().toISOString()\n   }\n   ```\n\n7. **Error Handling**:\n   - Wrap entire function in try/catch\n   - On any error:\n     - Log full error with stack trace: `logger.error(\"Bootstrap failed\", { error })`\n     - Return BootstrapResult with success: false and error details\n   - Use structured errors with error codes (BOOTSTRAP_FAILED, etc.)\n\n**General Requirements**:\n- Use async/await throughout\n- All file operations use `fs/promises` (async)\n- Comprehensive error handling with try/catch\n- Log all major steps (info level) and errors (error level)\n- No console.log statements\n- Add comprehensive JSDoc comments with usage example\n\n**JSDoc Example Section**:\n```typescript\n/**\n * Bootstrap vessel on first start.\n * \n * @example\n * ```typescript\n * const result = await BootstrapManager.bootstrap({\n *   backend_url: \"http://api-server:8080\",\n *   vessel_name: \"devbob-rpc-api\",\n *   force_bootstrap: false\n * })\n * \n * if (result.success) {\n *   console.log(`Vessel ${result.vessel_id} bootstrapped successfully`)\n * }\n * ```\n */\n```\n\n**Validation**:\n- Function exported and implemented\n- TypeScript compilation succeeds\n- Marker file creation logic present\n- Error handling comprehensive\n- No forbidden patterns (console.log, sync fs, TODO)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-comprehensive-tests",
+      "subagent": "test",
+      "description": "Create comprehensive test suite in src/vessel/bootstrap.test.ts with unit and integration tests covering all functions and error scenarios",
+      "dependencies": [
+        "implement-bootstrap-orchestration"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive test suite at `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.test.ts` for the BootstrapManager.\n\n**Test Framework**: Use Bun's built-in test framework (describe, it, expect, mock).\n\n**Test Structure**:\n\n```typescript\nimport { describe, it, expect, beforeEach, afterEach, mock } from \"bun:test\"\nimport { BootstrapManager } from \"./bootstrap\"\n\ndescribe(\"BootstrapManager\", () => {\n  // Test suites here\n})\n```\n\n**Test Suite 1: detectEnvironment()**\n\n1. **Test: Clean workspace (no git, no repos)**\n   - Mock fs checks to return empty workspace\n   - Mock bash commands to return \"command not found\"\n   - Expect: type=\"clean\", git_state=\"none\", capabilities=[]\n\n2. **Test: Mounted codebase (git clean)**\n   - Mock git status to return empty output\n   - Mock which git to succeed\n   - Expect: type=\"mounted-codebase\", git_state=\"clean\", capabilities includes \"git\"\n\n3. **Test: Mounted codebase (git dirty)**\n   - Mock git status to return \"M file.ts\"\n   - Expect: git_state=\"dirty\"\n\n4. **Test: Capability detection**\n   - Mock which git, docker, kubectl to succeed/fail\n   - Expect: capabilities array matches available commands\n\n**Test Suite 2: registerVessel()**\n\n1. **Test: Successful registration**\n   - Mock fetch to return { vessel_id: \"test-vessel-123\", registered_at: \"...\" }\n   - Expect: Returns VesselRegistration with vessel_id\n\n2. **Test: Network timeout**\n   - Mock fetch to throw timeout error\n   - Expect: Retries 3 times, then falls back to UUID\n\n3. **Test: Retry logic with exponential backoff**\n   - Mock fetch to fail twice, succeed on third attempt\n   - Verify: 3 fetch calls made with correct delays\n\n4. **Test: Fallback to local vessel_id**\n   - Mock fetch to always fail\n   - Expect: Returns VesselRegistration with UUID vessel_id\n\n**Test Suite 3: configureForRole()**\n\n1. **Test: Successful config fetch and apply**\n   - Mock fetch to return { config: {...} }\n   - Expect: Returns BootstrapConfig with config data\n\n2. **Test: Missing config (404) fallback to defaults**\n   - Mock fetch to return 404\n   - Expect: Returns default BootstrapConfig\n\n3. **Test: Invalid config (validation failure)**\n   - Mock fetch to return malformed JSON\n   - Expect: Falls back to default config, logs error\n\n**Test Suite 4: bootstrap() - Integration Tests**\n\n1. **Test: Fresh bootstrap (no marker file)**\n   - Mock all functions (detectEnvironment, registerVessel, configureForRole)\n   - Mock fs.readFile to throw ENOENT (file not found)\n   - Mock fs.writeFile to succeed\n   - Expect: Returns BootstrapResult with success=true, marker file created\n\n2. **Test: Skip bootstrap (marker exists, force=false)**\n   - Mock fs.readFile to return existing marker JSON\n   - Expect: Returns early with existing vessel_id, no registration/config calls\n\n3. **Test: Force bootstrap (marker exists, force=true)**\n   - Mock fs.readFile to return existing marker JSON\n   - Mock all bootstrap functions\n   - Expect: Full bootstrap executes, new marker file created\n\n4. **Test: With mock backend (registration + config fetch)**\n   - Mock fetch for both registration and config endpoints\n   - Expect: Both endpoints called, responses processed correctly\n\n5. **Test: With unavailable backend (fallback to defaults)**\n   - Mock fetch to always fail\n   - Expect: Falls back to local UUID and default config, success=true\n\n**Test Suite 5: Error Recovery**\n\n1. **Test: Partial bootstrap (environment detection fails)**\n   - Mock detectEnvironment to throw error\n   - Expect: Bootstrap fails gracefully, returns success=false with error\n\n2. **Test: Health check failures**\n   - Mock health check endpoint to fail\n   - Expect: Bootstrap continues, logs warning, success=true (degraded mode)\n\n3. **Test: Marker write failure (fallback to /tmp)**\n   - Mock fs.writeFile to fail with EACCES for /workspace/.bootstrapped\n   - Mock fs.writeFile to succeed for /tmp/.bootstrapped\n   - Expect: Uses fallback location, logs warning, success=true\n\n**Mocking Guidelines**:\n\n1. **Mock fetch()**:\n   ```typescript\n   mock.module(\"node:fetch\", () => ({\n     default: async (url) => {\n       if (url.includes(\"/register\")) {\n         return { json: async () => ({ vessel_id: \"test-123\" }) }\n       }\n       throw new Error(\"Network error\")\n     }\n   }))\n   ```\n\n2. **Mock fs/promises**:\n   ```typescript\n   mock.module(\"node:fs/promises\", () => ({\n     readFile: async () => { throw { code: \"ENOENT\" } },\n     writeFile: async () => {}\n   }))\n   ```\n\n3. **Mock bash commands** (via exec):\n   - Mock child_process.exec if used for git/which commands\n\n**Test Requirements**:\n- All tests must pass: `bun test src/vessel/bootstrap.test.ts`\n- Use beforeEach/afterEach for setup/cleanup\n- Keep tests isolated (no shared state)\n- Test coverage >90% (aim for 95%)\n- No skipped or pending tests (no it.skip or it.todo)\n\n**Validation**:\n- File exists and has test structure\n- All test suites present (5 suites)\n- Tests pass when run\n- Mocks used appropriately\n- No console.log in tests (use expect assertions)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun test src/vessel/bootstrap.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-and-document",
+      "subagent": "general",
+      "description": "Run final compilation and tests, then add comprehensive JSDoc documentation with usage examples and integration notes",
+      "dependencies": [
+        "create-comprehensive-tests"
+      ],
+      "prompt": {
+        "template": "Finalize the BootstrapManager implementation with comprehensive documentation and final validation.\n\n**Task 1: Run Final Validation**\n\n1. **TypeScript Compilation**:\n   - Run: `cd repos/metabob-opencode && bun run build`\n   - Confirm: No TypeScript errors\n   - If errors exist, fix them before proceeding\n\n2. **Run All Tests**:\n   - Run: `cd repos/metabob-opencode && bun test src/vessel/bootstrap.test.ts`\n   - Confirm: All tests pass\n   - If tests fail, fix implementation issues\n\n**Task 2: Add Comprehensive JSDoc Documentation**\n\nAdd or enhance JSDoc comments in `repos/metabob-opencode/packages/opencode/src/vessel/bootstrap.ts`:\n\n1. **Namespace-Level Documentation**:\n   ```typescript\n   /**\n    * BootstrapManager namespace provides core functionality for vessel first-start initialization.\n    * \n    * This module enables devbob containers to autonomously detect their environment, register with\n    * the backend API, fetch configuration, and mark themselves as bootstrapped. It is the final\n    * component of Phase 1 in the DevBob Vessel Architecture.\n    * \n    * @namespace BootstrapManager\n    * \n    * @example\n    * // Bootstrap vessel on first start\n    * import { BootstrapManager } from \"./vessel/bootstrap\"\n    * \n    * const result = await BootstrapManager.bootstrap({\n    *   backend_url: \"http://api-server:8080\",\n    *   vessel_name: \"devbob-rpc-api\",\n    *   force_bootstrap: false\n    * })\n    * \n    * if (result.success) {\n    *   console.log(`Vessel ${result.vessel_id} bootstrapped successfully`)\n    * } else {\n    *   console.error(`Bootstrap failed: ${result.error?.message}`)\n    * }\n    * \n    * @see VesselUpdateManager for version management\n    * @see ConfigManager for configuration management\n    * @see BoredomManager for idle monitoring\n    */\n   ```\n\n2. **Interface Documentation**:\n   - Add @interface and @property tags to all interfaces\n   - Include field descriptions and examples\n   - Document optional fields with default values\n\n3. **Function Documentation**:\n   - Add @function, @param, @returns, @throws tags to all functions\n   - Include usage examples for main functions (bootstrap, detectEnvironment)\n   - Document error conditions and recovery strategies\n\n4. **Error Code Documentation**:\n   - Add @const tags to error code constants\n   - Include descriptions of when each error occurs\n   - Document recovery strategies for each error type\n\n**Task 3: Add Integration Notes**\n\nAdd comments explaining integration points:\n\n1. **VesselUpdateManager Integration**:\n   ```typescript\n   // Integration: Uses VesselUpdateManager.getCurrentVersions() to include\n   // version info in vessel registration payload. Continues if unavailable.\n   ```\n\n2. **ConfigManager Integration**:\n   ```typescript\n   // Integration: Configuration fetched from backend can be applied using\n   // Config.state. Validates schema before applying to prevent corruption.\n   ```\n\n3. **BoredomManager Integration**:\n   ```typescript\n   // Integration: Optionally starts boredom monitoring after successful\n   // bootstrap. Does not fail bootstrap if BoredomManager unavailable.\n   ```\n\n**Task 4: Verify No Forbidden Patterns**\n\nScan the code for forbidden patterns and fix if found:\n- No TODO or FIXME comments in production code (tests are okay)\n- No console.log statements (use Log utility)\n- No hardcoded secrets or API keys\n- No synchronous fs operations (use fs/promises)\n- No unhandled promise rejections\n\n**Task 5: Consistency Check**\n\nVerify the code follows VesselUpdateManager patterns:\n1. Error codes defined as exported constants\n2. Interfaces use JSDoc comments\n3. Functions use async/await\n4. Logger used consistently (service: \"vessel-bootstrap\")\n5. Error handling with try/catch and structured errors\n\n**Final Report**:\n\nProvide a summary including:\n- TypeScript compilation status (pass/fail)\n- Test results (pass/fail, coverage %)\n- Documentation completeness (all functions documented?)\n- Integration notes added (yes/no)\n- Forbidden patterns found (list or \"none\")\n- Consistency with VesselUpdateManager (yes/no)\n\n**Validation**:\n- All validation commands pass\n- JSDoc comments present on all exported items\n- No forbidden patterns found\n- Code follows established patterns",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd repos/metabob-opencode && bun run build",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "cd repos/metabob-opencode && bun test src/vessel/bootstrap.test.ts",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-24T13:18:35.634Z",
+  "metadata": {}
+}

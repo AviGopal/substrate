@@ -1,0 +1,26 @@
+{
+  "testCase": "debug-activity-self-contained",
+  "input": {
+    "templateId": "debug-activity-self-contained",
+    "variables": {},
+    "description": "Test that debug-activity has trailblazing auto-enabled"
+  },
+  "expectedOutput": {
+    "trailblazingEnabled": true,
+    "costLimits": {
+      "maxCostPerTask": 1.0,
+      "maxTotalCost": 5.0
+    },
+    "isMetaTemplate": true,
+    "autoEnableLogicPresent": true,
+    "conservativeLimitsSet": true
+  },
+  "validationChecks": [
+    "isMetaTemplate('debug-activity-self-contained') returns true",
+    "Auto-enable logic present in activity.ts",
+    "Conservative cost limits set ($1/task, $5 total)",
+    "activityExecution impulse type exists",
+    "searchSimilarActivities() API exists",
+    "Impulse resolver handles activityExecution case"
+  ]
+}

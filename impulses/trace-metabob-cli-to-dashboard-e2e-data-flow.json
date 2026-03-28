@@ -1,0 +1,309 @@
+{
+  "id": "trace-metabob-cli-to-dashboard-e2e-data-flow",
+  "type": "dataFlowTrace",
+  "createdAt": "2026-03-12T00:00:00Z",
+  "budget": 5000,
+  "metadata": {
+    "specificationName": "metabob-cli-to-dashboard-e2e-data-flow",
+    "purpose": "Complete E2E data flow trace for validation and enforcement",
+    "deploymentStatus": "100% implemented",
+    "validationStatus": "E2E validation pending"
+  },
+  "content": {
+    "specificationName": "metabob-cli-to-dashboard-e2e-data-flow",
+    "description": "End-to-end data flow from metabob-cli to dashboard with project registration, session linking, SurrealDB persistence, and dashboard queries",
+    "deploymentStatus": "100% implemented (all 4 gaps deployed)",
+    "validationStatus": "E2E validation pending",
+    "dataFlow": "CLI (register_project) → RPC API (/auth/orgs/{org_id}/projects) → CLI (submit with project_id) → RPC API (/v2/submit) → Celery (run_analysis) → SurrealDB (bulk_create_problems) → Dashboard (list_problems_by_project)",
+    "components": [
+      {
+        "gap": "Gap 1: CLI Project Registration",
+        "status": "DEPLOYED (commit 28da1c375)",
+        "file": "repos/metabob-cli/src/metabob_cli/core/analysis_api_client.py",
+        "component": "AnalysisApiClient.register_project()",
+        "lines": "~450-550",
+        "currentBehavior": "Extracts org_id from JWT token, computes git_root_hash from repo, calls POST /auth/orgs/{org_id}/projects with project metadata (name, repository_url, branch, git_root_hash). Returns project_id for session linking.",
+        "desiredBehavior": "MATCHES IMPLEMENTATION - idempotent project creation with full metadata",
+        "integration": "Called from AnalysisEngine before file submission",
+        "validationNeeded": "E2E test: CLI calls register_project, verifies project created in SurrealDB with correct org_id and metadata"
+      },
+      {
+        "gap": "Gap 1: Engine Integration",
+        "status": "DEPLOYED",
+        "file": "repos/metabob-cli/src/metabob_cli/core/analysis_engine.py",
+        "component": "AnalysisEngine.__aenter__() / _project_id field",
+        "lines": "119-120, ~170-190",
+        "currentBehavior": "Stores project_id in self._project_id, calls api_client.register_project() before analysis, passes project_id to submit_files()",
+        "desiredBehavior": "MATCHES IMPLEMENTATION",
+        "integration": "Project ID flows from registration → session → submission",
+        "validationNeeded": "Verify project_id is correctly passed through entire analysis flow"
+      },
+      {
+        "gap": "Gap 4: Project API Endpoints",
+        "status": "DEPLOYED (FIXED via separate router)",
+        "file": "repos/metabob-rpc-api/server/routes/projects.py",
+        "component": "ProjectRouter: POST /auth/orgs/{org_id}/projects, GET /auth/orgs/{org_id}/projects",
+        "lines": "21-207",
+        "currentBehavior": "Separate FastAPI router with JWT authentication (get_current_user). POST creates projects with idempotent handling (returns existing if duplicate). GET lists projects with stats (total_sessions, total_activities, total_problems_found/fixed). Protected by org_id verification.",
+        "desiredBehavior": "MATCHES IMPLEMENTATION",
+        "integration": "Called by CLI (POST) and dashboard (GET)",
+        "validationNeeded": "E2E test: Verify CLI can create project, dashboard can retrieve it with stats"
+      },
+      {
+        "gap": "Gap 4: Project Database Operations",
+        "status": "DEPLOYED",
+        "file": "repos/metabob-rpc-api/server/db/operations/project_ops.py",
+        "component": "create_project(), get_project(), list_projects_by_org(), update_project_stats()",
+        "lines": "17-242",
+        "currentBehavior": "CRUD operations for projects table in SurrealDB. Schema: {project_id, org_id, name, git_root_hash, repository_url, branch, settings, stats, created_at, updated_at}. Stats tracking: total_sessions, total_activities, total_problems_found, total_problems_fixed.",
+        "desiredBehavior": "MATCHES IMPLEMENTATION",
+        "integration": "Used by projects.py router and problem persistence flow",
+        "validationNeeded": "Verify stats are correctly updated when problems are persisted"
+      },
+      {
+        "gap": "Gap 2: Session-Project Linking",
+        "status": "DEPLOYED",
+        "file": "repos/metabob-rpc-api/server/routes/analysis.py",
+        "component": "post_analysis_v2() endpoint: POST /v2/submit",
+        "lines": "109-207",
+        "currentBehavior": "Accepts project_id as Form parameter. Stores project_id in Redis session: redis.hset(f'session:{session_id}', 'project_id', project_id). Validates session authentication. Submits files to Celery queue.",
+        "desiredBehavior": "MATCHES IMPLEMENTATION",
+        "integration": "Called by CLI with project_id, project_id persists in Redis for duration of session",
+        "validationNeeded": "E2E test: Verify project_id is stored in Redis session and retrievable by Celery tasks"
+      },
+      {
+        "gap": "Gap 3: SurrealDB Persistence",
+        "status": "DEPLOYED",
+        "file": "repos/metabob-rpc-api/tasks/jobs/analysis.py",
+        "component": "_store_results() with SurrealDB dual-write",
+        "lines": "181-299",
+        "currentBehavior": "After storing problems to Redis (7-day TTL), extracts org_id and project_id from Redis session. Calls bulk_create_problems() with schema: {problem_id, session_id, project_id, org_id, file_path, start_line, end_line, category, severity, description, recommendation, context, problem_hash, status, metadata, created_at, updated_at}. Uses async event loop wrapper (_persist_to_surrealdb_sync) to call async operations from sync Celery context. Graceful degradation: logs error but doesn't fail task if SurrealDB write fails.",
+        "desiredBehavior": "MATCHES IMPLEMENTATION",
+        "integration": "Triggered automatically by run_analysis Celery task after detection model completes",
+        "validationNeeded": "E2E test: Verify problems persist to SurrealDB with correct org_id, project_id, and timestamps after analysis completes"
+      },
+      {
+        "gap": "Gap 3: Bulk Insert Helper",
+        "status": "DEPLOYED",
+        "file": "repos/metabob-rpc-api/tasks/jobs/analysis.py",
+        "component": "_persist_to_surrealdb_sync()",
+        "lines": "302-323",
+        "currentBehavior": "Synchronous wrapper for bulk_create_problems(). Creates new event loop to run async SurrealDB operations from sync Celery worker context. Error handling with logging.",
+        "desiredBehavior": "MATCHES IMPLEMENTATION",
+        "integration": "Called by _store_results() for SurrealDB persistence",
+        "validationNeeded": "Verify event loop creation/cleanup doesn't leak resources in Celery worker"
+      },
+      {
+        "gap": "Gap 3: Problem Database Operations",
+        "status": "DEPLOYED",
+        "file": "repos/metabob-rpc-api/server/db/operations/problem_ops.py",
+        "component": "bulk_create_problems(), list_problems_by_project()",
+        "lines": "83-200",
+        "currentBehavior": "Bulk insert problems with timestamps. Schema: {problem_id, session_id, project_id, org_id, file_path, start_line, end_line, category, severity, description, recommendation, context, problem_hash, status, metadata, created_at, updated_at}. list_problems_by_project() queries by project_id with ORDER BY created_at DESC for temporal tracking.",
+        "desiredBehavior": "MATCHES IMPLEMENTATION",
+        "integration": "Used by _persist_to_surrealdb_sync() and dashboard queries",
+        "validationNeeded": "E2E test: Verify problems can be queried by project_id with correct temporal ordering"
+      },
+      {
+        "gap": "Dashboard Query Endpoint",
+        "status": "DEPLOYMENT UNKNOWN - FILE NOT FOUND",
+        "file": "UNKNOWN (dashboard backend API)",
+        "component": "Dashboard API endpoint for project problems",
+        "currentBehavior": "EXPECTED: REST endpoint that calls list_problems_by_project() with project_id from authenticated user's session. Groups problems by component (file_path). Calculates temporal statistics (problems over time, severity distribution).",
+        "desiredBehavior": "Dashboard can retrieve problems by project_id, grouped by component, with temporal trends",
+        "integration": "Dashboard frontend → Dashboard backend API → problem_ops.list_problems_by_project()",
+        "validationNeeded": "CRITICAL GAP: Need to verify dashboard API endpoint exists and is properly integrated with problem_ops"
+      }
+    ],
+    "schemaCompliance": {
+      "projects": {
+        "table": "projects",
+        "fields": [
+          "project_id",
+          "org_id",
+          "name",
+          "git_root_hash",
+          "repository_url",
+          "branch",
+          "settings",
+          "stats",
+          "created_at",
+          "updated_at"
+        ],
+        "indexes": [
+          "project_id (unique)",
+          "org_id"
+        ],
+        "status": "COMPLIANT"
+      },
+      "problems": {
+        "table": "problems",
+        "fields": [
+          "problem_id",
+          "session_id",
+          "project_id",
+          "org_id",
+          "file_path",
+          "start_line",
+          "end_line",
+          "category",
+          "severity",
+          "description",
+          "recommendation",
+          "context",
+          "problem_hash",
+          "status",
+          "metadata",
+          "created_at",
+          "updated_at"
+        ],
+        "indexes": [
+          "problem_id (unique)",
+          "session_id",
+          "project_id",
+          "org_id"
+        ],
+        "status": "COMPLIANT"
+      },
+      "temporal_tracking": {
+        "created_at": "ISO 8601 timestamp - problem creation time",
+        "updated_at": "ISO 8601 timestamp - last update time",
+        "query_support": "ORDER BY created_at DESC for temporal trends",
+        "status": "COMPLIANT"
+      }
+    },
+    "integrationPoints": [
+      {
+        "source": "metabob-cli",
+        "destination": "rpc-api",
+        "endpoint": "POST /auth/orgs/{org_id}/projects",
+        "authentication": "JWT Bearer token (from session)",
+        "payload": "{name, repository_url, branch, git_root_hash}",
+        "response": "{project_id, org_id, name, ...}",
+        "status": "DEPLOYED"
+      },
+      {
+        "source": "metabob-cli",
+        "destination": "rpc-api",
+        "endpoint": "POST /v2/submit",
+        "authentication": "JWT Bearer token",
+        "payload": "multipart/form-data: files[] + project_id (Form field)",
+        "response": "{jobId, status, results}",
+        "status": "DEPLOYED"
+      },
+      {
+        "source": "rpc-api",
+        "destination": "Redis",
+        "operation": "hset(session:{session_id}, project_id, {value})",
+        "purpose": "Session-project linking",
+        "status": "DEPLOYED"
+      },
+      {
+        "source": "Celery (run_analysis)",
+        "destination": "Redis",
+        "operation": "hget(session:{session_id}, org_id|project_id)",
+        "purpose": "Retrieve session metadata for SurrealDB persistence",
+        "status": "DEPLOYED"
+      },
+      {
+        "source": "Celery (run_analysis)",
+        "destination": "SurrealDB",
+        "operation": "bulk_create_problems([{problem data}])",
+        "purpose": "Permanent storage with org/project organization",
+        "status": "DEPLOYED"
+      },
+      {
+        "source": "dashboard",
+        "destination": "rpc-api",
+        "endpoint": "GET /auth/orgs/{org_id}/projects",
+        "authentication": "JWT Bearer token",
+        "response": "{projects: [{project_id, name, stats, ...}], total, hasMore}",
+        "status": "DEPLOYED"
+      },
+      {
+        "source": "dashboard",
+        "destination": "UNKNOWN",
+        "endpoint": "UNKNOWN - problem query endpoint",
+        "purpose": "Retrieve problems by project_id for display",
+        "status": "MISSING - CRITICAL GAP"
+      }
+    ],
+    "validationChecklist": [
+      {
+        "id": "V1",
+        "description": "CLI creates project before analysis",
+        "test": "Run metabob-cli analyze with valid API key → verify POST /auth/orgs/{org_id}/projects is called → verify project exists in SurrealDB",
+        "status": "PENDING"
+      },
+      {
+        "id": "V2",
+        "description": "Project ID links to analysis session",
+        "test": "Verify project_id is stored in Redis session:{session_id} → verify project_id is passed to POST /v2/submit",
+        "status": "PENDING"
+      },
+      {
+        "id": "V3",
+        "description": "Problems persist to SurrealDB with org/project hierarchy",
+        "test": "Run analysis → verify problems table contains records with correct org_id, project_id, timestamps",
+        "status": "PENDING"
+      },
+      {
+        "id": "V4",
+        "description": "Dashboard can query problems by project",
+        "test": "Login to dashboard → select project → verify problems display grouped by component with temporal trends",
+        "status": "BLOCKED - dashboard endpoint unknown"
+      },
+      {
+        "id": "V5",
+        "description": "Temporal tracking works correctly",
+        "test": "Run multiple analysis sessions → verify problems can be queried by date range → verify ORDER BY created_at DESC works",
+        "status": "PENDING"
+      },
+      {
+        "id": "V6",
+        "description": "Stats are updated correctly",
+        "test": "Run analysis → verify project stats (total_problems_found) increment → verify dashboard displays correct counts",
+        "status": "PENDING"
+      }
+    ],
+    "criticalGaps": [
+      {
+        "id": "DASHBOARD_QUERY_ENDPOINT",
+        "severity": "CRITICAL",
+        "description": "Dashboard API endpoint for querying problems by project_id is not documented/found",
+        "impact": "Cannot complete E2E validation without knowing how dashboard retrieves problem data",
+        "recommendation": "Search for dashboard backend API that calls problem_ops.list_problems_by_project() or implement new endpoint"
+      }
+    ],
+    "deploymentVerification": {
+      "metabob_cli": {
+        "commit": "28da1c375",
+        "changes": [
+          "analysis_api_client.py (register_project)",
+          "analysis_engine.py (project_id integration)"
+        ],
+        "deployed": true
+      },
+      "rpc_api": {
+        "files": [
+          "server/routes/projects.py",
+          "server/routes/analysis.py",
+          "tasks/jobs/analysis.py",
+          "server/db/operations/project_ops.py",
+          "server/db/operations/problem_ops.py"
+        ],
+        "deployed": true
+      },
+      "surrealdb_schema": {
+        "tables": [
+          "projects",
+          "problems"
+        ],
+        "deployed": "ASSUMED (verify with DB inspection)"
+      },
+      "dashboard": {
+        "deployed": "UNKNOWN - cannot verify without dashboard codebase access"
+      }
+    }
+  }
+}

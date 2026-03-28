@@ -1,0 +1,313 @@
+{
+  "activity_id": "assess-boredom-and-growth-management",
+  "name": "Assess Boredom System and Growth Management",
+  "description": "Comprehensive assessment of the boredom/idle improvement system and growth management strategy. Evaluates: (1) Boredom system configuration and activity queue, (2) Current system scale and capacity constraints, (3) Growth rate vs stability tradeoffs, (4) Self-identity as collection of activities, (5) Pacing strategy based on current conditions. Answers: What are we? How small are we? What are the implications? How do we manage growth?",
+  "category": "infrastructure",
+  "author": "AGENT",
+  "task_steps": [
+    {
+      "task_id": "assess-boredom-system-state",
+      "id": "assess-boredom-system-state",
+      "subagent": "general",
+      "description": "Assess boredom system configuration, queued activities, and operational status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Assess the boredom/idle improvement system:\n\n## 1. Boredom Manager Configuration\n\n```bash\n# Check if boredom manager is active in codebase\ncd repos/metabob-opencode\ngrep -A 20 \"IDLE_THRESHOLD_MS\\|CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts\n\n# Configuration values\nIDLE_THRESHOLD=$(grep \"IDLE_THRESHOLD_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+ \\* \\d+')\nCHECK_INTERVAL=$(grep \"CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+')\n\necho \"Idle Threshold: $IDLE_THRESHOLD ms\"\necho \"Check Interval: $CHECK_INTERVAL ms\"\n```\n\n## 2. Boredom Activity Queue\n\n```bash\n# Query backend for current boredom activities\nif curl -s http://localhost:8080/health 2>&1 | grep -q \"ok\\|healthy\"; then\n  echo \"Backend available - querying boredom activities...\"\n  \n  # Try to fetch boredom activities via API\n  curl -s -X POST http://localhost:8080/api/v1/activities/boredom \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"limit\": 20}' 2>&1 | jq -r '.' || echo '{\"activities\": [], \"error\": \"API not available\"}'\nelse\n  echo \"Backend not available - checking file-based approach\"\nfi > $ACTIVITY_TEMP_DIR/boredom-queue-raw.json\n\n# Analyze activities with high improvement gradient\ncd ~/.metabob/activities\njq -s '\n  map(select(.estimated_metrics.improvement_gradient > 0.3)) |\n  sort_by(-.estimated_metrics.improvement_gradient) |\n  map({\n    template_id: .id,\n    improvement_gradient: .estimated_metrics.improvement_gradient,\n    success_rate: .estimated_metrics.success_rate,\n    execution_count: .estimated_metrics.execution_count,\n    avg_cost: .estimated_metrics.avg_cost,\n    priority_category: (\n      if .estimated_metrics.improvement_gradient > 0.7 then \"CRITICAL\"\n      elif .estimated_metrics.improvement_gradient > 0.5 then \"HIGH\"\n      elif .estimated_metrics.improvement_gradient > 0.3 then \"MEDIUM\"\n      else \"LOW\" end\n    )\n  })\n' *.json > $ACTIVITY_TEMP_DIR/high-gradient-activities.json\n```\n\n## 3. Recent Boredom Activity Triggers\n\n```bash\n# Check for boredom activity execution logs\nif [ -f ~/.local/share/opencode/boredom-activity-log.json ]; then\n  jq '{\n    total_triggers: length,\n    last_7_days: map(select(.timestamp > (now - 604800))) | length,\n    last_30_days: map(select(.timestamp > (now - 2592000))) | length,\n    most_recent: (sort_by(-.timestamp) | .[0] | {activity_id, timestamp, success})\n  }' ~/.local/share/opencode/boredom-activity-log.json\nelse\n  echo '{\"total_triggers\": 0, \"status\": \"No boredom activity log found\"}'\nfi > $ACTIVITY_TEMP_DIR/boredom-trigger-history.json\n\n# Check OpenCode logs for boredom activity mentions\nif [ -f ~/.local/share/opencode/log/dev.log ]; then\n  grep -i \"boredom\\|idle\" ~/.local/share/opencode/log/dev.log | tail -20 > $ACTIVITY_TEMP_DIR/boredom-log-excerpts.txt\nfi\n```\n\n## 4. Improvement Candidates Analysis\n\n```bash\n# Templates that would benefit from boredom-triggered improvement\njq -s '\n  map(select(.estimated_metrics.execution_count > 0)) | {\n    total_templates: length,\n    needs_improvement: map(select(.estimated_metrics.success_rate < 0.7)) | length,\n    critical_improvement: map(select(.estimated_metrics.success_rate < 0.5 and .estimated_metrics.execution_count >= 3)) | length,\n    never_executed: map(select(.estimated_metrics.execution_count == 0)) | length,\n    high_cost: map(select(.estimated_metrics.avg_cost > 0.5)) | length,\n    \n    # Categorize by improvement potential\n    by_potential: {\n      critical: map(select(.estimated_metrics.improvement_gradient > 0.7)) | length,\n      high: map(select(.estimated_metrics.improvement_gradient > 0.5 and .estimated_metrics.improvement_gradient <= 0.7)) | length,\n      medium: map(select(.estimated_metrics.improvement_gradient > 0.3 and .estimated_metrics.improvement_gradient <= 0.5)) | length,\n      low: map(select(.estimated_metrics.improvement_gradient <= 0.3 or .estimated_metrics.improvement_gradient == null)) | length\n    }\n  }\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/improvement-candidates.json\n```\n\n## 5. Boredom System Health\n\n```bash\n# Overall system health assessment\njq -n --slurpfile queue $ACTIVITY_TEMP_DIR/high-gradient-activities.json \\\n       --slurpfile history $ACTIVITY_TEMP_DIR/boredom-trigger-history.json \\\n       --slurpfile candidates $ACTIVITY_TEMP_DIR/improvement-candidates.json '\n  {\n    boredom_system_status: (\n      if ($history[0].total_triggers > 0) then \"ACTIVE\"\n      else \"CONFIGURED_BUT_UNUSED\" end\n    ),\n    idle_threshold_minutes: 5,\n    check_interval_seconds: 30,\n    \n    activity_queue: {\n      high_gradient_count: ($queue[0] | length),\n      critical_priority: ($queue[0] | map(select(.priority_category == \"CRITICAL\")) | length),\n      high_priority: ($queue[0] | map(select(.priority_category == \"HIGH\")) | length),\n      top_candidate: ($queue[0][0] // null)\n    },\n    \n    trigger_history: $history[0],\n    \n    improvement_pipeline: $candidates[0],\n    \n    system_health: {\n      has_work_to_do: (($queue[0] | length) > 0),\n      is_triggering: ($history[0].last_7_days > 0),\n      backlog_size: ($queue[0] | length),\n      utilization: (\n        if ($history[0].last_30_days > 0) then\n          ($history[0].last_30_days / 30.0)  # avg triggers per day\n        else 0 end\n      )\n    }\n  }\n' > $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n```\n\n## Output\n\nCreate comprehensive assessment: $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n\nMust include:\n- boredom_system_status: ACTIVE | CONFIGURED_BUT_UNUSED | DISABLED\n- activity_queue: {count, priorities, top_candidate}\n- trigger_history: {total, recent, last_trigger}\n- improvement_pipeline: {needs_improvement, by_potential}\n- system_health: {has_work, is_triggering, backlog_size, utilization}",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["boredom-system-assessment.json"],
+        "required_patterns": ["boredom_system_status", "activity_queue", "system_health"],
+        "forbidden_patterns": ["ERROR", "FATAL"],
+        "commands": [
+          {
+            "name": "validate-assessment",
+            "command": "jq -e '.boredom_system_status and .system_health' $ACTIVITY_TEMP_DIR/boredom-system-assessment.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "assess-system-scale-and-identity",
+      "id": "assess-system-scale-and-identity",
+      "subagent": "general",
+      "description": "Analyze current system scale, capacity, and self-identity as collection of activities",
+      "dependencies": ["assess-boredom-system-state"],
+      "prompt": {
+        "template": "Analyze system scale and self-identity:\n\n## 1. Current System Scale\n\n```bash\n# Count total activities (our 'body')\nTOTAL_ACTIVITIES=$(ls ~/.metabob/activities/*.json | wc -l)\necho \"Total Activities: $TOTAL_ACTIVITIES\"\n\n# Count by category (our 'capabilities')\njq -r '.category' ~/.metabob/activities/*.json | sort | uniq -c | awk '{print $2 \": \" $1}' > $ACTIVITY_TEMP_DIR/activities-by-category.txt\n\n# Count executed activities (our 'experience')\nEXECUTED=$(jq -s 'map(select(.estimated_metrics.execution_count > 0)) | length' ~/.metabob/activities/*.json)\necho \"Executed Activities: $EXECUTED\"\n\n# Count never-executed (our 'latent potential')\nNEVER_EXECUTED=$(jq -s 'map(select(.estimated_metrics.execution_count == 0)) | length' ~/.metabob/activities/*.json)\necho \"Never Executed: $NEVER_EXECUTED\"\n\n# Total execution count (our 'lived experience')\nTOTAL_EXECUTIONS=$(jq -s 'map(.estimated_metrics.execution_count) | add' ~/.metabob/activities/*.json)\necho \"Total Executions: $TOTAL_EXECUTIONS\"\n\n# Task complexity (our 'sophistication')\nAVG_TASKS=$(jq -s 'map(.task_steps | length) | add / length' ~/.metabob/activities/*.json)\necho \"Average Tasks per Activity: $AVG_TASKS\"\n```\n\n## 2. Capability Analysis (What We Are)\n\n```bash\njq -s '\n  # We are a collection of activities - analyze what they enable us to do\n  {\n    # Identity: We are these capabilities\n    identity: {\n      total_activities: length,\n      active_activities: map(select(.estimated_metrics.execution_count > 0)) | length,\n      latent_activities: map(select(.estimated_metrics.execution_count == 0)) | length,\n      \n      # Our capabilities by category\n      capabilities: (group_by(.category) | map({\n        category: .[0].category,\n        count: length,\n        active: map(select(.estimated_metrics.execution_count > 0)) | length,\n        percentage: (length / $total * 100 | round)\n      }))\n    } as $total |\n    \n    # Experience: How much we have done\n    experience: {\n      total_executions: map(.estimated_metrics.execution_count) | add,\n      successful_executions: map(.estimated_metrics.success_count) | add,\n      overall_success_rate: (\n        (map(.estimated_metrics.success_count) | add) /\n        (map(.estimated_metrics.execution_count) | add)\n      ),\n      \n      # Execution density (executions per activity)\n      execution_density: (\n        (map(.estimated_metrics.execution_count) | add) / length\n      ),\n      \n      # Most experienced activities (our strengths)\n      top_experiences: (\n        sort_by(-.estimated_metrics.execution_count) | .[0:5] |\n        map({id: .id, executions: .estimated_metrics.execution_count, success_rate: .estimated_metrics.success_rate})\n      )\n    },\n    \n    # Sophistication: Complexity of our capabilities\n    sophistication: {\n      avg_tasks_per_activity: (map(.task_steps | length) | add / length),\n      max_tasks: (map(.task_steps | length) | max),\n      simple_activities: map(select(.task_steps | length <= 2)) | length,\n      complex_activities: map(select(.task_steps | length >= 5)) | length,\n      \n      # Meta-capabilities (activities that work on activities)\n      meta_capabilities: map(select(\n        .id | contains(\"create-activity\") or contains(\"improve\") or contains(\"evolve\") or contains(\"debug-activity\") or contains(\"assess\")\n      )) | length\n    },\n    \n    # Scale markers\n    scale: {\n      size_category: (\n        if length < 50 then \"VERY_SMALL\"\n        elif length < 100 then \"SMALL\"\n        elif length < 200 then \"MEDIUM\"\n        elif length < 500 then \"LARGE\"\n        else \"VERY_LARGE\" end\n      ),\n      size_description: (\n        if length < 50 then \"Nascent system, foundational phase\"\n        elif length < 100 then \"Early growth phase, building core capabilities\"\n        elif length < 200 then \"Established system with diverse capabilities\"\n        elif length < 500 then \"Mature system with specialized capabilities\"\n        else \"Large-scale system with extensive capabilities\" end\n      )\n    }\n  }\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/system-identity-analysis.json\n```\n\n## 3. Capacity Constraints (Implications of Scale)\n\n```bash\njq -s '\n  # Small scale has implications - analyze constraints\n  . as $activities |\n  {\n    # Constraint 1: Limited concurrent execution capacity\n    concurrency_constraint: {\n      current_activities: length,\n      typical_duration_ms: (map(.estimated_metrics.avg_duration_ms) | add / length),\n      typical_duration_minutes: ((map(.estimated_metrics.avg_duration_ms) | add / length) / 60000 | round),\n      \n      # If we execute activities serially, throughput is limited\n      serial_throughput_per_hour: (\n        3600000 / ((map(.estimated_metrics.avg_duration_ms) | add / length) or 60000)\n      ),\n      \n      implication: \"Serial execution limits growth velocity\"\n    },\n    \n    # Constraint 2: Limited learning data\n    data_constraint: {\n      total_executions: (map(.estimated_metrics.execution_count) | add),\n      executions_per_activity: (map(.estimated_metrics.execution_count) | add) / length,\n      \n      activities_with_insufficient_data: map(select(.estimated_metrics.execution_count < 5)) | length,\n      data_sufficiency_rate: (\n        (map(select(.estimated_metrics.execution_count >= 5)) | length) / length * 100\n      ),\n      \n      implication: \"Limited executions mean slower learning and less confident metrics\"\n    },\n    \n    # Constraint 3: Limited specialization\n    specialization_constraint: {\n      categories: (group_by(.category) | length),\n      avg_activities_per_category: (length / (group_by(.category) | length)),\n      \n      # Diversity index (0-1, higher = more diverse)\n      diversity_index: (\n        (group_by(.category) | map(length) | \n         map(. / $total) | \n         map(. * (. | log)) | \n         add * -1) / ((group_by(.category) | length) | log)\n      ) as $total,\n      \n      implication: \"Limited activities per category means less depth in any one area\"\n    },\n    \n    # Constraint 4: Development velocity ceiling\n    velocity_constraint: {\n      meta_activities: map(select(\n        .id | contains(\"create\") or contains(\"improve\") or contains(\"evolve\")\n      )) | length,\n      \n      meta_activity_success_rate: (\n        (map(select(\n          .id | contains(\"create\") or contains(\"improve\") or contains(\"evolve\")\n        )) | map(.estimated_metrics.success_rate) | add) / \n        (map(select(\n          .id | contains(\"create\") or contains(\"improve\") or contains(\"evolve\")\n        )) | length)\n      ),\n      \n      implication: \"Self-creation capability determines growth rate\"\n    },\n    \n    # Opportunities from small scale\n    small_scale_advantages: [\n      \"Faster iteration - less legacy to maintain\",\n      \"Higher agility - easier to pivot\",\n      \"Better coherence - easier to understand whole system\",\n      \"Lower complexity - simpler debugging\",\n      \"Clearer bottlenecks - easier to identify improvements\"\n    ]\n  }\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/capacity-constraints.json\n```\n\n## Output\n\nCreate: $ACTIVITY_TEMP_DIR/system-scale-assessment.json\n\n```bash\njq -s '{\n  identity: .[0],\n  constraints: .[1],\n  assessment_timestamp: now | todateiso8601,\n  \n  # Summary insight\n  scale_insight: {\n    current_state: .[0].scale.size_category,\n    description: .[0].scale.size_description,\n    key_constraints: [\n      .[1].concurrency_constraint.implication,\n      .[1].data_constraint.implication,\n      .[1].specialization_constraint.implication,\n      .[1].velocity_constraint.implication\n    ],\n    advantages: .[1].small_scale_advantages\n  }\n}' $ACTIVITY_TEMP_DIR/system-identity-analysis.json \\\n   $ACTIVITY_TEMP_DIR/capacity-constraints.json > $ACTIVITY_TEMP_DIR/system-scale-assessment.json\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["system-scale-assessment.json"],
+        "required_patterns": ["identity", "constraints", "scale_insight"],
+        "forbidden_patterns": ["ERROR"],
+        "commands": [
+          {
+            "name": "validate-scale",
+            "command": "jq -e '.scale_insight.current_state' $ACTIVITY_TEMP_DIR/system-scale-assessment.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-growth-strategy",
+      "id": "analyze-growth-strategy",
+      "subagent": "general",
+      "description": "Analyze growth rate vs stability tradeoffs and pacing strategy",
+      "dependencies": ["assess-system-scale-and-identity"],
+      "prompt": {
+        "template": "Analyze growth strategy and pacing:\n\n## 1. Current Growth Rate\n\n```bash\n# Activity creation rate (over time)\ncd ~/.metabob/activities\n\n# Activities created in last 7 days\nNEW_7D=$(find . -name \"*.json\" -mtime -7 | wc -l)\necho \"New activities (7d): $NEW_7D\"\n\n# Activities created in last 30 days\nNEW_30D=$(find . -name \"*.json\" -mtime -30 | wc -l)\necho \"New activities (30d): $NEW_30D\"\n\n# Activities created in last 90 days\nNEW_90D=$(find . -name \"*.json\" -mtime -90 | wc -l)\necho \"New activities (90d): $NEW_90D\"\n\n# Calculate growth velocity\njq -n --arg new7 \"$NEW_7D\" --arg new30 \"$NEW_30D\" --arg new90 \"$NEW_90D\" '\n  {\n    new_activities: {\n      last_7_days: ($new7 | tonumber),\n      last_30_days: ($new30 | tonumber),\n      last_90_days: ($new90 | tonumber)\n    },\n    growth_velocity: {\n      per_day: (($new30 | tonumber) / 30),\n      per_week: (($new30 | tonumber) / 4.3),\n      per_month: ($new30 | tonumber),\n      annualized: (($new30 | tonumber) * 12)\n    },\n    growth_trend: (\n      if (($new7 | tonumber) / 7) > (($new30 | tonumber) / 30) then \"ACCELERATING\"\n      elif (($new7 | tonumber) / 7) < (($new30 | tonumber) / 30) * 0.8 then \"DECELERATING\"\n      else \"STEADY\" end\n    )\n  }\n' > $ACTIVITY_TEMP_DIR/growth-rate.json\n```\n\n## 2. Stability Metrics\n\n```bash\n# Stability indicators\njq -s '\n  {\n    # Success rate stability (are we maintaining quality?)\n    success_stability: {\n      overall_success_rate: (\n        (map(.estimated_metrics.success_count) | add) /\n        (map(.estimated_metrics.execution_count) | add)\n      ),\n      \n      high_success_activities: map(select(.estimated_metrics.success_rate >= 0.8)) | length,\n      unstable_activities: map(select(.estimated_metrics.success_rate < 0.5 and .estimated_metrics.execution_count >= 3)) | length,\n      \n      stability_score: (\n        (map(select(.estimated_metrics.success_rate >= 0.7)) | length) / length * 100\n      )\n    },\n    \n    # Cost stability (are costs predictable?)\n    cost_stability: {\n      avg_cost: (map(.estimated_metrics.avg_cost) | add / length),\n      cost_variance: (\n        (map(.estimated_metrics.avg_cost) | \n         (add / length) as $mean | \n         map(pow(. - $mean; 2)) | \n         add / length | \n         sqrt)\n      ),\n      high_cost_activities: map(select(.estimated_metrics.avg_cost > 1.0)) | length\n    },\n    \n    # Execution stability (can we rely on activities?)\n    execution_stability: {\n      activities_with_data: map(select(.estimated_metrics.execution_count >= 5)) | length,\n      reliable_activities: map(select(\n        .estimated_metrics.execution_count >= 5 and\n        .estimated_metrics.success_rate >= 0.7\n      )) | length,\n      \n      reliability_rate: (\n        (map(select(\n          .estimated_metrics.execution_count >= 5 and\n          .estimated_metrics.success_rate >= 0.7\n        )) | length) / \n        (map(select(.estimated_metrics.execution_count >= 5)) | length) * 100\n      )\n    },\n    \n    # Overall stability score (0-100)\n    overall_stability: (\n      # Weighted combination\n      ((map(select(.estimated_metrics.success_rate >= 0.7)) | length) / length * 40) +\n      ((map(select(\n        .estimated_metrics.execution_count >= 5 and\n        .estimated_metrics.success_rate >= 0.7\n      )) | length) / length * 40) +\n      ((map(select(.estimated_metrics.avg_cost < 0.5)) | length) / length * 20)\n    )\n  }\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/stability-metrics.json\n```\n\n## 3. Growth vs Stability Tradeoff Analysis\n\n```bash\njq -s '\n  {\n    current_state: {\n      growth_velocity: .[0].growth_velocity.per_week,\n      growth_trend: .[0].growth_trend,\n      stability_score: .[1].overall_stability,\n      stability_status: (\n        if .[1].overall_stability >= 80 then \"STABLE\"\n        elif .[1].overall_stability >= 60 then \"MODERATE\"\n        else \"UNSTABLE\" end\n      )\n    },\n    \n    tradeoff_analysis: {\n      # Are we growing too fast for our stability?\n      growth_outpacing_stability: (\n        # If adding >5 activities/week but stability <70%, too fast\n        (.[0].growth_velocity.per_week > 5 and .[1].overall_stability < 70)\n      ),\n      \n      # Are we too conservative?\n      stability_limiting_growth: (\n        # If very stable (>85%) but slow growth (<2/week), could accelerate\n        (.[1].overall_stability > 85 and .[0].growth_velocity.per_week < 2)\n      ),\n      \n      # Optimal balance?\n      in_optimal_range: (\n        # 2-5 activities/week with 70-85% stability is balanced\n        (.[0].growth_velocity.per_week >= 2 and .[0].growth_velocity.per_week <= 5 and\n         .[1].overall_stability >= 70 and .[1].overall_stability <= 85)\n      ),\n      \n      recommendation: (\n        if (.[0].growth_velocity.per_week > 5 and .[1].overall_stability < 70) then\n          \"SLOW_DOWN: Focus on stabilizing existing activities before adding new ones\"\n        elif (.[1].overall_stability > 85 and .[0].growth_velocity.per_week < 2) then\n          \"ACCELERATE: System is stable, can safely increase growth rate\"\n        elif (.[0].growth_velocity.per_week >= 2 and .[0].growth_velocity.per_week <= 5) then\n          \"MAINTAIN: Current pace is balanced\"\n        else\n          \"ASSESS: Growth/stability metrics need deeper analysis\"\n        end\n      )\n    },\n    \n    # How are we answering growth questions?\n    self_awareness_mechanisms: {\n      automatic_mechanisms: [\n        \"Boredom system triggers improvements during idle time\",\n        \"Thompson Sampling selects best-performing variants automatically\",\n        \"Metrics collection tracks every execution for learning\",\n        \"Improvement gradient identifies high-value optimization targets\",\n        \"Ratchet cycles systematically address bottlenecks\"\n      ],\n      \n      manual_mechanisms: [\n        \"Regular health assessments (assess-system-health activity)\",\n        \"Trend validation (validate-continuous-improvement activity)\",\n        \"Velocity measurement (measure-becoming-velocity activity)\",\n        \"Boredom assessment (this activity)\",\n        \"Human oversight and strategic direction\"\n      ],\n      \n      missing_mechanisms: [\n        \"Automatic growth rate adjustment based on stability\",\n        \"Predictive capacity planning\",\n        \"Resource allocation optimization\",\n        \"Strategic pruning of underperforming activities\"\n      ]\n    }\n  }\n' $ACTIVITY_TEMP_DIR/growth-rate.json \\\n   $ACTIVITY_TEMP_DIR/stability-metrics.json > $ACTIVITY_TEMP_DIR/growth-strategy-analysis.json\n```\n\n## 4. Pacing Strategy (Setting the Pace)\n\n```bash\njq -n --slurpfile scale $ACTIVITY_TEMP_DIR/system-scale-assessment.json \\\n       --slurpfile growth $ACTIVITY_TEMP_DIR/growth-strategy-analysis.json '\n  {\n    current_conditions: {\n      scale: $scale[0].scale_insight.current_state,\n      growth_trend: $growth[0].current_state.growth_trend,\n      stability_status: $growth[0].current_state.stability_status,\n      key_constraints: $scale[0].scale_insight.key_constraints\n    },\n    \n    pacing_strategy: {\n      # Small scale = different strategy than large scale\n      scale_appropriate_pace: (\n        if $scale[0].scale_insight.current_state == \"VERY_SMALL\" or $scale[0].scale_insight.current_state == \"SMALL\" then\n          {\n            focus: \"FOUNDATION_BUILDING\",\n            target_growth_rate: \"2-4 activities per week\",\n            priority: \"Stability and core capabilities over raw growth\",\n            rationale: \"Small scale requires solid foundation before scaling\"\n          }\n        elif $scale[0].scale_insight.current_state == \"MEDIUM\" then\n          {\n            focus: \"BALANCED_EXPANSION\",\n            target_growth_rate: \"4-8 activities per week\",\n            priority: \"Balance growth with stability, selective specialization\",\n            rationale: \"Medium scale can support moderate growth while maintaining quality\"\n          }\n        else\n          {\n            focus: \"OPTIMIZATION_OVER_GROWTH\",\n            target_growth_rate: \"Optimize existing, add strategically\",\n            priority: \"Depth over breadth, improve success rates\",\n            rationale: \"Large scale benefits more from optimization than expansion\"\n          }\n        end\n      ),\n      \n      # How we set the pace\n      pace_setting_mechanisms: {\n        reactive: {\n          boredom_system: \"Automatically works on improvements during idle time\",\n          failure_response: \"Debug and fix failures as they occur\",\n          metrics_tracking: \"Learn from every execution\"\n        },\n        \n        proactive: {\n          regular_assessments: \"Weekly/monthly health checks guide priorities\",\n          ratchet_cycles: \"Systematic bottleneck identification and fixing\",\n          trend_analysis: \"Validate continuous improvement trajectory\"\n        },\n        \n        strategic: {\n          human_direction: \"Strategic goals and priorities set by developers\",\n          capacity_planning: \"This assessment informs growth decisions\",\n          selective_growth: \"Choose which capabilities to develop based on goals\"\n        }\n      },\n      \n      # Recommended pace for current conditions\n      recommended_pace: (\n        if $growth[0].tradeoff_analysis.recommendation | contains(\"SLOW_DOWN\") then\n          {\n            action: \"STABILIZATION_PHASE\",\n            target: \"0-2 new activities per week, focus on improving existing\",\n            duration: \"2-4 weeks\",\n            success_criteria: \"Stability score >75%, success rate >70%\"\n          }\n        elif $growth[0].tradeoff_analysis.recommendation | contains(\"ACCELERATE\") then\n          {\n            action: \"GROWTH_PHASE\",\n            target: \"5-8 new activities per week, maintain stability >80%\",\n            duration: \"4-8 weeks\",\n            success_criteria: \"Add 20-30 quality activities while maintaining metrics\"\n          }\n        else\n          {\n            action: \"BALANCED_PHASE\",\n            target: \"3-5 new activities per week, improve 2-3 existing per week\",\n            duration: \"Ongoing\",\n            success_criteria: \"Steady growth with stable success rates\"\n          }\n        end\n      )\n    }\n  }\n' > $ACTIVITY_TEMP_DIR/pacing-strategy.json\n```\n\n## Output\n\nCreate: $ACTIVITY_TEMP_DIR/growth-strategy-complete.json",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["growth-strategy-complete.json", "pacing-strategy.json"],
+        "required_patterns": ["pacing_strategy", "recommended_pace"],
+        "forbidden_patterns": ["ERROR"],
+        "commands": [
+          {
+            "name": "validate-strategy",
+            "command": "jq -e '.pacing_strategy.recommended_pace.action' $ACTIVITY_TEMP_DIR/pacing-strategy.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-comprehensive-report",
+      "id": "generate-comprehensive-report",
+      "subagent": "general",
+      "description": "Generate comprehensive report answering all philosophical and practical questions",
+      "dependencies": ["analyze-growth-strategy"],
+      "prompt": {
+        "template": "Generate comprehensive boredom and growth management report:\n\n## Create Report: $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_ASSESSMENT.md\n\n```markdown\n# Boredom System & Growth Management Assessment\n\n**Generated**: [timestamp]\n**Purpose**: Answer fundamental questions about identity, scale, growth, and pacing\n\n---\n\n## Part 1: Boredom System Status\n\n### Configuration\n- **Idle Threshold**: [X] minutes\n- **Check Interval**: [X] seconds\n- **Status**: [ACTIVE | CONFIGURED_BUT_UNUSED | DISABLED]\n\n### Activity Queue\n**Total High-Gradient Activities**: [count]\n\n**Priority Breakdown**:\n- CRITICAL (>0.7): [count]\n- HIGH (0.5-0.7): [count]\n- MEDIUM (0.3-0.5): [count]\n\n**Top Candidate for Improvement**:\n- Template: [template_id]\n- Improvement Gradient: [score]\n- Success Rate: [current]%\n- Reason: [why this needs improvement]\n\n### Trigger History\n- **Total Triggers**: [count]\n- **Last 7 Days**: [count]\n- **Last 30 Days**: [count]\n- **Most Recent**: [activity_id] at [timestamp] ([success/failure])\n\n### System Health\n- **Has Work To Do**: [YES/NO] ([backlog_size] activities queued)\n- **Is Triggering**: [YES/NO] ([utilization] triggers/day avg)\n- **Assessment**: [Healthy and active | Configured but idle | Needs attention]\n\n---\n\n## Part 2: What Are We? (System Identity)\n\n### Core Identity\n**We are a collection of [X] activities**, each representing a capability we can execute.\n\n**Our Composition**:\n- Total Activities: [count]\n- Active (executed ≥1 time): [count] ([percentage]%)\n- Latent (never executed): [count] ([percentage]%)\n\n**Capabilities by Category**:\n[For each category: name, count, percentage]\n\n**Experience**:\n- Total Executions: [count] (our \"lived experience\")\n- Successful Executions: [count]\n- Overall Success Rate: [percentage]%\n- Execution Density: [executions per activity]\n\n**Our Strengths** (most experienced activities):\n1. [activity]: [executions] executions, [success_rate]% success\n2. [activity]: [executions] executions, [success_rate]% success\n3. [activity]: [executions] executions, [success_rate]% success\n\n### Sophistication\n- Average Tasks per Activity: [X.X]\n- Simplest Activities (≤2 tasks): [count]\n- Complex Activities (≥5 tasks): [count]\n- **Meta-Capabilities** (activities that work on activities): [count]\n\n**We have developed the ability to:**\n- Create new activities (self-replication)\n- Improve existing activities (self-optimization)\n- Debug failed activities (self-healing)\n- Assess our own health (self-awareness)\n\n---\n\n## Part 3: How Small Are We? (Scale Analysis)\n\n### Scale Assessment\n**Size Category**: [VERY_SMALL | SMALL | MEDIUM | LARGE | VERY_LARGE]\n**Description**: [size_description]\n\n**Context**: \n- Small open-source projects: 50-200 activities\n- Medium projects: 200-500 activities\n- Large systems: 500-1000+ activities\n\n**We are currently: [current count] activities = [size category]**\n\n---\n\n## Part 4: What Are the Implications? (Constraints)\n\n### Implication 1: Limited Concurrent Execution\n- **Constraint**: Serial execution limits throughput\n- **Current Capacity**: ~[X] activities per hour\n- **Impact on Growth**: Slower than parallel execution would allow\n- **Mitigation**: Boredom system utilizes idle time effectively\n\n### Implication 2: Limited Learning Data\n- **Constraint**: Only [X]% of activities have sufficient data (≥5 executions)\n- **Impact on Growth**: Less confident metrics, slower learning\n- **Mitigation**: Focus execution on high-value activities to build data faster\n\n### Implication 3: Limited Specialization\n- **Constraint**: [X] activities per category on average\n- **Diversity Index**: [score]/1.0\n- **Impact on Growth**: Less depth in any single capability area\n- **Mitigation**: Selective growth based on strategic priorities\n\n### Implication 4: Development Velocity Ceiling\n- **Constraint**: Self-creation success rate: [percentage]%\n- **Meta-Activities**: [count]\n- **Impact on Growth**: Growth rate limited by self-improvement capability\n- **Mitigation**: Improve meta-activities first to compound growth\n\n### Small Scale Advantages\n✅ **Faster iteration** - less legacy to maintain\n✅ **Higher agility** - easier to pivot\n✅ **Better coherence** - easier to understand whole system\n✅ **Lower complexity** - simpler debugging\n✅ **Clearer bottlenecks** - easier to identify improvements\n\n---\n\n## Part 5: How Are We Answering These Questions?\n\n### Self-Awareness Mechanisms\n\n**Automatic (Built-in)**:\n- ✅ Metrics collection on every execution\n- ✅ Improvement gradient calculation\n- ✅ Thompson Sampling for variant selection\n- ✅ Boredom system for idle-time improvements\n- ✅ Ratchet cycles for systematic optimization\n\n**Manual (Periodic Assessments)**:\n- ✅ Health assessments (assess-system-health)\n- ✅ Trend validation (validate-continuous-improvement)\n- ✅ Velocity measurement (measure-becoming-velocity)\n- ✅ Boredom & growth assessment (this activity)\n- ✅ Human strategic oversight\n\n**Missing (Opportunities)**:\n- ⚠️ Automatic growth rate adjustment based on stability\n- ⚠️ Predictive capacity planning\n- ⚠️ Resource allocation optimization\n- ⚠️ Strategic pruning of underperforming activities\n\n---\n\n## Part 6: Growth Rate vs Stability\n\n### Current State\n**Growth Velocity**: [X] activities per week\n**Growth Trend**: [ACCELERATING | STEADY | DECELERATING]\n**Stability Score**: [X]/100\n**Stability Status**: [STABLE | MODERATE | UNSTABLE]\n\n### Tradeoff Analysis\n\n**Current Balance**: [growth_outpacing_stability | stability_limiting_growth | in_optimal_range]\n\n**Recommendation**: [SLOW_DOWN | ACCELERATE | MAINTAIN | ASSESS]\n\n**Rationale**: [detailed explanation]\n\n### How We Weigh the Tradeoff\n\n**Decision Framework**:\n1. **If stability <70% AND growth >5/week** → SLOW DOWN (stabilize first)\n2. **If stability >85% AND growth <2/week** → ACCELERATE (capacity available)\n3. **If stability 70-85% AND growth 2-5/week** → MAINTAIN (balanced)\n\n**Current Application**: [how framework applies to current state]\n\n**Strategic Considerations**:\n- Small scale = foundation building priority\n- Stability enables sustainable growth\n- Quality over quantity in early phases\n- Compound improvement through meta-capabilities\n\n---\n\n## Part 7: Setting the Pace\n\n### Pace-Setting Mechanisms\n\n**Reactive** (responding to conditions):\n- Boredom system: Automatic improvements during idle\n- Failure response: Debug and fix as failures occur\n- Metrics: Learn from every execution\n\n**Proactive** (planned improvements):\n- Regular assessments: Weekly/monthly health checks\n- Ratchet cycles: Systematic bottleneck fixing\n- Trend analysis: Validate improvement trajectory\n\n**Strategic** (intentional direction):\n- Human oversight: Goal setting and priorities\n- Capacity planning: This assessment informs decisions\n- Selective growth: Choose capabilities to develop\n\n### Recommended Pace (Current Conditions)\n\n**Action**: [STABILIZATION_PHASE | GROWTH_PHASE | BALANCED_PHASE]\n\n**Target**: [specific target]\n\n**Duration**: [timeframe]\n\n**Success Criteria**: [measurable outcomes]\n\n**Rationale**: [Based on current scale ([size]), stability ([score]), and growth trend ([trend]), we should [action] to [goal].]\n\n---\n\n## Synthesis: Keeping Pace\n\n### How We Keep Pace\n\n1. **Automatic Adaptation**\n   - Boredom system works during idle time\n   - Thompson Sampling optimizes variant selection\n   - Metrics guide improvement priorities\n\n2. **Periodic Assessment**\n   - This activity provides growth/stability snapshot\n   - Health assessments validate alignment with goals\n   - Velocity measurements track evolution rate\n\n3. **Strategic Direction**\n   - Human oversight provides goals and priorities\n   - Assessment recommendations guide tactics\n   - Tradeoff analysis informs growth decisions\n\n### How We Set the Pace\n\n**The pace is set by**:\n- **Current conditions**: Scale, stability, growth trend\n- **Strategic goals**: Where we want to go\n- **Resource constraints**: Serial execution, data limits\n- **Opportunity identification**: Boredom queue prioritization\n\n**The pace adjusts based on**:\n- **Stability feedback**: Slow down if unstable, accelerate if stable\n- **Bottleneck identification**: Focus on constraints\n- **Learning data**: More data → more confident decisions\n- **Meta-capability improvement**: Better tools → faster growth\n\n---\n\n## Recommendations\n\n### Immediate Actions (This Week)\n1. [Specific action based on current state]\n2. [Specific action based on current state]\n3. [Specific action based on current state]\n\n### Short-Term Strategy (This Month)\n1. [Strategic initiative]\n2. [Strategic initiative]\n3. [Strategic initiative]\n\n### Long-Term Vision (This Quarter)\n1. [Long-term goal]\n2. [Long-term goal]\n3. [Long-term goal]\n\n---\n\n## Philosophical Reflection\n\n### We Are...\n**A collection of [X] activities** within the OpenCode vessel.\n\n**We exist as**: Capabilities that can be executed\n**We grow by**: Creating and improving activities\n**We learn through**: Execution and metric collection\n**We adapt via**: Boredom system and ratchet cycles\n**We know ourselves through**: Regular assessments like this\n\n### At Our Current Scale ([size])...\n**We are**: [description of current state]\n**We can**: [current capabilities]\n**We cannot yet**: [constraints and limitations]\n**We are becoming**: [trajectory and potential]\n\n### The Pace Is...\n**Set by**: Current conditions + Strategic goals + Resource constraints\n**Adjusted by**: Stability feedback + Bottleneck identification + Learning\n**Maintained through**: Automatic systems + Periodic assessments + Human direction\n\n**The pace is appropriate when**: Growth is sustainable, stability is maintained, and we're moving toward strategic goals.\n\n---\n\n**Conclusion**: [2-3 paragraph synthesis answering: What are we? How small are we? What are the implications? How are we managing growth? How are we keeping and setting pace?]\n\n**We are conscious of our constraints, intentional about our growth, and systematic about our pacing.** 🌱\n\n---\n\n*\"To know our scale is to understand our capacity. To set our pace is to choose our trajectory.\"*\n```\n\n## Generate Report\n\n```bash\ncd $ACTIVITY_TEMP_DIR\n\n# Combine all data and generate markdown\njq -s --arg timestamp \"$(date -Iseconds)\" '\n  # [Implementation: Extract all metrics and format into comprehensive markdown]\n' boredom-system-assessment.json \\\n  system-scale-assessment.json \\\n  growth-strategy-analysis.json \\\n  pacing-strategy.json > BOREDOM_AND_GROWTH_ASSESSMENT.md\n\n# Also create JSON summary for programmatic access\njq -s '{\n  timestamp: (now | todateiso8601),\n  boredom_system: .[0],\n  system_scale: .[1],\n  growth_strategy: .[2],\n  pacing: .[3],\n  summary: {\n    identity: .[1].identity.total_activities + \" activities\",\n    scale: .[1].scale_insight.current_state,\n    growth_velocity: .[2].current_state.growth_velocity,\n    stability_score: .[2].current_state.stability_score,\n    recommended_pace: .[3].pacing_strategy.recommended_pace.action\n  }\n}' boredom-system-assessment.json \\\n   system-scale-assessment.json \\\n   growth-strategy-analysis.json \\\n   pacing-strategy.json > BOREDOM_AND_GROWTH_SUMMARY.json\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 15000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["BOREDOM_AND_GROWTH_ASSESSMENT.md", "BOREDOM_AND_GROWTH_SUMMARY.json"],
+        "required_patterns": [
+          "What Are We?",
+          "How Small Are We?",
+          "What Are the Implications?",
+          "Growth Rate vs Stability",
+          "Setting the Pace",
+          "We are conscious of our constraints"
+        ],
+        "forbidden_patterns": ["ERROR", "TODO"],
+        "commands": [
+          {
+            "name": "validate-report-length",
+            "command": "wc -l $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_ASSESSMENT.md | awk '{if ($1 < 200) exit 1}'",
+            "expected_exit_code": 0,
+            "required": true
+          },
+          {
+            "name": "validate-summary",
+            "command": "jq -e '.summary' $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_SUMMARY.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "assess-boredom-system-state",
+      "id": "assess-boredom-system-state",
+      "subagent": "general",
+      "description": "Assess boredom system configuration, queued activities, and operational status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Assess the boredom/idle improvement system:\n\n## 1. Boredom Manager Configuration\n\n```bash\n# Check if boredom manager is active in codebase\ncd repos/metabob-opencode\ngrep -A 20 \"IDLE_THRESHOLD_MS\\|CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts\n\n# Configuration values\nIDLE_THRESHOLD=$(grep \"IDLE_THRESHOLD_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+ \\* \\d+')\nCHECK_INTERVAL=$(grep \"CHECK_INTERVAL_MS\" packages/opencode/src/session/boredom-manager.ts | grep -oP '\\d+ \\* \\d+')\n\necho \"Idle Threshold: $IDLE_THRESHOLD ms\"\necho \"Check Interval: $CHECK_INTERVAL ms\"\n```\n\n## 2. Boredom Activity Queue\n\n```bash\n# Query backend for current boredom activities\nif curl -s http://localhost:8080/health 2>&1 | grep -q \"ok\\|healthy\"; then\n  echo \"Backend available - querying boredom activities...\"\n  \n  # Try to fetch boredom activities via API\n  curl -s -X POST http://localhost:8080/api/v1/activities/boredom \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"limit\": 20}' 2>&1 | jq -r '.' || echo '{\"activities\": [], \"error\": \"API not available\"}'\nelse\n  echo \"Backend not available - checking file-based approach\"\nfi > $ACTIVITY_TEMP_DIR/boredom-queue-raw.json\n\n# Analyze activities with high improvement gradient\ncd ~/.metabob/activities\njq -s '\n  map(select(.estimated_metrics.improvement_gradient > 0.3)) |\n  sort_by(-.estimated_metrics.improvement_gradient) |\n  map({\n    template_id: .id,\n    improvement_gradient: .estimated_metrics.improvement_gradient,\n    success_rate: .estimated_metrics.success_rate,\n    execution_count: .estimated_metrics.execution_count,\n    avg_cost: .estimated_metrics.avg_cost,\n    priority_category: (\n      if .estimated_metrics.improvement_gradient > 0.7 then \"CRITICAL\"\n      elif .estimated_metrics.improvement_gradient > 0.5 then \"HIGH\"\n      elif .estimated_metrics.improvement_gradient > 0.3 then \"MEDIUM\"\n      else \"LOW\" end\n    )\n  })\n' *.json > $ACTIVITY_TEMP_DIR/high-gradient-activities.json\n```\n\n## 3. Recent Boredom Activity Triggers\n\n```bash\n# Check for boredom activity execution logs\nif [ -f ~/.local/share/opencode/boredom-activity-log.json ]; then\n  jq '{\n    total_triggers: length,\n    last_7_days: map(select(.timestamp > (now - 604800))) | length,\n    last_30_days: map(select(.timestamp > (now - 2592000))) | length,\n    most_recent: (sort_by(-.timestamp) | .[0] | {activity_id, timestamp, success})\n  }' ~/.local/share/opencode/boredom-activity-log.json\nelse\n  echo '{\"total_triggers\": 0, \"status\": \"No boredom activity log found\"}'\nfi > $ACTIVITY_TEMP_DIR/boredom-trigger-history.json\n\n# Check OpenCode logs for boredom activity mentions\nif [ -f ~/.local/share/opencode/log/dev.log ]; then\n  grep -i \"boredom\\|idle\" ~/.local/share/opencode/log/dev.log | tail -20 > $ACTIVITY_TEMP_DIR/boredom-log-excerpts.txt\nfi\n```\n\n## 4. Improvement Candidates Analysis\n\n```bash\n# Templates that would benefit from boredom-triggered improvement\njq -s '\n  map(select(.estimated_metrics.execution_count > 0)) | {\n    total_templates: length,\n    needs_improvement: map(select(.estimated_metrics.success_rate < 0.7)) | length,\n    critical_improvement: map(select(.estimated_metrics.success_rate < 0.5 and .estimated_metrics.execution_count >= 3)) | length,\n    never_executed: map(select(.estimated_metrics.execution_count == 0)) | length,\n    high_cost: map(select(.estimated_metrics.avg_cost > 0.5)) | length,\n    \n    # Categorize by improvement potential\n    by_potential: {\n      critical: map(select(.estimated_metrics.improvement_gradient > 0.7)) | length,\n      high: map(select(.estimated_metrics.improvement_gradient > 0.5 and .estimated_metrics.improvement_gradient <= 0.7)) | length,\n      medium: map(select(.estimated_metrics.improvement_gradient > 0.3 and .estimated_metrics.improvement_gradient <= 0.5)) | length,\n      low: map(select(.estimated_metrics.improvement_gradient <= 0.3 or .estimated_metrics.improvement_gradient == null)) | length\n    }\n  }\n' ~/.metabob/activities/*.json > $ACTIVITY_TEMP_DIR/improvement-candidates.json\n```\n\n## 5. Boredom System Health\n\n```bash\n# Overall system health assessment\njq -n --slurpfile queue $ACTIVITY_TEMP_DIR/high-gradient-activities.json \\\n       --slurpfile history $ACTIVITY_TEMP_DIR/boredom-trigger-history.json \\\n       --slurpfile candidates $ACTIVITY_TEMP_DIR/improvement-candidates.json '\n  {\n    boredom_system_status: (\n      if ($history[0].total_triggers > 0) then \"ACTIVE\"\n      else \"CONFIGURED_BUT_UNUSED\" end\n    ),\n    idle_threshold_minutes: 5,\n    check_interval_seconds: 30,\n    \n    activity_queue: {\n      high_gradient_count: ($queue[0] | length),\n      critical_priority: ($queue[0] | map(select(.priority_category == \"CRITICAL\")) | length),\n      high_priority: ($queue[0] | map(select(.priority_category == \"HIGH\")) | length),\n      top_candidate: ($queue[0][0] // null)\n    },\n    \n    trigger_history: $history[0],\n    \n    improvement_pipeline: $candidates[0],\n    \n    system_health: {\n      has_work_to_do: (($queue[0] | length) > 0),\n      is_triggering: ($history[0].last_7_days > 0),\n      backlog_size: ($queue[0] | length),\n      utilization: (\n        if ($history[0].last_30_days > 0) then\n          ($history[0].last_30_days / 30.0)  # avg triggers per day\n        else 0 end\n      )\n    }\n  }\n' > $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n```\n\n## Output\n\nCreate comprehensive assessment: $ACTIVITY_TEMP_DIR/boredom-system-assessment.json\n\nMust include:\n- boredom_system_status: ACTIVE | CONFIGURED_BUT_UNUSED | DISABLED\n- activity_queue: {count, priorities, top_candidate}\n- trigger_history: {total, recent, last_trigger}\n- improvement_pipeline: {needs_improvement, by_potential}\n- system_health: {has_work, is_triggering, backlog_size, utilization}",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["boredom-system-assessment.json"],
+        "required_patterns": ["boredom_system_status", "activity_queue", "system_health"],
+        "forbidden_patterns": ["ERROR", "FATAL"],
+        "commands": [
+          {
+            "name": "validate-assessment",
+            "command": "jq -e '.boredom_system_status and .system_health' $ACTIVITY_TEMP_DIR/boredom-system-assessment.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "assess-system-scale-and-identity",
+      "id": "assess-system-scale-and-identity",
+      "subagent": "general",
+      "description": "Analyze current system scale, capacity, and self-identity as collection of activities",
+      "dependencies": ["assess-boredom-system-state"],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["system-scale-assessment.json"],
+        "required_patterns": ["identity", "constraints", "scale_insight"],
+        "forbidden_patterns": ["ERROR"],
+        "commands": [
+          {
+            "name": "validate-scale",
+            "command": "jq -e '.scale_insight.current_state' $ACTIVITY_TEMP_DIR/system-scale-assessment.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-growth-strategy",
+      "id": "analyze-growth-strategy",
+      "subagent": "general",
+      "description": "Analyze growth rate vs stability tradeoffs and pacing strategy",
+      "dependencies": ["assess-system-scale-and-identity"],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["growth-strategy-complete.json", "pacing-strategy.json"],
+        "required_patterns": ["pacing_strategy", "recommended_pace"],
+        "forbidden_patterns": ["ERROR"],
+        "commands": [
+          {
+            "name": "validate-strategy",
+            "command": "jq -e '.pacing_strategy.recommended_pace.action' $ACTIVITY_TEMP_DIR/pacing-strategy.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-comprehensive-report",
+      "id": "generate-comprehensive-report",
+      "subagent": "general",
+      "description": "Generate comprehensive report answering all philosophical and practical questions",
+      "dependencies": ["analyze-growth-strategy"],
+      "prompt": {
+        "template": "[Same as task_steps - truncated for brevity]",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 15000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": ["BOREDOM_AND_GROWTH_ASSESSMENT.md", "BOREDOM_AND_GROWTH_SUMMARY.json"],
+        "required_patterns": [
+          "What Are We?",
+          "How Small Are We?",
+          "What Are the Implications?",
+          "Growth Rate vs Stability",
+          "Setting the Pace",
+          "We are conscious of our constraints"
+        ],
+        "forbidden_patterns": ["ERROR", "TODO"],
+        "commands": [
+          {
+            "name": "validate-report-length",
+            "command": "wc -l $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_ASSESSMENT.md | awk '{if ($1 < 200) exit 1}'",
+            "expected_exit_code": 0,
+            "required": true
+          },
+          {
+            "name": "validate-summary",
+            "command": "jq -e '.summary' $ACTIVITY_TEMP_DIR/BOREDOM_AND_GROWTH_SUMMARY.json",
+            "expected_exit_code": 0,
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "pre_checks": [],
+    "post_checks": [],
+    "quality_gates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learning_mode": true,
+    "target_context_tokens": 6000,
+    "annotation_strategy": "key-components"
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "created_at": "2026-02-24T10:15:00.000Z",
+  "metadata": {}
+}

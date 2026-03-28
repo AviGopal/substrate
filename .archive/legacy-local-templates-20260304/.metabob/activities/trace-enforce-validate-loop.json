@@ -1,0 +1,515 @@
+{
+  "activity_id": "trace-enforce-validate-loop",
+  "name": "trace-enforce-validate-loop",
+  "description": "Self-verifying functional state transformation: trace spec/rule/flow through codebase → enforce via code mutations → validate externally via impulses → aggregate conflicts → ripple changes",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "trace-specification",
+      "subagent": "general",
+      "description": "Trace how a specification, rule, or user flow is implemented in the codebase",
+      "dependencies": [],
+      "prompt": {
+        "template": "Trace the implementation of: {{specificationName}}\n\nSpecification Description:\n{{specificationDescription}}\n\nExpected Behavior:\n{{expectedBehavior}}\n\n---\n\nYour Task:\n1. Use trace-data-flow-single-feature to understand the current implementation\n2. Identify all components involved in this specification\n3. Document the CURRENT STATE vs DESIRED STATE\n4. Create an impulse with the traced flow for downstream tasks\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"components\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"component\": \"ComponentName\",\n      \"currentBehavior\": \"what it does now\",\n      \"desiredBehavior\": \"what it should do\",\n      \"gap\": \"what needs to change\"\n    }\n  ],\n  \"dataFlow\": \"entry → transform → validate → exit\",\n  \"traceImpulseId\": \"trace-{{specificationName}}\"\n}\n```\n\nCreate an impulse:\n- ID: trace-{{specificationName}}\n- Type: templateDefinition\n- Content: The full trace analysis above\n- Budget: 5000 tokens\n\nThis impulse will be used by downstream validation and enforcement tasks.",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification, rule, or flow to trace (e.g., 'budget-validation', 'user-authentication-flow')"
+          },
+          {
+            "name": "specificationDescription",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of what the specification requires"
+          },
+          {
+            "name": "expectedBehavior",
+            "type": "string",
+            "required": true,
+            "description": "Expected behavior or outcome of this specification"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enforce-specification",
+      "subagent": "general",
+      "description": "Enforce the specification through code mutations based on traced gaps",
+      "dependencies": [
+        "trace-specification"
+      ],
+      "prompt": {
+        "template": "Enforce specification: {{specificationName}}\n\nLoad the trace impulse from the previous task: trace-{{specificationName}}\n\nYour Task:\n1. For each component with a gap (currentBehavior != desiredBehavior):\n   - Apply code mutations to close the gap\n   - Use metabob_analyze_change_impact BEFORE changing\n   - Make the change\n   - Use metabob_annotate_component to document WHY\n\n2. Ensure changes ripple through the data flow:\n   - If you change an input schema, update all transformations\n   - If you add validation, propagate to all entry points\n   - If you modify output, update all consumers\n\n3. Create an enforcement summary impulse:\n   - ID: enforcement-{{specificationName}}\n   - Type: memo\n   - Content: List of all changes made with file paths and reasons\n   - Budget: 3000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"changesApplied\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"component\": \"ComponentName\",\n      \"changeMade\": \"what was changed\",\n      \"reason\": \"why this change enforces the spec\",\n      \"impactAnalysis\": \"blast radius summary\"\n    }\n  ],\n  \"enforcementImpulseId\": \"enforcement-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being enforced"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-validation-harness",
+      "subagent": "general",
+      "description": "Create external validation harness using impulses (not LLM-dependent)",
+      "dependencies": [
+        "trace-specification"
+      ],
+      "prompt": {
+        "template": "Create a validation harness for: {{specificationName}}\n\nValidation Strategy:\n{{validationStrategy}}\n\nYour Task:\n1. Create a validation script that:\n   - Loads the application/component\n   - Feeds in test inputs\n   - Captures actual outputs\n   - Compares against expected outputs\n   - Returns PASS/FAIL (no LLM needed)\n\n2. Store expected values as impulses:\n   - ID: validation-{{specificationName}}-case-N\n   - Type: memo\n   - Content: {input: X, expectedOutput: Y}\n   - These are HISTORICAL - can be run without LLM\n\n3. Create the validation harness file:\n   - File: tests/validation-harnesses/{{specificationName}}-harness.ts\n   - Exports: runValidation(input) => {pass: boolean, actual, expected}\n\n4. Create an impulse for the harness:\n   - ID: harness-{{specificationName}}\n   - Type: file\n   - Pointer: tests/validation-harnesses/{{specificationName}}-harness.ts\n   - Budget: 2000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"harnessFile\": \"tests/validation-harnesses/{{specificationName}}-harness.ts\",\n  \"testCases\": [\n    {\n      \"impulseId\": \"validation-{{specificationName}}-case-1\",\n      \"input\": \"sample input\",\n      \"expectedOutput\": \"expected result\"\n    }\n  ],\n  \"harnessImpulseId\": \"harness-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being validated"
+          },
+          {
+            "name": "validationStrategy",
+            "type": "string",
+            "required": true,
+            "description": "How to validate this specification (e.g., 'run activity with budget=5, expect BudgetExceededError', 'call API with invalid user, expect 401')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "run-validation",
+      "subagent": "general",
+      "description": "Execute validation harness and collect results",
+      "dependencies": [
+        "create-validation-harness",
+        "enforce-specification"
+      ],
+      "prompt": {
+        "template": "Run validation harness for: {{specificationName}}\n\nYour Task:\n1. Load the harness impulse: harness-{{specificationName}}\n2. Load all test case impulses: validation-{{specificationName}}-case-*\n3. Execute the validation harness for each test case:\n   - Run the harness\n   - Capture results\n   - Compare actual vs expected\n\n4. Create validation results impulse:\n   - ID: validation-results-{{specificationName}}\n   - Type: memo\n   - Content: PASS/FAIL per test case with details\n   - Budget: 2000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"validationResults\": [\n    {\n      \"testCase\": \"validation-{{specificationName}}-case-1\",\n      \"status\": \"PASS\" or \"FAIL\",\n      \"actual\": \"actual output\",\n      \"expected\": \"expected output\",\n      \"difference\": \"what differed if FAIL\"\n    }\n  ],\n  \"overallStatus\": \"PASS\" or \"FAIL\",\n  \"resultsImpulseId\": \"validation-results-{{specificationName}}\"\n}\n```\n\nIf any test FAILS, include diagnostic information for debugging.",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being validated"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "aggregate-conflicts",
+      "subagent": "general",
+      "description": "Aggregate validation results across all specifications and detect conflicts",
+      "dependencies": [
+        "run-validation"
+      ],
+      "prompt": {
+        "template": "Aggregate validation results and detect conflicts.\n\nCurrent Specification: {{specificationName}}\n\nYour Task:\n1. Load validation results for this specification: validation-results-{{specificationName}}\n\n2. Search for OTHER specification results in the system:\n   - List all impulses matching pattern: validation-results-*\n   - Load each one\n\n3. Detect conflicts:\n   - Do any specifications contradict each other?\n   - Do changes for this spec break other specs?\n   - Are there shared components with different requirements?\n\n4. Cross-reference with CPG:\n   - Use metabob_suggest_related_changes to find files affected by multiple specs\n   - Use metabob_analyze_change_impact to understand overlapping dependencies\n\n5. Create conflict analysis impulse:\n   - ID: conflict-analysis-{{specificationName}}\n   - Type: memo\n   - Content: Conflict matrix and resolution recommendations\n   - Budget: 3000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"otherSpecifications\": [\"spec1\", \"spec2\"],\n  \"conflicts\": [\n    {\n      \"type\": \"CONTRADICTORY_REQUIREMENTS\",\n      \"spec1\": \"budget-validation\",\n      \"spec2\": \"unrestricted-admin-execution\",\n      \"sharedComponent\": \"ActivityExecutor.execute\",\n      \"description\": \"Budget validation conflicts with admin bypass requirement\",\n      \"resolution\": \"Add role-based bypass logic\"\n    }\n  ],\n  \"sharedComponents\": [\n    {\n      \"component\": \"ActivityExecutor.execute\",\n      \"affectedBySpecs\": [\"budget-validation\", \"unrestricted-admin-execution\"],\n      \"recommendation\": \"Refactor to support both requirements\"\n    }\n  ],\n  \"conflictImpulseId\": \"conflict-analysis-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being analyzed for conflicts"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "ripple-changes",
+      "subagent": "general",
+      "description": "Ripple changes across all affected components to ensure functional state consistency",
+      "dependencies": [
+        "aggregate-conflicts"
+      ],
+      "prompt": {
+        "template": "Ripple changes for specification: {{specificationName}}\n\nYour Task:\n1. Load conflict analysis: conflict-analysis-{{specificationName}}\n2. Load enforcement summary: enforcement-{{specificationName}}\n\n3. For each affected component:\n   a. Use metabob_analyze_change_impact to understand full blast radius\n   b. Apply changes to maintain consistency across:\n      - All entry points\n      - All transformations\n      - All validations\n      - All exit points\n   c. Update tests to cover ripple changes\n   d. Annotate components with cross-spec context\n\n4. Resolve conflicts (if any):\n   - Implement resolution strategy from conflict analysis\n   - Add conditional logic for conflicting requirements\n   - Refactor shared components if needed\n\n5. Re-run validation harness:\n   - Execute harness-{{specificationName}} again\n   - Verify PASS status\n   - Re-run harnesses for conflicting specs\n   - Verify all specs still PASS\n\n6. Create ripple summary impulse:\n   - ID: ripple-{{specificationName}}\n   - Type: memo\n   - Content: All components updated, validation status\n   - Budget: 3000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"componentsUpdated\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"component\": \"ComponentName\",\n      \"changeMade\": \"what was updated\",\n      \"reason\": \"why ripple was needed\"\n    }\n  ],\n  \"validationStatus\": {\n    \"thisSpec\": \"PASS\",\n    \"conflictingSpecs\": [\n      {\"spec\": \"other-spec\", \"status\": \"PASS\"}\n    ]\n  },\n  \"functionalStateTransition\": {\n    \"before\": \"spec not enforced\",\n    \"after\": \"spec enforced across all components\"\n  },\n  \"rippleImpulseId\": \"ripple-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification whose changes are rippling"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "commit-functional-state-transition",
+      "subagent": "general",
+      "description": "Commit the functional state transition with comprehensive documentation",
+      "dependencies": [
+        "ripple-changes"
+      ],
+      "prompt": {
+        "template": "Commit functional state transition for: {{specificationName}}\n\nYour Task:\n1. Load all impulses created during this workflow:\n   - trace-{{specificationName}}\n   - enforcement-{{specificationName}}\n   - validation-results-{{specificationName}}\n   - conflict-analysis-{{specificationName}}\n   - ripple-{{specificationName}}\n\n2. Create a comprehensive commit message:\n   - Subject: \"feat({{specificationName}}): Enforce [brief description]\"\n   - Body:\n     - **Instructional State Change**: What requirement is now enforced\n     - **Functional State Change**: What code changed to enforce it\n     - **Validation**: How it's verified (harness reference)\n     - **Conflicts Resolved**: Any conflicts addressed\n     - **Components Affected**: List of modified components\n     - **Ripple Impact**: Cross-component changes made\n\n3. Create git commit with:\n   - All modified files\n   - All new test harnesses\n   - Updated flow documentation\n\n4. Tag commit with specification metadata:\n   git tag -a \"spec-{{specificationName}}-v1\" -m \"Specification enforcement: {{specificationName}}\"\n\n5. Create final summary impulse:\n   - ID: final-{{specificationName}}\n   - Type: memo\n   - Content: Complete transformation summary\n   - Budget: 2000 tokens\n\nOutput Format:\n```\nCommit Summary:\n- Specification: {{specificationName}}\n- Files Changed: N\n- Tests Added: M\n- Validation Status: PASS\n- Conflicts Resolved: X\n- Tag: spec-{{specificationName}}-v1\n\nInstructional → Functional State Bridge:\n[What was desired] → [What was implemented] → [How it's verified]\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being committed"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "trace-specification",
+      "subagent": "general",
+      "description": "Trace how a specification, rule, or user flow is implemented in the codebase",
+      "dependencies": [],
+      "prompt": {
+        "template": "Trace the implementation of: {{specificationName}}\n\nSpecification Description:\n{{specificationDescription}}\n\nExpected Behavior:\n{{expectedBehavior}}\n\n---\n\nYour Task:\n1. Use trace-data-flow-single-feature to understand the current implementation\n2. Identify all components involved in this specification\n3. Document the CURRENT STATE vs DESIRED STATE\n4. Create an impulse with the traced flow for downstream tasks\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"components\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"component\": \"ComponentName\",\n      \"currentBehavior\": \"what it does now\",\n      \"desiredBehavior\": \"what it should do\",\n      \"gap\": \"what needs to change\"\n    }\n  ],\n  \"dataFlow\": \"entry → transform → validate → exit\",\n  \"traceImpulseId\": \"trace-{{specificationName}}\"\n}\n```\n\nCreate an impulse:\n- ID: trace-{{specificationName}}\n- Type: templateDefinition\n- Content: The full trace analysis above\n- Budget: 5000 tokens\n\nThis impulse will be used by downstream validation and enforcement tasks.",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification, rule, or flow to trace (e.g., 'budget-validation', 'user-authentication-flow')"
+          },
+          {
+            "name": "specificationDescription",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of what the specification requires"
+          },
+          {
+            "name": "expectedBehavior",
+            "type": "string",
+            "required": true,
+            "description": "Expected behavior or outcome of this specification"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enforce-specification",
+      "subagent": "general",
+      "description": "Enforce the specification through code mutations based on traced gaps",
+      "dependencies": [
+        "trace-specification"
+      ],
+      "prompt": {
+        "template": "Enforce specification: {{specificationName}}\n\nLoad the trace impulse from the previous task: trace-{{specificationName}}\n\nYour Task:\n1. For each component with a gap (currentBehavior != desiredBehavior):\n   - Apply code mutations to close the gap\n   - Use metabob_analyze_change_impact BEFORE changing\n   - Make the change\n   - Use metabob_annotate_component to document WHY\n\n2. Ensure changes ripple through the data flow:\n   - If you change an input schema, update all transformations\n   - If you add validation, propagate to all entry points\n   - If you modify output, update all consumers\n\n3. Create an enforcement summary impulse:\n   - ID: enforcement-{{specificationName}}\n   - Type: memo\n   - Content: List of all changes made with file paths and reasons\n   - Budget: 3000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"changesApplied\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"component\": \"ComponentName\",\n      \"changeMade\": \"what was changed\",\n      \"reason\": \"why this change enforces the spec\",\n      \"impactAnalysis\": \"blast radius summary\"\n    }\n  ],\n  \"enforcementImpulseId\": \"enforcement-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being enforced"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-validation-harness",
+      "subagent": "general",
+      "description": "Create external validation harness using impulses (not LLM-dependent)",
+      "dependencies": [
+        "trace-specification"
+      ],
+      "prompt": {
+        "template": "Create a validation harness for: {{specificationName}}\n\nValidation Strategy:\n{{validationStrategy}}\n\nYour Task:\n1. Create a validation script that:\n   - Loads the application/component\n   - Feeds in test inputs\n   - Captures actual outputs\n   - Compares against expected outputs\n   - Returns PASS/FAIL (no LLM needed)\n\n2. Store expected values as impulses:\n   - ID: validation-{{specificationName}}-case-N\n   - Type: memo\n   - Content: {input: X, expectedOutput: Y}\n   - These are HISTORICAL - can be run without LLM\n\n3. Create the validation harness file:\n   - File: tests/validation-harnesses/{{specificationName}}-harness.ts\n   - Exports: runValidation(input) => {pass: boolean, actual, expected}\n\n4. Create an impulse for the harness:\n   - ID: harness-{{specificationName}}\n   - Type: file\n   - Pointer: tests/validation-harnesses/{{specificationName}}-harness.ts\n   - Budget: 2000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"harnessFile\": \"tests/validation-harnesses/{{specificationName}}-harness.ts\",\n  \"testCases\": [\n    {\n      \"impulseId\": \"validation-{{specificationName}}-case-1\",\n      \"input\": \"sample input\",\n      \"expectedOutput\": \"expected result\"\n    }\n  ],\n  \"harnessImpulseId\": \"harness-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being validated"
+          },
+          {
+            "name": "validationStrategy",
+            "type": "string",
+            "required": true,
+            "description": "How to validate this specification (e.g., 'run activity with budget=5, expect BudgetExceededError', 'call API with invalid user, expect 401')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "run-validation",
+      "subagent": "general",
+      "description": "Execute validation harness and collect results",
+      "dependencies": [
+        "create-validation-harness",
+        "enforce-specification"
+      ],
+      "prompt": {
+        "template": "Run validation harness for: {{specificationName}}\n\nYour Task:\n1. Load the harness impulse: harness-{{specificationName}}\n2. Load all test case impulses: validation-{{specificationName}}-case-*\n3. Execute the validation harness for each test case:\n   - Run the harness\n   - Capture results\n   - Compare actual vs expected\n\n4. Create validation results impulse:\n   - ID: validation-results-{{specificationName}}\n   - Type: memo\n   - Content: PASS/FAIL per test case with details\n   - Budget: 2000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"validationResults\": [\n    {\n      \"testCase\": \"validation-{{specificationName}}-case-1\",\n      \"status\": \"PASS\" or \"FAIL\",\n      \"actual\": \"actual output\",\n      \"expected\": \"expected output\",\n      \"difference\": \"what differed if FAIL\"\n    }\n  ],\n  \"overallStatus\": \"PASS\" or \"FAIL\",\n  \"resultsImpulseId\": \"validation-results-{{specificationName}}\"\n}\n```\n\nIf any test FAILS, include diagnostic information for debugging.",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being validated"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "aggregate-conflicts",
+      "subagent": "general",
+      "description": "Aggregate validation results across all specifications and detect conflicts",
+      "dependencies": [
+        "run-validation"
+      ],
+      "prompt": {
+        "template": "Aggregate validation results and detect conflicts.\n\nCurrent Specification: {{specificationName}}\n\nYour Task:\n1. Load validation results for this specification: validation-results-{{specificationName}}\n\n2. Search for OTHER specification results in the system:\n   - List all impulses matching pattern: validation-results-*\n   - Load each one\n\n3. Detect conflicts:\n   - Do any specifications contradict each other?\n   - Do changes for this spec break other specs?\n   - Are there shared components with different requirements?\n\n4. Cross-reference with CPG:\n   - Use metabob_suggest_related_changes to find files affected by multiple specs\n   - Use metabob_analyze_change_impact to understand overlapping dependencies\n\n5. Create conflict analysis impulse:\n   - ID: conflict-analysis-{{specificationName}}\n   - Type: memo\n   - Content: Conflict matrix and resolution recommendations\n   - Budget: 3000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"otherSpecifications\": [\"spec1\", \"spec2\"],\n  \"conflicts\": [\n    {\n      \"type\": \"CONTRADICTORY_REQUIREMENTS\",\n      \"spec1\": \"budget-validation\",\n      \"spec2\": \"unrestricted-admin-execution\",\n      \"sharedComponent\": \"ActivityExecutor.execute\",\n      \"description\": \"Budget validation conflicts with admin bypass requirement\",\n      \"resolution\": \"Add role-based bypass logic\"\n    }\n  ],\n  \"sharedComponents\": [\n    {\n      \"component\": \"ActivityExecutor.execute\",\n      \"affectedBySpecs\": [\"budget-validation\", \"unrestricted-admin-execution\"],\n      \"recommendation\": \"Refactor to support both requirements\"\n    }\n  ],\n  \"conflictImpulseId\": \"conflict-analysis-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being analyzed for conflicts"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "ripple-changes",
+      "subagent": "general",
+      "description": "Ripple changes across all affected components to ensure functional state consistency",
+      "dependencies": [
+        "aggregate-conflicts"
+      ],
+      "prompt": {
+        "template": "Ripple changes for specification: {{specificationName}}\n\nYour Task:\n1. Load conflict analysis: conflict-analysis-{{specificationName}}\n2. Load enforcement summary: enforcement-{{specificationName}}\n\n3. For each affected component:\n   a. Use metabob_analyze_change_impact to understand full blast radius\n   b. Apply changes to maintain consistency across:\n      - All entry points\n      - All transformations\n      - All validations\n      - All exit points\n   c. Update tests to cover ripple changes\n   d. Annotate components with cross-spec context\n\n4. Resolve conflicts (if any):\n   - Implement resolution strategy from conflict analysis\n   - Add conditional logic for conflicting requirements\n   - Refactor shared components if needed\n\n5. Re-run validation harness:\n   - Execute harness-{{specificationName}} again\n   - Verify PASS status\n   - Re-run harnesses for conflicting specs\n   - Verify all specs still PASS\n\n6. Create ripple summary impulse:\n   - ID: ripple-{{specificationName}}\n   - Type: memo\n   - Content: All components updated, validation status\n   - Budget: 3000 tokens\n\nOutput Format:\n```json\n{\n  \"specificationName\": \"{{specificationName}}\",\n  \"componentsUpdated\": [\n    {\n      \"file\": \"path/to/file.ts\",\n      \"component\": \"ComponentName\",\n      \"changeMade\": \"what was updated\",\n      \"reason\": \"why ripple was needed\"\n    }\n  ],\n  \"validationStatus\": {\n    \"thisSpec\": \"PASS\",\n    \"conflictingSpecs\": [\n      {\"spec\": \"other-spec\", \"status\": \"PASS\"}\n    ]\n  },\n  \"functionalStateTransition\": {\n    \"before\": \"spec not enforced\",\n    \"after\": \"spec enforced across all components\"\n  },\n  \"rippleImpulseId\": \"ripple-{{specificationName}}\"\n}\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification whose changes are rippling"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "commit-functional-state-transition",
+      "subagent": "general",
+      "description": "Commit the functional state transition with comprehensive documentation",
+      "dependencies": [
+        "ripple-changes"
+      ],
+      "prompt": {
+        "template": "Commit functional state transition for: {{specificationName}}\n\nYour Task:\n1. Load all impulses created during this workflow:\n   - trace-{{specificationName}}\n   - enforcement-{{specificationName}}\n   - validation-results-{{specificationName}}\n   - conflict-analysis-{{specificationName}}\n   - ripple-{{specificationName}}\n\n2. Create a comprehensive commit message:\n   - Subject: \"feat({{specificationName}}): Enforce [brief description]\"\n   - Body:\n     - **Instructional State Change**: What requirement is now enforced\n     - **Functional State Change**: What code changed to enforce it\n     - **Validation**: How it's verified (harness reference)\n     - **Conflicts Resolved**: Any conflicts addressed\n     - **Components Affected**: List of modified components\n     - **Ripple Impact**: Cross-component changes made\n\n3. Create git commit with:\n   - All modified files\n   - All new test harnesses\n   - Updated flow documentation\n\n4. Tag commit with specification metadata:\n   git tag -a \"spec-{{specificationName}}-v1\" -m \"Specification enforcement: {{specificationName}}\"\n\n5. Create final summary impulse:\n   - ID: final-{{specificationName}}\n   - Type: memo\n   - Content: Complete transformation summary\n   - Budget: 2000 tokens\n\nOutput Format:\n```\nCommit Summary:\n- Specification: {{specificationName}}\n- Files Changed: N\n- Tests Added: M\n- Validation Status: PASS\n- Conflicts Resolved: X\n- Tag: spec-{{specificationName}}-v1\n\nInstructional → Functional State Bridge:\n[What was desired] → [What was implemented] → [How it's verified]\n```",
+        "variables": [
+          {
+            "name": "specificationName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the specification being committed"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-03-02T19:01:44.199Z",
+  "metadata": {}
+}

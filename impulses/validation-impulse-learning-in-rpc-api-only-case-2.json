@@ -1,0 +1,34 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-2",
+  "type": "memo",
+  "priority": "medium",
+  "budget": 500,
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case"
+  },
+  "metadata": {
+    "testCase": 2,
+    "description": "No normalizePattern() in opencode"
+  },
+  "content": {
+    "input": {
+      "testType": "grep",
+      "config": {
+        "pattern": "normalizePattern",
+        "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts"
+      }
+    },
+    "expectedOutput": {
+      "pass": true,
+      "actual": {
+        "matchCount": 0
+      },
+      "expected": {
+        "function": "normalizePattern",
+        "maxMatches": 0
+      },
+      "reason": "No normalizePattern() found in opencode impulse learning"
+    }
+  }
+}

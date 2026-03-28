@@ -1,0 +1,136 @@
+# metabob-analysis-api Repository Spec (Orchestration)
+# Source of truth: metabob-devbob/openspec/
+# This file coordinates analysis-api development from metabob-devbob
+
+name: metabob-analysis-api
+version: 1.0.0
+status: draft
+owner: analysis-api-agent
+
+# Repository location
+repository:
+  path: repos/metabob-analysis-api
+  git_remote: none (separate git repo without remote yet, likely to be created during implementation, potentially git@github.com:MetabobProject/metabob-analysis-api.git)
+  branch: main
+  language: typescript
+  runtime: bun
+  framework: hono
+  size_estimate: 3000-5000 LOC
+
+# What this repo provides
+provides:
+  - id: http-api-v2-analysis
+    version: 1.0.0
+    contract: openspec/contracts/http-api-v2-analysis.md
+    stability: stable
+    description: HTTP API for code analysis operations
+
+# What this repo depends on
+depends_on:
+  - id: surrealdb-schema
+    version: ^1.0.0
+    contract: openspec/contracts/surrealdb-schema.md
+    critical: true
+    tables:
+      - analysis_problems
+      - code_components
+      - component_annotations
+      - cochange_patterns
+      - impact_relations
+    description: Shared database schema
+
+  - id: cpg-library
+    version: ^1.0.0
+    contract: openspec/contracts/cpg-library-api.md
+    critical: true
+    description: Code Property Graph library
+
+# Deployment configuration
+deployment:
+  helm_chart: helm/charts/metabob-analysis-api
+  namespace: activity-system
+  service_name: metabob-analysis-api
+  replicas: 2
+  port: 8080
+  health_check:
+    path: /health
+    interval: 10s
+    timeout: 5s
+  ingress:
+    enabled: true
+    host: analysis.minibob.local
+    paths:
+      - /v2/analysis
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  environment:
+    SURREALDB_URL: http://surrealdb.activity-system.svc.cluster.local:8000
+    SURREALDB_NAMESPACE: activity-system
+    SURREALDB_DATABASE: learning_loop
+    LOG_LEVEL: INFO
+
+# Validation configuration
+validation:
+  unit_tests:
+    command: bun test
+    required_coverage: 75%
+  integration_tests:
+    command: bun run test-integration.ts
+    dependencies:
+      - surrealdb available
+      - cpg-library installed
+  e2e_tests:
+    - openspec/contracts/e2e-tests.md#e2e-1-full-analysis-flow
+    - openspec/contracts/e2e-tests.md#e2e-2-co-change-prediction
+    - openspec/contracts/e2e-tests.md#e2e-5-impact-analysis
+  api_validation:
+    - GET /v2/analysis/priority returns issues
+    - POST /v2/analysis/codebase builds CPG
+    - POST /v2/analysis/annotate stores annotation
+    - POST /v2/analysis/suggest-changes uses hybrid scoring
+    - Performance targets met (P50 < 100ms, P99 < 300ms)
+  health_validation:
+    - GET /health returns 200
+    - Database connection healthy
+    - CPG library functional
+
+# Commit traceability
+commit_convention:
+  format: "type: description (refs: change-id#task-id spec: contract@version)"
+  types: [feat, fix, refactor, docs, test, chore, perf]
+  examples:
+    - "feat: add priority ranking (refs: analysis-api-extraction#API-3 spec: http-api-v2-analysis@1.0.0)"
+    - "perf: optimize co-change queries (refs: analysis-api-extraction#API-14 spec: http-api-v2-analysis@1.0.0)"
+
+# Delegation prerequisites
+delegation:
+  can_delegate: true
+  agent_type: repo-agent
+  prerequisites:
+    - Read openspec/contracts/http-api-v2-analysis.md for API contract
+    - Understand SurrealDB schema in openspec/contracts/surrealdb-schema.md
+    - Review CPG library contract in openspec/contracts/cpg-library-api.md
+    - Understand hybrid scoring (60% embedding + 40% co-change)
+
+# Ripple configuration
+ripple:
+  notify_on_change:
+    - openspec/repos/metabob-mcp.yaml
+    - openspec/repos/metabob-cloud-dashboard.yaml
+  check_before_complete:
+    - Verify contract openspec/contracts/http-api-v2-analysis.md matches implementation
+    - Run performance benchmarks (P50 < 100ms, P99 < 300ms)
+    - Test all 7 endpoints with live data
+    - Run E2E tests with live data
+    - Ensure system remains operational (helm deployment healthy)
+
+metadata:
+  created: 2026-03-23
+  last_updated: 2026-03-23
+  change_id: analysis-api-extraction
+  tasks_file: repos/metabob-analysis-api/openspec/tasks.md

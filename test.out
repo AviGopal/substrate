@@ -1,0 +1,123 @@
+🧪 Testing Helmfile Configuration for slack-bot
+================================================
+
+📋 1. Checking helmfile list...
+NAME     	NAMESPACE	ENABLED	INSTALLED	LABELS                                       	CHART                  	VERSION
+slack-bot	metabob  	true   	true     	chart:charts,name:slack-bot,namespace:metabob	charts/slack-bot/charts
+
+📋 2. Running helmfile diff...
+Comparing release=slack-bot, chart=charts/slack-bot/charts, namespace=metabob
+metabob, slack-bot, Deployment (apps) has been added:
+- 
++ # Source: slack-bot/templates/deployment.yaml
++ apiVersion: apps/v1
++ kind: Deployment
++ metadata:
++   name: slack-bot
++   labels:
++     helm.sh/chart: slack-bot-1.0.0
++     app.kubernetes.io/name: slack-bot
++     app.kubernetes.io/instance: slack-bot
++     app.kubernetes.io/version: "1.0.0"
++     app.kubernetes.io/managed-by: Helm
++ spec:
++   replicas: 1
++   selector:
++     matchLabels:
++       app.kubernetes.io/name: slack-bot
++       app.kubernetes.io/instance: slack-bot
++   template:
++     metadata:
++       labels:
++         app.kubernetes.io/name: slack-bot
++         app.kubernetes.io/instance: slack-bot
++     spec:
++       serviceAccountName: slack-bot
++       securityContext:
++         fsGroup: 2000
++       containers:
++       - name: slack-bot
++         securityContext:
++             capabilities:
++               drop:
++               - ALL
++             readOnlyRootFilesystem: false
++             runAsNonRoot: true
++             runAsUser: 1000
++         image: "metabobapp/slack-bot:v1.0.0"
++         imagePullPolicy: Always
++         env:
++         - name: SLACK_BOT_TOKEN
++           valueFrom:
++             secretKeyRef:
++               name: slack-bot
++               key: slack-bot-token
++         - name: SLACK_SIGNING_SECRET
++           valueFrom:
++             secretKeyRef:
++               name: slack-bot
++               key: slack-signing-secret
++         - name: SLACK_APP_TOKEN
++           valueFrom:
++             secretKeyRef:
++               name: slack-bot
++               key: slack-app-token
++         - name: OPENCODE_BACKEND_URL
++           value: "https://ide.metabob.com"
++         resources:
++             limits:
++               cpu: 1000m
++               memory: 512Mi
++             requests:
++               cpu: 200m
++               memory: 256Mi
++         livenessProbe:
++           exec:
++             command:
++             - node
++             - -e
++             - "console.log('healthy')"
++           initialDelaySeconds: 30
++           periodSeconds: 30
++         readinessProbe:
++           exec:
++             command:
++             - node
++             - -e
++             - "console.log('ready')"
++           initialDelaySeconds: 5
++           periodSeconds: 10
+metabob, slack-bot, Secret (v1) has been added:
++ # Source: slack-bot/templates/secret.yaml
++ apiVersion: v1
++ kind: Secret
++ metadata:
++   labels:
++     app.kubernetes.io/instance: slack-bot
++     app.kubernetes.io/managed-by: Helm
++     app.kubernetes.io/name: slack-bot
++     app.kubernetes.io/version: 1.0.0
++     helm.sh/chart: slack-bot-1.0.0
++   name: slack-bot
++ data:
++   slack-app-token: '++++++++ # (0 bytes)'
++   slack-bot-token: '++++++++ # (0 bytes)'
++   slack-signing-secret: '++++++++ # (0 bytes)'
++ type: Opaque
+
+metabob, slack-bot, ServiceAccount (v1) has been added:
+- 
++ # Source: slack-bot/templates/serviceaccount.yaml
++ apiVersion: v1
++ kind: ServiceAccount
++ metadata:
++   name: slack-bot
++   labels:
++     helm.sh/chart: slack-bot-1.0.0
++     app.kubernetes.io/name: slack-bot
++     app.kubernetes.io/instance: slack-bot
++     app.kubernetes.io/version: "1.0.0"
++     app.kubernetes.io/managed-by: Helm
+
+
+📋 3. If errors above, here's the helm template output:

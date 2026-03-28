@@ -1,0 +1,252 @@
+{
+  "name": "v3-compat",
+  "description": "Create activity templates using behavior-informed design patterns - incorporates empirical observations of agent template creation process (Backend compatible version)",
+  "category": "feature",
+  "variables": {
+    "template_name": {
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "Human-readable name for the activity (e.g., 'Deploy to Production')"
+    },
+    "template_id": {
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "Kebab-case identifier (e.g., 'deploy-production-v1')"
+    },
+    "category": {
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "Activity category: feature, bugfix, refactor, infrastructure, tool"
+    },
+    "description": {
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "Clear description of what this activity does"
+    },
+    "pattern_description": {
+      "type": "string",
+      "required": false,
+      "default": null,
+      "description": "Optional: Description of successful interaction pattern to formalize"
+    }
+  },
+  "context_requirements": [],
+  "task_steps": [
+    {
+      "id": "analyze-examples",
+      "order": 0,
+      "subagent": "general",
+      "description": "Study Example Templates: Extract patterns and best practices from high-quality templates",
+      "dependencies": [],
+      "prompt": {
+        "template": "Study the provided example activity templates from the highQualityExamples context.\n\n**Your Task**: Extract reusable patterns for creating '{{template_name}}' (category: {{category}}).\n\n**Analysis Steps**:\n\n1. **Task Count Patterns**\n   - How many tasks do successful templates have?\n   - What's the optimal range? (Hint: usually 3-5)\n\n2. **Validation Strategies**\n   - What validation checks are used?\n   - How comprehensive are they?\n   - Any clever validation patterns?\n\n3. **Retry Configurations**\n   - Which retry strategies are used where?\n   - When is 'simple' vs 'progressive-context' vs 'trailblazing' appropriate?\n\n4. **Variable Usage**\n   - How are variables defined (types, defaults)?\n   - How are they interpolated in prompts using {{var}}?\n\n5. **Tool Specifications**\n   - Which tools are commonly required vs optional?\n   - Any patterns in tool usage by task type?\n\n**Output**: Create PATTERN_ANALYSIS.md with these sections:\n## Observed Patterns\n## Best Practices\n## Anti-Patterns to Avoid\n## Recommendations for {{template_name}}",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": [
+          "template_name",
+          "category"
+        ]
+      },
+      "validation": {
+        "required_files": [
+          "PATTERN_ANALYSIS.md"
+        ],
+        "required_patterns": [
+          "## Observed Patterns",
+          "## Best Practices",
+          "## Anti-Patterns to Avoid",
+          "## Recommendations"
+        ],
+        "forbidden_patterns": [
+          "TODO",
+          "TBD",
+          "FIXME"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "The pattern analysis is incomplete. Re-read the examples and ensure you document: task count patterns, validation strategies, retry configurations, variable usage, and tool specifications. Be specific with examples."
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "design-template-structure",
+      "order": 1,
+      "subagent": "general",
+      "description": "Design Template Structure: Plan task graph, variables, and validation strategy",
+      "dependencies": [
+        "analyze-examples"
+      ],
+      "prompt": {
+        "template": "Based on your pattern analysis, design the structure for '{{template_name}}'.\n\n**Requirements**:\n- Template ID: {{template_id}}\n- Category: {{category}}\n- Description: {{description}}\n{{#if pattern_description}}- Pattern to formalize: {{pattern_description}}{{/if}}\n\n**Design Tasks**:\n\n1. **Task Graph Design**\n   - How many tasks? (Recommend 3-5)\n   - What does each task accomplish?\n   - What are the dependencies?\n   - Which subagent for each task?\n\n2. **Variable Definitions**\n   - What input variables are needed?\n   - What are their types? (string, number, object, array)\n   - What are sensible defaults?\n   - Which are required vs optional?\n\n3. **Validation Strategy**\n   - What files should each task create?\n   - What patterns should appear in outputs?\n   - What patterns should be forbidden?\n   - Any validation commands to run?\n\n4. **Tool Requirements**\n   - What tools does each task need?\n   - Which are required vs optional?\n\n**Output**: Create TEMPLATE_DESIGN.md with:\n\n## Task Graph\n```\ntask-1-id (subagent: X)\n  Purpose: ...\n  Validation: ...\n  Tools: ...\n  \u2193\ntask-2-id (subagent: Y)\n  Purpose: ...\n  Dependencies: [task-1-id]\n  Validation: ...\n  Tools: ...\n```\n\n## Variables\n```json\n{\n  \"var_name\": {\n    \"type\": \"string\",\n    \"required\": true,\n    \"description\": \"...\",\n    \"default\": \"...\"\n  }\n}\n```\n\n## Validation Strategy\n- Task 1: File X must exist, contain pattern Y\n- Task 2: Command Z must succeed\n\n## Tool Requirements  \n- Task 1: bash (required), write (optional)\n- Task 2: read (required)",
+        "max_tokens": 10000,
+        "compression_strategy": "filter",
+        "variables": [
+          "template_name",
+          "template_id",
+          "category",
+          "description",
+          "pattern_description"
+        ]
+      },
+      "validation": {
+        "required_files": [
+          "TEMPLATE_DESIGN.md"
+        ],
+        "required_patterns": [
+          "## Task Graph",
+          "## Variables",
+          "## Validation Strategy",
+          "## Tool Requirements",
+          "\u2193"
+        ],
+        "forbidden_patterns": [
+          "TODO",
+          "TBD"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "The design is incomplete. Ensure you specify: task graph with dependencies, all variables with types, validation strategy per task, and tool requirements per task. Use the format shown in the prompt."
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "write-template-json",
+      "order": 2,
+      "subagent": "general",
+      "description": "Write Template JSON: Convert design into complete ActivityTemplate JSON",
+      "dependencies": [
+        "design-template-structure"
+      ],
+      "prompt": {
+        "template": "Create the complete ActivityTemplate JSON for '{{template_name}}'.\n\n**Source**:\n- Your design: TEMPLATE_DESIGN.md\n- Examples: highQualityExamples context\n- Schema: schemaReference context (if available)\n\n**Required Top-Level Fields**:\n```json\n{\n  \"variant_id\": \"{{template_id}}\",\n  \"activity_id\": \"{{template_id}}\",\n  \"variant_name\": \"v1-baseline\",\n  \"version\": 1,\n  \"description\": \"{{description}}\",\n  \"variables\": { ... },\n  \"prompt_strategy\": \"guided\",\n  \"context_budget_tokens\": 10000,\n  \"expected_duration_ms\": 60000,\n  \"expected_cost\": 0.10,\n  \"expected_quality_score\": 0.85,\n  \"status\": \"active\",\n  \"tasks\": [ ... ]\n}\n```\n\n**Required Task Fields** (for EACH task):\n```json\n{\n  \"id\": \"task-id\",\n  \"subagent\": \"general\",\n  \"description\": \"...\",\n  \"dependencies\": [],\n  \"guidance\": [...],\n  \"impulse_refs\": [],\n  \"prompt\": {\n    \"template\": \"...\",\n    \"max_tokens\": 8000,\n    \"compression_strategy\": \"filter\",\n    \"variables\": []\n  },\n  \"validation\": {\n    \"required_files\": [],\n    \"required_patterns\": [],\n    \"forbidden_patterns\": [],\n    \"commands\": []\n  },\n  \"retry\": {\n    \"max_attempts\": 3,\n    \"strategy\": \"simple\",\n    \"fallback_prompt\": \"\"\n  },\n  \"metrics\": {\n    \"success_rate\": 0,\n    \"avg_tokens\": 0,\n    \"avg_duration\": 0,\n    \"common_failures\": []\n  },\n  \"tools\": {\n    \"required\": [],\n    \"optional\": [],\n    \"disabled\": []\n  }\n}\n```\n\n**Checklist Before Finishing**:\n- [ ] All variables from design included with types\n- [ ] Task count is 3-7 (ideally 3-5)\n- [ ] Each task has ALL required fields\n- [ ] Dependencies form valid DAG (no cycles)\n- [ ] Variable interpolation uses {{variable}} syntax\n- [ ] No TODO/TBD/FIXME anywhere\n\n**Output**: Write complete template to {{template_id}}.json",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": [
+          "template_name",
+          "template_id",
+          "description"
+        ]
+      },
+      "validation": {
+        "required_files": [
+          "*.json"
+        ],
+        "required_patterns": [
+          "\"variant_id\":",
+          "\"activity_id\":",
+          "\"variables\":",
+          "\"tasks\":",
+          "\"validation\":",
+          "\"retry\":",
+          "\"metrics\":",
+          "\"tools\":"
+        ],
+        "forbidden_patterns": [
+          "TODO",
+          "TBD",
+          "FIXME",
+          "\"subagent\": \"\"",
+          "\"max_tokens\": 0"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context",
+        "fallback_prompt": "The template JSON is incomplete or invalid. Review the examples again and ensure ALL required fields are present for the top-level template and EACH task. Check that variables are properly defined with types."
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "validate-template",
+      "order": 3,
+      "subagent": "general",
+      "description": "Validate Template: Check JSON syntax, required fields, and structural correctness",
+      "dependencies": [
+        "write-template-json"
+      ],
+      "prompt": {
+        "template": "Validate the created template {{template_id}}.json\n\n**Validation Steps**:\n\n1. **JSON Syntax**\n   ```bash\n   jq empty {{template_id}}.json\n   ```\n   Must succeed without errors.\n\n2. **Required Top-Level Fields**\n   Check these fields exist:\n   - variant_id, activity_id, version, description\n   - variables, tasks, status\n   \n3. **Task Structure**\n   For EACH task, verify fields exist:\n   - id, subagent, description, dependencies\n   - guidance, prompt, validation, retry, metrics, tools\n\n4. **Task Count**\n   ```bash\n   jq '.tasks | length' {{template_id}}.json\n   ```\n   Should be 3-7 (warn if outside range).\n\n5. **Variable References**\n   - All {{variable}} references in prompts must be defined in variables section\n   - Check with: `jq '.tasks[].prompt.variables[]' | sort -u`\n\n6. **Quality Checks**\n   - No TODO, TBD, or FIXME\n   - No empty subagent assignments\n   - No zero max_tokens\n\n**Output**: Create VALIDATION_REPORT.md with:\n\n## Validation Results\n- [x] JSON syntax valid\n- [x] Required fields present\n- [x] Task count: N (acceptable/warning)\n- [x] Variable references valid\n- [x] Quality checks passed\n\n## Issues Found\n(List any issues)\n\n## Recommendation\n[ PASS / NEEDS_FIXES ]",
+        "max_tokens": 8000,
+        "compression_strategy": "filter",
+        "variables": [
+          "template_id"
+        ]
+      },
+      "validation": {
+        "required_files": [
+          "VALIDATION_REPORT.md"
+        ],
+        "required_patterns": [
+          "## Validation Results",
+          "## Recommendation"
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "name": "validate-json-syntax",
+            "command": "jq empty *.json",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "trailblazing",
+        "fallback_prompt": "Validation failed. Fix the issues found and re-validate. If JSON syntax is invalid, fix the JSON. If required fields are missing, add them. If variable references are undefined, either define them or fix the references."
+      },
+      "impulse_refs": []
+    },
+    {
+      "id": "document-template",
+      "order": 4,
+      "subagent": "general",
+      "description": "Document Template: Create usage guide and examples",
+      "dependencies": [
+        "validate-template"
+      ],
+      "prompt": {
+        "template": "Create documentation for the template '{{template_name}}'.\n\n**Output**: TEMPLATE_SUMMARY.md\n\n## Template: {{template_name}}\n\n**ID**: {{template_id}}  \n**Category**: {{category}}  \n**Description**: {{description}}\n\n### Purpose\nExplain what this activity does and when to use it.\n\n### Variables\nList each variable:\n- `variable_name` (type): Description [default: value]\n\n### Example Usage\n```\nactivity({\n  activityId: \"{{template_id}}\",\n  variables: {\n    var1: \"value1\",\n    var2: \"value2\"\n  },\n  reason: \"Brief explanation of why running this activity\"\n})\n```\n\n### Tasks\n1. **task-1-id**: Brief description\n2. **task-2-id**: Brief description\n\n### Expected Outcome\nWhat should exist after successful execution.\n\n### Troubleshooting\nCommon issues and solutions.",
+        "max_tokens": 6000,
+        "compression_strategy": "filter",
+        "variables": [
+          "template_name",
+          "template_id",
+          "category",
+          "description"
+        ]
+      },
+      "validation": {
+        "required_files": [
+          "TEMPLATE_SUMMARY.md"
+        ],
+        "required_patterns": [
+          "## Template:",
+          "### Purpose",
+          "### Variables",
+          "### Example Usage",
+          "### Tasks"
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple",
+        "fallback_prompt": "Documentation is incomplete. Include all required sections: Purpose, Variables (with types and defaults), Example Usage, Tasks overview, Expected Outcome, Troubleshooting."
+      },
+      "impulse_refs": []
+    }
+  ],
+  "_original_activity_id": "create-activity-template"
+}

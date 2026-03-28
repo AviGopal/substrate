@@ -1,0 +1,26 @@
+{
+  "id": "validation-dynamic-activity-creation-devbob-e2e-validation-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "testCase",
+    "specification": "dynamic-activity-creation-devbob-e2e-validation",
+    "testName": "SurrealDB Data Persistence"
+  },
+  "content": {
+    "input": {
+      "database": "SurrealDB",
+      "tables": ["activity_executions", "template_metrics"],
+      "queryWindow": "1 hour"
+    },
+    "expectedOutput": {
+      "recordsCreated": true,
+      "metricsUpdated": true,
+      "thompsonAlphaIncremented": true,
+      "thompsonBetaIncremented": true
+    },
+    "validationCommand": "kubectl exec -it deployment/surrealdb -n metabob -- /surreal sql --namespace metabob --database learning_loop --user root --pass root \"SELECT COUNT(*) FROM activity_executions WHERE created_at > time::now() - 1h;\"",
+    "expectedResult": "Non-zero count of activity records in last hour"
+  },
+  "budget": 500,
+  "loaded": true
+}

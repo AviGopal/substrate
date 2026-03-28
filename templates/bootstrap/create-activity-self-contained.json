@@ -1,0 +1,92 @@
+{
+  "activity_id": "create-activity-self-contained",
+  "name": "Create Activity Template (Self-Contained)",
+  "description": "Create activity templates without requiring example files or specific project structure - fully self-contained and repository-agnostic. Registers template directly to backend without local file dependencies.",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "design-and-generate",
+      "subagent": "general",
+      "description": "Design and generate complete activity template JSON in one step",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create an activity template for: {{templateName}}\n\nDescription: {{templateDescription}}\nCategory: {{category}}\n\n**Task**: Write a complete activity template JSON to `/tmp/activity-{{templateId}}/template.json`\n\n**Template Structure**:\n```json\n{\n  \"activity_id\": \"{{templateId}}\",\n  \"name\": \"{{templateName}}\",\n  \"description\": \"{{templateDescription}}\",\n  \"category\": \"{{category}}\",\n  \"task_steps\": [\n    {\n      \"id\": \"task-1\",\n      \"subagent\": \"general\",\n      \"description\": \"What this task does\",\n      \"dependencies\": [],\n      \"prompt\": {\n        \"template\": \"Clear instructions (100-200 words). Use {{variable}} syntax.\",\n        \"max_tokens\": 8000,\n        \"compression_strategy\": \"filter\",\n        \"variables\": [{\"name\": \"var\", \"type\": \"string\", \"required\": true, \"description\": \"Purpose\"}]\n      },\n      \"validation\": {\n        \"required_files\": [],\n        \"required_patterns\": [],\n        \"forbidden_patterns\": [\"TODO\", \"FIXME\"],\n        \"commands\": []\n      },\n      \"retry\": {\"max_attempts\": 2, \"strategy\": \"simple\"}\n    }\n  ],\n  \"variables\": {},\n  \"context_requirements\": []\n}\n```\n\n**Design 3-4 tasks** that accomplish: {{templateDescription}}\n\n**Guidelines**:\n- Each task: ONE clear purpose\n- Prompts: 100-200 words (not 500+)\n- Dependencies: Linear flow (task-1 → task-2 → task-3)\n- NO git-related validation\n- Use /tmp/ for file outputs\n\n**Validate after writing**:\n```bash\nmkdir -p /tmp/activity-{{templateId}}\ncat /tmp/activity-{{templateId}}/template.json | python3 -m json.tool > /dev/null\n```",
+        "max_tokens": 12000,
+        "compression_strategy": "filter",
+        "variables": [
+          {
+            "name": "templateName",
+            "type": "string",
+            "required": true,
+            "description": "Human-readable template name"
+          },
+          {
+            "name": "templateDescription",
+            "type": "string",
+            "required": true,
+            "description": "What this template does"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "required": true,
+            "description": "feature, bugfix, refactor, tool, or infrastructure"
+          },
+          {
+            "name": "templateId",
+            "type": "string",
+            "required": false,
+            "description": "Kebab-case template ID",
+            "default": "{{templateName}}"
+          }
+        ]
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": ["\"activity_id\":", "\"task_steps\":"],
+        "forbidden_patterns": ["preChecks", "\"git"],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "register-template",
+      "subagent": "general",
+      "description": "Register template with backend and create success documentation",
+      "dependencies": ["design-and-generate"],
+      "prompt": {
+        "template": "Register the template with the backend.\n\n**Input**: `/tmp/activity-{{templateId}}/template.json`\n\n**Steps**:\n1. Use `register_activity_template` tool:\n   - file_path: /tmp/activity-{{templateId}}/template.json\n   - register_with_metabob: true\n\n2. Write success message to `/tmp/activity-{{templateId}}/SUCCESS.md`:\n```markdown\n# Template Created: {{templateName}}\n\n**ID**: {{templateId}}\n**Category**: {{category}}\n**Status**: Registered with backend\n\n## Usage\n```bash\nopencode run --prompt \"Use {{templateId}} template to...\"\n```\n\n## Next Steps\n1. Test with sample inputs\n2. Track metrics (target: 80%+ success over 5+ runs)\n3. Promote to metabob-proto when proven\n```",
+        "max_tokens": 6000,
+        "compression_strategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": ["Template Created", "Status: Registered"],
+        "forbidden_patterns": ["error", "failed"],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "variables": {},
+  "context_requirements": [],
+  "trailblazing": {
+    "enabled": true,
+    "maxRecoveryAttempts": 3,
+    "maxCostPerTask": 1.0,
+    "maxTotalCost": 5.0
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

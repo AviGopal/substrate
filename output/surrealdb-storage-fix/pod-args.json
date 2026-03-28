@@ -1,0 +1,10 @@
+[
+  "start",
+  "--log",
+  "info",
+  "--user",
+  "root",
+  "--pass",
+  "$(SURREAL_PASSWORD)",
+  "file:/data/database"
+]

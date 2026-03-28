@@ -1,0 +1,17 @@
+# Environment configuration for minibob testing namespaces
+# Layer 2 & 3: Progressive validation (single pod + cluster)
+
+backend:
+  enabled: true  # Need backend for testing
+
+dev:
+  enabled: false
+
+testing:
+  singlePod:
+    enabled: true  # Layer 2: Single pod validation
+  cluster:
+    enabled: true  # Layer 3: Multi-vessel coordination
+
+staging:
+  enabled: false

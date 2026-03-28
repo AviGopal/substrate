@@ -1,0 +1,355 @@
+{
+  "activity_id": "setup-docker-compose-testing-environment",
+  "name": "Setup Docker Compose Testing Environment",
+  "description": "Check Docker Compose environment, set up appropriate profiles, and run the application for testing with health checks and validation",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "check-docker-environment",
+      "task_id": "check-docker-environment",
+      "subagent": "general",
+      "description": "Verify Docker and Docker Compose are installed and running",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check the Docker environment and verify prerequisites:\n\n1. Verify Docker is installed and running:\n   - Run: docker --version\n   - Run: docker ps (to check Docker daemon is running)\n   - If Docker is not running, provide clear error message\n\n2. Verify Docker Compose is installed:\n   - Run: docker-compose --version\n   - Verify version is v2.x or higher\n\n3. Check if any services are already running:\n   - Run: docker-compose ps\n   - List running containers and their status\n\n4. Check Docker Compose configuration:\n   - Verify docker-compose.yaml exists\n   - Run: docker-compose config --profiles\n   - List available profiles (stable, devbob, devbob-dev)\n\nProvide a summary:\n- ✅ Docker status\n- ✅ Docker Compose status\n- ✅ Available profiles\n- ✅ Currently running services\n- ⚠️  Any issues or warnings",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker --version",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "docker-compose --version",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "stop-existing-services",
+      "task_id": "stop-existing-services",
+      "subagent": "general",
+      "description": "Stop any existing Docker Compose services to ensure clean start",
+      "dependencies": [
+        "check-docker-environment"
+      ],
+      "prompt": {
+        "template": "Stop any existing Docker Compose services:\n\n1. Check if any services are running:\n   - Run: docker-compose ps\n\n2. If services are running, stop them gracefully:\n   - Run: docker-compose --profile stable --profile devbob --profile devbob-dev down\n   - Wait for services to stop (up to 30 seconds)\n\n3. Verify all services are stopped:\n   - Run: docker-compose ps\n   - Should show no running services\n\n4. Optional: Clean up volumes if requested:\n   {{#if cleanVolumes}}\n   - Run: docker-compose down -v\n   - This will remove all volumes and data\n   {{/if}}\n\nProvide a summary:\n- Services that were stopped\n- Any errors or warnings\n- Clean state confirmed",
+        "variables": [
+          {
+            "name": "cleanVolumes",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to clean up volumes (WARNING: destroys data)",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "start-backend-services",
+      "task_id": "start-backend-services",
+      "subagent": "general",
+      "description": "Start stable backend services (redis, surreal, metabob-rpc-api-server)",
+      "dependencies": [
+        "stop-existing-services"
+      ],
+      "prompt": {
+        "template": "Start the stable backend services:\n\n1. Start services with stable profile:\n   - Run: docker-compose --profile stable up -d\n   - This starts: redis, surreal, surrealist, metabob-rpc-api-server\n\n2. Wait for services to be healthy:\n   - Wait 10 seconds for services to initialize\n   - Run: docker-compose ps\n   - Check that all services show \"running\" or \"healthy\"\n\n3. Verify each service:\n   - Redis: docker-compose exec redis redis-cli ping (should return PONG)\n   - SurrealDB: curl -f http://localhost:8000/health || echo \"SurrealDB not ready\"\n   - API Server: curl -f http://localhost:8080/health || echo \"API Server not ready\"\n\n4. Check logs for any errors:\n   - Run: docker-compose logs --tail=50\n   - Look for ERROR or FATAL messages\n\nProvide a summary:\n- ✅ Services started successfully\n- ✅ Health check results\n- ⚠️  Any warnings or issues\n- 📊 Service ports and access URLs",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker-compose ps | grep -E '(redis|surreal|metabob-rpc-api-server)' | grep -c 'Up'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "start-devbob-container",
+      "task_id": "start-devbob-container",
+      "subagent": "general",
+      "description": "Start devbob testing container and verify connectivity",
+      "dependencies": [
+        "start-backend-services"
+      ],
+      "prompt": {
+        "template": "Start the devbob testing container:\n\n1. Start devbob with the appropriate profile:\n   {{#if useDevProfile}}\n   - Run: docker-compose --profile stable --profile devbob-dev up -d\n   - This starts multiple devbob containers with mounted codebases\n   {{else}}\n   - Run: docker-compose --profile stable --profile devbob up -d\n   - This starts a single clean devbob container\n   {{/if}}\n\n2. Wait for devbob to be ready:\n   - Wait 5 seconds for initialization\n   - Run: docker-compose ps devbob-clean\n   - Check status is \"running\"\n\n3. Verify ACP server is accessible:\n   - Run: curl -f http://localhost:3000/health || echo \"ACP not ready\"\n   - Expected: 200 OK response\n\n4. Verify MCP server is accessible (if enabled):\n   - Run: curl -f http://localhost:8082/health || echo \"MCP not ready\"\n   - Expected: 200 OK response\n\n5. Check devbob container logs:\n   - Run: docker-compose logs devbob-clean --tail=30\n   - Look for \"ACP server listening\" or similar startup message\n\nProvide a summary:\n- ✅ Devbob container status\n- ✅ ACP server accessible at http://localhost:3000\n- ✅ MCP server accessible at http://localhost:8082\n- 📋 Ready for activity testing",
+        "variables": [
+          {
+            "name": "useDevProfile",
+            "type": "boolean",
+            "required": false,
+            "description": "Use devbob-dev profile (mounted codebases) instead of clean devbob",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker-compose ps | grep devbob | grep -c 'Up'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "run-health-checks",
+      "task_id": "run-health-checks",
+      "subagent": "general",
+      "description": "Run comprehensive health checks on all services",
+      "dependencies": [
+        "start-devbob-container"
+      ],
+      "prompt": {
+        "template": "Run comprehensive health checks on the Docker Compose environment:\n\n1. Check all container statuses:\n   - Run: docker-compose ps\n   - Verify all expected containers are \"Up\" or \"healthy\"\n\n2. Test backend connectivity:\n   - Redis: docker-compose exec redis redis-cli ping\n   - SurrealDB: curl -s http://localhost:8000/health\n   - API Server: curl -s http://localhost:8080/health\n\n3. Test devbob connectivity:\n   - ACP Server: curl -s http://localhost:3000/health\n   - MCP Server: curl -s http://localhost:8082/health (if enabled)\n\n4. Check resource usage:\n   - Run: docker stats --no-stream --format \"table {{{{.Container}}}}\\t{{{{.CPUPerc}}}}\\t{{{{.MemUsage}}}}\"\n   - Verify no containers are using excessive resources\n\n5. Check for any error logs:\n   - Run: docker-compose logs --since=5m | grep -i error | head -20\n   - Report any critical errors\n\n6. Verify network connectivity between services:\n   - Test that devbob can reach backend services\n   - Run: docker-compose exec devbob-clean curl -s http://metabob-rpc-api-server:8080/health\n\n7. Generate test report:\n   - Provide a table of service statuses\n   - List any warnings or issues\n   - Confirm environment is ready for testing\n\nProvide a comprehensive summary:\n- ✅ All services healthy\n- ✅ Network connectivity verified\n- 📊 Resource usage normal\n- 🚀 Environment ready for testing\n- ⚠️  Any issues or warnings",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "check-docker-environment",
+      "task_id": "check-docker-environment",
+      "subagent": "general",
+      "description": "Verify Docker and Docker Compose are installed and running",
+      "dependencies": [],
+      "prompt": {
+        "template": "Check the Docker environment and verify prerequisites:\n\n1. Verify Docker is installed and running:\n   - Run: docker --version\n   - Run: docker ps (to check Docker daemon is running)\n   - If Docker is not running, provide clear error message\n\n2. Verify Docker Compose is installed:\n   - Run: docker-compose --version\n   - Verify version is v2.x or higher\n\n3. Check if any services are already running:\n   - Run: docker-compose ps\n   - List running containers and their status\n\n4. Check Docker Compose configuration:\n   - Verify docker-compose.yaml exists\n   - Run: docker-compose config --profiles\n   - List available profiles (stable, devbob, devbob-dev)\n\nProvide a summary:\n- ✅ Docker status\n- ✅ Docker Compose status\n- ✅ Available profiles\n- ✅ Currently running services\n- ⚠️  Any issues or warnings",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker --version",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "docker-compose --version",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "stop-existing-services",
+      "task_id": "stop-existing-services",
+      "subagent": "general",
+      "description": "Stop any existing Docker Compose services to ensure clean start",
+      "dependencies": [
+        "check-docker-environment"
+      ],
+      "prompt": {
+        "template": "Stop any existing Docker Compose services:\n\n1. Check if any services are running:\n   - Run: docker-compose ps\n\n2. If services are running, stop them gracefully:\n   - Run: docker-compose --profile stable --profile devbob --profile devbob-dev down\n   - Wait for services to stop (up to 30 seconds)\n\n3. Verify all services are stopped:\n   - Run: docker-compose ps\n   - Should show no running services\n\n4. Optional: Clean up volumes if requested:\n   {{#if cleanVolumes}}\n   - Run: docker-compose down -v\n   - This will remove all volumes and data\n   {{/if}}\n\nProvide a summary:\n- Services that were stopped\n- Any errors or warnings\n- Clean state confirmed",
+        "variables": [
+          {
+            "name": "cleanVolumes",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to clean up volumes (WARNING: destroys data)",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "start-backend-services",
+      "task_id": "start-backend-services",
+      "subagent": "general",
+      "description": "Start stable backend services (redis, surreal, metabob-rpc-api-server)",
+      "dependencies": [
+        "stop-existing-services"
+      ],
+      "prompt": {
+        "template": "Start the stable backend services:\n\n1. Start services with stable profile:\n   - Run: docker-compose --profile stable up -d\n   - This starts: redis, surreal, surrealist, metabob-rpc-api-server\n\n2. Wait for services to be healthy:\n   - Wait 10 seconds for services to initialize\n   - Run: docker-compose ps\n   - Check that all services show \"running\" or \"healthy\"\n\n3. Verify each service:\n   - Redis: docker-compose exec redis redis-cli ping (should return PONG)\n   - SurrealDB: curl -f http://localhost:8000/health || echo \"SurrealDB not ready\"\n   - API Server: curl -f http://localhost:8080/health || echo \"API Server not ready\"\n\n4. Check logs for any errors:\n   - Run: docker-compose logs --tail=50\n   - Look for ERROR or FATAL messages\n\nProvide a summary:\n- ✅ Services started successfully\n- ✅ Health check results\n- ⚠️  Any warnings or issues\n- 📊 Service ports and access URLs",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker-compose ps | grep -E '(redis|surreal|metabob-rpc-api-server)' | grep -c 'Up'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "start-devbob-container",
+      "task_id": "start-devbob-container",
+      "subagent": "general",
+      "description": "Start devbob testing container and verify connectivity",
+      "dependencies": [
+        "start-backend-services"
+      ],
+      "prompt": {
+        "template": "Start the devbob testing container:\n\n1. Start devbob with the appropriate profile:\n   {{#if useDevProfile}}\n   - Run: docker-compose --profile stable --profile devbob-dev up -d\n   - This starts multiple devbob containers with mounted codebases\n   {{else}}\n   - Run: docker-compose --profile stable --profile devbob up -d\n   - This starts a single clean devbob container\n   {{/if}}\n\n2. Wait for devbob to be ready:\n   - Wait 5 seconds for initialization\n   - Run: docker-compose ps devbob-clean\n   - Check status is \"running\"\n\n3. Verify ACP server is accessible:\n   - Run: curl -f http://localhost:3000/health || echo \"ACP not ready\"\n   - Expected: 200 OK response\n\n4. Verify MCP server is accessible (if enabled):\n   - Run: curl -f http://localhost:8082/health || echo \"MCP not ready\"\n   - Expected: 200 OK response\n\n5. Check devbob container logs:\n   - Run: docker-compose logs devbob-clean --tail=30\n   - Look for \"ACP server listening\" or similar startup message\n\nProvide a summary:\n- ✅ Devbob container status\n- ✅ ACP server accessible at http://localhost:3000\n- ✅ MCP server accessible at http://localhost:8082\n- 📋 Ready for activity testing",
+        "variables": [
+          {
+            "name": "useDevProfile",
+            "type": "boolean",
+            "required": false,
+            "description": "Use devbob-dev profile (mounted codebases) instead of clean devbob",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "docker-compose ps | grep devbob | grep -c 'Up'",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "run-health-checks",
+      "task_id": "run-health-checks",
+      "subagent": "general",
+      "description": "Run comprehensive health checks on all services",
+      "dependencies": [
+        "start-devbob-container"
+      ],
+      "prompt": {
+        "template": "Run comprehensive health checks on the Docker Compose environment:\n\n1. Check all container statuses:\n   - Run: docker-compose ps\n   - Verify all expected containers are \"Up\" or \"healthy\"\n\n2. Test backend connectivity:\n   - Redis: docker-compose exec redis redis-cli ping\n   - SurrealDB: curl -s http://localhost:8000/health\n   - API Server: curl -s http://localhost:8080/health\n\n3. Test devbob connectivity:\n   - ACP Server: curl -s http://localhost:3000/health\n   - MCP Server: curl -s http://localhost:8082/health (if enabled)\n\n4. Check resource usage:\n   - Run: docker stats --no-stream --format \"table {{{{.Container}}}}\\t{{{{.CPUPerc}}}}\\t{{{{.MemUsage}}}}\"\n   - Verify no containers are using excessive resources\n\n5. Check for any error logs:\n   - Run: docker-compose logs --since=5m | grep -i error | head -20\n   - Report any critical errors\n\n6. Verify network connectivity between services:\n   - Test that devbob can reach backend services\n   - Run: docker-compose exec devbob-clean curl -s http://metabob-rpc-api-server:8080/health\n\n7. Generate test report:\n   - Provide a table of service statuses\n   - List any warnings or issues\n   - Confirm environment is ready for testing\n\nProvide a comprehensive summary:\n- ✅ All services healthy\n- ✅ Network connectivity verified\n- 📊 Resource usage normal\n- 🚀 Environment ready for testing\n- ⚠️  Any issues or warnings",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-17T19:51:08.488Z",
+  "metadata": {}
+}

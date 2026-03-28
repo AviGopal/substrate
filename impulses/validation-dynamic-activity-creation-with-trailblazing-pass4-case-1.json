@@ -1,0 +1,12 @@
+{
+  "input": {
+    "command": "opencode activity create-activity --variables '{\"activityName\":\"Test\",\"purpose\":\"CLI validation\"}' --reason 'Pass 4 validation'",
+    "environment": "K8s devbob pod"
+  },
+  "expectedOutput": {
+    "exitCode": 0,
+    "hasUnknownArgumentsError": false,
+    "cliAcceptsCommand": true
+  },
+  "description": "Tests that CLI accepts the validation harness syntax without 'Unknown arguments' error"
+}

@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: surrealdb-init-script
+  namespace: activity-system
+data:
+  init.sh: |
+    #!/bin/sh
+    set -e
+    
+    echo "==================================================================="
+    echo "SurrealDB Schema Initialization"
+    echo "==================================================================="
+    echo ""
+    
+    # Step 1: Define namespace (use backticks for hyphenated name)
+    echo "Step 1: Creating namespace 'activity-system'..."
+    curl -f -X POST "http://surrealdb.activity-system.svc.cluster.local:8000/sql" \
+      -u "root:${SURREAL_PASSWORD}" \
+      -H "Accept: application/json" \
+      -H "NS: " \
+      -H "DB: " \
+      -d "DEFINE NAMESPACE \`activity-system\`;"
+    
+    echo "OK - Namespace created"
+    echo ""
+    
+    # Step 2: USE namespace and define database
+    echo "Step 2: Using namespace and creating database..."
+    curl -f -X POST "http://surrealdb.activity-system.svc.cluster.local:8000/sql" \
+      -u "root:${SURREAL_PASSWORD}" \
+      -H "Accept: application/json" \
+      -d "USE NS \`activity-system\`; DEFINE DATABASE learning_loop;"
+    
+    echo "OK - Database created"
+    echo ""
+    
+    # Step 3: Create schema (all tables)
+    echo "Step 3: Creating tables..."
+    curl -f -X POST "http://surrealdb.activity-system.svc.cluster.local:8000/sql" \
+      -u "root:${SURREAL_PASSWORD}" \
+      -H "Accept: application/json" \
+      -d "USE NS \`activity-system\` DB learning_loop; DEFINE TABLE activity_template SCHEMAFULL; DEFINE FIELD variant_id ON TABLE activity_template TYPE string; DEFINE FIELD activity_id ON TABLE activity_template TYPE string; DEFINE FIELD variant_name ON TABLE activity_template TYPE string; DEFINE FIELD description ON TABLE activity_template TYPE string; DEFINE FIELD category ON TABLE activity_template TYPE string; DEFINE FIELD created_at ON TABLE activity_template TYPE datetime; DEFINE FIELD updated_at ON TABLE activity_template TYPE datetime; DEFINE INDEX idx_variant_id ON TABLE activity_template COLUMNS variant_id UNIQUE; DEFINE TABLE variant_performance_metrics SCHEMAFULL; DEFINE FIELD variant_id ON TABLE variant_performance_metrics TYPE string; DEFINE FIELD activity_id ON TABLE variant_performance_metrics TYPE string; DEFINE FIELD total_executions ON TABLE variant_performance_metrics TYPE int DEFAULT 0; DEFINE FIELD successful_executions ON TABLE variant_performance_metrics TYPE int DEFAULT 0; DEFINE FIELD success_rate ON TABLE variant_performance_metrics TYPE float DEFAULT 0.0; DEFINE FIELD created_at ON TABLE variant_performance_metrics TYPE datetime; DEFINE FIELD updated_at ON TABLE variant_performance_metrics TYPE datetime; DEFINE INDEX idx_vpm_variant ON TABLE variant_performance_metrics COLUMNS variant_id UNIQUE; DEFINE TABLE sessions SCHEMAFULL; DEFINE FIELD session_id ON TABLE sessions TYPE string; DEFINE FIELD created_at ON TABLE sessions TYPE datetime; DEFINE INDEX idx_session ON TABLE sessions COLUMNS session_id UNIQUE; DEFINE TABLE impulses SCHEMAFULL; DEFINE FIELD impulse_id ON TABLE impulses TYPE string; DEFINE FIELD project_id ON TABLE impulses TYPE string; DEFINE FIELD created_at ON TABLE impulses TYPE datetime; DEFINE INDEX idx_impulse ON TABLE impulses COLUMNS impulse_id UNIQUE;"
+    
+    echo "OK - All tables created"
+    echo ""
+    
+    echo "==================================================================="
+    echo "Initialization Complete!"
+    echo "==================================================================="
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-surrealdb-schema
+  namespace: activity-system
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: init
+        image: curlimages/curl:latest
+        command:
+          - sh
+          - /scripts/init.sh
+        env:
+        - name: SURREAL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: surrealdb-credentials
+              key: password
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+      volumes:
+      - name: script
+        configMap:
+          name: surrealdb-init-script
+          defaultMode: 0755

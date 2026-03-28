@@ -1,0 +1,2 @@
+NAME             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE    VOLUMEMODE
+surrealdb-data   Bound    pvc-5e27edb9-c979-4efd-8239-eced8d4518ae   10Gi       RWO            hostpath       <unset>                 167m   Filesystem

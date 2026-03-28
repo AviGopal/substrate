@@ -1,0 +1,153 @@
+{
+  "activity_id": "git-workflow-sync",
+  "name": "Git Workflow Sync",
+  "description": "Synchronize local branch with remote: fetch latest changes, rebase current branch, resolve conflicts if any, and push to remote. Ensures clean git history and up-to-date codebase.",
+  "category": "infrastructure",
+  "variant_id": "git-workflow-sync",
+  "tasks": [
+    {
+      "id": "fetch-and-status",
+      "subagent": "general",
+      "description": "Fetch latest changes from remote and check current branch status",
+      "dependencies": [],
+      "prompt": {
+        "template": "Fetch latest changes and check git status.\n\n## Your Task\n\n1. **Fetch from remote**:\n   ```bash\n   git fetch origin\n   ```\n\n2. **Check current status**:\n   ```bash\n   git status\n   git log --oneline -5\n   git branch -vv  # Show tracking info\n   ```\n\n3. **Identify current branch**:\n   - What branch are you on?\n   - What is the remote tracking branch?\n   - How many commits ahead/behind?\n\n4. **Check for uncommitted changes**:\n   - Are there uncommitted files?\n   - Are there untracked files that should be committed?\n\n5. **Document findings**:\n   Create /tmp/git-sync-status.md:\n   ```markdown\n   # Git Sync Status\n\n   ## Current Branch\n   - Local: {{currentBranch}}\n   - Remote: {{remoteBranch}}\n   - Status: {{ahead/behind status}}\n\n   ## Uncommitted Changes\n   {{list any uncommitted or untracked files}}\n\n   ## Recent Commits\n   {{last 5 commits}}\n\n   ## Ready to Sync\n   {{yes/no - explain if no}}\n   ```\n\n## Success Criteria\n\n- Fetch completed successfully\n- Current branch identified\n- Status documented in /tmp/git-sync-status.md\n- Clear indication if sync can proceed",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "handle-uncommitted-changes",
+      "subagent": "general",
+      "description": "Commit or stash uncommitted changes before rebase",
+      "dependencies": ["fetch-and-status"],
+      "prompt": {
+        "template": "Handle any uncommitted changes before rebasing.\n\n## Your Task\n\n1. **Read status document**:\n   ```bash\n   cat /tmp/git-sync-status.md\n   ```\n\n2. **Check for changes**:\n   ```bash\n   git status --short\n   ```\n\n3. **If there are uncommitted changes**:\n\n   **Option A: Commit them** (if changes are meaningful):\n   ```bash\n   git add <files>\n   git commit -m \"<descriptive message>\"\n   ```\n\n   **Option B: Stash them** (if changes are WIP):\n   ```bash\n   git stash push -m \"WIP: {{stashMessage}}\"\n   ```\n\n   **Option C: Discard them** (if changes are temporary/unwanted):\n   ```bash\n   git checkout -- <files>  # For modified files\n   rm <files>               # For untracked files\n   ```\n\n4. **Verify clean state**:\n   ```bash\n   git status\n   ```\n\n5. **Document action taken**:\n   Update /tmp/git-sync-status.md with:\n   ```markdown\n   ## Changes Handled\n   - Action: {{commit/stash/discard}}\n   - Details: {{what was done}}\n   - Working tree: {{clean/not clean}}\n   ```\n\n## Success Criteria\n\n- Working tree is clean (git status shows \"nothing to commit, working tree clean\")\n- OR changes are safely stashed\n- Action documented in status file",
+        "variables": [
+          {
+            "name": "stashMessage",
+            "type": "string",
+            "required": false,
+            "description": "Message for stash if stashing changes (default: 'Auto-stash before rebase')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          "git diff --quiet && git diff --cached --quiet"
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "rebase-on-remote",
+      "subagent": "general",
+      "description": "Rebase current branch on remote tracking branch",
+      "dependencies": ["handle-uncommitted-changes"],
+      "prompt": {
+        "template": "Rebase current branch on remote.\n\n## Your Task\n\n1. **Identify remote branch**:\n   ```bash\n   git rev-parse --abbrev-ref --symbolic-full-name @{u}\n   ```\n\n2. **Attempt rebase**:\n   ```bash\n   git rebase origin/{{remoteBranch}}\n   ```\n\n3. **If rebase succeeds**:\n   - Document success in /tmp/git-sync-status.md\n   - Proceed to next task\n\n4. **If conflicts occur**:\n\n   **Check conflict files**:\n   ```bash\n   git status\n   git diff --name-only --diff-filter=U\n   ```\n\n   **Resolve conflicts**:\n   - Read conflicted files\n   - Look for conflict markers: `<<<<<<<`, `=======`, `>>>>>>>`\n   - Edit files to resolve conflicts\n   - Remove conflict markers\n\n   **Mark as resolved**:\n   ```bash\n   git add <resolved-files>\n   git rebase --continue\n   ```\n\n   **If unable to resolve**:\n   ```bash\n   git rebase --abort\n   ```\n   Document the conflict and request manual intervention.\n\n5. **Verify rebase success**:\n   ```bash\n   git log --oneline -10\n   git status\n   ```\n\n6. **Document outcome**:\n   Update /tmp/git-sync-status.md:\n   ```markdown\n   ## Rebase Status\n   - Result: {{success/conflicts/aborted}}\n   - Conflicts: {{list if any}}\n   - Resolutions: {{what was done}}\n   - Log: {{git log output}}\n   ```\n\n## Success Criteria\n\n- Rebase completed successfully\n- No unresolved conflicts\n- Working tree is clean\n- Local branch is up-to-date with remote",
+        "variables": [
+          {
+            "name": "remoteBranch",
+            "type": "string",
+            "required": false,
+            "description": "Remote branch to rebase on (default: auto-detect from tracking branch)"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": ["CONFLICT", "<<<<<<", ">>>>>>"],
+        "commands": [
+          "! git status | grep -q 'rebase in progress'"
+        ]
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "push-to-remote",
+      "subagent": "general",
+      "description": "Push rebased branch to remote",
+      "dependencies": ["rebase-on-remote"],
+      "prompt": {
+        "template": "Push rebased branch to remote.\n\n## Your Task\n\n1. **Verify rebase status**:\n   ```bash\n   cat /tmp/git-sync-status.md\n   git status\n   ```\n\n2. **Check if push is needed**:\n   ```bash\n   git status -sb  # Shows ahead/behind status\n   ```\n\n3. **Push to remote**:\n\n   **If branch has no upstream** (new branch):\n   ```bash\n   git push -u origin {{currentBranch}}\n   ```\n\n   **If branch tracks remote and is ahead**:\n   ```bash\n   git push origin {{currentBranch}}\n   ```\n\n   **If force push is needed** (after rebase that changed history):\n   ⚠️ **CAUTION**: Only use if you're sure no one else is using this branch\n   ```bash\n   git push --force-with-lease origin {{currentBranch}}\n   ```\n\n4. **Verify push success**:\n   ```bash\n   git status\n   git log --oneline -5\n   ```\n\n5. **Apply stashed changes** (if any were stashed earlier):\n   ```bash\n   git stash list\n   # If stash exists from earlier task:\n   git stash pop\n   ```\n\n6. **Document final state**:\n   Update /tmp/git-sync-status.md:\n   ```markdown\n   ## Push Status\n   - Action: {{push/force-push/no-push-needed}}\n   - Result: {{success/failed}}\n   - Branch: {{currentBranch}}\n   - Remote: {{remoteBranch}}\n   - Stash restored: {{yes/no}}\n\n   ## Final State\n   - Local and remote in sync: {{yes/no}}\n   - Working tree: {{clean/has changes}}\n   - Ready for work: {{yes/no}}\n   ```\n\n## Success Criteria\n\n- Push completed successfully\n- Local and remote branches are in sync\n- git status shows \"Your branch is up to date with 'origin/...'\"\n- Stashed changes restored (if any)",
+        "variables": [
+          {
+            "name": "currentBranch",
+            "type": "string",
+            "required": false,
+            "description": "Current branch name (auto-detected if not provided)"
+          },
+          {
+            "name": "forcePush",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to force push (default: false, use --force-with-lease if true)"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": ["error:", "fatal:", "rejected"],
+        "commands": [
+          "git status | grep -q \"up to date\\|up-to-date\""
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "pre_checks": [
+      "git rev-parse --git-dir > /dev/null 2>&1"
+    ],
+    "post_checks": [
+      "git status | grep -q \"nothing to commit, working tree clean\""
+    ],
+    "quality_gates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learning_mode": false,
+    "target_context_tokens": 3000,
+    "annotation_strategy": "none"
+  }
+}

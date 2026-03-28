@@ -1,0 +1,125 @@
+{
+  "id": "trace-analytics-endpoint-fix-and-dashboard-local-mode",
+  "type": "templateDefinition",
+  "specificationName": "analytics-endpoint-fix-and-dashboard-local-mode",
+  "overview": {
+    "purpose": "Fix the remaining issues blocking the complete learning loop demonstration",
+    "blockers": [
+      "Analytics endpoint bug causing HTTP 500 errors (SurrealDB query returns strings instead of dicts)",
+      "Dashboard authentication requirement blocking access to Activity History view"
+    ],
+    "desiredOutcome": "Complete end-to-end data flow from OpenCode execution through dashboard visualization"
+  },
+  "components": [
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "get_activity_templates() endpoint",
+      "lines": "32-136",
+      "currentBehavior": {
+        "description": "Uses SurrealDB GROUP BY query without SELECT VALUE syntax",
+        "query": "SELECT template_id, count() as execution_count, math::sum(success == true) as success_count, ... FROM activity_executions GROUP BY template_id",
+        "issue": "SurrealDB returns strings instead of dictionaries, causing AttributeError at line 100: 'str' object has no attribute 'get'",
+        "errorMessage": "AttributeError: 'str' object has no attribute 'get' at analytics.py:100 - execution_count = record.get('execution_count', 0)"
+      },
+      "desiredBehavior": {
+        "description": "Use SELECT VALUE syntax to ensure proper dictionary results",
+        "query": "SELECT VALUE { template_id: template_id, execution_count: count(), success_count: math::sum(IF success THEN 1 ELSE 0 END), avg_cost_usd: math::mean(cost_usd), avg_duration_ms: math::mean(duration_ms), avg_tokens_input: math::mean(tokens_input), avg_tokens_output: math::mean(tokens_output), avg_tokens_cache: math::mean(tokens_cache), last_execution: math::max(started_at) } FROM activity_executions GROUP BY template_id ORDER BY execution_count DESC LIMIT $limit",
+        "result": "Returns valid JSON with template statistics (execution counts, success rates, avg cost/duration)"
+      },
+      "gap": "Query needs SELECT VALUE wrapper and explicit field mapping to return dictionaries instead of strings"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "get_improvement_roadmap() endpoint",
+      "lines": "304-447",
+      "currentBehavior": {
+        "description": "Same issue as get_activity_templates - uses GROUP BY without SELECT VALUE",
+        "issue": "Will fail with same AttributeError when called"
+      },
+      "desiredBehavior": {
+        "description": "Use SELECT VALUE syntax with explicit field mapping",
+        "query": "SELECT VALUE { template_id: template_id, execution_count: count(), success_count: math::sum(IF success THEN 1 ELSE 0 END), avg_cost_usd: math::mean(cost_usd), avg_duration_ms: math::mean(duration_ms) } FROM activity_executions GROUP BY template_id HAVING count() >= $min_executions"
+      },
+      "gap": "Same fix needed - add SELECT VALUE wrapper"
+    },
+    {
+      "file": "repos/metabob-dashboard/.env.local",
+      "component": "Environment configuration for local mode",
+      "currentBehavior": {
+        "description": "Local mode configuration exists but not used in Kubernetes deployment",
+        "content": "REACT_APP_DEPLOYMENT_MODE=local\\nREACT_APP_API_BASE_URL=http://localhost:8080\\nREACT_APP_USE_MOCKS=false"
+      },
+      "desiredBehavior": {
+        "description": "Dashboard deployment should use local mode configuration",
+        "content": "REACT_APP_DEPLOYMENT_MODE=local\\nREACT_APP_SKIP_AUTH=true\\nREACT_APP_API_BASE_URL=http://localhost:8080"
+      },
+      "gap": "Need to add REACT_APP_SKIP_AUTH=true and apply to Kubernetes deployment"
+    },
+    {
+      "file": "repos/platform/deployments/metabob/charts/metabob-dashboard/values/local.metabob-dashboard.values.yaml",
+      "component": "Helm values for local deployment",
+      "currentBehavior": {
+        "description": "Only sets image tag, no environment variables",
+        "content": "image:\\n  tag: 0.2.0"
+      },
+      "desiredBehavior": {
+        "description": "Should include environment variables for local mode",
+        "content": "image:\\n  tag: 0.2.0\\nenv:\\n  REACT_APP_DEPLOYMENT_MODE: local\\n  REACT_APP_SKIP_AUTH: 'true'\\n  REACT_APP_API_BASE_URL: 'http://localhost:8080'"
+      },
+      "gap": "Need to add env section with deployment mode configuration"
+    }
+  ],
+  "dataFlow": {
+    "description": "Complete end-to-end learning loop data flow",
+    "stages": [
+      {"stage": "1. Activity Execution", "status": "✅ Working"},
+      {"stage": "2. Session Logging", "status": "✅ Working"},
+      {"stage": "3. API Recording", "status": "✅ Working"},
+      {"stage": "4. SurrealDB Storage", "status": "✅ Working"},
+      {"stage": "5. Analytics Aggregation", "status": "🔴 BROKEN - Query returns strings"},
+      {"stage": "6. Dashboard Fetch", "status": "⏳ Waiting for stage 5"},
+      {"stage": "7. UI Rendering", "status": "⏳ Waiting for stages 5 and 8"},
+      {"stage": "8. Browser Access", "status": "🔴 BLOCKED - Auth requirement"}
+    ],
+    "currentState": "Stages 1-4 working, stage 5 broken (query bug), stage 8 blocked (auth), stages 6-7 waiting",
+    "desiredState": "All 8 stages working end-to-end with visible activity data in browser"
+  },
+  "implementationPlan": [
+    {
+      "step": 1,
+      "task": "Fix analytics.py SurrealDB queries",
+      "files": ["repos/metabob-rpc-api/server/routes/analytics.py"],
+      "changes": [
+        "Update get_activity_templates() query: Add SELECT VALUE wrapper",
+        "Update get_improvement_roadmap() query: Add SELECT VALUE wrapper"
+      ]
+    },
+    {
+      "step": 2,
+      "task": "Update dashboard deployment configuration",
+      "files": ["repos/platform/deployments/metabob/charts/metabob-dashboard/values/local.metabob-dashboard.values.yaml"],
+      "changes": [
+        "Add env section with REACT_APP_DEPLOYMENT_MODE=local",
+        "Add REACT_APP_SKIP_AUTH=true"
+      ]
+    },
+    {
+      "step": 3,
+      "task": "Redeploy backend and frontend",
+      "changes": [
+        "Build and push updated metabob-rpc-api image",
+        "Deploy to Kubernetes cluster",
+        "Restart metabob-dashboard with new env vars"
+      ]
+    },
+    {
+      "step": 4,
+      "task": "Browser automation demonstration",
+      "changes": [
+        "Navigate to http://app.metabob.local with Playwright",
+        "Verify dashboard loads without login",
+        "Capture screenshot showing activity data"
+      ]
+    }
+  ]
+}

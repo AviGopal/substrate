@@ -1,0 +1,226 @@
+{
+  "specificationName": "run-external-validation-until-pass",
+  "timestamp": 1773828019384,
+  "testCases": [
+    {
+      "id": "case-1-structure",
+      "input": {
+        "scriptPath": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run-external-validation-until-pass.sh",
+        "readmePath": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run-external-validation-until-pass.README.md",
+        "testMode": "structure"
+      },
+      "output": {
+        "pass": true,
+        "actual": {
+          "scriptExists": true,
+          "scriptExecutable": true,
+          "readmeExists": true,
+          "structureChecks": {
+            "hasBuildIntegration": true,
+            "hasIterativeLoop": true,
+            "hasResultAnalysis": true,
+            "hasFixPrompts": true,
+            "hasMetaValidation": true,
+            "hasFinalReport": true
+          },
+          "featureChecks": {
+            "maxIterationsConfigured": true,
+            "timestampedLogging": true,
+            "coloredOutput": true,
+            "exitCodeHandling": true,
+            "errorHandling": true
+          },
+          "documentationChecks": {
+            "hasOverview": true,
+            "hasUsageInstructions": true,
+            "hasConfiguration": true,
+            "hasTroubleshooting": true,
+            "hasExamples": true
+          },
+          "syntaxValid": true,
+          "errors": []
+        },
+        "expected": {
+          "scriptExists": true,
+          "scriptExecutable": true,
+          "readmeExists": true,
+          "allStructureChecksPass": true,
+          "allFeatureChecksPass": true,
+          "allDocumentationChecksPass": true,
+          "syntaxValid": true
+        },
+        "evidence": [
+          "Script exists: true",
+          "Script executable: true",
+          "README exists: true",
+          "Build integration: true",
+          "Iterative loop: true",
+          "Result analysis: true",
+          "Fix prompts: true",
+          "Meta-validation: true",
+          "Final report: true",
+          "Max iterations configured: true",
+          "Timestamped logging: true",
+          "Colored output: true",
+          "Exit code handling: true",
+          "Error handling: true",
+          "Documentation overview: true",
+          "Usage instructions: true",
+          "Configuration section: true",
+          "Troubleshooting guide: true",
+          "Examples provided: true"
+        ]
+      },
+      "passed": true
+    },
+    {
+      "id": "case-2-syntax",
+      "input": {
+        "scriptPath": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run-external-validation-until-pass.sh",
+        "readmePath": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run-external-validation-until-pass.README.md",
+        "testMode": "syntax"
+      },
+      "output": {
+        "pass": true,
+        "actual": {
+          "scriptExists": true,
+          "scriptExecutable": true,
+          "readmeExists": true,
+          "structureChecks": {
+            "hasBuildIntegration": true,
+            "hasIterativeLoop": true,
+            "hasResultAnalysis": true,
+            "hasFixPrompts": true,
+            "hasMetaValidation": true,
+            "hasFinalReport": true
+          },
+          "featureChecks": {
+            "maxIterationsConfigured": true,
+            "timestampedLogging": true,
+            "coloredOutput": true,
+            "exitCodeHandling": true,
+            "errorHandling": true
+          },
+          "documentationChecks": {
+            "hasOverview": true,
+            "hasUsageInstructions": true,
+            "hasConfiguration": true,
+            "hasTroubleshooting": true,
+            "hasExamples": true
+          },
+          "syntaxValid": true,
+          "errors": []
+        },
+        "expected": {
+          "scriptExists": true,
+          "scriptExecutable": true,
+          "readmeExists": true,
+          "allStructureChecksPass": true,
+          "allFeatureChecksPass": true,
+          "allDocumentationChecksPass": true,
+          "syntaxValid": true
+        },
+        "evidence": [
+          "Script exists: true",
+          "Script executable: true",
+          "README exists: true",
+          "Build integration: true",
+          "Iterative loop: true",
+          "Result analysis: true",
+          "Fix prompts: true",
+          "Meta-validation: true",
+          "Final report: true",
+          "Max iterations configured: true",
+          "Timestamped logging: true",
+          "Colored output: true",
+          "Exit code handling: true",
+          "Error handling: true",
+          "Documentation overview: true",
+          "Usage instructions: true",
+          "Configuration section: true",
+          "Troubleshooting guide: true",
+          "Examples provided: true",
+          "Syntax valid: true"
+        ]
+      },
+      "passed": true
+    },
+    {
+      "id": "case-3-documentation",
+      "input": {
+        "scriptPath": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run-external-validation-until-pass.sh",
+        "readmePath": "/home/avi/documents/work/exp-repo/metabob-devbob/scripts/run-external-validation-until-pass.README.md",
+        "testMode": "documentation"
+      },
+      "output": {
+        "pass": true,
+        "actual": {
+          "scriptExists": true,
+          "scriptExecutable": true,
+          "readmeExists": true,
+          "structureChecks": {
+            "hasBuildIntegration": true,
+            "hasIterativeLoop": true,
+            "hasResultAnalysis": true,
+            "hasFixPrompts": true,
+            "hasMetaValidation": true,
+            "hasFinalReport": true
+          },
+          "featureChecks": {
+            "maxIterationsConfigured": true,
+            "timestampedLogging": true,
+            "coloredOutput": true,
+            "exitCodeHandling": true,
+            "errorHandling": true
+          },
+          "documentationChecks": {
+            "hasOverview": true,
+            "hasUsageInstructions": true,
+            "hasConfiguration": true,
+            "hasTroubleshooting": true,
+            "hasExamples": true
+          },
+          "syntaxValid": true,
+          "errors": []
+        },
+        "expected": {
+          "scriptExists": true,
+          "scriptExecutable": true,
+          "readmeExists": true,
+          "allStructureChecksPass": true,
+          "allFeatureChecksPass": true,
+          "allDocumentationChecksPass": true,
+          "syntaxValid": true
+        },
+        "evidence": [
+          "Script exists: true",
+          "Script executable: true",
+          "README exists: true",
+          "Build integration: true",
+          "Iterative loop: true",
+          "Result analysis: true",
+          "Fix prompts: true",
+          "Meta-validation: true",
+          "Final report: true",
+          "Max iterations configured: true",
+          "Timestamped logging: true",
+          "Colored output: true",
+          "Exit code handling: true",
+          "Error handling: true",
+          "Documentation overview: true",
+          "Usage instructions: true",
+          "Configuration section: true",
+          "Troubleshooting guide: true",
+          "Examples provided: true"
+        ]
+      },
+      "passed": true
+    }
+  ],
+  "summary": {
+    "totalTests": 3,
+    "passed": 3,
+    "failed": 0,
+    "overallPass": true
+  }
+}

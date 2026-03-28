@@ -1,0 +1,16 @@
+{
+  "id": "validation-minibob-complete-system-integration-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\"testCase\": \"Staging layer validation\", \"input\": {\"repoPath\": \"./repos/minibob\", \"helmPath\": \"./helm\", \"environment\": \"staging\", \"layer\": \"staging\", \"skipLongRunning\": true}, \"expectedOutput\": {\"pass\": true, \"stepsCompleted\": 6, \"minPassedSteps\": 5, \"capabilitiesExpected\": [\"activities\", \"impulses\", \"git\", \"acp\", \"acp-gossip\", \"boredom\"]}}",
+    "source": "validation-harness-test-case"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCaseNumber": 4,
+    "description": "Validation of staging layer (production simulation)",
+    "skipLongRunning": true,
+    "expectedSteps": 6
+  }
+}

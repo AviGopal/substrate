@@ -1,0 +1,16 @@
+{
+  "id": "validation-activity-recommendation-learning-loop-e2e-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 3: Metrics Update Reflected in Next Recommendation\n\n## Input\n\n```json\n{\n  \"endpoint\": \"POST /v2/activities/recommend\",\n  \"payload\": {\n    \"task_description\": \"Add REST endpoint for user management\",\n    \"category\": \"feature\",\n    \"limit\": 5\n  },\n  \"headers\": {\n    \"Content-Type\": \"application/json\"\n  },\n  \"context\": {\n    \"previous_template_id\": \"<template from first recommendation>\",\n    \"previous_alpha\": \"<alpha from first recommendation>\",\n    \"previous_beta\": \"<beta from first recommendation>\",\n    \"execution_recorded\": true,\n    \"execution_success\": true\n  }\n}\n```\n\n## Expected Output\n\n**Option A**: Same template found with updated alpha\n```json\n{\n  \"status\": \"success\",\n  \"recommendations\": [\n    {\n      \"template_id\": \"<previous_template_id>\",\n      \"selection_metadata\": {\n        \"method\": \"thompson_sampling\",\n        \"alpha\": \"<previous_alpha + 1>\",\n        \"beta\": \"<previous_beta>\",\n        \"sample\": \"<new sample value>\"\n      }\n    }\n  ]\n}\n```\n\n**Option B**: Template not in top recommendations (ranking changed)\n```json\n{\n  \"status\": \"success\",\n  \"recommendations\": [\n    // Other templates ranked higher\n  ]\n}\n```\n\n## Validation Rules\n\n1. **Learning Loop Working**: Either alpha increased OR template ranking changed\n2. **Alpha Increment**: If template found, alpha should be `previous_alpha + 1` (success was recorded)\n3. **Beta Unchanged**: If template found, beta should remain same (no failure recorded)\n4. **Ranking Dynamics**: If template not found, other templates were preferred (valid outcome)\n5. **No Empty Results**: Recommendations array must not be empty\n\n## Test Assertions\n\n- `assert_not_empty(response.recommendations)`\n- `if (template_found) { assert_equals(response.alpha, previous_alpha + 1) }`\n- `if (template_found) { assert_equals(response.beta, previous_beta) }`\n- `if (!template_found) { log_info(\"Ranking changed - valid outcome\") }`\n\n## Purpose\n\nVerifies that:\n- Learning loop is closed (execution → metrics update → improved recommendations)\n- Thompson Sampling parameters (alpha/beta) update correctly\n- Success increments alpha (exploration/exploitation balance)\n- Recommendations reflect learning (higher success rate = higher probability)\n- System works end-to-end without manual intervention",
+    "source": "test-case"
+  },
+  "budget": 1000,
+  "metadata": {
+    "testCase": 3,
+    "specification": "activity-recommendation-learning-loop-e2e",
+    "priority": "critical",
+    "category": "learning-loop-closure"
+  }
+}

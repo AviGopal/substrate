@@ -1,0 +1,17 @@
+{
+  "id": "validation-metabob-cli-mcp-activity-impulse-learning-integration-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 3: Activity Without Impulse\n\n## Input\n\n```json\n{\n  \"activityId\": \"act-test-no-impulse-003\",\n  \"templateId\": \"simple-template\",\n  \"expectedMetrics\": {\n    \"duration\": 2000,\n    \"cost\": 0.02,\n    \"tokens\": {\n      \"input\": 500,\n      \"output\": 250,\n      \"cache\": 50\n    },\n    \"success\": true\n  }\n}\n```\n\n## Expected Output\n\n```json\n{\n  \"pass\": true,\n  \"testName\": \"metabob-cli-mcp-activity-impulse-learning-integration\",\n  \"actual\": {\n    \"activityRecorded\": true,\n    \"metricsUpdated\": true,\n    \"boredomDetected\": true,\n    \"impulseStored\": undefined,\n    \"mcpToolsWorking\": true,\n    \"noDirectHttp\": true\n  },\n  \"expected\": {\n    \"activityRecorded\": true,\n    \"metricsUpdated\": true,\n    \"boredomDetected\": true,\n    \"impulseStored\": false,\n    \"mcpToolsWorking\": true,\n    \"noDirectHttp\": true\n  },\n  \"errors\": []\n}\n```\n\n## Validation Strategy\n\n1. **Activity Recording**: Verify activity recorded without impulse data\n2. **Metrics Update**: Verify template metrics still updated\n3. **Boredom Detection**: Verify boredom system works without impulses\n4. **Impulse Storage**: Skip impulse check (no impulseId provided)\n5. **MCP Tools**: Verify code quality tools work\n6. **No HTTP Bypass**: Verify no direct HTTP calls\n\n## Success Criteria\n\n- Activity recorded in SurrealDB without impulse references\n- Template metrics updated normally\n- Boredom system operational\n- Impulse check skipped (not failed)\n- MCP tools working\n- No direct HTTP bypass\n\n## Notes\n\n- This test validates activities CAN work without impulses\n- Not all activities use impulse learning system\n- Simple templates may not require context optimization\n- Validates that impulse system is OPTIONAL, not required"
+  },
+  "budget": 1000,
+  "priority": "medium",
+  "scope": "global",
+  "loaded": false,
+  "metadata": {
+    "testCase": 3,
+    "testType": "no-impulse-case",
+    "requiresBackend": true
+  }
+}

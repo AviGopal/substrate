@@ -1,0 +1,11 @@
+{
+  "id": "validation-dynamic-activity-creation-with-trailblazing-pass4-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: K8s Memory Hook Execution\n\nInput:\n  environment: kubernetes\n  template: create-activity-self-contained\n  variables:\n    templateName: MemoryHookTest\n    templateDescription: Test memory hook\n    category: feature\n  reason: Pass 4 validation - verify memory management hook\n\nExpected Output:\n  Log Patterns (must be present):\n    - 'memory management hook'\n    - 'manage-session-memory'\n  \n  No Error Patterns (must NOT be present):\n    - 'hook execution failed'\n    - 'memory management error'\n\nValidation Method:\n  1. kubectl exec into devbob pod\n  2. Execute create-activity-self-contained template\n  3. Verify logs show memory management hook execution\n  4. Verify manage-session-memory activity runs\n  5. Return PASS if memory hook executes without errors"
+  },
+  "budget": 500,
+  "priority": "high",
+  "loaded": true
+}

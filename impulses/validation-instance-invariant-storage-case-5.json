@@ -1,0 +1,16 @@
+{
+  "id": "validation-Instance-Invariant Storage for Impulses and Activities-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 5: Pagination\n\nInput:\n  - Store 15 impulses with same (api_key, project_id)\n  - Query page 1 with limit=10\n  - Query page 2 with limit=10, offset=10\n\nExpected Output:\n  - page1Count: 10 (first page returns 10 items)\n  - page2Count: 5 (second page returns remaining 5 items)\n\nValidation:\n  - Call metabob_impulse_list with limit and offset\n  - Verify correct pagination behavior\n  - Verify no duplicate items across pages"
+  },
+  "budget": 2000,
+  "priority": "medium",
+  "scope": "global",
+  "metadata": {
+    "testCaseId": "case-5",
+    "testName": "Pagination",
+    "category": "api-functionality"
+  }
+}

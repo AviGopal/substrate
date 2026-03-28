@@ -1,0 +1,139 @@
+type: change
+name: minibob-tui-vessel-completion
+status: proposed
+created: 2024-03-26
+updated: 2024-03-26
+category: vessel_completion
+priority: high
+
+title: "Complete minibob-tui Vessel with Bidirectional Flow"
+
+summary: |
+  Enable bidirectional flow between MiniBob activities and the TUI by exposing
+  TUI capabilities as tools. This closes the self-development loop, allowing
+  MiniBob to verify its own TUI changes without human inspection.
+
+depends_on:
+  - minibob-tui  # Phases 1-5 complete
+
+blocks:
+  - minibob-self-improvement  # Autonomous TUI development requires these tools
+
+components:
+  - minibob-tui
+
+phases:
+  - id: phase_6
+    name: "Tool Infrastructure"
+    status: proposed
+    commit: "feat(minibob-tui): add TUI tool schema definitions"
+
+  - id: phase_7
+    name: "Control Socket Tools"
+    status: proposed
+    commit: "feat(minibob-tui): implement tui_observe and tui_snapshot tools"
+
+  - id: phase_8
+    name: "Action Tools"
+    status: proposed
+    commit: "feat(minibob-tui): implement tui_inject and tui_wait_for tools"
+
+  - id: phase_9
+    name: "Render Capture"
+    status: proposed
+    commit: "feat(minibob-tui): implement tui_render tool with text/ANSI capture"
+
+  - id: phase_10
+    name: "EmbeddedMiniBob Integration"
+    status: proposed
+    commit: "feat(minibob-tui): integrate TUI tools with EmbeddedMiniBob"
+
+  - id: phase_11
+    name: "Impulse Bridge"
+    status: proposed
+    commit: "feat(minibob-tui): add impulse-to-activity routing bridge"
+
+  - id: phase_12
+    name: "Self-Verification"
+    status: proposed
+    commit: "feat(minibob-tui): add self-verification activity template and tests"
+
+deliverables:
+  - name: "TUI Tool Schemas"
+    path: "src/lib/tools/schemas.ts"
+    phase: phase_6
+
+  - name: "TUI Tool Handlers"
+    path: "src/lib/tools/handlers.ts"
+    phase: phase_7
+
+  - name: "Render Capture"
+    path: "src/lib/tools/render-capture.ts"
+    phase: phase_9
+
+  - name: "TUI Tool Provider"
+    path: "src/lib/tools/provider.ts"
+    phase: phase_10
+
+  - name: "Impulse Bridge"
+    path: "src/lib/impulse-bridge.ts"
+    phase: phase_11
+
+  - name: "Self-Verification Template"
+    path: ".minibob/templates/tui/verify-component.json"
+    phase: phase_12
+
+success_criteria:
+  - "All 5 TUI tools defined with Zod schemas"
+  - "Tool handlers work in isolation (unit tests pass)"
+  - "EmbeddedMiniBob can execute TUI tools"
+  - "Render capture works in text and ANSI formats"
+  - "Impulse bridge routes TUI events to activities"
+  - "Self-verification activity completes successfully"
+  - "Integration tests demonstrate closed loop"
+
+patterns_used:
+  - name: "Tool Provider Pattern"
+    source: "minibob/src/tools.ts"
+
+  - name: "Event Bridge Pattern"
+    source: "TypedEventEmitter"
+
+  - name: "State Observation Pattern"
+    source: "TUIState"
+
+  - name: "Bridge Ethos"
+    source: "metabob-mcp"
+
+rbac_notes: |
+  TUI tools are entirely local - no authentication required.
+  Remote impulse resolution inherits auth from execution context.
+
+schema_notes: |
+  TUI tools don't access backend schemas. All data sourced from:
+  TUIState.getSnapshot(), process.stdout, Date.now(), RenderCapture.
+
+architecture_alignment:
+  - principle: "Resolvers Live Where Data Lives"
+    implementation: "TUI tools are local resolvers in TUI process"
+
+  - principle: "Record Everything"
+    implementation: "Tool calls captured in execution traces"
+
+  - principle: "LLMs Are Tools, Not Controllers"
+    implementation: "TUI tools are deterministic - no LLM processing"
+
+testing_strategy: |
+  Unit tests for each phase (mock TUIState)
+  Integration tests in Phase 12 (real EmbeddedMiniBob)
+  Control socket tests via Unix socket client
+
+verification_commands:
+  - "bun test test/tools/schemas.test.ts"
+  - "bun test test/tools/observe.test.ts"
+  - "bun test test/tools/inject.test.ts"
+  - "bun test test/tools/render-capture.test.ts"
+  - "bun test test/embedded-minibob-tools.test.ts"
+  - "bun test test/impulse-bridge.test.ts"
+  - "bun test test/self-development.test.ts"
+  - "bun test"

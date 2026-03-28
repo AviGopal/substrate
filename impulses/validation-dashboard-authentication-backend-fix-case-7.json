@@ -1,0 +1,35 @@
+{
+  "testCase": "Invalid Password Rejection",
+  "testNumber": 7,
+  "description": "Test login with wrong password. Verify endpoint correctly rejects with 401 'Invalid email or password'.",
+  "input": {
+    "endpoint": "POST /auth/login",
+    "url": "http://app.metabob.local/auth/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "email": "test{TIMESTAMP}@validation.metabob.com",
+      "password": "WrongPassword123!"
+    },
+    "prerequisite": "User registered with different password in Test Case 2"
+  },
+  "expectedOutput": {
+    "httpStatus": 401,
+    "responseBody": {
+      "detail": "Invalid email or password"
+    }
+  },
+  "passCriteria": [
+    "HTTP status is 401 Unauthorized",
+    "Response contains 'Invalid email or password' error message",
+    "Password verification with bcrypt correctly fails",
+    "No token returned in response"
+  ],
+  "failureIndicators": [
+    "HTTP status is 200 (wrong password accepted)",
+    "Token returned despite wrong password",
+    "Wrong error message",
+    "Password hash comparison fails or bypassed"
+  ]
+}

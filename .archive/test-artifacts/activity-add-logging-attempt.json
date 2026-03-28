@@ -1,0 +1,48 @@
+{
+  "id": "act_mlui5bwv_4f1eb4930bcbf37c",
+  "directory": "/opt/repos/metabob-opencode/packages/opencode",
+  "branch": "activity-execution",
+  "baseCommit": "HEAD",
+  "title": "Add Logging",
+  "status": "failed",
+  "todos": [],
+  "prompts": [],
+  "agentsUsed": [],
+  "sessionIDs": [],
+  "commits": [],
+  "startedAt": 1771568506255,
+  "stats": {
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "cache": {
+        "read": 0,
+        "write": 0
+      }
+    },
+    "cost": {
+      "total": 0,
+      "perPrompt": []
+    },
+    "metabob": {
+      "enabled": false,
+      "issuesResolved": 0,
+      "issuesAdded": 0,
+      "totalParticipations": 0,
+      "totalContextTokens": 0
+    },
+    "duration": 10
+  },
+  "impulses": {},
+  "agentDecisions": [],
+  "acpAgents": [],
+  "templateId": "add-logging",
+  "templateVersion": 0,
+  "variables": {
+    "targetFile": "/workspace/test-bug-scenario/buggy-calculator.ts"
+  },
+  "reason": "Testing impulse loading fix with a template that has proper contextRequirements (3 requirements: targetCode, loggingPatterns, projectCommands). This validates that the memory agent correctly negotiates context, creates impulses for target code analysis, logging patterns from the codebase, and project-specific commands, then loads them appropriately during task execution.\n\nRecent conversation:\nAssistant: I see the issue - this template expects variables that come from previous task outputs. Let me check...\nAssistant: I see the issue - the template has tasks with dependencies that pass outputs, but those are handled ...\nAssistant: I see the problem - the template definition is expecting these task output variables to be provided ...\nAssistant: Perfect! There's an `add-logging` template that only requires `targetFile`. Let me use that one inst...",
+  "callingSessionId": "ses_3864a4deaffeUx63r0zXoJPlMQ",
+  "completedAt": 1771568506265
+}

@@ -1,0 +1,129 @@
+{
+  "testCases": [
+    {
+      "impulseId": "validation-user-activity-tracking-case-1",
+      "name": "CLI User Tracking - API Key Authentication",
+      "input": {
+        "testCase": "CLI User Tracking - API Key Authentication",
+        "apiKey": "mb_tJhNPb5ZycOp5SH42MyaJNlbBU6nN5nk4E_S-ZJI2DM",
+        "activityData": {
+          "activity_id": "act_test_cli_user_tracking_001",
+          "template_id": "add-feature-complete",
+          "org_id": "cccb762e-310d-4d9c-842b-19b02c0c4225",
+          "project_id": "test-project",
+          "success": true,
+          "duration_ms": 45000,
+          "cost_usd": 0.245
+        },
+        "orgId": "cccb762e-310d-4d9c-842b-19b02c0c4225"
+      },
+      "expectedOutput": {
+        "userEmail": "demo_cli_1773464065@metabob.com",
+        "activityStored": true,
+        "apiResponseContainsEmail": true,
+        "actorEmail": "demo_cli_1773464065@metabob.com",
+        "multiTenantIsolation": true
+      }
+    },
+    {
+      "impulseId": "validation-user-activity-tracking-case-2",
+      "name": "JWT User Tracking - Dashboard Authentication",
+      "input": {
+        "testCase": "JWT User Tracking - Dashboard Authentication",
+        "jwtToken": "<JWT_TOKEN_PLACEHOLDER>",
+        "activityData": {
+          "activity_id": "act_test_dashboard_user_tracking_001",
+          "template_id": "fix-bug-complete",
+          "org_id": "cccb762e-310d-4d9c-842b-19b02c0c4225",
+          "project_id": "test-project",
+          "success": true,
+          "duration_ms": 28000,
+          "cost_usd": 0.182
+        },
+        "orgId": "cccb762e-310d-4d9c-842b-19b02c0c4225"
+      },
+      "expectedOutput": {
+        "userEmail": "test-user@metabob.com",
+        "activityStored": true,
+        "apiResponseContainsEmail": true,
+        "actorEmail": "test-user@metabob.com",
+        "multiTenantIsolation": true
+      }
+    },
+    {
+      "impulseId": "validation-user-activity-tracking-case-3",
+      "name": "Multi-User Attribution - Different API Keys",
+      "input": {
+        "testCase": "Multi-User Attribution - Different API Keys",
+        "apiKey": "mb_DIFFERENT_API_KEY_PLACEHOLDER",
+        "activityData": {
+          "activity_id": "act_test_multi_user_001",
+          "template_id": "refactor-with-tests",
+          "org_id": "cccb762e-310d-4d9c-842b-19b02c0c4225",
+          "project_id": "test-project",
+          "success": true,
+          "duration_ms": 62000,
+          "cost_usd": 0.428
+        },
+        "orgId": "cccb762e-310d-4d9c-842b-19b02c0c4225"
+      },
+      "expectedOutput": {
+        "userEmail": "different-user@metabob.com",
+        "activityStored": true,
+        "apiResponseContainsEmail": true,
+        "actorEmail": "different-user@metabob.com",
+        "multiTenantIsolation": true
+      }
+    },
+    {
+      "impulseId": "validation-user-activity-tracking-case-4",
+      "name": "Multi-Tenant Isolation - Different Organizations",
+      "input": {
+        "testCase": "Multi-Tenant Isolation - Different Organizations",
+        "apiKey": "mb_ORG2_API_KEY_PLACEHOLDER",
+        "activityData": {
+          "activity_id": "act_test_isolation_001",
+          "template_id": "add-feature-complete",
+          "org_id": "different-org-id-placeholder",
+          "project_id": "test-project-org2",
+          "success": true,
+          "duration_ms": 38000,
+          "cost_usd": 0.215
+        },
+        "orgId": "different-org-id-placeholder"
+      },
+      "expectedOutput": {
+        "userEmail": "org2-user@metabob.com",
+        "activityStored": true,
+        "apiResponseContainsEmail": true,
+        "actorEmail": "org2-user@metabob.com",
+        "multiTenantIsolation": true
+      }
+    },
+    {
+      "impulseId": "validation-user-activity-tracking-case-5",
+      "name": "Fallback Behavior - No User Email",
+      "input": {
+        "testCase": "Fallback Behavior - No User Email",
+        "apiKey": "mb_NO_USER_API_KEY_PLACEHOLDER",
+        "activityData": {
+          "activity_id": "act_test_fallback_001",
+          "template_id": "debug-test",
+          "org_id": "cccb762e-310d-4d9c-842b-19b02c0c4225",
+          "project_id": "test-project",
+          "success": true,
+          "duration_ms": 5000,
+          "cost_usd": 0.042
+        },
+        "orgId": "cccb762e-310d-4d9c-842b-19b02c0c4225"
+      },
+      "expectedOutput": {
+        "userEmail": "system@metabob.local",
+        "activityStored": true,
+        "apiResponseContainsEmail": true,
+        "actorEmail": "system@metabob.local",
+        "multiTenantIsolation": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "testCase": "empty-session",
+  "description": "Test empty session with zero metrics - tests zero division handling",
+  "input": {
+    "sessionSetup": {
+      "messageCount": 0,
+      "totalCost": 0,
+      "totalTokens": {
+        "input": 0,
+        "output": 0,
+        "cache": 0
+      },
+      "activityStates": {
+        "active": 0,
+        "completed": 0,
+        "failed": 0
+      },
+      "impulseData": {
+        "impulseCount": 0,
+        "totalBudget": 0,
+        "usedTokens": 0
+      }
+    }
+  },
+  "expectedOutput": {
+    "cost": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "cache": 0
+    },
+    "activities": {
+      "total": 0,
+      "completed": 0,
+      "failed": 0,
+      "successRate": 0
+    },
+    "contextUtilization": 0,
+    "edgeCases": {
+      "handlesZeroDivision": true,
+      "handlesEmptySession": true
+    }
+  }
+}

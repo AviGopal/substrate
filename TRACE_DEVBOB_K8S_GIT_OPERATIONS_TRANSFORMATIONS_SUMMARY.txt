@@ -1,0 +1,162 @@
+================================================================================
+DEVBOB K8S GIT OPERATIONS - DATA TRANSFORMATIONS QUICK REFERENCE
+================================================================================
+
+TRANSFORMATION 1: K8s Secret → Environment Variables
+────────────────────────────────────────────────────────────────────────────────
+What:     Base64 decode secrets → inject as env vars
+Where:    k8s-devbob-statefulset.yaml:67-81
+Status:   ✅ WORKING (but invalid token value)
+Blocker:  GITHUB_TOKEN="none" not validated
+
+Input:    K8s Secret (base64-encoded)
+Output:   GITHUB_TOKEN, GIT_USER_NAME, GIT_USER_EMAIL
+Why:      Secure credential management, multi-tenant support
+Validate: ❌ No token format validation
+
+Fix:      Add token validation in Helm chart or admission webhook
+────────────────────────────────────────────────────────────────────────────────
+
+TRANSFORMATION 2: Environment Variables → Git Config
+────────────────────────────────────────────────────────────────────────────────
+What:     Read env vars → git config --global → gh auth login
+Where:    entrypoint-self-config.sh:128-167
+Status:   ⚠️  PARTIAL (git works, gh auth fails)
+Blocker:  gh auth login fails with token="none"
+
+Input:    GITHUB_TOKEN, GIT_USER_NAME, GIT_USER_EMAIL
+Output:   ~/.gitconfig, ~/.config/gh/hosts.yml (if auth succeeds)
+Why:      Git requires user.name/email, gh CLI requires auth for PRs
+Validate: ❌ Silent failure (|| true), no pre-flight check
+
+Fix:      Remove || true, fail container on invalid token OR add validation
+────────────────────────────────────────────────────────────────────────────────
+
+TRANSFORMATION 3: Git Config → Branch Creation
+────────────────────────────────────────────────────────────────────────────────
+What:     Validate working tree → git checkout -b
+Where:    activity-git.ts:37-60
+Status:   ✅ WORKING
+
+Input:    Branch name string
+Output:   New git branch, HEAD updated
+Why:      Isolate activity work, enable parallel execution
+Validate: ✅ Clean working tree, ✅ Unique branch name
+
+Side Effects: Changes HEAD reference, creates local branch
+────────────────────────────────────────────────────────────────────────────────
+
+TRANSFORMATION 4: Prompt File → Commit Message
+────────────────────────────────────────────────────────────────────────────────
+What:     Parse filename → determine type/scope → format conventional commit
+Where:    activity-git.ts:151-170
+Status:   ✅ WORKING
+
+Input:    { promptFile, promptContent, diff }
+Output:   "feat(scope): description"
+Why:      Semantic commits, automated changelog, consistent format
+Validate: ⚠️  No filename format check, defaults to "feat"
+
+Side Effects: None (pure function)
+────────────────────────────────────────────────────────────────────────────────
+
+TRANSFORMATION 5: Working Tree Changes → CommitInfo
+────────────────────────────────────────────────────────────────────────────────
+What:     git add . → check diff → git commit → extract metadata
+Where:    activity-git.ts:111-145
+Status:   ✅ WORKING
+
+Input:    { promptFile, message }
+Output:   { sha, filesChanged, timestamp } | null
+Why:      Track what changed, enable rollback, audit trail
+Validate: ✅ Skips if no changes, ✅ Returns null for idempotency
+
+Side Effects: Creates git commit, advances HEAD, working tree clean
+────────────────────────────────────────────────────────────────────────────────
+
+TRANSFORMATION 6: Activity.Info → PR Body
+────────────────────────────────────────────────────────────────────────────────
+What:     Format activity data as Markdown PR description
+Where:    prompts-runner.ts:450-500 (inferred)
+Status:   ✅ WORKING
+
+Input:    Activity.Info (commits, stats, prompts)
+Output:   Markdown string
+Why:      Provide context for reviewers, link to activity, show metrics
+Validate: ⚠️  No length check (GitHub limit 65536 chars)
+
+Side Effects: None (pure function)
+────────────────────────────────────────────────────────────────────────────────
+
+TRANSFORMATION 7: PROptions → PR URL (🔴 BLOCKED HERE)
+────────────────────────────────────────────────────────────────────────────────
+What:     git push → gh pr create → parse URL
+Where:    activity-git.ts:184-221
+Status:   ❌ BLOCKED (git push works, gh pr create fails)
+Blocker:  gh CLI not authenticated
+
+Input:    { title, body, base }
+Output:   "https://github.com/owner/repo/pull/123"
+Why:      Autonomous PR creation, close the loop, integrate with GitHub
+Validate: ❌ No authentication check before gh pr create
+
+Fix:      Add checkGhAuthenticated() before gh pr create
+────────────────────────────────────────────────────────────────────────────────
+
+TRANSFORMATION 8: gh CLI Output → PR URL String
+────────────────────────────────────────────────────────────────────────────────
+What:     Parse gh pr create stdout → extract URL
+Where:    activity-git.ts:210-217
+Status:   ⚠️  FRAGILE (would work if gh auth succeeded)
+
+Input:    gh CLI stdout (may include extra text)
+Output:   Clean PR URL string
+Why:      Store URL for activity tracking, dashboard links
+Validate: ⚠️  Only trim(), no regex validation
+
+Improvement: Use gh pr create --json for structured output
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+ROOT CAUSE: SILENT FAILURE IN TRANSFORMATION 2
+================================================================================
+
+Problem Chain:
+  1. GITHUB_TOKEN="none" injected (no validation)
+  2. gh auth login fails (|| true suppresses error)
+  3. Container starts successfully (misleading)
+  4. All transformations 3-6 succeed (activity executes)
+  5. Transformation 7 fails at runtime (too late)
+
+Impact:
+  - Activity work already completed
+  - Commits already created
+  - Only PR creation fails
+  - User frustrated (expected full automation)
+
+Fix Options:
+  [A] Fail Fast: Remove || true, fail container on auth failure
+  [B] Validate: Check token format before gh auth login
+  [C] Config Flag: Disable PR feature if gh not authenticated
+
+Recommended: Option B (validate token, disable PR if invalid, continue)
+
+================================================================================
+KEY METRICS
+================================================================================
+
+Transformations:     8 total
+Working:             5 (62.5%)
+Partial:             2 (25%)
+Blocked:             1 (12.5%)
+
+Validation Coverage:
+  - Pre-transformation checks:   3/8 (37.5%)
+  - Post-transformation checks:  2/8 (25%)
+  - Error handling:              6/8 (75%)
+
+Critical Path: 8 steps, 1 blocker at step 7 (87.5% completion)
+
+Resolution: Replace GITHUB_TOKEN="none" with valid PAT to unblock step 7
+
+================================================================================

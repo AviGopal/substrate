@@ -1,0 +1,73 @@
+{
+  "activity_id": "ultra-simple-test",
+  "name": "Ultra Simple Test",
+  "description": "Ultra minimal test activity",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "id": "simple-task",
+      "task_id": "simple-task",
+      "subagent": "general",
+      "description": "Create a simple file",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called TEST.md with the content 'Activity executed successfully'.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [
+          "TEST.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "simple-task",
+      "task_id": "simple-task",
+      "subagent": "general",
+      "description": "Create a simple file",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create a file called TEST.md with the content 'Activity executed successfully'.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "none"
+      },
+      "validation": {
+        "required_files": [
+          "TEST.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-17T17:59:07.430Z",
+  "metadata": {}
+}

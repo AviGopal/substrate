@@ -1,0 +1,24 @@
+{
+  "id": "validation-api-key-org-id-injection-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Database org_id Population\n\nThis test verifies that execution records in SurrealDB have the org_id field properly populated when posted via API key authentication.",
+    "source": "validation-harness"
+  },
+  "budget": 800,
+  "testCase": {
+    "name": "Database org_id Population",
+    "input": {
+      "query": "SELECT org_id, activity_id FROM activity_executions WHERE org_id = 'd98c6120-96a8-41ff-b0fe-835c0cc0d454' ORDER BY created_at DESC LIMIT 10",
+      "database": "SurrealDB",
+      "namespace": "metabob",
+      "db": "production"
+    },
+    "expectedOutput": {
+      "recordCount": ">0",
+      "allHaveOrgId": true,
+      "sampleOrgId": "d98c6120-96a8-41ff-b0fe-835c0cc0d454"
+    }
+  }
+}

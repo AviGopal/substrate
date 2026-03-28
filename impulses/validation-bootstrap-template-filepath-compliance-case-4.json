@@ -1,0 +1,23 @@
+{
+  "id": "validation-bootstrap-template-filepath-compliance-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Production environment simulation\n\nInput: Load templates when metabob-proto directory doesn't exist\n\nExpected Output:\n- Load success without metabob-proto: true\n- No filesystem errors: true\n\nValidation Logic:\n1. Check if metabob-proto exists in typical production paths:\n   - /metabob-proto/activities/bootstrap\n   - /app/metabob-proto/activities/bootstrap\n   - /usr/local/metabob-proto/activities/bootstrap\n2. Load all bootstrap templates\n3. Verify templates load successfully regardless of metabob-proto existence\n\nSuccess Criteria:\n- Templates load successfully even when metabob-proto doesn't exist\n- No filesystem errors thrown\n- All 6 templates are available\n\nThis test validates the fix works in real production deployments (Docker, standalone binaries, client devices) where metabob-proto repository is not present.",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 4,
+    "specification": "bootstrap-template-filepath-compliance",
+    "validationType": "external-test",
+    "input": {
+      "action": "simulateProductionEnvironment",
+      "metabobProtoExists": false
+    },
+    "expectedOutput": {
+      "loadSuccessWithoutMetabobProto": true,
+      "noFileSystemErrors": true
+    }
+  }
+}

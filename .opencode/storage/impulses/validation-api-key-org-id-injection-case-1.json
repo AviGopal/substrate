@@ -1,0 +1,37 @@
+{
+  "id": "validation-api-key-org-id-injection-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 1: API Key org_id Extraction\n\nThis test verifies that when an execution is posted with an API key (Bearer mb_xxx), the RPC API successfully extracts the org_id from the api_keys table and stores it with the execution record.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "testCase": {
+    "name": "API Key org_id Extraction",
+    "input": {
+      "method": "POST",
+      "endpoint": "/api/v1/learning-loop/executions",
+      "headers": {
+        "Authorization": "Bearer mb_SISrjIPr_yz9O1IhEgKv4UeHx7VG4FxmGYV4XtC7u08",
+        "Content-Type": "application/json"
+      },
+      "payload": {
+        "activity_id": "act_test_validation",
+        "template_id": "validation-test-template",
+        "started_at": "2026-03-13T10:00:00Z",
+        "completed_at": "2026-03-13T10:00:05Z",
+        "duration_ms": 5000,
+        "success": true,
+        "cost_usd": 0.01,
+        "tokens_total": 1000
+      }
+    },
+    "expectedOutput": {
+      "status": 200,
+      "org_id_extracted": true,
+      "org_id": "d98c6120-96a8-41ff-b0fe-835c0cc0d454",
+      "execution_stored": true
+    }
+  }
+}

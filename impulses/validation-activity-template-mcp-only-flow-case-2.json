@@ -1,0 +1,19 @@
+{
+  "id": "validation-activity-template-mcp-only-flow-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Validation Test Case 2: Bootstrap Template Fallback\n\n## Input\n\n```json\n{\n  \"activityId\": \"manage-session-memory\",\n  \"variables\": {\n    \"sessionId\": \"test-session-123\",\n    \"operation\": \"cleanup\"\n  },\n  \"reason\": \"Validation test: Verify bootstrap template fallback when backend unavailable\"\n}\n```\n\n## Expected Output (Backend Unavailable)\n\n```json\n{\n  \"pass\": true,\n  \"actual\": {\n    \"mcpSearchRequest\": false,\n    \"mcpGetRequest\": false,\n    \"surrealdbTemplateRead\": false,\n    \"activityExecutionComplete\": true,\n    \"mcpPostResultRequest\": false,\n    \"surrealdbLearningWrite\": false,\n    \"noLocalDirectoryReads\": true\n  },\n  \"expected\": {\n    \"bootstrapFallback\": true,\n    \"embeddedTemplateUsed\": true,\n    \"activityExecutionComplete\": true,\n    \"noLocalDirectoryReads\": true\n  },\n  \"errors\": []\n}\n```\n\n## Validation Criteria\n\n1. **Bootstrap Template**: manage-session-memory is in BOOTSTRAP_TEMPLATES set\n2. **Embedded Source**: Template loaded from embedded source (not MCP, not local file)\n3. **Execution Success**: Activity completes successfully\n4. **No Local Reads**: ZERO reads of .metabob/activities directory\n\n## Test Description\n\nThis test validates bootstrap template fallback behavior:\n\n- When backend is unavailable, bootstrap templates load from embedded source\n- No local file reads occur\n- Activity can still execute in cold-start scenario\n\n**Test Environment**: devbob-k8s container with metabob-rpc-api DISCONNECTED\n\n**Expected Behavior**: Bootstrap template loads from embedded source, execution succeeds\n\n**Note**: This test requires temporarily disabling MCP backend to test fallback behavior.\n",
+    "source": "validation-test-case"
+  },
+  "budget": 1000,
+  "priority": "medium",
+  "loaded": true,
+  "metadata": {
+    "testCase": 2,
+    "specification": "activity-template-mcp-only-flow",
+    "activityId": "manage-session-memory",
+    "category": "fallback",
+    "requiresBackendDisconnect": true
+  }
+}

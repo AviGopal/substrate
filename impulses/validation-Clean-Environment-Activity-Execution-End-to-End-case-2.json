@@ -1,0 +1,23 @@
+{
+  "id": "validation-Clean Environment Activity Execution End-to-End-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-2\",\n  \"testName\": \"Memory Agent Config Has Activity Tools\",\n  \"input\": {\n    \"agentConfigPath\": \"repos/metabob-opencode/packages/opencode/src/agent/agent.ts\",\n    \"agentName\": \"memory\"\n  },\n  \"expectedOutput\": {\n    \"hasActivity\": true,\n    \"hasSearchActivities\": true,\n    \"hasGetActivityTemplate\": true,\n    \"hasImpulseCreate\": true,\n    \"hasImpulseLoad\": true,\n    \"hasImpulseUnload\": true\n  }\n}",
+    "source": "validation-test-case"
+  },
+  "budget": 500,
+  "priority": "high",
+  "scope": "validation",
+  "loaded": true,
+  "content": "{\n  \"impulseId\": \"validation-Clean Environment Activity Execution End-to-End-case-2\",\n  \"testName\": \"Memory Agent Config Has Activity Tools\",\n  \"input\": {\n    \"agentConfigPath\": \"repos/metabob-opencode/packages/opencode/src/agent/agent.ts\",\n    \"agentName\": \"memory\"\n  },\n  \"expectedOutput\": {\n    \"hasActivity\": true,\n    \"hasSearchActivities\": true,\n    \"hasGetActivityTemplate\": true,\n    \"hasImpulseCreate\": true,\n    \"hasImpulseLoad\": true,\n    \"hasImpulseUnload\": true\n  }\n}",
+  "metadata": {
+    "created": "2026-03-05T04:17:44.371Z",
+    "purpose": "validation-test-case",
+    "specification": "Clean Environment Activity Execution End-to-End",
+    "testName": "Memory Agent Config Has Activity Tools",
+    "usedBy": [
+      "validation-harness"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "validation-boredom-activity-detection-mechanism-case-5",
+  "name": "Boredom Activity with Only Branch Name (Auto-Correction)",
+  "input": {
+    "title": "Some Activity",
+    "branch": "boredom-activity"
+  },
+  "expectedOutput": {
+    "isBoredom": true,
+    "initiatedBy": null,
+    "branch": "boredom-activity",
+    "titleHasBoredomPrefix": false,
+    "detectionMethods": {
+      "titlePrefix": false,
+      "branchName": true,
+      "persistentField": true
+    }
+  }
+}

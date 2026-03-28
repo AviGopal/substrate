@@ -1,0 +1,298 @@
+# =============================================================================
+# Istio Gateway Configuration - DRY & Environment-Aware
+# =============================================================================
+#
+# Usage:
+#   Development: Uses .metabob.local TLD
+#   Production:  Uses .metabob.com TLD
+#
+# Service Mapping Matrix:
+# ┌─────────────────────────┬─────────────────────────┬────────────────────────────┐
+# │ Service                 │ Development             │ Production                 │
+# ├─────────────────────────┼─────────────────────────┼────────────────────────────┤
+# │ metabob-activity-api    │ activity.metabob.local  │ activity.metabob.com       │
+# │ metabob-analysis-api    │ api.metabob.local       │ api.metabob.com            │
+# │ metabob-cloud-dashboard │ app.metabob.local       │ app.metabob.com            │
+# │ activity-dashboard      │ graph.metabob.local     │ (no production equivalent) │
+# │ internal-dashboard      │ internal.metabob.local  │ (no external access)       │
+# │ surrealdb               │ surql.metabob.local     │ (no external access)       │
+# │ valkey/redis            │ (cluster internal only) │ (cluster internal only)    │
+# └─────────────────────────┴─────────────────────────┴────────────────────────────┘
+#
+# /etc/hosts (development):
+#   127.0.0.1 app.metabob.local activity.metabob.local api.metabob.local
+#   127.0.0.1 graph.metabob.local internal.metabob.local surql.metabob.local
+#
+# =============================================================================
+
+# Environment configuration
+environment: development  # development | production
+
+# Domain configuration per environment
+domains:
+  development: metabob.local
+  production: metabob.com
+
+# Gateway configuration
+gateway:
+  name: metabob-gateway
+  namespace: activity-system
+  selector:
+    istio: ingressgateway
+  # Port configuration
+  port:
+    number: 80
+    name: http
+    protocol: HTTP
+  # TLS configuration (production only)
+  tls:
+    enabled: false  # Enable in production
+    mode: SIMPLE
+    credentialName: metabob-tls-cert
+
+# =============================================================================
+# Service Definitions (DRY - define once, use everywhere)
+# =============================================================================
+# Each service is defined with:
+#   - subdomain: prefix for the hostname (e.g., "app" -> app.metabob.local)
+#   - service: Kubernetes service name
+#   - namespace: service namespace (default: activity-system)
+#   - port: service port
+#   - enabled: per-environment enable/disable
+#   - settings: traffic policies, cors, timeouts, etc.
+
+services:
+  # Cloud Dashboard (SaaS frontend)
+  dashboard:
+    subdomain: app
+    service: metabob-cloud-dashboard
+    namespace: activity-system
+    port: 3000
+    enabled:
+      development: true
+      production: true
+    settings:
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization"]
+        maxAge: 24h
+      # WebSocket support for real-time updates
+      websocket:
+        enabled: true
+        path: /ws
+        timeout: 3600s
+      loadBalancer: ROUND_ROBIN
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 100
+          maxRequestsPerConnection: 2
+
+  # Activity API (learning system backend)
+  activity:
+    subdomain: activity
+    service: metabob-activity-api
+    namespace: activity-system
+    port: 8080
+    enabled:
+      development: true
+      production: true
+    settings:
+      timeout: 60s
+      retries:
+        attempts: 3
+        perTryTimeout: 20s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "x-api-key", "x-org-id"]
+        maxAge: 24h
+      loadBalancer: LEAST_REQUEST
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 200
+          http2MaxRequests: 200
+          maxRequestsPerConnection: 5
+
+  # Analysis API (code analysis, problem resolution)
+  analysis:
+    subdomain: api
+    service: metabob-analysis-api
+    namespace: activity-system
+    port: 8080
+    enabled:
+      development: true
+      production: true
+    settings:
+      timeout: 120s  # Longer for analysis operations
+      retries:
+        attempts: 2
+        perTryTimeout: 60s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "x-api-key", "x-org-id"]
+        maxAge: 24h
+      loadBalancer: LEAST_REQUEST
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 100
+          http2MaxRequests: 100
+          maxRequestsPerConnection: 5
+
+  # SurrealDB (development access only)
+  surrealdb:
+    subdomain: surql
+    service: surrealdb
+    namespace: activity-system
+    port: 8000
+    enabled:
+      development: true
+      production: false  # NO external access in production
+    settings:
+      timeout: 30s
+      retries:
+        attempts: 1
+        perTryTimeout: 30s
+      # Inject default headers so browser/Surrealist access works without redirect
+      requestHeaders:
+        surreal-ns: activity-system
+        surreal-db: learning_loop
+        Accept: application/json
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "ns", "db", "accept", "surreal-ns", "surreal-db"]
+        maxAge: 24h
+      loadBalancer: ROUND_ROBIN
+
+  # Internal Dashboard (internal observability UI)
+  internal:
+    subdomain: internal
+    service: metabob-internal-dashboard
+    namespace: activity-system
+    port: 3001
+    enabled:
+      development: true
+      production: false  # Internal dashboard not exposed externally in production
+    settings:
+      timeout: 60s
+      retries:
+        attempts: 2
+        perTryTimeout: 30s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization"]
+        maxAge: 24h
+      # WebSocket support for MiniBob communication
+      websocket:
+        enabled: true
+        path: /ws
+        timeout: 3600s
+      loadBalancer: ROUND_ROBIN
+
+  # Activity Dashboard (MiniBob monitoring & learning visualization)
+  graph:
+    subdomain: graph
+    service: activity-dashboard
+    namespace: activity-system
+    port: 3000
+    enabled:
+      development: true
+      production: false  # Development only - no production equivalent
+    settings:
+      timeout: 60s
+      retries:
+        attempts: 2
+        perTryTimeout: 30s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization"]
+        maxAge: 24h
+      loadBalancer: ROUND_ROBIN
+
+  # Legacy RPC API (ide.metabob.com)
+  # FROZEN - No updates, minimal maintenance
+  # Routes to metabob-rpc-api service in metabob namespace
+  # NOTE: Despite intent to use metabob-legacy, resources deployed to metabob namespace
+  legacy-rpc-api:
+    subdomain: ide
+    service: metabob-rpc-api
+    namespace: metabob  # Actual deployment namespace (not metabob-legacy)
+    port: 8080
+    enabled:
+      development: false  # Not needed in development
+      production: true    # Production only - legacy IDE integration
+    settings:
+      timeout: 300s  # Longer timeout for legacy analysis operations
+      retries:
+        attempts: 3
+        perTryTimeout: 100s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "x-api-key"]
+        maxAge: 24h
+      loadBalancer: ROUND_ROBIN
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 100
+          maxRequestsPerConnection: 5
+
+# =============================================================================
+# Internal Services (cluster-internal only, no external gateway)
+# =============================================================================
+# These are accessible within the mesh but not exposed externally
+
+internalServices:
+  redis:
+    service: redis-valkey
+    namespace: activity-system
+    port: 6379
+    mtls: true
+
+  surrealdb-internal:
+    service: surrealdb
+    namespace: activity-system
+    port: 8000
+    mtls: true
+
+# =============================================================================
+# Metrics & Monitoring
+# =============================================================================
+
+metrics:
+  enabled: true
+  prometheus:
+    enabled: true
+    scrape: true
+    port: 15020
+    path: /stats/prometheus
+
+# =============================================================================
+# Namespace & Labels
+# =============================================================================
+
+namespace: activity-system
+
+labels:
+  app.kubernetes.io/name: metabob-gateway
+  app.kubernetes.io/component: networking
+  app.kubernetes.io/part-of: metabob
+
+# Istio injection
+istioInjection:
+  enabled: true

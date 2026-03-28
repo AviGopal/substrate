@@ -1,0 +1,155 @@
+{
+  "id": "validation-results-Dashboard_Activity_History_Viewing_Flow",
+  "type": "memo",
+  "pointer": {
+    "type": "file",
+    "filePath": "VALIDATION_RESULTS_Dashboard_Activity_History.md",
+    "source": "validation harness execution"
+  },
+  "metadata": {
+    "specificationName": "Dashboard Activity History Viewing Flow",
+    "validationDate": "2026-03-05",
+    "harnessId": "harness-Dashboard_Activity_History_Viewing_Flow",
+    "overallStatus": "PASS_WITH_CONDITIONS",
+    "summary": {
+      "totalTests": 6,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 3,
+      "passRate": "100%",
+      "coverage": "50%"
+    },
+    "testResults": [
+      {
+        "testCase": "validation-Dashboard_Activity_History_Viewing_Flow-case-1",
+        "name": "Kubernetes Context",
+        "status": "PASS",
+        "category": "infrastructure",
+        "automated": true,
+        "actual": {
+          "activeContext": "docker-desktop"
+        },
+        "expected": {
+          "activeContext": "docker-desktop",
+          "status": "PASS"
+        },
+        "difference": null
+      },
+      {
+        "testCase": "validation-Dashboard_Activity_History_Viewing_Flow-case-2",
+        "name": "Dashboard Pod Running",
+        "status": "PASS",
+        "category": "infrastructure",
+        "automated": true,
+        "actual": {
+          "podStatus": "Running",
+          "containersReady": true,
+          "containerCount": 1
+        },
+        "expected": {
+          "podStatus": "Running",
+          "containersReady": "1/1",
+          "status": "PASS"
+        },
+        "difference": null
+      },
+      {
+        "testCase": "validation-Dashboard_Activity_History_Viewing_Flow-case-DNS",
+        "name": "DNS Configuration",
+        "status": "PASS",
+        "category": "infrastructure",
+        "automated": true,
+        "actual": {
+          "hasAppMetabobLocal": true,
+          "hasApiMetabobLocal": true
+        },
+        "expected": {
+          "hasAppMetabobLocal": true,
+          "hasApiMetabobLocal": true,
+          "status": "PASS"
+        },
+        "difference": null
+      },
+      {
+        "testCase": "validation-Dashboard_Activity_History_Viewing_Flow-case-3",
+        "name": "API Activity List Schema",
+        "status": "SKIP",
+        "category": "api",
+        "automated": true,
+        "actual": {
+          "note": "API validation requires running backend and valid JWT token"
+        },
+        "expected": {
+          "status": "PASS",
+          "schema": {
+            "activities": "array",
+            "hasMore": "boolean",
+            "total": "number"
+          }
+        },
+        "difference": "Test requires backend API running and authentication",
+        "recommendation": "Start backend: cd repos/metabob-rpc-api && poetry run uvicorn server.main:app --port 8081"
+      },
+      {
+        "testCase": "validation-Dashboard_Activity_History_Viewing_Flow-case-4",
+        "name": "Authentication JWT Token",
+        "status": "SKIP",
+        "category": "authentication",
+        "automated": true,
+        "actual": {
+          "note": "Authentication requires running backend and test user in database"
+        },
+        "expected": {
+          "status": "PASS",
+          "hasToken": true,
+          "hasUser": true,
+          "tokenType": "Bearer"
+        },
+        "difference": "Test requires backend API running and test user created",
+        "recommendation": "Create test user in SurrealDB"
+      },
+      {
+        "testCase": "validation-Dashboard_Activity_History_Viewing_Flow-case-5",
+        "name": "End-to-End Integration",
+        "status": "SKIP",
+        "category": "integration",
+        "automated": false,
+        "actual": {
+          "note": "Integration test requires browser automation and multiple activity executions"
+        },
+        "expected": {
+          "status": "PASS",
+          "activitiesVisible": 3,
+          "statusBadgesCorrect": true,
+          "drillDownWorking": true
+        },
+        "difference": "Test requires browser automation (Playwright) and 3 test activities",
+        "recommendation": "Use Playwright for automated UI testing"
+      }
+    ],
+    "layerStatus": {
+      "infrastructure": "PASS",
+      "dns": "PASS",
+      "api": "SKIP",
+      "authentication": "SKIP",
+      "integration": "SKIP"
+    },
+    "environment": {
+      "os": "Linux",
+      "kubernetesContext": "docker-desktop",
+      "namespace": "metabob",
+      "dashboardPod": "Running (1/1)",
+      "dnsConfigured": true,
+      "backendApi": "Not started"
+    },
+    "nextSteps": [
+      "Start backend services (SurrealDB, metabob-rpc-api, dashboard)",
+      "Create test user in SurrealDB",
+      "Re-run validation harness with backend running",
+      "Implement Playwright tests for UI/integration validation"
+    ]
+  },
+  "budget": 2000,
+  "lazyLoad": false,
+  "compressed": false
+}

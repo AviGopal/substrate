@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Chart.Name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.config.port }}
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "{{ .Values.config.port }}"
+        - name: HOST
+          value: "{{ .Values.config.host }}"
+        - name: SURREALDB_URL
+          value: "{{ .Values.config.surrealdb.url }}"
+        - name: SURREALDB_NAMESPACE
+          value: "{{ .Values.config.surrealdb.namespace }}"
+        - name: SURREALDB_DATABASE
+          value: "{{ .Values.config.surrealdb.database }}"
+        - name: SURREALDB_USERNAME
+          value: "{{ .Values.config.surrealdb.username }}"
+        - name: SURREALDB_PASSWORD
+          value: "{{ .Values.config.surrealdb.password }}"
+        - name: REDIS_URL
+          value: "{{ .Values.config.redis.url }}"
+        - name: LOG_LEVEL
+          value: "{{ .Values.config.logLevel }}"
+        - name: CORS_ORIGINS
+          value: "{{ .Values.config.corsOrigins }}"
+        {{- if .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.resources }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        {{- end }}

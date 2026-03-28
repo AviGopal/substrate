@@ -1,0 +1,12 @@
+{
+  "id": "validation-vessel-tools-architecture-and-typescript-fixes-case-6",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 6: Session Type References\n\n## Input\n- Functions: `generateNextTask` and `requestAgentReflection`\n- Check parameter types for session\n\n## Expected Output\n- `generateUsesInfo: true` - generateNextTask uses session: Session.Info\n- `reflectionUsesInfo: true` - requestAgentReflection uses session: Session.Info\n- `hasBareSession: false` - No bare \"session: Session\" (namespace as type error)\n\n## Type Correction\n- Session is a namespace, not a type\n- Actual session info type is Session.Info\n- TypeScript error: \"Cannot use namespace 'Session' as a type\"\n\n## Fix Applied\n```typescript\n// OLD (Error)\nsession: Session\n\n// NEW (Correct)\nsession: Session.Info\n```"
+  },
+  "budget": 500,
+  "priority": "high",
+  "loaded": true,
+  "scope": "session"
+}

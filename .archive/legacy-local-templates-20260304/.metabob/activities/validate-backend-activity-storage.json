@@ -1,0 +1,327 @@
+{
+  "activity_id": "validate-backend-activity-storage",
+  "name": "Validate Backend Activity Storage",
+  "description": "Validate that metabob-rpc-api correctly stores, retrieves, and manages activity templates with Thompson Sampling",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "prepare-test-template",
+      "subagent": "activity",
+      "description": "Prepare a test activity template for validation",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Prepare Test Activity Template\n\n## Objective\nCreate a simple test activity template that we'll use to validate backend storage.\n\n## Template Requirements\n- Name: \"validate-backend-test-template\"\n- ID: \"validate-backend-test-template\"\n- Category: \"infrastructure\"\n- 2 simple tasks (to test task storage)\n- 1 variable (to test variable handling)\n- Basic validation (to test validation storage)\n\n## Template Structure\n```json\n{\n  \"name\": \"Validate Backend Test Template\",\n  \"description\": \"Simple template for backend validation testing\",\n  \"category\": \"infrastructure\",\n  \"version\": 1,\n  \"tasks\": [\n    {\n      \"id\": \"task-1\",\n      \"subagent\": \"general\",\n      \"description\": \"First test task\",\n      \"dependencies\": [],\n      \"prompt\": {\n        \"template\": \"Execute test task 1: {{testParam}}\",\n        \"maxTokens\": 1000,\n        \"compressionStrategy\": \"filter\",\n        \"variables\": [\n          {\n            \"name\": \"testParam\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"description\": \"Test parameter\"\n          }\n        ]\n      },\n      \"validation\": {\n        \"requiredPatterns\": [\"completed\"],\n        \"commands\": []\n      },\n      \"retry\": {\n        \"maxAttempts\": 1,\n        \"strategy\": \"simple\"\n      }\n    },\n    {\n      \"id\": \"task-2\",\n      \"subagent\": \"general\",\n      \"description\": \"Second test task\",\n      \"dependencies\": [\"task-1\"],\n      \"prompt\": {\n        \"template\": \"Execute test task 2 after task 1\",\n        \"maxTokens\": 1000,\n        \"compressionStrategy\": \"filter\",\n        \"variables\": []\n      },\n      \"validation\": {\n        \"commands\": []\n      },\n      \"retry\": {\n        \"maxAttempts\": 1,\n        \"strategy\": \"simple\"\n      }\n    }\n  ]\n}\n```\n\n## Your Task\n1. Create the template JSON file at: `./test-templates/validate-backend-test-template.json`\n2. Output the file path for the next task\n\n## Output Format\n```json\n{\n  \"templatePath\": \"./test-templates/validate-backend-test-template.json\",\n  \"templateId\": \"validate-backend-test-template\",\n  \"status\": \"created\"\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "./test-templates/validate-backend-test-template.json"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "{\"templatePath\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"status\": \"created\"",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-template-registration",
+      "subagent": "activity",
+      "description": "Test template registration via backend API",
+      "dependencies": [
+        "prepare-test-template"
+      ],
+      "prompt": {
+        "template": "# Task: Test Template Registration\n\n## Previous Task Output\n{{prepareOutput}}\n\nTemplate file: {{prepareOutput.templatePath}}\n\n## Backend URL\n{{backendUrl}}\n\n## Your Task\nTest that templates can be registered and stored in the backend.\n\n### Step 1: Register Template\nUse the CLI or direct API call to register the template:\n\n```bash\n# Option 1: Via metabob-cli\ncd repos/metabob-cli\npython -m metabob_cli.activities.register --file {{prepareOutput.templatePath}}\n\n# Option 2: Direct API call\ncurl -X POST {{backendUrl}}/v2/activities/templates \\\n  -H \"Content-Type: application/json\" \\\n  -d @{{prepareOutput.templatePath}}\n```\n\n### Step 2: Verify Storage\nRetrieve the template to verify it was stored:\n\n```bash\ncurl {{backendUrl}}/v2/activities/templates/{{prepareOutput.templateId}}\n```\n\n### Step 3: Validate Response\nCheck that the response contains:\n- ✅ All tasks (2 tasks)\n- ✅ Task dependencies (task-2 depends on task-1)\n- ✅ Variables (testParam)\n- ✅ Validation rules\n- ✅ Retry strategies\n\n## Output Format\n```json\n{\n  \"registration\": {\n    \"success\": true/false,\n    \"method\": \"cli|api\",\n    \"statusCode\": 200,\n    \"templateId\": \"validate-backend-test-template\"\n  },\n  \"retrieval\": {\n    \"success\": true/false,\n    \"tasksCount\": 2,\n    \"variablesCount\": 1,\n    \"allFieldsPresent\": true/false\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": [\"list any issues found\"]\n  }\n}\n```\n\n## Success Criteria\n- Template registered successfully (HTTP 200)\n- Template retrievable by ID\n- All fields preserved (tasks, variables, validation)\n- No data corruption",
+        "variables": [
+          {
+            "name": "prepareOutput",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from prepare-test-template task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"success\": true",
+            "description": ""
+          },
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-thompson-sampling",
+      "subagent": "activity",
+      "description": "Test Thompson Sampling variant selection",
+      "dependencies": [
+        "test-template-registration"
+      ],
+      "prompt": {
+        "template": "# Task: Test Thompson Sampling\n\n## Backend URL\n{{backendUrl}}\n\n## Template ID\n{{registrationOutput.registration.templateId}}\n\n## Your Task\nValidate that Thompson Sampling works for variant selection.\n\n### Step 1: Create Template Variant\nCreate a variant of the test template:\n\n```bash\ncurl -X POST {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}/variants \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"reason\": \"Test variant for validation\",\n    \"changes\": {\n      \"tasks\": [\n        {\n          \"id\": \"task-1\",\n          \"prompt\": {\n            \"template\": \"Variant task 1: {{testParam}}\"\n          }\n        }\n      ]\n    }\n  }'\n```\n\n### Step 2: Test Variant Selection\nRequest variant selection multiple times:\n\n```bash\nfor i in {1..5}; do\n  curl -X POST {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}/select-variant\ndone\n```\n\n### Step 3: Record Execution Results\nSimulate 2 successes for variant A, 1 failure for variant B:\n\n```bash\n# Success for variant A\ncurl -X POST {{backendUrl}}/v2/activities/executions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"template_id\": \"{{registrationOutput.registration.templateId}}\",\n    \"variant_id\": \"base\",\n    \"success\": true,\n    \"cost\": 0.01,\n    \"duration\": 5000\n  }'\n\n# Repeat success\ncurl -X POST {{backendUrl}}/v2/activities/executions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"template_id\": \"{{registrationOutput.registration.templateId}}\",\n    \"variant_id\": \"base\",\n    \"success\": true,\n    \"cost\": 0.01,\n    \"duration\": 4500\n  }'\n\n# Failure for variant (if exists)\ncurl -X POST {{backendUrl}}/v2/activities/executions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"template_id\": \"{{registrationOutput.registration.templateId}}\",\n    \"variant_id\": \"variant-1\",\n    \"success\": false,\n    \"cost\": 0.005,\n    \"duration\": 2000\n  }'\n```\n\n### Step 4: Verify Learning\nCheck that Thompson Sampling probabilities shifted:\n\n```bash\ncurl {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}/stats\n```\n\nExpected: Base variant should have higher probability after 2 successes vs 1 failure\n\n## Output Format\n```json\n{\n  \"variantCreation\": {\n    \"success\": true/false,\n    \"variantId\": \"variant-1\"\n  },\n  \"sampling\": {\n    \"selections\": [\n      {\"variantId\": \"base\", \"confidence\": 0.7},\n      {\"variantId\": \"variant-1\", \"confidence\": 0.3}\n    ],\n    \"distributionReasonable\": true/false\n  },\n  \"learning\": {\n    \"executionsRecorded\": 3,\n    \"baseAlpha\": \"value after 2 successes\",\n    \"baseBeta\": \"value (should be unchanged or minimal)\",\n    \"probabilityShift\": \"base variant favored after successes\"\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Variants can be created\n- Selection returns variant IDs\n- Execution results recorded\n- Learning updates alpha/beta\n- Probabilities shift based on outcomes",
+        "variables": [
+          {
+            "name": "registrationOutput",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from test-template-registration task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "cleanup-test-data",
+      "subagent": "activity",
+      "description": "Clean up test template and data",
+      "dependencies": [
+        "test-thompson-sampling"
+      ],
+      "prompt": {
+        "template": "# Task: Cleanup Test Data\n\n## Your Task\nClean up the test template and execution data.\n\n### Delete Test Template\n```bash\ncurl -X DELETE {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}\n```\n\n### Remove Test File\n```bash\nrm -f {{prepareOutput.templatePath}}\nrmdir test-templates 2>/dev/null || true\n```\n\n## Output\n```json\n{\n  \"cleanup\": {\n    \"templateDeleted\": true,\n    \"fileRemoved\": true\n  }\n}\n```",
+        "variables": [
+          {
+            "name": "registrationOutput",
+            "type": "string",
+            "required": true,
+            "description": "Output from test-template-registration"
+          },
+          {
+            "name": "prepareOutput",
+            "type": "string",
+            "required": true,
+            "description": "Output from prepare-test-template"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "prepare-test-template",
+      "subagent": "activity",
+      "description": "Prepare a test activity template for validation",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Prepare Test Activity Template\n\n## Objective\nCreate a simple test activity template that we'll use to validate backend storage.\n\n## Template Requirements\n- Name: \"validate-backend-test-template\"\n- ID: \"validate-backend-test-template\"\n- Category: \"infrastructure\"\n- 2 simple tasks (to test task storage)\n- 1 variable (to test variable handling)\n- Basic validation (to test validation storage)\n\n## Template Structure\n```json\n{\n  \"name\": \"Validate Backend Test Template\",\n  \"description\": \"Simple template for backend validation testing\",\n  \"category\": \"infrastructure\",\n  \"version\": 1,\n  \"tasks\": [\n    {\n      \"id\": \"task-1\",\n      \"subagent\": \"general\",\n      \"description\": \"First test task\",\n      \"dependencies\": [],\n      \"prompt\": {\n        \"template\": \"Execute test task 1: {{testParam}}\",\n        \"maxTokens\": 1000,\n        \"compressionStrategy\": \"filter\",\n        \"variables\": [\n          {\n            \"name\": \"testParam\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"description\": \"Test parameter\"\n          }\n        ]\n      },\n      \"validation\": {\n        \"requiredPatterns\": [\"completed\"],\n        \"commands\": []\n      },\n      \"retry\": {\n        \"maxAttempts\": 1,\n        \"strategy\": \"simple\"\n      }\n    },\n    {\n      \"id\": \"task-2\",\n      \"subagent\": \"general\",\n      \"description\": \"Second test task\",\n      \"dependencies\": [\"task-1\"],\n      \"prompt\": {\n        \"template\": \"Execute test task 2 after task 1\",\n        \"maxTokens\": 1000,\n        \"compressionStrategy\": \"filter\",\n        \"variables\": []\n      },\n      \"validation\": {\n        \"commands\": []\n      },\n      \"retry\": {\n        \"maxAttempts\": 1,\n        \"strategy\": \"simple\"\n      }\n    }\n  ]\n}\n```\n\n## Your Task\n1. Create the template JSON file at: `./test-templates/validate-backend-test-template.json`\n2. Output the file path for the next task\n\n## Output Format\n```json\n{\n  \"templatePath\": \"./test-templates/validate-backend-test-template.json\",\n  \"templateId\": \"validate-backend-test-template\",\n  \"status\": \"created\"\n}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 4000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "./test-templates/validate-backend-test-template.json"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "{\"templatePath\":",
+            "description": ""
+          },
+          {
+            "pattern": "\"status\": \"created\"",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-template-registration",
+      "subagent": "activity",
+      "description": "Test template registration via backend API",
+      "dependencies": [
+        "prepare-test-template"
+      ],
+      "prompt": {
+        "template": "# Task: Test Template Registration\n\n## Previous Task Output\n{{prepareOutput}}\n\nTemplate file: {{prepareOutput.templatePath}}\n\n## Backend URL\n{{backendUrl}}\n\n## Your Task\nTest that templates can be registered and stored in the backend.\n\n### Step 1: Register Template\nUse the CLI or direct API call to register the template:\n\n```bash\n# Option 1: Via metabob-cli\ncd repos/metabob-cli\npython -m metabob_cli.activities.register --file {{prepareOutput.templatePath}}\n\n# Option 2: Direct API call\ncurl -X POST {{backendUrl}}/v2/activities/templates \\\n  -H \"Content-Type: application/json\" \\\n  -d @{{prepareOutput.templatePath}}\n```\n\n### Step 2: Verify Storage\nRetrieve the template to verify it was stored:\n\n```bash\ncurl {{backendUrl}}/v2/activities/templates/{{prepareOutput.templateId}}\n```\n\n### Step 3: Validate Response\nCheck that the response contains:\n- ✅ All tasks (2 tasks)\n- ✅ Task dependencies (task-2 depends on task-1)\n- ✅ Variables (testParam)\n- ✅ Validation rules\n- ✅ Retry strategies\n\n## Output Format\n```json\n{\n  \"registration\": {\n    \"success\": true/false,\n    \"method\": \"cli|api\",\n    \"statusCode\": 200,\n    \"templateId\": \"validate-backend-test-template\"\n  },\n  \"retrieval\": {\n    \"success\": true/false,\n    \"tasksCount\": 2,\n    \"variablesCount\": 1,\n    \"allFieldsPresent\": true/false\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": [\"list any issues found\"]\n  }\n}\n```\n\n## Success Criteria\n- Template registered successfully (HTTP 200)\n- Template retrievable by ID\n- All fields preserved (tasks, variables, validation)\n- No data corruption",
+        "variables": [
+          {
+            "name": "prepareOutput",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from prepare-test-template task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 6000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"success\": true",
+            "description": ""
+          },
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "test-thompson-sampling",
+      "subagent": "activity",
+      "description": "Test Thompson Sampling variant selection",
+      "dependencies": [
+        "test-template-registration"
+      ],
+      "prompt": {
+        "template": "# Task: Test Thompson Sampling\n\n## Backend URL\n{{backendUrl}}\n\n## Template ID\n{{registrationOutput.registration.templateId}}\n\n## Your Task\nValidate that Thompson Sampling works for variant selection.\n\n### Step 1: Create Template Variant\nCreate a variant of the test template:\n\n```bash\ncurl -X POST {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}/variants \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"reason\": \"Test variant for validation\",\n    \"changes\": {\n      \"tasks\": [\n        {\n          \"id\": \"task-1\",\n          \"prompt\": {\n            \"template\": \"Variant task 1: {{testParam}}\"\n          }\n        }\n      ]\n    }\n  }'\n```\n\n### Step 2: Test Variant Selection\nRequest variant selection multiple times:\n\n```bash\nfor i in {1..5}; do\n  curl -X POST {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}/select-variant\ndone\n```\n\n### Step 3: Record Execution Results\nSimulate 2 successes for variant A, 1 failure for variant B:\n\n```bash\n# Success for variant A\ncurl -X POST {{backendUrl}}/v2/activities/executions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"template_id\": \"{{registrationOutput.registration.templateId}}\",\n    \"variant_id\": \"base\",\n    \"success\": true,\n    \"cost\": 0.01,\n    \"duration\": 5000\n  }'\n\n# Repeat success\ncurl -X POST {{backendUrl}}/v2/activities/executions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"template_id\": \"{{registrationOutput.registration.templateId}}\",\n    \"variant_id\": \"base\",\n    \"success\": true,\n    \"cost\": 0.01,\n    \"duration\": 4500\n  }'\n\n# Failure for variant (if exists)\ncurl -X POST {{backendUrl}}/v2/activities/executions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"template_id\": \"{{registrationOutput.registration.templateId}}\",\n    \"variant_id\": \"variant-1\",\n    \"success\": false,\n    \"cost\": 0.005,\n    \"duration\": 2000\n  }'\n```\n\n### Step 4: Verify Learning\nCheck that Thompson Sampling probabilities shifted:\n\n```bash\ncurl {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}/stats\n```\n\nExpected: Base variant should have higher probability after 2 successes vs 1 failure\n\n## Output Format\n```json\n{\n  \"variantCreation\": {\n    \"success\": true/false,\n    \"variantId\": \"variant-1\"\n  },\n  \"sampling\": {\n    \"selections\": [\n      {\"variantId\": \"base\", \"confidence\": 0.7},\n      {\"variantId\": \"variant-1\", \"confidence\": 0.3}\n    ],\n    \"distributionReasonable\": true/false\n  },\n  \"learning\": {\n    \"executionsRecorded\": 3,\n    \"baseAlpha\": \"value after 2 successes\",\n    \"baseBeta\": \"value (should be unchanged or minimal)\",\n    \"probabilityShift\": \"base variant favored after successes\"\n  },\n  \"validation\": {\n    \"passed\": true/false,\n    \"issues\": []\n  }\n}\n```\n\n## Success Criteria\n- Variants can be created\n- Selection returns variant IDs\n- Execution results recorded\n- Learning updates alpha/beta\n- Probabilities shift based on outcomes",
+        "variables": [
+          {
+            "name": "registrationOutput",
+            "type": "string",
+            "required": true,
+            "description": "JSON output from test-template-registration task"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [
+          {
+            "pattern": "\"passed\": true",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "cleanup-test-data",
+      "subagent": "activity",
+      "description": "Clean up test template and data",
+      "dependencies": [
+        "test-thompson-sampling"
+      ],
+      "prompt": {
+        "template": "# Task: Cleanup Test Data\n\n## Your Task\nClean up the test template and execution data.\n\n### Delete Test Template\n```bash\ncurl -X DELETE {{backendUrl}}/v2/activities/templates/{{registrationOutput.registration.templateId}}\n```\n\n### Remove Test File\n```bash\nrm -f {{prepareOutput.templatePath}}\nrmdir test-templates 2>/dev/null || true\n```\n\n## Output\n```json\n{\n  \"cleanup\": {\n    \"templateDeleted\": true,\n    \"fileRemoved\": true\n  }\n}\n```",
+        "variables": [
+          {
+            "name": "registrationOutput",
+            "type": "string",
+            "required": true,
+            "description": "Output from test-template-registration"
+          },
+          {
+            "name": "prepareOutput",
+            "type": "string",
+            "required": true,
+            "description": "Output from prepare-test-template"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T02:57:58.750Z",
+  "metadata": {}
+}

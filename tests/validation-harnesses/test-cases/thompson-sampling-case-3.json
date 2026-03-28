@@ -1,0 +1,19 @@
+{
+  "impulseId": "validation-thompson-sampling-in-rpc-api-only-case-3",
+  "testCase": "RPC API exposes template selection endpoint",
+  "input": {
+    "testType": "api-endpoint",
+    "config": {
+      "file": "repos/metabob-rpc-api/server/routes/activity.py",
+      "endpoint": "/v2/activities/templates/{activity_id}/select",
+      "httpMethod": "POST",
+      "handler": "select_variant_thompson_sampling"
+    }
+  },
+  "expectedOutput": {
+    "routeExists": true,
+    "handlerExists": true,
+    "pass": true,
+    "reason": "RPC API must expose POST /v2/activities/templates/{activity_id}/select endpoint"
+  }
+}

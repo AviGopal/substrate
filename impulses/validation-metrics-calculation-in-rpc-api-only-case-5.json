@@ -1,0 +1,16 @@
+{
+  "id": "validation-metrics-calculation-in-rpc-api-only-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"name\": \"reportExecution-single-write\",\n  \"input\": \"template-metrics-client.ts reportExecution() function\",\n  \"expectedOutput\": {\n    \"pass\": true,\n    \"mcpCalls\": 1,\n    \"hasSingleWriteDoc\": true,\n    \"mentionsArchitecture\": true,\n    \"message\": \"Function has exactly 1 MCP call and documents architectural boundary\"\n  }\n}",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testName": "reportExecution-single-write",
+    "specificationName": "metrics-calculation-in-rpc-api-only",
+    "createdAt": "2026-02-28T09:47:19.768Z"
+  },
+  "budget": 500,
+  "status": "active"
+}

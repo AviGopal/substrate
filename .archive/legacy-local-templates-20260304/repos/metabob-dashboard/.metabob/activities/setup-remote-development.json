@@ -1,0 +1,323 @@
+{
+  "activity_id": "setup-remote-development",
+  "name": "Setup Remote Development",
+  "description": "Configure and test remote development environment with ACP and SSH tools",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "task_id": "verify-prerequisites",
+      "subagent": "general",
+      "description": "Verify prerequisites and configuration",
+      "dependencies": [],
+      "prompt": {
+        "template": "Verify remote development prerequisites:\n\n1. Check opencode.json exists:\n   - Use read tool to check if opencode.json exists\n   - If not, create minimal config\n\n2. Verify target is configured:\n   - Remote name: {{remoteName}}\n   - Type: {{remoteType}} (acp or ssh)\n\n3. For ACP:\n   - Check if container/process exists\n   - Verify command is valid\n\n4. For SSH:\n   - Check SSH key exists: {{sshKey}}\n   - Test SSH connection: ssh -i {{sshKey}} {{sshUser}}@{{sshHost}}\n\n5. Output verification checklist with checkboxes",
+        "variables": [
+          {
+            "name": "remoteName",
+            "type": "string",
+            "required": true,
+            "description": "Name for the remote connection"
+          },
+          {
+            "name": "remoteType",
+            "type": "string",
+            "required": true,
+            "description": "Type of remote: 'acp' for agent communication, 'ssh' for direct SSH"
+          },
+          {
+            "name": "sshKey",
+            "type": "string",
+            "required": false,
+            "description": "Path to SSH key (for ssh type)"
+          },
+          {
+            "name": "sshUser",
+            "type": "string",
+            "required": false,
+            "description": "SSH user (for ssh type)"
+          },
+          {
+            "name": "sshHost",
+            "type": "string",
+            "required": false,
+            "description": "SSH host (for ssh type)"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "opencode.json"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "configure-acp",
+      "subagent": "config",
+      "description": "Add ACP configuration to opencode.json",
+      "dependencies": [
+        "verify-prerequisites"
+      ],
+      "prompt": {
+        "template": "Add ACP configuration to opencode.json:\n\n{{#if (eq remoteType 'acp')}}\n1. Read current opencode.json\n2. Add or update acp section:\n\n```json\n{\n  \"acp\": {\n    \"{{remoteName}}\": {\n      \"type\": \"{{acpType}}\",\n      \"transport\": \"stdio\",\n      {{#if (eq acpType 'container')}}\n      \"container\": \"{{containerName}}\",\n      \"workDir\": \"{{workDir}}\",\n      \"command\": [\"opencode\", \"acp\", \"--cwd\", \"{{workDir}}\"],\n      {{/if}}\n      {{#if (eq acpType 'local')}}\n      \"command\": {{localCommand}},\n      {{/if}}\n      \"autoStart\": {{autoStart}},\n      \"healthCheck\": {\n        \"interval\": 30000,\n        \"timeout\": 5000,\n        \"retries\": 3\n      },\n      \"reconnect\": {\n        \"enabled\": true,\n        \"maxAttempts\": 5,\n        \"backoff\": \"exponential\"\n      }\n    }\n  }\n}\n```\n\n3. Write updated opencode.json\n4. Verify JSON is valid\n{{else}}\nSkip ACP configuration (remote type is ssh)\n{{/if}}",
+        "variables": [
+          {
+            "name": "remoteType",
+            "type": "string",
+            "required": true,
+            "description": "Type of remote: acp or ssh"
+          },
+          {
+            "name": "remoteName",
+            "type": "string",
+            "required": true,
+            "description": "Name for the remote connection"
+          },
+          {
+            "name": "acpType",
+            "type": "string",
+            "required": false,
+            "description": "ACP connection type: container, local, or remote"
+          },
+          {
+            "name": "containerName",
+            "type": "string",
+            "required": false,
+            "description": "Docker container name (for container type)"
+          },
+          {
+            "name": "workDir",
+            "type": "string",
+            "required": false,
+            "description": "Working directory in container or local"
+          },
+          {
+            "name": "localCommand",
+            "type": "string",
+            "required": false,
+            "description": "Command to spawn local agent (JSON array)"
+          },
+          {
+            "name": "autoStart",
+            "type": "boolean",
+            "required": false,
+            "description": "Auto-start agent if not running"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "opencode.json"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "\"acp\"",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "node -e \"JSON.parse(require('fs').readFileSync('opencode.json', 'utf-8'))\"",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "configure-ssh",
+      "subagent": "config",
+      "description": "Add SSH remote configuration to opencode.json",
+      "dependencies": [
+        "verify-prerequisites"
+      ],
+      "prompt": {
+        "template": "Add SSH remote configuration to opencode.json:\n\n{{#if (eq remoteType 'ssh')}}\n1. Read current opencode.json\n2. Add or update remote section:\n\n```json\n{\n  \"remote\": {\n    \"{{remoteName}}\": {\n      \"host\": \"{{sshHost}}\",\n      \"user\": \"{{sshUser}}\",\n      \"directory\": \"{{sshDirectory}}\",\n      \"port\": {{sshPort}},\n      \"identity\": \"{{sshKey}}\",\n      \"auto_sync\": {{autoSync}},\n      \"copy_env\": false,\n      \"environment\": {}\n    }\n  }\n}\n```\n\n3. Write updated opencode.json\n4. Verify JSON is valid\n{{else}}\nSkip SSH configuration (remote type is acp)\n{{/if}}",
+        "variables": [
+          {
+            "name": "remoteType",
+            "type": "string",
+            "required": true,
+            "description": "Type of remote: acp or ssh"
+          },
+          {
+            "name": "remoteName",
+            "type": "string",
+            "required": true,
+            "description": "Name for the remote connection"
+          },
+          {
+            "name": "sshHost",
+            "type": "string",
+            "required": false,
+            "description": "SSH hostname or IP"
+          },
+          {
+            "name": "sshUser",
+            "type": "string",
+            "required": false,
+            "description": "SSH username"
+          },
+          {
+            "name": "sshDirectory",
+            "type": "string",
+            "required": false,
+            "description": "Remote directory path"
+          },
+          {
+            "name": "sshPort",
+            "type": "number",
+            "required": false,
+            "description": "SSH port (default 22)"
+          },
+          {
+            "name": "sshKey",
+            "type": "string",
+            "required": false,
+            "description": "Path to SSH private key"
+          },
+          {
+            "name": "autoSync",
+            "type": "boolean",
+            "required": false,
+            "description": "Auto-sync git before commands"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "opencode.json"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "\"remote\"",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "node -e \"JSON.parse(require('fs').readFileSync('opencode.json', 'utf-8'))\"",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "test-connection",
+      "subagent": "general",
+      "description": "Test the configured remote connection",
+      "dependencies": [
+        "configure-acp",
+        "configure-ssh"
+      ],
+      "prompt": {
+        "template": "Test the configured remote connection:\n\n{{#if (eq remoteType 'acp')}}\n## ACP Connection Test\n\n1. Connect to agent:\n   ```\n   acp_connect({ name: \"{{remoteName}}\" })\n   ```\n\n2. Verify connection established:\n   ```\n   acp_list_connections()\n   ```\n\n3. Test basic communication:\n   ```\n   acp_ping({ connectionName: \"{{remoteName}}\" })\n   ```\n\n4. Simple task delegation:\n   ```\n   acp_delegate_task({\n     connectionName: \"{{remoteName}}\",\n     promptText: \"Echo 'Hello from {{remoteName}}' and show current directory\",\n     reason: \"Connection test\"\n   })\n   ```\n\n5. Verify response received\n\n6. Clean up:\n   ```\n   acp_disconnect({ connectionName: \"{{remoteName}}\" })\n   ```\n{{else}}\n## SSH Connection Test\n\n1. Test basic command:\n   ```\n   remote_bash({\n     remote: \"{{remoteName}}\",\n     command: \"echo 'Hello from {{remoteName}}' && pwd\",\n     description: \"Connection test\"\n   })\n   ```\n\n2. Test file read:\n   ```\n   remote_bash({\n     remote: \"{{remoteName}}\",\n     command: \"echo 'test content' > /tmp/opencode-test.txt && cat /tmp/opencode-test.txt\",\n     description: \"Test file operations\"\n   })\n   ```\n\n3. Verify operations successful\n{{/if}}\n\nOutput test results with status indicators (✓ or ✗)",
+        "variables": [
+          {
+            "name": "remoteType",
+            "type": "string",
+            "required": true,
+            "description": "Type of remote: acp or ssh"
+          },
+          {
+            "name": "remoteName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the remote connection"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "document-setup",
+      "subagent": "general",
+      "description": "Document the setup and usage",
+      "dependencies": [
+        "test-connection"
+      ],
+      "prompt": {
+        "template": "Document the remote development setup:\n\n1. Create a README-REMOTE-DEV.md in the project root with:\n\n## Remote Development Setup\n\n**Remote Name:** {{remoteName}}  \n**Type:** {{remoteType}}  \n**Status:** ✅ Configured and Tested\n\n### Quick Start\n\n{{#if (eq remoteType 'acp')}}\n#### Using ACP Tools\n\n```typescript\n// Connect\nacp_connect({ name: \"{{remoteName}}\" })\n\n// Delegate task\nacp_delegate_task({\n  connectionName: \"{{remoteName}}\",\n  promptText: \"Your task here\",\n  reason: \"Why delegating\"\n})\n\n// Check status\nacp_list_connections()\n\n// Disconnect\nacp_disconnect({ connectionName: \"{{remoteName}}\" })\n```\n{{else}}\n#### Using SSH Remote Tools\n\n```typescript\n// Execute command\nremote_bash({\n  remote: \"{{remoteName}}\",\n  command: \"npm test\",\n  description: \"Run tests\"\n})\n\n// Read file\nremote_read({\n  remote: \"{{remoteName}}\",\n  filePath: \"config/app.json\"\n})\n\n// Write file\nremote_write({\n  remote: \"{{remoteName}}\",\n  filePath: \"config/feature.json\",\n  content: JSON.stringify({ enabled: true })\n})\n\n// Sync git\nremote_sync({ remote: \"{{remoteName}}\" })\n```\n{{/if}}\n\n### Configuration\n\nSee `opencode.json` for full configuration.\n\n### Documentation\n\n- [Remote Development Guide](docs/REMOTE_DEVELOPMENT_GUIDE.md)\n- [ACP Usage Guide](ACP_USAGE_GUIDE.md)\n- [ACP Configuration](docs/ACP_CONFIGURATION.md)\n\n2. Output success message with next steps",
+        "variables": [
+          {
+            "name": "remoteType",
+            "type": "string",
+            "required": true,
+            "description": "Type of remote: acp or ssh"
+          },
+          {
+            "name": "remoteName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the remote connection"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "README-REMOTE-DEV.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-01-27T18:20:35.094Z",
+  "metadata": {}
+}

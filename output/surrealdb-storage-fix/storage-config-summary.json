@@ -1,0 +1,22 @@
+{
+  "changes": {
+    "storage_mode": {
+      "before": "memory (in-memory, ephemeral)",
+      "after": "file:/data/database (rocksdb, persistent)"
+    },
+    "pvc": {
+      "name": "surrealdb-data",
+      "size": "10Gi",
+      "storageClass": "hostpath"
+    },
+    "volume_mount": "/data",
+    "database_path": "/data/database"
+  },
+  "benefits": [
+    "Data persists across pod restarts",
+    "User accounts maintained",
+    "Templates stored permanently",
+    "Supports production workloads"
+  ],
+  "status": "configured"
+}

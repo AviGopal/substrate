@@ -1,0 +1,79 @@
+{
+  "id": "validation-surrealdb-async-await-enforcement-case-3",
+  "type": "memo",
+  "category": "validation",
+  "specification": "surrealdb-async-await-enforcement",
+  "testCase": {
+    "name": "Execution Metrics Persistence and Learning Loop",
+    "description": "Verify that execution results persist to SurrealDB, enabling Thompson sampling learning loop",
+    "input": {
+      "setup": [
+        "Create template via POST /v2/activities/templates",
+        "Record execution result via POST /v2/activities/executions"
+      ],
+      "method": "POST",
+      "endpoint": "/v2/activities/executions",
+      "payload": {
+        "variant_id": "<created_template_variant_id>",
+        "success": true,
+        "duration_ms": 5000,
+        "cost": 0.02,
+        "tokens": {
+          "input": 1000,
+          "output": 500,
+          "cache": 0
+        }
+      }
+    },
+    "expectedOutput": {
+      "apiResponse": {
+        "variant_id": "<matches_input>",
+        "thompson_alpha": 2.0,
+        "thompson_beta": 1.0,
+        "success_rate": 0.666667,
+        "total_selections": 1
+      },
+      "surrealdbRecords": {
+        "activityExecution": {
+          "table": "activity_execution",
+          "recordExists": true,
+          "fields": {
+            "template_id": "<matches_variant_id>",
+            "success": true,
+            "duration_ms": 5000,
+            "cost_usd": 0.02
+          }
+        },
+        "templateMetrics": {
+          "table": "template_metrics",
+          "recordExists": true,
+          "fields": {
+            "template_id": "<matches_variant_id>",
+            "total_executions": 1,
+            "total_successes": 1,
+            "total_failures": 0,
+            "thompson_alpha": 2.0,
+            "thompson_beta": 1.0
+          }
+        }
+      },
+      "logs": {
+        "expectedMessages": [
+          "✅ SurrealDB write successful",
+          "✅ Execution recorded"
+        ],
+        "noWarnings": true
+      }
+    },
+    "validationChecks": [
+      "API returns updated metrics",
+      "Execution record exists in SurrealDB",
+      "Template metrics updated in SurrealDB",
+      "Thompson sampling parameters (alpha/beta) updated correctly",
+      "No 'coroutine was never awaited' warnings",
+      "Success rate calculated correctly"
+    ]
+  },
+  "budget": 1000,
+  "createdAt": "2026-03-03T09:53:00Z"
+}

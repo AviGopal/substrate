@@ -1,0 +1,202 @@
+{
+  "specificationName": "MCP Data Flow Validation in Local Kubernetes",
+  "dataFlow": "OpenCode Activity.ts → TemplateMetricsClient → CLI MCP metabob_post_activity_result → Backend /api/v1/learning-loop/executions → SurrealDB activity_executions",
+  "components": [
+    {
+      "layer": "OpenCode",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/activity.ts",
+      "component": "Activity execution completion",
+      "lineNumbers": "1056-1057, 1361-1362",
+      "currentBehavior": "Collects impulses_used and component_changes arrays and passes them to TemplateMetricsClient.reportExecution()",
+      "desiredBehavior": "✅ COMPLETE - Data collection implemented",
+      "gap": "NONE - Working as designed",
+      "evidence": "Lines 1056-1057 show: impulses_used: impulsesUsed.length > 0 ? impulsesUsed : undefined, component_changes: componentChanges.length > 0 ? componentChanges : undefined"
+    },
+    {
+      "layer": "OpenCode",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics.ts",
+      "component": "ActivityExecutionData schema",
+      "lineNumbers": "47-48",
+      "currentBehavior": "Schema defines impulses_used?: ImpulseUsageData[] and component_changes?: ComponentChangeData[]",
+      "desiredBehavior": "✅ COMPLETE - Schema aligned with MCP flow",
+      "gap": "NONE - Schema matches downstream expectations",
+      "evidence": "Lines 47-48 define the learning data fields"
+    },
+    {
+      "layer": "OpenCode",
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts",
+      "component": "MCP tool call metabob_post_activity_result",
+      "lineNumbers": "104-105, 124-125",
+      "currentBehavior": "Passes impulses_used and component_changes to MCP tool in result parameter",
+      "desiredBehavior": "✅ COMPLETE - Forwards learning data to CLI",
+      "gap": "NONE - Working as designed",
+      "evidence": "Lines 124-125 show data forwarding: impulses_used: data.impulses_used, component_changes: data.component_changes"
+    },
+    {
+      "layer": "CLI MCP",
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+      "component": "metabob_post_activity_result tool",
+      "lineNumbers": "314-365",
+      "currentBehavior": "Receives result dict with impulses_used and component_changes, adds them to request_data with logging",
+      "desiredBehavior": "✅ COMPLETE - Extracts and forwards learning data",
+      "gap": "NONE - Working as designed",
+      "evidence": "Lines 355-365 show: if result.get('impulses_used'): request_data['impulses_used'] = result.get('impulses_used'); logger.debug(f'[LEARNING] Including {len(result.get(\"impulses_used\"))} impulses in execution data')"
+    },
+    {
+      "layer": "CLI MCP",
+      "file": "repos/metabob-cli/src/metabob_cli/mcp/api_client.py",
+      "component": "HTTP client call_api",
+      "lineNumbers": "1-100",
+      "currentBehavior": "Generic HTTP client that forwards request_data to backend API with retry logic",
+      "desiredBehavior": "✅ COMPLETE - Proxies data without transformation",
+      "gap": "NONE - Working as designed",
+      "evidence": "Lines 53-82 show call_api makes POST with json=request_data"
+    },
+    {
+      "layer": "Backend API",
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "ExecutionRequest schema",
+      "lineNumbers": "151-158",
+      "currentBehavior": "Schema accepts impulses_used: Optional[List[ImpulseUsageData]] and component_changes: Optional[List[ComponentChangeData]]",
+      "desiredBehavior": "✅ COMPLETE - Schema defined for MCP data flow",
+      "gap": "NONE - Schema aligned",
+      "evidence": "Lines 151-158 show both fields defined with proper typing"
+    },
+    {
+      "layer": "Backend API",
+      "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+      "component": "record_execution endpoint",
+      "lineNumbers": "240-260",
+      "currentBehavior": "Receives request with impulses_used and component_changes but ONLY processes legacy 'impulses' field and passes it to insert_execution",
+      "desiredBehavior": "Should process impulses_used and component_changes from MCP data flow",
+      "gap": "❌ CRITICAL GAP - Learning data received but not persisted to database",
+      "evidence": "Lines 240-260 show: impulses_data = [impulse.model_dump() for impulse in request.impulses] but NO processing of request.impulses_used or request.component_changes"
+    },
+    {
+      "layer": "Backend API",
+      "file": "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+      "component": "insert_execution function",
+      "lineNumbers": "20-100",
+      "currentBehavior": "Accepts impulses parameter (legacy format) and stores in activity_executions table",
+      "desiredBehavior": "Should accept and store impulses_used and component_changes from MCP data flow",
+      "gap": "❌ CRITICAL GAP - Function signature needs impulses_used and component_changes parameters",
+      "evidence": "Lines 34 and 88 show only 'impulses' parameter, not impulses_used/component_changes"
+    },
+    {
+      "layer": "Backend API",
+      "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+      "component": "Impulse learning operations",
+      "lineNumbers": "1-100",
+      "currentBehavior": "Provides insert_mapping_record for turn-level learning, but not integrated with activity execution recording",
+      "desiredBehavior": "Should be called from record_execution to create impulse_usage and impulse_registry records",
+      "gap": "❌ IMPLEMENTATION GAP - No integration between activity execution and impulse learning operations",
+      "evidence": "impulse_learning operations exist but record_execution doesn't call them"
+    },
+    {
+      "layer": "Database",
+      "file": "SurrealDB tables: activity_executions, impulse_usage, impulse_registry",
+      "component": "Learning data storage",
+      "lineNumbers": "N/A",
+      "currentBehavior": "Tables exist but impulse_usage and impulse_registry not populated by activity executions",
+      "desiredBehavior": "Activity executions should populate all three tables with relationships",
+      "gap": "❌ DATA FLOW GAP - Tables exist but not receiving data from MCP flow",
+      "evidence": "insert_execution stores to activity_executions but doesn't create impulse_usage or impulse_registry records"
+    }
+  ],
+  "criticalGaps": [
+    {
+      "gapId": "GAP-1",
+      "severity": "HIGH",
+      "location": "repos/metabob-rpc-api/server/routes/learning_loop.py:240-260",
+      "issue": "record_execution receives impulses_used and component_changes but doesn't process them",
+      "impact": "Learning data is lost at the API boundary - never reaches database",
+      "fix": "Extract impulses_used and component_changes from request and pass to insert_execution or create separate impulse_usage records"
+    },
+    {
+      "gapId": "GAP-2",
+      "severity": "HIGH",
+      "location": "repos/metabob-rpc-api/server/db/operations/activity_execution.py:20-100",
+      "issue": "insert_execution function signature doesn't accept impulses_used or component_changes",
+      "impact": "Even if API passes the data, storage layer can't persist it",
+      "fix": "Add impulses_used and component_changes parameters to insert_execution and store in SurrealDB"
+    },
+    {
+      "gapId": "GAP-3",
+      "severity": "MEDIUM",
+      "location": "repos/metabob-rpc-api/server/routes/learning_loop.py:240-290",
+      "issue": "No integration with impulse_learning operations to populate impulse_usage and impulse_registry tables",
+      "impact": "Thompson sampling and pattern detection can't use learning data",
+      "fix": "After storing execution, iterate impulses_used and create impulse_usage records, update impulse_registry aggregates"
+    }
+  ],
+  "validationPlan": [
+    {
+      "step": 1,
+      "action": "Fix Backend API to process impulses_used and component_changes",
+      "files": [
+        "repos/metabob-rpc-api/server/routes/learning_loop.py",
+        "repos/metabob-rpc-api/server/db/operations/activity_execution.py"
+      ],
+      "verification": "Code inspection - check parameters passed to insert_execution"
+    },
+    {
+      "step": 2,
+      "action": "Deploy updated Backend to local Kubernetes",
+      "command": "kubectl apply -f helm/charts/metabob-rpc-api/ or helmfile sync",
+      "verification": "kubectl get pods -l app=metabob-rpc-api; kubectl logs <pod>"
+    },
+    {
+      "step": 3,
+      "action": "Execute test activity with impulses",
+      "command": "opencode activity --template=test-template --variables='{...}'",
+      "expectedLogs": "[LEARNING] Including N impulses in execution data"
+    },
+    {
+      "step": 4,
+      "action": "Query SurrealDB activity_executions table",
+      "query": "SELECT * FROM activity_executions WHERE activity_id = '<test-activity-id>'",
+      "expectedResult": "Record contains impulses_used and component_changes fields"
+    },
+    {
+      "step": 5,
+      "action": "Query impulse_usage table",
+      "query": "SELECT * FROM impulse_usage WHERE activity_id = '<test-activity-id>'",
+      "expectedResult": "Records exist for each impulse used, linked to activity_id"
+    },
+    {
+      "step": 6,
+      "action": "Query impulse_registry table",
+      "query": "SELECT * FROM impulse_registry WHERE impulse_id IN [<impulse-ids>]",
+      "expectedResult": "Aggregated stats updated with usage counts"
+    },
+    {
+      "step": 7,
+      "action": "Call learning API endpoints",
+      "endpoints": [
+        "GET /api/v1/learning-loop/executions/<activity-id>",
+        "GET /api/v1/learning-loop/impulse-mappings"
+      ],
+      "expectedResult": "Endpoints return learning data with impulse correlations"
+    }
+  ],
+  "deploymentContext": {
+    "environment": "Local Kubernetes",
+    "deploymentMethod": "Helmfile (helm/helmfile.yaml)",
+    "services": [
+      "metabob-opencode (not deployed, runs locally)",
+      "metabob-cli (MCP server, likely in devbob pod or separate service)",
+      "metabob-rpc-api (FastAPI backend)",
+      "SurrealDB (database)"
+    ],
+    "dataFlowSummary": "Local OpenCode → Local CLI MCP server → K8s Backend API → K8s SurrealDB"
+  },
+  "currentState": "PARTIAL - Data collection and MCP transport working, but backend doesn't persist learning data",
+  "desiredState": "COMPLETE - End-to-end data flow with all tables populated and learning systems using stored data",
+  "nextSteps": [
+    "1. Implement backend fixes for GAP-1, GAP-2, GAP-3",
+    "2. Deploy to local k8s and verify logs",
+    "3. Execute test activity and trace actual payloads",
+    "4. Validate database records and relationships",
+    "5. Test Thompson sampling and pattern detection queries"
+  ]
+}

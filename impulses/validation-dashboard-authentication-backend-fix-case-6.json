@@ -1,0 +1,37 @@
+{
+  "testCase": "Duplicate Email Rejection",
+  "testNumber": 6,
+  "description": "Test registration with duplicate email (already registered). Verify endpoint correctly rejects with 400 'Email already registered'.",
+  "input": {
+    "endpoint": "POST /auth/register",
+    "url": "http://app.metabob.local/auth/register",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "email": "test{TIMESTAMP}@validation.metabob.com",
+      "password": "ValidTestPass123!",
+      "name": "Duplicate User",
+      "org_name": "Duplicate Org"
+    },
+    "prerequisite": "Same email already registered in Test Case 2"
+  },
+  "expectedOutput": {
+    "httpStatus": 400,
+    "responseBody": {
+      "detail": "Email already registered"
+    }
+  },
+  "passCriteria": [
+    "HTTP status is 400 Bad Request",
+    "Response contains 'Email already registered' error message",
+    "Registration correctly detects duplicate via SurrealDB query",
+    "Robust result parsing prevents false positives"
+  ],
+  "failureIndicators": [
+    "HTTP status is 200 (duplicate allowed incorrectly)",
+    "HTTP status is 500 (server error in duplicate check)",
+    "Wrong error message in response",
+    "False positive from naive result parsing (len(existing[0]) > 0)"
+  ]
+}

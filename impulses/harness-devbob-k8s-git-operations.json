@@ -1,0 +1,29 @@
+{
+  "id": "harness-devbob-k8s-git-operations",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "createdAt": "2026-02-27T11:42:00Z",
+  "metadata": {
+    "harnessName": "devbob-k8s-git-operations",
+    "language": "bash",
+    "testCases": 8,
+    "destructive": true,
+    "canRunWithoutLLM": true,
+    "description": "Validates complete git operations capabilities across all 3 devbob pods in Kubernetes cluster. Tests git config, gh CLI installation/authentication, git credentials, workspace access, and full git workflows (clone, commit, push, PR creation).",
+    "usage": [
+      "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh",
+      "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --pod devbob-0",
+      "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --skip-destructive",
+      "./tests/validation-harnesses/devbob-k8s-git-operations-harness.sh --json"
+    ],
+    "exitCodes": {
+      "0": "PASS - All tests passed",
+      "1": "FAIL - Some tests failed"
+    }
+  }
+}

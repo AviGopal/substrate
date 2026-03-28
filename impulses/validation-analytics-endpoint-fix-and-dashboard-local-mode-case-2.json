@@ -1,0 +1,31 @@
+{
+  "id": "validation-analytics-endpoint-fix-and-dashboard-local-mode-case-2",
+  "type": "memo",
+  "testCase": "Dashboard loads without authentication in local mode",
+  "input": {
+    "url": "http://app.metabob.local",
+    "action": "navigate"
+  },
+  "expectedOutput": {
+    "pageLoaded": true,
+    "noLoginForm": true,
+    "homePageVisible": true,
+    "validations": [
+      "Page loads successfully (no redirect to login)",
+      "No login form elements present (input[type='password'], button:has-text('Login'))",
+      "Dashboard navigation visible",
+      "LocalAppContent component rendered (not CloudApp)",
+      "No authentication errors in console"
+    ],
+    "elementsPresent": [
+      "nav",
+      "main",
+      "Dashboard navigation links"
+    ],
+    "elementsAbsent": [
+      "input[type='password']",
+      "button:has-text('Login')",
+      "form[action*='login']"
+    ]
+  }
+}

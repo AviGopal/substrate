@@ -1,0 +1,10 @@
+{
+  "id": "validation-Deployment Synchronization with Instance-Invariant Storage Code-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Pods Running with Correct Image\n\nInput: Check devbob pods in devbob namespace\n\nExpected Output:\n{\n  \"podsExist\": true,\n  \"usingCorrectImage\": true,\n  \"notCrashLooping\": true\n}\n\nValidation Logic:\n- Run: kubectl get pods -n devbob -l app.kubernetes.io/name=devbob -o json\n- Parse pod list\n- Check each pod's spec.containers[0].image\n- Check each pod's status.phase\n- Count pods using devbob:1.0.64\n- Count pods NOT in CrashLoopBackOff\n\nPass Criteria:\n- At least one pod exists\n- At least one pod uses devbob:1.0.64\n- Prefer: pods not in CrashLoopBackOff (but image correctness is primary)",
+    "source": "validation-harness"
+  },
+  "budget": 500
+}

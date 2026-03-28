@@ -1,0 +1,61 @@
+{
+  "totalTests": 1,
+  "passed": 0,
+  "failed": 1,
+  "passRate": 0,
+  "details": [
+    {
+      "pass": false,
+      "testCase": "CLI User Tracking - API Key Authentication",
+      "actual": {
+        "postActivity": {
+          "success": true,
+          "message": "Activity posted successfully",
+          "executionId": "act_test_cli_user_tracking_001"
+        },
+        "database": {
+          "stored": false,
+          "userEmail": null
+        },
+        "api": {
+          "success": false,
+          "actorEmail": null,
+          "activities": []
+        },
+        "isolation": {
+          "isolated": true,
+          "message": "Unable to verify isolation (API returned no data)"
+        }
+      },
+      "expected": {
+        "userEmail": "demo_cli_1773464065@metabob.com",
+        "activityStored": true,
+        "apiResponseContainsEmail": true,
+        "actorEmail": "demo_cli_1773464065@metabob.com",
+        "multiTenantIsolation": true
+      },
+      "details": [
+        {
+          "step": "Post Activity",
+          "passed": true,
+          "message": "Activity posted successfully"
+        },
+        {
+          "step": "Database Storage",
+          "passed": false,
+          "message": "Expected user_email: demo_cli_1773464065@metabob.com, Actual: null"
+        },
+        {
+          "step": "API Response",
+          "passed": false,
+          "message": "Expected actor.email: demo_cli_1773464065@metabob.com, Actual: null"
+        },
+        {
+          "step": "Multi-tenant Isolation",
+          "passed": true,
+          "message": "Unable to verify isolation (API returned no data)"
+        }
+      ]
+    }
+  ]
+}

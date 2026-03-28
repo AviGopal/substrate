@@ -1,0 +1,273 @@
+================================================================================
+ACTIVITY API GOAL RESOLUTION ASSESSMENT
+================================================================================
+API Endpoint: http://activity.metabob.local
+Organization: metabob_internal
+Total Test Cases: 15
+================================================================================
+
+
+[TEST-CREATION] Create comprehensive unit tests for src/impulse.ts focusing on the createImpulse function
+--------------------------------------------------------------------------------
+
+Selection Method: thompson_sampling
+
+Top 3 Recommendations:
+
+🥇 activity:tpl_1774664882291_4usija - learned-learned-parent-goal--execute-the-goal-seeking-acti-mn9pneyb
+   Category: tool
+   Tags: []
+   Score: 0.9961
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+🥈 activity:⟨meta.learning.extract-activity-template-v1⟩ - Extract Activity Template (Ribosome)
+   Category: meta
+   Tags: []
+   Score: 0.9918
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 5/1
+
+🥉 activity:tpl_1774664953384_vt7pf - learned-system-failure-pattern-analysis-mn9poxt4
+   Category: tool
+   Tags: []
+   Score: 0.9917
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+Expected Patterns: [test, unit, vessel-add-tests]
+❌ NO MATCH - Selected: activity:tpl_1774664882291_4usija
+
+Consistency Check (same goal, 2nd request):
+⚠️  Inconsistent - Different top: activity:tpl_1774666097191_3mfl1g (was activity:tpl_1774664882291_4usija)
+
+[TEST-CREATION] Write tests for the activity executor to verify task execution flow
+--------------------------------------------------------------------------------
+
+Selection Method: thompson_sampling
+
+Top 3 Recommendations:
+
+🥇 activity:tpl_1774665552941_5pui - learned-goal-resolution-orchestrator-mn9q1sfh
+   Category: meta
+   Tags: []
+   Score: 0.9946
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+🥈 activity:tpl_1774664844855_31qw0d - learned-test-seed-template-v3-mn9pmm2f
+   Category: tool
+   Tags: []
+   Score: 0.9922
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+🥉 activity:tpl_1774664768770_j3j9ua - learned-extract-generalized-pattern-from-variants-mn9pkzcy
+   Category: tool
+   Tags: []
+   Score: 0.9880
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+Expected Patterns: [test, unit, vessel-add-tests]
+❌ NO MATCH - Selected: activity:tpl_1774665552941_5pui
+
+Consistency Check (same goal, 2nd request):
+⚠️  Inconsistent - Different top: activity:⟨meta.learning.extract-activity-template-v1⟩ (was activity:tpl_1774665552941_5pui)
+
+[BUGFIX] Fix the authentication error in MiniBob where JWT tokens are not being validated correctly
+--------------------------------------------------------------------------------
+
+Selection Method: thompson_sampling
+
+Top 3 Recommendations:
+
+🥇 activity:⟨analyze-and-fix-v1⟩ - Analyze and Fix Priority Issue
+   Category: bugfix
+   Tags: []
+   Score: 0.7402
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+Expected Patterns: [fix, debug, bugfix, analyze-failure]
+✅ MATCH - Found patterns: [fix, bugfix]
+
+Consistency Check (same goal, 2nd request):
+✅ Consistent - Same top recommendation
+
+[BUGFIX] Debug why the activity execution is failing with 'impulse not found' error
+--------------------------------------------------------------------------------
+
+Selection Method: thompson_sampling
+
+Top 3 Recommendations:
+
+🥇 activity:⟨analyze-and-fix-v1⟩ - Analyze and Fix Priority Issue
+   Category: bugfix
+   Tags: []
+   Score: 0.8766
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+Expected Patterns: [debug, analyze-failure, discover-missing-impulses]
+❌ NO MATCH - Selected: activity:⟨analyze-and-fix-v1⟩
+
+Consistency Check (same goal, 2nd request):
+✅ Consistent - Same top recommendation
+
+[FEATURE] Implement a new endpoint for retrieving activity execution history with pagination
+--------------------------------------------------------------------------------
+
+Selection Method: thompson_sampling
+
+Top 3 Recommendations:
+
+🥇 activity:tpl_1774649624804_mwbknp - learned-trace-analysis-template-mn9gke78
+   Category: feature
+   Tags: []
+   Score: 0.9992
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+🥈 activity:tpl_1774666443261_fukp7 - learned-print-hello-world-mn9qkvel
+   Category: feature
+   Tags: []
+   Score: 0.9371
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+🥉 activity:tpl_1774566195567_6j2yed - Create Welcome.txt File With Greeting
+   Category: feature
+   Tags: []
+   Score: 0.9139
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+Expected Patterns: [feature, implement, create]
+✅ MATCH - Found patterns: [feature]
+
+Consistency Check (same goal, 2nd request):
+⚠️  Inconsistent - Different top: activity:tpl_1774566347557_ujk4t2 (was activity:tpl_1774649624804_mwbknp)
+
+[FEATURE] Add support for WebSocket notifications when activity executions complete
+--------------------------------------------------------------------------------
+
+Selection Method: thompson_sampling
+
+Top 3 Recommendations:
+
+🥇 activity:tpl_1774649624804_mwbknp - learned-trace-analysis-template-mn9gke78
+   Category: feature
+   Tags: []
+   Score: 0.9547
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+🥈 activity:tpl_1774566347557_ujk4t2 - Read The Readme_new.md File And Summarize Its Key Points In A New File Called Summary.md
+   Category: feature
+   Tags: []
+   Score: 0.9171
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+🥉 activity:tpl_1774566195567_6j2yed - Create Welcome.txt File With Greeting
+   Category: feature
+   Tags: []
+   Score: 0.8739
+   Method: thompson_sampling
+   Source: legacy
+   Thompson α/β: 6/1
+
+Expected Patterns: [feature, implement, add]
+✅ MATCH - Found patterns: [feature]
+
+Consistency Check (same goal, 2nd request):
+✅ Consistent - Same top recommendation
+
+[REFACTOR] Refactor the impulse resolver to use a plugin architecture instead of switch statements
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[META-LEARNING] Analyze failed executions to discover common missing impulses
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[META-LEARNING] Extract a reusable activity template from the last successful test creation execution
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[META-LEARNING] Find patterns in which activity sequences successfully complete feature implementations
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[EXPLORATION] Explore the codebase structure to understand how activities are executed
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[EXPLORATION] Analyze the dependencies between MiniBob modules
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[INSTRUMENTATION] Add runtime instrumentation to capture execution traces for the activity executor
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[ACTIVITY-IMPROVEMENT] The vessel-add-tests activity is failing 60% of the time, debug and fix it
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+[ACTIVITY-IMPROVEMENT] Create a specialized variant of the test creation activity for React components
+--------------------------------------------------------------------------------
+⚠️  NO RECOMMENDATIONS RETURNED
+
+
+
+================================================================================
+ASSESSMENT SUMMARY
+================================================================================
+Total Tests: 15
+Matched: 3 (20.0%)
+Failed: 12 (80.0%)
+Errors: 0
+
+By Category:
+--------------------------------------------------------------------------------
+test-creation             0/2 (0.0%)
+bugfix                    1/2 (50.0%)
+feature                   2/2 (100.0%)
+refactor                  0/1 (0.0%)
+meta-learning             0/3 (0.0%)
+exploration               0/2 (0.0%)
+instrumentation           0/1 (0.0%)
+activity-improvement      0/2 (0.0%)
+
+================================================================================
+
+RECOMMENDATIONS:
+--------------------------------------------------------------------------------
+🔴 CRITICAL: Less than 50% match rate
+   - Goal resolution is performing poorly
+   - Template selection appears random or weakly correlated
+   - Input matching mechanism needs improvement
+
+Suggested Investigations:
+1. Check if Thompson Sampling priors are well-calibrated
+2. Verify input_schema matching logic is working
+3. Review semantic similarity implementation
+4. Assess if execution history has sufficient data
+5. Test deterministic vs semantic vs exploration strategies
+
+================================================================================

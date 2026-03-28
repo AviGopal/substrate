@@ -1,0 +1,108 @@
+{
+  "validationSpec": "Template Loading Persistence and Serialization",
+  "testCases": [
+    {
+      "id": "validation-template-loading-persistence-serialization-case-1",
+      "name": "Redis Cache Clear Recovery",
+      "type": "memo",
+      "input": {
+        "action": "clearRedisAndQueryAPI",
+        "rpcApiUrl": "http://localhost:8000",
+        "namespace": "metabob",
+        "limit": 50
+      },
+      "expectedOutput": {
+        "redisCleared": true,
+        "templateCount": ">=27",
+        "traceEnforceValidateLoopPresent": true,
+        "no500Errors": true,
+        "logsShowSurrealDBQueries": true
+      },
+      "description": "After clearing Redis with kubectl exec, query API and verify 27+ templates load from SurrealDB with no 500 errors",
+      "budget": 2000
+    },
+    {
+      "id": "validation-template-loading-persistence-serialization-case-2",
+      "name": "Template Count Verification",
+      "type": "memo",
+      "input": {
+        "action": "queryTemplatesAPI",
+        "endpoint": "/v2/activities/templates?limit=50",
+        "method": "GET"
+      },
+      "expectedOutput": {
+        "statusCode": 200,
+        "templateCountMin": 27,
+        "allTemplatesHaveVariantId": true,
+        "noRecordIDErrors": true
+      },
+      "description": "Query templates API and verify count >= 27, all templates have variant_id, and no RecordID serialization errors",
+      "budget": 2000
+    },
+    {
+      "id": "validation-template-loading-persistence-serialization-case-3",
+      "name": "trace-enforce-validate-loop Template Presence",
+      "type": "memo",
+      "input": {
+        "action": "checkSpecificTemplate",
+        "variantId": "trace_enforce_validate_loop_99b07520",
+        "alternativeNames": ["trace-enforce-validate-loop"]
+      },
+      "expectedOutput": {
+        "templateFound": true,
+        "variantIdMatches": true,
+        "templateLoadable": true
+      },
+      "description": "Verify trace_enforce_validate_loop_99b07520 template is present and retrievable by variant_id",
+      "budget": 2000
+    },
+    {
+      "id": "validation-template-loading-persistence-serialization-case-4",
+      "name": "Pod Logs Show SurrealDB Queries",
+      "type": "memo",
+      "input": {
+        "action": "checkPodLogs",
+        "namespace": "metabob",
+        "podLabel": "app=rpc-api",
+        "searchPatterns": [
+          "SurrealDB",
+          "activity_template",
+          "Template list cache miss"
+        ]
+      },
+      "expectedOutput": {
+        "logsFound": true,
+        "patternsMatched": ">=1",
+        "cacheMissLogPresent": true
+      },
+      "description": "Check pod logs for evidence of SurrealDB queries and cache miss patterns",
+      "budget": 2000
+    },
+    {
+      "id": "validation-template-loading-persistence-serialization-case-5",
+      "name": "Pod Restart Resilience",
+      "type": "memo",
+      "input": {
+        "action": "restartPodAndVerify",
+        "namespace": "metabob",
+        "podLabel": "app=rpc-api",
+        "waitTimeSeconds": 10
+      },
+      "expectedOutput": {
+        "podRestarted": true,
+        "templatesLoadAfterRestart": true,
+        "templateCountAfterRestart": ">=27",
+        "traceTemplateStillPresent": true
+      },
+      "description": "Restart pod and verify templates still load from SurrealDB (persistence across pod restarts)",
+      "budget": 2000
+    }
+  ],
+  "metadata": {
+    "totalTestCases": 5,
+    "budget": 10000,
+    "validationType": "external-api-and-kubernetes",
+    "requiresKubectl": true,
+    "requiresAPIAccess": true
+  }
+}

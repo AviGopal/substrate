@@ -1,0 +1,831 @@
+{
+  "activity_id": "initialize-surrealdb-schema-and-enable-dual-write",
+  "name": "Initialize SurrealDB Schema and Enable Dual-Write",
+  "description": "Initialize SurrealDB schema for learning loop (activity_execution, template_metrics, failure_patterns tables) and implement dual-write in API backend to persist data to both Redis (cache) and SurrealDB (primary storage)",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "initialize-surrealdb-schema",
+      "subagent": "general",
+      "description": "Create SurrealDB namespace, database, and tables for learning loop (activity_execution, template_metrics, failure_patterns)",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Initialize SurrealDB Schema for Learning Loop\n\nYou need to create and initialize the SurrealDB schema required for the activity execution learning loop.\n\n## Task Overview\n\nCreate a complete SurrealDB schema initialization script and execute it against the SurrealDB instance to establish:\n1. Namespace: `{{surrealdb_namespace}}`\n2. Database: `{{surrealdb_database}}`\n3. Tables: `activity_execution`, `template_metrics`, `failure_patterns`\n\n## Connection Details\n\n- **SurrealDB URL**: {{surrealdb_url}}\n- **Namespace**: {{surrealdb_namespace}}\n- **Database**: {{surrealdb_database}}\n- **User**: {{surrealdb_user}}\n- **Password**: {{surrealdb_password}}\n\n## Requirements\n\n### 1. Create Schema File\n\nCreate a file `schema.surql` in `/tmp/activity-template-initialize-surrealdb-schema-and-enable-dual-write/` with the following schema:\n\n**Namespace and Database:**\n```sql\nDEFINE NAMESPACE metabob;\nUSE NS metabob;\nDEFINE DATABASE metabob;\nUSE DB metabob;\n```\n\n**Table: activity_execution**\nStores individual activity execution records:\n- `id`: Unique execution ID (record ID)\n- `activity_id`: Activity instance ID\n- `template_id`: Template ID used\n- `success`: Boolean success flag\n- `duration_ms`: Execution duration in milliseconds\n- `cost_usd`: Execution cost in USD\n- `tokens`: Token usage (input, output, cache)\n- `created_at`: Timestamp of execution\n- `error_message`: Error message (if failed)\n- `metadata`: Additional metadata (JSON)\n\n**Table: template_metrics**\nStores aggregated metrics per template:\n- `id`: Template ID (record ID)\n- `template_id`: Template identifier\n- `total_executions`: Total number of executions\n- `success_count`: Number of successful executions\n- `failure_count`: Number of failed executions\n- `avg_duration_ms`: Average execution duration\n- `avg_cost_usd`: Average execution cost\n- `total_tokens`: Total tokens used\n- `last_updated`: Last update timestamp\n\n**Table: failure_patterns**\nStores failure pattern analysis:\n- `id`: Pattern ID (record ID)\n- `template_id`: Template ID\n- `error_pattern`: Error pattern/signature\n- `occurrence_count`: Number of occurrences\n- `first_seen`: First occurrence timestamp\n- `last_seen`: Last occurrence timestamp\n- `sample_error`: Sample error message\n\n**Indexes:**\nAdd appropriate indexes for common queries:\n- Index on `activity_execution.template_id`\n- Index on `activity_execution.created_at`\n- Index on `template_metrics.template_id`\n- Index on `failure_patterns.template_id`\n\n### 2. Execute Schema\n\nUse curl to execute the schema against SurrealDB:\n\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  --data-binary @schema.surql\n```\n\n### 3. Verify Schema Creation\n\nRun verification queries to confirm the schema was created successfully:\n\n**Check namespace:**\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  --data \"INFO FOR ROOT;\" | jq '.[] | .result.namespaces'\n```\n\n**Check database:**\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  --data \"INFO FOR NS;\" | jq '.[] | .result.databases'\n```\n\n**Check tables:**\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"INFO FOR DB;\" | jq '.[] | .result.tables'\n```\n\nExpected output should show 3 tables: `activity_execution`, `template_metrics`, `failure_patterns`\n\n### 4. Test with Sample Insert\n\nInsert a test record to verify the schema works:\n\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"CREATE activity_execution SET activity_id = 'test-001', template_id = 'test-template', success = true, duration_ms = 1000, cost_usd = 0.01, created_at = time::now();\"\n```\n\n## Error Handling\n\n**If schema already exists:**\n- Check if it matches the expected structure using `INFO FOR DB`\n- If correct, report success (idempotent)\n- If incorrect, report the differences and recommend manual intervention\n\n**If connection fails:**\n- Verify SurrealDB is running: `curl {{surrealdb_url}}/health`\n- Check credentials\n- Retry up to 3 times with exponential backoff\n\n**If \"Specify a namespace to use\" error occurs:**\n- Ensure the DEFINE NAMESPACE and USE NS statements are correct\n- Verify the namespace was created successfully\n\n## Success Criteria\n\nThis task succeeds when:\n1. Schema file `schema.surql` exists\n2. Verification queries show namespace, database, and 3 tables\n3. Sample INSERT succeeds\n4. No \"Specify a namespace to use\" errors\n\n## Output\n\nProvide:\n1. Confirmation that schema was created\n2. List of tables created\n3. Verification query results\n4. Any warnings or issues encountered",
+        "variables": [
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "fix-mcp-tool-endpoint",
+      "subagent": "general",
+      "description": "Update metabob-cli MCP tool to POST to correct API endpoint (/api/activity-execution) and add error logging",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Fix MCP Tool API Endpoint\n\nYou need to fix the API endpoint mismatch in the metabob-cli MCP tool that's causing 404 errors and preventing activity execution data from being persisted.\n\n## Task Overview\n\nUpdate `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` to:\n1. Change endpoint from `/api/v1/learning-loop/executions` to `/api/activity-execution`\n2. Add structured error logging to surface failures\n3. Remove silent error handling\n\n## Problem Context\n\nCurrently, the MCP tool posts activity execution metrics to the wrong endpoint:\n- **Current (wrong)**: `/api/v1/learning-loop/executions`\n- **Correct**: `/api/activity-execution`\n\nThis causes:\n- 404 errors (endpoint doesn't exist)\n- Silent failures (errors are swallowed)\n- No data persistence (learning loop can't function)\n\n## File to Modify\n\n**Path**: `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py`\n\n**Line ~256**: Look for the endpoint URL construction in the `post_activity_result` function or similar.\n\n## Required Changes\n\n### 1. Fix Endpoint URL\n\nFind the line that constructs the endpoint URL:\n```python\n# WRONG - Find and replace this\nurl = f\"{api_base}/api/v1/learning-loop/executions\"\n\n# CORRECT - Change to this\nurl = f\"{api_base}/api/activity-execution\"\n```\n\n### 2. Add Error Logging\n\nFind error handling blocks that silently swallow exceptions. Replace with structured logging:\n\n**Before (bad):**\n```python\ntry:\n    response = httpx.post(url, json=data)\nexcept Exception:\n    pass  # Silent failure\n```\n\n**After (good):**\n```python\ntry:\n    response = httpx.post(url, json=data, timeout=30.0)\n    response.raise_for_status()\n    logger.info(f\"Activity metrics posted successfully: {data['activity_id']}\")\nexcept httpx.HTTPError as e:\n    logger.error(\n        \"Failed to post activity metrics\",\n        extra={\n            \"activity_id\": data.get(\"activity_id\"),\n            \"template_id\": data.get(\"template_id\"),\n            \"endpoint\": url,\n            \"error\": str(e),\n            \"status_code\": getattr(e.response, \"status_code\", None) if hasattr(e, \"response\") else None\n        }\n    )\nexcept Exception as e:\n    logger.error(\n        \"Unexpected error posting activity metrics\",\n        extra={\n            \"activity_id\": data.get(\"activity_id\"),\n            \"error\": str(e)\n        }\n    )\n```\n\n### 3. Verify Changes\n\nAfter making changes:\n1. Verify no references to `/api/v1/learning-loop/executions` remain\n2. Verify all exception handlers include logging\n3. Ensure httpx client has timeout configured (e.g., 30 seconds)\n\n## Validation\n\nSearch the file to confirm:\n- ✅ Contains: `/api/activity-execution`\n- ✅ Contains: `logger.error(` or `logger.warning(` in exception handlers\n- ❌ Does NOT contain: `/api/v1/learning-loop/executions`\n- ❌ Does NOT contain: empty `except:` blocks without logging\n\n## Success Criteria\n\n1. File `activity_template_tools.py` updated with correct endpoint\n2. Error logging added with structured data (activity_id, template_id, error details)\n3. No silent error handling remains\n4. All references to old endpoint removed\n\n## Output\n\nProvide:\n1. Confirmation of changes made\n2. Line numbers where changes were applied\n3. Before/after code snippets\n4. Validation results (grep for patterns)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-backend-api-endpoint",
+      "subagent": "general",
+      "description": "Verify that backend API has /api/activity-execution endpoint and document request/response schema",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Verify Backend API Endpoint\n\nYou need to verify that the backend API has the `/api/activity-execution` endpoint and that its schema matches what the MCP tool expects.\n\n## Task Overview\n\n1. Check if the endpoint exists on the backend\n2. Test the endpoint with a sample request\n3. Document the request/response schema\n4. Identify any schema mismatches\n\n## Backend API Details\n\n**Base URL**: {{api_backend_url}}\n**Endpoint**: `/api/activity-execution`\n**Method**: POST\n\n## Verification Steps\n\n### 1. Check Endpoint Existence\n\nQuery the backend's OpenAPI spec (if available):\n```bash\ncurl -s {{api_backend_url}}/openapi.json | jq '.paths | keys | .[]' | grep activity\n```\n\nOr check for the route in backend code:\n```bash\nfind repos -name \"*.py\" -type f -exec grep -l \"activity-execution\" {} \\;\n```\n\n### 2. Test with Sample Request\n\nSend a test POST request:\n```bash\ncurl -X POST {{api_backend_url}}/api/activity-execution \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"activity_id\": \"test-activity-001\",\n    \"template_id\": \"test-template\",\n    \"success\": true,\n    \"duration_ms\": 1000,\n    \"cost_usd\": 0.01,\n    \"tokens\": {\n      \"input\": 100,\n      \"output\": 50,\n      \"cache\": 25\n    }\n  }' \\\n  -w \"\\nHTTP Status: %{http_code}\\n\" \\\n  -v\n```\n\n**Expected response:**\n- HTTP status: 200 or 201\n- Response body includes confirmation or execution_id\n\n**If 404:**\n- Endpoint doesn't exist\n- Document this and note that it needs to be created in the next task\n\n**If 200/201:**\n- Endpoint exists\n- Document the response schema\n\n### 3. Document Schema\n\nCreate a document describing:\n\n**Expected Request Schema:**\n```json\n{\n  \"activity_id\": \"string\",\n  \"template_id\": \"string\",\n  \"success\": \"boolean\",\n  \"duration_ms\": \"number\",\n  \"cost_usd\": \"number\",\n  \"tokens\": {\n    \"input\": \"number\",\n    \"output\": \"number\",\n    \"cache\": \"number\"\n  },\n  \"error_message\": \"string (optional)\",\n  \"metadata\": \"object (optional)\"\n}\n```\n\n**Expected Response Schema:**\n```json\n{\n  \"status\": \"success\",\n  \"execution_id\": \"string (optional)\",\n  \"message\": \"string (optional)\"\n}\n```\n\n### 4. Identify Mismatches\n\nCompare:\n- What the MCP tool sends (from activity_template_tools.py)\n- What the backend expects (from API spec or code)\n- Document any differences\n\n## If Endpoint Doesn't Exist\n\nDocument:\n1. The endpoint is missing from the backend\n2. It will be created in task `implement-dual-write-backend`\n3. The expected schema (as documented above)\n\nThis is NOT a failure - it's expected that we may need to create the endpoint.\n\n## If Endpoint Exists\n\nDocument:\n1. The endpoint exists and works\n2. The request/response schema\n3. Any schema mismatches that need to be fixed\n\n## Success Criteria\n\n1. Documentation created describing endpoint status\n2. If endpoint exists: response status is 200/201\n3. If endpoint missing: documented for next task\n4. Schema documented and compared\n\n## Output\n\nProvide:\n1. Endpoint status (exists/missing)\n2. Test results (HTTP status, response body)\n3. Schema documentation\n4. List of any schema mismatches\n5. Recommendation for next steps",
+        "variables": [
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-dual-write-backend",
+      "subagent": "general",
+      "description": "Implement dual-write logic in backend API to persist execution data to both Redis (cache) and SurrealDB (primary storage)",
+      "dependencies": [
+        "initialize-surrealdb-schema",
+        "verify-backend-api-endpoint"
+      ],
+      "prompt": {
+        "template": "# Implement Dual-Write in Backend API\n\nYou need to implement dual-write logic in the backend API so that activity execution data is persisted to both Redis (cache) and SurrealDB (primary storage).\n\n## Task Overview\n\nUpdate or create the `/api/activity-execution` endpoint to:\n1. Write execution record to SurrealDB (primary storage)\n2. Update metrics in Redis (cache)\n3. Handle partial failures gracefully\n4. Return appropriate responses\n\n## Architecture\n\n**Data Flow:**\n```\nMCP Tool (POST) → Backend API → [Redis (cache) + SurrealDB (primary)]\n                                       ↓                    ↓\n                                 Fast metrics          Durable storage\n```\n\n**Design Principles:**\n- SurrealDB is the source of truth (primary storage)\n- Redis is the cache layer (fast lookups, can rebuild)\n- Both writes should succeed, but Redis failure is tolerable\n- SurrealDB failure should return error (data must be saved)\n\n## Connection Details\n\n**SurrealDB:**\n- URL: {{surrealdb_url}}\n- Namespace: {{surrealdb_namespace}}\n- Database: {{surrealdb_database}}\n- User: {{surrealdb_user}}\n- Password: {{surrealdb_password}}\n\n**Redis:**\n- URL: {{redis_url}}\n\n## Implementation Requirements\n\n### 1. Endpoint Definition\n\n**Method**: POST  \n**Path**: `/api/activity-execution`  \n**Content-Type**: `application/json`\n\n**Request Body:**\n```json\n{\n  \"activity_id\": \"string\",\n  \"template_id\": \"string\",\n  \"success\": \"boolean\",\n  \"duration_ms\": \"number\",\n  \"cost_usd\": \"number\",\n  \"tokens\": {\n    \"input\": \"number\",\n    \"output\": \"number\",\n    \"cache\": \"number\"\n  },\n  \"error_message\": \"string (optional)\",\n  \"metadata\": \"object (optional)\"\n}\n```\n\n### 2. SurrealDB Write\n\nInsert execution record into `activity_execution` table:\n\n```sql\nCREATE activity_execution SET\n  activity_id = $activity_id,\n  template_id = $template_id,\n  success = $success,\n  duration_ms = $duration_ms,\n  cost_usd = $cost_usd,\n  tokens = $tokens,\n  error_message = $error_message,\n  metadata = $metadata,\n  created_at = time::now();\n```\n\n**Error Handling:**\n- If SurrealDB write fails, return HTTP 500\n- Log error with full context\n- Don't proceed to Redis write\n\n### 3. Redis Write\n\nUpdate template metrics in Redis:\n\n**Key format**: `template:{template_id}:metrics`\n\n**Data structure** (JSON):\n```json\n{\n  \"template_id\": \"string\",\n  \"total_selections\": \"number\",\n  \"total_executions\": \"number\",\n  \"success_count\": \"number\",\n  \"failure_count\": \"number\",\n  \"avg_duration_ms\": \"number\",\n  \"avg_cost_usd\": \"number\",\n  \"total_tokens\": \"number\",\n  \"last_updated\": \"timestamp\"\n}\n```\n\n**Update Logic:**\n1. GET existing metrics from Redis\n2. If not exists, initialize with zeros\n3. Increment counters:\n   - `total_executions += 1`\n   - `success_count += 1` (if success=true)\n   - `failure_count += 1` (if success=false)\n4. Update averages (running average)\n5. SET updated metrics back to Redis\n\n**Error Handling:**\n- If Redis write fails, log warning but don't fail request\n- Redis can be rebuilt from SurrealDB later\n- Return success if SurrealDB write succeeded\n\n### 4. Response\n\n**Success (200 or 201):**\n```json\n{\n  \"status\": \"success\",\n  \"message\": \"Activity execution recorded\",\n  \"execution_id\": \"<surrealdb_record_id>\"\n}\n```\n\n**Failure (500):**\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"Failed to persist execution data\",\n  \"error\": \"<error_details>\"\n}\n```\n\n## Implementation Steps\n\n### Step 1: Find or Create Endpoint\n\nSearch for existing endpoint:\n```bash\ngrep -r \"activity-execution\" repos/ --include=\"*.py\"\n```\n\nIf not found, create in appropriate router file (e.g., `repos/metabob-cli/src/metabob_cli/mcp/api_client.py` or backend router).\n\n### Step 2: Implement SurrealDB Client\n\nEnsure SurrealDB client is initialized:\n```python\nimport httpx\n\nsurrealdb_client = httpx.Client(\n    base_url=\"{{surrealdb_url}}\",\n    auth=(\"{{surrealdb_user}}\", \"{{surrealdb_password}}\")\n)\n\ndef insert_activity_execution(data):\n    response = surrealdb_client.post(\n        \"/sql\",\n        headers={\n            \"NS\": \"{{surrealdb_namespace}}\",\n            \"DB\": \"{{surrealdb_database}}\"\n        },\n        data=f\"\"\"\n        CREATE activity_execution SET\n          activity_id = '{data['activity_id']}',\n          template_id = '{data['template_id']}',\n          success = {str(data['success']).lower()},\n          duration_ms = {data['duration_ms']},\n          cost_usd = {data['cost_usd']},\n          tokens = {data['tokens']},\n          created_at = time::now();\n        \"\"\"\n    )\n    return response\n```\n\n### Step 3: Implement Redis Client\n\nEnsure Redis client is initialized:\n```python\nimport redis\nimport json\nfrom datetime import datetime\n\nredis_client = redis.from_url(\"{{redis_url}}\")\n\ndef update_template_metrics(template_id, execution_data):\n    key = f\"template:{template_id}:metrics\"\n    \n    # Get existing metrics\n    metrics_json = redis_client.get(key)\n    if metrics_json:\n        metrics = json.loads(metrics_json)\n    else:\n        metrics = {\n            \"template_id\": template_id,\n            \"total_selections\": 0,\n            \"total_executions\": 0,\n            \"success_count\": 0,\n            \"failure_count\": 0,\n            \"avg_duration_ms\": 0,\n            \"avg_cost_usd\": 0,\n            \"total_tokens\": 0\n        }\n    \n    # Update metrics\n    metrics[\"total_executions\"] += 1\n    if execution_data[\"success\"]:\n        metrics[\"success_count\"] += 1\n    else:\n        metrics[\"failure_count\"] += 1\n    \n    # Update running averages\n    n = metrics[\"total_executions\"]\n    metrics[\"avg_duration_ms\"] = ((metrics[\"avg_duration_ms\"] * (n-1)) + execution_data[\"duration_ms\"]) / n\n    metrics[\"avg_cost_usd\"] = ((metrics[\"avg_cost_usd\"] * (n-1)) + execution_data[\"cost_usd\"]) / n\n    metrics[\"total_tokens\"] += sum(execution_data[\"tokens\"].values())\n    metrics[\"last_updated\"] = datetime.now().isoformat()\n    \n    # Save back to Redis\n    redis_client.set(key, json.dumps(metrics))\n```\n\n### Step 4: Combine in Endpoint\n\n```python\n@app.post(\"/api/activity-execution\")\nasync def post_activity_execution(data: ActivityExecutionRequest):\n    try:\n        # Write to SurrealDB (primary storage)\n        surrealdb_response = insert_activity_execution(data.dict())\n        if surrealdb_response.status_code not in [200, 201]:\n            raise Exception(f\"SurrealDB write failed: {surrealdb_response.text}\")\n        \n        # Write to Redis (cache - tolerate failure)\n        try:\n            update_template_metrics(data.template_id, data.dict())\n        except Exception as redis_error:\n            logger.warning(\n                f\"Redis update failed (continuing): {redis_error}\",\n                extra={\"template_id\": data.template_id}\n            )\n        \n        return {\n            \"status\": \"success\",\n            \"message\": \"Activity execution recorded\"\n        }\n    \n    except Exception as e:\n        logger.error(\n            f\"Failed to persist activity execution: {e}\",\n            extra={\n                \"activity_id\": data.activity_id,\n                \"template_id\": data.template_id\n            }\n        )\n        raise HTTPException(status_code=500, detail=str(e))\n```\n\n## Testing\n\nAfter implementation, test the endpoint:\n\n```bash\n# Send test request\ncurl -X POST {{api_backend_url}}/api/activity-execution \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"activity_id\": \"test-123\",\n    \"template_id\": \"test-template\",\n    \"success\": true,\n    \"duration_ms\": 1000,\n    \"cost_usd\": 0.01,\n    \"tokens\": {\"input\": 100, \"output\": 50, \"cache\": 25}\n  }'\n\n# Verify SurrealDB\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT * FROM activity_execution WHERE activity_id = 'test-123';\" | jq\n\n# Verify Redis\nredis-cli GET \"template:test-template:metrics\" | jq\n```\n\n## Skip Backend Changes (Optional)\n\nIf `{{skip_backend_changes}}` is true, skip this task and only document what needs to be implemented.\n\n## Success Criteria\n\n1. Endpoint `/api/activity-execution` exists and responds\n2. POST request writes to both SurrealDB and Redis\n3. SurrealDB has execution record after test\n4. Redis has updated metrics after test\n5. Partial failures handled gracefully\n\n## Output\n\nProvide:\n1. Confirmation of implementation\n2. File paths modified/created\n3. Test results showing dual-write working\n4. Any issues or warnings",
+        "variables": [
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          },
+          {
+            "name": "redis_url",
+            "type": "string",
+            "required": false,
+            "description": "Redis connection URL",
+            "default": "redis://localhost:6379"
+          },
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "skip_backend_changes",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip backend code changes (schema init only)",
+            "default": "false"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "add-cache-rebuild-logic",
+      "subagent": "general",
+      "description": "Implement Redis cache rebuild function that recovers data from SurrealDB after Redis restarts",
+      "dependencies": [
+        "implement-dual-write-backend"
+      ],
+      "prompt": {
+        "template": "# Add Cache Rebuild Logic\n\nYou need to implement Redis cache rebuild functionality that recovers template metrics from SurrealDB after Redis restarts or data loss.\n\n## Task Overview\n\nCreate a cache rebuild function that:\n1. Queries all execution data from SurrealDB\n2. Aggregates metrics per template\n3. Populates Redis cache with aggregated data\n4. Can be triggered manually or on startup\n\n## Architecture\n\n**Recovery Flow:**\n```\nRedis Empty/Stale → Rebuild Function → Query SurrealDB → Aggregate → Populate Redis\n```\n\n**Trigger Options:**\n1. On backend startup (automatic recovery)\n2. Via API endpoint (manual trigger)\n3. Scheduled job (periodic sync)\n\n## Connection Details\n\n**SurrealDB:**\n- URL: {{surrealdb_url}}\n- Namespace: {{surrealdb_namespace}}\n- Database: {{surrealdb_database}}\n- User: {{surrealdb_user}}\n- Password: {{surrealdb_password}}\n\n**Redis:**\n- URL: {{redis_url}}\n\n## Implementation Requirements\n\n### 1. Create Rebuild Function\n\n```python\nimport httpx\nimport redis\nimport json\nfrom collections import defaultdict\nfrom datetime import datetime\n\ndef rebuild_redis_cache_from_surrealdb():\n    \"\"\"\n    Rebuild Redis cache from SurrealDB activity_execution records.\n    This recovers from Redis data loss by re-aggregating from source of truth.\n    \"\"\"\n    # Initialize clients\n    surrealdb_client = httpx.Client(\n        base_url=\"{{surrealdb_url}}\",\n        auth=(\"{{surrealdb_user}}\", \"{{surrealdb_password}}\")\n    )\n    redis_client = redis.from_url(\"{{redis_url}}\")\n    \n    try:\n        # Query all execution records from SurrealDB\n        response = surrealdb_client.post(\n            \"/sql\",\n            headers={\n                \"NS\": \"{{surrealdb_namespace}}\",\n                \"DB\": \"{{surrealdb_database}}\"\n            },\n            data=\"SELECT * FROM activity_execution;\"\n        )\n        \n        if response.status_code != 200:\n            raise Exception(f\"SurrealDB query failed: {response.text}\")\n        \n        results = response.json()\n        executions = results[0][\"result\"] if results else []\n        \n        # Aggregate metrics per template\n        template_metrics = defaultdict(lambda: {\n            \"total_executions\": 0,\n            \"success_count\": 0,\n            \"failure_count\": 0,\n            \"total_duration_ms\": 0,\n            \"total_cost_usd\": 0,\n            \"total_tokens\": 0\n        })\n        \n        for execution in executions:\n            template_id = execution[\"template_id\"]\n            metrics = template_metrics[template_id]\n            \n            metrics[\"total_executions\"] += 1\n            if execution[\"success\"]:\n                metrics[\"success_count\"] += 1\n            else:\n                metrics[\"failure_count\"] += 1\n            \n            metrics[\"total_duration_ms\"] += execution[\"duration_ms\"]\n            metrics[\"total_cost_usd\"] += execution[\"cost_usd\"]\n            if \"tokens\" in execution:\n                metrics[\"total_tokens\"] += sum(execution[\"tokens\"].values())\n        \n        # Populate Redis with aggregated metrics\n        rebuilt_count = 0\n        for template_id, aggregated in template_metrics.items():\n            n = aggregated[\"total_executions\"]\n            \n            redis_metrics = {\n                \"template_id\": template_id,\n                \"total_selections\": 0,  # Not tracked in activity_execution\n                \"total_executions\": n,\n                \"success_count\": aggregated[\"success_count\"],\n                \"failure_count\": aggregated[\"failure_count\"],\n                \"avg_duration_ms\": aggregated[\"total_duration_ms\"] / n,\n                \"avg_cost_usd\": aggregated[\"total_cost_usd\"] / n,\n                \"total_tokens\": aggregated[\"total_tokens\"],\n                \"last_updated\": datetime.now().isoformat()\n            }\n            \n            key = f\"template:{template_id}:metrics\"\n            redis_client.set(key, json.dumps(redis_metrics))\n            rebuilt_count += 1\n        \n        return {\n            \"status\": \"success\",\n            \"templates_rebuilt\": rebuilt_count,\n            \"total_executions\": sum(m[\"total_executions\"] for m in template_metrics.values())\n        }\n    \n    except Exception as e:\n        return {\n            \"status\": \"error\",\n            \"error\": str(e)\n        }\n    finally:\n        surrealdb_client.close()\n```\n\n### 2. Add API Endpoint (Optional)\n\nCreate an endpoint to manually trigger cache rebuild:\n\n```python\n@app.post(\"/api/admin/rebuild-cache\")\nasync def rebuild_cache_endpoint():\n    \"\"\"\n    Manually trigger Redis cache rebuild from SurrealDB.\n    Useful for recovery after Redis data loss.\n    \"\"\"\n    result = rebuild_redis_cache_from_surrealdb()\n    \n    if result[\"status\"] == \"success\":\n        return result\n    else:\n        raise HTTPException(status_code=500, detail=result[\"error\"])\n```\n\n### 3. Add Startup Hook (Recommended)\n\nAutomatically rebuild cache on backend startup if Redis is empty:\n\n```python\n@app.on_event(\"startup\")\nasync def startup_event():\n    \"\"\"\n    Check Redis cache health on startup and rebuild if necessary.\n    \"\"\"\n    redis_client = redis.from_url(\"{{redis_url}}\")\n    \n    # Check if cache is empty\n    template_keys = redis_client.keys(\"template:*:metrics\")\n    \n    if len(template_keys) == 0:\n        logger.info(\"Redis cache is empty, triggering rebuild from SurrealDB\")\n        result = rebuild_redis_cache_from_surrealdb()\n        \n        if result[\"status\"] == \"success\":\n            logger.info(f\"Cache rebuilt: {result['templates_rebuilt']} templates\")\n        else:\n            logger.error(f\"Cache rebuild failed: {result['error']}\")\n    else:\n        logger.info(f\"Redis cache healthy: {len(template_keys)} templates cached\")\n```\n\n## Testing\n\nTest the cache rebuild functionality:\n\n### Test 1: Manual Rebuild\n\n```bash\n# Flush Redis\nredis-cli FLUSHALL\n\n# Trigger rebuild (via endpoint or function)\ncurl -X POST {{api_backend_url}}/api/admin/rebuild-cache\n\n# Verify cache restored\nredis-cli KEYS \"template:*:metrics\"\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq\n```\n\n### Test 2: Startup Rebuild\n\n```bash\n# Flush Redis\nredis-cli FLUSHALL\n\n# Restart backend (triggers startup event)\n# Check logs for \"Cache rebuilt\" message\n\n# Verify cache restored\nredis-cli KEYS \"template:*:metrics\"\n```\n\n### Test 3: Data Consistency\n\n```bash\n# Query SurrealDB for a template\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT COUNT() FROM activity_execution WHERE template_id = '{{test_template_id}}' GROUP BY template_id;\" | jq\n\n# Get Redis metrics for same template\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq '.total_executions'\n\n# Verify counts match\n```\n\n## Error Handling\n\n**If SurrealDB query fails:**\n- Log error with connection details\n- Don't clear existing Redis cache\n- Return error status\n\n**If Redis is unavailable:**\n- Log error\n- Backend should still function (cache is optional)\n- Retry on next startup or manual trigger\n\n**If no data in SurrealDB:**\n- This is valid (new system)\n- Don't fail, just report 0 templates rebuilt\n\n## Success Criteria\n\n1. Rebuild function implemented\n2. After Redis FLUSHALL, rebuild restores metrics\n3. Redis keys match SurrealDB template count\n4. Metrics values are consistent with SurrealDB aggregates\n5. No data loss after Redis restart\n\n## Output\n\nProvide:\n1. Confirmation of implementation\n2. File paths modified/created\n3. Test results showing cache rebuild working\n4. Number of templates rebuilt\n5. Any consistency issues found",
+        "variables": [
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          },
+          {
+            "name": "redis_url",
+            "type": "string",
+            "required": false,
+            "description": "Redis connection URL",
+            "default": "redis://localhost:6379"
+          },
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "test_template_id",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for validation testing",
+            "default": "hello-world-minimal"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enhance-error-logging",
+      "subagent": "general",
+      "description": "Add structured error logging to activity.ts and MCP tools to surface persistence failures",
+      "dependencies": [
+        "fix-mcp-tool-endpoint"
+      ],
+      "prompt": {
+        "template": "# Enhance Error Logging\n\nYou need to add structured error logging to surface persistence failures that are currently being silently swallowed.\n\n## Task Overview\n\nUpdate error handling in:\n1. `packages/opencode/src/session/activity.ts` (TypeScript)\n2. Already fixed in `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` (Task 2)\n\nFocus on adding structured logging that includes:\n- Activity ID\n- Template ID\n- Error message and stack trace\n- Contextual metadata\n\n## File to Modify\n\n**Primary**: `packages/opencode/src/session/activity.ts`  \n**Line ~674**: Look for metrics reporting code with error handling\n\n## Problem Context\n\nCurrently, metrics reporting failures are silently caught:\n```typescript\n// BAD - Silent failure\ntry {\n  await reportMetrics(activity)\n} catch {\n  // Error swallowed, no visibility\n}\n```\n\nThis hides critical failures in the learning loop.\n\n## Required Changes\n\n### 1. Find Metrics Reporting Code\n\nSearch for metrics reporting in activity.ts:\n```bash\ngrep -n \"metrics\" packages/opencode/src/session/activity.ts | grep -i \"report\\|post\\|send\"\n```\n\n### 2. Add Structured Logging\n\nReplace silent error handling with structured logs:\n\n**Before (bad):**\n```typescript\ntry {\n  await reportActivityMetrics({\n    activityId: activity.id,\n    templateId: activity.templateId,\n    success: activity.status === 'completed',\n    duration: activity.duration,\n    cost: activity.cost\n  })\n} catch {\n  // Silent failure - NO VISIBILITY\n}\n```\n\n**After (good):**\n```typescript\ntry {\n  await reportActivityMetrics({\n    activityId: activity.id,\n    templateId: activity.templateId,\n    success: activity.status === 'completed',\n    duration: activity.duration,\n    cost: activity.cost\n  })\n} catch (error) {\n  log.warn(\"metrics reporting failed\", {\n    activityId: activity.id,\n    templateId: activity.templateId,\n    status: activity.status,\n    error: error instanceof Error ? error.message : String(error),\n    stack: error instanceof Error ? error.stack : undefined\n  })\n}\n```\n\n### 3. Add Logging to All Catch Blocks\n\nSearch for all catch blocks in activity.ts:\n```bash\ngrep -n \"catch\" packages/opencode/src/session/activity.ts\n```\n\nFor each catch block that handles external operations (API calls, file I/O, etc.), add structured logging.\n\n**Pattern to follow:**\n```typescript\n.catch((error: Error) => {\n  log.error(\"operation failed\", {\n    operation: \"<operation_name>\",\n    activityId: activity.id,\n    error: error.message,\n    stack: error.stack\n  })\n})\n```\n\n### 4. Use Appropriate Log Levels\n\n- `log.error()`: Critical failures that break functionality\n- `log.warn()`: Non-critical failures that reduce functionality\n- `log.info()`: Successful operations with context\n- `log.debug()`: Detailed debugging information\n\n**Examples:**\n- Metrics reporting failure: `log.warn()` (system continues, but learning is affected)\n- Activity execution failure: `log.error()` (critical failure)\n- Successful metrics post: `log.debug()` (verbose, not always needed)\n\n## Validation\n\nAfter making changes:\n\n### 1. TypeScript Compilation\n\n```bash\ncd packages/opencode && bun run typecheck\n```\n\nMust exit with code 0 (no errors).\n\n### 2. Search for Silent Failures\n\n```bash\n# Find catch blocks without logging\ngrep -A 2 \"catch\" packages/opencode/src/session/activity.ts | grep -E \"catch.*\\{\\s*\\}\"\n```\n\nShould return no matches.\n\n### 3. Verify Structured Logging\n\n```bash\n# Verify log calls include metadata\ngrep \"log\\.warn\\|log\\.error\" packages/opencode/src/session/activity.ts\n```\n\nEach should include structured data (object with fields).\n\n## Testing\n\nTo test error logging:\n\n### Test 1: Simulate API Failure\n\n1. Stop backend API\n2. Run test activity\n3. Check logs for metrics reporting warning with structured data\n\n### Test 2: Review Log Output\n\nRun activity and check log output includes:\n- ✅ Activity ID\n- ✅ Template ID\n- ✅ Error message\n- ✅ Operation context\n\n## Success Criteria\n\n1. File `activity.ts` updated with structured logging\n2. All relevant catch blocks include logging\n3. Logs include: activityId, templateId, error details\n4. No empty catch blocks remain (for external operations)\n5. TypeScript compilation succeeds\n6. Log format is consistent (structured objects, not strings)\n\n## Output\n\nProvide:\n1. Confirmation of changes made\n2. Line numbers where logging was added\n3. Before/after code snippets\n4. TypeScript compilation result\n5. Count of catch blocks enhanced",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd packages/opencode && bun run typecheck",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-end-to-end-flow",
+      "subagent": "test",
+      "description": "Execute comprehensive end-to-end validation test to confirm complete persistence pipeline works",
+      "dependencies": [
+        "implement-dual-write-backend",
+        "add-cache-rebuild-logic",
+        "enhance-error-logging"
+      ],
+      "prompt": {
+        "template": "# Validate End-to-End Flow\n\nYou need to execute comprehensive end-to-end validation tests to confirm the complete persistence pipeline is working correctly.\n\n## Task Overview\n\nRun a series of validation tests to verify:\n1. Activity execution persists to SurrealDB\n2. Redis metrics are updated\n3. Cache rebuild works after Redis flush\n4. API returns real metrics data\n5. No persistence errors in logs\n\n## Test Configuration\n\n**Test Template**: {{test_template_id}}  \n**SurrealDB URL**: {{surrealdb_url}}  \n**Redis URL**: {{redis_url}}  \n**Backend API**: {{api_backend_url}}  \n\n## Validation Tests\n\n### Test 1: Execute Test Activity\n\nRun a test activity execution:\n\n```bash\n# Option 1: Using bun (if available)\nbun run test-activity-execution --template {{test_template_id}}\n\n# Option 2: Using activity tool directly\nopencode activity execute --template {{test_template_id}}\n\n# Option 3: Manual API call\ncurl -X POST {{api_backend_url}}/api/activity-execution \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"activity_id\": \"validation-test-001\",\n    \"template_id\": \"{{test_template_id}}\",\n    \"success\": true,\n    \"duration_ms\": 1500,\n    \"cost_usd\": 0.025,\n    \"tokens\": {\"input\": 150, \"output\": 75, \"cache\": 30}\n  }'\n```\n\n**Expected**: Activity completes successfully without errors.\n\n### Test 2: Verify SurrealDB Persistence\n\nQuery SurrealDB to confirm execution record exists:\n\n```bash\ncurl -s -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT COUNT() FROM activity_execution GROUP ALL;\" \\\n  | jq '.[] | .result[0].count'\n```\n\n**Expected**: Count > 0 (at least the test execution).\n\n**Detailed query:**\n```bash\ncurl -s -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT * FROM activity_execution WHERE template_id = '{{test_template_id}}' ORDER BY created_at DESC LIMIT 1;\" \\\n  | jq '.[] | .result[0]'\n```\n\n**Expected**: Execution record with correct template_id, success=true, duration, cost, tokens.\n\n### Test 3: Verify Redis Metrics\n\nQuery Redis to confirm metrics were updated:\n\n```bash\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq\n```\n\n**Expected output:**\n```json\n{\n  \"template_id\": \"{{test_template_id}}\",\n  \"total_executions\": 1,\n  \"success_count\": 1,\n  \"avg_duration_ms\": 1500,\n  \"avg_cost_usd\": 0.025,\n  \"total_tokens\": 255\n}\n```\n\n**Validation checks:**\n- total_executions > 0\n- success_count > 0\n- avg_duration_ms > 0\n- avg_cost_usd > 0\n\n### Test 4: Verify API Metrics Endpoint\n\nQuery the backend API for metrics:\n\n```bash\ncurl -s {{api_backend_url}}/api/template/{{test_template_id}}/metrics | jq\n```\n\n**Expected output:**\n```json\n{\n  \"template_id\": \"{{test_template_id}}\",\n  \"success_rate\": 1.0,\n  \"total_executions\": 1,\n  \"avg_duration_ms\": 1500,\n  \"avg_cost_usd\": 0.025\n}\n```\n\n**Validation checks:**\n- success_rate > 0 (not null or 0)\n- total_executions > 0\n- Real data (not default zeros)\n\n### Test 5: Test Cache Rebuild\n\nTest Redis recovery from SurrealDB:\n\n```bash\n# Step 1: Flush Redis\nredis-cli FLUSHALL\n\n# Step 2: Verify Redis is empty\nredis-cli KEYS \"template:*:metrics\"\n# Should return (empty array) or no output\n\n# Step 3: Trigger cache rebuild\n# Option A: Via API endpoint\ncurl -X POST {{api_backend_url}}/api/admin/rebuild-cache\n\n# Option B: Via backend restart (if startup hook implemented)\n# (restart backend service)\n\n# Step 4: Verify cache restored\nredis-cli KEYS \"template:*:metrics\"\n# Should show template keys\n\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq\n# Should show metrics (not null)\n```\n\n**Expected**: Metrics are restored from SurrealDB after rebuild.\n\n### Test 6: Check Logs for Errors\n\nSearch logs for persistence errors:\n\n```bash\n# Check for metrics reporting errors\ngrep -i \"metrics.*failed\\|metrics.*error\" logs/*.log\n\n# Check for SurrealDB errors\ngrep -i \"surrealdb.*error\\|namespace.*error\" logs/*.log\n\n# Check for Redis errors (warnings are OK)\ngrep -i \"redis.*error\" logs/*.log\n```\n\n**Expected**: No critical errors related to persistence.\n\n### Test 7: Data Consistency Check\n\nVerify SurrealDB and Redis have consistent data:\n\n```bash\n# Get execution count from SurrealDB\nSURREALDB_COUNT=$(curl -s -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT COUNT() FROM activity_execution WHERE template_id = '{{test_template_id}}' GROUP BY template_id;\" \\\n  | jq '.[] | .result[0].count')\n\n# Get execution count from Redis\nREDIS_COUNT=$(redis-cli GET \"template:{{test_template_id}}:metrics\" | jq '.total_executions')\n\n# Compare\necho \"SurrealDB: $SURREALDB_COUNT\"\necho \"Redis: $REDIS_COUNT\"\n\nif [ \"$SURREALDB_COUNT\" -eq \"$REDIS_COUNT\" ]; then\n  echo \"✅ Data consistent\"\nelse\n  echo \"❌ Data mismatch\"\nfi\n```\n\n**Expected**: Counts match (data is consistent).\n\n## Validation Report\n\nCreate a file `/tmp/activity-template-initialize-surrealdb-schema-and-enable-dual-write/VALIDATION_REPORT.md` with test results:\n\n```markdown\n# End-to-End Validation Report\n\n## Summary\n- **Test Date**: <timestamp>\n- **Test Template**: {{test_template_id}}\n- **Overall Result**: [PASS/FAIL]\n\n## Test Results\n\n### ✅ Test 1: Execute Test Activity\n- Status: [PASS/FAIL]\n- Activity ID: <activity_id>\n- Duration: <duration>ms\n- Cost: $<cost>\n\n### ✅ Test 2: Verify SurrealDB Persistence\n- Status: [PASS/FAIL]\n- Execution count: <count>\n- Sample record: <json>\n\n### ✅ Test 3: Verify Redis Metrics\n- Status: [PASS/FAIL]\n- Metrics: <json>\n\n### ✅ Test 4: Verify API Metrics Endpoint\n- Status: [PASS/FAIL]\n- Response: <json>\n\n### ✅ Test 5: Test Cache Rebuild\n- Status: [PASS/FAIL]\n- Templates rebuilt: <count>\n- Sample restored: <json>\n\n### ✅ Test 6: Check Logs for Errors\n- Status: [PASS/FAIL]\n- Errors found: <count>\n- Sample: <log_lines>\n\n### ✅ Test 7: Data Consistency Check\n- Status: [PASS/FAIL]\n- SurrealDB count: <count>\n- Redis count: <count>\n\n## Issues\n<list any issues or warnings>\n\n## Recommendations\n<any recommended next steps>\n```\n\n## Skip Validation (Optional)\n\nIf `{{skip_validation}}` is true, skip all tests and document that validation was skipped.\n\n## Success Criteria\n\nAll tests pass:\n1. ✅ Activity executes successfully\n2. ✅ SurrealDB has execution record\n3. ✅ Redis metrics updated (not zeros)\n4. ✅ API returns real data\n5. ✅ Cache rebuild restores metrics\n6. ✅ No critical persistence errors in logs\n7. ✅ Data is consistent between SurrealDB and Redis\n\n## Error Handling\n\n**If any test fails:**\n- Document the failure in validation report\n- Provide error details and context\n- Suggest debugging steps\n- Don't stop testing (run all tests even if one fails)\n\n**Common failures:**\n- **SurrealDB empty**: Check if schema was initialized\n- **Redis empty**: Check if dual-write is working\n- **API 404**: Check if endpoint exists\n- **Data mismatch**: Check if there were errors during writes\n\n## Output\n\nProvide:\n1. Validation report file path\n2. Summary of test results (pass/fail counts)\n3. Any critical issues found\n4. Confirmation that learning loop is functional",
+        "variables": [
+          {
+            "name": "test_template_id",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for validation testing",
+            "default": "hello-world-minimal"
+          },
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          },
+          {
+            "name": "redis_url",
+            "type": "string",
+            "required": false,
+            "description": "Redis connection URL",
+            "default": "redis://localhost:6379"
+          },
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "skip_validation",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip end-to-end validation tests",
+            "default": "false"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "initialize-surrealdb-schema",
+      "subagent": "general",
+      "description": "Create SurrealDB namespace, database, and tables for learning loop (activity_execution, template_metrics, failure_patterns)",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Initialize SurrealDB Schema for Learning Loop\n\nYou need to create and initialize the SurrealDB schema required for the activity execution learning loop.\n\n## Task Overview\n\nCreate a complete SurrealDB schema initialization script and execute it against the SurrealDB instance to establish:\n1. Namespace: `{{surrealdb_namespace}}`\n2. Database: `{{surrealdb_database}}`\n3. Tables: `activity_execution`, `template_metrics`, `failure_patterns`\n\n## Connection Details\n\n- **SurrealDB URL**: {{surrealdb_url}}\n- **Namespace**: {{surrealdb_namespace}}\n- **Database**: {{surrealdb_database}}\n- **User**: {{surrealdb_user}}\n- **Password**: {{surrealdb_password}}\n\n## Requirements\n\n### 1. Create Schema File\n\nCreate a file `schema.surql` in `/tmp/activity-template-initialize-surrealdb-schema-and-enable-dual-write/` with the following schema:\n\n**Namespace and Database:**\n```sql\nDEFINE NAMESPACE metabob;\nUSE NS metabob;\nDEFINE DATABASE metabob;\nUSE DB metabob;\n```\n\n**Table: activity_execution**\nStores individual activity execution records:\n- `id`: Unique execution ID (record ID)\n- `activity_id`: Activity instance ID\n- `template_id`: Template ID used\n- `success`: Boolean success flag\n- `duration_ms`: Execution duration in milliseconds\n- `cost_usd`: Execution cost in USD\n- `tokens`: Token usage (input, output, cache)\n- `created_at`: Timestamp of execution\n- `error_message`: Error message (if failed)\n- `metadata`: Additional metadata (JSON)\n\n**Table: template_metrics**\nStores aggregated metrics per template:\n- `id`: Template ID (record ID)\n- `template_id`: Template identifier\n- `total_executions`: Total number of executions\n- `success_count`: Number of successful executions\n- `failure_count`: Number of failed executions\n- `avg_duration_ms`: Average execution duration\n- `avg_cost_usd`: Average execution cost\n- `total_tokens`: Total tokens used\n- `last_updated`: Last update timestamp\n\n**Table: failure_patterns**\nStores failure pattern analysis:\n- `id`: Pattern ID (record ID)\n- `template_id`: Template ID\n- `error_pattern`: Error pattern/signature\n- `occurrence_count`: Number of occurrences\n- `first_seen`: First occurrence timestamp\n- `last_seen`: Last occurrence timestamp\n- `sample_error`: Sample error message\n\n**Indexes:**\nAdd appropriate indexes for common queries:\n- Index on `activity_execution.template_id`\n- Index on `activity_execution.created_at`\n- Index on `template_metrics.template_id`\n- Index on `failure_patterns.template_id`\n\n### 2. Execute Schema\n\nUse curl to execute the schema against SurrealDB:\n\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  --data-binary @schema.surql\n```\n\n### 3. Verify Schema Creation\n\nRun verification queries to confirm the schema was created successfully:\n\n**Check namespace:**\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  --data \"INFO FOR ROOT;\" | jq '.[] | .result.namespaces'\n```\n\n**Check database:**\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  --data \"INFO FOR NS;\" | jq '.[] | .result.databases'\n```\n\n**Check tables:**\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"INFO FOR DB;\" | jq '.[] | .result.tables'\n```\n\nExpected output should show 3 tables: `activity_execution`, `template_metrics`, `failure_patterns`\n\n### 4. Test with Sample Insert\n\nInsert a test record to verify the schema works:\n\n```bash\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"CREATE activity_execution SET activity_id = 'test-001', template_id = 'test-template', success = true, duration_ms = 1000, cost_usd = 0.01, created_at = time::now();\"\n```\n\n## Error Handling\n\n**If schema already exists:**\n- Check if it matches the expected structure using `INFO FOR DB`\n- If correct, report success (idempotent)\n- If incorrect, report the differences and recommend manual intervention\n\n**If connection fails:**\n- Verify SurrealDB is running: `curl {{surrealdb_url}}/health`\n- Check credentials\n- Retry up to 3 times with exponential backoff\n\n**If \"Specify a namespace to use\" error occurs:**\n- Ensure the DEFINE NAMESPACE and USE NS statements are correct\n- Verify the namespace was created successfully\n\n## Success Criteria\n\nThis task succeeds when:\n1. Schema file `schema.surql` exists\n2. Verification queries show namespace, database, and 3 tables\n3. Sample INSERT succeeds\n4. No \"Specify a namespace to use\" errors\n\n## Output\n\nProvide:\n1. Confirmation that schema was created\n2. List of tables created\n3. Verification query results\n4. Any warnings or issues encountered",
+        "variables": [
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "fix-mcp-tool-endpoint",
+      "subagent": "general",
+      "description": "Update metabob-cli MCP tool to POST to correct API endpoint (/api/activity-execution) and add error logging",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Fix MCP Tool API Endpoint\n\nYou need to fix the API endpoint mismatch in the metabob-cli MCP tool that's causing 404 errors and preventing activity execution data from being persisted.\n\n## Task Overview\n\nUpdate `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` to:\n1. Change endpoint from `/api/v1/learning-loop/executions` to `/api/activity-execution`\n2. Add structured error logging to surface failures\n3. Remove silent error handling\n\n## Problem Context\n\nCurrently, the MCP tool posts activity execution metrics to the wrong endpoint:\n- **Current (wrong)**: `/api/v1/learning-loop/executions`\n- **Correct**: `/api/activity-execution`\n\nThis causes:\n- 404 errors (endpoint doesn't exist)\n- Silent failures (errors are swallowed)\n- No data persistence (learning loop can't function)\n\n## File to Modify\n\n**Path**: `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py`\n\n**Line ~256**: Look for the endpoint URL construction in the `post_activity_result` function or similar.\n\n## Required Changes\n\n### 1. Fix Endpoint URL\n\nFind the line that constructs the endpoint URL:\n```python\n# WRONG - Find and replace this\nurl = f\"{api_base}/api/v1/learning-loop/executions\"\n\n# CORRECT - Change to this\nurl = f\"{api_base}/api/activity-execution\"\n```\n\n### 2. Add Error Logging\n\nFind error handling blocks that silently swallow exceptions. Replace with structured logging:\n\n**Before (bad):**\n```python\ntry:\n    response = httpx.post(url, json=data)\nexcept Exception:\n    pass  # Silent failure\n```\n\n**After (good):**\n```python\ntry:\n    response = httpx.post(url, json=data, timeout=30.0)\n    response.raise_for_status()\n    logger.info(f\"Activity metrics posted successfully: {data['activity_id']}\")\nexcept httpx.HTTPError as e:\n    logger.error(\n        \"Failed to post activity metrics\",\n        extra={\n            \"activity_id\": data.get(\"activity_id\"),\n            \"template_id\": data.get(\"template_id\"),\n            \"endpoint\": url,\n            \"error\": str(e),\n            \"status_code\": getattr(e.response, \"status_code\", None) if hasattr(e, \"response\") else None\n        }\n    )\nexcept Exception as e:\n    logger.error(\n        \"Unexpected error posting activity metrics\",\n        extra={\n            \"activity_id\": data.get(\"activity_id\"),\n            \"error\": str(e)\n        }\n    )\n```\n\n### 3. Verify Changes\n\nAfter making changes:\n1. Verify no references to `/api/v1/learning-loop/executions` remain\n2. Verify all exception handlers include logging\n3. Ensure httpx client has timeout configured (e.g., 30 seconds)\n\n## Validation\n\nSearch the file to confirm:\n- ✅ Contains: `/api/activity-execution`\n- ✅ Contains: `logger.error(` or `logger.warning(` in exception handlers\n- ❌ Does NOT contain: `/api/v1/learning-loop/executions`\n- ❌ Does NOT contain: empty `except:` blocks without logging\n\n## Success Criteria\n\n1. File `activity_template_tools.py` updated with correct endpoint\n2. Error logging added with structured data (activity_id, template_id, error details)\n3. No silent error handling remains\n4. All references to old endpoint removed\n\n## Output\n\nProvide:\n1. Confirmation of changes made\n2. Line numbers where changes were applied\n3. Before/after code snippets\n4. Validation results (grep for patterns)",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-backend-api-endpoint",
+      "subagent": "general",
+      "description": "Verify that backend API has /api/activity-execution endpoint and document request/response schema",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Verify Backend API Endpoint\n\nYou need to verify that the backend API has the `/api/activity-execution` endpoint and that its schema matches what the MCP tool expects.\n\n## Task Overview\n\n1. Check if the endpoint exists on the backend\n2. Test the endpoint with a sample request\n3. Document the request/response schema\n4. Identify any schema mismatches\n\n## Backend API Details\n\n**Base URL**: {{api_backend_url}}\n**Endpoint**: `/api/activity-execution`\n**Method**: POST\n\n## Verification Steps\n\n### 1. Check Endpoint Existence\n\nQuery the backend's OpenAPI spec (if available):\n```bash\ncurl -s {{api_backend_url}}/openapi.json | jq '.paths | keys | .[]' | grep activity\n```\n\nOr check for the route in backend code:\n```bash\nfind repos -name \"*.py\" -type f -exec grep -l \"activity-execution\" {} \\;\n```\n\n### 2. Test with Sample Request\n\nSend a test POST request:\n```bash\ncurl -X POST {{api_backend_url}}/api/activity-execution \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"activity_id\": \"test-activity-001\",\n    \"template_id\": \"test-template\",\n    \"success\": true,\n    \"duration_ms\": 1000,\n    \"cost_usd\": 0.01,\n    \"tokens\": {\n      \"input\": 100,\n      \"output\": 50,\n      \"cache\": 25\n    }\n  }' \\\n  -w \"\\nHTTP Status: %{http_code}\\n\" \\\n  -v\n```\n\n**Expected response:**\n- HTTP status: 200 or 201\n- Response body includes confirmation or execution_id\n\n**If 404:**\n- Endpoint doesn't exist\n- Document this and note that it needs to be created in the next task\n\n**If 200/201:**\n- Endpoint exists\n- Document the response schema\n\n### 3. Document Schema\n\nCreate a document describing:\n\n**Expected Request Schema:**\n```json\n{\n  \"activity_id\": \"string\",\n  \"template_id\": \"string\",\n  \"success\": \"boolean\",\n  \"duration_ms\": \"number\",\n  \"cost_usd\": \"number\",\n  \"tokens\": {\n    \"input\": \"number\",\n    \"output\": \"number\",\n    \"cache\": \"number\"\n  },\n  \"error_message\": \"string (optional)\",\n  \"metadata\": \"object (optional)\"\n}\n```\n\n**Expected Response Schema:**\n```json\n{\n  \"status\": \"success\",\n  \"execution_id\": \"string (optional)\",\n  \"message\": \"string (optional)\"\n}\n```\n\n### 4. Identify Mismatches\n\nCompare:\n- What the MCP tool sends (from activity_template_tools.py)\n- What the backend expects (from API spec or code)\n- Document any differences\n\n## If Endpoint Doesn't Exist\n\nDocument:\n1. The endpoint is missing from the backend\n2. It will be created in task `implement-dual-write-backend`\n3. The expected schema (as documented above)\n\nThis is NOT a failure - it's expected that we may need to create the endpoint.\n\n## If Endpoint Exists\n\nDocument:\n1. The endpoint exists and works\n2. The request/response schema\n3. Any schema mismatches that need to be fixed\n\n## Success Criteria\n\n1. Documentation created describing endpoint status\n2. If endpoint exists: response status is 200/201\n3. If endpoint missing: documented for next task\n4. Schema documented and compared\n\n## Output\n\nProvide:\n1. Endpoint status (exists/missing)\n2. Test results (HTTP status, response body)\n3. Schema documentation\n4. List of any schema mismatches\n5. Recommendation for next steps",
+        "variables": [
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "implement-dual-write-backend",
+      "subagent": "general",
+      "description": "Implement dual-write logic in backend API to persist execution data to both Redis (cache) and SurrealDB (primary storage)",
+      "dependencies": [
+        "initialize-surrealdb-schema",
+        "verify-backend-api-endpoint"
+      ],
+      "prompt": {
+        "template": "# Implement Dual-Write in Backend API\n\nYou need to implement dual-write logic in the backend API so that activity execution data is persisted to both Redis (cache) and SurrealDB (primary storage).\n\n## Task Overview\n\nUpdate or create the `/api/activity-execution` endpoint to:\n1. Write execution record to SurrealDB (primary storage)\n2. Update metrics in Redis (cache)\n3. Handle partial failures gracefully\n4. Return appropriate responses\n\n## Architecture\n\n**Data Flow:**\n```\nMCP Tool (POST) → Backend API → [Redis (cache) + SurrealDB (primary)]\n                                       ↓                    ↓\n                                 Fast metrics          Durable storage\n```\n\n**Design Principles:**\n- SurrealDB is the source of truth (primary storage)\n- Redis is the cache layer (fast lookups, can rebuild)\n- Both writes should succeed, but Redis failure is tolerable\n- SurrealDB failure should return error (data must be saved)\n\n## Connection Details\n\n**SurrealDB:**\n- URL: {{surrealdb_url}}\n- Namespace: {{surrealdb_namespace}}\n- Database: {{surrealdb_database}}\n- User: {{surrealdb_user}}\n- Password: {{surrealdb_password}}\n\n**Redis:**\n- URL: {{redis_url}}\n\n## Implementation Requirements\n\n### 1. Endpoint Definition\n\n**Method**: POST  \n**Path**: `/api/activity-execution`  \n**Content-Type**: `application/json`\n\n**Request Body:**\n```json\n{\n  \"activity_id\": \"string\",\n  \"template_id\": \"string\",\n  \"success\": \"boolean\",\n  \"duration_ms\": \"number\",\n  \"cost_usd\": \"number\",\n  \"tokens\": {\n    \"input\": \"number\",\n    \"output\": \"number\",\n    \"cache\": \"number\"\n  },\n  \"error_message\": \"string (optional)\",\n  \"metadata\": \"object (optional)\"\n}\n```\n\n### 2. SurrealDB Write\n\nInsert execution record into `activity_execution` table:\n\n```sql\nCREATE activity_execution SET\n  activity_id = $activity_id,\n  template_id = $template_id,\n  success = $success,\n  duration_ms = $duration_ms,\n  cost_usd = $cost_usd,\n  tokens = $tokens,\n  error_message = $error_message,\n  metadata = $metadata,\n  created_at = time::now();\n```\n\n**Error Handling:**\n- If SurrealDB write fails, return HTTP 500\n- Log error with full context\n- Don't proceed to Redis write\n\n### 3. Redis Write\n\nUpdate template metrics in Redis:\n\n**Key format**: `template:{template_id}:metrics`\n\n**Data structure** (JSON):\n```json\n{\n  \"template_id\": \"string\",\n  \"total_selections\": \"number\",\n  \"total_executions\": \"number\",\n  \"success_count\": \"number\",\n  \"failure_count\": \"number\",\n  \"avg_duration_ms\": \"number\",\n  \"avg_cost_usd\": \"number\",\n  \"total_tokens\": \"number\",\n  \"last_updated\": \"timestamp\"\n}\n```\n\n**Update Logic:**\n1. GET existing metrics from Redis\n2. If not exists, initialize with zeros\n3. Increment counters:\n   - `total_executions += 1`\n   - `success_count += 1` (if success=true)\n   - `failure_count += 1` (if success=false)\n4. Update averages (running average)\n5. SET updated metrics back to Redis\n\n**Error Handling:**\n- If Redis write fails, log warning but don't fail request\n- Redis can be rebuilt from SurrealDB later\n- Return success if SurrealDB write succeeded\n\n### 4. Response\n\n**Success (200 or 201):**\n```json\n{\n  \"status\": \"success\",\n  \"message\": \"Activity execution recorded\",\n  \"execution_id\": \"<surrealdb_record_id>\"\n}\n```\n\n**Failure (500):**\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"Failed to persist execution data\",\n  \"error\": \"<error_details>\"\n}\n```\n\n## Implementation Steps\n\n### Step 1: Find or Create Endpoint\n\nSearch for existing endpoint:\n```bash\ngrep -r \"activity-execution\" repos/ --include=\"*.py\"\n```\n\nIf not found, create in appropriate router file (e.g., `repos/metabob-cli/src/metabob_cli/mcp/api_client.py` or backend router).\n\n### Step 2: Implement SurrealDB Client\n\nEnsure SurrealDB client is initialized:\n```python\nimport httpx\n\nsurrealdb_client = httpx.Client(\n    base_url=\"{{surrealdb_url}}\",\n    auth=(\"{{surrealdb_user}}\", \"{{surrealdb_password}}\")\n)\n\ndef insert_activity_execution(data):\n    response = surrealdb_client.post(\n        \"/sql\",\n        headers={\n            \"NS\": \"{{surrealdb_namespace}}\",\n            \"DB\": \"{{surrealdb_database}}\"\n        },\n        data=f\"\"\"\n        CREATE activity_execution SET\n          activity_id = '{data['activity_id']}',\n          template_id = '{data['template_id']}',\n          success = {str(data['success']).lower()},\n          duration_ms = {data['duration_ms']},\n          cost_usd = {data['cost_usd']},\n          tokens = {data['tokens']},\n          created_at = time::now();\n        \"\"\"\n    )\n    return response\n```\n\n### Step 3: Implement Redis Client\n\nEnsure Redis client is initialized:\n```python\nimport redis\nimport json\nfrom datetime import datetime\n\nredis_client = redis.from_url(\"{{redis_url}}\")\n\ndef update_template_metrics(template_id, execution_data):\n    key = f\"template:{template_id}:metrics\"\n    \n    # Get existing metrics\n    metrics_json = redis_client.get(key)\n    if metrics_json:\n        metrics = json.loads(metrics_json)\n    else:\n        metrics = {\n            \"template_id\": template_id,\n            \"total_selections\": 0,\n            \"total_executions\": 0,\n            \"success_count\": 0,\n            \"failure_count\": 0,\n            \"avg_duration_ms\": 0,\n            \"avg_cost_usd\": 0,\n            \"total_tokens\": 0\n        }\n    \n    # Update metrics\n    metrics[\"total_executions\"] += 1\n    if execution_data[\"success\"]:\n        metrics[\"success_count\"] += 1\n    else:\n        metrics[\"failure_count\"] += 1\n    \n    # Update running averages\n    n = metrics[\"total_executions\"]\n    metrics[\"avg_duration_ms\"] = ((metrics[\"avg_duration_ms\"] * (n-1)) + execution_data[\"duration_ms\"]) / n\n    metrics[\"avg_cost_usd\"] = ((metrics[\"avg_cost_usd\"] * (n-1)) + execution_data[\"cost_usd\"]) / n\n    metrics[\"total_tokens\"] += sum(execution_data[\"tokens\"].values())\n    metrics[\"last_updated\"] = datetime.now().isoformat()\n    \n    # Save back to Redis\n    redis_client.set(key, json.dumps(metrics))\n```\n\n### Step 4: Combine in Endpoint\n\n```python\n@app.post(\"/api/activity-execution\")\nasync def post_activity_execution(data: ActivityExecutionRequest):\n    try:\n        # Write to SurrealDB (primary storage)\n        surrealdb_response = insert_activity_execution(data.dict())\n        if surrealdb_response.status_code not in [200, 201]:\n            raise Exception(f\"SurrealDB write failed: {surrealdb_response.text}\")\n        \n        # Write to Redis (cache - tolerate failure)\n        try:\n            update_template_metrics(data.template_id, data.dict())\n        except Exception as redis_error:\n            logger.warning(\n                f\"Redis update failed (continuing): {redis_error}\",\n                extra={\"template_id\": data.template_id}\n            )\n        \n        return {\n            \"status\": \"success\",\n            \"message\": \"Activity execution recorded\"\n        }\n    \n    except Exception as e:\n        logger.error(\n            f\"Failed to persist activity execution: {e}\",\n            extra={\n                \"activity_id\": data.activity_id,\n                \"template_id\": data.template_id\n            }\n        )\n        raise HTTPException(status_code=500, detail=str(e))\n```\n\n## Testing\n\nAfter implementation, test the endpoint:\n\n```bash\n# Send test request\ncurl -X POST {{api_backend_url}}/api/activity-execution \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"activity_id\": \"test-123\",\n    \"template_id\": \"test-template\",\n    \"success\": true,\n    \"duration_ms\": 1000,\n    \"cost_usd\": 0.01,\n    \"tokens\": {\"input\": 100, \"output\": 50, \"cache\": 25}\n  }'\n\n# Verify SurrealDB\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT * FROM activity_execution WHERE activity_id = 'test-123';\" | jq\n\n# Verify Redis\nredis-cli GET \"template:test-template:metrics\" | jq\n```\n\n## Skip Backend Changes (Optional)\n\nIf `{{skip_backend_changes}}` is true, skip this task and only document what needs to be implemented.\n\n## Success Criteria\n\n1. Endpoint `/api/activity-execution` exists and responds\n2. POST request writes to both SurrealDB and Redis\n3. SurrealDB has execution record after test\n4. Redis has updated metrics after test\n5. Partial failures handled gracefully\n\n## Output\n\nProvide:\n1. Confirmation of implementation\n2. File paths modified/created\n3. Test results showing dual-write working\n4. Any issues or warnings",
+        "variables": [
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          },
+          {
+            "name": "redis_url",
+            "type": "string",
+            "required": false,
+            "description": "Redis connection URL",
+            "default": "redis://localhost:6379"
+          },
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "skip_backend_changes",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip backend code changes (schema init only)",
+            "default": "false"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "add-cache-rebuild-logic",
+      "subagent": "general",
+      "description": "Implement Redis cache rebuild function that recovers data from SurrealDB after Redis restarts",
+      "dependencies": [
+        "implement-dual-write-backend"
+      ],
+      "prompt": {
+        "template": "# Add Cache Rebuild Logic\n\nYou need to implement Redis cache rebuild functionality that recovers template metrics from SurrealDB after Redis restarts or data loss.\n\n## Task Overview\n\nCreate a cache rebuild function that:\n1. Queries all execution data from SurrealDB\n2. Aggregates metrics per template\n3. Populates Redis cache with aggregated data\n4. Can be triggered manually or on startup\n\n## Architecture\n\n**Recovery Flow:**\n```\nRedis Empty/Stale → Rebuild Function → Query SurrealDB → Aggregate → Populate Redis\n```\n\n**Trigger Options:**\n1. On backend startup (automatic recovery)\n2. Via API endpoint (manual trigger)\n3. Scheduled job (periodic sync)\n\n## Connection Details\n\n**SurrealDB:**\n- URL: {{surrealdb_url}}\n- Namespace: {{surrealdb_namespace}}\n- Database: {{surrealdb_database}}\n- User: {{surrealdb_user}}\n- Password: {{surrealdb_password}}\n\n**Redis:**\n- URL: {{redis_url}}\n\n## Implementation Requirements\n\n### 1. Create Rebuild Function\n\n```python\nimport httpx\nimport redis\nimport json\nfrom collections import defaultdict\nfrom datetime import datetime\n\ndef rebuild_redis_cache_from_surrealdb():\n    \"\"\"\n    Rebuild Redis cache from SurrealDB activity_execution records.\n    This recovers from Redis data loss by re-aggregating from source of truth.\n    \"\"\"\n    # Initialize clients\n    surrealdb_client = httpx.Client(\n        base_url=\"{{surrealdb_url}}\",\n        auth=(\"{{surrealdb_user}}\", \"{{surrealdb_password}}\")\n    )\n    redis_client = redis.from_url(\"{{redis_url}}\")\n    \n    try:\n        # Query all execution records from SurrealDB\n        response = surrealdb_client.post(\n            \"/sql\",\n            headers={\n                \"NS\": \"{{surrealdb_namespace}}\",\n                \"DB\": \"{{surrealdb_database}}\"\n            },\n            data=\"SELECT * FROM activity_execution;\"\n        )\n        \n        if response.status_code != 200:\n            raise Exception(f\"SurrealDB query failed: {response.text}\")\n        \n        results = response.json()\n        executions = results[0][\"result\"] if results else []\n        \n        # Aggregate metrics per template\n        template_metrics = defaultdict(lambda: {\n            \"total_executions\": 0,\n            \"success_count\": 0,\n            \"failure_count\": 0,\n            \"total_duration_ms\": 0,\n            \"total_cost_usd\": 0,\n            \"total_tokens\": 0\n        })\n        \n        for execution in executions:\n            template_id = execution[\"template_id\"]\n            metrics = template_metrics[template_id]\n            \n            metrics[\"total_executions\"] += 1\n            if execution[\"success\"]:\n                metrics[\"success_count\"] += 1\n            else:\n                metrics[\"failure_count\"] += 1\n            \n            metrics[\"total_duration_ms\"] += execution[\"duration_ms\"]\n            metrics[\"total_cost_usd\"] += execution[\"cost_usd\"]\n            if \"tokens\" in execution:\n                metrics[\"total_tokens\"] += sum(execution[\"tokens\"].values())\n        \n        # Populate Redis with aggregated metrics\n        rebuilt_count = 0\n        for template_id, aggregated in template_metrics.items():\n            n = aggregated[\"total_executions\"]\n            \n            redis_metrics = {\n                \"template_id\": template_id,\n                \"total_selections\": 0,  # Not tracked in activity_execution\n                \"total_executions\": n,\n                \"success_count\": aggregated[\"success_count\"],\n                \"failure_count\": aggregated[\"failure_count\"],\n                \"avg_duration_ms\": aggregated[\"total_duration_ms\"] / n,\n                \"avg_cost_usd\": aggregated[\"total_cost_usd\"] / n,\n                \"total_tokens\": aggregated[\"total_tokens\"],\n                \"last_updated\": datetime.now().isoformat()\n            }\n            \n            key = f\"template:{template_id}:metrics\"\n            redis_client.set(key, json.dumps(redis_metrics))\n            rebuilt_count += 1\n        \n        return {\n            \"status\": \"success\",\n            \"templates_rebuilt\": rebuilt_count,\n            \"total_executions\": sum(m[\"total_executions\"] for m in template_metrics.values())\n        }\n    \n    except Exception as e:\n        return {\n            \"status\": \"error\",\n            \"error\": str(e)\n        }\n    finally:\n        surrealdb_client.close()\n```\n\n### 2. Add API Endpoint (Optional)\n\nCreate an endpoint to manually trigger cache rebuild:\n\n```python\n@app.post(\"/api/admin/rebuild-cache\")\nasync def rebuild_cache_endpoint():\n    \"\"\"\n    Manually trigger Redis cache rebuild from SurrealDB.\n    Useful for recovery after Redis data loss.\n    \"\"\"\n    result = rebuild_redis_cache_from_surrealdb()\n    \n    if result[\"status\"] == \"success\":\n        return result\n    else:\n        raise HTTPException(status_code=500, detail=result[\"error\"])\n```\n\n### 3. Add Startup Hook (Recommended)\n\nAutomatically rebuild cache on backend startup if Redis is empty:\n\n```python\n@app.on_event(\"startup\")\nasync def startup_event():\n    \"\"\"\n    Check Redis cache health on startup and rebuild if necessary.\n    \"\"\"\n    redis_client = redis.from_url(\"{{redis_url}}\")\n    \n    # Check if cache is empty\n    template_keys = redis_client.keys(\"template:*:metrics\")\n    \n    if len(template_keys) == 0:\n        logger.info(\"Redis cache is empty, triggering rebuild from SurrealDB\")\n        result = rebuild_redis_cache_from_surrealdb()\n        \n        if result[\"status\"] == \"success\":\n            logger.info(f\"Cache rebuilt: {result['templates_rebuilt']} templates\")\n        else:\n            logger.error(f\"Cache rebuild failed: {result['error']}\")\n    else:\n        logger.info(f\"Redis cache healthy: {len(template_keys)} templates cached\")\n```\n\n## Testing\n\nTest the cache rebuild functionality:\n\n### Test 1: Manual Rebuild\n\n```bash\n# Flush Redis\nredis-cli FLUSHALL\n\n# Trigger rebuild (via endpoint or function)\ncurl -X POST {{api_backend_url}}/api/admin/rebuild-cache\n\n# Verify cache restored\nredis-cli KEYS \"template:*:metrics\"\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq\n```\n\n### Test 2: Startup Rebuild\n\n```bash\n# Flush Redis\nredis-cli FLUSHALL\n\n# Restart backend (triggers startup event)\n# Check logs for \"Cache rebuilt\" message\n\n# Verify cache restored\nredis-cli KEYS \"template:*:metrics\"\n```\n\n### Test 3: Data Consistency\n\n```bash\n# Query SurrealDB for a template\ncurl -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT COUNT() FROM activity_execution WHERE template_id = '{{test_template_id}}' GROUP BY template_id;\" | jq\n\n# Get Redis metrics for same template\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq '.total_executions'\n\n# Verify counts match\n```\n\n## Error Handling\n\n**If SurrealDB query fails:**\n- Log error with connection details\n- Don't clear existing Redis cache\n- Return error status\n\n**If Redis is unavailable:**\n- Log error\n- Backend should still function (cache is optional)\n- Retry on next startup or manual trigger\n\n**If no data in SurrealDB:**\n- This is valid (new system)\n- Don't fail, just report 0 templates rebuilt\n\n## Success Criteria\n\n1. Rebuild function implemented\n2. After Redis FLUSHALL, rebuild restores metrics\n3. Redis keys match SurrealDB template count\n4. Metrics values are consistent with SurrealDB aggregates\n5. No data loss after Redis restart\n\n## Output\n\nProvide:\n1. Confirmation of implementation\n2. File paths modified/created\n3. Test results showing cache rebuild working\n4. Number of templates rebuilt\n5. Any consistency issues found",
+        "variables": [
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          },
+          {
+            "name": "redis_url",
+            "type": "string",
+            "required": false,
+            "description": "Redis connection URL",
+            "default": "redis://localhost:6379"
+          },
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "test_template_id",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for validation testing",
+            "default": "hello-world-minimal"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "enhance-error-logging",
+      "subagent": "general",
+      "description": "Add structured error logging to activity.ts and MCP tools to surface persistence failures",
+      "dependencies": [
+        "fix-mcp-tool-endpoint"
+      ],
+      "prompt": {
+        "template": "# Enhance Error Logging\n\nYou need to add structured error logging to surface persistence failures that are currently being silently swallowed.\n\n## Task Overview\n\nUpdate error handling in:\n1. `packages/opencode/src/session/activity.ts` (TypeScript)\n2. Already fixed in `repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py` (Task 2)\n\nFocus on adding structured logging that includes:\n- Activity ID\n- Template ID\n- Error message and stack trace\n- Contextual metadata\n\n## File to Modify\n\n**Primary**: `packages/opencode/src/session/activity.ts`  \n**Line ~674**: Look for metrics reporting code with error handling\n\n## Problem Context\n\nCurrently, metrics reporting failures are silently caught:\n```typescript\n// BAD - Silent failure\ntry {\n  await reportMetrics(activity)\n} catch {\n  // Error swallowed, no visibility\n}\n```\n\nThis hides critical failures in the learning loop.\n\n## Required Changes\n\n### 1. Find Metrics Reporting Code\n\nSearch for metrics reporting in activity.ts:\n```bash\ngrep -n \"metrics\" packages/opencode/src/session/activity.ts | grep -i \"report\\|post\\|send\"\n```\n\n### 2. Add Structured Logging\n\nReplace silent error handling with structured logs:\n\n**Before (bad):**\n```typescript\ntry {\n  await reportActivityMetrics({\n    activityId: activity.id,\n    templateId: activity.templateId,\n    success: activity.status === 'completed',\n    duration: activity.duration,\n    cost: activity.cost\n  })\n} catch {\n  // Silent failure - NO VISIBILITY\n}\n```\n\n**After (good):**\n```typescript\ntry {\n  await reportActivityMetrics({\n    activityId: activity.id,\n    templateId: activity.templateId,\n    success: activity.status === 'completed',\n    duration: activity.duration,\n    cost: activity.cost\n  })\n} catch (error) {\n  log.warn(\"metrics reporting failed\", {\n    activityId: activity.id,\n    templateId: activity.templateId,\n    status: activity.status,\n    error: error instanceof Error ? error.message : String(error),\n    stack: error instanceof Error ? error.stack : undefined\n  })\n}\n```\n\n### 3. Add Logging to All Catch Blocks\n\nSearch for all catch blocks in activity.ts:\n```bash\ngrep -n \"catch\" packages/opencode/src/session/activity.ts\n```\n\nFor each catch block that handles external operations (API calls, file I/O, etc.), add structured logging.\n\n**Pattern to follow:**\n```typescript\n.catch((error: Error) => {\n  log.error(\"operation failed\", {\n    operation: \"<operation_name>\",\n    activityId: activity.id,\n    error: error.message,\n    stack: error.stack\n  })\n})\n```\n\n### 4. Use Appropriate Log Levels\n\n- `log.error()`: Critical failures that break functionality\n- `log.warn()`: Non-critical failures that reduce functionality\n- `log.info()`: Successful operations with context\n- `log.debug()`: Detailed debugging information\n\n**Examples:**\n- Metrics reporting failure: `log.warn()` (system continues, but learning is affected)\n- Activity execution failure: `log.error()` (critical failure)\n- Successful metrics post: `log.debug()` (verbose, not always needed)\n\n## Validation\n\nAfter making changes:\n\n### 1. TypeScript Compilation\n\n```bash\ncd packages/opencode && bun run typecheck\n```\n\nMust exit with code 0 (no errors).\n\n### 2. Search for Silent Failures\n\n```bash\n# Find catch blocks without logging\ngrep -A 2 \"catch\" packages/opencode/src/session/activity.ts | grep -E \"catch.*\\{\\s*\\}\"\n```\n\nShould return no matches.\n\n### 3. Verify Structured Logging\n\n```bash\n# Verify log calls include metadata\ngrep \"log\\.warn\\|log\\.error\" packages/opencode/src/session/activity.ts\n```\n\nEach should include structured data (object with fields).\n\n## Testing\n\nTo test error logging:\n\n### Test 1: Simulate API Failure\n\n1. Stop backend API\n2. Run test activity\n3. Check logs for metrics reporting warning with structured data\n\n### Test 2: Review Log Output\n\nRun activity and check log output includes:\n- ✅ Activity ID\n- ✅ Template ID\n- ✅ Error message\n- ✅ Operation context\n\n## Success Criteria\n\n1. File `activity.ts` updated with structured logging\n2. All relevant catch blocks include logging\n3. Logs include: activityId, templateId, error details\n4. No empty catch blocks remain (for external operations)\n5. TypeScript compilation succeeds\n6. Log format is consistent (structured objects, not strings)\n\n## Output\n\nProvide:\n1. Confirmation of changes made\n2. Line numbers where logging was added\n3. Before/after code snippets\n4. TypeScript compilation result\n5. Count of catch blocks enhanced",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cd packages/opencode && bun run typecheck",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-end-to-end-flow",
+      "subagent": "test",
+      "description": "Execute comprehensive end-to-end validation test to confirm complete persistence pipeline works",
+      "dependencies": [
+        "implement-dual-write-backend",
+        "add-cache-rebuild-logic",
+        "enhance-error-logging"
+      ],
+      "prompt": {
+        "template": "# Validate End-to-End Flow\n\nYou need to execute comprehensive end-to-end validation tests to confirm the complete persistence pipeline is working correctly.\n\n## Task Overview\n\nRun a series of validation tests to verify:\n1. Activity execution persists to SurrealDB\n2. Redis metrics are updated\n3. Cache rebuild works after Redis flush\n4. API returns real metrics data\n5. No persistence errors in logs\n\n## Test Configuration\n\n**Test Template**: {{test_template_id}}  \n**SurrealDB URL**: {{surrealdb_url}}  \n**Redis URL**: {{redis_url}}  \n**Backend API**: {{api_backend_url}}  \n\n## Validation Tests\n\n### Test 1: Execute Test Activity\n\nRun a test activity execution:\n\n```bash\n# Option 1: Using bun (if available)\nbun run test-activity-execution --template {{test_template_id}}\n\n# Option 2: Using activity tool directly\nopencode activity execute --template {{test_template_id}}\n\n# Option 3: Manual API call\ncurl -X POST {{api_backend_url}}/api/activity-execution \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"activity_id\": \"validation-test-001\",\n    \"template_id\": \"{{test_template_id}}\",\n    \"success\": true,\n    \"duration_ms\": 1500,\n    \"cost_usd\": 0.025,\n    \"tokens\": {\"input\": 150, \"output\": 75, \"cache\": 30}\n  }'\n```\n\n**Expected**: Activity completes successfully without errors.\n\n### Test 2: Verify SurrealDB Persistence\n\nQuery SurrealDB to confirm execution record exists:\n\n```bash\ncurl -s -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT COUNT() FROM activity_execution GROUP ALL;\" \\\n  | jq '.[] | .result[0].count'\n```\n\n**Expected**: Count > 0 (at least the test execution).\n\n**Detailed query:**\n```bash\ncurl -s -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT * FROM activity_execution WHERE template_id = '{{test_template_id}}' ORDER BY created_at DESC LIMIT 1;\" \\\n  | jq '.[] | .result[0]'\n```\n\n**Expected**: Execution record with correct template_id, success=true, duration, cost, tokens.\n\n### Test 3: Verify Redis Metrics\n\nQuery Redis to confirm metrics were updated:\n\n```bash\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq\n```\n\n**Expected output:**\n```json\n{\n  \"template_id\": \"{{test_template_id}}\",\n  \"total_executions\": 1,\n  \"success_count\": 1,\n  \"avg_duration_ms\": 1500,\n  \"avg_cost_usd\": 0.025,\n  \"total_tokens\": 255\n}\n```\n\n**Validation checks:**\n- total_executions > 0\n- success_count > 0\n- avg_duration_ms > 0\n- avg_cost_usd > 0\n\n### Test 4: Verify API Metrics Endpoint\n\nQuery the backend API for metrics:\n\n```bash\ncurl -s {{api_backend_url}}/api/template/{{test_template_id}}/metrics | jq\n```\n\n**Expected output:**\n```json\n{\n  \"template_id\": \"{{test_template_id}}\",\n  \"success_rate\": 1.0,\n  \"total_executions\": 1,\n  \"avg_duration_ms\": 1500,\n  \"avg_cost_usd\": 0.025\n}\n```\n\n**Validation checks:**\n- success_rate > 0 (not null or 0)\n- total_executions > 0\n- Real data (not default zeros)\n\n### Test 5: Test Cache Rebuild\n\nTest Redis recovery from SurrealDB:\n\n```bash\n# Step 1: Flush Redis\nredis-cli FLUSHALL\n\n# Step 2: Verify Redis is empty\nredis-cli KEYS \"template:*:metrics\"\n# Should return (empty array) or no output\n\n# Step 3: Trigger cache rebuild\n# Option A: Via API endpoint\ncurl -X POST {{api_backend_url}}/api/admin/rebuild-cache\n\n# Option B: Via backend restart (if startup hook implemented)\n# (restart backend service)\n\n# Step 4: Verify cache restored\nredis-cli KEYS \"template:*:metrics\"\n# Should show template keys\n\nredis-cli GET \"template:{{test_template_id}}:metrics\" | jq\n# Should show metrics (not null)\n```\n\n**Expected**: Metrics are restored from SurrealDB after rebuild.\n\n### Test 6: Check Logs for Errors\n\nSearch logs for persistence errors:\n\n```bash\n# Check for metrics reporting errors\ngrep -i \"metrics.*failed\\|metrics.*error\" logs/*.log\n\n# Check for SurrealDB errors\ngrep -i \"surrealdb.*error\\|namespace.*error\" logs/*.log\n\n# Check for Redis errors (warnings are OK)\ngrep -i \"redis.*error\" logs/*.log\n```\n\n**Expected**: No critical errors related to persistence.\n\n### Test 7: Data Consistency Check\n\nVerify SurrealDB and Redis have consistent data:\n\n```bash\n# Get execution count from SurrealDB\nSURREALDB_COUNT=$(curl -s -X POST {{surrealdb_url}}/sql \\\n  -u \"{{surrealdb_user}}:{{surrealdb_password}}\" \\\n  -H \"NS: {{surrealdb_namespace}}\" \\\n  -H \"DB: {{surrealdb_database}}\" \\\n  --data \"SELECT COUNT() FROM activity_execution WHERE template_id = '{{test_template_id}}' GROUP BY template_id;\" \\\n  | jq '.[] | .result[0].count')\n\n# Get execution count from Redis\nREDIS_COUNT=$(redis-cli GET \"template:{{test_template_id}}:metrics\" | jq '.total_executions')\n\n# Compare\necho \"SurrealDB: $SURREALDB_COUNT\"\necho \"Redis: $REDIS_COUNT\"\n\nif [ \"$SURREALDB_COUNT\" -eq \"$REDIS_COUNT\" ]; then\n  echo \"✅ Data consistent\"\nelse\n  echo \"❌ Data mismatch\"\nfi\n```\n\n**Expected**: Counts match (data is consistent).\n\n## Validation Report\n\nCreate a file `/tmp/activity-template-initialize-surrealdb-schema-and-enable-dual-write/VALIDATION_REPORT.md` with test results:\n\n```markdown\n# End-to-End Validation Report\n\n## Summary\n- **Test Date**: <timestamp>\n- **Test Template**: {{test_template_id}}\n- **Overall Result**: [PASS/FAIL]\n\n## Test Results\n\n### ✅ Test 1: Execute Test Activity\n- Status: [PASS/FAIL]\n- Activity ID: <activity_id>\n- Duration: <duration>ms\n- Cost: $<cost>\n\n### ✅ Test 2: Verify SurrealDB Persistence\n- Status: [PASS/FAIL]\n- Execution count: <count>\n- Sample record: <json>\n\n### ✅ Test 3: Verify Redis Metrics\n- Status: [PASS/FAIL]\n- Metrics: <json>\n\n### ✅ Test 4: Verify API Metrics Endpoint\n- Status: [PASS/FAIL]\n- Response: <json>\n\n### ✅ Test 5: Test Cache Rebuild\n- Status: [PASS/FAIL]\n- Templates rebuilt: <count>\n- Sample restored: <json>\n\n### ✅ Test 6: Check Logs for Errors\n- Status: [PASS/FAIL]\n- Errors found: <count>\n- Sample: <log_lines>\n\n### ✅ Test 7: Data Consistency Check\n- Status: [PASS/FAIL]\n- SurrealDB count: <count>\n- Redis count: <count>\n\n## Issues\n<list any issues or warnings>\n\n## Recommendations\n<any recommended next steps>\n```\n\n## Skip Validation (Optional)\n\nIf `{{skip_validation}}` is true, skip all tests and document that validation was skipped.\n\n## Success Criteria\n\nAll tests pass:\n1. ✅ Activity executes successfully\n2. ✅ SurrealDB has execution record\n3. ✅ Redis metrics updated (not zeros)\n4. ✅ API returns real data\n5. ✅ Cache rebuild restores metrics\n6. ✅ No critical persistence errors in logs\n7. ✅ Data is consistent between SurrealDB and Redis\n\n## Error Handling\n\n**If any test fails:**\n- Document the failure in validation report\n- Provide error details and context\n- Suggest debugging steps\n- Don't stop testing (run all tests even if one fails)\n\n**Common failures:**\n- **SurrealDB empty**: Check if schema was initialized\n- **Redis empty**: Check if dual-write is working\n- **API 404**: Check if endpoint exists\n- **Data mismatch**: Check if there were errors during writes\n\n## Output\n\nProvide:\n1. Validation report file path\n2. Summary of test results (pass/fail counts)\n3. Any critical issues found\n4. Confirmation that learning loop is functional",
+        "variables": [
+          {
+            "name": "test_template_id",
+            "type": "string",
+            "required": false,
+            "description": "Template ID for validation testing",
+            "default": "hello-world-minimal"
+          },
+          {
+            "name": "surrealdb_url",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB connection URL",
+            "default": "http://localhost:8000"
+          },
+          {
+            "name": "surrealdb_namespace",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB namespace name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_database",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB database name",
+            "default": "metabob"
+          },
+          {
+            "name": "surrealdb_user",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication user",
+            "default": "root"
+          },
+          {
+            "name": "surrealdb_password",
+            "type": "string",
+            "required": false,
+            "description": "SurrealDB authentication password",
+            "default": "root"
+          },
+          {
+            "name": "redis_url",
+            "type": "string",
+            "required": false,
+            "description": "Redis connection URL",
+            "default": "redis://localhost:6379"
+          },
+          {
+            "name": "api_backend_url",
+            "type": "string",
+            "required": false,
+            "description": "Backend API base URL",
+            "default": "http://localhost:8080"
+          },
+          {
+            "name": "skip_validation",
+            "type": "boolean",
+            "required": false,
+            "description": "Skip end-to-end validation tests",
+            "default": "false"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-23T00:26:23.361Z",
+  "metadata": {}
+}

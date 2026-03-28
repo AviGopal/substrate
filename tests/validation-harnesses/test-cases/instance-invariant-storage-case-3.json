@@ -1,0 +1,23 @@
+{
+  "impulseId": "validation-instance-invariant-storage-case-3",
+  "name": "Multi-Tenant Isolation",
+  "description": "Tenants with different project_ids cannot access each other's activities",
+  "input": {
+    "tenantA": {
+      "projectId": "proj_tenant_a",
+      "activityId": "act_001"
+    },
+    "tenantB": {
+      "projectId": "proj_tenant_b",
+      "activityId": "act_001"
+    }
+  },
+  "expectedOutput": {
+    "tenantACanAccessOwnData": true,
+    "tenantBCanAccessOwnData": true,
+    "tenantACanAccessTenantBData": false,
+    "tenantBCanAccessTenantAData": false
+  },
+  "type": "memo",
+  "budget": 500
+}

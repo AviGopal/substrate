@@ -1,0 +1,200 @@
+{
+  "id": "trace-vessel-repository-independence",
+  "type": "templateDefinition",
+  "description": "Complete trace analysis of vessel-repository-independence specification, including current vs desired state, architectural boundaries, blocking issues, and compliance validation",
+  "content": {
+    "specificationName": "vessel-repository-independence",
+    "specificationDescription": "Each vessel (minibob, metabob-activity-api, activity-dashboard) must be independently deployable with separate git repositories, no cross-vessel imports, and communication only via HTTP/REST APIs. Helm charts must be self-contained within each vessel's repository.",
+    "expectedBehavior": "When developing or deploying any vessel: (1) No import statements reference code from other vessels, (2) All vessel dependencies declared in package.json/requirements.txt, (3) Communication uses HTTP endpoints only (metabob-activity-api provides REST API, dashboard consumes it, minibob executes activities via API), (4) Each vessel has complete Helm chart in its own repo under helm/ directory",
+    "traceResults": {
+      "dataFlowDocumentPath": "docs/data-flows/vessel-repository-independence-flow.md",
+      "summary": {
+        "compliantComponents": 9,
+        "criticalIssues": 2,
+        "highPriorityIssues": 2,
+        "architecturalValidation": "PASSED with 2 critical fixes required"
+      },
+      "dataFlow": "Dashboard UI → HTTP GET /v2/activities/templates → Auth Middleware (Redis session validation) → Cache Check (Redis) → SurrealDB Query (on cache miss) → Thompson Sampling Filtering → JSON Response → Dashboard State Update | MiniBob MCP Poll → Same Flow → Template Selection → Activity Execution → POST /v2/activities/executions → Thompson Sampling Update (⚠️ RACE CONDITION) → Cache Invalidation",
+      "components": [
+        {
+          "file": "repos/activity-dashboard/src/lib/api-client.ts",
+          "component": "API Client",
+          "currentBehavior": "HTTP-only communication with Activity API using fetch, type duplication for schemas",
+          "desiredBehavior": "HTTP-only communication with Activity API using fetch, type duplication for schemas",
+          "gap": "COMPLIANT - No changes needed. Loose coupling achieved."
+        },
+        {
+          "file": "repos/metabob-activity-api/src/routes/activities.ts",
+          "component": "Activity Routes Handler",
+          "currentBehavior": "Exposes REST API endpoints for template listing and execution recording, Thompson Sampling learning loop",
+          "desiredBehavior": "Exposes REST API endpoints for template listing and execution recording, Thompson Sampling learning loop",
+          "gap": "CRITICAL - Race condition in Thompson Sampling (Issue #1). Need atomic UPDATE for metrics.",
+          "lineRange": "351-513"
+        },
+        {
+          "file": "repos/metabob-activity-api/src/middleware/auth.ts",
+          "component": "Authentication Middleware",
+          "currentBehavior": "Redis session validation with Zod, no try-catch for parse failures",
+          "desiredBehavior": "Redis session validation with Zod, graceful error handling with 401 status",
+          "gap": "CRITICAL - Missing try-catch for Zod parse errors (Issue #2). Results in 500 instead of 401.",
+          "lineRange": "16-73"
+        },
+        {
+          "file": "repos/metabob-activity-api/src/index.ts",
+          "component": "API Server Entry Point",
+          "currentBehavior": "Hono server with health check endpoint (basic), port 8080",
+          "desiredBehavior": "Hono server with deep health check (Redis + SurrealDB verification), port 8080",
+          "gap": "HIGH - Health check doesn't verify database connectivity (Issue #10). Kubernetes may route to unhealthy pods."
+        },
+        {
+          "file": "repos/metabob-activity-api/src/db/redis.ts",
+          "component": "Redis Client",
+          "currentBehavior": "Singleton with auto-reconnect, exponential backoff, cache-aside pattern",
+          "desiredBehavior": "Singleton with auto-reconnect, exponential backoff, cache-aside pattern with distributed locking",
+          "gap": "HIGH - No distributed lock for cache refresh (Issue #3). Cache stampede risk on TTL expiration."
+        },
+        {
+          "file": "repos/minibob/index.ts",
+          "component": "MiniBob Entry Point",
+          "currentBehavior": "MCP HTTP communication with Activity API for boredom polling",
+          "desiredBehavior": "MCP HTTP communication with Activity API for boredom polling",
+          "gap": "COMPLIANT - No changes needed. HTTP-only communication via MCP."
+        },
+        {
+          "file": "helm/charts/metabob-activity-api/Chart.yaml",
+          "component": "Activity API Helm Chart",
+          "currentBehavior": "Self-contained chart in metabob-activity-api repo with values.yaml",
+          "desiredBehavior": "Self-contained chart in metabob-activity-api repo with values.yaml",
+          "gap": "COMPLIANT - No changes needed. Chart is self-contained."
+        },
+        {
+          "file": "repos/activity-dashboard/helm/Chart.yaml",
+          "component": "Dashboard Helm Chart",
+          "currentBehavior": "Self-contained chart in activity-dashboard repo with values.yaml",
+          "desiredBehavior": "Self-contained chart in activity-dashboard repo with values.yaml",
+          "gap": "COMPLIANT - No changes needed. Chart is self-contained."
+        },
+        {
+          "file": "repos/minibob/helm/minibob-cluster/Chart.yaml",
+          "component": "MiniBob Helm Chart",
+          "currentBehavior": "Self-contained chart in minibob repo with values.yaml",
+          "desiredBehavior": "Self-contained chart in minibob repo with values.yaml",
+          "gap": "COMPLIANT - No changes needed. Chart is self-contained."
+        },
+        {
+          "file": "repos/metabob-activity-api/Dockerfile",
+          "component": "Activity API Docker Image",
+          "currentBehavior": "Builds independently from Bun base image, no external dependencies",
+          "desiredBehavior": "Builds independently from Bun base image, no external dependencies",
+          "gap": "COMPLIANT - No changes needed. Independent build."
+        },
+        {
+          "file": "repos/activity-dashboard/Dockerfile",
+          "component": "Dashboard Docker Image",
+          "currentBehavior": "Builds independently from Node base image, no external dependencies",
+          "desiredBehavior": "Builds independently from Node base image, no external dependencies",
+          "gap": "COMPLIANT - No changes needed. Independent build."
+        },
+        {
+          "file": "repos/minibob/Dockerfile",
+          "component": "MiniBob Docker Image",
+          "currentBehavior": "Builds independently from OpenCode base image, no external dependencies",
+          "desiredBehavior": "Builds independently from OpenCode base image, no external dependencies",
+          "gap": "COMPLIANT - No changes needed. Independent build."
+        }
+      ],
+      "blockingIssues": [
+        {
+          "id": "issue-1",
+          "severity": "CRITICAL",
+          "component": "repos/metabob-activity-api/src/routes/activities.ts:351-513",
+          "description": "Thompson Sampling race condition in read-modify-write sequence",
+          "impact": "Corrupted metrics under concurrent execution recording",
+          "fix": "Replace SELECT + UPDATE with single atomic UPDATE using SurrealDB += operator",
+          "code": "UPDATE variant_performance_metrics SET total_executions += 1, successful_executions += $success_delta, failed_executions += $failure_delta, thompson_alpha = successful_executions + 1, thompson_beta = failed_executions + 1, success_rate = successful_executions / total_executions WHERE variant_id = $variant_id"
+        },
+        {
+          "id": "issue-2",
+          "severity": "CRITICAL",
+          "component": "repos/metabob-activity-api/src/middleware/auth.ts:16-73",
+          "description": "Missing try-catch for Zod parse failures",
+          "impact": "Returns 500 Internal Server Error instead of 401 Unauthorized on corrupted session data",
+          "fix": "Wrap SessionDataSchema.parse() in try-catch with proper HTTP status codes",
+          "code": "try { const sessionData = SessionDataSchema.parse(JSON.parse(sessionDataRaw)); } catch (error) { if (error instanceof z.ZodError) { logger.warn('Invalid session schema', { error: error.errors }); } return c.json({ error: 'Invalid session' }, 401); }"
+        }
+      ],
+      "highPriorityIssues": [
+        {
+          "id": "issue-3",
+          "severity": "HIGH",
+          "component": "repos/metabob-activity-api/src/db/redis.ts",
+          "description": "Cache stampede risk on TTL expiration",
+          "impact": "SurrealDB overload when N clients simultaneously query on cache miss",
+          "fix": "Implement distributed lock using Redis SETNX for cache refresh operations"
+        },
+        {
+          "id": "issue-10",
+          "severity": "HIGH",
+          "component": "repos/metabob-activity-api/src/index.ts",
+          "description": "Health check endpoint doesn't verify database connectivity",
+          "impact": "Kubernetes routes traffic to pods with Redis/SurrealDB connection failures",
+          "fix": "Add Redis PING and SurrealDB query to /health endpoint with 503 status on failure"
+        }
+      ],
+      "architecturalBoundaries": [
+        {
+          "boundary": "Dashboard → Activity API",
+          "protocol": "HTTP REST",
+          "authentication": "Bearer token (Base64-encoded Redis session key)",
+          "coupling": "LOOSE - Type duplication, no shared code",
+          "discovery": "Environment variable: ACTIVITY_API_URL",
+          "compliance": "COMPLIANT"
+        },
+        {
+          "boundary": "MiniBob → Activity API",
+          "protocol": "MCP (JSON-RPC 2.0 over HTTP)",
+          "authentication": "Bearer token (same as Dashboard)",
+          "coupling": "LOOSE - HTTP-only, no shared code",
+          "discovery": "Environment variable: MCP_ENDPOINT",
+          "compliance": "COMPLIANT"
+        },
+        {
+          "boundary": "Activity API → Redis",
+          "protocol": "Redis protocol (ioredis)",
+          "connectionManagement": "Singleton with auto-reconnect, exponential backoff",
+          "dataFormat": "JSON strings",
+          "ttlStrategy": "Session 24h, Template 1h, Metrics 5min",
+          "compliance": "COMPLIANT"
+        },
+        {
+          "boundary": "Activity API → SurrealDB",
+          "protocol": "WebSocket (SurrealDB native)",
+          "connectionManagement": "Singleton with lazy initialization",
+          "resilience": "⚠️ No retry strategy (throws on connection error)",
+          "queryLanguage": "SurrealQL",
+          "multiTenancy": "WHERE clause filtering by org_id/project_id",
+          "compliance": "NEEDS IMPROVEMENT - No circuit breaker"
+        }
+      ],
+      "deploymentValidation": {
+        "independentDockerfiles": true,
+        "selfContainedHelmCharts": true,
+        "noCrossVesselImports": true,
+        "environmentBasedDiscovery": true,
+        "httpOnlyCommunication": true
+      }
+    }
+  },
+  "metadata": {
+    "created": "2026-03-16T22:23:00Z",
+    "budget": 5000,
+    "source": "trace-data-flow-single-feature activity",
+    "purpose": "Downstream validation and enforcement tasks for vessel independence compliance",
+    "usageScenarios": [
+      "Validate vessel independence before MiniBob self-development",
+      "Enforce architectural boundaries via automated checks",
+      "Guide critical bug fixes (Issue #1, #2)",
+      "Reference for vessel evolution patterns"
+    ]
+  }
+}

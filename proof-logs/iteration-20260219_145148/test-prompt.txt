@@ -1,0 +1,16 @@
+Create an activity template for adding logging statements.
+
+Template name: Add Logging Statements
+Description: Add comprehensive logging to functions at entry points, decision branches, and error paths
+Category: tool
+Template ID: add-logging
+
+The template should have 3 tasks:
+1. Analyze target code to identify key logging points (function entry/exit, branches, errors)
+2. Add logging statements with appropriate log levels (DEBUG, INFO, WARNING, ERROR)
+3. Validate that logging doesn't break functionality
+
+Variables:
+- targetFile: Path to file to add logging to (required, string)
+- functionName: Specific function to instrument - if not provided, instrument all functions (optional, string)
+- logLevel: Minimum log level to add (optional, string, default: INFO)

@@ -1,0 +1,22 @@
+{
+  "id": "validation-activity-system-minimal-deployment-case-3",
+  "type": "memo",
+  "testName": "Persistent Volume Binding",
+  "description": "Verify at least 1 PVC is bound (for SurrealDB storage)",
+  "input": {
+    "namespace": "activity-system",
+    "command": "kubectl get pvc -n activity-system"
+  },
+  "expectedOutput": {
+    "minimumBoundPVCs": 1,
+    "allBound": true,
+    "pvcs": [
+      {
+        "name": "surrealdb-data",
+        "status": "Bound",
+        "capacity": "5Gi",
+        "accessMode": "ReadWriteOnce"
+      }
+    ]
+  }
+}

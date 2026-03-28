@@ -1,0 +1,233 @@
+{
+  "overallPass": true,
+  "totalTests": 10,
+  "passed": 10,
+  "failed": 0,
+  "results": [
+    {
+      "pass": true,
+      "testName": "Entrypoint Script Exists",
+      "actual": {
+        "exists": true,
+        "executable": true,
+        "hasEnvironmentDetection": true,
+        "hasBackendValidation": true,
+        "hasApiKeyCheck": true,
+        "hasActivityExecution": true,
+        "hasAcpStart": true
+      },
+      "expected": {
+        "exists": true,
+        "executable": true,
+        "hasEnvironmentDetection": true,
+        "hasBackendValidation": true,
+        "hasApiKeyCheck": true,
+        "hasActivityExecution": true,
+        "hasAcpStart": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "Activity Template Exists",
+      "actual": {
+        "exists": true,
+        "hasName": true,
+        "hasTasks": true,
+        "taskCount": 5,
+        "hasDetectTask": true,
+        "hasLoadBackupTask": true,
+        "hasCalculateTask": true,
+        "hasApplyTask": true,
+        "hasReportTask": true
+      },
+      "expected": {
+        "exists": true,
+        "hasName": true,
+        "hasTasks": true,
+        "taskCount": 5,
+        "hasDetectTask": true,
+        "hasLoadBackupTask": true,
+        "hasCalculateTask": true,
+        "hasApplyTask": true,
+        "hasReportTask": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "ConfigManager API Exists",
+      "actual": {
+        "exists": true,
+        "hasGetCurrentConfig": true,
+        "hasUpdateConfig": true,
+        "hasAddMCPServer": true,
+        "hasUpdateBackendUrl": true,
+        "hasSetFeatureFlag": true,
+        "hasRollback": true,
+        "hasBackupLogic": true,
+        "hasValidation": true,
+        "hasAtomicWrite": true,
+        "hasAuditLog": true
+      },
+      "expected": {
+        "exists": true,
+        "hasGetCurrentConfig": true,
+        "hasUpdateConfig": true,
+        "hasAddMCPServer": true,
+        "hasUpdateBackendUrl": true,
+        "hasSetFeatureFlag": true,
+        "hasRollback": true,
+        "hasBackupLogic": true,
+        "hasValidation": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "VesselUpdateManager API Exists",
+      "actual": {
+        "exists": true,
+        "hasGetCurrentVersions": true,
+        "hasCheckUpdates": true,
+        "hasUpdateVessel": true,
+        "hasRollback": true,
+        "hasReloadVessel": true,
+        "hasChecksumVerification": true,
+        "hasRetryLogic": true,
+        "hasBackup": true
+      },
+      "expected": {
+        "exists": true,
+        "hasGetCurrentVersions": true,
+        "hasCheckUpdates": true,
+        "hasUpdateVessel": true,
+        "hasRollback": true,
+        "hasChecksumVerification": true,
+        "hasRetryLogic": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "BootstrapManager Exists",
+      "actual": {
+        "exists": true,
+        "hasBootstrap": true,
+        "hasDetectEnvironment": true,
+        "hasRegisterVessel": true,
+        "hasFetchConfig": true,
+        "hasIsBootstrapped": true,
+        "hasRetryLogic": true
+      },
+      "expected": {
+        "exists": true,
+        "hasBootstrap": true,
+        "hasDetectEnvironment": true,
+        "hasRegisterVessel": true,
+        "hasFetchConfig": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "Dockerfile Configuration",
+      "actual": {
+        "exists": true,
+        "hasMultiStage": true,
+        "copiesEntrypoint": true,
+        "setsEntrypoint": true,
+        "hasCMD": true
+      },
+      "expected": {
+        "exists": true,
+        "copiesEntrypoint": true,
+        "setsEntrypoint": true,
+        "hasCMD": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "CLI Debug Config Command",
+      "actual": {
+        "exists": true,
+        "hasConfigCommand": true,
+        "readsConfig": true,
+        "outputsJSON": true
+      },
+      "expected": {
+        "exists": true,
+        "hasConfigCommand": true,
+        "readsConfig": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "Activity Template Variables",
+      "actual": {
+        "exists": true,
+        "hasVariables": true,
+        "variablesList": [
+          "config_path",
+          "force_environment",
+          "detected_environment",
+          "detection_confidence",
+          "current_base_url",
+          "current_budget",
+          "current_max_tokens",
+          "current_log_level",
+          "metabob_base_url",
+          "token_budget_multiplier",
+          "enable_verbose_logging",
+          "new_settings",
+          "dry_run",
+          "validate_connectivity",
+          "detection_signals",
+          "config_changes",
+          "validation_results"
+        ],
+        "hasForceEnvironment": true,
+        "hasConfigPath": true,
+        "hasMetabobBaseUrl": true,
+        "hasTokenBudgetMultiplier": true
+      },
+      "expected": {
+        "exists": true,
+        "hasVariables": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "Activity Task Dependencies",
+      "actual": {
+        "exists": true,
+        "taskCount": 5,
+        "taskIds": [
+          "detect-environment",
+          "load-and-backup-config",
+          "calculate-environment-settings",
+          "apply-and-validate-config",
+          "generate-configuration-report"
+        ],
+        "hasDependencies": true,
+        "dependenciesValid": true
+      },
+      "expected": {
+        "exists": true,
+        "taskCount": 5,
+        "dependenciesValid": true
+      }
+    },
+    {
+      "pass": true,
+      "testName": "Component Integration",
+      "actual": {
+        "entrypointReferencesActivity": true,
+        "templateUsesConfigManager": true,
+        "dockerfileUsesEntrypoint": true,
+        "allConnected": true
+      },
+      "expected": {
+        "entrypointReferencesActivity": true,
+        "dockerfileUsesEntrypoint": true,
+        "allConnected": true
+      }
+    }
+  ],
+  "summary": "✅ ALL TESTS PASSED (10/10)"
+}

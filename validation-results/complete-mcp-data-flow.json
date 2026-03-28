@@ -1,0 +1,123 @@
+{
+  "specification": "Complete MCP Data Flow for Activity and Impulse System",
+  "timestamp": "2026-03-08",
+  "overall_status": "FAIL",
+  "summary": {
+    "total": 6,
+    "passed": 1,
+    "failed": 5
+  },
+  "results": [
+    {
+      "test": "Tool Registration",
+      "passed": true,
+      "expected": 5,
+      "actual": 5,
+      "details": {
+        "required": [
+          "metabob_post_activity_result",
+          "metabob_create_activity_variant",
+          "metabob_recommend_activities",
+          "metabob_recommend_impulses",
+          "metabob_fetch_boredom_activities"
+        ],
+        "available": [
+          "metabob_post_activity_result",
+          "metabob_create_activity_variant",
+          "metabob_recommend_activities",
+          "metabob_recommend_impulses",
+          "metabob_fetch_boredom_activities"
+        ]
+      }
+    },
+    {
+      "test": "metabob_post_activity_result",
+      "passed": false,
+      "expected": {
+        "status": "success"
+      },
+      "actual": {
+        "status": "error",
+        "timestamp": "2026-03-07T17:48:17.620740",
+        "message": "Network error: All connection attempts failed",
+        "learning_enabled": false
+      },
+      "details": {
+        "has_proper_structure": true,
+        "note": "May fail if backend not running - this is expected"
+      }
+    },
+    {
+      "test": "metabob_create_activity_variant",
+      "passed": false,
+      "expected": {
+        "status": "success",
+        "variant_id": "<string>"
+      },
+      "actual": {
+        "status": "error",
+        "error": "Connection error: Cannot connect to host localhost:8080 ssl:default [Connect call failed ('127.0.0.1', 8080)]",
+        "timestamp": "2026-03-07T17:48:20.637184"
+      },
+      "details": {
+        "has_proper_structure": true,
+        "note": "May fail if backend endpoint not implemented"
+      }
+    },
+    {
+      "test": "metabob_recommend_activities",
+      "passed": false,
+      "expected": {
+        "status": "success",
+        "recommendations": []
+      },
+      "actual": {
+        "status": "error",
+        "error": "Connection error: Cannot connect to host localhost:8080 ssl:default [Connect call failed ('127.0.0.1', 8080)]",
+        "timestamp": "2026-03-07T17:48:23.652960",
+        "recommendations": []
+      },
+      "details": {
+        "has_proper_structure": true,
+        "note": "May fail if backend ML service not implemented"
+      }
+    },
+    {
+      "test": "metabob_recommend_impulses",
+      "passed": false,
+      "expected": {
+        "status": "success",
+        "recommendations": []
+      },
+      "actual": {
+        "status": "error",
+        "error": "Connection error: Cannot connect to host localhost:8080 ssl:default [Connect call failed ('127.0.0.1', 8080)]",
+        "timestamp": "2026-03-07T17:48:26.669310",
+        "recommendations": []
+      },
+      "details": {
+        "has_proper_structure": true,
+        "note": "May fail if backend endpoint not implemented"
+      }
+    },
+    {
+      "test": "metabob_fetch_boredom_activities",
+      "passed": false,
+      "expected": {
+        "status": "success",
+        "activities": []
+      },
+      "actual": {
+        "status": "error",
+        "message": "Unexpected error fetching boredom activities: All connection attempts failed",
+        "timestamp": "2026-03-07T17:48:27.349312",
+        "activities": [],
+        "total_count": 0
+      },
+      "details": {
+        "has_proper_structure": true,
+        "note": "May fail if backend not running"
+      }
+    }
+  ]
+}

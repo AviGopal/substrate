@@ -1,0 +1,325 @@
+================================================================================
+DEVBOB K8S GIT OPERATIONS - ARCHITECTURAL BOUNDARIES QUICK REFERENCE
+================================================================================
+
+BOUNDARY 1: Package Boundary - OpenCode Core
+────────────────────────────────────────────────────────────────────────────────
+Type:       Repository Boundary
+Location:   packages/opencode | External Dependencies
+Contract:   package.json exports, TypeScript interfaces
+Coupling:   Medium (Bun runtime, git/gh CLI)
+Resilience: Good (structured errors, graceful degradation)
+Status:     ✅ Healthy
+
+Concerns:
+  - Tight coupling to Bun runtime ($ template)
+  - No git/gh CLI version enforcement
+  - Not portable to Node.js without changes
+
+────────────────────────────────────────────────────────────────────────────────
+
+BOUNDARY 2: Layer Boundary - Session → Git Operations
+────────────────────────────────────────────────────────────────────────────────
+Type:       Layer Boundary
+Location:   prompts-runner.ts | activity-git.ts
+Contract:   ActivityGit namespace with 8 public functions
+Coupling:   Medium (one-way dependency, clear API)
+Resilience: Good (pre-conditions checked, errors wrapped)
+Status:     ✅ Healthy
+
+Interface:
+  createBranch(name) → void
+  getCurrentBranch() → string
+  commitPromptChanges(opts) → CommitInfo | null
+  createPR(opts) → string (PR URL)
+  
+Concerns:
+  - Implicit Instance.directory dependency
+  - No transaction support (orphaned branches on failure)
+
+────────────────────────────────────────────────────────────────────────────────
+
+BOUNDARY 3: Data Store Boundary - Storage Layer
+────────────────────────────────────────────────────────────────────────────────
+Type:       Data Store Boundary
+Location:   storage/storage.ts | Filesystem
+Contract:   CRUD operations (read, write, update, remove, list)
+Coupling:   Loose (abstract storage, pluggable backend)
+Resilience: Good (locks, migrations, NotFoundError)
+Status:     ✅ Healthy
+
+Storage:
+  Backend:    Filesystem (JSON files)
+  Location:   ~/.local/share/opencode/storage/
+  Locking:    Read/write locks (concurrency control)
+  Migrations: Versioned (tracked in storage/migration)
+
+Concerns:
+  - No fsync (may lose data on crash)
+  - No indexing (linear search for list())
+  - No backup/recovery mechanism
+
+────────────────────────────────────────────────────────────────────────────────
+
+BOUNDARY 4: Service Boundary - OpenCode HTTP Server
+────────────────────────────────────────────────────────────────────────────────
+Type:       Service Boundary
+Location:   server/server.ts | HTTP Clients
+Contract:   REST API (OpenAPI spec)
+Coupling:   Loose (SDK client, CORS enabled)
+Resilience: Fair (error responses, SSE for events)
+Status:     ⚠️  Needs health checks
+
+API Routes:
+  POST   /api/session              - Create session
+  POST   /api/session/:id/prompt   - Send prompt
+  POST   /api/activity             - Create activity
+  GET    /api/template             - List templates
+
+Concerns:
+  - No health check endpoints
+  - No authentication (relies on network isolation)
+  - No rate limiting (vulnerable to abuse)
+
+────────────────────────────────────────────────────────────────────────────────
+
+BOUNDARY 5: External Service - GitHub API (🔴 CRITICAL)
+────────────────────────────────────────────────────────────────────────────────
+Type:       Service Boundary
+Location:   activity-git.ts | GitHub API (via gh CLI)
+Contract:   gh CLI commands (auth, pr create, pr view)
+Coupling:   Tight (gh CLI required, GITHUB_TOKEN)
+Resilience: Poor (no retry, no timeout, no auth check)
+Status:     ❌ CRITICAL - PR operations blocked
+
+Commands Used:
+  gh auth login --with-token          # Authenticate
+  gh auth status                      # Check status (NOT CALLED!)
+  gh pr create --title --body --base  # Create PR
+
+Issues:
+  ❌ No pre-flight authentication check
+  ❌ No retry logic for transient failures
+  ❌ No rate limit handling
+  ❌ No token expiration detection
+  ❌ Auth stored in ~/.config/gh (not persisted)
+
+Fix: Add checkGhAuthenticated() before createPR()
+
+────────────────────────────────────────────────────────────────────────────────
+
+BOUNDARY 6: External Service - Metabob API
+────────────────────────────────────────────────────────────────────────────────
+Type:       Service Boundary
+Location:   api/activity-client.ts | Metabob RPC API
+Contract:   REST API (activity execution, task tracking)
+Coupling:   Loose (non-blocking, graceful degradation)
+Resilience: Good (3 retries, exponential backoff)
+Status:     ✅ Healthy
+
+Endpoints:
+  POST   /api/v1/activity-execution/content  - Store activity
+  POST   /api/v1/activity-execution/tasks    - Start task
+  PATCH  /api/v1/activity-execution/tasks/:id - Update task
+
+Resilience:
+  ✅ Non-blocking (continues on failure)
+  ✅ 3 retries with exponential backoff (1s, 2s, 4s)
+  ✅ Graceful degradation (logs warning, continues)
+
+Concerns:
+  - No timeout configuration
+  - No circuit breaker (keeps retrying every activity)
+
+────────────────────────────────────────────────────────────────────────────────
+
+BOUNDARY 7: Infrastructure Boundary - Kubernetes → Container
+────────────────────────────────────────────────────────────────────────────────
+Type:       Infrastructure Boundary
+Location:   K8s StatefulSet | Container Runtime
+Contract:   StatefulSet spec, secrets, volumes
+Coupling:   Medium (secrets, PVC, service dependencies)
+Resilience: Fair (entrypoint checks, persistence)
+Status:     ⚠️  Needs persistence for gh auth
+
+Environment Variables:
+  GITHUB_TOKEN       - GitHub PAT (from secret)
+  GIT_USER_NAME      - Git user.name (from secret)
+  GIT_USER_EMAIL     - Git user.email (from secret)
+  ANTHROPIC_API_KEY  - Claude API (from secret)
+  METABOB_API_URL    - Backend API URL
+
+Persistence:
+  ✅ Storage volume: /root/.local/share/opencode (10Gi PVC)
+  ❌ gh config: ~/.config/gh (ephemeral, NOT persisted)
+
+Issues:
+  ❌ No liveness probe (pod may be unhealthy)
+  ❌ No readiness probe (traffic to unready pods)
+  ❌ gh auth lost on pod restart
+  ❌ Secret rotation requires manual rollout
+
+Fix: Mount volume for ~/.config/gh, add health checks
+
+────────────────────────────────────────────────────────────────────────────────
+
+BOUNDARY 8: Process Boundary - Bun Runtime → System Commands
+────────────────────────────────────────────────────────────────────────────────
+Type:       Process Boundary
+Location:   activity-git.ts | Shell Commands (git, gh)
+Contract:   Bun $ template for shell execution
+Coupling:   Tight (Bun-specific, assumes git/gh in PATH)
+Resilience: Fair (error handling, working directory specified)
+Status:     ⚠️  Needs abstraction
+
+Commands:
+  git checkout -b ${branch}              # Create branch
+  git status --porcelain                 # Check status
+  git add . && git commit -m ${msg}      # Stage and commit
+  git push -u origin ${branch}           # Push branch
+  gh pr create --title --body --base     # Create PR
+
+Concerns:
+  - No timeout for shell commands
+  - No version checking (assumes git 2.x, gh 2.x)
+  - Tight coupling to Bun (not portable to Node.js)
+  - No sandboxing (runs with full container permissions)
+
+Fix: Abstract shell execution, add timeout/retry
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+BOUNDARY HEALTH SUMMARY
+================================================================================
+
+┌──────────────────────────────┬───────────────┬──────────┬────────────┬────────┐
+│ Boundary                     │ Type          │ Coupling │ Resilience │ Status │
+├──────────────────────────────┼───────────────┼──────────┼────────────┼────────┤
+│ Package (OpenCode Core)      │ Repository    │ Medium   │ Good       │ ✅ OK  │
+│ Session → Git Operations     │ Layer         │ Medium   │ Good       │ ✅ OK  │
+│ Storage Layer                │ Data Store    │ Loose    │ Good       │ ✅ OK  │
+│ HTTP Server                  │ Service       │ Loose    │ Fair       │ ⚠️  OK │
+│ GitHub API                   │ Service       │ Tight    │ Poor       │ ❌ BAD │
+│ Metabob API                  │ Service       │ Loose    │ Good       │ ✅ OK  │
+│ Kubernetes → Container       │ Infrastructure│ Medium   │ Fair       │ ⚠️  OK │
+│ Bun → Shell Commands         │ Process       │ Tight    │ Fair       │ ⚠️  OK │
+└──────────────────────────────┴───────────────┴──────────┴────────────┴────────┘
+
+Legend:
+  ✅ OK  - Healthy, no critical issues
+  ⚠️  OK - Working, but has concerns
+  ❌ BAD - Critical issue blocking functionality
+
+================================================================================
+CRITICAL ISSUES
+================================================================================
+
+1. GitHub API Boundary (❌ BLOCKER)
+   Problem:  No authentication check before PR creation
+   Impact:   PR operations fail at runtime with 401 error
+   Fix:      Add checkGhAuthenticated() in createPR()
+   Priority: HIGH
+
+2. Kubernetes → Container Boundary (⚠️  PERSISTENCE)
+   Problem:  gh auth config not persisted in volume
+   Impact:   Pod restart loses authentication
+   Fix:      Mount volume for ~/.config/gh
+   Priority: HIGH
+
+3. HTTP Server Boundary (⚠️  OBSERVABILITY)
+   Problem:  No health check endpoints
+   Impact:   Can't detect unhealthy pods
+   Fix:      Add /health and /ready endpoints
+   Priority: MEDIUM
+
+================================================================================
+QUICK WINS (High Impact, Low Effort)
+================================================================================
+
+1. Add Authentication Check (5 min)
+   ────────────────────────────────────────────────────────────────────────────
+   async function checkGhAuthenticated(): Promise<boolean> {
+     try {
+       await $`gh auth status`.quiet()
+       return true
+     } catch {
+       return false
+     }
+   }
+   
+   export async function createPR(opts: PROptions): Promise<string> {
+     if (!await checkGhAuthenticated()) {
+       throw ActivityGitError.notAuthenticated("gh CLI not authenticated")
+     }
+     // ... rest of function
+   }
+
+2. Persist gh Config in Volume (10 min)
+   ────────────────────────────────────────────────────────────────────────────
+   # k8s-devbob-statefulset.yaml
+   volumeMounts:
+   - name: devbob-storage
+     mountPath: /root/.config/gh
+     subPath: gh-config
+
+3. Add Health Check Endpoints (30 min)
+   ────────────────────────────────────────────────────────────────────────────
+   app.get("/health", (c) => {
+     // Check git, gh, storage accessible
+     return c.json({ status: "healthy" })
+   })
+
+================================================================================
+COUPLING ANALYSIS
+================================================================================
+
+Tight Coupling (High Risk):
+  - Bun runtime ($ template)
+  - gh CLI (system dependency)
+  - Instance.directory (implicit context)
+
+Medium Coupling (Acceptable):
+  - Session → ActivityGit (one-way, clear API)
+  - K8s → Container (env vars, secrets)
+
+Loose Coupling (Good):
+  - Storage → Filesystem (abstract interface)
+  - Metabob API (graceful degradation)
+
+================================================================================
+RESILIENCE PATTERNS
+================================================================================
+
+✅ Good Patterns:
+  - Metabob API: Retry with exponential backoff
+  - Storage: Read/write locks for concurrency
+  - ActivityGit: Pre-condition validation
+  - Error handling: Structured errors (ActivityGitError)
+
+❌ Missing Patterns:
+  - GitHub API: No retry logic
+  - Shell commands: No timeout
+  - Services: No circuit breaker
+  - Container: No health checks
+
+================================================================================
+RECOMMENDATIONS (Priority Order)
+================================================================================
+
+HIGH PRIORITY:
+  1. Add checkGhAuthenticated() before PR creation
+  2. Persist gh config in K8s volume
+  3. Add health check endpoints
+
+MEDIUM PRIORITY:
+  4. Add retry logic for GitHub operations
+  5. Add circuit breaker for Metabob API
+  6. Add timeout for shell commands
+
+LOW PRIORITY:
+  7. Abstract shell execution (portability)
+  8. Add telemetry and monitoring
+  9. Implement service discovery
+
+================================================================================

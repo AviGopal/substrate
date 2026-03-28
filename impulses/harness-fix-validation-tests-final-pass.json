@@ -1,0 +1,26 @@
+{
+  "id": "harness-fix-validation-tests-final-pass",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/fix-validation-tests-final-pass-harness.ts",
+    "lineStart": 1,
+    "lineEnd": -1
+  },
+  "metadata": {
+    "specification": "fix-validation-tests-final-pass",
+    "purpose": "Validation harness to verify all fixes work correctly",
+    "testCases": [
+      "validation-fix-validation-tests-final-pass-case-1",
+      "validation-fix-validation-tests-final-pass-case-2",
+      "validation-fix-validation-tests-final-pass-case-3",
+      "validation-fix-validation-tests-final-pass-case-4",
+      "validation-fix-validation-tests-final-pass-case-5"
+    ],
+    "totalTests": 5,
+    "runCommand": "npx ts-node tests/validation-harnesses/fix-validation-tests-final-pass-harness.ts",
+    "expectedResult": "5/5 tests PASS",
+    "executionTime": "<60s"
+  },
+  "budget": 2000
+}

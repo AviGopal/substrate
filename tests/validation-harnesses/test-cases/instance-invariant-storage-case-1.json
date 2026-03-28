@@ -1,0 +1,18 @@
+{
+  "impulseId": "validation-instance-invariant-storage-case-1",
+  "name": "Storage Key Contains project_id",
+  "description": "Verify activity storage keys include project_id for multi-tenant isolation",
+  "input": {
+    "activityId": "act_test_123",
+    "projectId": "proj_abc"
+  },
+  "expectedOutput": {
+    "storageKeyFormat": ["activity", "proj_abc", "act_test_123"],
+    "containsProjectId": true,
+    "containsHostname": false,
+    "containsPID": false,
+    "containsLocalPath": false
+  },
+  "type": "memo",
+  "budget": 500
+}

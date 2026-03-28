@@ -1,0 +1,81 @@
+{
+  "activity_id": "verify-context-fix-final",
+  "name": "Verify Context Fix Final",
+  "description": "Final verification after nullish coalescing fix",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "verify",
+      "subagent": "general",
+      "description": "Verify context is loaded",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write verification message to /tmp/verify-{{testId}}.txt\n\nContext message: {{verificationMessage}}\nUser provided: {{testId}}",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test ID"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "verify",
+      "subagent": "general",
+      "description": "Verify context is loaded",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write verification message to /tmp/verify-{{testId}}.txt\n\nContext message: {{verificationMessage}}\nUser provided: {{testId}}",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test ID"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-20T00:15:12.228Z",
+  "metadata": {}
+}

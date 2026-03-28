@@ -1,0 +1,16 @@
+{
+  "id": "validation-acp-kubernetes-service-discovery-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Impulse Sharing Test",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "loaded": true,
+  "scope": "session",
+  "metadata": {
+    "testCase": "impulse-sharing",
+    "testNumber": 3
+  }
+}

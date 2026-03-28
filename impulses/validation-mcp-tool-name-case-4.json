@@ -1,0 +1,15 @@
+{
+  "id": "validation-Correct MCP Tool Name and Parameters-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Verify MCP Tool Registration Matches\n\nInput:\n- Client file: repos/metabob-opencode/packages/opencode/src/session/template-metrics-client.ts\n- Registry file: repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\n\nExpected Output:\n- Client calls tool: 'metabob_post_activity_result'\n- Registry registers tool: 'metabob_post_activity_result'\n- Names match exactly\n\nValidation:\n- Extract tool name from client callMCPTool\n- Extract registered tool name from @mcp.tool decorator\n- Verify both names match\n- Verify both are 'metabob_post_activity_result'\n\nPASS Criteria:\n- Tool names match between client and registry\n- Both are 'metabob_post_activity_result'\n\nFAIL Criteria:\n- Tool name mismatch between client and registry\n- Either name is incorrect",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testCase": 4,
+    "category": "cross-file-validation",
+    "expectedToolName": "metabob_post_activity_result"
+  },
+  "budget": 1000
+}

@@ -1,0 +1,515 @@
+{
+  "activity_id": "apply-documentation-deltas",
+  "name": "Apply Documentation Deltas",
+  "description": "Apply documentation changes from conformity assessment deltas via impulse artifacts",
+  "category": "refactor",
+  "task_steps": [
+    {
+      "task_id": "load-and-filter-deltas",
+      "subagent": "general",
+      "description": "Load deltas from impulse artifact and apply user filters",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Load and Filter Documentation Deltas\n\n## Objective\nLoad documentation conformity assessment deltas from an impulse artifact and apply user-specified filters to create a prioritized application plan.\n\n## Context\nYou are consuming the output of the `assess-documentation-conformity` activity via impulse pointer. This demonstrates Phase 2 artifact consumption using activityOutput type impulses.\n\n## Input Variables\n- **deltaImpulseId**: `{{deltaImpulseId}}` - Impulse ID containing activityOutput artifact\n- **priorityFilter**: `{{priorityFilter}}` - Filter deltas by priority (CRITICAL, HIGH, MEDIUM, LOW, or ALL)\n- **filePattern**: `{{filePattern}}` - Glob pattern to filter target files\n- **maxDeltas**: `{{maxDeltas}}` - Maximum number of deltas to apply (-1 for unlimited)\n\n## Steps\n\n1. **Resolve Impulse Artifact**\n   - Use impulse tools to load the impulse with ID `{{deltaImpulseId}}`\n   - Verify the artifact type is `activityOutput`\n   - Extract the artifact content\n   - If impulse not found, list available impulses and fail with clear error\n\n2. **Validate Artifact Schema**\n   - Verify the artifact contains a `deltas` array\n   - Check each delta has required fields:\n     - `id`: Unique delta identifier\n     - `file`: Target file path\n     - `priority`: CRITICAL, HIGH, MEDIUM, or LOW\n     - `changeType`: add, update, remove, or restructure\n     - `description`: Human-readable change description\n     - `content`: The actual change content (optional for remove type)\n   - If schema invalid, fail with detailed schema diff\n\n3. **Apply Priority Filter**\n   - If `{{priorityFilter}}` is not \"ALL\":\n     - Filter deltas to only include matching priority level\n     - Log: \"Filtered to [count] deltas with priority {{priorityFilter}}\"\n   - If \"ALL\", keep all deltas\n\n4. **Apply File Pattern Filter**\n   - Use glob matching to filter deltas by target file path\n   - Pattern: `{{filePattern}}`\n   - Log: \"File pattern filter reduced to [count] deltas\"\n\n5. **Sort and Prioritize**\n   - Sort deltas by priority (CRITICAL → HIGH → MEDIUM → LOW)\n   - Within same priority, sort by file path for deterministic ordering\n\n6. **Apply Max Deltas Limit**\n   - If `{{maxDeltas}}` is > 0, take only the first N deltas\n   - Log: \"Limited to {{maxDeltas}} deltas\"\n\n7. **Generate Application Plan**\n   - Log the final filtered and ordered delta list\n   - Include priority breakdown: \"X CRITICAL, Y HIGH, Z MEDIUM, W LOW\"\n   - Log total deltas to be applied\n   - If zero deltas after filtering, log warning and indicate success with zero changes\n\n## Success Criteria\n- Impulse resolved successfully\n- Artifact schema validated\n- Deltas filtered and sorted\n- Application plan logged with priority breakdown\n- Filtered delta list passed to next task\n\n## Error Handling\n- **Impulse not found**: Fail immediately with list of available impulses\n- **Artifact malformed**: Fail with schema validation details\n- **Zero deltas after filtering**: Warn and exit gracefully (not a failure)\n\n## Output\nLog the filtered delta list structure for next task to consume. Include:\n- Total deltas loaded\n- Deltas after filtering\n- Priority breakdown\n- First 3 delta IDs and files (summary)",
+        "variables": [
+          {
+            "name": "deltaImpulseId",
+            "type": "string",
+            "required": true,
+            "description": "Impulse ID containing activityOutput artifact from assess-documentation-conformity"
+          },
+          {
+            "name": "priorityFilter",
+            "type": "string",
+            "required": false,
+            "description": "Filter deltas by priority: CRITICAL, HIGH, MEDIUM, LOW, or ALL",
+            "default": "ALL"
+          },
+          {
+            "name": "filePattern",
+            "type": "string",
+            "required": false,
+            "description": "Glob pattern to filter target files (e.g., 'docs/**/*.md')",
+            "default": "**/*.md"
+          },
+          {
+            "name": "maxDeltas",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of deltas to apply (-1 for unlimited)",
+            "default": -1
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-preconditions",
+      "subagent": "general",
+      "description": "Check repository state and delta conflicts before making changes",
+      "dependencies": [
+        "load-and-filter-deltas"
+      ],
+      "prompt": {
+        "template": "# Task: Validate Preconditions\n\n## Objective\nValidate that the environment is ready to apply documentation deltas. Check file existence, write permissions, git state, and detect conflicting deltas.\n\n## Context\nYou have a filtered list of deltas from the previous task. Before making any changes, ensure all preconditions are met to avoid partial application failures.\n\n## Input Variables\n- **backupFiles**: `{{backupFiles}}` - Whether to create backup files before modifications\n- **continueOnError**: `{{continueOnError}}` - Whether to continue if errors occur\n\n## Steps\n\n1. **Check Target Files**\n   - For each delta in the filtered list:\n     - If `changeType` is \"create\", verify parent directory exists and is writable\n     - Otherwise, verify target file exists\n     - Check write permissions on file or directory\n   - Log all file checks (pass/fail)\n\n2. **Check Git Repository State**\n   - Run `git status --porcelain` to check for uncommitted changes\n   - If dirty:\n     - Log warning: \"Repository has uncommitted changes. Proceeding will mix your changes with delta application.\"\n     - Do NOT fail (user can proceed, just warn)\n   - If not a git repository:\n     - Log warning: \"Not in a git repository. Git commit functionality will be skipped.\"\n\n3. **Detect Conflicting Deltas**\n   - Check if multiple deltas target the same file with overlapping line ranges\n   - For each file:\n     - Group deltas by target file\n     - Check if line ranges overlap\n     - If overlap detected, log conflict details and FAIL\n   - Conflicts are fatal (cannot safely apply)\n\n4. **Verify Backup Strategy**\n   - If `{{backupFiles}}` is true:\n     - Estimate disk space needed (sum of file sizes)\n     - Check available disk space\n     - Warn if insufficient space (but don't fail)\n\n5. **Generate Precondition Report**\n   - Summary of checks:\n     - Total files checked\n     - Files missing (with changeType != \"create\")\n     - Permission issues\n     - Git state (clean/dirty/not a repo)\n     - Conflicting deltas (if any)\n   - Overall status: READY or BLOCKED\n   - If BLOCKED, fail task with details\n\n## Success Criteria\n- All target files exist or are creatable\n- No permission errors (or acceptable with continueOnError)\n- No conflicting deltas detected\n- Precondition report generated and logged\n\n## Error Handling\n- **Target file missing** (changeType != \"create\"):\n  - Warning if `{{continueOnError}}` is true\n  - Fail if `{{continueOnError}}` is false\n- **No write permissions**: FAIL immediately (cannot proceed)\n- **Conflicting deltas**: FAIL with conflict details\n- **Dirty git state**: WARN only (not fatal)\n\n## Output\nLog precondition validation report with status for each check. Indicate READY or BLOCKED state.",
+        "variables": [
+          {
+            "name": "backupFiles",
+            "type": "boolean",
+            "required": false,
+            "description": "Create .bak files before modifying originals",
+            "default": true
+          },
+          {
+            "name": "continueOnError",
+            "type": "boolean",
+            "required": false,
+            "description": "Continue applying remaining deltas if one fails",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "apply-changes-with-validation",
+      "subagent": "general",
+      "description": "Apply filtered deltas with atomic per-file validation",
+      "dependencies": [
+        "validate-preconditions"
+      ],
+      "prompt": {
+        "template": "# Task: Apply Changes With Validation\n\n## Objective\nApply each filtered delta to its target file with atomic validation. Create backups, apply changes, validate results, and rollback on errors.\n\n## Context\nThis is the core task that modifies documentation files. Each file operation is atomic - either the change succeeds completely or is rolled back. You must track success/failure for every delta.\n\n## Input Variables\n- **dryRun**: `{{dryRun}}` - If true, simulate changes without writing files\n- **backupFiles**: `{{backupFiles}}` - Create .bak files before modifications\n- **validateLinks**: `{{validateLinks}}` - Check for broken external links\n- **continueOnError**: `{{continueOnError}}` - Continue on individual delta failures\n\n## Steps\n\nFor each delta in the filtered list (in priority order):\n\n### 1. Backup File (if enabled)\n- If `{{backupFiles}}` is true and file exists:\n  - Copy file to `<filename>.bak`\n  - Log: \"Created backup: <filename>.bak\"\n\n### 2. Read Current Content\n- Use Read tool to load current file content\n- Store in memory for change application\n\n### 3. Apply Change Based on Type\n\n**For changeType=\"add\":**\n- Insert delta content at specified line/section\n- Preserve existing content\n\n**For changeType=\"update\":**\n- Replace content in specified line range\n- Preserve surrounding content\n\n**For changeType=\"remove\":**\n- Delete content in specified line range\n- Preserve surrounding content\n\n**For changeType=\"restructure\":**\n- Move/reorganize sections as specified\n- Update cross-references if needed\n\n### 4. Validate Markdown Syntax\n- Perform basic markdown parse check:\n  - Headers valid (# syntax)\n  - Lists properly formatted\n  - Code blocks closed\n  - Links properly formatted\n- If invalid:\n  - Log error with line numbers\n  - Skip to step 6 (rollback)\n\n### 5. Validate Cross-References\n- Find all markdown links in changed content: `[text](path)` or `[text](path#anchor)`\n- For internal links (not starting with http):\n  - Check if target file exists\n  - If anchor specified, check if anchor exists in target\n  - Log any broken references as warnings (non-fatal)\n\n### 6. Validate External Links (if enabled)\n- If `{{validateLinks}}` is true:\n  - Find all HTTP/HTTPS links\n  - Check each link (HEAD request, 5s timeout)\n  - Retry once if timeout\n  - Log broken links as warnings (non-fatal)\n\n### 7. Write File or Rollback\n\n**If all validations passed:**\n- If `{{dryRun}}` is false:\n  - Write updated content atomically using Write tool\n  - Log: \"✓ Applied delta [id] to [file]\"\n- If `{{dryRun}}` is true:\n  - Log: \"[DRY RUN] Would apply delta [id] to [file]\"\n  - Show diff preview\n\n**If any validation failed:**\n- If backup exists, restore from backup\n- Log: \"✗ Failed to apply delta [id]: [error details]\"\n- If `{{continueOnError}}` is true:\n  - Continue to next delta\n- If `{{continueOnError}}` is false:\n  - Stop processing and fail task\n\n### 8. Track Results\n- Maintain per-delta status:\n  - Delta ID\n  - File path\n  - Status: success, failed, skipped\n  - Error message (if failed)\n  - Timestamp\n\n## Success Criteria\n- All deltas attempted (up to maxDeltas limit)\n- Success rate >= 80% OR all failures explained\n- No partial file writes (atomic operations)\n- Backup files created if enabled\n- Per-delta status tracked\n\n## Error Handling\n- **Markdown syntax error**: Rollback, log error, continue/halt per continueOnError\n- **File write error**: Rollback, log error, continue/halt per continueOnError  \n- **Cross-reference broken**: Warning only (non-fatal)\n- **Link validation timeout**: Retry once, then warn and continue\n\n## Output\nLog comprehensive per-delta results:\n- Total deltas processed\n- Successful applications\n- Failed applications (with reasons)\n- Skipped deltas\n- Success rate percentage\n- List of modified files\n\nPass these results to next task for report generation.",
+        "variables": [
+          {
+            "name": "dryRun",
+            "type": "boolean",
+            "required": false,
+            "description": "If true, simulate changes without writing files",
+            "default": false
+          },
+          {
+            "name": "backupFiles",
+            "type": "boolean",
+            "required": false,
+            "description": "Create .bak files before modifying originals",
+            "default": true
+          },
+          {
+            "name": "validateLinks",
+            "type": "boolean",
+            "required": false,
+            "description": "Check for broken external links after changes",
+            "default": true
+          },
+          {
+            "name": "continueOnError",
+            "type": "boolean",
+            "required": false,
+            "description": "Continue applying remaining deltas if one fails",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-application-report",
+      "subagent": "general",
+      "description": "Create comprehensive JSON and markdown reports",
+      "dependencies": [
+        "apply-changes-with-validation"
+      ],
+      "prompt": {
+        "template": "# Task: Generate Application Report\n\n## Objective\nCreate comprehensive JSON and markdown reports summarizing the delta application process, including statistics, validation results, and recommendations.\n\n## Context\nYou have per-delta application results from the previous task. Generate both machine-readable (JSON) and human-readable (markdown) reports.\n\n## Input Variables\n- **dryRun**: `{{dryRun}}` - Indicates if this was a dry run\n\n## Steps\n\n### 1. Aggregate Statistics\nCalculate from previous task results:\n- `totalDeltas`: Total deltas loaded initially\n- `filteredDeltas`: Deltas after filtering\n- `appliedCount`: Successfully applied deltas\n- `failedCount`: Failed delta applications\n- `skippedCount`: Skipped deltas\n- `successRate`: (appliedCount / filteredDeltas) * 100\n\n### 2. Generate JSON Report\nCreate `delta-application-report.json` with this structure:\n\n```json\n{\n  \"summary\": {\n    \"totalDeltas\": <number>,\n    \"filteredDeltas\": <number>,\n    \"appliedCount\": <number>,\n    \"failedCount\": <number>,\n    \"skippedCount\": <number>,\n    \"successRate\": <percentage>,\n    \"dryRun\": {{dryRun}}\n  },\n  \"deltas\": [\n    {\n      \"id\": \"<delta-id>\",\n      \"file\": \"<file-path>\",\n      \"priority\": \"<CRITICAL|HIGH|MEDIUM|LOW>\",\n      \"changeType\": \"<add|update|remove|restructure>\",\n      \"status\": \"<success|failed|skipped>\",\n      \"error\": \"<error-message or null>\"\n    }\n  ],\n  \"validation\": {\n    \"markdownLintErrors\": <number>,\n    \"brokenReferences\": [\"<reference-1>\", \"<reference-2>\"],\n    \"brokenLinks\": [\"<url-1>\", \"<url-2>\"]\n  },\n  \"metadata\": {\n    \"timestamp\": \"<ISO-8601-timestamp>\",\n    \"duration\": \"<duration-string>\",\n    \"repository\": \"<branch>@<commit-sha>\"\n  }\n}\n```\n\nWrite this file using the Write tool.\n\n### 3. Generate Markdown Summary\nCreate `delta-application-summary.md` with this structure:\n\n```markdown\n# Documentation Delta Application Summary\n\n## Summary\n\n- **Total Deltas Loaded**: <number>\n- **Filtered Deltas**: <number>\n- **Successfully Applied**: <number> ✓\n- **Failed**: <number> ✗\n- **Skipped**: <number>\n- **Success Rate**: <percentage>%\n- **Dry Run**: {{dryRun}}\n\n## Priority Breakdown\n\n| Priority | Applied | Failed | Skipped |\n|----------|---------|--------|----------|\n| CRITICAL | X       | Y      | Z        |\n| HIGH     | X       | Y      | Z        |\n| MEDIUM   | X       | Y      | Z        |\n| LOW      | X       | Y      | Z        |\n\n## Failed Deltas\n\n<For each failed delta>\n- **[delta-id]** (`file-path`): <error-message>\n\n## Validation Results\n\n- Markdown Lint Errors: <number>\n- Broken Cross-References: <number>\n- Broken External Links: <number>\n\n<List details if any issues found>\n\n## Recommended Next Actions\n\n<Based on results, suggest:>\n- If failures: \"Review failed deltas and fix underlying issues\"\n- If broken references: \"Update cross-references to resolve broken links\"\n- If success rate < 90%: \"Investigate common failure patterns\"\n- If dry run: \"Review changes above, then re-run with dryRun=false\"\n- If all successful: \"Changes applied successfully. Consider running documentation build to verify.\"\n```\n\nWrite this file using the Write tool.\n\n### 4. Validate Reports\n- Verify JSON is valid: `jq empty delta-application-report.json`\n- Check both files were created successfully\n- Log file paths\n\n### 5. Output Summary\nLog:\n- Report file locations\n- Key statistics (applied/failed/skipped)\n- Success rate\n- Any validation issues\n\n## Success Criteria\n- `delta-application-report.json` created and valid JSON\n- `delta-application-summary.md` created\n- Summary statistics match actual changes\n- All required sections present in both reports\n\n## Error Handling\n- **JSON serialization error**: Log error, attempt markdown report only\n- **File write error**: Fail task (reports are critical outputs)\n\n## Output\nLog paths to both report files. These are the primary artifacts of this activity.",
+        "variables": [
+          {
+            "name": "dryRun",
+            "type": "boolean",
+            "required": false,
+            "description": "Indicates if this was a dry run",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq empty delta-application-report.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-git-commits",
+      "subagent": "general",
+      "description": "Commit applied changes in logical groups (conditional on createCommits)",
+      "dependencies": [
+        "generate-application-report"
+      ],
+      "prompt": {
+        "template": "# Task: Create Git Commits\n\n## Objective\nCommit the applied documentation changes to git in logical groups with descriptive messages. This task is OPTIONAL and only runs if `createCommits` is true.\n\n## Context\nDocumentation files have been modified by the previous task. Create git commits to track these changes with proper traceability to delta IDs.\n\n## Input Variables\n- **createCommits**: `{{createCommits}}` - Whether to create commits\n- **commitGrouping**: `{{commitGrouping}}` - How to group commits (priority, file, or single)\n- **autoPush**: `{{autoPush}}` - Whether to push commits automatically\n- **dryRun**: `{{dryRun}}` - If true, show what would be committed\n- **deltaImpulseId**: `{{deltaImpulseId}}` - Source impulse ID for commit message\n\n## Steps\n\n### 1. Check if Task Should Run\n- If `{{createCommits}}` is false:\n  - Log: \"Skipping git commits (createCommits=false)\"\n  - Exit successfully (not a failure)\n- If `{{dryRun}}` is true:\n  - Show what commits would be created\n  - Do NOT execute git commands\n  - Exit successfully\n\n### 2. Check Git Repository\n- Run `git rev-parse --git-dir` to verify in git repo\n- If not a git repo:\n  - Log warning: \"Not in a git repository. Skipping commit creation.\"\n  - Exit successfully (not a failure)\n\n### 3. Get Current Branch and Commit\n- Run `git branch --show-current` to get branch name\n- Run `git rev-parse --short HEAD` to get current commit SHA\n- Store for commit message metadata\n\n### 4. Group Modified Files\n\nBased on `{{commitGrouping}}`:\n\n**If \"priority\":**\n- Group files by delta priority (CRITICAL, HIGH, MEDIUM, LOW)\n- Create one commit per priority level\n\n**If \"file\":**\n- Create one commit per modified file\n\n**If \"single\":**\n- Create single commit for all changes\n\n### 5. Create Commits\n\nFor each group:\n\n**Stage files:**\n```bash\ngit add <file1> <file2> ...\n```\n\n**Create commit with message:**\n```\ndocs(delta): Applied <count> <priority> deltas\n\nDelta IDs: <delta-001>, <delta-002>, <delta-003>\nSource: impulse {{deltaImpulseId}}\nSuccess rate: <percentage>%\nFiles modified:\n- <file1>\n- <file2>\n```\n\n**Execute:**\n```bash\ngit commit -m \"<message>\"\n```\n\n**Log commit SHA:**\n- Run `git rev-parse --short HEAD` to get new commit SHA\n- Log: \"✓ Created commit <sha>: <message-first-line>\"\n\n### 6. Push Commits (if enabled)\n\nIf `{{autoPush}}` is true:\n\n**Push to remote:**\n```bash\ngit push origin <branch-name>\n```\n\n**Handle push failures gracefully:**\n- If push fails (e.g., no remote, auth issues, conflicts):\n  - Log error message\n  - Warn: \"Push failed. Commits created locally. Push manually: git push origin <branch>\"\n  - Do NOT fail the task\n- If push succeeds:\n  - Log: \"✓ Pushed commits to origin/<branch>\"\n\n### 7. Output Summary\n\nLog:\n- Number of commits created\n- Commit SHAs\n- Push status (if attempted)\n- Command to manually push (if push failed or disabled)\n\n## Success Criteria\n- If `createCommits=false`: Task exits successfully immediately\n- If `createCommits=true`: Commits created with proper messages\n- Commit messages include delta IDs and source impulse\n- Push attempted if `autoPush=true` (failure is non-fatal)\n\n## Error Handling\n- **Not a git repo**: Warn and exit successfully (not a failure)\n- **Commit fails**: Log error, continue with remaining commits\n- **Push fails**: Warn user to push manually, DO NOT fail task\n- **Detached HEAD**: Warn but create commits anyway\n\n## Output\nLog commit SHAs and push status. Git commits are optional - do not fail activity if git operations fail.",
+        "variables": [
+          {
+            "name": "createCommits",
+            "type": "boolean",
+            "required": false,
+            "description": "Automatically create git commits for changes",
+            "default": true
+          },
+          {
+            "name": "commitGrouping",
+            "type": "string",
+            "required": false,
+            "description": "Group commits by: priority, file, or single",
+            "default": "priority"
+          },
+          {
+            "name": "autoPush",
+            "type": "boolean",
+            "required": false,
+            "description": "Automatically push commits to remote (requires createCommits=true)",
+            "default": false
+          },
+          {
+            "name": "dryRun",
+            "type": "boolean",
+            "required": false,
+            "description": "If true, show what would be committed",
+            "default": false
+          },
+          {
+            "name": "deltaImpulseId",
+            "type": "string",
+            "required": true,
+            "description": "Source impulse ID for commit message traceability"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "load-and-filter-deltas",
+      "subagent": "general",
+      "description": "Load deltas from impulse artifact and apply user filters",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Load and Filter Documentation Deltas\n\n## Objective\nLoad documentation conformity assessment deltas from an impulse artifact and apply user-specified filters to create a prioritized application plan.\n\n## Context\nYou are consuming the output of the `assess-documentation-conformity` activity via impulse pointer. This demonstrates Phase 2 artifact consumption using activityOutput type impulses.\n\n## Input Variables\n- **deltaImpulseId**: `{{deltaImpulseId}}` - Impulse ID containing activityOutput artifact\n- **priorityFilter**: `{{priorityFilter}}` - Filter deltas by priority (CRITICAL, HIGH, MEDIUM, LOW, or ALL)\n- **filePattern**: `{{filePattern}}` - Glob pattern to filter target files\n- **maxDeltas**: `{{maxDeltas}}` - Maximum number of deltas to apply (-1 for unlimited)\n\n## Steps\n\n1. **Resolve Impulse Artifact**\n   - Use impulse tools to load the impulse with ID `{{deltaImpulseId}}`\n   - Verify the artifact type is `activityOutput`\n   - Extract the artifact content\n   - If impulse not found, list available impulses and fail with clear error\n\n2. **Validate Artifact Schema**\n   - Verify the artifact contains a `deltas` array\n   - Check each delta has required fields:\n     - `id`: Unique delta identifier\n     - `file`: Target file path\n     - `priority`: CRITICAL, HIGH, MEDIUM, or LOW\n     - `changeType`: add, update, remove, or restructure\n     - `description`: Human-readable change description\n     - `content`: The actual change content (optional for remove type)\n   - If schema invalid, fail with detailed schema diff\n\n3. **Apply Priority Filter**\n   - If `{{priorityFilter}}` is not \"ALL\":\n     - Filter deltas to only include matching priority level\n     - Log: \"Filtered to [count] deltas with priority {{priorityFilter}}\"\n   - If \"ALL\", keep all deltas\n\n4. **Apply File Pattern Filter**\n   - Use glob matching to filter deltas by target file path\n   - Pattern: `{{filePattern}}`\n   - Log: \"File pattern filter reduced to [count] deltas\"\n\n5. **Sort and Prioritize**\n   - Sort deltas by priority (CRITICAL → HIGH → MEDIUM → LOW)\n   - Within same priority, sort by file path for deterministic ordering\n\n6. **Apply Max Deltas Limit**\n   - If `{{maxDeltas}}` is > 0, take only the first N deltas\n   - Log: \"Limited to {{maxDeltas}} deltas\"\n\n7. **Generate Application Plan**\n   - Log the final filtered and ordered delta list\n   - Include priority breakdown: \"X CRITICAL, Y HIGH, Z MEDIUM, W LOW\"\n   - Log total deltas to be applied\n   - If zero deltas after filtering, log warning and indicate success with zero changes\n\n## Success Criteria\n- Impulse resolved successfully\n- Artifact schema validated\n- Deltas filtered and sorted\n- Application plan logged with priority breakdown\n- Filtered delta list passed to next task\n\n## Error Handling\n- **Impulse not found**: Fail immediately with list of available impulses\n- **Artifact malformed**: Fail with schema validation details\n- **Zero deltas after filtering**: Warn and exit gracefully (not a failure)\n\n## Output\nLog the filtered delta list structure for next task to consume. Include:\n- Total deltas loaded\n- Deltas after filtering\n- Priority breakdown\n- First 3 delta IDs and files (summary)",
+        "variables": [
+          {
+            "name": "deltaImpulseId",
+            "type": "string",
+            "required": true,
+            "description": "Impulse ID containing activityOutput artifact from assess-documentation-conformity"
+          },
+          {
+            "name": "priorityFilter",
+            "type": "string",
+            "required": false,
+            "description": "Filter deltas by priority: CRITICAL, HIGH, MEDIUM, LOW, or ALL",
+            "default": "ALL"
+          },
+          {
+            "name": "filePattern",
+            "type": "string",
+            "required": false,
+            "description": "Glob pattern to filter target files (e.g., 'docs/**/*.md')",
+            "default": "**/*.md"
+          },
+          {
+            "name": "maxDeltas",
+            "type": "number",
+            "required": false,
+            "description": "Maximum number of deltas to apply (-1 for unlimited)",
+            "default": -1
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "validate-preconditions",
+      "subagent": "general",
+      "description": "Check repository state and delta conflicts before making changes",
+      "dependencies": [
+        "load-and-filter-deltas"
+      ],
+      "prompt": {
+        "template": "# Task: Validate Preconditions\n\n## Objective\nValidate that the environment is ready to apply documentation deltas. Check file existence, write permissions, git state, and detect conflicting deltas.\n\n## Context\nYou have a filtered list of deltas from the previous task. Before making any changes, ensure all preconditions are met to avoid partial application failures.\n\n## Input Variables\n- **backupFiles**: `{{backupFiles}}` - Whether to create backup files before modifications\n- **continueOnError**: `{{continueOnError}}` - Whether to continue if errors occur\n\n## Steps\n\n1. **Check Target Files**\n   - For each delta in the filtered list:\n     - If `changeType` is \"create\", verify parent directory exists and is writable\n     - Otherwise, verify target file exists\n     - Check write permissions on file or directory\n   - Log all file checks (pass/fail)\n\n2. **Check Git Repository State**\n   - Run `git status --porcelain` to check for uncommitted changes\n   - If dirty:\n     - Log warning: \"Repository has uncommitted changes. Proceeding will mix your changes with delta application.\"\n     - Do NOT fail (user can proceed, just warn)\n   - If not a git repository:\n     - Log warning: \"Not in a git repository. Git commit functionality will be skipped.\"\n\n3. **Detect Conflicting Deltas**\n   - Check if multiple deltas target the same file with overlapping line ranges\n   - For each file:\n     - Group deltas by target file\n     - Check if line ranges overlap\n     - If overlap detected, log conflict details and FAIL\n   - Conflicts are fatal (cannot safely apply)\n\n4. **Verify Backup Strategy**\n   - If `{{backupFiles}}` is true:\n     - Estimate disk space needed (sum of file sizes)\n     - Check available disk space\n     - Warn if insufficient space (but don't fail)\n\n5. **Generate Precondition Report**\n   - Summary of checks:\n     - Total files checked\n     - Files missing (with changeType != \"create\")\n     - Permission issues\n     - Git state (clean/dirty/not a repo)\n     - Conflicting deltas (if any)\n   - Overall status: READY or BLOCKED\n   - If BLOCKED, fail task with details\n\n## Success Criteria\n- All target files exist or are creatable\n- No permission errors (or acceptable with continueOnError)\n- No conflicting deltas detected\n- Precondition report generated and logged\n\n## Error Handling\n- **Target file missing** (changeType != \"create\"):\n  - Warning if `{{continueOnError}}` is true\n  - Fail if `{{continueOnError}}` is false\n- **No write permissions**: FAIL immediately (cannot proceed)\n- **Conflicting deltas**: FAIL with conflict details\n- **Dirty git state**: WARN only (not fatal)\n\n## Output\nLog precondition validation report with status for each check. Indicate READY or BLOCKED state.",
+        "variables": [
+          {
+            "name": "backupFiles",
+            "type": "boolean",
+            "required": false,
+            "description": "Create .bak files before modifying originals",
+            "default": true
+          },
+          {
+            "name": "continueOnError",
+            "type": "boolean",
+            "required": false,
+            "description": "Continue applying remaining deltas if one fails",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "apply-changes-with-validation",
+      "subagent": "general",
+      "description": "Apply filtered deltas with atomic per-file validation",
+      "dependencies": [
+        "validate-preconditions"
+      ],
+      "prompt": {
+        "template": "# Task: Apply Changes With Validation\n\n## Objective\nApply each filtered delta to its target file with atomic validation. Create backups, apply changes, validate results, and rollback on errors.\n\n## Context\nThis is the core task that modifies documentation files. Each file operation is atomic - either the change succeeds completely or is rolled back. You must track success/failure for every delta.\n\n## Input Variables\n- **dryRun**: `{{dryRun}}` - If true, simulate changes without writing files\n- **backupFiles**: `{{backupFiles}}` - Create .bak files before modifications\n- **validateLinks**: `{{validateLinks}}` - Check for broken external links\n- **continueOnError**: `{{continueOnError}}` - Continue on individual delta failures\n\n## Steps\n\nFor each delta in the filtered list (in priority order):\n\n### 1. Backup File (if enabled)\n- If `{{backupFiles}}` is true and file exists:\n  - Copy file to `<filename>.bak`\n  - Log: \"Created backup: <filename>.bak\"\n\n### 2. Read Current Content\n- Use Read tool to load current file content\n- Store in memory for change application\n\n### 3. Apply Change Based on Type\n\n**For changeType=\"add\":**\n- Insert delta content at specified line/section\n- Preserve existing content\n\n**For changeType=\"update\":**\n- Replace content in specified line range\n- Preserve surrounding content\n\n**For changeType=\"remove\":**\n- Delete content in specified line range\n- Preserve surrounding content\n\n**For changeType=\"restructure\":**\n- Move/reorganize sections as specified\n- Update cross-references if needed\n\n### 4. Validate Markdown Syntax\n- Perform basic markdown parse check:\n  - Headers valid (# syntax)\n  - Lists properly formatted\n  - Code blocks closed\n  - Links properly formatted\n- If invalid:\n  - Log error with line numbers\n  - Skip to step 6 (rollback)\n\n### 5. Validate Cross-References\n- Find all markdown links in changed content: `[text](path)` or `[text](path#anchor)`\n- For internal links (not starting with http):\n  - Check if target file exists\n  - If anchor specified, check if anchor exists in target\n  - Log any broken references as warnings (non-fatal)\n\n### 6. Validate External Links (if enabled)\n- If `{{validateLinks}}` is true:\n  - Find all HTTP/HTTPS links\n  - Check each link (HEAD request, 5s timeout)\n  - Retry once if timeout\n  - Log broken links as warnings (non-fatal)\n\n### 7. Write File or Rollback\n\n**If all validations passed:**\n- If `{{dryRun}}` is false:\n  - Write updated content atomically using Write tool\n  - Log: \"✓ Applied delta [id] to [file]\"\n- If `{{dryRun}}` is true:\n  - Log: \"[DRY RUN] Would apply delta [id] to [file]\"\n  - Show diff preview\n\n**If any validation failed:**\n- If backup exists, restore from backup\n- Log: \"✗ Failed to apply delta [id]: [error details]\"\n- If `{{continueOnError}}` is true:\n  - Continue to next delta\n- If `{{continueOnError}}` is false:\n  - Stop processing and fail task\n\n### 8. Track Results\n- Maintain per-delta status:\n  - Delta ID\n  - File path\n  - Status: success, failed, skipped\n  - Error message (if failed)\n  - Timestamp\n\n## Success Criteria\n- All deltas attempted (up to maxDeltas limit)\n- Success rate >= 80% OR all failures explained\n- No partial file writes (atomic operations)\n- Backup files created if enabled\n- Per-delta status tracked\n\n## Error Handling\n- **Markdown syntax error**: Rollback, log error, continue/halt per continueOnError\n- **File write error**: Rollback, log error, continue/halt per continueOnError  \n- **Cross-reference broken**: Warning only (non-fatal)\n- **Link validation timeout**: Retry once, then warn and continue\n\n## Output\nLog comprehensive per-delta results:\n- Total deltas processed\n- Successful applications\n- Failed applications (with reasons)\n- Skipped deltas\n- Success rate percentage\n- List of modified files\n\nPass these results to next task for report generation.",
+        "variables": [
+          {
+            "name": "dryRun",
+            "type": "boolean",
+            "required": false,
+            "description": "If true, simulate changes without writing files",
+            "default": false
+          },
+          {
+            "name": "backupFiles",
+            "type": "boolean",
+            "required": false,
+            "description": "Create .bak files before modifying originals",
+            "default": true
+          },
+          {
+            "name": "validateLinks",
+            "type": "boolean",
+            "required": false,
+            "description": "Check for broken external links after changes",
+            "default": true
+          },
+          {
+            "name": "continueOnError",
+            "type": "boolean",
+            "required": false,
+            "description": "Continue applying remaining deltas if one fails",
+            "default": true
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "generate-application-report",
+      "subagent": "general",
+      "description": "Create comprehensive JSON and markdown reports",
+      "dependencies": [
+        "apply-changes-with-validation"
+      ],
+      "prompt": {
+        "template": "# Task: Generate Application Report\n\n## Objective\nCreate comprehensive JSON and markdown reports summarizing the delta application process, including statistics, validation results, and recommendations.\n\n## Context\nYou have per-delta application results from the previous task. Generate both machine-readable (JSON) and human-readable (markdown) reports.\n\n## Input Variables\n- **dryRun**: `{{dryRun}}` - Indicates if this was a dry run\n\n## Steps\n\n### 1. Aggregate Statistics\nCalculate from previous task results:\n- `totalDeltas`: Total deltas loaded initially\n- `filteredDeltas`: Deltas after filtering\n- `appliedCount`: Successfully applied deltas\n- `failedCount`: Failed delta applications\n- `skippedCount`: Skipped deltas\n- `successRate`: (appliedCount / filteredDeltas) * 100\n\n### 2. Generate JSON Report\nCreate `delta-application-report.json` with this structure:\n\n```json\n{\n  \"summary\": {\n    \"totalDeltas\": <number>,\n    \"filteredDeltas\": <number>,\n    \"appliedCount\": <number>,\n    \"failedCount\": <number>,\n    \"skippedCount\": <number>,\n    \"successRate\": <percentage>,\n    \"dryRun\": {{dryRun}}\n  },\n  \"deltas\": [\n    {\n      \"id\": \"<delta-id>\",\n      \"file\": \"<file-path>\",\n      \"priority\": \"<CRITICAL|HIGH|MEDIUM|LOW>\",\n      \"changeType\": \"<add|update|remove|restructure>\",\n      \"status\": \"<success|failed|skipped>\",\n      \"error\": \"<error-message or null>\"\n    }\n  ],\n  \"validation\": {\n    \"markdownLintErrors\": <number>,\n    \"brokenReferences\": [\"<reference-1>\", \"<reference-2>\"],\n    \"brokenLinks\": [\"<url-1>\", \"<url-2>\"]\n  },\n  \"metadata\": {\n    \"timestamp\": \"<ISO-8601-timestamp>\",\n    \"duration\": \"<duration-string>\",\n    \"repository\": \"<branch>@<commit-sha>\"\n  }\n}\n```\n\nWrite this file using the Write tool.\n\n### 3. Generate Markdown Summary\nCreate `delta-application-summary.md` with this structure:\n\n```markdown\n# Documentation Delta Application Summary\n\n## Summary\n\n- **Total Deltas Loaded**: <number>\n- **Filtered Deltas**: <number>\n- **Successfully Applied**: <number> ✓\n- **Failed**: <number> ✗\n- **Skipped**: <number>\n- **Success Rate**: <percentage>%\n- **Dry Run**: {{dryRun}}\n\n## Priority Breakdown\n\n| Priority | Applied | Failed | Skipped |\n|----------|---------|--------|----------|\n| CRITICAL | X       | Y      | Z        |\n| HIGH     | X       | Y      | Z        |\n| MEDIUM   | X       | Y      | Z        |\n| LOW      | X       | Y      | Z        |\n\n## Failed Deltas\n\n<For each failed delta>\n- **[delta-id]** (`file-path`): <error-message>\n\n## Validation Results\n\n- Markdown Lint Errors: <number>\n- Broken Cross-References: <number>\n- Broken External Links: <number>\n\n<List details if any issues found>\n\n## Recommended Next Actions\n\n<Based on results, suggest:>\n- If failures: \"Review failed deltas and fix underlying issues\"\n- If broken references: \"Update cross-references to resolve broken links\"\n- If success rate < 90%: \"Investigate common failure patterns\"\n- If dry run: \"Review changes above, then re-run with dryRun=false\"\n- If all successful: \"Changes applied successfully. Consider running documentation build to verify.\"\n```\n\nWrite this file using the Write tool.\n\n### 4. Validate Reports\n- Verify JSON is valid: `jq empty delta-application-report.json`\n- Check both files were created successfully\n- Log file paths\n\n### 5. Output Summary\nLog:\n- Report file locations\n- Key statistics (applied/failed/skipped)\n- Success rate\n- Any validation issues\n\n## Success Criteria\n- `delta-application-report.json` created and valid JSON\n- `delta-application-summary.md` created\n- Summary statistics match actual changes\n- All required sections present in both reports\n\n## Error Handling\n- **JSON serialization error**: Log error, attempt markdown report only\n- **File write error**: Fail task (reports are critical outputs)\n\n## Output\nLog paths to both report files. These are the primary artifacts of this activity.",
+        "variables": [
+          {
+            "name": "dryRun",
+            "type": "boolean",
+            "required": false,
+            "description": "Indicates if this was a dry run",
+            "default": false
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "jq empty delta-application-report.json",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-git-commits",
+      "subagent": "general",
+      "description": "Commit applied changes in logical groups (conditional on createCommits)",
+      "dependencies": [
+        "generate-application-report"
+      ],
+      "prompt": {
+        "template": "# Task: Create Git Commits\n\n## Objective\nCommit the applied documentation changes to git in logical groups with descriptive messages. This task is OPTIONAL and only runs if `createCommits` is true.\n\n## Context\nDocumentation files have been modified by the previous task. Create git commits to track these changes with proper traceability to delta IDs.\n\n## Input Variables\n- **createCommits**: `{{createCommits}}` - Whether to create commits\n- **commitGrouping**: `{{commitGrouping}}` - How to group commits (priority, file, or single)\n- **autoPush**: `{{autoPush}}` - Whether to push commits automatically\n- **dryRun**: `{{dryRun}}` - If true, show what would be committed\n- **deltaImpulseId**: `{{deltaImpulseId}}` - Source impulse ID for commit message\n\n## Steps\n\n### 1. Check if Task Should Run\n- If `{{createCommits}}` is false:\n  - Log: \"Skipping git commits (createCommits=false)\"\n  - Exit successfully (not a failure)\n- If `{{dryRun}}` is true:\n  - Show what commits would be created\n  - Do NOT execute git commands\n  - Exit successfully\n\n### 2. Check Git Repository\n- Run `git rev-parse --git-dir` to verify in git repo\n- If not a git repo:\n  - Log warning: \"Not in a git repository. Skipping commit creation.\"\n  - Exit successfully (not a failure)\n\n### 3. Get Current Branch and Commit\n- Run `git branch --show-current` to get branch name\n- Run `git rev-parse --short HEAD` to get current commit SHA\n- Store for commit message metadata\n\n### 4. Group Modified Files\n\nBased on `{{commitGrouping}}`:\n\n**If \"priority\":**\n- Group files by delta priority (CRITICAL, HIGH, MEDIUM, LOW)\n- Create one commit per priority level\n\n**If \"file\":**\n- Create one commit per modified file\n\n**If \"single\":**\n- Create single commit for all changes\n\n### 5. Create Commits\n\nFor each group:\n\n**Stage files:**\n```bash\ngit add <file1> <file2> ...\n```\n\n**Create commit with message:**\n```\ndocs(delta): Applied <count> <priority> deltas\n\nDelta IDs: <delta-001>, <delta-002>, <delta-003>\nSource: impulse {{deltaImpulseId}}\nSuccess rate: <percentage>%\nFiles modified:\n- <file1>\n- <file2>\n```\n\n**Execute:**\n```bash\ngit commit -m \"<message>\"\n```\n\n**Log commit SHA:**\n- Run `git rev-parse --short HEAD` to get new commit SHA\n- Log: \"✓ Created commit <sha>: <message-first-line>\"\n\n### 6. Push Commits (if enabled)\n\nIf `{{autoPush}}` is true:\n\n**Push to remote:**\n```bash\ngit push origin <branch-name>\n```\n\n**Handle push failures gracefully:**\n- If push fails (e.g., no remote, auth issues, conflicts):\n  - Log error message\n  - Warn: \"Push failed. Commits created locally. Push manually: git push origin <branch>\"\n  - Do NOT fail the task\n- If push succeeds:\n  - Log: \"✓ Pushed commits to origin/<branch>\"\n\n### 7. Output Summary\n\nLog:\n- Number of commits created\n- Commit SHAs\n- Push status (if attempted)\n- Command to manually push (if push failed or disabled)\n\n## Success Criteria\n- If `createCommits=false`: Task exits successfully immediately\n- If `createCommits=true`: Commits created with proper messages\n- Commit messages include delta IDs and source impulse\n- Push attempted if `autoPush=true` (failure is non-fatal)\n\n## Error Handling\n- **Not a git repo**: Warn and exit successfully (not a failure)\n- **Commit fails**: Log error, continue with remaining commits\n- **Push fails**: Warn user to push manually, DO NOT fail task\n- **Detached HEAD**: Warn but create commits anyway\n\n## Output\nLog commit SHAs and push status. Git commits are optional - do not fail activity if git operations fail.",
+        "variables": [
+          {
+            "name": "createCommits",
+            "type": "boolean",
+            "required": false,
+            "description": "Automatically create git commits for changes",
+            "default": true
+          },
+          {
+            "name": "commitGrouping",
+            "type": "string",
+            "required": false,
+            "description": "Group commits by: priority, file, or single",
+            "default": "priority"
+          },
+          {
+            "name": "autoPush",
+            "type": "boolean",
+            "required": false,
+            "description": "Automatically push commits to remote (requires createCommits=true)",
+            "default": false
+          },
+          {
+            "name": "dryRun",
+            "type": "boolean",
+            "required": false,
+            "description": "If true, show what would be committed",
+            "default": false
+          },
+          {
+            "name": "deltaImpulseId",
+            "type": "string",
+            "required": true,
+            "description": "Source impulse ID for commit message traceability"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-21T04:28:18.781Z",
+  "metadata": {}
+}

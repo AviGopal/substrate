@@ -1,0 +1,427 @@
+{
+  "activity_id": "trace-data-flow-single-feature",
+  "name": "trace-data-flow-single-feature",
+  "description": "Systematically trace how data flows through a feature from entry point to exit point, documenting transformations, validations, and architectural decisions",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "identify-entry-point",
+      "subagent": "general",
+      "description": "Identify the entry point(s) for the feature",
+      "dependencies": [],
+      "prompt": {
+        "template": "Find the entry point(s) for the feature '{{featureName}}'.\n\nSearch strategy:\n1. If API feature: search for route handlers, endpoint definitions\n2. If UI feature: search for event handlers, component entry points\n3. If background job: search for queue consumers, cron handlers\n4. If CLI feature: search for command definitions\n\nUse grep/glob to find relevant files. Document:\n- File paths and line numbers\n- Entry function/method names\n- Initial data type/schema received\n- HTTP method, event type, or trigger mechanism\n\nOutput format:\n```\nEntry Point: [file:line]\nFunction: [name]\nInput Type: [type/schema]\nTrigger: [how it's invoked]\n```",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature to trace (e.g., 'user registration', 'activity execution')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "trace-dependencies",
+      "subagent": "general",
+      "description": "Use CPG to trace dependencies from entry point",
+      "dependencies": [
+        "identify-entry-point"
+      ],
+      "prompt": {
+        "template": "Using the entry point identified in the previous task, trace the dependency chain.\n\nFor the entry point you found:\n1. Use metabob_list_file_components to identify the exact component name\n2. Use metabob_analyze_change_impact to see what this component depends on\n3. Read each dependent file to understand data flow\n4. Build a list of components in the data flow path\n\nDocument:\n- Component dependency chain (A → B → C → D)\n- What each component does (brief summary)\n- Data transformations at each step\n\nOutput format:\n```\nFlow Chain:\n1. [Component A] - [what it does]\n   Input: [type]\n   Output: [type]\n   \n2. [Component B] - [what it does]\n   Input: [type]\n   Output: [type]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "document-transformations",
+      "subagent": "general",
+      "description": "Document data transformations and business rules",
+      "dependencies": [
+        "trace-dependencies"
+      ],
+      "prompt": {
+        "template": "For each component in the flow chain from the previous task, document the data transformations:\n\nFor EACH transformation point:\n1. Read the source code carefully\n2. Identify what changes to the data:\n   - Type conversions (string → number, DTO → Entity)\n   - Validation rules (required fields, format checks)\n   - Business logic (calculations, enrichment)\n   - Side effects (database writes, API calls)\n\n3. Document WHY each transformation exists:\n   - Business requirement it satisfies\n   - Constraints it enforces\n   - Alternative approaches considered (if evident)\n\nOutput format:\n```\nTransformation: [Component A → Component B]\nWhat: [describe the transformation]\nWhy: [business/technical reason]\nValidations: [list any validation rules]\nSide Effects: [list any side effects]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "identify-boundaries",
+      "subagent": "general",
+      "description": "Identify architectural boundaries and integration points",
+      "dependencies": [
+        "trace-dependencies"
+      ],
+      "prompt": {
+        "template": "Analyze the flow chain for architectural boundaries:\n\nLook for:\n1. **Repository boundaries**: Cross-repo imports, package dependencies\n2. **Service boundaries**: HTTP calls, RPC, message queues\n3. **Layer boundaries**: Controller → Service → Repository patterns\n4. **Data store boundaries**: Database writes/reads, cache access, file I/O\n\nFor each boundary:\n- Document the contract (API schema, type definition, interface)\n- Identify coupling points (tight vs. loose)\n- Note any versioning or compatibility concerns\n- Check for error handling and resilience patterns\n\nOutput format:\n```\nBoundary: [Type - e.g., Service Boundary]\nLocation: [Component A | Component B]\nContract: [schema/interface]\nCoupling: [tight/loose/medium]\nResilience: [error handling approach]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "check-related-issues",
+      "subagent": "general",
+      "description": "Check for code quality issues in the data flow",
+      "dependencies": [
+        "trace-dependencies"
+      ],
+      "prompt": {
+        "template": "Search for code quality issues in the data flow components you identified:\n\n1. Use metabob_search_codebase_issues to find issues related to:\n   - Validation (input validation, type safety)\n   - Error handling (exception handling, edge cases)\n   - Security (SQL injection, XSS, auth checks)\n   - Performance (N+1 queries, inefficient loops)\n\n2. For each HIGH or MEDIUM issue found:\n   - Document the issue and its location\n   - Assess impact on data flow\n   - Note if it's a blocking concern or technical debt\n\n3. Use metabob_suggest_related_changes to find related files that might need review\n\nOutput format:\n```\nIssues Found: [count]\n\nHigh Priority:\n- [issue description] in [file:line]\n  Impact: [how it affects data flow]\n\nRelated Files to Review:\n- [file] - [reason]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "annotate-key-components",
+      "subagent": "general",
+      "description": "Annotate key components with flow documentation",
+      "dependencies": [
+        "document-transformations",
+        "identify-boundaries"
+      ],
+      "prompt": {
+        "template": "Annotate the key components in the data flow for feature '{{featureName}}':\n\nFor the 3-5 most critical components (prioritize):\n1. Entry point (always annotate)\n2. Main transformation/business logic components\n3. Integration/boundary crossing points\n4. Exit point (database write, API response, etc.)\n\nUse metabob_annotate_component for each:\n- Component name (exact name from metabob_list_file_components)\n- Why it exists in this flow\n- What transformations it performs\n- Business context and constraints\n- Design decisions made\n\nFocus on WHY, not WHAT (code already shows what).\n\nAnnotation template:\n```\n[Component] handles [stage] in {{featureName}} flow.\n\nData transformation: [input type] → [output type]\n\nBusiness logic: [what business rule is enforced]\n\nDesign decision: [why this approach was chosen]\n\nConstraints: [any important limitations or edge cases]\n```\n\nAfter annotating, output a summary of what was documented.",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature being traced"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-flow-diagram",
+      "subagent": "general",
+      "description": "Generate comprehensive flow documentation",
+      "dependencies": [
+        "document-transformations",
+        "identify-boundaries",
+        "check-related-issues"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive flow diagram and documentation for feature '{{featureName}}':\n\nUsing all information gathered, create:\n\n1. **Mermaid Flow Diagram**:\n```mermaid\ngraph TD\n    A[Entry Point] -->|input type| B[Component]\n    B -->|transformed type| C[Next Component]\n    C -->|final type| D[Exit Point]\n    \n    style A fill:#e1f5ff\n    style D fill:#ffe1e1\n```\n\n2. **Data Flow Summary**:\n- Entry: [where data enters, what format]\n- Transformations: [key transformations applied]\n- Validations: [validation rules enforced]\n- Boundaries: [architectural boundaries crossed]\n- Exit: [where data ends up, final format]\n\n3. **Key Insights**:\n- Business purpose of this flow\n- Critical decision points\n- Potential risks or technical debt\n- Suggested improvements (if any)\n\n4. **Reusable Patterns**:\n- Does this flow follow a common pattern?\n- Could it be abstracted into a reusable activity?\n- What aspects are feature-specific vs. universal?\n\nSave this documentation to: `docs/data-flows/{{featureName}}-flow.md`\n\nProvide a summary of the complete flow analysis.",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature being traced"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "identify-entry-point",
+      "subagent": "general",
+      "description": "Identify the entry point(s) for the feature",
+      "dependencies": [],
+      "prompt": {
+        "template": "Find the entry point(s) for the feature '{{featureName}}'.\n\nSearch strategy:\n1. If API feature: search for route handlers, endpoint definitions\n2. If UI feature: search for event handlers, component entry points\n3. If background job: search for queue consumers, cron handlers\n4. If CLI feature: search for command definitions\n\nUse grep/glob to find relevant files. Document:\n- File paths and line numbers\n- Entry function/method names\n- Initial data type/schema received\n- HTTP method, event type, or trigger mechanism\n\nOutput format:\n```\nEntry Point: [file:line]\nFunction: [name]\nInput Type: [type/schema]\nTrigger: [how it's invoked]\n```",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature to trace (e.g., 'user registration', 'activity execution')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "trace-dependencies",
+      "subagent": "general",
+      "description": "Use CPG to trace dependencies from entry point",
+      "dependencies": [
+        "identify-entry-point"
+      ],
+      "prompt": {
+        "template": "Using the entry point identified in the previous task, trace the dependency chain.\n\nFor the entry point you found:\n1. Use metabob_list_file_components to identify the exact component name\n2. Use metabob_analyze_change_impact to see what this component depends on\n3. Read each dependent file to understand data flow\n4. Build a list of components in the data flow path\n\nDocument:\n- Component dependency chain (A → B → C → D)\n- What each component does (brief summary)\n- Data transformations at each step\n\nOutput format:\n```\nFlow Chain:\n1. [Component A] - [what it does]\n   Input: [type]\n   Output: [type]\n   \n2. [Component B] - [what it does]\n   Input: [type]\n   Output: [type]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "document-transformations",
+      "subagent": "general",
+      "description": "Document data transformations and business rules",
+      "dependencies": [
+        "trace-dependencies"
+      ],
+      "prompt": {
+        "template": "For each component in the flow chain from the previous task, document the data transformations:\n\nFor EACH transformation point:\n1. Read the source code carefully\n2. Identify what changes to the data:\n   - Type conversions (string → number, DTO → Entity)\n   - Validation rules (required fields, format checks)\n   - Business logic (calculations, enrichment)\n   - Side effects (database writes, API calls)\n\n3. Document WHY each transformation exists:\n   - Business requirement it satisfies\n   - Constraints it enforces\n   - Alternative approaches considered (if evident)\n\nOutput format:\n```\nTransformation: [Component A → Component B]\nWhat: [describe the transformation]\nWhy: [business/technical reason]\nValidations: [list any validation rules]\nSide Effects: [list any side effects]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "identify-boundaries",
+      "subagent": "general",
+      "description": "Identify architectural boundaries and integration points",
+      "dependencies": [
+        "trace-dependencies"
+      ],
+      "prompt": {
+        "template": "Analyze the flow chain for architectural boundaries:\n\nLook for:\n1. **Repository boundaries**: Cross-repo imports, package dependencies\n2. **Service boundaries**: HTTP calls, RPC, message queues\n3. **Layer boundaries**: Controller → Service → Repository patterns\n4. **Data store boundaries**: Database writes/reads, cache access, file I/O\n\nFor each boundary:\n- Document the contract (API schema, type definition, interface)\n- Identify coupling points (tight vs. loose)\n- Note any versioning or compatibility concerns\n- Check for error handling and resilience patterns\n\nOutput format:\n```\nBoundary: [Type - e.g., Service Boundary]\nLocation: [Component A | Component B]\nContract: [schema/interface]\nCoupling: [tight/loose/medium]\nResilience: [error handling approach]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "check-related-issues",
+      "subagent": "general",
+      "description": "Check for code quality issues in the data flow",
+      "dependencies": [
+        "trace-dependencies"
+      ],
+      "prompt": {
+        "template": "Search for code quality issues in the data flow components you identified:\n\n1. Use metabob_search_codebase_issues to find issues related to:\n   - Validation (input validation, type safety)\n   - Error handling (exception handling, edge cases)\n   - Security (SQL injection, XSS, auth checks)\n   - Performance (N+1 queries, inefficient loops)\n\n2. For each HIGH or MEDIUM issue found:\n   - Document the issue and its location\n   - Assess impact on data flow\n   - Note if it's a blocking concern or technical debt\n\n3. Use metabob_suggest_related_changes to find related files that might need review\n\nOutput format:\n```\nIssues Found: [count]\n\nHigh Priority:\n- [issue description] in [file:line]\n  Impact: [how it affects data flow]\n\nRelated Files to Review:\n- [file] - [reason]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "annotate-key-components",
+      "subagent": "general",
+      "description": "Annotate key components with flow documentation",
+      "dependencies": [
+        "document-transformations",
+        "identify-boundaries"
+      ],
+      "prompt": {
+        "template": "Annotate the key components in the data flow for feature '{{featureName}}':\n\nFor the 3-5 most critical components (prioritize):\n1. Entry point (always annotate)\n2. Main transformation/business logic components\n3. Integration/boundary crossing points\n4. Exit point (database write, API response, etc.)\n\nUse metabob_annotate_component for each:\n- Component name (exact name from metabob_list_file_components)\n- Why it exists in this flow\n- What transformations it performs\n- Business context and constraints\n- Design decisions made\n\nFocus on WHY, not WHAT (code already shows what).\n\nAnnotation template:\n```\n[Component] handles [stage] in {{featureName}} flow.\n\nData transformation: [input type] → [output type]\n\nBusiness logic: [what business rule is enforced]\n\nDesign decision: [why this approach was chosen]\n\nConstraints: [any important limitations or edge cases]\n```\n\nAfter annotating, output a summary of what was documented.",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature being traced"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-flow-diagram",
+      "subagent": "general",
+      "description": "Generate comprehensive flow documentation",
+      "dependencies": [
+        "document-transformations",
+        "identify-boundaries",
+        "check-related-issues"
+      ],
+      "prompt": {
+        "template": "Create a comprehensive flow diagram and documentation for feature '{{featureName}}':\n\nUsing all information gathered, create:\n\n1. **Mermaid Flow Diagram**:\n```mermaid\ngraph TD\n    A[Entry Point] -->|input type| B[Component]\n    B -->|transformed type| C[Next Component]\n    C -->|final type| D[Exit Point]\n    \n    style A fill:#e1f5ff\n    style D fill:#ffe1e1\n```\n\n2. **Data Flow Summary**:\n- Entry: [where data enters, what format]\n- Transformations: [key transformations applied]\n- Validations: [validation rules enforced]\n- Boundaries: [architectural boundaries crossed]\n- Exit: [where data ends up, final format]\n\n3. **Key Insights**:\n- Business purpose of this flow\n- Critical decision points\n- Potential risks or technical debt\n- Suggested improvements (if any)\n\n4. **Reusable Patterns**:\n- Does this flow follow a common pattern?\n- Could it be abstracted into a reusable activity?\n- What aspects are feature-specific vs. universal?\n\nSave this documentation to: `docs/data-flows/{{featureName}}-flow.md`\n\nProvide a summary of the complete flow analysis.",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature being traced"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-03-02T17:58:08.018Z",
+  "metadata": {}
+}

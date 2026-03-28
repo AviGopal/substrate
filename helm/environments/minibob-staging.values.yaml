@@ -1,0 +1,17 @@
+# Environment configuration for minibob staging namespace
+# Layer 4: Production simulation with full backend integration
+
+backend:
+  enabled: true  # Full backend stack
+
+dev:
+  enabled: false
+
+testing:
+  singlePod:
+    enabled: false
+  cluster:
+    enabled: false
+
+staging:
+  enabled: true  # Layer 4: Production simulation

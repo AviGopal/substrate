@@ -1,0 +1,331 @@
+{
+  "activity_id": "fix-devbob-container-configuration",
+  "name": "Fix DevBob Container Configuration",
+  "description": "Fix devbob-clean container issues: initialize git repository, start ACP server, create opencode.json, install diagnostic tools",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "assess-current-state",
+      "subagent": "general",
+      "description": "Assess current devbob container configuration state",
+      "dependencies": [],
+      "prompt": {
+        "template": "Assess the current state of devbob-clean container:\n\n1. Check container status:\n   ```bash\n   docker ps --filter name=devbob-clean --format 'Name: {{.Names}}\\nStatus: {{.Status}}\\nPorts: {{.Ports}}'\n   ```\n\n2. Check /workspace directory:\n   ```bash\n   docker exec devbob-clean ls -la /workspace | head -20\n   docker exec devbob-clean test -d /workspace/.git && echo \"Git repo exists\" || echo \"Git repo MISSING\"\n   ```\n\n3. Check OpenCode installation:\n   ```bash\n   docker exec devbob-clean which opencode\n   docker exec devbob-clean opencode --version 2>&1 | head -5\n   ```\n\n4. Check for opencode.json:\n   ```bash\n   docker exec devbob-clean test -f /workspace/opencode.json && echo \"Config exists\" || echo \"Config MISSING\"\n   ```\n\n5. Check ACP server (try different methods):\n   ```bash\n   # Test port from host\n   curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 || echo \"Port 3000 not responding\"\n   \n   # Check process list\n   docker exec devbob-clean ps aux | grep -i opencode || echo \"No opencode processes\"\n   ```\n\n6. Check available tools:\n   ```bash\n   docker exec devbob-clean which pgrep || echo \"pgrep MISSING\"\n   docker exec devbob-clean which netstat || echo \"netstat MISSING\"\n   docker exec devbob-clean which git || echo \"git MISSING\"\n   ```\n\nReport:\n- What's working ✓\n- What needs fixing ✗\n- Priority order for fixes",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "install-diagnostic-tools",
+      "subagent": "general",
+      "description": "Install missing diagnostic tools (git, procps, net-tools)",
+      "dependencies": [
+        "assess-current-state"
+      ],
+      "prompt": {
+        "template": "Install diagnostic tools in devbob-clean container:\n\n1. Determine package manager:\n   ```bash\n   docker exec devbob-clean which apk && echo \"Alpine (apk)\" || echo \"Checking apt...\"\n   docker exec devbob-clean which apt-get && echo \"Debian (apt)\" || echo \"Unknown package manager\"\n   ```\n\n2. Install tools based on package manager:\n\n   **If Alpine (apk):**\n   ```bash\n   docker exec devbob-clean apk add --no-cache git procps net-tools curl\n   ```\n\n   **If Debian (apt):**\n   ```bash\n   docker exec devbob-clean apt-get update\n   docker exec devbob-clean apt-get install -y git procps net-tools curl\n   ```\n\n3. Verify installations:\n   ```bash\n   docker exec devbob-clean which git\n   docker exec devbob-clean which pgrep\n   docker exec devbob-clean which netstat\n   docker exec devbob-clean git --version\n   ```\n\n4. If installation fails:\n   - Note which tools couldn't be installed\n   - Check if container is read-only\n   - Document limitations for workarounds\n\nReport:\n- Installed tools ✓\n- Failed installations ✗\n- Alternative approaches if needed",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "initialize-git-repository",
+      "subagent": "general",
+      "description": "Initialize git repository in /workspace",
+      "dependencies": [
+        "install-diagnostic-tools"
+      ],
+      "prompt": {
+        "template": "Initialize git repository in /workspace:\n\n1. Check if git is available:\n   ```bash\n   docker exec devbob-clean which git || echo \"Git not available - cannot initialize\"\n   ```\n\n2. Initialize git repository:\n   ```bash\n   docker exec devbob-clean git init /workspace\n   ```\n\n3. Configure git:\n   ```bash\n   docker exec devbob-clean git -C /workspace config user.email \"devbob@localhost\"\n   docker exec devbob-clean git -C /workspace config user.name \"DevBob Agent\"\n   ```\n\n4. Create initial commit (optional but helpful):\n   ```bash\n   docker exec devbob-clean git -C /workspace add .\n   docker exec devbob-clean git -C /workspace commit -m \"Initial commit - devbob workspace\" || echo \"Commit failed (may be empty)\"\n   ```\n\n5. Verify git repository:\n   ```bash\n   docker exec devbob-clean git -C /workspace status\n   docker exec devbob-clean git -C /workspace log --oneline | head -5\n   ```\n\n6. Handle errors:\n   - If git init fails: check permissions\n   - If commit fails: check if there are files to commit\n   - If config fails: check git version\n\nReport:\n- Git initialization status\n- Repository state\n- Any issues encountered",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-opencode-config",
+      "subagent": "general",
+      "description": "Create opencode.json configuration file",
+      "dependencies": [
+        "initialize-git-repository"
+      ],
+      "prompt": {
+        "template": "Create opencode.json configuration in /workspace:\n\n1. Create minimal opencode.json:\n   ```bash\n   docker exec devbob-clean sh -c 'cat > /workspace/opencode.json << EOF\n{\n  \"mcp\": {\n    \"metabob\": {\n      \"type\": \"remote\",\n      \"url\": \"http://api-server:8080\",\n      \"enabled\": true\n    }\n  },\n  \"activity\": {\n    \"enabled\": true,\n    \"learningMode\": true\n  },\n  \"session\": {\n    \"boredomSystem\": {\n      \"enabled\": true,\n      \"idleThresholdMs\": 300000\n    }\n  }\n}\nEOF'\n   ```\n\n2. Verify file was created:\n   ```bash\n   docker exec devbob-clean cat /workspace/opencode.json\n   ```\n\n3. Validate JSON syntax:\n   ```bash\n   docker exec devbob-clean node -e \"JSON.parse(require('fs').readFileSync('/workspace/opencode.json', 'utf8')); console.log('Valid JSON')\" 2>&1\n   ```\n\n4. If creation fails, try alternative method:\n   ```bash\n   # Create locally and copy\n   echo '{\"mcp\":{\"metabob\":{\"type\":\"remote\",\"url\":\"http://api-server:8080\",\"enabled\":true}}}' > /tmp/opencode.json\n   docker cp /tmp/opencode.json devbob-clean:/workspace/\n   ```\n\nReport:\n- Configuration file created ✓/✗\n- File contents\n- Validation status",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "start-acp-server",
+      "subagent": "general",
+      "description": "Start ACP server on port 3000",
+      "dependencies": [
+        "create-opencode-config"
+      ],
+      "prompt": {
+        "template": "Start ACP server in devbob-clean container:\n\n1. Check if ACP server is already running:\n   ```bash\n   docker exec devbob-clean ps aux | grep \"opencode acp\" | grep -v grep && echo \"Already running\" || echo \"Not running\"\n   curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 && echo \"Port responding\" || echo \"Port not responding\"\n   ```\n\n2. Start ACP server in background:\n   ```bash\n   docker exec -d devbob-clean sh -c \"cd /workspace && opencode acp --port 3000 > /tmp/acp-server.log 2>&1\"\n   ```\n\n3. Wait for server to start:\n   ```bash\n   sleep 3\n   ```\n\n4. Verify server is running:\n   ```bash\n   docker exec devbob-clean ps aux | grep \"opencode acp\"\n   curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000\n   ```\n\n5. Check logs if server fails:\n   ```bash\n   docker exec devbob-clean cat /tmp/acp-server.log 2>/dev/null | tail -20\n   docker logs devbob-clean --tail 20\n   ```\n\n6. Alternative: Check container entrypoint\n   ```bash\n   docker inspect devbob-clean --format '{{.Config.Entrypoint}} {{.Config.Cmd}}'\n   ```\n\n7. If server won't start:\n   - Document the error\n   - Check if it's already in entrypoint\n   - Provide workaround options\n\nReport:\n- ACP server status\n- Port 3000 accessibility\n- Any errors or blockers",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-fixes",
+      "subagent": "general",
+      "description": "Verify all fixes and generate configuration report",
+      "dependencies": [
+        "start-acp-server"
+      ],
+      "prompt": {
+        "template": "Verify all devbob container fixes:\n\n## Final Verification\n\n1. **Git Repository:**\n   ```bash\n   docker exec devbob-clean git -C /workspace status\n   echo \"Git repo: $(docker exec devbob-clean test -d /workspace/.git && echo '✓' || echo '✗')\"\n   ```\n\n2. **OpenCode Configuration:**\n   ```bash\n   echo \"opencode.json: $(docker exec devbob-clean test -f /workspace/opencode.json && echo '✓' || echo '✗')\"\n   docker exec devbob-clean cat /workspace/opencode.json | head -10\n   ```\n\n3. **ACP Server:**\n   ```bash\n   echo \"ACP process: $(docker exec devbob-clean ps aux | grep -q 'opencode acp' && echo '✓' || echo '✗')\"\n   echo \"Port 3000: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000)\"\n   ```\n\n4. **Diagnostic Tools:**\n   ```bash\n   echo \"git: $(docker exec devbob-clean which git > /dev/null 2>&1 && echo '✓' || echo '✗')\"\n   echo \"pgrep: $(docker exec devbob-clean which pgrep > /dev/null 2>&1 && echo '✓' || echo '✗')\"\n   echo \"netstat: $(docker exec devbob-clean which netstat > /dev/null 2>&1 && echo '✓' || echo '✗')\"\n   ```\n\n5. **Run validation script:**\n   ```bash\n   ./scripts/validate-docker-environment.sh 2>&1 | grep -A 20 \"DevBob Container\"\n   ```\n\n## Generate Report\n\nCreate detailed report in: test-results/devbob-container-fix-report.md\n\nInclude:\n- ✅ What was fixed\n- ⚠️ What still needs attention\n- ❌ What couldn't be fixed\n- 📝 Configuration details\n- 🔧 Manual steps if any required\n- 🚀 Next steps\n\nReport should have clear summary at top:\n```\n## DevBob Container Fix Summary\n\n**Status:** [FIXED / PARTIALLY FIXED / FAILED]\n\n### Fixed Issues\n- [x] Git repository initialized\n- [x] opencode.json created\n- [ ] ACP server running\n...\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/devbob-container-fix-report.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "assess-current-state",
+      "subagent": "general",
+      "description": "Assess current devbob container configuration state",
+      "dependencies": [],
+      "prompt": {
+        "template": "Assess the current state of devbob-clean container:\n\n1. Check container status:\n   ```bash\n   docker ps --filter name=devbob-clean --format 'Name: {{.Names}}\\nStatus: {{.Status}}\\nPorts: {{.Ports}}'\n   ```\n\n2. Check /workspace directory:\n   ```bash\n   docker exec devbob-clean ls -la /workspace | head -20\n   docker exec devbob-clean test -d /workspace/.git && echo \"Git repo exists\" || echo \"Git repo MISSING\"\n   ```\n\n3. Check OpenCode installation:\n   ```bash\n   docker exec devbob-clean which opencode\n   docker exec devbob-clean opencode --version 2>&1 | head -5\n   ```\n\n4. Check for opencode.json:\n   ```bash\n   docker exec devbob-clean test -f /workspace/opencode.json && echo \"Config exists\" || echo \"Config MISSING\"\n   ```\n\n5. Check ACP server (try different methods):\n   ```bash\n   # Test port from host\n   curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 || echo \"Port 3000 not responding\"\n   \n   # Check process list\n   docker exec devbob-clean ps aux | grep -i opencode || echo \"No opencode processes\"\n   ```\n\n6. Check available tools:\n   ```bash\n   docker exec devbob-clean which pgrep || echo \"pgrep MISSING\"\n   docker exec devbob-clean which netstat || echo \"netstat MISSING\"\n   docker exec devbob-clean which git || echo \"git MISSING\"\n   ```\n\nReport:\n- What's working ✓\n- What needs fixing ✗\n- Priority order for fixes",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "install-diagnostic-tools",
+      "subagent": "general",
+      "description": "Install missing diagnostic tools (git, procps, net-tools)",
+      "dependencies": [
+        "assess-current-state"
+      ],
+      "prompt": {
+        "template": "Install diagnostic tools in devbob-clean container:\n\n1. Determine package manager:\n   ```bash\n   docker exec devbob-clean which apk && echo \"Alpine (apk)\" || echo \"Checking apt...\"\n   docker exec devbob-clean which apt-get && echo \"Debian (apt)\" || echo \"Unknown package manager\"\n   ```\n\n2. Install tools based on package manager:\n\n   **If Alpine (apk):**\n   ```bash\n   docker exec devbob-clean apk add --no-cache git procps net-tools curl\n   ```\n\n   **If Debian (apt):**\n   ```bash\n   docker exec devbob-clean apt-get update\n   docker exec devbob-clean apt-get install -y git procps net-tools curl\n   ```\n\n3. Verify installations:\n   ```bash\n   docker exec devbob-clean which git\n   docker exec devbob-clean which pgrep\n   docker exec devbob-clean which netstat\n   docker exec devbob-clean git --version\n   ```\n\n4. If installation fails:\n   - Note which tools couldn't be installed\n   - Check if container is read-only\n   - Document limitations for workarounds\n\nReport:\n- Installed tools ✓\n- Failed installations ✗\n- Alternative approaches if needed",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "initialize-git-repository",
+      "subagent": "general",
+      "description": "Initialize git repository in /workspace",
+      "dependencies": [
+        "install-diagnostic-tools"
+      ],
+      "prompt": {
+        "template": "Initialize git repository in /workspace:\n\n1. Check if git is available:\n   ```bash\n   docker exec devbob-clean which git || echo \"Git not available - cannot initialize\"\n   ```\n\n2. Initialize git repository:\n   ```bash\n   docker exec devbob-clean git init /workspace\n   ```\n\n3. Configure git:\n   ```bash\n   docker exec devbob-clean git -C /workspace config user.email \"devbob@localhost\"\n   docker exec devbob-clean git -C /workspace config user.name \"DevBob Agent\"\n   ```\n\n4. Create initial commit (optional but helpful):\n   ```bash\n   docker exec devbob-clean git -C /workspace add .\n   docker exec devbob-clean git -C /workspace commit -m \"Initial commit - devbob workspace\" || echo \"Commit failed (may be empty)\"\n   ```\n\n5. Verify git repository:\n   ```bash\n   docker exec devbob-clean git -C /workspace status\n   docker exec devbob-clean git -C /workspace log --oneline | head -5\n   ```\n\n6. Handle errors:\n   - If git init fails: check permissions\n   - If commit fails: check if there are files to commit\n   - If config fails: check git version\n\nReport:\n- Git initialization status\n- Repository state\n- Any issues encountered",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "create-opencode-config",
+      "subagent": "general",
+      "description": "Create opencode.json configuration file",
+      "dependencies": [
+        "initialize-git-repository"
+      ],
+      "prompt": {
+        "template": "Create opencode.json configuration in /workspace:\n\n1. Create minimal opencode.json:\n   ```bash\n   docker exec devbob-clean sh -c 'cat > /workspace/opencode.json << EOF\n{\n  \"mcp\": {\n    \"metabob\": {\n      \"type\": \"remote\",\n      \"url\": \"http://api-server:8080\",\n      \"enabled\": true\n    }\n  },\n  \"activity\": {\n    \"enabled\": true,\n    \"learningMode\": true\n  },\n  \"session\": {\n    \"boredomSystem\": {\n      \"enabled\": true,\n      \"idleThresholdMs\": 300000\n    }\n  }\n}\nEOF'\n   ```\n\n2. Verify file was created:\n   ```bash\n   docker exec devbob-clean cat /workspace/opencode.json\n   ```\n\n3. Validate JSON syntax:\n   ```bash\n   docker exec devbob-clean node -e \"JSON.parse(require('fs').readFileSync('/workspace/opencode.json', 'utf8')); console.log('Valid JSON')\" 2>&1\n   ```\n\n4. If creation fails, try alternative method:\n   ```bash\n   # Create locally and copy\n   echo '{\"mcp\":{\"metabob\":{\"type\":\"remote\",\"url\":\"http://api-server:8080\",\"enabled\":true}}}' > /tmp/opencode.json\n   docker cp /tmp/opencode.json devbob-clean:/workspace/\n   ```\n\nReport:\n- Configuration file created ✓/✗\n- File contents\n- Validation status",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "start-acp-server",
+      "subagent": "general",
+      "description": "Start ACP server on port 3000",
+      "dependencies": [
+        "create-opencode-config"
+      ],
+      "prompt": {
+        "template": "Start ACP server in devbob-clean container:\n\n1. Check if ACP server is already running:\n   ```bash\n   docker exec devbob-clean ps aux | grep \"opencode acp\" | grep -v grep && echo \"Already running\" || echo \"Not running\"\n   curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 && echo \"Port responding\" || echo \"Port not responding\"\n   ```\n\n2. Start ACP server in background:\n   ```bash\n   docker exec -d devbob-clean sh -c \"cd /workspace && opencode acp --port 3000 > /tmp/acp-server.log 2>&1\"\n   ```\n\n3. Wait for server to start:\n   ```bash\n   sleep 3\n   ```\n\n4. Verify server is running:\n   ```bash\n   docker exec devbob-clean ps aux | grep \"opencode acp\"\n   curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000\n   ```\n\n5. Check logs if server fails:\n   ```bash\n   docker exec devbob-clean cat /tmp/acp-server.log 2>/dev/null | tail -20\n   docker logs devbob-clean --tail 20\n   ```\n\n6. Alternative: Check container entrypoint\n   ```bash\n   docker inspect devbob-clean --format '{{.Config.Entrypoint}} {{.Config.Cmd}}'\n   ```\n\n7. If server won't start:\n   - Document the error\n   - Check if it's already in entrypoint\n   - Provide workaround options\n\nReport:\n- ACP server status\n- Port 3000 accessibility\n- Any errors or blockers",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify-fixes",
+      "subagent": "general",
+      "description": "Verify all fixes and generate configuration report",
+      "dependencies": [
+        "start-acp-server"
+      ],
+      "prompt": {
+        "template": "Verify all devbob container fixes:\n\n## Final Verification\n\n1. **Git Repository:**\n   ```bash\n   docker exec devbob-clean git -C /workspace status\n   echo \"Git repo: $(docker exec devbob-clean test -d /workspace/.git && echo '✓' || echo '✗')\"\n   ```\n\n2. **OpenCode Configuration:**\n   ```bash\n   echo \"opencode.json: $(docker exec devbob-clean test -f /workspace/opencode.json && echo '✓' || echo '✗')\"\n   docker exec devbob-clean cat /workspace/opencode.json | head -10\n   ```\n\n3. **ACP Server:**\n   ```bash\n   echo \"ACP process: $(docker exec devbob-clean ps aux | grep -q 'opencode acp' && echo '✓' || echo '✗')\"\n   echo \"Port 3000: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000)\"\n   ```\n\n4. **Diagnostic Tools:**\n   ```bash\n   echo \"git: $(docker exec devbob-clean which git > /dev/null 2>&1 && echo '✓' || echo '✗')\"\n   echo \"pgrep: $(docker exec devbob-clean which pgrep > /dev/null 2>&1 && echo '✓' || echo '✗')\"\n   echo \"netstat: $(docker exec devbob-clean which netstat > /dev/null 2>&1 && echo '✓' || echo '✗')\"\n   ```\n\n5. **Run validation script:**\n   ```bash\n   ./scripts/validate-docker-environment.sh 2>&1 | grep -A 20 \"DevBob Container\"\n   ```\n\n## Generate Report\n\nCreate detailed report in: test-results/devbob-container-fix-report.md\n\nInclude:\n- ✅ What was fixed\n- ⚠️ What still needs attention\n- ❌ What couldn't be fixed\n- 📝 Configuration details\n- 🔧 Manual steps if any required\n- 🚀 Next steps\n\nReport should have clear summary at top:\n```\n## DevBob Container Fix Summary\n\n**Status:** [FIXED / PARTIALLY FIXED / FAILED]\n\n### Fixed Issues\n- [x] Git repository initialized\n- [x] opencode.json created\n- [ ] ACP server running\n...\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "test-results/devbob-container-fix-report.md"
+        ],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-21T23:30:29.983Z",
+  "metadata": {}
+}

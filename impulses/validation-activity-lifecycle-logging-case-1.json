@@ -1,0 +1,86 @@
+{
+  "id": "validation-Activity Lifecycle Logging Specification-case-1",
+  "type": "memo",
+  "category": "validation-test-case",
+  "specificationName": "Activity Lifecycle Logging Specification",
+  "testCase": 1,
+  "description": "Simple activity execution with single task to verify all 8 lifecycle log patterns",
+  
+  "input": {
+    "templateId": "simple-file-analysis",
+    "variables": {
+      "targetFile": "README.md",
+      "operation": "analyze"
+    },
+    "reason": "Lifecycle logging validation - verify all 8 log patterns appear",
+    "method": "kubectl exec in fresh DevBob pod"
+  },
+  
+  "expectedOutput": {
+    "patterns": {
+      "activity_start": {
+        "regex": "Activity.*starting",
+        "description": "Activity initialization log",
+        "minOccurrences": 1,
+        "example": "Activity: Simple File Analysis starting"
+      },
+      "memory_init": {
+        "regex": "Memory agent initializing",
+        "description": "Memory agent starts gathering context",
+        "minOccurrences": 1,
+        "example": "Memory agent initializing"
+      },
+      "memory_complete": {
+        "regex": "Memory agent gathered.*impulses",
+        "description": "Memory agent completes with impulse count",
+        "minOccurrences": 1,
+        "example": "Memory agent gathered 3 impulses"
+      },
+      "task_start": {
+        "regex": "Task starting:",
+        "description": "Task execution begins",
+        "minOccurrences": 1,
+        "example": "Task starting: analyze-file"
+      },
+      "task_complete": {
+        "regex": "Task completed:",
+        "description": "Task execution completes with metrics",
+        "minOccurrences": 1,
+        "example": "Task completed: analyze-file"
+      },
+      "storage_write": {
+        "regex": "storage write confirmed",
+        "description": "Storage persistence confirmation",
+        "minOccurrences": 1,
+        "example": "storage write confirmed"
+      },
+      "git_commit": {
+        "regex": "Git commit created:",
+        "description": "Git commit for activity (if git enabled)",
+        "minOccurrences": 0,
+        "optional": true,
+        "example": "Git commit created: a1b2c3d"
+      },
+      "activity_complete": {
+        "regex": "Activity completed:",
+        "description": "Activity completion with full metrics",
+        "minOccurrences": 1,
+        "example": "Activity completed: Simple File Analysis"
+      }
+    },
+    "allPatternsPresent": true,
+    "requiredPatternCount": 7,
+    "optionalPatternCount": 1,
+    "totalExpectedPatterns": 8
+  },
+  
+  "validationMethod": {
+    "step1": "Execute activity in fresh DevBob pod via kubectl exec",
+    "step2": "Capture logs from pod with kubectl logs",
+    "step3": "Grep logs for each of 8 patterns",
+    "step4": "Count matches and verify >= minOccurrences for each",
+    "step5": "Return PASS if all required patterns found, FAIL otherwise"
+  },
+  
+  "budget": 2000
+}

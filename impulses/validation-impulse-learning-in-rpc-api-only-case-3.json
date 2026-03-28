@@ -1,0 +1,33 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-3",
+  "type": "memo",
+  "priority": "medium",
+  "budget": 500,
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case"
+  },
+  "metadata": {
+    "testCase": 3,
+    "description": "No calculateResponseQuality() in opencode"
+  },
+  "content": {
+    "input": {
+      "testType": "grep",
+      "config": {
+        "pattern": "calculateResponseQuality|calculateQuality|calculate_quality"
+      }
+    },
+    "expectedOutput": {
+      "pass": true,
+      "actual": {
+        "matchCount": 0
+      },
+      "expected": {
+        "function": "calculateResponseQuality",
+        "maxMatches": 0
+      },
+      "reason": "No calculateResponseQuality() found in opencode"
+    }
+  }
+}

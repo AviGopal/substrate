@@ -1,0 +1,25 @@
+{
+  "id": "harness-MCP-Architecture-Compliance-Apply-Ripple-Changes",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/mcp-architecture-compliance-ripple-changes-harness.ts"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "MCP Architecture Compliance - Apply Ripple Changes",
+    "purpose": "Validates all ripple changes applied for 100% MCP compliance",
+    "testCases": 8,
+    "validations": [
+      "No RpcHttpClient.selectTemplateVariant calls remain",
+      "TypeScript compilation succeeds",
+      "MCP compliance validator passes",
+      "Backend API connectivity",
+      "MetabobCLI.recommendActivities function exists",
+      "MetabobCLI.recommendImpulses function exists",
+      "TemplateSelector uses MetabobCLI.recommendActivities",
+      "ImpulseLearning.captureActivityLearning implemented"
+    ],
+    "usage": "bun run tests/validation-harnesses/mcp-architecture-compliance-ripple-changes-harness.ts"
+  }
+}

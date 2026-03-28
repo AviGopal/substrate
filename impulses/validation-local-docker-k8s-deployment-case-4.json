@@ -1,0 +1,19 @@
+{
+  "id": "validation-Local-Docker-Desktop-Kubernetes-Deployment-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Redis Resource Allocation Validation\n\nInput: Check redis local values configuration\n\nExpected Output:\n- Redis memory request: 512Mi (not 6Gi)\n- Redis persistence size: 8Gi (not 32Gi)\n- File: charts/redis/values/local.redis.values.yaml\n\nValidation:\n- Redis resources must be compatible with docker-desktop defaults (2-4Gi total)\n- 6Gi memory request would cause pod to be unschedulable\n- 512Mi is sufficient for local development and testing\n- 8Gi storage is appropriate for local workloads\n- Verifies enforcement task completed successfully",
+    "source": "validation test case"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 4,
+    "specification": "Local Docker Desktop Kubernetes Deployment",
+    "input": "charts/redis/values/local.redis.values.yaml",
+    "expectedOutput": {
+      "memory": "512Mi",
+      "storage": "8Gi"
+    }
+  }
+}

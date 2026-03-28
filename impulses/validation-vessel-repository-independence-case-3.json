@@ -1,0 +1,25 @@
+{
+  "id": "validation-vessel-repository-independence-case-3",
+  "type": "memo",
+  "description": "Test case: No cross-vessel imports from Dashboard to other vessels",
+  "content": {
+    "testName": "No imports from Dashboard in other vessels",
+    "input": {
+      "searchPattern": "from.*activity-dashboard|import.*activity-dashboard",
+      "searchPaths": [
+        "repos/metabob-activity-api",
+        "repos/minibob"
+      ],
+      "excludePaths": ["node_modules", "dist", "build", ".next"]
+    },
+    "expectedOutput": {
+      "matchCount": 0,
+      "pass": true,
+      "reason": "No vessel should import code from Dashboard - vessels must be independent"
+    }
+  },
+  "metadata": {
+    "category": "architectural-boundary",
+    "severity": "CRITICAL"
+  }
+}

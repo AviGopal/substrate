@@ -1,0 +1,50 @@
+{
+  "id": "harness-surrealdb-primary-redis-cache",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "filePath": "tests/validation-harnesses/surrealdb-primary-redis-cache-harness.ts",
+    "source": "validation"
+  },
+  "specification": "surrealdb-primary-redis-cache",
+  "description": "Validation harness that verifies SurrealDB primary storage with Redis cache-aside pattern",
+  "testCases": [
+    "validation-surrealdb-primary-redis-cache-case-1",
+    "validation-surrealdb-primary-redis-cache-case-2",
+    "validation-surrealdb-primary-redis-cache-case-3",
+    "validation-surrealdb-primary-redis-cache-case-4",
+    "validation-surrealdb-primary-redis-cache-case-5",
+    "validation-surrealdb-primary-redis-cache-case-6"
+  ],
+  "features": [
+    "Mock Redis and SurrealDB clients for isolated testing",
+    "Operation timestamp tracking for write order verification",
+    "Cache-aside pattern validation",
+    "Data durability testing (Redis flush recovery)",
+    "Cache invalidation verification",
+    "No LLM required - deterministic PASS/FAIL based on operation sequences"
+  ],
+  "usage": {
+    "import": "import { runValidation } from './tests/validation-harnesses/surrealdb-primary-redis-cache-harness';",
+    "run": "const result = runValidation();",
+    "cli": "npx tsx tests/validation-harnesses/surrealdb-primary-redis-cache-harness.ts"
+  },
+  "expectedResults": {
+    "beforeEnforcement": {
+      "overallPass": false,
+      "failures": [
+        "Template Creation Write Order - Redis written without SurrealDB",
+        "Template Read Cold Cache - No SurrealDB fallback",
+        "Data Durability - Templates lost after Redis flush",
+        "Execution Recording Write Order - Redis updated before SurrealDB",
+        "Cache Invalidation - Cache not invalidated on updates"
+      ]
+    },
+    "afterEnforcement": {
+      "overallPass": true,
+      "allTestsPass": true
+    }
+  },
+  "budget": 2000,
+  "created_at": "2026-02-28T03:15:00Z"
+}

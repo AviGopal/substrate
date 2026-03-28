@@ -1,0 +1,23 @@
+{
+  "id": "validation-activity-template-query-filtering-case-3",
+  "type": "memo",
+  "budget": 1000,
+  "testCase": {
+    "name": "User 1 Own Template Visibility",
+    "input": {
+      "action": "GET /v2/activities/templates",
+      "user": "User 1 (devbob-test@local.dev)",
+      "org_id": "3135883c-8be3-4b2b-bdd8-dbe2e427358f",
+      "templateToCheck": "org-isolation-test-<timestamp> (created by User 1)"
+    },
+    "expectedOutput": {
+      "templates": "array",
+      "ownOrgTemplateVisible": true,
+      "templateDetails": {
+        "scope": "org",
+        "org_id": "3135883c-8be3-4b2b-bdd8-dbe2e427358f"
+      }
+    },
+    "assertion": "User 1 can see their own org-scoped template"
+  }
+}

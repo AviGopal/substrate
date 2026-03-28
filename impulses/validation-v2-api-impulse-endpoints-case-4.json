@@ -1,0 +1,16 @@
+{
+  "id": "validation-v2-api-impulse-endpoints-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 4: Multi-Tenant Isolation - Cannot Retrieve from Different Project\n\nInput:\n  1. Create impulse in project-a-isolation with tokenA\n  2. Try to retrieve with tokenB (different project)\n\nExpected Output:\n  status: 404\n  error: Impulse not found\n  isolationEnforced: true",
+    "source": "validation harness"
+  },
+  "budget": 500,
+  "scope": "session",
+  "metadata": {
+    "specification": "v2-api-impulse-endpoints",
+    "testCase": 4,
+    "validation": "multi-tenant-isolation"
+  }
+}

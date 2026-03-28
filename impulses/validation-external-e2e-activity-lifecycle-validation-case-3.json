@@ -1,0 +1,48 @@
+{
+  "testCaseId": "validation-external-e2e-activity-lifecycle-validation-case-3",
+  "type": "memo",
+  "description": "E2E validation with strict requirements (all fields, low error tolerance)",
+  "input": {
+    "testCaseId": "case-3-strict-validation",
+    "description": "Strict E2E validation with comprehensive field checks",
+    "surrealUrl": "http://localhost:8000",
+    "surrealUser": "root",
+    "surrealPass": "root",
+    "surrealNs": "metabob",
+    "surrealDb": "devbob",
+    "opencodeBin": "repos/metabob-opencode/dist/opencode-linux-x64/bin/opencode",
+    "expectedTemplateCount": 1,
+    "expectedExecutionFields": [
+      "id",
+      "template_id",
+      "status",
+      "agent_id",
+      "variables",
+      "start_time",
+      "end_time",
+      "duration_ms",
+      "cost",
+      "tokens",
+      "created_at"
+    ]
+  },
+  "expectedOutput": {
+    "pass": true,
+    "actual": {
+      "phase1": {
+        "templateCount": ">= 1",
+        "hasRequiredFields": true
+      },
+      "phase2": {
+        "executionRecordFound": true,
+        "executionHasRequiredFields": true,
+        "templateIdMatches": true
+      },
+      "phase3": {
+        "errorCount": "0",
+        "hasLifecycleIndicators": true
+      }
+    }
+  },
+  "budget": 2000
+}

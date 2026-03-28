@@ -1,0 +1,110 @@
+{
+  "id": "validation-multi-task-activity-tracking-case-1",
+  "type": "memo",
+  "specificationName": "Multi-Task Activity Tracking",
+  "testCase": 1,
+  "description": "Execute 7-task activity (trace-data-flow-single-feature) and verify comprehensive task-level tracking",
+  "timestamp": "2026-03-11T04:40:00Z",
+  "input": {
+    "templateId": "trace-data-flow-single-feature",
+    "variables": {
+      "featureName": "Multi-Task Activity Tracking Validation"
+    },
+    "reason": "Validate multi-task activity tracking specification compliance",
+    "expectedTaskCount": 7,
+    "timeout": 300,
+    "verifyStorage": true
+  },
+  "expectedOutput": {
+    "pass": true,
+    "logs": {
+      "taskStartCount": 7,
+      "taskCompleteCount": 7,
+      "expectedTasks": 7,
+      "patterns": {
+        "taskStart": {
+          "pattern": "Task starting:",
+          "description": "Task execution start log",
+          "found": true,
+          "occurrences": 7,
+          "expected": 7,
+          "pass": true
+        },
+        "taskComplete": {
+          "pattern": "Task completed:",
+          "description": "Task execution complete log with metrics",
+          "found": true,
+          "occurrences": 7,
+          "expected": 7,
+          "pass": true
+        },
+        "activityStart": {
+          "pattern": "Activity.*starting",
+          "description": "Activity initialization log",
+          "found": true,
+          "occurrences": 1,
+          "expected": 1,
+          "pass": true
+        },
+        "activityComplete": {
+          "pattern": "Activity completed:",
+          "description": "Activity completion log",
+          "found": true,
+          "occurrences": 1,
+          "expected": 1,
+          "pass": true
+        }
+      }
+    },
+    "activityRecord": {
+      "recordFound": true,
+      "sessionsSpawned": 7,
+      "expectedSessions": 7,
+      "hasTaskMetrics": true,
+      "sessionsWithDuration": 7,
+      "sessionsWithCost": 7,
+      "sessionsWithTaskId": 7,
+      "pass": true
+    },
+    "errors": [],
+    "summary": "✅ PASS: Multi-Task Activity Tracking is compliant. All 7 tasks emitted proper lifecycle logs and activity record has complete per-task metrics."
+  },
+  "validationPoints": [
+    {
+      "checkpoint": "Task Start Logs",
+      "expected": "7 'Task starting:' logs with taskId, description, activityId, subagent, dependencies",
+      "verification": "grep -c 'Task starting:' logfile"
+    },
+    {
+      "checkpoint": "Task Complete Logs",
+      "expected": "7 'Task completed:' logs with taskId, description, activityId, attempts, duration, cost, usedTrailblazing, success",
+      "verification": "grep -c 'Task completed:' logfile"
+    },
+    {
+      "checkpoint": "Activity Record - Sessions Spawned",
+      "expected": "executionEvidence.sessionsSpawned array with 7 entries",
+      "verification": "jq '.executionEvidence.sessionsSpawned | length' activity.json"
+    },
+    {
+      "checkpoint": "Activity Record - Task Metrics",
+      "expected": "Each sessionsSpawned entry has: sessionID, taskId, agentType, startTime, endTime, messageCount, toolCallCount, duration, cost",
+      "verification": "jq '.executionEvidence.sessionsSpawned[] | select(.duration and .cost and .taskId)' activity.json"
+    }
+  ],
+  "relatedFiles": [
+    "tests/validation-harnesses/multi-task-activity-tracking-harness.ts",
+    "templates/data-flow/trace-data-flow-single-feature.json",
+    "repos/metabob-opencode/packages/opencode/src/tool/activity.ts",
+    "repos/metabob-opencode/packages/opencode/src/session/activity.ts"
+  ],
+  "usage": {
+    "budget": 1000,
+    "purpose": "Historical test case for multi-task activity tracking validation. Can be run without LLM.",
+    "consumers": [
+      "Validation harness",
+      "CI/CD quality gates",
+      "Regression testing",
+      "Specification compliance checks"
+    ]
+  }
+}

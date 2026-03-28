@@ -1,0 +1,234 @@
+{
+  "name": "vessel-feature-complete",
+  "description": "Complete feature implementation workflow for a vessel with tests, documentation, quality checks, and PR creation",
+  "category": "feature",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Analyze feature requirements and check for existing similar code",
+      "dependencies": [],
+      "prompt": {
+        "template": "You are implementing the feature: {{featureName}}\n\nDescription: {{featureDescription}}\n\nFirst, search for similar existing functionality:\n1. Use metabob_search_codebase_issues to find related code\n2. Read relevant files to understand patterns\n3. Identify what can be reused vs. what needs to be new\n4. Document your analysis\n\nThen create an implementation plan:\n- List files that need changes\n- Identify new files to create\n- Note any breaking changes\n- Estimate complexity\n\nOutput: A clear implementation plan with file list and approach.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "featureName",
+            "type": "string",
+            "required": true,
+            "description": "Name of the feature to implement"
+          },
+          {
+            "name": "featureDescription",
+            "type": "string",
+            "required": true,
+            "description": "Detailed description of what the feature should do"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-2",
+      "subagent": "general",
+      "description": "Implement the feature with proper error handling and logging",
+      "dependencies": ["task-1"],
+      "prompt": {
+        "template": "Implement the feature: {{featureName}}\n\nFollow the implementation plan from task-1.\n\nRequirements:\n1. Write clean, readable code following project conventions\n2. Add proper error handling\n3. Include logging for important operations\n4. Handle edge cases\n5. Make it extensible for future changes\n\nBest practices:\n- Follow existing code patterns in this vessel\n- Use type hints (Python) or TypeScript types\n- Keep functions focused and small\n- Extract reusable logic into helpers\n\nAfter implementation:\n1. Run metabob_search_codebase_issues to find issues in your changes\n2. Fix all HIGH severity issues immediately\n3. Document why you made key design decisions using metabob_annotate_component",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": ["TODO", "FIXME", "XXX"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-3",
+      "subagent": "general",
+      "description": "Write comprehensive tests for the feature",
+      "dependencies": ["task-2"],
+      "prompt": {
+        "template": "Write comprehensive tests for: {{featureName}}\n\nTest requirements:\n1. Unit tests for all functions/methods\n2. Integration tests for the full feature flow\n3. Edge case tests (empty input, invalid data, etc.)\n4. Error handling tests\n5. At least 80% code coverage for new code\n\nTest structure:\n- Use descriptive test names (test_should_do_X_when_Y)\n- Use fixtures/mocks appropriately\n- Test both happy path and error cases\n- Include docstrings explaining what's being tested\n\nRun the tests:\n1. Execute the test suite\n2. Verify all tests pass\n3. Check coverage report\n4. Fix any failures",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-4",
+      "subagent": "general",
+      "description": "Update documentation and add inline comments",
+      "dependencies": ["task-3"],
+      "prompt": {
+        "template": "Update documentation for: {{featureName}}\n\nDocumentation tasks:\n1. Add/update function docstrings with:\n   - What the function does\n   - Parameters and types\n   - Return value and type\n   - Raises (errors that can be thrown)\n   - Examples if complex\n\n2. Update README or relevant docs:\n   - Add feature to feature list\n   - Provide usage examples\n   - Note any breaking changes\n   - Update API documentation\n\n3. Add inline comments:\n   - Explain WHY, not WHAT\n   - Document non-obvious decisions\n   - Explain complex algorithms\n\n4. Update CHANGELOG:\n   - Add entry under 'Unreleased' section\n   - Use format: '- feat: {{featureName}} - {{featureDescription}}'",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-5",
+      "subagent": "general",
+      "description": "Run quality checks and fix all critical issues",
+      "dependencies": ["task-4"],
+      "prompt": {
+        "template": "Run quality checks for: {{featureName}}\n\n1. Metabob quality scan:\n   - Run metabob_get_priority_issues\n   - Fix all HIGH severity issues in your changes\n   - Fix MEDIUM issues if time permits\n   - For each fix, call metabob_mark_problem_complete with detailed notes\n\n2. Impact analysis:\n   - Use metabob_analyze_change_impact on changed functions\n   - Check if changes affect other vessels: {{affectedVessels}}\n   - If yes, note what needs coordination\n\n3. Related changes check:\n   - Use metabob_suggest_related_changes\n   - Review suggested files for similar patterns\n   - Update them if the same pattern should be applied\n\n4. Code annotations:\n   - Use metabob_annotate_component on 3-5 key components\n   - Document WHY they were designed this way\n   - Note alternatives considered\n   - Explain tradeoffs made",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "affectedVessels",
+            "type": "array",
+            "required": false,
+            "description": "List of vessels affected by this change",
+            "default": []
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-6",
+      "subagent": "general",
+      "description": "Create organized git commits with descriptive messages",
+      "dependencies": ["task-5"],
+      "prompt": {
+        "template": "Create git commits for: {{featureName}}\n\nCommit strategy:\n1. Organize changes into logical commits:\n   - Implementation commit\n   - Tests commit\n   - Documentation commit\n   - (Optional) Refactoring commit if you improved existing code\n\n2. Commit message format:\n   ```\n   type(scope): short description\n   \n   Longer explanation:\n   - Why this change was needed\n   - What alternatives were considered\n   - Any important implementation details\n   ```\n\n3. Types:\n   - feat: New feature\n   - test: Adding tests\n   - docs: Documentation\n   - refactor: Code restructuring\n\n4. Scope: Use vessel name (e.g., 'api', 'cli', 'opencode')\n\n5. Example:\n   ```\n   feat(api): add user profile endpoints\n   \n   Implements GET/PUT/DELETE for /api/users/:id/profile.\n   Uses existing auth middleware for access control.\n   Includes validation for profile fields.\n   ```\n\nCreate the commits now using git add and git commit.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": ["git log --oneline -5"]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "task-7",
+      "subagent": "general",
+      "description": "Create pull request if requested",
+      "dependencies": ["task-6"],
+      "prompt": {
+        "template": "{{#if createPR}}Create a pull request for: {{featureName}}\n\n1. Ensure branch is up to date:\n   - git fetch origin develop\n   - Rebase if needed: git rebase origin/develop\n   - Resolve any conflicts\n\n2. Push branch:\n   - git push origin HEAD\n\n3. Create PR using gh CLI:\n   ```bash\n   gh pr create \\\n     --title \"feat: {{featureName}}\" \\\n     --body \"$(cat <<'EOF'\n   ## Summary\n   {{featureDescription}}\n   \n   ## Changes\n   - Implemented {{featureName}} functionality\n   - Added comprehensive tests (unit + integration)\n   - Updated documentation and examples\n   - Fixed all HIGH severity code quality issues\n   \n   ## Testing\n   - ✓ All existing tests pass\n   - ✓ New tests added with 80%+ coverage\n   - ✓ Manually tested in development environment\n   \n   ## Quality Checks\n   - ✓ No HIGH severity Metabob issues\n   - ✓ Code reviewed with metabob_analyze_change_impact\n   - ✓ Design decisions documented with annotations\n   \n   {{#if affectedVessels}}\n   ## Affected Vessels\n   This change may affect: {{affectedVessels}}\n   Coordination activities may be needed.\n   {{/if}}\n   \n   ## Checklist\n   - [x] Tests pass\n   - [x] Documentation updated\n   - [x] Commit messages follow convention\n   - [x] No merge conflicts with develop\n   EOF\n   )\" \\\n     --base develop\n   ```\n\n4. Output the PR URL\n{{else}}Skipping PR creation (createPR=false)\n\nThe feature is complete and committed. To create a PR later:\n```bash\ngit push origin HEAD\ngh pr create --base develop\n```\n{{/if}}",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "createPR",
+            "type": "boolean",
+            "required": false,
+            "description": "Whether to create a PR automatically",
+            "default": true
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      {
+        "type": "git",
+        "description": "Verify git repository is clean or on feature branch",
+        "command": "git status --porcelain | wc -l"
+      },
+      {
+        "type": "dependencies",
+        "description": "Check metabob CLI is available",
+        "command": "which metabob-cli"
+      }
+    ],
+    "postChecks": [
+      {
+        "type": "git",
+        "description": "Verify commits were created",
+        "command": "git log --oneline -5"
+      },
+      {
+        "type": "tests",
+        "description": "Verify all tests pass",
+        "command": "echo 'Tests validated during execution'"
+      }
+    ],
+    "qualityGates": [
+      {
+        "name": "no-high-severity-issues",
+        "description": "No HIGH severity Metabob issues in changes",
+        "threshold": 0
+      },
+      {
+        "name": "test-coverage",
+        "description": "At least 80% test coverage for new code",
+        "threshold": 80
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}

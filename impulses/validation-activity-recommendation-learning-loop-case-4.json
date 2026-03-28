@@ -1,0 +1,39 @@
+{
+  "id": "validation-Activity Recommendation and Learning Loop End-to-End Validation-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testName": "Graceful Degradation: Backend Unavailable Falls Back to Local Templates",
+      "input": {
+        "scenario": "Backend api.metabob.local is temporarily unreachable",
+        "action": "Call metabob_recommend_activities MCP tool",
+        "request": {
+          "task_description": "Add REST endpoint for user management",
+          "category": "feature",
+          "limit": 5
+        }
+      },
+      "expectedOutput": {
+        "mcp_tool_returns": "empty array []",
+        "opencode_behavior": "Falls back to stable template selection",
+        "no_errors_thrown": true,
+        "user_experience": "Degraded but functional (uses local templates without Thompson Sampling)"
+      },
+      "validationCriteria": [
+        "MCP tool handles backend failure gracefully",
+        "Returns empty array instead of throwing error",
+        "OpenCode template-selector.ts detects empty array",
+        "Falls back to stable template (e.g., most commonly used)",
+        "User can still execute activities",
+        "Learning loop disabled temporarily but recovers when backend returns"
+      ]
+    }
+  },
+  "budget": 1000,
+  "metadata": {
+    "specification": "Activity Recommendation and Learning Loop End-to-End Validation",
+    "testCase": 4,
+    "purpose": "Verify graceful degradation when backend unavailable"
+  }
+}

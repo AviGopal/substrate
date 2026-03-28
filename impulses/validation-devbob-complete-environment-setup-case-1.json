@@ -1,0 +1,25 @@
+{
+  "id": "validation-devbob-complete-environment-setup-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "source": "test-case",
+    "content": {
+      "testName": "Pod Running (not CrashLoopBackOff)",
+      "input": {
+        "command": "kubectl get pod -n metabob <POD_NAME> -o jsonpath='{.status.phase}'"
+      },
+      "expectedOutput": {
+        "phase": "Running",
+        "containerState": "running",
+        "noCrash": true
+      }
+    }
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 1,
+    "category": "pod-status",
+    "criticalPath": true
+  }
+}

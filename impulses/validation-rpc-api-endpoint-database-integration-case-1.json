@@ -1,0 +1,21 @@
+{
+  "id": "validation-rpc-api-endpoint-database-integration-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"id\": \"validation-rpc-api-endpoint-database-integration-case-1\",\n  \"name\": \"Create Template - POST /v2/activities/templates\",\n  \"input\": {\n    \"method\": \"POST\",\n    \"endpoint\": \"/v2/activities/templates\",\n    \"data\": {\n      \"name\": \"validation-test-template\",\n      \"description\": \"Test template for validation\",\n      \"category\": \"feature\",\n      \"tasks\": [\n        {\n          \"id\": \"task-1\",\n          \"description\": \"Test task\",\n          \"prompt\": {\n            \"template\": \"Test prompt\"\n          },\n          \"subagent\": \"general\"\n        }\n      ],\n      \"org_id\": \"test-org\",\n      \"project_id\": \"test-project\",\n      \"scope\": \"project\"\n    }\n  },\n  \"expectedOutput\": {\n    \"statusCode\": 201,\n    \"responseSchema\": {\n      \"variant_id\": \"string\",\n      \"name\": \"string\",\n      \"category\": \"string\",\n      \"tasks\": \"array\"\n    },\n    \"validations\": [\n      \"Response is valid JSON\",\n      \"variant_id is present and not null\",\n      \"No RecordID serialization errors\"\n    ]\n  }\n}",
+    "source": "validation-harness"
+  },
+  "priority": "high",
+  "budget": 1000,
+  "metadata": {
+    "specification": "rpc-api-endpoint-database-integration",
+    "category": "validation-test-case",
+    "testName": "Create Template - POST /v2/activities/templates",
+    "endpoint": "/v2/activities/templates",
+    "method": "POST",
+    "expectedStatus": 201,
+    "criticalTest": false
+  },
+  "createdAt": "2026-03-03T11:05:11.231Z"
+}

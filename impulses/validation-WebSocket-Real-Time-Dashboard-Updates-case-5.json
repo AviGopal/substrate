@@ -1,0 +1,37 @@
+{
+  "id": "validation-WebSocket-Real-Time-Dashboard-Updates-case-5",
+  "type": "memo",
+  "testCase": "multi-client",
+  "description": "Verify events broadcast to all connected clients simultaneously",
+  "input": {
+    "testCase": "multi-client",
+    "apiUrl": "ws://localhost:8080/ws",
+    "timeout": 10000
+  },
+  "expectedOutput": {
+    "clientsConnected": 3,
+    "clientsReceivedEvents": 3,
+    "eventsPerClient": "all clients receive same events"
+  },
+  "validationCriteria": [
+    "3 WebSocket clients connect successfully",
+    "All clients authenticate independently",
+    "Events broadcast to all connected clients",
+    "All clients receive the same events",
+    "No event loss or duplication per client",
+    "Event order consistent across clients"
+  ],
+  "broadcastStrategy": {
+    "method": "iterate clients Set",
+    "send": "ws.send(JSON.stringify(message))",
+    "filtering": "only authenticated clients",
+    "errorHandling": "remove failed clients from Set"
+  },
+  "passingConditions": {
+    "clientsConnected": 3,
+    "allClientsAuthenticated": true,
+    "allClientsReceivedEvents": true,
+    "eventConsistency": true,
+    "noEventLoss": true
+  }
+}

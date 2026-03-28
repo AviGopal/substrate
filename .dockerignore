@@ -1,0 +1,97 @@
+# Git directories
+.git/
+.github/
+
+# Node modules (will be installed in container)
+node_modules/
+**/node_modules/
+
+# Build artifacts
+dist/
+build/
+*.log
+*.tmp
+.cache/
+tmp/
+
+# Test artifacts and outputs
+test-results/
+output/
+proof-logs/
+coverage/
+
+# Development files
+.env*
+!.env.devbob.example
+*.local
+.vscode/
+.idea/
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Archives and backups
+.archive/
+*.tar.gz
+*.zip
+*.bak
+
+# Logs
+logs/
+*.log
+
+# Test files (reduce context size)
+test-*.ts
+test-*.js
+test-*.sh
+test-*.py
+test-*.mjs
+
+# Converted templates (managed separately)
+.converted-templates/
+.converted-templates-v2/
+
+# Step library POC (not needed in production)
+step-library-poc/
+
+# Example repos (large, not needed)
+# repos/  # Commented out - repos are needed for devbob build
+# Allow specific repos needed for devbob container build:
+# - repos/metabob-cli (Python MCP tools)
+# - repos/metabob-opencode (OpenCode standalone binary)
+# - repos/metabob-proto (Shared TypeScript types)
+# All other repos/ subdirectories will be excluded by default
+repos/*
+!repos/metabob-cli/
+!repos/metabob-opencode/
+!repos/metabob-proto/
+!repos/metabob-rpc-api/
+examples/
+
+# SQL dumps
+sql/
+
+# Slack bot test
+slack-bot-test/
+
+# Helm charts (deployed separately)
+helm/
+
+# Scripts (most not needed in container)
+scripts/
+!scripts/fix-tmp-permissions.sh
+
+# Activity specs (handled by activity system)
+.activity-specs/
+
+# Session summaries and reports
+SESSION_*.md
+*_SUMMARY.md
+*_REPORT.md
+*_ANALYSIS.md
+DEPLOYMENT_*.md
+CONFLICT_*.json
+ENFORCEMENT_*.json
+RIPPLE_*.json

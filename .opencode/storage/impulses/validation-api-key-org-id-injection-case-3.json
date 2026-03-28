@@ -1,0 +1,29 @@
+{
+  "id": "validation-api-key-org-id-injection-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Dashboard org-scoped Query\n\nThis test verifies that the dashboard endpoint GET /auth/orgs/{org_id}/activity returns only the executions for the specified organization, enforcing multi-tenant isolation.",
+    "source": "validation-harness"
+  },
+  "budget": 1000,
+  "testCase": {
+    "name": "Dashboard org-scoped Query",
+    "input": {
+      "method": "GET",
+      "endpoint": "/auth/orgs/d98c6120-96a8-41ff-b0fe-835c0cc0d454/activity?limit=50&offset=0",
+      "headers": {
+        "Authorization": "Bearer {JWT_TOKEN}",
+        "Content-Type": "application/json"
+      }
+    },
+    "expectedOutput": {
+      "status": 200,
+      "activityCount": ">0",
+      "hasMore": false,
+      "total": ">0",
+      "allHaveCorrectOrgId": true,
+      "message": "Dashboard returns org-scoped activities"
+    }
+  }
+}

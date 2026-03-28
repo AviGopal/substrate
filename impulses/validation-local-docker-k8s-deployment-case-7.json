@@ -1,0 +1,20 @@
+{
+  "id": "validation-Local-Docker-Desktop-Kubernetes-Deployment-case-7",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 7: Service Exposure Validation\n\nInput: kubectl get svc -n metabob\n\nExpected Output:\n- At least 4 services deployed\n- At least 1 service with type NodePort (for local access)\n- Services include:\n  - config\n  - redis (redis-master)\n  - metabob-rpc-api\n  - metabob-dashboard\n\nValidation:\n- Verifies services are created and exposed\n- Confirms NodePort services are accessible on localhost\n- Tests service discovery (redis URI should resolve)\n- Validates service type configuration (NodePort for local, ClusterIP for others)\n\nNote: NodePort services allow access via http://localhost:<nodePort>",
+    "source": "validation test case"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 7,
+    "specification": "Local Docker Desktop Kubernetes Deployment",
+    "input": "kubectl get svc -n metabob",
+    "expectedOutput": {
+      "totalServices": ">= 4",
+      "nodePortServices": ">= 1",
+      "services": "config, redis, rpc-api, dashboard"
+    }
+  }
+}

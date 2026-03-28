@@ -1,277 +1,94 @@
 {
   "id": "debug-activity-self-contained",
   "name": "Debug Activity Execution (Self-Contained)",
-  "version": 2,
-  "description": "Debug failed activity executions using backend API without requiring log files or local state - fully self-contained",
+  "version": 3,
+  "description": "Debug failed activity executions using activity_error_inspector MCP tool - follows architecture compliance",
   "category": "infrastructure",
   "contextRequirements": [],
+  "variant_id": "debug-activity-self-contained",
+  "activity_id": "debug-activity-self-contained",
   "tasks": [
     {
-      "id": "fetch-execution-details",
+      "id": "inspect-execution-errors",
       "subagent": "general",
-      "description": "Fetch execution details from backend API using execution ID",
+      "description": "Use activity_error_inspector tool to get comprehensive error analysis",
       "dependencies": [],
-      "impulse_refs": [],
       "prompt": {
-        "template": "Fetch details for a failed activity execution from the backend.\n\n**Execution ID**: {{executionId}}\n\n**Your Task**: Use available tools to query the backend API for execution details.\n\n**Information to Gather**:\n\n1. **Execution Metadata**:\n   - Activity template ID and name\n   - Start time and end time\n   - Status (failed, timeout, error)\n   - Total duration\n   - Total cost\n\n2. **Task Execution Details**:\n   - Which tasks completed successfully?\n   - Which task failed?\n   - Task execution order\n   - Per-task duration and token usage\n\n3. **Failure Information**:\n   - Error messages\n   - Stack traces (if available)\n   - Agent output before failure\n   - Validation failures (if any)\n\n4. **Context Information**:\n   - Variables passed to activity\n   - Working directory\n   - Environment variables\n   - Input impulses (if any)\n\n**API Queries**:\n\nYou may need to query these endpoints (adapt to actual API):\n- `GET /v2/activities/executions/{{executionId}}` - Execution summary\n- `GET /v2/activities/executions/{{executionId}}/tasks` - Task details\n- `GET /v2/activities/executions/{{executionId}}/logs` - Execution logs\n- `GET /v2/activities/executions/{{executionId}}/errors` - Error details\n\n**Output Format**:\n\nCreate `EXECUTION_DETAILS.md` with this structure:\n\n```markdown\n# Execution Details: {{executionId}}\n\n## Summary\n- **Template**: [template-name] (template-id)\n- **Status**: FAILED\n- **Started**: [timestamp]\n- **Ended**: [timestamp]\n- **Duration**: X minutes Y seconds\n- **Cost**: $X.XX\n\n## Task Execution Timeline\n\n1. ✅ **task-1**: Completed (Xs, $X.XX)\n2. ✅ **task-2**: Completed (Xs, $X.XX)\n3. ❌ **task-3**: FAILED (Xs, $X.XX)\n4. ⊗ **task-4**: Not executed (blocked by task-3 failure)\n\n## Failure Details\n\n### Failed Task: task-3\n\n**Error Message**:\n```\n[Error message from backend]\n```\n\n**Stack Trace**:\n```\n[Stack trace if available]\n```\n\n**Agent Output** (last 500 chars):\n```\n[Agent's response before failure]\n```\n\n**Validation Failures**:\n- ❌ Required file not found: `output.json`\n- ❌ Pattern not found: \"Success\"\n- ✅ Command passed: `jq empty`\n\n## Variables\n\n```json\n{\n  \"var1\": \"value1\",\n  \"var2\": \"value2\"\n}\n```\n\n## Environment\n\n- Working directory: /tmp/...\n- Environment variables: [list]\n- Input impulses: [count] impulses\n\n## Raw API Response\n\n<details>\n<summary>Full execution data (JSON)</summary>\n\n```json\n[Full JSON response from API]\n```\n\n</details>\n```\n\n**Write the EXECUTION_DETAILS.md file now.**",
-        "max_tokens": 10000,
-        "compression_strategy": "filter",
+        "template": "Debug a failed activity execution using the MCP-provided activity_error_inspector tool.\n\n**Execution ID**: {{executionId}}\n\n**Your Task**: Use the activity_error_inspector tool to analyze the failure.\n\n**CRITICAL**: You MUST use the `activity_error_inspector` tool. Do NOT attempt to call APIs directly.\n\n**Steps**:\n\n1. Call activity_error_inspector with:\n   - activityId: {{executionId}}\n   - includeSessionLogs: true\n   - includeToolCalls: true\n   - maxMessagesPerTask: 30\n\n2. The tool will return:\n   - Activity summary (status, template, timing, cost)\n   - Task-level error breakdown\n   - Session logs and tool call traces\n   - Recommendations for fixes\n\n3. Create a file called `EXECUTION_ANALYSIS.md` that summarizes:\n   - What failed (which task, what error)\n   - Why it failed (root cause analysis)\n   - How to fix it (concrete recommendations)\n   - Related patterns (if this is a known issue)\n\n**Output Format**:\n\n```markdown\n# Execution Analysis: {{executionId}}\n\n## Summary\n- **Template**: [name]\n- **Status**: [status]\n- **Failed Task**: [task-id]\n- **Error Type**: [validation/execution/timeout]\n\n## Root Cause\n[Clear explanation of why it failed]\n\n## Error Details\n```\n[Error message from inspector]\n```\n\n## Recommendations\n1. [Specific fix]\n2. [Another fix]\n3. [Testing strategy]\n\n## Tool Calls\n[Summary of what tools were called and what failed]\n```\n\n**Remember**: Use activity_error_inspector, not curl or API calls.",
         "variables": [
           {
             "name": "executionId",
             "type": "string",
             "required": true,
-            "description": "Execution ID from failed activity (shown in error messages)"
+            "description": "Activity execution ID to debug"
           }
         ]
       },
       "validation": {
-        "required_files": ["EXECUTION_DETAILS.md"],
-        "required_patterns": ["## Summary", "## Task Execution Timeline", "## Failure Details"],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 2,
-        "strategy": "simple",
-        "fallback_prompt": ""
-      },
-      "metrics": {
-        "success_rate": 0,
-        "avg_tokens": 0,
-        "avg_duration": 0,
-        "common_failures": []
-      },
-      "tools": {
-        "required": ["write", "bash"],
-        "optional": ["read"],
-        "disabled": []
-      }
-    },
-    {
-      "id": "analyze-failure-patterns",
-      "subagent": "general",
-      "description": "Analyze failure patterns and identify root cause",
-      "dependencies": ["fetch-execution-details"],
-      "impulse_refs": [],
-      "prompt": {
-        "template": "Analyze the execution failure to identify root cause and patterns.\n\n**Input**: Read EXECUTION_DETAILS.md\n\n**Your Task**: Perform root cause analysis\n\n**Analysis Framework**:\n\n1. **Symptom Identification**:\n   - What exactly failed? (validation, exception, timeout)\n   - At what stage? (which task, which step)\n   - What was expected vs. what happened?\n\n2. **Root Cause Categories**:\n\n   **A. Template Design Issues**:\n   - ❌ Insufficient token budget (agent ran out of tokens mid-response)\n   - ❌ Incorrect validation rules (checking for wrong patterns)\n   - ❌ Missing dependencies (task depends on output from non-dependent task)\n   - ❌ Vague prompt (agent unclear what to do)\n   - ❌ Wrong agent assignment (task requires tool agent but uses general)\n\n   **B. Input Issues**:\n   - ❌ Missing required variables\n   - ❌ Invalid variable values (wrong type, out of range)\n   - ❌ Insufficient context (needed impulses not provided)\n\n   **C. Environment Issues**:\n   - ❌ File permissions\n   - ❌ Missing dependencies (tools not installed)\n   - ❌ Network issues (API calls failed)\n   - ❌ Disk space\n\n   **D. Execution Issues**:\n   - ❌ Timeout (task took too long)\n   - ❌ Resource limits (memory, CPU)\n   - ❌ Concurrent execution conflicts\n\n3. **Pattern Recognition**:\n   - Has this task failed before? (query backend for similar failures)\n   - Is this a known issue? (check learning history)\n   - Is this template-specific or general?\n\n4. **Impact Assessment**:\n   - Which tasks were blocked by this failure?\n   - What outputs were not produced?\n   - Can execution be resumed or must restart?\n\n**Root Cause Analysis Steps**:\n\n```bash\n# 1. Check if this is a common failure\n# Query backend for similar failures (if API available)\ncurl -s http://localhost:8082/v2/activities/executions?status=failed&template_id=[template-id]&limit=10 | jq\n\n# 2. Examine the failed task's prompt\n# Is it clear? Testable? Realistic?\n\n# 3. Check validation rules\n# Are they correct? Too strict? Too loose?\n\n# 4. Review token budget\n# Did agent have enough tokens to complete?\n\n# 5. Examine dependencies\n# Did all dependencies complete successfully?\n# Were their outputs available?\n```\n\n**Output Format**:\n\nCreate `ROOT_CAUSE_ANALYSIS.md`:\n\n```markdown\n# Root Cause Analysis: {{executionId}}\n\n## Executive Summary\n\n**Root Cause**: [One sentence: what fundamentally caused the failure]\n\n**Category**: [Template Design | Input | Environment | Execution]\n\n**Severity**: [Critical | High | Medium | Low]\n\n**Recurrence**: [First occurrence | Known issue | Frequent pattern]\n\n## Detailed Analysis\n\n### Symptom\n\n- **What failed**: Task [task-id] failed validation\n- **Expected**: File `output.json` to exist\n- **Actual**: File not created\n- **Error**: \"Required file not found: output.json\"\n\n### Investigation\n\n**Step 1**: Review task prompt\n- Prompt: [excerpt]\n- Analysis: Prompt mentions creating output.json but doesn't specify path or format\n- Issue: Ambiguity in instructions\n\n**Step 2**: Check agent output\n- Agent output: [excerpt]\n- Analysis: Agent attempted to create file but used wrong path\n- Issue: Prompt didn't specify working directory context\n\n**Step 3**: Review validation rules\n- Validation: `required_files: [\"output.json\"]`\n- Analysis: Validation checks root directory but file was created in subdirectory\n- Issue: Mismatch between expected and actual paths\n\n### Root Cause\n\n**Primary Cause**: Template design issue - ambiguous file path in prompt\n\nThe task prompt instructs agent to \"create output.json\" without specifying:\n1. Absolute vs. relative path\n2. Target directory\n3. File format/structure\n\nAgent created file in subdirectory while validation expected root directory.\n\n**Contributing Factors**:\n1. No example output file shown in prompt\n2. Validation rule too strict (exact path match)\n3. No feedback loop (agent can't see validation rules)\n\n### Pattern Analysis\n\nQuery backend for similar failures:\n```bash\ncurl http://localhost:8082/v2/activities/executions?template_id=[id]&status=failed | jq '.failures[] | select(.reason | contains(\"output.json\"))'\n```\n\n**Findings**: 3 other failures with same symptom in last 30 days\n\n**Conclusion**: This is a recurring template design issue\n\n## Impact Assessment\n\n**Blocked Tasks**: 2 tasks (task-4, task-5) were not executed\n\n**Missing Outputs**: \n- output.json (required by task-4)\n- final-report.md (depends on output.json)\n\n**Recovery**: Execution cannot be resumed; must restart with fixed template\n\n## Similar Failures\n\n| Execution ID | Date | Task | Symptom |\n|--------------|------|------|----------|\n| exec-123 | 2026-02-14 | task-3 | output.json not found |\n| exec-456 | 2026-02-10 | task-3 | output.json not found |\n| exec-789 | 2026-02-08 | task-3 | output.json not found |\n\n**Pattern Confirmed**: Same task, same failure, recurring issue\n```\n\n**Write the ROOT_CAUSE_ANALYSIS.md file now.**",
-        "max_tokens": 12000,
-        "compression_strategy": "filter",
-        "variables": []
-      },
-      "validation": {
-        "required_files": ["ROOT_CAUSE_ANALYSIS.md"],
-        "required_patterns": ["## Executive Summary", "## Detailed Analysis", "## Root Cause"],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 2,
-        "strategy": "progressive-context",
-        "fallback_prompt": ""
-      },
-      "metrics": {
-        "success_rate": 0,
-        "avg_tokens": 0,
-        "avg_duration": 0,
-        "common_failures": []
-      },
-      "tools": {
-        "required": ["read", "write", "bash"],
-        "optional": [],
-        "disabled": []
-      }
-    },
-    {
-      "id": "generate-fixes",
-      "subagent": "general",
-      "description": "Generate concrete fixes and improvement recommendations",
-      "dependencies": ["analyze-failure-patterns"],
-      "impulse_refs": [],
-      "prompt": {
-        "template": "Generate concrete fixes based on root cause analysis.\n\n**Input**: Read ROOT_CAUSE_ANALYSIS.md\n\n**Your Task**: Create actionable fixes for each identified issue\n\n**Fix Categories**:\n\n### 1. Template Fixes (Modify Template JSON)\n\n**If root cause is template design**:\n- Fix ambiguous prompts\n- Adjust token budgets\n- Correct validation rules\n- Add missing dependencies\n- Reassign agents\n- Add examples to prompts\n\n**Template Fix Format**:\n```json\n{\n  \"task_id\": \"task-3\",\n  \"field\": \"prompt.template\",\n  \"current_value\": \"Create output.json with results\",\n  \"fixed_value\": \"Create output.json in the current working directory with results in JSON format.\\n\\nExample structure:\\n```json\\n{\\\"results\\\": []}\\n```\",\n  \"reason\": \"Specify exact path and format to remove ambiguity\"\n}\n```\n\n### 2. Input Fixes (Variable Changes)\n\n**If root cause is input issues**:\n- Provide missing variables\n- Correct variable values\n- Add required context\n- Adjust variable types\n\n**Input Fix Format**:\n```json\n{\n  \"variable\": \"outputPath\",\n  \"current_value\": null,\n  \"fixed_value\": \"./output.json\",\n  \"reason\": \"Variable was missing, causing agent to guess path\"\n}\n```\n\n### 3. Execution Fixes (Retry Strategy)\n\n**If root cause is transient**:\n- Retry with same inputs\n- Retry with adjusted timeouts\n- Retry with different agent\n\n**Retry Fix Format**:\n```json\n{\n  \"strategy\": \"retry_with_adjustment\",\n  \"adjustment\": \"Increase timeout from 120s to 300s\",\n  \"reason\": \"Task timed out but was making progress\"\n}\n```\n\n### 4. Environment Fixes (Setup Changes)\n\n**If root cause is environment**:\n- Install missing dependencies\n- Fix permissions\n- Free disk space\n- Configure network\n\n**Environment Fix Format**:\n```bash\n# Install missing dependency\nnpm install -g jq\n\n# Fix permissions\nchmod +x scripts/process.sh\n\n# Create required directories\nmkdir -p output/results\n```\n\n**Output Format**:\n\nCreate `FIXES.md`:\n\n```markdown\n# Fixes for Execution {{executionId}}\n\n## Quick Fix (Immediate Action)\n\n**To retry this execution successfully**:\n\n1. [First action to take]\n2. [Second action]\n3. Retry execution with: `activity({ activityId: '...', variables: {...}, reason: '...' })`\n\n**Estimated success probability**: XX% (based on root cause)\n\n## Template Fixes (Long-term)\n\n### Fix 1: Clarify file path in task-3 prompt\n\n**File**: `[template-id].json`\n\n**Location**: `.tasks[2].prompt.template` (task-3)\n\n**Current**:\n```\nCreate output.json with results\n```\n\n**Fixed**:\n```\nCreate output.json in the current working directory ($(pwd)) with results in JSON format.\n\nExample structure:\n```json\n{\n  \"results\": [],\n  \"timestamp\": \"ISO-8601\",\n  \"status\": \"success\"\n}\n```\n\nWrite to: ./output.json\n```\n\n**Reason**: Removes ambiguity about path and format\n\n**Impact**: Prevents 3 similar failures identified in pattern analysis\n\n### Fix 2: Adjust validation rule\n\n**File**: `[template-id].json`\n\n**Location**: `.tasks[2].validation.required_files`\n\n**Current**:\n```json\n[\"output.json\"]\n```\n\n**Fixed**:\n```json\n[\"**/output.json\"]\n```\n\n**Reason**: Accept file in any subdirectory (more flexible)\n\n**Alternative**: Keep strict rule but ensure prompt specifies exact path\n\n### Fix 3: Increase token budget\n\n**File**: `[template-id].json`\n\n**Location**: `.tasks[2].prompt.max_tokens`\n\n**Current**: `8000`\n\n**Fixed**: `10000`\n\n**Reason**: Agent output was truncated, suggesting token limit was reached\n\n## Input Fixes\n\n### Provide missing variable\n\n**Variable**: `outputDirectory`\n\n**Current**: Not provided\n\n**Fixed**: `\"./output\"`\n\n**Usage**:\n```json\n{\n  \"variables\": {\n    \"outputDirectory\": \"./output\",\n    ...existing variables\n  }\n}\n```\n\n**Reason**: Specifying output directory removes ambiguity\n\n## Execution Fixes\n\n### Retry Strategy\n\n**Recommended**: Retry after applying template fixes\n\n**Probability of success**:\n- With template fix only: 80%\n- With template + input fixes: 95%\n- Without fixes: 10% (likely same failure)\n\n### Retry Command\n\n```bash\nopencode activity \\\n  --activityId [template-id] \\\n  --variables '{\"var1\":\"value1\",\"outputDirectory\":\"./output\"}' \\\n  --reason \"Retry after fixing output path ambiguity\"\n```\n\n## Environment Fixes\n\nNone required (failure not environment-related)\n\n## Prevention (Future)\n\n### Template Design Guidelines\n\n1. **Always specify file paths explicitly**:\n   - ✅ \"Write to ./output/results.json\"\n   - ❌ \"Create results.json\"\n\n2. **Provide examples in prompts**:\n   - Show expected file structure\n   - Show expected output format\n   - Demonstrate command usage\n\n3. **Match validation to instructions**:\n   - If prompt says \"./output/file.json\", validate that exact path\n   - If prompt is vague, validation should be flexible\n\n4. **Token budgets should have 20% margin**:\n   - If task needs ~8000 tokens, set max_tokens: 10000\n   - Prevents truncation from causing failures\n\n### Testing Strategy\n\n1. **Test templates in empty workspaces**:\n   - Ensures no hidden dependencies on existing files\n   - Validates self-contained execution\n\n2. **Test with minimal variables**:\n   - Only provide required variables\n   - Catches missing defaults\n\n3. **Test failure modes**:\n   - Provide invalid inputs intentionally\n   - Verify error messages are helpful\n\n## Monitoring\n\nAfter applying fixes, monitor:\n- Success rate for this template (target: >80%)\n- Failure patterns (should not see same error)\n- Average duration (fixes shouldn't increase time significantly)\n\n## Related Issues\n\n- Execution exec-123: Same root cause\n- Execution exec-456: Same root cause  \n- Execution exec-789: Same root cause\n\n**All should be fixed by this template update**\n```\n\n**Write the FIXES.md file now with actionable, specific fixes.**",
-        "max_tokens": 14000,
-        "compression_strategy": "filter",
-        "variables": []
-      },
-      "validation": {
-        "required_files": ["FIXES.md"],
-        "required_patterns": ["## Quick Fix", "## Template Fixes", "## Prevention"],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 2,
-        "strategy": "simple",
-        "fallback_prompt": ""
-      },
-      "metrics": {
-        "success_rate": 0,
-        "avg_tokens": 0,
-        "avg_duration": 0,
-        "common_failures": []
-      },
-      "tools": {
-        "required": ["read", "write"],
-        "optional": [],
-        "disabled": []
-      }
-    },
-    {
-      "id": "create-diagnosis-report",
-      "subagent": "general",
-      "description": "Create comprehensive diagnosis report combining all findings",
-      "dependencies": ["generate-fixes"],
-      "impulse_refs": [],
-      "prompt": {
-        "template": "Create a comprehensive diagnosis report combining all findings.\n\n**Input**: Read all previous outputs\n- EXECUTION_DETAILS.md\n- ROOT_CAUSE_ANALYSIS.md\n- FIXES.md\n\n**Your Task**: Synthesize findings into executive summary\n\n**Output Format**:\n\nCreate `DIAGNOSIS_REPORT.md`:\n\n```markdown\n# Activity Execution Diagnosis Report\n\n**Execution ID**: {{executionId}}  \n**Generated**: [timestamp]  \n**Status**: Analysis Complete ✅\n\n---\n\n## Executive Summary\n\n### Failure Overview\n\n- **Template**: [name] ([id])\n- **Failed Task**: [task-id] - [description]\n- **Root Cause**: [one sentence]\n- **Severity**: [Critical/High/Medium/Low]\n- **Recurrence**: [First/Known/Frequent]\n- **Fix Complexity**: [Simple/Moderate/Complex]\n\n### Quick Actions\n\n**To resolve immediately**:\n\n1. ⚡ [First action - highest priority]\n2. ⚡ [Second action]\n3. ⚡ [Third action]\n\n**Expected outcome**: XX% success probability with these fixes\n\n---\n\n## Detailed Findings\n\n### 1. What Happened\n\n[Summary from EXECUTION_DETAILS.md]\n\n- Execution started: [time]\n- Failed at: Task [N] - [task-id]\n- Error: [error message]\n- Duration: [time]\n- Cost: $[amount]\n\n### 2. Why It Failed\n\n[Summary from ROOT_CAUSE_ANALYSIS.md]\n\n**Root Cause Category**: [Template Design/Input/Environment/Execution]\n\n**Primary Issue**: [description]\n\n**Contributing Factors**:\n- [Factor 1]\n- [Factor 2]\n\n**Pattern Analysis**: [Similar failures: N occurrences]\n\n### 3. How to Fix It\n\n[Summary from FIXES.md]\n\n#### Immediate Fixes (Retry Now)\n\n```bash\n# [Command to retry with fixes]\n```\n\n#### Template Fixes (Update JSON)\n\n**Changes needed**:\n- File: `[template-id].json`\n- Tasks affected: [count]\n- Fields to update: [list]\n\n**Diff preview**:\n```diff\n- \"max_tokens\": 8000\n+ \"max_tokens\": 10000\n\n- \"Create output.json\"\n+ \"Create output.json in ./output/ directory with structure: {...}\"\n```\n\n#### Prevention Measures\n\n- [Guideline 1]\n- [Guideline 2]\n\n---\n\n## Impact Assessment\n\n### Execution Impact\n\n- **Tasks Completed**: N/Total\n- **Tasks Blocked**: N tasks\n- **Outputs Missing**: [list]\n- **Recovery**: [Can resume / Must restart]\n\n### Template Quality Impact\n\n- **Success Rate**: XX% (before fix)\n- **Expected After Fix**: XX%\n- **Similar Failures**: N occurrences\n- **Users Affected**: [estimate]\n\n---\n\n## Recommendations\n\n### Priority 1: Fix Template (High Impact)\n\n**Action**: Update template JSON with fixes from FIXES.md\n\n**Reason**: Prevents N similar failures\n\n**Effort**: [time estimate]\n\n**Files to modify**:\n- `[template-id].json` ([N] changes)\n\n### Priority 2: Test Fix (Validate)\n\n**Action**: Execute template with test variables\n\n**Reason**: Verify fix works before production use\n\n**Command**:\n```bash\nopencode activity --activityId [id] --variables '{...}' --reason \"Validate fix\"\n```\n\n### Priority 3: Monitor (Ongoing)\n\n**Action**: Track success rate after fix deployment\n\n**Reason**: Ensure fix is effective\n\n**Metrics to watch**:\n- Success rate (target: >80%)\n- Failure patterns (should change)\n- Average duration (shouldn't increase)\n\n---\n\n## Technical Details\n\n### Execution Timeline\n\n[Table from EXECUTION_DETAILS.md showing task execution order and results]\n\n### Failure Stack Trace\n\n<details>\n<summary>Full error details</summary>\n\n```\n[Stack trace from EXECUTION_DETAILS.md]\n```\n\n</details>\n\n### Variables Used\n\n```json\n[Variables from EXECUTION_DETAILS.md]\n```\n\n---\n\n## Related Resources\n\n- **Execution Details**: `EXECUTION_DETAILS.md`\n- **Root Cause Analysis**: `ROOT_CAUSE_ANALYSIS.md`\n- **Fixes**: `FIXES.md`\n- **Template File**: `[template-id].json`\n- **Similar Failures**: [link to backend query]\n\n---\n\n## Next Steps\n\n1. ✅ Diagnosis complete\n2. ⏭️ Apply template fixes from FIXES.md\n3. ⏭️ Test fixed template\n4. ⏭️ Retry original execution\n5. ⏭️ Monitor success rate\n\n---\n\n**Generated by**: debug-activity-self-contained v2  \n**Execution ID**: {{executionId}}  \n**Analysis Duration**: [time]  \n```\n\n**Write the DIAGNOSIS_REPORT.md file now with complete synthesis of all findings.**",
-        "max_tokens": 12000,
-        "compression_strategy": "filter",
-        "variables": []
-      },
-      "validation": {
-        "required_files": ["DIAGNOSIS_REPORT.md"],
-        "required_patterns": ["## Executive Summary", "## Quick Actions", "## Recommendations", "## Next Steps"],
-        "forbidden_patterns": [],
-        "commands": []
-      },
-      "retry": {
-        "max_attempts": 2,
-        "strategy": "simple",
-        "fallback_prompt": ""
-      },
-      "metrics": {
-        "success_rate": 0,
-        "avg_tokens": 0,
-        "avg_duration": 0,
-        "common_failures": []
-      },
-      "tools": {
-        "required": ["read", "write", "bash"],
-        "optional": [],
-        "disabled": []
-      }
-    }
-  ],
-  "integration": {
-    "preChecks": [],
-    "postChecks": [],
-    "qualityGates": [
-      {
-        "name": "diagnosis-complete",
-        "command": "test -f DIAGNOSIS_REPORT.md && grep -q '## Executive Summary' DIAGNOSIS_REPORT.md",
-        "required": true
-      }
-    ]
-  },
-  "metabob": {
-    "enabled": false,
-    "learningMode": true,
-    "targetContextTokens": 5000,
-    "annotationStrategy": "key-components"
-  },
-  "composition": {
-    "standalone": true,
-    "composesWith": [
-      {
-        "templateId": "evolve-activity-self-contained",
-        "relationship": "sequential",
-        "description": "After diagnosing failure, use evolve-activity to improve template"
-      }
-    ],
-    "examples": [
-      {
-        "name": "Debug and Fix Failed Execution",
-        "description": "Diagnose failure, apply fixes, and evolve template",
-        "sequence": [
-          {
-            "template": "debug-activity-self-contained",
-            "variables": {
-              "executionId": "exec-abc123"
-            },
-            "reason": "Diagnose failed execution"
-          },
-          {
-            "template": "evolve-activity-self-contained",
-            "variables": {
-              "templateId": "original-template",
-              "improvements": "Apply fixes from diagnosis"
-            },
-            "reason": "Update template with fixes"
-          }
+        "required_files": [
+          "EXECUTION_ANALYSIS.md"
         ],
-        "outcome": "Template improved based on failure analysis"
-      }
-    ]
-  },
-  "learning": {
-    "enabled": true,
-    "captureStrategy": "detailed",
-    "feedbackPoints": [
-      {
-        "taskId": "analyze-failure-patterns",
-        "metrics": {
-          "root_cause_identified": "Was root cause correctly identified?",
-          "pattern_recognized": "Were similar failures found?",
-          "analysis_depth": "How thorough was analysis? (1-10)"
-        },
-        "improvementHints": {
-          "api_query_effectiveness": "Were API queries effective? (1-10)",
-          "pattern_recognition": "Was pattern recognition helpful? (1-10)"
-        }
-      }
-    ],
-    "patterns": {
-      "successPatterns": [
-        "Agent queries backend for execution details",
-        "Agent identifies similar historical failures",
-        "Agent provides specific, actionable fixes",
-        "Agent creates comprehensive diagnosis report"
-      ],
-      "failurePatterns": [
-        "Agent can't access backend API (missing credentials)",
-        "Agent provides vague fixes without specifics",
-        "Agent misidentifies root cause",
-        "Agent ignores similar historical failures"
-      ],
-      "optimizationOpportunities": [
-        "Add automated fix application (update template JSON directly)",
-        "Include fix validation (test fixes before recommending)",
-        "Add confidence scoring for root cause analysis",
-        "Integrate with template improvement workflow automatically"
-      ]
-    }
-  },
-  "hooks": {
-    "preActivity": {
-      "workingDirectory": {
-        "type": "temporary",
-        "prefix": "debug-activity-",
-        "cleanup": "never"
+        "required_patterns": [
+          "## Root Cause",
+          "## Recommendations"
+        ],
+        "forbidden_patterns": [
+          "curl",
+          "http://",
+          "GET /",
+          "POST /"
+        ],
+        "commands": []
       },
-      "environment": {
-        "DEBUG_MODE": "true",
-        "NO_FILESYSTEM_DEPS": "true"
+      "tools": {
+        "required": [
+          "activity_error_inspector",
+          "write"
+        ],
+        "optional": [
+          "read"
+        ],
+        "disabled": []
       },
-      "commands": []
-    },
-    "postActivity": {
-      "cleanup": false,
-      "createSummary": true,
-      "extractFiles": {
-        "pattern": "*.md",
-        "destination": "./debug-reports",
-        "action": "copy"
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
       }
     },
-    "onError": {
-      "captureEnvironment": true,
-      "captureLogs": {
-        "tail": 200
+    {
+      "id": "generate-fix-recommendations",
+      "subagent": "general",
+      "description": "Generate concrete fixes based on error analysis",
+      "dependencies": [
+        "inspect-execution-errors"
+      ],
+      "prompt": {
+        "template": "Based on the execution analysis, generate concrete fixes.\n\n**Your Task**: Read EXECUTION_ANALYSIS.md and create actionable fixes.\n\n**Fix Categories**:\n\n1. **Template Fixes**: If the template itself has issues\n   - Schema problems (missing fields, wrong types)\n   - Prompt clarity issues\n   - Validation rules too strict/loose\n   - Variable defaults incorrect\n\n2. **Input Fixes**: If the inputs were wrong\n   - Missing required variables\n   - Invalid variable values\n   - Better defaults needed\n\n3. **System Fixes**: If it's a system integration issue\n   - Tool availability\n   - Permission problems\n   - MCP connectivity\n\n**Output**: Create `FIX_RECOMMENDATIONS.md` with:\n\n```markdown\n# Fix Recommendations\n\n## Immediate Fixes (Apply Now)\n1. **Fix**: [Specific change]\n   - **File**: [file to edit]\n   - **Change**: [exact change]\n   - **Why**: [explanation]\n\n## Template Improvements (For Next Version)\n1. **Improvement**: [enhancement]\n   - **Benefit**: [why this helps]\n\n## Testing Strategy\n1. Test with: [test scenario]\n2. Expect: [expected outcome]\n```",
+        "variables": []
       },
-      "createDiagnosticImpulse": true,
-      "cleanup": false
+      "validation": {
+        "required_files": [
+          "FIX_RECOMMENDATIONS.md"
+        ],
+        "required_patterns": [
+          "## Immediate Fixes",
+          "## Testing Strategy"
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "tools": {
+        "required": [
+          "write",
+          "read"
+        ],
+        "optional": [],
+        "disabled": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
     }
-  }
+  ]
 }

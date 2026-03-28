@@ -1,0 +1,22 @@
+{
+  "testRun": {
+    "timestamp": "2026-02-26T19:39:34-08:00",
+    "specificationName": "Kubernetes-Deployment-Validation-Exit-Codes",
+    "passed": true,
+    "errors": 0
+  },
+  "actual": {
+    "exitCode": 1,
+    "podsNotReady": 2,
+    "totalPods": 2,
+    "servicesWithoutEndpoints": 1,
+    "totalServices": 4,
+    "containsPassMessage": false,
+    "containsFailMessage": true
+  },
+  "expected": {
+    "exitCode": 1,
+    "hasFailures": true,
+    "expectedMessage": "❌ VALIDATION FAILED"
+  }
+}

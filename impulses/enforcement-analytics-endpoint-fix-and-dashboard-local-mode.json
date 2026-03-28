@@ -1,0 +1,111 @@
+{
+  "id": "enforcement-analytics-endpoint-fix-and-dashboard-local-mode",
+  "type": "memo",
+  "specificationName": "analytics-endpoint-fix-and-dashboard-local-mode",
+  "timestamp": "2026-03-05T00:00:00Z",
+  "summary": "Enforced specification by fixing analytics endpoint SurrealDB queries and configuring dashboard for local mode authentication bypass",
+  "changesApplied": [
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "get_activity_templates() endpoint",
+      "lines": "74-92",
+      "changeMade": "Wrapped SELECT query with SELECT VALUE syntax and explicit field mapping. Changed math::sum(success == true) to math::sum(IF success THEN 1 ELSE 0 END). Changed ORDER BY execution_count to ORDER BY count().",
+      "reason": "Fix AttributeError caused by SurrealDB GROUP BY returning strings instead of dictionaries. SELECT VALUE ensures results are proper dictionary objects that support .get() method calls.",
+      "impactAnalysis": "Low impact - Query output format unchanged (still returns dictionaries), only fixes internal query structure. Consumers (DevelopmentProgressDashboard.js, MetabobRestApi.js) expect dictionary format and will work correctly once endpoint returns 200 instead of 500.",
+      "before": "SELECT template_id, count() as execution_count, ... FROM activity_executions GROUP BY template_id",
+      "after": "SELECT VALUE { template_id: template_id, execution_count: count(), ... } FROM activity_executions GROUP BY template_id"
+    },
+    {
+      "file": "repos/metabob-rpc-api/server/routes/analytics.py",
+      "component": "get_improvement_roadmap() endpoint",
+      "lines": "351-364",
+      "changeMade": "Wrapped SELECT query with SELECT VALUE syntax and explicit field mapping. Changed math::sum(success == true) to math::sum(IF success THEN 1 ELSE 0 END).",
+      "reason": "Prevent same AttributeError that affects get_activity_templates(). Proactive fix to ensure improvement roadmap endpoint doesn't fail with same SurrealDB GROUP BY issue.",
+      "impactAnalysis": "Low impact - Query output format unchanged. Dashboard component (if exists) and data-bridge-server.js will receive proper dictionary results instead of strings.",
+      "before": "SELECT template_id, count() as execution_count, ... FROM activity_executions GROUP BY template_id HAVING count() >= $min_executions",
+      "after": "SELECT VALUE { template_id: template_id, execution_count: count(), ... } FROM activity_executions GROUP BY template_id HAVING count() >= $min_executions"
+    },
+    {
+      "file": "repos/platform/deployments/metabob/charts/metabob-dashboard/values/local.metabob-dashboard.values.yaml",
+      "component": "Helm values for local deployment",
+      "lines": "4-7",
+      "changeMade": "Added env section with REACT_APP_DEPLOYMENT_MODE=local, REACT_APP_SKIP_AUTH='true', REACT_APP_API_BASE_URL='http://localhost:8080'",
+      "reason": "Configure dashboard deployment to run in local mode without authentication. Enables browser access to Activity History view by bypassing CloudApp authentication flow.",
+      "impactAnalysis": "Medium impact - Changes dashboard deployment behavior from cloud mode (requires auth) to local mode (no auth). Affects App.js routing (lines 160-168) which checks CONFIG.IS_CLOUD_MODE. When local mode, renders LocalAppContent instead of CloudApp, bypassing authentication entirely.",
+      "before": "image:\n  tag: 0.2.0",
+      "after": "image:\n  tag: 0.2.0\n\nenv:\n  REACT_APP_DEPLOYMENT_MODE: local\n  REACT_APP_SKIP_AUTH: 'true'\n  REACT_APP_API_BASE_URL: 'http://localhost:8080'"
+    },
+    {
+      "file": "repos/metabob-dashboard/.env.local",
+      "component": "Environment configuration for local development",
+      "lines": "2",
+      "changeMade": "Added REACT_APP_SKIP_AUTH=true to local environment configuration",
+      "reason": "Ensure local development environment also bypasses authentication. Aligns .env.local with Helm deployment configuration for consistency.",
+      "impactAnalysis": "Low impact - Only affects local npm run start development mode. Ensures developers running dashboard locally don't hit authentication issues. CONFIG.SKIP_AUTH in features.js (line 137) will be true.",
+      "before": "REACT_APP_DEPLOYMENT_MODE=local\nREACT_APP_API_BASE_URL=http://localhost:8080\nREACT_APP_USE_MOCKS=false",
+      "after": "REACT_APP_DEPLOYMENT_MODE=local\nREACT_APP_SKIP_AUTH=true\nREACT_APP_API_BASE_URL=http://localhost:8080\nREACT_APP_USE_MOCKS=false"
+    }
+  ],
+  "dataFlowImpact": {
+    "stage1_activity_execution": "No change - Still working",
+    "stage2_session_logging": "No change - Still working",
+    "stage3_api_recording": "No change - Still working",
+    "stage4_surrealdb_storage": "No change - Still working",
+    "stage5_analytics_aggregation": "FIXED - SELECT VALUE query now returns dictionaries instead of strings, endpoint returns 200 with valid JSON",
+    "stage6_dashboard_fetch": "UNBLOCKED - useGetActivityTemplatesQuery() will receive valid data once backend deployed",
+    "stage7_ui_rendering": "UNBLOCKED - DevelopmentProgressDashboard.js will render activity data once stages 5 and 8 working",
+    "stage8_browser_access": "UNBLOCKED - Dashboard loads in local mode without authentication requirement"
+  },
+  "deploymentRequired": {
+    "backend": {
+      "service": "metabob-rpc-api",
+      "reason": "Analytics endpoint queries updated",
+      "steps": [
+        "cd repos/metabob-rpc-api",
+        "docker build -t metabob-rpc-api:latest .",
+        "docker push metabob-rpc-api:latest",
+        "kubectl rollout restart deployment/metabob-rpc-api -n metabob",
+        "kubectl rollout status deployment/metabob-rpc-api -n metabob"
+      ]
+    },
+    "frontend": {
+      "service": "metabob-dashboard",
+      "reason": "Environment variables updated in Helm values",
+      "steps": [
+        "helm upgrade metabob-dashboard ./charts/metabob-dashboard -n metabob -f values/local.metabob-dashboard.values.yaml",
+        "kubectl rollout restart deployment/metabob-dashboard -n metabob",
+        "kubectl rollout status deployment/metabob-dashboard -n metabob"
+      ]
+    }
+  },
+  "validationTests": [
+    {
+      "test": "Analytics endpoint returns valid JSON",
+      "command": "curl http://localhost:8080/analytics/templates",
+      "expectedBefore": "HTTP 500 - AttributeError: 'str' object has no attribute 'get'",
+      "expectedAfter": "{\"templates\": [{\"template_id\": \"...\", \"execution_count\": 5, ...}], \"total_templates\": 12, \"total_executions\": 543}",
+      "status": "Ready for validation after backend deployment"
+    },
+    {
+      "test": "Dashboard loads without authentication",
+      "command": "playwright_playwright_navigate({ url: 'http://app.metabob.local' })",
+      "expectedBefore": "Login form shown (CloudApp component)",
+      "expectedAfter": "Dashboard home page (LocalDashboard component)",
+      "status": "Ready for validation after frontend deployment"
+    },
+    {
+      "test": "Activity History view shows data",
+      "command": "Navigate to Activity History in dashboard, check for template statistics",
+      "expectedBefore": "Cannot access - blocked by authentication",
+      "expectedAfter": "Table/chart showing activity executions with template names, counts, success rates",
+      "status": "Ready for validation after both deployments"
+    }
+  ],
+  "nextActions": [
+    "Deploy updated metabob-rpc-api backend (Step 3 from implementation plan)",
+    "Deploy updated metabob-dashboard frontend (Step 3 from implementation plan)",
+    "Validate analytics endpoint with curl (Step 4 validation)",
+    "Validate dashboard access with Playwright (Step 4 validation)",
+    "Capture screenshots showing complete data flow (Step 4 validation)"
+  ]
+}

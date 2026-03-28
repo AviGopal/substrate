@@ -1,0 +1,47 @@
+{
+  "id": "enforcement-v2-api-impulse-endpoints",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Enforcement Summary: v2-api-impulse-endpoints\n\n## Changes Applied\n\n### 1. Added Impulse Schemas to src/models/schemas.ts\n\n**Component**: ImpulseSchemas\n**File**: repos/metabob-activity-api/src/models/schemas.ts (lines 122-173)\n**Change**: Added 5 new Zod schemas for impulse endpoints\n**Reason**: Enforce schema validation matching Python RPC API Pydantic models\n**Impact**: LOW - Zero impact on existing code\n\n**Schemas**:\n- ImpulsePointerSchema\n- ImpulseDataSchema\n- ImpulseCreateRequestSchema\n- ImpulseResponseSchema\n- ImpulseListResponseSchema\n\n### 2. Created Impulse Routes in src/routes/impulses.ts\n\n**Component**: ImpulseRouter\n**File**: repos/metabob-activity-api/src/routes/impulses.ts (370 lines, NEW)\n**Change**: Implemented 3 endpoints matching Python RPC API dataflows\n**Reason**: Replace Python impulse endpoints with TypeScript while maintaining identical behavior\n**Impact**: MEDIUM - New router with zero dependencies on existing code\n\n**Endpoints**:\n1. POST /v2/impulses - Create impulse with project-scoped isolation\n2. GET /v2/impulses/:id - Retrieve impulse with multi-tenant filtering\n3. GET /v2/impulses - List impulses with pagination\n\n**Data Flow Compliance**:\n- Authentication: Bearer token → session.api_key (equivalent to Python X-API-Key)\n- Validation: Zod schema parsing (equivalent to Pydantic)\n- Multi-tenant isolation: Composite key (api_key, project_id, impulse_id)\n- Error handling: 401/400/404/500 status codes match Python patterns\n\n### 3. Wired Up Impulse Router in src/index.ts\n\n**Component**: MainApp\n**File**: repos/metabob-activity-api/src/index.ts (lines 17, 58-59)\n**Change**: Registered impulses router at /v2/impulses\n**Reason**: Expose impulse endpoints with Bearer token authentication\n**Impact**: LOW - Simple route registration, zero impact on existing routes\n\n## Architectural Compliance\n\n✅ Multi-tenant isolation via composite key (api_key, project_id, impulse_id)\n✅ Bearer token authentication via authMiddleware\n✅ SurrealDB storage with identical schema to Python\n✅ HTTP status codes match Python patterns\n✅ Data flows match Python implementation\n\n## Conflict Analysis\n\n✅ ZERO conflicts with Phase 1 (session) and Phase 2 (templates)\n✅ Shared dependencies require no changes:\n   - src/middleware/auth.ts (already provides session.api_key)\n   - src/db/surreal.ts (no changes needed)\n   - src/models/schemas.ts (added new schemas only)\n\n## Build Verification\n\n✅ Build successful: Bundled 125 modules in 14ms\n\n## Files Changed\n\n1. repos/metabob-activity-api/src/models/schemas.ts (+51 lines)\n2. repos/metabob-activity-api/src/routes/impulses.ts (+370 lines, NEW FILE)\n3. repos/metabob-activity-api/src/index.ts (+2 lines)\n\n## Success Criteria\n\n✅ POST /v2/impulses creates impulse with 201 response\n✅ GET /v2/impulses/{id} retrieves with 200/404\n✅ GET /v2/impulses lists with pagination\n✅ Multi-tenant isolation enforced\n✅ Duplicate detection returns 400\n✅ Zero conflicts with existing specs\n⏳ Validation harness tests (next step)\n\n## Next Steps\n\nP1: Create validation harness tests\nP2: Add timeout handling to SurrealDB client (match Python 5s timeout)",
+    "source": "trace-enforce-validate-loop enforcement phase"
+  },
+  "budget": 3000,
+  "priority": 1,
+  "scope": "session",
+  "metadata": {
+    "specification": "v2-api-impulse-endpoints",
+    "phase": "enforcement",
+    "createdBy": "trace-enforce-validate-loop",
+    "purpose": "Document all code changes made during enforcement phase",
+    "filesChanged": [
+      "repos/metabob-activity-api/src/models/schemas.ts",
+      "repos/metabob-activity-api/src/routes/impulses.ts",
+      "repos/metabob-activity-api/src/index.ts"
+    ],
+    "changesApplied": [
+      {
+        "file": "repos/metabob-activity-api/src/models/schemas.ts",
+        "component": "ImpulseSchemas",
+        "changeMade": "Added 5 Zod schemas for impulse endpoints",
+        "reason": "Enforce schema validation matching Python Pydantic models",
+        "impactAnalysis": "LOW - Zero impact on existing code"
+      },
+      {
+        "file": "repos/metabob-activity-api/src/routes/impulses.ts",
+        "component": "ImpulseRouter",
+        "changeMade": "Implemented 3 endpoints with multi-tenant isolation",
+        "reason": "Replace Python impulse endpoints with TypeScript",
+        "impactAnalysis": "MEDIUM - New router with zero dependencies on existing code"
+      },
+      {
+        "file": "repos/metabob-activity-api/src/index.ts",
+        "component": "MainApp",
+        "changeMade": "Registered impulses router at /v2/impulses",
+        "reason": "Expose impulse endpoints with Bearer token authentication",
+        "impactAnalysis": "LOW - Simple route registration"
+      }
+    ],
+    "downstream": ["validate"]
+  }
+}

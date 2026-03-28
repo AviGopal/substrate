@@ -1,0 +1,43 @@
+{
+  "id": "validation-playwright-validation-workflow-case-3",
+  "type": "memo",
+  "version": "1.0.0",
+  "created": "2026-03-16T00:00:00Z",
+  "budget": 1000,
+  "metadata": {
+    "testCase": "report-content-validation",
+    "specification": "playwright-validation-workflow"
+  },
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case",
+    "content": {
+      "input": {
+        "reportPath": "FINAL_VALIDATION_REPORT.md"
+      },
+      "expectedOutput": {
+        "reportExists": true,
+        "hasOverallStatus": true,
+        "hasPassRate": true,
+        "hasDeploymentStatus": true,
+        "hasTestResults": true,
+        "hasSuccessCriteria": true,
+        "hasArchitectureNotes": true,
+        "hasScreenshotReferences": true,
+        "passFailIndicators": true,
+        "requiredSections": [
+          "# Activity System Deployment Validation Report",
+          "## Overall Status:",
+          "**Pass Rate**:",
+          "## Deployment Status",
+          "### Kubernetes Pods",
+          "## Validation Tests",
+          "## Success Criteria",
+          "## Architecture Notes"
+        ],
+        "generatedByScript": "scripts/validate-deployment-playwright.sh"
+      },
+      "description": "Test case for verifying FINAL_VALIDATION_REPORT.md contains all required sections and proper pass/fail status"
+    }
+  }
+}

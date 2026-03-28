@@ -1,0 +1,120 @@
+{
+  "specificationName": "devbob-provider-initialization",
+  "rootCauseIdentified": {
+    "primary": "Read-only mount at /workspace/.config/opencode prevents package installation and config writes",
+    "secondary": "ConfigMap uses ${ANTHROPIC_API_KEY} syntax which doesn't work in static JSON",
+    "tertiary": "K8s deployment doesn't use devbob-entrypoint.sh initialization script"
+  },
+  "investigationFindings": [
+    {
+      "finding": "Cache directory /root/.cache/opencode is writable",
+      "status": "VERIFIED",
+      "command": "mkdir -p /root/.cache/opencode/test && echo success",
+      "result": "success"
+    },
+    {
+      "finding": "ANTHROPIC_API_KEY environment variable is set",
+      "status": "VERIFIED",
+      "command": "env | grep ANTHROPIC_API_KEY",
+      "result": "ANTHROPIC_API_KEY=sk-ant-api03-..."
+    },
+    {
+      "finding": "Workspace is read-write",
+      "status": "VERIFIED",
+      "command": "touch /workspace/testfile.txt",
+      "result": "SUCCESS"
+    },
+    {
+      "finding": "/workspace/.config/opencode is mounted read-only",
+      "status": "ROOT_CAUSE",
+      "command": "mount | grep workspace",
+      "result": "/dev/vda1 on /workspace/.config/opencode type ext4 (ro,relatime,discard)"
+    },
+    {
+      "finding": "@ai-sdk/anthropic package installs successfully",
+      "status": "VERIFIED",
+      "command": "cd /root/.cache/opencode && bun add @ai-sdk/anthropic@latest",
+      "result": "installed @ai-sdk/anthropic@3.0.58"
+    },
+    {
+      "finding": "SDK module can be imported and initialized",
+      "status": "VERIFIED",
+      "command": "bun -e 'import(...); createAnthropic({...})'",
+      "result": "SDK created: function"
+    }
+  ],
+  "changesRequired": [
+    {
+      "file": "helm/devbob/templates/deployment.yaml",
+      "component": "volumeMounts",
+      "changeMade": "Remove read-only mount of /workspace/.config/opencode OR change mount path to /workspace/opencode-config and update config loading",
+      "reason": "Read-only mount prevents opencode from writing package.json and installing SDK packages, causing ProviderInitError",
+      "impactAnalysis": "Breaking change - requires pod restart. Alternative: Use emptyDir with initContainer to copy config."
+    },
+    {
+      "file": "helm/devbob/templates/configmap.yaml",
+      "component": "opencode.json",
+      "changeMade": "Remove ${ANTHROPIC_API_KEY} template syntax - environment variable substitution doesn't work in static JSON mounted as ConfigMap",
+      "reason": "Static JSON files cannot perform environment variable substitution. The apiKey field ends up as literal string '${ANTHROPIC_API_KEY}' instead of actual key value.",
+      "impactAnalysis": "Config change requires ConfigMap update. Provider will use env var directly instead of from config file."
+    },
+    {
+      "file": "helm/devbob/templates/deployment.yaml",
+      "component": "command",
+      "changeMade": "Change command from 'opencode acp' to '/configs/devbob-entrypoint.sh acp' to use initialization script",
+      "reason": "Entrypoint script creates proper opencode config with environment variable substitution before starting opencode",
+      "impactAnalysis": "Requires /configs/devbob-entrypoint.sh to be available in container image or mounted as ConfigMap"
+    },
+    {
+      "file": "helm/devbob/values.yaml (RECOMMENDED FIX)",
+      "component": "config.useInitContainer",
+      "changeMade": "Add initContainer to copy ConfigMap to writable location before main container starts",
+      "reason": "Allows ConfigMap to be mounted read-only while still providing writable config directory for opencode",
+      "impactAnalysis": "Non-breaking change. InitContainer copies /workspace/.config/opencode-readonly to /workspace/.config/opencode before app starts."
+    }
+  ],
+  "recommendedImplementation": {
+    "approach": "Option A: InitContainer Pattern (RECOMMENDED)",
+    "steps": [
+      {
+        "step": 1,
+        "action": "Add initContainer to deployment",
+        "code": "initContainers:\n- name: setup-config\n  image: busybox\n  command:\n  - sh\n  - -c\n  - |\n    mkdir -p /workspace/.config/opencode\n    cp /config-readonly/opencode.json /workspace/.config/opencode/opencode.json\n    # Substitute environment variables\n    sed -i \"s/\\${ANTHROPIC_API_KEY}/$ANTHROPIC_API_KEY/g\" /workspace/.config/opencode/opencode.json\n    sed -i \"s/\\${METABOB_API_KEY}/$METABOB_API_KEY/g\" /workspace/.config/opencode/opencode.json\n  volumeMounts:\n  - name: workspace\n    mountPath: /workspace\n  - name: config\n    mountPath: /config-readonly\n    readOnly: true\n  env:\n  - name: ANTHROPIC_API_KEY\n    valueFrom:\n      secretKeyRef:\n        name: devbob-secrets\n        key: anthropic-api-key\n  - name: METABOB_API_KEY\n    valueFrom:\n      secretKeyRef:\n        name: devbob-secrets\n        key: metabob-api-key"
+      },
+      {
+        "step": 2,
+        "action": "Update main container volumeMounts",
+        "code": "volumeMounts:\n- mountPath: /workspace\n  name: workspace\n# Remove the read-only mount - config is now in /workspace/.config/opencode"
+      },
+      {
+        "step": 3,
+        "action": "Keep ConfigMap mount in volumes",
+        "code": "volumes:\n- name: workspace\n  persistentVolumeClaim:\n    claimName: devbob-pvc\n- name: config\n  configMap:\n    name: devbob"
+      }
+    ]
+  },
+  "alternativeApproaches": {
+    "optionB": {
+      "name": "Remove config file requirement",
+      "description": "Modify opencode to work without config file when ANTHROPIC_API_KEY is in environment",
+      "pros": ["No k8s changes needed", "Simpler deployment"],
+      "cons": ["Requires code changes in opencode", "Loses other config benefits"],
+      "files": ["repos/metabob-opencode/packages/opencode/src/provider/provider.ts"]
+    },
+    "optionC": {
+      "name": "Use environment variables instead of config file",
+      "description": "Pass all config via environment variables",
+      "pros": ["Cloud-native approach", "No file mounts needed"],
+      "cons": ["Large config is cumbersome as env vars", "Loses config file benefits"],
+      "files": ["helm/devbob/templates/deployment.yaml"]
+    }
+  },
+  "enforcementImpulseId": "enforcement-devbob-provider-initialization",
+  "status": "ANALYSIS_COMPLETE",
+  "nextActions": [
+    "Implement recommended initContainer pattern in helm/devbob/templates/deployment.yaml",
+    "Update ConfigMap to remove environment variable syntax",
+    "Deploy updated Helm chart",
+    "Validate opencode run works without ProviderInitError"
+  ]
+}

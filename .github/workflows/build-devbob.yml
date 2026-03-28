@@ -1,0 +1,228 @@
+name: Build DevBob Container
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'docker/Dockerfile.devbob'
+      - 'docker/entrypoint-self-config.sh'
+      - 'repos/metabob-opencode/**'
+      - 'repos/metabob-cli/**'
+      - '.dockerignore'
+      - '.github/workflows/build-devbob.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag'
+        required: false
+        default: 'latest'
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: metabobapp/devbob
+
+jobs:
+  # =============================================================================
+  # Job 1: Build OpenCode Binary
+  # =============================================================================
+  build-opencode:
+    name: Build OpenCode Binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1.1.45'
+      
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            repos/metabob-opencode/node_modules
+            ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('repos/metabob-opencode/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      
+      - name: Install dependencies
+        working-directory: repos/metabob-opencode
+        run: bun install
+      
+      - name: Build OpenCode binary
+        working-directory: repos/metabob-opencode/packages/opencode
+        run: bun run build --single
+      
+      - name: Verify binary
+        working-directory: repos/metabob-opencode/packages/opencode
+        run: |
+          ls -lh dist/opencode-linux-x64/bin/opencode
+          ./dist/opencode-linux-x64/bin/opencode --version
+      
+      - name: Upload OpenCode binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-linux-x64
+          path: repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/
+          retention-days: 1
+
+  # =============================================================================
+  # Job 2: Build and Push DevBob Container
+  # =============================================================================
+  build-and-push:
+    name: Build and Push DevBob Container
+    runs-on: ubuntu-latest
+    needs: build-opencode
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Download OpenCode binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: opencode-linux-x64
+          path: repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/
+      
+      - name: Make OpenCode binary executable
+        run: chmod +x repos/metabob-opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=sha,prefix={{branch}}-
+      
+      - name: Build and push DevBob image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.devbob
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          target: runtime
+      
+      - name: Test container (smoke test)
+        run: |
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} --help
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} --version
+      
+      - name: Validate plugin dependencies
+        run: |
+          echo "Validating OpenCode plugin dependencies are pre-installed..."
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} \
+            find /root/.cache/opencode/node_modules/@openauthjs/openauth -name "pkce.js" | grep -q "pkce.js"
+          echo "✓ Plugin dependencies validated successfully"
+      
+      - name: Test container startup (no crashes)
+        run: |
+          echo "Testing container startup for 10 seconds..."
+          docker run -d --name devbob-startup-test \
+            -e ANTHROPIC_API_KEY=test \
+            -e SKIP_CONFIG=true \
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          sleep 10
+          docker logs devbob-startup-test | grep -q "DevBob Ready!"
+          docker ps | grep devbob-startup-test | grep -q "Up"
+          docker rm -f devbob-startup-test
+          echo "✓ Container startup test passed"
+
+  # =============================================================================
+  # Job 3: Integration Tests (Optional)
+  # =============================================================================
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Compose
+        run: |
+          docker compose version
+      
+      - name: Create Docker networks
+        run: |
+          docker network create metabob-network || true
+          docker network create devbob-network || true
+      
+      - name: Start backend services
+        run: |
+          docker compose --profile stable up -d
+          sleep 30
+      
+      - name: Check backend health
+        run: |
+          docker ps
+          docker compose --profile stable ps
+      
+      - name: Pull DevBob image
+        run: |
+          docker pull ${{ env.IMAGE_NAME }}:latest
+      
+      - name: Start DevBob container
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          docker run -d --name devbob-integration-test \
+            --network metabob-network \
+            -e METABOB_API_URL=http://api-server-dev:8080 \
+            -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+            -e WAIT_FOR_BACKEND=true \
+            -e SKIP_CONFIG=false \
+            ${{ env.IMAGE_NAME }}:latest
+          sleep 20
+      
+      - name: Check DevBob logs
+        run: |
+          docker logs devbob-integration-test
+      
+      - name: Verify DevBob health
+        run: |
+          docker exec devbob-integration-test opencode --version
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop devbob-integration-test || true
+          docker rm devbob-integration-test || true
+          docker compose --profile stable down

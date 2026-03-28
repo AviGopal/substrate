@@ -1,0 +1,58 @@
+[
+  {
+    "id": "validation-Kubernetes-Deployment-Validation-Exit-Codes-case-1",
+    "description": "Verify script returns exit code 1 when deployment has failures (pods in CrashLoopBackOff/ImagePullBackOff)",
+    "input": {
+      "scriptPath": "repos/platform/scripts/validate-local-deployment.sh",
+      "deploymentState": "current"
+    },
+    "expectedOutput": {
+      "exitCode": 1,
+      "shouldDetectFailures": true,
+      "outputPattern": "❌ VALIDATION FAILED",
+      "minPodsExpected": 1
+    }
+  },
+  {
+    "id": "validation-Kubernetes-Deployment-Validation-Exit-Codes-case-2",
+    "description": "Verify script detects CrashLoopBackOff status in pods",
+    "input": {
+      "scriptPath": "repos/platform/scripts/validate-local-deployment.sh",
+      "deploymentState": "current"
+    },
+    "expectedOutput": {
+      "exitCode": 1,
+      "shouldDetectFailures": true,
+      "outputPattern": "❌ VALIDATION FAILED",
+      "minPodsExpected": 1
+    }
+  },
+  {
+    "id": "validation-Kubernetes-Deployment-Validation-Exit-Codes-case-3",
+    "description": "Verify script detects ImagePullBackOff status in pods",
+    "input": {
+      "scriptPath": "repos/platform/scripts/validate-local-deployment.sh",
+      "deploymentState": "current"
+    },
+    "expectedOutput": {
+      "exitCode": 1,
+      "shouldDetectFailures": true,
+      "outputPattern": "❌ VALIDATION FAILED",
+      "minPodsExpected": 1
+    }
+  },
+  {
+    "id": "validation-Kubernetes-Deployment-Validation-Exit-Codes-case-4",
+    "description": "Verify script detects services without endpoints",
+    "input": {
+      "scriptPath": "repos/platform/scripts/validate-local-deployment.sh",
+      "deploymentState": "current"
+    },
+    "expectedOutput": {
+      "exitCode": 1,
+      "shouldDetectFailures": true,
+      "outputPattern": "❌ VALIDATION FAILED",
+      "minPodsExpected": 1
+    }
+  }
+]

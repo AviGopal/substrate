@@ -1,0 +1,7 @@
+[install]
+# Use workspace dependencies
+peer = false
+
+[test]
+# Preload test setup
+preload = ["./tests/setup.ts"]

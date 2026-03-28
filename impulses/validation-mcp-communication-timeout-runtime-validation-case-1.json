@@ -1,0 +1,17 @@
+{
+  "id": "validation-mcp-communication-timeout-runtime-validation-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case",
+    "content": "Test Case 1: Timeout Enforcement - 10s Limit\n\nThis test validates that MCP tool calls actually timeout after 10 seconds in practice.\n\n**Input:**\n```json\n{\n  \"testCase\": \"timeout-enforcement\",\n  \"delayMs\": 15000,\n  \"timeout\": 10000\n}\n```\n\n**Expected Output:**\n```json\n{\n  \"timeoutOccurred\": true,\n  \"timeoutDuration\": \"~10000ms\",\n  \"errorMessageIncludesTimeout\": true,\n  \"withinExpectedRange\": true\n}\n```\n\n**Validation Strategy:**\n1. Create a slow operation that would take 15 seconds\n2. Wrap it with withTimeout(10000)\n3. Measure when the timeout actually triggers\n4. Verify timeout occurs between 9500ms and 10500ms (±500ms tolerance)\n5. Verify error message includes \"timeout\" or \"timed out\"\n\n**Success Criteria:**\n- Timeout occurs within 10000ms ±500ms\n- Error message is actionable and mentions timeout\n- Operation does not complete (would take 15s)\n\n**Historical Result:**\n✅ PASSED - Timeout at 10003ms (within tolerance)"
+  },
+  "budget": 500,
+  "metadata": {
+    "testCase": 1,
+    "testType": "timeout",
+    "specification": "MCP Communication Timeout Runtime Validation",
+    "historical": true,
+    "canRunWithoutLLM": true
+  }
+}

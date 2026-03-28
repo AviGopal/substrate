@@ -1,0 +1,12 @@
+{
+  "id": "validation-vessel-tools-architecture-and-typescript-fixes-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 3: ActivityTemplate Imports\n\n## Input\n- File: `packages/opencode/src/session/autonomous-trailblazing.ts`\n- Search for type references\n\n## Expected Output\n- `hasVariableSchema: false` - Should NOT use ActivityTemplate.VariableSchema\n- `hasPromptVariable: true` - Should use ActivityTemplate.PromptVariable\n- `hasCategory: false` - Should NOT use ActivityTemplate.Category\n- `hasCategoryLiteral: true` - Should use literal union: \"feature\" | \"bugfix\" | \"refactor\" | \"tool\" | \"infrastructure\"\n\n## Type Corrections\n1. VariableSchema doesn't exist → use PromptVariable (correct exported type)\n2. Category not exported separately → use literal union from Schema definition"
+  },
+  "budget": 500,
+  "priority": "high",
+  "loaded": true,
+  "scope": "session"
+}

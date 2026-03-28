@@ -1,0 +1,17 @@
+{
+  "id": "validation-activity-template-flow-via-mcp-backend-case-6",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Validation Test Case: Memory Agent Tool Configuration\n\n## Input\n```json\n{\n  \"file\": \"repos/metabob-opencode/packages/opencode/src/agent/agent.ts\",\n  \"check\": \"Memory agent has impulse tools and activity tools\"\n}\n```\n\n## Expected Output\n```json\n{\n  \"hasActivity\": true,\n  \"hasSearchActivities\": true,\n  \"hasImpulseCreate\": true,\n  \"hasImpulseLoad\": true,\n  \"hasImpulseUnload\": true\n}\n```\n\n## Test Description\nThis test case validates that Memory agent has impulse tools and activity tools meets the specification requirements for Activity Template Flow via MCP Backend.\n\n## Validation Type\nStatic code analysis - no LLM required\n",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "Activity Template Flow via MCP Backend",
+    "testName": "Memory Agent Tool Configuration",
+    "testCaseNumber": 6,
+    "totalTestCases": 7
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "validation-devbob-acp-multi-vessel-coordination-case-1",
+  "type": "memo",
+  "description": "Basic impulse sharing: parent creates impulse, shares with devbob-0, remote resolves and computes",
+  "input": {
+    "impulseData": {
+      "value1": 42,
+      "value2": 58
+    },
+    "operation": "sum",
+    "target": "docker://devbob-0"
+  },
+  "expectedOutput": {
+    "success": true,
+    "result": 100,
+    "impulseResolved": true,
+    "remoteSessionCreated": true
+  },
+  "testType": "functional",
+  "validationType": "input-output-dependency",
+  "noLLMRequired": true
+}

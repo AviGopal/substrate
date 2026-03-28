@@ -1,0 +1,17 @@
+{
+  "id": "validation-thompson-sampling-in-rpc-api-only-case-2",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 2: No Beta distribution sampling implementation in opencode\n\nInput: Search for betavariate() or Beta sampling code implementations in metabob-opencode\nExpected Output: No implementation code found (comments and type annotations allowed)\nValidation: grep for random.betavariate or Math.random Beta sampling, exclude comments\nRationale: Beta distribution sampling is part of the Thompson Sampling algorithm and must not exist in opencode",
+    "source": "validation-harness-generator"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "thompson-sampling-in-rpc-api-only",
+    "testNumber": 2,
+    "category": "algorithm-absence",
+    "createdAt": "2026-03-01T02:30:00.000Z"
+  }
+}

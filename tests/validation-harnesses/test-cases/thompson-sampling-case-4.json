@@ -1,0 +1,18 @@
+{
+  "impulseId": "validation-thompson-sampling-in-rpc-api-only-case-4",
+  "testCase": "OpenCode delegates to RPC API (no local sampling)",
+  "input": {
+    "testType": "delegation-check",
+    "config": {
+      "file": "repos/metabob-opencode/packages/opencode/src/session/template-selector.ts",
+      "requiredCalls": ["RpcHttpClient.selectTemplateVariant", "rpcClient.selectTemplateVariant"],
+      "forbiddenPatterns": ["Math.random", "betavariate", "sampleBeta", "sample_beta"]
+    }
+  },
+  "expectedOutput": {
+    "rpcDelegation": true,
+    "forbiddenPatternsFound": [],
+    "pass": true,
+    "reason": "OpenCode must delegate to RPC API via HTTP, not implement sampling locally"
+  }
+}

@@ -1,0 +1,259 @@
+{
+  "id": "conflict-analysis-deterministic-container-testing-output-based-validation-kubectx-sandbox",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "specificationName": "Deterministic Container Testing with Output-Based Validation in Kubectx Sandbox",
+      "analysisTimestamp": "2026-03-09T02:55:00Z",
+      "validationStatus": "PASS (14/14 tests)",
+      "otherSpecifications": [
+        "Cross-Vessel Type Preservation",
+        "Clean Environment Activity Execution End-to-End",
+        "Activity Execution Comprehensive Mapping Display",
+        "Activity Lifecycle Dynamic Creation Boredom Evolution",
+        "Activity Recommendation Learning Loop",
+        "Activity Template Flow via MCP Backend",
+        "Bootstrap Template Filepath Compliance",
+        "Complete Architecture Separation",
+        "Context Optimization Endpoint Complete",
+        "Dashboard Activity History Viewing Flow"
+      ],
+      "totalValidationHarnesses": 456,
+      "specsInvolvingValidationHarnesses": 30,
+      "conflicts": [
+        {
+          "type": "REDUNDANT_HARNESS_DUPLICATION",
+          "severity": "MEDIUM",
+          "spec1": "Deterministic Container Testing",
+          "spec2": "Cross-Vessel Type Preservation",
+          "sharedComponent": "tests/validation-harnesses/cross-vessel-type-preservation-harness.py",
+          "description": "Cross-vessel harness (223 lines) has duplicate HTTP client, validation logic, impulse loading that unified-output-validator.py now provides. Deterministic Container Testing spec creates unified-output-validator.py to consolidate 100+ harnesses, but cross-vessel harness not yet migrated.",
+          "resolution": "Migrate cross-vessel-type-preservation-harness.py to use unified-output-validator.py. Replace custom HTTP client with OutputComparator.assertJsonFieldEquals(), load expected outputs from impulses instead of hardcoding.",
+          "blockedBy": "Cross-vessel validation currently BLOCKED due to API bug (impulse already exists errors), cannot test migration until API fixed"
+        },
+        {
+          "type": "VALIDATION_HARNESS_CONSOLIDATION_INCOMPLETE",
+          "severity": "HIGH",
+          "spec1": "Deterministic Container Testing",
+          "spec2": "All 30+ specs with validation harnesses",
+          "sharedComponent": "tests/validation-harnesses/",
+          "description": "Deterministic Container Testing spec aims to consolidate 456 validation harnesses into single unified-output-validator.py framework. Only 2 of 456 harnesses migrated so far (0.4% complete). Each existing harness has duplicate HTTP clients, kubectl wrappers, assertion logic.",
+          "resolution": "Phase migration: (1) Create unified-output-validator.py (DONE), (2) Migrate high-priority harnesses (cross-vessel, e2e-activity-lifecycle, rpc-api-infrastructure), (3) Deprecate old harnesses, (4) Enforce unified validator for new specs",
+          "estimate": "454 harnesses remaining, ~2-3 harnesses/day migration rate = 6-9 months for full consolidation"
+        },
+        {
+          "type": "IMPULSE_BASED_VALIDATION_INCONSISTENCY",
+          "severity": "MEDIUM",
+          "spec1": "Deterministic Container Testing",
+          "spec2": "Clean Environment Activity Execution",
+          "sharedComponent": "Impulse-based expected outputs",
+          "description": "Deterministic Container Testing stores expected outputs as impulses (validation-deterministic-container-testing-case-N). Clean Environment spec validates impulse management tools exist but doesn't use impulse-based expected outputs for validation. Inconsistent pattern.",
+          "resolution": "Adopt impulse-based expected outputs as standard across ALL validation harnesses. Update Clean Environment and other specs to store expected outputs as impulses, not hardcoded in harness files.",
+          "benefit": "Enables validation to run without LLM (historical impulse comparison), reduces harness complexity, centralizes expected output management"
+        },
+        {
+          "type": "KUBECTX_SANDBOX_ENFORCEMENT_GAP",
+          "severity": "HIGH",
+          "spec1": "Deterministic Container Testing",
+          "spec2": "All deployment/validation specs",
+          "sharedComponent": "Kubernetes deployment workflow",
+          "description": "Deterministic Container Testing enforces docker-desktop kubectx for all validation (sandbox isolation). Existing validation harnesses (cross-vessel, e2e-activity-lifecycle, rpc-api-infrastructure) don't check kubectx before running, risk of running tests against production.",
+          "resolution": "Add kubectx check to ALL validation harnesses: `kubectl config current-context === 'docker-desktop' || exit 1`. Create deploy-to-sandbox.sh (pending from enforcement phase) to standardize sandbox deployment.",
+          "criticalPath": "deploy-to-sandbox.sh creation (Priority 4 from enforcement) blocks full sandbox isolation"
+        },
+        {
+          "type": "BUILD_SCRIPT_FRAGMENTATION",
+          "severity": "MEDIUM",
+          "spec1": "Deterministic Container Testing",
+          "spec2": "Dashboard build-deploy-validate, Activity Template MCP Backend",
+          "sharedComponent": "Container build workflows",
+          "description": "build-container.sh created for unified builds (metabob-rpc-api, metabob-cli, metabob-opencode). Existing specs use: build-and-deploy-devbob-k8s.sh (inline Dockerfile), build-devbob.sh (Slack package), repos/metabob-rpc-api/docker/build.sh. No migration to unified script yet.",
+          "resolution": "Replace all custom build scripts with build-container.sh. Update deployment specs to call scripts/build-container.sh instead of repo-specific build scripts.",
+          "impact": "Eliminates 3-5 duplicate build scripts, standardizes tagging (test-${timestamp}), enables automated build-deploy-validate workflow"
+        },
+        {
+          "type": "DETERMINISTIC_ASSERTIONS_NOT_UNIVERSAL",
+          "severity": "LOW",
+          "spec1": "Deterministic Container Testing",
+          "spec2": "Activity Lifecycle, Activity Recommendation Learning Loop",
+          "sharedComponent": "Validation assertion methods",
+          "description": "Deterministic Container Testing validates 6 deterministic comparison types (===, !==, >, <, includes, regex). Some existing harnesses still use LLM-dependent validation ('check if data looks reasonable', 'verify deployment seems healthy').",
+          "resolution": "Audit all 456 harnesses for LLM-dependent assertions. Replace vague checks with deterministic OutputComparator methods. Enforce zero LLM dependency in validation.",
+          "note": "Low severity because most harnesses already use deterministic checks (HTTP status codes, JSON field equality), but some edge cases remain"
+        }
+      ],
+      "sharedComponents": [
+        {
+          "component": "tests/validation-harnesses/cross-vessel-type-preservation-harness.py",
+          "affectedBySpecs": [
+            "Deterministic Container Testing (wants to consolidate)",
+            "Cross-Vessel Type Preservation (owns the harness)"
+          ],
+          "currentState": "223-line standalone harness with custom HTTP client, validation logic",
+          "desiredState": "Migrated to use unified-output-validator.py, ~50 lines of test definitions",
+          "recommendation": "Migrate to unified-output-validator.py after cross-vessel API bug fixed",
+          "blockedBy": "API bug: impulse 'already exists' errors preventing validation"
+        },
+        {
+          "component": "tests/validation-harnesses/ (456 files)",
+          "affectedBySpecs": [
+            "Deterministic Container Testing",
+            "30+ other specs with validation requirements"
+          ],
+          "currentState": "456 harnesses with duplicate HTTP clients, kubectl wrappers, assertion logic",
+          "desiredState": "Consolidated to unified-output-validator.py + test definition impulses",
+          "recommendation": "Phased migration over 6-9 months, prioritize high-value harnesses first",
+          "migrationProgress": "0.4% (2 of 456 harnesses using unified framework)"
+        },
+        {
+          "component": "scripts/build-container.sh",
+          "affectedBySpecs": [
+            "Deterministic Container Testing (created)",
+            "Dashboard build-deploy-validate (uses build-and-deploy-devbob-k8s.sh)",
+            "Activity Template MCP Backend (uses build-devbob.sh)"
+          ],
+          "currentState": "Created but not yet used by other specs",
+          "desiredState": "Used by all container build workflows",
+          "recommendation": "Update deployment specs to call build-container.sh, deprecate old scripts",
+          "migrationProgress": "0% (no specs migrated to build-container.sh yet)"
+        },
+        {
+          "component": "Impulse-based expected outputs",
+          "affectedBySpecs": [
+            "Deterministic Container Testing (uses impulses for expected outputs)",
+            "Clean Environment Activity Execution (validates impulse tools exist)",
+            "All validation harnesses (could benefit)"
+          ],
+          "currentState": "Only Deterministic Container Testing uses impulse-based expected outputs",
+          "desiredState": "All validation harnesses store expected outputs as impulses",
+          "recommendation": "Adopt as standard pattern, update existing harnesses to use impulses",
+          "benefit": "Validation runs without LLM (historical comparison), reduces harness complexity"
+        },
+        {
+          "component": "Kubectx sandbox enforcement",
+          "affectedBySpecs": [
+            "Deterministic Container Testing (enforces docker-desktop)",
+            "All deployment/validation specs (should enforce)"
+          ],
+          "currentState": "Only new harness checks kubectx, existing harnesses don't",
+          "desiredState": "All harnesses check kubectx before running",
+          "recommendation": "Add kubectx check to all validation harnesses, create deploy-to-sandbox.sh",
+          "criticalPath": "deploy-to-sandbox.sh creation pending (Priority 4 from enforcement)"
+        }
+      ],
+      "criticalPath": [
+        {
+          "priority": 1,
+          "blocker": "Cross-vessel API bug",
+          "description": "API returns false positive 'impulse already exists' errors, blocking cross-vessel validation",
+          "impact": "Cannot validate cross-vessel harness migration to unified-output-validator.py",
+          "requiredFix": "repos/metabob-rpc-api/server/routes/impulse.py:145, impulse_data.py:130-165",
+          "severity": "CRITICAL"
+        },
+        {
+          "priority": 2,
+          "blocker": "deploy-to-sandbox.sh not created",
+          "description": "Kubectx enforcement script pending from enforcement phase",
+          "impact": "Cannot enforce docker-desktop sandbox for all validation runs",
+          "requiredAction": "Create scripts/deploy-to-sandbox.sh with kubectx check + helmfile deployment",
+          "severity": "HIGH"
+        },
+        {
+          "priority": 3,
+          "blocker": "Massive harness consolidation pending",
+          "description": "454 of 456 harnesses not yet migrated to unified-output-validator.py",
+          "impact": "Redundant code persists, duplicate validation logic across harnesses",
+          "requiredAction": "Phased migration: prioritize high-value harnesses (cross-vessel, e2e-activity-lifecycle, rpc-api-infrastructure)",
+          "severity": "MEDIUM",
+          "estimate": "6-9 months for full consolidation at 2-3 harnesses/day"
+        }
+      ],
+      "recommendations": [
+        {
+          "priority": 1,
+          "action": "Fix cross-vessel API bug",
+          "rationale": "Unblocks cross-vessel validation and harness migration",
+          "files": [
+            "repos/metabob-rpc-api/server/routes/impulse.py",
+            "repos/metabob-rpc-api/server/db/operations/impulse_data.py"
+          ]
+        },
+        {
+          "priority": 2,
+          "action": "Create deploy-to-sandbox.sh",
+          "rationale": "Enables kubectx sandbox enforcement across all validation",
+          "specification": "Deterministic Container Testing (Priority 4 from enforcement phase)"
+        },
+        {
+          "priority": 3,
+          "action": "Migrate top 10 harnesses to unified-output-validator.py",
+          "rationale": "Proves consolidation value, removes most redundant code (Pareto principle)",
+          "candidates": [
+            "cross-vessel-type-preservation-harness.py",
+            "e2e-activity-lifecycle-validation.py",
+            "rpc-api-deployed-infrastructure-validation-harness.ts",
+            "activity-template-mcp-only-flow-harness.ts",
+            "clean-environment-activity-execution-harness.ts"
+          ]
+        },
+        {
+          "priority": 4,
+          "action": "Adopt impulse-based expected outputs as standard",
+          "rationale": "Enables LLM-free validation, reduces harness complexity",
+          "impact": "All new validation harnesses must store expected outputs as impulses"
+        },
+        {
+          "priority": 5,
+          "action": "Update deployment specs to use build-container.sh",
+          "rationale": "Eliminates duplicate build scripts, standardizes container builds",
+          "specs": [
+            "Dashboard build-deploy-validate",
+            "Activity Template MCP Backend"
+          ]
+        }
+      ],
+      "noConflicts": [
+        {
+          "observation": "Zero contradictory requirements",
+          "detail": "Deterministic Container Testing complements other specs (consolidates validation, doesn't contradict requirements)"
+        },
+        {
+          "observation": "No breaking changes to existing specs",
+          "detail": "unified-output-validator.py is additive, existing harnesses continue to work"
+        },
+        {
+          "observation": "Shared goals across specs",
+          "detail": "All specs benefit from: deterministic validation, impulse-based expected outputs, kubectx sandbox isolation, unified build scripts"
+        }
+      ],
+      "summary": {
+        "conflictCount": 6,
+        "conflictTypes": [
+          "Redundant Harness Duplication (1)",
+          "Validation Harness Consolidation Incomplete (1)",
+          "Impulse-Based Validation Inconsistency (1)",
+          "Kubectx Sandbox Enforcement Gap (1)",
+          "Build Script Fragmentation (1)",
+          "Deterministic Assertions Not Universal (1)"
+        ],
+        "criticalBlockers": 1,
+        "highPriorityIssues": 2,
+        "mediumPriorityIssues": 2,
+        "lowPriorityIssues": 1,
+        "overallAssessment": "Deterministic Container Testing spec is well-aligned with system goals. Main challenges are: (1) Cross-vessel API bug blocking migration validation, (2) Massive scope (456 harnesses to consolidate), (3) Pending deploy-to-sandbox.sh creation. No contradictory requirements found. Spec complements other validation efforts."
+      }
+    }
+  },
+  "budget": 3000,
+  "created": "2026-03-09T02:55:55.488Z",
+  "metadata": {
+    "specificationName": "Deterministic Container Testing with Output-Based Validation in Kubectx Sandbox",
+    "analysisTimestamp": "2026-03-09T02:55:00Z",
+    "validationStatus": "PASS (14/14 tests)",
+    "conflictCount": 6,
+    "criticalBlockers": 1,
+    "highPriorityIssues": 2,
+    "overallAssessment": "Deterministic Container Testing spec is well-aligned with system goals. Main challenges are: (1) Cross-vessel API bug blocking migration validation, (2) Massive scope (456 harnesses to consolidate), (3) Pending deploy-to-sandbox.sh creation. No contradictory requirements found. Spec complements other validation efforts."
+  }
+}

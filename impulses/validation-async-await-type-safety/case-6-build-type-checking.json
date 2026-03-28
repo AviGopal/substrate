@@ -1,0 +1,16 @@
+{
+  "impulseId": "validation-async-await-type-safety-case-6",
+  "testCase": "Build workflow includes type-check job",
+  "input": {
+    "file": "repos/metabob-rpc-api/.github/workflows/build.yaml",
+    "checkType": "job_dependency_exists"
+  },
+  "expectedOutput": {
+    "jobName": "type-check",
+    "dependentJob": "build",
+    "dependency": "needs: type-check",
+    "validation": "Docker builds only happen if types are valid"
+  },
+  "validationMethod": "grep",
+  "purpose": "Ensures production deployments are blocked if type errors exist"
+}

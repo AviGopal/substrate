@@ -1,0 +1,349 @@
+{
+  "id": "conflict-analysis-surrealdb-official-library-integration",
+  "type": "memo",
+  "title": "Conflict Analysis: SurrealDB Official Library Integration",
+  "description": "Analysis of conflicts and overlaps between SurrealDB Official Library Integration and other specifications in the system",
+  "content": {
+    "specificationName": "SurrealDB Official Library Integration",
+    "specificationId": "surrealdb-official-library-integration",
+    "analysisTimestamp": "2026-03-01T21:15:00Z",
+    "otherSpecifications": [
+      "surrealdb-primary-redis-cache",
+      "thompson-sampling-in-rpc-api-only",
+      "metrics-calculation-in-rpc-api-only",
+      "impulse-learning-storage-complete"
+    ],
+    "sharedComponents": [
+      {
+        "component": "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+        "affectedBySpecs": [
+          "surrealdb-official-library-integration",
+          "impulse-learning-storage-complete"
+        ],
+        "details": {
+          "thisSpec": {
+            "changes": [
+              "Complete rewrite from custom HTTP client to AsyncSurrealDBClient",
+              "Replaced 481-line custom implementation with official surrealdb-py wrapper",
+              "Changed from sync to async (get_surreal_client() now async)",
+              "Added merge() method for partial updates"
+            ]
+          },
+          "impulse-learning-storage-complete": {
+            "changes": [
+              "Added health_check() method",
+              "Added _execute_with_retry() with exponential backoff",
+              "Connection retry logic for transient failures"
+            ],
+            "status": "ALREADY_ENFORCED",
+            "compatibility": "HIGH - retry logic orthogonal to client implementation"
+          }
+        },
+        "conflictType": "OVERLAPPING_ENHANCEMENTS",
+        "resolution": "COMPATIBLE - The retry logic from impulse-learning-storage-complete should be preserved in the new AsyncSurrealDBClient. Both changes are complementary."
+      },
+      {
+        "component": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+        "affectedBySpecs": [
+          "surrealdb-official-library-integration",
+          "surrealdb-primary-redis-cache",
+          "thompson-sampling-in-rpc-api-only"
+        ],
+        "details": {
+          "thisSpec": {
+            "changes": [
+              "Line 273: Changed db.update() to db.merge() for partial updates",
+              "Removed lines 244-246: workaround for variant_id/activity_id preservation",
+              "Made get_metrics(), create_metrics(), update_metrics_after_execution() async",
+              "Added awaits to all db operations"
+            ],
+            "functionsModified": [
+              "get_metrics() - made async",
+              "create_metrics() - made async",
+              "update_metrics_after_execution() - made async + changed update() to merge()"
+            ]
+          },
+          "surrealdb-primary-redis-cache": {
+            "changes": [
+              "Wants to add Redis cache updates to update_metrics_after_execution()",
+              "Wants to add cache-aside pattern to get_metrics()",
+              "Wants to add cache invalidation after SurrealDB writes"
+            ],
+            "status": "NOT_YET_ENFORCED",
+            "validationStatus": "5/6 PASS (83%) - one test failed on execution recording order"
+          },
+          "thompson-sampling-in-rpc-api-only": {
+            "dependency": "update_metrics_after_execution() updates thompson_alpha and thompson_beta",
+            "status": "ALREADY_ENFORCED (100% pass)",
+            "compatibility": "HIGH - relies on this function working correctly"
+          }
+        },
+        "conflictType": "SEQUENTIAL_DEPENDENCIES",
+        "resolution": "MERGE_REQUIRED - Both specs need to be applied sequentially:\n1. Apply surrealdb-official-library-integration first (merge() + async)\n2. Then apply surrealdb-primary-redis-cache (add Redis cache updates)\nThe async changes from spec 1 will require spec 2's Redis cache code to also be async."
+      },
+      {
+        "component": "repos/metabob-rpc-api/server/routes/activity.py",
+        "affectedBySpecs": [
+          "surrealdb-official-library-integration",
+          "surrealdb-primary-redis-cache",
+          "thompson-sampling-in-rpc-api-only"
+        ],
+        "details": {
+          "thisSpec": {
+            "changes": [
+              "Line 509: Need to change db.update() to db.merge() (pending)",
+              "Add awaits to db operations (pending)"
+            ]
+          },
+          "surrealdb-primary-redis-cache": {
+            "changes": [
+              "Wants to add SurrealDB writes to create_template()",
+              "Wants to add cache-aside pattern to get_template_by_id()",
+              "Wants to change execution recording order"
+            ]
+          },
+          "thompson-sampling-in-rpc-api-only": {
+            "dependency": "select_variant() endpoint uses metrics",
+            "status": "ENFORCED"
+          }
+        },
+        "conflictType": "OVERLAPPING_MODIFICATIONS",
+        "resolution": "COORDINATE - Both specs modify different parts of activity.py. Apply in sequence:\n1. surrealdb-official-library-integration: async conversions + merge()\n2. surrealdb-primary-redis-cache: add SurrealDB writes + cache logic"
+      },
+      {
+        "component": "repos/metabob-rpc-api/requirements.txt",
+        "affectedBySpecs": [
+          "surrealdb-official-library-integration"
+        ],
+        "details": {
+          "thisSpec": {
+            "changes": [
+              "Uncommented surrealdb>=1.0.0",
+              "Updated from v1.0.8 to >=1.0.0 for v3.0+ compatibility"
+            ]
+          }
+        },
+        "conflictType": "NONE",
+        "resolution": "NO CONFLICT - Unique to this specification"
+      }
+    ],
+    "conflicts": [
+      {
+        "conflictId": "conflict-1",
+        "type": "SEQUENTIAL_DEPENDENCY",
+        "severity": "MEDIUM",
+        "spec1": "surrealdb-official-library-integration",
+        "spec2": "surrealdb-primary-redis-cache",
+        "sharedComponent": "template_metrics.py::update_metrics_after_execution",
+        "description": "Both specifications modify update_metrics_after_execution(). Spec 1 changes it to async and uses merge(). Spec 2 wants to add Redis cache updates. The changes are compatible but must be applied in order.",
+        "impact": "If spec 2 is enforced before spec 1 completes, Redis cache code will use sync db operations and update() instead of merge(), breaking the bug fix.",
+        "resolution": {
+          "approach": "SEQUENTIAL_ENFORCEMENT",
+          "steps": [
+            "1. Complete surrealdb-official-library-integration enforcement (currently 40% done)",
+            "2. Update surrealdb-primary-redis-cache enforcement plan to account for async changes",
+            "3. Add Redis cache updates to async update_metrics_after_execution() using merge()",
+            "4. Ensure Redis cache operations are also async"
+          ],
+          "priority": "HIGH",
+          "estimatedEffort": "2 hours to coordinate"
+        },
+        "technicalDetails": {
+          "spec1Changes": "async def update_metrics_after_execution(...) -> ...\n    ...\n    result = await db.merge(record_id, update_data)  # Changed from update()",
+          "spec2DesiredChanges": "async def update_metrics_after_execution(...) -> ...\n    ...\n    result = await db.merge(record_id, update_data)\n    # ADD THIS:\n    await update_redis_cache(template_id, result)",
+          "mergedImplementation": "Combine both: use merge() for SurrealDB, then update Redis cache"
+        }
+      },
+      {
+        "conflictId": "conflict-2",
+        "type": "BREAKING_CHANGE_PROPAGATION",
+        "severity": "HIGH",
+        "spec1": "surrealdb-official-library-integration",
+        "spec2": "ALL OTHER SPECS",
+        "sharedComponent": "surrealdb_client.py::get_surreal_client",
+        "description": "Making get_surreal_client() async is a BREAKING CHANGE that affects all code using the database client. All callers must add 'await'.",
+        "impact": "Any specification that uses database operations will break until updated to use async/await.",
+        "affectedSpecs": [
+          "surrealdb-primary-redis-cache (uses db operations)",
+          "thompson-sampling-in-rpc-api-only (indirect - uses template_metrics)",
+          "metrics-calculation-in-rpc-api-only (indirect)",
+          "impulse-learning-storage-complete (uses db operations)"
+        ],
+        "resolution": {
+          "approach": "CASCADING_UPDATES",
+          "steps": [
+            "1. Audit all db operation modules for sync calls",
+            "2. Update each module to async (estimated 8+ files)",
+            "3. Update all route handlers to await db operations",
+            "4. Run comprehensive tests to catch missed async conversions"
+          ],
+          "priority": "CRITICAL",
+          "estimatedEffort": "3-4 hours for complete async conversion",
+          "blocker": "Cannot fully deploy surrealdb-official-library-integration until this is complete"
+        },
+        "technicalDetails": {
+          "beforeChange": "db = get_surreal_client()  # Sync call\nresult = db.query(...)",
+          "afterChange": "db = await get_surreal_client()  # Async call\nresult = await db.query(...)",
+          "filesNeedingUpdate": [
+            "repos/metabob-rpc-api/server/db/operations/template_metrics.py (partial)",
+            "repos/metabob-rpc-api/server/db/operations/activity_data.py",
+            "repos/metabob-rpc-api/server/db/operations/activity_execution.py",
+            "repos/metabob-rpc-api/server/db/operations/impulse_data.py",
+            "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+            "repos/metabob-rpc-api/server/db/operations/template_data.py",
+            "repos/metabob-rpc-api/server/db/operations/task_execution.py",
+            "repos/metabob-rpc-api/server/db/operations/failure_pattern.py",
+            "repos/metabob-rpc-api/server/routes/*.py (all route handlers)"
+          ]
+        }
+      },
+      {
+        "conflictId": "conflict-3",
+        "type": "DEPLOYMENT_DEPENDENCY",
+        "severity": "CRITICAL",
+        "spec1": "surrealdb-official-library-integration",
+        "spec2": "surrealdb-primary-redis-cache",
+        "sharedComponent": "SurrealDB v3.0+ deployment requirement",
+        "description": "surrealdb-official-library-integration requires SurrealDB v3.0+ for compatibility. surrealdb-primary-redis-cache assumes SurrealDB is available. Both specs are blocked by the same deployment requirement.",
+        "impact": "Cannot test or validate either specification until SurrealDB is upgraded from v2.3.10 to v3.0+",
+        "resolution": {
+          "approach": "INFRASTRUCTURE_UPGRADE",
+          "steps": [
+            "1. Upgrade SurrealDB deployment: kubectl set image deployment/surrealdb surrealdb=surrealdb/surrealdb:v3.0 -n metabob",
+            "2. Apply unified schema from activity_learning_loop.surql",
+            "3. Verify auth works with official library",
+            "4. Run validation harnesses for both specs"
+          ],
+          "priority": "CRITICAL",
+          "estimatedEffort": "30 minutes + validation",
+          "blocker": "DEPLOYMENT - blocks both specifications"
+        }
+      }
+    ],
+    "compatibilityMatrix": {
+      "surrealdb-official-library-integration": {
+        "surrealdb-primary-redis-cache": {
+          "compatibility": "SEQUENTIAL",
+          "recommendation": "Apply surrealdb-official-library-integration first, then adapt surrealdb-primary-redis-cache to async patterns",
+          "risk": "MEDIUM - Requires coordination"
+        },
+        "thompson-sampling-in-rpc-api-only": {
+          "compatibility": "HIGH",
+          "recommendation": "No conflicts. Thompson Sampling uses template_metrics which will benefit from merge() bug fix",
+          "risk": "LOW"
+        },
+        "metrics-calculation-in-rpc-api-only": {
+          "compatibility": "HIGH",
+          "recommendation": "No conflicts. Metrics calculation is in opencode, database operations are in rpc-api",
+          "risk": "LOW"
+        },
+        "impulse-learning-storage-complete": {
+          "compatibility": "COMPLEMENTARY",
+          "recommendation": "Preserve retry logic from impulse-learning when rewriting client",
+          "risk": "LOW - Both improvements are orthogonal"
+        }
+      }
+    },
+    "rippleAnalysis": {
+      "directImpact": {
+        "files": [
+          "repos/metabob-rpc-api/server/db/surrealdb_client.py",
+          "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+          "repos/metabob-rpc-api/server/routes/activity.py",
+          "repos/metabob-rpc-api/requirements.txt"
+        ],
+        "count": 4
+      },
+      "cascadingImpact": {
+        "description": "Async conversion cascades to all db operation modules and route handlers",
+        "files": [
+          "repos/metabob-rpc-api/server/db/operations/*.py (8 files)",
+          "repos/metabob-rpc-api/server/routes/*.py (multiple files)",
+          "repos/metabob-rpc-api/server/actions/*.py (activity.py uses db operations)"
+        ],
+        "estimatedCount": "15-20 files"
+      },
+      "dependentSpecifications": {
+        "surrealdb-primary-redis-cache": "Needs async version before adding cache updates",
+        "thompson-sampling-in-rpc-api-only": "Depends on template_metrics working correctly",
+        "All specs using database": "Must update to async/await"
+      }
+    },
+    "recommendations": [
+      {
+        "priority": 1,
+        "recommendation": "Complete Phase 2 of surrealdb-official-library-integration",
+        "reason": "Finish async conversion of all db operation modules before other specs build on top",
+        "estimatedEffort": "3-4 hours",
+        "blocksSpecs": ["surrealdb-primary-redis-cache"]
+      },
+      {
+        "priority": 2,
+        "recommendation": "Upgrade SurrealDB deployment to v3.0+",
+        "reason": "Unblocks both surrealdb-official-library-integration and surrealdb-primary-redis-cache",
+        "estimatedEffort": "30 minutes",
+        "blocksSpecs": ["surrealdb-official-library-integration", "surrealdb-primary-redis-cache"]
+      },
+      {
+        "priority": 3,
+        "recommendation": "Update surrealdb-primary-redis-cache enforcement plan",
+        "reason": "Account for async patterns from surrealdb-official-library-integration",
+        "estimatedEffort": "1 hour",
+        "action": "Add async/await to all Redis cache update code"
+      },
+      {
+        "priority": 4,
+        "recommendation": "Create integration test suite",
+        "reason": "Verify both specifications work together correctly",
+        "estimatedEffort": "2 hours",
+        "testCases": [
+          "Test variant_id persistence with merge()",
+          "Test Redis cache updates after SurrealDB writes",
+          "Test cache-aside pattern with async operations",
+          "Test Thompson Sampling with merged specifications"
+        ]
+      }
+    ],
+    "riskAssessment": {
+      "overallRisk": "MEDIUM",
+      "risks": [
+        {
+          "risk": "Incomplete async conversion breaks production",
+          "severity": "HIGH",
+          "mitigation": "Complete Phase 2 fully before deployment, comprehensive testing",
+          "status": "MITIGATED_BY_PHASING"
+        },
+        {
+          "risk": "Specifications enforce in wrong order",
+          "severity": "MEDIUM",
+          "mitigation": "Document dependency: surrealdb-official-library-integration must complete before surrealdb-primary-redis-cache",
+          "status": "DOCUMENTED"
+        },
+        {
+          "risk": "SurrealDB v3.0 upgrade causes unexpected issues",
+          "severity": "LOW",
+          "mitigation": "Test in staging first, legacy client backup available for rollback",
+          "status": "MITIGATED"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "createdAt": "2026-03-01T21:15:00Z",
+    "createdBy": "aggregate-validation-and-detect-conflicts activity",
+    "relatedImpulses": [
+      "trace-surrealdb-official-library-integration",
+      "enforcement-surrealdb-official-library-integration",
+      "validation-results-surrealdb-official-library-integration",
+      "trace-surrealdb-primary-redis-cache",
+      "validation-results-surrealdb-primary-redis-cache",
+      "trace-thompson-sampling-in-rpc-api-only",
+      "validation-results-thompson-sampling-in-rpc-api-only",
+      "trace-impulse-learning-storage-complete",
+      "enforcement-impulse-learning-storage-complete"
+    ],
+    "specificationCount": 5,
+    "conflictCount": 3,
+    "sharedComponentCount": 4
+  }
+}

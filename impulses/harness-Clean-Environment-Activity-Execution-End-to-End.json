@@ -1,0 +1,26 @@
+{
+  "id": "harness-Clean Environment Activity Execution End-to-End",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/clean-environment-activity-execution-end-to-end-harness.ts",
+    "source": "validation-harness"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "scope": "validation",
+  "loaded": true,
+  "metadata": {
+    "created": "2026-03-05T04:17:52.155Z",
+    "purpose": "validation-harness",
+    "specification": "Clean Environment Activity Execution End-to-End",
+    "totalTestCases": 8,
+    "harnessType": "static-analysis-and-mock",
+    "runtime": "< 10 seconds",
+    "usedBy": [
+      "ci-cd-pipeline",
+      "regression-testing",
+      "compliance-audits"
+    ]
+  }
+}

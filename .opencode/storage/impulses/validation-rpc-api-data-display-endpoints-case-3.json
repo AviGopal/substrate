@@ -1,0 +1,50 @@
+{
+  "id": "validation-rpc-api-data-display-endpoints-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "Project Listing Not Field Names Array",
+      "description": "Specific test to detect the bug where projects array contains field name strings like 'branch', 'created_at' instead of project objects",
+      "input": {
+        "endpoint": "GET /auth/orgs/{org_id}/projects",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer {auth_token}",
+          "Content-Type": "application/json"
+        },
+        "urlParams": {
+          "org_id": "test-org-id"
+        }
+      },
+      "expectedOutput": {
+        "status": 200,
+        "projectsArrayType": "array of objects",
+        "firstElement": {
+          "type": "object",
+          "notType": "string"
+        },
+        "notContains": [
+          "branch",
+          "created_at",
+          "updated_at",
+          "project_id",
+          "org_id",
+          "name",
+          "repository_url",
+          "git_root_hash"
+        ],
+        "description": "Projects array should NOT contain these as string elements - they are field names, not project objects"
+      },
+      "bugBeingTested": "Specific regression test for the bug where list_projects_by_org returned ['branch', 'created_at', 'updated_at', ...] as the projects array instead of [{project_id: '...', name: '...', ...}, ...]"
+    },
+    "source": "validation-harness-creation"
+  },
+  "budget": 1000,
+  "metadata": {
+    "createdAt": "2026-03-12T00:00:00Z",
+    "createdBy": "validation-harness-task",
+    "purpose": "Historical regression test for field names bug in RPC API Data Display Endpoints",
+    "relatedSpec": "RPC API Data Display Endpoints"
+  }
+}

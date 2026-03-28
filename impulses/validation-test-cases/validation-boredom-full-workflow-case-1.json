@@ -1,0 +1,35 @@
+{
+  "id": "validation-boredom-full-workflow-case-1",
+  "name": "Improve Template with Low Success Rate",
+  "input": {
+    "templateId": "test-improve-template-struggling",
+    "mockMetrics": {
+      "successRate": 0.45,
+      "improvementGradient": 0.45,
+      "avgCost": 0.05,
+      "avgDurationMs": 60000,
+      "executionCount": 10,
+      "failurePatterns": [
+        {
+          "errorType": "validation_failed",
+          "frequency": 5,
+          "taskId": "task-1",
+          "message": "Missing required file RESULT.json"
+        }
+      ],
+      "impulseUsageCount": 0,
+      "avgPromptTokens": 8000
+    },
+    "improvementType": "improve-template"
+  },
+  "expectedOutput": {
+    "metricsImproved": true,
+    "gradientIncreased": true,
+    "successRateIncreased": true,
+    "costReduced": true,
+    "impulseUsageIncreased": true,
+    "promptSizeDecreased": true,
+    "minGradientIncrease": 0.1,
+    "minSuccessRateIncrease": 0.15
+  }
+}

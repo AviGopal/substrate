@@ -1,0 +1,33 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-5",
+  "type": "memo",
+  "priority": "medium",
+  "budget": 500,
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case"
+  },
+  "metadata": {
+    "testCase": 5,
+    "description": "POST /record-turn endpoint exists in rpc-api"
+  },
+  "content": {
+    "input": {
+      "testType": "endpoint-check",
+      "config": {
+        "endpoint": "POST /record-turn",
+        "file": "repos/metabob-rpc-api/server/routes/learning_loop.py"
+      }
+    },
+    "expectedOutput": {
+      "pass": true,
+      "actual": {
+        "hasEndpoint": true
+      },
+      "expected": {
+        "endpoint": "POST /record-turn"
+      },
+      "reason": "Found POST /record-turn endpoint in rpc-api"
+    }
+  }
+}

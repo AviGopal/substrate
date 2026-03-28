@@ -1,0 +1,260 @@
+{
+  "name": "test-metabob-stack-e2e-fixed",
+  "description": "End-to-end test of Metabob application stack with data flow validation and input-output dependency enforcement",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "validate-deployment-state",
+      "subagent": "general",
+      "description": "Validate all Metabob stack components are deployed and accessible",
+      "dependencies": [],
+      "prompt": {
+        "template": "Validate Metabob Stack Deployment\n\nYour Task:\n1. Run the validation script to verify all components:\n   ```bash\n   ./scripts/validate-metabob-stack.sh\n   ```\n\n2. Verify pod status:\n   - Redis: Running\n   - SurrealDB: Running\n   - DevBob: Running\n\n3. Check service endpoints:\n   - Redis: Port 6379 available\n   - SurrealDB: Port 8000 available\n   - DevBob: Port 3000 available (ACP server)\n\n4. Verify ACP server initialization:\n   ```bash\n   kubectl logs -n metabob -l app.kubernetes.io/name=devbob | grep \"acp-command setup connection\"\n   ```\n\n5. Create deployment state impulse:\n   - ID: deployment-state-{{testRunId}}\n   - Type: memo\n   - Content: Deployment status summary\n   - Budget: 1500 tokens\n\nOutput Format:\n```json\n{\n  \"testRunId\": \"{{testRunId}}\",\n  \"deploymentStatus\": {\n    \"redis\": {\"status\": \"Running\", \"endpoint\": \"redis-master:6379\"},\n    \"surrealdb\": {\"status\": \"Running\", \"endpoint\": \"surrealdb:8000\"},\n    \"devbob\": {\"status\": \"Running\", \"endpoint\": \"devbob:3000\", \"acpReady\": true}\n  },\n  \"validationScript\": \"PASS\" or \"FAIL\",\n  \"deploymentStateImpulseId\": \"deployment-state-{{testRunId}}\"\n}\n```",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testRunId",
+            "type": "string",
+            "required": true,
+            "description": "Unique identifier for this test run (e.g., 'e2e-test-2026-02-26-001')"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [
+          "scripts/validate-metabob-stack.sh"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-redis-data-flow",
+      "subagent": "general",
+      "description": "Test Redis data flow: write data, read data, verify input-output dependency",
+      "dependencies": [
+        "validate-deployment-state"
+      ],
+      "prompt": {
+        "template": "Test Redis Data Flow with Input-Output Validation\n\nYour Task:\n1. Create test data with specific structure:\n   ```typescript\n   const testData = {\n     testRunId: \"{{testRunId}}\",\n     sessionId: \"test-session-{{testRunId}}\",\n     data: {\n       input: \"{{redisTestInput}}\",\n       timestamp: new Date().toISOString()\n     }\n   };\n   ```\n\n2. Write data to Redis:\n   - Port-forward: kubectl port-forward -n metabob svc/redis-master 6379:6379\n   - Use redis-cli or Node.js redis client\n   - Key: \"test:session:{{testRunId}}\"\n   - Value: JSON.stringify(testData)\n   - Set TTL: 300 seconds\n\n3. Read data back from Redis:\n   - Use same key: \"test:session:{{testRunId}}\"\n   - Parse JSON response\n   - Verify data integrity\n\n4. Validate input-output dependency:\n   - Input: {{redisTestInput}}\n   - Output: Should match testData.data.input exactly\n   - If output !== input: FAIL with diff\n   - If output === input: PASS\n\n5. Create Redis test results impulse:\n   - ID: redis-test-{{testRunId}}\n   - Type: memo\n   - Content: Test results with input/output comparison\n   - Budget: 2000 tokens\n\nOutput Format:\n```json\n{\n  \"testRunId\": \"{{testRunId}}\",\n  \"testName\": \"redis-data-flow\",\n  \"input\": \"{{redisTestInput}}\",\n  \"output\": \"<actual output from Redis>\",\n  \"status\": \"PASS\" or \"FAIL\",\n  \"dataDependency\": \"output === input\",\n  \"verificationMethod\": \"exact string match\",\n  \"redisTestImpulseId\": \"redis-test-{{testRunId}}\"\n}\n```",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testRunId",
+            "type": "string",
+            "required": true,
+            "description": "Test run identifier"
+          },
+          {
+            "name": "redisTestInput",
+            "type": "string",
+            "required": true,
+            "description": "Test input data for Redis (any string value to verify round-trip)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-surrealdb-data-flow",
+      "subagent": "general",
+      "description": "Test SurrealDB data flow: create record, query record, verify input-output dependency",
+      "dependencies": [
+        "validate-deployment-state"
+      ],
+      "prompt": {
+        "template": "Test SurrealDB Data Flow with Input-Output Validation\n\nYour Task:\n1. Port-forward SurrealDB:\n   ```bash\n   kubectl port-forward -n metabob svc/surrealdb 8000:8000 &\n   ```\n\n2. Create test record with specific structure:\n   ```sql\n   CREATE test_activity:{{testRunId}} SET\n     testRunId = \"{{testRunId}}\",\n     activityName = \"{{surrealTestActivityName}}\",\n     status = \"{{surrealTestStatus}}\",\n     input = \"{{surrealTestInput}}\",\n     timestamp = time::now();\n   ```\n\n3. Query the record back:\n   ```sql\n   SELECT * FROM test_activity:{{testRunId}};\n   ```\n\n4. Validate input-output dependencies:\n   - Input activityName: {{surrealTestActivityName}}\n   - Output activityName: Should match exactly\n   - Input status: {{surrealTestStatus}}\n   - Output status: Should match exactly\n   - Input data: {{surrealTestInput}}\n   - Output data: Should match exactly\n\n5. Test data transformation (optional enhancement):\n   - Update the record:\n     ```sql\n     UPDATE test_activity:{{testRunId}} SET\n       status = \"completed\",\n       result = \"transformation of: \" + input;\n     ```\n   - Query again and verify transformation applied\n   - Verify result depends on input\n\n6. Create SurrealDB test results impulse:\n   - ID: surrealdb-test-{{testRunId}}\n   - Type: memo\n   - Content: Test results with input/output comparison\n   - Budget: 2500 tokens\n\nOutput Format:\n```json\n{\n  \"testRunId\": \"{{testRunId}}\",\n  \"testName\": \"surrealdb-data-flow\",\n  \"inputs\": {\n    \"activityName\": \"{{surrealTestActivityName}}\",\n    \"status\": \"{{surrealTestStatus}}\",\n    \"data\": \"{{surrealTestInput}}\"\n  },\n  \"outputs\": {\n    \"activityName\": \"<from SurrealDB>\",\n    \"status\": \"<from SurrealDB>\",\n    \"data\": \"<from SurrealDB>\"\n  },\n  \"dataDependencies\": [\n    {\"field\": \"activityName\", \"match\": true/false},\n    {\"field\": \"status\", \"match\": true/false},\n    {\"field\": \"data\", \"match\": true/false}\n  ],\n  \"status\": \"PASS\" or \"FAIL\",\n  \"surrealdbTestImpulseId\": \"surrealdb-test-{{testRunId}}\"\n}\n```",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testRunId",
+            "type": "string",
+            "required": true,
+            "description": "Test run identifier"
+          },
+          {
+            "name": "surrealTestActivityName",
+            "type": "string",
+            "required": true,
+            "description": "Test activity name for SurrealDB"
+          },
+          {
+            "name": "surrealTestStatus",
+            "type": "string",
+            "required": true,
+            "description": "Test status value (e.g., 'pending', 'running')"
+          },
+          {
+            "name": "surrealTestInput",
+            "type": "string",
+            "required": true,
+            "description": "Test input data for SurrealDB"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-devbob-acp-delegation",
+      "subagent": "general",
+      "description": "Test DevBob ACP server: delegate task, verify input-output dependency",
+      "dependencies": [
+        "validate-deployment-state"
+      ],
+      "prompt": {
+        "template": "Test DevBob ACP Delegation with Input-Output Validation\n\nYour Task:\n1. Create impulse with test input data:\n   - ID: acp-test-input-{{testRunId}}\n   - Type: memo\n   - Content: Test prompt and expected behavior\n   - Budget: 1000 tokens\n\n2. Use acp_delegate to send task to DevBob:\n   ```typescript\n   const result = await acp_delegate({\n     target: \"docker://devbob\",\n     taskDescription: \"Echo test for input-output validation\",\n     prompt: `Echo back this exact text: \"{{acpTestInput}}\"\n     \n     Your response must contain the exact text I provided.\n     Do not add any additional explanation.\n     Just echo: {{acpTestInput}}`,\n     shareImpulses: [\"acp-test-input-{{testRunId}}\"],\n     timeout: 60\n   });\n   ```\n\n3. Validate input-output dependency:\n   - Input: \"{{acpTestInput}}\"\n   - Output: result.response\n   - Verify output contains input string\n   - If input not in output: FAIL\n   - If input in output: PASS\n\n4. Test impulse sharing (data flow verification):\n   - Create impulse with structured data:\n     ```typescript\n     {\n       testData: {\n         value1: \"{{acpTestValue1}}\",\n         value2: \"{{acpTestValue2}}\"\n       }\n     }\n     ```\n   - Share impulse with DevBob\n   - Ask DevBob to compute: value1 + value2\n   - Verify output depends on both inputs\n\n5. Create ACP test results impulse:\n   - ID: acp-test-{{testRunId}}\n   - Type: memo\n   - Content: Test results with input/output dependency analysis\n   - Budget: 3000 tokens\n\nOutput Format:\n```json\n{\n  \"testRunId\": \"{{testRunId}}\",\n  \"testName\": \"devbob-acp-delegation\",\n  \"echoTest\": {\n    \"input\": \"{{acpTestInput}}\",\n    \"output\": \"<DevBob response>\",\n    \"inputFoundInOutput\": true/false,\n    \"status\": \"PASS\" or \"FAIL\"\n  },\n  \"impulseShareTest\": {\n    \"inputs\": {\n      \"value1\": \"{{acpTestValue1}}\",\n      \"value2\": \"{{acpTestValue2}}\"\n    },\n    \"output\": \"<DevBob computed result>\",\n    \"dependencyVerified\": true/false,\n    \"status\": \"PASS\" or \"FAIL\"\n  },\n  \"acpTestImpulseId\": \"acp-test-{{testRunId}}\"\n}\n```",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testRunId",
+            "type": "string",
+            "required": true,
+            "description": "Test run identifier"
+          },
+          {
+            "name": "acpTestInput",
+            "type": "string",
+            "required": true,
+            "description": "Test input string for echo test"
+          },
+          {
+            "name": "acpTestValue1",
+            "type": "string",
+            "required": true,
+            "description": "First value for impulse sharing test"
+          },
+          {
+            "name": "acpTestValue2",
+            "type": "string",
+            "required": true,
+            "description": "Second value for impulse sharing test"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-end-to-end-data-flow",
+      "subagent": "general",
+      "description": "Test complete data flow: Redis → SurrealDB → DevBob → validation",
+      "dependencies": [
+        "test-redis-data-flow",
+        "test-surrealdb-data-flow",
+        "test-devbob-acp-delegation"
+      ],
+      "prompt": {
+        "template": "Test Complete End-to-End Data Flow\n\nYour Task:\n1. Create a complete workflow that spans all components:\n   \n   a. Store session data in Redis:\n      - Key: \"session:{{testRunId}}\"\n      - Value: {sessionId: \"{{testRunId}}\", prompt: \"{{e2eTestPrompt}}\"}\n   \n   b. Create activity record in SurrealDB:\n      - Record: activity:{{testRunId}}\n      - Data: {activityId: \"{{testRunId}}\", sessionId: \"{{testRunId}}\", status: \"pending\"}\n   \n   c. Delegate task to DevBob via ACP:\n      - Task: Process the prompt from Redis session\n      - Verify DevBob can access both Redis and SurrealDB\n      - Update SurrealDB activity status to \"completed\"\n   \n   d. Verify complete data flow:\n      - Input: {{e2eTestPrompt}}\n      - Flow: Redis → DevBob → SurrealDB\n      - Output: Updated activity record with result\n\n2. Validate input-output dependencies at each stage:\n   - Stage 1 (Redis): Input prompt stored correctly\n   - Stage 2 (SurrealDB): Activity linked to session\n   - Stage 3 (DevBob): Result depends on input prompt\n   - Stage 4 (Validation): Final state reflects initial input\n\n3. Test data transformation requirements:\n   - Input: {{e2eTestPrompt}}\n   - Expected transformation: DevBob processes prompt\n   - Output verification: Result contains reference to input\n   - Dependency verification: Changing input should change output\n\n4. Create end-to-end test results impulse:\n   - ID: e2e-test-{{testRunId}}\n   - Type: memo\n   - Content: Complete data flow analysis\n   - Budget: 4000 tokens\n\nOutput Format:\n```json\n{\n  \"testRunId\": \"{{testRunId}}\",\n  \"testName\": \"end-to-end-data-flow\",\n  \"dataFlow\": {\n    \"stage1_redis\": {\n      \"input\": \"{{e2eTestPrompt}}\",\n      \"stored\": true/false,\n      \"status\": \"PASS/FAIL\"\n    },\n    \"stage2_surrealdb\": {\n      \"activityCreated\": true/false,\n      \"linkedToSession\": true/false,\n      \"status\": \"PASS/FAIL\"\n    },\n    \"stage3_devbob\": {\n      \"taskDelegated\": true/false,\n      \"resultGenerated\": true/false,\n      \"resultDependsOnInput\": true/false,\n      \"status\": \"PASS/FAIL\"\n    },\n    \"stage4_validation\": {\n      \"finalState\": \"<state description>\",\n      \"inputOutputDependency\": \"verified/failed\",\n      \"status\": \"PASS/FAIL\"\n    }\n  },\n  \"overallStatus\": \"PASS\" or \"FAIL\",\n  \"dependencyGraph\": \"input → redis → surrealdb → devbob → output\",\n  \"e2eTestImpulseId\": \"e2e-test-{{testRunId}}\"\n}\n```",
+        "maxTokens": 20000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testRunId",
+            "type": "string",
+            "required": true,
+            "description": "Test run identifier"
+          },
+          {
+            "name": "e2eTestPrompt",
+            "type": "string",
+            "required": true,
+            "description": "Test prompt that flows through entire system"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "aggregate-test-results",
+      "subagent": "general",
+      "description": "Aggregate all test results and create comprehensive report",
+      "dependencies": [
+        "test-redis-data-flow",
+        "test-surrealdb-data-flow",
+        "test-devbob-acp-delegation",
+        "test-end-to-end-data-flow"
+      ],
+      "prompt": {
+        "template": "Aggregate Metabob Stack Test Results\n\nYour Task:\n1. Load all test result impulses:\n   - deployment-state-{{testRunId}}\n   - redis-test-{{testRunId}}\n   - surrealdb-test-{{testRunId}}\n   - acp-test-{{testRunId}}\n   - e2e-test-{{testRunId}}\n\n2. Analyze input-output dependencies across all tests:\n   - Count total dependencies tested\n   - Count dependencies verified (PASS)\n   - Count dependencies failed (FAIL)\n   - Identify patterns in failures\n\n3. Validate data flow requirements:\n   - Requirement 1: Data stored in Redis can be retrieved unchanged\n   - Requirement 2: Data stored in SurrealDB maintains structure\n   - Requirement 3: DevBob ACP server responds to delegated tasks\n   - Requirement 4: Impulse sharing works across components\n   - Requirement 5: End-to-end flow maintains input-output dependency\n\n4. Create test summary report:\n   - Overall status: PASS/FAIL\n   - Component-level results\n   - Data flow validation results\n   - Input-output dependency matrix\n   - Recommendations for failures\n\n5. Create final test report impulse:\n   - ID: test-report-{{testRunId}}\n   - Type: memo\n   - Content: Comprehensive test report\n   - Budget: 5000 tokens\n\nOutput Format:\n```json\n{\n  \"testRunId\": \"{{testRunId}}\",\n  \"timestamp\": \"<ISO timestamp>\",\n  \"overallStatus\": \"PASS\" or \"FAIL\",\n  \"componentResults\": {\n    \"redis\": {\"status\": \"PASS/FAIL\", \"dataFlowVerified\": true/false},\n    \"surrealdb\": {\"status\": \"PASS/FAIL\", \"dataFlowVerified\": true/false},\n    \"devbob\": {\"status\": \"PASS/FAIL\", \"acpVerified\": true/false},\n    \"e2e\": {\"status\": \"PASS/FAIL\", \"fullFlowVerified\": true/false}\n  },\n  \"dataFlowRequirements\": {\n    \"requirement1_redisRoundTrip\": \"PASS/FAIL\",\n    \"requirement2_surrealdbStructure\": \"PASS/FAIL\",\n    \"requirement3_acpResponse\": \"PASS/FAIL\",\n    \"requirement4_impulseSharing\": \"PASS/FAIL\",\n    \"requirement5_e2eDependency\": \"PASS/FAIL\"\n  },\n  \"inputOutputDependencies\": {\n    \"totalTested\": <number>,\n    \"verified\": <number>,\n    \"failed\": <number>,\n    \"verificationRate\": \"<percentage>\"\n  },\n  \"recommendations\": [\n    \"<action item 1>\",\n    \"<action item 2>\"\n  ],\n  \"testReportImpulseId\": \"test-report-{{testRunId}}\"\n}\n```\n\nIf overall status is FAIL:\n- List all failed tests\n- Provide diagnostic information\n- Recommend specific fixes\n\nIf overall status is PASS:\n- Confirm all data flow requirements met\n- Confirm all input-output dependencies verified\n- Provide performance metrics if available",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "testRunId",
+            "type": "string",
+            "required": true,
+            "description": "Test run identifier"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "test -f scripts/validate-metabob-stack.sh",
+      "kubectl get namespace metabob"
+    ],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 10000,
+    "annotationStrategy": "key-components"
+  }
+}

@@ -1,0 +1,523 @@
+{
+  "activity_id": "debug-failing-feature",
+  "name": "Debug Failing Feature",
+  "description": "Systematic debugging workflow: reproduce issue, isolate root cause, apply fix, verify, and document findings",
+  "category": "bugfix",
+  "task_steps": [
+    {
+      "task_id": "reproduce",
+      "subagent": "general",
+      "description": "Create minimal reproduction case to isolate the issue",
+      "dependencies": [],
+      "prompt": {
+        "template": "Reproduce the bug: {{bugDescription}}\n\n## Approach: Binary Search Through Complexity\n\n1. **Create Minimal Case** (simplest version that should work):\n   - Strip away all non-essential features\n   - Use hardcoded values instead of dynamic ones\n   - Test if basic functionality works\n\n2. **Create Failing Case** (minimal version that demonstrates bug):\n   - Add ONE feature at a time from minimal case\n   - Identify exact feature that triggers failure\n   - Document difference between working and failing cases\n\n3. **Execute Both Tests**:\n   - Run minimal case: expect success ✅\n   - Run failing case: expect failure ❌\n   - Capture logs, error messages, timing\n\n## Context\n\n{{#if relevantFiles}}\nRelevant files:\n{{relevantFiles}}\n{{/if}}\n\n{{#if recentChanges}}\nRecent changes:\n{{recentChanges}}\n{{/if}}\n\n## Output\n\nCreate test files in `/tmp/debug-{{debugId}}/`:\n- `minimal-case.{ts,sh,json}` - Working baseline\n- `failing-case.{ts,sh,json}` - Demonstrates bug\n- `reproduction-summary.md` - Findings\n\nWrite reproduction-summary.md with:\n- What works (minimal case results)\n- What fails (failing case results)\n- Exact difference between cases\n- Hypothesis about root cause",
+        "variables": [
+          {
+            "name": "debugId",
+            "type": "string",
+            "required": true,
+            "description": "Unique identifier for this debug session (e.g., timestamp or feature name)"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/reproduction-summary.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "What works",
+            "description": ""
+          },
+          {
+            "pattern": "What fails",
+            "description": ""
+          },
+          {
+            "pattern": "Hypothesis",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze",
+      "subagent": "general",
+      "description": "Trace through code to identify root cause",
+      "dependencies": [
+        "reproduce"
+      ],
+      "prompt": {
+        "template": "Analyze the bug based on reproduction results.\n\n## Read Reproduction Summary\n\nFile: `/tmp/debug-{{debugId}}/reproduction-summary.md`\n\nKey findings:\n- Minimal case: what worked\n- Failing case: what failed\n- Hypothesis: initial guess\n\n## Root Cause Analysis Strategy\n\n1. **Log Analysis**:\n   - Search logs for error messages\n   - Find timing (0.0s = immediate failure)\n   - Identify which layer failed (pre-flight, execution, validation)\n\n2. **Data Flow Inspection**:\n   - Check inputs: what was provided?\n   - Check processing: what transformations happened?\n   - Check outputs: what was produced?\n   - Find the mismatch\n\n3. **Code Trace**:\n   - Find entry point (tool/function that handles input)\n   - Trace through transformations\n   - Identify where data is lost/corrupted\n   - Locate exact line causing issue\n\n## Tools to Use\n\n- `rg` (ripgrep): Search codebase for patterns\n- `read`: Read suspected files\n- `bash`: Check logs, inspect data\n- `grep`: Find related code\n\n## Output\n\nWrite to `/tmp/debug-{{debugId}}/root-cause-analysis.md`:\n\n```markdown\n# Root Cause Analysis\n\n## Bug Location\nFile: path/to/file.ts:LINE\n\n## Problem Code\n```language\n// Show the buggy code\n```\n\n## Why It Fails\n[Clear explanation of the bug mechanism]\n\n## Data Flow\n1. Input: [what comes in]\n2. Processing: [what happens]\n3. Bug: [where it breaks]\n4. Output: [what comes out wrong]\n\n## Evidence\n- Log excerpts showing failure\n- Variable inspection results\n- Comparison with working code\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/root-cause-analysis.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Bug Location",
+            "description": ""
+          },
+          {
+            "pattern": "Problem Code",
+            "description": ""
+          },
+          {
+            "pattern": "Why It Fails",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "unknown",
+            "description": ""
+          },
+          {
+            "pattern": "not sure",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "fix",
+      "subagent": "general",
+      "description": "Apply targeted fix based on root cause analysis",
+      "dependencies": [
+        "analyze"
+      ],
+      "prompt": {
+        "template": "Fix the bug based on root cause analysis.\n\n## Read Analysis\n\nFile: `/tmp/debug-{{debugId}}/root-cause-analysis.md`\n\nKey info:\n- Bug location: file and line number\n- Problem code: what's broken\n- Why it fails: mechanism\n\n## Fix Strategy\n\n1. **Verify Current State**:\n   - Read the file with the bug\n   - Confirm the problem code exists\n   - Check for related code that might need updates\n\n2. **Design Fix**:\n   - Minimal change principle (smallest fix possible)\n   - Preserve existing behavior for working cases\n   - Add missing functionality or fix incorrect logic\n   - Consider edge cases\n\n3. **Apply Fix**:\n   - Use `edit` tool to modify file\n   - Update related code if needed (e.g., function signatures)\n   - Follow existing code style and patterns\n\n4. **Rebuild if Needed**:\n   - If fixing compiled code: run build command\n   - Check for compilation errors\n   - Note if runtime restart required\n\n## Output\n\nWrite to `/tmp/debug-{{debugId}}/fix-applied.md`:\n\n```markdown\n# Fix Applied\n\n## Files Modified\n- path/to/file.ts (lines X-Y)\n\n## Changes Made\n\n### Before\n```language\n// Original buggy code\n```\n\n### After\n```language\n// Fixed code\n```\n\n## Explanation\n[Why this fix resolves the bug]\n\n## Testing Required\n- [ ] Unit tests (if available)\n- [ ] Integration test (re-run failing case)\n- [ ] Regression test (re-run minimal case)\n\n## Notes\n[Any special considerations, restart requirements, etc.]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/fix-applied.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Files Modified",
+            "description": ""
+          },
+          {
+            "pattern": "Before",
+            "description": ""
+          },
+          {
+            "pattern": "After",
+            "description": ""
+          },
+          {
+            "pattern": "Explanation",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify",
+      "subagent": "general",
+      "description": "Test fix with both minimal and failing cases",
+      "dependencies": [
+        "fix"
+      ],
+      "prompt": {
+        "template": "Verify the fix works.\n\n## Test Plan\n\n1. **Re-run Minimal Case** (should still work):\n   - Execute: `/tmp/debug-{{debugId}}/minimal-case.*`\n   - Expect: SUCCESS ✅\n   - Purpose: Ensure fix didn't break working functionality\n\n2. **Re-run Failing Case** (should now work):\n   - Execute: `/tmp/debug-{{debugId}}/failing-case.*`\n   - Expect: SUCCESS ✅\n   - Purpose: Confirm fix resolves the bug\n\n3. **Additional Tests**:\n   - Run test suite if available\n   - Check for related features that might be affected\n   - Verify error messages are clear (no silent failures)\n\n## Important Notes\n\n- If fix requires restart: document that testing is pending\n- If fix requires rebuild: ensure build succeeded\n- If tests fail: capture new errors for iteration\n\n## Output\n\nWrite to `/tmp/debug-{{debugId}}/verification-results.md`:\n\n```markdown\n# Verification Results\n\n## Minimal Case Test\n- Status: [PASS/FAIL/PENDING]\n- Output: [summary]\n- Notes: [any observations]\n\n## Failing Case Test  \n- Status: [PASS/FAIL/PENDING]\n- Output: [summary]\n- Comparison with before: [improvement]\n\n## Additional Tests\n- Test suite: [results]\n- Related features: [status]\n- Edge cases: [findings]\n\n## Conclusion\n[Fix verified ✅ / Fix needs iteration / Testing pending restart]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/verification-results.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Minimal Case Test",
+            "description": ""
+          },
+          {
+            "pattern": "Failing Case Test",
+            "description": ""
+          },
+          {
+            "pattern": "Conclusion",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "document",
+      "subagent": "general",
+      "description": "Create comprehensive session documentation",
+      "dependencies": [
+        "verify"
+      ],
+      "prompt": {
+        "template": "Document the complete debugging session.\n\n## Gather All Materials\n\nRead files from `/tmp/debug-{{debugId}}/`:\n- `reproduction-summary.md` - How bug was reproduced\n- `root-cause-analysis.md` - What caused the bug\n- `fix-applied.md` - How it was fixed\n- `verification-results.md` - Testing results\n\n## Create Comprehensive Documentation\n\nWrite to `{{outputPath}}/DEBUG_SESSION_{{debugId}}.md`:\n\n```markdown\n# Debug Session: [Feature Name]\n\n## Executive Summary\n\n**Problem**: [One sentence bug description]\n**Root Cause**: [One sentence explanation]\n**Fix**: [One sentence solution]\n**Status**: [Fixed ✅ / Pending verification]\n\n## Investigation Timeline\n\n1. **Reproduction** (Xmin): [summary]\n2. **Analysis** (Xmin): [summary]\n3. **Fix** (Xmin): [summary]\n4. **Verification** (Xmin): [summary]\n\n**Total**: Xmin from symptom to fix\n\n## Reproduction Process\n\n[Include key findings from reproduction-summary.md]\n\n### Minimal Case (Baseline)\n[What worked]\n\n### Failing Case (Bug Demo)\n[What failed]\n\n### Key Difference\n[What isolated the bug]\n\n## Root Cause Analysis\n\n[Include findings from root-cause-analysis.md]\n\n### Bug Location\nFile: `path/to/file.ts:LINE`\n\n### Problem Code\n```language\n// Show buggy code\n```\n\n### Why It Failed\n[Mechanism explanation]\n\n### Data Flow\n[Input → Processing → Bug → Output]\n\n## The Fix\n\n[Include details from fix-applied.md]\n\n### Changes Made\n\n**Before**:\n```language\n// Original code\n```\n\n**After**:\n```language\n// Fixed code\n```\n\n### Explanation\n[Why this resolves the bug]\n\n## Verification Results\n\n[Include results from verification-results.md]\n\n## Impact Assessment\n\n### What Worked\n[List working components]\n\n### What Was Broken\n[List affected features]\n\n### Blast Radius\n[Scope of impact]\n\n## Learnings\n\n1. **[Learning Category]**: [Insight from this debugging session]\n2. **[Learning Category]**: [Insight from this debugging session]\n3. **[Learning Category]**: [Insight from this debugging session]\n\n## Files Modified\n\n[List all changed files with commit info]\n\n## Next Steps\n\n- [ ] [Follow-up tasks]\n- [ ] [Regression tests to add]\n- [ ] [Documentation updates]\n\n---\n\n*Session completed: [date]*\n*Status: [status]*\n```\n\n## Commit Changes\n\n1. Commit all modified source files with clear message\n2. Commit documentation file\n3. Update any submodules if needed\n\n## Output\n\nConfirm completion by writing summary to stdout:\n```\n✅ Debug session documented\n📄 File: {{outputPath}}/DEBUG_SESSION_{{debugId}}.md\n🔧 Files modified: [count]\n📝 Commits: [count]\n```",
+        "variables": [
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path where documentation should be written (defaults to current directory)",
+            "default": "."
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{outputPath}}/DEBUG_SESSION_{{debugId}}.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Root Cause",
+            "description": ""
+          },
+          {
+            "pattern": "The Fix",
+            "description": ""
+          },
+          {
+            "pattern": "Verification Results",
+            "description": ""
+          },
+          {
+            "pattern": "Learnings",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "[pending]",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "reproduce",
+      "subagent": "general",
+      "description": "Create minimal reproduction case to isolate the issue",
+      "dependencies": [],
+      "prompt": {
+        "template": "Reproduce the bug: {{bugDescription}}\n\n## Approach: Binary Search Through Complexity\n\n1. **Create Minimal Case** (simplest version that should work):\n   - Strip away all non-essential features\n   - Use hardcoded values instead of dynamic ones\n   - Test if basic functionality works\n\n2. **Create Failing Case** (minimal version that demonstrates bug):\n   - Add ONE feature at a time from minimal case\n   - Identify exact feature that triggers failure\n   - Document difference between working and failing cases\n\n3. **Execute Both Tests**:\n   - Run minimal case: expect success ✅\n   - Run failing case: expect failure ❌\n   - Capture logs, error messages, timing\n\n## Context\n\n{{#if relevantFiles}}\nRelevant files:\n{{relevantFiles}}\n{{/if}}\n\n{{#if recentChanges}}\nRecent changes:\n{{recentChanges}}\n{{/if}}\n\n## Output\n\nCreate test files in `/tmp/debug-{{debugId}}/`:\n- `minimal-case.{ts,sh,json}` - Working baseline\n- `failing-case.{ts,sh,json}` - Demonstrates bug\n- `reproduction-summary.md` - Findings\n\nWrite reproduction-summary.md with:\n- What works (minimal case results)\n- What fails (failing case results)\n- Exact difference between cases\n- Hypothesis about root cause",
+        "variables": [
+          {
+            "name": "debugId",
+            "type": "string",
+            "required": true,
+            "description": "Unique identifier for this debug session (e.g., timestamp or feature name)"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/reproduction-summary.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "What works",
+            "description": ""
+          },
+          {
+            "pattern": "What fails",
+            "description": ""
+          },
+          {
+            "pattern": "Hypothesis",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze",
+      "subagent": "general",
+      "description": "Trace through code to identify root cause",
+      "dependencies": [
+        "reproduce"
+      ],
+      "prompt": {
+        "template": "Analyze the bug based on reproduction results.\n\n## Read Reproduction Summary\n\nFile: `/tmp/debug-{{debugId}}/reproduction-summary.md`\n\nKey findings:\n- Minimal case: what worked\n- Failing case: what failed\n- Hypothesis: initial guess\n\n## Root Cause Analysis Strategy\n\n1. **Log Analysis**:\n   - Search logs for error messages\n   - Find timing (0.0s = immediate failure)\n   - Identify which layer failed (pre-flight, execution, validation)\n\n2. **Data Flow Inspection**:\n   - Check inputs: what was provided?\n   - Check processing: what transformations happened?\n   - Check outputs: what was produced?\n   - Find the mismatch\n\n3. **Code Trace**:\n   - Find entry point (tool/function that handles input)\n   - Trace through transformations\n   - Identify where data is lost/corrupted\n   - Locate exact line causing issue\n\n## Tools to Use\n\n- `rg` (ripgrep): Search codebase for patterns\n- `read`: Read suspected files\n- `bash`: Check logs, inspect data\n- `grep`: Find related code\n\n## Output\n\nWrite to `/tmp/debug-{{debugId}}/root-cause-analysis.md`:\n\n```markdown\n# Root Cause Analysis\n\n## Bug Location\nFile: path/to/file.ts:LINE\n\n## Problem Code\n```language\n// Show the buggy code\n```\n\n## Why It Fails\n[Clear explanation of the bug mechanism]\n\n## Data Flow\n1. Input: [what comes in]\n2. Processing: [what happens]\n3. Bug: [where it breaks]\n4. Output: [what comes out wrong]\n\n## Evidence\n- Log excerpts showing failure\n- Variable inspection results\n- Comparison with working code\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/root-cause-analysis.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Bug Location",
+            "description": ""
+          },
+          {
+            "pattern": "Problem Code",
+            "description": ""
+          },
+          {
+            "pattern": "Why It Fails",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "unknown",
+            "description": ""
+          },
+          {
+            "pattern": "not sure",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "fix",
+      "subagent": "general",
+      "description": "Apply targeted fix based on root cause analysis",
+      "dependencies": [
+        "analyze"
+      ],
+      "prompt": {
+        "template": "Fix the bug based on root cause analysis.\n\n## Read Analysis\n\nFile: `/tmp/debug-{{debugId}}/root-cause-analysis.md`\n\nKey info:\n- Bug location: file and line number\n- Problem code: what's broken\n- Why it fails: mechanism\n\n## Fix Strategy\n\n1. **Verify Current State**:\n   - Read the file with the bug\n   - Confirm the problem code exists\n   - Check for related code that might need updates\n\n2. **Design Fix**:\n   - Minimal change principle (smallest fix possible)\n   - Preserve existing behavior for working cases\n   - Add missing functionality or fix incorrect logic\n   - Consider edge cases\n\n3. **Apply Fix**:\n   - Use `edit` tool to modify file\n   - Update related code if needed (e.g., function signatures)\n   - Follow existing code style and patterns\n\n4. **Rebuild if Needed**:\n   - If fixing compiled code: run build command\n   - Check for compilation errors\n   - Note if runtime restart required\n\n## Output\n\nWrite to `/tmp/debug-{{debugId}}/fix-applied.md`:\n\n```markdown\n# Fix Applied\n\n## Files Modified\n- path/to/file.ts (lines X-Y)\n\n## Changes Made\n\n### Before\n```language\n// Original buggy code\n```\n\n### After\n```language\n// Fixed code\n```\n\n## Explanation\n[Why this fix resolves the bug]\n\n## Testing Required\n- [ ] Unit tests (if available)\n- [ ] Integration test (re-run failing case)\n- [ ] Regression test (re-run minimal case)\n\n## Notes\n[Any special considerations, restart requirements, etc.]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/fix-applied.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Files Modified",
+            "description": ""
+          },
+          {
+            "pattern": "Before",
+            "description": ""
+          },
+          {
+            "pattern": "After",
+            "description": ""
+          },
+          {
+            "pattern": "Explanation",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "verify",
+      "subagent": "general",
+      "description": "Test fix with both minimal and failing cases",
+      "dependencies": [
+        "fix"
+      ],
+      "prompt": {
+        "template": "Verify the fix works.\n\n## Test Plan\n\n1. **Re-run Minimal Case** (should still work):\n   - Execute: `/tmp/debug-{{debugId}}/minimal-case.*`\n   - Expect: SUCCESS ✅\n   - Purpose: Ensure fix didn't break working functionality\n\n2. **Re-run Failing Case** (should now work):\n   - Execute: `/tmp/debug-{{debugId}}/failing-case.*`\n   - Expect: SUCCESS ✅\n   - Purpose: Confirm fix resolves the bug\n\n3. **Additional Tests**:\n   - Run test suite if available\n   - Check for related features that might be affected\n   - Verify error messages are clear (no silent failures)\n\n## Important Notes\n\n- If fix requires restart: document that testing is pending\n- If fix requires rebuild: ensure build succeeded\n- If tests fail: capture new errors for iteration\n\n## Output\n\nWrite to `/tmp/debug-{{debugId}}/verification-results.md`:\n\n```markdown\n# Verification Results\n\n## Minimal Case Test\n- Status: [PASS/FAIL/PENDING]\n- Output: [summary]\n- Notes: [any observations]\n\n## Failing Case Test  \n- Status: [PASS/FAIL/PENDING]\n- Output: [summary]\n- Comparison with before: [improvement]\n\n## Additional Tests\n- Test suite: [results]\n- Related features: [status]\n- Edge cases: [findings]\n\n## Conclusion\n[Fix verified ✅ / Fix needs iteration / Testing pending restart]\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/debug-{{debugId}}/verification-results.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Minimal Case Test",
+            "description": ""
+          },
+          {
+            "pattern": "Failing Case Test",
+            "description": ""
+          },
+          {
+            "pattern": "Conclusion",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "document",
+      "subagent": "general",
+      "description": "Create comprehensive session documentation",
+      "dependencies": [
+        "verify"
+      ],
+      "prompt": {
+        "template": "Document the complete debugging session.\n\n## Gather All Materials\n\nRead files from `/tmp/debug-{{debugId}}/`:\n- `reproduction-summary.md` - How bug was reproduced\n- `root-cause-analysis.md` - What caused the bug\n- `fix-applied.md` - How it was fixed\n- `verification-results.md` - Testing results\n\n## Create Comprehensive Documentation\n\nWrite to `{{outputPath}}/DEBUG_SESSION_{{debugId}}.md`:\n\n```markdown\n# Debug Session: [Feature Name]\n\n## Executive Summary\n\n**Problem**: [One sentence bug description]\n**Root Cause**: [One sentence explanation]\n**Fix**: [One sentence solution]\n**Status**: [Fixed ✅ / Pending verification]\n\n## Investigation Timeline\n\n1. **Reproduction** (Xmin): [summary]\n2. **Analysis** (Xmin): [summary]\n3. **Fix** (Xmin): [summary]\n4. **Verification** (Xmin): [summary]\n\n**Total**: Xmin from symptom to fix\n\n## Reproduction Process\n\n[Include key findings from reproduction-summary.md]\n\n### Minimal Case (Baseline)\n[What worked]\n\n### Failing Case (Bug Demo)\n[What failed]\n\n### Key Difference\n[What isolated the bug]\n\n## Root Cause Analysis\n\n[Include findings from root-cause-analysis.md]\n\n### Bug Location\nFile: `path/to/file.ts:LINE`\n\n### Problem Code\n```language\n// Show buggy code\n```\n\n### Why It Failed\n[Mechanism explanation]\n\n### Data Flow\n[Input → Processing → Bug → Output]\n\n## The Fix\n\n[Include details from fix-applied.md]\n\n### Changes Made\n\n**Before**:\n```language\n// Original code\n```\n\n**After**:\n```language\n// Fixed code\n```\n\n### Explanation\n[Why this resolves the bug]\n\n## Verification Results\n\n[Include results from verification-results.md]\n\n## Impact Assessment\n\n### What Worked\n[List working components]\n\n### What Was Broken\n[List affected features]\n\n### Blast Radius\n[Scope of impact]\n\n## Learnings\n\n1. **[Learning Category]**: [Insight from this debugging session]\n2. **[Learning Category]**: [Insight from this debugging session]\n3. **[Learning Category]**: [Insight from this debugging session]\n\n## Files Modified\n\n[List all changed files with commit info]\n\n## Next Steps\n\n- [ ] [Follow-up tasks]\n- [ ] [Regression tests to add]\n- [ ] [Documentation updates]\n\n---\n\n*Session completed: [date]*\n*Status: [status]*\n```\n\n## Commit Changes\n\n1. Commit all modified source files with clear message\n2. Commit documentation file\n3. Update any submodules if needed\n\n## Output\n\nConfirm completion by writing summary to stdout:\n```\n✅ Debug session documented\n📄 File: {{outputPath}}/DEBUG_SESSION_{{debugId}}.md\n🔧 Files modified: [count]\n📝 Commits: [count]\n```",
+        "variables": [
+          {
+            "name": "outputPath",
+            "type": "string",
+            "required": false,
+            "description": "Path where documentation should be written (defaults to current directory)",
+            "default": "."
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "{{outputPath}}/DEBUG_SESSION_{{debugId}}.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "Executive Summary",
+            "description": ""
+          },
+          {
+            "pattern": "Root Cause",
+            "description": ""
+          },
+          {
+            "pattern": "The Fix",
+            "description": ""
+          },
+          {
+            "pattern": "Verification Results",
+            "description": ""
+          },
+          {
+            "pattern": "Learnings",
+            "description": ""
+          }
+        ],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": ""
+          },
+          {
+            "pattern": "[pending]",
+            "description": ""
+          }
+        ],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-20T00:18:54.870Z",
+  "metadata": {}
+}

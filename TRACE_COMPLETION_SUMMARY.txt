@@ -1,0 +1,48 @@
+
+## Trace Complete: dashboard-activity-history-viewing-flow
+
+### Summary
+Traced the complete end-to-end flow for viewing activity history in the Metabob dashboard. Identified all components from Kubernetes infrastructure through frontend UI to backend API and database.
+
+### Key Findings
+
+**Working Components:**
+- Kubernetes cluster (docker-desktop context) with services deployed
+- Dashboard UI with DevelopmentProgressDashboard and LearningView components
+- Activity execution write path (POST /v2/activities/executions → SurrealDB)
+- SurrealDB storage with activity_executions table
+- Playwright browser automation tools
+
+**Critical Gaps (3):**
+1. **Analytics Router Missing** - repos/metabob-rpc-api/server/routes/analytics.py does not exist
+2. **Aggregation Logic Missing** - No functions to compute template statistics from executions
+3. **Router Registration Missing** - analytics_router not included in FastAPI app
+
+**Data Flow:**
+- WRITE PATH ✓: OpenCode → POST /v2/activities/executions → SurrealDB
+- READ PATH ✗: Dashboard → GET /analytics/* → 404 NOT FOUND
+
+### Files Analyzed
+- repos/metabob-dashboard/src/pages/Dashboard/components/DevelopmentProgressDashboard.js
+- repos/metabob-dashboard/src/pages/Dashboard/components/LearningView.js
+- repos/metabob-dashboard/src/common/MetabobRestApi.js
+- repos/metabob-rpc-api/server/app.py
+- repos/metabob-rpc-api/server/routes/activity.py
+- repos/metabob-rpc-api/server/db/operations/activity_execution.py
+
+### Output Files
+1. trace-dashboard-activity-history-viewing-flow.json - Structured trace data
+2. TRACE_DASHBOARD_ACTIVITY_HISTORY_VIEWING_FLOW.md - Human-readable documentation
+
+### Impulse Created
+ID: trace-dashboard-activity-history-viewing-flow
+Type: templateDefinition
+Budget: 5000 tokens
+Content: Complete component analysis, gap identification, data flow documentation
+
+### Next Steps for Implementation
+1. Create analytics router with aggregation endpoints
+2. Register router in FastAPI application  
+3. Test data flow from SurrealDB to Dashboard UI
+4. Demonstrate with Playwright browser automation
+

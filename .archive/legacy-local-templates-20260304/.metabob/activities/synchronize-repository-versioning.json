@@ -1,0 +1,321 @@
+{
+  "activity_id": "synchronize-repository-versioning",
+  "name": "Synchronize Repository Versioning",
+  "description": "Audit and synchronize version numbers across all version-related files in a repository (version files, package configs, CI/CD, docs, CLIs) following the codebase's conventions",
+  "category": "infrastructure",
+  "task_steps": [
+    {
+      "task_id": "task-1-discover-version-files",
+      "subagent": "general",
+      "description": "Discover all version-related files in the repository",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Discover Version Files\n\n## Objective\nFind all files in {{repoPath}} that contain or reference version numbers.\n\n## Discovery Process\n\n1. **Find Version Definition Files**:\n```bash\ncd {{repoPath}}\n\n# Python projects\nfind . -type f \\( -name \"_version.py\" -o -name \"__version__.py\" -o -name \"version.py\" \\) ! -path \"*/.*\" ! -path \"*/.venv/*\" ! -path \"*/venv/*\" ! -path \"*/node_modules/*\"\n\n# Node.js projects\nfind . -type f -name \"package.json\" ! -path \"*/node_modules/*\" ! -path \"*/.*\" ! -path \"*/dist/*\"\n\n# Generic version files\nfind . -type f \\( -name \"VERSION\" -o -name \".version\" -o -name \"version.txt\" \\) ! -path \"*/.*\"\n\n# Config files with version fields\nfind . -type f \\( -name \"pyproject.toml\" -o -name \"setup.py\" -o -name \"Cargo.toml\" \\) ! -path \"*/.*\" ! -path \"*/.venv/*\"\n```\n\n2. **Find Version Management Tools**:\n```bash\n# Check for commitizen config\ngrep -r \"tool.commitizen\" . --include=\"*.toml\" --include=\"*.json\" | head -20\n\n# Check for version bumping scripts\nfind . -type f \\( -name \"*bump*\" -o -name \"*version*\" \\) \\( -name \"*.sh\" -o -name \"*.py\" -o -name \"*.js\" \\) ! -path \"*/.*\" ! -path \"*/node_modules/*\"\n```\n\n3. **Find Version References in CI/CD**:\n```bash\n# GitHub Actions\nfind . -path \"*/.github/workflows/*.yml\" -o -path \"*/.github/workflows/*.yaml\" | xargs grep -l \"version\" 2>/dev/null\n\n# Docker files\nfind . -type f -name \"Dockerfile*\" ! -path \"*/.*\" | xargs grep -l \"VERSION\\|version\" 2>/dev/null\n\n# Helm charts\nfind . -path \"*/helm/*/Chart.yaml\" -o -path \"*/charts/*/Chart.yaml\"\n```\n\n4. **Find Version References in Documentation**:\n```bash\nfind . -type f \\( -name \"README.md\" -o -name \"CHANGELOG.md\" -o -name \"*.md\" \\) ! -path \"*/node_modules/*\" ! -path \"*/.*\" | head -20\n```\n\n5. **Generate Discovery Report** in `VERSION_FILES_DISCOVERED.md`:\n```markdown\n# Version Files Discovery Report\n\n## Version Definition Files\n- [List all _version.py, __version__.py, package.json with versions]\n\n## Version Management\n- Tool: [commitizen/standard-version/semantic-release/manual]\n- Config files: [List pyproject.toml, package.json with version config]\n\n## CI/CD References\n- [List workflow files, Dockerfiles, Helm charts with version refs]\n\n## Documentation\n- [List README, CHANGELOG, other docs with version mentions]\n\n## Current Versions Found\n- [File path]: [version number]\n  ...\n\n## Version Management Strategy\n- [Detected: commitizen with version_files, or manual, or other]\n```\n\n## Output Requirements\n- File: `VERSION_FILES_DISCOVERED.md`\n- Lists ALL files containing version information\n- Identifies version management tool/strategy\n- Shows current version in each file\n- Clear categorization by file type",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to analyze"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2-audit-version-consistency",
+      "subagent": "general",
+      "description": "Audit version consistency across all discovered files",
+      "dependencies": [
+        "task-1-discover-version-files"
+      ],
+      "prompt": {
+        "template": "# Task: Audit Version Consistency\n\n## Objective\nAnalyze all discovered version files and identify inconsistencies.\n\n## Analysis Process\n\n1. **Extract All Version Numbers**:\nFor each file discovered in VERSION_FILES_DISCOVERED.md:\n- Read the file\n- Extract the version number\n- Note the format and context\n\n2. **Identify Version Patterns**:\n```bash\ncd {{repoPath}}\n\n# Python _version.py files\ngrep -h \"__version__\" **/_version.py 2>/dev/null | sort | uniq\n\n# package.json files  \nfind . -name \"package.json\" ! -path \"*/node_modules/*\" -exec grep -H '\"version\"' {} \\; | head -20\n\n# pyproject.toml\ngrep -r \"^version\" . --include=\"pyproject.toml\" --include=\"*.toml\"\n```\n\n3. **Check Version Management Configuration**:\n```bash\n# Commitizen config\ngrep -A 5 \"tool.commitizen\" {{repoPath}}/pyproject.toml 2>/dev/null\ngrep -A 5 \"tool.commitizen\" {{repoPath}}/package.json 2>/dev/null\n\n# Look for version_files array\ngrep -A 10 \"version_files\" {{repoPath}}/pyproject.toml 2>/dev/null\n```\n\n4. **Generate Consistency Report** in `VERSION_CONSISTENCY_AUDIT.md`:\n```markdown\n# Version Consistency Audit\n\n## Summary\n- **Primary Version**: {{targetVersion}} (or \"INCONSISTENT\" if multiple found)\n- **Total Files Checked**: [number]\n- **Consistent Files**: [number]\n- **Inconsistent Files**: [number]\n- **Status**: PASS/FAIL\n\n## Version by File\n\n### Consistent (✅)\n- `/path/to/file1.py`: 1.9.0 ✅\n- `/path/to/package.json`: 1.9.0 ✅\n\n### Inconsistent (❌)\n- `/path/to/file2.py`: 1.8.0 ❌ (Expected: 1.9.0)\n- `/path/to/README.md`: 1.7.0 ❌ (Expected: 1.9.0)\n\n## Version Management Configuration\n\n### Commitizen Settings\n```toml\n[tool.commitizen]\nversion = \"1.10.0\"\nversion_files = [\n    \"src/metabob_cli/_version.py:__version__\",\n    \"pyproject.toml:version\"\n]\n```\n\n### Issues Found\n- Missing from version_files: [list files]\n- Conflicting versions: [list conflicts]\n- Unmanaged version references: [list]\n\n## Recommendations\n1. Set canonical version to: {{targetVersion}}\n2. Update inconsistent files: [list]\n3. Add missing files to version_files config: [list]\n4. Update documentation with version references\n```\n\n## Output Requirements\n- File: `VERSION_CONSISTENCY_AUDIT.md`\n- Clear PASS/FAIL status\n- Lists every file with its version\n- Identifies the canonical version\n- Lists all inconsistencies\n- Provides actionable recommendations",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to analyze"
+          },
+          {
+            "name": "targetVersion",
+            "type": "string",
+            "required": false,
+            "description": "Target version to synchronize to (if not provided, uses most common version)",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "task-3-synchronize-versions",
+      "subagent": "general",
+      "description": "Synchronize all version files to target version",
+      "dependencies": [
+        "task-2-audit-version-consistency"
+      ],
+      "prompt": {
+        "template": "# Task: Synchronize Version Numbers\n\n## Objective\nUpdate all version files to match {{targetVersion}}, following repository conventions.\n\n## Synchronization Process\n\n1. **Determine Target Version**:\n- If {{targetVersion}} is provided: use it\n- Otherwise: use the most recent/common version from audit\n- Validate version format (semver: X.Y.Z)\n\n2. **Update Version Definition Files**:\n\n### Python Projects:\n```python\n# Update _version.py or __version__.py\n__version__ = \"{{targetVersion}}\"\n```\n\n### Node.js Projects:\n```json\n// Update package.json\n{\n  \"version\": \"{{targetVersion}}\"\n}\n```\n\n### Configuration Files:\n```toml\n# Update pyproject.toml\n[tool.commitizen]\nversion = \"{{targetVersion}}\"\n```\n\n3. **Update Version Management Config**:\n\nIf commitizen is used:\n```bash\ncd {{repoPath}}\n\n# Verify version_files includes all discovered files\n# Update pyproject.toml [tool.commitizen] section\n```\n\n4. **Update Documentation**:\n- README.md: Update version badges, installation instructions\n- CHANGELOG.md: Ensure latest version is documented\n- Other docs: Update version references\n\n5. **Verify CI/CD Compatibility**:\n- Check that GitHub Actions/workflows don't hardcode versions\n- Verify Docker builds pull version from code\n- Update Helm chart versions if applicable\n\n6. **Generate Synchronization Report** in `VERSION_SYNC_REPORT.md`:\n```markdown\n# Version Synchronization Report\n\n## Target Version: {{targetVersion}}\n\n## Files Updated\n\n### Core Version Files (✅ Updated)\n- `src/_version.py`: 1.8.0 → {{targetVersion}}\n- `package.json`: 1.9.0 → {{targetVersion}}\n- `pyproject.toml`: 1.10.0 → {{targetVersion}}\n\n### Documentation (✅ Updated)\n- `README.md`: Updated installation instructions\n- `CHANGELOG.md`: Verified latest entry\n\n### Configuration (✅ Updated)\n- `pyproject.toml`: Added missing files to version_files\n\n## Verification\n\n```bash\n# Verify all files show same version\ngrep -r \"{{targetVersion}}\" {{repoPath}} --include=\"*_version.py\" --include=\"package.json\" --include=\"pyproject.toml\"\n```\n\n## Next Steps\n1. Run tests to ensure no breaks\n2. Commit changes with: `chore: synchronize version to {{targetVersion}} across all files`\n3. Use version tool (cz bump / npm version) for future updates\n4. Consider adding pre-commit hook to validate version consistency\n\n## Files Requiring Manual Review\n- [List any files that couldn't be auto-updated]\n```\n\n## Output Requirements\n- File: `VERSION_SYNC_REPORT.md`\n- All version files updated to {{targetVersion}}\n- Documentation updated with new version\n- Version management config updated\n- Clear list of changes made\n- Verification commands included",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to synchronize"
+          },
+          {
+            "name": "targetVersion",
+            "type": "string",
+            "required": false,
+            "description": "Target version to synchronize to (if not provided, uses most common version)",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4-verify-synchronization",
+      "subagent": "general",
+      "description": "Verify all versions are synchronized correctly",
+      "dependencies": [
+        "task-3-synchronize-versions"
+      ],
+      "prompt": {
+        "template": "# Task: Verify Version Synchronization\n\n## Objective\nConfirm that all version files in {{repoPath}} are synchronized to {{targetVersion}}.\n\n## Verification Steps\n\n1. **Re-scan All Version Files**:\n```bash\ncd {{repoPath}}\n\n# Extract versions from all known files\necho \"=== Python Version Files ===\"\nfind . -name \"*version*.py\" ! -path \"*/.*\" ! -path \"*/.venv/*\" -exec grep -H \"__version__\" {} \\;\n\necho \"=== Package.json Files ===\"\nfind . -name \"package.json\" ! -path \"*/node_modules/*\" ! -path \"*/.*\" -exec grep -H '\"version\"' {} \\;\n\necho \"=== Config Files ===\"\ngrep -r \"^version\" . --include=\"pyproject.toml\" --include=\"Cargo.toml\"\ngrep -r \"tool.commitizen\" . --include=\"*.toml\" -A 2\n\necho \"=== Documentation ===\"\ngrep -n \"version\" README.md | head -10\n```\n\n2. **Run Tests** (if available):\n```bash\ncd {{repoPath}}\n\n# Python\nif [ -f \"pyproject.toml\" ]; then\n    python -c \"import sys; sys.path.insert(0, 'src'); from $(basename {{repoPath}} | tr - _)._version import __version__; print('Python version:', __version__)\"\nfi\n\n# Node.js  \nif [ -f \"package.json\" ]; then\n    node -e \"console.log('Package version:', require('./package.json').version)\"\nfi\n```\n\n3. **Validate Version Format**:\n```bash\n# Ensure all versions match semver pattern\necho \"{{targetVersion}}\" | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9\\.]+)?(\\+[a-zA-Z0-9\\.]+)?$'\n```\n\n4. **Generate Verification Report** in `VERSION_VERIFICATION.md`:\n```markdown\n# Version Synchronization Verification\n\n## Status: ✅ PASS / ❌ FAIL\n\n## Target Version: {{targetVersion}}\n\n## Verification Results\n\n### All Version Files\n| File | Version | Status |\n|------|---------|--------|\n| src/_version.py | {{targetVersion}} | ✅ |\n| package.json | {{targetVersion}} | ✅ |\n| pyproject.toml | {{targetVersion}} | ✅ |\n| README.md | {{targetVersion}} | ✅ |\n\n### Test Results\n```bash\n[Include output from test commands]\n```\n\n### Format Validation\n- Version format: ✅ Valid semver (X.Y.Z)\n- No inconsistencies found: ✅\n\n## Issues Found\n[List any remaining issues, or \"None\" if all pass]\n\n## Recommendations\n- ✅ All versions synchronized\n- ✅ Ready to commit\n- Next: Run `git add -A && git commit -m \"chore: synchronize version to {{targetVersion}}\"`\n\n## Maintenance Notes\n\n### For Python Projects (commitizen):\n```bash\n# Bump patch version\ncz bump --increment PATCH\n\n# Bump minor version\ncz bump --increment MINOR\n\n# Bump major version  \ncz bump --increment MAJOR\n```\n\n### For Node.js Projects:\n```bash\n# Bump patch\nnpm version patch\n\n# Bump minor\nnpm version minor\n\n# Bump major\nnpm version major\n```\n\n### Manual Updates:\nIf not using automated tools, update these files manually:\n1. [List version_files from config]\n2. Update CHANGELOG.md\n3. Commit with conventional commit message\n```\n\n## Output Requirements\n- File: `VERSION_VERIFICATION.md`\n- Clear PASS/FAIL status\n- Table showing all files and their versions\n- Test results (if tests available)\n- Maintenance instructions for future version bumps\n- List any remaining issues",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to verify"
+          },
+          {
+            "name": "targetVersion",
+            "type": "string",
+            "required": false,
+            "description": "Expected target version",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task-1-discover-version-files",
+      "subagent": "general",
+      "description": "Discover all version-related files in the repository",
+      "dependencies": [],
+      "prompt": {
+        "template": "# Task: Discover Version Files\n\n## Objective\nFind all files in {{repoPath}} that contain or reference version numbers.\n\n## Discovery Process\n\n1. **Find Version Definition Files**:\n```bash\ncd {{repoPath}}\n\n# Python projects\nfind . -type f \\( -name \"_version.py\" -o -name \"__version__.py\" -o -name \"version.py\" \\) ! -path \"*/.*\" ! -path \"*/.venv/*\" ! -path \"*/venv/*\" ! -path \"*/node_modules/*\"\n\n# Node.js projects\nfind . -type f -name \"package.json\" ! -path \"*/node_modules/*\" ! -path \"*/.*\" ! -path \"*/dist/*\"\n\n# Generic version files\nfind . -type f \\( -name \"VERSION\" -o -name \".version\" -o -name \"version.txt\" \\) ! -path \"*/.*\"\n\n# Config files with version fields\nfind . -type f \\( -name \"pyproject.toml\" -o -name \"setup.py\" -o -name \"Cargo.toml\" \\) ! -path \"*/.*\" ! -path \"*/.venv/*\"\n```\n\n2. **Find Version Management Tools**:\n```bash\n# Check for commitizen config\ngrep -r \"tool.commitizen\" . --include=\"*.toml\" --include=\"*.json\" | head -20\n\n# Check for version bumping scripts\nfind . -type f \\( -name \"*bump*\" -o -name \"*version*\" \\) \\( -name \"*.sh\" -o -name \"*.py\" -o -name \"*.js\" \\) ! -path \"*/.*\" ! -path \"*/node_modules/*\"\n```\n\n3. **Find Version References in CI/CD**:\n```bash\n# GitHub Actions\nfind . -path \"*/.github/workflows/*.yml\" -o -path \"*/.github/workflows/*.yaml\" | xargs grep -l \"version\" 2>/dev/null\n\n# Docker files\nfind . -type f -name \"Dockerfile*\" ! -path \"*/.*\" | xargs grep -l \"VERSION\\|version\" 2>/dev/null\n\n# Helm charts\nfind . -path \"*/helm/*/Chart.yaml\" -o -path \"*/charts/*/Chart.yaml\"\n```\n\n4. **Find Version References in Documentation**:\n```bash\nfind . -type f \\( -name \"README.md\" -o -name \"CHANGELOG.md\" -o -name \"*.md\" \\) ! -path \"*/node_modules/*\" ! -path \"*/.*\" | head -20\n```\n\n5. **Generate Discovery Report** in `VERSION_FILES_DISCOVERED.md`:\n```markdown\n# Version Files Discovery Report\n\n## Version Definition Files\n- [List all _version.py, __version__.py, package.json with versions]\n\n## Version Management\n- Tool: [commitizen/standard-version/semantic-release/manual]\n- Config files: [List pyproject.toml, package.json with version config]\n\n## CI/CD References\n- [List workflow files, Dockerfiles, Helm charts with version refs]\n\n## Documentation\n- [List README, CHANGELOG, other docs with version mentions]\n\n## Current Versions Found\n- [File path]: [version number]\n  ...\n\n## Version Management Strategy\n- [Detected: commitizen with version_files, or manual, or other]\n```\n\n## Output Requirements\n- File: `VERSION_FILES_DISCOVERED.md`\n- Lists ALL files containing version information\n- Identifies version management tool/strategy\n- Shows current version in each file\n- Clear categorization by file type",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to analyze"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-2-audit-version-consistency",
+      "subagent": "general",
+      "description": "Audit version consistency across all discovered files",
+      "dependencies": [
+        "task-1-discover-version-files"
+      ],
+      "prompt": {
+        "template": "# Task: Audit Version Consistency\n\n## Objective\nAnalyze all discovered version files and identify inconsistencies.\n\n## Analysis Process\n\n1. **Extract All Version Numbers**:\nFor each file discovered in VERSION_FILES_DISCOVERED.md:\n- Read the file\n- Extract the version number\n- Note the format and context\n\n2. **Identify Version Patterns**:\n```bash\ncd {{repoPath}}\n\n# Python _version.py files\ngrep -h \"__version__\" **/_version.py 2>/dev/null | sort | uniq\n\n# package.json files  \nfind . -name \"package.json\" ! -path \"*/node_modules/*\" -exec grep -H '\"version\"' {} \\; | head -20\n\n# pyproject.toml\ngrep -r \"^version\" . --include=\"pyproject.toml\" --include=\"*.toml\"\n```\n\n3. **Check Version Management Configuration**:\n```bash\n# Commitizen config\ngrep -A 5 \"tool.commitizen\" {{repoPath}}/pyproject.toml 2>/dev/null\ngrep -A 5 \"tool.commitizen\" {{repoPath}}/package.json 2>/dev/null\n\n# Look for version_files array\ngrep -A 10 \"version_files\" {{repoPath}}/pyproject.toml 2>/dev/null\n```\n\n4. **Generate Consistency Report** in `VERSION_CONSISTENCY_AUDIT.md`:\n```markdown\n# Version Consistency Audit\n\n## Summary\n- **Primary Version**: {{targetVersion}} (or \"INCONSISTENT\" if multiple found)\n- **Total Files Checked**: [number]\n- **Consistent Files**: [number]\n- **Inconsistent Files**: [number]\n- **Status**: PASS/FAIL\n\n## Version by File\n\n### Consistent (✅)\n- `/path/to/file1.py`: 1.9.0 ✅\n- `/path/to/package.json`: 1.9.0 ✅\n\n### Inconsistent (❌)\n- `/path/to/file2.py`: 1.8.0 ❌ (Expected: 1.9.0)\n- `/path/to/README.md`: 1.7.0 ❌ (Expected: 1.9.0)\n\n## Version Management Configuration\n\n### Commitizen Settings\n```toml\n[tool.commitizen]\nversion = \"1.10.0\"\nversion_files = [\n    \"src/metabob_cli/_version.py:__version__\",\n    \"pyproject.toml:version\"\n]\n```\n\n### Issues Found\n- Missing from version_files: [list files]\n- Conflicting versions: [list conflicts]\n- Unmanaged version references: [list]\n\n## Recommendations\n1. Set canonical version to: {{targetVersion}}\n2. Update inconsistent files: [list]\n3. Add missing files to version_files config: [list]\n4. Update documentation with version references\n```\n\n## Output Requirements\n- File: `VERSION_CONSISTENCY_AUDIT.md`\n- Clear PASS/FAIL status\n- Lists every file with its version\n- Identifies the canonical version\n- Lists all inconsistencies\n- Provides actionable recommendations",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to analyze"
+          },
+          {
+            "name": "targetVersion",
+            "type": "string",
+            "required": false,
+            "description": "Target version to synchronize to (if not provided, uses most common version)",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "task-3-synchronize-versions",
+      "subagent": "general",
+      "description": "Synchronize all version files to target version",
+      "dependencies": [
+        "task-2-audit-version-consistency"
+      ],
+      "prompt": {
+        "template": "# Task: Synchronize Version Numbers\n\n## Objective\nUpdate all version files to match {{targetVersion}}, following repository conventions.\n\n## Synchronization Process\n\n1. **Determine Target Version**:\n- If {{targetVersion}} is provided: use it\n- Otherwise: use the most recent/common version from audit\n- Validate version format (semver: X.Y.Z)\n\n2. **Update Version Definition Files**:\n\n### Python Projects:\n```python\n# Update _version.py or __version__.py\n__version__ = \"{{targetVersion}}\"\n```\n\n### Node.js Projects:\n```json\n// Update package.json\n{\n  \"version\": \"{{targetVersion}}\"\n}\n```\n\n### Configuration Files:\n```toml\n# Update pyproject.toml\n[tool.commitizen]\nversion = \"{{targetVersion}}\"\n```\n\n3. **Update Version Management Config**:\n\nIf commitizen is used:\n```bash\ncd {{repoPath}}\n\n# Verify version_files includes all discovered files\n# Update pyproject.toml [tool.commitizen] section\n```\n\n4. **Update Documentation**:\n- README.md: Update version badges, installation instructions\n- CHANGELOG.md: Ensure latest version is documented\n- Other docs: Update version references\n\n5. **Verify CI/CD Compatibility**:\n- Check that GitHub Actions/workflows don't hardcode versions\n- Verify Docker builds pull version from code\n- Update Helm chart versions if applicable\n\n6. **Generate Synchronization Report** in `VERSION_SYNC_REPORT.md`:\n```markdown\n# Version Synchronization Report\n\n## Target Version: {{targetVersion}}\n\n## Files Updated\n\n### Core Version Files (✅ Updated)\n- `src/_version.py`: 1.8.0 → {{targetVersion}}\n- `package.json`: 1.9.0 → {{targetVersion}}\n- `pyproject.toml`: 1.10.0 → {{targetVersion}}\n\n### Documentation (✅ Updated)\n- `README.md`: Updated installation instructions\n- `CHANGELOG.md`: Verified latest entry\n\n### Configuration (✅ Updated)\n- `pyproject.toml`: Added missing files to version_files\n\n## Verification\n\n```bash\n# Verify all files show same version\ngrep -r \"{{targetVersion}}\" {{repoPath}} --include=\"*_version.py\" --include=\"package.json\" --include=\"pyproject.toml\"\n```\n\n## Next Steps\n1. Run tests to ensure no breaks\n2. Commit changes with: `chore: synchronize version to {{targetVersion}} across all files`\n3. Use version tool (cz bump / npm version) for future updates\n4. Consider adding pre-commit hook to validate version consistency\n\n## Files Requiring Manual Review\n- [List any files that couldn't be auto-updated]\n```\n\n## Output Requirements\n- File: `VERSION_SYNC_REPORT.md`\n- All version files updated to {{targetVersion}}\n- Documentation updated with new version\n- Version management config updated\n- Clear list of changes made\n- Verification commands included",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to synchronize"
+          },
+          {
+            "name": "targetVersion",
+            "type": "string",
+            "required": false,
+            "description": "Target version to synchronize to (if not provided, uses most common version)",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "task-4-verify-synchronization",
+      "subagent": "general",
+      "description": "Verify all versions are synchronized correctly",
+      "dependencies": [
+        "task-3-synchronize-versions"
+      ],
+      "prompt": {
+        "template": "# Task: Verify Version Synchronization\n\n## Objective\nConfirm that all version files in {{repoPath}} are synchronized to {{targetVersion}}.\n\n## Verification Steps\n\n1. **Re-scan All Version Files**:\n```bash\ncd {{repoPath}}\n\n# Extract versions from all known files\necho \"=== Python Version Files ===\"\nfind . -name \"*version*.py\" ! -path \"*/.*\" ! -path \"*/.venv/*\" -exec grep -H \"__version__\" {} \\;\n\necho \"=== Package.json Files ===\"\nfind . -name \"package.json\" ! -path \"*/node_modules/*\" ! -path \"*/.*\" -exec grep -H '\"version\"' {} \\;\n\necho \"=== Config Files ===\"\ngrep -r \"^version\" . --include=\"pyproject.toml\" --include=\"Cargo.toml\"\ngrep -r \"tool.commitizen\" . --include=\"*.toml\" -A 2\n\necho \"=== Documentation ===\"\ngrep -n \"version\" README.md | head -10\n```\n\n2. **Run Tests** (if available):\n```bash\ncd {{repoPath}}\n\n# Python\nif [ -f \"pyproject.toml\" ]; then\n    python -c \"import sys; sys.path.insert(0, 'src'); from $(basename {{repoPath}} | tr - _)._version import __version__; print('Python version:', __version__)\"\nfi\n\n# Node.js  \nif [ -f \"package.json\" ]; then\n    node -e \"console.log('Package version:', require('./package.json').version)\"\nfi\n```\n\n3. **Validate Version Format**:\n```bash\n# Ensure all versions match semver pattern\necho \"{{targetVersion}}\" | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9\\.]+)?(\\+[a-zA-Z0-9\\.]+)?$'\n```\n\n4. **Generate Verification Report** in `VERSION_VERIFICATION.md`:\n```markdown\n# Version Synchronization Verification\n\n## Status: ✅ PASS / ❌ FAIL\n\n## Target Version: {{targetVersion}}\n\n## Verification Results\n\n### All Version Files\n| File | Version | Status |\n|------|---------|--------|\n| src/_version.py | {{targetVersion}} | ✅ |\n| package.json | {{targetVersion}} | ✅ |\n| pyproject.toml | {{targetVersion}} | ✅ |\n| README.md | {{targetVersion}} | ✅ |\n\n### Test Results\n```bash\n[Include output from test commands]\n```\n\n### Format Validation\n- Version format: ✅ Valid semver (X.Y.Z)\n- No inconsistencies found: ✅\n\n## Issues Found\n[List any remaining issues, or \"None\" if all pass]\n\n## Recommendations\n- ✅ All versions synchronized\n- ✅ Ready to commit\n- Next: Run `git add -A && git commit -m \"chore: synchronize version to {{targetVersion}}\"`\n\n## Maintenance Notes\n\n### For Python Projects (commitizen):\n```bash\n# Bump patch version\ncz bump --increment PATCH\n\n# Bump minor version\ncz bump --increment MINOR\n\n# Bump major version  \ncz bump --increment MAJOR\n```\n\n### For Node.js Projects:\n```bash\n# Bump patch\nnpm version patch\n\n# Bump minor\nnpm version minor\n\n# Bump major\nnpm version major\n```\n\n### Manual Updates:\nIf not using automated tools, update these files manually:\n1. [List version_files from config]\n2. Update CHANGELOG.md\n3. Commit with conventional commit message\n```\n\n## Output Requirements\n- File: `VERSION_VERIFICATION.md`\n- Clear PASS/FAIL status\n- Table showing all files and their versions\n- Test results (if tests available)\n- Maintenance instructions for future version bumps\n- List any remaining issues",
+        "variables": [
+          {
+            "name": "repoPath",
+            "type": "string",
+            "required": true,
+            "description": "Path to the repository to verify"
+          },
+          {
+            "name": "targetVersion",
+            "type": "string",
+            "required": false,
+            "description": "Expected target version",
+            "default": ""
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-19T10:48:13.355Z",
+  "metadata": {}
+}

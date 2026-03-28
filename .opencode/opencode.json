@@ -3,58 +3,28 @@
   "model": "anthropic/claude-sonnet-4-5-20250929",
   "share": "disabled",
   "mcp": {
-    "metabob": {
-      "type": "local",
-      "command": [
-        "metabob-cli",
-        "mcp",
-        "--transport",
-        "stdio"
-      ],
-      "enabled": true,
-      "timeout": 30000,
-      "environment": {
-        "METABOB_API_URL": "http://localhost:8080",
-        "METABOB_PROJECT_ID": "exp-repo-dev",
-        "METABOB_API_KEY": "mb_uYl7DfW-II6w-I9rR2-94iDKn1Hdu4QLm0wbFO9ePq8",
-        "METABOB_EXCLUDE_PATHS": "**/tests/**,**/perf-repos/**,**/__pycache__/**,**/.git/**,**/node_modules/**,**/venv/**,**/.venv/**,**/dist/**,**/build/**,**/.next/**,**/.metabob/**",
-        "METABOB_WATCH_FILES": "false",
-        "METABOB_SESSION_TOKEN": "c2Vzc2lvbnM6YjRmZTY4NjAtNTU0My00M2ZkLTkwYzAtM2I1NzA0YmQ0ZWJhOmJvb3RzdHJhcC1vcmc6Ym9vdHN0cmFwLXVzZXI="
-      }
-    },
     "playwright": {
       "type": "local",
       "command": [
         "npx",
-        "-y",
-        "@executeautomation/playwright-mcp-server"
+        "@playwright/mcp@latest",
+	"--browser",
+	"firefox"
       ],
-      "enabled": true,
-      "timeout": 60000
-    }
-  },
-  "metabob": {
-    "cli_path": "metabob-cli",
-    "base_url": "http://localhost:8080",
-    "api_key": "c2Vzc2lvbnM6YjRmZTY4NjAtNTU0My00M2ZkLTkwYzAtM2I1NzA0YmQ0ZWJhOmJvb3RzdHJhcC1vcmc6Ym9vdHN0cmFwLXVzZXI=",
-    "template_registration": {
-      "auto_register": true,
-      "default_category": "feature"
+      "enabled": true
     },
-    "activity_learning": {
-      "enabled": true,
-      "min_confidence": 0.7
+    "shadcn": {
+       "type": "local",
+       "command": ["npx", "shadcn@latest", "mcp"],
+       "enabled": true
     }
   },
   "provider": {
     "anthropic": {
       "options": {
-        "apiKey": "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"
+        "apiKey": "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"
       }
     },
     "openai": {}
-  },
-  "sessionMemory": {
-    "enabled": true
   }
 }

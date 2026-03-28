@@ -1,0 +1,294 @@
+{
+  "total_documents": 41,
+  "discovered_at": "2026-02-20T20:07:01.037133",
+  "repository_path": "/home/avi/documents/work/exp-repo/metabob-devbob",
+  "documents": [
+    {
+      "file_path": "ACTIVITY_REPLAY_AND_STATE_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/ACTIVITY_REPLAY_AND_STATE_ARCHITECTURE.md",
+      "size_bytes": 27567,
+      "last_modified": "2026-02-19T04:07:42.255642",
+      "line_count": 937
+    },
+    {
+      "file_path": "ARCHITECTURE_ASSESSMENT.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/ARCHITECTURE_ASSESSMENT.md",
+      "size_bytes": 14107,
+      "last_modified": "2026-02-18T19:10:57.118236",
+      "line_count": 350
+    },
+    {
+      "file_path": "ARCHITECTURE_CORRECTION.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/ARCHITECTURE_CORRECTION.md",
+      "size_bytes": 8656,
+      "last_modified": "2026-02-20T00:01:07.147848",
+      "line_count": 268
+    },
+    {
+      "file_path": "ARCHITECTURE_QUICK_REFERENCE_OLD.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/ARCHITECTURE_QUICK_REFERENCE_OLD.md",
+      "size_bytes": 13903,
+      "last_modified": "2026-02-18T00:14:41.705084",
+      "line_count": 373
+    },
+    {
+      "file_path": "ARCHITECTURE_SEPARATION_OF_CONCERNS.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/ARCHITECTURE_SEPARATION_OF_CONCERNS.md",
+      "size_bytes": 16409,
+      "last_modified": "2026-02-19T03:19:28.924645",
+      "line_count": 427
+    },
+    {
+      "file_path": "ARCHITECTURE_SESSION_ACTIVITY_UNIFICATION.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/ARCHITECTURE_SESSION_ACTIVITY_UNIFICATION.md",
+      "size_bytes": 27477,
+      "last_modified": "2026-02-20T15:08:29.580039",
+      "line_count": 752
+    },
+    {
+      "file_path": "ARCHITECTURE_VIOLATION_FIXED.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/ARCHITECTURE_VIOLATION_FIXED.md",
+      "size_bytes": 5518,
+      "last_modified": "2026-02-20T00:08:39.310076",
+      "line_count": 220
+    },
+    {
+      "file_path": "BACKEND_FIRST_TEMPLATE_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/BACKEND_FIRST_TEMPLATE_ARCHITECTURE.md",
+      "size_bytes": 16817,
+      "last_modified": "2026-02-19T12:16:15.221338",
+      "line_count": 412
+    },
+    {
+      "file_path": "COMMUNICATION_FLOW_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/COMMUNICATION_FLOW_ARCHITECTURE.md",
+      "size_bytes": 22762,
+      "last_modified": "2026-02-19T03:22:27.826886",
+      "line_count": 720
+    },
+    {
+      "file_path": "CONTEXT_ARCHITECTURE_COMPREHENSIVE_GUIDE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/CONTEXT_ARCHITECTURE_COMPREHENSIVE_GUIDE.md",
+      "size_bytes": 38462,
+      "last_modified": "2026-02-19T02:20:03.119915",
+      "line_count": 1050
+    },
+    {
+      "file_path": "CONTEXT_ARCHITECTURE_QUICK_REFERENCE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/CONTEXT_ARCHITECTURE_QUICK_REFERENCE.md",
+      "size_bytes": 9149,
+      "last_modified": "2026-02-19T02:20:59.257704",
+      "line_count": 387
+    },
+    {
+      "file_path": "CORRECT_FIX_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/CORRECT_FIX_ARCHITECTURE.md",
+      "size_bytes": 7205,
+      "last_modified": "2026-02-19T23:56:17.850145",
+      "line_count": 215
+    },
+    {
+      "file_path": "CPG_COCHANGE_INTEGRATION_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/CPG_COCHANGE_INTEGRATION_ARCHITECTURE.md",
+      "size_bytes": 8778,
+      "last_modified": "2026-02-19T04:51:43.927937",
+      "line_count": 109
+    },
+    {
+      "file_path": "CRITICAL_ARCHITECTURE_ERRORS.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/CRITICAL_ARCHITECTURE_ERRORS.md",
+      "size_bytes": 13976,
+      "last_modified": "2026-02-19T03:31:12.325067",
+      "line_count": 476
+    },
+    {
+      "file_path": "EXECUTION_GRAPH_AND_SIDEBAR_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/EXECUTION_GRAPH_AND_SIDEBAR_ARCHITECTURE.md",
+      "size_bytes": 14343,
+      "last_modified": "2026-02-20T15:42:00.199665",
+      "line_count": 471
+    },
+    {
+      "file_path": "IMPLEMENTATION_CHECKLIST_UNIFIED_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/IMPLEMENTATION_CHECKLIST_UNIFIED_ARCHITECTURE.md",
+      "size_bytes": 14453,
+      "last_modified": "2026-02-20T15:09:31.757861",
+      "line_count": 501
+    },
+    {
+      "file_path": "IMPULSE_ACTIVITY_ARCHITECTURE_EXPLAINED.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/IMPULSE_ACTIVITY_ARCHITECTURE_EXPLAINED.md",
+      "size_bytes": 14298,
+      "last_modified": "2026-02-19T05:06:41.841179",
+      "line_count": 511
+    },
+    {
+      "file_path": "MCP_GATEWAY_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/MCP_GATEWAY_ARCHITECTURE.md",
+      "size_bytes": 60099,
+      "last_modified": "2026-02-19T03:35:21.937796",
+      "line_count": 343
+    },
+    {
+      "file_path": "MEMORY_AGENT_ARCHITECTURE_RESTORATION.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/MEMORY_AGENT_ARCHITECTURE_RESTORATION.md",
+      "size_bytes": 5256,
+      "last_modified": "2026-02-19T23:13:13.752194",
+      "line_count": 152
+    },
+    {
+      "file_path": "MEMORY_AGENT_ARCHITECTURE_VERIFIED.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/MEMORY_AGENT_ARCHITECTURE_VERIFIED.md",
+      "size_bytes": 16321,
+      "last_modified": "2026-02-18T00:13:38.987837",
+      "line_count": 441
+    },
+    {
+      "file_path": "PROMPT_OPTIMIZATION_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/PROMPT_OPTIMIZATION_ARCHITECTURE.md",
+      "size_bytes": 18387,
+      "last_modified": "2026-02-18T19:31:57.876240",
+      "line_count": 751
+    },
+    {
+      "file_path": "SESSION_AFFINITY_ARCHITECTURE_DIAGRAM.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/SESSION_AFFINITY_ARCHITECTURE_DIAGRAM.md",
+      "size_bytes": 20673,
+      "last_modified": "2026-02-20T01:08:56.540437",
+      "line_count": 382
+    },
+    {
+      "file_path": "SESSION_ARCHITECTURE_CLARIFICATION.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/SESSION_ARCHITECTURE_CLARIFICATION.md",
+      "size_bytes": 4217,
+      "last_modified": "2026-02-20T15:19:24.801484",
+      "line_count": 163
+    },
+    {
+      "file_path": "SESSION_COMPLETE_IMPULSE_ARCHITECTURE_FIX.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/SESSION_COMPLETE_IMPULSE_ARCHITECTURE_FIX.md",
+      "size_bytes": 9615,
+      "last_modified": "2026-02-20T14:45:52.573236",
+      "line_count": 360
+    },
+    {
+      "file_path": "SESSION_MEMORY_IMPULSE_ARCHITECTURE_STATUS.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/SESSION_MEMORY_IMPULSE_ARCHITECTURE_STATUS.md",
+      "size_bytes": 17919,
+      "last_modified": "2026-02-20T03:55:06.740582",
+      "line_count": 609
+    },
+    {
+      "file_path": "SHARED_INSTRUCTIONAL_STATE_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/SHARED_INSTRUCTIONAL_STATE_ARCHITECTURE.md",
+      "size_bytes": 4945,
+      "last_modified": "2026-02-20T04:55:13.484619",
+      "line_count": 180
+    },
+    {
+      "file_path": "SHARED_INSTRUCTIONAL_STATE_COMPLETE_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/SHARED_INSTRUCTIONAL_STATE_COMPLETE_ARCHITECTURE.md",
+      "size_bytes": 23790,
+      "last_modified": "2026-02-20T10:45:48.288675",
+      "line_count": 852
+    },
+    {
+      "file_path": "TEMPLATE_MANAGEMENT_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/TEMPLATE_MANAGEMENT_ARCHITECTURE.md",
+      "size_bytes": 17852,
+      "last_modified": "2026-02-18T19:13:21.146873",
+      "line_count": 545
+    },
+    {
+      "file_path": "VARIANT_CREATION_AND_SESSION_AFFINITY_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/VARIANT_CREATION_AND_SESSION_AFFINITY_ARCHITECTURE.md",
+      "size_bytes": 28031,
+      "last_modified": "2026-02-20T01:07:02.116046",
+      "line_count": 948
+    },
+    {
+      "file_path": "docs/architecture/ARCHITECTURE_ALIGNMENT_ISSUES.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/docs/architecture/ARCHITECTURE_ALIGNMENT_ISSUES.md",
+      "size_bytes": 3849,
+      "last_modified": "2026-02-17T18:39:04.242526",
+      "line_count": 149
+    },
+    {
+      "file_path": "docs/architecture/ARCHITECTURE_SEPARATION_OF_CONCERNS.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/docs/architecture/ARCHITECTURE_SEPARATION_OF_CONCERNS.md",
+      "size_bytes": 16901,
+      "last_modified": "2026-02-17T18:39:04.243526",
+      "line_count": 534
+    },
+    {
+      "file_path": "docs/architecture/ARCHITECTURE_VIOLATION_IDENTIFIED.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/docs/architecture/ARCHITECTURE_VIOLATION_IDENTIFIED.md",
+      "size_bytes": 11349,
+      "last_modified": "2026-02-17T18:39:04.243526",
+      "line_count": 333
+    },
+    {
+      "file_path": "docs/architecture/ARCHITECTURE_VISUAL.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/docs/architecture/ARCHITECTURE_VISUAL.md",
+      "size_bytes": 14403,
+      "last_modified": "2026-02-17T18:39:04.243526",
+      "line_count": 249
+    },
+    {
+      "file_path": "docs/architecture/README.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/docs/architecture/README.md",
+      "size_bytes": 13506,
+      "last_modified": "2026-02-17T18:39:04.278525",
+      "line_count": 396
+    },
+    {
+      "file_path": "metabob-apps/charts/slack-bot/SLACK_BOT_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/metabob-apps/charts/slack-bot/SLACK_BOT_ARCHITECTURE.md",
+      "size_bytes": 17865,
+      "last_modified": "2026-02-17T23:32:19.166811",
+      "line_count": 500
+    },
+    {
+      "file_path": "repos/metabob-cli/.gemini/ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-cli/.gemini/ARCHITECTURE.md",
+      "size_bytes": 13613,
+      "last_modified": "2026-02-16T16:02:24.259354",
+      "line_count": 345
+    },
+    {
+      "file_path": "repos/metabob-dashboard/CONFIGURATION_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/CONFIGURATION_ARCHITECTURE.md",
+      "size_bytes": 14962,
+      "last_modified": "2026-02-07T16:07:49.764484",
+      "line_count": 287
+    },
+    {
+      "file_path": "repos/metabob-dashboard/docs/PROJECT_CODEBASE_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-dashboard/docs/PROJECT_CODEBASE_ARCHITECTURE.md",
+      "size_bytes": 10189,
+      "last_modified": "2026-02-07T16:07:49.755484",
+      "line_count": 396
+    },
+    {
+      "file_path": "repos/metabob-opencode/packages/plugin-activities/ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/plugin-activities/ARCHITECTURE.md",
+      "size_bytes": 10003,
+      "last_modified": "2026-01-27T10:13:17.882574",
+      "line_count": 389
+    },
+    {
+      "file_path": "repos/metabob-opencode/packages/plugin-metabob/ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/metabob-opencode/packages/plugin-metabob/ARCHITECTURE.md",
+      "size_bytes": 5942,
+      "last_modified": "2026-01-27T10:13:17.883961",
+      "line_count": 265
+    },
+    {
+      "file_path": "repos/platform/metabob-apps/charts/slack-bot/SLACK_BOT_ARCHITECTURE.md",
+      "absolute_path": "/home/avi/documents/work/exp-repo/metabob-devbob/repos/platform/metabob-apps/charts/slack-bot/SLACK_BOT_ARCHITECTURE.md",
+      "size_bytes": 17865,
+      "last_modified": "2026-02-17T23:32:19.166811",
+      "line_count": 500
+    }
+  ]
+}

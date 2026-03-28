@@ -1,0 +1,50 @@
+{
+  "id": "validation-Activity Recommendation and Learning Loop End-to-End Validation-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testName": "Recommendation Endpoint Returns Thompson Sampling Results",
+      "input": {
+        "endpoint": "POST /v2/activities/recommend",
+        "requestBody": {
+          "task_description": "Add REST endpoint for user management",
+          "category": "feature",
+          "limit": 5
+        }
+      },
+      "expectedOutput": {
+        "status": "success",
+        "recommendations": {
+          "minCount": 1,
+          "maxCount": 5,
+          "structure": {
+            "template_id": "string (required)",
+            "variant_id": "string (required)",
+            "selection_metadata": {
+              "method": "thompson_sampling",
+              "alpha": "number > 0",
+              "beta": "number > 0",
+              "sample": "number between 0 and 1"
+            }
+          }
+        },
+        "timestamp": "ISO 8601 string"
+      },
+      "validationCriteria": [
+        "Response status is 'success'",
+        "Recommendations array contains 1-5 items",
+        "Each recommendation has template_id and selection_metadata",
+        "Selection metadata method is 'thompson_sampling'",
+        "Alpha and beta are positive numbers",
+        "Sample value is between 0 and 1"
+      ]
+    }
+  },
+  "budget": 1000,
+  "metadata": {
+    "specification": "Activity Recommendation and Learning Loop End-to-End Validation",
+    "testCase": 1,
+    "purpose": "Verify recommendation endpoint returns Thompson Sampling results"
+  }
+}

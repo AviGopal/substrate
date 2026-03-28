@@ -1,0 +1,116 @@
+{
+  "id": "trace-activity-lifecycle-dynamic-creation-boredom-evolution",
+  "type": "templateDefinition",
+  "pointer": {
+    "type": "memo",
+    "content": "# Activity Lifecycle Dynamic Creation Boredom Evolution - Implementation Trace\n\n**Specification**: activity-lifecycle-dynamic-creation-boredom-evolution\n**Trace Date**: 2026-03-08\n**Status**: PARTIALLY IMPLEMENTED - Critical gaps in lifecycle integration\n\n## Executive Summary\n\nThe activity lifecycle system has **foundational components in place** but lacks **integration logic** to connect:\n1. Dynamic creation trigger when no existing activity matches\n2. Automatic storage of all created activities for pattern learning\n3. Pattern extraction and boredom activity generation\n4. Activity evolution (split/merge/debug) based on execution patterns\n5. Multi-tenant org/project scoping enforcement\n\n**Current State**: Phase 1 typing complete (commit f8f7162), boredom infrastructure exists but not integrated into lifecycle flow.\n\n**Desired State**: Complete autonomous lifecycle from search → dynamic creation → execution → learning → evolution → boredom improvement.\n\n---\n\n## Components Traced\n\n1. **Dynamic Activity Creation** (create_activity_goal_seeking.ts) - ✅ EXISTS, ❌ NOT AUTO-TRIGGERED\n2. **Activity Storage** (activity.py:1082, activity_content.py) - ✅ EXISTS, ❌ NOT CALLED\n3. **Pattern Extraction** (pattern_extraction_service.py) - ✅ EXISTS, ❌ NOT PERIODIC\n4. **Boredom Activities** (activity_template_tools.py:565, learning_loop.py:575) - ✅ EXISTS, ❌ INCOMPLETE TYPES\n5. **Activity Evolution** (activity_manager.py:2062) - ✅ EXISTS, ❌ NO SPLIT/MERGE/DEBUG\n6. **Replay Validation** (activity-replay.ts) - ✅ EXISTS, ❌ NO COMPARISON LOGIC\n7. **Multi-Tenant Scoping** (actions/activity.py:260) - ✅ EXISTS, ❌ MISSING IN BOREDOM API\n\n## Critical Gaps (10 Total)\n\n| Gap ID | Component | Priority | Impact |\n|--------|-----------|----------|--------|\n| GAP-1 | Dynamic Creation Trigger | CRITICAL | Manual creation only |\n| GAP-2 | Activity Storage Hook | CRITICAL | No learning data |\n| GAP-3 | Pattern Extraction Scheduler | CRITICAL | No autonomous learning |\n| GAP-4 | Split/Merge Detection | HIGH | Boredom activities incomplete |\n| GAP-5 | Boredom Activity Types | HIGH | Evolution blocked |\n| GAP-6 | Evolution Logic | HIGH | Can't execute boredom tasks |\n| GAP-7 | Replay Comparison | MEDIUM | No validation |\n| GAP-8 | Auto-Promotion | MEDIUM | Manual intervention |\n| GAP-9 | Boredom Scoping | HIGH | Security risk |\n| GAP-10 | Periodic Scheduling | CRITICAL | Never runs autonomously |\n\n## 5-Phase Implementation Roadmap\n\n**Week 1**: Connect Dynamic Creation (GAP-1, GAP-2)\n**Week 2**: Pattern Extraction Pipeline (GAP-3, GAP-4)\n**Week 3**: Boredom Activity Types (GAP-5, GAP-9)\n**Week 4**: Evolution Execution (GAP-6)\n**Week 5**: Replay Validation (GAP-7, GAP-8)\n\n**Estimated Total**: 4-5 weeks\n\nSee full trace document for detailed analysis, data flow diagrams, and code recommendations.\n",
+    "source": "trace-data-flow-single-feature"
+  },
+  "budget": 5000,
+  "metadata": {
+    "specificationName": "activity-lifecycle-dynamic-creation-boredom-evolution",
+    "traceDate": "2026-03-08",
+    "totalComponents": 7,
+    "totalGaps": 10,
+    "criticalGaps": 4,
+    "estimatedWeeks": 5,
+    "components": [
+      {
+        "name": "Dynamic Activity Creation",
+        "file": "create-activity-goal-seeking.ts",
+        "status": "exists_not_triggered"
+      },
+      {
+        "name": "Activity Storage",
+        "file": "activity.py",
+        "status": "exists_not_called"
+      },
+      {
+        "name": "Pattern Extraction",
+        "file": "pattern_extraction_service.py",
+        "status": "exists_not_periodic"
+      },
+      {
+        "name": "Boredom Activities",
+        "file": "activity_template_tools.py",
+        "status": "exists_incomplete"
+      },
+      {
+        "name": "Activity Evolution",
+        "file": "activity_manager.py",
+        "status": "exists_no_logic"
+      },
+      {
+        "name": "Replay Validation",
+        "file": "activity-replay.ts",
+        "status": "exists_no_comparison"
+      },
+      {
+        "name": "Multi-Tenant Scoping",
+        "file": "actions/activity.py",
+        "status": "exists_missing_boredom"
+      }
+    ],
+    "gaps": [
+      {
+        "id": "GAP-1",
+        "component": "Dynamic Creation Trigger",
+        "priority": "CRITICAL"
+      },
+      {
+        "id": "GAP-2",
+        "component": "Activity Storage Hook",
+        "priority": "CRITICAL"
+      },
+      {
+        "id": "GAP-3",
+        "component": "Pattern Extraction Scheduler",
+        "priority": "CRITICAL"
+      },
+      {
+        "id": "GAP-4",
+        "component": "Split/Merge Detection",
+        "priority": "HIGH"
+      },
+      {
+        "id": "GAP-5",
+        "component": "Boredom Activity Types",
+        "priority": "HIGH"
+      },
+      {
+        "id": "GAP-6",
+        "component": "Evolution Logic",
+        "priority": "HIGH"
+      },
+      {
+        "id": "GAP-7",
+        "component": "Replay Comparison",
+        "priority": "MEDIUM"
+      },
+      {
+        "id": "GAP-8",
+        "component": "Auto-Promotion",
+        "priority": "MEDIUM"
+      },
+      {
+        "id": "GAP-9",
+        "component": "Boredom Scoping",
+        "priority": "HIGH"
+      },
+      {
+        "id": "GAP-10",
+        "component": "Periodic Scheduling",
+        "priority": "CRITICAL"
+      }
+    ],
+    "dataFlow": "search → (missing: trigger) → create → (missing: store) → execute → (missing: extract) → (missing: boredom) → (missing: evolve) → (missing: validate)",
+    "recommendations": [
+      "Phase 1: Add trigger in metabob_search_activities when templates.length == 0",
+      "Phase 2: Add POST /content hook in create_activity_goal_seeking after TemplateRepository.save",
+      "Phase 3: Create pattern_extraction_job.py cron to run extract_patterns periodically",
+      "Phase 4: Extend get_boredom_activities to return split/merge/debug activity types",
+      "Phase 5: Implement evolution_actions.py with split/merge/debug logic"
+    ]
+  },
+  "createdAt": "2026-03-08T13:28:06.799Z"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "validation-Dashboard_Activity_History_Viewing_Flow-case-1",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": {
+      "testCase": "Infrastructure Validation - Kubernetes Context",
+      "input": {
+        "kubeContext": "docker-desktop"
+      },
+      "expectedOutput": {
+        "status": "PASS",
+        "activeContext": "docker-desktop",
+        "message": "Kubernetes context 'docker-desktop' is active"
+      }
+    },
+    "source": "validation harness specification"
+  },
+  "metadata": {
+    "specificationName": "Dashboard Activity History Viewing Flow",
+    "testCaseNumber": 1,
+    "validationStep": "Infrastructure: Kubernetes Context",
+    "category": "infrastructure",
+    "automated": true,
+    "requiresSetup": false
+  },
+  "budget": 500,
+  "lazyLoad": false
+}

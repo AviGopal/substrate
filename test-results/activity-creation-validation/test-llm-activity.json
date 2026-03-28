@@ -1,0 +1,54 @@
+{
+  "name": "Test LLM Activity",
+  "description": "Test activity using LLM-assisted execution",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "task-1",
+      "subagent": "general",
+      "description": "Test task with LLM",
+      "dependencies": [],
+      "executionMode": "llm-assisted",
+      "prompt": {
+        "template": "Test prompt with {{variable}}",
+        "maxTokens": 4000,
+        "compressionStrategy": "none",
+        "variables": [
+          {
+            "name": "variable",
+            "type": "string",
+            "required": true,
+            "description": "Test variable"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      },
+      "metrics": {
+        "successRate": 0,
+        "avgTokens": 0,
+        "avgDuration": 0,
+        "commonFailures": []
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

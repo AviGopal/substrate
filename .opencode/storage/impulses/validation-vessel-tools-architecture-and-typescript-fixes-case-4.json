@@ -1,0 +1,12 @@
+{
+  "id": "validation-vessel-tools-architecture-and-typescript-fixes-case-4",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Test Case 4: Tools Metadata Extraction\n\n## Input\n- Function: `segmentIntoTemplateTasks` in autonomous-trailblazing.ts\n- Check for tools extraction from execution traces\n\n## Expected Output\n- `hasToolsProperty: true` - Task generation includes tools property\n- `hasToolsPlanned: true` - Tools extracted from executedTask.task.toolsPlanned\n- `hasRequiredOptionalDisabled: true` - Tools structure has required/optional/disabled arrays\n\n## Vessel Architecture Implementation\nThis is the CRITICAL piece of the vessel-tools architecture:\n- Tools are LEARNED from execution traces (not pre-planned)\n- toolsPlanned (what agent planned to use) → TaskTools schema\n- Stored in templates for future vessel distribution decisions\n- Enables routing tasks to vessels with matching tool sets\n\n## Data Flow\n```\nAgent generates task with toolsPlanned\n  ↓\nTask executes, toolCalls recorded\n  ↓\nsegmentIntoTemplateTasks extracts toolsPlanned\n  ↓\ntools: { required: toolsPlanned, optional: [], disabled: [] }\n  ↓\nTemplate stored with tools metadata\n  ↓\n[FUTURE] Vessels check availability and accept tasks\n```"
+  },
+  "budget": 700,
+  "priority": "high",
+  "loaded": true,
+  "scope": "session"
+}

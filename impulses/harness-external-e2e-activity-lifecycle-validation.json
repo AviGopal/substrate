@@ -1,0 +1,59 @@
+{
+  "id": "harness-external-e2e-activity-lifecycle-validation",
+  "type": "file",
+  "description": "External E2E Activity Lifecycle Validation Harness - tests complete lifecycle with DB verification",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/external-e2e-activity-lifecycle-validation-harness.ts",
+    "source": "implementation"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "external-e2e-activity-lifecycle-validation",
+    "purpose": "Validate complete activity lifecycle using only external tools",
+    "externalTools": [
+      "Compiled OpenCode binary (no dev code access)",
+      "SurrealDB CLI ('surreal sql')",
+      "Standard shell tools (grep, jq)"
+    ],
+    "testPhases": [
+      {
+        "phase": 1,
+        "name": "Template Storage Verification",
+        "method": "Query SurrealDB activity_template table",
+        "validates": "Templates can be stored in database"
+      },
+      {
+        "phase": 2,
+        "name": "Template Execution + Storage Verification",
+        "method": "Execute template via CLI, query activity_execution table",
+        "validates": "Templates can be executed and executions are recorded"
+      },
+      {
+        "phase": 3,
+        "name": "Log Analysis",
+        "method": "Analyze validation logs for errors and lifecycle indicators",
+        "validates": "System tracks lifecycle correctly"
+      }
+    ],
+    "exports": {
+      "runValidation": "Main validation function: (input: ValidationInput) => Promise<ValidationOutput>",
+      "ValidationInput": "Input type with DB connection, OpenCode binary path, expected values",
+      "ValidationOutput": "Output type with pass/fail, actual vs expected, errors, evidence"
+    },
+    "usage": {
+      "programmatic": "import { runValidation } from './external-e2e-activity-lifecycle-validation-harness'; const result = await runValidation(input);",
+      "cli": "npx ts-node tests/validation-harnesses/external-e2e-activity-lifecycle-validation-harness.ts",
+      "withTestCase": "const testCase = require('./impulses/validation-external-e2e-activity-lifecycle-validation-case-1.json'); const result = await runValidation(testCase.input);"
+    },
+    "successCriteria": "2/3 phases must pass for overall PASS",
+    "outputFormat": {
+      "pass": "boolean (true if validation passed)",
+      "actual": "object with phase1, phase2, phase3 results",
+      "expected": "object with expected values for comparison",
+      "errors": "array of error messages",
+      "evidence": "array of evidence strings",
+      "timestamp": "ISO timestamp"
+    }
+  }
+}

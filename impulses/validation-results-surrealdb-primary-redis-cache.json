@@ -1,0 +1,197 @@
+{
+  "id": "validation-results-surrealdb-primary-redis-cache",
+  "type": "memo",
+  "specificationName": "surrealdb-primary-redis-cache",
+  "executionTimestamp": "2026-02-28T03:20:00Z",
+  "harnessLocation": "tests/validation-harnesses/surrealdb-primary-redis-cache-harness.ts",
+  "overallStatus": "FAIL",
+  "summary": {
+    "total": 6,
+    "passed": 5,
+    "failed": 1,
+    "successRate": 0.833
+  },
+  "validationResults": [
+    {
+      "testCase": "validation-surrealdb-primary-redis-cache-case-1",
+      "testName": "Template Creation Write Order",
+      "status": "PASS",
+      "expected": {
+        "orderCorrect": true,
+        "description": "SurrealDB write timestamp must be less than Redis write timestamp"
+      },
+      "actual": {
+        "orderCorrect": true,
+        "surrealWriteFirst": true,
+        "redisWriteSecond": true
+      },
+      "details": "✓ Template written to SurrealDB before Redis cache",
+      "phase": "Phase 1 - Template Storage",
+      "severity": "HIGH"
+    },
+    {
+      "testCase": "validation-surrealdb-primary-redis-cache-case-2",
+      "testName": "Template Read (Cold Cache)",
+      "status": "PASS",
+      "expected": {
+        "redisChecked": true,
+        "surrealQueried": true,
+        "cachePopulated": true,
+        "resultRetrieved": true,
+        "description": "On cache miss, must query SurrealDB and populate Redis"
+      },
+      "actual": {
+        "redisChecked": true,
+        "surrealQueried": true,
+        "cachePopulated": true,
+        "resultRetrieved": true
+      },
+      "details": "✓ Cache-aside pattern correctly implemented",
+      "phase": "Phase 1 - Template Storage",
+      "severity": "HIGH"
+    },
+    {
+      "testCase": "validation-surrealdb-primary-redis-cache-case-3",
+      "testName": "Template Read (Warm Cache)",
+      "status": "PASS",
+      "expected": {
+        "redisChecked": true,
+        "surrealQueried": false,
+        "cacheHit": true,
+        "description": "On cache hit, SurrealDB should NOT be queried"
+      },
+      "actual": {
+        "redisChecked": true,
+        "surrealQueried": false,
+        "cacheHit": true
+      },
+      "details": "✓ Cache hit correctly served from Redis",
+      "phase": "Phase 1 - Template Storage",
+      "severity": "MEDIUM"
+    },
+    {
+      "testCase": "validation-surrealdb-primary-redis-cache-case-4",
+      "testName": "Data Durability (Redis Flush)",
+      "status": "PASS",
+      "expected": {
+        "surrealFallbackUsed": true,
+        "dataRecovered": true,
+        "description": "Template must survive Redis flush by reading from SurrealDB"
+      },
+      "actual": {
+        "surrealFallbackUsed": true,
+        "dataRecovered": true
+      },
+      "details": "✓ Template recovered from SurrealDB after Redis flush",
+      "phase": "Phase 1 - Template Storage",
+      "severity": "CRITICAL"
+    },
+    {
+      "testCase": "validation-surrealdb-primary-redis-cache-case-5",
+      "testName": "Execution Recording Write Order",
+      "status": "FAIL",
+      "expected": {
+        "orderCorrect": true,
+        "surrealWriteFirst": true,
+        "redisInvalidateSecond": true,
+        "description": "SurrealDB execution write must happen BEFORE Redis cache invalidation"
+      },
+      "actual": {
+        "orderCorrect": false,
+        "surrealWriteTime": 0,
+        "redisInvalidateTime": 0,
+        "reason": "Both timestamps are 0, indicating operations may not have executed in expected order"
+      },
+      "difference": "Expected SurrealDB write to happen before Redis invalidation, but operation ordering could not be verified",
+      "details": "✗ VIOLATION: Redis invalidated before or without SurrealDB write",
+      "phase": "Phase 2 - Execution Recording",
+      "severity": "HIGH",
+      "diagnostics": {
+        "issue": "Execution recording write order is incorrect or not implemented",
+        "expectedFlow": "SurrealDB write (insert_execution + update_metrics) → Redis cache invalidation",
+        "currentFlow": "Unknown - timestamps are 0, may indicate missing implementation",
+        "fileLocation": "repos/metabob-rpc-api/server/actions/activity.py:360-571",
+        "remediation": "Implement Phase 2 changes: Reverse write order to SurrealDB-first, then Redis cache update/invalidation"
+      }
+    },
+    {
+      "testCase": "validation-surrealdb-primary-redis-cache-case-6",
+      "testName": "Cache Invalidation on Metrics Update",
+      "status": "PASS",
+      "expected": {
+        "surrealUpdated": true,
+        "cacheInvalidated": true,
+        "cacheCleared": true,
+        "description": "Metrics update in SurrealDB must invalidate Redis cache to prevent stale reads"
+      },
+      "actual": {
+        "surrealUpdated": true,
+        "cacheInvalidated": true,
+        "cacheCleared": true
+      },
+      "details": "✓ Cache correctly invalidated on metrics update",
+      "phase": "Phase 2 - Execution Recording",
+      "severity": "MEDIUM"
+    }
+  ],
+  "analysisOfFailures": {
+    "failureCount": 1,
+    "criticalFailures": 0,
+    "highSeverityFailures": 1,
+    "details": [
+      {
+        "testCase": "Execution Recording Write Order",
+        "root Cause": "Execution recording (record_execution_result) function does not implement SurrealDB-first write pattern",
+        "impact": "During execution recording, cache may be updated before source of truth, creating consistency risks during failures",
+        "blockedBy": "Phase 2 enforcement not completed - record_execution_result still uses old dual-write pattern (Redis first, then SurrealDB)",
+        "requiredFix": "Complete Phase 2 enforcement: Reverse write order in record_execution_result() - SurrealDB first, then Redis cache"
+      }
+    ]
+  },
+  "specificationConformance": {
+    "phase1TemplateStorage": {
+      "status": "PASS",
+      "testsPass": 4,
+      "testsFail": 0,
+      "conformanceRate": 1.0,
+      "details": "Template creation, reads (cold/warm cache), and data durability all pass specification"
+    },
+    "phase2ExecutionRecording": {
+      "status": "FAIL",
+      "testsPass": 1,
+      "testsFail": 1,
+      "conformanceRate": 0.5,
+      "details": "Cache invalidation passes, but execution recording write order fails specification"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "phase": "Phase 2",
+      "action": "Fix execution recording write order",
+      "details": "Update record_execution_result() in repos/metabob-rpc-api/server/actions/activity.py (lines 360-571) to write to SurrealDB FIRST, then update Redis cache. Remove compensating transaction logic.",
+      "estimatedEffort": "2 hours"
+    },
+    {
+      "priority": "MEDIUM",
+      "phase": "Phase 3",
+      "action": "Add cache-aside pattern to Thompson sampling",
+      "details": "Update select_variant_thompson_sampling() to read metrics from SurrealDB with Redis cache (not validated by current harness)",
+      "estimatedEffort": "1-2 hours"
+    },
+    {
+      "priority": "LOW",
+      "phase": "Phase 4",
+      "action": "Deprecate MetricsAggregator service",
+      "details": "Audit and migrate legacy code that bypasses SurrealDB (not validated by current harness)",
+      "estimatedEffort": "3-4 hours"
+    }
+  ],
+  "nextSteps": [
+    "Complete Phase 2 enforcement to fix execution recording write order",
+    "Re-run validation harness to verify all tests pass",
+    "Proceed with Phase 3 (Thompson Sampling) and Phase 4 (Deprecate legacy code) enforcement"
+  ],
+  "budget": 2000,
+  "created_at": "2026-02-28T03:20:00Z"
+}

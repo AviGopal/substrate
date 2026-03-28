@@ -1,0 +1,194 @@
+[
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-1",
+    "testCase": "Pod Health and Readiness",
+    "input": {
+      "namespace": "testing-minibob",
+      "expectedReplicas": 3
+    },
+    "expectedOutput": {
+      "replicas": 3,
+      "readyReplicas": 3,
+      "allRunning": true,
+      "podPhase": "Running"
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-2",
+    "testCase": "Activity Execution and Tracking",
+    "input": {
+      "template": {
+        "id": "test-activity-validation",
+        "tasks": [
+          {
+            "id": "task-1",
+            "prompt": "Use bash tool to execute: echo 'validation test'"
+          }
+        ]
+      }
+    },
+    "expectedOutput": {
+      "status": 200,
+      "activityStatus": "completed",
+      "taskStatus": "completed",
+      "metricsReported": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-3",
+    "testCase": "Dynamic Activity Creation",
+    "input": {
+      "impulseCreate": {
+        "id": "test-impulse",
+        "type": "memo",
+        "content": "test data",
+        "budget": 1000
+      }
+    },
+    "expectedOutput": {
+      "status": 200,
+      "activityStatus": "completed",
+      "impulseCreated": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-4",
+    "testCase": "Trailblazing - Success After Retry",
+    "input": {
+      "task": {
+        "retry": {
+          "maxAttempts": 3,
+          "strategy": "simple"
+        }
+      }
+    },
+    "expectedOutput": {
+      "retriesAttempted": true,
+      "eventualSuccess": true,
+      "maxAttempts": 3
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-5",
+    "testCase": "Trailblazing - Failure After Limit",
+    "input": {
+      "task": {
+        "alwaysFails": true,
+        "retry": {
+          "maxAttempts": 3
+        }
+      }
+    },
+    "expectedOutput": {
+      "status": "failed",
+      "attempts": 3,
+      "retriesExhausted": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-6",
+    "testCase": "ACP Gossip Discovery",
+    "input": {
+      "minPods": 2,
+      "namespace": "testing-minibob"
+    },
+    "expectedOutput": {
+      "acpEndpoint": true,
+      "gossipDiscovery": true,
+      "peerDiscovery": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-7",
+    "testCase": "Nested Activity Execution",
+    "input": {
+      "parentActivity": {
+        "callsNested": true,
+        "nestedTemplateId": "nested-test"
+      }
+    },
+    "expectedOutput": {
+      "nestedExecutionAttempted": true,
+      "noRaceConditions": true,
+      "isolatedContext": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-8",
+    "testCase": "Boredom Task Execution",
+    "input": {
+      "idleThreshold": 60000,
+      "pollInterval": 30000
+    },
+    "expectedOutput": {
+      "boredomInitialized": true,
+      "autonomousPolling": true,
+      "tasksFetchedFromBackend": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-9",
+    "testCase": "Impulse Agent Execution",
+    "input": {
+      "activityReferencesImpulse": true,
+      "impulseId": "test-impulse-ref"
+    },
+    "expectedOutput": {
+      "impulseCreated": true,
+      "impulseLoaded": true,
+      "activityCompleted": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-10",
+    "testCase": "Learning Loop Metrics",
+    "input": {
+      "backendUrl": "http://api.metabob.local",
+      "endpoint": "/activity-executions"
+    },
+    "expectedOutput": {
+      "status": 200,
+      "metricsReported": true,
+      "thompsonSamplingUpdated": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-11",
+    "testCase": "Learned Parameter Reuse",
+    "input": {
+      "reExecuteSameActivity": true,
+      "impulseAgentPreviouslyExecuted": true
+    },
+    "expectedOutput": {
+      "impulseAgentSkipped": true,
+      "learnedParamsUsed": true,
+      "fasterExecution": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-12",
+    "testCase": "Activity Variant Creation",
+    "input": {
+      "successfulExecution": true,
+      "backendUrl": "http://api.metabob.local"
+    },
+    "expectedOutput": {
+      "status": 200,
+      "variantsCreated": true,
+      "thompsonSamplingActive": true
+    }
+  },
+  {
+    "impulseId": "validation-minibob-standalone-execution-case-13",
+    "testCase": "Activity Debugging Capabilities",
+    "input": {
+      "activityWithError": true,
+      "intentionalFailure": true
+    },
+    "expectedOutput": {
+      "errorCaptured": true,
+      "debugInfoAvailable": true,
+      "taskReplayPossible": false
+    }
+  }
+]

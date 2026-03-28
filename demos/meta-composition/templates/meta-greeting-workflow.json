@@ -1,0 +1,122 @@
+{
+  "id": "meta-greeting-workflow",
+  "name": "Meta-Level Greeting Workflow",
+  "description": "META-LEVEL EXECUTOR: Composes three sub-activities into a workflow",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "execute-greeting",
+      "subagent": "general",
+      "description": "Execute the greeting generation sub-activity",
+      "dependencies": [],
+      "prompt": {
+        "template": "You need to execute a sub-activity using the activity tool.\n\nCall the 'generate-greeting' activity with these parameters:\n- templateId: 'generate-greeting'\n- variables: { name: '{{targetName}}' }\n- reason: 'Sub-task 1: Generate personalized greeting'\n\nIMPORTANT: Use the activity tool to execute this sub-activity. The output will be used by the next task.",
+        "maxTokens": 4096,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "targetName",
+            "type": "string",
+            "required": true,
+            "description": "Name to greet in sub-activity"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "execute-timestamp",
+      "subagent": "general",
+      "description": "Execute the timestamp generation sub-activity",
+      "dependencies": ["execute-greeting"],
+      "prompt": {
+        "template": "You need to execute a sub-activity using the activity tool.\n\nCall the 'generate-timestamp' activity:\n- templateId: 'generate-timestamp'\n- variables: {} (no variables needed)\n- reason: 'Sub-task 2: Generate timestamp'\n\nIMPORTANT: Use the activity tool to execute this sub-activity. The output will be combined with the greeting.",
+        "maxTokens": 4096,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "execute-combine",
+      "subagent": "general",
+      "description": "Execute the combination sub-activity with outputs from previous tasks",
+      "dependencies": ["execute-greeting", "execute-timestamp"],
+      "prompt": {
+        "template": "You need to execute a sub-activity that combines the outputs from the previous two sub-activities.\n\nBased on the greeting and timestamp generated in previous tasks, call the 'combine-outputs' activity:\n- templateId: 'combine-outputs'\n- variables: { greeting: '<greeting from task 1>', timestamp: '<timestamp from task 2>' }\n- reason: 'Sub-task 3: Combine all outputs into final report'\n\nIMPORTANT: Extract the actual greeting and timestamp from the previous task outputs and pass them as variables.\n\nThis demonstrates THREE-LEVEL COMPOSITION:\n1. This meta-executor (top level)\n2. Calls three sub-activities (middle level)\n3. Each sub-activity executes its own tasks (bottom level)",
+        "maxTokens": 4096,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "report-composition-success",
+      "subagent": "general",
+      "description": "Report that meta-level composition succeeded",
+      "dependencies": ["execute-combine"],
+      "prompt": {
+        "template": "Report the success of the meta-level composition:\n\n✅ META-LEVEL COMPOSITION PROVEN!\n\nThis meta-executor successfully:\n1. Executed 'generate-greeting' sub-activity\n2. Executed 'generate-timestamp' sub-activity  \n3. Executed 'combine-outputs' sub-activity\n4. All three sub-activities completed successfully\n\nThis proves that activities can compose other activities to create execution engines.\n\nFinal output is available from the combine-outputs activity.",
+        "maxTokens": 1024,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "contextRequirements": [],
+  "integration": {
+    "requiresCleanGit": false,
+    "preChecks": [
+      "Verify sub-activities exist: generate-greeting, generate-timestamp, combine-outputs"
+    ],
+    "postChecks": [
+      "Verify all 4 tasks completed",
+      "Verify 3 sub-activities were invoked",
+      "Verify final report was generated"
+    ],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": false,
+    "targetContextTokens": 0,
+    "annotationStrategy": "key-components"
+  }
+}

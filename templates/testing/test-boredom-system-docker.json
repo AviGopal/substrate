@@ -1,0 +1,214 @@
+{
+  "name": "Test Boredom System in Docker",
+  "description": "Set up and test the complete boredom activity system in Docker devbob environment with end-to-end validation",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "verify-docker-setup",
+      "subagent": "general",
+      "description": "Verify Docker compose environment is ready",
+      "dependencies": [],
+      "prompt": {
+        "template": "Verify the Docker devbob environment is ready for testing:\n\n1. Check docker-compose.yaml exists and is configured\n2. Verify services are defined (devbob, metabob-cli if needed)\n3. Check if containers are already running: docker ps\n4. List what needs to be started\n\nProvide clear status of the Docker environment.",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "docker-compose.yaml"
+        ],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-test-templates",
+      "subagent": "general",
+      "description": "Create mock templates with low improvement_gradient for testing",
+      "dependencies": [
+        "verify-docker-setup"
+      ],
+      "prompt": {
+        "template": "Create mock activity templates with metrics to test the boredom API:\n\n1. Create 2-3 templates in ~/.metabob/activities/ with:\n   - Low improvement_gradient (0.3-0.5) to trigger boredom system\n   - Various activity types (debug-failures, optimize-performance, improve-template)\n   - execution_count >= 3 (required for gradient calculation)\n\n2. Template format:\n```json\n{\n  \"activity_id\": \"test-template-name\",\n  \"name\": \"Test Template\",\n  \"category\": \"feature\",\n  \"estimated_metrics\": {\n    \"execution_count\": 5,\n    \"success_count\": 2,\n    \"success_rate\": 0.4,\n    \"avg_duration_ms\": 45000,\n    \"avg_cost\": 0.35,\n    \"improvement_gradient\": 0.42,\n    \"performance_trends\": {\n      \"duration\": \"stable\",\n      \"cost\": \"stable\",\n      \"success_rate\": \"degrading\"\n    },\n    \"failure_patterns\": [\n      {\n        \"task_id\": \"task-1\",\n        \"error_type\": \"validation\",\n        \"error_message\": \"Test error\",\n        \"count\": 2,\n        \"last_seen\": \"2026-02-21T00:00:00Z\"\n      }\n    ]\n  }\n}\n```\n\n3. List the created templates and their gradients.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-boredom-api",
+      "subagent": "general",
+      "description": "Test the boredom activities API directly",
+      "dependencies": [
+        "create-test-templates"
+      ],
+      "prompt": {
+        "template": "Test the boredom activities API to verify it returns the mock templates:\n\n1. Create a Python test script that:\n   - Imports the boredom API from metabob-cli\n   - Calls metabob_fetch_boredom_activities()\n   - Prints the results with template IDs, priorities, and activity types\n\n2. Expected output:\n   - Status: success\n   - Activities list with 2-3 templates\n   - Each activity should have: template_id, priority, activity_type, improvement_gradient, reason\n\n3. Verify:\n   - Templates are sorted by priority (highest first)\n   - Activity types are correctly categorized\n   - Improvement gradients match the mock data\n\nProvide the test script and its output.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "start-docker-environment",
+      "subagent": "general",
+      "description": "Start the Docker devbob environment",
+      "dependencies": [
+        "test-boredom-api"
+      ],
+      "prompt": {
+        "template": "Start the Docker devbob environment for integration testing:\n\n1. Start Docker compose services:\n   ```bash\n   docker-compose up -d\n   ```\n\n2. Wait for services to be healthy:\n   ```bash\n   docker-compose ps\n   ```\n\n3. Check logs to ensure services started correctly:\n   ```bash\n   docker-compose logs --tail=50\n   ```\n\n4. Verify metabob-opencode is accessible in the container\n\n5. Report status of all services.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-idle-detection",
+      "subagent": "general",
+      "description": "Test idle detection and boredom system in Docker",
+      "dependencies": [
+        "start-docker-environment"
+      ],
+      "prompt": {
+        "template": "Test the boredom system idle detection in Docker:\n\n1. Create a test script to run inside Docker container:\n   - Import BoredomManager from session/boredom-manager\n   - Create a test session ID\n   - Call startMonitoring(sessionID)\n   - Wait 30 seconds (for first check cycle)\n   - Manually trigger checkIdleAndExecute() or reduce IDLE_THRESHOLD_MS for testing\n   - Check logs for boredom activity detection\n\n2. Alternative: Modify IDLE_THRESHOLD_MS to 10 seconds for faster testing\n\n3. Expected behavior:\n   - BoredomManager starts monitoring\n   - After idle threshold, fetches boredom activities\n   - Logs which activity would be executed\n   - Shows the activity details (template_id, priority, reason)\n\n4. Capture and report:\n   - Log output showing idle detection\n   - API call to fetch_boredom_activities\n   - Activity selection and execution intent\n\nProvide the test script and results.",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-activity-tracking",
+      "subagent": "general",
+      "description": "Test user activity tracking resets idle timer",
+      "dependencies": [
+        "test-idle-detection"
+      ],
+      "prompt": {
+        "template": "Test that user activity correctly resets the idle timer:\n\n1. Create test script:\n   - Start monitoring a session\n   - Wait 4 minutes (almost idle)\n   - Call trackActivity(sessionID) to simulate user message\n   - Verify idle timer resets (lastActivityTime updated)\n   - Confirm no boredom activity is triggered\n\n2. Test cancellation on user return:\n   - Let session go idle\n   - During boredom activity execution, call trackActivity()\n   - Verify activity is flagged for cancellation\n\n3. Expected results:\n   - Activity tracking updates timestamp\n   - Idle state changes from true to false\n   - Timer calculation shows time since last activity\n\nProvide test script and validation output.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-lifecycle-integration",
+      "subagent": "general",
+      "description": "Test full session lifecycle integration",
+      "dependencies": [
+        "test-activity-tracking"
+      ],
+      "prompt": {
+        "template": "Test the full session lifecycle integration:\n\n1. Test Session Creation Hook:\n   - Create a new session using Session.create()\n   - Verify startMonitoring() is called\n   - Check sessionManagers Map has the session\n   - Verify checkTimer is set\n\n2. Test Session Deletion Hook:\n   - Delete/close a session\n   - Verify stopMonitoring() is called\n   - Check sessionManagers Map no longer has session\n   - Verify checkTimer is cleared (no memory leak)\n\n3. Test Multiple Sessions:\n   - Create 3 sessions\n   - Verify each is tracked independently\n   - Make one idle while others active\n   - Verify only idle session triggers boredom activity\n\n4. Validation:\n   - Check Map size matches active sessions\n   - Verify no interference between sessions\n   - Confirm proper cleanup\n\nProvide test results showing all lifecycle events.",
+        "maxTokens": 16000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-test-report",
+      "subagent": "general",
+      "description": "Generate comprehensive test report",
+      "dependencies": [
+        "test-lifecycle-integration"
+      ],
+      "prompt": {
+        "template": "Generate a comprehensive test report for the boredom system:\n\n## Test Report: Boredom Activity System\n\n### Executive Summary\n- Overall Status: [PASS/FAIL]\n- Tests Run: [count]\n- Tests Passed: [count]\n- Tests Failed: [count]\n\n### Test Results\n\n#### 1. Boredom API Integration\n- Status: [PASS/FAIL]\n- Templates fetched: [count]\n- Priority sorting: [verified/failed]\n- Activity categorization: [verified/failed]\n- Sample output: [show example]\n\n#### 2. Idle Detection\n- Status: [PASS/FAIL]\n- Threshold: 5 minutes (or modified value)\n- Detection working: [yes/no]\n- Logs captured: [show relevant logs]\n\n#### 3. Activity Tracking\n- Status: [PASS/FAIL]\n- Timer reset: [verified/failed]\n- User return detection: [verified/failed]\n- Cancellation: [verified/failed]\n\n#### 4. Session Lifecycle\n- Status: [PASS/FAIL]\n- Creation hook: [verified/failed]\n- Deletion hook: [verified/failed]\n- Multi-session: [verified/failed]\n- Memory cleanup: [verified/failed]\n\n### Issues Found\n- [List any issues discovered]\n- [Include severity and recommended fixes]\n\n### Performance Metrics\n- API latency: [ms]\n- Memory usage: [MB]\n- CPU overhead: [%]\n\n### Recommendations\n- [List any improvements or next steps]\n\n### Artifacts\n- Test scripts: [locations]\n- Log files: [locations]\n- Mock data: [locations]\n\nSave this report to: test-results/boredom-system-test-report.md",
+        "maxTokens": 20000,
+        "compressionStrategy": "filter",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "Overall Status"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [
+      "test -f test-results/boredom-system-test-report.md"
+    ],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}

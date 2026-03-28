@@ -1,0 +1,45 @@
+{
+  "name": "Debug Trace Test",
+  "description": "Test with debug logging",
+  "category": "infrastructure",
+  "contextRequirements": [
+    {
+      "key": "debugTest",
+      "hint": "Debug test message",
+      "impulseTypes": ["memo"],
+      "required": true,
+      "budgetRange": [100, 500]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "debug",
+      "subagent": "general",
+      "description": "Debug task",
+      "dependencies": [],
+      "prompt": {
+        "template": "Write {{debugTest}} to /tmp/debug-{{id}}.txt",
+        "maxTokens": 2000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true,
+            "description": "ID"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ]
+}

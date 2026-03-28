@@ -1,0 +1,19 @@
+{
+  "id": "harness-dashboard-data-flow-to-surrealdb",
+  "type": "file",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/dashboard-data-flow-to-surrealdb-harness.sh",
+    "lineStart": 1,
+    "lineEnd": 300,
+    "source": "validation harness creation"
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "dashboard-data-flow-to-surrealdb",
+    "strategy": "external-api-trace",
+    "totalTestCases": 7,
+    "language": "bash",
+    "noLLMRequired": true
+  }
+}

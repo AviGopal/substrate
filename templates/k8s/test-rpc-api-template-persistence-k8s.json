@@ -1,0 +1,133 @@
+{
+  "name": "Test RPC API Template Persistence in K8s",
+  "description": "Test whether the RPC API running in K8s can successfully persist activity templates to SurrealDB, verifying that the surrealdb-py library auth issue has been resolved",
+  "category": "infrastructure",
+  "tasks": [
+    {
+      "id": "port-forward-rpc-api",
+      "subagent": "general",
+      "description": "Set up port forward to RPC API service",
+      "dependencies": [],
+      "prompt": {
+        "template": "Set up a port forward to the metabob-rpc-api service in the metabob namespace:\n\n1. Start port forward: kubectl port-forward -n metabob svc/metabob-rpc-api 8089:8080\n2. Wait 5 seconds for connection to establish\n3. Test health endpoint: curl http://localhost:8089/\n4. Confirm service is accessible\n5. Keep port-forward running in background for next tasks\n\nIMPORTANT: Start the port-forward in background and store the PID so we can clean up later.",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "commands": [
+          {
+            "command": "curl -s http://localhost:8089/ | jq -r '.status'",
+            "expectedOutput": "ok",
+            "description": "Verify RPC API is accessible"
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "test-template-creation",
+      "subagent": "general",
+      "description": "Create test template via RPC API",
+      "dependencies": ["port-forward-rpc-api"],
+      "prompt": {
+        "template": "Test template creation via the RPC API:\n\n1. Use the correct endpoint path from OpenAPI spec (check /openapi.json)\n2. Create a test template with:\n   - id: test-template-k8s-persistence-{{timestamp}}\n   - name: Test K8s Persistence\n   - description: Testing SurrealDB persistence from K8s RPC API\n   - category: infrastructure\n   - tasks: []\n   - scope: global\n   - org_id: null\n\n3. Send POST request and capture response\n4. Check response status code (201 = success, 200 = success, 404 = endpoint not found)\n5. If 404, search for correct endpoint in /openapi.json\n6. Document the correct endpoint path for future reference\n\nIMPORTANT: The endpoint might not be /v1/activity_templates. Check /openapi.json first to find the correct path.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "timestamp",
+            "type": "string",
+            "required": true,
+            "description": "Unix timestamp for unique template ID"
+          }
+        ]
+      },
+      "validation": {
+        "commands": [
+          {
+            "command": "echo 'Template creation validation'",
+            "expectedOutput": ".*",
+            "description": "Placeholder - actual validation in prompt"
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "verify-persistence",
+      "subagent": "general",
+      "description": "Verify template was persisted to SurrealDB",
+      "dependencies": ["test-template-creation"],
+      "prompt": {
+        "template": "Verify that the template was actually persisted to SurrealDB:\n\n1. Try to retrieve the template using GET request to the same endpoint\n2. If retrieval works via API, the persistence is confirmed\n3. Alternative verification: Query SurrealDB directly from RPC API pod:\n   - kubectl exec -n metabob deployment/metabob-rpc-api -- curl -X POST http://surrealdb:8000/rpc ...\n   - Use the same auth pattern as init_schema.py (signin, then query with Bearer token)\n   \n4. Document findings:\n   - Does API endpoint work for retrieval?\n   - Can we query SurrealDB directly?\n   - Is the template actually persisted or just cached?\n   \n5. Test conclusion:\n   - ✅ PASS: Template created and retrieved successfully\n   - ⚠️  PARTIAL: Template created but not retrievable (check logs)\n   - ❌ FAIL: Template creation failed or not persisted\n\nNote the {{templateId}} from previous task.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "templateId",
+            "type": "string",
+            "required": true,
+            "description": "Template ID created in previous task"
+          }
+        ]
+      },
+      "validation": {
+        "commands": [
+          {
+            "command": "echo 'Persistence verification'",
+            "expectedOutput": ".*",
+            "description": "Placeholder - actual validation in prompt"
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "cleanup",
+      "subagent": "general",
+      "description": "Clean up port-forward and test data",
+      "dependencies": ["verify-persistence"],
+      "prompt": {
+        "template": "Clean up after testing:\n\n1. Kill the port-forward process (use PID from first task)\n2. Optionally delete the test template from SurrealDB\n3. Document final findings in a summary\n\nSummary should include:\n- Whether persistence works end-to-end\n- What endpoint paths were used\n- Any errors or issues encountered\n- Recommendation: is the surrealdb-py auth issue resolved?",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {},
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      {
+        "type": "command",
+        "command": "kubectl get pods -n metabob -l app=metabob-rpc-api --field-selector=status.phase=Running | grep -q Running",
+        "description": "Verify RPC API pod is running"
+      },
+      {
+        "type": "command",
+        "command": "kubectl get pods -n metabob -l app=surrealdb --field-selector=status.phase=Running | grep -q Running",
+        "description": "Verify SurrealDB pod is running"
+      }
+    ],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 5000,
+    "annotationStrategy": "key-components"
+  }
+}

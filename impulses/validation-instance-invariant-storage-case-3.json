@@ -1,0 +1,16 @@
+{
+  "id": "validation-Instance-Invariant Storage for Impulses and Activities-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 3: Multi-Tenant Isolation\n\nInput:\n  - Use two different api_keys (api_key_A, api_key_B)\n  - Same project_id\n  - Store impulse with api_key_A\n  - Try to retrieve with api_key_B\n\nExpected Output:\n  - accessDenied: true (api_key_B cannot access api_key_A's impulses)\n\nValidation:\n  - Store impulse with api_key_A credentials\n  - Attempt to load with api_key_B credentials\n  - Verify 403/404 error or empty result\n  - Ensure no data leakage across tenants"
+  },
+  "budget": 2000,
+  "priority": "high",
+  "scope": "global",
+  "metadata": {
+    "testCaseId": "case-3",
+    "testName": "Multi-Tenant Isolation",
+    "category": "security"
+  }
+}

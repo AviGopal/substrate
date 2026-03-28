@@ -1,0 +1,29 @@
+{
+  "impulseId": "validation-run-external-validation-until-pass-case-2",
+  "type": "memo",
+  "description": "Test Case 2: Script Syntax Validation",
+  "content": {
+    "testCase": "case-2-syntax",
+    "input": {
+      "scriptPath": "scripts/run-external-validation-until-pass.sh",
+      "readmePath": "scripts/run-external-validation-until-pass.README.md",
+      "testMode": "syntax"
+    },
+    "expectedOutput": {
+      "syntaxValid": true,
+      "errors": []
+    },
+    "successCriteria": [
+      "Script passes bash -n syntax check",
+      "No syntax errors reported",
+      "No undefined variables",
+      "No unclosed quotes or brackets",
+      "All conditionals properly formed",
+      "All loops properly closed",
+      "All functions properly defined"
+    ],
+    "validationMethod": "Execute 'bash -n <script>' to check for syntax errors without running"
+  },
+  "budget": 300,
+  "timestamp": "2026-03-18T00:00:00Z"
+}

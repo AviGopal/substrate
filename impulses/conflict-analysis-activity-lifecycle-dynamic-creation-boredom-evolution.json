@@ -1,0 +1,82 @@
+{
+  "id": "conflict-analysis-activity-lifecycle-dynamic-creation-boredom-evolution",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "# Conflict Analysis: Activity Lifecycle Dynamic Creation Boredom Evolution\n\n**Specification**: activity-lifecycle-dynamic-creation-boredom-evolution\n**Analysis Date**: 2026-03-08\n**Total Other Specifications Analyzed**: 47\n**Related Specifications Found**: 4\n**Conflicts Detected**: 3 (1 HIGH, 1 MEDIUM, 1 LOW)\n**Overall Risk**: MEDIUM\n\n---\n\n## Conflict Matrix\n\n### Conflict 1: ARCHITECTURAL_COMPLIANCE (HIGH SEVERITY) ✅ RESOLVED\n\n**Specification 1**: activity-lifecycle-dynamic-creation-boredom-evolution\n**Specification 2**: complete-architecture-separation\n**Shared Component**: MCP-only communication\n\n**Description**: New features must use MCP layer, not direct DB access. The architecture separation spec enforces that all communication between metabob-cli and metabob-rpc-api goes through MCP tools, with no direct database access from CLI layer.\n\n**Potential Impact**: If GAP-1 or GAP-9 fixes bypass MCP layer, they would violate architectural boundaries.\n\n**Verification**:\n- ✅ GAP-9 (Boredom Scoping): template_metrics.py → learning_loop.py endpoint → metabob_fetch_boredom_activities MCP tool\n- ✅ GAP-1 (Dynamic Creation Trigger): activity_template_tools.py MCP tool (no DB access)\n\n**Resolution**: ✅ COMPLIANT - All changes go through MCP layer\n\n**Status**: RESOLVED - No conflict detected\n\n---\n\n### Conflict 2: SHARED_COMPONENT (MEDIUM SEVERITY) ⚠️ REQUIRES VALIDATION\n\n**Specification 1**: activity-lifecycle-dynamic-creation-boredom-evolution\n**Specification 2**: activity-template-query-filtering\n**Shared Component**: Template query filtering\n\n**Description**: Both specifications modify template query behavior. The activity-template-query-filtering spec likely adds filters for category, scope, or other attributes. Our GAP-9 fix adds org_id/project_id filtering to boredom candidates query.\n\n**Potential Impact**:\n- Template queries may have multiple overlapping filters\n- Query performance may degrade with additional WHERE clauses\n- Existing query filters may not account for org/project scoping\n\n**Files Affected**:\n- repos/metabob-rpc-api/server/db/operations/template_metrics.py (get_boredom_candidates)\n- repos/metabob-rpc-api/server/actions/activity.py (list_templates - if modified by other spec)\n\n**Resolution Recommendations**:\n1. Review activity-template-query-filtering spec to understand existing filters\n2. Ensure org_id/project_id filters are compatible with existing WHERE clauses\n3. Test combined queries with multiple filters\n4. Verify SQL query performance with composite filters\n5. Check for SQL injection vulnerabilities in parameterized queries\n\n**Validation Plan**:\n- Load activity-template-query-filtering spec\n- Compare SQL WHERE clauses\n- Run integration test with multiple filters active\n- Measure query performance (baseline vs combined)\n\n**Status**: PENDING VALIDATION - Integration test needed\n\n---\n\n### Conflict 3: POTENTIAL_INTERACTION (LOW SEVERITY) ℹ️ INFORMATIONAL\n\n**Specification 1**: activity-lifecycle-dynamic-creation-boredom-evolution\n**Specification 2**: activity-recommendation-learning-loop-e2e\n**Shared Component**: metabob_search_activities\n\n**Description**: GAP-1 fix adds dynamic creation trigger that returns suggestion object when templates.length == 0. The activity-recommendation-learning-loop spec uses search results for Thompson Sampling-based recommendations.\n\n**Potential Impact**:\n- Recommendation system receives modified response format with 'suggestion' field\n- Empty search results trigger suggestion instead of returning empty list\n- Thompson Sampling logic may need to handle suggestion responses\n\n**Files Affected**:\n- repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py (metabob_search_activities)\n\n**Current Behavior (GAP-1 Fix)**:\n```python\nif len(templates) == 0 and query:\n    return {\n        \"status\": \"no_match\",\n        \"suggestion\": {\n            \"action\": \"create_activity_goal_seeking\",\n            \"recommended_variables\": {...}\n        }\n    }\n```\n\n**Recommendation System Expectation**:\n```python\n# Expects:\n{\n  \"status\": \"success\",\n  \"templates\": [...],  # May be empty\n  \"template_count\": 0\n}\n```\n\n**Resolution Recommendations**:\n1. Ensure recommendation system checks response.status\n2. Handle status=\"no_match\" gracefully (skip Thompson Sampling)\n3. Log suggestion for analytics but don't execute automatically\n4. Consider adding feature flag for dynamic creation trigger\n\n**Validation Plan**:\n- Review activity-recommendation-learning-loop code\n- Check if it handles empty template lists\n- Test recommendation system with status=\"no_match\" response\n- Verify no exceptions thrown\n\n**Status**: LOW RISK - Backward compatible (old clients ignore 'suggestion' field)\n\n---\n\n## Shared Components Analysis\n\n### Component 1: get_boredom_candidates\n\n**File**: repos/metabob-rpc-api/server/db/operations/template_metrics.py\n**Affected By Specs**: \n- activity-lifecycle-dynamic-creation-boredom-evolution (GAP-9 fix)\n\n**Change Type**: Added org_id and project_id parameters with SQL filtering\n\n**Impact**:\n- Function signature changed (backward incompatible)\n- All callers must pass org_id/project_id (can be None)\n- SQL query performance may change\n\n**Callers**:\n- repos/metabob-rpc-api/server/routes/learning_loop.py:638 (get_boredom_activities endpoint)\n\n**Recommendation**: ✅ SAFE - Only one caller, signature updated in same commit\n\n---\n\n### Component 2: metabob_search_activities\n\n**File**: repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py\n**Affected By Specs**:\n- activity-lifecycle-dynamic-creation-boredom-evolution (GAP-1 fix)\n- activity-recommendation-learning-loop-e2e (consumer)\n\n**Change Type**: Added dynamic creation trigger (suggestion object in response)\n\n**Impact**:\n- Response format extended (backward compatible)\n- New field 'suggestion' added when templates.length == 0\n- Existing consumers can ignore unknown fields\n\n**Consumers**:\n- OpenCode vessels (via MCP)\n- Activity recommendation system (possibly)\n\n**Recommendation**: ✅ SAFE - Additive change, backward compatible\n\n---\n\n## Risk Assessment\n\n### Overall Risk: MEDIUM\n\n**Risk Breakdown**:\n- **HIGH Severity**: 1 conflict (RESOLVED - architectural compliance verified)\n- **MEDIUM Severity**: 1 conflict (PENDING - shared component validation needed)\n- **LOW Severity**: 1 conflict (INFORMATIONAL - backward compatible)\n\n### Risk Mitigation\n\n**Immediate Actions**:\n1. ✅ Verify architectural compliance (COMPLETE)\n2. ⏳ Run integration tests for template query filtering (PENDING)\n3. ⏳ Test recommendation system with new response format (PENDING)\n\n**Testing Requirements**:\n1. Integration test: Multiple filters active (org_id + category + scope)\n2. Integration test: Recommendation system with empty search results\n3. Performance test: SQL query speed with composite filters\n4. Security test: SQL injection in parameterized queries\n\n**Monitoring**:\n- Monitor /api/v1/learning-loop/boredom-activities endpoint for errors\n- Monitor metabob_search_activities MCP tool for suggestion field usage\n- Track recommendation system behavior with empty template lists\n\n---\n\n## Related Specifications\n\n### 1. complete-architecture-separation (Status: PASS)\n- **Relationship**: Enforces MCP-only communication\n- **Conflict**: ARCHITECTURAL_COMPLIANCE (HIGH) - RESOLVED\n- **Action**: None required\n\n### 2. activity-template-query-filtering (Status: UNKNOWN)\n- **Relationship**: Both modify template query logic\n- **Conflict**: SHARED_COMPONENT (MEDIUM) - PENDING VALIDATION\n- **Action**: Review spec, run integration tests\n\n### 3. activity-template-mcp-only-flow (Status: ARCHITECTURAL_COMPLIANCE_VERIFIED)\n- **Relationship**: Both enforce MCP layer usage\n- **Conflict**: None\n- **Action**: None required\n\n### 4. activity-recommendation-learning-loop-e2e (Status: FAIL)\n- **Relationship**: Consumes metabob_search_activities output\n- **Conflict**: POTENTIAL_INTERACTION (LOW) - INFORMATIONAL\n- **Action**: Test recommendation system with new response format\n\n---\n\n## Conflict Resolution Roadmap\n\n### Phase 1: Immediate (Week 1)\n1. ✅ Verify architectural compliance (COMPLETE)\n2. Load activity-template-query-filtering spec\n3. Analyze SQL query composition\n4. Run integration test with multiple filters\n\n### Phase 2: Validation (Week 2)\n1. Test recommendation system with suggestion responses\n2. Measure query performance impact\n3. Run security scan for SQL injection\n4. Update validation harness with conflict scenarios\n\n### Phase 3: Monitoring (Ongoing)\n1. Monitor boredom API error rates\n2. Track suggestion field usage analytics\n3. Watch for recommendation system failures\n4. Collect query performance metrics\n\n---\n\n## Conclusion\n\n**Overall Assessment**: MEDIUM RISK - Manageable with testing\n\n**Key Findings**:\n1. ✅ Architectural compliance verified - no MCP boundary violations\n2. ⚠️ Template query filtering needs integration testing\n3. ℹ️ Recommendation system interaction is backward compatible\n\n**Recommended Actions**:\n1. Deploy changes to staging environment\n2. Run integration tests for query filtering\n3. Test recommendation system with new response format\n4. Monitor production metrics for performance degradation\n\n**Go/No-Go Decision**: ✅ GO - Proceed with deployment after integration tests\n\n**Next Steps**:\n1. Complete Phase 1 validation (activity-template-query-filtering analysis)\n2. Run integration test suite\n3. Deploy to staging\n4. Monitor metrics\n5. Deploy to production if metrics look good",
+    "source": "conflict-analysis"
+  },
+  "budget": 3000,
+  "metadata": {
+    "specificationName": "activity-lifecycle-dynamic-creation-boredom-evolution",
+    "analysisDate": "2026-03-08",
+    "totalSpecificationsAnalyzed": 47,
+    "relatedSpecificationsFound": 4,
+    "conflictsDetected": 3,
+    "overallRisk": "MEDIUM",
+    "highSeverityConflicts": 1,
+    "mediumSeverityConflicts": 1,
+    "lowSeverityConflicts": 1,
+    "conflictsResolved": 1,
+    "conflictsPending": 2,
+    "otherSpecifications": [
+      "complete-architecture-separation",
+      "activity-template-query-filtering",
+      "activity-template-mcp-only-flow",
+      "activity-recommendation-learning-loop-e2e"
+    ],
+    "conflicts": [
+      {
+        "type": "ARCHITECTURAL_COMPLIANCE",
+        "severity": "HIGH",
+        "status": "RESOLVED",
+        "spec1": "activity-lifecycle-dynamic-creation-boredom-evolution",
+        "spec2": "complete-architecture-separation",
+        "component": "MCP-only communication"
+      },
+      {
+        "type": "SHARED_COMPONENT",
+        "severity": "MEDIUM",
+        "status": "PENDING",
+        "spec1": "activity-lifecycle-dynamic-creation-boredom-evolution",
+        "spec2": "activity-template-query-filtering",
+        "component": "template query filtering"
+      },
+      {
+        "type": "POTENTIAL_INTERACTION",
+        "severity": "LOW",
+        "status": "INFORMATIONAL",
+        "spec1": "activity-lifecycle-dynamic-creation-boredom-evolution",
+        "spec2": "activity-recommendation-learning-loop-e2e",
+        "component": "metabob_search_activities"
+      }
+    ],
+    "sharedComponents": [
+      {
+        "component": "get_boredom_candidates",
+        "file": "repos/metabob-rpc-api/server/db/operations/template_metrics.py",
+        "affectedBySpecs": ["activity-lifecycle-dynamic-creation-boredom-evolution"],
+        "changeType": "Added org_id/project_id filtering",
+        "risk": "LOW"
+      },
+      {
+        "component": "metabob_search_activities",
+        "file": "repos/metabob-cli/src/metabob_cli/mcp/activity_template_tools.py",
+        "affectedBySpecs": [
+          "activity-lifecycle-dynamic-creation-boredom-evolution",
+          "activity-recommendation-learning-loop-e2e"
+        ],
+        "changeType": "Added dynamic creation trigger",
+        "risk": "LOW"
+      }
+    ],
+    "goNoGoDecision": "GO",
+    "recommendedActions": [
+      "Complete activity-template-query-filtering analysis",
+      "Run integration tests for composite query filters",
+      "Test recommendation system with suggestion responses",
+      "Deploy to staging and monitor metrics"
+    ]
+  },
+  "createdAt": "2026-03-08T06:45:00.000Z"
+}

@@ -1,0 +1,19 @@
+name: learned-corpus-dashboard
+status: proposed
+created: 2026-03-27
+schema: experimental
+
+artifacts:
+  - proposal.md
+  - design.md
+  - tasks.md
+
+summary: |
+  Dashboard at graph.metabob.local visualizing the learned corpus -
+  Thompson Sampling scores, activity beliefs, and improvisation candidates.
+
+tags:
+  - dashboard
+  - thompson-sampling
+  - observability
+  - activity-dashboard

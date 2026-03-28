@@ -1,0 +1,141 @@
+[
+  {
+    "id": "validation-project-scoped-template-filtering-case-1",
+    "type": "memo",
+    "description": "Test Case 1: Create sessions with tenant context (org_id and project_id)",
+    "content": {
+      "input": {
+        "users": [
+          { "userId": 1, "orgId": "org-a-test-uuid", "projectId": "project-a-test-uuid" },
+          { "userId": 2, "orgId": "org-a-test-uuid", "projectId": "project-b-test-uuid" },
+          { "userId": 3, "orgId": "org-b-test-uuid", "projectId": "project-c-test-uuid" }
+        ]
+      },
+      "expectedOutput": {
+        "user1Token": "created",
+        "user2Token": "created",
+        "user3Token": "created"
+      }
+    },
+    "budget": 500
+  },
+  {
+    "id": "validation-project-scoped-template-filtering-case-2",
+    "type": "memo",
+    "description": "Test Case 2: Register project-scoped template as User 1 (Org A, Project A)",
+    "content": {
+      "input": {
+        "userId": 1,
+        "templateName": "project-isolation-test",
+        "scope": "project"
+      },
+      "expectedOutput": {
+        "templateId": "non-null",
+        "scope": "project",
+        "orgId": "org-a-test-uuid",
+        "projectId": "project-a-test-uuid"
+      }
+    },
+    "budget": 500
+  },
+  {
+    "id": "validation-project-scoped-template-filtering-case-3",
+    "type": "memo",
+    "description": "Test Case 3: Query templates as User 1 - should see project template",
+    "content": {
+      "input": {
+        "userId": 1
+      },
+      "expectedOutput": {
+        "projectTemplate": true,
+        "orgTemplate": true,
+        "globalTemplate": true
+      }
+    },
+    "budget": 500
+  },
+  {
+    "id": "validation-project-scoped-template-filtering-case-4",
+    "type": "memo",
+    "description": "Test Case 4: Query templates as User 2 (same org, different project) - should NOT see project template",
+    "content": {
+      "input": {
+        "userId": 2
+      },
+      "expectedOutput": {
+        "projectTemplate": false,
+        "orgTemplate": true,
+        "globalTemplate": true
+      }
+    },
+    "budget": 500
+  },
+  {
+    "id": "validation-project-scoped-template-filtering-case-5",
+    "type": "memo",
+    "description": "Test Case 5: Query templates as User 3 (different org) - should NOT see project or org templates",
+    "content": {
+      "input": {
+        "userId": 3
+      },
+      "expectedOutput": {
+        "projectTemplate": false,
+        "orgTemplate": false,
+        "globalTemplate": true
+      }
+    },
+    "budget": 500
+  },
+  {
+    "id": "validation-project-scoped-template-filtering-case-6",
+    "type": "memo",
+    "description": "Test Case 6: Query templates unauthenticated - should ONLY see global templates",
+    "content": {
+      "input": {
+        "userId": null
+      },
+      "expectedOutput": {
+        "projectTemplate": false,
+        "orgTemplate": false,
+        "globalTemplate": true
+      }
+    },
+    "budget": 500
+  },
+  {
+    "id": "validation-project-scoped-template-filtering-case-7",
+    "type": "memo",
+    "description": "Test Case 7: Create project-scoped template validation - scope='project' requires project_id",
+    "content": {
+      "input": {
+        "scope": "project",
+        "hasProjectId": false
+      },
+      "expectedOutput": {
+        "error": "project_id required in session when creating project-scoped template",
+        "statusCode": 400
+      }
+    },
+    "budget": 500
+  },
+  {
+    "id": "validation-project-scoped-template-filtering-case-8",
+    "type": "memo",
+    "description": "Test Case 8: Backward compatibility - existing org-scoped templates still work",
+    "content": {
+      "input": {
+        "userId": 1,
+        "templateName": "org-isolation-test",
+        "scope": "org"
+      },
+      "expectedOutput": {
+        "templateId": "non-null",
+        "scope": "org",
+        "orgId": "org-a-test-uuid",
+        "visibleToSameOrg": true,
+        "visibleToDifferentOrg": false
+      }
+    },
+    "budget": 500
+  }
+]

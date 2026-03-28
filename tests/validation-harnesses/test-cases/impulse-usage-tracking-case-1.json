@@ -1,0 +1,40 @@
+{
+  "testCase": "case-1-activity-with-impulses",
+  "description": "Validates that an activity using impulses sends correct tracking data",
+  "input": {
+    "activityType": "activity-with-impulses",
+    "impulsesCount": 2,
+    "impulseTokens": 50,
+    "totalInputTokens": 200
+  },
+  "expectedOutput": {
+    "impulsesLoaded": {
+      "type": "array",
+      "minLength": 1,
+      "description": "Array of impulse IDs that were loaded for this task"
+    },
+    "impulsesCreated": {
+      "type": "array",
+      "description": "Array of newly created impulse IDs (may be empty)"
+    },
+    "contextRatio": {
+      "type": "number",
+      "min": 0,
+      "max": 1,
+      "expectedValue": 0.5,
+      "description": "Ratio of impulse tokens to total input tokens (100/200 = 0.5)"
+    },
+    "tokens": {
+      "type": "object",
+      "hasBreakdown": true,
+      "fields": ["input", "output", "cache"],
+      "description": "Token breakdown with input, output, and cache fields"
+    }
+  },
+  "validationRules": [
+    "impulsesLoaded must be a non-empty array when impulses are used",
+    "impulsesCreated must be an array (may be empty)",
+    "contextRatio must be a number between 0 and 1",
+    "tokens must be an object with input, output, and cache fields"
+  ]
+}

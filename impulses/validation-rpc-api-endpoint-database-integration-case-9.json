@@ -1,0 +1,21 @@
+{
+  "id": "validation-rpc-api-endpoint-database-integration-case-9",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"id\": \"validation-rpc-api-endpoint-database-integration-case-9\",\n  \"name\": \"Get Activity Storage - GET /v2/activities/storage/{id}\",\n  \"input\": {\n    \"method\": \"GET\",\n    \"endpoint\": \"/v2/activities/storage/{id}\"\n  },\n  \"expectedOutput\": {\n    \"statusCode\": 200,\n    \"responseSchema\": {\n      \"activity_id\": \"string\",\n      \"status\": \"string\"\n    },\n    \"validations\": [\n      \"Response is valid JSON\",\n      \"activity_id is string\",\n      \"No RecordID serialization errors\"\n    ]\n  }\n}",
+    "source": "validation-harness"
+  },
+  "priority": "high",
+  "budget": 1000,
+  "metadata": {
+    "specification": "rpc-api-endpoint-database-integration",
+    "category": "validation-test-case",
+    "testName": "Get Activity Storage - GET /v2/activities/storage/{id}",
+    "endpoint": "/v2/activities/storage/{id}",
+    "method": "GET",
+    "expectedStatus": 200,
+    "criticalTest": false
+  },
+  "createdAt": "2026-03-03T11:05:11.234Z"
+}

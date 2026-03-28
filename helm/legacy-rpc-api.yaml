@@ -1,0 +1,54 @@
+---
+# Legacy RPC API Deployment (ide.metabob.com only)
+# Verbatim copy from repos/platform/metabob-apps/
+# Isolated namespace, minimal resources, no updates
+#
+# IMPORTANT: VirtualService for ide.metabob.com is managed by the
+# centralized istio-gateway chart, not by this deployment.
+
+helmDefaults:
+  createNamespace: true
+  wait: true
+  timeout: 300
+
+releases:
+  - name: metabob-rpc-api-legacy
+    chart: ./charts/metabob-rpc-api
+    namespace: metabob-legacy
+    version: 0.16.13
+    labels:
+      component: legacy
+      surface: ide
+    values:
+      # Override namespace for legacy deployment
+      - namespace: metabob-legacy
+      - name: rpc-api
+
+      # Use production configuration verbatim
+      - ./charts/metabob-rpc-api.production.values.yaml
+
+      # Minimal resource adjustments for legacy
+      - service:
+          replicas: 2
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+
+      - workers:
+          replicas: 2
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 1000m
+              memory: 4Gi
+
+      # Disable the chart's VirtualService template
+      # (VirtualService is managed by istio-gateway chart instead)
+      - istio:
+          enabled: false

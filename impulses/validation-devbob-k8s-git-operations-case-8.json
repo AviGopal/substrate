@@ -1,0 +1,11 @@
+{
+  "id": "validation-devbob-k8s-git-operations-case-8",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "Test Case 8: PR Creation Operation Validation\n\nInput:\n- Pod: devbob-0, devbob-1, devbob-2\n- Working Directory: /tmp/test-repo-TIMESTAMP (from push test)\n- Command: gh pr create --title 'Test PR from POD_NAME' --body 'Automated test PR' --base main --head validation-test-TIMESTAMP\n\nExpected Output:\n- https://github.com/metabob-labs/test-repo/pull/N\n- OR: a pull request for branch \"validation-test-TIMESTAMP\" into branch \"main\" already exists\n\nExpected Output (on failure):\n- HTTP 401: Requires authentication\n- gh: command not found\n- failed to run gh pr create\n\nValidation:\n- Output must contain 'https://github.com' (PR URL) OR 'already exists'\n- Must NOT contain '401', 'authentication', 'command not found'\n- Tests gh CLI authentication and PR creation capability\n- This is the CRITICAL test - if this passes, full git workflow is functional",
+    "source": "validation-harness"
+  },
+  "budget": 500,
+  "createdAt": "2026-02-27T11:42:00Z"
+}

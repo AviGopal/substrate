@@ -1,0 +1,296 @@
+{
+  "id": "enforcement-impulse-learning-in-rpc-api-only",
+  "type": "memo",
+  "priority": "high",
+  "budget": 3000,
+  "pointer": {
+    "type": "memo",
+    "source": "enforcement-verification"
+  },
+  "metadata": {
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "enforcementType": "verification",
+    "enforcementStatus": "ALREADY_COMPLIANT",
+    "createdBy": "enforce-architecture-separation",
+    "purpose": "Document that specification is already enforced - no changes required",
+    "createdAt": "2026-02-28T18:30:00Z"
+  },
+  "content": {
+    "specificationName": "impulse-learning-in-rpc-api-only",
+    "enforcementSummary": {
+      "status": "ALREADY_COMPLIANT",
+      "message": "All components are compliant. Architectural boundary successfully enforced. No code changes required.",
+      "verificationDate": "2026-02-28",
+      "componentsVerified": 6,
+      "componentsCompliant": 6,
+      "componentsNonCompliant": 0,
+      "changesApplied": 0
+    },
+    "changesApplied": [],
+    "componentsVerified": [
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/session/impulse-learning.ts",
+        "component": "impulse-learning.ts (entire file)",
+        "verificationMethod": "Line count check + content inspection",
+        "verificationResult": "COMPLIANT",
+        "currentBehavior": "Data collection only - 35 lines with buffer management and database flush",
+        "desiredBehavior": "<50 lines OR deleted, no learning algorithms",
+        "gap": "NONE",
+        "evidence": [
+          "Line count: 35 lines (target: <50)",
+          "Contains only data capture functions",
+          "flushToDatabase() calls MetabobCLI.recordTurnLearning() without processing",
+          "No pattern normalization logic",
+          "No quality calculation logic",
+          "No usage tracking logic"
+        ],
+        "changeMade": "NONE - Already compliant",
+        "reason": "File already meets specification requirements"
+      },
+      {
+        "file": "repos/metabob-opencode/packages/opencode/src/util/metabob.ts",
+        "component": "MetabobCLI.recordTurnLearning()",
+        "verificationMethod": "Function inspection at lines 1695-1753",
+        "verificationResult": "COMPLIANT",
+        "currentBehavior": "POSTs raw turn data to /api/v1/learning-loop/record-turn",
+        "desiredBehavior": "Send raw data only, no client-side learning",
+        "gap": "NONE",
+        "evidence": [
+          "Function performs HTTP POST only",
+          "Payload contains raw data without transformation",
+          "No normalize_pattern() calls",
+          "No calculate_quality() calls",
+          "No track_usage() calls"
+        ],
+        "changeMade": "NONE - Already compliant",
+        "reason": "Function already sends raw data without processing"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/routes/learning_loop.py",
+        "component": "record_turn_learning() endpoint",
+        "verificationMethod": "Endpoint inspection at lines 459-532",
+        "verificationResult": "COMPLIANT",
+        "currentBehavior": "Receives raw turn data, calls insert_mapping_record() for server-side processing",
+        "desiredBehavior": "Receive data and perform all learning server-side",
+        "gap": "NONE",
+        "evidence": [
+          "Endpoint exists: @router.post('/record-turn')",
+          "Receives TurnLearningRequest with raw data",
+          "Calls insert_mapping_record() for processing",
+          "Returns TurnLearningResponse with computed results"
+        ],
+        "changeMade": "NONE - Already compliant",
+        "reason": "Endpoint already handles learning server-side"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "component": "normalize_pattern()",
+        "verificationMethod": "Function inspection at lines 28-79",
+        "verificationResult": "COMPLIANT",
+        "currentBehavior": "Server-side pattern normalization (file paths → {file0}, numbers → {num0})",
+        "desiredBehavior": "Pattern extraction in rpc-api only",
+        "gap": "NONE",
+        "evidence": [
+          "Function exists in rpc-api",
+          "Not present in opencode",
+          "Implements pattern normalization logic",
+          "Called by insert_mapping_record()"
+        ],
+        "changeMade": "NONE - Already compliant",
+        "reason": "Pattern extraction correctly implemented server-side"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "component": "calculate_quality()",
+        "verificationMethod": "Function inspection at lines 82-122",
+        "verificationResult": "COMPLIANT",
+        "currentBehavior": "Server-side quality scoring (base + utilization bonus)",
+        "desiredBehavior": "Quality calculation in rpc-api only",
+        "gap": "NONE",
+        "evidence": [
+          "Function exists in rpc-api",
+          "Not present in opencode",
+          "Implements quality scoring algorithm",
+          "Called by insert_mapping_record()"
+        ],
+        "changeMade": "NONE - Already compliant",
+        "reason": "Quality calculation correctly implemented server-side"
+      },
+      {
+        "file": "repos/metabob-rpc-api/server/db/operations/impulse_learning.py",
+        "component": "track_usage()",
+        "verificationMethod": "Function inspection at lines 124-191",
+        "verificationResult": "COMPLIANT",
+        "currentBehavior": "Server-side impulse usage tracking in response text",
+        "desiredBehavior": "Usage tracking in rpc-api only",
+        "gap": "NONE",
+        "evidence": [
+          "Function exists in rpc-api",
+          "Not present in opencode",
+          "Implements usage tracking logic",
+          "Called by insert_mapping_record()"
+        ],
+        "changeMade": "NONE - Already compliant",
+        "reason": "Usage tracking correctly implemented server-side"
+      }
+    ],
+    "architecturalBoundaryVerification": {
+      "rule": "Learning algorithms belong in rpc-api, NOT in opencode",
+      "enforcementStatus": "ENFORCED",
+      "opencode_verification": {
+        "responsibility": [
+          "Capture raw turn data (user message, intent, impulses created, response, outcome)",
+          "Buffer turn data in memory",
+          "Flush buffered data to rpc-api endpoint",
+          "NO pattern extraction, NO quality calculation, NO usage tracking"
+        ],
+        "actualImplementation": [
+          "✓ Captures raw turn data via buffer functions",
+          "✓ Buffers data in Map<string, LearningBuffer>",
+          "✓ Flushes via MetabobCLI.recordTurnLearning()",
+          "✓ No pattern extraction (verified via grep)",
+          "✓ No quality calculation (verified via grep)",
+          "✓ No usage tracking (verified via grep)"
+        ],
+        "verdict": "COMPLIANT"
+      },
+      "rpc_api_verification": {
+        "responsibility": [
+          "Receive raw turn data via POST /record-turn",
+          "Extract normalized patterns (normalize_pattern)",
+          "Calculate quality scores (calculate_quality)",
+          "Track impulse usage (track_usage)",
+          "Persist complete ImpulseMappingRecord to SurrealDB",
+          "Return confirmation with record_id, pattern, quality"
+        ],
+        "actualImplementation": [
+          "✓ Receives via POST /record-turn endpoint (line 459)",
+          "✓ Extracts patterns via normalize_pattern() (line 28)",
+          "✓ Calculates quality via calculate_quality() (line 82)",
+          "✓ Tracks usage via track_usage() (line 124)",
+          "✓ Persists via insert_mapping_record() (line 193)",
+          "✓ Returns TurnLearningResponse with computed data"
+        ],
+        "verdict": "COMPLIANT"
+      },
+      "separation_achieved": true
+    },
+    "dataFlowVerification": {
+      "entry": "session/impulse-learning.ts::flushToDatabase()",
+      "exit": "SurrealDB impulse_mapping_record table",
+      "steps_verified": [
+        {
+          "step": 1,
+          "description": "opencode collects raw data",
+          "status": "VERIFIED",
+          "evidence": "impulse-learning.ts:24-32 shows buffer retrieval and raw data passing"
+        },
+        {
+          "step": 2,
+          "description": "opencode sends raw data to rpc-api",
+          "status": "VERIFIED",
+          "evidence": "metabob.ts:1695-1753 shows HTTP POST with raw payload"
+        },
+        {
+          "step": 3,
+          "description": "rpc-api receives and processes",
+          "status": "VERIFIED",
+          "evidence": "learning_loop.py:459-532 shows endpoint handler"
+        },
+        {
+          "step": 4,
+          "description": "rpc-api performs learning pipeline",
+          "status": "VERIFIED",
+          "evidence": "impulse_learning.py:193-311 shows orchestration with normalize/track/calculate"
+        },
+        {
+          "step": 5,
+          "description": "rpc-api returns confirmation",
+          "status": "VERIFIED",
+          "evidence": "learning_loop.py:521-528 shows response return"
+        }
+      ],
+      "dataFlow_intact": true
+    },
+    "validationCriteria": [
+      {
+        "criterion": "impulse-learning.ts is <50 lines OR deleted",
+        "status": "PASS",
+        "verificationMethod": "wc -l command",
+        "actual": "35 lines",
+        "expected": "<50 lines",
+        "evidence": "File contains 35 lines (well under limit)"
+      },
+      {
+        "criterion": "No normalizePattern() in opencode",
+        "status": "PASS",
+        "verificationMethod": "grep -rn normalizePattern in opencode src",
+        "actual": "Only found in activity-schema-adapter.ts for validation patterns (different purpose)",
+        "expected": "Not present for impulse learning",
+        "evidence": "No impulse learning pattern normalization in opencode"
+      },
+      {
+        "criterion": "No calculateResponseQuality() in opencode",
+        "status": "PASS",
+        "verificationMethod": "grep -rn calculateResponseQuality in opencode src",
+        "actual": "Function not found",
+        "expected": "Not present",
+        "evidence": "grep returned no results"
+      },
+      {
+        "criterion": "No trackImpulseUsage() in opencode",
+        "status": "PASS",
+        "verificationMethod": "grep -rn trackImpulseUsage in opencode src",
+        "actual": "Function not found",
+        "expected": "Not present",
+        "evidence": "grep returned no results"
+      },
+      {
+        "criterion": "RPC API has POST /record-turn endpoint",
+        "status": "PASS",
+        "verificationMethod": "grep endpoint in learning_loop.py",
+        "actual": "Endpoint exists at line 459",
+        "expected": "Endpoint present",
+        "evidence": "@router.post('/record-turn') decorator found"
+      },
+      {
+        "criterion": "RPC API has normalize_pattern() function",
+        "status": "PASS",
+        "verificationMethod": "grep function definition in impulse_learning.py",
+        "actual": "Function exists at line 28",
+        "expected": "Function present",
+        "evidence": "def normalize_pattern() found"
+      },
+      {
+        "criterion": "RPC API has calculate_quality() function",
+        "status": "PASS",
+        "verificationMethod": "grep function definition in impulse_learning.py",
+        "actual": "Function exists at line 82",
+        "expected": "Function present",
+        "evidence": "def calculate_quality() found"
+      },
+      {
+        "criterion": "RPC API has track_usage() function",
+        "status": "PASS",
+        "verificationMethod": "grep function definition in impulse_learning.py",
+        "actual": "Function exists at line 124",
+        "expected": "Function present",
+        "evidence": "def track_usage() found"
+      }
+    ],
+    "conclusion": {
+      "enforcementStatus": "COMPLETE - ALREADY COMPLIANT",
+      "summary": "The impulse-learning-in-rpc-api-only specification is fully enforced. All architectural boundaries are in place. Learning algorithms have been successfully separated from opencode into rpc-api. No code changes were required during enforcement verification.",
+      "changesRequired": false,
+      "changesApplied": 0,
+      "componentsVerified": 6,
+      "allComponentsCompliant": true,
+      "recommendation": "Continue monitoring to ensure boundary remains enforced in future changes.",
+      "nextSteps": [
+        "Run validation harness to confirm specification compliance",
+        "Add enforcement to CI/CD pre-push hooks if not already present",
+        "Document architectural boundary in team documentation"
+      ]
+    }
+  }
+}

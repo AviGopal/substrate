@@ -1,0 +1,15 @@
+{
+  "id": "validation-cross-vessel-type-preservation-case-5",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"test_name\": \"Case 5: Complex Random Structure\",\n  \"description\": \"Validate random complex structure with all types (generated at runtime)\",\n  \"input\": \"GENERATED_AT_RUNTIME\",\n  \"expected_output\": \"MATCHES_INPUT\",\n  \"validation_strategy\": \"field_by_field_comparison\",\n  \"type_check\": \"type(returned_value) == type(original_value)\",\n  \"value_check\": \"returned_value == original_value\"\n}"
+  },
+  "budget": 500,
+  "priority": "high",
+  "metadata": {
+    "specification": "Cross-Vessel Type Preservation and Data Integrity Validation",
+    "test_case": "Case 5: Complex Random Structure",
+    "created_at": "2026-03-08T18:30:00Z"
+  }
+}

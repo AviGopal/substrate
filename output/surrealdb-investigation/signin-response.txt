@@ -1,0 +1,1 @@
+{"error":{"code":-32000,"message":"There was a problem with the database: There was a problem with authentication"}}

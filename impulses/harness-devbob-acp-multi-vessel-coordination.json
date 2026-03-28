@@ -1,0 +1,24 @@
+{
+  "id": "harness-devbob-acp-multi-vessel-coordination",
+  "type": "file",
+  "description": "Validation harness for DevBob ACP multi-vessel coordination specification",
+  "pointer": {
+    "type": "file",
+    "path": "tests/validation-harnesses/devbob-acp-multi-vessel-coordination-harness.ts",
+    "offset": 0,
+    "limit": 1000
+  },
+  "budget": 2000,
+  "metadata": {
+    "specification": "devbob-acp-multi-vessel-coordination",
+    "testCases": [
+      "validation-devbob-acp-multi-vessel-coordination-case-1",
+      "validation-devbob-acp-multi-vessel-coordination-case-2",
+      "validation-devbob-acp-multi-vessel-coordination-case-3"
+    ],
+    "testTypes": ["functional", "security", "reliability"],
+    "noLLMRequired": true,
+    "reproducible": true,
+    "executionCommand": "bun run tests/validation-harnesses/devbob-acp-multi-vessel-coordination-harness.ts"
+  }
+}

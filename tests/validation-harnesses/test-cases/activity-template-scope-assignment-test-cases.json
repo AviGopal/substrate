@@ -1,0 +1,63 @@
+{
+  "specificationName": "activity-template-scope-assignment",
+  "testCases": [
+    {
+      "id": "validation-activity-template-scope-assignment-case-1",
+      "name": "Explicit scope assignment",
+      "description": "Register template with explicit scope='org' and verify it is persisted",
+      "input": {
+        "templateName": "test-scope-explicit",
+        "scope": "org",
+        "includeScope": true
+      },
+      "expectedOutput": {
+        "scope": "org",
+        "org_id": "3135883c-8be3-4b2b-bdd8-dbe2e427358f"
+      }
+    },
+    {
+      "id": "validation-activity-template-scope-assignment-case-2",
+      "name": "Default scope assignment",
+      "description": "Register template without scope field and verify it defaults to 'org'",
+      "input": {
+        "templateName": "test-scope-default",
+        "includeScope": false
+      },
+      "expectedOutput": {
+        "scope": "org",
+        "org_id": "3135883c-8be3-4b2b-bdd8-dbe2e427358f"
+      }
+    },
+    {
+      "id": "validation-activity-template-scope-assignment-case-3",
+      "name": "org_id extraction from Bearer token",
+      "description": "Verify org_id is extracted from Bearer token and persisted",
+      "input": {
+        "templateName": "test-org-id-extraction",
+        "scope": "org",
+        "includeScope": true
+      },
+      "expectedOutput": {
+        "org_id": "3135883c-8be3-4b2b-bdd8-dbe2e427358f",
+        "org_id_not_null": true,
+        "org_id_not_undefined": true
+      }
+    },
+    {
+      "id": "validation-activity-template-scope-assignment-case-4",
+      "name": "Scope persistence in variants",
+      "description": "Verify scope persists across template variants",
+      "input": {
+        "templateName": "test-scope-variants",
+        "scope": "org",
+        "includeScope": true,
+        "createVariants": true
+      },
+      "expectedOutput": {
+        "variant1_scope": "org",
+        "variant2_scope": "org",
+        "both_have_scope": true
+      }
+    }
+  ]
+}

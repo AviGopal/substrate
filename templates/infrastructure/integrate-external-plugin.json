@@ -1,0 +1,151 @@
+{
+  "id": "integrate-external-plugin",
+  "name": "Integrate External Plugin (Complete Pipeline)",
+  "category": "infrastructure",
+  "description": "End-to-end plugin integration: analyze capabilities → generate MCP adapter → validate tools. Implements the 'Becoming Anything' paradigm with minimal manual adjustments.",
+  "tasks": [
+    {
+      "id": "analyze-capabilities",
+      "subagent": "general",
+      "description": "Analyze plugin source code and extract capabilities",
+      "prompt": {
+        "template": "Execute the analyze-plugin-capabilities activity to extract functional specification from the plugin.\n\n**Activity**: analyze-plugin-capabilities\n\n**Variables**:\n- pluginUrl: {{pluginUrl}}\n- pluginType: {{pluginType}}\n\n**Expected Output**: Plugin specification impulse will be created\n\n**Your Task**: \n\n1. Run the activity:\n```bash\nopencode activity run analyze-plugin-capabilities \\\n  --var pluginUrl=\"{{pluginUrl}}\" \\\n  --var pluginType=\"{{pluginType}}\" \\\n  --reason=\"Analyzing {{pluginUrl}} for integration pipeline\"\n```\n\n2. Wait for completion\n\n3. Verify outputs:\n   - PLUGIN_SPECIFICATION.json exists\n   - plugin-specification-{{pluginType}} impulse created\n   - INTEGRATION_SUMMARY.md created\n\n4. Report summary:\n   - Number of capabilities found\n   - Number of APIs found\n   - Recommended integration approach\n   - Estimated integration effort",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["PLUGIN_SPECIFICATION.json", "INTEGRATION_SUMMARY.md"]
+      }
+    },
+    {
+      "id": "generate-adapter",
+      "subagent": "general",
+      "description": "Generate MCP adapter code from specification",
+      "dependencies": ["analyze-capabilities"],
+      "prompt": {
+        "template": "Execute the generate-mcp-adapter activity to create MCP gateway code.\n\n**Activity**: generate-mcp-adapter\n\n**Variables**:\n- specificationImpulseId: plugin-specification-{{pluginType}}\n- targetLanguage: {{targetLanguage}}\n\n**Your Task**:\n\n1. Verify specification impulse exists:\n```bash\n# Check impulse was created in previous task\n```\n\n2. Run the activity:\n```bash\nopencode activity run generate-mcp-adapter \\\n  --var specificationImpulseId=\"plugin-specification-{{pluginType}}\" \\\n  --var targetLanguage=\"{{targetLanguage}}\" \\\n  --reason=\"Generating MCP adapter for {{pluginUrl}}\"\n```\n\n3. Wait for completion\n\n4. Verify outputs:\n   - src/server.[ts|py] exists\n   - src/tools.[ts|py] exists\n   - src/client.[ts|py] exists\n   - package.json or pyproject.toml exists\n   - tests/ directory exists\n   - README.md exists\n\n5. Report summary:\n   - Number of MCP tools generated\n   - Package configuration created\n   - Test files created",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["README.md", "ADAPTER_GENERATION_SUMMARY.md"],
+        "commands": ["test -f src/server.ts -o -f src/server.py"]
+      }
+    },
+    {
+      "id": "install-and-build",
+      "subagent": "general",
+      "description": "Install dependencies and build the adapter",
+      "dependencies": ["generate-adapter"],
+      "prompt": {
+        "template": "Build the generated MCP adapter.\n\n**Target Language**: {{targetLanguage}}\n\n**Your Task**:\n\n**For TypeScript**:\n```bash\ncd [adapter_directory]\nnpm install\nnpm run build\n```\n\n**For Python**:\n```bash\ncd [adapter_directory]\npip install -e .\n```\n\n**Verify**:\n1. Dependencies installed successfully\n2. Build completed without errors\n3. Executable created (dist/server.js or [plugin]-mcp command)\n\n**Report**:\n- Build status: success/failure\n- Any warnings or issues\n- Executable location",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "run-tests",
+      "subagent": "general",
+      "description": "Run generated tests to validate MCP tools",
+      "dependencies": ["install-and-build"],
+      "prompt": {
+        "template": "Run the generated test suite.\n\n**Target Language**: {{targetLanguage}}\n\n**Your Task**:\n\n**For TypeScript**:\n```bash\nnpm test\n```\n\n**For Python**:\n```bash\npytest\n```\n\n**If tests fail**:\n1. Review error messages\n2. Check if plugin client needs configuration\n3. Consider mocking external APIs\n4. Fix any obvious issues\n5. Re-run tests\n\n**Report**:\n- Tests passed: X/Y\n- Coverage percentage (if available)\n- Any failures or warnings\n- Recommended fixes",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "commands": ["npm test || pytest || echo 'Tests completed'"]
+      }
+    },
+    {
+      "id": "validate-mcp-server",
+      "subagent": "general",
+      "description": "Test MCP server starts and responds correctly",
+      "dependencies": ["run-tests"],
+      "prompt": {
+        "template": "Validate the MCP server works correctly.\n\n**Your Task**:\n\n1. **Start server in background**:\n\n**TypeScript**:\n```bash\nnpm start &\nSERVER_PID=$!\nsleep 2\n```\n\n**Python**:\n```bash\n[plugin]-mcp &\nSERVER_PID=$!\nsleep 2\n```\n\n2. **Test MCP protocol**:\n\n```bash\n# Send list_tools request\necho '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}' | npm start\n\n# Should return list of tools\n```\n\n3. **Verify response**:\n   - Server responds to JSON-RPC\n   - tools/list returns tool definitions\n   - No errors in stderr\n\n4. **Stop server**:\n```bash\nkill $SERVER_PID\n```\n\n**Report**:\n- Server starts: yes/no\n- MCP protocol works: yes/no\n- Tools returned: [list]\n- Any errors or warnings",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      }
+    },
+    {
+      "id": "create-opencode-integration",
+      "subagent": "general",
+      "description": "Generate OpenCode configuration for the adapter",
+      "dependencies": ["validate-mcp-server"],
+      "prompt": {
+        "template": "Create OpenCode integration configuration.\n\n**Your Task**: Generate opencode.json snippet\n\n**Output**:\n\nCreate `opencode.json.snippet`:\n\n```json\n{\n  \"mcp\": {\n    \"[plugin-name]\": {\n      \"command\": \"[plugin]-mcp\",\n      \"args\": [],\n      \"env\": {\n        \"PLUGIN_BASE_URL\": \"${PLUGIN_BASE_URL}\",\n        \"PLUGIN_API_KEY\": \"${PLUGIN_API_KEY}\",\n        \"PLUGIN_TIMEOUT\": \"30000\"\n      }\n    }\n  }\n}\n```\n\n**Also create**: `INTEGRATION_INSTRUCTIONS.md`\n\n```markdown\n# Integration Instructions\n\n## Add to OpenCode\n\n1. Copy the configuration from `opencode.json.snippet`\n2. Add to your project's `opencode.json`\n3. Set environment variables:\n   ```bash\n   export PLUGIN_BASE_URL=\"...\"\n   export PLUGIN_API_KEY=\"...\"\n   ```\n\n## Test Integration\n\n```bash\nopencode tui\n# Use MCP tools in conversation\n```\n\n## Available Tools\n\n[List of generated MCP tools]\n\n## Next Steps\n\n1. **Optional: Backend Integration**\n   - If plugin needs state persistence\n   - Run: `instrument-backend-integration` activity\n\n2. **Optional: Activity Templates**\n   - Generate workflow templates\n   - Run: `generate-plugin-activities` activity\n\n3. **Documentation**\n   - Review README.md\n   - Test all MCP tools manually\n   - Write usage examples\n```",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["opencode.json.snippet", "INTEGRATION_INSTRUCTIONS.md"]
+      }
+    },
+    {
+      "id": "final-summary",
+      "subagent": "general",
+      "description": "Create comprehensive integration summary",
+      "dependencies": ["create-opencode-integration"],
+      "prompt": {
+        "template": "Generate final integration summary.\n\n**Input**: Read all previous task outputs\n\n**Your Task**: Create comprehensive summary\n\n**Output**:\n\nCreate `PLUGIN_INTEGRATION_COMPLETE.md`:\n\n```markdown\n# Plugin Integration Complete ✅\n\n**Plugin**: {{pluginUrl}}\n**Type**: {{pluginType}}\n**Language**: {{targetLanguage}}\n**Completed**: [timestamp]\n\n---\n\n## Summary\n\n### Analysis Phase\n\n**Capabilities Discovered**: [count]\n**APIs Identified**: [count]\n**Use Cases**: [count]\n**Integration Complexity**: [score]/10\n\n### Code Generation Phase\n\n**MCP Tools Generated**: [count]\n**Files Created**: [count]\n**Lines of Code**: [estimate]\n**Test Coverage**: [percentage]\n\n### Validation Phase\n\n**Tests Passed**: X/Y\n**MCP Server**: ✅ Working\n**OpenCode Integration**: ✅ Configured\n\n---\n\n## Generated Files\n\n```\n[adapter-directory]/\n├── src/\n│   ├── server.[ts|py]       - MCP server implementation\n│   ├── tools.[ts|py]        - Tool definitions\n│   └── client.[ts|py]       - Plugin API client\n├── tests/\n│   └── tools.test.[ts|py]   - Test suite\n├── package.json             - Package config\n├── README.md                - Documentation\n└── .env.example             - Environment template\n```\n\n---\n\n## MCP Tools Available\n\n[For each tool]:\n- **`[plugin]_[action]`**: [description]\n  - Parameters: [list]\n  - Returns: [type]\n\n---\n\n## Usage Example\n\n**In OpenCode**:\n\n```typescript\n// The plugin is now available as MCP tools\n// Example conversation:\n\nUser: \"List my repositories\"\nAgent: Calls [plugin]_list_repositories()\nResult: [list of repos]\n\nUser: \"Create an issue\"\nAgent: Calls [plugin]_create_issue({ title, body })\nResult: Issue created\n```\n\n---\n\n## Time Savings\n\n**Manual Integration Estimate**: 2-4 weeks\n**Activity-Based Integration**: 2-4 hours\n**Time Saved**: 90-95%\n\n**Manual Code Lines**: 500-1000\n**Generated Code Lines**: [actual]\n**Quality**: Consistent, tested, documented\n\n---\n\n## Next Steps (Optional)\n\n### 1. Backend Integration\n\nIf plugin needs state persistence:\n\n```bash\nopencode activity run instrument-backend-integration \\\n  --var pluginName=\"[plugin]\" \\\n  --var mcpAdapterPath=\"./[adapter-dir]\"\n```\n\nThis will generate:\n- API routes for backend\n- Storage schemas (SurrealDB)\n- Learning loop integration\n\n### 2. Activity Template Generation\n\nGenerate workflow templates for common use cases:\n\n```bash\nopencode activity run generate-plugin-activities \\\n  --var specificationImpulseId=\"plugin-specification-{{pluginType}}\"\n```\n\nThis will create:\n- Activity templates for each use case\n- Multi-plugin composition templates\n- Example workflows\n\n### 3. Plugin Marketplace\n\nShare your integration:\n- Publish MCP adapter to npm/PyPI\n- Share activity templates\n- Contribute to plugin marketplace\n\n---\n\n## Architecture Compliance\n\n✅ **MCP Gateway Pattern**: Followed correctly\n  - OpenCode → MCP Protocol → Adapter → Plugin API\n  - No direct backend calls from OpenCode\n  - Clean separation of concerns\n\n✅ **Functional State Transformation**: Achieved\n  - Plugin intent → Functional specification\n  - Specification → MCP adapter code\n  - Code → Tested implementation\n\n✅ **Self-Improving**: Learning loop ready\n  - Tool usage tracked\n  - Success rates monitored\n  - Can evolve templates based on metrics\n\n---\n\n## Success Metrics\n\n- ✅ **Minimal Adjustments**: < 5% manual changes needed\n- ✅ **Becoming Anything**: Plugin capabilities absorbed\n- ✅ **Quality**: Tests pass, code follows best practices\n- ✅ **Extensibility**: Activity templates can be generated\n\n---\n\n## We Have Become [Plugin] 🚀\n\nThe plugin's capabilities are now native to OpenCode:\n- API calls → MCP tools\n- Use cases → Activity templates (optional)\n- Workflows → Composable activities (optional)\n\n**This is the \"Becoming Anything\" paradigm in action.**\n```\n\n**Also log metrics**:\n- Store integration time\n- Count generated files\n- Track test success rate\n- Document any manual fixes needed",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter"
+      },
+      "validation": {
+        "requiredFiles": ["PLUGIN_INTEGRATION_COMPLETE.md"]
+      }
+    }
+  ],
+  "variables": [
+    {
+      "name": "pluginUrl",
+      "type": "string",
+      "required": true,
+      "description": "Plugin repository URL (git) or local path"
+    },
+    {
+      "name": "pluginType",
+      "type": "string",
+      "required": true,
+      "description": "Plugin type: mcp-server | rest-api | cli | library | graphql"
+    },
+    {
+      "name": "targetLanguage",
+      "type": "string",
+      "required": false,
+      "default": "typescript",
+      "description": "Generated code language: typescript | python"
+    }
+  ],
+  "integration": {
+    "preChecks": [
+      "git --version",
+      "node --version || python --version",
+      "npm --version || pip --version"
+    ],
+    "postChecks": [
+      "test -f PLUGIN_INTEGRATION_COMPLETE.md",
+      "test -f opencode.json.snippet",
+      "test -f ADAPTER_GENERATION_SUMMARY.md"
+    ],
+    "qualityGates": [
+      {
+        "name": "adapter_builds",
+        "command": "test -f src/server.ts -o -f src/server.py",
+        "errorMessage": "MCP adapter code not generated"
+      },
+      {
+        "name": "tests_exist",
+        "command": "test -d tests",
+        "errorMessage": "Test directory not created"
+      }
+    ]
+  },
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 12000,
+    "annotationStrategy": "key-components"
+  }
+}

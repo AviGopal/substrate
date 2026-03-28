@@ -1,0 +1,23 @@
+{
+  "id": "validation-vessel-repository-independence-case-5",
+  "type": "memo",
+  "description": "Test case: Dashboard uses HTTP fetch calls, not direct imports",
+  "content": {
+    "testName": "Dashboard HTTP-only communication",
+    "input": {
+      "searchPattern": "fetch\\(|axios\\.|http\\.",
+      "searchPaths": ["repos/activity-dashboard/src"],
+      "excludePaths": ["node_modules", "dist", "build", ".next"],
+      "minimumMatches": 1
+    },
+    "expectedOutput": {
+      "hasHttpCalls": true,
+      "pass": true,
+      "reason": "Dashboard must use HTTP/REST API calls, not direct code imports"
+    }
+  },
+  "metadata": {
+    "category": "http-communication",
+    "severity": "CRITICAL"
+  }
+}

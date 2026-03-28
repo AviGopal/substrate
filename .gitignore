@@ -63,6 +63,8 @@ htmlcov/
 *.bak
 *.backup
 test-local.txt
+tmp/
+**/tmp/
 
 # Database
 *.db
@@ -73,3 +75,56 @@ test-local.txt
 *.pem
 *.key
 !*.pub
+test-workspace/dummy-project/
+test-workspace/refactor-test/
+
+# Metabob state files (stateful, should not be committed)
+.metabob/state
+.metabob/.metabob/cpg_cache.db
+.metabob/.metabob/cpg_cache.db-journal
+.metabob/.metabob/*.db
+.metabob/.metabob/*.db-journal
+
+# Temporary working files from other specifications
+CONFLICT_ANALYSIS_rpc-api-endpoint-database-integration.md
+FINAL_SUMMARY_dashboard-login-flow-e2e-validation.md
+RIPPLE_CHANGES_rpc-api-endpoint-database-integration.md
+VALIDATION_RESULTS_rpc-api-endpoint-database-integration.md
+conflict-detection-output.json
+create-conflict-analysis-impulse.ts
+create-ripple-impulse.ts
+create-validation-results-impulse.ts
+impulses/conflict-analysis-rpc-api-endpoint-database-integration.json
+impulses/ripple-rpc-api-endpoint-database-integration.json
+impulses/validation-results-rpc-api-endpoint-database-integration.json
+output/VALIDATION_RESULTS_dashboard-login-flow-e2e-validation.json
+output/VALIDATION_dashboard-login-flow-e2e-validation.json
+ripple-execution-output.json
+run-validation-tests.sh
+tests/validation-harnesses/README-rpc-api-endpoint-database-integration.md
+validation-harness-creation-summary.json
+validation-harness-rpc-api-endpoint-database-integration-summary.json
+.metabob/state.lock
+create-mcp-timeout-trace-impulse.ts
+
+# Session documentation (keep latest only)
+*AUTHENTICATION*.md
+*PLAYWRIGHT*.md
+*SESSION*.md
+*STATUS*.md
+PLATFORM_E2E*.md
+READY_TO_BUILD*.md
+
+# Build scripts (project-specific)
+build-and-deploy-*.sh
+build-deploy-test-*.sh
+
+# Test artifacts
+playwright-e2e-test.js
+test-python-project/
+screenshots/error-screenshot.png
+screenshots/final-test-*.png
+
+# Temp files from activity session
+COMMIT_MESSAGE_*.txt
+repos/minibob/

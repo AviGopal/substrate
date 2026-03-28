@@ -1,0 +1,33 @@
+{
+  "id": "validation-impulse-learning-in-rpc-api-only-case-4",
+  "type": "memo",
+  "priority": "medium",
+  "budget": 500,
+  "pointer": {
+    "type": "memo",
+    "source": "validation-test-case"
+  },
+  "metadata": {
+    "testCase": 4,
+    "description": "No trackImpulseUsage() in opencode"
+  },
+  "content": {
+    "input": {
+      "testType": "grep",
+      "config": {
+        "pattern": "trackImpulseUsage|trackUsage|track_usage"
+      }
+    },
+    "expectedOutput": {
+      "pass": true,
+      "actual": {
+        "matchCount": 0
+      },
+      "expected": {
+        "function": "trackImpulseUsage",
+        "maxMatches": 0
+      },
+      "reason": "No trackImpulseUsage() found in opencode"
+    }
+  }
+}

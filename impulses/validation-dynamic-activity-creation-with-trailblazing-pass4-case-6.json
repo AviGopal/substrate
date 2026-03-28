@@ -1,0 +1,15 @@
+{
+  "input": {
+    "files": [
+      "templates/bootstrap/create-activity-self-contained.json",
+      "templates/bootstrap/debug-activity-self-contained.json",
+      "templates/bootstrap/evolve-activity-self-contained.json"
+    ]
+  },
+  "expectedOutput": {
+    "allTemplatesExist": true,
+    "templateCount": 3,
+    "namingConvention": "self-contained (not -v2)"
+  },
+  "description": "Verifies all 3 bootstrap templates exist with correct naming"
+}

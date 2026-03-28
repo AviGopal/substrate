@@ -1,0 +1,145 @@
+{
+  "activity_id": "cleanup-documentation-and-tests",
+  "name": "Cleanup Documentation and Tests",
+  "description": "Identify and remove outdated, irrelevant, or redundant documentation and test files from the codebase",
+  "category": "refactor",
+  "tasks": [
+    {
+      "task_id": "discover-candidates",
+      "subagent": "activity",
+      "description": "Identify documentation and test files that may be outdated or irrelevant",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze the codebase to identify documentation and test files that may be candidates for cleanup.\n\nScope: {{scope}}\n\nSearch for:\n1. Documentation files (.md, .txt) that may be:\n   - Outdated (references to removed features)\n   - Redundant (duplicate content)\n   - Irrelevant (not related to current codebase)\n   - Empty or stub files\n\n2. Test files that may be:\n   - Testing removed features\n   - Duplicate test coverage\n   - Broken or skipped tests\n   - Unused fixtures or helpers\n\nProvide a list of candidate files with reasoning for why each should be considered for removal.\n\nUse glob and grep tools to search. DO NOT make assumptions - verify each file's relevance.",
+        "variables": [
+          {
+            "name": "scope",
+            "type": "string",
+            "required": true,
+            "description": "Scope of cleanup (e.g., 'entire codebase', 'docs/ directory', 'test/integration/')"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "task_id": "analyze-safety",
+      "subagent": "activity",
+      "description": "Analyze the safety of removing identified files",
+      "dependencies": [
+        "discover-candidates"
+      ],
+      "prompt": {
+        "template": "Review the candidate files identified for cleanup and perform safety analysis.\n\nFor each candidate file:\n1. Check if it's referenced by other files (use grep/rg)\n2. Check if it's imported or required anywhere\n3. For test files: verify the tested code still exists\n4. For docs: check if linked from other documentation\n5. Run git log to see recent activity (active files should be kept)\n\nCategorize files as:\n- SAFE: Can be removed without impact\n- REVIEW: Needs human review before removal\n- KEEP: Should not be removed\n\nProvide detailed reasoning for each categorization.\n\nUse metabob_assess_deletion_safety if available to check for dependencies.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 15000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "{{typecheckCommand}}",
+            "expected_exit_code": 1
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "cleanup-files",
+      "subagent": "activity",
+      "description": "Remove files marked as SAFE",
+      "dependencies": [
+        "analyze-safety"
+      ],
+      "prompt": {
+        "template": "Remove the files that were categorized as SAFE in the previous analysis.\n\nFor each file to be removed:\n1. Verify one final time it's not referenced (grep)\n2. Remove the file using bash tool with 'rm' command\n3. Log the removal with reasoning\n\nCreate a summary of:\n- Files removed (with paths)\n- Reasoning for each removal\n- Any files moved to REVIEW category\n\nDO NOT remove files categorized as REVIEW or KEEP.\n\nIf unsure about any file, err on the side of caution and move it to REVIEW.",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "{{typecheckCommand}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 3,
+        "strategy": "progressive-context"
+      }
+    },
+    {
+      "task_id": "verify-cleanup",
+      "subagent": "build",
+      "description": "Verify that cleanup didn't break anything",
+      "dependencies": [
+        "cleanup-files"
+      ],
+      "prompt": {
+        "template": "Verify that the file cleanup didn't break the codebase.\n\nRun the following checks:\n1. Type checking: {{typecheckCommand}}\n2. Test suite: {{testCommand}}\n3. Build process: {{buildCommand}} (if applicable)\n\nIf any checks fail:\n1. Identify which removed file caused the issue\n2. Restore the file from git: git checkout HEAD -- <file>\n3. Move that file to REVIEW category\n4. Re-run checks\n\nProvide a summary of:\n- All checks passed/failed\n- Any files that needed to be restored\n- Final status of cleanup operation",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [],
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "{{typecheckCommand}}",
+            "expected_exit_code": 0
+          },
+          {
+            "command": "{{testCommand}}",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "max_attempts": 2,
+        "strategy": "fallback-agent"
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": null,
+  "created_at": "2026-02-16T10:00:51.590Z",
+  "metadata": {}
+}

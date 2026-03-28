@@ -1,0 +1,16 @@
+{
+  "id": "validation-metrics-calculation-in-rpc-api-only-case-3",
+  "type": "memo",
+  "pointer": {
+    "type": "memo",
+    "content": "{\n  \"name\": \"quality-score-deprecated\",\n  \"input\": \"template-quality-score.ts file\",\n  \"expectedOutput\": {\n    \"pass\": true,\n    \"lineCount\": \"<100\",\n    \"isDeprecated\": true,\n    \"hasCalculations\": false,\n    \"message\": \"File is deprecated stub with no calculation logic\"\n  }\n}",
+    "source": "validation-harness"
+  },
+  "metadata": {
+    "testName": "quality-score-deprecated",
+    "specificationName": "metrics-calculation-in-rpc-api-only",
+    "createdAt": "2026-02-28T09:47:19.767Z"
+  },
+  "budget": 500,
+  "status": "active"
+}
