@@ -155,11 +155,60 @@ bun test src/integration/impulse-flow.test.ts
 
 **Test Results:** 4/4 tests passing (1 skipped integration test)
 
-**3.4 Development Trace Capture**
-- [ ] Ensure traces sent to backend
-- [ ] Enable ribosome extraction for dev activities
-- [ ] Feed Thompson Sampling for development templates
-- [ ] Test: Backend receives development traces
+**3.4 Development Trace Capture** ✅
+- [x] Ensure traces sent to backend
+- [x] Enable ribosome extraction for dev activities
+- [x] Feed Thompson Sampling for development templates
+- [x] Test: Backend receives development traces
+
+**Verification Complete:**
+
+**Trace Submission** (repos/minibob/src/activity.ts:759)
+```typescript
+await mcp.storeExecutionTrace(execution)
+// POST /v2/activities/execution-traces
+// Payload includes: execution_id, template_id, success, duration_ms,
+//                   cost_usd, tokens, execution_trace, vessel_id
+```
+
+**Ribosome Extraction** (repos/minibob/src/activity.ts:789-853)
+- Automatically extracts templates from successful executions
+- Only when: success=true, has trace, not already ribosome-generated
+- Calls `assembleTemplateFromExecution()` to create reusable template
+- Registers extracted template to backend via `mcp.registerTemplate()`
+- Tags with inherited tags from original template or category-based tags
+- Prevents infinite loop by checking `template.metadata?.author !== "ribosome"`
+
+**Thompson Sampling** (Backend-Side)
+- Backend processes execution traces to update α/β parameters
+- Success increments α (alpha), failure increments β (beta)
+- Next selection uses Thompson Sampling to balance exploration/exploitation
+- Development traces tagged with `vessel_id: "microplastic-dev"`
+
+**Data Flow:**
+```
+Development Goal → MiniBobDevExecutor.execute()
+  → ActivityExecutor.execute()
+  → Build executionTrace during task execution
+  → mcp.storeExecutionTrace(execution)
+  → Backend receives trace
+  → Backend updates Thompson Sampling (α/β)
+  → If successful: ribosome extracts template
+  → Extracted template registered to backend
+  → Future goals benefit from learned patterns
+```
+
+**Testable State:**
+```bash
+# Execute development goal
+cd repos/microplastic
+export ANTHROPIC_API_KEY=your-key
+export MINIBOB_API_KEY=your-key
+bun run src/index.ts /dev "Add a console.log to index.ts"
+
+# Verify trace in backend
+curl http://activity.metabob.local/v2/activities/execution-traces?vessel_id=microplastic-dev | jq
+```
 
 **Testable State:**
 ```bash
