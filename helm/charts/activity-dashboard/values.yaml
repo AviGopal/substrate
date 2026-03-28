@@ -7,7 +7,7 @@ replicaCount: 1
 image:
   repository: metabobapp/activity-dashboard
   pullPolicy: IfNotPresent
-  tag: "dev-1.0.0-b07c1f9-1774595346"
+  tag: "dev-1.0.0-cfb2a7c-1774695755"
 
 imagePullSecrets: []
 nameOverride: ""

@@ -3,7 +3,7 @@
 # Image configuration
 image:
   repository: metabobapp/minibob
-  tag: "dev-0.1.0-b07c1f9-1774595346"
+  tag: "dev-0.2.0-cfb2a7c-1774695755"
   pullPolicy: IfNotPresent
 
 # Replica count
@@ -64,6 +64,17 @@ secrets:
   githubToken: ""      # GitHub Personal Access Token (classic) with repo, workflow, write:packages scopes
   gitUserName: "Devbob Agent"     # Git user.name for commit attribution
   gitUserEmail: "devbob@metabob.local"  # Git user.email for commit attribution
+
+# Instance authentication for MiniBob
+# Enables JWT-based auth with org_id for execution trace recording
+instance:
+  # Instance ID registered in SurrealDB minibob_instance table
+  instanceId: "minibob-local-001"
+  # Secret containing the API key
+  secretName: "minibob-instance-credentials"
+  secretKey: "api-key"
+  # Optional: Override org_id (normally comes from JWT)
+  # orgId: "metabob_internal"
 
 # Health checks
 livenessProbe:
