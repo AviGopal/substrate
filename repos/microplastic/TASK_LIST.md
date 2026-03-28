@@ -106,15 +106,29 @@ bun test src/integration/impulse-flow.test.ts
 - [ ] Add CLI argument parsing for `/dev` or `--dev`
 - [ ] Test: `microplastic /dev "test goal"` is recognized
 
-**3.2 MiniBob Integration**
-- [ ] Create `src/commands/minibob-integration.ts`
-- [ ] Implement `initializeMiniBobForDev(config)`
-- [ ] Configure MiniBob with:
+**3.2 MiniBob Integration** ✅
+- [x] Create `src/commands/minibob-integration.ts`
+- [x] Implement `initializeMiniBobForDev(config)`
+- [x] Configure MiniBob with:
   - workdir: `repos/microplastic`
   - backend: `http://activity.metabob.local`
   - apiKey: `mb_live_9VKN3eT_JoGxFEIsErU1KSlltoOUiMJB`
   - instanceId: `microplastic-dev`
-- [ ] Test: MiniBob instance initializes successfully
+- [x] Test: MiniBob instance initializes successfully
+
+**Files Modified:**
+- Created `src/commands/minibob-integration.ts` - MiniBobDevExecutor class with configuration validation
+- Updated `src/commands/dev.ts` - Wire MiniBob execution with environment variable validation
+- Created `tests/commands/minibob-integration.test.ts` - 8 tests for initialization and validation
+
+**Key Features:**
+- `MiniBobDevExecutor` class wraps ActivityExecutor with dev-specific config
+- Validates all required config fields (workdir, backend, apiKey, instanceId, anthropicApiKey)
+- Colored console output for execution progress (activity, task, completion)
+- Improvisation template for goals without matching templates
+- Reports files modified, duration, and cost after execution
+
+**Test Results:** 8/8 tests passing
 
 **3.3 Execute Development Goals**
 - [ ] Wire MiniBob GoalProcessor to execute goals

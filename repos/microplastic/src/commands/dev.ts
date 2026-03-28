@@ -5,6 +5,7 @@
  */
 
 import type { Options } from "../types.ts";
+import { initializeMiniBobForDev, type MiniBobDevConfig } from "./minibob-integration.ts";
 
 export interface DevOptions extends Options {
   analyze?: boolean; // Run trace analysis first
@@ -27,21 +28,51 @@ export interface DevOptions extends Options {
 export async function devCommand(goal: string, options: DevOptions): Promise<void> {
   console.log(`\x1b[36m/dev\x1b[0m ${goal}\n`);
 
-  // TODO: Implement MiniBob integration
-  // For now, just show what would happen
-  console.log("\x1b[33m[TODO] MiniBob integration not yet implemented\x1b[0m");
-  console.log("\x1b[90mWould execute:\x1b[0m");
-  console.log(`  Goal: ${goal}`);
-  console.log(`  Workdir: ${options.workdir}`);
-  console.log(`  Backend: ${process.env.ACTIVITY_API_URL ?? "http://activity.metabob.local"}`);
-  console.log(`  API Key: ${process.env.MINIBOB_API_KEY ? "configured" : "missing"}`);
-  console.log(`  Instance: microplastic-dev`);
+  // Get required environment variables
+  const backend = process.env.ACTIVITY_API_URL ?? "http://activity.metabob.local";
+  const apiKey = process.env.MINIBOB_API_KEY;
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 
-  if (options.analyze) {
-    console.log("\x1b[90m  Mode: analyze runtime traces first\x1b[0m");
+  // Validate configuration
+  if (!apiKey) {
+    console.error("\x1b[31mError: MINIBOB_API_KEY environment variable not set\x1b[0m");
+    console.error("\x1b[90mSet it with: export MINIBOB_API_KEY=your-key\x1b[0m");
+    process.exit(1);
   }
 
-  if (options.seed) {
-    console.log("\x1b[90m  Mode: seed templates before execution\x1b[0m");
+  if (!anthropicApiKey) {
+    console.error("\x1b[31mError: ANTHROPIC_API_KEY environment variable not set\x1b[0m");
+    console.error("\x1b[90mSet it with: export ANTHROPIC_API_KEY=your-key\x1b[0m");
+    process.exit(1);
+  }
+
+  // Create MiniBob configuration
+  const config: MiniBobDevConfig = {
+    workdir: options.workdir,
+    backend,
+    apiKey,
+    instanceId: "microplastic-dev",
+    anthropicApiKey,
+    verbose: options.verbose,
+  };
+
+  // Initialize MiniBob executor
+  const executor = initializeMiniBobForDev(config);
+
+  // Execute development goal
+  try {
+    const result = await executor.execute(goal);
+
+    // Exit with appropriate code
+    if (result.success) {
+      console.log("\n\x1b[32m✓ Development goal completed\x1b[0m");
+      process.exit(0);
+    } else {
+      console.log("\n\x1b[31m✗ Development goal failed\x1b[0m");
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error("\n\x1b[31m✗ Unexpected error:\x1b[0m", error);
+    process.exit(1);
   }
 }
