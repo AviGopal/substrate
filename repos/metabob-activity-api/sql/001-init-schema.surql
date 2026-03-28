@@ -59,9 +59,19 @@ DEFINE FIELD description ON activity_template TYPE string
   ASSERT $value != NONE
   COMMENT "Template description";
 
-DEFINE FIELD category ON activity_template TYPE string
-  ASSERT $value IN ['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']
-  COMMENT "Template category (meta = activities that operate on the activity system itself)";
+-- DEPRECATED: Use tags field instead. Kept for backward compatibility.
+DEFINE FIELD category ON activity_template TYPE option<string>
+  COMMENT "DEPRECATED: Use tags field for hierarchical classification.";
+
+-- Hierarchical tags using dot-notation (e.g., feature.vessel.state.communication)
+DEFINE FIELD tags ON activity_template TYPE array<string>
+  DEFAULT []
+  COMMENT "Hierarchical tags using dot-notation (e.g., feature.vessel.state, utility.code.trace)";
+
+-- Computed tag prefixes for efficient prefix queries
+DEFINE FIELD tag_prefixes ON activity_template TYPE array<string>
+  DEFAULT []
+  COMMENT "Auto-computed tag prefixes for hierarchical queries";
 
 DEFINE FIELD task_steps ON activity_template TYPE option<array<object>> FLEXIBLE
   COMMENT "Array of task definitions (flexible structure - no nested validation)";
