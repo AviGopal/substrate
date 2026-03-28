@@ -38,8 +38,8 @@ async function storeImpulse(token: string) {
 
   const impulseData = {
     impulse_id: `test-datetime-fix-${Date.now()}`,
-    // org_id and project_id come from $auth context (null uses defaults)
-    project_id: null,
+    // Use default project for testing
+    project_id: "default",
     impulse_data: {
       id: `test-datetime-fix-${Date.now()}`,
       type: "memo",

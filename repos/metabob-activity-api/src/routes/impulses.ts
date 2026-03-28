@@ -147,17 +147,21 @@ router.post('/', async (c) => {
       authorization: c.req.header('Authorization') ? 'present' : 'missing',
     });
 
-    // Get api_key from session, JWT auth, or internal header
+    // Get api_key and org_id from session, JWT auth, or internal header
     let api_key: string;
+    let org_id: string;
 
     if (session?.api_key) {
       api_key = session.api_key;
+      org_id = session.org_id || 'metabob_internal';
     } else if (jwtAuth) {
       // JWT auth from MiniBob instances - use instance info
       api_key = `minibob:${jwtAuth.instanceId || jwtAuth.orgId}`;
+      org_id = jwtAuth.orgId;
       logger.debug('Using JWT auth', { orgId: jwtAuth.orgId, projectId: jwtAuth.projectId });
     } else if (internalApiKey) {
       api_key = internalApiKey;
+      org_id = 'metabob_internal'; // Default for internal services
       logger.debug('Using internal service api_key', { api_key: api_key.substring(0, 8) + '...' });
     } else {
       logger.warn('POST /v2/impulses: no auth', { hasSession: !!session, hasJwtAuth: !!jwtAuth, hasInternalKey: !!internalApiKey });
@@ -208,6 +212,7 @@ router.post('/', async (c) => {
         impulse_id: $impulse_id,
         api_key: $api_key,
         project_id: $project_id,
+        org_id: type::record('organizations', $org_id),
         impulse_data: $impulse_data,
         created_at: time::now(),
         updated_at: time::now()
@@ -218,14 +223,24 @@ router.post('/', async (c) => {
       impulse_id,
       api_key,
       project_id,
+      org_id,
       impulse_data,
     });
 
-    if (!result || result.length === 0) {
+    // CREATE may return empty with some auth contexts, query the created record
+    const selectQuery = `SELECT * FROM impulse_data WHERE impulse_id = $impulse_id AND api_key = $api_key AND project_id = $project_id LIMIT 1`;
+    const selectResult = await surrealDB.query<any>(selectQuery, {
+      impulse_id,
+      api_key,
+      project_id
+    });
+
+    if (!selectResult || selectResult.length === 0) {
+      logger.error('Failed to retrieve created impulse', { impulse_id });
       throw new Error('Failed to create impulse in SurrealDB');
     }
 
-    const created = result[0];
+    const created = selectResult[0];
 
     logger.info('Impulse created', {
       impulse_id,
