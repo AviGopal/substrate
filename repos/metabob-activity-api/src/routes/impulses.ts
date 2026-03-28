@@ -202,15 +202,15 @@ router.post('/', async (c) => {
     }
 
     // Create impulse record with timestamps
-    const now = new Date().toISOString();
+    // Use SurrealDB's time::now() function for datetime fields (REBUILD MARKER)
     const createQuery = `
       CREATE impulse_data CONTENT {
         impulse_id: $impulse_id,
         api_key: $api_key,
         project_id: $project_id,
         impulse_data: $impulse_data,
-        created_at: $created_at,
-        updated_at: $updated_at
+        created_at: time::now(),
+        updated_at: time::now()
       }
     `;
 
@@ -219,18 +219,18 @@ router.post('/', async (c) => {
       api_key,
       project_id,
       impulse_data,
-      created_at: now,
-      updated_at: now,
     });
 
     if (!result || result.length === 0) {
       throw new Error('Failed to create impulse in SurrealDB');
     }
 
+    const created = result[0];
+
     logger.info('Impulse created', {
       impulse_id,
       project_id,
-      created_at: now,
+      created_at: created.created_at,
     });
 
     // Return response matching Python ImpulseResponse schema
@@ -239,8 +239,8 @@ router.post('/', async (c) => {
       api_key,
       project_id,
       impulse_data,
-      created_at: now,
-      updated_at: now,
+      created_at: created.created_at,
+      updated_at: created.updated_at,
     };
 
     return c.json(response, 201);
