@@ -17,23 +17,20 @@ import {
   createExecutionBridge,
 } from "./tui/index.ts";
 import { ImpulseStore } from "./impulse/index.ts";
+import { devCommand, type DevOptions } from "./commands/dev.ts";
+import type { Options } from "./types.ts";
 
 // Simple argument parsing for Phase 1
 const args = process.argv.slice(2);
 
-interface Options {
-  workdir: string;
-  verbose: boolean;
-  dryRun: boolean;
-  useRegions: boolean; // Use region-based TUI
-}
-
-function parseArgs(): { command: string | null; goal: string | null; options: Options } {
-  const options: Options = {
+function parseArgs(): { command: string | null; goal: string | null; options: DevOptions } {
+  const options: DevOptions = {
     workdir: process.cwd(),
     verbose: false,
     dryRun: false,
     useRegions: true, // Default to region-based TUI
+    analyze: false,
+    seed: false,
   };
 
   let command: string | null = null;
@@ -72,14 +69,24 @@ function parseArgs(): { command: string | null; goal: string | null; options: Op
       continue;
     }
 
+    if (arg === "--analyze") {
+      options.analyze = true;
+      continue;
+    }
+
+    if (arg === "--seed") {
+      options.seed = true;
+      continue;
+    }
+
     if (arg.startsWith("-")) {
       console.error(`Unknown option: ${arg}`);
       process.exit(1);
     }
 
     // First non-option argument
-    if (arg === "help" || arg === "templates" || arg === "history") {
-      command = arg as "help" | "templates" | "history";
+    if (arg === "help" || arg === "templates" || arg === "history" || arg === "dev" || arg === "/dev") {
+      command = arg === "/dev" ? "dev" : arg as "help" | "templates" | "history" | "dev";
     } else {
       goal = arg;
     }
@@ -94,6 +101,7 @@ ${description}
 
 Usage:
   microplastic [goal]              Execute a goal or enter interactive mode
+  microplastic /dev [goal]         Use MiniBob to develop microplastic itself
   microplastic help                Show this help
   microplastic templates           List available activity templates
   microplastic history             Show execution history
@@ -103,13 +111,17 @@ Options:
   -v, --verbose        Enable verbose output
   -d, --dry-run        Show what would be done without executing
   --classic            Use classic narrative TUI (default: region-based)
+  --analyze            Analyze runtime traces before /dev execution
+  --seed               Seed templates before /dev execution
   -V, --version        Show version
   -h, --help           Show this help
 
 Examples:
-  microplastic                          # Interactive mode
-  microplastic "Fix the login bug"      # Execute a goal
-  microplastic templates --level 0      # List level 0 templates
+  microplastic                                    # Interactive mode
+  microplastic "Fix the login bug"                # Execute a goal
+  microplastic /dev "Add console.log to index"    # Self-development
+  microplastic /dev --analyze                     # Analyze then improve
+  microplastic templates --level 0                # List level 0 templates
 `);
 }
 
@@ -626,6 +638,14 @@ async function main() {
     showTemplates();
   } else if (command === "history") {
     showHistory();
+  } else if (command === "dev") {
+    // /dev command - self-development mode
+    if (!goal) {
+      console.error("\x1b[31mError:\x1b[0m /dev requires a goal");
+      console.log("Example: microplastic /dev \"Add feature X\"");
+      process.exit(1);
+    }
+    await devCommand(goal, options);
   } else if (goal) {
     await runGoal(goal, options);
   } else {

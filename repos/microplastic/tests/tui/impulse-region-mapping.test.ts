@@ -47,7 +47,7 @@ describe("Impulse-to-Region 1:1 Mapping", () => {
 
     // Create a task start impulse with the SAME impulse ID (simulating update)
     // In practice, this would be a different impulse, but we're testing the mapping
-    const impulse2 = impulseStore.create({
+    impulseStore.create({
       id: impulse1.id, // Reuse same ID to simulate update
       pointer: { type: "execution_event", event: "task_start" },
       budget: 1000,
@@ -169,7 +169,7 @@ describe("Impulse-to-Region 1:1 Mapping", () => {
 
     // Update the impulse (in practice this would be a subsequent event for the same execution)
     // For testing, we'll create a new impulse with a reference to the first
-    const impulse2 = impulseStore.create({
+    impulseStore.create({
       id: impulse.id, // Same ID = same impulse
       pointer: { type: "execution_event", event: "template_selected" },
       budget: 1000,
@@ -189,7 +189,7 @@ describe("Impulse-to-Region 1:1 Mapping", () => {
     expect(activityRegions.length).toBe(1);
 
     // Should be the same region ID
-    expect(activityRegions[0].id).toBe(regionId1);
+    expect(activityRegions[0]!.id).toBe(regionId1);
 
     // Cleanup
     bridge.shutdown();

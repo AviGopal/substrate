@@ -67,7 +67,7 @@ describe("End-to-End Impulse Flow Integration", () => {
     const activityRegions = regions.filter((r) => r.shape === "activity");
     expect(activityRegions.length).toBe(1);
 
-    const activityRegion = activityRegions[0];
+    const activityRegion = activityRegions[0]!;
     expect(activityRegion.content.name).toBe("Test Activity");
     expect(activityRegion.content.totalTasks).toBe(2);
     expect(activityRegion.state).toBe("loading");
@@ -75,7 +75,7 @@ describe("End-to-End Impulse Flow Integration", () => {
 
   test("task impulse updates activity region progress", () => {
     // First, create an activity
-    const activityImpulse = impulseStore.create({
+    impulseStore.create({
       pointer: { type: "execution_event", event: "template_selected" },
       budget: 1000,
       priority: "medium",
@@ -144,9 +144,9 @@ describe("End-to-End Impulse Flow Integration", () => {
     const toolCallRegions = regions.filter((r) => r.shape === "tool_call");
     expect(toolCallRegions.length).toBe(1);
 
-    const toolCallRegion = toolCallRegions[0];
+    const toolCallRegion = toolCallRegions[0]!;
     expect(toolCallRegion.content.tool).toBe("read");
-    expect(toolCallRegion.content.args.file_path).toBe("/test/file.ts");
+    expect(toolCallRegion.content.args?.file_path).toBe("/test/file.ts");
   });
 
   test("summary impulse creates summary region and completes activity", () => {
@@ -200,12 +200,12 @@ describe("End-to-End Impulse Flow Integration", () => {
     const summaryRegions = regions2.filter((r) => r.shape === "summary");
     expect(summaryRegions.length).toBe(1);
 
-    const summaryRegion = summaryRegions[0];
+    const summaryRegion = summaryRegions[0]!;
     expect(summaryRegion.content.text).toBe("Task completed successfully");
     expect(summaryRegion.content.filesModified).toContain("/test/file.ts");
 
     // Verify activity region was marked as complete
-    const activityRegion2 = regionManager.get(activityRegion1.id);
+    const activityRegion2 = regionManager.get(activityRegion1!.id);
     expect(activityRegion2!.state).toBe("complete");
   });
 
@@ -247,7 +247,7 @@ describe("End-to-End Impulse Flow Integration", () => {
     const errorRegions = regions.filter((r) => r.shape === "error");
     expect(errorRegions.length).toBe(1);
 
-    const errorRegion = errorRegions[0];
+    const errorRegion = errorRegions[0]!;
     expect(errorRegion.content.message).toContain("API key not found");
     expect(errorRegion.display?.priority).toBeGreaterThan(500); // Errors have high priority
   });
@@ -363,7 +363,7 @@ describe("End-to-End Impulse Flow Integration", () => {
     const regions1 = regionManager.getAll();
     const activityRegions1 = regions1.filter((r) => r.shape === "activity");
     expect(activityRegions1.length).toBe(1);
-    const regionId1 = activityRegions1[0].id;
+    const regionId1 = activityRegions1[0]!.id;
 
     // Create another impulse with the same ID (update scenario)
     impulseStore.create({
@@ -385,6 +385,6 @@ describe("End-to-End Impulse Flow Integration", () => {
     expect(activityRegions2.length).toBe(1);
 
     // Should be the same region ID (not a new region)
-    expect(activityRegions2[0].id).toBe(regionId1);
+    expect(activityRegions2[0]!.id).toBe(regionId1);
   });
 });
