@@ -338,6 +338,8 @@ bun test               # Run tests
 
 ### Build and Deployment
 
+> **CRITICAL**: The canonical infrastructure deployments are in `repos/deployment/`. All builds and deployments MUST be performed from that repository, not from the main development workspace.
+
 **Prerequisites:**
 1. Docker Desktop with Kubernetes enabled (context: `docker-desktop`)
 2. Istio installed: `istioctl install --set profile=demo -y`
@@ -353,58 +355,100 @@ bun test               # Run tests
    export SURREALDB_PASSWORD="surrealdb-local-dev-123"  # Optional
    ```
 
-**Build Docker Images:**
+**Development Deployment Workflow:**
 
-Use the build script to build all vessels with correct contexts:
-
-```bash
-# Build all vessels
-./scripts/build-vessels.sh
-
-# Or build specific vessel
-./scripts/build-vessels.sh minibob
-./scripts/build-vessels.sh metabob-activity-api
-./scripts/build-vessels.sh activity-dashboard
-```
-
-**Important:** The `metabob-activity-api` image requires a multi-repo build context:
+The proper workflow ensures continuous, incremental deployments with trace collection:
 
 ```bash
-# Automated (recommended)
-./scripts/build-vessels.sh metabob-activity-api
+# 1. Switch to deployment repository dev branch
+cd repos/deployment
+git checkout dev
+git pull
 
-# Manual
-cd repos
-docker build -f metabob-activity-api/Dockerfile -t metabob-activity-api:latest .
-```
+# 2. Check status of specific vessel (e.g., metabob-activity-api)
+git --work-tree=vessels/metabob-activity-api status
 
-This includes metabob-proto schemas for automated database migrations. **Do not build from `repos/metabob-activity-api/`** - the Dockerfile requires access to the parent repos/ directory.
+# 3. Copy changes from development workspace
+# After making changes in main workspace (repos/metabob-activity-api),
+# sync them to deployment workspace:
+rsync -av ../metabob-activity-api/src/ vessels/metabob-activity-api/src/
+# Or manually copy changed files
 
-**Deploy to Development Cluster:**
+# 4. Bump version tag
+# Edit vessels/metabob-activity-api/package.json version
+# Update helm/charts/metabob-activity-api/values.yaml image tag
 
-Using the minimal activity system helmfile:
+# 5. Build container
+./scripts/build-vessel.sh metabob-activity-api
 
-```bash
+# 6. Deploy with helmfile
 cd helm
-helmfile -f activity-system-minimal.yaml.gotmpl sync
+helmfile -e local sync
+
+# 7. Check deployment status
+kubectl get pods -n activity-system
+kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api --tail=50
+
+# 8. If deployment is healthy (not crashing):
+#    Commit and push deployment changes
+cd ..
+git add vessels/metabob-activity-api helm/charts/metabob-activity-api
+git commit -m "feat(activity-api): <description>"
+git push origin dev
+
+# 9. If deployment is broken:
+#    Fix the issue and retry from step 5 (build container)
+
+# 10. Back in main workspace: discard local changes and pull
+cd ../../  # Back to main workspace root
+git restore repos/metabob-activity-api
+git pull origin <your-branch>
 ```
 
-This deploys (in order):
-1. **Valkey** (Redis-compatible cache) in `activity-system` namespace
-2. **SurrealDB 3.x** (persistent learning database)
-3. **Schema Migration Job** (hook-weight: 5) - Applies all database schemas automatically
-4. **Init-Data Job** (hook-weight: 10) - Creates default org and MiniBob instance
-5. **metabob-activity-api** (MCP backend with Thompson Sampling)
-6. **MiniBob** (3 replicas for boredom activities)
-7. **Activity Dashboard** (React UI)
-8. **Istio Gateway** (networking with virtual services)
+**Why This Workflow:**
 
-**Automated Schema Deployment:**
-- Schemas are applied automatically via Helm hooks
-- No manual schema application required
-- Migration Job creates namespace, applies core + activity schemas, backfills org_id
-- Init-Data Job creates organizations:metabob_internal and minibob-local-001 instance
-- Both Jobs are idempotent (safe to redeploy)
+1. **Continuous incremental deployment**: Each change is deployed immediately, allowing trace collection and performance monitoring
+2. **Separation of concerns**: Development workspace stays clean; deployment workspace manages packaging and K8s resources
+3. **Version control**: Deployment repository tracks working configurations separately from source code
+4. **Rollback capability**: Deployment history is independent of source code history
+5. **Multi-vessel coordination**: Deployment repo manages inter-vessel dependencies and versioning
+
+**Deployment Repository Structure:**
+
+```
+repos/deployment/
+├── vessels/                    # Vessel source code (synced from main workspace)
+│   ├── metabob-activity-api/
+│   ├── minibob/
+│   └── activity-dashboard/
+├── helm/                       # Kubernetes manifests
+│   ├── charts/
+│   │   ├── metabob-activity-api/
+│   │   │   ├── values.yaml    # Image tags, config
+│   │   │   └── templates/
+│   │   └── ...
+│   └── helmfile.yaml
+└── scripts/
+    └── build-vessel.sh         # Build script for containers
+```
+
+**Automated Deployment (via pre-commit hook):**
+
+The main workspace has a pre-commit hook that automatically:
+1. Updates image tags in deployment repo
+2. Builds changed vessels
+3. Deploys via helmfile
+4. Validates deployment health
+
+This ensures every commit triggers a deployment attempt, maintaining continuous integration.
+
+**Manual Deployment (when auto-deployment fails):**
+
+If the pre-commit hook fails:
+1. Review logs: `.git/hooks/logs/pre-commit-<timestamp>.log`
+2. Fix the issue in main workspace
+3. Follow the manual deployment workflow above
+4. Once fixed, re-commit to trigger auto-deployment again
 
 **Verify Deployment:**
 
