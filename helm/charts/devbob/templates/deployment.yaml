@@ -187,13 +187,26 @@ spec:
               key: git-user-email
         - name: METABOB_API_URL
           value: {{ .Values.env.metabobApiUrl | quote }}
-        {{- if .Values.env.minibobMcpEndpoint }}
-        - name: MINIBOB_MCP_ENDPOINT
-          value: {{ .Values.env.minibobMcpEndpoint | quote }}
+        {{- if .Values.env.activityApiEndpoint }}
+        - name: ACTIVITY_API_ENDPOINT
+          value: {{ .Values.env.activityApiEndpoint | quote }}
         {{- end }}
         {{- if .Values.env.minibobServiceName }}
         - name: MINIBOB_SERVICE_NAME
           value: {{ .Values.env.minibobServiceName | quote }}
+        {{- end }}
+        {{- if .Values.instance }}
+        - name: MINIBOB_INSTANCE_ID
+          value: {{ .Values.instance.instanceId | quote }}
+        - name: MINIBOB_INSTANCE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.instance.secretName | default "minibob-instance-credentials" }}
+              key: {{ .Values.instance.secretKey | default "api-key" }}
+        {{- if .Values.instance.orgId }}
+        - name: MINIBOB_ORG_ID
+          value: {{ .Values.instance.orgId | quote }}
+        {{- end }}
         {{- end }}
         - name: SURREAL_HOST
           value: {{ .Values.env.surrealHost | quote }}

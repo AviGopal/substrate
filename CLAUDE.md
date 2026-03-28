@@ -107,7 +107,6 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - `src/impulse.ts`: Impulse system for context management
 - `src/activity.ts`: Activity template executor
 - `src/goal-processor.ts`: Goal-seeking activity recommendations
-- `src/acp.ts`: ACP protocol for vessel-to-vessel communication
 - `src/mcp.ts`: MCP client for backend integration
 
 **Capabilities:**
@@ -541,7 +540,7 @@ resolvectl query surql.metabob.local  # Check resolver path
 **MiniBob (configured via Helm values):**
 ```bash
 ANTHROPIC_API_KEY           # Required: Anthropic API key (from secret)
-MINIBOB_MCP_ENDPOINT        # Backend URL (set by Helm)
+ACTIVITY_API_ENDPOINT       # Activity API (default: https://activity.metabob.com)
 MINIBOB_SERVICE_NAME        # Service discovery name
 LLM_PROVIDER                # Default: anthropic
 LLM_MODEL                   # Default: claude-sonnet-4-20250514
@@ -713,15 +712,13 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 
 ## Architecture Documentation
 
-**Core ontology and philosophy:**
-- `docs/architecture/ONTOLOGY_OF_BECOMING.md`: Three-state model
-- `docs/architecture/VESSEL_ARCHITECTURE_CORRECTED.md`: Vessel design
-- `docs/architecture/INSTRUCTIONAL_TO_FUNCTIONAL_STATE_BRIDGE.md`: State transformation
+**Canonical reference (read this first):**
+- [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md): The foundational model defining impulses, activities, vessels, and learning
 
-**Implementation architecture:**
-- `UNIFIED_IMPULSE_DRIVEN_ARCHITECTURE.md`: Core impulse system
-- `RIBOSOME_ARCHITECTURE.md`: Self-replicating pattern
-- `DEPLOYMENT_GUIDE.md`: Deployment procedures
+**Complementary architecture docs:**
+- `COMPOSITION_AND_CONTROL_FLOW.md`: Activity composition patterns and hooks
+- `ACTIVITY_BASED_IMPROVISATION.md`: VM-as-executor philosophy
+- `DEPLOYMENT_GUIDE.md`: Kubernetes deployment procedures
 
 **Multi-tenant & RBAC:**
 - `docs/MULTI_TENANT_ARCHITECTURE.md`: Tenancy model and authentication
@@ -729,10 +726,8 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 - `docs/AUTH_JWT_CLAIMS.md`: JWT token structure
 - `docs/SCHEMA_OWNERSHIP.md`: Service-to-table ownership
 
-**Integration and progress:**
-- `MINIBOB_LIBRARY_INTEGRATION_COMPLETE.md`: OpenCode integration
-- `PHASE_1_8_COMPLETE.md`: Learning system phases
-- `LEARNING_SYSTEM_PROGRESS.md`: Current status
+**Archived docs** (superseded by foundation doc):
+- `docs/archive/2026-03-27-superseded/`: Historical design documents
 
 ## RBAC and Multi-Tenant Isolation
 
