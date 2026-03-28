@@ -14,6 +14,7 @@ import beta from '@stdlib/random-base-beta';
 import { surrealDB, queryWithAuth } from '../db/surreal';
 import { RedisClient } from '../db/redis';
 import { logger } from '../utils/logger';
+import { ensureTags, computeTagPrefixes, deriveCategory } from '../utils/tags';
 import {
   insertActivity,
   insertExecution,
@@ -92,7 +93,11 @@ interface ActivityTemplate {
   activity_id: string;
   variant_name: string;
   description: string;
-  category: string;
+  // Hierarchical tags (primary classification)
+  tags: string[];
+  tag_prefixes?: string[];
+  // Legacy category (deprecated)
+  category?: string;
   task_steps?: any[];
   scope: string | null;
   org_id: string | null;
@@ -404,11 +409,19 @@ app.post('/templates', async (c) => {
     const body = await c.req.json();
     const validated = CreateTemplateRequestSchema.parse(body);
 
+    // Convert category to tags if needed (backward compatibility)
+    const tags = ensureTags({ tags: validated.tags, category: validated.category });
+    const tagPrefixes = computeTagPrefixes(tags);
+    // Derive category for backward compat (first tag's root segment if known)
+    const derivedCategory = deriveCategory(tags) || validated.category || tags[0]?.split('.')[0] || 'uncategorized';
+
     logger.info('POST /v2/activities/templates', {
       variant_id: validated.variant_id,
       activity_id: validated.activity_id,
       variant_name: validated.variant_name,
-      category: validated.category,
+      tags,
+      tagPrefixes,
+      category: derivedCategory,
       scope: validated.scope,
     });
 
@@ -438,7 +451,11 @@ app.post('/templates', async (c) => {
       activity_id: validated.activity_id,
       variant_name: validated.variant_name,
       description: validated.description,
-      category: validated.category,
+      // Hierarchical tags (primary classification)
+      tags,
+      tag_prefixes: tagPrefixes,
+      // Legacy category for backward compatibility
+      category: derivedCategory,
       scope: validated.scope || 'global',
     };
 
@@ -493,7 +510,11 @@ app.post('/templates', async (c) => {
         input_shapes: [], // Legacy templates don't have shapes yet
         output_shapes: [],
         execution_type: 'template',
-        category: validated.category,
+        // Hierarchical tags (primary classification)
+        tags,
+        tag_prefixes: tagPrefixes,
+        // Legacy category for backward compatibility
+        category: derivedCategory,
         tasks: validated.task_steps,
         scope: validated.scope || 'org',
         public: validated.scope === 'global',

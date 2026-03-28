@@ -106,6 +106,8 @@ const ACTIVITY_FIELD_MAP = {
   activity_id: 'id', // In new schema, activity_id is just id
   variant_name: 'name',
   description: 'description',
+  tags: 'tags',
+  tag_prefixes: 'tag_prefixes',
   category: 'category',
   task_steps: 'tasks',
   scope: 'scope',
@@ -129,6 +131,10 @@ export interface ParadigmActivity {
   input_shapes: string[];
   output_shapes: string[];
   execution_type: 'template' | 'tool' | 'composition' | 'vessel_function';
+  // Hierarchical tags (primary classification)
+  tags?: string[];
+  tag_prefixes?: string[];
+  // Legacy category for backward compatibility
   category?: string;
   tasks?: any[];
   tool_name?: string;

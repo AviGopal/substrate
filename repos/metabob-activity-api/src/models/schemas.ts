@@ -1,5 +1,31 @@
 import { z } from 'zod';
 
+// =============================================================================
+// HIERARCHICAL TAG SYSTEM
+// =============================================================================
+
+/**
+ * Tag validation schema
+ * Tags use dot-notation for hierarchy: feature.vessel.state.communication
+ */
+export const TagSchema = z.string()
+  .regex(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)*$/, {
+    message: 'Tags must be lowercase alphanumeric with dots (e.g., "feature.vessel.state")',
+  })
+  .max(100, 'Tag must be at most 100 characters');
+
+/**
+ * Legacy category enum for backward compatibility
+ */
+export const LegacyCategorySchema = z.enum([
+  'feature',
+  'bugfix',
+  'refactor',
+  'tool',
+  'infrastructure',
+  'meta',
+]);
+
 // Session schemas
 export const SessionPostRequestSchema = z.object({
   org_id: z.string().optional(),
@@ -68,7 +94,11 @@ export const ActivityTemplateSchema = z.object({
   activity_id: z.string(),
   variant_name: z.string(),
   description: z.string(),
-  category: z.string(),
+  // Hierarchical tags (primary classification)
+  tags: z.array(z.string()).default([]),
+  tag_prefixes: z.array(z.string()).optional(),
+  // Legacy category (deprecated, kept for backward compatibility)
+  category: z.string().optional(),
   task_steps: z.array(TemplateTaskSchema).optional(),
   scope: z.string().nullable(),
   org_id: z.string().nullable(),
@@ -102,7 +132,10 @@ export const CreateTemplateRequestSchema = z.object({
   activity_id: z.string(),
   variant_name: z.string(),
   description: z.string(),
-  category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']),
+  // Primary: Hierarchical tags using dot-notation
+  tags: z.array(TagSchema).min(1).optional(),
+  // Deprecated: Legacy category (auto-converted to tags if tags not provided)
+  category: LegacyCategorySchema.optional(),
   task_steps: z.array(TemplateTaskSchema),
   scope: z.enum(['global', 'org', 'project']).default('global'),
   org_id: z.string().nullable().optional(),
@@ -129,7 +162,10 @@ export const CreateTemplateRequestSchema = z.object({
       description: z.string().optional(),
     })).optional(),
   }).optional(),
-});
+}).refine(
+  data => data.tags?.length || data.category,
+  { message: 'Either tags or category must be provided' }
+);
 
 export const CreateTemplateResponseSchema = z.object({
   success: z.boolean(),
