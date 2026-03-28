@@ -1960,14 +1960,18 @@ app.post('/recommend', async (c) => {
     const {
       task_description,
       category,
+      tags,           // NEW: Filter by exact tags
+      tag_prefix,     // NEW: Filter by tag prefix (e.g., "feature" matches "feature.vessel")
       loaded_impulses = [],
-      impulse_shapes = [],  // NEW: Array of impulse shapes for schema filtering
+      impulse_shapes = [],  // Array of impulse shapes for schema filtering
       limit = 3
     } = body;
 
     logger.info('POST /recommend', {
       task_description: task_description?.substring(0, 100),
       category,
+      tags,
+      tag_prefix,
       loaded_impulses,
       impulse_shapes,
       limit
@@ -2020,6 +2024,8 @@ app.post('/recommend', async (c) => {
           activity_id,
           variant_name,
           category,
+          tags,
+          tag_prefixes,
           input_schema,
           output_schema
         FROM activity_template
@@ -2038,10 +2044,24 @@ app.post('/recommend', async (c) => {
         whereClauses.push(`(scope IS NULL OR scope = 'global')`);
       }
 
-      // Filter by category if provided
+      // Filter by category if provided (legacy)
       if (category) {
         whereClauses.push(`category = $category`);
         params.category = category;
+      }
+
+      // Filter by exact tags if provided
+      if (tags && Array.isArray(tags) && tags.length > 0) {
+        // Match templates that have any of the specified tags
+        whereClauses.push(`tags CONTAINSANY $tags`);
+        params.tags = tags;
+      }
+
+      // Filter by tag prefix if provided
+      if (tag_prefix && typeof tag_prefix === 'string') {
+        // Match templates where any tag_prefix starts with the given prefix
+        whereClauses.push(`tag_prefixes CONTAINS $tag_prefix`);
+        params.tag_prefix = tag_prefix;
       }
 
       if (whereClauses.length > 0) {
@@ -2134,6 +2154,7 @@ app.post('/recommend', async (c) => {
           template_id: activityId,
           template_name: template.name || template.variant_name,
           category: template.category,
+          tags: template.tags || [],
           input_shapes: template.input_shapes || [],
           output_shapes: template.output_shapes || [],
           input_schema: template.input_schema || null,
@@ -3516,6 +3537,136 @@ app.get('/execution-sequences', async (c) => {
     
     return c.json({
       error: 'Failed to query execution sequences',
+      message: error.message,
+    }, 500);
+  }
+});
+
+// =============================================================================
+// Tag Endpoints
+// =============================================================================
+
+/**
+ * GET /tags/suggest
+ *
+ * Get tag suggestions based on a prefix
+ *
+ * Query params:
+ *   prefix?: string - The prefix to match (e.g., "feat" matches "feature", "feature.vessel")
+ *   limit?: number - Maximum suggestions to return (default: 20)
+ *
+ * Returns:
+ * {
+ *   suggestions: string[],
+ *   total: number
+ * }
+ */
+app.get('/tags/suggest', async (c) => {
+  try {
+    const prefix = c.req.query('prefix') || '';
+    const limit = parseInt(c.req.query('limit') || '20', 10);
+
+    logger.info('GET /tags/suggest', { prefix, limit });
+
+    // Query tag prefixes (deduplication happens in code)
+    const query = `
+      SELECT tag_prefixes FROM activity_template
+      WHERE array::len(tag_prefixes) > 0
+      LIMIT 1000
+    `;
+
+    const result = await surrealDB.query(query);
+
+    // Flatten and dedupe all tag_prefixes, filtering by prefix
+    const allPrefixes = new Set<string>();
+    for (const row of (result || [])) {
+      if (row.tag_prefixes && Array.isArray(row.tag_prefixes)) {
+        for (const p of row.tag_prefixes) {
+          if (!prefix || p.startsWith(prefix)) {
+            allPrefixes.add(p);
+          }
+        }
+      }
+    }
+
+    // Sort and limit
+    const suggestions = Array.from(allPrefixes)
+      .sort()
+      .slice(0, limit);
+
+    return c.json({
+      suggestions,
+      total: allPrefixes.size,
+      prefix: prefix || null,
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to get tag suggestions', { error: error.message });
+    return c.json({
+      error: 'Failed to get tag suggestions',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /tags/stats
+ *
+ * Get tag usage statistics
+ *
+ * Query params:
+ *   prefix?: string - Filter to tags with this prefix
+ *
+ * Returns:
+ * {
+ *   stats: { tag: string, count: number }[],
+ *   total_templates: number
+ * }
+ */
+app.get('/tags/stats', async (c) => {
+  try {
+    const prefix = c.req.query('prefix') || '';
+
+    logger.info('GET /tags/stats', { prefix });
+
+    // Query templates and count tag occurrences
+    const query = `
+      SELECT tags FROM activity_template
+      WHERE array::len(tags) > 0
+    `;
+
+    const result = await surrealDB.query(query);
+
+    // Count tag occurrences
+    const tagCounts = new Map<string, number>();
+    let totalTemplates = 0;
+
+    for (const row of (result || [])) {
+      if (row.tags && Array.isArray(row.tags)) {
+        totalTemplates++;
+        for (const tag of row.tags) {
+          if (!prefix || tag.startsWith(prefix)) {
+            tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+          }
+        }
+      }
+    }
+
+    // Convert to sorted array
+    const stats = Array.from(tagCounts.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return c.json({
+      stats,
+      total_templates: totalTemplates,
+      prefix: prefix || null,
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to get tag stats', { error: error.message });
+    return c.json({
+      error: 'Failed to get tag stats',
       message: error.message,
     }, 500);
   }
