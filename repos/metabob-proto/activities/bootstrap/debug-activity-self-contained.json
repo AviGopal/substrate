@@ -49,6 +49,10 @@
           "read"
         ],
         "disabled": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
       }
     },
     {
@@ -80,6 +84,10 @@
         ],
         "optional": [],
         "disabled": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
       }
     }
   ]

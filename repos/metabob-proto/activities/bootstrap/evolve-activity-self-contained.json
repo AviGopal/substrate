@@ -38,7 +38,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple",
         "fallback_prompt": ""
       },
@@ -86,7 +86,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "progressive-context",
         "fallback_prompt": ""
       },
@@ -139,7 +139,7 @@
         ]
       },
       "retry": {
-        "max_attempts": 3,
+        "maxAttempts": 3,
         "strategy": "progressive-context",
         "fallback_prompt": "Template generation failed. Common issues:\n1. Invalid JSON syntax\n2. Circular dependencies created\n3. Undeclared variables introduced\n4. Required fields removed\n\nReview the improvements and apply them carefully, preserving template structure."
       },
@@ -187,7 +187,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple",
         "fallback_prompt": ""
       },

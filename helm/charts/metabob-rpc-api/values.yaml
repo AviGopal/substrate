@@ -1,27 +1,92 @@
+# Metabob RPC API Chart Values
+# Copied verbatim from repos/platform/metabob-apps/
+
 name: rpc-api
-namespace: activity-system
+namespace: metabob
 release: production
 
 config: "universal-config"
 
+# Container image configuration
 image:
   imageRegistry: metabobapp
   pullPolicy: IfNotPresent
   rpc_api:
     repo: metabob-rpc-api
-    tag: 0.12.5
+    tag: 0.16.13
 
+# Deployment replicas
 workers:
-  replicas: 1
+  replicas: 3
+  resources:
+    requests:
+      memory: "8Gi"
+      cpu: "2000m"
 
 service:
-  replicas: 1
+  replicas: 2
+  workers: 16
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2"
 
+# SurrealDB configuration
 surrealdb:
   database: production
+  url: "http://surrealdb:8000"
 
-# Application environment (development, staging, production)
+# Universal configuration (merged from config chart)
 environment: production
+basedomain: metabob.com
 
-# JWT secret key for token signing (override per environment)
-jwtSecretKey: ""
+# Database configuration
+database:
+  uri: "postgresql://{username}:{password}@34.94.22.213:5432/{db}"
+  name: "metabob_production_1_7_0"
+
+# Service URIs
+topic:
+  uri: "topic.metabob.svc"
+
+redis:
+  uri: "redis-master.metabob.svc"
+
+minio:
+  uri: "minio.metabob.svc:9000"
+
+# Analytics
+mixpanel: "9b75df0453c34711bdbc54f678dee2b6"
+
+# Workflow version
+workflow_version: "2.0.0"
+
+# Analysis configuration
+analysis:
+  channel: "analysis_requests"
+
+# Bitbucket integration
+bitbucket:
+  uri: "bitbucket.metabob.com"
+
+# Model configuration
+model:
+  type: 'openai'
+  path: './models'
+
+# API keys (should be overridden in production values or secrets)
+keys:
+  openai: ""
+  openai_org: ""
+
+# GitHub OAuth configuration
+github:
+  client_id: ""
+  client_secret: ""
+
+# JWT secret key (should be overridden in production values)
+jwt:
+  secretKey: ""

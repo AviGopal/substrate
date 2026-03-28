@@ -1,207 +1,170 @@
 # Metabob DevBob - Self-Improving Development System
 
-**An autonomous AI development system with self-improvement capabilities through the Ratchet Mechanism.**
+**An autonomous AI development system built on the impulse-activity foundation with Thompson Sampling for continuous learning.**
 
 ## Overview
 
 Metabob DevBob is an experimental development environment that demonstrates:
 
-- **Activity-based development** - Structured, reproducible development workflows
-- **Ratchet mechanism** - Automated self-improvement cycles that continuously optimize the system
-- **Learning loop** - Persistent metrics storage (SurrealDB + Redis) with Thompson Sampling for variant selection
-- **Template evolution** - Activity templates that improve themselves based on execution data
+- **Impulse-Activity Architecture** - Universal data (impulses) processed through constrained state transitions (activities)
+- **Learning Loop** - Thompson Sampling for activity selection with Bayesian relevance scoring
+- **Vessel Pattern** - Execution environments that bundle activities + resolvers + lifecycle hooks
+- **Ribosome Extraction** - Successful executions automatically become reusable templates
+
+## Architecture Foundation
+
+> **Canonical Reference**: [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
+
+### Core Concepts
+
+**Impulses** - Data in any form (text, structured data, signals, commands) with metadata for reasoning:
+```typescript
+{
+  id: "error-log",
+  pointer: { type: "file", path: "error.log" },
+  shape: { domain: "debugging", intent: "analyze" },
+  budget: 2000  // Token budget
+}
+```
+
+**Activities** - Constrained state transitions linking input impulses to output impulses:
+```typescript
+{
+  id: "fix-bug",
+  tasks: [
+    { id: "analyze", inputImpulses: ["error-log"], outputImpulses: ["diagnosis"] },
+    { id: "fix", inputImpulses: ["diagnosis"], outputImpulses: ["patch"] }
+  ]
+}
+```
+
+**Vessels** - Bundles of activities + resolvers that provide capabilities where data lives:
+- MiniBob: Autonomous development vessel
+- Microplastic: TUI vessel for guided development
+- Analysis API: Code analysis vessel
 
 ## Key Components
 
-### 1. Activity System
-Structured workflows with:
-- Task decomposition with dependency graphs
-- Validation rules and retry strategies
-- Metrics tracking (success rate, cost, duration)
-- Template variants with learning
+### 1. MiniBob (`repos/minibob`)
+Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
+- Execute activities with LLM + tools
+- Capture execution traces with state snapshots
+- Resolve LOCAL impulse types (memo, file)
+- Delegate to backend for other impulse types
 
-### 2. Ratchet Mechanism
-Autonomous improvement cycle:
-1. **Inspect** - Collect system metrics and identify bottlenecks
-2. **Identify** - Calculate priority scores (severity × frequency × impact)
-3. **Fix** - Apply targeted improvements
-4. **Measure** - Quantify before/after impact
-5. **Decide** - Continue, stop, or escalate based on thresholds
+### 2. metabob-activity-api (`repos/metabob-activity-api`)
+TypeScript/Bun/Hono backend:
+- Store execution traces persistently
+- Thompson Sampling for template selection
+- Pattern recognition and learning
+- Impulse relevance tracking
+- Tag-based filtering and recommendation
 
-**Status**: ✅ Operational (8.12% improvement in first automated cycle)
+### 3. Activity Dashboard (`repos/activity-dashboard`)
+React 19/Bun real-time observability:
+- Template performance metrics
+- Live execution monitoring
+- Learning loop visualization
 
-### 3. Learning Loop
-- **Storage**: SurrealDB (persistent) + Redis (live selection)
-- **Selection**: Thompson Sampling (Beta distribution)
-- **Tracking**: Template variants, execution history, success rates
-- **Dual-write**: Ensures data consistency across stores
+### 4. Helm Deployment (`helm/`)
+Kubernetes orchestration:
+- SurrealDB 3.x (persistent storage)
+- Redis/Valkey (live selection cache)
+- Istio (service mesh)
 
-**Status**: ✅ 6/6 conditions met
+## Learning Loop
 
-### 4. Template Validation
-Prevents syntax errors:
-- Blocks Handlebars conditionals (`{{#if}}`, `{{/if}}`)
-- Enforces Mustache-only syntax (`{{variable}}`)
-- 7 forbidden patterns validated
-- **Result**: 19x improvement in template creation (5.3% → 100% success)
+The system learns through execution:
 
-## Recent Achievements
+1. **Recommend** - Thompson Sampling selects activity variant
+2. **Execute** - Activity runs, producing execution trace
+3. **Record** - Trace stored with success/failure, cost, duration
+4. **Learn** - Alpha/beta parameters updated for future selection
+5. **Extract** - Successful patterns become new templates (Ribosome)
 
-### Automated Ratchet Success (Latest)
-- **First autonomous cycle**: 5/5 tasks completed
-- **Improvement**: 8.12% overall, 50% fast failure reduction
-- **Cost**: $1.20 for 16 minutes of execution
-- **Decision**: stop-success (proof of concept validated)
-- **Meta-achievement**: System fixed its own bugs autonomously
+### Tag-Based Filtering
 
-### Template Validation Fix
-- **Problem**: 94.7% template creation failure rate
-- **Root cause**: Handlebars syntax not supported
-- **Fix**: Added 7 forbidden patterns to validation
-- **Result**: 100% clean template generation
-- **ROI**: 73x after 100 batches, ∞ long-term
+Activities use hierarchical tags for efficient discovery:
+```
+feature.auth.jwt
+feature.api.rest
+bugfix.validation.input
+```
+
+Tag prefixes enable broad queries: `feature.*` matches all feature activities.
+
+## Quick Start
+
+### Prerequisites
+1. Kubernetes cluster with Istio
+2. Docker Desktop or minikube
+3. Helm 3.x, kubectl
+
+### Deploy
+
+```bash
+cd helm
+helmfile -f activity-system-minimal.yaml.gotmpl sync
+```
+
+### Verify
+
+```bash
+kubectl get pods -n activity-system
+curl http://api.minibob.local/health
+```
 
 ## Project Structure
 
 ```
 .
-├── .metabob/
-│   └── activities/          # Registered activity templates
+├── docs/
+│   └── architecture/          # Architecture documentation
+│       └── IMPULSE_ACTIVITY_FOUNDATION.md  # Canonical reference
+├── helm/
+│   ├── charts/                # Helm charts for each component
+│   └── activity-system-minimal.yaml.gotmpl  # Main deployment
 ├── repos/
-│   ├── metabob-opencode/    # OpenCode implementation
-│   └── metabob-rpc-api/     # RPC API server
-├── tmp/
-│   └── template-evolution/  # Ratchet cycle outputs
-├── docs/                    # Architecture documentation
-└── scripts/                 # Utility scripts
-```
-
-## Quick Start
-
-### Run Automated Ratchet
-```bash
-# Execute one improvement cycle
-opencode activity execute-ratchet-cycle-fixed \
-  --domain activity-system \
-  --max_cycles 1 \
-  --improvement_threshold 10
-```
-
-### Create Activity Template
-```bash
-# Generate new activity template with validation
-opencode activity create-activity-template-self-contained \
-  --templateName "My Activity" \
-  --category infrastructure \
-  --purpose "Automate workflow X"
-```
-
-## Metrics
-
-### System Performance
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| Template success rate | 5.3% | 100% | **19x** |
-| Fast failure rate | 18.4% | 15.5% | **-16%** |
-| Validation coverage | 0% | 100% | **Complete** |
-
-### Investment & ROI
-- **Total investment**: $7.96
-- **Break-even**: 53 executions
-- **100-batch ROI**: 73x
-- **Long-term**: ∞ (continuous improvement)
-
-## Architecture Highlights
-
-### Activity Template Schema
-```typescript
-{
-  id: string
-  name: string
-  category: "feature" | "bugfix" | "refactor" | "tool" | "infrastructure"
-  tasks: Array<{
-    id: string
-    subagent: string
-    prompt: {
-      template: string  // Mustache syntax only
-      variables: Variable[]
-    }
-    validation: {
-      requiredFiles: string[]
-      requiredPatterns: string[]
-      forbiddenPatterns: string[]  // Includes Handlebars blocks
-      commands: Command[]
-    }
-    retry: {
-      maxAttempts: number
-      strategy: "simple" | "progressive-context"
-    }
-  }>
-}
-```
-
-### Ratchet Cycle Data Flow
-```
-Metrics Collection → Bottleneck Analysis → Fix Application → 
-Progress Measurement → Decision Logic → [Continue | Stop | Escalate]
-```
-
-### Learning Loop Flow
-```
-Execution → Store (SurrealDB + Redis) → Thompson Sampling → 
-Variant Selection → Execution → [Loop]
+│   ├── minibob/               # Autonomous development vessel
+│   ├── metabob-activity-api/  # Learning backend
+│   ├── activity-dashboard/    # Observability UI
+│   └── microplastic/          # TUI vessel
+├── openspec/
+│   └── changes/               # OpenSpec change proposals
+├── CLAUDE.md                  # Claude Code instructions
+└── README.md                  # This file
 ```
 
 ## Documentation
 
-### Core Architecture
-- `LEARNING_LOOP_OPERATIONAL_VALIDATION.md` - Learning loop implementation
-- `ACTIVITY_SYSTEM_PROOF_COMPLETE.md` - Activity system validation
-- `RATCHET_STRATEGY.md` - Ratchet mechanism design
+### Architecture
+- [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) - Canonical system definition
+- `COMPOSITION_AND_CONTROL_FLOW.md` - Activity composition patterns
+- `ACTIVITY_BASED_IMPROVISATION.md` - VM-as-executor philosophy
+- `DEPLOYMENT_GUIDE.md` - Kubernetes deployment procedures
 
-### Implementation Details
-- `tmp/template-evolution/` - Complete ratchet cycle documentation
-  - `RATCHET_CYCLE_1_COMPLETE.md` - Manual cycle execution
-  - `TEST_RESULTS_CYCLE_1.md` - Validation test results
-  - `AUTOMATED_RATCHET_SUCCESS.md` - First autonomous cycle
+### Multi-Tenant & RBAC
+- `docs/MULTI_TENANT_ARCHITECTURE.md` - Tenancy model
+- `docs/RBAC_GUIDE.md` - PERMISSIONS patterns
+- `docs/AUTH_JWT_CLAIMS.md` - JWT token structure
 
-### Session Notes
-Session-specific documentation is in root `*.md` files (archived for reference).
+## Key Design Principles
 
-## Testing
-
-Tests are located in `repos/metabob-opencode/packages/opencode/test/`:
-
-```bash
-cd repos/metabob-opencode
-npm test                    # Run all tests
-npm test agent/            # Run agent tests
-npm test activity/         # Run activity tests
-```
-
-## Key Insights
-
-1. **Self-improvement is real** - The ratchet fixed the bug that was blocking itself
-2. **Validation prevents waste** - Early error detection saves 94.7% of failed executions
-3. **Small improvements compound** - 8% per cycle leads to exponential gains
-4. **Autonomous systems work** - No human intervention needed after setup
-5. **ROI is infinite** - System improves forever once operational
-
-## Future Directions
-
-- **Continuous cycles** - Run ratchet on schedule (daily/weekly)
-- **Multi-domain** - Apply to CPG analysis, testing, documentation
-- **Metrics dashboard** - Visualize improvements over time
-- **Template marketplace** - Share proven activity templates
-- **Cross-system learning** - Fixes in one domain benefit others
+1. **Impulses Are Universal Data** - Everything is an impulse with metadata
+2. **Activities Constrain Search** - Without activities, infinite options; with activities, ranked finite options
+3. **Resolvers Live Where Data Lives** - Don't centralize resolution
+4. **Metadata First, Content Later** - Reasoners see metadata; resolvers load content
+5. **Record Everything** - Every execution is traced for learning
+6. **Learn From Traces** - Thompson Sampling, relevance scores, ribosome extraction
+7. **Reserve Improvisation** - When nothing matches, try something new but record it
+8. **LLMs Are Tools, Not Controllers** - Use LLMs for reasoning; deterministic resolvers for everything else
 
 ## Status
 
-- ✅ Learning loop: Operational
-- ✅ Template validation: 100% effective
-- ✅ Automated ratchet: First cycle successful
-- ✅ Self-improvement: Proven and autonomous
-- 🚀 System: Continuously improving
+- Learning loop: Operational with Thompson Sampling
+- Tag filtering: M4-M5 complete (tag-based recommendations)
+- MiniBob: Instance authentication with org_id tracking
+- Dashboard: Convergence overview with explainability
 
 ## License
 
@@ -210,7 +173,3 @@ npm test activity/         # Run activity tests
 ## Contributing
 
 [Contribution guidelines]
-
----
-
-**The future is autonomous. The ratchet is turning.** 🔄✨

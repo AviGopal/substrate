@@ -373,10 +373,108 @@ User types: "Fix the auth bug in src/auth.ts"
     activity "debug-null-pointer": alpha += 1
 ```
 
+### Decision 8: Thin Vessel Wrapper Architecture
+
+**Choice:** microplastic is a thin vessel that wraps other vessels (imported as libraries), providing primarily the shared impulse state space within a single process.
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         microplastic                             │
+│                      (thin vessel wrapper)                       │
+│                                                                  │
+│  Core contribution:                                              │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              ImpulseStateSpace                             │  │
+│  │   • Single process shared state                            │  │
+│  │   • Subscription mechanism (predicate → handler)           │  │
+│  │   • Impulse lifecycle (emit/update/complete)               │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  Imported libraries (impulse resolvers):                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ @metabob/    │  │ @metabob/tui │  │ @metabob/mcp │          │
+│  │ minibob      │  │ (from        │  │              │          │
+│  │              │  │ minibob-tui) │  │              │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Library vs Vessel distinction:**
+- **Libraries** = impulse resolvers (canResolve, resolve). Passive.
+- **Vessels** = libraries + learning + activities + state space + hooks. Active.
+
+microplastic IS the vessel; minibob, tui, mcp are libraries it composes.
+
+**Rationale:**
+- Keeps microplastic minimal - just the coordination layer
+- Reuses existing implementations (no reimplementing minibob-tui)
+- Single process = simple deployment, no network overhead
+- Libraries observe shared state via subscriptions, no explicit wiring
+
+### Decision 9: Activities as Instrumentation
+
+**Choice:** Use deterministic (non-LLM) activities to instrument microplastic for in-vivo observation. Activities provide structured traces without requiring AI execution.
+
+**Instrumentation Activities:**
+```
+┌────────────────────────────────────────────────────────────────┐
+│  impulse_lifecycle                                             │
+│  ────────────────                                              │
+│  Traces: impulse creation, updates, completion                 │
+│  Captures: ID, type, shape, resolver, duration, state delta    │
+├────────────────────────────────────────────────────────────────┤
+│  subscription_match                                            │
+│  ──────────────────                                            │
+│  Traces: when predicates match impulses                        │
+│  Captures: match latency, predicate eval count, handler time   │
+├────────────────────────────────────────────────────────────────┤
+│  vessel_lifecycle                                              │
+│  ────────────────                                              │
+│  Traces: bootstrap, activate, shutdown events                  │
+│  Captures: startup time, libraries loaded, subscriptions       │
+├────────────────────────────────────────────────────────────────┤
+│  resolver_invocation                                           │
+│  ────────────────────                                          │
+│  Traces: when libraries resolve impulses                       │
+│  Captures: resolver ID, input pointer, output content, timing  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Why activities for instrumentation:**
+- Traces are already the unit of learning - reuse infrastructure
+- Full context preserved (not aggregated away like metrics)
+- Pattern extraction works automatically (ribosome)
+- Thompson Sampling can identify performance regressions
+- Stored in backend for later analysis when we have opportunity
+
+**In-vivo observation flow:**
+```
+microplastic instances    →    activity-api    →    analysis when ready
+      ┌─────┐                      │
+      │  μ₁ │───traces────────────▶│
+      └─────┘                      │   "30% of cpg_query >2s"
+      ┌─────┐                      │   "subscription O(n) bottleneck"
+      │  μ₂ │───traces────────────▶│   "these 3 impulses co-occur"
+      └─────┘                      │
+      ┌─────┐                      ▼
+      │  μ₃ │───traces────────────▶  Improvements applied
+      └─────┘                        in next deployment
+```
+
+**Rationale:**
+- Passive observation (activities just record, don't control)
+- Deferred analysis (address issues when we have time)
+- Learning-compatible (traces feed Thompson Sampling)
+- No LLM cost for instrumentation activities
+
 ## Related Documentation
 
 - `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` - Core model
 - `repos/minibob/src/lib.ts` - Library entry point
+- `repos/minibob-tui/src/` - TUI library to import
+- `repos/metabob-mcp/src/` - MCP analysis library to import
+- `repos/minibob-tui/CLAUDE.md` - TUI vessel patterns and tools
 - `repos/minibob/src/types.ts` - Type definitions
 - `repos/metabob-mcp/src/` - MCP analysis tools
 - `openspec/changes/internal-dashboard/design.md` - UI impulse patterns

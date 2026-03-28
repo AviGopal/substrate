@@ -2,572 +2,470 @@
 
 ## Overview
 
-This task list is organized into 12 phases, each ending in a testable state. Phases can be worked on by different agents in parallel where dependencies allow.
+This task list implements microplastic as a **thin vessel wrapper** with a **self-development loop**. The key insight: microplastic uses MiniBob to develop itself, creating templates that improve both development AND runtime activities.
 
-**Estimated Total LOC:** ~3,500 new lines
-**Estimated Duration:** 6-8 weeks
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         ARCHITECTURE                                    │
+│                                                                         │
+│  microplastic (thin wrapper)                                            │
+│  ├── ImpulseStateSpace (shared state - OUR CORE CONTRIBUTION)          │
+│  ├── @metabob/minibob (execution library - IMPORT)                     │
+│  ├── TUI components (region rendering - REUSE src/tui/)                │
+│  └── /dev command (self-development - NEW)                             │
+│                                                                         │
+│  Self-Development Loop:                                                 │
+│  /dev goal → MiniBob executes → Trace → Ribosome → Template → Learn    │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**API Configuration:**
+- Key: `mb_live_9VKN3eT_JoGxFEIsErU1KSlltoOUiMJB`
+- Backend: `http://activity.metabob.local`
 
 ---
 
-## Phase 1: Project Scaffold
+## Component Reuse Assessment
 
-**Goal:** Create the basic project structure with build tooling.
+| Component | Status | Action |
+|-----------|--------|--------|
+| `src/impulse/store.ts` | ✅ Works | Evolve → ImpulseStateSpace with subscriptions |
+| `src/vessel/registry.ts` | ✅ Works | Use as-is, add getImpulseStore() |
+| `src/tui/regions.ts` | ✅ Works | Wire to ImpulseStateSpace subscriptions |
+| `src/tui/components.ts` | ✅ Works | Add renderTrace, enhance progressBar (done) |
+| `src/selection/thompson.ts` | ✅ Works | Use as-is for local sampling |
+| `src/ribosome/` | ✅ Works | Use for template extraction |
+| `src/execution/executor.ts` | ⚠️ Partial | Refactor to emit impulses |
+| `src/failure/` | ⚠️ Partial | Wire to impulse-based recovery |
 
-**Testable State:** `bun run build` succeeds, `bun run test` runs (empty suite).
+---
+
+## Phase 1: ImpulseStateSpace Foundation
+
+**Goal:** Evolve ImpulseStore into full ImpulseStateSpace with subscription predicates.
+
+**Testable State:** Impulses can be subscribed to with type/shape/priority filters.
 
 ### Tasks
 
-- [ ] 1.1 Create `repos/microplastic/` directory structure
-  - `src/` - source code
-  - `templates/` - bootstrap templates
-  - `tests/` - test files
-  - `.microplastic/` - runtime data (gitignored)
+- [ ] 1.1 Add subscription predicate support to ImpulseStore
+  ```typescript
+  interface SubscriptionPredicate {
+    type?: string | string[]      // Pointer type(s)
+    shape?: string | string[]     // Impulse shape(s)
+    minPriority?: number          // Minimum priority
+    custom?: (i: Impulse) => boolean
+  }
 
-- [ ] 1.2 Initialize `package.json` with dependencies
-  - `@metabob/minibob` (workspace dependency)
-  - `ink` (React for terminal)
-  - `zod` (validation)
-  - `sade` (CLI parsing)
-  - `bun-types` (dev dependency)
+  subscribe(
+    handler: (event: ImpulseStoreEvent) => void,
+    predicate?: SubscriptionPredicate
+  ): () => void
+  ```
 
-- [ ] 1.3 Create `tsconfig.json` with strict settings
-  - Path aliases: `@/` for `src/`
-  - Target: ESNext
-  - Module: ESNext
-  - Strict: true
+- [ ] 1.2 Add query method for matching impulses
+  ```typescript
+  query(predicate: SubscriptionPredicate): Impulse[]
+  ```
 
-- [ ] 1.4 Create `bunfig.toml` for Bun configuration
+- [ ] 1.3 Add impulse lifecycle events with shapes
+  - `impulse:created` with shape metadata
+  - `impulse:updated` with delta
+  - `impulse:completed` with final state
+  - `impulse:removed` with cleanup
 
-- [ ] 1.5 Create entry point `src/index.ts` with CLI skeleton
-  - Parse `microplastic [goal]` or `microplastic` (interactive)
-  - Handle `--version`, `--help` flags
+- [ ] 1.4 Add impulse shape field to Impulse type
+  ```typescript
+  interface Impulse {
+    // ... existing fields
+    shape?: string  // "goal", "error", "trace", "code", etc.
+  }
+  ```
 
-- [ ] 1.6 Create `README.md` with usage instructions
+- [ ] 1.5 Create ImpulseStateSpace tests
+  - Subscription predicate matching
+  - Query correctness
+  - Event emission with shapes
 
-- [ ] 1.7 Add to root workspace `package.json`
+**Commit Milestone:** `feat(microplastic): add subscription predicates to ImpulseStateSpace`
 
 **Exit Criteria:**
-```bash
-cd repos/microplastic
-bun install
-bun run build  # No errors
-bun run test   # 0 tests, 0 failures
-bun run src/index.ts --version  # Prints version
+```typescript
+const space = impulseStore
+space.subscribe(
+  (event) => console.log("File impulse:", event.impulse.id),
+  { type: "file", shape: "source_code" }
+)
+space.create({ pointer: { type: "file", path: "test.ts" }, shape: "source_code" })
+// Handler called only for matching impulses
 ```
 
 ---
 
-## Phase 2: Vessel Core
+## Phase 2: VesselProvider Wiring
 
-**Goal:** Implement VesselProvider interface and ImpulseStore.
+**Goal:** Wire vessels to ImpulseStateSpace via subscriptions, not direct calls.
 
-**Testable State:** Can create vessels, register resolvers, resolve impulses.
+**Testable State:** Execution events automatically create impulses that TUI subscribes to.
 
 ### Tasks
 
-- [ ] 2.1 Create `src/vessel/interface.ts` - VesselProvider interface
-  - All methods from vessel-interface.md spec
+- [ ] 2.1 Refactor GoalExecutor to emit impulses
+  ```typescript
+  // Instead of direct TUI calls:
+  executor.on("execution:start", () => {
+    impulseStore.create({
+      pointer: { type: "activity_status" },
+      shape: "activity",
+      content: { status: "running", name: template.name }
+    })
+  })
+  ```
 
-- [ ] 2.2 Create `src/vessel/context.ts` - VesselContext type
-  - ImpulseStore reference
-  - Config
-  - Event emitter
-  - Logger
+- [ ] 2.2 Wire TUI to subscribe to execution impulses
+  ```typescript
+  // RegionManager subscribes to state space
+  impulseStore.subscribe(
+    (event) => {
+      if (event.type === "create") {
+        regionManager.add({
+          id: event.impulse.id,
+          shape: mapImpulseShapeToRegionShape(event.impulse.shape),
+          content: event.impulse.content
+        })
+      }
+    },
+    { shape: ["activity", "task", "tool_call", "summary", "error"] }
+  )
+  ```
 
-- [ ] 2.3 Create `src/impulse/store.ts` - ImpulseStore implementation
-  - Create, get, update, delete impulses
-  - Resolver registration
-  - Resolver routing by pointer type
+- [ ] 2.3 Wire input as impulse emission
+  ```typescript
+  // User submits goal → emit goal impulse
+  impulseStore.create({
+    pointer: { type: "user_goal" },
+    shape: "goal",
+    content: { message: inputValue }
+  })
 
-- [ ] 2.4 Create `src/impulse/types.ts` - Import types from minibob
-  - Re-export Impulse, ImpulsePointer, etc.
+  // Executor subscribes to goals
+  impulseStore.subscribe(
+    (event) => {
+      executor.execute({ goal: event.impulse.content.message })
+    },
+    { shape: "goal" }
+  )
+  ```
 
-- [ ] 2.5 Create `src/vessel/minibob.ts` - MiniBobVessel adapter
-  - Wraps @metabob/minibob as VesselProvider
-  - Implements canResolve for file, memo
-  - Implements resolve for local pointers
+- [ ] 2.4 Create impulse → region shape mapping
+  ```typescript
+  function mapImpulseShapeToRegionShape(shape: string): RegionShape {
+    const mapping: Record<string, RegionShape> = {
+      "activity": "activity",
+      "task": "activity",
+      "tool_call": "tool_call",
+      "error": "error",
+      "summary": "summary",
+      "trace": "trace",
+      "code": "code"
+    }
+    return mapping[shape] ?? "block"
+  }
+  ```
 
-- [ ] 2.6 Create `src/vessel/registry.ts` - VesselRegistry
-  - Register vessels
-  - Initialize in order
-  - Shutdown in reverse order
+- [ ] 2.5 Test impulse-driven execution flow
+  - Emit goal impulse
+  - Verify executor receives it
+  - Verify TUI creates regions
+  - Verify completion summary appears
 
-- [ ] 2.7 Create tests for vessel system
-  - `tests/vessel/store.test.ts`
-  - `tests/vessel/registry.test.ts`
+**Commit Milestone:** `feat(microplastic): wire vessels via ImpulseStateSpace subscriptions`
 
 **Exit Criteria:**
 ```bash
-bun test tests/vessel/
-# All tests pass
-# Can create impulse, resolve via registered vessel
+bun run src/index.ts "Read package.json"
+# Goal flows: input → impulse → executor subscription → execution → impulse → TUI subscription → regions
 ```
 
 ---
 
-## Phase 3: TUI Narrative
+## Phase 3: /dev Command Implementation
 
-**Goal:** Implement the narrative TUI using Ink.
+**Goal:** Implement self-development command that uses MiniBob to modify microplastic.
 
-**Testable State:** Can render goal submission and thinking state.
+**Testable State:** `/dev "goal"` executes against microplastic codebase with trace capture.
 
 ### Tasks
 
-- [ ] 3.1 Create `src/tui/vessel.ts` - TUIVessel implementation
-  - Implements VesselProvider
-  - Resolves ui_component, narrative pointer types
+- [ ] 3.1 Create src/commands/dev.ts
+  ```typescript
+  export async function devCommand(
+    goal: string,
+    options: { verbose?: boolean; dryRun?: boolean }
+  ): Promise<GoalResult>
+  ```
 
-- [ ] 3.2 Create `src/tui/components/App.tsx` - Root component
-  - Layout container
-  - Keyboard handling
+- [ ] 3.2 Initialize MiniBob with backend connection
+  ```typescript
+  initializeMCP({
+    endpoint: process.env.ACTIVITY_API_URL ?? "http://activity.metabob.local",
+    instance: {
+      instanceId: "microplastic-dev",
+      apiKey: process.env.MINIBOB_API_KEY!
+    }
+  })
+  ```
 
-- [ ] 3.3 Create `src/tui/components/GoalInput.tsx` - Input field
-  - Text input with history
-  - Submit on Enter
+- [ ] 3.3 Create GoalProcessor with microplastic workdir
+  ```typescript
+  const processor = new GoalProcessor({
+    workingDirectory: "repos/microplastic",
+    executor: new ActivityExecutor({
+      provider: "anthropic",
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+      model: "claude-sonnet-4-20250514",
+      workingDirectory: "repos/microplastic"
+    })
+  })
+  ```
 
-- [ ] 3.4 Create `src/tui/components/Narrative.tsx` - Narrative display
-  - Thinking state
-  - Action state
-  - Progress bar
+- [ ] 3.4 Wire executor callbacks to ImpulseStateSpace
+  ```typescript
+  executor.onActivityStarted = (id, templateId, name) => {
+    impulseStore.create({
+      shape: "activity",
+      content: { id, templateId, name, status: "running" }
+    })
+  }
+  ```
 
-- [ ] 3.5 Create `src/tui/components/StatusBar.tsx` - Bottom status
-  - Duration
-  - Cost
-  - Task progress
+- [ ] 3.5 Add /dev to CLI parser
+  ```typescript
+  if (arg === "/dev" || arg === "--dev") {
+    const goal = args.slice(i + 1).join(" ")
+    await devCommand(goal, options)
+    process.exit(0)
+  }
+  ```
 
-- [ ] 3.6 Create `src/tui/state.ts` - TUI state management
-  - Current goal
-  - Current state (thinking, executing, complete)
-  - Progress
+- [ ] 3.6 Test /dev command
+  ```bash
+  MINIBOB_API_KEY=mb_live_9VKN3eT_JoGxFEIsErU1KSlltoOUiMJB \
+  bun run src/index.ts /dev "Add a console.log to index.ts"
+  ```
 
-- [ ] 3.7 Create `src/tui/renderer.ts` - NarrativeRenderer
-  - Subscribe to impulse events
-  - Update TUI state
-
-- [ ] 3.8 Create tests for TUI
-  - `tests/tui/narrative.test.ts` (snapshot tests)
+**Commit Milestone:** `feat(microplastic): implement /dev self-development command`
 
 **Exit Criteria:**
 ```bash
-bun run src/index.ts
-# Shows welcome message
-# Can type goal and see "Thinking..."
+MINIBOB_API_KEY=mb_live_9VKN3eT_JoGxFEIsErU1KSlltoOUiMJB \
+ACTIVITY_API_URL=http://activity.metabob.local \
+bun run src/index.ts /dev "Add type annotations to impulse store"
+# MiniBob executes, trace captured, template potentially extracted
 ```
 
 ---
 
-## Phase 4: Thompson Selection
+## Phase 4: Template Seeding
 
-**Goal:** Integrate Thompson Sampling for template selection.
+**Goal:** Seed development templates to backend for Thompson Sampling.
 
-**Testable State:** Goals route to best-matching template or improvisation.
+**Testable State:** Backend has microplastic-specific templates; recommendations work.
 
 ### Tasks
 
-- [ ] 4.1 Create `src/selection/client.ts` - Activity API client
-  - GET /v2/activities/recommend
-  - Handle offline gracefully
+- [ ] 4.1 Create seed templates file
+  - `src/primordials/microplastic-templates.ts`
+  - Generic: implement-feature, fix-bug, add-tests
+  - Specific: add-impulse-shape, add-provider, enhance-tui-region, fix-subscription-bug
 
-- [ ] 4.2 Create `src/selection/thompson.ts` - Local Thompson state
-  - Store alpha/beta per template
-  - Sample from Beta distribution
-  - Update on outcome
+- [ ] 4.2 Add seedTemplates() to dev command initialization
+  ```typescript
+  async function seedTemplates() {
+    const mcp = getMCPClient()
+    for (const template of MICROPLASTIC_TEMPLATES) {
+      await mcp.registerTemplate(template)
+    }
+  }
+  ```
 
-- [ ] 4.3 Create `src/selection/selector.ts` - TemplateSelector
-  - Query backend for recommendations
-  - Fall back to local state if offline
-  - Return ranked templates
+- [ ] 4.3 Add --seed flag for manual seeding
+  ```bash
+  bun run src/index.ts /dev --seed
+  # Seeds all templates to backend
+  ```
 
-- [ ] 4.4 Integrate with goal processor
-  - After goal enrichment, call selector
-  - Pass selection to executor
+- [ ] 4.4 Test template recommendations
+  ```typescript
+  const recommendations = await mcp.recommendActivities(
+    "Add new impulse shape for progress bars",
+    "feature"
+  )
+  // Should return microplastic/add-impulse-shape-v1
+  ```
 
-- [ ] 4.5 Create `src/selection/offline.ts` - Offline mode
-  - Cache templates locally
-  - Use local Thompson state
-
-- [ ] 4.6 Create tests for selection
-  - `tests/selection/thompson.test.ts`
-  - `tests/selection/selector.test.ts`
+**Commit Milestone:** `feat(microplastic): seed development templates to backend`
 
 **Exit Criteria:**
 ```bash
-bun test tests/selection/
-# Thompson sampling selects templates correctly
-# Offline mode works
+curl http://activity.metabob.local/v2/activities/templates | jq '.[] | select(.id | startswith("microplastic/"))'
+# Returns microplastic-specific templates
 ```
 
 ---
 
-## Phase 5: Ribosome Integration
+## Phase 5: Instrumentation Activities
 
-**Goal:** Extract templates from successful improvisations.
+**Goal:** Add non-LLM activities for in-vivo tracing without AI cost.
 
-**Testable State:** Successful improvisation creates new template.
+**Testable State:** Instrumentation traces captured and sent to backend.
 
 ### Tasks
 
-- [ ] 5.1 Create `src/ribosome/extractor.ts` - TraceExtractor
-  - Analyze execution trace
-  - Identify variable points
-  - Generate task definitions
+- [ ] 5.1 Create instrumentation activity definitions
+  ```typescript
+  const INSTRUMENTATION_ACTIVITIES = [
+    {
+      id: "impulse_lifecycle",
+      category: "instrumentation",
+      execution_type: "tool",  // No LLM
+      tool_name: "trace_capture"
+    },
+    {
+      id: "subscription_match",
+      category: "instrumentation",
+      execution_type: "tool"
+    },
+    {
+      id: "resolver_invocation",
+      category: "instrumentation",
+      execution_type: "tool"
+    }
+  ]
+  ```
 
-- [ ] 5.2 Create `src/ribosome/template-generator.ts` - Generate templates
-  - Create valid ActivityTemplate from trace
-  - Include metadata tracking
+- [ ] 5.2 Create trace_capture tool
+  ```typescript
+  async function traceCaptureHandler(params: {
+    event: string
+    data: Record<string, unknown>
+    timestamp: number
+  }): Promise<ToolResult> {
+    // Send to backend asynchronously
+    getMCPClient()?.storeInstrumentationTrace(params)
+    return { success: true }
+  }
+  ```
 
-- [ ] 5.3 Create `src/ribosome/cache.ts` - TemplateCache
-  - Store extracted templates locally
-  - Track execution statistics
+- [ ] 5.3 Wire instrumentation to ImpulseStateSpace
+  ```typescript
+  if (process.env.MICROPLASTIC_INSTRUMENT) {
+    impulseStore.subscribe(
+      (event) => {
+        traceCaptureHandler({
+          event: `impulse:${event.type}`,
+          data: { impulseId: event.impulse.id, shape: event.impulse.shape },
+          timestamp: Date.now()
+        })
+      },
+      {}  // All impulses
+    )
+  }
+  ```
 
-- [ ] 5.4 Create `src/ribosome/promotion.ts` - PromotionManager
-  - Check promotion criteria
-  - Register to backend when threshold met
+- [ ] 5.4 Add --instrument flag
+  ```bash
+  bun run src/index.ts --instrument "Read package.json"
+  # Captures instrumentation traces
+  ```
 
-- [ ] 5.5 Integrate with goal processor
-  - After successful improvisation, extract
-  - Cache extracted template
-  - Update TUI with "New Capability" message
+- [ ] 5.5 Test instrumentation overhead
+  - Measure with/without instrumentation
+  - Verify < 5ms overhead per impulse
 
-- [ ] 5.6 Create tests for ribosome
-  - `tests/ribosome/extractor.test.ts`
-  - `tests/ribosome/generator.test.ts`
+**Commit Milestone:** `feat(microplastic): add instrumentation activities for tracing`
 
 **Exit Criteria:**
 ```bash
-# Run improvisation goal
-bun run src/index.ts "Implement a new feature"
-# On success, verify template created in .microplastic/templates/
+MICROPLASTIC_INSTRUMENT=true bun run src/index.ts "Read package.json"
+curl http://activity.metabob.local/v2/activities/execution-traces?activity=impulse_lifecycle
+# Returns instrumentation traces
 ```
 
 ---
 
-## Phase 6: Failure Recovery
+## Phase 6: Cross-Pollination
 
-**Goal:** Handle failures gracefully with variant creation.
+**Goal:** Connect development traces to runtime improvement and vice versa.
 
-**Testable State:** Failed execution offers recovery options.
-
-### Tasks
-
-- [ ] 6.1 Create `src/failure/analyzer.ts` - FailureAnalyzer
-  - Analyze execution trace for failure point
-  - Identify root cause
-  - Suggest fixes
-
-- [ ] 6.2 Create `src/failure/recovery.ts` - RecoveryManager
-  - Present options to user
-  - Handle retry/variant/investigate/abandon
-
-- [ ] 6.3 Create `src/failure/variant.ts` - VariantCreator
-  - Create variant template from failure
-  - Track lineage
-
-- [ ] 6.4 Create `src/tui/components/RecoveryOptions.tsx`
-  - Display recovery options
-  - Handle selection
-
-- [ ] 6.5 Integrate with goal processor
-  - On failure, invoke FailureAnalyzer
-  - Present recovery options via TUI
-
-- [ ] 6.6 Create tests for failure handling
-  - `tests/failure/analyzer.test.ts`
-  - `tests/failure/recovery.test.ts`
-
-**Exit Criteria:**
-```bash
-# Run goal that will fail validation
-# Verify recovery options appear
-# Select "Create variant" and verify variant template created
-```
-
----
-
-## Phase 7: Analysis Vessel
-
-**Goal:** Integrate metabob-mcp as analysis resolver.
-
-**Testable State:** CPG queries resolve via MCP vessel.
+**Testable State:** Runtime issues create development goals; development improves runtime.
 
 ### Tasks
 
-- [ ] 7.1 Create `src/vessel/mcp.ts` - MCPVessel implementation
-  - Implements VesselProvider
-  - Resolves cpg_query, embedding_search pointer types
+- [ ] 6.1 Create trace analyzer for runtime issues
+  ```typescript
+  async function analyzeRuntimeTraces(): Promise<DevelopmentGoal[]> {
+    const traces = await mcp.queryTraces({
+      activity: "impulse_lifecycle",
+      success: false,
+      limit: 10
+    })
+    return traces.map(t => ({
+      message: `Fix: ${t.error_message}`,
+      type: "bugfix",
+      context: { traceId: t.execution_id }
+    }))
+  }
+  ```
 
-- [ ] 7.2 Create `src/analysis/cpg.ts` - CPG client
-  - Query metabob-mcp for graph data
-  - Cache results
+- [ ] 6.2 Create /dev --analyze command
+  ```bash
+  bun run src/index.ts /dev --analyze
+  # Analyzes runtime traces, suggests development goals
+  ```
 
-- [ ] 7.3 Create `src/analysis/embeddings.ts` - Embedding client
-  - Semantic search via MCP
+- [ ] 6.3 Wire ribosome extraction to /dev
+  ```typescript
+  processor.on("goal:completed", async ({ result }) => {
+    if (result.completed && result.executions.some(e => e.improvisation)) {
+      // Ribosome already extracts template
+      // Template available for future similar goals
+    }
+  })
+  ```
 
-- [ ] 7.4 Create `src/impulse/types-mcp.ts` - MCP pointer types
-  - cpg_query pointer
-  - embedding_search pointer
+- [ ] 6.4 Create improvement suggestion impulses
+  ```typescript
+  impulseStore.create({
+    shape: "improvement_suggestion",
+    content: {
+      source: "runtime_analysis",
+      goal: "Optimize subscription matching",
+      evidence: { traceIds: [...] }
+    }
+  })
+  ```
 
-- [ ] 7.5 Integrate MCP vessel into registry
-  - Initialize after MiniBob
-  - Register resolvers
+- [ ] 6.5 Test cross-pollination cycle
+  - Create runtime issue (slow subscription)
+  - /dev --analyze identifies it
+  - /dev executes fix
+  - Runtime traces show improvement
 
-- [ ] 7.6 Update workspace detection to use analysis
-  - Use CPG for framework detection
-  - Use embeddings for similar code search
-
-- [ ] 7.7 Create tests for MCP integration
-  - `tests/vessel/mcp.test.ts`
-  - `tests/analysis/cpg.test.ts`
-
-**Exit Criteria:**
-```bash
-bun test tests/vessel/mcp.test.ts
-# CPG queries resolve correctly
-# Workspace detection uses analysis
-```
-
----
-
-## Phase 8: Bootstrap Templates
-
-**Goal:** Implement the bootstrap template hierarchy.
-
-**Testable State:** All Level 0-4 templates load and are usable.
-
-### Tasks
-
-- [ ] 8.1 Create `templates/level-0/create-activity-template.json`
-  - Primordial template, immutable
-
-- [ ] 8.2 Create `templates/level-0/execute-goal.json`
-  - Primordial template, immutable
-
-- [ ] 8.3 Create `templates/level-0/validate-template.json`
-  - Primordial template, immutable
-
-- [ ] 8.4 Create `templates/level-1/extract-from-trace.json`
-  - Meta template (ribosome)
-
-- [ ] 8.5 Create `templates/level-1/create-variant.json`
-  - Meta template
-
-- [ ] 8.6 Create `templates/level-2/` spec generation templates
-  - generate-implementation-spec.json
-  - generate-test-spec.json
-
-- [ ] 8.7 Create `templates/level-3/` core development templates
-  - implement-feature.json
-  - fix-bug.json
-  - refactor-code.json
-  - add-tests.json
-
-- [ ] 8.8 Create `templates/level-4/` TUI choreography templates
-  - update-narrative.json
-  - request-clarification.json
-
-- [ ] 8.9 Create `src/templates/loader.ts` - TemplateLoader
-  - Load templates by level
-  - Enforce immutability for Level 0
-
-- [ ] 8.10 Create tests for template loading
-  - `tests/templates/loader.test.ts`
-  - `tests/templates/validation.test.ts`
+**Commit Milestone:** `feat(microplastic): implement cross-pollination between dev and runtime`
 
 **Exit Criteria:**
 ```bash
-bun test tests/templates/
-# All templates valid
-# Level 0 templates cannot be overridden
-```
+# Create runtime issue
+MICROPLASTIC_INSTRUMENT=true bun run src/index.ts "Complex goal"
 
----
+# Analyze and suggest fixes
+bun run src/index.ts /dev --analyze
+# Output: "Suggestion: Optimize subscription predicate evaluation"
 
-## Phase 9: System Prompts
-
-**Goal:** Create system prompts for LLM interactions.
-
-**Testable State:** LLM interactions use consistent, effective prompts.
-
-### Tasks
-
-- [ ] 9.1 Create `src/prompts/goal-enrichment.ts`
-  - System prompt for understanding goals
-
-- [ ] 9.2 Create `src/prompts/task-execution.ts`
-  - System prompt for executing tasks
-
-- [ ] 9.3 Create `src/prompts/improvisation.ts`
-  - System prompt for exploration mode
-
-- [ ] 9.4 Create `src/prompts/verification.ts`
-  - System prompt for goal verification
-
-- [ ] 9.5 Create `src/prompts/narrative.ts`
-  - System prompt for narrative generation
-
-- [ ] 9.6 Create `src/prompts/index.ts` - Prompt registry
-  - Export all prompts
-  - Handle variable substitution
-
-- [ ] 9.7 Create tests for prompts
-  - `tests/prompts/enrichment.test.ts`
-  - Verify variable substitution
-
-**Exit Criteria:**
-```bash
-bun test tests/prompts/
-# All prompts render correctly
-# No undefined variable references
-```
-
----
-
-## Phase 10: Power User Features
-
-**Goal:** Implement slash commands and keyboard shortcuts.
-
-**Testable State:** All slash commands work.
-
-### Tasks
-
-- [ ] 10.1 Create `src/commands/parser.ts` - Command parser
-  - Parse `/command arg1 arg2`
-  - Handle unknown commands
-
-- [ ] 10.2 Create `src/commands/help.ts` - /help command
-
-- [ ] 10.3 Create `src/commands/templates.ts` - /templates command
-  - List templates by level
-  - Show success rates
-
-- [ ] 10.4 Create `src/commands/history.ts` - /history command
-  - Show recent executions
-  - Totals
-
-- [ ] 10.5 Create `src/commands/debug.ts` - /debug command
-  - Toggle verbose mode
-
-- [ ] 10.6 Create `src/commands/abort.ts` - /abort command
-  - Stop current execution
-
-- [ ] 10.7 Create `src/commands/config.ts` - /config command
-  - Show/edit configuration
-
-- [ ] 10.8 Create `src/tui/keyboard.ts` - Keyboard handler
-  - Ctrl+C abort
-  - Arrow keys history
-  - Tab completion
-
-- [ ] 10.9 Create tests for commands
-  - `tests/commands/parser.test.ts`
-  - `tests/commands/templates.test.ts`
-
-**Exit Criteria:**
-```bash
-# In microplastic
-/help      # Shows all commands
-/templates # Lists templates
-/history   # Shows history
-```
-
----
-
-## Phase 11: Boredom Mode
-
-**Goal:** Implement autonomous self-improvement when idle.
-
-**Testable State:** System improves itself when idle.
-
-### Tasks
-
-- [ ] 11.1 Create `src/boredom/detector.ts` - IdleDetector
-  - Detect 5+ minutes without user input
-
-- [ ] 11.2 Create `src/boredom/goals.ts` - BoredomGoals
-  - Analyze own templates for improvement
-  - Identify low-success templates
-  - Find patterns that could become templates
-
-- [ ] 11.3 Create `src/boredom/executor.ts` - BoredomExecutor
-  - Execute self-improvement goals
-  - Low priority (yield to user)
-
-- [ ] 11.4 Create `src/tui/components/BoredomIndicator.tsx`
-  - Show when boredom mode active
-  - What it's working on
-
-- [ ] 11.5 Create `src/boredom/circuit-breaker.ts` - SafetyBreaker
-  - Stop if success rate drops
-  - Notify user
-
-- [ ] 11.6 Create tests for boredom mode
-  - `tests/boredom/detector.test.ts`
-  - `tests/boredom/goals.test.ts`
-
-**Exit Criteria:**
-```bash
-# Leave microplastic idle for 5 minutes
-# Verify boredom mode activates
-# Verify circuit breaker works
-```
-
----
-
-## Phase 12: Production Hardening
-
-**Goal:** Prepare for production use.
-
-**Testable State:** Robust, documented, deployable.
-
-### Tasks
-
-- [ ] 12.1 Create error boundaries for TUI
-  - Catch rendering errors
-  - Show fallback UI
-
-- [ ] 12.2 Add logging infrastructure
-  - Log levels
-  - File output
-  - Structured logs
-
-- [ ] 12.3 Add metrics collection
-  - Execution counts
-  - Success rates
-  - Costs
-
-- [ ] 12.4 Create `src/config/schema.ts` - Configuration schema
-  - Environment variables
-  - Config file
-
-- [ ] 12.5 Add rate limiting
-  - Prevent runaway LLM calls
-  - Per-hour cost limits
-
-- [ ] 12.6 Create installation script
-  - Download binary
-  - Add to PATH
-
-- [ ] 12.7 Write user documentation
-  - Getting started
-  - Command reference
-  - Troubleshooting
-
-- [ ] 12.8 Create GitHub release workflow
-  - Build binaries for Linux/Mac/Windows
-  - Publish to releases
-
-- [ ] 12.9 Final integration testing
-  - End-to-end scenarios
-  - Performance testing
-  - Memory leak check
-
-- [ ] 12.10 Create CHANGELOG.md
-
-**Exit Criteria:**
-```bash
-# Full integration test passes
-# Documentation complete
-# Release workflow creates artifacts
+# Execute fix
+bun run src/index.ts /dev "Optimize subscription predicate evaluation"
 ```
 
 ---
@@ -575,45 +473,28 @@ bun test tests/prompts/
 ## Dependency Graph
 
 ```
-Phase 1 (Scaffold)
+Phase 1 (ImpulseStateSpace)
     │
     ▼
-Phase 2 (Vessel Core) ────────────────┐
-    │                                  │
-    ▼                                  ▼
-Phase 3 (TUI)              Phase 7 (Analysis)
-    │                                  │
-    └─────────┬────────────────────────┘
-              │
-              ▼
-       Phase 4 (Thompson)
-              │
-              ▼
-       Phase 5 (Ribosome)
-              │
-              ▼
-       Phase 6 (Failure)
-              │
-              ▼
-       Phase 8 (Templates)
-              │
-              ├──────────────────────┐
-              │                      │
-              ▼                      ▼
-       Phase 9 (Prompts)    Phase 10 (Commands)
-              │                      │
-              └──────────┬───────────┘
-                         │
-                         ▼
-               Phase 11 (Boredom)
-                         │
-                         ▼
-               Phase 12 (Production)
+Phase 2 (VesselProvider Wiring)
+    │
+    ▼
+Phase 3 (/dev Command)
+    │
+    ├─────────────────────────────┐
+    │                             │
+    ▼                             ▼
+Phase 4 (Template Seeding)  Phase 5 (Instrumentation)
+    │                             │
+    └─────────────┬───────────────┘
+                  │
+                  ▼
+          Phase 6 (Cross-Pollination)
 ```
 
-**Parallel Work Opportunities:**
-- Phase 3 (TUI) and Phase 7 (Analysis) can be done in parallel after Phase 2
-- Phase 9 (Prompts) and Phase 10 (Commands) can be done in parallel after Phase 8
+**Parallel Work:**
+- Phase 4 and Phase 5 can run in parallel after Phase 3
+- Tasks within phases can be parallelized where no dependencies exist
 
 ---
 
@@ -621,15 +502,36 @@ Phase 3 (TUI)              Phase 7 (Analysis)
 
 | Phase | Metric |
 |-------|--------|
-| 1 | Project builds and runs |
-| 2 | Impulse resolution works |
-| 3 | TUI renders goal input |
-| 4 | Templates selected via Thompson |
-| 5 | Templates extracted from traces |
-| 6 | Failures offer recovery |
-| 7 | CPG queries resolve |
-| 8 | Bootstrap templates load |
-| 9 | LLM prompts effective |
-| 10 | Slash commands work |
-| 11 | Boredom mode activates |
-| 12 | Ready for production |
+| 1 | Subscription predicates filter correctly |
+| 2 | Execution flows through impulses, TUI updates |
+| 3 | /dev command executes goals against microplastic |
+| 4 | Backend has templates, recommendations work |
+| 5 | Instrumentation traces appear in backend |
+| 6 | Runtime issues inform development, development improves runtime |
+
+---
+
+## Environment Configuration
+
+```bash
+# Required
+export ANTHROPIC_API_KEY="sk-ant-..."
+export MINIBOB_API_KEY="mb_live_9VKN3eT_JoGxFEIsErU1KSlltoOUiMJB"
+
+# Optional (with defaults)
+export ACTIVITY_API_URL="http://activity.metabob.local"
+export MINIBOB_MODEL="claude-sonnet-4-20250514"
+
+# Create .env in repos/microplastic/
+echo 'MINIBOB_API_KEY=mb_live_9VKN3eT_JoGxFEIsErU1KSlltoOUiMJB' >> repos/microplastic/.env
+echo 'ACTIVITY_API_URL=http://activity.metabob.local' >> repos/microplastic/.env
+```
+
+---
+
+## Related Documentation
+
+- [Self-Development Loop Spec](./specs/self-development-loop/spec.md) - Full specification
+- [Design Decisions](./design.md) - Architecture decisions
+- [MiniBob Library](../../../repos/minibob/src/lib.ts) - Library entry point
+- [Activity API](../../../repos/metabob-activity-api/src/routes/) - Backend endpoints

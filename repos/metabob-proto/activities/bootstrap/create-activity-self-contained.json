@@ -70,7 +70,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       },
       "id": "gather-requirements"
@@ -111,7 +111,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       },
       "id": "design-task-graph"
@@ -166,7 +166,7 @@
         ]
       },
       "retry": {
-        "max_attempts": 3,
+        "maxAttempts": 3,
         "strategy": "simple"
       },
       "id": "write-template-json"
@@ -224,7 +224,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       },
       "id": "register-with-backend",

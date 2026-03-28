@@ -223,6 +223,35 @@ services:
         maxAge: 24h
       loadBalancer: ROUND_ROBIN
 
+  # Legacy RPC API (ide.metabob.com)
+  # FROZEN - No updates, minimal maintenance
+  # Routes to metabob-rpc-api service in metabob namespace
+  # NOTE: Despite intent to use metabob-legacy, resources deployed to metabob namespace
+  legacy-rpc-api:
+    subdomain: ide
+    service: metabob-rpc-api
+    namespace: metabob  # Actual deployment namespace (not metabob-legacy)
+    port: 8080
+    enabled:
+      development: false  # Not needed in development
+      production: true    # Production only - legacy IDE integration
+    settings:
+      timeout: 300s  # Longer timeout for legacy analysis operations
+      retries:
+        attempts: 3
+        perTryTimeout: 100s
+      cors:
+        allowOrigins:
+          - exact: "*"
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowHeaders: ["content-type", "authorization", "x-api-key"]
+        maxAge: 24h
+      loadBalancer: ROUND_ROBIN
+      connectionPool:
+        http:
+          http1MaxPendingRequests: 100
+          maxRequestsPerConnection: 5
+
 # =============================================================================
 # Internal Services (cluster-internal only, no external gateway)
 # =============================================================================

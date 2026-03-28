@@ -18,8 +18,8 @@ spec:
     spec:
       containers:
         - name: {{ .Values.name }}-worker
-          image: {{ .Values.image.imageRegistry }}/{{ .Values.image.rpc_api.repo }}:{{ .Values.image.rpc_api.tag }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default "Always" }}
+          image: {{ if .Values.image.imageRegistry }}{{ .Values.image.imageRegistry }}/{{ end }}{{ .Values.image.rpc_api.repo }}:{{ .Values.image.rpc_api.tag }}
+          imagePullPolicy: Always
           command: ["celery"]
           args: ["-A", "tasks.jobs", "worker", '-l', 'INFO', "-c", "8"]
           env:
@@ -27,8 +27,6 @@ spec:
               value: /usr/app
             - name: CONFIG_PATH
               value: /usr/app/.env
-            - name: ENVIRONMENT
-              value: {{ .Values.environment | default "production" | quote }}
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
@@ -49,23 +47,19 @@ spec:
                 secretKeyRef:
                   name: postgres-client
                   key: postgresql-password
-            - name: JWT_SECRET_KEY
+            # Application environment configuration
+            - name: ENVIRONMENT
               valueFrom:
                 configMapKeyRef:
                   name: universal-config
-                  key: JWT_SECRET_KEY
+                  key: ENVIRONMENT
           volumeMounts:
             - mountPath: /usr/app
               name: universal-config
-          {{- if .Values.workers.resources }}
-          resources:
-            {{- toYaml .Values.workers.resources | nindent 12 }}
-          {{- else }}
           resources:
             requests:
               memory: "8Gi"
               cpu: "2000m"
-          {{- end }}
           livenessProbe:
             exec:
               command:
@@ -88,10 +82,8 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 10
             failureThreshold: 10
-      {{- if .Values.image.pullSecrets }}
       imagePullSecrets:
-        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
-      {{- end }}
+       - name: regcred
       volumes:
         - name: {{ .Values.config }}
           configMap:

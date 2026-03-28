@@ -174,33 +174,33 @@
 
 ### Tasks
 
-- [ ] **5.1** Create `useImpulseRelevance` hook
+- [x] **5.1** Create `useImpulseRelevance` hook
   - Location: `repos/activity-dashboard/src/hooks/useImpulseRelevance.ts`
   - Endpoint: `GET /v2/activities/impulse-relevance`
   - Params: `{ activity_id?, min_relevance?, limit }`
 
-- [ ] **5.2** Create `ImpulseRelevanceDashboard` component
+- [x] **5.2** Create `ImpulseRelevanceDashboard` component
   - Location: `repos/activity-dashboard/src/components/ImpulseRelevanceDashboard.tsx`
   - Features: Heatmap (activity × impulse), relevance table, filters
 
-- [ ] **5.3** Create `useToolUsage` hook
+- [x] **5.3** Create `useToolUsage` hook
   - Location: `repos/activity-dashboard/src/hooks/useToolUsage.ts`
   - Endpoint: `GET /v2/activities/tool-usage`
   - Params: `{ activity_id?, tool_name?, limit }`
 
-- [ ] **5.4** Create `ToolUsageDashboard` component
+- [x] **5.4** Create `ToolUsageDashboard` component
   - Location: `repos/activity-dashboard/src/components/ToolUsageDashboard.tsx`
   - Features: Grouped bar chart (tool × activity), usage table
 
-- [ ] **5.5** Add API client methods
+- [x] **5.5** Add API client methods
   - `api.listImpulseRelevance(params)`
   - `api.listToolUsage(params)`
 
-- [ ] **5.6** Add TypeScript types
+- [x] **5.6** Add TypeScript types
   - `ImpulseRelevanceMetric` in `types.ts`
   - `ToolUsagePattern` in `types.ts`
 
-- [ ] **5.7** Add tabs to App.tsx navigation
+- [x] **5.7** Add tabs to App.tsx navigation
   - "Impulses" tab → ImpulseRelevanceDashboard
   - "Tools" tab → ToolUsageDashboard
 
@@ -214,29 +214,29 @@
 
 ### Tasks
 
-- [ ] **6.1** Update API to return edge weights
+- [x] **6.1** Update API to return edge weights
   - Endpoint: `GET /v2/activities/composition/graph`
   - Add: Query from `v_composition_graph` view
   - Return: `edges[].weight`, `edges[].execution_count`, `edges[].success_count`
 
-- [ ] **6.2** Refactor CompositionVisualization to use InteractiveGraph
+- [x] **6.2** Refactor CompositionVisualization to use InteractiveGraph
   - Replace: Hierarchical list with React Flow/D3 graph
   - Features: Zoom, pan, node expansion
 
-- [ ] **6.3** Implement edge weight visualization
+- [x] **6.3** Implement edge weight visualization
   - Visual: Edge thickness proportional to `execution_count`
   - Color: Green (high success), red (low success) based on `weight`
   - Hover: Show detailed edge statistics
 
-- [ ] **6.4** Implement node expansion
+- [x] **6.4** Implement node expansion
   - Click node: Expand to show child activities
   - Double-click: Drill down into activity detail
 
-- [ ] **6.5** Add time range filtering
+- [x] **6.5** Add time range filtering
   - Integrate DateRangePicker
   - Filter edges by `last_executed_at` within range
 
-- [ ] **6.6** Add export capability
+- [x] **6.6** Add export capability
   - Export graph as PNG/SVG
   - Export edge data as CSV
 
@@ -250,34 +250,34 @@
 
 ### Tasks
 
-- [ ] **7.1** Add trend sparklines to ActivityBeliefs
+- [x] **7.1** Add trend sparklines to ActivityBeliefs
   - Data: Last 20 executions for each activity
   - Visual: Inline sparkline showing belief evolution
 
-- [ ] **7.2** Add convergence badges to LearnedCorpus
+- [x] **7.2** Add convergence badges to LearnedCorpus
   - Badge: "Converging" (uncertainty decreasing), "Exploring" (high uncertainty)
   - Color: Green/yellow/red based on convergence state
 
-- [ ] **7.3** Add date range filtering to ExecutionHistory
+- [x] **7.3** Add date range filtering to ExecutionHistory
   - Integrate DateRangePicker from M2
   - Filter API calls by `start_date`, `end_date`
 
-- [ ] **7.4** Add export to ExecutionHistory
+- [x] **7.4** Add export to ExecutionHistory
   - Button: "Export CSV" / "Export JSON"
   - Uses ExportUtility from M2
 
-- [ ] **7.5** Add decision framework badges to LearningSystem
+- [x] **7.5** Add decision framework badges to LearningSystem
   - Logic:
     - `uncertainty >15%, execs <5` → "Keep Exploring" (yellow)
     - `uncertainty <10%, execs ≥10` → "Safe to Exploit" (green)
     - `success_rate <30%, execs ≥10` → "Needs Variant" (red)
     - `success_rate >70%, uncertainty <10%` → "Specialize" (blue)
 
-- [ ] **7.6** Add auto-refresh to CompositionVisualization
+- [x] **7.6** Add auto-refresh to CompositionVisualization
   - Currently manual-only
   - Add refresh interval option (30s/60s/off)
 
-- [ ] **7.7** Update VesselStatus with historical metrics
+- [x] **7.7** Update VesselStatus with historical metrics
   - Add mini time-series for CPU/memory
   - Data: Last 1 hour of metrics (if available)
 
@@ -323,7 +323,7 @@ Week 4:
 ## Definition of Done
 
 Each milestone is complete when:
-- [ ] All tasks checked off
+- [x] All tasks checked off
 - [ ] Tests pass (unit + integration)
 - [ ] Dashboard loads without errors
 - [ ] New features visible in UI

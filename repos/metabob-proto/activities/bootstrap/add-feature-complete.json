@@ -65,7 +65,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     },
@@ -98,7 +98,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     },
@@ -128,7 +128,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 3,
+        "maxAttempts": 3,
         "strategy": "simple"
       }
     },
@@ -157,7 +157,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     },
@@ -186,7 +186,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     }

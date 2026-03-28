@@ -2,27 +2,28 @@
 
 ## Overview
 
-This spec defines how vessels (MiniBob, TUI, and future vessels) share state through a unified impulse mechanism. The core insight: **vessels don't call each other—they emit impulses into a shared space**.
+This spec defines how vessels (MiniBob, TUI, and future vessels) share state through a unified impulse mechanism. The core insight: **vessels don't call each other—they modify a shared trace field (stigmergy)**.
 
 ## Core Architecture
 
 ```
-        Shared Impulse Space (ImpulseStore)
-              ↑ emit        ↑ emit
+        Shared Impulse Space (Trace Field)
+              ↑ write       ↑ write
               │             │
           MiniBob          TUI
          (executor)      (renderer)
               │             │
-              ↓ resolve     ↓ resolve
+              ↓ read        ↓ read
          [file, bash]    [visual components]
 ```
 
-### Key Principles
+### Key Principles (from IMPULSE_ACTIVITY_FOUNDATION.md)
 
 1. **Impulses are universal data** - Everything is an impulse with metadata describing its shape
-2. **Shape determines handling** - Vessels resolve/render impulses they understand, ignore others
-3. **Event-driven synchronization** - Store emits events; consumers react asynchronously
-4. **Non-blocking execution** - TUI render loop and MiniBob execution are independent
+2. **Stigmergy** - Vessels modify shared environment (trace field); coordination emerges from accumulated modifications
+3. **Metadata first, content later** - Reasoners see shape/summary to decide; resolvers load content to execute
+4. **Resolvers live where data lives** - Vessels resolve what they have access to; backend resolves historical data
+5. **Append-only traces** - Traces are source of truth; patterns derived, not stored separately
 
 ## Interface Boundaries
 
@@ -186,21 +187,55 @@ ImpulseStore.update() → TUI marks StreamComponent complete
 
 ## Database Schema Integration
 
-### Impulse Persistence (Backend)
+### New Paradigm Core Tables (Mar 2026)
 
-The backend (`metabob-activity-api`) stores impulses in `impulse_data` table:
+The backend uses a unified 4-table architecture (from `020-paradigm-core-tables.surql`):
 
+**`impulse` table** - All data with pointers and metadata:
 ```sql
-DEFINE TABLE impulse_data SCHEMAFULL;
-DEFINE FIELD impulse_id ON impulse_data TYPE string;
-DEFINE FIELD pointer ON impulse_data TYPE object;
-DEFINE FIELD budget ON impulse_data TYPE int;
-DEFINE FIELD priority ON impulse_data TYPE string;
-DEFINE FIELD loaded ON impulse_data TYPE bool;
-DEFINE FIELD metadata ON impulse_data FLEXIBLE TYPE object;
-DEFINE FIELD org_id ON impulse_data TYPE record<organizations>;
-DEFINE FIELD created_at ON impulse_data TYPE datetime DEFAULT time::now();
+DEFINE TABLE impulse SCHEMAFULL;
+DEFINE FIELD id ON impulse TYPE string;
+DEFINE FIELD pointer ON impulse TYPE object;           -- Resolver routing
+DEFINE FIELD shape ON impulse TYPE string;             -- Semantic type
+DEFINE FIELD summary ON impulse TYPE string;           -- Human/LLM readable
+DEFINE FIELD token_estimate ON impulse TYPE int;       -- Estimated load cost
+DEFINE FIELD content ON impulse TYPE option<string>;   -- Null = not loaded
+DEFINE FIELD org_id ON impulse TYPE record<organizations>;
+DEFINE FIELD vessel_id ON impulse TYPE string;         -- Which vessel created
+DEFINE FIELD created_at ON impulse TYPE datetime;
+DEFINE FIELD expires_at ON impulse TYPE option<datetime>;
 ```
+
+**`execution` table** - Traces linking inputs to outputs:
+```sql
+DEFINE TABLE execution SCHEMAFULL;
+DEFINE FIELD id ON execution TYPE string;
+DEFINE FIELD activity_id ON execution TYPE string;
+DEFINE FIELD input_impulses ON execution TYPE array<string>;   -- Consumed
+DEFINE FIELD output_impulses ON execution TYPE array<string>;  -- Produced
+DEFINE FIELD success ON execution TYPE bool;
+DEFINE FIELD duration_ms ON execution TYPE float;
+DEFINE FIELD cost_usd ON execution TYPE float;
+DEFINE FIELD trace ON execution FLEXIBLE TYPE object;          -- Full trace
+DEFINE FIELD org_id ON execution TYPE record<organizations>;
+DEFINE FIELD vessel_id ON execution TYPE string;
+```
+
+**`vessel` table** - Execution environments with resolver capabilities:
+```sql
+DEFINE TABLE vessel SCHEMAFULL;
+DEFINE FIELD id ON vessel TYPE string;
+DEFINE FIELD name ON vessel TYPE string;
+DEFINE FIELD resolves ON vessel TYPE array<string>;    -- Which impulse types
+DEFINE FIELD is_active ON vessel TYPE bool;
+DEFINE FIELD org_id ON vessel TYPE record<organizations>;
+```
+
+### Computed Views (replacing stored aggregations)
+
+- `v_activity_score` - Thompson Sampling params per activity
+- `v_tool_usage` - Aggregated tool usage patterns
+- `v_vessel_activity` - Vessel execution health metrics
 
 ### Field Sourcing
 
@@ -228,70 +263,89 @@ interface ExecutionTrace {
 }
 ```
 
-## Existing Components Status
+## Existing Components Status (Updated Mar 2026)
 
-### Working Well (No Changes Needed)
+### Working Well (Build On These)
 
 | Component | File | Status |
 |-----------|------|--------|
+| ImpulseStore | `minibob/src/impulse.ts` | ✅ Full lifecycle, 5-level resolver dispatch |
 | RegionManager | `minibob-tui/src/lib/regions.ts` | ✅ Lifecycle, routing, layout |
-| ComponentFactory | `minibob-tui/src/components/factory.ts` | ✅ Shape mapping |
+| ComponentFactory | `minibob-tui/src/components/factory.ts` | ✅ Shape mapping (9 components) |
 | TUIState | `minibob-tui/src/lib/state.ts` | ✅ Input, regions, snapshots |
-| WebSocket | `minibob/src/websocket.ts` | ✅ Broadcasting |
+| ResolverRegistry | `minibob-tui/src/lib/resolver-registry.ts` | ✅ NEW - Priority-based, cached |
+| ImpulseResolver | `minibob-tui/src/lib/impulse-resolver.ts` | ✅ NEW - Base class + interface |
+| ImpulseProvider | `minibob-tui/src/lib/impulse-provider.ts` | ✅ NEW - TUI state as impulses |
+| TUI Tools | `minibob-tui/src/lib/tools/*` | ✅ NEW - 6 tools fully implemented |
 
-### Needs Enhancement
+### Needs Enhancement (Partial Implementation)
 
-| Component | File | Gap | Fix |
-|-----------|------|-----|-----|
-| EmbeddedMiniBob | `minibob-tui/src/lib/embedded-minibob.ts` | Events not wired | Wire executor callbacks |
-| ActivityExecutor | `minibob/src/activity.ts` | No intermediate events | Add tool/stream events |
-| TUI Tools | `minibob-tui/src/lib/tools/handlers.ts` | Impulse creation disconnected | Wire to ImpulseStore |
+| Component | File | Completeness | Gap |
+|-----------|------|--------------|-----|
+| EmbeddedMiniBob | `minibob-tui/src/lib/embedded-minibob.ts` | 70% | Executor callbacks not wired to events |
+| ImpulseBridge | `minibob-tui/src/lib/impulse-bridge.ts` | 60% | Only routes user_intent, no activity routing |
+| WebSocket (TUI) | `minibob-tui/src/lib/websocket.ts` | 60% | Connection works, event dispatch to regions missing |
+| WebSocket (MiniBob) | `minibob/src/websocket.ts` | 40% | Types defined, broadcast implementation incomplete |
+| TUI Resolvers | `minibob-tui/src/lib/resolvers.ts` | 50% | Only TUI input/dialog, no backend types |
 
-### Needs Creation
+### Critical Gaps (Blocking Full Integration)
 
-| Component | Purpose |
-|-----------|---------|
-| `ImpulseStore` | Shared state container with events |
-| `ImpulseStoreEvents` | Unified event contracts |
-| Shape registry | Constants and metadata for all shapes |
+| Gap | Impact | Required Work |
+|-----|--------|---------------|
+| ActivityExecutor → Impulse callbacks | No real-time activity progress in TUI | Add callbacks in `activity.ts` |
+| MiniBob WebSocket broadcasting | TUI can't receive remote impulse events | Implement broadcast functions |
+| TUI WebSocket → region updates | WebSocket events don't create regions | Wire event → regionManager.add() |
+| Shape registry constants | Shapes scattered, no single source of truth | Extract to shared module |
 
 ## Code Organization
 
-### Shared Package: `@minibob/impulse`
+### Strategy: Build on Existing Infrastructure
 
-Extract ~500 lines into shared package:
+Most infrastructure already exists. Focus on **wiring** rather than **creating**:
 
+**Already Exists (reuse):**
+- `minibob/src/impulse.ts` - ImpulseStore with create/load/unload/delete
+- `minibob-tui/src/lib/resolver-registry.ts` - Priority-based resolver registry
+- `minibob-tui/src/lib/events.ts` - TypedEventEmitter
+- `minibob-tui/src/lib/regions.ts` - RegionManager with state lifecycle
+
+**Needs Extraction (shared module):**
 ```
-repos/minibob-impulse/
-├── src/
-│   ├── types/
-│   │   ├── impulse.ts      # Impulse, ImpulsePointer, ImpulseMetadata
-│   │   ├── shapes.ts       # Shape constants and registry
-│   │   └── events.ts       # ImpulseStoreEvents
-│   ├── store/
-│   │   ├── index.ts        # ImpulseStore implementation
-│   │   └── lifecycle.ts    # State machine
-│   ├── resolvers/
-│   │   ├── base.ts         # ImpulseResolver interface
-│   │   ├── registry.ts     # ResolverRegistry
-│   │   └── builtin/        # memo, file, mcp resolvers
-│   └── events/
-│       └── emitter.ts      # TypedEventEmitter
-├── package.json
-└── tsconfig.json
+repos/minibob/src/shared/
+├── shapes.ts        # Shape constants (extract from factory.ts)
+├── events.ts        # Event type contracts (consolidate)
+└── index.ts         # Re-exports
 ```
 
-### Consumer Updates
+### Required Wiring
 
 **MiniBob** (`repos/minibob/`):
-- Import types from `@minibob/impulse`
-- Replace local impulse store with shared
-- Wire executor callbacks to emit impulses
+- Add lifecycle callbacks to `ActivityExecutor` in `activity.ts`
+- Implement broadcast functions in `websocket.ts`
+- Emit impulse events at task/tool/stream lifecycle points
 
 **TUI** (`repos/minibob-tui/`):
-- Remove duplicate types
-- Use shared ImpulseStore
-- Subscribe to impulse events for rendering
+- Wire WebSocketManager events → RegionManager
+- Wire EmbeddedMiniBob events → RegionManager
+- Use shape constants from shared module
+
+### Type Consolidation
+
+Currently 3-4 separate Impulse definitions:
+- `minibob/src/types.ts` - Comprehensive (source of truth)
+- `minibob-tui/src/types.ts` - Simplified with display hints
+- Others with slight variations
+
+**Solution:** TUI imports from MiniBob types, adds display-specific extensions:
+```typescript
+import { Impulse as BaseImpulse } from '@minibob/types'
+
+interface TUIImpulse extends BaseImpulse {
+  metadata: BaseImpulse['metadata'] & {
+    display?: ImpulseDisplayHints
+  }
+}
+```
 
 ## Error Handling
 

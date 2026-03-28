@@ -3,9 +3,10 @@
   "name": "Git Workflow Sync",
   "description": "Synchronize local branch with remote: fetch latest changes, rebase current branch, resolve conflicts if any, and push to remote. Ensures clean git history and up-to-date codebase.",
   "category": "infrastructure",
-  "task_steps": [
+  "variant_id": "git-workflow-sync",
+  "tasks": [
     {
-      "task_id": "fetch-and-status",
+      "id": "fetch-and-status",
       "subagent": "general",
       "description": "Fetch latest changes from remote and check current branch status",
       "dependencies": [],
@@ -24,12 +25,12 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     },
     {
-      "task_id": "handle-uncommitted-changes",
+      "id": "handle-uncommitted-changes",
       "subagent": "general",
       "description": "Commit or stash uncommitted changes before rebase",
       "dependencies": ["fetch-and-status"],
@@ -57,12 +58,12 @@
         ]
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     },
     {
-      "task_id": "rebase-on-remote",
+      "id": "rebase-on-remote",
       "subagent": "general",
       "description": "Rebase current branch on remote tracking branch",
       "dependencies": ["handle-uncommitted-changes"],
@@ -90,12 +91,12 @@
         ]
       },
       "retry": {
-        "max_attempts": 1,
+        "maxAttempts": 1,
         "strategy": "simple"
       }
     },
     {
-      "task_id": "push-to-remote",
+      "id": "push-to-remote",
       "subagent": "general",
       "description": "Push rebased branch to remote",
       "dependencies": ["rebase-on-remote"],
@@ -129,7 +130,7 @@
         ]
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     }

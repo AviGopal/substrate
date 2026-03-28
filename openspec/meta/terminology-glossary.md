@@ -517,24 +517,26 @@ const unloaded = ImpulseResolver.unload(impulse)
 
 ---
 
-### ACP (Activity Composition Protocol)
+### ACP (Activity Composition Protocol) - REMOVED
 
-**Definition:** Protocol for vessel-to-vessel communication and coordination.
+**Status:** ❌ REMOVED (2026-03-27)
 
-**What it IS:**
-- Custom protocol for this system
-- Vessel-agnostic communication
-- Activity invocation across vessels
-- State synchronization mechanism
+**What it WAS:**
+- RPC-style protocol for vessel-to-vessel direct communication
+- Allowed vessels to "call" each other with prompts
 
-**What it is NOT:**
-- NOT implemented yet (experimental code only)
-- NOT proven (no production usage)
+**Why it was REMOVED:**
+- Did not align with foundation principle: "vessels share impulse spaces, not direct calls"
+- Bypassed activity selection and Thompson Sampling
+- Did not record traces properly (broke learning loop)
+- Made vessels dependent on knowing about each other
 
-**Code references:**
-- Experimental: `repos/minibob/src/acp.ts`
+**Replacement:**
+- Vessels communicate through **shared impulse state spaces**
+- Resolution happens via capability matching in the shared space
+- No direct vessel-to-vessel communication
 
-**Status:** 🔴 Experimental - concept defined, minimal implementation
+**See:** `openspec/changes/shared-impulse-state-space/notes/vessel-and-impulse-foundations.md`
 
 ---
 

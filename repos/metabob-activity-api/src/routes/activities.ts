@@ -1966,7 +1966,8 @@ app.post('/recommend', async (c) => {
       tag_prefix,     // NEW: Filter by tag prefix (e.g., "feature" matches "feature.vessel")
       loaded_impulses = [],
       impulse_shapes = [],  // Array of impulse shapes for schema filtering
-      limit = 3
+      limit = 3,
+      exclude_activities = []  // T4: Blacklist of activity IDs to exclude
     } = body;
 
     logger.info('POST /recommend', {
@@ -2108,6 +2109,18 @@ app.post('/recommend', async (c) => {
           reduction: beforeCount > 0 ? `${Math.round((1 - templates.length / beforeCount) * 100)}%` : '0%'
         });
       }
+    }
+
+    // T4: Filter out excluded activities (within-goal blacklisting)
+    if (exclude_activities && exclude_activities.length > 0) {
+      const beforeCount = templates.length;
+      const excludeSet = new Set(exclude_activities);
+      templates = templates.filter((t: any) => !excludeSet.has(t.variant_id));
+      logger.info('Blacklist filtering applied', {
+        before: beforeCount,
+        after: templates.length,
+        excluded: exclude_activities
+      });
     }
 
     // Get Thompson Sampling scores

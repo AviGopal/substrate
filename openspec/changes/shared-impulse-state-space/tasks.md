@@ -1,215 +1,296 @@
-# Shared Impulse State Space - Task List
+# Shared Impulse State Space - Task List (Revised)
 
 ## Milestone Overview
 
+Since much infrastructure already exists, focus on **wiring** rather than **creating**:
+
 | Milestone | Commit Message | Testable State |
 |-----------|---------------|----------------|
-| M1 | `feat(impulse): add shared ImpulseStore with events` | Unit tests pass for store operations |
-| M2 | `feat(impulse): add shape registry and constants` | Shape lookups work, types enforce contracts |
-| M3 | `feat(minibob): wire executor callbacks to impulse emission` | Activity execution emits impulses (logged) |
-| M4 | `feat(tui): subscribe to ImpulseStore for rendering` | TUI renders impulses from store |
-| M5 | `feat(tui): add streaming impulse support` | LLM streaming shows real-time in TUI |
-| M6 | `feat(tui): wire embedded-minibob to shared store` | Full integration: input → activity → display |
+| M1 | `feat(minibob): add activity executor impulse callbacks` | Executor emits impulse events (logged) |
+| M2 | `feat(minibob): implement websocket broadcast` | Remote clients receive impulse events |
+| M3 | `feat(tui): wire websocket events to regions` | TUI renders impulses from WebSocket |
+| M4 | `feat(tui): wire embedded-minibob to regions` | Embedded mode renders activity progress |
+| M5 | `feat(impulse): add shape constants module` | Shared shapes, type-safe routing |
+| M6 | `feat(tui): add streaming impulse support` | LLM streaming shows real-time |
 
 ---
 
-## Milestone 1: Shared ImpulseStore
+## Milestone 1: Activity Executor Impulse Callbacks
 
-**Goal**: Create the core shared state container with event emission.
+**Goal**: Add lifecycle callbacks to ActivityExecutor that emit impulse events.
 
-### Tasks
-
-- [ ] **M1.1** Create `repos/minibob-impulse/` package structure
-  - `package.json` with `@minibob/impulse` name
-  - `tsconfig.json` extending root config
-  - `src/index.ts` with exports
-
-- [ ] **M1.2** Extract types from `minibob/src/types.ts`
-  - Move `Impulse`, `ImpulsePointer`, `ImpulseMetadata` to `src/types/impulse.ts`
-  - Add `ImpulseDisplayHints` from TUI types
-  - Export unified type definitions
-
-- [ ] **M1.3** Create `TypedEventEmitter` in `src/events/emitter.ts`
-  - Move from `minibob-tui/src/lib/events.ts`
-  - Add proper TypeScript generics
-  - Export for consumers
-
-- [ ] **M1.4** Implement `ImpulseStore` in `src/store/index.ts`
-  - `create()`, `update()`, `delete()` with event emission
-  - `get()`, `getByShape()`, `getByPriority()`, `list()` queries
-  - `load()` with resolver dispatch (stub for now)
-  - `unload()` for memory management
-
-- [ ] **M1.5** Add unit tests for ImpulseStore
-  - CRUD operations
-  - Event emission verification
-  - Query filtering
-
-**Commit**: `feat(impulse): add shared ImpulseStore with events`
-
-**Testable**: `bun test repos/minibob-impulse/` passes
-
----
-
-## Milestone 2: Shape Registry
-
-**Goal**: Centralize shape definitions and metadata.
+**Existing**: `minibob/src/activity.ts` has execution logic but no intermediate event emission.
 
 ### Tasks
 
-- [ ] **M2.1** Create shape constants in `src/types/shapes.ts`
+- [ ] **M1.1** Add callback interface to ActivityExecutor config
   ```typescript
+  interface ExecutorCallbacks {
+    onActivityStarted?: (execId: string, templateId: string, name: string) => void
+    onTaskStarted?: (execId: string, taskId: string, description: string) => void
+    onToolCalled?: (execId: string, taskId: string, tool: string, args: unknown) => void
+    onToolResult?: (execId: string, taskId: string, tool: string, result: ToolResult) => void
+    onTaskCompleted?: (execId: string, taskId: string, status: string, output?: string) => void
+    onActivityCompleted?: (execution: ActivityExecution) => void
+    onActivityFailed?: (execId: string, error: string) => void
+  }
+  ```
+
+- [ ] **M1.2** Call callbacks at lifecycle points in `executeActivity()`
+  - Before first task: `onActivityStarted`
+  - Before each task: `onTaskStarted`
+  - Before/after tool calls: `onToolCalled`, `onToolResult`
+  - After each task: `onTaskCompleted`
+  - On success: `onActivityCompleted`
+  - On failure: `onActivityFailed`
+
+- [ ] **M1.3** Add integration test
+  - Execute activity with mock callbacks
+  - Verify all callbacks fired in correct order
+
+**Commit**: `feat(minibob): add activity executor impulse callbacks`
+
+**Testable**: Activity execution logs all lifecycle events
+
+---
+
+## Milestone 2: WebSocket Broadcast Implementation
+
+**Goal**: Implement the broadcast functions declared in `websocket.ts`.
+
+**Existing**: `minibob/src/websocket.ts` has types and function signatures but incomplete implementation.
+
+### Tasks
+
+- [ ] **M2.1** Implement WebSocketManager client tracking
+  - `clients: Set<WebSocket>` for active connections
+  - `addClient()`, `removeClient()` methods
+  - Auto-cleanup on disconnect
+
+- [ ] **M2.2** Implement broadcast functions
+  ```typescript
+  broadcastImpulseCreated(impulse: Impulse): void
+  broadcastImpulseUpdated(id: string, content: unknown): void
+  broadcastImpulseDeleted(id: string): void
+  broadcastActivityStarted(execId: string, templateId: string, name?: string): void
+  broadcastActivityTaskCompleted(execId: string, taskId: string, ...): void
+  broadcastActivityCompleted(execution: ActivityExecution): void
+  broadcastActivityFailed(execId: string, error: string): void
+  ```
+
+- [ ] **M2.3** Wire executor callbacks to broadcast
+  - In `index.ts` or goal processor
+  - Pass callbacks that call broadcast functions
+
+- [ ] **M2.4** Add message queue for late joiners
+  - 100-message buffer (already designed)
+  - Replay on new connection
+
+- [ ] **M2.5** Test with WebSocket client
+  - Connect to MiniBob WebSocket
+  - Submit goal via HTTP
+  - Verify events received
+
+**Commit**: `feat(minibob): implement websocket broadcast`
+
+**Testable**: WebSocket client receives activity lifecycle events
+
+---
+
+## Milestone 3: TUI WebSocket → Regions
+
+**Goal**: Wire TUI's WebSocketManager to create/update regions from events.
+
+**Existing**:
+- `minibob-tui/src/lib/websocket.ts` - Connection management works
+- `minibob-tui/src/lib/regions.ts` - RegionManager fully implemented
+- Gap: No wiring between them
+
+### Tasks
+
+- [ ] **M3.1** Create WebSocket event → Region mapper
+  ```typescript
+  function mapEventToRegion(event: MiniBobWSEvent): Partial<Region> | null
+  ```
+
+- [ ] **M3.2** Subscribe to WebSocketManager events in App
+  ```typescript
+  wsManager.on('event', (event) => {
+    switch (event.type) {
+      case 'impulse:created':
+        regionManager.add(mapImpulseToRegion(event.impulse))
+        break
+      case 'impulse:updated':
+        regionManager.update(event.impulseId, { content: event.content })
+        break
+      // ... other cases
+    }
+  })
+  ```
+
+- [ ] **M3.3** Map activity events to impulses
+  - `activity:started` → create impulse with shape `activity`
+  - `activity:task-completed` → update activity impulse
+  - `activity:completed` → complete activity region
+
+- [ ] **M3.4** Test remote mode
+  - Start MiniBob server
+  - Start TUI in remote mode
+  - Submit goal
+  - Verify regions appear
+
+**Commit**: `feat(tui): wire websocket events to regions`
+
+**Testable**: TUI in remote mode renders activity from server
+
+---
+
+## Milestone 4: TUI Embedded MiniBob → Regions
+
+**Goal**: Wire EmbeddedMiniBob events to RegionManager.
+
+**Existing**:
+- `minibob-tui/src/lib/embedded-minibob.ts` - 70% complete, events defined but not wired
+- `minibob-tui/src/lib/impulse-bridge.ts` - Bridge exists, partial routing
+
+### Tasks
+
+- [ ] **M4.1** Wire executor callbacks in EmbeddedMiniBob
+  - Pass callbacks from MiniBob config
+  - Emit EmbeddedMiniBobEvents from callbacks
+
+- [ ] **M4.2** Subscribe to EmbeddedMiniBob events in App
+  ```typescript
+  embeddedMiniBob.on('activity:started', ({ activityId, name }) => {
+    regionManager.add({
+      impulseId: activityId,
+      componentType: 'ActivityComponent',
+      impulse: { metadata: { shape: 'activity' }, content: { name, status: 'running' } }
+    })
+  })
+  ```
+
+- [ ] **M4.3** Handle task-level events
+  - `activity:task-started` → add nested task region
+  - `activity:task-completed` → update task region status
+
+- [ ] **M4.4** Handle goal events
+  - `goal:started` → show "Processing goal..."
+  - `goal:completed` → show completion message
+  - `goal:failed` → show error region
+
+- [ ] **M4.5** Test embedded mode
+  - Start TUI with `--embedded`
+  - Submit goal via input
+  - Verify activity/task regions render
+
+**Commit**: `feat(tui): wire embedded-minibob to regions`
+
+**Testable**: Embedded mode shows activity progress
+
+---
+
+## Milestone 5: Shape Constants Module
+
+**Goal**: Extract shape constants to shared module for type safety.
+
+**Existing**: Shapes scattered across:
+- `minibob-tui/src/components/factory.ts` (hardcoded switch)
+- `minibob-tui/src/lib/impulse-bridge.ts` (ROUTABLE_SHAPES)
+- Various type definitions
+
+### Tasks
+
+- [ ] **M5.1** Create shape constants file
+  ```typescript
+  // minibob/src/shared/shapes.ts
   export const SHAPES = {
     USER_INTENT: 'user_intent',
     ACTIVITY: 'activity',
     TASK_UPDATE: 'task_update',
     TOOL_CALL: 'tool_call',
     STREAM_CHUNK: 'stream_chunk',
-    // ... etc
+    CODE_GENERATION: 'code_generation',
+    DIFF: 'diff',
+    ERROR: 'error',
+    STATE_TRANSITION: 'state_transition',
+    LOG_STREAM: 'log_stream',
   } as const
+
+  export type Shape = typeof SHAPES[keyof typeof SHAPES]
   ```
 
-- [ ] **M2.2** Add shape metadata registry
-  - `ShapeMetadata` interface with description, resolver type, component type
-  - `SHAPE_REGISTRY` constant with all shapes
-  - `getShapeMetadata(shape)` function
-
-- [ ] **M2.3** Add shape routing helpers
-  - `isRoutableShape(shape)` - shapes that trigger activities
-  - `getDefaultPriority(shape)` - priority by shape type
-  - `getComponentType(shape)` - for TUI routing
-
-- [ ] **M2.4** Update TUI `factory.ts` to use shape registry
-  - Import from `@minibob/impulse`
-  - Replace hardcoded switch with registry lookup
-  - Keep fallback to BlockComponent
-
-- [ ] **M2.5** Add tests for shape registry
-  - All shapes have metadata
-  - Component routing works
-  - Priority defaults are correct
-
-**Commit**: `feat(impulse): add shape registry and constants`
-
-**Testable**: Shape lookups return correct metadata
-
----
-
-## Milestone 3: MiniBob Executor Integration
-
-**Goal**: Wire activity executor to emit impulses at lifecycle points.
-
-### Tasks
-
-- [ ] **M3.1** Add `ImpulseStore` to `ActivityExecutor` config
-  - Optional dependency (backward compatible)
-  - Pass through from `EmbeddedMiniBob`
-
-- [ ] **M3.2** Emit `activity` impulse on start
+- [ ] **M5.2** Add shape metadata registry
   ```typescript
-  onActivityStarted: (execId, templateId, name) => {
-    impulseStore?.create({
-      pointer: { type: 'memo', content: { name, status: 'running' } },
-      metadata: { shape: SHAPES.ACTIVITY, display: { priority: 800 } }
-    })
+  export const SHAPE_REGISTRY: Record<Shape, ShapeMetadata> = {
+    [SHAPES.USER_INTENT]: {
+      component: 'InputComponent',
+      priority: 1000,
+      routable: true,
+    },
+    // ...
   }
   ```
 
-- [ ] **M3.3** Emit `task_update` impulses
-  - On task start: `{ taskId, description, status: 'running' }`
-  - On task complete: update with `{ status: 'complete', result }`
+- [ ] **M5.3** Update TUI factory to use registry
+  - Import from shared shapes
+  - Replace switch with registry lookup
 
-- [ ] **M3.4** Emit `tool_call` impulses
-  - Before tool execution: `{ tool, args }`
-  - After tool execution: update with `{ result, success }`
+- [ ] **M5.4** Update impulse-bridge to use constants
+  - Replace ROUTABLE_SHAPES array
+  - Use registry for routing decisions
 
-- [ ] **M3.5** Update `activity:completed` / `activity:failed` to update impulse
-  - Update activity impulse status
-  - Don't create new impulse
+- [ ] **M5.5** Export from minibob package
+  - Add to package exports
+  - TUI imports from minibob
 
-- [ ] **M3.6** Add integration test
-  - Execute activity with mock ImpulseStore
-  - Verify impulses created at correct lifecycle points
+**Commit**: `feat(impulse): add shape constants module`
 
-**Commit**: `feat(minibob): wire executor callbacks to impulse emission`
-
-**Testable**: Activity execution logs impulse creation
+**Testable**: Shape lookups work, TypeScript enforces valid shapes
 
 ---
 
-## Milestone 4: TUI ImpulseStore Subscription
+## Milestone 6: Streaming Impulse Support
 
-**Goal**: TUI renders from ImpulseStore instead of direct events.
+**Goal**: Support real-time LLM streaming in TUI.
 
-### Tasks
-
-- [ ] **M4.1** Create `ImpulseStoreSubscriber` in TUI
-  ```typescript
-  class ImpulseStoreSubscriber {
-    constructor(store: ImpulseStore, regionManager: RegionManager) {
-      store.on('impulse:created', this.handleCreated)
-      store.on('impulse:updated', this.handleUpdated)
-      store.on('impulse:deleted', this.handleDeleted)
-    }
-  }
-  ```
-
-- [ ] **M4.2** Map impulse events to region operations
-  - `created` → `regionManager.add()`
-  - `updated` → `regionManager.update()`
-  - `deleted` → `regionManager.remove()`
-
-- [ ] **M4.3** Use shape registry for component type
-  - Get component type from `getComponentType(impulse.metadata.shape)`
-  - Use display hints for layout
-
-- [ ] **M4.4** Wire subscriber into TUI `App`
-  - Create ImpulseStore instance
-  - Create subscriber with store and regionManager
-  - Initialize on startup
-
-- [ ] **M4.5** Add visual test
-  - Manually create impulses via store
-  - Verify they render correctly
-
-**Commit**: `feat(tui): subscribe to ImpulseStore for rendering`
-
-**Testable**: Creating impulse in store shows in TUI
-
----
-
-## Milestone 5: Streaming Support
-
-**Goal**: LLM streaming creates real-time updating impulses.
+**Existing**:
+- `StreamComponent` exists in TUI
+- No streaming flag or chunk handling
 
 ### Tasks
 
-- [ ] **M5.1** Add `streaming` flag to impulse metadata
+- [ ] **M6.1** Add streaming metadata to impulse
   ```typescript
   metadata: {
     shape: 'stream_chunk',
-    streaming: true,  // Content is still arriving
-    parent?: string   // Parent activity/task impulse
+    streaming: true,    // Content still arriving
+    parent?: string,    // Parent activity/task impulse
   }
   ```
 
-- [ ] **M5.2** Implement streaming in ActivityExecutor
+- [ ] **M6.2** Add LLM stream callbacks to executor
+  - `onStreamStart(execId, taskId)` → create stream impulse
+  - `onStreamChunk(impulseId, chunk)` → update content
+  - `onStreamEnd(impulseId)` → set streaming: false
+
+- [ ] **M6.3** Wire streaming to broadcasts
   - Create impulse on first chunk
-  - Update impulse on subsequent chunks (append content)
-  - Set `streaming: false` on final chunk
+  - Update impulse on subsequent chunks
+  - Complete impulse on final chunk
 
-- [ ] **M5.3** Update `StreamComponent` to handle streaming state
+- [ ] **M6.4** Update StreamComponent for streaming state
   - Show cursor/indicator while `streaming: true`
-  - Hide indicator when `streaming: false`
+  - Hide indicator when complete
 
-- [ ] **M5.4** Optimize update frequency
-  - Batch chunks (every 50ms or 10 chunks)
+- [ ] **M6.5** Optimize update frequency
+  - Batch chunks (every 50ms)
   - Debounce TUI re-renders
 
-- [ ] **M5.5** Add streaming test
-  - Simulate LLM stream
-  - Verify impulse updates
-  - Verify TUI shows progressive content
+- [ ] **M6.6** Test streaming
+  - Execute activity with LLM
+  - Verify content appears progressively
+  - Verify completion state
 
 **Commit**: `feat(tui): add streaming impulse support`
 
@@ -217,82 +298,37 @@
 
 ---
 
-## Milestone 6: Full Integration
-
-**Goal**: Complete integration of embedded MiniBob with TUI via shared store.
-
-### Tasks
-
-- [ ] **M6.1** Update `EmbeddedMiniBob` to use shared ImpulseStore
-  - Accept store in config
-  - Pass to ActivityExecutor
-  - Remove direct event emission (use store events)
-
-- [ ] **M6.2** Wire user input to ImpulseStore
-  - TUI creates `user_intent` impulse on submit
-  - MiniBob subscribes to `user_intent` shape
-  - Goal processing starts from impulse
-
-- [ ] **M6.3** Remove duplicate event handling
-  - Remove `activity:started`, etc. handlers from App
-  - All rendering flows through ImpulseStore
-
-- [ ] **M6.4** Add hierarchical impulse rendering
-  - Activity impulse shows nested tasks
-  - Task impulse shows nested tool calls
-  - Use `metadata.parent` for relationships
-
-- [ ] **M6.5** End-to-end test
-  - Start TUI with embedded MiniBob
-  - Type goal and submit
-  - Verify activity renders with tasks
-  - Verify tool calls show
-  - Verify completion state
-
-- [ ] **M6.6** Performance validation
-  - TUI remains responsive during execution
-  - No render blocking
-  - Scroll works during streaming
-
-**Commit**: `feat(tui): wire embedded-minibob to shared store`
-
-**Testable**: Full flow works: input → activity → display
-
----
-
 ## Task Dependencies
 
 ```
-M1.1 → M1.2 → M1.3 → M1.4 → M1.5
-                              ↓
-M2.1 → M2.2 → M2.3 → M2.4 → M2.5
-                              ↓
-                    M3.1 → M3.2 → M3.3 → M3.4 → M3.5 → M3.6
-                                                        ↓
-                                          M4.1 → M4.2 → M4.3 → M4.4 → M4.5
-                                                                        ↓
-                                                          M5.1 → M5.2 → M5.3 → M5.4 → M5.5
-                                                                                        ↓
-                                                                          M6.1 → M6.2 → M6.3 → M6.4 → M6.5 → M6.6
+M1 (executor callbacks) → M2 (websocket broadcast) → M3 (tui websocket wiring)
+          ↓                                                    ↓
+          └─────────────────→ M4 (embedded wiring) ←───────────┘
+                                      ↓
+                              M5 (shape constants)
+                                      ↓
+                              M6 (streaming)
 ```
+
+M1 and M2 can proceed in parallel initially, then converge.
 
 ## Files Changed by Milestone
 
-| Milestone | Files Created | Files Modified |
-|-----------|--------------|----------------|
-| M1 | `repos/minibob-impulse/*` | - |
-| M2 | `repos/minibob-impulse/src/types/shapes.ts` | `repos/minibob-tui/src/components/factory.ts` |
-| M3 | - | `repos/minibob/src/activity.ts`, `repos/minibob-tui/src/lib/embedded-minibob.ts` |
-| M4 | `repos/minibob-tui/src/lib/impulse-subscriber.ts` | `repos/minibob-tui/src/index.ts` |
-| M5 | - | `repos/minibob/src/activity.ts`, `repos/minibob-tui/src/components/StreamComponent.ts` |
-| M6 | - | `repos/minibob-tui/src/lib/embedded-minibob.ts`, `repos/minibob-tui/src/index.ts` |
+| Milestone | Files Modified |
+|-----------|----------------|
+| M1 | `repos/minibob/src/activity.ts` |
+| M2 | `repos/minibob/src/websocket.ts`, `repos/minibob/src/index.ts` |
+| M3 | `repos/minibob-tui/src/index.ts`, `repos/minibob-tui/src/lib/websocket.ts` |
+| M4 | `repos/minibob-tui/src/lib/embedded-minibob.ts`, `repos/minibob-tui/src/index.ts` |
+| M5 | `repos/minibob/src/shared/shapes.ts` (new), `repos/minibob-tui/src/components/factory.ts` |
+| M6 | `repos/minibob/src/activity.ts`, `repos/minibob-tui/src/components/StreamComponent.ts` |
 
 ## Success Criteria
 
 After M6 completion:
 
-1. **TUI displays rich activity state** - Not just "Hello / Completed" boxes
-2. **Real-time updates** - Streaming content, tool calls visible as they happen
-3. **Shared state** - One ImpulseStore, multiple consumers
-4. **No duplicate code** - Types, events, shapes from shared package
+1. **Rich activity display** - Tasks, tool calls visible in TUI
+2. **Real-time streaming** - LLM output appears progressively
+3. **Both modes work** - Remote (WebSocket) and Embedded
+4. **Type-safe shapes** - Shared constants, no string literals
 5. **Testable at each milestone** - Working state after each commit

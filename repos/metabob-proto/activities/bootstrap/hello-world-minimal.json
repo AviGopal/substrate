@@ -38,7 +38,7 @@
         "commands": []
       },
       "retry": {
-        "max_attempts": 2,
+        "maxAttempts": 2,
         "strategy": "simple"
       }
     }

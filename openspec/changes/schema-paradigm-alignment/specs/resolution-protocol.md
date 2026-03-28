@@ -22,10 +22,7 @@ When an impulse needs to be loaded, resolution proceeds through this hierarchy:
    ├── activityMetrics: Performance statistics
    └── Any new type backend introduces
 
-4. PEER VESSEL (ACP) - Future: distributed resolution
-   └── Route to vessel with capability
-
-5. FALLBACK - In-memory cache
+4. FALLBACK - In-memory cache
    └── activityOutput: Output from current session
 ```
 
@@ -124,6 +121,8 @@ When resolution fails at one level, fall back to the next:
 | custom | backend | - | error |
 | backend | - | - | error |
 
+> **Note:** Peer vessel resolution (formerly ACP) has been removed. Vessels communicate through shared impulse spaces, not direct calls.
+
 ### Fallback Implementation
 
 ```typescript
@@ -221,4 +220,3 @@ class ImpulseResolutionError extends Error {
 | file (cached) | < 10ms |
 | file (uncached) | < 100ms |
 | backend | < 500ms |
-| peer vessel | < 1000ms |
