@@ -82,11 +82,11 @@ export class ImpulseStore implements IImpulseStore {
   /**
    * Create a new impulse
    *
-   * @param impulse - Impulse data (can include optional shape field)
+   * @param impulse - Impulse data (can include optional shape field, id is optional)
    * @returns The created impulse with id and timestamps
    */
-  create(impulse: Omit<ExtendedImpulse, "loaded" | "createdAt"> & { shape?: ImpulseShape }): ExtendedImpulse {
-    const id = impulse.id || this.generateId();
+  create(impulse: Omit<ExtendedImpulse, "id" | "loaded" | "createdAt"> & { id?: string; shape?: ImpulseShape }): ExtendedImpulse {
+    const id = impulse.id ?? this.generateId();
     const fullImpulse: ExtendedImpulse = {
       ...impulse,
       id,

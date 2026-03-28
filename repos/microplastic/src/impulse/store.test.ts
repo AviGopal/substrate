@@ -6,7 +6,6 @@
 
 import { describe, test, expect, beforeEach } from "bun:test";
 import { ImpulseStore } from "./store.ts";
-import type { ExtendedImpulse, ImpulseShape } from "./types.ts";
 
 describe("ImpulseStore", () => {
   let store: ImpulseStore;
