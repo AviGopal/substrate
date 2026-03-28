@@ -3,22 +3,38 @@
  *
  * Renders TUI state to terminal or plain text.
  * Subscribes to state changes and updates the display.
+ * Features animated spinner and dynamic tool/impulse display.
  */
 
-import type { TUIState, TUISnapshot, NarrativePhase, ProgressState } from "./state.ts";
+import type { TUIState, TUISnapshot, NarrativePhase, ProgressState, ToolCallDisplay, ImpulseDisplay } from "./state.ts";
 
 // =============================================================================
 // STYLE CONSTANTS
 // =============================================================================
 
+// Spinner frames for animation
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
 const PHASE_STYLES: Record<NarrativePhase, { color: string; symbol: string }> = {
   idle: { color: "gray", symbol: "○" },
-  thinking: { color: "cyan", symbol: "◐" },
-  executing: { color: "cyan", symbol: "●" },
-  verifying: { color: "yellow", symbol: "◑" },
+  thinking: { color: "cyan", symbol: "◐" }, // Will be animated
+  executing: { color: "cyan", symbol: "●" }, // Will be animated
+  verifying: { color: "yellow", symbol: "◑" }, // Will be animated
   complete: { color: "green", symbol: "✓" },
   failed: { color: "red", symbol: "✗" },
   recovering: { color: "yellow", symbol: "⟳" },
+};
+
+// Tool icons
+const TOOL_ICONS: Record<string, string> = {
+  read: "📖",
+  write: "✏️",
+  edit: "📝",
+  bash: "💻",
+  glob: "🔍",
+  grep: "🔎",
+  git: "📦",
+  default: "🔧",
 };
 
 // ANSI color codes for terminal output
@@ -87,15 +103,18 @@ export class TextRenderer {
   /**
    * Render a snapshot with ANSI color codes
    */
-  static renderColored(snapshot: TUISnapshot): string {
+  static renderColored(snapshot: TUISnapshot, tickCount = 0): string {
     const lines: string[] = [];
     const style = PHASE_STYLES[snapshot.phase];
     const c = ANSI_COLORS;
 
-    // Header
+    // Get animated symbol for active phases
+    const symbol = TextRenderer.getAnimatedSymbol(snapshot.phase, tickCount);
     const headerColor = c[style.color] ?? c.reset;
+
+    // Header
     lines.push(
-      `${headerColor}${style.symbol}${c.reset} ` +
+      `${headerColor}${symbol}${c.reset} ` +
       `${headerColor}${c.bold}microplastic${c.reset}` +
       (snapshot.goal ? `${c.gray} — ${snapshot.goal}${c.reset}` : "")
     );
@@ -111,26 +130,129 @@ export class TextRenderer {
       lines.push(`${c.dim}Type to enter a goal...${c.reset}`);
     }
 
-    // Progress
+    // Progress bar
     if (snapshot.progress) {
       lines.push(TextRenderer.renderProgressBar(snapshot.progress));
     }
 
-    // Narrative
+    // Narrative text
     lines.push("");
     lines.push(`${headerColor}${snapshot.narrative.text}${c.reset}`);
     if (snapshot.narrative.detail) {
       lines.push(`${c.gray}${snapshot.narrative.detail}${c.reset}`);
     }
-    if (snapshot.narrative.error) {
-      lines.push(`${c.red}Error: ${snapshot.narrative.error}${c.reset}`);
+
+    // Tool calls (show recent activity)
+    if (snapshot.narrative.toolCalls && snapshot.narrative.toolCalls.length > 0) {
+      lines.push("");
+      lines.push(`${c.dim}─── Activity ───${c.reset}`);
+      const recentTools = snapshot.narrative.toolCalls.slice(-5); // Show last 5
+      for (const tool of recentTools) {
+        lines.push(TextRenderer.renderToolCall(tool, tickCount));
+      }
     }
 
-    // Status
+    // Impulses
+    if (snapshot.narrative.impulses && snapshot.narrative.impulses.length > 0) {
+      const loading = snapshot.narrative.impulses.filter((i) => i.status === "loading");
+      if (loading.length > 0) {
+        lines.push("");
+        lines.push(`${c.dim}─── Impulses ───${c.reset}`);
+        for (const impulse of loading) {
+          lines.push(TextRenderer.renderImpulse(impulse, tickCount));
+        }
+      }
+    }
+
+    // Error
+    if (snapshot.narrative.error) {
+      lines.push("");
+      lines.push(`${c.red}✗ Error: ${snapshot.narrative.error}${c.reset}`);
+    }
+
+    // Recovery options
+    if (snapshot.narrative.recoveryOptions && snapshot.narrative.recoveryOptions.length > 0) {
+      lines.push("");
+      lines.push(`${c.yellow}Recovery options:${c.reset}`);
+      snapshot.narrative.recoveryOptions.forEach((opt, i) => {
+        lines.push(`  ${c.gray}${i + 1}.${c.reset} ${opt}`);
+      });
+    }
+
+    // Status footer
     lines.push("");
-    lines.push(`${headerColor}[${snapshot.phase.toUpperCase()}]${c.reset}`);
+    const statusLine = TextRenderer.renderStatusLine(snapshot, tickCount);
+    lines.push(statusLine);
 
     return lines.join("\n");
+  }
+
+  /**
+   * Get animated symbol based on phase and tick
+   */
+  private static getAnimatedSymbol(phase: NarrativePhase, tickCount: number): string {
+    if (phase === "thinking" || phase === "executing" || phase === "verifying") {
+      return SPINNER_FRAMES[tickCount % SPINNER_FRAMES.length]!;
+    }
+    return PHASE_STYLES[phase].symbol;
+  }
+
+  /**
+   * Render a tool call line
+   */
+  private static renderToolCall(tool: ToolCallDisplay, tickCount: number): string {
+    const c = ANSI_COLORS;
+    const icon = TOOL_ICONS[tool.tool] ?? TOOL_ICONS.default;
+
+    if (tool.status === "running") {
+      const spinner = SPINNER_FRAMES[tickCount % SPINNER_FRAMES.length];
+      return `  ${c.cyan}${spinner}${c.reset} ${icon} ${tool.tool}`;
+    } else if (tool.status === "complete") {
+      const duration = tool.duration ? ` ${c.dim}(${tool.duration}ms)${c.reset}` : "";
+      return `  ${c.green}✓${c.reset} ${icon} ${tool.tool}${duration}`;
+    } else {
+      return `  ${c.red}✗${c.reset} ${icon} ${tool.tool}`;
+    }
+  }
+
+  /**
+   * Render an impulse line
+   */
+  private static renderImpulse(impulse: ImpulseDisplay, tickCount: number): string {
+    const c = ANSI_COLORS;
+
+    if (impulse.status === "loading") {
+      const spinner = SPINNER_FRAMES[tickCount % SPINNER_FRAMES.length];
+      return `  ${c.cyan}${spinner}${c.reset} 📥 ${impulse.type}:${impulse.id}`;
+    } else if (impulse.status === "loaded") {
+      const tokens = impulse.tokens ? ` ${c.dim}(${impulse.tokens} tokens)${c.reset}` : "";
+      return `  ${c.green}✓${c.reset} 📥 ${impulse.type}:${impulse.id}${tokens}`;
+    } else {
+      return `  ${c.red}✗${c.reset} 📥 ${impulse.type}:${impulse.id}`;
+    }
+  }
+
+  /**
+   * Render status line with elapsed time
+   */
+  private static renderStatusLine(snapshot: TUISnapshot, _tickCount: number): string {
+    const c = ANSI_COLORS;
+    const style = PHASE_STYLES[snapshot.phase];
+    const headerColor = c[style.color] ?? c.reset;
+
+    let elapsed = "";
+    if (snapshot.progress?.startedAt) {
+      const ms = Date.now() - snapshot.progress.startedAt;
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      if (minutes > 0) {
+        elapsed = ` ${c.dim}${minutes}m ${seconds % 60}s${c.reset}`;
+      } else {
+        elapsed = ` ${c.dim}${seconds}s${c.reset}`;
+      }
+    }
+
+    return `${headerColor}[${snapshot.phase.toUpperCase()}]${c.reset}${elapsed}`;
   }
 
   /**
@@ -165,8 +287,11 @@ export type RenderMode = "text" | "ansi" | "opentui";
 /**
  * NarrativeRenderer - renders TUI state to terminal
  *
- * Currently uses simple ANSI output.
- * Future: integrate with @opentui/core for full TUI capabilities.
+ * Features:
+ * - Animated spinner during active phases
+ * - Tool call and impulse display
+ * - Elapsed time tracking
+ * - Future: integrate with @opentui/core for full TUI capabilities.
  */
 export class NarrativeRenderer {
   private state: TUIState;
@@ -174,6 +299,8 @@ export class NarrativeRenderer {
   private mode: RenderMode;
   private stdout: NodeJS.WriteStream;
   private lineCount = 0;
+  private tickCount = 0;
+  private running = false;
 
   constructor(state: TUIState, options: { mode?: RenderMode; stdout?: NodeJS.WriteStream } = {}) {
     this.state = state;
@@ -182,27 +309,47 @@ export class NarrativeRenderer {
   }
 
   /**
-   * Start rendering
+   * Start rendering with animation loop
    */
   start(): void {
+    if (this.running) return;
+    this.running = true;
+
     // Initial render
     this.render();
 
-    // Subscribe to state changes
+    // Subscribe to state changes (update snapshot)
     this.state.on("snapshot", (snapshot) => {
       this.lastSnapshot = snapshot;
-      this.render();
+      // Don't render here - tick will handle it for smooth animation
+      // But render immediately for non-TTY
+      if (this.mode !== "ansi") {
+        this.render();
+      }
     });
+
+    // Subscribe to ticks for animation
+    this.state.on("tick", (tick) => {
+      this.tickCount = tick;
+      if (this.mode === "ansi" && this.running) {
+        this.render();
+      }
+    });
+
+    // Start the animation loop
+    this.state.startTicking(100); // 10 FPS for smooth spinners
   }
 
   /**
    * Stop rendering
    */
   stop(): void {
-    // Clear the display if in ANSI mode
-    if (this.mode === "ansi" && this.lineCount > 0) {
-      this.clearLines(this.lineCount);
-      this.lineCount = 0;
+    this.running = false;
+    this.state.stopTicking();
+
+    // Final render to show completed state
+    if (this.mode === "ansi") {
+      this.render();
     }
   }
 
@@ -228,8 +375,8 @@ export class NarrativeRenderer {
       this.clearLines(this.lineCount);
     }
 
-    // Render new content
-    const output = TextRenderer.renderColored(snapshot);
+    // Render new content with current tick for animation
+    const output = TextRenderer.renderColored(snapshot, this.tickCount);
     const lines = output.split("\n");
     this.lineCount = lines.length;
 
@@ -237,7 +384,7 @@ export class NarrativeRenderer {
   }
 
   /**
-   * Render as plain text (append only)
+   * Render as plain text (append only, no animation)
    */
   private renderText(snapshot: TUISnapshot): void {
     const output = TextRenderer.render(snapshot);
@@ -267,6 +414,247 @@ export class NarrativeRenderer {
    */
   getMode(): RenderMode {
     return this.mode;
+  }
+
+  /**
+   * Check if renderer is currently running
+   */
+  isRunning(): boolean {
+    return this.running;
+  }
+}
+
+// =============================================================================
+// REGION RENDERER (for region-based display)
+// =============================================================================
+
+import { RegionManager } from "./regions.ts";
+import { renderLayout, type RenderContext } from "./components.ts";
+
+/**
+ * RegionRenderer - renders regions to terminal
+ *
+ * Uses RegionManager for impulse-based display with priority layout.
+ * Shows input at top, active regions, then completed regions.
+ */
+export class RegionRenderer {
+  private regionManager: RegionManager;
+  private mode: RenderMode;
+  private stdout: NodeJS.WriteStream;
+  private tickCount = 0;
+  private running = false;
+  private tickInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Terminal dimensions
+  private termWidth: number;
+  private termHeight: number;
+
+  // Viewport scrolling
+  private scrollOffset = 0;
+
+  constructor(
+    regionManager: RegionManager,
+    options: { mode?: RenderMode; stdout?: NodeJS.WriteStream } = {}
+  ) {
+    this.regionManager = regionManager;
+    this.mode = options.mode ?? (process.stdout.isTTY ? "ansi" : "text");
+    this.stdout = options.stdout ?? process.stdout;
+
+    // Initialize terminal dimensions
+    this.termWidth = this.stdout.columns || 80;
+    this.termHeight = this.stdout.rows || 24;
+
+    // Listen for terminal resize events
+    if (this.stdout.isTTY) {
+      this.stdout.on("resize", () => {
+        this.termWidth = this.stdout.columns || 80;
+        this.termHeight = this.stdout.rows || 24;
+        if (this.running) {
+          this.render();
+        }
+      });
+    }
+  }
+
+  /**
+   * Start the render loop
+   */
+  start(): void {
+    if (this.running) return;
+    this.running = true;
+
+    // Initial render
+    this.render();
+
+    // Subscribe to region changes
+    this.regionManager.on("region:added", () => this.scheduleRender());
+    this.regionManager.on("region:updated", () => this.scheduleRender());
+    this.regionManager.on("region:removed", () => this.scheduleRender());
+    this.regionManager.on("layout:changed", () => this.scheduleRender());
+
+    // Start tick interval for animation
+    if (this.mode === "ansi") {
+      this.tickInterval = setInterval(() => {
+        this.tickCount++;
+        this.render();
+      }, 100);
+    }
+  }
+
+  /**
+   * Stop the render loop
+   */
+  stop(): void {
+    this.running = false;
+    if (this.tickInterval) {
+      clearInterval(this.tickInterval);
+      this.tickInterval = null;
+    }
+    // Final render
+    this.render();
+  }
+
+  private renderScheduled = false;
+
+  /**
+   * Schedule a render (debounced)
+   */
+  private scheduleRender(): void {
+    if (this.renderScheduled || !this.running) return;
+    this.renderScheduled = true;
+    queueMicrotask(() => {
+      this.renderScheduled = false;
+      if (this.running) this.render();
+    });
+  }
+
+  /**
+   * Force a render
+   */
+  render(): void {
+    if (this.mode === "ansi") {
+      this.renderAnsi();
+    } else {
+      this.renderText();
+    }
+  }
+
+  /**
+   * Render with ANSI codes (clears and redraws)
+   *
+   * Uses full terminal height with viewport scrolling.
+   */
+  private renderAnsi(): void {
+    // Clear screen and move to top
+    this.stdout.write("\x1b[2J"); // Clear entire screen
+    this.stdout.write("\x1b[H");  // Move cursor to home
+
+    // Get layout and render
+    const layout = this.regionManager.getLayout();
+    const ctx: RenderContext = {
+      width: this.termWidth,
+      tickCount: this.tickCount,
+      useColor: true,
+    };
+
+    // Render header (2 lines: header + blank line)
+    const headerLines = this.renderHeader();
+
+    // Render regions
+    const regionLines = renderLayout(layout, ctx);
+
+    // Combine all content
+    const allLines = [...headerLines, "", ...regionLines];
+
+    // Calculate available height (reserve 1 line for potential status bar)
+    const availableHeight = this.termHeight - 1;
+
+    // Apply viewport scrolling if content exceeds screen height
+    let visibleLines: string[];
+    if (allLines.length > availableHeight) {
+      // Auto-scroll to bottom to show latest content
+      const startLine = Math.max(0, allLines.length - availableHeight);
+      visibleLines = allLines.slice(startLine, startLine + availableHeight);
+      this.scrollOffset = startLine;
+    } else {
+      visibleLines = allLines;
+      this.scrollOffset = 0;
+    }
+
+    // Pad with empty lines to fill terminal height (prevents flicker)
+    while (visibleLines.length < availableHeight) {
+      visibleLines.push("");
+    }
+
+    // Write all lines at once
+    this.stdout.write(visibleLines.join("\n"));
+
+    // Add scroll indicator if needed
+    if (this.scrollOffset > 0) {
+      const c = ANSI_COLORS;
+      const scrollInfo = ` ${c.dim}↑ ${this.scrollOffset} lines above${c.reset}`;
+      this.stdout.write(`\n${scrollInfo}`);
+    }
+  }
+
+  /**
+   * Render as plain text (append only)
+   */
+  private renderText(): void {
+    const layout = this.regionManager.getLayout();
+    const ctx: RenderContext = {
+      width: this.termWidth,
+      tickCount: this.tickCount,
+      useColor: false,
+    };
+
+    const headerLines = this.renderHeaderPlain();
+    const regionLines = renderLayout(layout, ctx);
+    const allLines = [...headerLines, "", ...regionLines];
+    this.stdout.write(allLines.join("\n") + "\n\n");
+  }
+
+  /**
+   * Render header for plain text mode
+   */
+  private renderHeaderPlain(): string[] {
+    const hasActive = this.regionManager.hasActiveRegions();
+    const spinner = hasActive ? "●" : "○";
+    return [`${spinner} microplastic`];
+  }
+
+  /**
+   * Render the header line
+   */
+  private renderHeader(): string[] {
+    const c = ANSI_COLORS;
+    const hasActive = this.regionManager.hasActiveRegions();
+    const spinner = hasActive ? SPINNER_FRAMES[this.tickCount % SPINNER_FRAMES.length] : "○";
+    const spinnerColored = hasActive ? `${c.cyan}${spinner}${c.reset}` : `${c.gray}${spinner}${c.reset}`;
+
+    return [`${spinnerColored} ${c.cyan}${c.bold}microplastic${c.reset}`];
+  }
+
+
+  /**
+   * Get the region manager
+   */
+  getRegionManager(): RegionManager {
+    return this.regionManager;
+  }
+
+  /**
+   * Get current render mode
+   */
+  getMode(): RenderMode {
+    return this.mode;
+  }
+
+  /**
+   * Check if renderer is running
+   */
+  isRunning(): boolean {
+    return this.running;
   }
 }
 

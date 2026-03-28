@@ -16,6 +16,7 @@ import {
   createActivityRegion,
   createErrorRegion,
   createSummaryRegion,
+  type RegionShape,
 } from "./regions.ts";
 
 // =============================================================================
@@ -42,6 +43,8 @@ export interface ExecutionBridgeOptions {
 
 /**
  * ExecutionBridge - connects executor events to region display
+ *
+ * Maintains 1:1 mapping between impulses and regions for stateful display.
  */
 export class ExecutionBridge {
   private regionManager: RegionManager;
@@ -55,6 +58,9 @@ export class ExecutionBridge {
 
   // Unsubscribe functions for cleanup
   private unsubscribers: Array<() => void> = [];
+
+  // Map impulse IDs to region IDs for stateful updates
+  private impulseToRegion = new Map<string, string>();
 
   constructor(
     regionManager: RegionManager,
@@ -508,6 +514,55 @@ export class ExecutionBridge {
       unsub();
     }
     this.unsubscribers = [];
+    this.impulseToRegion.clear();
+  }
+
+  /**
+   * Get or create a region for an impulse (ensures 1:1 mapping)
+   *
+   * TODO: Use this method in impulse handlers to ensure stateful updates
+   */
+  // @ts-expect-error - Helper method for future use
+  private getOrCreateRegionForImpulse(
+    impulseId: string,
+    shape: RegionShape,
+    content: any,
+    summary?: string
+  ): string {
+    // Check if we already have a region for this impulse
+    const existingRegionId = this.impulseToRegion.get(impulseId);
+    if (existingRegionId) {
+      // Update existing region
+      this.regionManager.update(existingRegionId, content, summary);
+      return existingRegionId;
+    }
+
+    // Create new region
+    const regionId = `${shape}-${impulseId}`;
+    const regionOpts = this.createRegionForShape(regionId, shape, content, summary);
+    this.regionManager.add(regionOpts);
+
+    // Track mapping
+    this.impulseToRegion.set(impulseId, regionId);
+
+    return regionId;
+  }
+
+  /**
+   * Create region options based on shape
+   */
+  private createRegionForShape(
+    id: string,
+    shape: RegionShape,
+    content: any,
+    summary?: string
+  ): Parameters<typeof this.regionManager.add>[0] {
+    return {
+      id,
+      shape,
+      content,
+      summary,
+    };
   }
 }
 
