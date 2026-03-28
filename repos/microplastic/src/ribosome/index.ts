@@ -48,7 +48,7 @@ export {
 // CONVENIENCE: Ribosome Facade
 // =============================================================================
 
-import type { ActivityTemplate, ExecutionTrace } from "@metabob/minibob";
+import type { ActivityTemplate } from "@metabob/minibob";
 import { ActivityAPIClient } from "../selection/client.ts";
 import { TemplateGenerator } from "./template-generator.ts";
 import { TemplateCache } from "./cache.ts";

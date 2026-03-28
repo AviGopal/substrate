@@ -173,7 +173,7 @@ export class RecoveryManager {
    */
   private determineRecommendation(
     analysis: FailureAnalysis,
-    options: RecoveryOption[]
+    _options: RecoveryOption[]
   ): { recommended: RecoveryOption; reason: string } {
     // Critical failures - investigate first
     if (analysis.severity === "critical") {
@@ -208,10 +208,11 @@ export class RecoveryManager {
     }
 
     // High confidence in fix suggestions
-    if (analysis.suggestedFixes[0]?.confidence >= 0.7) {
+    const topFix = analysis.suggestedFixes[0];
+    if (topFix && topFix.confidence >= 0.7) {
       return {
         recommended: "retry",
-        reason: `High confidence fix available: ${analysis.suggestedFixes[0].description}`,
+        reason: `High confidence fix available: ${topFix.description}`,
       };
     }
 
@@ -383,7 +384,7 @@ export class RecoveryManager {
   /**
    * Execute skip (continue without failed task)
    */
-  private async executeSkip(analysis: FailureAnalysis): Promise<RecoveryResult> {
+  private async executeSkip(_analysis: FailureAnalysis): Promise<RecoveryResult> {
     // For now, just mark as skipped - actual execution would need
     // to be handled by the executor
     return {

@@ -508,4 +508,164 @@ describe("TUIState", () => {
       expect(state.phase).toBe("idle");
     });
   });
+
+  describe("tool call tracking", () => {
+    test("tracks tool call start", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      state.startToolCall("read", { path: "file.ts" });
+
+      expect(state.toolCalls).toHaveLength(1);
+      expect(state.toolCalls[0]?.tool).toBe("read");
+      expect(state.toolCalls[0]?.status).toBe("running");
+      expect(state.activeToolCalls).toHaveLength(1);
+    });
+
+    test("completes tool calls", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      state.startToolCall("bash", { command: "ls" });
+      state.completeToolCall("bash", true);
+
+      expect(state.toolCalls).toHaveLength(1);
+      expect(state.toolCalls[0]?.status).toBe("complete");
+      expect(state.toolCalls[0]?.duration).toBeDefined();
+      expect(state.activeToolCalls).toHaveLength(0);
+    });
+
+    test("tracks failed tool calls", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      state.startToolCall("bash", { command: "invalid" });
+      state.completeToolCall("bash", false);
+
+      expect(state.toolCalls[0]?.status).toBe("failed");
+    });
+
+    test("includes tool calls in narrative", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      state.startToolCall("read");
+      state.startToolCall("edit");
+
+      expect(state.narrative.toolCalls).toHaveLength(2);
+    });
+
+    test("limits tool call history", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      // Add more than max (10)
+      for (let i = 0; i < 15; i++) {
+        state.startToolCall(`tool_${i}`);
+      }
+
+      expect(state.toolCalls.length).toBeLessThanOrEqual(10);
+    });
+
+    test("emits tool events", () => {
+      const starts: unknown[] = [];
+      const completes: unknown[] = [];
+      state.on("tool:start", (data) => starts.push(data));
+      state.on("tool:complete", (data) => completes.push(data));
+
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+      state.startToolCall("read");
+      state.completeToolCall("read", true);
+
+      expect(starts).toHaveLength(1);
+      expect(completes).toHaveLength(1);
+    });
+
+    test("reset clears tool calls", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+      state.startToolCall("read");
+
+      state.reset();
+
+      expect(state.toolCalls).toHaveLength(0);
+    });
+  });
+
+  describe("impulse tracking", () => {
+    test("tracks impulse loading", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      state.startImpulseLoad("imp_1", "file");
+
+      expect(state.impulses).toHaveLength(1);
+      expect(state.impulses[0]?.status).toBe("loading");
+    });
+
+    test("completes impulse loading", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      state.startImpulseLoad("imp_1", "file");
+      state.completeImpulseLoad("imp_1", 500);
+
+      expect(state.impulses[0]?.status).toBe("loaded");
+      expect(state.impulses[0]?.tokens).toBe(500);
+    });
+
+    test("includes impulses in narrative", () => {
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+
+      state.startImpulseLoad("imp_1", "file");
+
+      expect(state.narrative.impulses).toHaveLength(1);
+    });
+
+    test("emits impulse events", () => {
+      const loading: unknown[] = [];
+      const loaded: unknown[] = [];
+      state.on("impulse:loading", (data) => loading.push(data));
+      state.on("impulse:loaded", (data) => loaded.push(data));
+
+      state.startThinking("goal");
+      state.startExecuting("template", 2);
+      state.startImpulseLoad("imp_1", "file");
+      state.completeImpulseLoad("imp_1", 100);
+
+      expect(loading).toHaveLength(1);
+      expect(loaded).toHaveLength(1);
+    });
+  });
+
+  describe("animation ticking", () => {
+    test("starts and stops ticking", async () => {
+      const ticks: number[] = [];
+      state.on("tick", (tick) => ticks.push(tick));
+
+      state.startTicking(50);
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      state.stopTicking();
+
+      expect(ticks.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test("tickCount increments", async () => {
+      state.startTicking(50);
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      state.stopTicking();
+
+      expect(state.tickCount).toBeGreaterThanOrEqual(2);
+    });
+
+    test("multiple startTicking calls are idempotent", () => {
+      state.startTicking(100);
+      state.startTicking(100);
+      state.startTicking(100);
+      state.stopTicking();
+      // Should not throw or create multiple intervals
+    });
+  });
 });

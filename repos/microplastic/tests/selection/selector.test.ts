@@ -290,8 +290,15 @@ describe("TemplateSelector", () => {
     });
 
     test("checkConnection returns false when backend unavailable", async () => {
-      const isOnline = await selector.checkConnection();
-      expect(isOnline).toBe(false); // Backend not running in tests
+      // Use a port that definitely won't have a backend
+      const offlineSelector = new TemplateSelector({
+        api: {
+          baseUrl: "http://localhost:59999",  // Unlikely to be in use
+          timeout: 100,
+        },
+      });
+      const isOnline = await offlineSelector.checkConnection();
+      expect(isOnline).toBe(false);
     });
   });
 

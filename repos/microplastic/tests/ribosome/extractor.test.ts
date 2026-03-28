@@ -6,10 +6,9 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import {
   TraceExtractor,
   calculateExtractionConfidence,
-  type TaskGroup,
 } from "../../src/ribosome/extractor.ts";
 import type { ExecutionContext } from "../../src/ribosome/types.ts";
-import type { ExecutionTrace, ExecutedTask, ToolCall } from "@metabob/minibob";
+import type { ExecutionTrace, ExecutedTask, ToolCall } from "../../src/internal-types.ts";
 
 // =============================================================================
 // TEST HELPERS

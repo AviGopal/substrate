@@ -8,12 +8,14 @@
 import type {
   ActivityTemplate,
   ActivityTask,
+} from "@metabob/minibob";
+import type {
   TaskValidation,
   VariableDefinition,
   ActivityInputSchema,
   ActivityOutputSchema,
   ImpulseShape,
-} from "@metabob/minibob";
+} from "../internal-types.ts";
 import {
   TraceExtractor,
   calculateExtractionConfidence,
@@ -224,7 +226,7 @@ export class TemplateGenerator {
 
       // Also check tool calls
       for (const call of task.toolCalls) {
-        if (call.name === "write" && call.result.success) {
+        if (call.name === "write" && call.result?.success) {
           const path = call.arguments.file_path as string | undefined;
           if (path && !filesCreated.includes(path)) {
             filesCreated.push(path);
@@ -273,14 +275,14 @@ export class TemplateGenerator {
     const required: ImpulseShape[] = [];
     const optional: ImpulseShape[] = [];
 
-    for (const shape of shapes) {
+    for (const shapeStr of shapes) {
       const descriptor: ImpulseShape = {
-        shape,
-        description: this.getShapeDescription(shape),
+        shape: shapeStr,
+        description: this.getShapeDescription(shapeStr),
       };
 
       // Goal context is always required
-      if (shape === "goal_context") {
+      if (shapeStr === "goal_context") {
         required.push(descriptor);
       } else {
         optional.push(descriptor);
@@ -295,9 +297,9 @@ export class TemplateGenerator {
    */
   private generateOutputSchema(shapes: string[]): ActivityOutputSchema {
     return {
-      produces: shapes.map((shape) => ({
-        shape,
-        description: this.getShapeDescription(shape),
+      produces: shapes.map((shapeStr) => ({
+        shape: shapeStr,
+        description: this.getShapeDescription(shapeStr),
       })),
     };
   }
@@ -379,7 +381,7 @@ export class TemplateGenerator {
    */
   private inferCategory(
     goal: string,
-    success: boolean
+    _success: boolean
   ): "feature" | "bugfix" | "refactor" | "tool" | "infrastructure" {
     const goalLower = goal.toLowerCase();
 

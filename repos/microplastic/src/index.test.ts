@@ -103,7 +103,7 @@ describe("User Goal Impulse Flow", () => {
     // Subscribe to user_goal impulses
     impulseStore.subscribe(
       (event) => {
-        if (event.type === "create") {
+        if (event.type === "create" && event.impulse.content) {
           const parsed = JSON.parse(event.impulse.content);
           received.push(parsed.goal);
         }

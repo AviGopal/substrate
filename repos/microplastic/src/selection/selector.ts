@@ -99,7 +99,7 @@ export class TemplateSelector {
     context: GoalContext
   ): Promise<SelectionResult | null> {
     const response = await this.client.recommend(context, this.candidateCount);
-    if (!response) {
+    if (!response || !response.recommendations) {
       return null;
     }
 
@@ -107,7 +107,9 @@ export class TemplateSelector {
     for (const rec of response.recommendations) {
       this.cache.cacheTemplate(rec.template);
     }
-    this.cache.updateThompsonState(response.stats);
+    if (response.stats) {
+      this.cache.updateThompsonState(response.stats);
+    }
 
     // Find best candidate
     const candidates = response.recommendations;

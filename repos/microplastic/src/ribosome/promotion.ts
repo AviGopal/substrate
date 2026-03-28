@@ -5,11 +5,9 @@
  * Templates are promoted when they meet success thresholds.
  */
 
-import type { ActivityTemplate } from "@metabob/minibob";
 import { ActivityAPIClient } from "../selection/client.ts";
 import { TemplateCache } from "./cache.ts";
 import type {
-  CachedTemplate,
   PromotionCriteria,
   PromotionDecision,
   PromotionResult,

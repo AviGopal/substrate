@@ -202,7 +202,7 @@ describe("RecoveryManager", () => {
 
     test("uses user decision when callback provided", async () => {
       const presentMock = mock(
-        async (ctx: RecoveryContext): Promise<RecoveryDecision> => ({
+        async (_ctx: RecoveryContext): Promise<RecoveryDecision> => ({
           option: "abandon",
         })
       );

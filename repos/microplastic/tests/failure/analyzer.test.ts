@@ -4,7 +4,7 @@
 
 import { describe, test, expect, beforeEach } from "bun:test";
 import { FailureAnalyzer, type FailureContext } from "../../src/failure/analyzer.ts";
-import type { ExecutionTrace, ExecutedTask, ToolCall } from "@metabob/minibob";
+import type { ExecutionTrace, ExecutedTask, ToolCall } from "../../src/internal-types.ts";
 
 // =============================================================================
 // TEST HELPERS
@@ -34,7 +34,7 @@ function createTask(
   options: Partial<ExecutedTask> = {}
 ): ExecutedTask {
   // Determine result status from tool calls
-  const hasFailed = toolCalls.some((c) => !c.result.success);
+  const hasFailed = toolCalls.some((c) => c.result && !c.result.success);
   const defaultResult = hasFailed
     ? { status: "failure" as const, error: "Task failed" }
     : { status: "success" as const };

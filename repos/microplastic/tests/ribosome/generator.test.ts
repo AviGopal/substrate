@@ -5,7 +5,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { TemplateGenerator } from "../../src/ribosome/template-generator.ts";
 import type { ExecutionContext } from "../../src/ribosome/types.ts";
-import type { ExecutionTrace, ExecutedTask, ToolCall } from "@metabob/minibob";
+import type { ExecutionTrace, ExecutedTask, ToolCall } from "../../src/internal-types.ts";
 
 // =============================================================================
 // TEST HELPERS
@@ -407,7 +407,7 @@ describe("TemplateGenerator", () => {
 
       // node_modules paths should be excluded (low confidence)
       expect(
-        result.template.variables.some((v) => v.value?.includes("node_modules"))
+        result.template.variables.some((v) => String(v.default || "").includes("node_modules"))
       ).toBe(false);
     });
   });

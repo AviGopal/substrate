@@ -11,6 +11,9 @@ import type { Impulse, ImpulsePointer } from "@metabob/minibob";
 // TEST SETUP
 // =============================================================================
 
+// Store original fetch for cleanup
+const originalFetch = globalThis.fetch;
+
 const createMockContext = (overrides: Partial<VesselContext> = {}): VesselContext => {
   const config: VesselConfig = {
     developmentMode: true,
@@ -87,6 +90,9 @@ describe("MCPVessel", () => {
   });
 
   afterEach(async () => {
+    // Restore original fetch to prevent test interference
+    globalThis.fetch = originalFetch;
+
     try {
       await vessel.shutdown();
     } catch {

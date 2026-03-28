@@ -158,9 +158,10 @@ export class VariantCreator {
         variantLineage: {
           parentId: lineage.parentId,
           generation: lineage.generation,
-          creationReason: lineage.creationReason,
+          reason: lineage.creationReason,
+          modifications: [],
         },
-      },
+      } as ActivityTemplate["metadata"],
     };
 
     return template;
@@ -259,7 +260,7 @@ export class VariantCreator {
   /**
    * Generate variant ID
    */
-  private generateVariantId(parentId: string, generation: number): string {
+  private generateVariantId(_parentId: string, generation: number): string {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
     return `${this.options.idPrefix}_${generation}_${timestamp}_${random}`;
@@ -309,10 +310,8 @@ export class VariantCreator {
    * Get generation from template
    */
   getGeneration(template: ActivityTemplate): number {
-    const lineageData = template.metadata?.variantLineage as
-      | { generation?: number }
-      | undefined;
-
+    const metadata = template.metadata as Record<string, unknown> | undefined;
+    const lineageData = metadata?.variantLineage as { generation?: number } | undefined;
     return lineageData?.generation ?? 0;
   }
 
@@ -327,10 +326,8 @@ export class VariantCreator {
    * Get parent ID from variant
    */
   getParentId(template: ActivityTemplate): string | undefined {
-    const lineageData = template.metadata?.variantLineage as
-      | { parentId?: string }
-      | undefined;
-
+    const metadata = template.metadata as Record<string, unknown> | undefined;
+    const lineageData = metadata?.variantLineage as { parentId?: string } | undefined;
     return lineageData?.parentId;
   }
 
@@ -338,6 +335,7 @@ export class VariantCreator {
    * Extract full lineage from metadata
    */
   extractLineage(template: ActivityTemplate): Partial<VariantLineage> | undefined {
-    return template.metadata?.variantLineage as Partial<VariantLineage> | undefined;
+    const metadata = template.metadata as Record<string, unknown> | undefined;
+    return metadata?.variantLineage as Partial<VariantLineage> | undefined;
   }
 }

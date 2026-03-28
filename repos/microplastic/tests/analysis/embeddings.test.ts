@@ -2,7 +2,7 @@
  * Embeddings Client Tests
  */
 
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
 import { EmbeddingsClient } from "../../src/analysis/embeddings.ts";
 import type { MCPClientOptions } from "../../src/analysis/types.ts";
 
@@ -32,11 +32,19 @@ const mockFetch = (response: unknown, ok = true, status = 200) => {
 // TESTS
 // =============================================================================
 
+// Store original fetch for cleanup
+const originalFetch = globalThis.fetch;
+
 describe("EmbeddingsClient", () => {
   let client: EmbeddingsClient;
 
   beforeEach(() => {
     client = new EmbeddingsClient(mockOptions);
+  });
+
+  afterEach(() => {
+    // Restore original fetch to prevent test interference
+    globalThis.fetch = originalFetch;
   });
 
   describe("constructor", () => {
@@ -154,7 +162,6 @@ describe("EmbeddingsClient", () => {
     });
 
     test("uses test file extensions by default", async () => {
-      let capturedBody: Record<string, unknown> | undefined;
       globalThis.fetch = mock(() => {
         return Promise.resolve({
           ok: true,

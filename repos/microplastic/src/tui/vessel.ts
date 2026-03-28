@@ -13,8 +13,10 @@ import type {
   ResolverResult,
 } from "../vessel/types.ts";
 import type { Impulse, ImpulsePointer, ActivityTemplate } from "@metabob/minibob";
+import type { ToolCall } from "../internal-types.ts";
 import { TUIState, type TUIStateEvents, type NarrativePhase } from "./state.ts";
 import { NarrativeRenderer, type RenderMode } from "./renderer.ts";
+import { NarrativeStream, type NarrativeEventType, type GeneratedNarrative } from "./narrative.ts";
 
 // =============================================================================
 // TUI POINTER TYPES
@@ -70,12 +72,19 @@ export class TUIVessel implements VesselProvider {
 
   private state: TUIState;
   private renderer: NarrativeRenderer | null = null;
+  private narrativeStream: NarrativeStream;
   private options: TUIVesselOptions;
   private inputHandler: ((key: string) => void) | null = null;
 
   constructor(options: TUIVesselOptions = {}) {
     this.options = options;
     this.state = new TUIState();
+    this.narrativeStream = new NarrativeStream();
+
+    // Connect narrative stream to state updates
+    this.narrativeStream.subscribe((narrative, event) => {
+      this.applyNarrative(narrative, event.type);
+    });
   }
 
   // ===========================================================================
@@ -274,6 +283,66 @@ export class TUIVessel implements VesselProvider {
   }
 
   // ===========================================================================
+  // NARRATIVE STREAM
+  // ===========================================================================
+
+  /**
+   * Get the narrative stream for emitting events
+   */
+  getNarrativeStream(): NarrativeStream {
+    return this.narrativeStream;
+  }
+
+  /**
+   * Emit a narrative event
+   */
+  narrate(type: NarrativeEventType, data: Record<string, unknown> = {}): GeneratedNarrative {
+    return this.narrativeStream.emit(type, data);
+  }
+
+  /**
+   * Emit narrative for a tool call
+   */
+  narrateToolCall(call: ToolCall): GeneratedNarrative {
+    return this.narrativeStream.emitToolCall(call);
+  }
+
+  /**
+   * Apply generated narrative to state
+   */
+  private applyNarrative(_narrative: GeneratedNarrative, eventType: NarrativeEventType): void {
+    // Map event types to state transitions
+    switch (eventType) {
+      case "goal_received":
+      case "understanding":
+        // State already handles this via startThinking
+        break;
+
+      case "task_starting":
+      case "task_progress":
+      case "tool_call":
+      case "thinking":
+        // Update narrative during execution
+        if (this.state.phase === "executing") {
+          // Emit narrative update event
+          this.state.on("narrative:update", () => {}); // Trigger update
+        }
+        break;
+
+      case "success":
+        // State handles this via complete()
+        break;
+
+      case "failure":
+        // State handles this via fail()
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  // ===========================================================================
   // STATE CONTROL
   // ===========================================================================
 
@@ -281,34 +350,63 @@ export class TUIVessel implements VesselProvider {
    * Transition to thinking phase
    */
   startThinking(goal: string): void {
+    this.narrativeStream.emit("goal_received", { goal });
     this.state.startThinking(goal);
   }
 
   /**
    * Transition to executing phase
    */
-  startExecuting(templateName: string, totalTasks: number): void {
+  startExecuting(templateName: string, totalTasks: number, successRate?: number): void {
+    this.narrativeStream.emit("template_selected", {
+      templateName,
+      totalTasks,
+      successRate,
+      isNew: !successRate || successRate === 0,
+    });
     this.state.startExecuting(templateName, totalTasks);
+  }
+
+  /**
+   * Start improvisation (no template matched)
+   */
+  startImprovising(goal: string): void {
+    this.narrativeStream.emit("improvising", { goal });
+    this.state.startExecuting("improvisation", 0);
   }
 
   /**
    * Update progress
    */
-  updateProgress(taskIndex: number, taskName: string): void {
+  updateProgress(taskIndex: number, taskName: string, totalTasks?: number): void {
+    this.narrativeStream.emit("task_progress", {
+      taskIndex: taskIndex + 1,
+      totalTasks: totalTasks ?? this.state.progress?.totalTasks ?? 1,
+      taskName,
+    });
     this.state.updateProgress(taskIndex, taskName);
+  }
+
+  /**
+   * Emit thinking narrative
+   */
+  emitThinking(thought: string): void {
+    this.narrativeStream.emit("thinking", { thought });
   }
 
   /**
    * Transition to verifying phase
    */
   startVerifying(): void {
+    this.narrativeStream.emit("verification", {});
     this.state.startVerifying();
   }
 
   /**
    * Complete successfully
    */
-  complete(summary: string): void {
+  complete(summary: string, filesModified?: number): void {
+    this.narrativeStream.emit("success", { summary, filesModified });
     this.state.complete(summary);
   }
 
@@ -316,7 +414,19 @@ export class TUIVessel implements VesselProvider {
    * Fail with error
    */
   fail(error: string, recoveryOptions?: string[]): void {
+    this.narrativeStream.emit("failure", { error });
     this.state.fail(error, recoveryOptions);
+
+    if (recoveryOptions && recoveryOptions.length > 0) {
+      this.narrativeStream.emit("recovery_offered", { options: recoveryOptions });
+    }
+  }
+
+  /**
+   * Emit learning event
+   */
+  emitLearning(templateName: string): void {
+    this.narrativeStream.emit("learning", { templateName });
   }
 
   /**

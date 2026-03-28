@@ -2,9 +2,9 @@
  * CPG Client Tests
  */
 
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
 import { CPGClient } from "../../src/analysis/cpg.ts";
-import type { MCPClientOptions, CPGQueryPointer } from "../../src/analysis/types.ts";
+import type { MCPClientOptions } from "../../src/analysis/types.ts";
 
 // =============================================================================
 // TEST SETUP
@@ -32,11 +32,19 @@ const mockFetch = (response: unknown, ok = true, status = 200) => {
 // TESTS
 // =============================================================================
 
+// Store original fetch for cleanup
+const originalFetch = globalThis.fetch;
+
 describe("CPGClient", () => {
   let client: CPGClient;
 
   beforeEach(() => {
     client = new CPGClient(mockOptions);
+  });
+
+  afterEach(() => {
+    // Restore original fetch to prevent test interference
+    globalThis.fetch = originalFetch;
   });
 
   describe("constructor", () => {

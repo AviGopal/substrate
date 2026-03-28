@@ -112,6 +112,7 @@ interface ImpulseStore {
 |----------|-------------|---------|
 | `ANTHROPIC_API_KEY` | API key for LLM | Required |
 | `ACTIVITY_API_URL` | Backend API URL | `http://localhost:8080` |
+| `ACTIVITY_API_KEY` | Backend auth token | Optional |
 | `MICROPLASTIC_VERBOSE` | Enable verbose output | `false` |
 
 ## Development Phases
@@ -133,6 +134,8 @@ See `openspec/changes/microplastic/tasks.md` for the full task list:
 
 ## Related Documentation
 
+- [`docs/MENTORSHIP.md`](docs/MENTORSHIP.md) - How to develop with microplastic
+- [`docs/QUICKREF.md`](docs/QUICKREF.md) - Quick reference card
 - [`openspec/changes/microplastic/design.md`](../../openspec/changes/microplastic/design.md) - Architecture decisions
 - [`openspec/changes/microplastic/specs/`](../../openspec/changes/microplastic/specs/) - Detailed specifications
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../../docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) - Core ontology

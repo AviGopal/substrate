@@ -4,7 +4,8 @@
  * Type definitions for template extraction, caching, and promotion.
  */
 
-import type { ActivityTemplate, ExecutionTrace } from "@metabob/minibob";
+import type { ActivityTemplate } from "@metabob/minibob";
+import type { ExecutionTrace } from "../internal-types.ts";
 
 // =============================================================================
 // EXTRACTION TYPES

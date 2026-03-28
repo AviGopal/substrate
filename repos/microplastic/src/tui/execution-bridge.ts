@@ -16,7 +16,6 @@ import {
   createActivityRegion,
   createErrorRegion,
   createSummaryRegion,
-  type RegionShape,
 } from "./regions.ts";
 
 // =============================================================================
@@ -109,22 +108,22 @@ export class ExecutionBridge {
           const data = JSON.parse(impulse.content);
           const eventType = impulse.metadata?.executionEvent as string;
 
-          // Route to appropriate handler based on shape
+          // Route to appropriate handler based on shape (with impulse ID for region mapping)
           switch (impulse.shape) {
             case "activity":
-              this.handleActivityImpulse(eventType, data);
+              this.handleActivityImpulse(eventType, data, impulse.id);
               break;
             case "task":
               this.handleTaskImpulse(eventType, data);
               break;
             case "tool_call":
-              this.handleToolCallImpulse(eventType, data);
+              this.handleToolCallImpulse(eventType, data, impulse.id);
               break;
             case "summary":
-              this.handleSummaryImpulse(data);
+              this.handleSummaryImpulse(data, impulse.id);
               break;
             case "error":
-              this.handleErrorImpulse(data);
+              this.handleErrorImpulse(data, impulse.id);
               break;
           }
         } catch (error) {
@@ -143,39 +142,32 @@ export class ExecutionBridge {
   /**
    * Handle activity-related impulses
    */
-  private handleActivityImpulse(eventType: string, data: any): void {
+  private handleActivityImpulse(eventType: string, data: any, impulseId: string): void {
     if (eventType === "execution:start") {
       this.toolCallCounter = 0;
     } else if (eventType === "execution:template_selected") {
-      this.currentActivityId = `activity-${Date.now()}`;
-      const regionOpts = createActivityRegion(
-        this.currentActivityId,
-        data.template.name,
-        data.template.tasks.length
+      this.currentActivityId = this.getOrCreateRegionForImpulse(impulseId, () =>
+        createActivityRegion(
+          `activity-${impulseId}`,
+          data.template.name,
+          data.template.tasks.length
+        )
       );
-      this.regionManager.add({
-        id: regionOpts.id!,
-        shape: regionOpts.shape!,
-        display: regionOpts.display,
-        content: regionOpts.content,
-        summary: regionOpts.summary,
-      });
     } else if (eventType === "execution:improvising") {
-      this.currentActivityId = `activity-${Date.now()}`;
-      const regionOpts = createActivityRegion(
-        this.currentActivityId,
-        "Improvisation",
-        undefined
-      );
-      this.regionManager.add({
-        id: regionOpts.id!,
-        shape: regionOpts.shape!,
-        display: regionOpts.display,
-        content: {
-          ...regionOpts.content,
-          currentTask: data.goal,
-        },
-        summary: "Improvising",
+      this.currentActivityId = this.getOrCreateRegionForImpulse(impulseId, () => {
+        const regionOpts = createActivityRegion(
+          `activity-${impulseId}`,
+          "Improvisation",
+          undefined
+        );
+        return {
+          ...regionOpts,
+          content: {
+            ...regionOpts.content,
+            currentTask: data.goal,
+          },
+          summary: "Improvising",
+        };
       });
     }
   }
@@ -208,11 +200,10 @@ export class ExecutionBridge {
   /**
    * Handle tool call impulses
    */
-  private handleToolCallImpulse(eventType: string, data: any): void {
+  private handleToolCallImpulse(eventType: string, data: any, impulseId: string): void {
     if (eventType === "execution:tool_call" && this.options.showToolCalls) {
-      const id = `tool-${Date.now()}-${this.toolCallCounter++}`;
-      this.regionManager.add({
-        id,
+      const regionId = this.getOrCreateRegionForImpulse(impulseId, () => ({
+        id: `tool-${impulseId}`,
         shape: "tool_call",
         display: {
           preferred: "inline",
@@ -222,14 +213,14 @@ export class ExecutionBridge {
           tool: data.tool,
           args: data.args,
         },
-      });
+      }));
 
       // Auto-complete tool calls after brief delay
       setTimeout(() => {
-        const toolRegion = this.regionManager.get(id);
+        const toolRegion = this.regionManager.get(regionId);
         if (toolRegion && toolRegion.state !== "complete") {
-          this.regionManager.update(id, { success: true, duration: 100 });
-          this.regionManager.complete(id);
+          this.regionManager.update(regionId, { success: true, duration: 100 });
+          this.regionManager.complete(regionId);
         }
       }, 500);
     }
@@ -238,15 +229,15 @@ export class ExecutionBridge {
   /**
    * Handle summary impulses
    */
-  private handleSummaryImpulse(data: any): void {
-    this.handleComplete(data.result);
+  private handleSummaryImpulse(data: any, impulseId: string): void {
+    this.handleComplete(data.result, impulseId);
   }
 
   /**
    * Handle error impulses
    */
-  private handleErrorImpulse(data: any): void {
-    this.handleFailed(data.error, data.result);
+  private handleErrorImpulse(data: any, impulseId: string): void {
+    this.handleFailed(data.error, data.result, impulseId);
   }
 
   /**
@@ -361,7 +352,7 @@ export class ExecutionBridge {
   /**
    * Handle successful completion
    */
-  private handleComplete(result: ExecutionResult): void {
+  private handleComplete(result: ExecutionResult, impulseId?: string): void {
     // Update activity region to complete
     if (this.currentActivityId) {
       this.regionManager.update(this.currentActivityId, {
@@ -370,26 +361,39 @@ export class ExecutionBridge {
       this.regionManager.complete(this.currentActivityId);
     }
 
-    // Create summary region
-    const summaryId = `summary-${Date.now()}`;
-    const trace = result.execution?.executionTrace;
+    // Create summary region (use impulse mapping if ID provided)
+    const summaryId = impulseId
+      ? this.getOrCreateRegionForImpulse(impulseId, () => {
+          const trace = result.execution?.executionTrace;
+          return createSummaryRegion(`summary-${impulseId}`, result.summary, {
+            detail: result.improvised ? "Improvised execution" : `Template: ${result.template?.name}`,
+            durationMs: result.durationMs,
+            cost: result.cost,
+            filesModified: trace?.filesModified ?? [],
+            filesCreated: [],
+          });
+        })
+      : (() => {
+          // Fallback for non-impulse calls (event listener path)
+          const id = `summary-${Date.now()}`;
+          const trace = result.execution?.executionTrace;
+          const regionOpts = createSummaryRegion(id, result.summary, {
+            detail: result.improvised ? "Improvised execution" : `Template: ${result.template?.name}`,
+            durationMs: result.durationMs,
+            cost: result.cost,
+            filesModified: trace?.filesModified ?? [],
+            filesCreated: [],
+          });
+          this.regionManager.add({
+            id: regionOpts.id!,
+            shape: regionOpts.shape!,
+            display: regionOpts.display,
+            content: regionOpts.content,
+            summary: regionOpts.summary,
+          });
+          return id;
+        })();
 
-    const regionOpts = createSummaryRegion(summaryId, result.summary, {
-      detail: result.improvised ? "Improvised execution" : `Template: ${result.template?.name}`,
-      durationMs: result.durationMs,
-      cost: result.cost,
-      filesModified: trace?.filesModified ?? [],
-      // Note: filesCreated not available on ExecutionTrace, using empty array
-      filesCreated: [],
-    });
-
-    this.regionManager.add({
-      id: regionOpts.id!,
-      shape: regionOpts.shape!,
-      display: regionOpts.display,
-      content: regionOpts.content,
-      summary: regionOpts.summary,
-    });
     this.regionManager.complete(summaryId);
 
     // Create output impulse regions
@@ -427,7 +431,7 @@ export class ExecutionBridge {
   /**
    * Handle failed execution
    */
-  private handleFailed(error: string, _result: ExecutionResult): void {
+  private handleFailed(error: string, _result: ExecutionResult, impulseId?: string): void {
     // Update activity region to failed
     if (this.currentActivityId) {
       this.regionManager.update(this.currentActivityId, {
@@ -436,17 +440,25 @@ export class ExecutionBridge {
       this.regionManager.complete(this.currentActivityId);
     }
 
-    // Create error region
-    const errorId = `error-${Date.now()}`;
-    const regionOpts = createErrorRegion(errorId, error, "ExecutionError");
+    // Create error region (use impulse mapping if ID provided)
+    const errorId = impulseId
+      ? this.getOrCreateRegionForImpulse(impulseId, () =>
+          createErrorRegion(`error-${impulseId}`, error, "ExecutionError")
+        )
+      : (() => {
+          // Fallback for non-impulse calls (event listener path)
+          const id = `error-${Date.now()}`;
+          const regionOpts = createErrorRegion(id, error, "ExecutionError");
+          this.regionManager.add({
+            id: regionOpts.id!,
+            shape: regionOpts.shape!,
+            display: regionOpts.display,
+            content: regionOpts.content,
+            summary: regionOpts.summary,
+          });
+          return id;
+        })();
 
-    this.regionManager.add({
-      id: regionOpts.id!,
-      shape: regionOpts.shape!,
-      display: regionOpts.display,
-      content: regionOpts.content,
-      summary: regionOpts.summary,
-    });
     this.regionManager.complete(errorId);
 
     // Reset current state
@@ -520,49 +532,40 @@ export class ExecutionBridge {
   /**
    * Get or create a region for an impulse (ensures 1:1 mapping)
    *
-   * TODO: Use this method in impulse handlers to ensure stateful updates
+   * Uses a factory function to create region options, ensuring consistent structure
+   * while maintaining 1:1 impulse-to-region mapping.
    */
-  // @ts-expect-error - Helper method for future use
   private getOrCreateRegionForImpulse(
     impulseId: string,
-    shape: RegionShape,
-    content: any,
-    summary?: string
+    factory: () => Partial<Parameters<typeof this.regionManager.add>[0]>
   ): string {
     // Check if we already have a region for this impulse
     const existingRegionId = this.impulseToRegion.get(impulseId);
     if (existingRegionId) {
-      // Update existing region
-      this.regionManager.update(existingRegionId, content, summary);
+      // Region exists - update it with new data
+      const regionOpts = factory();
+      if (regionOpts.content) {
+        this.regionManager.update(existingRegionId, regionOpts.content, regionOpts.summary);
+      }
       return existingRegionId;
     }
 
-    // Create new region
-    const regionId = `${shape}-${impulseId}`;
-    const regionOpts = this.createRegionForShape(regionId, shape, content, summary);
-    this.regionManager.add(regionOpts);
+    // Create new region using factory
+    const regionOpts = factory();
+    const regionId = regionOpts.id ?? `region-${impulseId}`;
+
+    this.regionManager.add({
+      id: regionId,
+      shape: regionOpts.shape!,
+      display: regionOpts.display,
+      content: regionOpts.content,
+      summary: regionOpts.summary,
+    });
 
     // Track mapping
     this.impulseToRegion.set(impulseId, regionId);
 
     return regionId;
-  }
-
-  /**
-   * Create region options based on shape
-   */
-  private createRegionForShape(
-    id: string,
-    shape: RegionShape,
-    content: any,
-    summary?: string
-  ): Parameters<typeof this.regionManager.add>[0] {
-    return {
-      id,
-      shape,
-      content,
-      summary,
-    };
   }
 }
 

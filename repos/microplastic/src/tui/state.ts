@@ -47,6 +47,28 @@ export interface ProgressState {
 }
 
 /**
+ * Tool call record for display
+ */
+export interface ToolCallDisplay {
+  tool: string;
+  args?: Record<string, unknown>;
+  status: "running" | "complete" | "failed";
+  timestamp: number;
+  duration?: number;
+}
+
+/**
+ * Impulse display for loaded impulses
+ */
+export interface ImpulseDisplay {
+  id: string;
+  type: string;
+  status: "loading" | "loaded" | "failed";
+  tokens?: number;
+  timestamp: number;
+}
+
+/**
  * Narrative content to display
  */
 export interface NarrativeContent {
@@ -60,6 +82,10 @@ export interface NarrativeContent {
   error?: string;
   /** Recovery options if applicable */
   recoveryOptions?: string[];
+  /** Recent tool calls */
+  toolCalls?: ToolCallDisplay[];
+  /** Active impulses */
+  impulses?: ImpulseDisplay[];
 }
 
 /**
@@ -99,7 +125,12 @@ export interface TUIStateEvents {
   "input:cancel": void;
   "progress:update": ProgressState;
   "narrative:update": NarrativeContent;
+  "tool:start": ToolCallDisplay;
+  "tool:complete": ToolCallDisplay;
+  "impulse:loading": ImpulseDisplay;
+  "impulse:loaded": ImpulseDisplay;
   "snapshot": TUISnapshot;
+  "tick": number; // For animation frame
 }
 
 // =============================================================================
@@ -115,6 +146,15 @@ export class TUIState {
   private _progress: ProgressState | null = null;
   private _narrative: NarrativeContent;
   private _goal: string | null = null;
+
+  // Tool and impulse tracking
+  private _toolCalls: ToolCallDisplay[] = [];
+  private _impulses: ImpulseDisplay[] = [];
+  private _maxToolCalls = 10; // Keep last N tool calls
+
+  // Animation
+  private _tickInterval: ReturnType<typeof setInterval> | null = null;
+  private _tickCount = 0;
 
   // Temporal tracking
   private _transitions: StateTransition[] = [];
@@ -134,7 +174,41 @@ export class TUIState {
 
     this._narrative = {
       text: "Ready",
+      toolCalls: [],
+      impulses: [],
     };
+  }
+
+  // ===========================================================================
+  // ANIMATION LOOP
+  // ===========================================================================
+
+  /**
+   * Start the animation tick loop
+   */
+  startTicking(intervalMs = 100): void {
+    if (this._tickInterval) return;
+    this._tickInterval = setInterval(() => {
+      this._tickCount++;
+      this.events.emit("tick", this._tickCount);
+    }, intervalMs);
+  }
+
+  /**
+   * Stop the animation tick loop
+   */
+  stopTicking(): void {
+    if (this._tickInterval) {
+      clearInterval(this._tickInterval);
+      this._tickInterval = null;
+    }
+  }
+
+  /**
+   * Get current tick count (for spinner animation)
+   */
+  get tickCount(): number {
+    return this._tickCount;
   }
 
   // ===========================================================================
@@ -345,7 +419,9 @@ export class TUIState {
   reset(): void {
     this._goal = null;
     this._progress = null;
-    this._narrative = { text: "Ready" };
+    this._toolCalls = [];
+    this._impulses = [];
+    this._narrative = { text: "Ready", toolCalls: [], impulses: [] };
     this._input = {
       active: false,
       value: "",
@@ -354,6 +430,124 @@ export class TUIState {
       historyIndex: -1,
     };
     this.transitionTo("idle", "reset");
+  }
+
+  // ===========================================================================
+  // TOOL CALL TRACKING
+  // ===========================================================================
+
+  /**
+   * Record a tool call starting
+   */
+  startToolCall(tool: string, args?: Record<string, unknown>): string {
+    const id = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const toolCall: ToolCallDisplay = {
+      tool,
+      args,
+      status: "running",
+      timestamp: Date.now(),
+    };
+    this._toolCalls.push(toolCall);
+
+    // Keep only recent tool calls
+    if (this._toolCalls.length > this._maxToolCalls) {
+      this._toolCalls.shift();
+    }
+
+    this._narrative = {
+      ...this._narrative,
+      toolCalls: [...this._toolCalls],
+    };
+
+    this.events.emit("tool:start", toolCall);
+    this.events.emit("snapshot", this.getSnapshot());
+    return id;
+  }
+
+  /**
+   * Mark a tool call as complete
+   */
+  completeToolCall(tool: string, success: boolean): void {
+    const toolCall = this._toolCalls.find(
+      (t) => t.tool === tool && t.status === "running"
+    );
+    if (toolCall) {
+      toolCall.status = success ? "complete" : "failed";
+      toolCall.duration = Date.now() - toolCall.timestamp;
+
+      this._narrative = {
+        ...this._narrative,
+        toolCalls: [...this._toolCalls],
+      };
+
+      this.events.emit("tool:complete", toolCall);
+      this.events.emit("snapshot", this.getSnapshot());
+    }
+  }
+
+  /**
+   * Get active tool calls
+   */
+  get activeToolCalls(): ToolCallDisplay[] {
+    return this._toolCalls.filter((t) => t.status === "running");
+  }
+
+  /**
+   * Get all recent tool calls
+   */
+  get toolCalls(): ToolCallDisplay[] {
+    return [...this._toolCalls];
+  }
+
+  // ===========================================================================
+  // IMPULSE TRACKING
+  // ===========================================================================
+
+  /**
+   * Record an impulse being loaded
+   */
+  startImpulseLoad(id: string, type: string): void {
+    const impulse: ImpulseDisplay = {
+      id,
+      type,
+      status: "loading",
+      timestamp: Date.now(),
+    };
+    this._impulses.push(impulse);
+
+    this._narrative = {
+      ...this._narrative,
+      impulses: [...this._impulses],
+    };
+
+    this.events.emit("impulse:loading", impulse);
+    this.events.emit("snapshot", this.getSnapshot());
+  }
+
+  /**
+   * Mark an impulse as loaded
+   */
+  completeImpulseLoad(id: string, tokens?: number): void {
+    const impulse = this._impulses.find((i) => i.id === id);
+    if (impulse) {
+      impulse.status = "loaded";
+      impulse.tokens = tokens;
+
+      this._narrative = {
+        ...this._narrative,
+        impulses: [...this._impulses],
+      };
+
+      this.events.emit("impulse:loaded", impulse);
+      this.events.emit("snapshot", this.getSnapshot());
+    }
+  }
+
+  /**
+   * Get active impulses
+   */
+  get impulses(): ImpulseDisplay[] {
+    return [...this._impulses];
   }
 
   // ===========================================================================

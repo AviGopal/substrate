@@ -5,7 +5,7 @@
  * and suggest fixes.
  */
 
-import type { ExecutionTrace, ExecutedTask, ToolCall } from "@metabob/minibob";
+import type { ExecutionTrace, ExecutedTask } from "../internal-types.ts";
 import {
   DEFAULT_FAILURE_PATTERNS,
   type FailureAnalysis,
@@ -112,7 +112,7 @@ export class FailureAnalyzer {
       // Check for failed tool calls first - they have more specific errors
       for (let j = 0; j < task.toolCalls.length; j++) {
         const call = task.toolCalls[j]!;
-        if (!call.result.success) {
+        if (call.result && !call.result.success) {
           return {
             taskId: task.id,
             stepIndex: j,
@@ -150,7 +150,8 @@ export class FailureAnalyzer {
    */
   private findFailedStep(task: ExecutedTask): number {
     for (let i = 0; i < task.toolCalls.length; i++) {
-      if (!task.toolCalls[i]!.result.success) {
+      const call = task.toolCalls[i]!;
+      if (call.result && !call.result.success) {
         return i;
       }
     }
@@ -162,7 +163,7 @@ export class FailureAnalyzer {
    */
   private findFailedTool(task: ExecutedTask): string | undefined {
     for (const call of task.toolCalls) {
-      if (!call.result.success) {
+      if (call.result && !call.result.success) {
         return call.name;
       }
     }
@@ -317,7 +318,7 @@ export class FailureAnalyzer {
 
     // Check read operations that failed
     for (const call of task.toolCalls) {
-      if (call.name === "read" && !call.result.success) {
+      if (call.name === "read" && call.result && !call.result.success) {
         const path = call.arguments.file_path as string | undefined;
         if (path) missing.push(path);
       }
@@ -377,10 +378,10 @@ export class FailureAnalyzer {
    * Generate fix suggestions
    */
   private generateFixes(
-    context: FailureContext,
+    _context: FailureContext,
     failurePoint: FailurePoint,
     pattern?: FailurePattern,
-    rootCause?: RootCauseAnalysis
+    _rootCause?: RootCauseAnalysis
   ): SuggestedFix[] {
     const fixes: SuggestedFix[] = [];
 

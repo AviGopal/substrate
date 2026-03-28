@@ -5,7 +5,7 @@
  * First step in the ribosome pattern: trace → analysis → template.
  */
 
-import type { ExecutionTrace, ExecutedTask, ToolCall } from "@metabob/minibob";
+import type { ExecutionTrace, ExecutedTask, ToolCall } from "../internal-types.ts";
 import type {
   ExtractionAnalysis,
   ExtractionOptions,
@@ -80,7 +80,7 @@ export class TraceExtractor {
 
     // Count tool calls
     const toolCallCount = tasks.reduce(
-      (sum, task) => sum + task.toolCalls.length,
+      (sum: number, task: (typeof tasks)[number]) => sum + task.toolCalls.length,
       0
     );
 

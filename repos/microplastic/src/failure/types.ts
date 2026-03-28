@@ -4,7 +4,8 @@
  * Type definitions for failure analysis, recovery, and variant creation.
  */
 
-import type { ActivityTemplate, ExecutionTrace, ExecutedTask } from "@metabob/minibob";
+import type { ActivityTemplate } from "@metabob/minibob";
+// Note: ExecutionTrace and ExecutedTask are used internally but not currently needed in types
 
 // =============================================================================
 // FAILURE ANALYSIS TYPES

@@ -126,7 +126,8 @@ describe("VariantCreator", () => {
 
       const result = creator.createVariant(parent, analysis);
 
-      const lineageData = result.template.metadata?.variantLineage as {
+      const metadata = result.template.metadata as Record<string, unknown> | undefined;
+      const lineageData = metadata?.variantLineage as {
         parentId: string;
         generation: number;
       };
