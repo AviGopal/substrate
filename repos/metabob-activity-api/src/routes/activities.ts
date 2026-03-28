@@ -18,6 +18,7 @@ import {
   insertActivity,
   insertExecution,
   getActivityScores,
+  getShapeConditionedScores,
   queryActivitiesByShapes,
   transformToLegacyTemplate,
   isDualWriteEnabled,
@@ -453,6 +454,17 @@ app.post('/templates', async (c) => {
     }
     if (validated.genealogy && Object.keys(validated.genealogy).length > 0) {
       templateRecord.genealogy = validated.genealogy;
+    }
+    // Add impulse definitions for bootstrap templates
+    if (validated.impulses && validated.impulses.length > 0) {
+      templateRecord.impulses = validated.impulses;
+    }
+    // Add input/output schemas for composition
+    if (validated.input_schema) {
+      templateRecord.input_schema = validated.input_schema;
+    }
+    if (validated.output_schema) {
+      templateRecord.output_schema = validated.output_schema;
     }
 
     // Build dynamic query with only provided fields
@@ -1844,6 +1856,7 @@ app.get('/corpus-summary', async (c) => {
     const fullOrgId = orgId.startsWith('organizations:') ? orgId : `organizations:${orgId}`;
 
     // Query aggregate metrics from v_activity_score
+    // Note: org_id in the view is a record reference, so we use type::record() to convert
     const summaryResult = await surrealDB.query(`
       SELECT
         count() AS total_activities,
@@ -1855,7 +1868,7 @@ app.get('/corpus-summary', async (c) => {
         count(IF total_executions < 5 THEN 1 ELSE NONE END) AS exploration_count,
         count(IF total_executions >= 10 THEN 1 ELSE NONE END) AS exploitation_count
       FROM v_activity_score
-      WHERE org_id = $org_id
+      WHERE org_id = type::record($org_id)
       GROUP ALL
     `, { org_id: fullOrgId });
 
@@ -2035,19 +2048,48 @@ app.post('/recommend', async (c) => {
       }
     }
 
-    // Get Thompson Sampling scores from v_activity_score (or fallback to variant_performance_metrics)
+    // Get Thompson Sampling scores
+    // Use shape-conditioned scores when impulse_shapes are provided (goal-aware recommendations)
+    // This allows learning different success rates for different input contexts
     const activityIds = templates.map((t: any) => t.id || t.variant_id);
     let scoresMap = new Map<string, ActivityScore>();
+    let scoreMethod: 'shape_conditioned' | 'global' | 'legacy' = 'legacy';
 
     if (activityIds.length > 0 && orgId) {
-      const scoresResult = await getActivityScores(orgId, activityIds, jwtAuth?.jwtToken);
-      for (const score of scoresResult.data) {
-        scoresMap.set(score.activity_id, score);
+      // Use shape-conditioned scores when shapes are provided
+      if (impulse_shapes && impulse_shapes.length > 0) {
+        const shapeScoresResult = await getShapeConditionedScores(
+          orgId,
+          activityIds,
+          impulse_shapes,
+          jwtAuth?.jwtToken
+        );
+        for (const score of shapeScoresResult.data) {
+          scoresMap.set(score.activity_id, score);
+        }
+        // Check if we got shape-conditioned data or fell back to global
+        const hasShapeData = shapeScoresResult.data.some(
+          (s: any) => s.shape_signature && s.shape_signature.length > 0
+        );
+        scoreMethod = hasShapeData ? 'shape_conditioned' : 'global';
+        logger.info('[paradigm] Shape-conditioned scores fetched', {
+          count: shapeScoresResult.data.length,
+          path: shapeScoresResult.path,
+          scoreMethod,
+          impulse_shapes,
+        });
+      } else {
+        // Fall back to global activity scores
+        const scoresResult = await getActivityScores(orgId, activityIds, jwtAuth?.jwtToken);
+        for (const score of scoresResult.data) {
+          scoresMap.set(score.activity_id, score);
+        }
+        scoreMethod = 'global';
+        logger.debug('[paradigm] Activity scores fetched (global)', {
+          count: scoresResult.data.length,
+          path: scoresResult.path,
+        });
       }
-      logger.debug('[paradigm] Activity scores fetched', {
-        count: scoresResult.data.length,
-        path: scoresResult.path,
-      });
     } else {
       // Fallback: Use enrichTemplatesWithMetrics for legacy path
       templates = await enrichTemplatesWithMetrics(templates);
@@ -2077,11 +2119,16 @@ app.post('/recommend', async (c) => {
           output_schema: template.output_schema || null,
           selection_metadata: {
             method: 'thompson_sampling',
+            score_source: scoreMethod, // shape_conditioned | global | legacy
             alpha,
             beta: betaVal,
             sample,
             score: sample, // Use sample as score for ranking
             query_path: queryPath, // For monitoring
+            // Include shape signature if shape-conditioned
+            ...(scoreMethod === 'shape_conditioned' && scores && 'shape_signature' in scores
+              ? { shape_signature: (scores as any).shape_signature }
+              : {}),
           },
         };
       })
@@ -2090,9 +2137,17 @@ app.post('/recommend', async (c) => {
       // Take top N
       .slice(0, limit);
 
+    // Generate correlation IDs for selection-to-execution linkage
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    recommendations.forEach((rec: any, index: number) => {
+      rec.correlation_id = `sel_${timestamp}_${randomSuffix}_${index}`;
+    });
+
     logger.info('Recommendations generated', {
       count: recommendations.length,
-      top: recommendations[0]?.template_id
+      top: recommendations[0]?.template_id,
+      correlationIds: recommendations.map((r: any) => r.correlation_id),
     });
 
     // Log Thompson Sampling selections for explainability (non-blocking)
@@ -2100,21 +2155,39 @@ app.post('/recommend', async (c) => {
     if (orgId && recommendations.length > 0) {
       // Log each selection to thompson_selection_log for explainability
       const selectionLogs = recommendations.map((rec: any, index: number) => ({
-        execution_id: `recommend-${Date.now()}-${index}`, // Placeholder until actual execution
+        correlation_id: rec.correlation_id, // Link to execution via correlation_id
+        execution_id: `recommend-${timestamp}-${index}`, // Placeholder until actual execution
         activity_id: rec.template_id,
         thompson_sample: rec.selection_metadata.sample,
         alpha: rec.selection_metadata.alpha,
         beta: rec.selection_metadata.beta,
         selection_method: 'thompson_sampling',
         candidates_count: templates.length,
-        org_id: orgId,
-        project_id: projectId,
       }));
 
-      // Insert selection logs (fire-and-forget for performance)
+      // Insert selection logs with record references (fire-and-forget for performance)
+      // Use FOR loop to handle array inserts properly
+      // Note: Use type::record() for reliable string-to-record conversion
       surrealDB.query(`
-        INSERT INTO thompson_selection_log $logs
-      `, { logs: selectionLogs }).catch((err: any) => {
+        FOR $log IN $logs {
+          CREATE thompson_selection_log CONTENT {
+            correlation_id: $log.correlation_id,
+            execution_id: $log.execution_id,
+            activity_id: $log.activity_id,
+            thompson_sample: $log.thompson_sample,
+            alpha: $log.alpha,
+            beta: $log.beta,
+            selection_method: $log.selection_method,
+            candidates_count: $log.candidates_count,
+            org_id: type::record('organizations', $org_name),
+            project_id: IF $project_name IS NOT NONE AND $project_name IS NOT NULL THEN type::record('projects', $project_name) ELSE NONE END
+          }
+        }
+      `, {
+        logs: selectionLogs,
+        org_name: orgId, // Just the name part, not the full record ref
+        project_name: projectId, // Just the name part
+      }).catch((err: any) => {
         logger.warn('Failed to log Thompson selections', { error: err.message });
       });
 

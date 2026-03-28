@@ -1053,6 +1053,147 @@ router.post('/resolve', async (c) => {
         } as ImpulseResolveResponse, 200);
       }
 
+      // =============================================================================
+      // BOOTSTRAP TEMPLATE POINTER TYPES
+      // These support the self-hosting genesis and trailblazer templates
+      // =============================================================================
+
+      case 'activityTemplateRecommendation': {
+        // Search for templates similar to a goal/query
+        // Used by genesis template to learn from existing templates
+        const query_text = pointer.query || '';
+        const category = pointer.category;
+        const limit = pointer.limit || 3;
+
+        logger.info('Resolving activityTemplateRecommendation', { query_text, category, limit });
+
+        // Query templates with optional category filter
+        let whereClause = '';
+        const params: Record<string, any> = { limit };
+
+        // Handle category filter - can be string or array
+        const categoryValue = Array.isArray(category) ? category[0] : category;
+        if (categoryValue && categoryValue !== 'tool') {
+          whereClause = 'WHERE category = $category';
+          params.category = categoryValue;
+        }
+
+        const templatesQuery = `
+          SELECT variant_id, variant_name, description, category, task_steps, created_at
+          FROM activity_template
+          ${whereClause}
+          ORDER BY created_at DESC
+          LIMIT $limit
+        `;
+
+        const templates = await surrealDB.query<any>(templatesQuery, params);
+
+        if (templates.length === 0) {
+          content = `# Similar Templates\n\nNo templates found matching query: "${query_text}"`;
+        } else {
+          content = formatTemplateListAsMarkdown(templates, `Templates similar to: "${query_text}"`);
+        }
+        break;
+      }
+
+      case 'activityTemplatesByMetrics': {
+        // Get top-performing templates by metrics
+        // Used by genesis template to learn task structure from successful templates
+        const sortBy = pointer.sortBy || 'success_rate';
+        const minExecutions = pointer.minExecutions || 5;
+        const limit = pointer.limit || 2;
+
+        logger.info('Resolving activityTemplatesByMetrics', { sortBy, minExecutions, limit });
+
+        // First get metrics for top-performing templates
+        const orderField = sortBy === 'success_rate' ? 'success_rate' : 'total_executions';
+        const metricsQuery = `
+          SELECT variant_id, total_executions, success_rate, avg_duration_ms, avg_cost_usd
+          FROM variant_performance_metrics
+          WHERE total_executions >= $min_executions
+          ORDER BY ${orderField} DESC
+          LIMIT $limit
+        `;
+
+        const metrics = await surrealDB.query<any>(metricsQuery, {
+          min_executions: minExecutions,
+          limit
+        });
+
+        if (metrics.length === 0) {
+          content = `# Top Performing Templates\n\nNo templates found with at least ${minExecutions} executions.`;
+        } else {
+          // Fetch template details for the top performers
+          const variantIds = metrics.map((m: any) => m.variant_id);
+          const templateQuery = `
+            SELECT variant_id, variant_name, description, category, task_steps
+            FROM activity_template
+            WHERE variant_id IN $variant_ids
+          `;
+          const templateDetails = await surrealDB.query<any>(templateQuery, { variant_ids: variantIds });
+
+          // Merge metrics with template details
+          const templates = metrics.map((m: any) => {
+            const template = templateDetails.find((t: any) => t.variant_id === m.variant_id) || {};
+            return {
+              ...template,
+              total_executions: m.total_executions,
+              success_rate: m.success_rate,
+              avg_duration_ms: m.avg_duration_ms,
+              avg_cost_usd: m.avg_cost_usd,
+            };
+          });
+
+          content = formatTemplateListWithMetricsAsMarkdown(templates);
+        }
+        break;
+      }
+
+      case 'executionTraces': {
+        // Get multiple execution traces for a template
+        // Used by trailblazer template to analyze failure patterns
+        const templateId = pointer.templateId;
+        const success = pointer.success; // boolean or undefined
+        const limit = pointer.limit || 5;
+
+        if (!templateId) {
+          return c.json({
+            success: false,
+            error: 'templateId required for executionTraces pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        logger.info('Resolving executionTraces', { templateId, success, limit });
+
+        let whereClause = 'WHERE variant_id = $template_id';
+        const params: Record<string, any> = { template_id: templateId, limit };
+
+        if (success === true) {
+          whereClause += ' AND status = "success"';
+        } else if (success === false) {
+          whereClause += ' AND (status = "failure" OR status = "failed")';
+        }
+
+        const tracesQuery = `
+          SELECT execution_id, variant_id, status, duration_ms, cost_usd,
+                 error_message, failed_task_id, execution_trace, created_at
+          FROM activity_execution_traces
+          ${whereClause}
+          ORDER BY created_at DESC
+          LIMIT $limit
+        `;
+
+        const traces = await surrealDB.query<any>(tracesQuery, params);
+
+        if (traces.length === 0) {
+          const filterDesc = success === true ? 'successful' : success === false ? 'failed' : 'any';
+          content = `# Execution Traces\n\nNo ${filterDesc} executions found for template: ${templateId}`;
+        } else {
+          content = formatMultipleTracesAsMarkdown(traces, templateId, success);
+        }
+        break;
+      }
+
       default:
         return c.json({
           success: false,
@@ -1512,6 +1653,217 @@ function formatSuccessPatternsAsMarkdown(successes: any[]): string {
     }
   } else {
     md += `No tool usage data available.\n`;
+  }
+
+  return md;
+}
+
+/**
+ * Format a list of templates as markdown
+ * Used by activityTemplateRecommendation resolver
+ */
+function formatTemplateListAsMarkdown(templates: any[], heading: string): string {
+  let md = `# ${heading}\n\n`;
+  md += `Found ${templates.length} template(s)\n\n`;
+
+  for (const template of templates) {
+    md += `## ${template.variant_name || template.variant_id}\n\n`;
+    md += `**ID**: \`${template.variant_id}\`\n`;
+    md += `**Category**: ${template.category}\n`;
+    md += `**Description**: ${template.description || 'No description'}\n\n`;
+
+    if (template.task_steps && template.task_steps.length > 0) {
+      md += `### Task Structure (${template.task_steps.length} tasks)\n\n`;
+      for (const task of template.task_steps) {
+        md += `#### ${task.id}\n`;
+        md += `- **Description**: ${task.description}\n`;
+        md += `- **Subagent**: ${task.subagent || 'default'}\n`;
+        if (task.dependencies && task.dependencies.length > 0) {
+          md += `- **Dependencies**: ${task.dependencies.join(', ')}\n`;
+        }
+        if (task.prompt?.variables && task.prompt.variables.length > 0) {
+          md += `- **Variables**: ${task.prompt.variables.map((v: any) => `${v.name} (${v.type})`).join(', ')}\n`;
+        }
+        md += `\n**Prompt Template**:\n\`\`\`\n${task.prompt?.template?.substring(0, 500) || 'No template'}${task.prompt?.template?.length > 500 ? '\n...(truncated)' : ''}\n\`\`\`\n\n`;
+      }
+    }
+    md += `---\n\n`;
+  }
+
+  return md;
+}
+
+/**
+ * Format templates with performance metrics as markdown
+ * Used by activityTemplatesByMetrics resolver
+ */
+function formatTemplateListWithMetricsAsMarkdown(templates: any[]): string {
+  let md = `# Top Performing Templates\n\n`;
+  md += `Found ${templates.length} template(s) with sufficient execution history\n\n`;
+
+  md += `## Performance Summary\n\n`;
+  md += `| Template | Success Rate | Executions | Avg Duration | Avg Cost |\n`;
+  md += `|----------|--------------|------------|--------------|----------|\n`;
+
+  for (const t of templates) {
+    const successRate = t.success_rate ? `${(t.success_rate * 100).toFixed(1)}%` : 'N/A';
+    const avgDuration = t.avg_duration_ms ? `${t.avg_duration_ms.toFixed(0)}ms` : 'N/A';
+    const avgCost = t.avg_cost_usd ? `$${t.avg_cost_usd.toFixed(4)}` : 'N/A';
+    md += `| ${t.variant_name || t.variant_id} | ${successRate} | ${t.total_executions || 0} | ${avgDuration} | ${avgCost} |\n`;
+  }
+  md += `\n`;
+
+  // Detailed task structure for learning
+  for (const template of templates) {
+    md += `## ${template.variant_name || template.variant_id}\n\n`;
+    md += `**ID**: \`${template.variant_id}\`\n`;
+    md += `**Category**: ${template.category}\n`;
+    md += `**Description**: ${template.description || 'No description'}\n`;
+    md += `**Success Rate**: ${template.success_rate ? `${(template.success_rate * 100).toFixed(1)}%` : 'N/A'}\n\n`;
+
+    if (template.task_steps && template.task_steps.length > 0) {
+      md += `### Task Structure\n\n`;
+      for (const task of template.task_steps) {
+        md += `#### ${task.id}\n`;
+        md += `**Description**: ${task.description}\n`;
+        if (task.prompt?.template) {
+          md += `\n**Prompt** (truncated):\n\`\`\`\n${task.prompt.template.substring(0, 300)}${task.prompt.template.length > 300 ? '\n...' : ''}\n\`\`\`\n`;
+        }
+        md += `\n`;
+      }
+    }
+    md += `---\n\n`;
+  }
+
+  return md;
+}
+
+/**
+ * Format multiple execution traces as markdown
+ * Used by executionTraces resolver for trailblazer template
+ */
+function formatMultipleTracesAsMarkdown(traces: any[], templateId: string, successFilter?: boolean): string {
+  const filterDesc = successFilter === true ? 'Successful' : successFilter === false ? 'Failed' : 'All';
+  let md = `# ${filterDesc} Execution Traces for ${templateId}\n\n`;
+  md += `Found ${traces.length} execution(s)\n\n`;
+
+  // Summary table
+  md += `## Summary\n\n`;
+  md += `| Execution ID | Status | Duration | Cost | Time |\n`;
+  md += `|--------------|--------|----------|------|------|\n`;
+
+  for (const trace of traces) {
+    const id = trace.execution_id?.substring(0, 12) || 'unknown';
+    const status = trace.status || 'unknown';
+    const duration = trace.duration_ms ? `${trace.duration_ms}ms` : 'N/A';
+    const cost = trace.cost_usd ? `$${trace.cost_usd.toFixed(4)}` : 'N/A';
+    const time = trace.created_at ? new Date(trace.created_at).toISOString().split('T')[0] : 'N/A';
+    md += `| ${id}... | ${status} | ${duration} | ${cost} | ${time} |\n`;
+  }
+  md += `\n`;
+
+  // Detailed traces
+  for (const trace of traces) {
+    md += `## Execution: ${trace.execution_id}\n\n`;
+    md += `**Status**: ${trace.status}\n`;
+    md += `**Duration**: ${trace.duration_ms || 'N/A'}ms\n`;
+    md += `**Cost**: $${trace.cost_usd?.toFixed(4) || 'N/A'}\n\n`;
+
+    // Error details for failed executions
+    if (trace.status === 'failure' || trace.status === 'failed') {
+      md += `### Error Details\n\n`;
+      if (trace.error_message) {
+        md += `**Error**: ${trace.error_message}\n`;
+      }
+      if (trace.failed_task_id) {
+        md += `**Failed Task**: ${trace.failed_task_id}\n`;
+      }
+      md += `\n`;
+    }
+
+    // Task execution details
+    if (trace.execution_trace?.tasks && trace.execution_trace.tasks.length > 0) {
+      md += `### Task Execution Flow\n\n`;
+      for (const task of trace.execution_trace.tasks) {
+        const taskStatus = task.result?.status || task.status || 'unknown';
+        const statusIcon = taskStatus === 'completed' || taskStatus === 'success' ? '✓' : taskStatus === 'failed' ? '✗' : '○';
+        md += `#### ${statusIcon} ${task.id || task.task_id}\n`;
+
+        if (task.description) {
+          md += `${task.description}\n\n`;
+        }
+
+        // Tool calls
+        if (task.toolCalls && task.toolCalls.length > 0) {
+          md += `**Tool Calls**:\n`;
+          for (const call of task.toolCalls.slice(0, 5)) { // Limit to 5 calls per task
+            const callStatus = call.result?.success ? '✓' : '✗';
+            md += `- ${callStatus} \`${call.name}\``;
+            if (call.result?.error) {
+              md += ` - Error: ${call.result.error.substring(0, 100)}`;
+            }
+            md += `\n`;
+          }
+          if (task.toolCalls.length > 5) {
+            md += `- ... and ${task.toolCalls.length - 5} more calls\n`;
+          }
+          md += `\n`;
+        }
+
+        // Error for failed task
+        if (task.result?.error) {
+          md += `**Error**: ${task.result.error}\n\n`;
+        }
+      }
+    }
+
+    // Output state if available
+    if (trace.execution_trace?.filesModified?.length > 0) {
+      md += `### Files Modified\n\n`;
+      for (const file of trace.execution_trace.filesModified) {
+        md += `- ${file}\n`;
+      }
+      md += `\n`;
+    }
+
+    md += `---\n\n`;
+  }
+
+  // Pattern analysis for failed traces
+  if (successFilter === false && traces.length > 1) {
+    md += `## Failure Pattern Analysis\n\n`;
+
+    // Group by failed task
+    const failedTasks: Record<string, number> = {};
+    const errorPatterns: Record<string, number> = {};
+
+    for (const trace of traces) {
+      if (trace.failed_task_id) {
+        failedTasks[trace.failed_task_id] = (failedTasks[trace.failed_task_id] || 0) + 1;
+      }
+      if (trace.error_message) {
+        const errorKey = trace.error_message.substring(0, 50);
+        errorPatterns[errorKey] = (errorPatterns[errorKey] || 0) + 1;
+      }
+    }
+
+    if (Object.keys(failedTasks).length > 0) {
+      md += `**Most Common Failing Tasks**:\n`;
+      const sortedTasks = Object.entries(failedTasks).sort((a, b) => b[1] - a[1]);
+      for (const [task, count] of sortedTasks.slice(0, 3)) {
+        md += `- \`${task}\`: ${count} failures (${Math.round(count / traces.length * 100)}%)\n`;
+      }
+      md += `\n`;
+    }
+
+    if (Object.keys(errorPatterns).length > 0) {
+      md += `**Common Error Patterns**:\n`;
+      const sortedErrors = Object.entries(errorPatterns).sort((a, b) => b[1] - a[1]);
+      for (const [error, count] of sortedErrors.slice(0, 3)) {
+        md += `- "${error}...": ${count} occurrences\n`;
+      }
+      md += `\n`;
+    }
   }
 
   return md;

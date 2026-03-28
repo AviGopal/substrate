@@ -60,8 +60,8 @@ DEFINE FIELD description ON activity_template TYPE string
   COMMENT "Template description";
 
 DEFINE FIELD category ON activity_template TYPE string
-  ASSERT $value IN ['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']
-  COMMENT "Template category";
+  ASSERT $value IN ['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']
+  COMMENT "Template category (meta = activities that operate on the activity system itself)";
 
 DEFINE FIELD task_steps ON activity_template TYPE option<array<object>> FLEXIBLE
   COMMENT "Array of task definitions (flexible structure - no nested validation)";

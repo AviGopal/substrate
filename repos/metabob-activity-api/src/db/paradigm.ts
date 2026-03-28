@@ -732,3 +732,204 @@ export function transformToLegacyTemplate(activity: ParadigmActivity): any {
     updated_at: activity.updated_at,
   };
 }
+
+// =============================================================================
+// Shape-Conditioned Thompson Sampling (goal-aware recommendations)
+// =============================================================================
+
+export interface ShapeConditionedScore extends ActivityScore {
+  shape_signature: string[];
+}
+
+/**
+ * Compute canonical shape signature from an array of shapes.
+ * This is a sorted, deduplicated array for consistent grouping.
+ */
+export function computeShapeSignature(shapes: string[]): string[] {
+  return [...new Set(shapes)].sort();
+}
+
+/**
+ * Get shape-conditioned Thompson priors for activities.
+ *
+ * This allows recommendations to be informed by how well an activity
+ * performs with specific input shape combinations (goals).
+ *
+ * Example: "debug-null-pointer" might have:
+ *   - α=15, β=3 when input_shapes = ['error', 'source_code']
+ *   - α=5, β=8 when input_shapes = ['goal']
+ *
+ * This lets us learn that the activity works great for debugging errors
+ * but poorly when given just a vague goal.
+ *
+ * @param orgId - Organization ID
+ * @param activityIds - Activity IDs to get scores for
+ * @param inputShapes - Input shapes being provided (for matching)
+ * @param jwtToken - Optional JWT for RBAC
+ */
+export async function getShapeConditionedScores(
+  orgId: string,
+  activityIds: string[],
+  inputShapes: string[],
+  jwtToken?: string | null
+): Promise<QueryPathResult<ShapeConditionedScore>> {
+  const startTime = Date.now();
+
+  if (!inputShapes || inputShapes.length === 0) {
+    // No shapes provided - fall back to global scores
+    const globalResult = await getActivityScores(orgId, activityIds, jwtToken);
+    return {
+      data: globalResult.data.map(score => ({
+        ...score,
+        shape_signature: [],
+      })),
+      path: globalResult.path,
+      latency_ms: Date.now() - startTime,
+    };
+  }
+
+  // Compute canonical signature for matching
+  const signature = computeShapeSignature(inputShapes);
+  const fullOrgId = orgId.startsWith('organizations:') ? orgId : `organizations:${orgId}`;
+
+  try {
+    // Query shape-conditioned scores
+    // Note: We look for exact match on shape_signature
+    const query = `
+      SELECT * FROM v_shape_conditioned_score
+      WHERE org_id = $org_id
+        AND activity_id IN $activity_ids
+        AND shape_signature = $signature
+    `;
+
+    const params = {
+      org_id: fullOrgId,
+      activity_ids: activityIds,
+      signature,
+    };
+
+    const result = jwtToken
+      ? await queryWithAuth<ShapeConditionedScore>(jwtToken, query, params)
+      : await surrealDB.query<ShapeConditionedScore>(query, params);
+
+    if (result && result.length > 0) {
+      logger.info('[paradigm] Shape-conditioned scores fetched', {
+        count: result.length,
+        signature,
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      });
+
+      return {
+        data: result,
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      };
+    }
+
+    // No exact match - try partial match (shapes that are subsets)
+    // This handles the case where the activity has been used with similar
+    // but not identical shape combinations
+    const subsetQuery = `
+      SELECT * FROM v_shape_conditioned_score
+      WHERE org_id = $org_id
+        AND activity_id IN $activity_ids
+        AND shape_signature ALLINSIDE $signature
+      ORDER BY total_executions DESC
+      LIMIT 1
+    `;
+
+    const subsetResult = jwtToken
+      ? await queryWithAuth<ShapeConditionedScore>(jwtToken, subsetQuery, params)
+      : await surrealDB.query<ShapeConditionedScore>(subsetQuery, params);
+
+    if (subsetResult && subsetResult.length > 0) {
+      logger.debug('[paradigm] Shape-conditioned scores found via subset match', {
+        count: subsetResult.length,
+        signature,
+        matched_signatures: subsetResult.map(s => s.shape_signature),
+      });
+
+      return {
+        data: subsetResult,
+        path: 'new',
+        latency_ms: Date.now() - startTime,
+      };
+    }
+
+    // No shape-conditioned data - fall back to global scores
+    logger.debug('[paradigm] No shape-conditioned scores, falling back to global', {
+      signature,
+      activityIds,
+    });
+
+  } catch (error) {
+    logger.warn('[paradigm] Shape-conditioned score query failed, falling back', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Fallback to global activity scores
+  const globalResult = await getActivityScores(orgId, activityIds, jwtToken);
+  return {
+    data: globalResult.data.map(score => ({
+      ...score,
+      shape_signature: [],
+    })),
+    path: globalResult.path,
+    latency_ms: Date.now() - startTime,
+  };
+}
+
+/**
+ * Get best shape patterns for an activity.
+ * Returns patterns ordered by success rate - useful for debugging
+ * which input combinations work best.
+ */
+export async function getActivityShapePatterns(
+  activityId: string,
+  orgId: string,
+  jwtToken?: string | null
+): Promise<QueryPathResult<ShapeConditionedScore>> {
+  const startTime = Date.now();
+  const fullOrgId = orgId.startsWith('organizations:') ? orgId : `organizations:${orgId}`;
+
+  try {
+    const query = `
+      SELECT * FROM v_shape_conditioned_score
+      WHERE org_id = $org_id
+        AND activity_id = $activity_id
+      ORDER BY total_executions DESC
+      LIMIT 20
+    `;
+
+    const params = { org_id: fullOrgId, activity_id: activityId };
+
+    const result = jwtToken
+      ? await queryWithAuth<ShapeConditionedScore>(jwtToken, query, params)
+      : await surrealDB.query<ShapeConditionedScore>(query, params);
+
+    logger.debug('[paradigm] Activity shape patterns fetched', {
+      activityId,
+      count: result?.length || 0,
+    });
+
+    return {
+      data: result || [],
+      path: 'new',
+      latency_ms: Date.now() - startTime,
+    };
+
+  } catch (error) {
+    logger.warn('[paradigm] Shape patterns query failed', {
+      activityId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return {
+      data: [],
+      path: 'legacy',
+      latency_ms: Date.now() - startTime,
+    };
+  }
+}

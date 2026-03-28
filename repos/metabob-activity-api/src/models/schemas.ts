@@ -85,18 +85,50 @@ export const TemplateListResponseSchema = z.object({
   total: z.number(),
 });
 
+// Template impulse pointer schema
+export const TemplateImpulseSchema = z.object({
+  id: z.string(),
+  pointer: z.object({
+    type: z.string(),
+  }).passthrough(), // Allow additional fields
+  budget: z.number(),
+  priority: z.enum(['critical', 'high', 'medium', 'low']),
+  description: z.string().optional(),
+});
+
 // Template Registration/Creation schemas
 export const CreateTemplateRequestSchema = z.object({
   variant_id: z.string(),
   activity_id: z.string(),
   variant_name: z.string(),
   description: z.string(),
-  category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']),
+  category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']),
   task_steps: z.array(TemplateTaskSchema),
   scope: z.enum(['global', 'org', 'project']).default('global'),
   org_id: z.string().nullable().optional(),
   project_id: z.string().nullable().optional(),
   genealogy: z.record(z.any()).optional(),
+  // Template-level impulse definitions
+  impulses: z.array(TemplateImpulseSchema).optional(),
+  // Input/output schemas for composition
+  input_schema: z.object({
+    required: z.array(z.object({
+      shape: z.string(),
+      description: z.string().optional(),
+      collection: z.boolean().optional(),
+    })).optional(),
+    optional: z.array(z.object({
+      shape: z.string(),
+      description: z.string().optional(),
+      collection: z.boolean().optional(),
+    })).optional(),
+  }).optional(),
+  output_schema: z.object({
+    produces: z.array(z.object({
+      shape: z.string(),
+      description: z.string().optional(),
+    })).optional(),
+  }).optional(),
 });
 
 export const CreateTemplateResponseSchema = z.object({
@@ -412,7 +444,7 @@ export type ExecutionSequenceResponse = z.infer<typeof ExecutionSequenceResponse
 export const GoalExecutionPathSchema = z.object({
   goal_hash: z.string(),
   goal_text: z.string(),
-  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']),
+  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']),
   
   // Path definition
   path_activities: z.array(z.string()),
@@ -443,7 +475,7 @@ export const GoalExecutionPathSchema = z.object({
 
 export const PathRecordRequestSchema = z.object({
   goal_text: z.string(),
-  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']),
+  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']),
   path_activities: z.array(z.string()).min(1),
   success: z.boolean(),
   duration_ms: z.number().int(),
@@ -456,7 +488,7 @@ export const PathRecordRequestSchema = z.object({
 export const PathQuerySchema = z.object({
   goal_text: z.string().optional(),
   goal_hash: z.string().optional(),
-  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']).optional(),
+  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']).optional(),
   min_executions: z.number().int().positive().default(1),
   limit: z.number().int().positive().default(10),
   offset: z.number().int().nonnegative().default(0),
@@ -464,7 +496,7 @@ export const PathQuerySchema = z.object({
 
 export const PathRecommendationRequestSchema = z.object({
   goal_text: z.string(),
-  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']).optional(),
+  goal_category: z.enum(['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']).optional(),
   exploration_rate: z.number().min(0).max(1).default(0.1), // 10% exploration
   top_k: z.number().int().positive().default(3),
 });
@@ -621,20 +653,24 @@ export const ImpulseResolveRequestSchema = z.object({
     activityId: z.string().optional(),
     // For recentExecutions pointer type
     filter: z.enum(['failed', 'successful', 'all']).optional(),
-    limit: z.number().int().positive().optional(),
+    limit: z.union([z.number(), z.string().transform(v => parseInt(v, 10))]).pipe(z.number().int().positive()).optional(),
     since: z.string().optional(), // ISO date string
     // Analysis-specific pointer types (M3 - Impulse Bridge)
     resultId: z.string().optional(), // For analysisResult pointer
     componentIds: z.array(z.string()).optional(), // For cochangeSuggestions pointer
     changedFiles: z.array(z.string()).optional(), // For impactAnalysis pointer
-    query: z.string().optional(), // For codebaseSearch pointer
+    query: z.string().optional(), // For codebaseSearch and activityTemplateRecommendation pointer
     maxDepth: z.number().int().positive().optional(), // For impactAnalysis
     format: z.enum(['full', 'summary']).optional(), // For analysisResult
     severity: z.array(z.string()).optional(), // For codebaseSearch filters
-    category: z.array(z.string()).optional(), // For codebaseSearch filters
+    category: z.union([z.array(z.string()), z.string()]).optional(), // For codebaseSearch/template filters (accepts string or array)
     status: z.enum(['open', 'in_progress', 'resolved', 'ignored']).optional(), // For problemCluster filter
     // For activityExecutionTrace pointer type
     includeImpulses: z.boolean().optional(), // Include referenced impulses in response
+    // For bootstrap template pointer types
+    sortBy: z.enum(['success_rate', 'total_executions', 'avg_duration_ms']).optional(), // For activityTemplatesByMetrics
+    minExecutions: z.union([z.number(), z.string().transform(v => parseInt(v, 10))]).pipe(z.number().int().nonnegative()).optional(), // For activityTemplatesByMetrics
+    success: z.boolean().optional(), // For executionTraces - filter by success/failure
   }),
 });
 

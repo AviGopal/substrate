@@ -49,9 +49,9 @@ DEFINE FIELD IF NOT EXISTS description ON activity_registry TYPE string
   COMMENT "What this activity does";
 
 DEFINE FIELD IF NOT EXISTS category ON activity_registry TYPE string
-  ASSERT $value IN ['feature', 'bugfix', 'refactor', 'tool', 'infrastructure']
+  ASSERT $value IN ['feature', 'bugfix', 'refactor', 'tool', 'infrastructure', 'meta']
   VALUE $value OR 'infrastructure'
-  COMMENT "Activity category";
+  COMMENT "Activity category (meta = self-referential activities)";
 
 -- Execution format (how to invoke this activity)
 DEFINE FIELD IF NOT EXISTS execution_format ON activity_registry TYPE string
