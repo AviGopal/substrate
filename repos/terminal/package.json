@@ -1,0 +1,22 @@
+{
+  "name": "@metabob/terminal-vessel",
+  "version": "1.0.0",
+  "description": "General-purpose stateful terminal vessel with multi-viewer sync and replay",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "node-pty": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "bun-types": "^1.0.25",
+    "typescript": "^5.3.3"
+  }
+}
