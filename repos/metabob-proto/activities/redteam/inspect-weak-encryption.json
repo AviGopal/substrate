@@ -1,0 +1,135 @@
+{
+  "activity_id": "inspect-weak-encryption",
+  "name": "Test Encryption Implementation",
+  "description": "Red team: validate encryption strength, key management, and cryptographic implementation",
+  "category": "security",
+  "variant_id": "inspect-weak-encryption",
+  "learning_mode": "inverse",
+  "success_when": "weak_crypto_found",
+  "contextRequirements": [
+    {
+      "key": "respectEndpoint",
+      "type": "memo",
+      "hint": "respect vessel endpoint for testing",
+      "impulseTypes": ["memo"],
+      "required": false,
+      "budgetRange": [50, 100]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "test-encryption-at-rest",
+      "subagent": "general",
+      "description": "Check if secrets are encrypted in storage",
+      "dependencies": [],
+      "prompt": {
+        "template": "Test encryption at rest for stored secrets.\\n\\n## Attack Vector: Unencrypted Storage\\n\\n```bash\\nENDPOINT=${RESPECT_ENDPOINT:-http://respect:8082}\\n\\necho \\\"Testing: Encryption at rest\\\"\\n\\n# Check SurrealDB directly (bypass API)\\nSURREALDB_URL=${SURREALDB_URL:-http://surrealdb:8000}\\nSURREALDB_NS=${SURREALDB_NAMESPACE:-activity-system}\\nSURREALDB_DB=${SURREALDB_DATABASE:-learning_loop}\\n\\n# Query raw secret records\\ncurl -s -X POST \\\"$SURREALDB_URL/sql\\\" \\\\\\n  -u \\\"root:${SURREALDB_PASSWORD:-changeme}\\\" \\\\\\n  -H \\\"surreal-ns: $SURREALDB_NS\\\" \\\\\\n  -H \\\"surreal-db: $SURREALDB_DB\\\" \\\\\\n  -d \\\"SELECT * FROM secret LIMIT 5\\\" > /tmp/raw-secrets.json\\n\\n# Check if 'value' field contains plaintext\\nif jq -e '.result[0][] | select(.value != null) | .value | select(test(\\\"^[A-Za-z0-9+/=]+$\\\") | not)' /tmp/raw-secrets.json 2>/dev/null; then\\n  # Found plaintext that doesn't look like base64\\n  cat > /tmp/vulnerability-plaintext-storage.json <<EOF\\n{\\n  \\\"type\\\": \\\"weak_encryption\\\",\\n  \\\"severity\\\": \\\"critical\\\",\\n  \\\"attack_vector\\\": \\\"plaintext_storage\\\",\\n  \\\"description\\\": \\\"Secrets stored in plaintext in database\\\",\\n  \\\"evidence\\\": {\\n    \\\"table\\\": \\\"secret\\\",\\n    \\\"database\\\": \\\"$SURREALDB_DB\\\"\\n  },\\n  \\\"remediation\\\": [\\n    \\\"Implement AES-256-GCM encryption for secret values\\\",\\n    \\\"Encrypt all existing secrets\\\",\\n    \\\"Store encryption keys in secure key management system\\\",\\n    \\\"Use different keys per secret or tenant\\\"\\n  ]\\n}\\nEOF\\n  echo \\\"FOUND: true\\\" > /tmp/vulnerability-found.txt\\n  echo \\\"🚨 VULNERABILITY: Secrets stored in plaintext\\\"\\nelse\\n  echo \\\"✓ PASS: Secrets appear to be encrypted (base64-encoded or encrypted)\\\"\\n  echo \\\"FOUND: false\\\" > /tmp/vulnerability-found.txt\\nfi\\n```\\n\\n## Success Criteria (Inverse)\\n\\nFinding plaintext secrets = successful test (bad for security).",
+        "variables": [
+          {
+            "name": "RESPECT_ENDPOINT",
+            "type": "string",
+            "required": false,
+            "default": "http://respect:8082"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 2500,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/vulnerability-found.txt"
+        ],
+        "commands": [
+          "test -f /tmp/vulnerability-found.txt"
+        ]
+      },
+      "model_hint": "haiku"
+    },
+    {
+      "id": "test-weak-algorithms",
+      "subagent": "general",
+      "description": "Check for weak cryptographic algorithms",
+      "dependencies": ["test-encryption-at-rest"],
+      "prompt": {
+        "template": "Test for weak or deprecated crypto algorithms.\\n\\n## Attack Vector: Weak Algorithms\\n\\n```bash\\nENDPOINT=${RESPECT_ENDPOINT:-http://respect:8082}\\n\\necho \\\"Testing: Cryptographic algorithm strength\\\"\\n\\n# Check TLS version and ciphers\\necho \\\"Checking TLS configuration...\\\"\\nopenssl s_client -connect ${RESPECT_ENDPOINT#http://} -tls1 2>&1 | grep -q 'Cipher' && TLS1_SUPPORTED=true || TLS1_SUPPORTED=false\\nopenssl s_client -connect ${RESPECT_ENDPOINT#http://} -tls1_1 2>&1 | grep -q 'Cipher' && TLS1_1_SUPPORTED=true || TLS1_1_SUPPORTED=false\\n\\nWEAK_TLS=false\\n[ \\\"$TLS1_SUPPORTED\\\" = true ] && WEAK_TLS=true\\n[ \\\"$TLS1_1_SUPPORTED\\\" = true ] && WEAK_TLS=true\\n\\nif [ \\\"$WEAK_TLS\\\" = true ]; then\\n  cat > /tmp/vulnerability-weak-tls.json <<EOF\\n{\\n  \\\"type\\\": \\\"weak_encryption\\\",\\n  \\\"severity\\\": \\\"high\\\",\\n  \\\"attack_vector\\\": \\\"weak_tls_version\\\",\\n  \\\"description\\\": \\\"Server supports deprecated TLS 1.0 or 1.1\\\",\\n  \\\"evidence\\\": {\\n    \\\"tls1_supported\\\": $TLS1_SUPPORTED,\\n    \\\"tls1_1_supported\\\": $TLS1_1_SUPPORTED\\n  },\\n  \\\"remediation\\\": [\\n    \\\"Disable TLS 1.0 and 1.1\\\",\\n    \\\"Require TLS 1.2 or higher\\\",\\n    \\\"Use strong cipher suites only\\\"\\n  ]\\n}\\nEOF\\n  echo \\\"FOUND: true\\\" >> /tmp/vulnerability-found.txt\\n  echo \\\"🚨 VULNERABILITY: Weak TLS versions supported\\\"\\nelse\\n  echo \\\"✓ PASS: Only modern TLS versions supported\\\"\\nfi\\n\\n# Check for weak ciphers\\necho \\\"Checking cipher suites...\\\"\\nWEAK_CIPHERS=$(openssl s_client -connect ${RESPECT_ENDPOINT#http://} -cipher 'DES:RC4:MD5' 2>&1 | grep -c 'Cipher')\\n\\nif [ \\\"$WEAK_CIPHERS\\\" -gt 0 ]; then\\n  cat > /tmp/vulnerability-weak-ciphers.json <<EOF\\n{\\n  \\\"type\\\": \\\"weak_encryption\\\",\\n  \\\"severity\\\": \\\"high\\\",\\n  \\\"attack_vector\\\": \\\"weak_cipher_suites\\\",\\n  \\\"description\\\": \\\"Server supports weak cipher suites (DES, RC4, MD5)\\\",\\n  \\\"remediation\\\": [\\n    \\\"Remove weak ciphers from configuration\\\",\\n    \\\"Use only AEAD ciphers (AES-GCM, ChaCha20-Poly1305)\\\"\\n  ]\\n}\\nEOF\\n  echo \\\"FOUND: true\\\" >> /tmp/vulnerability-found.txt\\n  echo \\\"🚨 VULNERABILITY: Weak ciphers enabled\\\"\\nelse\\n  echo \\\"✓ PASS: No weak ciphers detected\\\"\\nfi\\n```",
+        "variables": [
+          {
+            "name": "RESPECT_ENDPOINT",
+            "type": "string",
+            "required": false,
+            "default": "http://respect:8082"
+          }
+        ]
+      },
+      "model_hint": "haiku"
+    },
+    {
+      "id": "test-key-management",
+      "subagent": "general",
+      "description": "Test encryption key storage and rotation",
+      "dependencies": ["test-weak-algorithms"],
+      "prompt": {
+        "template": "Test key management practices.\\n\\n## Attack Vector: Weak Key Management\\n\\n```bash\\necho \\\"Testing: Encryption key management\\\"\\n\\n# Check for hardcoded keys in environment\\nHARDCODED_KEYS=false\\n\\nif env | grep -qE 'ENCRYPTION_KEY|SECRET_KEY|CRYPTO_KEY'; then\\n  HARDCODED_KEYS=true\\n  cat > /tmp/vulnerability-hardcoded-keys.json <<EOF\\n{\\n  \\\"type\\\": \\\"weak_encryption\\\",\\n  \\\"severity\\\": \\\"critical\\\",\\n  \\\"attack_vector\\\": \\\"hardcoded_encryption_keys\\\",\\n  \\\"description\\\": \\\"Encryption keys stored in environment variables\\\",\\n  \\\"remediation\\\": [\\n    \\\"Move encryption keys to HSM or key management service\\\",\\n    \\\"Use AWS KMS, Google Cloud KMS, or HashiCorp Vault\\\",\\n    \\\"Implement automatic key rotation\\\",\\n    \\\"Never store keys in code or environment\\\"\\n  ]\\n}\\nEOF\\n  echo \\\"FOUND: true\\\" >> /tmp/vulnerability-found.txt\\n  echo \\\"🚨 VULNERABILITY: Hardcoded encryption keys\\\"\\nelse\\n  echo \\\"✓ PASS: No hardcoded keys in environment\\\"\\nfi\\n\\n# Check for key rotation\\nENDPOINT=${RESPECT_ENDPOINT:-http://respect:8082}\\n\\n# Query if respect has key rotation enabled\\ncurl -s \\\"$ENDPOINT/health\\\" | jq -e '.key_rotation_enabled == true' >/dev/null 2>&1\\nKEY_ROTATION=$?\\n\\nif [ \\\"$KEY_ROTATION\\\" -ne 0 ]; then\\n  cat > /tmp/vulnerability-no-key-rotation.json <<EOF\\n{\\n  \\\"type\\\": \\\"weak_encryption\\\",\\n  \\\"severity\\\": \\\"medium\\\",\\n  \\\"attack_vector\\\": \\\"no_key_rotation\\\",\\n  \\\"description\\\": \\\"Encryption keys are not rotated automatically\\\",\\n  \\\"remediation\\\": [\\n    \\\"Implement automatic key rotation (90-180 days)\\\",\\n    \\\"Re-encrypt secrets with new keys during rotation\\\",\\n    \\\"Maintain key version history for decryption\\\"\\n  ]\\n}\\nEOF\\n  echo \\\"FOUND: true\\\" >> /tmp/vulnerability-found.txt\\n  echo \\\"🚨 VULNERABILITY: Key rotation not enabled\\\"\\nelse\\n  echo \\\"✓ PASS: Key rotation is configured\\\"\\nfi\\n```",
+        "variables": [
+          {
+            "name": "RESPECT_ENDPOINT",
+            "type": "string",
+            "required": false,
+            "default": "http://respect:8082"
+          }
+        ]
+      },
+      "model_hint": "haiku"
+    },
+    {
+      "id": "compile-crypto-report",
+      "subagent": "general",
+      "description": "Aggregate cryptographic vulnerabilities and create remediation plan",
+      "dependencies": ["test-key-management"],
+      "prompt": {
+        "template": "Compile cryptographic security report.\\n\\n```bash\\n# Count vulnerabilities\\nVULN_COUNT=$(grep -c \\\"FOUND: true\\\" /tmp/vulnerability-found.txt 2>/dev/null || echo 0)\\n\\necho \\\"Cryptographic Vulnerabilities Found: $VULN_COUNT\\\"\\n\\n# Determine highest severity\\nif ls /tmp/vulnerability-*.json 1>/dev/null 2>&1; then\\n  HIGHEST_SEVERITY=$(jq -rs 'map(.severity) | map(select(. == \\\"critical\\\")) | if length > 0 then \\\"critical\\\" elif map(select(. == \\\"high\\\")) | length > 0 then \\\"high\\\" elif map(select(. == \\\"medium\\\")) | length > 0 then \\\"medium\\\" else \\\"low\\\" end' /tmp/vulnerability-*.json)\\nelse\\n  HIGHEST_SEVERITY=\\\"none\\\"\\nfi\\n\\nif [ \\\"$VULN_COUNT\\\" -gt 0 ]; then\\n  cat > /tmp/crypto-report.json <<EOF\\n{\\n  \\\"scan_id\\\": \\\"$(uuidgen)\\\",\\n  \\\"activity_id\\\": \\\"inspect-weak-encryption\\\",\\n  \\\"timestamp\\\": \\\"$(date -Iseconds)\\\",\\n  \\\"target_vessel\\\": \\\"respect\\\",\\n  \\\"vulnerabilities_found\\\": $VULN_COUNT,\\n  \\\"highest_severity\\\": \\\"$HIGHEST_SEVERITY\\\",\\n  \\\"findings\\\": [\\nEOF\\n\\n  # Aggregate vulnerabilities\\n  first=true\\n  for vuln_file in /tmp/vulnerability-*.json; do\\n    [ -f \\\"$vuln_file\\\" ] || continue\\n    [ \\\"$first\\\" = true ] && first=false || echo \\\",\\\" >> /tmp/crypto-report.json\\n    cat \\\"$vuln_file\\\" >> /tmp/crypto-report.json\\n  done\\n\\n  cat >> /tmp/crypto-report.json <<EOF\\n  ],\\n  \\\"compliance_impact\\\": {\\n    \\\"pci_dss\\\": \\\"fails\\\",\\n    \\\"hipaa\\\": \\\"fails\\\",\\n    \\\"gdpr\\\": \\\"at_risk\\\"\\n  }\\n}\\nEOF\\n\\n  echo \\\"📋 Cryptographic Security Report:\\\"\\n  jq . /tmp/crypto-report.json\\n\\n  # Create remediation task\\n  cat > /tmp/fix-task-crypto.json <<EOF\\n{\\n  \\\"task_id\\\": \\\"fix_$(uuidgen)\\\",\\n  \\\"priority\\\": \\\"critical\\\",\\n  \\\"created_by\\\": \\\"inspect-weak-encryption\\\",\\n  \\\"created_at\\\": \\\"$(date -Iseconds)\\\",\\n  \\\"assigned_to\\\": \\\"respect\\\",\\n  \\\"goal\\\": \\\"Fix cryptographic weaknesses in $VULN_COUNT areas\\\",\\n  \\\"remediation_steps\\\": [\\n    \\\"Implement AES-256-GCM for secret encryption\\\",\\n    \\\"Disable TLS 1.0 and 1.1, require TLS 1.3\\\",\\n    \\\"Remove weak cipher suites\\\",\\n    \\\"Move encryption keys to KMS\\\",\\n    \\\"Enable automatic key rotation\\\",\\n    \\\"Re-encrypt all existing secrets with strong crypto\\\"\\n  ],\\n  \\\"compliance_requirements\\\": [\\n    \\\"PCI DSS 4.0 requirement 3.5.1\\\",\\n    \\\"NIST SP 800-175B cryptographic standards\\\",\\n    \\\"OWASP Cryptographic Storage Cheat Sheet\\\"\\n  ],\\n  \\\"verification\\\": \\\"Re-run inspect-weak-encryption after fixes\\\"\\n}\\nEOF\\n\\n  echo \\\"✅ Created cryptographic remediation task\\\"\\n  echo \\\"SUCCESS: true\\\" > /tmp/test-success.txt\\nelse\\n  echo \\\"✓ Cryptographic implementation is secure\\\"\\n  echo \\\"SUCCESS: false\\\" > /tmp/test-success.txt\\nfi\\n\\n# Summary\\ncat > /tmp/crypto-summary.txt <<EOF\\nRed Team Test: Cryptographic Implementation\\nTests Performed: 3 (storage, algorithms, key management)\\nVulnerabilities Found: $VULN_COUNT\\nHighest Severity: $HIGHEST_SEVERITY\\nTest Success (Inverse): $([ \\\"$VULN_COUNT\\\" -gt 0 ] && echo \\\"true\\\" || echo \\\"false\\\")\\nEOF\\n\\ncat /tmp/crypto-summary.txt\\n```",
+        "variables": []
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/crypto-summary.txt",
+          "/tmp/test-success.txt"
+        ],
+        "required_patterns": [
+          "Vulnerabilities Found:"
+        ],
+        "commands": [
+          "test -f /tmp/crypto-summary.txt"
+        ]
+      },
+      "model_hint": "haiku"
+    }
+  ],
+  "integration": {
+    "pre_checks": [
+      "command -v curl >/dev/null 2>&1",
+      "command -v jq >/dev/null 2>&1",
+      "command -v openssl >/dev/null 2>&1"
+    ],
+    "post_checks": [],
+    "quality_gates": []
+  },
+  "outcome_scoring": {
+    "type": "inverse",
+    "score_formula": "vulnerabilities_found * severity_weight",
+    "severity_weights": {
+      "critical": 10,
+      "high": 7,
+      "medium": 4,
+      "low": 1
+    }
+  },
+  "metabob": {
+    "enabled": true,
+    "learning_mode": "inverse",
+    "target_context_tokens": 3500,
+    "annotation_strategy": "key-components"
+  }
+}

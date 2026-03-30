@@ -1,0 +1,195 @@
+{
+  "activity_id": "interpret-test-results",
+  "name": "Interpret Hypothesis Test Results",
+  "description": "Analyze hypothesis test results and decide whether to align code to validators or validators to code",
+  "category": "tool",
+  "execution_type": "template",
+  "input_shapes": ["trace", "goal"],
+  "output_shapes": ["recommendation"],
+  "tasks": [
+    {
+      "id": "analyze-validator-failures",
+      "subagent": "general",
+      "description": "Analyze why validators failed and categorize the failures",
+      "dependencies": [],
+      "prompt": {
+        "template": "Analyze validator failures from the hypothesis test.\n\n**Test ID**: {{testId}}  \n**Current Goal**: {{currentGoal}}\n\n**Inputs**:\n- Read `/tmp/hypothesis-test-{{testId}}/EXECUTION_TRACE.json`\n- Read `/tmp/hypothesis-test-{{testId}}/OBSERVATIONS.md`\n\n**Your Task**: For each failed validator, determine:\n\n1. **Failure Category**:\n   - `pattern_not_found`: Expected pattern missing from code\n   - `file_not_found`: Expected file doesn't exist\n   - `forbidden_pattern_found`: Code has pattern it shouldn't\n   - `structural_mismatch`: Architecture differs from expectation\n\n2. **Failure Reason**:\n   - Is the validator wrong? (code is actually correct)\n   - Is the code wrong? (should match validator)\n   - Is it just different? (alternative valid approach)\n\n3. **Impact on Goal**:\n   - Does this failure block the current goal?\n   - Does it indicate a fundamental misunderstanding?\n   - Is it a minor detail vs architectural difference?\n\n**Output**: Create `/tmp/hypothesis-test-{{testId}}/FAILURE_ANALYSIS.md`\n\nStructure:\n```markdown\n# Validator Failure Analysis\n\n**Test ID**: {{testId}}  \n**Total Failures**: {{count}}\n\n## Failure Breakdown\n\n### Failure 1: {{validator name}}\n\n**Category**: pattern_not_found  \n**Expected**: Pattern `redis` in files  \n**Observed**: Pattern `Map<string, any>` found instead\n\n**Reason Analysis**:\n- Validator expected Redis for distributed caching\n- Code uses in-memory Map instead\n- Both are valid caching approaches\n- In-memory is simpler but not distributed\n\n**Goal Impact**: {{HIGH/MEDIUM/LOW}}\n- Current goal: \"{{currentGoal}}\"\n- Impact: {{explanation of how this affects the goal}}\n\n**Alignment Recommendation**: {{ALIGN_CODE / ALIGN_VALIDATOR / ACCEPT_DIFFERENCE}}\n\nReasoning:\n{{explain why code should change OR validator should change OR both are acceptable}}\n\n### Failure 2: ...\n\n## Summary\n\n**Align Code**: {{count}} failures recommend fixing code  \n**Align Validator**: {{count}} failures recommend updating validator  \n**Accept Difference**: {{count}} failures are acceptable alternatives\n```",
+        "variables": [
+          {
+            "name": "testId",
+            "type": "string",
+            "required": true,
+            "description": "Test ID from hypothesis test"
+          },
+          {
+            "name": "currentGoal",
+            "type": "string",
+            "required": true,
+            "description": "Current development goal that prompted this hypothesis"
+          }
+        ]
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/hypothesis-test-{{testId}}/FAILURE_ANALYSIS.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Failure Breakdown",
+            "description": "Must analyze failures"
+          },
+          {
+            "pattern": "**Alignment Recommendation**:",
+            "description": "Must recommend alignment strategy"
+          },
+          {
+            "pattern": "## Summary",
+            "description": "Must summarize recommendations"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "query-goal-history",
+      "subagent": "general",
+      "description": "Retrieve historical goals to understand user preferences and patterns",
+      "dependencies": [],
+      "prompt": {
+        "template": "Query goal history to inform alignment decisions.\n\n**Your Task**:\n1. Query the backend for recent goals (via MCP or API)\n2. Look for patterns:\n   - Does user prefer specific technologies? (Redis vs in-memory)\n   - Are there consistency patterns? (always use X for Y)\n   - What quality attributes matter? (scalability, simplicity, cost)\n\n**MCP Query** (if available):\n```typescript\nquery_impulses({\n  shape: \"goal\",\n  limit: 20,\n  order_by: \"created_at DESC\"\n})\n```\n\n**Analysis**:\n- Count mentions of key technologies\n- Identify recurring patterns\n- Note explicit preferences in goal descriptions\n\n**Output**: Create `/tmp/hypothesis-test-{{testId}}/GOAL_HISTORY.md`\n\nStructure:\n```markdown\n# Goal History Analysis\n\n**Goals Analyzed**: {{count}}  \n**Date Range**: {{oldest}} to {{newest}}\n\n## Technology Preferences\n\n### Redis\n- Mentioned in: {{count}} goals\n- Context: {{distributed caching, session storage, etc.}}\n- Preference strength: {{HIGH/MEDIUM/LOW}}\n\n### In-Memory Storage\n- Mentioned in: {{count}} goals\n- Context: {{simple caching, development mode, etc.}}\n- Preference strength: {{HIGH/MEDIUM/LOW}}\n\n## Quality Attributes\n\n### Scalability\n- Importance: {{count}} mentions\n- Keywords: distributed, horizontal scaling, multi-instance\n\n### Simplicity\n- Importance: {{count}} mentions\n- Keywords: minimal dependencies, easy to understand, local-first\n\n## Consistency Patterns\n\n{{patterns observed across multiple goals}}\n\n## Recommendation for Current Goal\n\nBased on history:\n{{recommendation aligned with user's demonstrated preferences}}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 8000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/hypothesis-test-{{testId}}/GOAL_HISTORY.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "## Technology Preferences",
+            "description": "Must analyze tech preferences"
+          },
+          {
+            "pattern": "## Recommendation for Current Goal",
+            "description": "Must provide recommendation"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "decide-alignment-strategy",
+      "subagent": "general",
+      "description": "Make final decision on whether to align code or validators",
+      "dependencies": ["analyze-validator-failures", "query-goal-history"],
+      "prompt": {
+        "template": "Decide alignment strategy based on failure analysis and goal history.\n\n**Inputs**:\n- `/tmp/hypothesis-test-{{testId}}/FAILURE_ANALYSIS.md`\n- `/tmp/hypothesis-test-{{testId}}/GOAL_HISTORY.md`\n- Current goal: {{currentGoal}}\n\n**Decision Framework**:\n\n1. **ALIGN_CODE** (Fix code to match validators) when:\n   - Goal explicitly requires the validated pattern\n   - Goal history shows strong preference for this approach\n   - Current code has bugs/issues\n   - Validator represents best practice for the goal\n\n2. **ALIGN_VALIDATOR** (Update validators to match code) when:\n   - Code works correctly but uses different approach\n   - Current implementation is simpler/better\n   - No strong preference in goal history\n   - Validator was based on wrong assumption\n\n3. **ACCEPT_DIFFERENCE** (Both are valid) when:\n   - Alternative approaches with different tradeoffs\n   - Context-dependent choice\n   - Low impact on goal\n\n**Output**: Create `/tmp/hypothesis-test-{{testId}}/ALIGNMENT_DECISION.md`\n\nStructure:\n```markdown\n# Alignment Decision\n\n**Test ID**: {{testId}}  \n**Current Goal**: {{currentGoal}}  \n**Decision**: {{ALIGN_CODE / ALIGN_VALIDATOR / ACCEPT_DIFFERENCE}}\n\n## Decision Summary\n\n{{1-2 sentence summary of the decision}}\n\n## Rationale\n\n### Current Goal Analysis\n{{how the current goal informs this decision}}\n\n### Goal History Insights\n{{what past goals tell us about user preferences}}\n\n### Failure Impact\n{{why these specific failures matter or don't matter}}\n\n### Final Reasoning\n{{clear explanation of why this decision was made}}\n\n## Action Items\n\n{{if ALIGN_CODE}}\n### Align Code to Validators\n\n**Changes Required**:\n1. Change 1: {{description}}\n   - File: {{file path}}\n   - Action: {{what to change}}\n   - Reason: {{why}}\n\n2. Change 2: {{description}}\n   ...\n\n**Next Activity**: Create activity to implement these changes\n\n**Success Criteria**: Re-run hypothesis test - all validators should pass\n\n{{if ALIGN_VALIDATOR}}\n### Align Validators to Code\n\n**Validator Updates Required**:\n1. Validator 1: {{name}}\n   - Current: {{current expectation}}\n   - Updated: {{new expectation}}\n   - Reason: {{why code is correct}}\n\n2. Validator 2: {{name}}\n   ...\n\n**Next Activity**: Update hypothesis activity with corrected validators\n\n**Success Criteria**: Re-run hypothesis test - should pass with new validators\n\n{{if ACCEPT_DIFFERENCE}}\n### Accept as Valid Alternative\n\n**Tradeoffs**:\n- Current approach: {{pros and cons}}\n- Validator approach: {{pros and cons}}\n\n**Recommendation**: Document both approaches as valid, choose based on specific requirements\n\n## Implementation Plan\n\n{{step-by-step plan for executing the alignment decision}}\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 12000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/hypothesis-test-{{testId}}/ALIGNMENT_DECISION.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "**Decision**: ",
+            "description": "Must state decision"
+          },
+          {
+            "pattern": "## Rationale",
+            "description": "Must explain reasoning"
+          },
+          {
+            "pattern": "## Action Items",
+            "description": "Must provide actionable steps"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-alignment-activity",
+      "subagent": "general",
+      "description": "Generate an activity to execute the alignment decision",
+      "dependencies": ["decide-alignment-strategy"],
+      "prompt": {
+        "template": "Create an activity template to execute the alignment decision.\n\n**Input**: Read `/tmp/hypothesis-test-{{testId}}/ALIGNMENT_DECISION.md`\n\n**Your Task**: Based on the decision (ALIGN_CODE, ALIGN_VALIDATOR, or ACCEPT_DIFFERENCE), create an appropriate activity.\n\n**If ALIGN_CODE**:\nCreate activity to refactor code:\n```json\n{\n  \"id\": \"align_code_{{aspect}}\",\n  \"name\": \"Align {{aspect}} to match validators\",\n  \"execution_type\": \"template\",\n  \"input_shapes\": [\"source_code\", \"trace\"],\n  \"output_shapes\": [\"source_code\"],\n  \"tasks\": [\n    {\n      \"id\": \"refactor_{{file}}\",\n      \"description\": \"Update {{file}} to match expected pattern\",\n      \"prompt\": {\n        \"template\": \"Refactor {{file}} to use {{expected_pattern}}...\"\n      },\n      \"validation\": {\n        \"required_patterns\": [\"{{expected_pattern}}\"],\n        \"forbidden_patterns\": [\"{{old_pattern}}\"]\n      }\n    }\n  ]\n}\n```\n\n**If ALIGN_VALIDATOR**:\nCreate activity to update hypothesis:\n```json\n{\n  \"id\": \"update_hypothesis_{{testId}}\",\n  \"name\": \"Update hypothesis validators to match reality\",\n  \"execution_type\": \"template\",\n  \"input_shapes\": [\"activity\", \"trace\"],\n  \"output_shapes\": [\"activity\"],\n  \"tasks\": [\n    {\n      \"id\": \"update_validators\",\n      \"description\": \"Update validator expectations\",\n      \"prompt\": {\n        \"template\": \"Update hypothesis activity to accept {{actual_pattern}}...\"\n      },\n      \"validation\": {\n        \"required_patterns\": [\"\\\"required_patterns\\\": [\\\"{{new_pattern}}\\\"]\"]\n      }\n    }\n  ]\n}\n```\n\n**If ACCEPT_DIFFERENCE**:\nCreate documentation activity:\n```json\n{\n  \"id\": \"document_alternatives_{{testId}}\",\n  \"name\": \"Document alternative valid approaches\",\n  \"execution_type\": \"template\",\n  \"input_shapes\": [\"trace\"],\n  \"output_shapes\": [\"documentation\"],\n  \"tasks\": [\n    {\n      \"id\": \"create_docs\",\n      \"description\": \"Document both approaches and tradeoffs\",\n      \"validation\": {\n        \"required_files\": [\"docs/APPROACHES.md\"]\n      }\n    }\n  ]\n}\n```\n\n**Output**: Create `/tmp/hypothesis-test-{{testId}}/alignment_activity.json`\n\nThen create summary: `/tmp/hypothesis-test-{{testId}}/INTERPRETATION_COMPLETE.md`\n\n```markdown\n# Interpretation Complete\n\n**Test ID**: {{testId}}  \n**Decision**: {{decision}}  \n**Alignment Activity**: {{activity_id}}\n\n## Summary\n\n{{summary of the full interpretation process}}\n\n## Next Steps\n\n1. Execute alignment activity:\n   ```typescript\n   run_goal({ activity_id: \"{{activity_id}}\" })\n   ```\n\n2. Re-run hypothesis test to verify alignment\n\n3. Update mental model with confirmed understanding\n```",
+        "variables": []
+      },
+      "context_rules": {
+        "max_tokens": 10000,
+        "compression_strategy": "filter"
+      },
+      "validation": {
+        "required_files": [
+          "/tmp/hypothesis-test-{{testId}}/alignment_activity.json",
+          "/tmp/hypothesis-test-{{testId}}/INTERPRETATION_COMPLETE.md"
+        ],
+        "required_patterns": [
+          {
+            "pattern": "\"execution_type\": \"template\"",
+            "description": "Must create valid activity"
+          },
+          {
+            "pattern": "## Next Steps",
+            "description": "Must provide next steps"
+          }
+        ],
+        "forbidden_patterns": [],
+        "commands": [
+          {
+            "command": "cat /tmp/hypothesis-test-{{testId}}/alignment_activity.json | jq empty",
+            "expected_exit_code": 0
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      },
+      "tools": {
+        "required": ["read", "write", "bash"],
+        "optional": [],
+        "disabled": []
+      }
+    }
+  ],
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "version": 1,
+  "created_at": null,
+  "metadata": {
+    "purpose": "Analyze hypothesis test results and decide alignment strategy",
+    "paradigm_alignment": "Uses goal history from impulse table to inform decisions"
+  }
+}
