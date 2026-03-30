@@ -14,6 +14,7 @@ export interface Config {
     database: string;
     username: string;
     password: string;
+    authEnabled: boolean;  // Whether SurrealDB requires authentication
   };
 
   // Redis
@@ -88,6 +89,7 @@ export function loadConfig(): Config {
       database: process.env.SURREALDB_DATABASE || 'learning_loop',
       username: process.env.SURREALDB_USERNAME || 'root',
       password: process.env.SURREALDB_PASSWORD || 'changeme',
+      authEnabled: parseEnvBool('SURREALDB_AUTH_ENABLED', true),  // Default true for safety
     },
     
     redis: {
