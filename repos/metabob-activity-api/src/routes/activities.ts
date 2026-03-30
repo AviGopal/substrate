@@ -2249,6 +2249,7 @@ app.post('/recommend', async (c) => {
           template_name: template.name || template.variant_name,
           category: template.category,
           tags: template.tags || [],
+          tag_prefixes: template.tag_prefixes || [],
           input_shapes: template.input_shapes || [],
           output_shapes: template.output_shapes || [],
           input_schema: template.input_schema || null,
