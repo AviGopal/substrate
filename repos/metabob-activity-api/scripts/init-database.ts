@@ -12,6 +12,7 @@ const SURREALDB_NAMESPACE = process.env.SURREALDB_NAMESPACE || 'activity-system'
 const SURREALDB_DATABASE = process.env.SURREALDB_DATABASE || 'learning_loop';
 const SURREALDB_USERNAME = process.env.SURREALDB_USERNAME || 'root';
 const SURREALDB_PASSWORD = process.env.SURREALDB_PASSWORD || 'surrealdb-local-dev-123';
+const SURREALDB_AUTH_ENABLED = process.env.SURREALDB_AUTH_ENABLED?.toLowerCase() !== 'false';
 
 const SQL_DIR = join(import.meta.dir, '../sql');
 
@@ -28,14 +29,19 @@ async function applySQLFile(filePath: string): Promise<boolean> {
   try {
     const sqlContent = await readFile(filePath, 'utf-8');
 
+    // Build headers - only include Authorization when auth is enabled
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'surreal-ns': SURREALDB_NAMESPACE,
+      'surreal-db': SURREALDB_DATABASE,
+    };
+    if (SURREALDB_AUTH_ENABLED) {
+      headers['Authorization'] = 'Basic ' + Buffer.from(`${SURREALDB_USERNAME}:${SURREALDB_PASSWORD}`).toString('base64');
+    }
+
     const response = await fetch(`${SURREALDB_URL}/sql`, {
       method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'surreal-ns': SURREALDB_NAMESPACE,
-        'surreal-db': SURREALDB_DATABASE,
-        'Authorization': 'Basic ' + Buffer.from(`${SURREALDB_USERNAME}:${SURREALDB_PASSWORD}`).toString('base64'),
-      },
+      headers,
       body: sqlContent,
     });
 
