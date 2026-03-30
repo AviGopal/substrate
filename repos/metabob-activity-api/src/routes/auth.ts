@@ -83,18 +83,23 @@ auth.post('/minibob/signin', async (c) => {
       ? authResult
       : (authResult as { access: string }).access
 
-    // Query the instance to get org_id and project_id for response
-    // (The JWT token already has these in $auth, but we return them for client convenience)
-    const instanceResult = await db.query<[{ org_id: string; project_id?: string }[]]>(
-      `SELECT org_id, project_id FROM minibob_instance WHERE instance_id = $instance_id LIMIT 1`,
-      { instance_id }
+    // Query $auth to get org_id and project_id from the authenticated session
+    // After RECORD signin, $auth contains the minibob_instance record
+    const authQuery = await db.query<[{
+      org_id: string;
+      project_id?: string;
+    }]>(
+      `RETURN {
+        org_id: $auth.org_id,
+        project_id: $auth.project_id
+      }`
     )
 
-    const instance = instanceResult[0]?.[0]
-    if (!instance) {
+    const instance = authQuery[0]
+    if (!instance || !instance.org_id) {
       return c.json({
-        error: 'Instance not found after authentication',
-        message: 'This should not happen - instance authenticated but not found'
+        error: 'Instance authenticated but session details not found',
+        message: 'Authentication succeeded but $auth not populated'
       }, 500)
     }
 
