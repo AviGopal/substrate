@@ -508,6 +508,7 @@ DEFINE INDEX IF NOT EXISTS idx_thompson_selection_method
 -- Note: SurrealDB 3.0 views cannot use CASE expressions, so we pass status through as-is
 DEFINE TABLE IF NOT EXISTS view_execution_traces AS
   SELECT
+    execution_id AS id,   -- Use execution_id as record ID for view
     execution_id,
     activity_id AS template_id,
     status,
@@ -522,6 +523,7 @@ DEFINE TABLE IF NOT EXISTS view_execution_traces AS
 -- View: activity_executions (legacy table name from 001-init-schema.surql)
 DEFINE TABLE IF NOT EXISTS view_activity_executions AS
   SELECT
+    execution_id AS id,   -- Use execution_id as record ID for view
     execution_id,
     variant_id,
     org_id,

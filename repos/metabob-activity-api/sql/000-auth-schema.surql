@@ -1,55 +1,31 @@
 -- =============================================================================
 -- Authentication and Authorization Schema
 -- =============================================================================
--- Defines organizations, users, minibob_instance tables and ACCESS methods
+-- Activity-API owns: minibob_instance table
+-- Identity-vessel owns: organizations, users, api_keys tables
 -- =============================================================================
 
 -- =============================================================================
--- Table: organizations
+-- Table: minibob_instance (Activity-specific)
+-- =============================================================================
+-- PERMISSIONS: MiniBob instances can read their own record
+-- This is critical for $auth.org_id to work in RBAC checks
 -- =============================================================================
 
-DEFINE TABLE IF NOT EXISTS organizations SCHEMAFULL;
-
-DEFINE FIELD IF NOT EXISTS name ON organizations TYPE string
-  ASSERT $value != NONE;
-
-DEFINE FIELD IF NOT EXISTS created_at ON organizations TYPE datetime
-  VALUE $value OR time::now();
-
-DEFINE FIELD IF NOT EXISTS updated_at ON organizations TYPE datetime
-  VALUE $value OR time::now();
-
--- =============================================================================
--- Table: users
--- =============================================================================
-
-DEFINE TABLE IF NOT EXISTS users SCHEMAFULL;
-
-DEFINE FIELD IF NOT EXISTS email ON users TYPE string
-  ASSERT $value != NONE;
-
-DEFINE FIELD IF NOT EXISTS name ON users TYPE option<string>;
-
-DEFINE FIELD IF NOT EXISTS org_id ON users TYPE record<organizations>
-  ASSERT $value != NONE;
-
-DEFINE FIELD IF NOT EXISTS created_at ON users TYPE datetime
-  VALUE $value OR time::now();
-
-DEFINE FIELD IF NOT EXISTS updated_at ON users TYPE datetime
-  VALUE $value OR time::now();
-
--- =============================================================================
--- Table: minibob_instance
--- =============================================================================
-
-DEFINE TABLE IF NOT EXISTS minibob_instance SCHEMAFULL;
+-- OVERWRITE ensures PERMISSIONS are always applied (critical for $auth.org_id access)
+DEFINE TABLE OVERWRITE minibob_instance SCHEMAFULL
+  PERMISSIONS
+    -- MiniBob can read its own record (needed for org_id access)
+    FOR select WHERE id = $auth
+    -- Only root can create/update/delete (managed via init-data)
+    FOR create, update, delete NONE;
 
 DEFINE FIELD IF NOT EXISTS instance_id ON minibob_instance TYPE string
   ASSERT $value != NONE;
 
-DEFINE FIELD IF NOT EXISTS org_id ON minibob_instance TYPE record<organizations>
-  ASSERT $value != NONE;
+DEFINE FIELD IF NOT EXISTS org_id ON minibob_instance TYPE string
+  ASSERT $value != NONE
+  COMMENT "Organization ID (string reference)";
 
 DEFINE FIELD IF NOT EXISTS project_id ON minibob_instance TYPE option<string>;
 

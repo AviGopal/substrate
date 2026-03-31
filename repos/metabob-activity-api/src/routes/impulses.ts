@@ -13,7 +13,7 @@
  */
 
 import { Hono } from 'hono';
-import { surrealDB } from '../db/surreal';
+import { surrealDB, queryWithAuth } from '../db/surreal';
 import { logger } from '../utils/logger';
 import {
   ImpulseCreateRequestSchema,
@@ -181,6 +181,16 @@ router.post('/', async (c) => {
       impulse_type: impulse_data.type 
     });
 
+    // Helper to execute queries with proper auth context
+    // Use authenticated query when JWT is present (for RBAC), otherwise root
+    const executeQuery = async <T>(sql: string, params: Record<string, any>): Promise<T[]> => {
+      if (jwtAuth?.jwtToken) {
+        logger.debug('Using authenticated query with JWT', { hasToken: true });
+        return queryWithAuth<T>(jwtAuth.jwtToken, sql, params);
+      }
+      return surrealDB.query<T>(sql, params);
+    };
+
     // Check if impulse already exists (composite key: api_key, project_id, impulse_id)
     const existsQuery = `
       SELECT * FROM impulse_data
@@ -189,8 +199,8 @@ router.post('/', async (c) => {
         AND project_id = $project_id
       LIMIT 1
     `;
-    
-    const existing = await surrealDB.query<any>(existsQuery, {
+
+    const existing = await executeQuery<any>(existsQuery, {
       impulse_id,
       api_key,
       project_id,
@@ -219,7 +229,7 @@ router.post('/', async (c) => {
       }
     `;
 
-    const result = await surrealDB.query<any>(createQuery, {
+    const result = await executeQuery<any>(createQuery, {
       impulse_id,
       api_key,
       project_id,
@@ -229,7 +239,7 @@ router.post('/', async (c) => {
 
     // CREATE may return empty with some auth contexts, query the created record
     const selectQuery = `SELECT * FROM impulse_data WHERE impulse_id = $impulse_id AND api_key = $api_key AND project_id = $project_id LIMIT 1`;
-    const selectResult = await surrealDB.query<any>(selectQuery, {
+    const selectResult = await executeQuery<any>(selectQuery, {
       impulse_id,
       api_key,
       project_id

@@ -128,11 +128,25 @@ async function main() {
     process.exit(1);
   }
 
-  // Find all .surql files in sql directory
+  // Find all .surql files in sql directory and schemas subdirectory
   const files = await readdir(SQL_DIR);
   const sqlFiles = files
     .filter(f => f.endsWith('.surql'))
-    .sort(); // Apply migrations in order (001-, 002-, etc.)
+    .sort(); // Apply migrations in order (000-, 001-, etc.)
+
+  // Also include schema files from sql/schemas/ subdirectory
+  const schemasDir = join(SQL_DIR, 'schemas');
+  try {
+    const schemaFiles = await readdir(schemasDir);
+    const schemasSqlFiles = schemaFiles
+      .filter(f => f.endsWith('.surql'))
+      .map(f => `schemas/${f}`)  // Prefix with subdirectory
+      .sort();
+    sqlFiles.push(...schemasSqlFiles);
+  } catch (error) {
+    // schemas directory may not exist, that's okay
+    console.log('[Init] No schemas subdirectory found, skipping...');
+  }
 
   if (sqlFiles.length === 0) {
     console.log('[Init] No migration files found');

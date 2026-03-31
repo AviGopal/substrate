@@ -13,12 +13,14 @@
 -- Note: api_key field deprecated in favor of org_id for consistency
 -- =============================================================================
 
-DEFINE TABLE IF NOT EXISTS impulse_data SCHEMAFULL
+-- OVERWRITE ensures PERMISSIONS are always applied (critical for MiniBob RBAC)
+DEFINE TABLE OVERWRITE impulse_data SCHEMAFULL
   PERMISSIONS
     -- SELECT: Users can see impulses in their org and assigned projects
+    -- Note: When $auth.project_ids IS NONE, user has full org access (no project restriction)
     FOR select WHERE
       org_id = $auth.org_id
-      AND (project_id IS NONE OR project_id IN $auth.project_ids)
+      AND (project_id IS NONE OR $auth.project_ids IS NONE OR project_id IN $auth.project_ids)
 
     -- CREATE: Any authenticated user can create impulses
     FOR create WHERE $auth.org_id != NONE

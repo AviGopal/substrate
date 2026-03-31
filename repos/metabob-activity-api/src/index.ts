@@ -11,10 +11,8 @@ import { cors } from 'hono/cors';
 import { logger as honoLogger } from 'hono/logger';
 import { config } from './config';
 import { logger } from './utils/logger';
-import { authMiddleware } from './middleware/auth';
 import { jwtAuthMiddleware, JwtAuthContext } from './middleware/jwtAuth';
 import authRoutes from './routes/auth';
-import sessionRoutes from './routes/session';
 import activitiesRoutes from './routes/activities';
 import impulsesRoutes from './routes/impulses';
 import goalPathsRoutes from './routes/goal-paths';
@@ -53,27 +51,15 @@ app.use('/*', cors({
 app.use('/*', honoLogger());
 
 // Authentication middleware (applies to all routes except /health and /v2/auth)
-// JWT auth runs first, then falls back to Redis session auth
+// JWT auth only (Redis session auth removed)
 app.use('/v2/*', async (c, next) => {
-  logger.info('Auth middleware triggered', { path: c.req.path });
   // Skip auth middleware for authentication endpoints
   if (c.req.path.startsWith('/v2/auth/')) {
     await next();
     return;
   }
-  logger.info('Calling JWT auth middleware', { path: c.req.path });
-  // Try JWT auth first (for MiniBob instances)
-  await jwtAuthMiddleware(c, async () => {
-    // If JWT auth succeeded, skip session auth (JWT takes precedence)
-    const jwtAuth = c.get('jwtAuth');
-    if (jwtAuth) {
-      logger.debug('JWT auth succeeded, skipping session auth');
-      await next();
-      return;
-    }
-    // Then try Redis session auth (for dashboard/web clients)
-    await authMiddleware(c, next);
-  });
+  // JWT auth only (no Redis session fallback)
+  await jwtAuthMiddleware(c, next);
 });
 
 // ============================================================================
@@ -141,9 +127,6 @@ app.get('/health', async (c) => {
 
 // Authentication routes (no auth middleware - handles authentication itself)
 app.route('/v2/auth', authRoutes);
-
-// Session routes (POST /v2/session, GET /v2/session)
-app.route('/v2/session', sessionRoutes);
 
 // Activity routes (GET /v2/activities/templates, etc.)
 app.route('/v2/activities', activitiesRoutes);

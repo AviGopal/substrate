@@ -17,6 +17,7 @@ import { logger } from '../utils/logger';
 import { ensureTags, computeTagPrefixes, deriveCategory } from '../utils/tags';
 import { analyzeTaskSemantics } from '../utils/semantic-tags';
 import { calculateImpulseRelevancyBoosts, discoverMissingImpulses } from '../utils/impulse-relevancy';
+import { captureValidationTrace } from '../utils/validation-traces';
 import {
   insertActivity,
   insertExecution,
@@ -390,9 +391,15 @@ async function listPublicTemplatesFromDB(
  * Automatically creates initial performance metrics with Thompson Sampling parameters
  */
 app.post('/templates', async (c) => {
+  // Parse body early for validation trace capture
+  let body: any;
+  let jwtAuth: any;
+  let orgId: string | null = null;
+  let projectId: string | null = null;
+
   try {
     // Check for JWT auth first (MiniBob instances)
-    const jwtAuth = getJwtAuthFromContext(c);
+    jwtAuth = getJwtAuthFromContext(c);
 
     logger.info('POST /templates - JWT auth context', {
       hasJwtAuth: !!jwtAuth,
@@ -404,11 +411,11 @@ app.post('/templates', async (c) => {
     const session = (c.get as any)('session') as SessionData | undefined;
 
     // Use JWT auth claims if available, otherwise fall back to session
-    const orgId = jwtAuth?.orgId || session?.org_id || null;
-    const projectId = jwtAuth?.projectId || session?.project_id || null;
+    orgId = jwtAuth?.orgId || session?.org_id || null;
+    projectId = jwtAuth?.projectId || session?.project_id || null;
 
     // Parse and validate request body
-    const body = await c.req.json();
+    body = await c.req.json();
     const validated = CreateTemplateRequestSchema.parse(body);
 
     // Convert category to tags if needed (backward compatibility)
@@ -617,6 +624,20 @@ app.post('/templates', async (c) => {
 
     // Check if it's a validation error
     if (error.name === 'ZodError') {
+      // Capture validation error as trace for pattern detection
+      // This enables auto-detection of schema mismatches like snake_case vs camelCase
+      captureValidationTrace(
+        '/v2/activities/templates',
+        'POST',
+        error.errors,
+        body,
+        {
+          callerId: jwtAuth?.instanceId,
+          orgId: orgId || undefined,
+          projectId: projectId || undefined,
+        }
+      );
+
       return c.json({
         error: 'Validation failed',
         message: error.message,
@@ -628,6 +649,37 @@ app.post('/templates', async (c) => {
       error: 'Failed to register template',
       message: error.message,
     }, 500);
+  }
+});
+
+/**
+ * GET /v2/activities/validation-patterns
+ * Detect recurring validation errors for self-healing
+ *
+ * Returns patterns of validation failures that occur frequently,
+ * enabling auto-detection of schema drift and field naming mismatches.
+ */
+app.get('/validation-patterns', async (c) => {
+  try {
+    const { detectValidationPatterns } = await import('../utils/validation-traces');
+    const timeWindowHours = parseInt(c.req.query('hours') || '24', 10);
+    const minFrequency = parseInt(c.req.query('min_frequency') || '3', 10);
+
+    const patterns = await detectValidationPatterns(timeWindowHours, minFrequency);
+
+    return c.json({
+      patterns,
+      query: {
+        time_window_hours: timeWindowHours,
+        min_frequency: minFrequency,
+      },
+      total: patterns.length,
+    });
+  } catch (error: any) {
+    logger.error('GET /v2/activities/validation-patterns failed', {
+      error: error.message,
+    });
+    return c.json({ error: error.message }, 500);
   }
 });
 
@@ -1406,255 +1458,6 @@ app.get('/executions', async (c) => {
  *   execution_id: string,
  *   message?: string
  * }
- */
-// DEPRECATED: This handler moved to src/routes/execution-traces.ts
-// Commenting out to prevent duplicate handler conflict
-/*
-app.post('/execution-traces', async (c) => {
-  try {
-    const body = await c.req.json();
-    const validated = StoreExecutionTraceRequestSchema.parse(body);
-    
-    logger.info('POST /v2/activities/execution-traces', {
-      execution_id: validated.execution_id,
-      template_id: validated.template_id,
-      status: validated.status,
-      tasks_count: validated.execution_trace.tasks.length,
-      duration_ms: validated.duration_ms,
-      cost_usd: validated.cost_usd,
-    });
-
-    // Check if trace already exists
-    const existsQuery = `
-      SELECT * FROM execution_traces
-      WHERE execution_id = $execution_id
-      LIMIT 1
-    `;
-    
-    const existing = await surrealDB.query<any>(existsQuery, {
-      execution_id: validated.execution_id,
-    });
-
-    if (existing.length > 0) {
-      logger.warn('Execution trace already exists', { execution_id: validated.execution_id });
-      return c.json({
-        success: false,
-        execution_id: validated.execution_id,
-        message: 'Execution trace already exists',
-      } as StoreExecutionTraceResponse, 409);
-    }
-
-    // Store execution trace
-    const createQuery = `
-      CREATE execution_traces CONTENT {
-        execution_id: $execution_id,
-        template_id: $template_id,
-        status: $status,
-        duration_ms: $duration_ms,
-        cost_usd: $cost_usd,
-        execution_trace: $execution_trace,
-        stored_at: time::now(),
-        created_at: time::now(),
-        updated_at: time::now()
-      }
-    `;
-    
-    await surrealDB.query(createQuery, {
-      execution_id: validated.execution_id,
-      template_id: validated.template_id,
-      status: validated.status,
-      duration_ms: validated.duration_ms,
-      cost_usd: validated.cost_usd,
-      execution_trace: validated.execution_trace,
-    });
-
-    logger.info('Execution trace stored successfully', {
-      execution_id: validated.execution_id,
-      template_id: validated.template_id,
-      status: validated.status,
-    });
-
-    // Post-execution hook: Generate debug tasks for failures
-    if (validated.status === 'failure') {
-      try {
-        const { taskGenerator } = await import('../services/task-generator');
-        const { enqueueTask } = await import('./boredom');
-
-        const debugTasks = await taskGenerator.analyzeExecution({
-          execution_id: validated.execution_id,
-          template_id: validated.template_id,
-          status: validated.status,
-          duration_ms: validated.duration_ms,
-          cost_usd: validated.cost_usd,
-          execution_trace: validated.execution_trace,
-          created_at: new Date().toISOString(),
-        });
-
-        for (const task of debugTasks) {
-          await enqueueTask(task);
-        }
-
-        if (debugTasks.length > 0) {
-          logger.info('[TaskGenerator] Generated debug tasks for failed execution', {
-            execution_id: validated.execution_id,
-            taskCount: debugTasks.length,
-          });
-        }
-      } catch (hookError) {
-        // Don't fail the request if hook fails
-        logger.error('[TaskGenerator] Post-execution hook failed', { error: hookError });
-      }
-    }
-
-    return c.json({
-      success: true,
-      execution_id: validated.execution_id,
-      message: 'Execution trace stored successfully',
-    } as StoreExecutionTraceResponse, 201);
-
-  } catch (error: any) {
-    logger.error('POST /v2/activities/execution-traces failed', {
-      error: error.message,
-      stack: error.stack,
-    });
-
-    if (error.name === 'ZodError') {
-      return c.json({
-        success: false,
-        execution_id: '',
-        message: 'Validation failed: ' + error.message,
-      } as StoreExecutionTraceResponse, 400);
-    }
-
-    return c.json({
-      success: false,
-      execution_id: '',
-      message: error.message,
-    } as StoreExecutionTraceResponse, 500);
-  }
-});
-*/
-
-/**
- * GET /v2/activities/execution-traces/:executionId
- * 
- * Retrieve execution trace by ID.
- * 
- * Use cases:
- * - Debugging: Load trace to understand what went wrong
- * - Analysis: Review successful execution patterns
- * - Ribosome: Extract trace to generate new template
- * 
- * Returns full trace with all tasks, tool calls, state transitions.
- */
-// DEPRECATED: Moved to src/routes/execution-traces.ts
-/*
-app.get('/execution-traces/:executionId', async (c) => {
-  try {
-    const executionId = c.req.param('executionId');
-
-    logger.info('GET /v2/activities/execution-traces/:executionId', { executionId });
-
-    const query = `
-      SELECT * FROM execution_traces
-      WHERE execution_id = $execution_id
-      LIMIT 1
-    `;
-
-    const result = await surrealDB.query<any>(query, {
-      execution_id: executionId,
-    });
-
-    if (result.length === 0) {
-      return c.json({
-        error: 'Execution trace not found',
-        execution_id: executionId,
-      }, 404);
-    }
-
-    const trace = result[0];
-
-    logger.info('Execution trace retrieved', { executionId });
-
-    return c.json(trace);
-
-  } catch (error: any) {
-    logger.error('GET /v2/activities/execution-traces/:executionId failed', {
-      error: error.message,
-      stack: error.stack,
-    });
-
-    return c.json({
-      error: 'Failed to retrieve execution trace',
-      message: error.message,
-    }, 500);
-  }
-});
-*/
-
-// DEPRECATED: Moved to src/routes/execution-traces.ts
-/*
-app.get('/execution-traces', async (c) => {
-  try {
-    const templateId = c.req.query('template_id');
-    const status = c.req.query('status');
-    const limitStr = c.req.query('limit') || '50';
-    const offsetStr = c.req.query('offset') || '0';
-
-    const limit = Math.min(Math.max(parseInt(limitStr, 10), 1), 100);
-    const offset = Math.max(parseInt(offsetStr, 10), 0);
-
-    logger.info('GET /v2/activities/execution-traces', {
-      template_id: templateId,
-      status,
-      limit,
-      offset,
-    });
-
-    // Build query with filters
-    let query = 'SELECT * FROM execution_traces WHERE 1=1';
-    const params: Record<string, any> = {};
-
-    if (templateId) {
-      query += ' AND template_id = $template_id';
-      params.template_id = templateId;
-    }
-
-    if (status) {
-      query += ' AND status = $status';
-      params.status = status;
-    }
-
-    query += ' ORDER BY stored_at DESC';
-    query += ' LIMIT $limit START $offset';
-    params.limit = limit;
-    params.offset = offset;
-
-    const result = await surrealDB.query(query, params);
-    const traces = Array.isArray(result) ? result : [];
-
-    logger.info('Execution traces retrieved', { count: traces.length });
-
-    return c.json({
-      executions: traces,
-      total: traces.length,
-      limit,
-      offset,
-    });
-
-  } catch (error: any) {
-    logger.error('GET /v2/activities/execution-traces failed', {
-      error: error.message,
-      stack: error.stack,
-    });
-
-    return c.json({
-      error: 'Failed to list execution traces',
-      message: error.message,
-    }, 500);
-  }
-});
-*/
 
 /**
  * GET /v2/activities/metrics/trend

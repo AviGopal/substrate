@@ -35,7 +35,8 @@ interface ActivityTask {
     commands?: Array<{ command: string; expectedOutput?: string }>;
   };
   retry?: {
-    maxAttempts: number;
+    max_attempts?: number;
+    maxAttempts?: number;
     strategy: string;
   };
   subagent?: string;

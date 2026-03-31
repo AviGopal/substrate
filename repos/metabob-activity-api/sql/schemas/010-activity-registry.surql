@@ -307,6 +307,7 @@ DEFINE INDEX IF NOT EXISTS idx_variant_performance_success_rate
 
 DEFINE TABLE IF NOT EXISTS view_activity_template AS
   SELECT
+    id,                    -- CRITICAL: Must include 'id' for SurrealDB 3.x view compatibility
     id AS variant_id,
     id AS activity_id,
     name AS variant_name,

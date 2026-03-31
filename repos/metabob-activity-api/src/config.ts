@@ -21,7 +21,6 @@ export interface Config {
   redis: {
     url: string;
     ttl: {
-      session: number;      // Session TTL in seconds
       template: number;     // Template cache TTL
       metrics: number;      // Metrics cache TTL
     };
@@ -95,7 +94,6 @@ export function loadConfig(): Config {
     redis: {
       url: process.env.REDIS_URL || 'redis://localhost:6379',
       ttl: {
-        session: parseEnvInt('REDIS_SESSION_TTL', 86400), // 24 hours
         template: parseEnvInt('REDIS_TEMPLATE_TTL', 3600), // 1 hour
         metrics: parseEnvInt('REDIS_METRICS_TTL', 300),    // 5 minutes
       },
