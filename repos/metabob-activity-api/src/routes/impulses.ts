@@ -31,6 +31,7 @@ import {
   formatSearchResultsAsMarkdown,
 } from '../services/impulse-formatters';
 import { getJwtAuthFromContext, type JwtAuthContext } from '../middleware/jwtAuth';
+import activitiesRouter from './activities';
 
 const router = new Hono();
 
@@ -1217,6 +1218,141 @@ router.post('/resolve', async (c) => {
           content = formatMultipleTracesAsMarkdown(traces, templateId, success);
         }
         break;
+      }
+
+      case 'goal': {
+        // Goal impulse resolver: Returns activity recommendations via Thompson Sampling
+        // Used by MiniBob to get recommendations based on goal description + impulse context
+
+        const goalDescription = pointer.content;
+        const category = pointer.category;
+        const impulseRefs = pointer.impulseRefs || [];
+        const limit = pointer.limit || 3;
+        const excludeActivities = pointer.excludeActivities || [];
+
+        // Validate required fields
+        if (!goalDescription) {
+          return c.json({
+            success: false,
+            error: 'content (goal description) required for goal pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        logger.info('Resolving goal impulse', {
+          goal: goalDescription.substring(0, 100),
+          category,
+          impulseRefsCount: impulseRefs.length,
+          limit,
+        });
+
+        // Get session data for multi-tenant filtering
+        const sessionData = (c.get as any)('session') as SessionData | undefined;
+        const jwtAuth = getJwtAuthFromContext(c);
+        const orgId = jwtAuth?.orgId || sessionData?.org_id || null;
+        const projectId = jwtAuth?.projectId || sessionData?.project_id || null;
+
+        // Load impulse metadata for context (optional - used by Thompson Sampling for relevance scoring)
+        let impulseContext: any[] = [];
+        let impulseShapes: string[] = [];
+        if (impulseRefs.length > 0) {
+          try {
+            const contextQuery = `
+              SELECT id, shape, summary FROM impulse
+              WHERE id IN $impulse_ids
+            `;
+            impulseContext = await surrealDB.query(contextQuery, {
+              impulse_ids: impulseRefs,
+            });
+            impulseShapes = impulseContext.map((i: any) => i.shape).filter(Boolean);
+            logger.debug('Loaded impulse context for goal', {
+              count: impulseContext.length,
+              shapes: impulseShapes,
+            });
+          } catch (error) {
+            logger.warn('Failed to load impulse context', {
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Continue without context - not critical
+          }
+        }
+
+        // Call internal recommendation logic (reusing existing /recommend endpoint logic)
+        // This is essentially an internal API call to avoid code duplication
+        try {
+          const recommendRequest = new Request(`http://internal/recommend`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              // Forward auth headers
+              ...(jwtAuth?.jwtToken ? { 'Authorization': `Bearer ${jwtAuth.jwtToken}` } : {}),
+            },
+            body: JSON.stringify({
+              task_description: goalDescription,
+              category,
+              loaded_impulses: impulseRefs,
+              impulse_shapes: impulseShapes,
+              limit,
+              exclude_activities: excludeActivities,
+            }),
+          });
+
+          const recommendResponse = await activitiesRouter.fetch(recommendRequest);
+
+          if (!recommendResponse.ok) {
+            const errorData = await recommendResponse.json();
+            logger.error('Recommendation request failed', {
+              status: recommendResponse.status,
+              error: errorData,
+            });
+            return c.json({
+              success: false,
+              error: `Failed to get recommendations: ${errorData.error || 'Unknown error'}`,
+            } as ImpulseResolveResponse, 500);
+          }
+
+          const recommendData = await recommendResponse.json();
+          const recommendations = recommendData.recommendations || [];
+
+          // Format as impulse content
+          const contentData = {
+            recommendations,
+            metadata: {
+              impulse_context_size: impulseRefs.length,
+              impulse_context_shapes: impulseShapes,
+              sampling_method: 'thompson',
+              total_candidates: recommendations.length,
+            },
+          };
+
+          content = JSON.stringify(contentData, null, 2);
+
+          // Return with metadata
+          logger.info('Goal impulse resolved successfully', {
+            recommendationsCount: recommendations.length,
+            topActivity: recommendations[0]?.template_id,
+          });
+
+          return c.json({
+            success: true,
+            content,
+            metadata: {
+              shape: 'activityRecommendations',
+              rowCount: recommendations.length,
+              summary: `${recommendations.length} activities recommended for: "${goalDescription.substring(0, 50)}..."`,
+              availableOps: ['select', 'execute', 'compare'],
+            },
+          } as ImpulseResolveResponse, 200);
+
+        } catch (error: any) {
+          logger.error('Goal impulse resolution failed', {
+            error: error.message,
+            stack: error.stack,
+          });
+          return c.json({
+            success: false,
+            error: `Failed to resolve goal impulse: ${error.message}`,
+          } as ImpulseResolveResponse, 500);
+        }
       }
 
       default:

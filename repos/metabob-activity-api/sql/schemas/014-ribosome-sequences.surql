@@ -63,10 +63,10 @@ DEFINE FIELD IF NOT EXISTS composition_weights ON composite_sequence_patterns TY
   COMMENT "Edge weights from composition graph for each transition (e.g., [0.85, 0.92] for A→B→C)";
 
 -- Multi-tenant isolation
-DEFINE FIELD IF NOT EXISTS org_id ON composite_sequence_patterns TYPE record<organizations>
+DEFINE FIELD IF NOT EXISTS org_id ON composite_sequence_patterns TYPE string
   ASSERT $value != NONE
   VALUE $value OR $auth.org_id
-  COMMENT "Organization ID (required for RBAC)";
+  COMMENT "Organization ID (string reference to identity-vessel)";
 
 DEFINE FIELD IF NOT EXISTS project_id ON composite_sequence_patterns TYPE option<record<projects>>
   VALUE $value OR $auth.project_id

@@ -40,10 +40,10 @@ DEFINE FIELD IF NOT EXISTS impulse_id ON impulse_data TYPE string
   COMMENT "Unique impulse identifier within organization";
 
 -- Multi-tenancy (REQUIRED for RBAC)
-DEFINE FIELD IF NOT EXISTS org_id ON impulse_data TYPE record<organizations>
+DEFINE FIELD IF NOT EXISTS org_id ON impulse_data TYPE string
   ASSERT $value != NONE
   VALUE $value OR $auth.org_id
-  COMMENT "Organization ID (required for all impulses)";
+  COMMENT "Organization ID (string reference to identity-vessel)";
 
 DEFINE FIELD IF NOT EXISTS project_id ON impulse_data TYPE option<record<projects>>
   VALUE $value OR $auth.project_id
@@ -165,10 +165,10 @@ DEFINE FIELD IF NOT EXISTS execution_id ON impulse_usage_history TYPE string
   COMMENT "Execution trace ID";
 
 -- Multi-tenancy (REQUIRED for RBAC)
-DEFINE FIELD IF NOT EXISTS org_id ON impulse_usage_history TYPE record<organizations>
+DEFINE FIELD IF NOT EXISTS org_id ON impulse_usage_history TYPE string
   ASSERT $value != NONE
   VALUE $value OR $auth.org_id
-  COMMENT "Organization ID (required)";
+  COMMENT "Organization ID (string reference to identity-vessel)";
 
 DEFINE FIELD IF NOT EXISTS project_id ON impulse_usage_history TYPE option<record<projects>>
   VALUE $value OR $auth.project_id
@@ -234,10 +234,10 @@ DEFINE FIELD IF NOT EXISTS run_id ON ci_runs TYPE string
   COMMENT "Unique CI run identifier";
 
 -- Multi-tenancy (REQUIRED for RBAC)
-DEFINE FIELD IF NOT EXISTS org_id ON ci_runs TYPE record<organizations>
+DEFINE FIELD IF NOT EXISTS org_id ON ci_runs TYPE string
   ASSERT $value != NONE
   VALUE $value OR $auth.org_id
-  COMMENT "Organization ID (required)";
+  COMMENT "Organization ID (string reference to identity-vessel)";
 
 DEFINE FIELD IF NOT EXISTS project_id ON ci_runs TYPE option<record<projects>>
   VALUE $value OR $auth.project_id
@@ -316,10 +316,10 @@ DEFINE FIELD IF NOT EXISTS variant_id ON code_variants TYPE string
   COMMENT "Unique variant identifier";
 
 -- Multi-tenancy (REQUIRED for RBAC)
-DEFINE FIELD IF NOT EXISTS org_id ON code_variants TYPE record<organizations>
+DEFINE FIELD IF NOT EXISTS org_id ON code_variants TYPE string
   ASSERT $value != NONE
   VALUE $value OR $auth.org_id
-  COMMENT "Organization ID (required)";
+  COMMENT "Organization ID (string reference to identity-vessel)";
 
 DEFINE FIELD IF NOT EXISTS project_id ON code_variants TYPE option<record<projects>>
   VALUE $value OR $auth.project_id
