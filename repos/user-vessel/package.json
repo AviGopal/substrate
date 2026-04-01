@@ -14,7 +14,7 @@
     "format": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
-    "hono": "^4.0.0",
+    "hono": "^4.12.9",
     "nanoid": "^5.0.4",
     "surrealdb": "^2.0.2",
     "zod": "^3.22.4"

@@ -305,6 +305,76 @@ Everything uses existing infrastructure:
 - ✅ Trailblazing creates variants when hypotheses fail
 - ✅ Goal history informs alignment decisions
 
+## Deployment
+
+### Seeding Activities to Backend
+
+Use the seed script to load all four hypothesis activities into metabob-activity-api:
+
+```bash
+cd /path/to/metabob-devbob/scripts
+
+# Make sure activity-api is running
+# Default: http://localhost:8080
+# Or set: export API_URL=http://activity.metabob.local
+
+# Seed all hypothesis activities
+bun run seed-hypothesis-activities.ts
+
+# Expected output:
+# Hypothesis Activities Seeder
+# ============================
+# API: http://localhost:8080
+# Org: metabob_internal
+#
+# API health: OK
+#
+# Loaded 4 hypothesis activities from ../repos/metabob-proto/activities/hypothesis
+#
+#   generate-hypothesis-activities... created
+#   test-hypothesis... created
+#   interpret-test-results... created
+#   learn-from-executions... created
+#
+# ============================
+# Summary:
+#   Created: 4
+#   Already exists: 0
+#   Failed: 0
+```
+
+**Environment Variables:**
+- `API_URL` or `ACTIVITY_API_URL`: Backend URL (default: `http://localhost:8080`)
+- `ORG_ID`: Organization ID (default: `metabob_internal`)
+
+**Script Features:**
+- ✅ Idempotent: Safe to run multiple times
+- ✅ Health check: Verifies API before seeding
+- ✅ Transform: Converts new paradigm format to API format
+- ✅ Error handling: Reports failures with details
+
+**What Gets Seeded:**
+1. **generate-hypothesis-activities**: Create testable hypotheses from learning goals
+2. **test-hypothesis**: Execute hypothesis and capture observations
+3. **interpret-test-results**: Decide alignment strategy (code vs validators)
+4. **learn-from-executions**: Meta-learning from execution history
+
+### Verification
+
+After seeding, verify activities are available:
+
+```bash
+# List all templates
+curl http://localhost:8080/v2/activities/templates | jq '.[] | select(.activity_id | contains("hypothesis"))'
+
+# Check specific activity
+curl http://localhost:8080/v2/activities/templates/generate-hypothesis-activities | jq .
+
+# Verify all four are present
+curl http://localhost:8080/v2/activities/templates | jq '[.[] | select(.activity_id | contains("hypothesis")) | .activity_id]'
+# Expected: ["generate-hypothesis-activities", "test-hypothesis", "interpret-test-results", "learn-from-executions"]
+```
+
 ## Success Metrics
 
 Track hypothesis quality over time:

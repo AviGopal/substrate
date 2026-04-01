@@ -1,80 +1,148 @@
 {
   "id": "debug-activity-self-contained",
   "name": "Debug Activity Execution (Self-Contained)",
-  "version": 3,
-  "description": "Debug failed activity executions using activity_error_inspector MCP tool - follows architecture compliance",
+  "version": 4,
+  "description": "Debug failed activity executions using impulse-based trace access - teaches impulse resolution and failure analysis",
   "category": "infrastructure",
+  "tags": [
+    "meta.debug",
+    "bootstrap.primordial"
+  ],
   "contextRequirements": [],
   "variant_id": "debug-activity-self-contained",
   "activity_id": "debug-activity-self-contained",
+  "variables": [
+    {
+      "name": "executionId",
+      "type": "string",
+      "required": true,
+      "description": "Activity execution ID to debug"
+    },
+    {
+      "name": "outputDir",
+      "type": "string",
+      "required": false,
+      "default": "/tmp/debug-analysis",
+      "description": "Directory for analysis outputs"
+    }
+  ],
+  "impulses": [
+    {
+      "id": "failedTrace",
+      "pointer": {
+        "type": "activityExecutionTrace",
+        "executionId": "{{executionId}}",
+        "includeState": true,
+        "includeToolCalls": true
+      },
+      "budget": 15000,
+      "priority": "critical",
+      "description": "Full execution trace with state transitions and tool calls"
+    },
+    {
+      "id": "originalTemplate",
+      "pointer": {
+        "type": "activityTemplate",
+        "templateId": "{{failedTrace.templateId}}"
+      },
+      "budget": 5000,
+      "priority": "high",
+      "description": "Template definition that was executed"
+    }
+  ],
   "tasks": [
     {
-      "id": "inspect-execution-errors",
+      "id": "analyze-failure",
       "subagent": "general",
-      "description": "Use activity_error_inspector tool to get comprehensive error analysis",
+      "description": "Analyze execution trace to identify root cause of failure",
       "dependencies": [],
+      "impulseReferences": [
+        "failedTrace",
+        "originalTemplate"
+      ],
       "prompt": {
-        "template": "Debug a failed activity execution using the MCP-provided activity_error_inspector tool.\n\n**Execution ID**: {{executionId}}\n\n**Your Task**: Use the activity_error_inspector tool to analyze the failure.\n\n**CRITICAL**: You MUST use the `activity_error_inspector` tool. Do NOT attempt to call APIs directly.\n\n**Steps**:\n\n1. Call activity_error_inspector with:\n   - activityId: {{executionId}}\n   - includeSessionLogs: true\n   - includeToolCalls: true\n   - maxMessagesPerTask: 30\n\n2. The tool will return:\n   - Activity summary (status, template, timing, cost)\n   - Task-level error breakdown\n   - Session logs and tool call traces\n   - Recommendations for fixes\n\n3. Create a file called `EXECUTION_ANALYSIS.md` that summarizes:\n   - What failed (which task, what error)\n   - Why it failed (root cause analysis)\n   - How to fix it (concrete recommendations)\n   - Related patterns (if this is a known issue)\n\n**Output Format**:\n\n```markdown\n# Execution Analysis: {{executionId}}\n\n## Summary\n- **Template**: [name]\n- **Status**: [status]\n- **Failed Task**: [task-id]\n- **Error Type**: [validation/execution/timeout]\n\n## Root Cause\n[Clear explanation of why it failed]\n\n## Error Details\n```\n[Error message from inspector]\n```\n\n## Recommendations\n1. [Specific fix]\n2. [Another fix]\n3. [Testing strategy]\n\n## Tool Calls\n[Summary of what tools were called and what failed]\n```\n\n**Remember**: Use activity_error_inspector, not curl or API calls.",
-        "variables": [
-          {
-            "name": "executionId",
-            "type": "string",
-            "required": true,
-            "description": "Activity execution ID to debug"
-          }
-        ]
+        "template": "Debug a failed activity execution using impulse-based trace access.\n\n**Execution ID**: {{executionId}}\n\n**Available Context**:\n- `failedTrace` impulse: Full execution trace with state and tool calls\n- `originalTemplate` impulse: Template definition that was executed\n\n**Your Task**: Analyze the failure and identify the root cause.\n\n**Analysis Steps**:\n\n1. **Review Execution Summary** (from failedTrace impulse):\n   - Template used: [name and version]\n   - Status: [failed]\n   - Failed at task: [task-id]\n   - Error type: [validation failure / execution error / timeout]\n   - Duration: [time]\n   - Cost: [USD]\n\n2. **Examine Failed Task**:\n   - Task ID: [id]\n   - Description: [what it was trying to do]\n   - Dependencies: [what completed before]\n   - Error message: [exact error]\n   - Tool calls made: [list with arguments]\n   - State before failure: [files, variables]\n\n3. **Compare to Template** (from originalTemplate impulse):\n   - Expected behavior: [from template task definition]\n   - Validation rules: [what was checked]\n   - Variable usage: [were all variables provided?]\n   - Prompt clarity: [was the instruction clear?]\n\n4. **Identify Root Cause**:\n   - **Validation Failure**: Which validation rule failed and why?\n   - **Execution Error**: What tool call failed? Missing file? Permission issue?\n   - **Timeout**: Was the task too complex? Slow API?\n   - **Variable Issue**: Missing required variable? Invalid value?\n   - **Template Issue**: Unclear prompt? Wrong validation rule?\n\n5. **Pattern Recognition**:\n   - Is this a known failure pattern?\n   - Have similar executions failed?\n   - Is this template-specific or systemic?\n\n**Output Format**:\n\nCreate `{{outputDir}}/EXECUTION_ANALYSIS.md`:\n\n```markdown\n# Execution Analysis: {{executionId}}\n\n## Summary\n- **Template**: [name] (v[version])\n- **Category**: [category]\n- **Status**: Failed\n- **Failed Task**: [task-id]\n- **Error Type**: [validation/execution/timeout/variable]\n- **Duration**: [time]\n- **Cost**: $[amount]\n\n## Execution Flow\n\n### Completed Tasks\n1. [task-1]: ✓ Success ([duration])\n2. [task-2]: ✓ Success ([duration])\n\n### Failed Task: [task-id]\n- **Description**: [what it tried to do]\n- **Error**: [error message]\n- **Tool Calls**:\n  1. [tool]: [arguments] → [result]\n  2. [tool]: [arguments] → ❌ FAILED\n\n## Root Cause\n\n[Clear, specific explanation of why the execution failed]\n\n### Evidence\n- [Fact 1 from trace]\n- [Fact 2 from template]\n- [Fact 3 from state]\n\n### Contributing Factors\n1. [Primary cause]\n2. [Secondary cause if applicable]\n\n## Error Details\n\n```\n[Full error message from trace]\n```\n\n## State at Failure\n\n**Input State**:\n- Variables provided: [list]\n- Files available: [list]\n- Working directory: [path]\n\n**Output State**:\n- Files created: [list or none]\n- Files modified: [list or none]\n- Partial output: [if any]\n\n## Template Analysis\n\n**Task Prompt** (from originalTemplate):\n```\n[Relevant portion of prompt]\n```\n\n**Validation Rules**:\n- Required files: [list]\n- Required patterns: [list]\n- Forbidden patterns: [list]\n- Commands: [list]\n\n**What Failed**:\n- ❌ [Specific validation rule or execution step]\n\n## Recommendations\n\n### Immediate Fix (User Action)\n1. **Fix**: [Specific action to take]\n   - **Why**: [Explanation]\n   - **How**: [Exact steps]\n\n### Template Improvement (For Next Version)\n1. **Improvement**: [Change to template]\n   - **Benefit**: [How this helps]\n   - **Impact**: [Estimated success rate improvement]\n\n## Related Patterns\n\n- Similar failures: [count] executions\n- Common issue: [description if pattern exists]\n- Template success rate: [percentage]\n\n## Testing Strategy\n\n1. **Test the fix**:\n   ```bash\n   [Command to re-run with fix]\n   ```\n\n2. **Expected outcome**: [What should happen]\n\n3. **Validation**: [How to verify it worked]\n```\n\n**IMPORTANT**: Base your analysis entirely on the impulses provided. The `failedTrace` impulse contains all execution data. The `originalTemplate` impulse contains the template definition. Do NOT make API calls or use other tools to fetch data."
       },
       "validation": {
         "required_files": [
-          "EXECUTION_ANALYSIS.md"
+          "{{outputDir}}/EXECUTION_ANALYSIS.md"
         ],
         "required_patterns": [
-          "## Root Cause",
-          "## Recommendations"
+          {
+            "pattern": "## Root Cause",
+            "description": "Must identify root cause"
+          },
+          {
+            "pattern": "## Recommendations",
+            "description": "Must provide recommendations"
+          },
+          {
+            "pattern": "## Summary",
+            "description": "Must have execution summary"
+          }
         ],
         "forbidden_patterns": [
-          "curl",
-          "http://",
-          "GET /",
-          "POST /"
+          {
+            "pattern": "TODO",
+            "description": "Analysis must be complete"
+          },
+          {
+            "pattern": "UNKNOWN",
+            "description": "Must determine root cause"
+          }
         ],
         "commands": []
       },
       "tools": {
         "required": [
-          "activity_error_inspector",
           "write"
         ],
         "optional": [
-          "read"
+          "read",
+          "bash"
         ],
         "disabled": []
       },
       "retry": {
         "maxAttempts": 2,
-        "strategy": "simple"
+        "strategy": "exponential"
       }
     },
     {
       "id": "generate-fix-recommendations",
       "subagent": "general",
-      "description": "Generate concrete fixes based on error analysis",
+      "description": "Generate concrete, actionable fixes based on failure analysis",
       "dependencies": [
-        "inspect-execution-errors"
+        "analyze-failure"
       ],
+      "impulseReferences": [],
       "prompt": {
-        "template": "Based on the execution analysis, generate concrete fixes.\n\n**Your Task**: Read EXECUTION_ANALYSIS.md and create actionable fixes.\n\n**Fix Categories**:\n\n1. **Template Fixes**: If the template itself has issues\n   - Schema problems (missing fields, wrong types)\n   - Prompt clarity issues\n   - Validation rules too strict/loose\n   - Variable defaults incorrect\n\n2. **Input Fixes**: If the inputs were wrong\n   - Missing required variables\n   - Invalid variable values\n   - Better defaults needed\n\n3. **System Fixes**: If it's a system integration issue\n   - Tool availability\n   - Permission problems\n   - MCP connectivity\n\n**Output**: Create `FIX_RECOMMENDATIONS.md` with:\n\n```markdown\n# Fix Recommendations\n\n## Immediate Fixes (Apply Now)\n1. **Fix**: [Specific change]\n   - **File**: [file to edit]\n   - **Change**: [exact change]\n   - **Why**: [explanation]\n\n## Template Improvements (For Next Version)\n1. **Improvement**: [enhancement]\n   - **Benefit**: [why this helps]\n\n## Testing Strategy\n1. Test with: [test scenario]\n2. Expect: [expected outcome]\n```",
-        "variables": []
+        "template": "Based on the execution analysis, generate concrete fixes.\n\n**Input**: Read `{{outputDir}}/EXECUTION_ANALYSIS.md` (created in previous task)\n\n**Your Task**: Create actionable fix recommendations\n\n**Fix Categories**:\n\n### 1. Template Fixes (Permanent Improvements)\n\nIf the template itself has issues:\n- **Schema problems**: Missing fields, wrong types\n- **Prompt clarity**: Ambiguous instructions, missing examples\n- **Validation rules**: Too strict, too loose, or incorrect\n- **Variable defaults**: Wrong or missing defaults\n- **Task dependencies**: Incorrect order or missing dependencies\n- **Token budgets**: Insufficient for task complexity\n\n**Example Template Fix**:\n```json\n{\n  \"tasks\": [{\n    \"id\": \"task-1\",\n    \"prompt\": {\n      \"template\": \"Create output.json in ./output/ directory.\",\n      \"max_tokens\": 8000  // was: 5000 (too low)\n    },\n    \"validation\": {\n      \"required_files\": [\"./output/output.json\"]  // was: [\"output.json\"] (ambiguous)\n    }\n  }]\n}\n```\n\n### 2. Input Fixes (User Action)\n\nIf the inputs were wrong:\n- **Missing required variables**: User forgot to provide\n- **Invalid variable values**: Wrong type, format, or range\n- **Better defaults needed**: Optional variables need sensible defaults\n- **Variable descriptions**: Need clearer guidance\n\n**Example Input Fix**:\n```bash\n# Was: minibob --goal \"debug {{executionId}}\"\n# Fix: minibob --goal \"debug {{executionId}}\" --var outputDir=/tmp/debug\n```\n\n### 3. System Fixes (Infrastructure)\n\nIf it's a system integration issue:\n- **Tool availability**: Required tool not installed\n- **Permission problems**: File/directory access denied\n- **MCP connectivity**: Backend unreachable\n- **Resource limits**: Out of memory, disk space\n\n**Example System Fix**:\n```bash\n# Install missing dependency\nnpm install -g typescript\n```\n\n**Output Format**:\n\nCreate `{{outputDir}}/FIX_RECOMMENDATIONS.md`:\n\n```markdown\n# Fix Recommendations: {{executionId}}\n\n## Executive Summary\n\n**Root Cause**: [Brief description]\n\n**Fix Type**: [Template / Input / System]\n\n**Priority**: [High / Medium / Low]\n\n**Estimated Impact**: [Percentage of similar failures this would prevent]\n\n---\n\n## Immediate Fixes (Apply Now)\n\n### Fix 1: [Specific fix title]\n\n**Type**: [Template / Input / System]\n\n**Problem**: [What's wrong]\n\n**Solution**: [Exact change to make]\n\n**Implementation**:\n\n```bash\n# For template fixes:\nEdit: repos/metabob-proto/activities/[template].json\nChange: [specific field]\nFrom: [old value]\nTo: [new value]\n\n# For input fixes:\nProvide variable: [name]=[value]\n\n# For system fixes:\n[command to run]\n```\n\n**Why This Helps**: [Explanation]\n\n**Risk**: [LOW/MEDIUM/HIGH] - [why]\n\n---\n\n## Template Improvements (For Next Version)\n\n### Improvement 1: [Enhancement title]\n\n**Benefit**: [How this improves the template]\n\n**Change**:\n```diff\n{\n  \"tasks\": [{\n-   \"prompt\": { \"template\": \"Old prompt\" }\n+   \"prompt\": { \"template\": \"Improved prompt with examples\" }\n  }]\n}\n```\n\n**Expected Impact**: [Success rate improvement estimate]\n\n---\n\n## Testing Strategy\n\n### Test 1: Verify Fix Works\n\n**Setup**:\n```bash\n# Apply the fix\n[commands to apply fix]\n```\n\n**Execute**:\n```bash\n# Re-run the activity with same inputs\nminibob --goal \"[goal]\" --var executionId={{executionId}}\n```\n\n**Expected Outcome**:\n- ✓ Task [id] completes successfully\n- ✓ Validation passes\n- ✓ Output files created\n\n**Validation**:\n```bash\n# Check success\n[commands to verify]\n```\n\n### Test 2: Prevent Regression\n\n**Test Case**: [Scenario that was failing]\n\n**Expected**: [Should now succeed]\n\n---\n\n## Rollout Plan\n\n**If Template Fix**:\n1. Create variant with fix: [template-id-v2]\n2. Test with 10 executions\n3. Compare success rate to baseline\n4. Deploy if successful\n\n**If Input Fix**:\n1. Update documentation\n2. Add variable validation\n3. Provide better error messages\n\n**If System Fix**:\n1. Update deployment scripts\n2. Add health checks\n3. Document requirements\n\n---\n\n## Prevention\n\n**How to prevent this failure in future**:\n\n1. [Specific measure]\n2. [Another measure]\n3. [Testing improvement]\n\n**Validation to add**:\n- [New validation rule]\n- [Pre-execution check]\n- [Post-execution verification]\n```\n\n**Write the file now.**"
       },
       "validation": {
         "required_files": [
-          "FIX_RECOMMENDATIONS.md"
+          "{{outputDir}}/FIX_RECOMMENDATIONS.md"
         ],
         "required_patterns": [
-          "## Immediate Fixes",
-          "## Testing Strategy"
+          {
+            "pattern": "## Immediate Fixes",
+            "description": "Must provide immediate fixes"
+          },
+          {
+            "pattern": "## Testing Strategy",
+            "description": "Must include testing strategy"
+          },
+          {
+            "pattern": "## Executive Summary",
+            "description": "Must have summary"
+          }
         ],
-        "forbidden_patterns": [],
+        "forbidden_patterns": [
+          {
+            "pattern": "TODO",
+            "description": "Recommendations must be complete"
+          }
+        ],
         "commands": []
       },
       "tools": {
@@ -82,13 +150,28 @@
           "write",
           "read"
         ],
-        "optional": [],
+        "optional": [
+          "bash"
+        ],
         "disabled": []
       },
       "retry": {
         "maxAttempts": 2,
-        "strategy": "simple"
+        "strategy": "exponential"
       }
     }
-  ]
+  ],
+  "metadata": {
+    "primordial": true,
+    "bootstrap": true,
+    "teaches": [
+      "impulse-based trace access",
+      "activityExecutionTrace resolution",
+      "activityTemplate resolution",
+      "failure analysis patterns",
+      "root cause identification",
+      "fix recommendation generation"
+    ],
+    "level": 0
+  }
 }

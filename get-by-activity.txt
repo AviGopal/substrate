@@ -1,5 +1,0 @@
-  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
-                                 Dload  Upload  Total   Spent   Left   Speed
-  0      0   0      0   0      0      0      0                              0100     57 100     57   0      0    923      0                              0100     57 100     57   0      0    921      0                              0100     57 100     57   0      0    920      0                              0
-{"error":"Template not found: activity-id-test-template"}
-HTTP: 404

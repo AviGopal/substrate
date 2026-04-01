@@ -36,7 +36,23 @@ import activitiesRouter from './activities';
 const router = new Hono();
 
 /**
- * Proxy request to Analysis API with retry and timeout
+ * Proxy request to Analysis API [DEPRECATED - ARCHITECTURE DRIFT]
+ *
+ * TODO: This violates "Resolvers live WHERE THE DATA IS" principle.
+ *
+ * PROBLEM: The activity-api backend is proxying Analysis API data through
+ * impulse resolution. This makes the backend act as a universal resolver
+ * instead of letting vessels access the Analysis API directly.
+ *
+ * SOLUTION: Analysis API should provide its own /v2/impulses/resolve endpoint
+ * - Vessels can call Analysis API directly for their impulse types
+ * - Analysis API resolves impulses like 'analysisResult', 'cochangeSuggestions', etc.
+ * - Activity-api backend only stores traces, doesn't proxy data
+ *
+ * This function is retained for reference but analysis types now return
+ * an error directing vessels to use the Analysis API directly.
+ *
+ * Original: Proxy request to Analysis API with retry and timeout
  * Returns null on failure (graceful degradation)
  */
 async function proxyToAnalysisApi<T>(
@@ -218,12 +234,13 @@ router.post('/', async (c) => {
 
     // Create impulse record with timestamps
     // Use SurrealDB's time::now() function for datetime fields (REBUILD MARKER)
+    // NOTE: org_id is a STRING field in schema, not a record link
     const createQuery = `
       CREATE impulse_data CONTENT {
         impulse_id: $impulse_id,
         api_key: $api_key,
         project_id: $project_id,
-        org_id: type::record('organizations', $org_id),
+        org_id: $org_id,
         impulse_data: $impulse_data,
         created_at: time::now(),
         updated_at: time::now()
@@ -852,10 +869,31 @@ router.post('/resolve', async (c) => {
       }
 
       // =============================================================================
-      // ANALYSIS API POINTER TYPES (M3 - Impulse Bridge)
-      // These proxy to metabob-analysis-api for CPG and analysis data
+      // ANALYSIS API POINTER TYPES (M3 - Impulse Bridge) [DEPRECATED]
+      // TODO: These cases violate "Resolvers live WHERE THE DATA IS"
+      // Analysis API should provide its own /v2/impulses/resolve endpoint
+      // Vessels should call Analysis API directly, not proxy through activity-api
       // =============================================================================
 
+      case 'analysisResult':
+      case 'cochangeSuggestions':
+      case 'impactAnalysis':
+      case 'codebaseSearch': {
+        // Return helpful error directing vessels to Analysis API
+        return c.json({
+          success: false,
+          error: 'resolver_moved',
+          message: `Analysis API impulse types (${pointer.type}) should be resolved by calling ` +
+                   `the Analysis API directly, not through activity-api. ` +
+                   `This follows the "Resolvers live WHERE THE DATA IS" principle.`,
+          todo: 'Analysis API should implement /v2/impulses/resolve endpoint',
+          analysis_api_url: config.analysisApi.url,
+          pointer_type: pointer.type,
+          suggested_approach: 'Vessels should include Analysis API client code to resolve these impulse types locally'
+        } as ImpulseResolveResponse, 410); // 410 Gone - permanent deprecation
+      }
+
+      /* ORIGINAL IMPLEMENTATION - COMMENTED OUT FOR REFERENCE
       case 'analysisResult': {
         // Load a single analysis problem/issue
         if (!pointer.resultId) {
@@ -983,6 +1021,7 @@ router.post('/resolve', async (c) => {
         }
         break;
       }
+      END COMMENTED OUT ORIGINAL IMPLEMENTATION */
 
       case 'problemCluster': {
         // Impulse-driven problem investigation - returns METADATA not content

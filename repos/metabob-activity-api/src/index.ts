@@ -21,8 +21,11 @@ import ciRoutes from './routes/ci';
 import executionTracesRoutes from './routes/execution-traces';
 import codeVariantsRoutes from './routes/code-variants';
 import vesselsRoutes from './routes/vessels';
+import vesselRegistryRoutes from './routes/vessel-registry';
 import connectionsRoutes from './routes/connections';
-import resolveRoutes from './routes/resolve';
+import ribosomeRoutes from './routes/ribosome';
+// DEPRECATED: Resolve routes disabled due to architecture drift (Task #1, Phase 1)
+// import resolveRoutes from './routes/resolve';
 import { broadcaster } from './websocket/broadcaster';
 import type { ServerWebSocket } from 'bun';
 
@@ -149,14 +152,23 @@ app.route('/v2/activities/execution-traces', executionTracesRoutes);
 // Code variants routes (GET /v2/activities/code-variants)
 app.route('/v2/activities/code-variants', codeVariantsRoutes);
 
+// Vessel registry routes (SPEC-004: POST /v2/vessels/register, GET /v2/vessels/discover, etc.)
+// MOUNTED FIRST to take precedence over legacy vessel status routes
+app.route('/v2/vessels', vesselRegistryRoutes);
+
 // Vessel status routes (GET /v2/vessels/status, POST /v2/vessels/heartbeat)
+// Legacy routes - mounted after SPEC-004 routes
 app.route('/v2/vessels', vesselsRoutes);
 
 // Connection slot routes (POST /v2/connections/acquire, heartbeat, reconnect, release)
 app.route('/v2/connections', connectionsRoutes);
 
-// Resolution routes (POST /v2/resolve - tiered resolver system)
-app.route('/v2', resolveRoutes);
+// Ribosome routes (T9: POST /v2/ribosome/extract, POST /v2/ribosome/extract-from-session, GET /v2/ribosome/candidates)
+app.route('/v2/ribosome', ribosomeRoutes);
+
+// DEPRECATED: Resolution routes disabled due to architecture drift (Task #1, Phase 1)
+// Resolution violates "Resolvers live WHERE THE DATA IS" - vessels should resolve, not backend
+// app.route('/v2', resolveRoutes);
 
 // ============================================================================
 // Error Handling
@@ -358,4 +370,18 @@ if (taskGenerationEnabled) {
       intervalMs: TASK_GENERATION_INTERVAL,
     });
   }, 30000);
+}
+
+// ============================================================================
+// Vessel Cleanup Job (SPEC-004)
+// ============================================================================
+
+const vesselCleanupEnabled = process.env.VESSEL_CLEANUP_ENABLED !== 'false';
+if (vesselCleanupEnabled) {
+  import('./jobs/cleanup-vessels').then(({ startCleanupJob }) => {
+    startCleanupJob();
+    logger.info('[Server] Vessel cleanup job started');
+  }).catch(err => {
+    logger.error('[Server] Failed to start vessel cleanup job', { error: err.message });
+  });
 }

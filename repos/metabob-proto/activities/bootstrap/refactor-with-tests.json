@@ -7,16 +7,27 @@
     {
       "key": "targetCode",
       "hint": "Provide the code files to be refactored",
-      "impulseTypes": ["file", "component"],
+      "impulseTypes": [
+        "file",
+        "component"
+      ],
       "required": false,
-      "budgetRange": [2000, 4000]
+      "budgetRange": [
+        2000,
+        4000
+      ]
     },
     {
       "key": "relatedTests",
       "hint": "Share existing tests for the code being refactored",
-      "impulseTypes": ["file"],
+      "impulseTypes": [
+        "file"
+      ],
       "required": false,
-      "budgetRange": [1000, 2000]
+      "budgetRange": [
+        1000,
+        2000
+      ]
     }
   ],
   "tasks": [
@@ -28,28 +39,7 @@
       "prompt": {
         "template": "Analyze code for refactoring:\n\n**Target**: {{refactorTarget}}\n**Goal**: {{refactorGoal}}\n\n## Your Task\n\n1. **Understand Current Code**:\n   - Read the target files carefully\n   - Understand what the code does\n   - Identify dependencies and interactions\n   - Map out the current structure\n\n2. **Identify Issues**:\n   - Use `metabob_search_codebase_issues` to find code quality issues\n   - Look for code smells (duplication, complexity, coupling)\n   - Check for hard-to-test code\n   - Note technical debt\n\n3. **Analyze Dependencies**:\n   - Use `metabob_analyze_change_impact` to understand what depends on this code\n   - Check how many components will be affected\n   - Assess refactoring risk\n\n4. **Review Tests**:\n   - What tests currently cover this code?\n   - Are tests sufficient to catch regressions?\n   - Will tests need updating after refactor?\n\n5. **Create Analysis Document**:\n   Create /tmp/refactor-analysis-{{refactorId}}.md:\n   ```markdown\n   # Refactoring Analysis: {{refactorTarget}}\n\n   ## Current State\n   - Purpose: What this code does\n   - Structure: How it's organized\n   - Dependencies: What depends on it (X components)\n\n   ## Issues Found\n   - Issue 1: Description\n   - Issue 2: Description\n   ...\n\n   ## Refactoring Goals\n   {{refactorGoal}}\n\n   ## Test Coverage\n   - Current tests: [list]\n   - Coverage gaps: [any]\n\n   ## Impact Assessment\n   - Risk level: LOW / MEDIUM / HIGH\n   - Affected components: X\n   - Recommendation: SAFE TO PROCEED / CAUTION / RISKY\n   ```\n\n## Guidelines\n\n- Understand code thoroughly before planning changes\n- Use Metabob tools to assess impact\n- Don't refactor without good test coverage\n- Be honest about risks",
         "max_tokens": 12000,
-        "compression_strategy": "filter",
-        "variables": [
-          {
-            "name": "refactorTarget",
-            "type": "string",
-            "required": true,
-            "description": "What code to refactor (file path, component name, or module)"
-          },
-          {
-            "name": "refactorGoal",
-            "type": "string",
-            "required": true,
-            "description": "What you want to achieve with this refactoring"
-          },
-          {
-            "name": "refactorId",
-            "type": "string",
-            "required": false,
-            "description": "Unique identifier for this refactoring (defaults to generated ID)",
-            "default": "{{refactorId}}"
-          }
-        ]
+        "compression_strategy": "filter"
       },
       "validation": {
         "required_files": [
@@ -72,12 +62,13 @@
       "id": "plan-refactoring",
       "subagent": "general",
       "description": "Create detailed refactoring plan with incremental steps",
-      "dependencies": ["analyze-code"],
+      "dependencies": [
+        "analyze-code"
+      ],
       "prompt": {
         "template": "Plan the refactoring based on /tmp/refactor-analysis-{{refactorId}}.md\n\n## Your Task\n\n1. **Review Analysis**: Read the analysis document carefully\n\n2. **Design New Structure**:\n   - What should the code look like after refactoring?\n   - How will it be better than current structure?\n   - What patterns or principles will we apply?\n\n3. **Plan Incremental Steps**:\n   - Break refactoring into small, safe steps\n   - Each step should leave code in working state\n   - Run tests after each step\n   - Order steps from safest to riskiest\n\n4. **Identify Test Updates**:\n   - Which tests need to change?\n   - Do we need new tests?\n   - Can we add tests before refactoring?\n\n5. **Create Refactoring Plan**:\n   Create /tmp/refactor-plan-{{refactorId}}.md:\n   ```markdown\n   # Refactoring Plan: {{refactorTarget}}\n\n   ## Goal\n   {{refactorGoal}}\n\n   ## New Structure\n   [Description of how code will be organized after refactoring]\n\n   ## Refactoring Steps\n   1. **Step 1**: What to change\n      - Why this step is safe\n      - Expected outcome\n      - Tests to run after\n\n   2. **Step 2**: What to change\n      - Why this step is safe\n      - Expected outcome\n      - Tests to run after\n   ...\n\n   ## Test Updates Needed\n   - Test 1: How it needs to change\n   - Test 2: How it needs to change\n\n   ## Success Criteria\n   - All tests passing\n   - Code quality improved\n   - Functionality unchanged\n   ```\n\n## Guidelines\n\n- Small, incremental steps\n- Each step preserves functionality\n- Run tests frequently\n- Have a rollback plan",
         "max_tokens": 10000,
-        "compression_strategy": "filter",
-        "variables": []
+        "compression_strategy": "filter"
       },
       "validation": {
         "required_files": [
@@ -100,12 +91,13 @@
       "id": "execute-refactoring",
       "subagent": "general",
       "description": "Execute refactoring plan step by step",
-      "dependencies": ["plan-refactoring"],
+      "dependencies": [
+        "plan-refactoring"
+      ],
       "prompt": {
         "template": "Execute the refactoring plan from /tmp/refactor-plan-{{refactorId}}.md\n\n## Your Task\n\n1. **Follow Plan Exactly**:\n   - Execute each step in order\n   - Don't skip or combine steps\n   - Complete one step before moving to next\n\n2. **For Each Step**:\n   - Make the code changes\n   - Run tests immediately\n   - If tests fail, fix or rollback\n   - Document what you did\n\n3. **Preserve Functionality**:\n   - Don't change behavior, only structure\n   - Keep public APIs stable\n   - Maintain backward compatibility\n\n4. **Code Quality**:\n   - Follow existing code style\n   - Add comments where code is complex\n   - Remove dead code\n   - Simplify where possible\n\n5. **Create Execution Log**:\n   Create /tmp/refactor-execution-{{refactorId}}.md:\n   ```markdown\n   # Refactoring Execution Log\n\n   ## Step 1: [Description]\n   ✅ Completed\n   - Changes: [what changed]\n   - Tests: All passing\n\n   ## Step 2: [Description]\n   ✅ Completed\n   - Changes: [what changed]\n   - Tests: All passing\n\n   ...\n\n   ## Files Changed\n   - file1.ts: Summary of changes\n   - file2.ts: Summary of changes\n\n   ## Status\n   Ready for final verification\n   ```\n\n## Guidelines\n\n- Test after every step\n- Don't change functionality\n- Document each change\n- Stop if something unexpected happens",
         "max_tokens": 14000,
-        "compression_strategy": "filter",
-        "variables": []
+        "compression_strategy": "filter"
       },
       "validation": {
         "required_files": [
@@ -130,12 +122,13 @@
       "id": "verify-and-commit",
       "subagent": "general",
       "description": "Verify refactoring success and commit changes",
-      "dependencies": ["execute-refactoring"],
+      "dependencies": [
+        "execute-refactoring"
+      ],
       "prompt": {
         "template": "Verify refactoring is complete and commit the changes.\n\n## Your Task\n\n1. **Run Full Test Suite**:\n   - All tests must pass\n   - No new failures\n   - No skipped tests\n\n2. **Verify Quality Improved**:\n   - Use `metabob_search_codebase_issues` on refactored files\n   - Check if issues were reduced\n   - Ensure no new HIGH severity issues\n\n3. **Check Code Quality**:\n   - Run type checker if applicable\n   - Verify no regressions\n   - Confirm goal achieved\n\n4. **Review Changes**:\n   - `git diff` to review all changes\n   - Ensure only intended changes included\n   - Check for leftover debugging code\n\n5. **Commit Refactoring**:\n   - Clear commit message: \"refactor: {{refactorTarget}} - {{refactorGoal}}\"\n   - Explain what was refactored and why\n   - Group related changes logically\n\n6. **Document Key Decisions**:\n   Use `metabob_annotate_component` for refactored components (2-3 max):\n   ```typescript\n   metabob_annotate_component({\n     file_path: \"src/module.ts\",\n     component_name: \"RefactoredClass\",\n     component_type: \"class\",\n     reason: \"Refactored to improve X. Extracted Y into separate method for testability. Chose Z pattern over W because of performance. Previous design had coupling issues.\"\n   })\n   ```\n\n7. **Create Completion Summary**:\n   Create /tmp/refactor-complete-{{refactorId}}.md:\n   ```markdown\n   # Refactoring Complete\n\n   ## Goal\n   {{refactorGoal}}\n\n   ## Changes Made\n   [Summary of structural changes]\n\n   ## Quality Improvements\n   - Before: X issues\n   - After: Y issues\n   - Improvement: [specific metrics]\n\n   ## Tests\n   ✅ All X tests passing\n\n   ## Deliverables\n   ✅ Refactoring complete\n   ✅ All tests passing\n   ✅ Code quality improved\n   ✅ Changes committed\n   ✅ Key decisions documented\n   ```\n\n## Guidelines\n\n- All tests must pass\n- Quality should be improved, not worse\n- Commit message explains value of refactoring\n- Annotate design decisions",
         "max_tokens": 12000,
-        "compression_strategy": "filter",
-        "variables": []
+        "compression_strategy": "filter"
       },
       "validation": {
         "required_files": [
@@ -171,5 +164,26 @@
   },
   "id": "refactor-with-tests",
   "variant_id": "refactor-with-tests",
-  "activity_id": "refactor-with-tests"
+  "activity_id": "refactor-with-tests",
+  "variables": [
+    {
+      "name": "refactorTarget",
+      "type": "string",
+      "required": true,
+      "description": "What code to refactor (file path, component name, or module)"
+    },
+    {
+      "name": "refactorGoal",
+      "type": "string",
+      "required": true,
+      "description": "What you want to achieve with this refactoring"
+    },
+    {
+      "name": "refactorId",
+      "type": "string",
+      "required": false,
+      "description": "Unique identifier for this refactoring (defaults to generated ID)",
+      "default": "{{refactorId}}"
+    }
+  ]
 }

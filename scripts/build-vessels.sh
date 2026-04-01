@@ -67,7 +67,7 @@ build_vessel() {
   # - metabob-internal-dashboard: needs @metabob/minibob library
   if [ "$vessel_name" = "metabob-activity-api" ] || [ "$vessel_name" = "metabob-analysis-api" ] || [ "$vessel_name" = "metabob-internal-dashboard" ]; then
     cd "$ROOT_DIR/repos"
-    if docker build -f "$vessel_name/Dockerfile" -t "$vessel_name:dev" . ; then
+    if docker build --ssh default -f "$vessel_name/Dockerfile" -t "$vessel_name:dev" . ; then
       info "✓ Built $vessel_name:dev (with shared dependencies)"
     else
       error "Failed to build $vessel_name"
@@ -75,7 +75,7 @@ build_vessel() {
     fi
   else
     cd "$full_path"
-    if docker build -t "$vessel_name:dev" . ; then
+    if docker build --ssh default -t "$vessel_name:dev" . ; then
       info "✓ Built $vessel_name:dev"
     else
       error "Failed to build $vessel_name"

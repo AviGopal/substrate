@@ -781,6 +781,80 @@ app.post('/', async (c) => {
       ...(body.correlation_id ? { correlation_id: body.correlation_id } : {}),
     };
 
+    // ========================================================================
+    // TASK #3: Activity Shape Validation
+    // Validate that output_impulses match the activity's declared output_shapes
+    // ========================================================================
+    if (trace.success && trace.output_impulses && trace.output_impulses.length > 0) {
+      try {
+        // Fetch activity template to get declared output_shapes
+        const activityQuery = `
+          SELECT output_shapes FROM activity_template
+          WHERE id = $activity_id OR variant_id = $variant_id
+          LIMIT 1
+        `;
+        const activityResult = await surrealDB.query(activityQuery, {
+          activity_id: trace.activity_id,
+          variant_id: trace.variant_id,
+        });
+
+        if (activityResult && activityResult.length > 0 && activityResult[0]?.output_shapes) {
+          const declaredShapes: string[] = activityResult[0].output_shapes;
+          const actualShapes: string[] = trace.output_impulses.map((imp: any) =>
+            typeof imp === 'string' ? imp : (imp?.shape || 'unknown')
+          );
+
+          // Compare declared vs actual
+          const shapeMismatch = {
+            declared: declaredShapes,
+            actual: actualShapes,
+            missing: declaredShapes.filter(s => !actualShapes.includes(s)),
+            unexpected: actualShapes.filter(s => !declaredShapes.includes(s)),
+          };
+
+          if (shapeMismatch.missing.length > 0 || shapeMismatch.unexpected.length > 0) {
+            logger.warn('[Shape Validation] Output impulse shapes do not match activity declaration', {
+              execution_id: trace.execution_id,
+              activity_id: trace.activity_id,
+              variant_id: trace.variant_id,
+              shape_mismatch: shapeMismatch,
+            });
+
+            // Store mismatch in trace metadata for learning
+            if (!trace.metadata) {
+              trace.metadata = {};
+            }
+            (trace.metadata as any).shape_validation = {
+              passed: false,
+              mismatch: shapeMismatch,
+              validated_at: new Date().toISOString(),
+            };
+          } else {
+            logger.info('[Shape Validation] Output impulse shapes match activity declaration', {
+              execution_id: trace.execution_id,
+              shapes: actualShapes,
+            });
+
+            // Store validation success in metadata
+            if (!trace.metadata) {
+              trace.metadata = {};
+            }
+            (trace.metadata as any).shape_validation = {
+              passed: true,
+              shapes: actualShapes,
+              validated_at: new Date().toISOString(),
+            };
+          }
+        }
+      } catch (validationError) {
+        // Don't fail the trace insertion if validation fails - just log
+        logger.error('[Shape Validation] Failed to validate output shapes', {
+          execution_id: trace.execution_id,
+          error: validationError instanceof Error ? validationError.message : String(validationError),
+        });
+      }
+    }
+
     // Insert into database
     // Build query dynamically to avoid NULL vs NONE issues for optional fields
     const optionalFields: string[] = [];
@@ -804,16 +878,8 @@ app.post('/', async (c) => {
 
     const optionalFieldsStr = optionalFields.length > 0 ? `,\n        ${optionalFields.join(',\n        ')}` : '';
 
-    // Build org_id/project_id record link expressions
-    // SurrealDB expects record links (organizations:xxx) not plain strings
-    // Use type::record() to construct record links from string IDs
-    const orgIdExpr = trace.org_id
-      ? `type::record('organizations', $org_id)`
-      : 'NONE';
-    const projectIdExpr = trace.project_id
-      ? `type::record('projects', $project_id)`
-      : 'NONE';
-
+    // NOTE: org_id is a STRING field in schema (not a record link)
+    // project_id is option<record<projects>> but can be passed as string if set
     const query = `
       INSERT INTO activity_execution_traces {
         execution_id: $execution_id,
@@ -825,8 +891,8 @@ app.post('/', async (c) => {
         tokens_input: $tokens_input,
         tokens_output: $tokens_output,
         tokens_cache: $tokens_cache,
-        org_id: ${orgIdExpr},
-        project_id: ${projectIdExpr},
+        org_id: $org_id,
+        project_id: $project_id,
         executed_at: $executed_at,
         created_at: $created_at${optionalFieldsStr}
       }
