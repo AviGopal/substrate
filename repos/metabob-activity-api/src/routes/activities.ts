@@ -504,8 +504,12 @@ app.post('/templates', async (c) => {
       // Legacy category for backward compatibility
       category: derivedCategory,
       scope: validated.scope || 'global',
-      org_id: validated.org_id || orgId,
     };
+
+    // Add org_id only if provided (optional field, let schema handle default)
+    if (validated.org_id || orgId) {
+      activityRecord.org_id = validated.org_id || orgId;
+    }
 
     // Add task_steps (schema field name)
     if (validated.task_steps && validated.task_steps.length > 0) {
