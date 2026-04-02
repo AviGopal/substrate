@@ -702,6 +702,7 @@ app.get('/candidates', async (c) => {
     const minTraces = parseInt(c.req.query('min_traces') || '2', 10);
 
     // Find activity_ids with multiple successful executions
+    // Note: SurrealDB doesn't support HAVING, so we filter after grouping
     const query = `
       SELECT
         activity_id,
@@ -710,21 +711,24 @@ app.get('/candidates', async (c) => {
         array::group(execution_id) as execution_ids
       FROM activity_execution_traces
       GROUP BY activity_id
-      HAVING success_count >= $min_traces
       ORDER BY success_count DESC
-      LIMIT $limit
     `;
 
-    const candidates = await surrealDB.query<{
+    const results = await surrealDB.query<{
       activity_id: string;
       execution_count: number;
       success_count: number;
       execution_ids: string[];
-    }>(query, { limit, min_traces: minTraces });
+    }>(query, {});
+
+    // Filter results where success_count >= min_traces (client-side filtering since SurrealDB doesn't support HAVING)
+    const candidates = (results || [])
+      .filter(r => r.success_count >= minTraces)
+      .slice(0, limit);
 
     return c.json({
-      candidates: candidates || [],
-      count: candidates?.length || 0,
+      candidates,
+      count: candidates.length,
     });
 
   } catch (error) {

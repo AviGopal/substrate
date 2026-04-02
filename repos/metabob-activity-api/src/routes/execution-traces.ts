@@ -425,8 +425,14 @@ app.get('/', async (c) => {
       }
     }
 
+    // Ensure execution_id is populated (use SurrealDB id as fallback for legacy data)
+    const executionsNormalized = executionsWithSelection.map((trace: any) => ({
+      ...trace,
+      execution_id: trace.execution_id || trace.id?.toString().split(':')[1] || trace.id,
+    }));
+
     const response: ListExecutionTracesResponse = {
-      executions: executionsWithSelection,
+      executions: executionsNormalized,
       total,
       limit,
       offset,
@@ -565,10 +571,14 @@ app.get('/:executionId', async (c) => {
     }
 
     // Return trace with optional selection data
-    return c.json({
+    // Ensure execution_id is populated (use SurrealDB id as fallback for legacy data)
+    const traceNormalized = {
       ...trace,
+      execution_id: trace.execution_id || (trace as any).id?.toString().split(':')[1] || (trace as any).id,
       selection_attribution: selectionData,
-    });
+    };
+
+    return c.json(traceNormalized);
 
   } catch (error) {
     logger.error('Failed to get execution trace', {
@@ -703,8 +713,9 @@ app.post('/', async (c) => {
     const session = ((c.get as any)('session') as SessionData | undefined) || { session_id: 'internal', org_id: null, project_id: null, api_key: null, latest_job_id: null };
 
     // Use JWT auth claims if available, otherwise fall back to session
-    const orgId = jwtAuth?.orgId || session.org_id || null;
-    const projectId = jwtAuth?.projectId || session.project_id || null;
+    // Default to 'public' for unauthenticated/improvised executions (schema requires non-null string)
+    const orgId = jwtAuth?.orgId || session?.org_id || 'public';
+    const projectId = jwtAuth?.projectId || session?.project_id || null;
 
     const body = await c.req.json();
 
@@ -875,11 +886,13 @@ app.post('/', async (c) => {
     if (trace.metadata) optionalFields.push('metadata: $metadata');
     // Selection-to-execution correlation
     if ((trace as any).correlation_id) optionalFields.push('correlation_id: $correlation_id');
+    // Project ID - only include if set (MiniBob instances may not have projects)
+    if (trace.project_id) optionalFields.push('project_id: $project_id');
 
     const optionalFieldsStr = optionalFields.length > 0 ? `,\n        ${optionalFields.join(',\n        ')}` : '';
 
     // NOTE: org_id is a STRING field in schema (not a record link)
-    // project_id is option<record<projects>> but can be passed as string if set
+    // project_id is optional - only included in query if set (handled in optionalFields)
     const query = `
       INSERT INTO activity_execution_traces {
         execution_id: $execution_id,
@@ -892,11 +905,15 @@ app.post('/', async (c) => {
         tokens_output: $tokens_output,
         tokens_cache: $tokens_cache,
         org_id: $org_id,
-        project_id: $project_id,
         executed_at: $executed_at,
         created_at: $created_at${optionalFieldsStr}
       }
     `;
+
+    // Ensure org_id is always a non-null string (schema requirement)
+    if (!trace.org_id || typeof trace.org_id !== 'string') {
+      trace.org_id = 'public';
+    }
 
     const result = await surrealDB.query(query, trace);
 
