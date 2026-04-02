@@ -27,7 +27,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://activity.metabob.local}"
+API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-https://activity.metabob.com}"
 VERBOSE=${VERBOSE:-false}
 TEMPLATE_ID=""
 TEST_OUTPUT="/tmp/progressive-test-$(date +%s).txt"

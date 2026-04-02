@@ -18,7 +18,7 @@
 import { basename } from "node:path"
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 
-const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT || "http://activity.metabob.local"
+const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT || "https://activity.metabob.com"
 const TEST_WORKDIR = "/tmp/test-progressive-creation-" + Date.now()
 
 interface ActivityTemplate {

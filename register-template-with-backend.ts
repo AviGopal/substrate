@@ -40,16 +40,55 @@ interface RegistrationResponse {
 }
 
 /**
+ * Convert simple template format to backend schema
+ */
+function transformToBackendSchema(template: any): any {
+  // If already in backend format, return as-is
+  if (template.variant_id && template.activity_id) {
+    return template
+  }
+
+  // Convert from simple format
+  return {
+    // Backend requires these for the activity table
+    variant_id: template.id || template.variant_id,
+    activity_id: template.id || template.activity_id || `activity-${template.id}`,
+    variant_name: template.name || template.variant_name,
+    description: template.description,
+    category: template.category || "feature",
+    tags: template.tags || [],
+    scope: template.scope || "global",  // Required: 'global' | 'org' | 'project'
+    org_id: template.org_id || null,
+    project_id: template.project_id || null,
+
+    // Convert tasks to task_steps for backend
+    task_steps: (template.tasks || []).map((task: any) => ({
+      id: task.id,
+      description: task.description,
+      prompt: task.prompt,
+      validation: task.validation || { required_patterns: [], forbidden_patterns: [] },
+      dependencies: task.dependencies || [],
+      retry: task.retry || { maxAttempts: 1, strategy: "linear" },
+    })),
+
+    // Metadata
+    metadata: template.metadata || { author: "auto-extracted", version: "1.0.0" },
+    variables: template.variables || [],
+    impulses: template.impulses || [],
+  }
+}
+
+/**
  * Validate template structure
  */
 function validateTemplate(template: any): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
-  if (!template.id || typeof template.id !== "string") {
-    errors.push("Missing or invalid 'id' field")
+  if (!template.id && !template.variant_id && !template.activity_id) {
+    errors.push("Missing 'id' or 'variant_id' field")
   }
-  if (!template.name || typeof template.name !== "string") {
-    errors.push("Missing or invalid 'name' field")
+  if (!template.name && !template.variant_name) {
+    errors.push("Missing 'name' or 'variant_name' field")
   }
   if (!template.description || typeof template.description !== "string") {
     errors.push("Missing or invalid 'description' field")
@@ -57,13 +96,14 @@ function validateTemplate(template: any): { valid: boolean; errors: string[] } {
   if (!template.category || typeof template.category !== "string") {
     errors.push("Missing or invalid 'category' field")
   }
-  if (!Array.isArray(template.tasks) || template.tasks.length === 0) {
+  const tasksArray = template.tasks || template.task_steps
+  if (!Array.isArray(tasksArray) || tasksArray.length === 0) {
     errors.push("Missing or empty 'tasks' array")
   }
 
   // Validate each task
-  for (let i = 0; i < template.tasks?.length; i++) {
-    const task = template.tasks[i]
+  for (let i = 0; i < tasksArray?.length; i++) {
+    const task = tasksArray[i]
     if (!task.id) errors.push(`Task ${i}: Missing 'id' field`)
     if (!task.description) errors.push(`Task ${i}: Missing 'description' field`)
     if (!task.prompt) errors.push(`Task ${i}: Missing 'prompt' field`)
@@ -181,9 +221,12 @@ async function main(): Promise<void> {
 
     printTemplateInfo(template)
 
+    // Transform to backend schema if needed
+    const backendTemplate = transformToBackendSchema(template)
+
     // Register with backend
     console.error(`\n⏳ Registering template with backend...`)
-    const result = await registerTemplate(template, apiEndpoint)
+    const result = await registerTemplate(backendTemplate, apiEndpoint)
 
     // Success response
     console.log(JSON.stringify(result, null, 2))

@@ -271,8 +271,9 @@ GOAL-FAILED: <description of test failure>
 ## Environment Variables
 
 ```bash
-# Backend API endpoint (used by all tools)
-export ACTIVITY_API_ENDPOINT="http://activity.metabob.local"
+# Backend API endpoint (default: https://activity.metabob.com - production)
+# Use this for local testing (if available):
+# export ACTIVITY_API_ENDPOINT="http://activity.metabob.local"
 
 # Optional: Set for tests
 export VERBOSE="true"    # Enable verbose output
