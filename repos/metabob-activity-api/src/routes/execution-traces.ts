@@ -912,8 +912,18 @@ app.post('/', async (c) => {
 
     // Ensure org_id is always a non-null string (schema requirement)
     if (!trace.org_id || typeof trace.org_id !== 'string') {
+      logger.info('Fixing org_id for execution trace', {
+        original_org_id: trace.org_id,
+        org_id_type: typeof trace.org_id
+      });
       trace.org_id = 'public';
     }
+
+    logger.debug('Executing trace query', {
+      execution_id: trace.execution_id,
+      org_id: trace.org_id,
+      org_id_type: typeof trace.org_id
+    });
 
     const result = await surrealDB.query(query, trace);
 
