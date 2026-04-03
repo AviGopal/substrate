@@ -1,0 +1,709 @@
+{
+  "metadata": {
+    "generated": "2026-04-02",
+    "last_analysis": "vessel-alignment",
+    "canonical_documents": [
+      "CLAUDE.md",
+      "README.md",
+      "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md"
+    ],
+    "total_files_analyzed": 44,
+    "conflict_categories": {
+      "status_report": 18,
+      "implementation_note": 10,
+      "architecture_doc": 5,
+      "deployment_guide": 3,
+      "planning_doc": 2,
+      "reference_doc": 4,
+      "specification": 2
+    }
+  },
+
+  "vessel_alignment_analysis": {
+    "scope": "repos/{minibob,metabob-activity-api,identity-vessel,user-vessel}",
+    "analysis_date": "2026-04-02",
+    "vessels_analyzed": 4,
+    "schema_conflicts_found": 7,
+    "critical_issues": 3,
+
+    "vessel_ownership": {
+      "minibob": {
+        "concern": "Activity execution, local impulse resolution",
+        "tables_owned": [],
+        "tables_read": ["activity (via MCP)", "execution (via MCP)", "impulse (via MCP)"],
+        "resolves": ["memo", "file", "ui_component"],
+        "delegates_to": "metabob-activity-api",
+        "communication": "MCP protocol"
+      },
+      "metabob-activity-api": {
+        "concern": "Learning backend, trace storage, Thompson Sampling, backend impulse resolution",
+        "tables_owned": [
+          "impulse", "activity", "execution", "vessel",
+          "impulse_data (legacy)", "impulse_usage_history",
+          "variant_performance_metrics", "activity_composition_graph",
+          "goal_execution_paths", "execution_sequences",
+          "impulse_relevance_metrics", "tool_usage",
+          "thompson_selection_log", "ci_runs", "code_variants",
+          "composite_sequence_patterns"
+        ],
+        "tables_read": ["users (for created_by)", "organizations (for org_id validation)"],
+        "resolves": ["activityExecutionTrace", "activityTemplate", "activityMetrics", "recentExecutions", "failurePatterns", "successPatterns", "templateComparison", "*"],
+        "delegates_to": null,
+        "communication": "HTTP REST + MCP"
+      },
+      "identity-vessel": {
+        "concern": "Stateless authentication validation (JWT + API key)",
+        "tables_owned": [],
+        "tables_read": ["users", "organizations", "api_keys", "minibob_instance"],
+        "resolves": ["authentication"],
+        "delegates_to": null,
+        "communication": "HTTP REST",
+        "note": "Should NOT define tables, only read from user-vessel's tables"
+      },
+      "user-vessel": {
+        "concern": "User/org/project management, API key lifecycle, connection tracking",
+        "tables_owned": [
+          "users", "organizations", "projects", "project_members",
+          "api_keys", "active_connections"
+        ],
+        "tables_read": [],
+        "resolves": [],
+        "delegates_to": "identity-vessel (for HMAC key generation)",
+        "communication": "HTTP REST"
+      }
+    },
+
+    "schema_conflicts": [
+      {
+        "id": "SC001",
+        "severity": "critical",
+        "type": "table_ownership",
+        "description": "Duplicate users table definition",
+        "files": [
+          "repos/identity-vessel/sql/001-auth-tables.surql",
+          "repos/user-vessel/sql/schema/002-users.surql"
+        ],
+        "identity_vessel_schema": {
+          "fields": ["email", "name", "org_id (string)", "password_hash", "created_at", "updated_at"],
+          "permissions": "none defined"
+        },
+        "user_vessel_schema": {
+          "fields": ["email", "name", "org_id (record<organizations>)", "password_hash", "role", "email_verified", "is_active", "created_at", "updated_at", "last_login", "last_password_change"],
+          "permissions": "full RBAC"
+        },
+        "resolution": "delete from identity-vessel",
+        "reason": "user-vessel owns user management. identity-vessel should only READ users table."
+      },
+      {
+        "id": "SC002",
+        "severity": "critical",
+        "type": "table_ownership",
+        "description": "Duplicate organizations table definition",
+        "files": [
+          "repos/identity-vessel/sql/001-auth-tables.surql",
+          "repos/user-vessel/sql/schema/001-organizations.surql"
+        ],
+        "identity_vessel_schema": {
+          "fields": ["name", "created_at", "updated_at"],
+          "permissions": "none defined"
+        },
+        "user_vessel_schema": {
+          "fields": ["org_id", "name", "subscription_tier", "seat_limit", "seat_usage", "created_at", "updated_at"],
+          "permissions": "full RBAC"
+        },
+        "resolution": "delete from identity-vessel",
+        "reason": "user-vessel owns organization management. identity-vessel should only READ."
+      },
+      {
+        "id": "SC003",
+        "severity": "critical",
+        "type": "table_ownership",
+        "description": "Duplicate api_keys table definition",
+        "files": [
+          "repos/identity-vessel/sql/001-auth-tables.surql",
+          "repos/user-vessel (api-keys.ts creates records)"
+        ],
+        "identity_vessel_fields": ["key_id", "org_id", "user_id", "name", "scopes", "revoked", "created_at", "last_used_at"],
+        "user_vessel_fields_used": ["id", "org_id", "user_id", "key_id", "scopes", "is_active", "rotation_required", "created_at", "last_used_at", "expires_at", "max_connections"],
+        "resolution": "consolidate in user-vessel",
+        "reason": "Reconcile field differences (revoked vs is_active, add max_connections/rotation_required)."
+      },
+      {
+        "id": "SC004",
+        "severity": "medium",
+        "type": "field_mismatch",
+        "description": "org_id type inconsistency",
+        "files": [
+          "repos/identity-vessel/sql/001-auth-tables.surql (string)",
+          "repos/user-vessel/sql/schema/002-users.surql (record<organizations>)",
+          "repos/metabob-activity-api/sql/schemas/020-paradigm-core-tables.surql (string)"
+        ],
+        "resolution": "standardize to string for cross-service, record within user-vessel",
+        "reason": "String is simpler for cross-service queries. Record provides referential integrity."
+      },
+      {
+        "id": "SC005",
+        "severity": "medium",
+        "type": "data_duplication",
+        "description": "impulse_data vs impulse table overlap",
+        "files": [
+          "repos/metabob-activity-api/sql/schemas/013-impulse-tool-usage.surql",
+          "repos/metabob-activity-api/sql/schemas/020-paradigm-core-tables.surql"
+        ],
+        "impulse_data_purpose": "Legacy impulse storage with detailed metadata",
+        "impulse_purpose": "New paradigm-aligned impulse storage",
+        "resolution": "migrate data, deprecate impulse_data",
+        "reason": "impulse table aligns with IMPULSE_ACTIVITY_FOUNDATION.md paradigm."
+      },
+      {
+        "id": "SC006",
+        "severity": "low",
+        "type": "communication_pattern",
+        "description": "API key validation bypass risk",
+        "issue": "identity-vessel validates HMAC signatures without real-time revocation check",
+        "files": ["repos/identity-vessel/src/index.ts", "repos/user-vessel/src/routes/api-keys.ts"],
+        "resolution": "use short token TTLs for eventual consistency",
+        "reason": "Current architecture relies on short TTLs rather than synchronous revocation checks."
+      },
+      {
+        "id": "SC007",
+        "severity": "low",
+        "type": "missing_integration",
+        "description": "Connection tracking not enforced by activity-api",
+        "files": ["repos/user-vessel/sql/002-connection-tracking.surql", "repos/metabob-activity-api/src/routes/activities.ts"],
+        "issue": "user-vessel tracks active_connections but activity-api doesn't check limits",
+        "resolution": "design decision needed",
+        "reason": "If minibob instances respect slot limits, activity-api may not need to enforce."
+      }
+    ],
+
+    "recommendations": [
+      {
+        "id": "R001",
+        "priority": "high",
+        "action": "Remove table definitions from identity-vessel",
+        "description": "Delete DEFINE TABLE statements from repos/identity-vessel/sql/001-auth-tables.surql. identity-vessel should be stateless - read only from user-vessel's tables.",
+        "migration_required": true
+      },
+      {
+        "id": "R002",
+        "priority": "high",
+        "action": "Create unified api_keys schema",
+        "description": "Consolidate api_keys table in user-vessel with all fields: is_active, rotation_required, max_connections, expires_at.",
+        "migration_required": true
+      },
+      {
+        "id": "R003",
+        "priority": "medium",
+        "action": "Standardize org_id type",
+        "description": "Use string for all tables outside user-vessel. Use record<organizations> within user-vessel for referential integrity.",
+        "migration_required": true
+      },
+      {
+        "id": "R004",
+        "priority": "medium",
+        "action": "Deprecate impulse_data table",
+        "description": "Create migration to impulse table. Add deprecation warnings. Target removal in next major version.",
+        "migration_required": true
+      },
+      {
+        "id": "R005",
+        "priority": "low",
+        "action": "Document vessel communication patterns",
+        "description": "Create docs/architecture/VESSEL_COMMUNICATION.md with data flow diagrams.",
+        "migration_required": false
+      }
+    ],
+
+    "data_flow_summary": {
+      "user_authentication": {
+        "dashboard_login": "Dashboard -> user-vessel (POST /v2/auth/login) -> SurrealDB (user_password ACCESS) -> JWT",
+        "api_key_validation": "Any vessel -> identity-vessel (POST /v1/auth/resolve) -> SurrealDB (api_keys read) -> auth context"
+      },
+      "minibob_authentication": {
+        "flow": "MiniBob -> identity-vessel (POST /v2/auth/minibob/signin) -> SurrealDB (minibob_instance lookup) -> JWT"
+      },
+      "activity_execution": {
+        "flow": "MiniBob -> activity-api (MCP) -> execute locally -> activity-api (MCP: record-execution-traces) -> SurrealDB",
+        "impulse_resolution": "memo/file: MiniBob resolves. All other types: activity-api via MCP."
+      },
+      "api_key_lifecycle": {
+        "create": "Dashboard -> user-vessel -> identity-vessel (crypto) -> user-vessel stores metadata",
+        "revoke": "Dashboard -> user-vessel -> SurrealDB (api_keys.is_active = false)"
+      }
+    }
+  },
+  "conflicts": [
+    {
+      "file": "ACTIVITY_SYSTEM_REDESIGN.md",
+      "category": "planning_doc",
+      "date": "2026-03-31",
+      "conflicts_with": "CLAUDE.md (deployment section), AUTH_DELEGATION_IMPLEMENTATION_COMPLETE.md",
+      "conflict_type": "duplicate",
+      "resolution": "archive",
+      "reason": "Planning document for auth extraction that has been completed. Status: Planning. Tasks listed as unchecked suggest this was a pre-implementation plan. AUTH_DELEGATION_IMPLEMENTATION_COMPLETE.md shows this work is done."
+    },
+    {
+      "file": "AUTH_DELEGATION_IMPLEMENTATION_COMPLETE.md",
+      "category": "status_report",
+      "date": "2026-03-31",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Temporal status update documenting completion of auth delegation work. File explicitly states 'Status: IMPLEMENTED'. Historical value but not current documentation."
+    },
+    {
+      "file": "AUTHENTICATION_STATUS.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Status report about authentication state. Likely superseded by AUTH_DELEGATION_IMPLEMENTATION_COMPLETE.md and current CLAUDE.md documentation."
+    },
+    {
+      "file": "BUILD_VALIDATION_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Temporal validation report. Summary documents are point-in-time snapshots that become outdated immediately."
+    },
+    {
+      "file": "COMPLETE_HYPOTHESIS_SYSTEM.md",
+      "category": "architecture_doc",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Documents hypothesis-driven understanding system. Appears to be complementary architecture documentation, not superseded. First 100 lines show detailed technical design for meta-learning system. Should verify against canonical foundation doc for conflicts."
+    },
+    {
+      "file": "DATETIME_FIX_DEPLOYMENT_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Deployment summary for specific datetime fix. Temporal status update with no ongoing relevance."
+    },
+    {
+      "file": "DEPLOYMENT_RESULTS.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "DEPLOYMENT_GUIDE.md, CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Results from specific deployment. Point-in-time status that doesn't reflect current state."
+    },
+    {
+      "file": "DOCUMENTATION_CLEANUP_PLAN.md",
+      "category": "planning_doc",
+      "date": "2026-03-27",
+      "conflicts_with": "none",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Meta-documentation about cleanup strategy. Still relevant as it provides a framework for ongoing documentation management. Generated 2026-03-27, appears to be an active process document."
+    },
+    {
+      "file": "DOCUMENTATION_CLEANUP_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "DOCUMENTATION_CLEANUP_PLAN.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Summary of completed cleanup work. Temporal status update that documents a finished task."
+    },
+    {
+      "file": "FEEDBACK_SIMULATION.md",
+      "category": "implementation_note",
+      "date": "unknown",
+      "conflicts_with": "LEARNING_LOOP_COMPLETE.md",
+      "conflict_type": "duplicate",
+      "resolution": "archive",
+      "reason": "Detailed feedback analysis for learning loop. Appears to be part of LEARNING_LOOP_COMPLETE.md documentation suite. Likely a working document during implementation."
+    },
+    {
+      "file": "GOAL_IMPULSE_RESOLVER_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Summary document about goal impulse resolution. Foundation doc is the canonical source for impulse architecture."
+    },
+    {
+      "file": "GOAL_RESOLUTION_ANALYSIS.md",
+      "category": "implementation_note",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md",
+      "conflict_type": "duplicate",
+      "resolution": "archive",
+      "reason": "Analysis document about goal resolution patterns. Foundational architecture should be in canonical docs, not root-level analysis files."
+    },
+    {
+      "file": "HYPOTHESIS_DEPLOYMENT_SETUP.md",
+      "category": "status_report",
+      "date": "2026-03-31",
+      "conflicts_with": "COMPLETE_HYPOTHESIS_SYSTEM.md, CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Deployment setup completion document. Status: Complete. Describes one-time setup of hypothesis activities seed script. Historical implementation log."
+    },
+    {
+      "file": "HYPOTHESIS_TESTING_IMPLEMENTATION_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "COMPLETE_HYPOTHESIS_SYSTEM.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Implementation summary for hypothesis testing. Summary documents are temporal snapshots."
+    },
+    {
+      "file": "IDENTITY_INTEGRATION_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "IDENTITY_VESSEL_INTEGRATION_PLAN.md, CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Summary of identity integration work. Temporal status update documenting completed integration."
+    },
+    {
+      "file": "IDENTITY_VESSEL_INTEGRATION_PLAN.md",
+      "category": "planning_doc",
+      "date": "unknown",
+      "conflicts_with": "DEPLOYMENT_PROCEDURE.md",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Integration plan document. May contain detailed design decisions not in deployment procedure. Needs review to determine if it's a plan (archive) or reference (keep)."
+    },
+    {
+      "file": "IMPLEMENTATION_COMPLETE.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Generic implementation completion document. Temporal status marker with no specific ongoing value."
+    },
+    {
+      "file": "IMPULSE_LEARNING_ANALYSIS.md",
+      "category": "implementation_note",
+      "date": "2026-03-31",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Comprehensive audit of impulse relevance tracking and learning algorithms. 747 lines of detailed analysis including proposed enhancements. This is valuable reference documentation for the learning system implementation, complementary to foundation doc."
+    },
+    {
+      "file": "IMPULSE_RESOLVER_ARCHITECTURE.md",
+      "category": "architecture_doc",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md, LLM_RESOLVER_MIXIN.md",
+      "conflict_type": "duplicate",
+      "resolution": "merge_or_archive",
+      "reason": "Detailed impulse-resolver architecture (672 lines). Covers resolver interface, state transitions, migration path. Should be merged into canonical foundation doc or moved to docs/architecture/ if it extends foundation doc. Contains implementation details that may still be relevant."
+    },
+    {
+      "file": "IMPULSE_STORAGE_FIX_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Summary of specific impulse storage fix. Temporal bug fix documentation."
+    },
+    {
+      "file": "LEARNING_LOOP_COMPLETE.md",
+      "category": "status_report",
+      "date": "2026-03-30",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Status report documenting learning loop demonstration. Status: Complete. MiniBob Score: 43.8%. Historical milestone documentation but not current reference material."
+    },
+    {
+      "file": "LLM_RESOLVER_MIXIN.md",
+      "category": "architecture_doc",
+      "date": "unknown",
+      "conflicts_with": "IMPULSE_RESOLVER_ARCHITECTURE.md",
+      "conflict_type": "duplicate",
+      "resolution": "merge_or_archive",
+      "reason": "Design document for LLM resolver as optional mix-in (646 lines). Detailed implementation guide with code examples. Should be in docs/architecture/ or merged into resolver architecture doc. Contains valuable design patterns."
+    },
+    {
+      "file": "MIDDLEWARE_CLEANUP_COMPLETE.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "AUTH_DELEGATION_IMPLEMENTATION_COMPLETE.md, CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Completion document for Redis session auth removal. Status: Complete. Temporal implementation log with historical value only."
+    },
+    {
+      "file": "MINIBOB_IDENTITY_INTEGRATION.md",
+      "category": "implementation_note",
+      "date": "unknown",
+      "conflicts_with": "IDENTITY_VESSEL_INTEGRATION_PLAN.md, CLAUDE.md",
+      "conflict_type": "duplicate",
+      "resolution": "archive",
+      "reason": "MiniBob-specific identity integration notes. Likely superseded by broader integration plan and CLAUDE.md documentation."
+    },
+    {
+      "file": "MINIBOB_IMPULSE_DRIVEN_IMPLEMENTATION.md",
+      "category": "implementation_note",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md",
+      "conflict_type": "duplicate",
+      "resolution": "archive",
+      "reason": "Implementation notes for impulse-driven architecture in MiniBob. Should be merged into canonical foundation doc if contains unique insights, otherwise archive."
+    },
+    {
+      "file": "PRE_COMMIT_HOOK_VERIFICATION.md",
+      "category": "status_report",
+      "date": "recent",
+      "conflicts_with": "PRE_COMMIT_WORKFLOW.md",
+      "conflict_type": "duplicate",
+      "resolution": "archive",
+      "reason": "Verification document for pre-commit hook. Listed in git status with 'A' flag suggesting recent addition. Appears to document verification of hook registration."
+    },
+    {
+      "file": "PRE_COMMIT_WORKFLOW.md",
+      "category": "reference_doc",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md (deployment section)",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Documentation of pre-commit workflow. Reference document for CI/CD process. Should remain accessible for developers."
+    },
+    {
+      "file": "REACT_RENDERER_LEARNING_LOOP_DEMO.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "LEARNING_LOOP_COMPLETE.md",
+      "conflict_type": "duplicate",
+      "resolution": "archive",
+      "reason": "Demo/example document for learning loop using react-renderer. Part of learning loop documentation suite, likely temporal demo artifact."
+    },
+    {
+      "file": "RECOMMENDATION_IMPROVEMENTS_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Summary of recommendation improvements. Temporal status update."
+    },
+    {
+      "file": "RELIABILITY_IMPLEMENTATION_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Summary of reliability implementation work. Temporal status update."
+    },
+    {
+      "file": "SCHEMA_CONSISTENCY_IMPLEMENTATION.md",
+      "category": "implementation_note",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md (schema section)",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Implementation notes for schema consistency. Should be part of schema documentation in repos/metabob-activity-api/sql/, not root-level doc."
+    },
+    {
+      "file": "SECRETS_MANAGEMENT_SPEC.md",
+      "category": "specification",
+      "date": "recent",
+      "conflicts_with": "CLAUDE.md (configuration section)",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Specification for secrets management. Recent addition per git commit 3003d1a. Specifications provide ongoing reference value for security practices."
+    },
+    {
+      "file": "SURREALDB_VIEW_RECORD_ID_FIX.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "none",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Documentation of specific SurrealDB view fix. Temporal bug fix documentation."
+    },
+    {
+      "file": "system_test.md",
+      "category": "reference_doc",
+      "date": "unknown",
+      "conflicts_with": "none",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "System test documentation. Reference material for testing procedures. Likely still relevant."
+    },
+    {
+      "file": "TRAJECTORY_VALIDATION_SUMMARY.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Summary of trajectory validation work. Temporal status update."
+    },
+    {
+      "file": "USER_VESSEL_IMPLEMENTATION_COMPLETE.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Completion document for user-vessel implementation. Status marker with temporal value only."
+    },
+    {
+      "file": "VALIDATION_REPORT.md",
+      "category": "status_report",
+      "date": "unknown",
+      "conflicts_with": "COMPLETE_HYPOTHESIS_SYSTEM.md, HYPOTHESIS_TESTING_IMPLEMENTATION_SUMMARY.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Validation report for hypothesis system. Point-in-time validation results."
+    },
+    {
+      "file": "VESSEL_REGISTRY_IMPLEMENTATION.md",
+      "category": "status_report",
+      "date": "2026-03-31",
+      "conflicts_with": "CLAUDE.md",
+      "conflict_type": "superseded",
+      "resolution": "archive",
+      "reason": "Implementation completion document for SPEC-004 vessel registry. Status: Complete. Detailed implementation log (439 lines) with historical value but not current reference documentation."
+    },
+    {
+      "file": "VESSELS_AND_LOCAL_RESOLVERS.md",
+      "category": "architecture_doc",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Architecture documentation about vessels and resolver patterns. Likely complementary to foundation doc. Needs review to ensure no semantic conflicts with canonical architecture."
+    },
+    {
+      "file": "VESSEL_TAG_STRATEGY.md",
+      "category": "reference_doc",
+      "date": "unknown",
+      "conflicts_with": "CLAUDE.md (deployment section)",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Documentation of vessel tagging strategy for deployments. Reference material for deployment practices."
+    },
+    {
+      "file": "ACTIVITY_BASED_IMPROVISATION.md",
+      "category": "architecture_doc",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md, CLAUDE.md",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Philosophy document about VM-as-executor and activity-based improvisation. Listed in CLAUDE.md as complementary architecture doc. Part of official architecture documentation suite."
+    },
+    {
+      "file": "COMPOSITION_AND_CONTROL_FLOW.md",
+      "category": "architecture_doc",
+      "date": "unknown",
+      "conflicts_with": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md, CLAUDE.md",
+      "conflict_type": "none",
+      "resolution": "keep",
+      "reason": "Activity composition patterns and hooks documentation. Listed in CLAUDE.md as complementary architecture doc. Part of official architecture documentation suite."
+    },
+    {
+      "file": "DEPLOYMENT_GUIDE.md",
+      "category": "reference_doc",
+      "date": "unknown",
+      "conflicts_with": "DEPLOYMENT_PROCEDURE.md, CLAUDE.md (deployment section)",
+      "conflict_type": "duplicate",
+      "resolution": "merge",
+      "reason": "General deployment guide. DEPLOYMENT_PROCEDURE.md is more specific to identity-vessel. These should be merged or one should be designated as canonical. CLAUDE.md already has comprehensive deployment section."
+    },
+    {
+      "file": "DEPLOYMENT_PROCEDURE.md",
+      "category": "reference_doc",
+      "date": "unknown",
+      "conflicts_with": "DEPLOYMENT_GUIDE.md, CLAUDE.md (deployment section)",
+      "conflict_type": "duplicate",
+      "resolution": "merge",
+      "reason": "Specific deployment procedure for identity-vessel integration (586 lines). Highly detailed procedural guide. Should either be merged into DEPLOYMENT_GUIDE.md or moved to repos/deployment/ documentation."
+    }
+  ],
+  "summary": {
+    "total_conflicts": 44,
+    "by_resolution": {
+      "archive": 26,
+      "keep": 12,
+      "merge": 2,
+      "merge_or_archive": 2,
+      "delete": 0
+    },
+    "by_conflict_type": {
+      "superseded": 21,
+      "duplicate": 11,
+      "none": 10,
+      "semantic_conflict": 0,
+      "merged_into_canonical": 0
+    },
+    "high_priority_actions": [
+      {
+        "action": "Archive status reports",
+        "count": 18,
+        "files": [
+          "AUTH_DELEGATION_IMPLEMENTATION_COMPLETE.md",
+          "AUTHENTICATION_STATUS.md",
+          "BUILD_VALIDATION_SUMMARY.md",
+          "DATETIME_FIX_DEPLOYMENT_SUMMARY.md",
+          "DEPLOYMENT_RESULTS.md",
+          "DOCUMENTATION_CLEANUP_SUMMARY.md",
+          "GOAL_IMPULSE_RESOLVER_SUMMARY.md",
+          "HYPOTHESIS_DEPLOYMENT_SETUP.md",
+          "HYPOTHESIS_TESTING_IMPLEMENTATION_SUMMARY.md",
+          "IDENTITY_INTEGRATION_SUMMARY.md",
+          "IMPLEMENTATION_COMPLETE.md",
+          "IMPULSE_STORAGE_FIX_SUMMARY.md",
+          "LEARNING_LOOP_COMPLETE.md",
+          "MIDDLEWARE_CLEANUP_COMPLETE.md",
+          "PRE_COMMIT_HOOK_VERIFICATION.md",
+          "RECOMMENDATION_IMPROVEMENTS_SUMMARY.md",
+          "RELIABILITY_IMPLEMENTATION_SUMMARY.md",
+          "SURREALDB_VIEW_RECORD_ID_FIX.md",
+          "TRAJECTORY_VALIDATION_SUMMARY.md",
+          "USER_VESSEL_IMPLEMENTATION_COMPLETE.md",
+          "VALIDATION_REPORT.md",
+          "VESSEL_REGISTRY_IMPLEMENTATION.md"
+        ]
+      },
+      {
+        "action": "Merge deployment docs",
+        "count": 2,
+        "files": [
+          "DEPLOYMENT_GUIDE.md",
+          "DEPLOYMENT_PROCEDURE.md"
+        ],
+        "recommendation": "Either: (1) Merge DEPLOYMENT_PROCEDURE.md into DEPLOYMENT_GUIDE.md, or (2) Keep DEPLOYMENT_GUIDE.md as general reference and move DEPLOYMENT_PROCEDURE.md to repos/deployment/docs/identity-vessel-integration.md"
+      },
+      {
+        "action": "Review architecture docs",
+        "count": 3,
+        "files": [
+          "IMPULSE_RESOLVER_ARCHITECTURE.md",
+          "LLM_RESOLVER_MIXIN.md",
+          "VESSELS_AND_LOCAL_RESOLVERS.md"
+        ],
+        "recommendation": "Determine if these should: (1) Move to docs/architecture/, (2) Merge into IMPULSE_ACTIVITY_FOUNDATION.md, or (3) Archive if superseded by foundation doc"
+      }
+    ]
+  },
+  "recommended_archive_path": "docs/archive/2026-03-31-root-level-cleanup/",
+  "execution_plan": {
+    "phase_1": "Create archive directory: docs/archive/2026-03-31-root-level-cleanup/",
+    "phase_2": "Move 26 status_report and superseded files to archive",
+    "phase_3": "Review and merge deployment documentation (DEPLOYMENT_GUIDE.md vs DEPLOYMENT_PROCEDURE.md)",
+    "phase_4": "Review architecture docs against IMPULSE_ACTIVITY_FOUNDATION.md for semantic conflicts",
+    "phase_5": "Update DOCUMENTATION_CLEANUP_PLAN.md to reflect completed cleanup",
+    "phase_6": "Commit with message documenting cleanup rationale"
+  }
+}
