@@ -4,20 +4,31 @@ This guide covers the migration system for deploying and updating SurrealDB sche
 
 ## Overview
 
-The migration system uses versioned `.surql` files with checksums for idempotent deployment:
+The migration system uses versioned `.surql` files with checksums for idempotent deployment.
+
+As of 2026-04, the system follows the **paradigm table structure** with migrations organized by domain:
 
 ```
+repos/deployment/vessels/metabob-activity-api/sql/schemas/
+├── 010-auth-access.surql                # Multi-tenant auth
+├── 011-organizations.surql              # Organizations and users
+├── 020-paradigm-core-tables.surql       # Core: impulse, activity, execution, vessel
+├── 021-paradigm-computed-views.surql    # Analytics and computed metrics
+├── 022-paradigm-compat-views.surql      # Legacy compatibility views
+└── 030-supporting-tables.surql          # Composition, tool usage, sequences
+
 repos/metabob-proto/surrealdb/
-├── core/                    # Core multi-tenant schemas
-│   ├── 000-schema-version.surql
-│   ├── 001-auth-access.surql
-│   ├── 002-organizations.surql
-│   ├── 003-projects.surql
-│   └── 004-subscriptions.surql
+├── core/                                 # DEPRECATED - now in deployment repo
 ├── lib/
-│   └── migrate.ts           # Migration runner
-└── MIGRATION_GUIDE.md       # This file
+│   └── migrate.ts                        # Migration runner
+└── MIGRATION_GUIDE.md                    # This file
 ```
+
+**Migration Numbering:**
+- `010-019`: Authentication and organization schemas
+- `020-029`: Paradigm core tables (impulse, activity, execution, vessel)
+- `030-039`: Supporting tables (composition, learning metrics)
+- `040+`: Future extensions
 
 ## Quick Start
 
@@ -117,12 +128,21 @@ Examples:
 010-activity-registry.surql  # Service-specific (higher numbers)
 ```
 
-### File Order
+### File Order (Paradigm Structure)
 
-Core schemas: `000-004` (metabob-proto)
-Activity API: `010-019`
-Analysis API: `020-029`
-Future services: `030+`
+As of 2026-04, all schemas are in the deployment repository with paradigm-based numbering:
+
+- `010-019`: Authentication and multi-tenant organization schemas
+- `020-029`: **Paradigm core tables** (impulse, activity, execution, vessel)
+- `030-039`: Supporting tables (composition graphs, learning metrics, tool usage)
+- `040-049`: Analytics and computed views
+- `050+`: Future service-specific extensions
+
+**Key paradigm tables** (defined in `020-paradigm-core-tables.surql`):
+1. **impulse** - All data with pointers, shapes, and metadata
+2. **activity** - All state transitions (templates + metrics in one table)
+3. **execution** - All execution traces linking input/output impulses
+4. **vessel** - Execution environments with resolver capabilities
 
 ### Template
 

@@ -12,7 +12,8 @@
  */
 
 const API_URL = process.env.ACTIVITY_API_ENDPOINT || 'http://activity.metabob.local';
-const ORG_ID = 'metabob_internal';
+// Use record format for org_id consistency with JWT $auth.org_id
+const ORG_ID = 'organizations:metabob_internal';
 
 interface ActivityTemplate {
   variant_id: string;

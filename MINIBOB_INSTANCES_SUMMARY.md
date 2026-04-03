@@ -10,7 +10,7 @@ The following instances are already configured in the deployment:
 
 | Instance ID | API Key | Organization | Vessel ID | Purpose |
 |-------------|---------|---------------|-----------|---------|
-| `minibob-local-001` | `mb_inst_local_879...` | metabob | `minibob-k8s-local` | Local development |
+| `minibob-local-001` | `minibob-local-dev-key` | metabob | `minibob-k8s-local` | Local development |
 | `minibob-canary-001` | `mb_inst_canary_03b...` | metabob | `minibob-k8s-canary` | Canary deployments |
 | `minibob-production-001` | `mb_inst_prod_51fc...` | metabob | `minibob-k8s-production` | Production |
 
@@ -75,7 +75,7 @@ cat > ~/.metabob/config.json << 'EOF'
 {
   "instance": {
     "instanceId": "minibob-local-001",
-    "apiKey": "mb_inst_local_879a7c1920f58aa9c67c584f7ca3f1c963e10c6af9e83c3d596890a1100a95f7",
+    "apiKey": "minibob-local-dev-key",
     "orgId": "metabob"
   },
   "vessels": {
@@ -95,7 +95,7 @@ minibob --single "Your development goal here"
 ```bash
 # With port forward to SurrealDB
 export MINIBOB_INSTANCE_ID="minibob-local-001"
-export MINIBOB_INSTANCE_API_KEY="mb_inst_local_879a7c1920f58aa9c67c584f7ca3f1c963e10c6af9e83c3d596890a1100a95f7"
+export MINIBOB_INSTANCE_API_KEY="minibob-local-dev-key"
 export MINIBOB_ORG_ID="metabob"
 export ACTIVITY_API_ENDPOINT="https://activity.metabob.com"
 
@@ -149,7 +149,7 @@ curl -X POST http://localhost:8080/v1/auth/minibob/signin \
   -H "Content-Type: application/json" \
   -d '{
     "instance_id": "minibob-local-001",
-    "api_key": "mb_inst_local_879a7c1920f58aa9c67c584f7ca3f1c963e10c6af9e83c3d596890a1100a95f7"
+    "api_key": "minibob-local-dev-key"
   }'
 ```
 

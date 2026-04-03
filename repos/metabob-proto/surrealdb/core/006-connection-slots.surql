@@ -85,7 +85,7 @@ DEFINE FIELD IF NOT EXISTS disconnected_at ON connection TYPE option<datetime>
   COMMENT "When connection was marked as disconnected";
 
 -- Execution tracking (for grace period calculation)
-DEFINE FIELD IF NOT EXISTS current_execution ON connection TYPE option<record<activity_execution_traces>>
+DEFINE FIELD IF NOT EXISTS current_execution ON connection TYPE option<record<execution>>
   COMMENT "Reference to in-flight execution (for grace period calculation)";
 
 DEFINE FIELD IF NOT EXISTS execution_started_at ON connection TYPE option<datetime>

@@ -100,29 +100,18 @@ export function logDualWriteConfig(): void {
   });
 }
 
-// Field mapping: legacy -> new schema
-const ACTIVITY_FIELD_MAP = {
-  variant_id: 'id',
-  activity_id: 'id', // In new schema, activity_id is just id
-  variant_name: 'name',
-  description: 'description',
-  tags: 'tags',
-  tag_prefixes: 'tag_prefixes',
-  category: 'category',
-  task_steps: 'tasks',
-  scope: 'scope',
-  org_id: 'org_id',
-  project_id: 'project_id',
-  created_at: 'created_at',
-  updated_at: 'updated_at',
-} as const;
-
-// Reverse mapping for compatibility
-const ACTIVITY_REVERSE_MAP = {
-  id: 'variant_id',
-  name: 'variant_name',
-  tasks: 'task_steps',
-} as const;
+// =============================================================================
+// CANONICAL FIELD NAMES (aligned with 020-paradigm-core-tables.surql)
+// =============================================================================
+// The activity table uses these canonical field names:
+//   id           - Unique activity identifier (was variant_id)
+//   name         - Human-readable activity name (was variant_name)
+//   tasks        - Task steps array (was task_steps)
+//   variant_of   - Activity lineage (was genealogy)
+//
+// Legacy field names are accepted in API requests but converted to canonical
+// names before database operations. Response objects use canonical names only.
+// =============================================================================
 
 export interface ParadigmActivity {
   id: string;
@@ -179,6 +168,7 @@ export interface ParadigmExecution {
   org_id: string;
   project_id?: string;
   vessel_id?: string;
+  vessel_version?: string;
   executed_at: string;
   created_at: string;
 }
@@ -244,10 +234,10 @@ export async function insertActivity(
       .map(k => `${k}: $${k}`)
       .join(',\n        ');
 
-    // For org_id: org_id is a STRING field in paradigm schema (not a record)
-    // $auth.org_id is already a plain string like "metabob_internal"
+    // For org_id: org_id is a STRING field in paradigm schema
+    // $auth.org_id contains record format like "organizations:metabob_internal"
     const orgIdClause = jwtToken
-      ? `,\n        org_id: $auth.org_id` // Use string directly from $auth
+      ? `,\n        org_id: $auth.org_id` // Use record format from $auth
       : (activity.org_id ? `,\n        org_id: $org_id` : '');
     if (!jwtToken && activity.org_id) record.org_id = activity.org_id;
 
@@ -258,7 +248,7 @@ export async function insertActivity(
     if (!jwtToken && activity.project_id) record.project_id = activity.project_id;
 
     const query = `
-      INSERT INTO activity_template {
+      INSERT INTO activity {
         ${fields}${orgIdClause}${projectIdClause},
         created_at: time::now(),
         updated_at: time::now()
@@ -323,6 +313,7 @@ export async function insertExecution(
     // org_id and project_id are handled separately - they need record type conversion
     // or should be populated from $auth context
     if (execution.vessel_id) record.vessel_id = execution.vessel_id;
+    if (execution.vessel_version) record.vessel_version = execution.vessel_version;
 
     // Build field list - org_id/project_id are special: use $auth if JWT, or convert to record type
     const fields = Object.keys(record)
@@ -330,10 +321,10 @@ export async function insertExecution(
       .map(k => `${k}: $${k}`)
       .join(',\n        ');
 
-    // For org_id: org_id is a STRING field in paradigm schema (not a record)
-    // $auth.org_id is already a plain string like "metabob_internal"
+    // For org_id: org_id is a STRING field in paradigm schema
+    // $auth.org_id contains record format like "organizations:metabob_internal"
     const orgIdClause = jwtToken
-      ? `,\n        org_id: $auth.org_id` // Use string directly from $auth
+      ? `,\n        org_id: $auth.org_id` // Use record format from $auth
       : (execution.org_id ? `,\n        org_id: $org_id` : '');
     if (!jwtToken && execution.org_id) record.org_id = execution.org_id;
 
@@ -475,8 +466,9 @@ export async function getActivityScores(
 
     if (orgId) {
       query += ` WHERE org_id = $org_id`;
-      // Legacy table stores org_id as plain string (e.g., "metabob_internal")
-      // Strip organizations: prefix if present
+      // Legacy table (variant_performance_metrics) may have existing data with plain strings
+      // TODO: After migrating existing data to record format, use orgId directly
+      // For backward compatibility, strip organizations: prefix if present
       params.org_id = orgId.startsWith('organizations:') ? orgId.replace('organizations:', '') : orgId;
     }
 

@@ -277,6 +277,7 @@ export async function setupTemplates(db: Surreal): Promise<void> {
   `);
 
   // Global template (scope=global means visible to all)
+  // Use record format for org_id consistency
   await db.query(`
     CREATE activity_template SET
       variant_id = 'test-global-public-001',
@@ -285,7 +286,7 @@ export async function setupTemplates(db: Surreal): Promise<void> {
       description = 'Visible to all orgs',
       category = 'tool',
       scope = 'global',
-      org_id = 'metabob_internal',
+      org_id = 'organizations:metabob_internal',
       task_steps = [],
       created_at = time::now(),
       updated_at = time::now()

@@ -75,8 +75,8 @@ export const TemplateTaskSchema = z.object({
 });
 
 export const TemplateMetricsSchema = z.object({
-  variant_id: z.string(),
-  activity_id: z.string(),
+  // Canonical: use 'id' as the primary identifier
+  id: z.string(),
   total_executions: z.number(),
   successful_executions: z.number(),
   failed_executions: z.number(),
@@ -95,20 +95,25 @@ export const TemplateMetricsSchema = z.object({
 });
 
 export const ActivityTemplateSchema = z.object({
-  variant_id: z.string(),
-  activity_id: z.string(),
-  variant_name: z.string(),
+  // Canonical field names (aligned with 020-paradigm-core-tables.surql)
+  id: z.string(),
+  name: z.string(),
   description: z.string(),
   // Hierarchical tags (primary classification)
   tags: z.array(z.string()).default([]),
   tag_prefixes: z.array(z.string()).optional(),
   // Legacy category (deprecated, kept for backward compatibility)
   category: z.string().optional(),
-  task_steps: z.array(TemplateTaskSchema).optional(),
+  // Canonical: 'tasks' instead of 'task_steps'
+  tasks: z.array(TemplateTaskSchema).optional(),
   scope: z.string().nullable(),
   org_id: z.string().nullable(),
   project_id: z.string().nullable(),
-  genealogy: z.record(z.any()).optional(),
+  // Input/output shapes for paradigm alignment
+  input_shapes: z.array(z.string()).optional(),
+  output_shapes: z.array(z.string()).optional(),
+  execution_type: z.string().optional(),
+  variant_of: z.record(z.any()).optional(),
   created_at: z.union([z.string(), z.object({}).passthrough()]),
   updated_at: z.union([z.string(), z.object({}).passthrough()]),
   // Metrics merged in from template_metrics
@@ -132,23 +137,36 @@ export const TemplateImpulseSchema = z.object({
 });
 
 // Template Registration/Creation schemas
+// Accepts both canonical and legacy field names for backward compatibility
 export const CreateTemplateRequestSchema = z.object({
-  variant_id: z.string(),
-  activity_id: z.string(),
-  variant_name: z.string(),
+  // Canonical field: 'id' (also accept legacy 'variant_id')
+  id: z.string().optional(),
+  variant_id: z.string().optional(),
+  // Legacy field: 'activity_id' is redundant with 'id' - ignored
+  activity_id: z.string().optional(),
+  // Canonical field: 'name' (also accept legacy 'variant_name')
+  name: z.string().optional(),
+  variant_name: z.string().optional(),
   description: z.string(),
   // Primary: Hierarchical tags using dot-notation
   tags: z.array(TagSchema).min(1).optional(),
   // Deprecated: Legacy category (auto-converted to tags if tags not provided)
   category: LegacyCategorySchema.optional(),
-  task_steps: z.array(TemplateTaskSchema),
+  // Canonical field: 'tasks' (also accept legacy 'task_steps')
+  tasks: z.array(TemplateTaskSchema).optional(),
+  task_steps: z.array(TemplateTaskSchema).optional(),
   scope: z.enum(['global', 'org', 'project']).default('global'),
   org_id: z.string().nullable().optional(),
   project_id: z.string().nullable().optional(),
+  // Canonical field: 'variant_of' (also accept legacy 'genealogy')
+  variant_of: z.record(z.any()).optional(),
   genealogy: z.record(z.any()).optional(),
   // Template-level impulse definitions
   impulses: z.array(TemplateImpulseSchema).optional(),
-  // Input/output schemas for composition
+  // Input/output shapes for paradigm alignment
+  input_shapes: z.array(z.string()).optional(),
+  output_shapes: z.array(z.string()).optional(),
+  // Legacy input/output schemas (converted to shapes internally)
   input_schema: z.object({
     required: z.array(z.object({
       shape: z.string(),
@@ -170,11 +188,22 @@ export const CreateTemplateRequestSchema = z.object({
 }).refine(
   data => data.tags?.length || data.category,
   { message: 'Either tags or category must be provided' }
+).refine(
+  data => data.id || data.variant_id,
+  { message: 'Either id or variant_id must be provided' }
+).refine(
+  data => data.name || data.variant_name,
+  { message: 'Either name or variant_name must be provided' }
+).refine(
+  data => data.tasks || data.task_steps,
+  { message: 'Either tasks or task_steps must be provided' }
 );
 
 export const CreateTemplateResponseSchema = z.object({
   success: z.boolean(),
-  variant_id: z.string(),
+  // Canonical: 'id' (kept variant_id for backward compatibility in response)
+  id: z.string(),
+  variant_id: z.string().optional(), // Legacy alias
   message: z.string().optional(),
 });
 
@@ -186,7 +215,9 @@ export const ExecutionTokensSchema = z.object({
 });
 
 export const ExecutionRecordSchema = z.object({
-  variant_id: z.string(),
+  // Canonical: use 'activity_id' (also accept legacy 'variant_id')
+  activity_id: z.string().optional(),
+  variant_id: z.string().optional(), // Legacy alias
   success: z.boolean(),
   duration_ms: z.number(),
   cost: z.number(),
@@ -205,7 +236,10 @@ export const ExecutionRecordSchema = z.object({
     pointer: z.record(z.unknown()),
   })).optional(),
   metadata: z.record(z.unknown()).optional(),
-});
+}).refine(
+  data => data.activity_id || data.variant_id,
+  { message: 'Either activity_id or variant_id must be provided' }
+);
 
 export const ExecutionRecordResponseSchema = z.object({
   success: z.boolean(),
@@ -237,6 +271,30 @@ export const ImpulsePointerSchema = z.object({
   source: z.string().optional(), // source identifier
 });
 
+/**
+ * Impulse metadata schema for impulse-driven investigation
+ * Contains: shape, rowCount, columns, sample, availableOps, producedBy, etc.
+ */
+export const ImpulseMetadataObjectSchema = z.object({
+  // Shape describes the data structure
+  shape: z.string().optional(),
+  // Count information for reasoning
+  rowCount: z.number().int().optional(),
+  // Column names for tabular data
+  columns: z.array(z.string()).optional(),
+  // Sample data for LLM context
+  sample: z.array(z.any()).optional(),
+  // Human-readable summary
+  summary: z.string().optional(),
+  // Available operations for process_impulse
+  availableOps: z.array(z.string()).optional(),
+  // Lineage tracking for investigation chains
+  producedBy: z.string().optional(),
+  // Legacy fields for backward compatibility
+  tags: z.array(z.string()).optional(),
+  content: z.string().optional(),
+}).passthrough(); // Allow additional metadata fields
+
 export const ImpulseDataSchema = z.object({
   id: z.string(),
   type: z.string(),
@@ -245,7 +303,8 @@ export const ImpulseDataSchema = z.object({
   // Accept both string ("high", "medium", "low") and number (1, 2, 3, 4)
   priority: z.union([z.number(), z.string()]).optional(),
   scope: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  // Full metadata object for impulse-driven investigation
+  metadata: ImpulseMetadataObjectSchema.optional(),
 });
 
 export const ImpulseCreateRequestSchema = z.object({
@@ -273,6 +332,7 @@ export const ImpulseListResponseSchema = z.object({
 
 // Type exports for impulses
 export type ImpulsePointer = z.infer<typeof ImpulsePointerSchema>;
+export type ImpulseMetadataObject = z.infer<typeof ImpulseMetadataObjectSchema>;
 export type ImpulseData = z.infer<typeof ImpulseDataSchema>;
 export type ImpulseCreateRequest = z.infer<typeof ImpulseCreateRequestSchema>;
 export type ImpulseResponse = z.infer<typeof ImpulseResponseSchema>;

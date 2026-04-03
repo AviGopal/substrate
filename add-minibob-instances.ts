@@ -190,14 +190,17 @@ async function main() {
     }
 
     // Create instances
+    // Use record format for org_id to match JWT $auth.org_id format
     console.log(`\n🚀 Creating MiniBob instances...`);
     console.log(`═══════════════════════════════════════════`);
+
+    const orgIdForInstances = `organizations:${DEFAULT_ORG_ID}`;
 
     let created = 0;
     let skipped = 0;
 
     for (const config of INSTANCES_TO_CREATE) {
-      const success = await createInstance(db, config, DEFAULT_ORG_ID);
+      const success = await createInstance(db, config, orgIdForInstances);
       if (success) {
         created++;
       } else {

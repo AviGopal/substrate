@@ -20,6 +20,9 @@ export interface UserVesselConfig {
   activityApi: {
     endpoint: string
   }
+  identityVessel?: {
+    endpoint: string
+  }
 }
 
 // =============================================================================
@@ -66,30 +69,27 @@ export interface ProjectMember {
   added_at: string
 }
 
+export interface LlmBudget {
+  tokens_per_month: number
+  tokens_used: number
+  reset_at: string  // ISO datetime string for next reset
+  overage_enabled: boolean
+}
+
 export interface ApiKey {
   id: string
   org_id: string
   user_id: string
-  key_hash: string  // Argon2 hash, never expose raw key after creation
+  key_id: string  // Identity-vessel key identifier (replaces key_hash)
   scopes: string[]
   is_active: boolean
   created_at: string
   last_used_at?: string
   expires_at?: string
-  max_connections?: number  // Connection slot limit for this API key
-}
-
-export interface ActiveConnection {
-  id: string
-  api_key_id: string
-  instance_id: string
-  instance_type: 'minibob' | 'ide' | 'cli' | 'other'
-  org_id: string
-  user_id: string
-  connected_at: string
-  last_heartbeat_at: string
-  disconnected_at?: string
-  client_metadata?: Record<string, unknown>
+  tier: 'starter' | 'pro' | 'enterprise'  // Billing tier (inherited from org)
+  max_connections: number  // Connection slot limit for this API key
+  llm_budget: LlmBudget  // Token budget for LLM usage
+  rotation_required?: boolean  // For legacy key migration
 }
 
 // =============================================================================
@@ -162,39 +162,28 @@ export interface CreateApiKeyRequest {
   expires_in_days?: number
 }
 
+/**
+ * API key display format for dashboard responses
+ * Contains a subset of ApiKey fields plus additional display fields
+ */
+export interface ApiKeyDisplayResponse {
+  id: string
+  user_id: string
+  user_email: string
+  prefix: string
+  name?: string
+  created_at: string
+  last_used_at?: string
+  usage_count: number
+  status: 'active' | 'revoked' | 'rotation_required'
+  tier: 'starter' | 'pro' | 'enterprise'
+  max_connections: number
+  llm_budget: LlmBudget | null
+}
+
 export interface CreateApiKeyResponse {
-  key: ApiKey  // Full API key record
+  key: ApiKeyDisplayResponse  // Transformed API key for dashboard display
   secret: string  // Raw key, only returned once on creation
-}
-
-export interface ClaimConnectionRequest {
-  api_key: string
-  instance_id: string
-  instance_type: 'minibob' | 'ide' | 'cli' | 'other'
-  client_metadata?: Record<string, unknown>
-}
-
-export interface ClaimConnectionResponse {
-  connection_id: string
-  api_key_id: string
-  instance_id: string
-  connected_at: string
-  heartbeat_interval_ms: number
-}
-
-export interface ReleaseConnectionRequest {
-  instance_id: string
-}
-
-export interface HeartbeatRequest {
-  instance_id: string
-  client_metadata?: Record<string, unknown>
-}
-
-export interface HeartbeatResponse {
-  connection_id: string
-  last_heartbeat_at: string
-  expires_in_ms: number
 }
 
 // =============================================================================

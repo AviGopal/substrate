@@ -19,7 +19,7 @@ cat > ~/.metabob/config.json << 'EOF'
 {
   "instance": {
     "instanceId": "minibob-local-001",
-    "apiKey": "mb_inst_local_879a7c1920f58aa9c67c584f7ca3f1c963e10c6af9e83c3d596890a1100a95f7",
+    "apiKey": "minibob-local-dev-key",
     "orgId": "metabob"
   },
   "defaults": {

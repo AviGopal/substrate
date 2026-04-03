@@ -364,6 +364,89 @@ MiniBob              identity-vessel              SurrealDB
 
 ---
 
+## Auth Delegation Pattern
+
+### Overview
+
+API key validation is delegated to identity-vessel, establishing it as the single source of truth for authentication. Other vessels (activity-api, user-vessel) do not validate API keys directly - they delegate to identity-vessel.
+
+### Delegation Flow
+
+```
+Client (CLI/IDE)
+    |
+    | sends API key
+    v
+activity-api (/v2/auth/apikey)
+    |
+    | delegates validation
+    v
+identity-vessel (/v1/auth/resolve)
+    |
+    | validates HMAC signature
+    | checks Redis for revocation
+    v
+Returns auth context (org_id, user_id, scopes)
+    |
+    v
+activity-api generates JWT token
+    |
+    v
+Returns JWT to client
+```
+
+### Implementation
+
+```typescript
+// activity-api delegates to identity-vessel
+async function validateApiKeyViaIdentityVessel(apiKey: string) {
+  const response = await fetch(`${identityVesselUrl}/v1/auth/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      impulse: {
+        type: 'authentication',
+        pointer: { type: 'apiKey', apiKey }
+      }
+    }),
+    signal: AbortSignal.timeout(5000)
+  })
+
+  const result = await response.json()
+  return result.data  // { authenticated, orgId, userId, keyId, scopes }
+}
+```
+
+### Benefits
+
+1. **Single Source of Truth**: identity-vessel is authoritative for API key validation. No dual validation logic across vessels.
+
+2. **Stateless Validation**: HMAC-based keys embed their metadata (org_id, user_id, scopes). Validation requires no database lookup - only signature verification (<10us) plus optional Redis revocation check (~1ms).
+
+3. **Horizontal Scalability**: Any identity-vessel replica can validate any key. No coordination required between instances.
+
+4. **Unified Key Management**: Generate, revoke, and rotate keys in one place (user-vessel calls identity-vessel for generation; identity-vessel validates everywhere).
+
+5. **Backward Compatibility**: activity-api can support both new HMAC keys (via identity-vessel) and legacy SurrealDB keys (fallback) during migration.
+
+### Key Format
+
+Identity-vessel uses HMAC-SHA256 signed keys with embedded metadata:
+
+```
+Format: Base64(mb_live-<org_id>-<user_id>-<key_id>-<signature>)
+
+The key itself contains:
+- Organization ID
+- User ID
+- Key ID (for revocation)
+- HMAC signature (verifies integrity)
+```
+
+Validation extracts and verifies these fields without database lookup. Revocation is checked via Redis cache with TTL.
+
+---
+
 ## Design Principles
 
 ### Why identity-vessel is Stateless
@@ -405,6 +488,59 @@ MiniBob              identity-vessel              SurrealDB
 ```
 
 This principle prevents the backend from becoming a "universal resolver" that proxies all data. Each vessel resolves impulses for data it owns or has direct access to.
+
+---
+
+## Collective Learning via Shared State
+
+Vessels do NOT call each other directly. They interact via the **shared learning substrate**.
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  MiniBob 1  │     │  MiniBob 2  │     │  MiniBob 3  │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │
+       │ POST /traces      │ POST /traces      │ POST /traces
+       │                   │                   │
+       └───────────────────┴───────────────────┘
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │ metabob-activity-api   │
+              │ (learning substrate)   │
+              ├────────────────────────┤
+              │ • Thompson Sampling    │
+              │ • Composition graph    │
+              │ • Pattern recognition  │
+              └────────────────────────┘
+```
+
+### How MiniBob 1 Learns from MiniBob 2
+
+1. **MiniBob 2 executes** activity and succeeds
+   - Records trace, increments Thompson α parameter
+
+2. **MiniBob 1 requests recommendation** for similar goal
+   - Backend samples from Beta(α, β) distributions
+   - Higher α → more likely to be recommended
+
+3. **MiniBob 1 uses recommendation** and also succeeds
+   - Further increases α, reinforcing the pattern
+
+4. **MiniBob 3 fails** with same recommendation
+   - Increments β parameter (failure count)
+   - Future sampling less likely to select this template
+
+**This is collective learning** - all vessels contribute to shared knowledge without direct communication.
+
+### Vessel-Specific vs Shared
+
+| Vessel-Specific (not shared) | Shared (backend-mediated) |
+|------------------------------|---------------------------|
+| Session memory (in-flight impulses) | Activity performance (Thompson α/β) |
+| Local file state | Composition graph |
+| Current execution context | Impulse relevance scores |
+| | Tool usage patterns |
 
 ---
 

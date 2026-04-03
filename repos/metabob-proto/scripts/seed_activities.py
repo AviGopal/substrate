@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
 """
+DEPRECATED: This script seeds the legacy `activity_variants` table.
+
+As of 2026-04, the system now uses paradigm tables (activity, impulse, execution, vessel).
+
+Use instead:
+    repos/deployment/vessels/metabob-activity-api/sql/seed-paradigm-templates.ts
+
+This script is kept for reference only and will be removed in a future cleanup.
+
+---
+
+Legacy documentation:
+
 Seed bootstrap activity templates into SurrealDB.
 
 This script loads activity templates from metabob-proto/activities/bootstrap
@@ -7,7 +20,7 @@ into the configured SurrealDB instance.
 
 Usage:
     python seed_activities.py [--db-url URL] [--namespace NS] [--database DB]
-    
+
 Environment variables:
     SURREAL_URL: SurrealDB URL (default: http://localhost:8000)
     SURREAL_USER: SurrealDB username (default: root)

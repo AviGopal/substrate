@@ -17,7 +17,8 @@ import { readdir } from "fs/promises";
 import path from "path";
 
 const API_URL = process.env.API_URL || process.env.ACTIVITY_API_URL || 'http://localhost:8080';
-const ORG_ID = process.env.ORG_ID || 'metabob_internal';
+// Use record format for org_id consistency with JWT $auth.org_id
+const ORG_ID = process.env.ORG_ID || 'organizations:metabob_internal';
 
 // Template directories to seed
 const TEMPLATE_DIRS = [

@@ -166,9 +166,9 @@ message TaskComplexity {
 // =============================================================================
 // ActivityVariant - A/B testable implementation stored in database
 // =============================================================================
-// 
-// SurrealDB Table: activity_variants
-// Indexes: variant_id (unique), activity_id, content_hash, status
+//
+// SurrealDB Table: activity
+// Indexes: id (unique), name, category, org_id, scope
 //
 // =============================================================================
 
@@ -266,8 +266,9 @@ message ActivityVariant {
 // Variant Performance Metrics - Thompson Sampling optimization
 // =============================================================================
 //
-// SurrealDB Table: variant_performance_metrics
-// Indexes: variant_id (unique)
+// SurrealDB: Metrics are now stored in the activity table itself
+// Fields: executions_total, executions_success, executions_failed,
+//         avg_duration_ms, avg_cost_usd, thompson_alpha, thompson_beta
 //
 // =============================================================================
 

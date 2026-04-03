@@ -1,38 +1,37 @@
 /**
  * Authentication middleware for user-vessel
  *
- * Validates JWT tokens and populates request context with auth info
+ * Validates JWT tokens and API keys, populates request context with auth info
  */
 
 import type { Context, Next } from "hono"
 import type { AuthContext, UserVesselConfig } from "../types"
-import { verifyToken, extractAuthContext } from "../utils/jwt"
+import { authenticate } from "../services/auth"
 
 /**
  * Middleware to require authentication
  *
- * Checks Authorization header for Bearer token and validates it
+ * Supports two authentication methods:
+ * - Bearer <jwt> - JWT session token
+ * - ApiKey <key> - API key from identity-vessel
  */
 export function requireAuth(config: UserVesselConfig) {
   return async (c: Context, next: Next) => {
     const authHeader = c.req.header("Authorization")
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return c.json({ error: "Unauthorized - No token provided" }, 401)
+    if (!authHeader) {
+      return c.json({ error: "Unauthorized - No authorization header" }, 401)
     }
 
-    const token = authHeader.substring(7) // Remove "Bearer " prefix
+    // Delegate to authentication service
+    const result = await authenticate(authHeader, config)
 
-    // Verify JWT token
-    const payload = await verifyToken(token, config.jwt.secret)
-    if (!payload) {
-      return c.json({ error: "Unauthorized - Invalid or expired token" }, 401)
+    if (!result.success || !result.auth) {
+      return c.json({ error: result.error || "Unauthorized" }, 401)
     }
 
-    // Extract auth context and store in request
-    const authContext = extractAuthContext(payload)
-    c.set("auth", authContext)
-    c.set("token", token)
+    // Store auth context in request
+    c.set("auth", result.auth)
 
     await next()
   }
@@ -50,14 +49,14 @@ export function getAuth(c: Context): AuthContext {
 }
 
 /**
- * Get JWT token from request
+ * Get JWT token from request (if authenticated via JWT)
  */
-export function getToken(c: Context): string {
-  const token = c.get("token") as string
-  if (!token) {
-    throw new Error("Token not available - did you use requireAuth middleware?")
+export function getToken(c: Context): string | undefined {
+  const authHeader = c.req.header("Authorization")
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return undefined
   }
-  return token
+  return authHeader.substring(7)
 }
 
 /**

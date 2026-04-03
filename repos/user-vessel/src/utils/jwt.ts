@@ -37,6 +37,24 @@ export async function generateToken(
 }
 
 /**
+ * Create JWT token from auth context
+ */
+export async function createToken(
+  auth: AuthContext,
+  secret: string,
+  expiresIn: string = "15m"
+): Promise<string> {
+  return generateToken(
+    auth.id,
+    auth.org_id,
+    auth.role,
+    auth.project_ids,
+    secret,
+    expiresIn
+  )
+}
+
+/**
  * Verify and decode JWT token
  */
 export async function verifyToken(

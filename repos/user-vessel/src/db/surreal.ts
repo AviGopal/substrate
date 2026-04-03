@@ -60,6 +60,26 @@ export async function createAuthenticatedClient(
 }
 
 /**
+ * Get authenticated database connection from auth context
+ *
+ * Creates a temporary JWT token from auth context to establish
+ * an authenticated connection with PERMISSIONS enforcement
+ */
+export async function getAuthenticatedDb(
+  config: UserVesselConfig,
+  auth: AuthContext
+): Promise<Surreal> {
+  // Import JWT utilities
+  const { createToken } = await import("../utils/jwt")
+
+  // Create JWT token from auth context
+  const token = await createToken(auth, config.jwt.secret, config.jwt.expiresIn)
+
+  // Create authenticated connection
+  return createAuthenticatedClient(config, token)
+}
+
+/**
  * Execute query with authentication context
  *
  * Ensures PERMISSIONS are enforced via $auth

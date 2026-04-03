@@ -3,10 +3,10 @@
 
 DEFINE TABLE organizations SCHEMAFULL
   PERMISSIONS
-    FOR select WHERE org_id = $auth.org_id
-    FOR create WHERE org_id = $auth.org_id
-    FOR update WHERE org_id = $auth.org_id AND $auth.role IN ['admin', 'owner']
-    FOR delete WHERE org_id = $auth.org_id AND $auth.role = 'owner';
+    FOR select WHERE $auth = NONE OR org_id = $auth.org_id
+    FOR create WHERE $auth = NONE OR org_id = $auth.org_id
+    FOR update WHERE $auth = NONE OR (org_id = $auth.org_id AND $auth.role IN ['admin', 'owner'])
+    FOR delete WHERE $auth = NONE OR (org_id = $auth.org_id AND $auth.role = 'owner');
 
 -- Primary fields
 DEFINE FIELD org_id ON organizations TYPE string

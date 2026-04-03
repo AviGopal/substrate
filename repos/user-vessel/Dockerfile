@@ -1,50 +1,23 @@
-# user-vessel Dockerfile
-# Build lightweight TypeScript user management vessel
-#
-# Build context: Parent directory containing user-vessel/ as a subdirectory
-#
-# Deployment: docker build -f user-vessel/Dockerfile -t user-vessel:latest vessels/
-
-FROM oven/bun:1 as build
+# syntax=docker/dockerfile:1
+FROM oven/bun:1 AS build
 WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+COPY src ./src
+COPY sql ./sql
+COPY index.ts ./
+COPY tsconfig.json ./
 
-# Copy package files
-COPY user-vessel/package.json user-vessel/bun.lock* ./
-
-# Install dependencies
-RUN bun install --frozen-lockfile --production
-
-# Copy source code
-COPY user-vessel/src ./src
-COPY user-vessel/sql ./sql
-COPY user-vessel/tsconfig.json ./
-COPY user-vessel/index.ts ./
-
-# Verify TypeScript compilation
-RUN bun build index.ts --target bun --outdir dist
-
-FROM oven/bun:1-slim
+FROM oven/bun:1-slim AS runtime
 WORKDIR /app
-
-# Copy dependencies and source from build stage
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/src ./src
 COPY --from=build /app/sql ./sql
-COPY --from=build /app/tsconfig.json ./
-COPY --from=build /app/package.json ./
 COPY --from=build /app/index.ts ./
-
-# Environment configuration
+COPY --from=build /app/package.json ./
 ENV NODE_ENV=production
-ENV PORT=8080
-ENV HOST=0.0.0.0
-
-# Expose HTTP port
+USER bun
 EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
-
-# Run the server
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+  CMD bun -e "fetch('http://localhost:8080/health').then(r => process.exit(r.ok ? 0 : 1))"
 CMD ["bun", "run", "index.ts"]

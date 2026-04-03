@@ -1,14 +1,27 @@
 -- =============================================================================
 -- Activity Registry with RBAC Multi-Tenancy
 -- =============================================================================
+-- DEPRECATED: This table is superseded by the 'activity' table defined in
+--             020-paradigm-core-tables.surql.
+--
+-- Migration Status:
+--   - New code should query/insert into 'activity' table
+--   - Field mappings:
+--       activity_registry.execution_format -> activity.execution_type
+--       activity_registry.task_steps       -> activity.tasks
+--   - This file is kept for backward compatibility during migration
+--   - DO NOT add new features to this table
+--
+-- Original Purpose:
 -- Unified registry for ALL activities (templates AND vessel functions)
 -- Merges: 001-init-schema.surql (activity_template) + 008-unified-activity-model.surql
 -- =============================================================================
 
 -- =============================================================================
--- Table: activity_registry
+-- Table: activity_registry (DEPRECATED)
 -- =============================================================================
--- Unified registry for ALL activities (templates AND vessel functions)
+-- DEPRECATED: Use 'activity' table from 020-paradigm-core-tables.surql instead.
+-- Kept for backward compatibility - do not add new code paths that use this table.
 -- RBAC: Scope-aware permissions (global/org/project)
 -- =============================================================================
 
@@ -299,10 +312,10 @@ DEFINE INDEX IF NOT EXISTS idx_variant_performance_success_rate
   ON variant_performance_metrics FIELDS org_id, success_rate;
 
 -- =============================================================================
--- Table: activity_template (DEPRECATED)
+-- Table: view_activity_template (DEPRECATED)
 -- =============================================================================
--- Legacy table name - replaced by activity_registry
--- Kept as VIEW for backward compatibility
+-- Legacy view - maps 'activity' table to old activity_template format.
+-- Kept for backward compatibility. Prefer querying 'activity' table directly.
 -- =============================================================================
 
 DEFINE TABLE IF NOT EXISTS view_activity_template AS
@@ -313,14 +326,13 @@ DEFINE TABLE IF NOT EXISTS view_activity_template AS
     name AS variant_name,
     description,
     category,
-    tags,
-    tag_prefixes,
-    task_steps,
+    -- Map new field names to old names for backward compatibility
+    tasks AS task_steps,
     scope,
     org_id,
     project_id,
-    genealogy,
+    variant_of AS genealogy,
     created_at,
     updated_at
-  FROM activity_registry
-  WHERE execution_format = 'template';
+  FROM activity
+  WHERE execution_type = 'template';

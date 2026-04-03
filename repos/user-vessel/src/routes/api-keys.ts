@@ -1,5 +1,6 @@
 /**
  * API key management routes
+ * Delegates key generation and validation to identity-vessel
  */
 
 import { Hono } from "hono"
@@ -8,10 +9,87 @@ import type {
   ApiKey,
   CreateApiKeyRequest,
   CreateApiKeyResponse,
+  ApiKeyDisplayResponse,
+  Organization,
+  LlmBudget,
 } from "../types"
 import { requireAuth, getAuth } from "../middleware/auth"
-import { generateApiKey, hashApiKey } from "../utils/crypto"
-import { getRootDb, getFirstRecord, getAllRecords } from "../db/surreal"
+import { createIdentityVesselClient } from "../services/identity-vessel"
+import { getAuthenticatedDb } from "../db/surreal"
+import { getFirstRecord, getAllRecords } from "../db/surreal"
+
+// =============================================================================
+// TIER LIMITS CONFIGURATION
+// =============================================================================
+
+type BillingTier = 'starter' | 'pro' | 'enterprise'
+
+interface TierLimits {
+  connections: number
+  tokens: number
+}
+
+const TIER_LIMITS: Record<BillingTier, TierLimits> = {
+  starter: { connections: 1, tokens: 100_000 },
+  pro: { connections: 3, tokens: 500_000 },
+  enterprise: { connections: 10, tokens: 2_000_000 },
+}
+
+/**
+ * Get connection limit for a given tier
+ */
+function getTierConnections(tier: string): number {
+  const billingTier = normalizeTier(tier)
+  return TIER_LIMITS[billingTier].connections
+}
+
+/**
+ * Get token budget for a given tier
+ */
+function getTierTokens(tier: string): number {
+  const billingTier = normalizeTier(tier)
+  return TIER_LIMITS[billingTier].tokens
+}
+
+/**
+ * Normalize subscription tier to billing tier
+ * Maps 'free' -> 'starter' since free tier uses starter limits
+ */
+function normalizeTier(tier: string): BillingTier {
+  if (tier === 'free' || tier === 'starter') {
+    return 'starter'
+  }
+  if (tier === 'pro') {
+    return 'pro'
+  }
+  if (tier === 'enterprise') {
+    return 'enterprise'
+  }
+  // Default to starter for unknown tiers
+  return 'starter'
+}
+
+/**
+ * Calculate the reset date for the next month
+ */
+function getNextMonthReset(): string {
+  const now = new Date()
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  return nextMonth.toISOString()
+}
+
+/**
+ * Create LLM budget object based on organization tier
+ */
+function createLlmBudget(tier: string): LlmBudget {
+  const billingTier = normalizeTier(tier)
+  return {
+    tokens_per_month: getTierTokens(tier),
+    tokens_used: 0,
+    reset_at: getNextMonthReset(),
+    overage_enabled: billingTier === 'enterprise',
+  }
+}
 
 export function apiKeyRoutes(config: UserVesselConfig) {
   const app = new Hono()
@@ -26,7 +104,7 @@ export function apiKeyRoutes(config: UserVesselConfig) {
   app.get("/", async (c) => {
     try {
       const auth = getAuth(c)
-      const db = await getRootDb(config)
+      const db = await getAuthenticatedDb(config, auth)
 
       // Regular users see only their own keys, admins see all keys in org
       let query: string
@@ -37,12 +115,16 @@ export function apiKeyRoutes(config: UserVesselConfig) {
                    api_keys.id,
                    api_keys.org_id,
                    api_keys.user_id,
+                   api_keys.key_id,
                    api_keys.scopes,
                    api_keys.is_active,
+                   api_keys.rotation_required,
                    api_keys.created_at,
                    api_keys.last_used_at,
                    api_keys.expires_at,
+                   api_keys.tier,
                    api_keys.max_connections,
+                   api_keys.llm_budget,
                    users.email AS user_email
                  FROM api_keys
                  INNER JOIN users ON api_keys.user_id = users.id
@@ -54,12 +136,16 @@ export function apiKeyRoutes(config: UserVesselConfig) {
                    api_keys.id,
                    api_keys.org_id,
                    api_keys.user_id,
+                   api_keys.key_id,
                    api_keys.scopes,
                    api_keys.is_active,
+                   api_keys.rotation_required,
                    api_keys.created_at,
                    api_keys.last_used_at,
                    api_keys.expires_at,
+                   api_keys.tier,
                    api_keys.max_connections,
+                   api_keys.llm_budget,
                    users.email AS user_email
                  FROM api_keys
                  INNER JOIN users ON api_keys.user_id = users.id
@@ -81,10 +167,10 @@ export function apiKeyRoutes(config: UserVesselConfig) {
         created_at: key.created_at,
         last_used_at: key.last_used_at,
         usage_count: 0,  // TODO: Track usage count
-        status: key.is_active ? "active" : "revoked",
-        tier: "starter",  // TODO: Add tier to schema
+        status: key.rotation_required ? "rotation_required" : (key.is_active ? "active" : "revoked"),
+        tier: key.tier || "starter",
         max_connections: key.max_connections || 1,
-        // llm_budget not yet implemented
+        llm_budget: key.llm_budget || null,
       }))
 
       return c.json({ data: transformedKeys })
@@ -96,7 +182,7 @@ export function apiKeyRoutes(config: UserVesselConfig) {
 
   /**
    * POST /v2/api-keys
-   * Generate new API key
+   * Generate new API key via identity-vessel
    */
   app.post("/", async (c) => {
     try {
@@ -104,42 +190,61 @@ export function apiKeyRoutes(config: UserVesselConfig) {
       const body = await c.req.json<CreateApiKeyRequest>()
       const { name, scopes = [], expires_in_days } = body
 
-      // Generate API key
-      const apiKey = generateApiKey("live")
-      const keyHash = await hashApiKey(apiKey)
+      // Delegate key generation to identity-vessel
+      const identityClient = createIdentityVesselClient(config)
+      const keyResult = await identityClient.generateKey({
+        org_id: auth.org_id,
+        user_id: auth.id,
+        name,
+        scopes,
+        expires_in_days,
+      })
 
-      // Calculate expiry
-      let expiresAt: string | null = null
-      if (expires_in_days) {
-        const expiryDate = new Date()
-        expiryDate.setDate(expiryDate.getDate() + expires_in_days)
-        expiresAt = expiryDate.toISOString()
-      }
+      const db = await getAuthenticatedDb(config, auth)
 
-      const db = await getRootDb(config)
+      // Fetch organization to get subscription tier for billing fields
+      const orgResult = await db.query(
+        `SELECT subscription_tier FROM organizations WHERE org_id = $orgId LIMIT 1`,
+        { orgId: auth.org_id }
+      )
+      const org = getFirstRecord<Pick<Organization, 'subscription_tier'>>(orgResult)
+      const orgTier = org?.subscription_tier || 'starter'
 
-      // Create API key record
+      // Calculate billing fields from org tier
+      const billingTier = normalizeTier(orgTier)
+      const maxConnections = getTierConnections(orgTier)
+      const llmBudget = createLlmBudget(orgTier)
+
+      // Store key metadata in database (NOT the raw key!)
       const createResult = await db.query(
         `CREATE api_keys SET
+          id = $keyId,
           org_id = $orgId,
           user_id = $userId,
-          key_hash = $keyHash,
+          key_id = $keyId,
           scopes = $scopes,
           is_active = true,
+          rotation_required = false,
           created_at = time::now(),
-          expires_at = $expiresAt`,
+          expires_at = $expiresAt,
+          tier = $tier,
+          max_connections = $maxConnections,
+          llm_budget = $llmBudget`,
         {
+          keyId: keyResult.key_id,
           orgId: auth.org_id,
           userId: auth.id,
-          keyHash,
           scopes,
-          expiresAt,
+          expiresAt: keyResult.expires_at || null,
+          tier: billingTier,
+          maxConnections,
+          llmBudget,
         }
       )
 
       const apiKeyRecord = getFirstRecord<ApiKey>(createResult)
       if (!apiKeyRecord) {
-        return c.json({ error: "Failed to create API key" }, 500)
+        return c.json({ error: "Failed to create API key record" }, 500)
       }
 
       // Get user email for response
@@ -150,25 +255,25 @@ export function apiKeyRoutes(config: UserVesselConfig) {
       const user = getFirstRecord<{ email: string }>(userResult)
 
       // Transform to match dashboard expected format
-      const transformedKey = {
+      const transformedKey: ApiKeyDisplayResponse = {
         id: apiKeyRecord.id,
         user_id: apiKeyRecord.user_id,
         user_email: user?.email || "",
-        prefix: "mb_live_",
+        prefix: keyResult.prefix,
         name,
         created_at: apiKeyRecord.created_at,
         last_used_at: apiKeyRecord.last_used_at,
         usage_count: 0,
-        status: "active" as const,
-        tier: "starter" as const,
-        max_connections: apiKeyRecord.max_connections || 1,
+        status: "active",
+        tier: apiKeyRecord.tier,
+        max_connections: apiKeyRecord.max_connections,
+        llm_budget: apiKeyRecord.llm_budget,
       }
 
       // Return response with raw key (only time it's exposed)
-      // Dashboard expects: { data: { key: ApiKey, secret: string } }
       const response: CreateApiKeyResponse = {
-        key: transformedKey,  // Transformed key record
-        secret: apiKey,  // Raw API key value (only shown once)
+        key: transformedKey,
+        secret: keyResult.key,  // Raw API key from identity-vessel (base64 encoded)
       }
 
       return c.json({ data: response }, 201)
@@ -192,10 +297,9 @@ export function apiKeyRoutes(config: UserVesselConfig) {
         keyId = `api_keys:${keyId}`
       }
 
-      const db = await getRootDb(config)
+      const db = await getAuthenticatedDb(config, auth)
 
       // Check ownership (users can only delete their own keys, admins can delete any)
-      // Use SELECT to verify ownership, then UPDATE
       let verifyQuery: string
       let params: Record<string, any>
 
@@ -215,7 +319,7 @@ export function apiKeyRoutes(config: UserVesselConfig) {
         return c.json({ error: "API key not found or no permission" }, 404)
       }
 
-      // Now update it
+      // Mark as inactive in database
       const updateQuery = `UPDATE ${keyId} SET is_active = false`
       const result = await db.query(updateQuery)
       const updated = getFirstRecord(result)
@@ -223,6 +327,10 @@ export function apiKeyRoutes(config: UserVesselConfig) {
       if (!updated) {
         return c.json({ error: "Failed to update API key" }, 500)
       }
+
+      // NOTE: We don't call identity-vessel.revokeKey() because
+      // identity-vessel doesn't store keys - it only validates HMAC signatures.
+      // Marking as inactive in our database is sufficient.
 
       return c.json({ message: "API key revoked successfully" })
     } catch (error) {

@@ -1,8 +1,6 @@
 /**
- * Cryptographic utilities for password hashing and API key generation
+ * Cryptographic utilities for password hashing
  */
-
-import { customAlphabet } from "nanoid"
 
 // =============================================================================
 // PASSWORD HASHING
@@ -28,44 +26,6 @@ export async function verifyPassword(
   hash: string
 ): Promise<boolean> {
   return await Bun.password.verify(password, hash)
-}
-
-// =============================================================================
-// API KEY GENERATION
-// =============================================================================
-
-/**
- * Generate API key with format: mb_<env>_<random>
- *
- * Example: mb_live_3kTp9vQ2hNx8rBm5wDc4
- */
-export function generateApiKey(env: "live" | "test" = "live"): string {
-  // Use alphanumeric alphabet (no ambiguous chars)
-  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZabcdefghjkmnpqrstvwxyz"
-  const nanoid = customAlphabet(alphabet, 24)
-
-  return `mb_${env}_${nanoid()}`
-}
-
-/**
- * Hash API key for storage (Argon2)
- */
-export async function hashApiKey(apiKey: string): Promise<string> {
-  return await Bun.password.hash(apiKey, {
-    algorithm: "argon2id",
-    memoryCost: 65536,
-    timeCost: 3,
-  })
-}
-
-/**
- * Verify API key against hash
- */
-export async function verifyApiKey(
-  apiKey: string,
-  hash: string
-): Promise<boolean> {
-  return await Bun.password.verify(apiKey, hash)
 }
 
 // =============================================================================

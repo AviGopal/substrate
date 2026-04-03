@@ -20,7 +20,7 @@ import { userRoutes } from "./src/routes/users"
 import { organizationRoutes } from "./src/routes/organizations"
 import { projectRoutes } from "./src/routes/projects"
 import { apiKeyRoutes } from "./src/routes/api-keys"
-import { connectionRoutes } from "./src/routes/connections"
+import { costRoutes } from "./src/routes/costs"
 import type { UserVesselConfig } from "./src/types"
 
 // =============================================================================
@@ -128,7 +128,7 @@ async function startServer() {
   app.route("/v2/organizations", organizationRoutes(config))
   app.route("/v2/projects", projectRoutes(config))
   app.route("/v2/api-keys", apiKeyRoutes(config))
-  app.route("/v2/connections", connectionRoutes(config))
+  app.route("/v2/costs", costRoutes(config))
 
   // 404 handler
   app.notFound((c) => {
@@ -167,10 +167,31 @@ async function startServer() {
 async function applyMigrations(config: UserVesselConfig) {
   const db = await getRootDb(config)
 
-  // Apply migrations in order
+  // Apply core schemas first (table definitions with PERMISSIONS)
+  const schemas = [
+    "schema/001-organizations.surql",
+    "schema/002-users.surql",
+  ]
+
+  for (const schema of schemas) {
+    const schemaPath = `${import.meta.dir}/sql/${schema}`
+    const file = Bun.file(schemaPath)
+
+    if (await file.exists()) {
+      const sql = await file.text()
+      await db.query(sql)
+      console.log(`  Applied: ${schema}`)
+    } else {
+      console.log(`  [SKIP] ${schema} not found`)
+    }
+  }
+
+  // Then apply extensions and migrations
   const migrations = [
     "001-user-vessel-extensions.surql",
     "002-connection-tracking.surql",
+    "003-cost-tracking.surql",
+    "004-bootstrap-data.surql",
   ]
 
   for (const migration of migrations) {

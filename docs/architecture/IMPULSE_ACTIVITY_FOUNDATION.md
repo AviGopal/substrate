@@ -124,6 +124,54 @@ interface Activity {
 
 ---
 
+## Implementation Patterns
+
+The interfaces above describe the **logical model**. Implementations may optimize for query performance, learning flexibility, and evolution. This section documents the intentional patterns used in production.
+
+### Variant System
+
+Activities may have multiple variants that compete via Thompson Sampling:
+
+- **`activity_id`**: Groups related variants (e.g., `"debug-null-pointer"`)
+- **`variant_id`**: Identifies a specific template version (e.g., `"debug-null-pointer:v3"`)
+
+When an activity is recommended, the system probabilistically selects the best-performing variant based on learned success rates. New variants can be created through:
+- Manual authoring
+- Ribosome extraction from successful improvisations
+- Automated optimization based on failure patterns
+
+**Rationale**: This enables A/B testing of activity templates without explicit configuration. Variants compete; the best one naturally rises to the top through Thompson Sampling.
+
+### Shape Matching Optimization
+
+For query performance, `inputSchema.required` may be stored as a flat array:
+
+```sql
+input_shapes: array<string>  -- ["error_log", "source_code", "goal"]
+```
+
+This enables efficient matching using set operators:
+
+```sql
+WHERE input_shapes ALLINSIDE $available_shapes
+```
+
+The full `ImpulseShape` metadata (descriptions, collection hints) exists at extraction time but is not persisted in the query-optimized projection.
+
+**Rationale**: Structured objects would require custom matching logic. Flat arrays with ALLINSIDE enable sub-millisecond activity matching even with thousands of templates.
+
+### Computed Thompson Scores
+
+Thompson parameters (`alpha`, `beta`) are computed from execution traces rather than stored directly on activities:
+
+- **Views** (`v_activity_score`, `v_shape_conditioned_score`) aggregate success/failure counts at query time
+- **Shape-conditioned learning** enables goal-aware success rates (activity X performs better when input includes shape Y)
+- **Flexible grouping** allows per-user, per-vessel, or per-context learning without schema changes
+
+**Rationale**: Storing α/β on the activity record would create update race conditions under concurrent execution. Computing from traces ensures consistency and enables richer conditioning without modifying the core activity schema.
+
+---
+
 ## Vessels: Bundles of Capabilities
 
 A **vessel** is a collection of activities and impulse resolvers that, when bundled together, provide capabilities in a specific context. The vessel exists where the data and execution happen.
@@ -162,6 +210,67 @@ VESSEL (MiniBob, OpenCode, hardware controller, etc.)
 ```
 
 **Key insight**: The backend is not a universal resolver. It's a trace store. When a vessel "resolves" something from the backend, it's accessing historical execution data for replay and reflection. The actual data work happens in vessels, where the data lives.
+
+---
+
+## Vessel Discovery
+
+Vessels are NOT discovered through a registry. They are **introspected** at the point of use.
+
+### The Codebase as Vessel
+
+When MiniBob operates in a codebase, that codebase IS a vessel with its own resolvers:
+
+| Source | Discovered Resolvers |
+|--------|---------------------|
+| `package.json` scripts | `npm:test`, `npm:build`, `npm:lint` |
+| `Makefile` targets | `make:deploy`, `make:clean` |
+| CI configuration | `ci:validate`, `ci:release` |
+| Git repository | `git:status`, `git:stash`, `git:commit` |
+
+### Discovery Pattern
+
+```typescript
+// Introspect package.json for npm scripts
+const pkg = await fs.readJSON('package.json')
+for (const [name, command] of Object.entries(pkg.scripts || {})) {
+  vessel.registerResolver(`npm:${name}`, {
+    type: 'command',
+    command: `npm run ${name}`,
+    canProduce: inferOutputs(name)  // test → test_results, build → artifacts
+  })
+}
+```
+
+### Vessels Collaborate, Not Nest
+
+Vessels don't "contain" other vessels - they **collaborate**:
+
+```
+MiniBob (vessel)  ←→  Codebase (vessel)
+   │                      │
+   ├─ llm resolver        ├─ npm:test resolver
+   ├─ git resolver        ├─ npm:build resolver
+   ├─ file resolver       ├─ make:deploy resolver
+   └─ mcp resolver        └─ [project-specific]
+```
+
+Activities compose resolvers from BOTH vessels. The codebase provides local tools; MiniBob provides LLM reasoning and backend access.
+
+### Performance Tracking
+
+Local resolvers are measured like any other:
+
+```typescript
+// After npm:test execution
+await backend.recordResolverMetrics('npm:test', {
+  latency_ms: 3421,
+  success: true,
+  context: { files_modified: ['src/auth.ts'] }
+})
+
+// Backend learns: npm:test succeeds 87% in this repo
+```
 
 ---
 
@@ -394,6 +503,82 @@ When improvisation succeeds, the **ribosome** extracts a reusable activity:
 5. Register it for future matching
 
 Next time similar inputs arrive, this activity is available.
+
+---
+
+## Self-Instrumentation: Activities As Tests
+
+When adding new resolvers or capabilities, **create validation activities that instrument them**. We don't write separate tests - activities ARE tests.
+
+### The Pattern
+
+```typescript
+// 1. Add new resolver
+vessel.registerResolver('npm:test', new NpmTestResolver())
+
+// 2. Create validation activity
+const validationActivity = {
+  id: 'validate-resolver:npm:test',
+  intent: 'Verify npm:test resolver works as expected',
+
+  tasks: [
+    {
+      id: 'test-success-case',
+      resolver: 'npm:test',
+      inputImpulses: [{ fixture: 'passing-tests' }],
+      validation: {
+        expectation: { exitCode: 0, passed: true },
+        aligns_with_intent: (actual) => actual.exitCode === 0
+      }
+    },
+    {
+      id: 'test-failure-case',
+      resolver: 'npm:test',
+      inputImpulses: [{ fixture: 'failing-tests' }],
+      validation: {
+        expectation: { exitCode: 1, passed: false },
+        aligns_with_intent: (actual) => actual.exitCode === 1
+      }
+    }
+  ]
+}
+
+// 3. Execute and measure
+const trace = await vessel.execute(validationActivity)
+const allPassed = trace.tasks.every(t => t.validation.aligns_with_intent)
+
+// 4. Update resolver confidence
+vessel.updateResolverConfidence('npm:test', allPassed ? 1.0 : 0.0)
+```
+
+### Key Insight
+
+| Traditional | Self-Instrumenting |
+|-------------|-------------------|
+| Write code → Write tests → Hope coverage is enough | Add resolver → Create validation activity → Execute → Measure |
+| Tests are separate from system | Activities ARE tests |
+| Test results in CI logs | Traces ARE test results |
+| Manual test maintenance | System validates itself by using itself |
+
+### Hidden State Discovery
+
+Self-instrumentation also discovers **side effects** - the "yet-unseen portions" of state:
+
+```typescript
+// Capture state before/after execution
+const before = await captureFileHashes(workingDir)
+await resolver.resolve(inputs)
+const after = await captureFileHashes(workingDir)
+
+// Discover hidden changes
+const learned = {
+  'npm:test creates coverage/': { always: true },
+  'npm:test modifies .cache/': { always: true },
+  'npm:test never modifies src/': { always: true }
+}
+```
+
+This enables better rollback, conflict detection, and prediction of resolver behavior.
 
 ---
 

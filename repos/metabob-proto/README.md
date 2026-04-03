@@ -40,7 +40,7 @@ metabob-proto/
 │       └── activity-evolve.json    # Meta-activity: evolve activities
 ├── scripts/
 │   ├── generate_surreal_schema.py  # Generate SurrealDB schema from proto
-│   └── seed_activities.py          # Seed bootstrap activities
+│   └── seed_activities.py          # DEPRECATED - use sql/seed-paradigm-templates.ts instead
 └── gen/                            # Generated code (gitignored)
     ├── python/                     # Generated Python code
     └── typescript/                 # Generated TypeScript code
@@ -95,44 +95,38 @@ protoc -I=proto --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_p
   --ts_proto_out=gen/typescript proto/metabob/**/*.proto
 ```
 
-## Generated Tables (19)
+## Database Tables
 
-The proto definitions generate the following SurrealDB tables:
+### Paradigm Core Tables (as of 2026-04)
 
-### Activity System
-| Table | Proto Message | Description |
-|-------|--------------|-------------|
-| `activities` | `Activity` | Base activity definitions |
-| `activity_variants` | `ActivityVariant` | A/B testable implementations |
-| `activity_selections` | `ActivitySelection` | User selection records |
-| `activity_conversions` | `ActivityConversion` | Execution outcomes |
-| `activity_executions` | `ActivityExecution` | Full execution records |
-| `activity_experiments` | `ActivityExperiment` | A/B test configurations |
-| `activity_impressions` | `ActivityImpression` | Recommendation impressions |
-| `variant_performance_metrics` | `VariantPerformanceMetrics` | Thompson sampling stats |
+The system now uses **4 core tables** implementing the impulse/activity/vessel paradigm:
 
-### Learning System
-| Table | Proto Message | Description |
-|-------|--------------|-------------|
-| `consumer_profiles` | `ConsumerProfile` | Agent behavior profiles |
+| Table | Description |
+|-------|-------------|
+| `impulse` | All data with pointer + shape + metadata (lazy-loaded) |
+| `activity` | All state transitions (templates, tools, compositions) |
+| `execution` | All execution traces linking input impulses to output impulses |
+| `vessel` | Execution environments with resolver capabilities |
+
+See `repos/deployment/PARADIGM_TABLES.md` for complete reference.
 
 ### Authentication & Organization
 | Table | Proto Message | Description |
 |-------|--------------|-------------|
 | `organizations` | `Organization` | Multi-tenant organizations |
 | `users` | `User` | Organization members |
-| `api_keys` | `ApiKey` | Authentication credentials |
+| `api_keys` | `ApiKey` | Authentication credentials (deprecated - now in vessel) |
 | `projects` | `Project` | Code projects |
 | `subscriptions` | `Subscription` | Billing subscriptions |
 | `audit_logs` | `AuditLog` | Security audit trail |
 
-### Session & Metrics
-| Table | Proto Message | Description |
-|-------|--------------|-------------|
-| `sessions` | `Session` | API sessions |
-| `metric_events` | `MetricEvent` | Raw analytics events |
-| `daily_metrics` | `DailyMetrics` | Aggregated daily stats |
-| `schema_versions` | `SchemaVersion` | Migration tracking |
+### Supporting Tables
+| Table | Description |
+|-------|-------------|
+| `activity_composition_graph` | Parent-child activity relationships |
+| `impulse_relevance_metrics` | Learning: impulse usage scores |
+| `tool_usage` | Learning: tool execution patterns |
+| `execution_sequences` | Learning: activity execution order |
 
 ## Key Concepts
 

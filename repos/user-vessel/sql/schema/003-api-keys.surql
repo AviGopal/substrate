@@ -96,6 +96,39 @@ DEFINE FIELD max_connections ON api_keys TYPE int
   COMMENT "Maximum concurrent connection slots for this API key";
 
 -- =============================================================================
+-- BILLING FIELDS
+-- =============================================================================
+
+-- Billing tier (inherited from organization, can be overridden)
+DEFINE FIELD tier ON api_keys TYPE string
+  ASSERT $value IN ['starter', 'pro', 'enterprise']
+  VALUE $value OR 'starter'
+  COMMENT "Billing tier: starter, pro, or enterprise";
+
+-- LLM token budget (FLEXIBLE object to allow partial updates)
+DEFINE FIELD llm_budget ON api_keys FLEXIBLE TYPE object
+  COMMENT "Token budget for LLM usage tracking";
+
+-- Nested fields for llm_budget
+DEFINE FIELD llm_budget.tokens_per_month ON api_keys TYPE int
+  ASSERT $value >= 0
+  VALUE $value OR 0
+  COMMENT "Maximum tokens allowed per billing period";
+
+DEFINE FIELD llm_budget.tokens_used ON api_keys TYPE int
+  ASSERT $value >= 0
+  VALUE $value OR 0
+  COMMENT "Tokens consumed in current billing period";
+
+DEFINE FIELD llm_budget.reset_at ON api_keys TYPE datetime
+  VALUE $value OR time::now()
+  COMMENT "Next budget reset timestamp";
+
+DEFINE FIELD llm_budget.overage_enabled ON api_keys TYPE bool
+  VALUE $value OR false
+  COMMENT "Allow usage beyond token limit (with overage charges)";
+
+-- =============================================================================
 -- TIMESTAMPS
 -- =============================================================================
 

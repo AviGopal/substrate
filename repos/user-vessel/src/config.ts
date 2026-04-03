@@ -33,6 +33,9 @@ const defaultConfig: UserVesselConfig = {
   activityApi: {
     endpoint: "http://metabob-activity-api.activity-system.svc.cluster.local:8080",
   },
+  identityVessel: {
+    endpoint: "http://identity-vessel.activity-system.svc.cluster.local:8080",
+  },
 }
 
 // =============================================================================
@@ -108,6 +111,12 @@ export async function loadConfig(): Promise<UserVesselConfig> {
   // Activity API config
   if (process.env.ACTIVITY_API_ENDPOINT) {
     config.activityApi.endpoint = process.env.ACTIVITY_API_ENDPOINT
+  }
+
+  // Identity Vessel config
+  if (process.env.IDENTITY_VESSEL_ENDPOINT) {
+    config.identityVessel = config.identityVessel || {}
+    config.identityVessel.endpoint = process.env.IDENTITY_VESSEL_ENDPOINT
   }
 
   return config

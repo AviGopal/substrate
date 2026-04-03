@@ -41,37 +41,23 @@ DEFINE ACCESS OVERWRITE minibob_record ON DATABASE TYPE RECORD
   -- Duration settings - longer for autonomous operation
   DURATION FOR TOKEN 24h, FOR SESSION 7d;
 
--- RECORD Authentication for User API Keys (IDE integrations, CLI tools)
--- Clients only need: endpoint URL + api_key (format: mb_<type>_<random>)
-DEFINE ACCESS OVERWRITE apikey_record ON DATABASE TYPE RECORD
-  -- SIGNIN query validates API key and returns user info with computed fields
-  SIGNIN (
-    SELECT
-      id,
-      org_id,
-      user_id,
-      scopes,
-      -- Include user role for RBAC
-      (SELECT role FROM users WHERE id = $parent.user_id)[0].role AS role,
-      -- Include project_ids from project_members table for project-scoped access
-      (SELECT project_id FROM project_members WHERE user_id = $parent.user_id).project_id AS project_ids
-    FROM api_keys
-    WHERE is_active = true
-      AND (expires_at IS NONE OR expires_at > time::now())
-      -- Verify API key using argon2 hash comparison
-      AND crypto::argon2::compare(key_hash, $api_key)
-  )
-  -- AUTHENTICATE clause ensures $auth is populated correctly
-  AUTHENTICATE {
-    -- Validate the API key record exists and has required fields
-    IF !$auth.id OR !$auth.org_id {
-      THROW "Invalid API key";
-    };
-    -- Return the record to confirm authentication
-    RETURN $auth;
-  }
-  -- Duration settings - shorter tokens for security, refresh via API key
-  DURATION FOR TOKEN 15m, FOR SESSION 1h;
+-- =============================================================================
+-- LEGACY: apikey_record ACCESS (REMOVED 2026-04-03)
+-- =============================================================================
+-- This SurrealDB RECORD access method has been removed in favor of HMAC-based
+-- API key validation via identity-vessel. The identity-vessel pattern is:
+-- 1. Faster (~2ms vs ~50ms for Argon2 hash comparison)
+-- 2. Stateless (no database lookup required for validation)
+-- 3. Centralized (identity-vessel is the single source of truth for auth)
+--
+-- API key format: mb_{env}_{org}_{keyId}_{hmacSignature}
+-- Validation: identity-vessel validates format and HMAC signature
+-- Revocation: Redis-based revocation cache (O(1) lookup)
+--
+-- Clients should use:
+-- - Authorization: Bearer <jwt> for JWT tokens
+-- - Authorization: ApiKey <key> for API keys (validated via identity-vessel)
+-- =============================================================================
 
 -- Note on JWT claims structure (for jwt_external):
 -- {
@@ -86,8 +72,10 @@ DEFINE ACCESS OVERWRITE apikey_record ON DATABASE TYPE RECORD
 -- }
 
 -- Note on RECORD authentication:
--- MiniBob instances authenticate with instance_id and api_key
--- API keys authenticate with just the api_key (mb_live_xxx or mb_test_xxx)
+-- MiniBob instances authenticate with instance_id and api_key via minibob_record
 -- The SIGNIN query validates credentials and returns the record
 -- The AUTHENTICATE clause ensures $auth is populated for PERMISSIONS clauses
 -- Clients only need the endpoint URL and credentials - auth is self-managed
+--
+-- API key authentication for users is handled by identity-vessel (HMAC-based)
+-- NOT via SurrealDB RECORD access - see comment above for apikey_record removal

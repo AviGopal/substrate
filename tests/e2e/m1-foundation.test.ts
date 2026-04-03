@@ -47,7 +47,8 @@ test.describe('M1: Foundation Validation', () => {
 
       expect(response.token).toBeTruthy();
       expect(response.token.split('.')).toHaveLength(3); // Valid JWT format
-      expect(response.org_id).toBe('metabob_internal');
+      // org_id uses record format for consistency
+      expect(response.org_id).toBe('organizations:metabob_internal');
     });
 
     test('M1.2.2: signin returns JWT with project_id', async () => {
@@ -81,9 +82,10 @@ test.describe('M1: Foundation Validation', () => {
       const templates = await getTemplates(token);
 
       // All templates should be from same org or global
+      // org_id uses record format for consistency
       for (const template of templates) {
         if (template.org_id) {
-          expect([org_id, 'metabob_internal']).toContain(template.org_id);
+          expect([org_id, 'organizations:metabob_internal']).toContain(template.org_id);
         }
       }
     });

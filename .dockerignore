@@ -49,25 +49,30 @@ test-*.sh
 test-*.py
 test-*.mjs
 
-# Converted templates (managed separately)
-.converted-templates/
-.converted-templates-v2/
-
 # Step library POC (not needed in production)
 step-library-poc/
 
 # Example repos (large, not needed)
-# repos/  # Commented out - repos are needed for devbob build
-# Allow specific repos needed for devbob container build:
-# - repos/metabob-cli (Python MCP tools)
-# - repos/metabob-opencode (OpenCode standalone binary)
-# - repos/metabob-proto (Shared TypeScript types)
-# All other repos/ subdirectories will be excluded by default
-repos/*
-!repos/metabob-cli/
-!repos/metabob-opencode/
-!repos/metabob-proto/
-!repos/metabob-rpc-api/
+# Explicitly exclude large repos not needed for validation build
+repos/activity-dashboard
+repos/concept-db
+repos/conversation-vessel
+repos/cpg-inference
+repos/cpg-inference-ts
+repos/deployment
+repos/identity-vessel
+repos/metabob-activity-api
+repos/metabob-analysis-api
+repos/metabob-cloud-dashboard
+repos/metabob-dashboard
+repos/metabob-internal-dashboard
+repos/metabob-mcp
+repos/microplastic
+repos/platform
+repos/react-renderer
+repos/tutor
+repos/user-vessel
+repos/vessels
 examples/
 
 # SQL dumps
