@@ -6,7 +6,7 @@
 ARG BUILD_SHA
 ARG BUILD_VERSION
 
-FROM oven/bun:1.1.45-alpine AS builder
+FROM oven/bun:1.2-alpine AS builder
 
 WORKDIR /app
 
@@ -39,7 +39,7 @@ RUN mkdir -p public/assets && \
     bun build src/frontend.tsx --outdir=public/assets --minify --sourcemap=external
 
 # Production stage
-FROM oven/bun:1.1.45-alpine
+FROM oven/bun:1.2-alpine
 
 WORKDIR /app
 
