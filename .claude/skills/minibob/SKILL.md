@@ -2,10 +2,10 @@
 name: minibob
 description: Delegate development tasks to MiniBob - your autonomous development vessel. Prefer delegation over doing work yourself. Teach MiniBob new capabilities by letting it learn from executions.
 license: MIT
-compatibility: Requires bun installed. MiniBob source is in repos/minibob
+compatibility: Requires Node.js 18+. Install via npm i -g @metabob/minibob@latest
 metadata:
   author: metabob
-  version: "4.1"
+  version: "5.0"
 ---
 
 # MiniBob: Delegation-First Development
@@ -17,6 +17,19 @@ MiniBob is an autonomous development vessel that learns from every execution. By
 - Selection improves over time based on success history
 - Successful patterns become reusable for future tasks
 - Each delegation makes MiniBob more capable
+
+---
+
+## Installation
+
+```bash
+npm i -g @metabob/minibob@latest
+```
+
+Verify installation:
+```bash
+minibob --version
+```
 
 ---
 
@@ -57,13 +70,17 @@ Goal: "Refactor the specified code for clarity and maintainability"
 ### Step 2: Execute MiniBob
 
 ```bash
-cd repos/minibob
-bun run index.ts goal "your formulated goal description"
+minibob goal "your formulated goal description"
 ```
 
 **With specific working directory:**
 ```bash
-MINIBOB_WORKDIR=/path/to/project bun run index.ts goal "goal description"
+minibob goal "goal description" --workdir /path/to/project
+```
+
+Or using environment variable:
+```bash
+MINIBOB_WORKDIR=/path/to/project minibob goal "goal description"
 ```
 
 ### Step 3: Report Results
@@ -90,10 +107,10 @@ Good goal descriptions teach MiniBob about intent:
 
 ```bash
 # Weak - MiniBob has to guess
-bun run index.ts goal "fix the bug"
+minibob goal "fix the bug"
 
 # Strong - MiniBob understands context and learns patterns
-bun run index.ts goal "Fix the authentication bug where JWT tokens expire prematurely - check the token refresh logic in auth.ts"
+minibob goal "Fix the authentication bug where JWT tokens expire prematurely - check the token refresh logic in auth.ts"
 ```
 
 ### 3. Build Through Repetition
@@ -108,20 +125,27 @@ bun run index.ts goal "Fix the authentication bug where JWT tokens expire premat
 
 ### Primary Command (Use This)
 ```bash
-cd repos/minibob
-bun run index.ts goal "description of what needs to be done"
+minibob goal "description of what needs to be done"
 ```
 
 ### Specialized Commands
 ```bash
 # Diagnose a problem (investigation focused)
-bun run index.ts diagnose "description of the problem"
+minibob diagnose "description of the problem"
 
 # Understand a codebase (analysis focused)
-bun run index.ts understand ./path/to/code [focus]
+minibob understand ./path/to/code [focus]
 
 # Pure improvisation (skip learned patterns)
-bun run index.ts improvise "goal description"
+minibob improvise "goal description"
+```
+
+### Common Flags
+```bash
+--workdir, -w     # Set working directory
+--model, -m       # Override LLM model
+--verbose, -v     # Verbose output
+--dry-run         # Show what would be done without executing
 ```
 
 ---
@@ -154,8 +178,7 @@ export MINIBOB_MODEL="claude-sonnet-4-20250514"
 
 **Execute:**
 ```bash
-cd repos/minibob
-MINIBOB_WORKDIR=../webapp bun run index.ts goal "Fix the login page submit button that isn't responding to clicks - check event handlers and form submission logic"
+minibob goal "Fix the login page submit button that isn't responding to clicks - check event handlers and form submission logic" --workdir ./webapp
 ```
 
 **Report results:**
@@ -191,6 +214,15 @@ If MiniBob can't complete a task:
 ---
 
 ## Troubleshooting
+
+### MiniBob Not Found
+```bash
+# Reinstall globally
+npm i -g @metabob/minibob@latest
+
+# Or check your PATH
+which minibob
+```
 
 ### MiniBob Can't Find Patterns
 This is normal for new task types. MiniBob will figure it out and learn:

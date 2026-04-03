@@ -24,6 +24,7 @@ import {
   getActivityScores,
   getShapeConditionedScores,
   queryActivitiesByShapes,
+  queryActivitiesByFTS,
   transformToLegacyTemplate,
   isDualWriteEnabled,
   type ParadigmActivity,
@@ -1823,8 +1824,169 @@ app.get('/corpus-summary', async (c) => {
 export default app;
 
 /**
+ * Tiered fallback result type
+ */
+type TieredFallbackResult = {
+  activities: ParadigmActivity[];
+  tier: 'exact' | 'compatible' | 'fts';
+};
+
+/**
+ * Tiered fallback for activity recommendations
+ * Each tier progressively relaxes constraints to ensure results
+ *
+ * Tier 1: Exact match - shapes + category + tags
+ * Tier 2: Compatible - shapes optional, category soft match
+ * Tier 3: FTS fallback - search by goal description
+ *
+ * @param shapes - Available impulse shapes for filtering
+ * @param category - Optional category filter
+ * @param goalDescription - Goal description for FTS search fallback
+ * @param orgId - Organization ID for multi-tenant filtering
+ * @param executionType - Optional execution_type filter
+ * @param limit - Maximum number of results to return
+ * @param jwtToken - Optional JWT token for RBAC
+ * @returns Activities with tier indicator
+ */
+async function getActivitiesWithTieredFallback(
+  shapes: string[],
+  category: string | null,
+  goalDescription: string | null,
+  orgId: string | null,
+  executionType: 'template' | 'tool' | 'composition' | 'vessel_function' | null,
+  limit: number,
+  jwtToken: string | null
+): Promise<TieredFallbackResult> {
+  const minResults = Math.ceil(limit / 2);
+
+  // Tier 1: Exact match - use shapes for strict filtering
+  if (shapes && shapes.length > 0) {
+    logger.debug('[tiered-fallback] Trying Tier 1: exact shape match', {
+      shapes,
+      category,
+      executionType,
+      limit,
+      minResults,
+    });
+
+    const tier1Result = await queryActivitiesByShapes(
+      shapes,
+      orgId,
+      category,
+      executionType,
+      limit * 3, // Fetch more to allow for filtering
+      jwtToken
+    );
+
+    if (tier1Result.data && tier1Result.data.length >= minResults) {
+      logger.info('[tiered-fallback] Tier 1 (exact) succeeded', {
+        resultCount: tier1Result.data.length,
+        path: tier1Result.path,
+        latency_ms: tier1Result.latency_ms,
+      });
+
+      return {
+        activities: tier1Result.data,
+        tier: 'exact',
+      };
+    }
+
+    logger.debug('[tiered-fallback] Tier 1 insufficient results, trying Tier 2', {
+      tier1Count: tier1Result.data?.length || 0,
+      minResults,
+    });
+  }
+
+  // Tier 2: Compatible - query without shape filter (relax constraints)
+  logger.debug('[tiered-fallback] Trying Tier 2: compatible (no shape filter)', {
+    category,
+    executionType,
+    limit,
+    minResults,
+  });
+
+  const tier2Result = await queryActivitiesByShapes(
+    [], // No shape filter - accept all activities
+    orgId,
+    category,
+    executionType,
+    limit * 3,
+    jwtToken
+  );
+
+  if (tier2Result.data && tier2Result.data.length >= minResults) {
+    logger.info('[tiered-fallback] Tier 2 (compatible) succeeded', {
+      resultCount: tier2Result.data.length,
+      path: tier2Result.path,
+      latency_ms: tier2Result.latency_ms,
+    });
+
+    return {
+      activities: tier2Result.data,
+      tier: 'compatible',
+    };
+  }
+
+  logger.debug('[tiered-fallback] Tier 2 insufficient results, trying Tier 3 FTS', {
+    tier2Count: tier2Result.data?.length || 0,
+    minResults,
+    goalDescription: goalDescription?.substring(0, 50),
+  });
+
+  // Tier 3: FTS fallback - search by goal description
+  if (goalDescription && goalDescription.trim()) {
+    const tier3Result = await queryActivitiesByFTS(
+      goalDescription,
+      orgId,
+      executionType,
+      limit * 3,
+      jwtToken
+    );
+
+    if (tier3Result.data && tier3Result.data.length > 0) {
+      logger.info('[tiered-fallback] Tier 3 (FTS) succeeded', {
+        resultCount: tier3Result.data.length,
+        searchQuery: goalDescription.substring(0, 50),
+        topScore: tier3Result.data[0]?.fts_score,
+        latency_ms: tier3Result.latency_ms,
+      });
+
+      return {
+        activities: tier3Result.data,
+        tier: 'fts',
+      };
+    }
+  }
+
+  // If FTS returned nothing or no goalDescription, return whatever we got from Tier 2
+  // This ensures we always return something if Tier 2 found any results
+  if (tier2Result.data && tier2Result.data.length > 0) {
+    logger.info('[tiered-fallback] Returning Tier 2 results after FTS miss', {
+      resultCount: tier2Result.data.length,
+    });
+
+    return {
+      activities: tier2Result.data,
+      tier: 'compatible',
+    };
+  }
+
+  // Last resort: return empty array with FTS tier indicator
+  logger.warn('[tiered-fallback] All tiers exhausted, returning empty', {
+    shapes,
+    category,
+    goalDescription: goalDescription?.substring(0, 50),
+  });
+
+  return {
+    activities: [],
+    tier: 'fts',
+  };
+}
+
+/**
  * POST /recommend
- * 
+ *
  * Get activity recommendations using Thompson Sampling
  * 
  * Request body:
@@ -1885,7 +2047,7 @@ app.post('/recommend', async (c) => {
     }
 
     // SEMANTIC ANALYSIS: Extract tag prefixes and implied shapes from task description
-    const semantics = analyzeTaskSemantics(task_description, loaded_impulses);
+    const semantics = analyzeTaskSemantics(task_description);
 
     // Use extracted tag prefixes if not explicitly provided
     const effectiveTagPrefix = tag_prefix || semantics.tagPrefixes[0] || null;
@@ -1909,64 +2071,25 @@ app.post('/recommend', async (c) => {
     const orgId = jwtAuth?.orgId || sessionData?.org_id || null;
     const projectId = jwtAuth?.projectId || sessionData?.project_id || null;
 
-    // Query activities from the canonical activity table using SELECT *
-    let templates: any[] = [];
+    // Query activities using tiered fallback strategy
+    // Tier 1: Exact shape match, Tier 2: Compatible (no shapes), Tier 3: FTS on goal description
+    const fallbackResult = await getActivitiesWithTieredFallback(
+      effectiveShapes,
+      category || null,
+      task_description,
+      orgId,
+      execution_type || null,
+      limit,
+      jwtAuth?.jwtToken || null
+    );
 
-    // Build query with all filters
-    const whereClauses: string[] = [];
-    const params: Record<string, any> = { limit: limit * 3 };
+    let templates: any[] = fallbackResult.activities;
+    const fallbackTier = fallbackResult.tier;
 
-    // Multi-tenant filtering via scope
-    if (orgId) {
-      whereClauses.push(`(scope IS NULL OR scope = 'global' OR (scope = 'org' AND org_id = $org_id) OR (scope = 'project' AND project_id = $project_id))`);
-      params.org_id = orgId;
-      params.project_id = projectId;
-    } else {
-      whereClauses.push(`(scope IS NULL OR scope = 'global')`);
-    }
-
-    // Filter by category if provided
-    if (category) {
-      whereClauses.push(`category = $category`);
-      params.category = category;
-    }
-
-    // Filter by exact tags if provided (uses semantic extraction if not explicit)
-    if (effectiveTags && Array.isArray(effectiveTags) && effectiveTags.length > 0) {
-      whereClauses.push(`tag_prefixes CONTAINSANY $tags`);
-      params.tags = effectiveTags;
-    }
-
-    // Filter by tag prefix if provided (uses semantic extraction if not explicit)
-    if (effectiveTagPrefix && typeof effectiveTagPrefix === 'string') {
-      whereClauses.push(`tag_prefixes CONTAINS $tag_prefix`);
-      params.tag_prefix = effectiveTagPrefix;
-    }
-
-    // Filter by execution_type if provided
-    if (execution_type) {
-      whereClauses.push(`execution_type = $execution_type`);
-      params.execution_type = execution_type;
-    }
-
-    // Shape-based filtering: activity.input_shapes must be subset of available shapes
-    if (effectiveShapes && effectiveShapes.length > 0) {
-      whereClauses.push(`(input_shapes = [] OR input_shapes ALLINSIDE $available_shapes)`);
-      params.available_shapes = effectiveShapes;
-    }
-
-    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-    // Use meta::id() to extract clean ID from SurrealDB record ID format
-    const query = `SELECT meta::id(id) as id, * FROM activity ${whereClause} ORDER BY created_at DESC LIMIT $limit`;
-
-    logger.debug('Recommendation query', { query, params });
-
-    const result = jwtAuth?.jwtToken
-      ? await queryWithAuth(jwtAuth.jwtToken, query, params)
-      : await surrealDB.query(query, params);
-    templates = result || [];
-
-    logger.info('Templates fetched for recommendation', { count: templates.length });
+    logger.info('Templates fetched for recommendation', {
+      count: templates.length,
+      fallback_tier: fallbackTier,
+    });
 
     // T4: Filter out excluded activities (within-goal blacklisting)
     if (exclude_activities && exclude_activities.length > 0) {
@@ -2114,6 +2237,14 @@ app.post('/recommend', async (c) => {
         const impulseBetaPenalty = impulseBoost?.betaPenalty || 0;
         totalBoost += impulseAlphaBoost;
 
+        // 7. Category preference boost (soft, not hard filter)
+        const templateCategory = template.category;
+        let categoryBoost = 0;
+        if (category && templateCategory === category) {
+          categoryBoost = 3;  // Exact category match
+        }
+        totalBoost += categoryBoost;
+
         // Apply boosts and penalties
         alpha += totalBoost;
         const adjustedBeta = betaVal + impulseBetaPenalty;
@@ -2151,6 +2282,7 @@ app.post('/recommend', async (c) => {
               execution_history: historyBoost,
               scope_preference: scopeBoost,
               impulse_relevancy: impulseAlphaBoost,
+              category_match: categoryBoost,
             },
             // Impulse relevancy details
             impulse_analysis: impulseBoost ? {
@@ -2257,6 +2389,8 @@ app.post('/recommend', async (c) => {
 
     return c.json({
       recommendations,
+      // Include fallback tier to indicate which matching strategy was used
+      fallback_tier: fallbackTier,
       // Include missing impulse suggestions if any were found
       ...(missingImpulseSuggestions.length > 0 ? {
         missing_impulses: missingImpulseSuggestions.map(s => ({
