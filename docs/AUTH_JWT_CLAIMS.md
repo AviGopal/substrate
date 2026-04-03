@@ -257,49 +257,67 @@ SELECT * FROM users WHERE id = $auth.id;
 
 ## Example: Full Token Flow
 
-### 1. API Key Exchange
+### 1. API Key Validation (identity-vessel)
 
 Request:
 ```http
-POST /v2/auth/apikey
+POST http://identity.metabob.local/v1/auth/resolve
 Content-Type: application/json
 
 {
-  "api_key": "mk_acme_a1b2c3..."
+  "impulse": {
+    "type": "authentication",
+    "pointer": {
+      "type": "apiKey",
+      "apiKey": "mb_live-acme-usr_alice-key_abc123-signature"
+    }
+  }
 }
 ```
 
 Response:
 ```json
 {
-  "token": "eyJhbGci...",
-  "expires_at": "2026-03-25T12:30:00Z",
-  "expires_in": 900,
-  "org_id": "acme",
-  "user_id": "alice",
-  "scopes": ["read", "write"]
+  "success": true,
+  "data": {
+    "authenticated": true,
+    "orgId": "acme",
+    "userId": "usr_alice",
+    "keyId": "key_abc123",
+    "type": "api_key",
+    "scopes": ["read", "write"]
+  }
 }
 ```
 
-### 2. Authenticated Request
+### 2. MiniBob Instance Authentication (identity-vessel)
 
+Request:
 ```http
-GET /v2/activities/templates
-Authorization: Bearer eyJhbGci...
-```
-
-### 3. Token Refresh (Before Expiry)
-
-```http
-POST /v2/auth/apikey
+POST http://identity.metabob.local/v1/auth/minibob/signin
 Content-Type: application/json
 
 {
-  "api_key": "mk_acme_a1b2c3..."
+  "instance_id": "minibob-local-001",
+  "api_key": "minibob-local-dev-key"
 }
 ```
 
-Returns new token with fresh expiry.
+Response:
+```json
+{
+  "success": true,
+  "token": "eyJhbGci...",
+  "org_id": "metabob_internal"
+}
+```
+
+### 3. Authenticated Request (activity-api)
+
+```http
+GET http://activity.metabob.local/v2/activities/templates
+Authorization: Bearer eyJhbGci...
+```
 
 ## Debugging
 

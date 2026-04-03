@@ -105,11 +105,14 @@ code_variants             - Test-driven development
 
 ### Data Flow Summary
 
+> **Updated 2026-04-02**: Auth endpoints moved to identity-vessel and user-vessel.
+
 | Source → Target | Endpoints | Auth | Purpose |
 |-----------------|-----------|------|---------|
-| mcp → activity-api | `/v2/auth/apikey`, templates, traces | API Key → JWT | IDE integration |
-| minibob → activity-api | `/v2/auth/minibob/signin`, all MCP endpoints | RECORD → JWT | Vessel execution |
-| dashboard → analysis-api | `/v2/auth/login`, projects, problems | Session → JWT | User management |
+| mcp → identity-vessel | `/v1/auth/resolve` | API Key → context | IDE auth validation |
+| minibob → identity-vessel | `/v1/auth/minibob/signin` | RECORD → JWT | Vessel authentication |
+| minibob → activity-api | templates, traces, MCP endpoints | JWT | Vessel execution |
+| dashboard → user-vessel | `/v2/auth/login`, password, API keys | Session → JWT | User management |
 | dashboard → activity-api | Templates, traces, metrics | JWT | Activity monitoring |
 | activity-api → analysis-api | Learning forward (async) | Internal | Co-change patterns |
 

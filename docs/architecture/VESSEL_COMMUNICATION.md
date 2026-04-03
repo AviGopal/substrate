@@ -364,70 +364,78 @@ MiniBob              identity-vessel              SurrealDB
 
 ---
 
-## Auth Delegation Pattern
+## Auth Architecture (Simplified 2026-04-02)
 
 ### Overview
 
-API key validation is delegated to identity-vessel, establishing it as the single source of truth for authentication. Other vessels (activity-api, user-vessel) do not validate API keys directly - they delegate to identity-vessel.
+Authentication is handled by dedicated vessels. Activity-api no longer issues tokens - it only validates JWT tokens via middleware.
 
-### Delegation Flow
+**Token Issuers:**
+- `identity-vessel`: MiniBob instance authentication, API key validation
+- `user-vessel`: User login/signup, password management, API key lifecycle
+
+**Token Consumers:**
+- `activity-api`: Validates JWT in Authorization header, enforces org_id RBAC
+- Other vessels: Same pattern - validate JWT, don't issue tokens
+
+### Authentication Flows
 
 ```
-Client (CLI/IDE)
+MiniBob Instance Authentication:
+================================
+MiniBob
     |
-    | sends API key
+    | POST /v1/auth/minibob/signin
+    | { instance_id, api_key }
     v
-activity-api (/v2/auth/apikey)
+identity-vessel
     |
-    | delegates validation
+    | validates via SurrealDB RECORD access
+    | returns JWT with org_id
     v
-identity-vessel (/v1/auth/resolve)
-    |
-    | validates HMAC signature
-    | checks Redis for revocation
-    v
-Returns auth context (org_id, user_id, scopes)
-    |
-    v
-activity-api generates JWT token
-    |
-    v
-Returns JWT to client
-```
+MiniBob uses JWT for all activity-api calls
 
-### Implementation
 
-```typescript
-// activity-api delegates to identity-vessel
-async function validateApiKeyViaIdentityVessel(apiKey: string) {
-  const response = await fetch(`${identityVesselUrl}/v1/auth/resolve`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      impulse: {
-        type: 'authentication',
-        pointer: { type: 'apiKey', apiKey }
-      }
-    }),
-    signal: AbortSignal.timeout(5000)
-  })
+API Key Validation (for context, not JWT):
+==========================================
+Client (MCP/IDE)
+    |
+    | POST /v1/auth/resolve
+    | { impulse: { type: "authentication", pointer: { type: "apiKey", apiKey } } }
+    v
+identity-vessel
+    |
+    | validates HMAC signature (<10us)
+    | checks Redis for revocation (~1ms)
+    v
+Returns auth context: { orgId, userId, keyId, scopes }
+(Client uses this context for authorization decisions)
 
-  const result = await response.json()
-  return result.data  // { authenticated, orgId, userId, keyId, scopes }
-}
+
+User Authentication (Dashboard):
+================================
+User
+    |
+    | POST /v2/auth/login
+    | { email, password }
+    v
+user-vessel
+    |
+    | validates credentials
+    | returns JWT with org_id, role
+    v
+Dashboard uses JWT for all API calls
 ```
 
 ### Benefits
 
-1. **Single Source of Truth**: identity-vessel is authoritative for API key validation. No dual validation logic across vessels.
+1. **Single Responsibility**: Each vessel does one thing. identity-vessel validates, user-vessel manages accounts.
 
-2. **Stateless Validation**: HMAC-based keys embed their metadata (org_id, user_id, scopes). Validation requires no database lookup - only signature verification (<10us) plus optional Redis revocation check (~1ms).
+2. **Stateless Validation**: HMAC-based keys embed metadata. No database lookup for validation.
 
-3. **Horizontal Scalability**: Any identity-vessel replica can validate any key. No coordination required between instances.
+3. **Horizontal Scalability**: Any identity-vessel replica can validate any key.
 
-4. **Unified Key Management**: Generate, revoke, and rotate keys in one place (user-vessel calls identity-vessel for generation; identity-vessel validates everywhere).
-
-5. **Backward Compatibility**: activity-api can support both new HMAC keys (via identity-vessel) and legacy SurrealDB keys (fallback) during migration.
+4. **Simplified Activity-API**: Only validates JWT tokens, doesn't manage auth flows.
 
 ### Key Format
 

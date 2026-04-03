@@ -1,7 +1,12 @@
 # Build stage
 # NOTE: This Dockerfile must be built from repos/ directory context
 # to access @metabob/minibob dependency
-FROM oven/bun:1.2-alpine AS builder
+
+# Build arguments for version embedding
+ARG BUILD_SHA
+ARG BUILD_VERSION
+
+FROM oven/bun:1.1.45-alpine AS builder
 
 WORKDIR /app
 
@@ -34,7 +39,7 @@ RUN mkdir -p public/assets && \
     bun build src/frontend.tsx --outdir=public/assets --minify --sourcemap=external
 
 # Production stage
-FROM oven/bun:1.2-alpine
+FROM oven/bun:1.1.45-alpine
 
 WORKDIR /app
 
@@ -59,6 +64,14 @@ RUN addgroup -g 1001 -S appgroup && \
     chown -R appuser:appgroup /app
 
 USER appuser
+
+# Re-declare build args
+ARG BUILD_SHA
+ARG BUILD_VERSION
+
+# Version information
+ENV BUILD_SHA=${BUILD_SHA}
+ENV BUILD_VERSION=${BUILD_VERSION}
 
 # Expose port
 EXPOSE 3001
