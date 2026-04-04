@@ -17,6 +17,7 @@ import { logger } from '../utils/logger';
 import { ensureTags, computeTagPrefixes, deriveCategory } from '../utils/tags';
 import { analyzeTaskSemantics } from '../utils/semantic-tags';
 import { calculateImpulseRelevancyBoosts, discoverMissingImpulses } from '../utils/impulse-relevancy';
+import { inferShapesFromTemplate, mergeShapes } from '../utils/shape-inference';
 import { captureValidationTrace } from '../utils/validation-traces';
 import {
   insertActivity,
@@ -578,21 +579,73 @@ app.post('/templates', async (c) => {
     }
 
     // Add input/output shapes for paradigm alignment
+    // Priority: 1. Explicit shapes, 2. Legacy schema conversion, 3. Inference from template
+    let inputShapesProvided = false;
+    let outputShapesProvided = false;
+
     if (validated.input_shapes?.length) {
       activityRecord.input_shapes = validated.input_shapes;
+      inputShapesProvided = true;
     } else if (validated.input_schema?.required) {
       // Convert legacy input_schema to input_shapes
       activityRecord.input_shapes = validated.input_schema.required
         .map((s: any) => typeof s === 'string' ? s : s.shape)
         .filter(Boolean);
+      inputShapesProvided = activityRecord.input_shapes.length > 0;
     }
     if (validated.output_shapes?.length) {
       activityRecord.output_shapes = validated.output_shapes;
+      outputShapesProvided = true;
     } else if (validated.output_schema?.produces) {
       // Convert legacy output_schema to output_shapes
       activityRecord.output_shapes = validated.output_schema.produces
         .map((s: any) => typeof s === 'string' ? s : s.shape)
         .filter(Boolean);
+      outputShapesProvided = activityRecord.output_shapes.length > 0;
+    }
+
+    // Infer shapes from template if not explicitly provided
+    if (!inputShapesProvided || !outputShapesProvided) {
+      try {
+        const inferredShapes = inferShapesFromTemplate({
+          tasks: activityTasks,
+          task_steps: activityTasks, // backward compat
+          description: validated.description,
+          category: derivedCategory,
+        });
+
+        if (!inputShapesProvided && inferredShapes.input_shapes.length > 0) {
+          // Merge with any existing shapes (in case partial shapes were set)
+          activityRecord.input_shapes = mergeShapes(
+            activityRecord.input_shapes,
+            inferredShapes.input_shapes
+          );
+          logger.info('Input shapes inferred from template', {
+            activityId,
+            inferredInputShapes: inferredShapes.input_shapes,
+            mergedInputShapes: activityRecord.input_shapes,
+          });
+        }
+
+        if (!outputShapesProvided && inferredShapes.output_shapes.length > 0) {
+          // Merge with any existing shapes (in case partial shapes were set)
+          activityRecord.output_shapes = mergeShapes(
+            activityRecord.output_shapes,
+            inferredShapes.output_shapes
+          );
+          logger.info('Output shapes inferred from template', {
+            activityId,
+            inferredOutputShapes: inferredShapes.output_shapes,
+            mergedOutputShapes: activityRecord.output_shapes,
+          });
+        }
+      } catch (inferenceError) {
+        // Shape inference is best-effort - don't fail template creation
+        logger.warn('Shape inference failed, continuing without inferred shapes', {
+          activityId,
+          error: inferenceError instanceof Error ? inferenceError.message : String(inferenceError),
+        });
+      }
     }
 
     // Add optional fields only if provided
@@ -603,17 +656,37 @@ app.post('/templates', async (c) => {
       activityRecord.variant_of = activityVariantOf;
     }
 
+    // Store structured schemas if provided (goal-execution-foundation-alignment)
+    // These are stored in addition to input_shapes/output_shapes for detailed schema info
+    if (validated.input_schema) {
+      activityRecord.input_schema = validated.input_schema;
+    }
+    if (validated.output_schema) {
+      activityRecord.output_schema = validated.output_schema;
+    }
+    if (validated.schema_confidence !== undefined) {
+      activityRecord.schema_confidence = validated.schema_confidence;
+      // Log warning for low confidence schemas
+      if (validated.schema_confidence < 0.5) {
+        logger.warn('Low schema confidence template registered', {
+          activityId,
+          schemaConfidence: validated.schema_confidence,
+        });
+      }
+    }
+
     // Build dynamic query with only provided fields
+    // Use UPSERT to handle orphaned index entries and allow re-registration
     const fields = Object.keys(activityRecord).map(k => `${k}: $${k}`).join(',\n        ');
-    const insertActivityQuery = `
-      INSERT INTO activity {
+    const upsertActivityQuery = `
+      UPSERT activity:\`${activityId}\` CONTENT {
         ${fields},
         created_at: time::now(),
         updated_at: time::now()
       }
     `;
 
-    await surrealDB.query(insertActivityQuery, activityRecord);
+    await surrealDB.query(upsertActivityQuery, activityRecord);
 
     logger.info('Activity template inserted into activity table', {
       id: activityId,
@@ -2510,8 +2583,9 @@ app.post('/create-goal-seeking', async (c) => {
     }
 
     const fields = Object.keys(templateRecord).map(k => `${k}: $${k}`).join(',\n        ');
-    const insertTemplateQuery = `
-      INSERT INTO activity {
+    // Use UPSERT to handle re-registration and orphaned index entries
+    const upsertTemplateQuery = `
+      UPSERT activity:\`${generated.id}\` CONTENT {
         ${fields},
         created_at: time::now(),
         updated_at: time::now()
@@ -2519,26 +2593,13 @@ app.post('/create-goal-seeking', async (c) => {
     `;
 
     try {
-      await surrealDB.query(insertTemplateQuery, templateRecord);
-      logger.debug('Generated template inserted into activity table', {
+      await surrealDB.query(upsertTemplateQuery, templateRecord);
+      logger.debug('Generated template upserted into activity table', {
         id: generated.id,
       });
-    } catch (insertError: any) {
-      // Check if this is a duplicate key error
-      if (insertError?.message?.includes('already contains') ||
-          insertError?.message?.includes('idx_activity_id')) {
-        logger.info('Template already exists, returning existing template', {
-          id: generated.id,
-        });
-        // Return success with existing template ID
-        return c.json({
-          status: 'success',
-          template_id: generated.id,
-          existing: true,
-        });
-      }
-      // Re-throw other errors
-      throw insertError;
+    } catch (upsertError: any) {
+      // Re-throw errors
+      throw upsertError;
     }
 
     // Initialize Thompson Sampling metrics
@@ -2608,6 +2669,8 @@ app.post('/composition', async (c) => {
       parent: validated.parent_activity_id,
       child: validated.child_activity_id,
       success: validated.success,
+      inputShapes: validated.input_impulse_shapes?.length || 0,
+      outputShapes: validated.output_impulse_shapes?.length || 0,
     });
 
     // Check if edge exists
@@ -2624,6 +2687,8 @@ app.post('/composition', async (c) => {
     });
 
     let edge: CompositionEdge;
+    // Generate edge_id for composition_impulse_flow records
+    const edgeId = `${validated.parent_activity_id}:${validated.child_activity_id}`;
 
     if (existing && existing.length > 0 && existing[0]) {
       // Update existing edge
@@ -2636,11 +2701,19 @@ app.post('/composition', async (c) => {
 
       const updateQuery = `
         UPDATE activity_composition_graph
-        SET 
+        SET
           execution_count = $execution_count,
           success_count = $success_count,
           weight = $weight,
-          updated_at = time::now()
+          updated_at = time::now(),
+          input_impulse_shapes = $input_impulse_shapes,
+          output_impulse_shapes = $output_impulse_shapes,
+          duration_ms = $duration_ms,
+          cost_usd = $cost_usd,
+          tokens_input = $tokens_input,
+          tokens_output = $tokens_output,
+          depth = $depth,
+          composition_chain = $composition_chain
         WHERE parent_activity_id = $parent_activity_id
           AND child_activity_id = $child_activity_id
         RETURN AFTER
@@ -2652,6 +2725,14 @@ app.post('/composition', async (c) => {
         execution_count: newExecutionCount,
         success_count: newSuccessCount,
         weight: newWeight,
+        input_impulse_shapes: validated.input_impulse_shapes || [],
+        output_impulse_shapes: validated.output_impulse_shapes || [],
+        duration_ms: validated.duration_ms ?? null,
+        cost_usd: validated.cost_usd ?? null,
+        tokens_input: validated.tokens_input ?? null,
+        tokens_output: validated.tokens_output ?? null,
+        depth: validated.depth ?? null,
+        composition_chain: validated.composition_chain || null,
       });
 
       // @ts-ignore - SurrealDB query typing issue
@@ -2663,7 +2744,7 @@ app.post('/composition', async (c) => {
         weight: newWeight,
       });
     } else {
-      // Create new edge
+      // Create new edge with impulse flow fields
       const createQuery = `
         CREATE activity_composition_graph CONTENT {
           parent_activity_id: $parent_activity_id,
@@ -2674,6 +2755,14 @@ app.post('/composition', async (c) => {
           execution_count: 1,
           success_count: $success_count,
           weight: $weight,
+          input_impulse_shapes: $input_impulse_shapes,
+          output_impulse_shapes: $output_impulse_shapes,
+          duration_ms: $duration_ms,
+          cost_usd: $cost_usd,
+          tokens_input: $tokens_input,
+          tokens_output: $tokens_output,
+          depth: $depth,
+          composition_chain: $composition_chain,
           created_at: time::now(),
           updated_at: time::now()
         }
@@ -2687,6 +2776,14 @@ app.post('/composition', async (c) => {
         success: validated.success,
         success_count: validated.success ? 1 : 0,
         weight: validated.success ? 1.0 : 0.0,
+        input_impulse_shapes: validated.input_impulse_shapes || [],
+        output_impulse_shapes: validated.output_impulse_shapes || [],
+        duration_ms: validated.duration_ms ?? null,
+        cost_usd: validated.cost_usd ?? null,
+        tokens_input: validated.tokens_input ?? null,
+        tokens_output: validated.tokens_output ?? null,
+        depth: validated.depth ?? null,
+        composition_chain: validated.composition_chain || null,
       });
 
       // @ts-ignore - SurrealDB query typing issue
@@ -2699,6 +2796,8 @@ app.post('/composition', async (c) => {
         execution_count: 1,
         success_count: validated.success ? 1 : 0,
         weight: validated.success ? 1.0 : 0.0,
+        input_impulse_shapes: validated.input_impulse_shapes || [],
+        output_impulse_shapes: validated.output_impulse_shapes || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -2707,6 +2806,51 @@ app.post('/composition', async (c) => {
         child: validated.child_activity_id,
         weight: edge.weight,
       });
+    }
+
+    // Record detailed impulse flow if impulse IDs are provided
+    if (validated.input_impulse_ids?.length || validated.output_impulse_ids?.length) {
+      const flowRecords: any[] = [];
+
+      // Create input flow records
+      if (validated.input_impulse_ids && validated.input_impulse_shapes) {
+        for (let i = 0; i < validated.input_impulse_ids.length; i++) {
+          flowRecords.push({
+            edge_id: edgeId,
+            execution_id: validated.execution_id,
+            impulse_id: validated.input_impulse_ids[i],
+            direction: 'input',
+            shape: validated.input_impulse_shapes[i] || 'unknown',
+            execution_succeeded: validated.success,
+          });
+        }
+      }
+
+      // Create output flow records
+      if (validated.output_impulse_ids && validated.output_impulse_shapes) {
+        for (let i = 0; i < validated.output_impulse_ids.length; i++) {
+          flowRecords.push({
+            edge_id: edgeId,
+            execution_id: validated.execution_id,
+            impulse_id: validated.output_impulse_ids[i],
+            direction: 'output',
+            shape: validated.output_impulse_shapes[i] || 'unknown',
+            execution_succeeded: validated.success,
+          });
+        }
+      }
+
+      // Insert flow records
+      if (flowRecords.length > 0) {
+        const flowInsertQuery = `
+          INSERT INTO composition_impulse_flow $records
+        `;
+        await surrealDB.query(flowInsertQuery, { records: flowRecords });
+        logger.info('Recorded composition impulse flows', {
+          edge_id: edgeId,
+          flow_count: flowRecords.length,
+        });
+      }
     }
 
     return c.json({
@@ -2819,6 +2963,132 @@ app.get('/composition/graph', async (c) => {
 
     return c.json({
       error: 'Failed to query composition graph',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /v2/activities/composition/impulse-success
+ * Query impulse-conditioned success rates from composition data
+ *
+ * This endpoint enables queries like:
+ * - "Success rate when parent X calls child Y with shape Z loaded"
+ * - "Which input shapes correlate with composition success?"
+ * - "Which output shapes indicate successful completion?"
+ *
+ * Query parameters:
+ * - edge_id: Filter by specific composition edge (parent:child)
+ * - shape: Filter by specific impulse shape
+ * - direction: Filter by 'input' or 'output'
+ * - min_count: Minimum count for statistical significance (default: 3)
+ * - limit: Max results (default: 100)
+ * - offset: Pagination offset (default: 0)
+ *
+ * Returns success rates grouped by edge, shape, and direction
+ */
+app.get('/composition/impulse-success', async (c) => {
+  try {
+    const query = c.req.query();
+
+    const edgeId = query.edge_id;
+    const shape = query.shape;
+    const direction = query.direction as 'input' | 'output' | undefined;
+    const minCount = query.min_count ? parseInt(query.min_count) : 3;
+    const limit = query.limit ? parseInt(query.limit) : 100;
+    const offset = query.offset ? parseInt(query.offset) : 0;
+
+    logger.info('GET /v2/activities/composition/impulse-success', {
+      edge_id: edgeId,
+      shape,
+      direction,
+      min_count: minCount,
+      limit,
+      offset,
+    });
+
+    const whereClauses: string[] = [];
+    const params: Record<string, any> = {
+      limit,
+      offset,
+      min_count: minCount,
+    };
+
+    if (edgeId) {
+      whereClauses.push(`edge_id = $edge_id`);
+      params.edge_id = edgeId;
+    }
+
+    if (shape) {
+      whereClauses.push(`shape = $shape`);
+      params.shape = shape;
+    }
+
+    if (direction) {
+      whereClauses.push(`direction = $direction`);
+      params.direction = direction;
+    }
+
+    // Query from the view (v_composition_impulse_success) or aggregate directly
+    let ratesQuery = `
+      SELECT
+        edge_id,
+        shape,
+        direction,
+        count() as total_count,
+        count(IF execution_succeeded = true THEN 1 ELSE NONE END) as success_count,
+        (count(IF execution_succeeded = true THEN 1 ELSE NONE END) * 1.0 / count()) as success_rate
+      FROM composition_impulse_flow
+    `;
+
+    if (whereClauses.length > 0) {
+      ratesQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    ratesQuery += `
+      GROUP BY edge_id, shape, direction
+      HAVING count() >= $min_count
+      ORDER BY success_rate DESC
+      LIMIT $limit START $offset
+    `;
+
+    // Count query for total
+    let countQuery = `
+      SELECT count() as total FROM (
+        SELECT edge_id, shape, direction
+        FROM composition_impulse_flow
+        ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}
+        GROUP BY edge_id, shape, direction
+        HAVING count() >= $min_count
+      )
+    `;
+
+    const [ratesResult, countResult] = await Promise.all([
+      surrealDB.query<any[]>(ratesQuery, params),
+      surrealDB.query<any[]>(countQuery, params),
+    ]);
+
+    const rates = ratesResult && Array.isArray(ratesResult) ? ratesResult.flat() : [];
+    // @ts-ignore - SurrealDB query typing issue
+    const total = (countResult && countResult.length > 0 && countResult[0]) ? (countResult[0].total || 0) : rates.length;
+
+    logger.info('Composition impulse success query result', {
+      rates_count: rates.length,
+      total,
+    });
+
+    return c.json({
+      rates,
+      total,
+    });
+  } catch (error: any) {
+    logger.error('GET /v2/activities/composition/impulse-success failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to query impulse success rates',
       message: error.message,
     }, 500);
   }
@@ -3860,12 +4130,13 @@ app.post('/tool-argument-patterns', async (c) => {
       shape: validated.argument_shape,
       hash: validated.argument_hash.substring(0, 16) + '...',
       succeeded: validated.execution_succeeded,
+      failureType: validated.failure_type,
     });
 
     // Check if pattern exists
     const checkQuery = `
       SELECT * FROM tool_argument_pattern
-      WHERE argument_hash = $hash
+      WHERE argument_hash = $hash AND org_id = <string>$auth.org_id
       LIMIT 1
     `;
 
@@ -3881,24 +4152,44 @@ app.post('/tool-argument-patterns', async (c) => {
       // @ts-ignore - SurrealDB query typing issue
       const currentTimesUsed = current.times_used || 0;
       const successIncrement = validated.execution_succeeded ? 1 : 0;
+      const failureIncrement = validated.execution_succeeded ? 0 : 1;
+
+      // Update failure counts breakdown if failure type is provided
+      // @ts-ignore - SurrealDB query typing issue
+      const currentFailureCounts = current.failure_counts || {};
+      if (!validated.execution_succeeded && validated.failure_type) {
+        currentFailureCounts[validated.failure_type] = (currentFailureCounts[validated.failure_type] || 0) + 1;
+      }
 
       const updateQuery = `
         UPDATE tool_argument_pattern
         SET
           times_used = times_used + 1,
           times_succeeded = times_succeeded + $success_increment,
+          times_failed = (times_failed OR 0) + $failure_increment,
           avg_execution_ms = (avg_execution_ms * $current_times_used + $execution_ms) / ($current_times_used + 1),
           last_used_at = time::now(),
-          updated_at = time::now()
-        WHERE argument_hash = $hash
+          updated_at = time::now(),
+          failure_type = $failure_type,
+          failure_reason = $failure_reason,
+          tool_succeeded = $tool_succeeded,
+          validation_error = $validation_error,
+          failure_counts = $failure_counts
+        WHERE argument_hash = $hash AND org_id = <string>$auth.org_id
         RETURN AFTER
       `;
 
       const updateResult = await surrealDB.query<any[]>(updateQuery, {
         hash: validated.argument_hash,
         success_increment: successIncrement,
+        failure_increment: failureIncrement,
         current_times_used: currentTimesUsed,
         execution_ms: validated.execution_ms,
+        failure_type: validated.failure_type || null,
+        failure_reason: validated.failure_reason || null,
+        tool_succeeded: validated.tool_succeeded ?? null,
+        validation_error: validated.validation_error || null,
+        failure_counts: currentFailureCounts,
       });
 
       pattern = updateResult && updateResult.length > 0 ? updateResult[0] : current;
@@ -3907,9 +4198,16 @@ app.post('/tool-argument-patterns', async (c) => {
         hash: validated.argument_hash.substring(0, 16) + '...',
         times_used: pattern.times_used,
         times_succeeded: pattern.times_succeeded,
+        times_failed: pattern.times_failed,
+        failureType: validated.failure_type,
       });
     } else {
-      // Create new pattern
+      // Create new pattern with failure tracking fields
+      const initialFailureCounts: Record<string, number> = {};
+      if (!validated.execution_succeeded && validated.failure_type) {
+        initialFailureCounts[validated.failure_type] = 1;
+      }
+
       const createQuery = `
         CREATE tool_argument_pattern SET
           activity_id = $activity_id,
@@ -3919,8 +4217,14 @@ app.post('/tool-argument-patterns', async (c) => {
           arguments = $arguments,
           times_used = 1,
           times_succeeded = $success_increment,
+          times_failed = $failure_increment,
           avg_execution_ms = $execution_ms,
-          last_used_at = time::now()
+          last_used_at = time::now(),
+          failure_type = $failure_type,
+          failure_reason = $failure_reason,
+          tool_succeeded = $tool_succeeded,
+          validation_error = $validation_error,
+          failure_counts = $failure_counts
       `;
 
       const createResult = await surrealDB.query<any[]>(createQuery, {
@@ -3930,7 +4234,13 @@ app.post('/tool-argument-patterns', async (c) => {
         argument_hash: validated.argument_hash,
         arguments: validated.arguments,
         success_increment: validated.execution_succeeded ? 1 : 0,
+        failure_increment: validated.execution_succeeded ? 0 : 1,
         execution_ms: validated.execution_ms,
+        failure_type: validated.failure_type || null,
+        failure_reason: validated.failure_reason || null,
+        tool_succeeded: validated.tool_succeeded ?? null,
+        validation_error: validated.validation_error || null,
+        failure_counts: initialFailureCounts,
       });
 
       pattern = createResult && createResult.length > 0 ? createResult[0] : {
@@ -3940,13 +4250,18 @@ app.post('/tool-argument-patterns', async (c) => {
         argument_hash: validated.argument_hash,
         times_used: 1,
         times_succeeded: validated.execution_succeeded ? 1 : 0,
+        times_failed: validated.execution_succeeded ? 0 : 1,
         avg_execution_ms: validated.execution_ms,
+        failure_type: validated.failure_type,
+        failure_reason: validated.failure_reason,
+        failure_counts: initialFailureCounts,
       };
 
       logger.info('Created new tool argument pattern', {
         hash: validated.argument_hash.substring(0, 16) + '...',
         tool: validated.tool_name,
         shape: validated.argument_shape,
+        failureType: validated.failure_type,
       });
     }
 
@@ -4051,6 +4366,417 @@ app.get('/tool-argument-recommendations', async (c) => {
 
     return c.json({
       error: 'Failed to get tool argument recommendations',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /failure-patterns
+ *
+ * Returns failure patterns for analysis and debugging.
+ * Surfaces patterns that frequently fail to help identify:
+ * - Problematic argument combinations
+ * - Common validation failures
+ * - Execution issues
+ *
+ * Query params:
+ *   activity_id?: string - Filter by activity
+ *   tool_name?: string - Filter by tool
+ *   failure_type?: 'validation' | 'execution' | 'tool_failure' | 'timeout' - Filter by failure type
+ *   min_failures?: number - Minimum failure count (default: 1)
+ *   limit?: number - Max results (default: 100)
+ *   offset?: number - Pagination offset (default: 0)
+ *
+ * Returns:
+ * {
+ *   patterns: [{
+ *     activity_id: string,
+ *     tool_name: string,
+ *     argument_shape: string,
+ *     argument_hash: string,
+ *     arguments: object,
+ *     success_rate: number,
+ *     failure_rate: number,
+ *     times_used: number,
+ *     times_succeeded: number,
+ *     times_failed: number,
+ *     failure_type?: string,
+ *     failure_reason?: string,
+ *     validation_error?: string,
+ *     failure_counts?: object
+ *   }],
+ *   total: number
+ * }
+ *
+ * Use cases:
+ * - Identify argument patterns that fail validation
+ * - Debug execution failures
+ * - Learn what to avoid in recommendations
+ */
+app.get('/failure-patterns', async (c) => {
+  try {
+    const query = c.req.query();
+
+    const activityId = query.activity_id;
+    const toolName = query.tool_name;
+    const failureType = query.failure_type as 'validation' | 'execution' | 'tool_failure' | 'timeout' | undefined;
+    const minFailures = query.min_failures ? parseInt(query.min_failures) : 1;
+    const limit = query.limit ? parseInt(query.limit) : 100;
+    const offset = query.offset ? parseInt(query.offset) : 0;
+
+    logger.info('GET /v2/activities/failure-patterns', {
+      activity_id: activityId,
+      tool_name: toolName,
+      failure_type: failureType,
+      min_failures: minFailures,
+      limit,
+      offset,
+    });
+
+    const whereClauses: string[] = ['times_failed >= $min_failures'];
+    const params: Record<string, any> = {
+      min_failures: minFailures,
+      limit,
+      offset,
+    };
+
+    if (activityId) {
+      whereClauses.push(`activity_id = $activity_id`);
+      params.activity_id = activityId;
+    }
+
+    if (toolName) {
+      whereClauses.push(`tool_name = $tool_name`);
+      params.tool_name = toolName;
+    }
+
+    if (failureType) {
+      whereClauses.push(`failure_type = $failure_type`);
+      params.failure_type = failureType;
+    }
+
+    // Query failure patterns from v_failure_patterns view or tool_argument_pattern table
+    const patternsQuery = `
+      SELECT
+        activity_id,
+        tool_name,
+        argument_shape,
+        argument_hash,
+        arguments,
+        (times_succeeded * 1.0 / times_used) as success_rate,
+        (times_failed * 1.0 / times_used) as failure_rate,
+        times_used,
+        times_succeeded,
+        times_failed,
+        avg_execution_ms,
+        failure_type,
+        failure_reason,
+        validation_error,
+        failure_counts,
+        org_id
+      FROM tool_argument_pattern
+      WHERE ${whereClauses.join(' AND ')}
+        AND org_id = <string>$auth.org_id
+      ORDER BY times_failed DESC, failure_rate DESC
+      LIMIT $limit START $offset
+    `;
+
+    // Count query
+    const countQuery = `
+      SELECT count() as total FROM tool_argument_pattern
+      WHERE ${whereClauses.join(' AND ')}
+        AND org_id = <string>$auth.org_id
+    `;
+
+    const [patternsResult, countResult] = await Promise.all([
+      surrealDB.query<any[]>(patternsQuery, params),
+      surrealDB.query<any[]>(countQuery, params),
+    ]);
+
+    const patterns = patternsResult && Array.isArray(patternsResult) ? patternsResult.flat() : [];
+    // @ts-ignore - SurrealDB query typing issue
+    const total = (countResult && countResult.length > 0 && countResult[0]) ? (countResult[0].total || 0) : patterns.length;
+
+    logger.info('Failure patterns query result', {
+      patterns_found: patterns.length,
+      total,
+    });
+
+    return c.json({
+      patterns,
+      total,
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to get failure patterns', { error: error.message });
+
+    return c.json({
+      error: 'Failed to get failure patterns',
+      message: error.message,
+    }, 500);
+  }
+});
+
+// =============================================================================
+// Emergent Shape Network Endpoints
+// =============================================================================
+// These endpoints expose the emergent shape statistics from v_shape_* views.
+// Shapes are discovered through usage, not predefined - these views reveal
+// the network topology that emerges from activity definitions and executions.
+// =============================================================================
+
+/**
+ * Shape network edge representing a transformation from input to output shape
+ */
+interface ShapeNetworkEdge {
+  input_shape: string;
+  output_shape: string;
+  edge_weight: number;
+  activities: string[];
+}
+
+/**
+ * Shape usage statistics by role (input or output)
+ */
+interface ShapeUsage {
+  shape: string;
+  role: 'input' | 'output';
+  activity_count: number;
+  activities: string[];
+}
+
+/**
+ * Shape suggestion for autocomplete
+ */
+interface ShapeAutocomplete {
+  shape: string;
+  total_uses: number;
+  roles: string[];
+}
+
+/**
+ * GET /shapes/network
+ *
+ * Returns the emergent shape transformation graph showing how shapes
+ * transform from inputs to outputs across activities.
+ *
+ * Query params:
+ *   input_shape?: string - Filter to edges from this input shape
+ *   output_shape?: string - Filter to edges producing this output shape
+ *   min_weight?: number - Filter to edges with weight >= this value
+ *   limit?: number - Maximum edges to return (default: 100)
+ *   offset?: number - Pagination offset (default: 0)
+ *
+ * Returns:
+ * {
+ *   edges: ShapeNetworkEdge[],
+ *   total: number
+ * }
+ */
+app.get('/shapes/network', async (c) => {
+  try {
+    const inputShape = c.req.query('input_shape');
+    const outputShape = c.req.query('output_shape');
+    const minWeight = c.req.query('min_weight') ? parseInt(c.req.query('min_weight')!, 10) : undefined;
+    const limit = parseInt(c.req.query('limit') || '100', 10);
+    const offset = parseInt(c.req.query('offset') || '0', 10);
+
+    logger.info('GET /shapes/network', { inputShape, outputShape, minWeight, limit, offset });
+
+    const whereClauses: string[] = [];
+    const params: Record<string, any> = {
+      limit,
+      offset,
+    };
+
+    if (inputShape) {
+      whereClauses.push('input_shape = $input_shape');
+      params.input_shape = inputShape;
+    }
+
+    if (outputShape) {
+      whereClauses.push('output_shape = $output_shape');
+      params.output_shape = outputShape;
+    }
+
+    if (minWeight !== undefined) {
+      whereClauses.push('edge_weight >= $min_weight');
+      params.min_weight = minWeight;
+    }
+
+    let edgesQuery = 'SELECT * FROM v_shape_network';
+    if (whereClauses.length > 0) {
+      edgesQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+    edgesQuery += ' ORDER BY edge_weight DESC LIMIT $limit START $offset';
+
+    let countQuery = 'SELECT count() as total FROM v_shape_network';
+    if (whereClauses.length > 0) {
+      countQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    const [edgesResult, countResult] = await Promise.all([
+      surrealDB.query<ShapeNetworkEdge[]>(edgesQuery, params),
+      surrealDB.query<{ total: number }[]>(countQuery, params),
+    ]);
+
+    const edges = edgesResult && Array.isArray(edgesResult) ? edgesResult.flat() : [];
+    // @ts-ignore - SurrealDB query typing issue
+    const total = countResult && countResult.length > 0 && countResult[0] ? (countResult[0].total || 0) : 0;
+
+    logger.info('Shape network query result', { edges: edges.length, total });
+
+    return c.json({
+      edges,
+      total,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /shapes/network failed', { error: error.message, stack: error.stack });
+    return c.json({
+      error: 'Failed to query shape network',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /shapes/usage
+ *
+ * Returns shape frequency statistics showing how often each shape
+ * appears as an input or output across activities.
+ *
+ * Query params:
+ *   shape?: string - Filter to a specific shape
+ *   role?: 'input' | 'output' - Filter to a specific role
+ *   limit?: number - Maximum results to return (default: 100)
+ *   offset?: number - Pagination offset (default: 0)
+ *
+ * Returns:
+ * {
+ *   usage: ShapeUsage[],
+ *   total: number
+ * }
+ */
+app.get('/shapes/usage', async (c) => {
+  try {
+    const shape = c.req.query('shape');
+    const role = c.req.query('role');
+    const limit = parseInt(c.req.query('limit') || '100', 10);
+    const offset = parseInt(c.req.query('offset') || '0', 10);
+
+    logger.info('GET /shapes/usage', { shape, role, limit, offset });
+
+    const whereClauses: string[] = [];
+    const params: Record<string, any> = {
+      limit,
+      offset,
+    };
+
+    if (shape) {
+      whereClauses.push('shape = $shape');
+      params.shape = shape;
+    }
+
+    if (role && (role === 'input' || role === 'output')) {
+      whereClauses.push('role = $role');
+      params.role = role;
+    }
+
+    let usageQuery = 'SELECT * FROM v_shape_usage';
+    if (whereClauses.length > 0) {
+      usageQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+    usageQuery += ' ORDER BY activity_count DESC LIMIT $limit START $offset';
+
+    let countQuery = 'SELECT count() as total FROM v_shape_usage';
+    if (whereClauses.length > 0) {
+      countQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    const [usageResult, countResult] = await Promise.all([
+      surrealDB.query<ShapeUsage[]>(usageQuery, params),
+      surrealDB.query<{ total: number }[]>(countQuery, params),
+    ]);
+
+    const usage = usageResult && Array.isArray(usageResult) ? usageResult.flat() : [];
+    // @ts-ignore - SurrealDB query typing issue
+    const total = countResult && countResult.length > 0 && countResult[0] ? (countResult[0].total || 0) : 0;
+
+    logger.info('Shape usage query result', { usage: usage.length, total });
+
+    return c.json({
+      usage,
+      total,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /shapes/usage failed', { error: error.message, stack: error.stack });
+    return c.json({
+      error: 'Failed to query shape usage',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /shapes/autocomplete
+ *
+ * Returns shape suggestions for UI autocomplete, sorted by frequency.
+ * Shapes emerge from observed usage - this is not a predefined list.
+ *
+ * Query params:
+ *   prefix?: string - Filter shapes starting with this prefix
+ *   limit?: number - Maximum suggestions to return (default: 50)
+ *
+ * Returns:
+ * {
+ *   suggestions: ShapeAutocomplete[],
+ *   total: number
+ * }
+ */
+app.get('/shapes/autocomplete', async (c) => {
+  try {
+    const prefix = c.req.query('prefix') || '';
+    const limit = parseInt(c.req.query('limit') || '50', 10);
+
+    logger.info('GET /shapes/autocomplete', { prefix, limit });
+
+    // Query the autocomplete view
+    // Note: SurrealDB views don't support LIKE, so we filter in code for prefix matching
+    const query = `
+      SELECT * FROM v_shapes_for_autocomplete
+      ORDER BY total_uses DESC
+      LIMIT 1000
+    `;
+
+    const result = await surrealDB.query<ShapeAutocomplete[]>(query);
+    const allShapes = result && Array.isArray(result) ? result.flat() : [];
+
+    // Filter by prefix if provided
+    const filtered = prefix
+      ? allShapes.filter(s => s.shape && s.shape.toLowerCase().startsWith(prefix.toLowerCase()))
+      : allShapes;
+
+    // Apply limit
+    const suggestions = filtered.slice(0, limit);
+
+    logger.info('Shape autocomplete query result', {
+      prefix: prefix || null,
+      suggestions: suggestions.length,
+      total: filtered.length,
+    });
+
+    return c.json({
+      suggestions,
+      total: filtered.length,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /shapes/autocomplete failed', { error: error.message, stack: error.stack });
+    return c.json({
+      error: 'Failed to get shape suggestions',
       message: error.message,
     }, 500);
   }
