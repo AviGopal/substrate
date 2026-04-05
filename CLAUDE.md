@@ -338,7 +338,28 @@ bun test               # Run tests
 
 ### Build and Deployment
 
-> **CRITICAL**: The canonical infrastructure deployments are in `repos/deployment/`. All builds and deployments MUST be performed from that repository, not from the main development workspace.
+> **Canonical Documentation**: See [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md) for the complete deployment guide including CI/CD pipelines, canary deployments, and production promotion.
+
+**Quick Reference:**
+
+```bash
+# Local development
+cd repos/deployment
+./scripts/build_changed.sh --dev    # Build changed vessels
+helmfile -e local sync               # Deploy locally
+
+# Push to trigger CI/CD canary deployment
+git push origin dev
+
+# Production promotion (manual or daily at 10 AM UTC)
+./scripts/promote-canary-to-production.sh
+```
+
+**CI/CD Pipeline:**
+```
+Local Dev → Push to dev → Canary (auto) → Production (manual/scheduled)
+   (manual)     (triggers)    (10% traffic)    (100% traffic)
+```
 
 **Prerequisites:**
 1. Docker Desktop with Kubernetes enabled (context: `docker-desktop`)
@@ -351,151 +372,53 @@ bun test               # Run tests
 4. Set environment variables:
    ```bash
    export ANTHROPIC_API_KEY="sk-ant-your-key-here"
-   export SURREALDB_USERNAME="root"  # Optional, defaults to root
-   export SURREALDB_PASSWORD="surrealdb-local-dev-123"  # Optional
+   export SURREALDB_PASSWORD="surrealdb-local-dev-123"
    ```
-
-**Development Deployment Workflow:**
-
-The proper workflow ensures continuous, incremental deployments with trace collection:
-
-```bash
-# 1. Switch to deployment repository dev branch
-cd repos/deployment
-git checkout dev
-git pull
-
-# 2. Check status of specific vessel (e.g., metabob-activity-api)
-git --work-tree=vessels/metabob-activity-api status
-
-# 3. Copy changes from development workspace
-# After making changes in main workspace (repos/metabob-activity-api),
-# sync them to deployment workspace:
-rsync -av ../metabob-activity-api/src/ vessels/metabob-activity-api/src/
-# Or manually copy changed files
-
-# 4. Bump version tag
-# Edit vessels/metabob-activity-api/package.json version
-# Update helm/charts/metabob-activity-api/values.yaml image tag
-
-# 5. Build container
-./scripts/build-vessel.sh metabob-activity-api
-
-# 6. Deploy with helmfile
-cd helm
-helmfile -e local sync
-
-# 7. Check deployment status
-kubectl get pods -n activity-system
-kubectl logs -n activity-system -l app.kubernetes.io/name=metabob-activity-api --tail=50
-
-# 8. If deployment is healthy (not crashing):
-#    Commit and push deployment changes
-cd ..
-git add vessels/metabob-activity-api helm/charts/metabob-activity-api
-git commit -m "feat(activity-api): <description>"
-git push origin dev
-
-# 9. If deployment is broken:
-#    Fix the issue and retry from step 5 (build container)
-
-# 10. Back in main workspace: discard local changes and pull
-cd ../../  # Back to main workspace root
-git restore repos/metabob-activity-api
-git pull origin <your-branch>
-```
-
-**Why This Workflow:**
-
-1. **Continuous incremental deployment**: Each change is deployed immediately, allowing trace collection and performance monitoring
-2. **Separation of concerns**: Development workspace stays clean; deployment workspace manages packaging and K8s resources
-3. **Version control**: Deployment repository tracks working configurations separately from source code
-4. **Rollback capability**: Deployment history is independent of source code history
-5. **Multi-vessel coordination**: Deployment repo manages inter-vessel dependencies and versioning
 
 **Deployment Repository Structure:**
 
 ```
 repos/deployment/
-├── vessels/                    # Vessel source code (synced from main workspace)
-│   ├── metabob-activity-api/
-│   ├── minibob/
-│   └── activity-dashboard/
-├── helm/                       # Kubernetes manifests
-│   ├── charts/
-│   │   ├── metabob-activity-api/
-│   │   │   ├── values.yaml    # Image tags, config
-│   │   │   └── templates/
-│   │   └── ...
-│   └── helmfile.yaml
-└── scripts/
-    └── build-vessel.sh         # Build script for containers
+├── .github/workflows/
+│   ├── deploy-canary.yml           # Auto-deploy on push to dev (runs tests + lint)
+│   └── promote-to-production.yml   # Daily/manual production promotion (health gates)
+├── environments/
+│   ├── local.values.yaml           # Local dev cluster config
+│   ├── production.canary.values.yaml  # Canary image tags
+│   └── production.values.yaml      # Production image tags
+├── scripts/
+│   ├── build_changed.sh            # Build script (--dev or --canary)
+│   ├── promote-canary-to-production.sh  # Manual promotion with health checks
+│   └── health-check.sh             # Environment health validation
+├── vessels/                         # Vessel source code (synced from main workspace)
+├── helmfile.yaml                    # Main helmfile with environments
+└── DEPLOYMENT_WORKFLOW.md          # Complete deployment documentation
 ```
-
-**Automated Deployment (via pre-commit hook):**
-
-The main workspace has a pre-commit hook that automatically:
-1. Updates image tags in deployment repo
-2. Builds changed vessels
-3. Deploys via helmfile
-4. Validates deployment health
-
-This ensures every commit triggers a deployment attempt, maintaining continuous integration.
-
-**Manual Deployment (when auto-deployment fails):**
-
-If the pre-commit hook fails:
-1. Review logs: `.git/hooks/logs/pre-commit-<timestamp>.log`
-2. Fix the issue in main workspace
-3. Follow the manual deployment workflow above
-4. Once fixed, re-commit to trigger auto-deployment again
 
 **Verify Deployment:**
 
 ```bash
-# Check Helm hook Jobs completed
-kubectl get jobs -n activity-system
-# Expected: surrealdb-schema-migration (1/1), surrealdb-init-data (1/1)
-
-# View migration logs
-kubectl logs -n activity-system job/surrealdb-schema-migration
-# Expected: ✓ Applied core schemas, ✓ Applied activity schemas, ✓ Data migrations completed
-
-# View init-data logs
-kubectl logs -n activity-system job/surrealdb-init-data
-# Expected: ✓ Organization metabob_internal created, ✓ MiniBob instance minibob-local-001 created
-
 # Check all pods are running
 kubectl get pods -n activity-system
-# Expected: surrealdb-0, metabob-activity-api, minibob-x3, activity-dashboard, redis-valkey
 
 # Check API health
-curl http://api.minibob.local/health
-# Expected: {"status": "ok"}
+curl http://activity.metabob.local/health
 
 # Verify MiniBob authentication
-curl -X POST http://api.minibob.local/v2/auth/minibob/signin \
+curl -X POST http://activity.metabob.local/v2/auth/minibob/signin \
   -H "Content-Type: application/json" \
-  -d '{"instance_id":"minibob-local-001","api_key":"test-api-key-123"}' | jq
-# Expected: {"token": "eyJ...", "org_id": "metabob_internal"}
-
-# Access dashboard
-open http://dashboard.minibob.local
-
-# Watch MiniBob logs
-kubectl logs -n activity-system -l app.kubernetes.io/name=minibob -f
+  -d '{"instance_id":"minibob-local-001","api_key":"test-api-key-123"}'
 ```
 
-**Quick Deploy Script:**
+**Rollback:**
 
-For automated build and deployment:
 ```bash
-./deploy-learning-system.sh
-```
+# Helm rollback
+helm rollback metabob-activity-api -n activity-system
 
-This script:
-1. Builds metabob-activity-api Docker image
-2. Deploys via helmfile
+# Or use rollback script
+./scripts/rollback-production.sh <previous-tag>
+```
 3. Verifies health endpoints
 4. Runs integration tests
 
@@ -579,46 +502,92 @@ resolvectl query surql.metabob.local  # Check resolver path
 
 ## Configuration
 
-### Environment Variables
+### MiniBob Configuration Priority
 
-**MiniBob (configured via Helm values):**
-```bash
-ANTHROPIC_API_KEY           # Required: Anthropic API key (from secret)
-ACTIVITY_API_ENDPOINT       # Activity API (default: https://activity.metabob.com)
-MINIBOB_SERVICE_NAME        # Service discovery name
-LLM_PROVIDER                # Default: anthropic
-LLM_MODEL                   # Default: claude-sonnet-4-20250514
-SURREAL_HOST                # SurrealDB hostname
-SURREAL_PORT                # SurrealDB port (8000)
-SURREAL_USER                # Database username
-SURREAL_PASS                # Database password
-SURREAL_NAMESPACE           # Database namespace
-SURREAL_DATABASE            # Database name
-WAIT_FOR_BACKEND            # Wait for API before starting
-LOG_LEVEL                   # INFO, DEBUG, ERROR
+MiniBob resolves configuration from multiple sources (highest to lowest priority):
+
+1. **Environment variables** (e.g., `ANTHROPIC_API_KEY`, `MINIBOB_INSTANCE_ID`)
+2. **Project config** (`.metabob/config.json` in project root)
+3. **User config** (`~/.metabob/config.json`)
+4. **Defaults** (hardcoded in MiniBob)
+
+**Minimal user config** (`~/.metabob/config.json`):
+```json
+{
+  "providers": {
+    "anthropic": { "apiKey": "sk-ant-..." }
+  },
+  "instance": {
+    "instanceId": "minibob-local-001",
+    "apiKey": "test-api-key-123",
+    "orgId": "metabob_internal"
+  },
+  "vessels": {
+    "metabob": { "endpoint": "https://activity.metabob.com" }
+  }
+}
 ```
 
-**metabob-activity-api (configured via Helm values):**
+### Pre-configured MiniBob Instances
+
+| Instance ID | API Key | Organization | Purpose |
+|-------------|---------|--------------|---------|
+| `minibob-local-001` | `minibob-local-dev-key` | metabob | Local development |
+| `minibob-canary-001` | (in secrets) | metabob | Canary deployments |
+| `minibob-production-001` | (in secrets) | metabob | Production |
+
+### Secrets Management (SOPS + Age)
+
+Secrets are managed via SOPS encryption with Age keys:
+
+```
+repos/deployment/secrets/
+├── local.secrets.yaml           # ENCRYPTED - local dev
+├── canary.secrets.yaml          # ENCRYPTED - canary
+└── production.secrets.yaml      # ENCRYPTED - production
+```
+
+**Setup:**
 ```bash
-PORT                        # Server port (default: 8080)
-HOST                        # Bind address (0.0.0.0)
+# Generate Age key (one-time)
+age-keygen -o ~/.config/sops/age/keys.txt
+
+# Generate secrets for environment
+./scripts/generate-secrets.sh local
+
+# Encrypt secrets
+sops -e -i secrets/local.secrets.yaml
+
+# Deploy (auto-decrypts)
+./scripts/deploy-local.sh
+```
+
+### Environment Variables
+
+**MiniBob:**
+```bash
+ANTHROPIC_API_KEY           # Required: Anthropic API key
+MINIBOB_INSTANCE_ID         # Instance identifier
+MINIBOB_INSTANCE_API_KEY    # Instance API key
+MINIBOB_ORG_ID              # Organization ID
+ACTIVITY_API_ENDPOINT       # Backend API (default: https://activity.metabob.com)
+LLM_MODEL                   # Default: claude-sonnet-4-20250514
+```
+
+**metabob-activity-api:**
+```bash
 SURREALDB_URL               # Full SurrealDB URL with protocol
 SURREALDB_NAMESPACE         # Namespace (activity-system)
 SURREALDB_DATABASE          # Database (learning_loop)
 SURREALDB_USERNAME          # Auth username
 SURREALDB_PASSWORD          # Auth password
 REDIS_URL                   # Redis connection string
-CORS_ORIGINS                # CORS allowed origins
-LOG_LEVEL                   # info, debug, error
-LOG_FORMAT                  # json, text
 ```
 
-**Activity Dashboard (configured via Helm values):**
+**Activity Dashboard:**
 ```bash
 PORT                        # Server port (default: 3000)
 ACTIVITY_API_URL            # Backend API URL
-WS_ENABLED                  # Enable WebSocket updates
-REFRESH_INTERVAL            # Polling interval (ms)
 ```
 
 ## Testing and Validation
