@@ -148,7 +148,27 @@ bun test
 bunx playwright test
 ```
 
+## CI/CD Integration
+
+This vessel is deployed via the deployment repository CI/CD pipeline.
+
+### Before Push
+
+```bash
+bun test        # Tests must pass
+bun run lint    # Linting must pass (if script exists)
+```
+
+### Deployment Flow
+
+1. Push changes to main workspace
+2. Sync to `repos/deployment/vessels/metabob-internal-dashboard/`
+3. Push to `dev` branch triggers canary deployment
+4. Health endpoint validated before promotion
+
 ## Related Documentation
 
 - [Impulse Activity Foundation](../../docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
 - [README](./README.md) - Overview and deployment
+- [DEPLOYMENT_WORKFLOW.md](../deployment/DEPLOYMENT_WORKFLOW.md)
+- [Root CLAUDE.md](../../CLAUDE.md)

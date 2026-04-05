@@ -132,10 +132,30 @@ See `openspec/changes/microplastic/tasks.md` for the full task list:
 - **Phase 11** Boredom mode
 - **Phase 12** Production hardening
 
+## CI/CD Integration
+
+This vessel is deployed via the deployment repository CI/CD pipeline.
+
+### Before Push
+
+```bash
+bun test        # Tests must pass
+bun run lint    # Linting must pass (if script exists)
+```
+
+### Deployment Flow
+
+1. Push changes to main workspace
+2. Sync to `repos/deployment/vessels/microplastic/`
+3. Push to `dev` branch triggers canary deployment
+4. Health endpoint validated before promotion
+
 ## Related Documentation
 
 - [`docs/MENTORSHIP.md`](docs/MENTORSHIP.md) - How to develop with microplastic
 - [`docs/QUICKREF.md`](docs/QUICKREF.md) - Quick reference card
 - [`openspec/changes/microplastic/design.md`](../../openspec/changes/microplastic/design.md) - Architecture decisions
 - [`openspec/changes/microplastic/specs/`](../../openspec/changes/microplastic/specs/) - Detailed specifications
-- [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../../docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) - Core ontology
+- [IMPULSE_ACTIVITY_FOUNDATION.md](../../docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) - Core ontology
+- [DEPLOYMENT_WORKFLOW.md](../deployment/DEPLOYMENT_WORKFLOW.md)
+- [Root CLAUDE.md](../../CLAUDE.md)
