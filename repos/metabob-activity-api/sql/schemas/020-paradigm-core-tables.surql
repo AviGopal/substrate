@@ -67,8 +67,9 @@ DEFINE FIELD IF NOT EXISTS project_id ON impulse TYPE option<record<projects>>
 DEFINE FIELD IF NOT EXISTS vessel_id ON impulse TYPE option<string>
   COMMENT "Vessel that created this impulse";
 
-DEFINE FIELD IF NOT EXISTS created_by ON impulse TYPE option<record<users> | record<minibob_instance>>
-  VALUE $value OR $auth.id;
+DEFINE FIELD IF NOT EXISTS created_by ON impulse TYPE option<string | record<users> | record<minibob_instance>>
+  VALUE $value OR $auth.id
+  COMMENT "User, MiniBob instance, or instance ID string who created this impulse";
 
 -- Lifecycle
 DEFINE FIELD IF NOT EXISTS created_at ON impulse TYPE datetime
@@ -137,6 +138,13 @@ DEFINE FIELD IF NOT EXISTS execution_type ON activity TYPE string
 -- Category (backward compat with activity_registry)
 DEFINE FIELD IF NOT EXISTS category ON activity TYPE option<string>;
 
+-- Hierarchical tags for classification
+DEFINE FIELD IF NOT EXISTS tags ON activity TYPE option<array<string>>
+  COMMENT "Hierarchical tags using dot-notation (e.g., 'feature.ui', 'bugfix.auth')";
+
+DEFINE FIELD IF NOT EXISTS tag_prefixes ON activity TYPE option<array<string>>
+  COMMENT "All prefixes of tags for efficient prefix matching";
+
 -- Template-specific: Task steps for LLM execution
 -- Both tasks and tasks.* must be FLEXIBLE to allow arbitrary nested task objects
 DEFINE FIELD IF NOT EXISTS tasks ON activity TYPE option<array<object>> FLEXIBLE
@@ -176,8 +184,9 @@ DEFINE FIELD IF NOT EXISTS org_id ON activity TYPE string
 
 DEFINE FIELD IF NOT EXISTS project_id ON activity TYPE option<record<projects>>;
 
-DEFINE FIELD IF NOT EXISTS created_by ON activity TYPE option<record<users> | record<minibob_instance>>
-  VALUE $value OR $auth.id;
+DEFINE FIELD IF NOT EXISTS created_by ON activity TYPE option<string | record<users> | record<minibob_instance>>
+  VALUE $value OR $auth.id
+  COMMENT "User, MiniBob instance, or instance ID string who created this activity";
 
 -- Timestamps
 DEFINE FIELD IF NOT EXISTS created_at ON activity TYPE datetime
@@ -279,8 +288,9 @@ DEFINE FIELD IF NOT EXISTS vessel_id ON execution TYPE option<string>
 DEFINE FIELD IF NOT EXISTS vessel_version ON execution TYPE option<string>
   COMMENT "Vessel version in format semver-sha7 (e.g., 0.3.3-f24a329) for learning correlation";
 
-DEFINE FIELD IF NOT EXISTS created_by ON execution TYPE option<record<users> | record<minibob_instance>>
-  VALUE $value OR $auth.id;
+DEFINE FIELD IF NOT EXISTS created_by ON execution TYPE option<string | record<users> | record<minibob_instance>>
+  VALUE $value OR $auth.id
+  COMMENT "User, MiniBob instance, or instance ID string who created this execution";
 
 -- Edge Learning Fields (from improvisation traces)
 DEFINE FIELD IF NOT EXISTS improvisation ON execution TYPE option<bool>

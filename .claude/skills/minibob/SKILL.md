@@ -1,22 +1,16 @@
 ---
 name: minibob
-description: Delegate development tasks to MiniBob - your autonomous development vessel. Prefer delegation over doing work yourself. Teach MiniBob new capabilities by letting it learn from executions.
+description: Execute development tasks through MiniBob, an autonomous vessel that processes goals through the activity/impulse system.
 license: MIT
-compatibility: Requires Node.js 18+. Install via npm i -g @metabob/minibob@latest
+compatibility: Requires Node.js 18+ or Bun. Install via npm i -g @metabob/minibob@latest
 metadata:
   author: metabob
-  version: "5.0"
+  version: "5.1"
 ---
 
-# MiniBob: Delegation-First Development
+# MiniBob CLI
 
-**Core principle: Delegate tasks to MiniBob rather than doing them yourself.**
-
-MiniBob is an autonomous development vessel that learns from every execution. By delegating tasks to MiniBob:
-- It builds a library of proven solutions
-- Selection improves over time based on success history
-- Successful patterns become reusable for future tasks
-- Each delegation makes MiniBob more capable
+MiniBob is a goal-first development vessel. All inputs are treated as goals to be achieved through the activity/impulse system.
 
 ---
 
@@ -26,237 +20,191 @@ MiniBob is an autonomous development vessel that learns from every execution. By
 npm i -g @metabob/minibob@latest
 ```
 
-Verify installation:
+Verify:
 ```bash
-minibob --version
+minibob --help
 ```
 
 ---
 
-## When to Delegate to MiniBob
+## Modes
 
-**ALWAYS delegate when the task involves:**
-- Code changes (fixes, features, refactoring)
-- Multi-step development workflows
-- File creation or modification
-- Running commands and interpreting results
-- Diagnosis and debugging
-- Testing and verification
+### REPL Mode (default)
+```bash
+minibob
+```
+Interactive loop that accepts goals continuously. Runs boredom tasks when idle.
 
-**Only do it yourself when:**
-- Reading a single file for understanding (use Read tool)
-- Quick exploratory search (use Grep/Glob tools)
-- Answering questions about code (answer directly)
-- The user explicitly asks YOU to do it, not MiniBob
+### Single Goal Mode
+```bash
+minibob --single "fix the failing tests"
+minibob -s "add input validation to the form handler"
+```
+Execute one goal and exit. Exit code 0 on success, 1 on failure.
+
+### Daemon Mode
+```bash
+minibob --daemon
+```
+Start as HTTP/ACP server. Exposes `/health`, `/goal`, `/status`, `/acp` endpoints. Starts in bored state.
+
+### Idle Mode
+```bash
+minibob --idle
+```
+Start REPL but in bored state. Runs tasks until user input interrupts.
 
 ---
 
-## How to Delegate
+## Flags
 
-### Step 1: Formulate the Goal
-Transform the user's request into a clear, actionable goal description:
-
-```
-User: "The tests are failing"
-Goal: "Diagnose and fix the failing tests in the test suite"
-
-User: "Add dark mode"
-Goal: "Implement dark mode support with theme toggle in the UI"
-
-User: "Clean up this code"
-Goal: "Refactor the specified code for clarity and maintainability"
-```
-
-### Step 2: Execute MiniBob
-
-```bash
-minibob goal "your formulated goal description"
-```
-
-**With specific working directory:**
-```bash
-minibob goal "goal description" --workdir /path/to/project
-```
-
-Or using environment variable:
-```bash
-MINIBOB_WORKDIR=/path/to/project minibob goal "goal description"
-```
-
-### Step 3: Report Results
-After MiniBob completes, summarize:
-- What MiniBob accomplished
-- Files changed
-- Any follow-up needed
+| Flag | Description |
+|------|-------------|
+| `--single`, `-s` | Run single goal and exit |
+| `--daemon` | Start as HTTP/ACP server |
+| `--idle` | Start REPL in bored state |
+| `--caffeine` | Disable boredom tasks |
+| `--dev` | Enable development mode |
+| `-q`, `--quiet` | Only show errors |
+| `-v` | Show info messages |
+| `-vv` | Show debug messages |
+| `-vvv` | Show trace messages |
 
 ---
 
-## Teaching MiniBob
+## REPL Commands
 
-MiniBob learns from every execution. To teach it new capabilities:
+| Command | Description |
+|---------|-------------|
+| `/help` | Show available commands |
+| `/auth` | Show authentication configuration |
+| `/config` | Show current configuration and file locations |
+| `/status` | Check connectivity, list vessels, next boredom activity |
+| `/continue` | Continue working on last goal |
+| `/cheer[!] [msg]` | Positive feedback on last activity (! for stronger, max !!!) |
+| `/chide[!] [msg]` | Negative feedback on last activity (! for stronger, max !!!) |
+| `/bye` | Exit |
 
-### 1. Let It Try First
-Even if MiniBob might struggle initially, let it attempt the task. It will:
-- Record what happened
-- Learn from both successes and failures
-- Improve its approach for similar tasks
-- Eventually find working solutions
-
-### 2. Provide Rich Context in Goals
-Good goal descriptions teach MiniBob about intent:
-
-```bash
-# Weak - MiniBob has to guess
-minibob goal "fix the bug"
-
-# Strong - MiniBob understands context and learns patterns
-minibob goal "Fix the authentication bug where JWT tokens expire prematurely - check the token refresh logic in auth.ts"
-```
-
-### 3. Build Through Repetition
-- Simple tasks build foundational capabilities
-- Complex tasks combine learned patterns
-- Repeated similar tasks optimize the approach
-- Failures teach what doesn't work
+All other input is treated as a goal.
 
 ---
 
-## Quick Reference
+## Doctor Command
 
-### Primary Command (Use This)
+Health check and template management:
+
 ```bash
-minibob goal "description of what needs to be done"
-```
-
-### Specialized Commands
-```bash
-# Diagnose a problem (investigation focused)
-minibob diagnose "description of the problem"
-
-# Understand a codebase (analysis focused)
-minibob understand ./path/to/code [focus]
-
-# Pure improvisation (skip learned patterns)
-minibob improvise "goal description"
-```
-
-### Common Flags
-```bash
---workdir, -w     # Set working directory
---model, -m       # Override LLM model
---verbose, -v     # Verbose output
---dry-run         # Show what would be done without executing
+minibob doctor              # Health check (default)
+minibob doctor health       # Same as above
+minibob doctor check <path> # Validate activity templates
+minibob doctor surface <q>  # Search and retrieve templates
+minibob doctor fix <path>   # Auto-fix template issues
+minibob doctor tutor <path> # Submit templates to registry
 ```
 
 ---
 
-## Environment Setup
+## Configuration
 
-MiniBob uses built-in instance authentication:
+### Files
 
-```bash
-# Required: LLM access
-export ANTHROPIC_API_KEY="sk-ant-..."
+| Location | Purpose |
+|----------|---------|
+| `~/.metabob/config.json` | Global config (API keys, defaults) |
+| `.metabob.json` | Project config (working dir, tools) |
 
-# Optional: override default endpoint (https://activity.metabob.com)
-export ACTIVITY_API_ENDPOINT="http://localhost:8080"
-export MINIBOB_INSTANCE_ID="minibob-local-001"
-export MINIBOB_INSTANCE_API_KEY="test-api-key-123"
+### Environment Variables
 
-# Optional
-export MINIBOB_WORKDIR="/path/to/project"
-export MINIBOB_MODEL="claude-sonnet-4-20250514"
-```
-
----
-
-## Example Delegation Workflow
-
-**User says:** "The login page has a bug where the submit button doesn't work"
-
-**You respond:** "I'll delegate this to MiniBob to diagnose and fix."
-
-**Execute:**
-```bash
-minibob goal "Fix the login page submit button that isn't responding to clicks - check event handlers and form submission logic" --workdir ./webapp
-```
-
-**Report results:**
-```
-MiniBob completed: Fix login submit button
-
-Execution ID: act_1774641234567_abc123
-Status: completed
-Duration: 45.2s
-
-Changes made:
-- src/pages/Login.tsx: Fixed onClick handler binding
-- src/utils/auth.ts: Added missing await on async call
-```
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | API key for Claude |
+| `METABOB_API_KEY` | API key for Metabob backend |
+| `ACTIVITY_API_ENDPOINT` | Activity API URL (default: https://activity.metabob.com) |
+| `MINIBOB_PORT` | Server port (default: 8080) |
+| `MINIBOB_PROVIDER` | LLM provider: anthropic \| openai |
+| `MINIBOB_MODEL` | Model to use |
+| `MINIBOB_WORKDIR` | Working directory |
+| `MINIBOB_INSTANCE` | Instance name for multi-instance setups |
+| `MINIBOB_PROJECT` | Project context |
+| `MINIBOB_HANG_TIMEOUT` | Hang detection timeout in ms (default: 1800000) |
 
 ---
 
-## Delegation Philosophy
+## Usage Examples
 
-### Why Delegate?
-1. **MiniBob learns** - Every delegation teaches it
-2. **Patterns accumulate** - Successful approaches become reusable
-3. **Selection improves** - Better choices over time
-4. **You stay focused** - On architecture and guidance, not implementation
-
-### When Delegating Fails
-If MiniBob can't complete a task:
-1. Check what went wrong in the output
-2. Provide more context in the goal description
-3. Let MiniBob try again (it learns from failures)
-4. Only intervene manually if truly necessary
-
----
-
-## Troubleshooting
-
-### MiniBob Not Found
+### Execute a goal
 ```bash
-# Reinstall globally
-npm i -g @metabob/minibob@latest
-
-# Or check your PATH
-which minibob
+minibob -s "Fix the authentication bug where JWT tokens expire prematurely"
 ```
 
-### MiniBob Can't Find Patterns
-This is normal for new task types. MiniBob will figure it out and learn:
-```
-[GoalProcessor] No matching activity, falling back to improvisation
-```
-
-### Backend Unreachable
+### Interactive session
 ```bash
-kubectl port-forward -n activity-system svc/metabob-activity-api 8080:8080 &
-export ACTIVITY_API_ENDPOINT="http://localhost:8080"
+minibob
+minibob> fix the login page submit button
+minibob> /cheer! fixed the event binding issue
+minibob> /status
+minibob> /bye
 ```
 
-### Auth Errors
+### Pipe mode
 ```bash
-# Test authentication
-curl -X POST http://activity.metabob.local/v2/auth/minibob/signin \
+echo "add tests for auth module" | minibob
+```
+
+### Background server
+```bash
+minibob --daemon &
+curl -X POST http://localhost:8080/goal \
   -H "Content-Type: application/json" \
-  -d '{"instance_id":"minibob-local-001","api_key":"test-api-key-123"}'
+  -d '{"goal": "optimize database queries"}'
 ```
 
 ---
 
-## Configuration Reference
+## Boredom System
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | - | Required for Claude LLM access |
-| `ACTIVITY_API_ENDPOINT` | `https://activity.metabob.com` | Activity API URL |
-| `MINIBOB_INSTANCE_ID` | - | Instance ID for authentication |
-| `MINIBOB_INSTANCE_API_KEY` | - | API key for instance auth |
-| `MINIBOB_WORKDIR` | `.` | Working directory for goals |
-| `MINIBOB_MODEL` | claude-sonnet-4-20250514 | Model to use |
+MiniBob can work autonomously when idle:
+
+1. **Cluster Mode**: Backend-assigned tasks from org-wide queue
+2. **Local Mode**: Uses `~/.minibob/boredom-queue.json`
+
+Control:
+- `--caffeine` disables boredom
+- `--idle` starts immediately bored
+- `/status` shows next queued task
 
 ---
 
-**Remember: Delegate first. Teach through delegation. Let MiniBob learn.**
+## Output
+
+Goal processing returns:
+- Success/failure status
+- Activity ID (for feedback)
+- Execution trace (stored in backend)
+- Files modified
+
+Example output:
+```
+[GoalProcessor] Processing: fix the login bug
+[Activity] Starting: debug-and-fix
+[Task 1/3] Analyzing error logs...
+[Task 2/3] Identifying root cause...
+[Task 3/3] Applying fix...
+[Activity] Completed in 45.2s
+```
+
+---
+
+## Feedback
+
+Provide feedback on activity outcomes:
+
+```bash
+/cheer           # Positive, normal intensity
+/cheer!          # Positive, stronger
+/cheer!! great   # Positive, strong, with message
+/chide           # Negative, normal intensity
+/chide! broke X  # Negative, stronger, with message
+```
+
+Feedback adjusts Thompson Sampling scores for activity selection.

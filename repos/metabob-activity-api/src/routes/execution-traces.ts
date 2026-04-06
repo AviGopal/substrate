@@ -733,11 +733,13 @@ app.post('/', async (c) => {
 
     // Map MiniBob's field names to database schema
     // MiniBob sends: template_id, we store as: variant_id + activity_id
+    const success = body.status === 'completed' || body.success === true;
     const trace = {
       execution_id: body.execution_id,
       variant_id: body.template_id, // MiniBob's template_id maps to variant_id
       activity_id: body.activity_id || body.template_id, // Default to template_id
-      success: body.status === 'completed' || body.success === true,
+      success,
+      status: success ? 'success' : 'failure', // Derived status for backward compatibility
       duration_ms: body.duration_ms || 0,
       cost_usd: body.cost_usd || body.cost || 0,
       // Token counts (separate fields, not nested object)
@@ -901,6 +903,7 @@ app.post('/', async (c) => {
         variant_id: $variant_id,
         activity_id: $activity_id,
         success: $success,
+        status: $status,
         duration_ms: $duration_ms,
         cost_usd: $cost_usd,
         tokens_input: $tokens_input,

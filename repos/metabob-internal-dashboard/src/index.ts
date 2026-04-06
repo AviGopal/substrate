@@ -34,6 +34,7 @@ checkMiniBobConnection()
 const minibobIntegration = await initializeMiniBobIntegration({
   activityApiUrl: MINIBOB_API_URL,
   workingDirectory: WORKING_DIRECTORY,
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
 })
 
 // Set up query handler - routes to MiniBob

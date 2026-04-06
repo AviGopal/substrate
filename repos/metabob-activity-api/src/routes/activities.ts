@@ -18,7 +18,9 @@ import { ensureTags, computeTagPrefixes, deriveCategory } from '../utils/tags';
 import { analyzeTaskSemantics } from '../utils/semantic-tags';
 import { calculateImpulseRelevancyBoosts, discoverMissingImpulses } from '../utils/impulse-relevancy';
 import { inferShapesFromTemplate, mergeShapes } from '../utils/shape-inference';
+import { calculateOutputShapeCoverage } from '../utils/outcome-to-shape';
 import { captureValidationTrace } from '../utils/validation-traces';
+import { normalizeRecordId } from '../utils/surrealdb-types';
 import {
   insertActivity,
   insertExecution,
@@ -28,9 +30,15 @@ import {
   queryActivitiesByFTS,
   transformToLegacyTemplate,
   isDualWriteEnabled,
+  getVariantFamily,
+  getVariantScores,
+  buildVariantTree,
   type ParadigmActivity,
   type ParadigmExecution,
   type ActivityScore,
+  type VariantInfo,
+  type VariantScore,
+  type VariantTreeNode,
 } from '../db/paradigm';
 
 /**
@@ -71,6 +79,7 @@ import {
   StoreExecutionTraceRequestSchema,
   ToolArgumentPatternRecordRequestSchema,
   ToolArgumentRecommendationsQuerySchema,
+  ShapeScoreUpdateRequestSchema,
   type ExecutionRecord,
   type ExecutionRecordResponse,
   type CreateTemplateRequest,
@@ -87,6 +96,7 @@ import {
   type StoreExecutionTraceResponse,
   type ToolArgumentPattern,
   type ToolArgumentRecommendationsResponse,
+  type ShapeScoreUpdateResponse,
 } from '../models/schemas';
 import { broadcaster } from '../websocket/broadcaster';
 
@@ -212,6 +222,86 @@ function filterByInputSchema(
 }
 
 /**
+ * Ensure output_shapes is populated for backward compatibility with existing templates.
+ * For templates without output_shapes, infers them from template content/category.
+ *
+ * This function should be called when reading templates from the database to ensure
+ * all templates have the required output_shapes field.
+ */
+function ensureOutputShapes(templates: ActivityTemplate[]): ActivityTemplate[] {
+  return templates.map(template => {
+    // If output_shapes already exists and has at least one element, no change needed
+    if (template.output_shapes && template.output_shapes.length > 0) {
+      return template;
+    }
+
+    // Need to infer output_shapes for this template
+    // Try to infer from template content first
+    try {
+      const inferredShapes = inferShapesFromTemplate({
+        tasks: template.tasks,
+        description: template.description,
+        category: template.category,
+      });
+
+      if (inferredShapes.output_shapes.length > 0) {
+        logger.debug('Output shapes inferred on read for backward compatibility', {
+          activityId: template.id,
+          outputShapes: inferredShapes.output_shapes,
+        });
+        return {
+          ...template,
+          output_shapes: inferredShapes.output_shapes,
+        };
+      }
+    } catch (e) {
+      // Inference failed, use category-based fallback
+    }
+
+    // Fallback: derive from category
+    const categoryLower = template.category?.toLowerCase() || '';
+    let fallbackShape = 'unknown_output';
+    switch (categoryLower) {
+      case 'bugfix':
+        fallbackShape = 'patch';
+        break;
+      case 'feature':
+        fallbackShape = 'source_code';
+        break;
+      case 'refactor':
+        fallbackShape = 'source_code';
+        break;
+      case 'test':
+        fallbackShape = 'test_result';
+        break;
+      case 'tool':
+        fallbackShape = 'tool_output';
+        break;
+      case 'infrastructure':
+        fallbackShape = 'config_file';
+        break;
+      case 'meta':
+        fallbackShape = 'activity_template';
+        break;
+      case 'docs':
+        fallbackShape = 'documentation';
+        break;
+    }
+
+    logger.debug('Output shapes set to category fallback on read', {
+      activityId: template.id,
+      category: template.category,
+      outputShapes: [fallbackShape],
+    });
+
+    return {
+      ...template,
+      output_shapes: [fallbackShape],
+    };
+  });
+}
+
+/**
  * Enrich templates with execution metrics from v_activity_score view
  * Uses canonical field names (id instead of variant_id)
  */
@@ -236,13 +326,21 @@ async function enrichTemplatesWithMetrics(
     // Fallback to legacy variant_performance_metrics if view doesn't exist
     let metricsResult: any[] = [];
 
+    // Normalize activity IDs for v_activity_score view which stores plain IDs
+    // Example: "activity:⟨fix.bug.thorough⟩" -> "fix.bug.thorough"
+    // Note: IDs may be SurrealDB RecordId objects, so convert to string first
+    const normalizedIds = activityIds.map(id => {
+      const idStr = typeof id === 'string' ? id : String(id);
+      return idStr.replace(/^activity:/, '').replace(/[⟨⟩`]/g, '');
+    });
+
     try {
       const metricsQuery = `
         SELECT * FROM v_activity_score
         WHERE activity_id IN $activity_ids
       `;
       metricsResult = await surrealDB.query<any>(metricsQuery, {
-        activity_ids: activityIds
+        activity_ids: normalizedIds
       });
     } catch (error: any) {
       // Fallback to activity table if view doesn't exist yet
@@ -294,17 +392,26 @@ async function enrichTemplatesWithMetrics(
     }
 
     // Attach metrics to each template using canonical 'id' field
-    return templates.map(template => ({
-      ...template,
-      metrics: metricsMap.get(template.id) || undefined
-    }));
+    // Normalize template ID to match metricsMap keys (plain IDs)
+    // Note: IDs may be SurrealDB RecordId objects, so convert to string first
+    const enriched = templates.map(template => {
+      const idStr = typeof template.id === 'string' ? template.id : String(template.id);
+      const normalizedId = idStr.replace(/^activity:/, '').replace(/[⟨⟩`]/g, '');
+      return {
+        ...template,
+        metrics: metricsMap.get(normalizedId) || undefined
+      };
+    });
+
+    // Ensure output_shapes is populated for backward compatibility
+    return ensureOutputShapes(enriched);
 
   } catch (error) {
     logger.error('Failed to enrich templates with metrics', {
       error: error instanceof Error ? error.message : String(error)
     });
-    // Return templates without metrics rather than failing
-    return templates;
+    // Return templates without metrics, but still ensure output_shapes
+    return ensureOutputShapes(templates);
   }
 }
 /**
@@ -423,7 +530,7 @@ async function listAllTemplatesFromDB(
       ORDER BY created_at DESC
       LIMIT $limit
     `;
-    params = { limit };
+    params = { limit, execution_type: effectiveExecutionType };
   }
 
   logger.debug('Fetching templates from SurrealDB', { query, params });
@@ -627,8 +734,9 @@ app.post('/templates', async (c) => {
           });
         }
 
-        if (!outputShapesProvided && inferredShapes.output_shapes.length > 0) {
-          // Merge with any existing shapes (in case partial shapes were set)
+        if (!outputShapesProvided) {
+          // inferShapesFromTemplate always returns at least one output shape
+          // (category-based fallback ensures this)
           activityRecord.output_shapes = mergeShapes(
             activityRecord.output_shapes,
             inferredShapes.output_shapes
@@ -640,12 +748,59 @@ app.post('/templates', async (c) => {
           });
         }
       } catch (inferenceError) {
-        // Shape inference is best-effort - don't fail template creation
-        logger.warn('Shape inference failed, continuing without inferred shapes', {
+        // Shape inference failed - but output_shapes is required
+        // Use a fallback based on category
+        logger.warn('Shape inference failed, using category-based fallback for output_shapes', {
           activityId,
           error: inferenceError instanceof Error ? inferenceError.message : String(inferenceError),
         });
+
+        if (!outputShapesProvided) {
+          // Fallback: derive output shape from category
+          const categoryLower = derivedCategory?.toLowerCase() || '';
+          let fallbackShape = 'unknown_output';
+          switch (categoryLower) {
+            case 'bugfix':
+              fallbackShape = 'patch';
+              break;
+            case 'feature':
+              fallbackShape = 'source_code';
+              break;
+            case 'refactor':
+              fallbackShape = 'source_code';
+              break;
+            case 'test':
+              fallbackShape = 'test_result';
+              break;
+            case 'tool':
+              fallbackShape = 'tool_output';
+              break;
+            case 'infrastructure':
+              fallbackShape = 'config_file';
+              break;
+            case 'meta':
+              fallbackShape = 'activity_template';
+              break;
+            case 'docs':
+              fallbackShape = 'documentation';
+              break;
+          }
+          activityRecord.output_shapes = [fallbackShape];
+          logger.info('Output shapes set to category fallback', {
+            activityId,
+            category: derivedCategory,
+            outputShapes: activityRecord.output_shapes,
+          });
+        }
       }
+    }
+
+    // Final validation: ensure output_shapes is populated (required field)
+    if (!activityRecord.output_shapes || activityRecord.output_shapes.length === 0) {
+      activityRecord.output_shapes = ['unknown_output'];
+      logger.warn('output_shapes was empty after all inference attempts, using default fallback', {
+        activityId,
+      });
     }
 
     // Add optional fields only if provided
@@ -704,9 +859,11 @@ app.post('/templates', async (c) => {
     // Build metrics query with conditional project_id
     // Note: variant_performance_metrics is a legacy table but still used for Thompson Sampling
     // The v_activity_score view reads from this table
+    // UPSERT metrics to handle re-registration of existing templates
+    // Uses deterministic record ID format to ensure idempotent upserts
     const insertMetricsQuery = metricsProjectId
       ? `
-      INSERT INTO variant_performance_metrics {
+      UPSERT variant_performance_metrics:\`${activityId.replace(/[^a-zA-Z0-9_-]/g, '_')}\` CONTENT {
         variant_id: $activity_id,
         activity_id: $activity_id,
         org_id: $org_id,
@@ -725,7 +882,7 @@ app.post('/templates', async (c) => {
       }
     `
       : `
-      INSERT INTO variant_performance_metrics {
+      UPSERT variant_performance_metrics:\`${activityId.replace(/[^a-zA-Z0-9_-]/g, '_')}\` CONTENT {
         variant_id: $activity_id,
         activity_id: $activity_id,
         org_id: $org_id,
@@ -1100,7 +1257,12 @@ app.get('/templates/:variantId', async (c) => {
 
     if (cachedData) {
       logger.debug('Template cache hit', { variantId });
-      const template = JSON.parse(cachedData) as ActivityTemplate;
+      let template = JSON.parse(cachedData) as ActivityTemplate;
+      // Ensure output_shapes for backward compatibility (cached templates may not have it)
+      if (!template.output_shapes || template.output_shapes.length === 0) {
+        const [ensured] = ensureOutputShapes([template]);
+        template = ensured;
+      }
       return c.json(template);
     }
 
@@ -1363,6 +1525,24 @@ app.post('/executions', async (c) => {
       }
     } // end isDualWriteEnabled()
 
+    // Step 1b: Update shape-based Thompson Sampling scores
+    // If input_impulse_shapes are provided, update impulse_shape_activity_score table
+    // This enables shape-conditioned activity selection
+    if (validated.input_impulse_shapes && validated.input_impulse_shapes.length > 0 && orgId) {
+      // Non-blocking: don't await, just fire and forget
+      updateShapeScoresFromExecution(
+        activityIdFromRequest,
+        validated.input_impulse_shapes,
+        validated.success,
+        orgId
+      ).catch((error) => {
+        logger.warn('Shape score update failed (non-blocking)', {
+          activity_id: activityIdFromRequest,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
+
     // Step 2: Update Thompson Sampling metrics in variant_performance_metrics
     // Thompson Sampling uses Beta distribution: Beta(alpha, beta)
     // - alpha: number of successes + 1
@@ -1370,7 +1550,7 @@ app.post('/executions', async (c) => {
     //
     // ATOMIC UPDATE: Uses SurrealDB += operator for race-condition-free concurrent updates
     // Previous implementation had read-modify-write race condition
-    
+
     const success_delta = validated.success ? 1 : 0;
     const failure_delta = validated.success ? 0 : 1;
     
@@ -1762,6 +1942,111 @@ app.get('/metrics/summary', async (c) => {
 });
 
 /**
+ * GET /v2/activities/metrics
+ *
+ * Returns detailed metrics for a specific activity.
+ * Used by MiniBob's model selector for progressive determinism.
+ *
+ * Query params:
+ * - activity_id: string (required) - Activity template ID to get metrics for
+ *
+ * Returns:
+ * {
+ *   activity_id: string,
+ *   total_executions: number,
+ *   successful_executions: number,
+ *   success_rate: number,
+ *   avg_duration_ms: number,
+ *   avg_cost_usd: number,
+ *   model_usage_distribution: Record<string, number>,
+ *   deterministic_task_ratio: number,
+ * }
+ */
+app.get('/metrics', async (c) => {
+  try {
+    const activityId = c.req.query('activity_id');
+
+    if (!activityId) {
+      return c.json({ error: 'Missing required parameter: activity_id' }, 400);
+    }
+
+    logger.info('GET /v2/activities/metrics', { activity_id: activityId });
+
+    // Query execution metrics for this specific activity
+    const metricsResult = await surrealDB.query(`
+      SELECT
+        count() AS total_executions,
+        count(IF success = true THEN 1 ELSE NONE END) AS successful_executions,
+        math::mean(IF success = true THEN 1.0 ELSE 0.0 END) AS success_rate,
+        math::mean(duration_ms) AS avg_duration_ms,
+        math::mean(cost_usd) AS avg_cost_usd
+      FROM execution_record
+      WHERE activity_id = $activity_id
+      GROUP ALL
+    `, { activity_id: activityId });
+
+    const stats = (metricsResult[0] as any) || {};
+
+    // Query model usage distribution
+    const modelDistResult = await surrealDB.query(`
+      SELECT model, count() AS count
+      FROM execution_record
+      WHERE activity_id = $activity_id
+      GROUP BY model
+    `, { activity_id: activityId });
+
+    const modelUsageDistribution: Record<string, number> = {};
+    for (const row of (modelDistResult as any[]) || []) {
+      if (row.model) {
+        modelUsageDistribution[row.model] = row.count || 0;
+      }
+    }
+
+    // Query deterministic task ratio (tasks that don't require LLM)
+    // Tasks are deterministic if they have tool_calls but no llm_tokens
+    const taskRatioResult = await surrealDB.query(`
+      SELECT
+        count() AS total_tasks,
+        count(IF llm_tokens = 0 OR llm_tokens = NONE THEN 1 ELSE NONE END) AS deterministic_tasks
+      FROM activity_execution_task_result
+      WHERE activity_id = $activity_id
+      GROUP ALL
+    `, { activity_id: activityId });
+
+    const taskStats = (taskRatioResult[0] as any) || {};
+    const totalTasks = taskStats.total_tasks || 0;
+    const deterministicTasks = taskStats.deterministic_tasks || 0;
+    const deterministicTaskRatio = totalTasks > 0 ? deterministicTasks / totalTasks : 0;
+
+    const metrics = {
+      activity_id: activityId,
+      total_executions: stats.total_executions || 0,
+      successful_executions: stats.successful_executions || 0,
+      success_rate: stats.success_rate || 0,
+      avg_duration_ms: Math.round(stats.avg_duration_ms || 0),
+      avg_cost_usd: stats.avg_cost_usd || 0,
+      model_usage_distribution: modelUsageDistribution,
+      deterministic_task_ratio: deterministicTaskRatio,
+    };
+
+    logger.debug('Activity metrics retrieved', { activity_id: activityId, metrics });
+
+    return c.json(metrics);
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/metrics failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch activity metrics',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
  * GET /scores
  *
  * Get Thompson Sampling scores for all activities in the learned corpus.
@@ -1893,6 +2178,187 @@ app.get('/corpus-summary', async (c) => {
 
     return c.json({
       error: 'Failed to fetch corpus summary',
+      message: error.message,
+    }, 500);
+  }
+});
+
+// =============================================================================
+// Variant Resolver Endpoints (variant-resolver-endpoints)
+// =============================================================================
+
+/**
+ * GET /v2/activities/:id/variants
+ * Get all variants of an activity (recursive family tree).
+ *
+ * Returns all activities where variant_of matches the base ID,
+ * including recursive children up to 3 levels deep.
+ *
+ * Query params:
+ * - None
+ *
+ * Returns: { variants: VariantInfo[], total: number }
+ */
+app.get('/:id/variants', async (c) => {
+  try {
+    const activityId = c.req.param('id');
+    const jwtAuth = getJwtAuthFromContext(c);
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    if (!orgId) {
+      return c.json({ error: 'Organization ID required' }, 401);
+    }
+
+    logger.info('GET /v2/activities/:id/variants', {
+      activityId,
+      orgId,
+      authMethod: jwtAuth ? 'jwt' : 'session',
+    });
+
+    const result = await getVariantFamily(activityId, orgId, jwtAuth?.jwtToken);
+
+    return c.json({
+      variants: result.data,
+      total: result.data.length,
+      path: result.path,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/:id/variants failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch activity variants',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /v2/activities/:id/variant-scores
+ * Get per-variant Thompson Sampling scores.
+ *
+ * First fetches all variants in the family, then retrieves
+ * alpha/beta parameters and metrics for each.
+ *
+ * Query params:
+ * - None
+ *
+ * Returns: { scores: VariantScore[], total: number }
+ */
+app.get('/:id/variant-scores', async (c) => {
+  try {
+    const activityId = c.req.param('id');
+    const jwtAuth = getJwtAuthFromContext(c);
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    if (!orgId) {
+      return c.json({ error: 'Organization ID required' }, 401);
+    }
+
+    logger.info('GET /v2/activities/:id/variant-scores', {
+      activityId,
+      orgId,
+      authMethod: jwtAuth ? 'jwt' : 'session',
+    });
+
+    // First get all variants in the family
+    const familyResult = await getVariantFamily(activityId, orgId, jwtAuth?.jwtToken);
+    const variantIds = familyResult.data.map(v => v.id);
+
+    if (variantIds.length === 0) {
+      return c.json({
+        scores: [],
+        total: 0,
+        path: 'new',
+      });
+    }
+
+    // Then get scores for all variants
+    const scoresResult = await getVariantScores(variantIds, orgId, jwtAuth?.jwtToken);
+
+    return c.json({
+      scores: scoresResult.data,
+      total: scoresResult.data.length,
+      path: scoresResult.path,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/:id/variant-scores failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch variant scores',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /v2/activities/family/:baseId
+ * Get genealogy tree for an activity family.
+ *
+ * Returns a tree structure showing parent-child relationships
+ * based on the variant_of field.
+ *
+ * Query params:
+ * - max_depth: number (default: 5, max: 10) - Maximum tree depth
+ *
+ * Returns: { tree: VariantTreeNode | null, total_nodes: number }
+ */
+app.get('/family/:baseId', async (c) => {
+  try {
+    const baseId = c.req.param('baseId');
+    const jwtAuth = getJwtAuthFromContext(c);
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    if (!orgId) {
+      return c.json({ error: 'Organization ID required' }, 401);
+    }
+
+    // Parse max_depth parameter
+    const maxDepthStr = c.req.query('max_depth') || '5';
+    let maxDepth = parseInt(maxDepthStr, 10);
+    if (isNaN(maxDepth) || maxDepth < 1) maxDepth = 5;
+    maxDepth = Math.min(maxDepth, 10); // Cap at 10 levels
+
+    logger.info('GET /v2/activities/family/:baseId', {
+      baseId,
+      orgId,
+      maxDepth,
+      authMethod: jwtAuth ? 'jwt' : 'session',
+    });
+
+    const tree = await buildVariantTree(baseId, orgId, maxDepth, jwtAuth?.jwtToken);
+
+    // Count total nodes in tree
+    function countNodes(node: VariantTreeNode | null): number {
+      if (!node) return 0;
+      return 1 + node.children.reduce((sum, child) => sum + countNodes(child), 0);
+    }
+
+    const totalNodes = countNodes(tree);
+
+    return c.json({
+      tree,
+      total_nodes: totalNodes,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/family/:baseId failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to fetch activity family tree',
       message: error.message,
     }, 500);
   }
@@ -2101,6 +2567,7 @@ app.post('/recommend', async (c) => {
       execution_type, // T8: Filter by execution type (template, tool, composition, vessel_function)
       loaded_impulses = [],
       impulse_shapes = [],  // Array of impulse shapes for schema filtering
+      expected_output_shapes = [],  // Array of expected output shapes from goal enrichment
       limit = 3,
       exclude_activities = []  // T4: Blacklist of activity IDs to exclude
     } = body;
@@ -2113,6 +2580,7 @@ app.post('/recommend', async (c) => {
       execution_type,
       loaded_impulses,
       impulse_shapes,
+      expected_output_shapes,
       limit
     });
 
@@ -2183,7 +2651,10 @@ app.post('/recommend', async (c) => {
     // Get Thompson Sampling scores
     // Use shape-conditioned scores when impulse_shapes are provided (goal-aware recommendations)
     // This allows learning different success rates for different input contexts
-    const activityIds = templates.map((t: any) => t.id || t.variant_id);
+    // Note: Use normalizeRecordId to convert SurrealDB RecordId objects to strings
+    const activityIds = templates.map((t: any) =>
+      normalizeRecordId(t.id || t.variant_id)
+    );
     let scoresMap = new Map<string, ActivityScore>();
     let scoreMethod: 'shape_conditioned' | 'global' | 'legacy' = 'legacy';
 
@@ -2247,12 +2718,13 @@ app.post('/recommend', async (c) => {
     }
 
     // Filter out templates without a valid ID before processing
+    // Note: Use normalizeRecordId to handle SurrealDB RecordId objects
     const validTemplates = templates.filter((template: any) => {
-      const templateId = template.id || template.variant_id;
-      if (!templateId || typeof templateId !== 'string' || templateId.trim() === '') {
+      const templateId = normalizeRecordId(template.id || template.variant_id);
+      if (!templateId || templateId.trim() === '') {
         logger.warn('Filtering out template without valid ID', {
           template_name: template.name || template.variant_name,
-          template_id: template.id,
+          template_id: normalizeRecordId(template.id),
           variant_id: template.variant_id,
         });
         return false;
@@ -2272,7 +2744,8 @@ app.post('/recommend', async (c) => {
     const recommendations = validTemplates
       .map((template: any) => {
         // Try to get alpha/beta from v_activity_score first
-        const activityId = template.id || template.variant_id;
+        // Note: Use normalizeRecordId for consistent Map lookups and API output
+        const activityId = normalizeRecordId(template.id || template.variant_id);
         const scores = scoresMap.get(activityId);
         let alpha = scores?.alpha || template.metrics?.thompson_alpha || 1.0;
         const betaVal = scores?.beta || template.metrics?.thompson_beta || 1.0;
@@ -2322,6 +2795,14 @@ app.post('/recommend', async (c) => {
         }
         totalBoost += categoryBoost;
 
+        // 8. Output shape coverage boost (based on expected outcomes from goal enrichment)
+        // Activities whose output_shapes cover expected outcomes get boosted
+        const templateOutputShapes = template.output_shapes || [];
+        const outputCoverage = calculateOutputShapeCoverage(expected_output_shapes, templateOutputShapes);
+        // +0 to +4 based on coverage (0% = +0, 50% = +2, 100% = +4)
+        const outputShapeBoost = Math.floor(outputCoverage * 4);
+        totalBoost += outputShapeBoost;
+
         // Apply boosts and penalties
         alpha += totalBoost;
         const adjustedBeta = betaVal + impulseBetaPenalty;
@@ -2360,7 +2841,15 @@ app.post('/recommend', async (c) => {
               scope_preference: scopeBoost,
               impulse_relevancy: impulseAlphaBoost,
               category_match: categoryBoost,
+              output_shape_coverage: outputShapeBoost,
             },
+            // Output shape analysis
+            output_shape_analysis: expected_output_shapes.length > 0 ? {
+              expected_shapes: expected_output_shapes,
+              activity_output_shapes: templateOutputShapes,
+              coverage: outputCoverage,
+              boost: outputShapeBoost,
+            } : null,
             // Impulse relevancy details
             impulse_analysis: impulseBoost ? {
               alpha_boost: impulseBoost.alphaBoost,
@@ -2602,9 +3091,11 @@ app.post('/create-goal-seeking', async (c) => {
       throw upsertError;
     }
 
-    // Initialize Thompson Sampling metrics
+    // Initialize Thompson Sampling metrics (UPSERT to handle re-registration)
+    // Use deterministic record ID format for idempotent upserts
+    const metricsRecordId = generated.id.replace(/[^a-zA-Z0-9_-]/g, '_');
     const insertMetricsQuery = `
-      INSERT INTO variant_performance_metrics {
+      UPSERT variant_performance_metrics:\`${metricsRecordId}\` CONTENT {
         variant_id: $activity_id,
         activity_id: $activity_id,
         total_executions: 0,
@@ -4719,6 +5210,244 @@ app.get('/shapes/usage', async (c) => {
     }, 500);
   }
 });
+
+/**
+ * POST /shape-scores
+ *
+ * Update impulse_shape_activity_score table with execution outcomes.
+ * Used for shape-based Thompson Sampling activity selection.
+ *
+ * For each shape in the request:
+ * - UPSERT into impulse_shape_activity_score
+ * - Increment success_count or failure_count based on outcome
+ * - Compute alpha = success_count + 1, beta = failure_count + 1
+ *
+ * Uses atomic UPSERT operations to prevent race conditions.
+ *
+ * Request body:
+ * {
+ *   activity_id: string,
+ *   shapes: string[],
+ *   success: boolean,
+ *   org_id?: string  // Optional, inferred from auth context
+ * }
+ *
+ * Returns:
+ * {
+ *   success: boolean,
+ *   updated_count: number,
+ *   message?: string
+ * }
+ */
+app.post('/shape-scores', async (c) => {
+  try {
+    // Check for JWT auth first (MiniBob instances)
+    const jwtAuth = getJwtAuthFromContext(c);
+
+    // Extract session from context (set by auth middleware)
+    const session = (c.get as any)('session') as SessionData | undefined;
+
+    // Use JWT auth claims if available, otherwise fall back to session
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    // Parse and validate request body
+    const body = await c.req.json();
+    const validated = ShapeScoreUpdateRequestSchema.parse(body);
+
+    // Use provided org_id or fall back to auth context
+    const effectiveOrgId = validated.org_id || orgId;
+
+    if (!effectiveOrgId) {
+      return c.json({
+        success: false,
+        updated_count: 0,
+        message: 'Organization ID required (provide org_id or authenticate)',
+      }, 401);
+    }
+
+    logger.info('POST /v2/activities/shape-scores', {
+      activity_id: validated.activity_id,
+      shapes: validated.shapes,
+      success: validated.success,
+      org_id: effectiveOrgId,
+    });
+
+    // Update shape scores atomically using UPSERT
+    // For each shape, either create a new record or update existing counts
+    let updatedCount = 0;
+
+    for (const shape of validated.shapes) {
+      try {
+        // Determine which counter to increment
+        const successIncrement = validated.success ? 1 : 0;
+        const failureIncrement = validated.success ? 0 : 1;
+
+        // UPSERT: Create if not exists, otherwise update atomically
+        // SurrealDB UPSERT with ON DUPLICATE KEY semantics using MERGE
+        const upsertQuery = `
+          UPSERT impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+          MERGE {
+            shape: $shape,
+            activity_id: $activity_id,
+            org_id: $org_id,
+            success_count: (
+              SELECT VALUE success_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $success_increment,
+            failure_count: (
+              SELECT VALUE failure_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $failure_increment,
+            alpha: (
+              SELECT VALUE success_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $success_increment + 1,
+            beta: (
+              SELECT VALUE failure_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $failure_increment + 1,
+            updated_at: time::now()
+          };
+        `;
+
+        await surrealDB.query(upsertQuery, {
+          shape,
+          activity_id: validated.activity_id,
+          org_id: effectiveOrgId,
+          success_increment: successIncrement,
+          failure_increment: failureIncrement,
+        });
+
+        updatedCount++;
+
+        logger.debug('Shape score updated', {
+          shape,
+          activity_id: validated.activity_id,
+          org_id: effectiveOrgId,
+          success: validated.success,
+        });
+      } catch (shapeError: any) {
+        // Log error but continue with other shapes
+        logger.warn('Failed to update shape score', {
+          shape,
+          activity_id: validated.activity_id,
+          error: shapeError.message,
+        });
+      }
+    }
+
+    logger.info('Shape scores updated', {
+      activity_id: validated.activity_id,
+      requested_shapes: validated.shapes.length,
+      updated_count: updatedCount,
+      success: validated.success,
+    });
+
+    const response: ShapeScoreUpdateResponse = {
+      success: updatedCount > 0,
+      updated_count: updatedCount,
+      message: `Updated ${updatedCount} of ${validated.shapes.length} shape scores`,
+    };
+
+    return c.json(response, updatedCount > 0 ? 200 : 500);
+
+  } catch (error: any) {
+    logger.error('POST /v2/activities/shape-scores failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    // Check if it's a validation error
+    if (error.name === 'ZodError') {
+      return c.json({
+        success: false,
+        updated_count: 0,
+        message: `Validation failed: ${error.message}`,
+      }, 400);
+    }
+
+    return c.json({
+      success: false,
+      updated_count: 0,
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * updateShapeScoresFromExecution - Helper function to update shape scores
+ *
+ * Called from the execution recording flow to update shape-based Thompson
+ * Sampling scores based on execution outcomes.
+ *
+ * @param activityId - Activity that was executed
+ * @param shapes - Input impulse shapes observed during execution
+ * @param success - Whether the execution succeeded
+ * @param orgId - Organization ID
+ */
+async function updateShapeScoresFromExecution(
+  activityId: string,
+  shapes: string[],
+  success: boolean,
+  orgId: string
+): Promise<void> {
+  if (!shapes || shapes.length === 0) {
+    return; // No shapes to update
+  }
+
+  try {
+    const successIncrement = success ? 1 : 0;
+    const failureIncrement = success ? 0 : 1;
+
+    for (const shape of shapes) {
+      try {
+        const upsertQuery = `
+          UPSERT impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+          MERGE {
+            shape: $shape,
+            activity_id: $activity_id,
+            org_id: $org_id,
+            success_count: (
+              SELECT VALUE success_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $success_increment,
+            failure_count: (
+              SELECT VALUE failure_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $failure_increment,
+            alpha: (
+              SELECT VALUE success_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $success_increment + 1,
+            beta: (
+              SELECT VALUE failure_count FROM ONLY impulse_shape_activity_score:[$org_id, $shape, $activity_id]
+            ) ?? 0 + $failure_increment + 1,
+            updated_at: time::now()
+          };
+        `;
+
+        await surrealDB.query(upsertQuery, {
+          shape,
+          activity_id: activityId,
+          org_id: orgId,
+          success_increment: successIncrement,
+          failure_increment: failureIncrement,
+        });
+      } catch (shapeError: any) {
+        logger.warn('Failed to update shape score in execution flow', {
+          shape,
+          activity_id: activityId,
+          error: shapeError.message,
+        });
+      }
+    }
+
+    logger.debug('Shape scores updated from execution', {
+      activity_id: activityId,
+      shapes_count: shapes.length,
+      success,
+    });
+  } catch (error: any) {
+    // Non-blocking: don't fail the execution recording if shape score update fails
+    logger.warn('Shape score update from execution failed (non-blocking)', {
+      activity_id: activityId,
+      error: error.message,
+    });
+  }
+}
 
 /**
  * GET /shapes/autocomplete

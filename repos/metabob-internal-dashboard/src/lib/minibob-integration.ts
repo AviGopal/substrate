@@ -325,10 +325,11 @@ export class MiniBobIntegration {
       customTools: uiTools,
     })
 
-    // Create goal processor
+    // Create goal processor (needs API key for LLM enrichment)
     this.goalProcessor = new GoalProcessor({
       workingDirectory: this.config.workingDirectory,
       executor: this.executor,
+      apiKey: this.config.anthropicApiKey || process.env.ANTHROPIC_API_KEY || '',
     })
 
     this.initialized = true

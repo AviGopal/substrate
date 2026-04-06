@@ -47,7 +47,12 @@ PERMISSIONS FOR select FULL;
 -- ============================================================================
 -- Purpose: Show shape transformations (input → output) across activities
 -- Reveals which shapes can be transformed into which other shapes
+-- Includes execution success rates for each transformation edge
 -- Edge weight = number of activities performing this transformation
+--
+-- Note: Uses v_activity_score from 021-paradigm-computed-views.surql for
+-- execution statistics (total_executions, successes). That view must be
+-- defined before this one.
 -- ============================================================================
 
 DEFINE TABLE IF NOT EXISTS v_shape_network AS
@@ -55,14 +60,25 @@ DEFINE TABLE IF NOT EXISTS v_shape_network AS
     input_shape,
     output_shape,
     count() AS edge_weight,
-    array::distinct(array::flatten(array::group(activity_id))) AS activities
+    array::distinct(array::flatten(array::group(activity_id))) AS activities,
+    math::sum(total_execs) AS total_executions,
+    math::sum(success_execs) AS success_count,
+    IF math::sum(total_execs) > 0 THEN
+      <float> math::sum(success_execs) / <float> math::sum(total_execs)
+    ELSE
+      0.0
+    END AS success_rate
   FROM (
     SELECT
-      id AS activity_id,
-      input_shapes,
-      output_shapes
-    FROM activity
-    WHERE array::len(input_shapes) > 0 AND array::len(output_shapes) > 0
+      a.id AS activity_id,
+      a.input_shapes,
+      a.output_shapes,
+      -- Join with pre-aggregated execution stats from v_activity_score
+      -- v_activity_score already aggregates total_executions and successes per activity_id
+      (SELECT total_executions FROM v_activity_score WHERE activity_id = a.id)[0].total_executions OR 0 AS total_execs,
+      (SELECT successes FROM v_activity_score WHERE activity_id = a.id)[0].successes OR 0 AS success_execs
+    FROM activity AS a
+    WHERE array::len(a.input_shapes) > 0 AND array::len(a.output_shapes) > 0
   )
   SPLIT input_shapes AS input_shape
   SPLIT output_shapes AS output_shape
@@ -122,4 +138,5 @@ DEFINE TABLE IF NOT EXISTS v_shapes_for_autocomplete AS
 DEFINE INDEX IF NOT EXISTS idx_v_shape_usage_shape ON v_shape_usage FIELDS shape;
 DEFINE INDEX IF NOT EXISTS idx_v_shape_network_input ON v_shape_network FIELDS input_shape;
 DEFINE INDEX IF NOT EXISTS idx_v_shape_network_output ON v_shape_network FIELDS output_shape;
+DEFINE INDEX IF NOT EXISTS idx_v_shape_network_success_rate ON v_shape_network FIELDS success_rate;
 DEFINE INDEX IF NOT EXISTS idx_v_shape_exec_stats_shape ON v_shape_execution_stats FIELDS shape;
