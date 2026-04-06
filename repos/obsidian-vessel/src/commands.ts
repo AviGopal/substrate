@@ -48,6 +48,16 @@ export function registerCommands(plugin: MetabobVesselPlugin): void {
     }
   });
 
+  // Open Composition Graph Canvas
+  plugin.addCommand({
+    id: 'metabob-open-composition-canvas',
+    name: 'Metabob: Show activity composition graph',
+    icon: 'network',
+    callback: async () => {
+      await plugin.openCompositionCanvas();
+    }
+  });
+
   // Show Vessel Status
   plugin.addCommand({
     id: 'metabob-vessel-status',

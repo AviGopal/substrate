@@ -9,6 +9,7 @@ import {
 } from '../types/canvas';
 import { ExecutionTrace } from '../types';
 import { MetabobVesselSettings } from '../settings';
+import type { CompositionGraph, CompositionNode, CompositionEdge } from '../api-client';
 
 /**
  * Get cost from execution trace, handling both cost and cost_usd field names
@@ -466,6 +467,187 @@ export class ExecutionCanvasBuilder {
         tasks_completed: 0,
         tasks_total: 0
       }));
+  }
+
+  // ===========================================================================
+  // Composition Graph Canvas
+  // ===========================================================================
+
+  /**
+   * Build a canvas showing activity composition relationships.
+   * Shows how activities relate to each other through impulse flows.
+   */
+  async buildCompositionCanvas(
+    graph: CompositionGraph,
+    name: string = 'composition-graph'
+  ): Promise<void> {
+    if (graph.nodes.length === 0) {
+      // Create empty canvas with placeholder
+      const emptyCanvas: CanvasData = {
+        nodes: [{
+          id: 'empty-placeholder',
+          type: 'text',
+          x: 0,
+          y: 0,
+          width: 400,
+          height: 100,
+          text: '# No Composition Data\n\nNo activity composition data found. Run activities with parent-child relationships to see them here.',
+          color: '3'
+        }],
+        edges: []
+      };
+      await this.canvasManager.createOrUpdateCanvas(name, emptyCanvas);
+      return;
+    }
+
+    // Calculate positions using hierarchical layout
+    const positions = this.calculateCompositionLayout(graph);
+
+    // Create nodes and edges
+    const nodes = this.createCompositionNodes(graph.nodes, positions);
+    const edges = this.createCompositionEdges(graph.edges);
+
+    await this.canvasManager.createOrUpdateCanvas(name, { nodes, edges });
+  }
+
+  /**
+   * Calculate layout positions for composition graph nodes.
+   * Uses a simple hierarchical layout based on edge relationships.
+   */
+  private calculateCompositionLayout(graph: CompositionGraph): Map<string, Position> {
+    const positions = new Map<string, Position>();
+    const nodeWidth = 350;
+    const nodeHeight = 150;
+    const horizontalGap = 200;
+    const verticalGap = 150;
+
+    // Find root nodes (nodes that are parents but not children)
+    const childIds = new Set(graph.edges.map(e => e.childActivityId));
+    const parentIds = new Set(graph.edges.map(e => e.parentActivityId));
+    const rootIds = [...parentIds].filter(id => !childIds.has(id));
+
+    // If no clear roots, use all nodes
+    const startNodes = rootIds.length > 0 ? rootIds : graph.nodes.map(n => n.id);
+
+    // Build adjacency map
+    const children = new Map<string, string[]>();
+    for (const edge of graph.edges) {
+      const existing = children.get(edge.parentActivityId) || [];
+      existing.push(edge.childActivityId);
+      children.set(edge.parentActivityId, existing);
+    }
+
+    // BFS to assign levels
+    const levels = new Map<string, number>();
+    const queue = startNodes.map(id => ({ id, level: 0 }));
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+      const { id, level } = queue.shift()!;
+      if (visited.has(id)) continue;
+      visited.add(id);
+      levels.set(id, level);
+
+      const nodeChildren = children.get(id) || [];
+      for (const childId of nodeChildren) {
+        if (!visited.has(childId)) {
+          queue.push({ id: childId, level: level + 1 });
+        }
+      }
+    }
+
+    // Handle nodes not reached by BFS (disconnected)
+    for (const node of graph.nodes) {
+      if (!levels.has(node.id)) {
+        levels.set(node.id, 0);
+      }
+    }
+
+    // Group nodes by level
+    const nodesByLevel = new Map<number, string[]>();
+    for (const [id, level] of levels) {
+      const existing = nodesByLevel.get(level) || [];
+      existing.push(id);
+      nodesByLevel.set(level, existing);
+    }
+
+    // Calculate positions
+    for (const [level, nodeIds] of nodesByLevel) {
+      const x = level * (nodeWidth + horizontalGap);
+      nodeIds.forEach((id, index) => {
+        const y = index * (nodeHeight + verticalGap);
+        positions.set(id, { x, y });
+      });
+    }
+
+    return positions;
+  }
+
+  /**
+   * Create canvas text nodes for composition graph activities.
+   */
+  private createCompositionNodes(
+    nodes: CompositionNode[],
+    positions: Map<string, Position>
+  ): CanvasTextNode[] {
+    return nodes.map(node => {
+      const pos = positions.get(node.id) || { x: 0, y: 0 };
+      const successRate = node.successRate ?? 0;
+
+      return {
+        id: node.id,
+        type: 'text',
+        x: pos.x,
+        y: pos.y,
+        width: 350,
+        height: 150,
+        text: this.formatCompositionNodeText(node),
+        color: this.getSuccessRateColor(successRate)
+      } as CanvasTextNode;
+    });
+  }
+
+  /**
+   * Format composition node as markdown text.
+   */
+  private formatCompositionNodeText(node: CompositionNode): string {
+    const successPct = Math.round((node.successRate ?? 0) * 100);
+    const avgDuration = node.avgDurationMs
+      ? `${Math.round(node.avgDurationMs / 1000)}s`
+      : 'N/A';
+
+    return `# ${node.activityName || node.activityId}
+
+## Metrics
+- **Executions**: ${node.executionCount ?? 0}
+- **Success Rate**: ${successPct}%
+- **Avg Duration**: ${avgDuration}
+
+---
+*ID: ${node.activityId}*`;
+  }
+
+  /**
+   * Create canvas edges for composition relationships.
+   */
+  private createCompositionEdges(edges: CompositionEdge[]): CanvasEdge[] {
+    return edges.map(edge => {
+      const successRate = edge.successRate ?? 0;
+      const label = edge.impulseShape
+        ? `${edge.impulseShape} (${Math.round(successRate * 100)}%)`
+        : `${Math.round(successRate * 100)}%`;
+
+      return {
+        id: edge.id,
+        fromNode: edge.parentActivityId,
+        toNode: edge.childActivityId,
+        fromSide: 'right',
+        toSide: 'left',
+        toEnd: 'arrow',
+        color: this.getSuccessRateColor(successRate),
+        label
+      };
+    });
   }
 }
 

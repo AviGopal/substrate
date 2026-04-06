@@ -563,6 +563,40 @@ export default class MetabobVesselPlugin extends Plugin {
   }
 
   /**
+   * Open the composition canvas view
+   * Shows activity relationships and impulse flows as a visual graph
+   */
+  async openCompositionCanvas(): Promise<void> {
+    if (!this.canvasBuilder || !this.apiClient) {
+      new Notice('Canvas builder or API client not initialized');
+      return;
+    }
+
+    try {
+      // Fetch composition graph
+      const graph = await this.apiClient.getCompositionGraph({ limit: 50 });
+
+      if (!graph?.nodes || graph.nodes.length === 0) {
+        new Notice('No composition graph data found');
+        return;
+      }
+
+      // Build canvas
+      await this.canvasBuilder.buildCompositionCanvas(graph);
+
+      // Open canvas file
+      const path = `${this.settings.canvasFolder}/composition-graph.canvas`;
+      await this.app.workspace.openLinkText(path, '', true);
+
+      new Notice(`Opened composition canvas with ${graph.totalNodes} activities and ${graph.totalEdges} relationships`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[Metabob Vessel] Failed to open composition canvas:', error);
+      new Notice(`Failed to open composition canvas: ${errorMessage}`);
+    }
+  }
+
+  /**
    * Ensure a folder path exists, creating intermediate folders as needed
    */
   private async ensureFolderExists(folderPath: string): Promise<void> {
