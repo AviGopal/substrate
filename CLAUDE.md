@@ -2,6 +2,62 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Philosophy: MiniBob First, Canary Always
+
+> **CRITICAL**: Use MiniBob for development tasks. Validate changes against the canary deployment at `activity.metabob.com`, not local clusters.
+
+### Why MiniBob First
+
+MiniBob is not just a tool we're building - it's how we build. Every development task should go through MiniBob when possible:
+
+```bash
+# Use MiniBob for development goals
+minibob --single "fix the failing tests in metabob-activity-api"
+minibob --single "add input validation to the impulse endpoint"
+minibob --single "refactor the Thompson Sampling implementation"
+```
+
+**Benefits:**
+- Execution traces feed the learning loop
+- Successful patterns become reusable templates
+- Thompson Sampling improves over time
+- We dogfood our own system
+
+### Why Canary First
+
+**Do NOT develop against local Kubernetes clusters.** Instead:
+
+1. **Write code locally** - Use your IDE, run tests with `bun test`
+2. **Push to `dev` branch** - CI/CD automatically deploys to canary
+3. **Validate against canary** - Test at `https://activity.metabob.com`
+4. **Promote to production** - After canary validation succeeds
+
+**Production Endpoints (use these, not .local):**
+- `https://activity.metabob.com` - Activity API (learning backend)
+- `https://identity.metabob.com` - Identity/auth service
+
+**MiniBob Config** (`~/.metabob/config.json`):
+```json
+{
+  "vessels": {
+    "metabob": { "endpoint": "https://activity.metabob.com" },
+    "identity": { "endpoint": "https://identity.metabob.com" }
+  }
+}
+```
+
+### The Development Loop
+
+```
+1. Describe goal → MiniBob executes activity
+2. Activity succeeds/fails → Trace stored in canary backend
+3. Push code changes → CI/CD deploys to canary
+4. Validate via MiniBob → More traces, more learning
+5. Repeat
+```
+
+---
+
 ## Foundational Reference
 
 > **CRITICAL**: Before implementing anything, read [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
@@ -313,55 +369,79 @@ Probabilistic template selection that learns which variants perform best over ti
 
 ## Development Workflows
 
-### Using Bun (All Components)
+### Primary Workflow: MiniBob + Canary CI/CD
+
+**This is how we develop.** Don't set up local Kubernetes - use the canary deployment.
+
+```bash
+# 1. Use MiniBob for development tasks
+minibob --single "implement the new feature"
+minibob --single "fix the bug in impulse resolution"
+
+# 2. Run tests locally before pushing
+cd repos/metabob-activity-api
+bun test
+bun run typecheck
+
+# 3. Push to dev branch - CI/CD deploys to canary automatically
+git add . && git commit -m "feat(activity-api): add new feature"
+git push origin dev
+
+# 4. Validate against canary
+curl https://activity.metabob.com/health
+minibob --single "verify the new feature works"
+
+# 5. Monitor CI/CD
+gh run list --limit 5
+gh run view <run-id> --log
+```
+
+### Local Testing (Tests Only, Not Full Deployment)
 
 ```bash
 # MiniBob
 cd repos/minibob
-bun run start          # Start server
-bun run dev            # Watch mode
 bun test               # Run tests
 bun run typecheck      # Type checking
 
 # metabob-activity-api
 cd repos/metabob-activity-api
-bun run start          # Start server
-bun run dev            # Watch mode with reload
 bun test               # Run tests
+bun run typecheck      # Type checking
 
 # Activity Dashboard
 cd repos/activity-dashboard
-bun run start          # Production mode
-bun run dev            # Hot reload development
 bun test               # Run tests
 ```
 
-### Build and Deployment
+### CI/CD Pipeline (Canary First)
 
-> **Canonical Documentation**: See [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md) for the complete deployment guide including CI/CD pipelines, canary deployments, and production promotion.
+> **Canonical Documentation**: See [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md)
 
-**Quick Reference:**
+**The Flow:**
+```
+Write Code → bun test → Push to dev → Canary (auto) → Validate → Production
+   (local)    (local)    (triggers)    (activity.metabob.com)   (promote)
+```
 
+**CI/CD Commands:**
 ```bash
-# Local development
-cd repos/deployment
-./scripts/build_changed.sh --dev    # Build changed vessels
-helmfile -e local sync               # Deploy locally
-
-# Push to trigger CI/CD canary deployment
+# Push triggers canary deployment automatically
 git push origin dev
 
-# Production promotion (manual or daily at 10 AM UTC)
+# Monitor deployment
+gh run list --repo MetabobProject/deployment --limit 5
+gh run view <run-id> --log
+
+# Production promotion (after canary validation)
 ./scripts/promote-canary-to-production.sh
 ```
 
-**CI/CD Pipeline:**
-```
-Local Dev → Push to dev → Canary (auto) → Production (manual/scheduled)
-   (manual)     (triggers)    (10% traffic)    (100% traffic)
-```
+### Local Kubernetes (Advanced - Usually Not Needed)
 
-**Prerequisites:**
+> **Note**: Prefer using the canary deployment at `activity.metabob.com` instead of local Kubernetes. Only set up local clusters for infrastructure changes or offline development.
+
+**Prerequisites (if you really need local):**
 1. Docker Desktop with Kubernetes enabled (context: `docker-desktop`)
 2. Istio installed: `istioctl install --set profile=demo -y`
 3. Configure `/etc/hosts`:
@@ -432,7 +512,12 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 
 ### Service Endpoints
 
-**Backend API:** `http://activity.metabob.local` (external) / `http://metabob-activity-api.activity-system.svc.cluster.local:8080` (internal)
+**Production/Canary (USE THESE):**
+- **Activity API**: `https://activity.metabob.com`
+- **Identity API**: `https://identity.metabob.com`
+
+**Local Development (if using local K8s):**
+- **Backend API:** `http://activity.metabob.local` (external) / `http://metabob-activity-api.activity-system.svc.cluster.local:8080` (internal)
 - `GET /health`: Health check
 - `POST /v2/activities/recommend`: Thompson Sampling recommendations
 - `GET /v2/activities/templates`: List templates
@@ -448,7 +533,9 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 - Database: `learning_loop`
 - Auth: Username and password from environment variables
 
-### Development Network Mapping
+### Development Network Mapping (Local K8s Only)
+
+> **Note**: This section is for local Kubernetes development only. For normal development, use `https://activity.metabob.com`.
 
 All services use the `.metabob.local` TLD for local development. Traffic routes through Istio ingress gateway on port 80.
 
@@ -511,7 +598,7 @@ MiniBob resolves configuration from multiple sources (highest to lowest priority
 3. **User config** (`~/.metabob/config.json`)
 4. **Defaults** (hardcoded in MiniBob)
 
-**Minimal user config** (`~/.metabob/config.json`):
+**Recommended user config** (`~/.metabob/config.json`):
 ```json
 {
   "providers": {
@@ -519,14 +606,17 @@ MiniBob resolves configuration from multiple sources (highest to lowest priority
   },
   "instance": {
     "instanceId": "minibob-local-001",
-    "apiKey": "test-api-key-123",
+    "apiKey": "minibob-local-dev-key",
     "orgId": "metabob_internal"
   },
   "vessels": {
-    "metabob": { "endpoint": "https://activity.metabob.com" }
+    "metabob": { "endpoint": "https://activity.metabob.com" },
+    "identity": { "endpoint": "https://identity.metabob.com" }
   }
 }
 ```
+
+> **Important**: Always use production endpoints (`https://activity.metabob.com`, `https://identity.metabob.com`), not `.local` endpoints.
 
 ### Pre-configured MiniBob Instances
 
@@ -807,7 +897,30 @@ Before implementing any feature, verify alignment with the foundation:
 
 **Current objective:** Develop MiniBob with MiniBob, achieving continuous autonomous development visible in the dashboard.
 
-**Two parallel tracks:**
+### Use MiniBob for Everything
+
+```bash
+# Feature development
+minibob --single "add Thompson Sampling decay to old templates"
+
+# Bug fixes
+minibob --single "fix the schema mismatch error in execution traces"
+
+# Refactoring
+minibob --single "extract the impulse resolution logic into a separate module"
+
+# Documentation
+minibob --single "update the API documentation for the new endpoints"
+```
+
+### Track Progress via Dashboard
+
+- **Canary Dashboard**: https://internal.metabob.com (when deployed)
+- **Activity API Health**: https://activity.metabob.com/health
+- **Execution Traces**: Stored automatically by MiniBob
+
+### Two Parallel Tracks
+
 1. **Vessels**: Building and improving execution environments (MiniBob variants)
 2. **Activities**: Creating and optimizing templates for development work
 
