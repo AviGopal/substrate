@@ -1,0 +1,86 @@
+{
+  "id": "visualize:learning-loop",
+  "name": "Visualize Learning Loop State",
+  "description": "Create UI components showing Thompson Sampling state, activity success rates, and template performance metrics. Queries the backend for metrics and creates appropriate visualizations.",
+  "tags": ["dashboard", "visualization", "learningloop", "metrics"],
+  "inputSchema": {
+    "optional": [
+      { "shape": "activity_id", "description": "Specific activity to focus on" },
+      { "shape": "time_range", "description": "Time range for metrics (e.g., '24h', '7d')" }
+    ]
+  },
+  "outputSchema": {
+    "produces": [
+      { "shape": "ui_component", "description": "Dashboard visualization impulse", "collection": true }
+    ]
+  },
+  "variables": [
+    {
+      "name": "activityId",
+      "type": "string",
+      "required": false,
+      "description": "Optional activity ID to focus on"
+    },
+    {
+      "name": "timeRange",
+      "type": "string",
+      "required": false,
+      "default": "24h",
+      "description": "Time range for metrics"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "fetch-template-metrics",
+      "description": "Query backend for activity template performance metrics including success rates, execution counts, and Thompson Sampling parameters (alpha, beta)",
+      "prompt": {
+        "template": "Query the activity API for template metrics. Use query_activity_api with endpoint '/v2/activities/templates' to get all templates with their Thompson Sampling state (alpha, beta values). Also query '/v2/activities/execution-traces?limit=100' to get recent execution history for calculating success rates.\n\nStore the results for visualization.",
+        "variables": ["activityId", "timeRange"]
+      },
+      "validation": {
+        "requiredPatterns": ["query_activity_api"]
+      }
+    },
+    {
+      "id": "create-summary-card",
+      "description": "Create a summary card showing overall learning loop health: total activities, average success rate, total executions",
+      "dependencies": ["fetch-template-metrics"],
+      "prompt": {
+        "template": "Using the fetched metrics, create a UI component impulse with create_ui_component. Create a container with:\n- Heading: 'Learning Loop Health'\n- A horizontal layout with 3-4 stat badges:\n  - Total Activities (count)\n  - Average Success Rate (percentage)\n  - Total Executions (count)\n  - Active Variants (count)\n\nUse the 'badge' primitive with appropriate variants (success/warning/error based on thresholds).",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": ["create_ui_component", "container", "badge"]
+      }
+    },
+    {
+      "id": "create-thompson-sampling-chart",
+      "description": "Create a chart showing Thompson Sampling beta distribution for top activities",
+      "dependencies": ["fetch-template-metrics"],
+      "prompt": {
+        "template": "Create a UI component showing Thompson Sampling state. For each activity template, visualize the Beta(alpha, beta) distribution:\n\nUse create_ui_component with a container containing:\n- Heading: 'Thompson Sampling State'\n- A data-table showing:\n  - Activity name\n  - Alpha (successes + 1)\n  - Beta (failures + 1)\n  - Expected success rate: alpha / (alpha + beta)\n  - Confidence: 1 / sqrt(alpha + beta)\n\nSort by expected success rate descending. Highlight activities with low confidence (need more samples).",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": ["create_ui_component", "data-table"]
+      }
+    },
+    {
+      "id": "create-execution-timeline",
+      "description": "Create a timeline chart showing recent executions with success/failure markers",
+      "dependencies": ["fetch-template-metrics"],
+      "prompt": {
+        "template": "Create a UI component showing execution history. Use create_ui_component with:\n- Heading: 'Recent Executions'\n- A chart primitive with chartType 'bar' or 'line' showing:\n  - X-axis: time (hourly buckets)\n  - Y-axis: execution count\n  - Color-coded by success/failure\n\nAlternatively, if chart data is complex, use a data-table showing recent executions with columns: timestamp, activity, status, duration_ms, cost_usd.",
+        "variables": ["timeRange"]
+      },
+      "validation": {
+        "requiredPatterns": ["create_ui_component"]
+      }
+    }
+  ],
+  "metadata": {
+    "mentor": true,
+    "teaches": ["query_activity_api", "create_ui_component", "data visualization", "Thompson Sampling"],
+    "visualizes": "learning-loop"
+  }
+}

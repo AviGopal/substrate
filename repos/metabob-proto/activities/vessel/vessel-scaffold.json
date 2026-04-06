@@ -1,0 +1,131 @@
+{
+  "id": "vessel-scaffold",
+  "name": "Scaffold New Vessel",
+  "version": 1,
+  "description": "Create directory structure and boilerplate for a new vessel. Generates package.json, types, index.ts entry point, and basic resolver structure.",
+  "category": "infrastructure",
+  "tags": ["vessel", "scaffold", "infrastructure", "bootstrap"],
+  "variables": [
+    {
+      "name": "vesselName",
+      "type": "string",
+      "required": true,
+      "description": "Name of the vessel (e.g., 'file-watcher', 'websocket-relay')"
+    },
+    {
+      "name": "vesselDescription",
+      "type": "string",
+      "required": true,
+      "description": "Short description of what this vessel does"
+    },
+    {
+      "name": "targetPath",
+      "type": "string",
+      "required": false,
+      "description": "Path where vessel should be created (default: repos/<vesselName>)",
+      "default": "repos/{{vesselName}}"
+    },
+    {
+      "name": "initialResolvers",
+      "type": "string",
+      "required": false,
+      "description": "Comma-separated list of initial resolver types (e.g., 'file,memo')",
+      "default": "memo"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "create-dirs",
+      "description": "Create vessel directory structure",
+      "resolver": "bash",
+      "inputImpulses": ["vesselPath"],
+      "inputShapes": ["bash_args"],
+      "outputShapes": ["stdout"],
+      "config": {
+        "template": "mkdir -p {{targetPath}}/src/resolvers && mkdir -p {{targetPath}}/src/tools"
+      },
+      "prompt": {
+        "template": "Create the directory structure for vessel {{vesselName}} at {{targetPath}}:\n\n```\n{{targetPath}}/\n  src/\n    resolvers/\n    tools/\n```\n\nUse mkdir -p to create all directories.",
+        "maxTokens": 2000
+      },
+      "validation": {
+        "commands": [
+          {
+            "command": "test -d {{targetPath}}/src/resolvers && echo 'OK'",
+            "expectedOutput": "OK"
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-package",
+      "description": "Generate package.json with vessel configuration",
+      "dependencies": ["create-dirs"],
+      "prompt": {
+        "template": "Create a package.json for vessel {{vesselName}} at {{targetPath}}/package.json.\n\nVessel description: {{vesselDescription}}\n\n## Requirements:\n\n1. Use Bun as the runtime\n2. Include these dependencies:\n   - TypeScript (devDependency)\n   - @types/bun (devDependency)\n3. Include scripts:\n   - start: bun run src/index.ts\n   - dev: bun --watch run src/index.ts\n   - typecheck: bun x tsc --noEmit\n   - test: bun test\n4. Set type: \"module\"\n5. Set main: \"src/index.ts\"\n6. Add vessel metadata in a \"vessel\" field:\n   ```json\n   \"vessel\": {\n     \"type\": \"autonomous\",\n     \"capabilities\": [\"resolve\"],\n     \"resolvers\": [{{initialResolvers}}]\n   }\n   ```\n\nWrite the file using the write tool.",
+        "maxTokens": 4000
+      },
+      "validation": {
+        "requiredFiles": ["{{targetPath}}/package.json"],
+        "requiredPatterns": [
+          { "file": "{{targetPath}}/package.json", "pattern": "\"name\":" },
+          { "file": "{{targetPath}}/package.json", "pattern": "\"vessel\":" }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-types",
+      "description": "Generate TypeScript type definitions",
+      "dependencies": ["create-dirs"],
+      "prompt": {
+        "template": "Create TypeScript types for vessel {{vesselName}} at {{targetPath}}/src/types.ts.\n\n## Required types:\n\n```typescript\n// Impulse types\nexport interface Impulse {\n  id: string\n  pointer: ImpulsePointer\n  budget: number\n  priority: 'critical' | 'high' | 'medium' | 'low'\n  loaded?: boolean\n  content?: string\n  tokenCount?: number\n  tags?: string[]\n  metadata?: Record<string, unknown>\n}\n\nexport type ImpulsePointer =\n  | { type: 'memo'; content: string }\n  | { type: 'file'; path: string; offset?: number; limit?: number }\n  | { type: 'custom'; resolver: string; data: Record<string, unknown> }\n\n// Resolver interface\nexport interface Resolver {\n  name: string\n  enabled: boolean\n  resolve(refs: ImpulseRef[], config: Record<string, unknown>): Promise<Impulse[]>\n}\n\nexport interface ImpulseRef {\n  id: string\n  ref: string\n  priority: 'required' | 'optional'\n  budget: number\n}\n\n// Vessel configuration\nexport interface VesselConfig {\n  name: string\n  port: number\n  workingDirectory: string\n  resolvers: string[]\n}\n```\n\nWrite the file using the write tool.",
+        "maxTokens": 6000
+      },
+      "validation": {
+        "requiredFiles": ["{{targetPath}}/src/types.ts"],
+        "requiredPatterns": [
+          { "file": "{{targetPath}}/src/types.ts", "pattern": "export interface Impulse" },
+          { "file": "{{targetPath}}/src/types.ts", "pattern": "export interface Resolver" }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-index",
+      "description": "Generate index.ts entry point with HTTP server",
+      "dependencies": ["generate-types"],
+      "prompt": {
+        "template": "Create the entry point for vessel {{vesselName}} at {{targetPath}}/src/index.ts.\n\n## Requirements:\n\n1. Import types from ./types\n2. Create a simple HTTP server using Bun.serve\n3. Implement these endpoints:\n   - GET /health - Returns { status: 'ok', vessel: '{{vesselName}}' }\n   - POST /resolve - Accepts { pointer: ImpulsePointer } and resolves it\n   - GET /capabilities - Returns list of supported resolver types\n4. Read port from VESSEL_PORT env var (default 8080)\n5. Log startup message with vessel name and port\n\n## Example structure:\n\n```typescript\nimport type { VesselConfig, ImpulsePointer } from './types'\n\nconst config: VesselConfig = {\n  name: '{{vesselName}}',\n  port: parseInt(process.env.VESSEL_PORT || '8080'),\n  workingDirectory: process.cwd(),\n  resolvers: ['memo']\n}\n\nconst server = Bun.serve({\n  port: config.port,\n  async fetch(req) {\n    const url = new URL(req.url)\n    \n    if (url.pathname === '/health') {\n      return Response.json({ status: 'ok', vessel: config.name })\n    }\n    \n    // ... other endpoints\n    \n    return new Response('Not Found', { status: 404 })\n  }\n})\n\nconsole.log(`[{{vesselName}}] Listening on port ${config.port}`)\n```\n\nWrite the file using the write tool.",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": ["{{targetPath}}/src/index.ts"],
+        "requiredPatterns": [
+          { "file": "{{targetPath}}/src/index.ts", "pattern": "Bun.serve" },
+          { "file": "{{targetPath}}/src/index.ts", "pattern": "/health" }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "metadata": {
+    "author": "vessel-development",
+    "createdAt": 1712188800000,
+    "estimatedDuration": "2-5 minutes",
+    "costRange": { "min": 0.02, "max": 0.10 }
+  }
+}

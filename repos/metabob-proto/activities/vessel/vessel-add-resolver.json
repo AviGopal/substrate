@@ -1,0 +1,107 @@
+{
+  "id": "vessel-add-resolver",
+  "name": "Add Impulse Resolver to Vessel",
+  "version": 1,
+  "description": "Add a new impulse resolver to an existing vessel. Analyzes existing resolvers for patterns, generates the new resolver, and updates the registry.",
+  "category": "infrastructure",
+  "tags": ["vessel", "resolver", "infrastructure", "impulse"],
+  "variables": [
+    {
+      "name": "vesselPath",
+      "type": "string",
+      "required": true,
+      "description": "Path to the vessel (e.g., 'repos/minibob')"
+    },
+    {
+      "name": "resolverName",
+      "type": "string",
+      "required": true,
+      "description": "Name of the resolver to add (e.g., 'git', 'http')"
+    },
+    {
+      "name": "resolverDescription",
+      "type": "string",
+      "required": true,
+      "description": "What this resolver resolves (e.g., 'Git repository contents')"
+    },
+    {
+      "name": "inputShape",
+      "type": "string",
+      "required": false,
+      "description": "Expected input impulse shape (e.g., 'git_ref')",
+      "default": "custom"
+    },
+    {
+      "name": "outputShape",
+      "type": "string",
+      "required": false,
+      "description": "Output impulse shape (e.g., 'file_content')",
+      "default": "text"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "analyze-existing",
+      "description": "Analyze existing resolvers to understand patterns",
+      "prompt": {
+        "template": "Analyze the existing resolver implementations in {{vesselPath}}/src/resolvers/ to understand the patterns used.\n\n## Your Task:\n\n1. List all files in {{vesselPath}}/src/resolvers/\n2. Read 2-3 existing resolver files to understand:\n   - Import patterns\n   - Class/function structure\n   - Error handling patterns\n   - How they implement the Resolver interface\n3. Create a summary at /tmp/resolver-analysis-{{resolverName}}.md:\n\n```markdown\n# Resolver Pattern Analysis for {{vesselPath}}\n\n## Existing Resolvers\n- resolver1.ts: Brief description\n- resolver2.ts: Brief description\n\n## Common Patterns\n- Import style: ...\n- Export style: ...\n- Error handling: ...\n- Logging: ...\n\n## Interface Implementation\n- Properties: name, enabled, ...\n- Methods: resolve(), ...\n\n## Recommended Structure for {{resolverName}}\n[Outline based on analysis]\n```\n\nRead the files and write the analysis.",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/resolver-analysis-{{resolverName}}.md"],
+        "requiredPatterns": [
+          "## Common Patterns",
+          "## Recommended Structure"
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "generate-resolver",
+      "description": "Generate the new resolver implementation",
+      "dependencies": ["analyze-existing"],
+      "prompt": {
+        "template": "Generate the {{resolverName}} resolver for {{vesselPath}} based on the analysis in /tmp/resolver-analysis-{{resolverName}}.md.\n\n## Resolver Details:\n- Name: {{resolverName}}\n- Description: {{resolverDescription}}\n- Input Shape: {{inputShape}}\n- Output Shape: {{outputShape}}\n\n## Requirements:\n\n1. Follow the patterns identified in the analysis\n2. Implement the Resolver interface\n3. Include proper error handling\n4. Add logging where appropriate\n5. Handle edge cases\n\n## File: {{vesselPath}}/src/resolvers/{{resolverName}}-resolver.ts\n\n```typescript\n/**\n * {{resolverName}} Resolver\n * \n * {{resolverDescription}}\n * \n * Input shape: {{inputShape}}\n * Output shape: {{outputShape}}\n */\n\nimport type { Resolver, ImpulseRef, Impulse } from '../types'\n\nexport class {{ResolverName}}Resolver implements Resolver {\n  name = '{{resolverName}}'\n  enabled = true\n  \n  constructor(private workingDirectory: string) {}\n  \n  async resolve(refs: ImpulseRef[], config: Record<string, unknown>): Promise<Impulse[]> {\n    // Implementation here\n  }\n}\n```\n\nWrite the resolver file.",
+        "maxTokens": 10000
+      },
+      "validation": {
+        "requiredFiles": ["{{vesselPath}}/src/resolvers/{{resolverName}}-resolver.ts"],
+        "requiredPatterns": [
+          { "file": "{{vesselPath}}/src/resolvers/{{resolverName}}-resolver.ts", "pattern": "class.*Resolver" },
+          { "file": "{{vesselPath}}/src/resolvers/{{resolverName}}-resolver.ts", "pattern": "async resolve" }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "update-registry",
+      "description": "Update the resolver registry to include the new resolver",
+      "dependencies": ["generate-resolver"],
+      "prompt": {
+        "template": "Update the vessel's resolver registry to include the new {{resolverName}} resolver.\n\n## Your Task:\n\n1. Find where resolvers are registered in {{vesselPath}}/src/\n   - Check index.ts for initializeResolvers or similar\n   - Check for a resolvers/index.ts barrel export\n2. Add the import for {{resolverName}}-resolver.ts\n3. Add the resolver to the registry\n4. Update the capabilities endpoint if it exists\n\n## Example patterns:\n\n```typescript\n// In resolvers/index.ts or similar\nimport { {{ResolverName}}Resolver } from './{{resolverName}}-resolver'\n\nexport const resolvers = {\n  // existing resolvers...\n  {{resolverName}}: new {{ResolverName}}Resolver(workingDirectory),\n}\n```\n\n## Or in index.ts:\n\n```typescript\nimport { {{ResolverName}}Resolver } from './resolvers/{{resolverName}}-resolver'\n\n// In initializeResolvers() or constructor\nthis.resolvers.set('{{resolverName}}', new {{ResolverName}}Resolver(this.workingDirectory))\n```\n\nMake the necessary edits to register the resolver.",
+        "maxTokens": 6000
+      },
+      "validation": {
+        "requiredPatterns": [
+          "{{resolverName}}-resolver"
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "metadata": {
+    "author": "vessel-development",
+    "createdAt": 1712188800000,
+    "estimatedDuration": "3-7 minutes",
+    "costRange": { "min": 0.05, "max": 0.15 }
+  }
+}

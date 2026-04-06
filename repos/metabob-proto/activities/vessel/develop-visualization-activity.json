@@ -1,0 +1,107 @@
+{
+  "id": "develop:visualization-activity",
+  "name": "Develop Dashboard Visualization Activity",
+  "description": "Create an activity template that produces UI component impulses for dashboard visualization",
+  "tags": ["development.activity", "development.dashboard", "meta.activity"],
+
+  "variables": [
+    {
+      "name": "activityName",
+      "type": "string",
+      "required": true,
+      "description": "Name of the activity (e.g., 'show-thompson-sampling')"
+    },
+    {
+      "name": "activityId",
+      "type": "string",
+      "required": true,
+      "description": "ID for the activity (e.g., 'dashboard:show-thompson-sampling')"
+    },
+    {
+      "name": "visualizationType",
+      "type": "string",
+      "required": true,
+      "description": "Type of visualization (chart, table, graph, gauge)"
+    },
+    {
+      "name": "dataEndpoint",
+      "type": "string",
+      "required": true,
+      "description": "Backend API endpoint to fetch data from"
+    },
+    {
+      "name": "outputPath",
+      "type": "string",
+      "required": false,
+      "default": "repos/metabob-proto/activities/dashboard",
+      "description": "Path to save the activity template"
+    }
+  ],
+
+  "inputSchema": {
+    "required": [
+      { "shape": "goal", "description": "What to visualize" }
+    ]
+  },
+
+  "outputSchema": {
+    "produces": [
+      { "shape": "activity_template", "description": "The created activity template" }
+    ]
+  },
+
+  "tasks": [
+    {
+      "id": "analyze-data-shape",
+      "description": "Analyze the data shape from the endpoint",
+      "prompt": {
+        "template": "Analyze what data is available from {{dataEndpoint}}.\n\n1. Read the route handler to understand the response schema\n2. Identify the fields that would be useful for visualization\n3. Determine the best visualization type for this data\n4. Note any query parameters that could filter the data\n\nProvide a summary of the data structure and recommended visualization approach.",
+        "variables": ["dataEndpoint"]
+      },
+      "resolverRequirements": {
+        "requiredTools": ["read", "grep"]
+      }
+    },
+    {
+      "id": "design-primitive-composition",
+      "description": "Design the primitive composition for the visualization",
+      "prompt": {
+        "template": "Design a primitive composition for {{activityName}} using {{visualizationType}}.\n\nThe composition should:\n1. Have a container with appropriate layout\n2. Include a title/heading\n3. Include the main visualization ({{visualizationType}})\n4. Include status badges for key metrics\n5. Handle loading and error states\n\nOutput the primitive JSON structure.",
+        "variables": ["activityName", "visualizationType"]
+      },
+      "dependencies": ["analyze-data-shape"]
+    },
+    {
+      "id": "create-activity-template",
+      "description": "Create the activity template JSON",
+      "prompt": {
+        "template": "Create the activity template at {{outputPath}}/{{activityId}}.json.\n\nThe activity should:\n1. Have id: '{{activityId}}'\n2. Have name: '{{activityName}}'\n3. Have tags: ['dashboard.visualization', 'dashboard.{{visualizationType}}']\n4. Define inputSchema requiring 'goal' shape\n5. Define outputSchema producing 'ui_component' shape\n6. Have tasks:\n   - fetch-data: Query {{dataEndpoint}} using query_activity_api tool\n   - transform-data: Transform response for visualization\n   - create-visualization: Create ui_component impulse with the primitive composition\n7. Include proper validation for each task\n\nOutput valid JSON that can be registered with the activity API.",
+        "variables": ["outputPath", "activityId", "activityName", "visualizationType", "dataEndpoint"]
+      },
+      "dependencies": ["design-primitive-composition"],
+      "validation": {
+        "requiredFiles": ["{{outputPath}}/{{activityId}}.json"],
+        "requiredPatterns": ["\"id\":", "\"tasks\":", "\"inputSchema\":"]
+      }
+    },
+    {
+      "id": "validate-template",
+      "description": "Validate the activity template is well-formed",
+      "prompt": {
+        "template": "Read {{outputPath}}/{{activityId}}.json and validate:\n1. JSON is syntactically correct\n2. All required fields are present (id, name, tasks, inputSchema, outputSchema)\n3. Each task has id, description, and prompt or resolver\n4. Dependencies form a valid DAG (no cycles)\n5. Variable references use correct {{variable}} syntax\n\nReport any issues found.",
+        "variables": ["outputPath", "activityId"]
+      },
+      "dependencies": ["create-activity-template"],
+      "resolverRequirements": {
+        "requiredTools": ["read"]
+      }
+    }
+  ],
+
+  "metadata": {
+    "generatedFrom": "manual",
+    "category": "meta",
+    "estimatedDuration": "10-15 minutes",
+    "learningObjective": "Teach MiniBob to create dashboard visualization activities"
+  }
+}

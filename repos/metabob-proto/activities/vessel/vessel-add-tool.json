@@ -1,0 +1,101 @@
+{
+  "id": "vessel-add-tool",
+  "name": "Add MCP Tool to Vessel",
+  "version": 1,
+  "description": "Add a new MCP tool to a vessel. Reads existing tool definitions, adds the new tool with proper schema, and registers the handler.",
+  "category": "infrastructure",
+  "tags": ["vessel", "tool", "mcp", "infrastructure"],
+  "variables": [
+    {
+      "name": "vesselPath",
+      "type": "string",
+      "required": true,
+      "description": "Path to the vessel (e.g., 'repos/minibob')"
+    },
+    {
+      "name": "toolName",
+      "type": "string",
+      "required": true,
+      "description": "Name of the tool (e.g., 'search', 'transform')"
+    },
+    {
+      "name": "toolDescription",
+      "type": "string",
+      "required": true,
+      "description": "What this tool does"
+    },
+    {
+      "name": "inputParams",
+      "type": "string",
+      "required": false,
+      "description": "JSON schema for input parameters",
+      "default": "{}"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "read-tools",
+      "description": "Read existing tool definitions to understand patterns",
+      "resolver": "file",
+      "inputShapes": ["file_read_args"],
+      "outputShapes": ["file_content"],
+      "config": {
+        "operation": "read",
+        "pattern": "{{vesselPath}}/src/tools.ts"
+      },
+      "prompt": {
+        "template": "Read the existing tool definitions in {{vesselPath}}/src/tools.ts to understand:\n\n1. How tools are defined (schema structure)\n2. How handlers are registered\n3. Common patterns for input validation\n4. Error handling patterns\n\nRead the file and create /tmp/tool-analysis-{{toolName}}.md with:\n\n```markdown\n# Tool Pattern Analysis\n\n## Tool Definition Structure\n[How tools are defined]\n\n## Handler Structure\n[How handlers work]\n\n## Input Validation\n[How inputs are validated]\n\n## Error Handling\n[How errors are handled]\n```",
+        "maxTokens": 6000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/tool-analysis-{{toolName}}.md"]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "add-definition",
+      "description": "Add the tool definition with JSON schema",
+      "dependencies": ["read-tools"],
+      "prompt": {
+        "template": "Add the tool definition for {{toolName}} to {{vesselPath}}/src/tools.ts.\n\n## Tool Details:\n- Name: {{toolName}}\n- Description: {{toolDescription}}\n- Input params: {{inputParams}}\n\n## Requirements:\n\n1. Add a tool definition following the existing pattern\n2. Include proper JSON schema for inputs\n3. Add description and parameter descriptions\n4. Mark required vs optional parameters\n\n## Example tool definition:\n\n```typescript\nconst {{toolName}}Definition: ToolDefinition = {\n  name: '{{toolName}}',\n  description: '{{toolDescription}}',\n  inputSchema: {\n    type: 'object',\n    properties: {\n      // Define properties based on {{inputParams}}\n    },\n    required: [/* required properties */]\n  }\n}\n```\n\nEdit the tools.ts file to add the definition.",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requiredPatterns": [
+          { "file": "{{vesselPath}}/src/tools.ts", "pattern": "{{toolName}}" }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "add-handler",
+      "description": "Add the tool handler implementation",
+      "dependencies": ["add-definition"],
+      "prompt": {
+        "template": "Add the handler for {{toolName}} tool in {{vesselPath}}/src/tools.ts.\n\n## Requirements:\n\n1. Implement the handler function\n2. Validate inputs match the schema\n3. Handle errors gracefully\n4. Return properly formatted ToolResult\n\n## Handler structure:\n\n```typescript\nconst {{toolName}}Handler: ToolHandler = async (params) => {\n  try {\n    // Validate params\n    if (!params.requiredField) {\n      return {\n        success: false,\n        error: 'Missing required field: requiredField'\n      }\n    }\n    \n    // Implement tool logic\n    const result = // ...\n    \n    return {\n      success: true,\n      output: result\n    }\n  } catch (error) {\n    return {\n      success: false,\n      error: error instanceof Error ? error.message : String(error)\n    }\n  }\n}\n```\n\nAlso register the handler in the createToolHandlers function:\n\n```typescript\nhandlers['{{toolName}}'] = {{toolName}}Handler\n```\n\nEdit the file to add the handler and registration.",
+        "maxTokens": 10000
+      },
+      "validation": {
+        "requiredPatterns": [
+          { "file": "{{vesselPath}}/src/tools.ts", "pattern": "{{toolName}}Handler" }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "metadata": {
+    "author": "vessel-development",
+    "createdAt": 1712188800000,
+    "estimatedDuration": "3-6 minutes",
+    "costRange": { "min": 0.04, "max": 0.12 }
+  }
+}

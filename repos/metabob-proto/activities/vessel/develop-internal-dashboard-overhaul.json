@@ -1,0 +1,127 @@
+{
+  "id": "develop:internal-dashboard-overhaul",
+  "name": "Develop Internal Dashboard Overhaul",
+  "description": "Orchestrate the complete overhaul of internal-dashboard to provide clarity on learning loop, database state, and shapes",
+  "tags": ["development.vessel", "development.dashboard", "meta.orchestration"],
+
+  "variables": [
+    {
+      "name": "reactRendererPath",
+      "type": "string",
+      "default": "repos/react-renderer",
+      "description": "Path to react-renderer vessel"
+    },
+    {
+      "name": "dashboardPath",
+      "type": "string",
+      "default": "repos/metabob-internal-dashboard",
+      "description": "Path to internal-dashboard"
+    }
+  ],
+
+  "inputSchema": {
+    "required": [
+      { "shape": "goal", "description": "The overhaul objectives" }
+    ]
+  },
+
+  "outputSchema": {
+    "produces": [
+      { "shape": "source_code", "description": "Updated dashboard codebase" },
+      { "shape": "activity_template", "collection": true, "description": "Created visualization activities" }
+    ]
+  },
+
+  "tasks": [
+    {
+      "id": "analyze-current-state",
+      "description": "Analyze current internal-dashboard implementation",
+      "prompt": {
+        "template": "Analyze the current state of {{dashboardPath}}:\n1. Read package.json for dependencies\n2. Read src/index.ts for server architecture\n3. Read src/lib/minibob-integration.ts for MiniBob integration\n4. Identify what's working vs what needs replacement\n5. List the existing primitives in PrimitiveRenderer\n\nCreate a gap analysis comparing current state to the react-renderer architecture.",
+        "variables": ["dashboardPath"]
+      },
+      "resolverRequirements": {
+        "requiredTools": ["read", "glob"]
+      }
+    },
+    {
+      "id": "scaffold-react-renderer",
+      "description": "Ensure react-renderer vessel is scaffolded",
+      "prompt": {
+        "template": "Check if {{reactRendererPath}} has the core structure:\n1. vessel.json manifest\n2. package.json with dependencies\n3. src/types.ts with primitive definitions\n4. src/resolvers/ with ui-component resolver\n5. src/state/impulse-store.ts\n\nIf any are missing, create them following the ARCHITECTURE.md spec.",
+        "variables": ["reactRendererPath"]
+      },
+      "dependencies": ["analyze-current-state"]
+    },
+    {
+      "id": "implement-missing-primitives",
+      "description": "Implement any missing primitive components",
+      "prompt": {
+        "template": "Check {{reactRendererPath}}/src/primitives/ for all required primitives:\n- container, text, data-table, chart, graph\n- input, button, badge, progress, code, image\n\nFor each missing primitive, create the component following patterns from existing primitives or the internal-dashboard PrimitiveRenderer.",
+        "variables": ["reactRendererPath"]
+      },
+      "dependencies": ["scaffold-react-renderer"]
+    },
+    {
+      "id": "implement-websocket-broadcasting",
+      "description": "Implement WebSocket impulse broadcasting",
+      "prompt": {
+        "template": "Implement WebSocket infrastructure in {{reactRendererPath}}/src/websocket/:\n1. protocol.ts - Message type definitions\n2. broadcaster.ts - Client management and broadcast\n3. handler.ts - Message dispatching\n\nFollow the stigmergy pattern from internal-dashboard reference.",
+        "variables": ["reactRendererPath"]
+      },
+      "dependencies": ["implement-missing-primitives"]
+    },
+    {
+      "id": "create-learning-loop-activities",
+      "description": "Create visualization activities for learning loop",
+      "prompt": {
+        "template": "Create dashboard visualization activities:\n\n1. dashboard:show-thompson-sampling\n   - Endpoint: /v2/activities/scores\n   - Visualization: gauges for α/β, charts for success rates\n\n2. dashboard:show-execution-graph\n   - Endpoint: /v2/activities/composition/graph\n   - Visualization: force-directed graph of activity composition\n\n3. dashboard:show-convergence\n   - Endpoint: /v2/activities/corpus-summary\n   - Visualization: gauges, progress bars, trend charts\n\nSave each to repos/metabob-proto/activities/dashboard/",
+        "variables": []
+      },
+      "dependencies": ["implement-websocket-broadcasting"]
+    },
+    {
+      "id": "create-database-state-activities",
+      "description": "Create visualization activities for database state",
+      "prompt": {
+        "template": "Create dashboard visualization activities for database state:\n\n1. dashboard:show-corpus-summary\n   - Endpoint: /v2/activities/corpus-summary\n   - Visualization: table with template counts, success rates\n\n2. dashboard:show-execution-traces\n   - Endpoint: /v2/activities/execution-traces\n   - Visualization: timeline with drill-down\n\n3. dashboard:show-variant-performance\n   - Endpoint: /v2/activities/scores\n   - Visualization: bar chart by variant family\n\nSave each to repos/metabob-proto/activities/dashboard/",
+        "variables": []
+      },
+      "dependencies": ["create-learning-loop-activities"]
+    },
+    {
+      "id": "create-shape-discovery-activities",
+      "description": "Create visualization activities for shape discovery",
+      "prompt": {
+        "template": "Create dashboard visualization activities for shape discovery:\n\n1. dashboard:show-shape-network\n   - Endpoint: /v2/activities/shapes/network\n   - Visualization: graph of shape transformations\n\n2. dashboard:show-shape-catalog\n   - Endpoint: /v2/activities/shapes/usage\n   - Visualization: table with shape examples\n\n3. dashboard:show-impulse-relevance\n   - Endpoint: /v2/activities/impulse-relevance\n   - Visualization: heatmap of relevance scores\n\nSave each to repos/metabob-proto/activities/dashboard/",
+        "variables": []
+      },
+      "dependencies": ["create-database-state-activities"]
+    },
+    {
+      "id": "wire-activity-routing",
+      "description": "Wire dashboard queries through activity execution",
+      "prompt": {
+        "template": "Update {{dashboardPath}} to route queries through activities:\n\n1. User query becomes goal impulse\n2. Thompson Sampling selects matching activity\n3. Activity executes and produces ui_component impulses\n4. WebSocket broadcasts impulses to react-renderer\n5. React-renderer renders primitives\n\nModify minibob-integration.ts to:\n- Create goal impulse from query\n- Call activity recommendation endpoint\n- Execute selected activity\n- Record execution trace",
+        "variables": ["dashboardPath"]
+      },
+      "dependencies": ["create-shape-discovery-activities"]
+    },
+    {
+      "id": "verify-integration",
+      "description": "Verify the complete integration works",
+      "prompt": {
+        "template": "Test the complete integration:\n1. Start react-renderer vessel\n2. Start internal-dashboard\n3. Query 'show system health'\n4. Verify Thompson Sampling selects an activity\n5. Verify ui_component impulses are created\n6. Verify primitives render correctly\n7. Verify execution trace is recorded\n\nDocument any issues found.",
+        "variables": []
+      },
+      "dependencies": ["wire-activity-routing"]
+    }
+  ],
+
+  "metadata": {
+    "generatedFrom": "manual",
+    "category": "meta",
+    "estimatedDuration": "1-2 hours",
+    "learningObjective": "Teach MiniBob to orchestrate multi-component development"
+  }
+}
