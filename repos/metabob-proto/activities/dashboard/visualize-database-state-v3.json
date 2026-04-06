@@ -1,0 +1,126 @@
+{
+  "id": "visualize:database-state:v3",
+  "name": "Visualize Database State (v3)",
+  "description": "Create UI components showing SurrealDB schema, table counts, recent records, and data health. Dynamically discovers tables and passes data between tasks via temp files for reliable data flow.",
+  "tags": ["dashboard", "visualization", "database", "schema", "v3"],
+  "inputSchema": {
+    "optional": [
+      { "shape": "table_name", "description": "Focus on specific table" },
+      { "shape": "limit", "description": "Number of recent records to show" }
+    ]
+  },
+  "outputSchema": {
+    "produces": [
+      { "shape": "ui_component", "description": "Database state dashboard", "collection": true },
+      { "shape": "analysis_file", "description": "Schema JSON at /tmp/db-schema.json" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "tableName",
+      "type": "string",
+      "required": false,
+      "description": "Focus on specific table"
+    },
+    {
+      "name": "limit",
+      "type": "number",
+      "required": false,
+      "default": 10,
+      "description": "Number of recent records to show"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "discover-schema",
+      "description": "Dynamically discover database schema by querying the backend API and write results to temp file",
+      "prompt": {
+        "template": "Discover the database schema dynamically by querying the activity API.\n\nFollow these steps in order:\n\n## Step 1: Verify API Connectivity\nUse query_activity_api with '/health' to verify connectivity.\n\n## Step 2: Discover Table Structures\nFor each endpoint, query with limit=1 to discover structure:\n- Use query_activity_api with '/v2/activities/templates?limit=1' to discover template table structure\n- Use query_activity_api with '/v2/activities/execution-traces?limit=1' to discover trace structure\n- Use query_activity_api with '/v2/activities/tool-argument-patterns?limit=1' to discover patterns structure\n- Use query_activity_api with '/v2/activities/shapes?limit=1' to discover shapes structure\n\n## Step 3: Analyze Responses\nFor each endpoint, examine the response structure to determine:\n- Available fields and their types\n- Whether the endpoint exists (404 means table may not exist)\n- Sample data structure\n\n## Step 4: Save Schema to File (REQUIRED)\nAfter discovering all tables, you MUST use the write tool to save the JSON to /tmp/db-schema.json.\n\nExample usage:\n```\nwrite({\n  path: '/tmp/db-schema.json',\n  content: JSON.stringify({\n    tables: [\n      {\n        name: 'activity_template',\n        endpoint: '/v2/activities/templates',\n        fields: ['id', 'name', 'category', ...],\n        exists: true\n      },\n      ...\n    ],\n    discoveredAt: new Date().toISOString(),\n    apiHealthy: true\n  }, null, 2)\n})\n```\n\nThe file structure must be:\n```json\n{\n  \"tables\": [\n    {\n      \"name\": \"activity_template\",\n      \"endpoint\": \"/v2/activities/templates\",\n      \"fields\": [\"id\", \"name\", \"category\", ...],\n      \"exists\": true\n    },\n    ...\n  ],\n  \"discoveredAt\": \"<ISO timestamp>\",\n  \"apiHealthy\": true\n}\n```\n\nIMPORTANT: This task is not complete until you have called the write tool and created /tmp/db-schema.json. The validation will fail if this file does not exist.",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/db-schema.json"],
+        "requiredPatterns": ["query_activity_api", "write"]
+      }
+    },
+    {
+      "id": "create-schema-overview",
+      "description": "Create a visual overview of the discovered database schema",
+      "dependencies": ["discover-schema"],
+      "prompt": {
+        "template": "READ /tmp/db-schema.json to get the discovered schema information.\n\nCreate a UI component showing database schema overview based on the ACTUAL discovered tables (not hardcoded). Use create_ui_component with:\n\n- Heading: 'Database Schema'\n- A container with cards for EACH table found in the schema file:\n  - Show table name from the discovered schema\n  - Show fields discovered for that table\n  - Show endpoint URL\n  - Indicate if table exists or returned 404\n\nDo NOT hardcode table names - use what was discovered in the schema file.\n\nWRITE the component specification to /tmp/schema-overview-component.json for reference.",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/schema-overview-component.json"],
+        "requiredPatterns": ["create_ui_component", "container"]
+      }
+    },
+    {
+      "id": "fetch-table-counts",
+      "description": "Query for record counts in each discovered table and write to temp file",
+      "dependencies": ["discover-schema"],
+      "prompt": {
+        "template": "READ /tmp/db-schema.json to get the list of discovered tables and their endpoints.\n\nFor EACH table that exists (where exists=true):\n1. Query the endpoint with a small limit to get total count from pagination metadata\n2. Use query_activity_api with each discovered endpoint\n\nWRITE results to /tmp/db-counts.json with structure:\n```json\n{\n  \"counts\": {\n    \"activity_template\": 42,\n    \"execution_trace\": 156,\n    ...\n  },\n  \"queriedAt\": \"<ISO timestamp>\",\n  \"errors\": []\n}\n```\n\nIMPORTANT: Use the actual table names from /tmp/db-schema.json, not hardcoded names.",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/db-counts.json"],
+        "requiredPatterns": ["query_activity_api"]
+      }
+    },
+    {
+      "id": "create-stats-dashboard",
+      "description": "Create a dashboard showing table statistics based on actual counts",
+      "dependencies": ["fetch-table-counts"],
+      "prompt": {
+        "template": "READ /tmp/db-schema.json and /tmp/db-counts.json to get schema info and record counts.\n\nCreate a UI component showing database statistics. Use create_ui_component with:\n\n- Heading: 'Database Statistics'\n- A grid layout with stat cards for EACH discovered table:\n  - Table name: actual count from db-counts.json\n  - Use badge with appropriate variant:\n    - 'success' if count > 10\n    - 'warning' if count is 1-10\n    - 'error' if count is 0\n\n- Add a 'Data Health' progress bar:\n  - Calculate percentage of tables with data (count > 0)\n  - Show percentage value\n\nIf {{tableName}} is specified, highlight that table.\n\nWRITE the component specification to /tmp/stats-dashboard-component.json",
+        "variables": ["tableName"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/stats-dashboard-component.json"],
+        "requiredPatterns": ["create_ui_component", "badge"]
+      }
+    },
+    {
+      "id": "fetch-recent-records",
+      "description": "Fetch recent records from the target table",
+      "dependencies": ["discover-schema"],
+      "prompt": {
+        "template": "READ /tmp/db-schema.json to get the schema information.\n\nDetermine which table to query:\n- If {{tableName}} is specified and exists in schema, use that table's endpoint\n- Otherwise, default to execution_trace endpoint\n\nUse query_activity_api with the appropriate endpoint and limit={{limit}}.\n\nWRITE results to /tmp/recent-records.json with structure:\n```json\n{\n  \"tableName\": \"<actual table name used>\",\n  \"endpoint\": \"<endpoint queried>\",\n  \"records\": [...],\n  \"count\": <number of records returned>,\n  \"columns\": [\"<detected column names>\"]\n}\n```",
+        "variables": ["tableName", "limit"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/recent-records.json"],
+        "requiredPatterns": ["query_activity_api"]
+      }
+    },
+    {
+      "id": "create-recent-records-table",
+      "description": "Create a table showing recent records with dynamically determined columns",
+      "dependencies": ["fetch-recent-records"],
+      "prompt": {
+        "template": "READ /tmp/recent-records.json to get the records and column information.\n\nCreate a UI component showing recent records. Use create_ui_component with:\n\n- Heading: 'Recent <tableName from file>'\n- A data-table with:\n  - Columns: Use the 'columns' array from the file (dynamically determined)\n  - Rows: Use the 'records' array from the file\n  - Limit to {{limit}} rows\n\nDo NOT hardcode column names - use what was discovered in recent-records.json.\n\nFor common tables, format appropriately:\n- Timestamps: Format as human-readable dates\n- Status fields: Use badge variants\n- Duration fields: Show with 'ms' suffix\n\nWRITE the component specification to /tmp/records-table-component.json",
+        "variables": ["limit"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/records-table-component.json"],
+        "requiredPatterns": ["create_ui_component", "data-table"]
+      }
+    }
+  ],
+  "metadata": {
+    "mentor": true,
+    "teaches": ["query_activity_api", "create_ui_component", "schema discovery", "temp file storage", "write tool"],
+    "visualizes": "database-state",
+    "version": 3,
+    "parentVersion": "visualize:database-state:v2",
+    "improvements": [
+      "Explicit write tool instructions with example code",
+      "Step-by-step numbered approach for first task",
+      "Added 'write' to requiredPatterns validation",
+      "Clear IMPORTANT notice about file creation requirement",
+      "Structured prompt with markdown headers for clarity"
+    ]
+  }
+}

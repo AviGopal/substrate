@@ -1,0 +1,116 @@
+{
+  "id": "visualize:learning-loop:v3",
+  "name": "Visualize Learning Loop State (v3)",
+  "description": "Create UI components showing Thompson Sampling state, activity success rates, and template performance metrics. Queries the backend for metrics, stores to temp file, and creates appropriate visualizations assembled into a unified dashboard.",
+  "tags": ["dashboard", "visualization", "learningloop", "metrics"],
+  "inputSchema": {
+    "optional": [
+      { "shape": "activity_id", "description": "Filter to specific activity" },
+      { "shape": "time_range", "description": "Time range for metrics (e.g., '24h', '7d')" }
+    ]
+  },
+  "outputSchema": {
+    "produces": [
+      { "shape": "ui_component", "description": "Learning loop dashboard", "collection": true },
+      { "shape": "analysis_file", "description": "Metrics JSON at /tmp/learning-loop-metrics.json" }
+    ]
+  },
+  "variables": [
+    {
+      "name": "activityId",
+      "type": "string",
+      "required": false,
+      "description": "Filter executions to specific activity"
+    },
+    {
+      "name": "timeRange",
+      "type": "string",
+      "required": false,
+      "default": "24h",
+      "description": "Time range for metrics"
+    },
+    {
+      "name": "metricsFile",
+      "type": "string",
+      "required": false,
+      "default": "/tmp/learning-loop-metrics.json",
+      "description": "Path to store metrics data"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "fetch-and-store-metrics",
+      "description": "Query backend for activity template performance metrics and store to /tmp/learning-loop-metrics.json for subsequent tasks",
+      "prompt": {
+        "template": "Query the activity API for template metrics and store the results to {{metricsFile}}.\n\nFollow these steps in order:\n\n## Step 1: Fetch Templates\nUse query_activity_api with endpoint '/v2/activities/templates' to get all templates with their Thompson Sampling state (alpha, beta values).\n\n## Step 2: Fetch Execution History\nUse query_activity_api with endpoint '/v2/activities/execution-traces?limit=100' to get recent execution history.\n\n## Step 3: Process and Combine Data\n{{#if activityId}}\nFilter executions to only include activity: {{activityId}}\n{{/if}}\n\nCombine the results into a single JSON structure with shape:\n```json\n{\n  \"templates\": [...],\n  \"executions\": [...],\n  \"summary\": {\n    \"totalTemplates\": <number>,\n    \"totalExecutions\": <number>,\n    \"successCount\": <number>,\n    \"failureCount\": <number>,\n    \"avgSuccessRate\": <number between 0 and 1>\n  },\n  \"fetchedAt\": \"<ISO timestamp>\"\n}\n```\n\n## Step 4: Save Metrics to File (REQUIRED)\nAfter computing the combined data, you MUST use the write tool to save the JSON to {{metricsFile}}.\n\nExample usage:\n```\nwrite({\n  path: '{{metricsFile}}',\n  content: JSON.stringify({\n    templates: templatesFromStep1,\n    executions: executionsFromStep2,\n    summary: {\n      totalTemplates: templates.length,\n      totalExecutions: executions.length,\n      successCount: executions.filter(e => e.success).length,\n      failureCount: executions.filter(e => !e.success).length,\n      avgSuccessRate: successCount / totalExecutions\n    },\n    fetchedAt: new Date().toISOString()\n  }, null, 2)\n})\n```\n\nIMPORTANT: This task is not complete until you have called the write tool and created {{metricsFile}}. The validation will fail if this file does not exist.",
+        "variables": ["activityId", "timeRange", "metricsFile"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/learning-loop-metrics.json"],
+        "requiredPatterns": ["query_activity_api", "write"]
+      }
+    },
+    {
+      "id": "create-summary-card",
+      "description": "Create a summary card showing overall learning loop health from the stored metrics file",
+      "dependencies": ["fetch-and-store-metrics"],
+      "prompt": {
+        "template": "Read the metrics from {{metricsFile}} and create a UI component impulse with create_ui_component.\n\nFirst, read {{metricsFile}} to get the summary data.\n\nThen create a container with:\n- id: 'learning-loop-summary'\n- Heading: 'Learning Loop Health'\n- A horizontal layout with 4 stat badges:\n  - Total Templates (count from summary.totalTemplates)\n  - Average Success Rate (percentage from summary.avgSuccessRate, use 'success' variant if >= 70%, 'warning' if >= 50%, 'error' otherwise)\n  - Total Executions (count from summary.totalExecutions)\n  - Active Variants (count unique template variants)\n\nUse the 'badge' primitive with appropriate variants based on thresholds.",
+        "variables": ["metricsFile"]
+      },
+      "validation": {
+        "requiredPatterns": ["create_ui_component", "container", "badge", "read"]
+      }
+    },
+    {
+      "id": "create-thompson-sampling-table",
+      "description": "Create a table showing Thompson Sampling beta distribution parameters for each activity template",
+      "dependencies": ["fetch-and-store-metrics"],
+      "prompt": {
+        "template": "Read the metrics from {{metricsFile}} and create a UI component showing Thompson Sampling state.\n\nFirst, read {{metricsFile}} to get the templates array.\n\nFor each activity template, calculate:\n- Expected success rate: alpha / (alpha + beta)\n- Confidence: 1 / sqrt(alpha + beta)\n\nCreate a UI component with create_ui_component:\n- id: 'thompson-sampling-state'\n- Heading: 'Thompson Sampling State'\n- A data-table with columns:\n  - Activity Name\n  - Alpha (successes + 1)\n  - Beta (failures + 1)\n  - Expected Rate (formatted as percentage)\n  - Confidence (low/medium/high badge based on value)\n\nSort rows by expected success rate descending.\nHighlight rows with low confidence (< 0.3) using warning style - these need more samples.",
+        "variables": ["metricsFile"]
+      },
+      "validation": {
+        "requiredPatterns": ["create_ui_component", "data-table", "read"]
+      }
+    },
+    {
+      "id": "create-execution-visualization",
+      "description": "Create a chart showing recent executions; fallback to table if data is sparse",
+      "dependencies": ["fetch-and-store-metrics"],
+      "prompt": {
+        "template": "Read the metrics from {{metricsFile}} and create a visualization of execution history.\n\nFirst, read {{metricsFile}} to get the executions array.\n\nDetermine visualization type based on data density:\n- If >= 10 executions: use a CHART (primary)\n- If < 10 executions: use a TABLE (fallback for sparse data)\n\nFOR CHART (primary - when >= 10 executions):\nCreate UI component with create_ui_component:\n- id: 'execution-timeline-chart'\n- Heading: 'Execution Timeline ({{timeRange}})'\n- A chart primitive with:\n  - chartType: 'bar'\n  - data: bucket executions by hour\n  - Each bar should show success (green) vs failure (red) stacked\n  - xKey: time bucket\n  - yKey: count\n\nFOR TABLE (fallback - when < 10 executions):\nCreate UI component with create_ui_component:\n- id: 'execution-timeline-table'\n- Heading: 'Recent Executions'\n- A data-table with columns:\n  - Timestamp (formatted)\n  - Activity Name\n  - Status (badge: success=green, failure=red)\n  - Duration (ms)\n  - Cost (USD if available)\n\nAlways include a caption indicating which view is shown and why.",
+        "variables": ["timeRange", "metricsFile"]
+      },
+      "validation": {
+        "requiredPatterns": ["create_ui_component", "read"]
+      }
+    },
+    {
+      "id": "assemble-dashboard",
+      "description": "Combine all visualization components into a unified dashboard layout",
+      "dependencies": ["create-summary-card", "create-thompson-sampling-table", "create-execution-visualization"],
+      "prompt": {
+        "template": "Create a final dashboard container that assembles all the visualization components into a cohesive layout.\n\nUse create_ui_component with:\n- id: 'learning-loop-dashboard'\n- A container with:\n  - layout: 'vertical'\n  - gap: '1.5rem'\n  - style: appropriate padding and background\n  - children (in order):\n    1. Header section:\n       - Heading: 'Learning Loop Dashboard'\n       - Caption: 'Last updated: [current timestamp]'\n    2. Summary section (reference: 'learning-loop-summary')\n       - The summary card with stat badges\n    3. Main content in a 2-column grid:\n       - Left column: Thompson Sampling state table\n       - Right column: Execution visualization (chart or table)\n    4. Footer with:\n       - Refresh button (action: re-run this activity)\n       - Text showing data source: '{{metricsFile}}'\n\nPosition this as the main dashboard view using position: { type: 'flow' }.\n\nNote: Since UI components are already created, this task creates a LAYOUT component that references them by ID or re-embeds the primitives for a unified view.",
+        "variables": ["metricsFile"]
+      },
+      "validation": {
+        "requiredPatterns": ["create_ui_component", "container", "grid"]
+      }
+    }
+  ],
+  "metadata": {
+    "mentor": true,
+    "teaches": ["query_activity_api", "create_ui_component", "thompson sampling visualization", "temp file storage", "write tool"],
+    "visualizes": "learning-loop",
+    "version": 3,
+    "parentVersion": "visualize:learning-loop:v2",
+    "improvements": [
+      "Explicit write tool instructions with example code",
+      "Step-by-step numbered approach for first task",
+      "Added 'write' to requiredPatterns validation",
+      "Clear IMPORTANT notice about file creation requirement",
+      "Structured prompt with markdown headers for clarity"
+    ]
+  }
+}
