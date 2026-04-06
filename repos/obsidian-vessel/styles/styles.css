@@ -1,0 +1,581 @@
+/* Metabob Vessel Plugin Styles */
+
+/* Status bar indicator */
+.metabob-status-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.metabob-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.metabob-status-indicator.connected {
+  background-color: var(--color-green);
+}
+
+.metabob-status-indicator.disconnected {
+  background-color: var(--color-red);
+}
+
+.metabob-status-indicator.syncing {
+  background-color: var(--color-yellow);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Modal styles */
+.metabob-modal {
+  padding: 20px;
+}
+
+.metabob-modal .setting-item {
+  border-top: none;
+  padding-top: 10px;
+}
+
+/* Connection status in settings */
+.metabob-connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: var(--background-secondary);
+}
+
+.metabob-connection-status.connected {
+  border-left: 3px solid var(--color-green);
+}
+
+.metabob-connection-status.disconnected {
+  border-left: 3px solid var(--color-red);
+}
+
+/* Sync indicator */
+.metabob-sync-notice {
+  position: fixed;
+  bottom: 40px;
+  right: 20px;
+  background-color: var(--background-modifier-message);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0;
+  }
+  10%, 90% {
+    opacity: 1;
+  }
+}
+
+/* Canvas vessel markers */
+.metabob-canvas-node-marker {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* ============================================
+   Status Bar Styles
+   ============================================ */
+
+.metabob-status-bar {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.metabob-status-bar .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.metabob-status-bar .status-dot.connected {
+  background-color: var(--color-green);
+}
+
+.metabob-status-bar .status-dot.disconnected {
+  background-color: var(--color-red);
+}
+
+.metabob-status-bar .status-dot.syncing {
+  background-color: var(--color-yellow);
+  animation: pulse 1s infinite;
+}
+
+.metabob-status-bar .status-dot.error {
+  background-color: var(--color-red);
+  animation: pulse 0.5s infinite;
+}
+
+.metabob-status-bar .status-dot.success {
+  background-color: var(--color-green);
+}
+
+.metabob-status-bar.syncing {
+  color: var(--text-muted);
+}
+
+.metabob-status-bar.error {
+  color: var(--color-red);
+}
+
+.metabob-status-bar.success {
+  color: var(--color-green);
+}
+
+/* ============================================
+   Status Modal Styles
+   ============================================ */
+
+.metabob-status-modal {
+  padding: 16px;
+  max-width: 500px;
+}
+
+.metabob-status-modal .status-section {
+  margin-bottom: 20px;
+}
+
+.metabob-status-modal .status-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+}
+
+.metabob-status-modal .status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.metabob-status-modal .status-label {
+  color: var(--text-muted);
+}
+
+.metabob-status-modal .status-value {
+  font-family: var(--font-monospace);
+}
+
+.metabob-status-modal .status-indicator {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.metabob-status-modal .status-indicator.connected {
+  background-color: var(--background-modifier-success);
+  color: var(--color-green);
+}
+
+.metabob-status-modal .status-indicator.disconnected {
+  background-color: var(--background-modifier-error);
+  color: var(--color-red);
+}
+
+.metabob-status-modal .status-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.metabob-status-modal .status-actions button {
+  flex: 1;
+}
+
+.metabob-status-modal .syncing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.metabob-status-modal .syncing-indicator .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.metabob-status-modal .collapsible .collapsible-header {
+  cursor: pointer;
+}
+
+.metabob-status-modal .collapsible .collapsible-header::after {
+  content: ' ▸';
+}
+
+.metabob-status-modal .collapsible.expanded .collapsible-header::after {
+  content: ' ▾';
+}
+
+.metabob-status-modal .collapsible .collapsible-content {
+  display: none;
+  padding-top: 8px;
+}
+
+.metabob-status-modal .collapsible.expanded .collapsible-content {
+  display: block;
+}
+
+/* ============================================
+   Search Modal Styles
+   ============================================ */
+
+.metabob-search-modal {
+  padding: 16px;
+  max-width: 600px;
+}
+
+.metabob-search-modal .search-controls {
+  margin-bottom: 16px;
+}
+
+.metabob-search-modal .search-results {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.metabob-search-modal .loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: var(--text-muted);
+}
+
+.metabob-search-modal .loading-indicator .spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 12px;
+}
+
+.metabob-search-modal .empty-results {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+}
+
+.metabob-search-modal .empty-results .hint-text {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.metabob-search-modal .results-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.metabob-search-modal .results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metabob-search-modal .search-result-item {
+  padding: 12px;
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.metabob-search-modal .search-result-item:hover,
+.metabob-search-modal .search-result-item.hovered {
+  background-color: var(--background-modifier-hover);
+}
+
+.metabob-search-modal .result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metabob-search-modal .status-icon {
+  font-size: 14px;
+}
+
+.metabob-search-modal .status-icon.success {
+  color: var(--color-green);
+}
+
+.metabob-search-modal .status-icon.failure {
+  color: var(--color-red);
+}
+
+.metabob-search-modal .activity-name {
+  flex: 1;
+}
+
+.metabob-search-modal .result-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.metabob-search-modal .error-preview {
+  font-size: 12px;
+  color: var(--color-red);
+  margin-top: 8px;
+  padding: 8px;
+  background-color: var(--background-modifier-error);
+  border-radius: 4px;
+}
+
+.metabob-search-modal .error-text {
+  color: var(--color-red);
+}
+
+/* ============================================
+   Templates Browser Modal Styles
+   ============================================ */
+
+.metabob-templates-modal {
+  padding: 16px;
+  max-width: 700px;
+}
+
+.metabob-templates-modal .templates-controls {
+  margin-bottom: 16px;
+}
+
+.metabob-templates-modal .templates-list {
+  max-height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metabob-templates-modal .template-item {
+  padding: 12px;
+  background-color: var(--background-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.metabob-templates-modal .template-item:hover,
+.metabob-templates-modal .template-item.hovered {
+  background-color: var(--background-modifier-hover);
+}
+
+.metabob-templates-modal .template-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metabob-templates-modal .template-name {
+  font-size: 14px;
+}
+
+.metabob-templates-modal .category-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.metabob-templates-modal .category-badge.category-feature {
+  background-color: var(--color-green);
+  color: white;
+}
+
+.metabob-templates-modal .category-badge.category-bugfix {
+  background-color: var(--color-red);
+  color: white;
+}
+
+.metabob-templates-modal .category-badge.category-refactor {
+  background-color: var(--color-yellow);
+  color: black;
+}
+
+.metabob-templates-modal .category-badge.category-tool {
+  background-color: var(--color-blue);
+  color: white;
+}
+
+.metabob-templates-modal .category-badge.category-infrastructure {
+  background-color: var(--color-purple);
+  color: white;
+}
+
+.metabob-templates-modal .category-badge.category-meta {
+  background-color: var(--text-muted);
+  color: white;
+}
+
+.metabob-templates-modal .type-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: var(--background-modifier-border);
+}
+
+.metabob-templates-modal .template-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.metabob-templates-modal .template-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.metabob-templates-modal .metric-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: var(--background-primary);
+  color: var(--text-muted);
+}
+
+.metabob-templates-modal .metric-badge.success-rate.high {
+  background-color: var(--background-modifier-success);
+  color: var(--color-green);
+}
+
+.metabob-templates-modal .metric-badge.success-rate.medium {
+  background-color: var(--background-modifier-message);
+  color: var(--color-yellow);
+}
+
+.metabob-templates-modal .metric-badge.success-rate.low {
+  background-color: var(--background-modifier-error);
+  color: var(--color-red);
+}
+
+.metabob-templates-modal .template-shapes {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.metabob-templates-modal .shapes-text {
+  font-family: var(--font-monospace);
+  color: var(--text-faint);
+}
+
+.metabob-templates-modal .template-tasks {
+  margin-top: 8px;
+}
+
+.metabob-templates-modal .tasks-count {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* ============================================
+   Execution ID Modal Styles
+   ============================================ */
+
+.metabob-execution-id-modal {
+  padding: 16px;
+  max-width: 450px;
+}
+
+.metabob-execution-id-modal .modal-description {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.metabob-execution-id-modal .example-section {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+}
+
+.metabob-execution-id-modal .example-header {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.metabob-execution-id-modal .example-list {
+  font-size: 11px;
+  font-family: var(--font-monospace);
+  color: var(--text-faint);
+  margin: 0;
+  padding-left: 20px;
+}
+
+.metabob-execution-id-modal .example-list li {
+  margin: 4px 0;
+}
+
+/* ============================================
+   Global Spinner Animation
+   ============================================ */
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}

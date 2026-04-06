@@ -1,0 +1,24 @@
+{
+  "vesselId": "obsidian-vessel",
+  "vesselName": "Obsidian Knowledge Vessel",
+  "version": "0.1.0",
+  "shapes": [
+    "obsidian:note",
+    "obsidian:search",
+    "obsidian:canvas",
+    "obsidian:backlinks",
+    "obsidian:frontmatter",
+    "obsidian:daily_note",
+    "obsidian:graph_query"
+  ],
+  "capabilities": [
+    {
+      "type": "impulse-resolver",
+      "shapes": ["obsidian:note", "obsidian:search", "obsidian:canvas", "obsidian:backlinks", "obsidian:frontmatter", "obsidian:daily_note", "obsidian:graph_query"]
+    },
+    {
+      "type": "http-server",
+      "port": 27182
+    }
+  ]
+}
