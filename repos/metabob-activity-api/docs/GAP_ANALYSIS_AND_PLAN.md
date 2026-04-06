@@ -2,7 +2,28 @@
 
 ## Executive Summary
 
-After inspecting the activity.metabob.com API (metabob-activity-api), we found that the **core infrastructure is well-implemented** but several learning features that are **tracked and stored are NOT used in recommendations**. This document identifies gaps and proposes fixes.
+After inspecting the **live API at https://activity.metabob.com** (2026-04-06), we found:
+
+1. **Infrastructure is deployed and healthy** - SurrealDB (4ms), Redis (1ms) connected
+2. **Templates exist** - 45 activity templates with shapes defined
+3. **Recommendation endpoint works** - Returns Thompson Sampling metadata with boost breakdowns
+4. **CRITICAL: Learning loop is NOT active** - No execution traces, composition data, or goal paths in production
+
+The learning infrastructure exists but **no MiniBob instances are sending execution traces to production**. This means Thompson Sampling has no data to learn from - all scores are based on heuristic priors only.
+
+### Live API State (2026-04-06)
+
+| Endpoint | Data Present | Notes |
+|----------|--------------|-------|
+| `/health` | ✅ Healthy | SurrealDB 4ms, Redis 1ms |
+| `/v2/activities/templates` | ✅ 45 templates | Full shape definitions |
+| `/v2/activities/recommend` | ✅ Works | Returns Thompson metadata, boost breakdown |
+| `/v2/activities/composition/graph` | ❌ Empty | `edges: [], total: 0` |
+| `/v2/activities/goal-paths` | ❌ Empty | `paths: [], total: 0` |
+| `/v2/activities/tool-usage` | ❌ Empty | `patterns: [], total: 0` |
+| `/v2/activities/impulse-relevance` | ❌ Empty | `metrics: [], total: 0` |
+| `/v2/activities/execution-sequences` | ❌ Empty | `sequences: [], total: 0` |
+| `/v2/activities/shapes/network` | ✅ 40+ activities | Shape data populated |
 
 ---
 
@@ -26,11 +47,103 @@ After inspecting the activity.metabob.com API (metabob-activity-api), we found t
 
 | Gap ID | Description | Impact | Priority |
 |--------|-------------|--------|----------|
+| **GAP-00** | **Learning loop not active in production** | No execution traces being recorded; Thompson Sampling has no data | **CRITICAL** |
 | **GAP-01** | Composition graph not used in recommendations | Activities that succeed as children of current context aren't boosted | HIGH |
 | **GAP-02** | Goal paths not used in recommendations | Proven paths for similar goals aren't suggested | HIGH |
 | **GAP-03** | Heuristic boosts may overwhelm learning | ~22 points of boosts can overpower data-driven signal | MEDIUM |
 | **GAP-04** | No activity seeding workflow | No structured way to bootstrap activities from heuristic chains | MEDIUM |
 | **GAP-05** | Missing impulse tracking feedback | Input shapes tracked but not fed back to relevance scoring | LOW |
+
+---
+
+## GAP-00: Learning Loop Not Active (CRITICAL)
+
+### Problem
+
+The production API at https://activity.metabob.com has:
+- ✅ 45 activity templates defined
+- ✅ Healthy SurrealDB and Redis connections
+- ✅ Working recommendation endpoint
+- ❌ **Zero execution traces**
+- ❌ **Zero composition edges**
+- ❌ **Zero goal path data**
+
+This means **Thompson Sampling is running on heuristic priors only** - no learning is happening.
+
+### Root Cause Investigation
+
+Possible reasons no traces are being recorded:
+
+1. **MiniBob not configured for production backend**
+   - Check: `ACTIVITY_API_ENDPOINT` in MiniBob deployments
+   - Expected: `https://activity.metabob.com`
+
+2. **Execution trace recording disabled**
+   - Check: MiniBob's `captureAndStoreTrace()` function
+   - Check: Network connectivity from MiniBob pods to activity API
+
+3. **Authentication failing silently**
+   - Check: JWT/API key auth for `POST /v2/activities/executions`
+   - Check: MiniBob logs for 401/403 errors
+
+4. **No MiniBob instances running activities**
+   - Check: MiniBob deployment status in production
+   - Check: Boredom system activity
+
+### Code Analysis: Trace Storage Flow
+
+**MiniBob stores traces via:**
+1. `mcp.storeExecutionTrace(execution)` in `src/activity.ts:1119`
+2. Sends to: `POST ${endpoint}/v2/activities/execution-traces`
+3. Requires JWT token from AuthService
+
+**Configuration chain:**
+```
+ACTIVITY_API_ENDPOINT → loadConfig() → mcpEndpoint → initializeMCP() → MCPClient.endpoint
+MINIBOB_INSTANCE_ID + MINIBOB_INSTANCE_API_KEY → identityClient.authenticate() → JWT token
+```
+
+**Possible failure points:**
+1. `ACTIVITY_API_ENDPOINT` not set → defaults to local dev endpoint
+2. Identity authentication failing → no JWT token → traces not sent
+3. MiniBob not running activities → no traces generated
+4. Backend health check failing → MCP client not initialized
+
+### Verification Steps
+
+```bash
+# 1. Check MiniBob configuration
+kubectl exec -it deployment/minibob -n activity-system -- \
+  printenv | grep -E "ACTIVITY_API|IDENTITY|INSTANCE"
+
+# 2. Check MiniBob logs for trace storage
+kubectl logs -n activity-system -l app=minibob --tail=100 | \
+  grep -i "execution.*trace\|store.*trace\|bootstrap"
+
+# 3. Check if MCP is initialized
+kubectl logs -n activity-system -l app=minibob --tail=100 | \
+  grep -i "mcp\|client initialized\|backend unavailable"
+
+# 4. Test trace storage endpoint directly
+curl -X POST https://activity.metabob.com/v2/activities/execution-traces \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"activity_id":"test","success":true,"duration_ms":100}'
+
+# 5. Check execution traces count over time
+curl https://activity.metabob.com/v2/activities/execution-traces | jq '.total'
+```
+
+### Fix Plan
+
+1. **Verify MiniBob pods are running** in production cluster
+2. **Check environment variables** in MiniBob deployment:
+   - `ACTIVITY_API_ENDPOINT=https://activity.metabob.com`
+   - `IDENTITY_ENDPOINT=https://identity.metabob.com`
+   - `MINIBOB_INSTANCE_ID` and `MINIBOB_INSTANCE_API_KEY` set
+3. **Check bootstrap logs** for authentication failures
+4. **Run a test activity** and verify trace appears in backend
+5. **Monitor trace count** increasing over time
 
 ---
 
@@ -242,7 +355,19 @@ async function calculateImpulseRelevancyBoosts(
 
 ## Implementation Priority
 
-### Phase 1: High-Impact Quick Wins (Week 1)
+### Phase 0: Activate Learning Loop (IMMEDIATE - Day 1)
+
+| Task | Gap | Effort | Impact |
+|------|-----|--------|--------|
+| Diagnose why no traces in production | GAP-00 | 2h | **CRITICAL** |
+| Verify MiniBob → Activity API connectivity | GAP-00 | 1h | **CRITICAL** |
+| Fix authentication/configuration issues | GAP-00 | 2h | **CRITICAL** |
+| Run test activity end-to-end | GAP-00 | 1h | **CRITICAL** |
+| Verify trace count increasing | GAP-00 | 1h | **CRITICAL** |
+
+**Without Phase 0, all other improvements are meaningless** - there's no data to learn from.
+
+### Phase 1: Quick Wins (Week 1, after Phase 0)
 
 | Task | Gap | Effort | Impact |
 |------|-----|--------|--------|
@@ -255,7 +380,7 @@ async function calculateImpulseRelevancyBoosts(
 | Task | Gap | Effort | Impact |
 |------|-----|--------|--------|
 | Implement boost scaling by data confidence | GAP-03 | 1h | MEDIUM |
-| Add boost breakdown to recommendation response | - | 1h | LOW |
+| Add boost breakdown to recommendation response | - | Already done ✅ | - |
 | Add A/B test flag for boost configurations | - | 2h | MEDIUM |
 
 ### Phase 3: Seeding & Feedback (Week 3-4)
