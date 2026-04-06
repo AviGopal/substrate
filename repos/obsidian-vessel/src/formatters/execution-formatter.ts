@@ -4,7 +4,7 @@
  * Converts execution traces to Obsidian-compatible markdown notes.
  */
 
-import type { ExecutionTrace, TaskExecution, ToolCall, StateSnapshot } from '../types';
+import type { ExecutionTrace, TaskExecution, ToolCall, StateSnapshot, ComponentChange } from '../types';
 import type { MetabobVesselSettings } from '../settings';
 import {
   generateFrontmatter,
@@ -125,7 +125,12 @@ export class ExecutionFormatter {
 
     // Error section (if failed)
     if (!execution.success && execution.error_message) {
-      parts.push(this.formatError(execution.error_message));
+      parts.push(this.formatError(execution));
+    }
+
+    // Component changes section (if present)
+    if (execution.component_changes && execution.component_changes.length > 0) {
+      parts.push(this.formatComponentChanges(execution.component_changes));
     }
 
     // Footer with links
@@ -323,10 +328,18 @@ export class ExecutionFormatter {
   private formatStateChanges(snapshot: StateSnapshot): string {
     const lines: string[] = [];
 
+    // Extract file changes from both nested and flat formats
+    const filesCreated = snapshot.output_state?.filesCreated ?? snapshot.filesCreated ?? snapshot.files_created ?? [];
+    const filesModified = snapshot.output_state?.filesModified ?? snapshot.filesModified ?? snapshot.files_modified ?? [];
+    const filesDeleted = snapshot.output_state?.filesDeleted ?? snapshot.filesDeleted ?? snapshot.files_deleted ?? [];
+    const workingDir = snapshot.stateTransition?.workingDirectory ?? snapshot.workingDirectory;
+    const exitCode = snapshot.output_state?.exitCode;
+
     const hasChanges =
-      (snapshot.filesModified?.length ?? 0) > 0 ||
-      (snapshot.filesCreated?.length ?? 0) > 0 ||
-      (snapshot.filesDeleted?.length ?? 0) > 0;
+      filesModified.length > 0 ||
+      filesCreated.length > 0 ||
+      filesDeleted.length > 0 ||
+      exitCode !== undefined;
 
     if (!hasChanges) {
       return '';
@@ -335,35 +348,112 @@ export class ExecutionFormatter {
     lines.push('## State Changes');
     lines.push('');
 
-    if (snapshot.filesCreated && snapshot.filesCreated.length > 0) {
+    // Summary stats
+    const totalChanges = filesCreated.length + filesModified.length + filesDeleted.length;
+    if (totalChanges > 0) {
+      lines.push(`**Total Files Changed:** ${totalChanges}`);
+      lines.push('');
+    }
+
+    if (filesCreated.length > 0) {
       lines.push('### Files Created');
       lines.push('');
-      for (const file of snapshot.filesCreated) {
-        lines.push(`- (+) \`${file}\``);
+      for (const file of filesCreated) {
+        lines.push(`- ✚ \`${file}\``);
       }
       lines.push('');
     }
 
-    if (snapshot.filesModified && snapshot.filesModified.length > 0) {
+    if (filesModified.length > 0) {
       lines.push('### Files Modified');
       lines.push('');
-      for (const file of snapshot.filesModified) {
-        lines.push(`- (~) \`${file}\``);
+      for (const file of filesModified) {
+        lines.push(`- ✎ \`${file}\``);
       }
       lines.push('');
     }
 
-    if (snapshot.filesDeleted && snapshot.filesDeleted.length > 0) {
+    if (filesDeleted.length > 0) {
       lines.push('### Files Deleted');
       lines.push('');
-      for (const file of snapshot.filesDeleted) {
-        lines.push(`- (-) \`${file}\``);
+      for (const file of filesDeleted) {
+        lines.push(`- ✖ \`${file}\``);
       }
       lines.push('');
     }
 
-    if (snapshot.workingDirectory) {
-      lines.push(`**Working Directory:** \`${snapshot.workingDirectory}\``);
+    // Working directory and exit code
+    if (workingDir || exitCode !== undefined) {
+      lines.push('### Execution Context');
+      lines.push('');
+      if (workingDir) {
+        lines.push(`- **Working Directory:** \`${workingDir}\``);
+      }
+      if (exitCode !== undefined) {
+        const exitIcon = exitCode === 0 ? '✓' : '✗';
+        lines.push(`- **Exit Code:** ${exitIcon} \`${exitCode}\``);
+      }
+      lines.push('');
+    }
+
+    // Input state summary (if available)
+    if (snapshot.input_state) {
+      const inputFiles = snapshot.input_state.filesAvailable ?? [];
+      const inputImpulses = snapshot.input_state.impulses ?? [];
+      if (inputFiles.length > 0 || inputImpulses.length > 0) {
+        lines.push('<details>');
+        lines.push('<summary>Input State</summary>');
+        lines.push('');
+        if (inputFiles.length > 0) {
+          lines.push(`- **Files Available:** ${inputFiles.length}`);
+        }
+        if (inputImpulses.length > 0) {
+          lines.push(`- **Impulses:** ${inputImpulses.length}`);
+        }
+        lines.push('</details>');
+        lines.push('');
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  private formatComponentChanges(changes: ComponentChange[]): string {
+    const lines: string[] = [];
+
+    lines.push('## Component Changes');
+    lines.push('');
+
+    // Group by change type
+    const added = changes.filter(c => c.change_type === 'added');
+    const modified = changes.filter(c => c.change_type === 'modified');
+    const deleted = changes.filter(c => c.change_type === 'deleted');
+
+    lines.push(`**Total:** ${changes.length} components (✚${added.length} ✎${modified.length} ✖${deleted.length})`);
+    lines.push('');
+
+    lines.push('| Component | Type | Change | File |');
+    lines.push('|-----------|------|--------|------|');
+
+    for (const change of changes) {
+      const changeIcon = change.change_type === 'added' ? '✚' :
+                         change.change_type === 'modified' ? '✎' : '✖';
+      const fileName = change.file_path.split('/').pop() ?? change.file_path;
+      lines.push(`| \`${change.component_name}\` | ${change.component_type} | ${changeIcon} ${change.change_type} | \`${fileName}\` |`);
+    }
+
+    lines.push('');
+
+    // Show reasons if any
+    const withReasons = changes.filter(c => c.reason);
+    if (withReasons.length > 0) {
+      lines.push('<details>');
+      lines.push('<summary>Change Reasons</summary>');
+      lines.push('');
+      for (const change of withReasons) {
+        lines.push(`- **${change.component_name}**: ${change.reason}`);
+      }
+      lines.push('</details>');
       lines.push('');
     }
 
@@ -392,12 +482,17 @@ export class ExecutionFormatter {
     return lines.join('\n');
   }
 
-  private formatError(errorMessage: string): string {
+  private formatError(execution: ExecutionTrace): string {
     const lines: string[] = [];
+    const errorMessage = execution.error_message ?? 'Unknown error';
 
     lines.push('## Error');
     lines.push('');
-    lines.push('> [!error] Execution Failed');
+
+    // Error type badge (if available)
+    const errorType = execution.error_type ?? 'unknown';
+    const errorTypeEmoji = this.getErrorTypeEmoji(errorType);
+    lines.push(`> [!error] ${errorTypeEmoji} ${this.formatErrorType(errorType)}`);
     lines.push('>');
 
     // Handle multi-line error messages
@@ -407,6 +502,33 @@ export class ExecutionFormatter {
     }
 
     lines.push('');
+
+    // Error metadata table
+    lines.push('| Property | Value |');
+    lines.push('|----------|-------|');
+    lines.push(`| Type | \`${errorType}\` |`);
+    if (execution.failed_task_id) {
+      lines.push(`| Failed Task | \`${execution.failed_task_id}\` |`);
+    }
+    // Exit code from output_state
+    const exitCode = execution.state_snapshot?.output_state?.exitCode;
+    if (exitCode !== undefined && exitCode !== 0) {
+      lines.push(`| Exit Code | \`${exitCode}\` |`);
+    }
+    lines.push('');
+
+    // Stderr (if available)
+    const stderr = execution.state_snapshot?.output_state?.stderr;
+    if (stderr && stderr.length > 0) {
+      lines.push('<details>');
+      lines.push('<summary>Standard Error Output</summary>');
+      lines.push('');
+      lines.push('```');
+      lines.push(stderr.length > 1000 ? stderr.substring(0, 1000) + '...' : stderr);
+      lines.push('```');
+      lines.push('</details>');
+      lines.push('');
+    }
 
     // Add code block for technical details
     if (errorMessage.length > 100) {
@@ -421,6 +543,28 @@ export class ExecutionFormatter {
     }
 
     return lines.join('\n');
+  }
+
+  private getErrorTypeEmoji(errorType: string): string {
+    const emojiMap: Record<string, string> = {
+      'tool_error': '(🔧)',
+      'validation_error': '(❌)',
+      'timeout': '(⏱️)',
+      'llm_error': '(🤖)',
+      'permission_error': '(🔒)',
+      'network_error': '(🌐)',
+      'resource_error': '(📦)',
+      'unknown': '(❓)',
+    };
+    return emojiMap[errorType] ?? '(❓)';
+  }
+
+  private formatErrorType(errorType: string): string {
+    // Convert snake_case to Title Case
+    return errorType
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   private formatFooter(execution: ExecutionTrace): string {

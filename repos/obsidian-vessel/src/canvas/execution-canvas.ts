@@ -53,6 +53,21 @@ const CATEGORY_COLORS: Record<string, CanvasColor> = {
 };
 
 /**
+ * Color mapping for error types.
+ * Used to visually distinguish different failure modes.
+ */
+const ERROR_TYPE_COLORS: Record<string, CanvasColor> = {
+  'tool_error': '1',         // Red - tool failures
+  'validation_error': '2',   // Orange - validation issues
+  'timeout': '3',            // Yellow - timeouts
+  'llm_error': '6',          // Purple - LLM issues
+  'permission_error': '1',   // Red - permission denied
+  'network_error': '5',      // Cyan - connectivity
+  'resource_error': '2',     // Orange - resource issues
+  'unknown': '1'             // Red - unknown errors
+};
+
+/**
  * Builds execution visualization canvases.
  * Displays execution traces as connected nodes in Obsidian canvas.
  */
@@ -298,15 +313,79 @@ export class ExecutionCanvasBuilder {
 
   /**
    * Create canvas nodes for executions.
+   * Includes file nodes for execution notes and label nodes for activity names.
    */
   private createExecutionNodes(
     executions: ExecutionTrace[],
     positions: Map<string, Position>
   ): CanvasNode[] {
-    return executions.map(exec => {
+    const nodes: CanvasNode[] = [];
+
+    // Track which activities we've already labeled to avoid duplicates
+    const labeledActivities = new Map<string, Position>();
+
+    for (const exec of executions) {
       const pos = positions.get(exec.execution_id) || { x: 0, y: 0 };
-      return this.createFileNode(exec, pos);
-    });
+
+      // Add the file node
+      nodes.push(this.createFileNode(exec, pos));
+
+      // Add activity label if this is the first execution of this activity
+      // or if the previous execution was a different activity
+      const activityKey = exec.activity_id;
+      if (!labeledActivities.has(activityKey)) {
+        labeledActivities.set(activityKey, pos);
+
+        // Create a small label node above the first file node of each activity
+        const activityName = exec.template_name || exec.activity_id;
+        nodes.push(this.createActivityLabelNode(exec, pos, activityName));
+      }
+    }
+
+    return nodes;
+  }
+
+  /**
+   * Create a small text node label for an activity.
+   */
+  private createActivityLabelNode(
+    exec: ExecutionTrace,
+    pos: Position,
+    activityName: string
+  ): CanvasTextNode {
+    return {
+      id: `label-${exec.activity_id}-${exec.execution_id}`,
+      type: 'text',
+      x: pos.x,
+      y: pos.y - 50,
+      width: 200,
+      height: 40,
+      text: `**${activityName}**`,
+      color: this.getActivityCategoryColor(exec)
+    } as CanvasTextNode;
+  }
+
+  /**
+   * Get color based on activity category (inferred from activity_id).
+   */
+  private getActivityCategoryColor(exec: ExecutionTrace): CanvasColor {
+    const activityId = exec.activity_id.toLowerCase();
+    if (activityId.includes('bugfix') || activityId.includes('fix')) {
+      return CATEGORY_COLORS.bugfix;
+    }
+    if (activityId.includes('feature') || activityId.includes('add')) {
+      return CATEGORY_COLORS.feature;
+    }
+    if (activityId.includes('refactor')) {
+      return CATEGORY_COLORS.refactor;
+    }
+    if (activityId.includes('tool')) {
+      return CATEGORY_COLORS.tool;
+    }
+    if (activityId.includes('infra')) {
+      return CATEGORY_COLORS.infrastructure;
+    }
+    return '5'; // Default cyan
   }
 
   /**
@@ -339,7 +418,7 @@ export class ExecutionCanvasBuilder {
   }
 
   /**
-   * Get color based on execution status.
+   * Get color based on execution status and error type.
    */
   private getStatusColor(exec: ExecutionTrace): CanvasColor {
     if (exec.success) {
@@ -349,6 +428,11 @@ export class ExecutionCanvasBuilder {
     // Partial success: some tasks completed
     if (exec.tasks_completed && exec.tasks_total && exec.tasks_completed > 0 && exec.tasks_completed < exec.tasks_total) {
       return STATUS_COLORS.partial;
+    }
+
+    // Use error type color for failed executions
+    if (exec.error_type && ERROR_TYPE_COLORS[exec.error_type]) {
+      return ERROR_TYPE_COLORS[exec.error_type];
     }
 
     return STATUS_COLORS.failed;
@@ -366,6 +450,7 @@ export class ExecutionCanvasBuilder {
 
   /**
    * Create edges based on execution sequence.
+   * Includes activity transition labels when activities change.
    */
   private createSequentialEdges(executions: ExecutionTrace[]): CanvasEdge[] {
     const edges: CanvasEdge[] = [];
@@ -377,14 +462,31 @@ export class ExecutionCanvasBuilder {
 
     // Connect sequential executions
     for (let i = 0; i < sorted.length - 1; i++) {
-      edges.push({
-        id: `edge-${sorted[i].execution_id}-${sorted[i + 1].execution_id}`,
-        fromNode: sorted[i].execution_id,
-        toNode: sorted[i + 1].execution_id,
+      const from = sorted[i];
+      const to = sorted[i + 1];
+
+      // Create edge with activity transition label when activities change
+      const edge: CanvasEdge = {
+        id: `edge-${from.execution_id}-${to.execution_id}`,
+        fromNode: from.execution_id,
+        toNode: to.execution_id,
         fromSide: 'right',
         toSide: 'left',
         toEnd: 'arrow'
-      });
+      };
+
+      // Add label when transitioning between different activities
+      if (from.activity_id !== to.activity_id) {
+        const toName = to.template_name || to.activity_id;
+        edge.label = `→ ${toName}`;
+      }
+
+      // Color edge based on transition success
+      if (!from.success) {
+        edge.color = STATUS_COLORS.failed;
+      }
+
+      edges.push(edge);
     }
 
     return edges;
