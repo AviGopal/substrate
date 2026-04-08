@@ -1,0 +1,111 @@
+{
+  "id": "development:dashboard-feature-complete:v1",
+  "name": "Dashboard Feature Complete",
+  "description": "End-to-end implementation of a complete dashboard feature including page component, API integration, navigation, and testing. Combines page creation, API integration, and validation in a full workflow.",
+  "tags": ["development.dashboard", "development.feature", "development.complete"],
+  "category": "development",
+  "variables": [
+    {
+      "name": "featureName",
+      "description": "Name of the feature to implement (e.g., 'Member Management', 'Usage Analytics', 'Activity Traces')",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "featureDescription",
+      "description": "Detailed description of what the feature should do and display",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "pageName",
+      "description": "Page component name (e.g., 'Members', 'UsageAnalytics', 'ExecutionTraces')",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "pageId",
+      "description": "Page route ID (e.g., 'members', 'usage-analytics', 'execution-traces')",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "iconName",
+      "description": "Sidebar icon (emoji or text)",
+      "required": false,
+      "type": "string",
+      "default": "📄"
+    },
+    {
+      "name": "apiEndpoints",
+      "description": "Comma-separated list of API endpoints needed (e.g., '/v2/users, /v2/costs')",
+      "required": false,
+      "type": "string",
+      "default": ""
+    }
+  ],
+  "input_shapes": ["file_exists"],
+  "output_shapes": ["file_exists", "typescript_compiles", "tests_pass"],
+  "tasks": [
+    {
+      "id": "plan-feature",
+      "description": "Analyze requirements and create detailed implementation plan",
+      "prompt": {
+        "template": "Plan the implementation for the {{featureName}} dashboard feature.\n\n**Feature Description**: {{featureDescription}}\n**Page**: {{pageName}} (route: {{pageId}})\n**API Endpoints**: {{apiEndpoints}}\n\n## Your Task\n\n1. **Understand Requirements**:\n   - What data needs to be displayed?\n   - What user interactions are needed?\n   - What API calls are required?\n   - What UI components will be used (shadcn/ui)?\n\n2. **Analyze Existing Code**:\n   - Review repos/metabob-cloud-dashboard/src/pages/ for similar pages\n   - Review repos/metabob-cloud-dashboard/src/lib/api/ for API patterns\n   - Check repos/metabob-cloud-dashboard/src/types/api.ts for type patterns\n   - Look at Sidebar.tsx and App.tsx for routing patterns\n\n3. **Identify Components Needed**:\n   - What shadcn components (Card, Table, Button, etc.)?\n   - Any custom components needed?\n   - State management approach (useState, useEffect)?\n\n4. **Plan API Integration**:\n   - What TypeScript types are needed?\n   - What API client functions to create?\n   - Where to add them (which file in lib/api/)?\n\n5. **Create Implementation Plan**:\n   Create /tmp/dashboard-feature-plan-{{pageId}}.md:\n   ```markdown\n   # Feature Implementation Plan: {{featureName}}\n\n   ## Overview\n   {{featureDescription}}\n\n   ## Files to Create/Modify\n   - [ ] src/pages/{{pageName}}.tsx (create)\n   - [ ] src/types/api.ts (add types)\n   - [ ] src/lib/api/[file].ts (add API functions)\n   - [ ] src/components/Sidebar.tsx (add nav item)\n   - [ ] src/App.tsx (add route)\n\n   ## TypeScript Types Needed\n   - Type1: Description\n   - Type2: Description\n\n   ## API Functions Needed\n   - function1(): Description\n   - function2(): Description\n\n   ## Page Components\n   - Main layout structure\n   - Data display components (table, cards, etc.)\n   - User interaction elements (buttons, forms, filters)\n\n   ## Implementation Steps\n   1. Define TypeScript types\n   2. Create API client functions\n   3. Create page component with basic layout\n   4. Add data fetching and state management\n   5. Implement UI components\n   6. Add routing and navigation\n   7. Test functionality\n\n   ## Success Criteria\n   - [ ] Page renders without errors\n   - [ ] Data loads from API\n   - [ ] UI matches description\n   - [ ] Navigation works\n   - [ ] TypeScript compiles\n   ```",
+        "variables": ["featureName", "featureDescription", "pageName", "pageId", "apiEndpoints"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/dashboard-feature-plan-{{pageId}}.md"],
+        "requiredPatterns": ["## Files to Create/Modify", "## Implementation Steps", "## Success Criteria"]
+      }
+    },
+    {
+      "id": "implement-types-and-api",
+      "description": "Implement TypeScript types and API client functions",
+      "prompt": {
+        "template": "Implement TypeScript types and API integration based on the plan.\n\n**Reference**: /tmp/dashboard-feature-plan-{{pageId}}.md\n\n## Your Task\n\n1. **Add TypeScript Types** to repos/metabob-cloud-dashboard/src/types/api.ts:\n   - Define interfaces for all data types needed\n   - Include all fields based on API endpoints\n   - Add JSDoc comments\n   - Export all types\n\n   Example:\n   ```typescript\n   /**\n    * Represents a [description]\n    */\n   export interface TypeName {\n     id: string;\n     name: string;\n     createdAt: string;\n     // other fields\n   }\n   ```\n\n2. **Create API Client Functions**:\n   - Determine which file in src/lib/api/ to use (or create new one)\n   - Import types from @/types/api\n   - Import apiRequest from './client'\n   - Create functions for each endpoint\n   - Add error handling\n   - Add JSDoc comments\n\n   Example:\n   ```typescript\n   import type { TypeName } from '@/types/api';\n   import { apiRequest } from './client';\n\n   /**\n    * Fetches [description]\n    */\n   export async function getItems(): Promise<TypeName[]> {\n     const response = await apiRequest('GET', '/v2/endpoint');\n     return response.data;\n   }\n   ```\n\n3. **Test Compilation**:\n   ```bash\n   cd repos/metabob-cloud-dashboard\n   bun run typecheck\n   ```\n   Fix any errors.\n\n4. **Document Changes**:\n   Create /tmp/api-implementation-{{pageId}}.md:\n   ```markdown\n   # API Implementation: {{featureName}}\n\n   ## Types Added\n   - Type1: Description and fields\n   - Type2: Description and fields\n\n   ## Functions Created\n   - function1(): What it does, endpoint used\n   - function2(): What it does, endpoint used\n\n   ## Files Modified\n   - src/types/api.ts: Added X types\n   - src/lib/api/[file].ts: Added Y functions\n\n   ## Next Steps\n   - Ready to create page component\n   ```",
+        "variables": ["pageId", "featureName"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/api-implementation-{{pageId}}.md"],
+        "requiredPatterns": ["export.*interface", "export.*function", "apiRequest"]
+      }
+    },
+    {
+      "id": "create-page-component",
+      "description": "Create the page component with UI and data fetching",
+      "prompt": {
+        "template": "Create the {{pageName}} page component.\n\n**Reference**: /tmp/dashboard-feature-plan-{{pageId}}.md\n\n**File**: repos/metabob-cloud-dashboard/src/pages/{{pageName}}.tsx\n\n## Your Task\n\n1. **Set up imports**:\n   ```typescript\n   import { useState, useEffect } from 'react';\n   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';\n   import { Button } from '@/components/ui/button';\n   // Import other shadcn components as needed\n   import { cn } from '@/lib/utils';\n   import type { TypeName } from '@/types/api';\n   import { getItems } from '@/lib/api/[file]';\n   ```\n\n2. **Create functional component**:\n   ```typescript\n   export function {{pageName}}() {\n     const [data, setData] = useState<TypeName[]>([]);\n     const [loading, setLoading] = useState(true);\n     const [error, setError] = useState<string | null>(null);\n\n     useEffect(() => {\n       loadData();\n     }, []);\n\n     const loadData = async () => {\n       try {\n         setLoading(true);\n         const result = await getItems();\n         setData(result);\n       } catch (err) {\n         setError(err instanceof Error ? err.message : 'Failed to load data');\n       } finally {\n         setLoading(false);\n       }\n     };\n\n     return (\n       <div className=\"space-y-6\">\n         <Card>\n           <CardHeader>\n             <CardTitle>{{pageName | titleCase}}</CardTitle>\n             <CardDescription>{{featureDescription}}</CardDescription>\n           </CardHeader>\n           <CardContent>\n             {/* Implement UI based on requirements */}\n           </CardContent>\n         </Card>\n       </div>\n     );\n   }\n   ```\n\n3. **Implement UI based on requirements**:\n   - Use shadcn components (Table for lists, Card for containers, Button for actions)\n   - Show loading state while fetching\n   - Display error messages if API fails\n   - Format data appropriately (dates, numbers, etc.)\n   - Add any filters, search, or pagination if needed\n\n4. **Follow existing patterns** from other pages:\n   - 2-space indentation\n   - Functional components with hooks\n   - Proper TypeScript types\n   - Accessible HTML (aria labels)\n\n5. **Test compilation**:\n   ```bash\n   cd repos/metabob-cloud-dashboard\n   bun run typecheck\n   ```",
+        "variables": ["pageName", "pageId", "featureDescription", "featureName"]
+      },
+      "validation": {
+        "requiredFiles": ["repos/metabob-cloud-dashboard/src/pages/{{pageName}}.tsx"],
+        "requiredPatterns": ["export function {{pageName}}", "useState", "useEffect", "Card"]
+      }
+    },
+    {
+      "id": "add-routing-and-navigation",
+      "description": "Add page to routing and sidebar navigation",
+      "prompt": {
+        "template": "Add routing and navigation for the {{pageName}} page.\n\n## Your Task\n\n1. **Update App.tsx** (repos/metabob-cloud-dashboard/src/App.tsx):\n\n   a. Add import:\n   ```typescript\n   import { {{pageName}} } from \"@/pages/{{pageName}}\";\n   ```\n\n   b. Update Page type:\n   ```typescript\n   type Page = \"api-keys\" | \"settings\" | \"{{pageId}}\" | \"signup\" | \"login\";\n   ```\n\n   c. Add case to renderPage():\n   ```typescript\n   case \"{{pageId}}\":\n     return <{{pageName}} />;\n   ```\n\n2. **Update Sidebar.tsx** (repos/metabob-cloud-dashboard/src/components/Sidebar.tsx):\n\n   Add to navItems array (before \"settings\"):\n   ```typescript\n   { id: \"{{pageId}}\", label: \"{{pageName | titleCase}}\", icon: \"{{iconName}}\" },\n   ```\n\n3. **Verify changes**:\n   ```bash\n   cd repos/metabob-cloud-dashboard\n   bun run typecheck\n   ```\n\n4. **Test navigation** (if possible):\n   - Check that clicking the sidebar item navigates to the page\n   - Verify the route displays the correct component\n\n5. **Document changes**:\n   Create /tmp/routing-{{pageId}}.md:\n   ```markdown\n   # Routing Added: {{featureName}}\n\n   ## Changes Made\n   - ✅ Added import to App.tsx\n   - ✅ Updated Page type union\n   - ✅ Added renderPage() case\n   - ✅ Added navItems entry to Sidebar.tsx\n\n   ## Route Details\n   - Page ID: {{pageId}}\n   - Component: {{pageName}}\n   - Icon: {{iconName}}\n\n   ## Next Steps\n   - Ready for testing\n   ```",
+        "variables": ["pageName", "pageId", "featureName", "iconName"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/routing-{{pageId}}.md"],
+        "requiredPatterns": ["import.*{{pageName}}", "case \"{{pageId}}\"", "id: \"{{pageId}}\""]
+      }
+    },
+    {
+      "id": "test-and-validate",
+      "description": "Test the complete feature end-to-end",
+      "prompt": {
+        "template": "Test and validate the {{featureName}} feature.\n\n## Your Task\n\n1. **TypeScript Compilation**:\n   ```bash\n   cd repos/metabob-cloud-dashboard\n   bun run typecheck\n   ```\n   Ensure no errors.\n\n2. **Build Test** (optional but recommended):\n   ```bash\n   cd repos/metabob-cloud-dashboard\n   bun run build\n   ```\n\n3. **Manual Testing** (if backend is running):\n   - Start the dev server: `bun run dev`\n   - Navigate to the new page in browser\n   - Verify page loads without errors\n   - Check that data loads from API\n   - Test any interactive features (buttons, forms, filters)\n   - Verify styling looks correct\n\n4. **Integration Testing**:\n   - Test navigation from other pages\n   - Verify clicking sidebar item navigates correctly\n   - Check page title and description\n   - Test error states (if API fails)\n   - Test loading states\n\n5. **Code Quality Checks**:\n   - Review for console.log statements (remove them)\n   - Check for TypeScript 'any' types (avoid them)\n   - Verify proper error handling\n   - Ensure accessibility (aria labels, semantic HTML)\n\n6. **Create Test Summary**:\n   Create /tmp/feature-complete-{{pageId}}.md:\n   ```markdown\n   # Feature Complete: {{featureName}}\n\n   ## Implementation Summary\n   - ✅ TypeScript types defined\n   - ✅ API functions implemented\n   - ✅ Page component created\n   - ✅ Routing configured\n   - ✅ Navigation added\n   - ✅ Compilation successful\n\n   ## Files Created/Modified\n   - src/types/api.ts: Added types\n   - src/lib/api/[file].ts: Added API functions\n   - src/pages/{{pageName}}.tsx: Created page component\n   - src/App.tsx: Added routing\n   - src/components/Sidebar.tsx: Added navigation\n\n   ## Testing Results\n   - TypeScript: ✅ Pass\n   - Build: ✅ Pass (or skipped)\n   - Manual: ✅ Pass (or pending backend)\n\n   ## Next Steps\n   - Deploy to canary for validation\n   - Test against live backend\n   - Gather user feedback\n\n   ## Known Issues\n   - None (or list any issues found)\n   ```",
+        "variables": ["featureName", "pageName", "pageId"]
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/feature-complete-{{pageId}}.md"],
+        "requiredPatterns": ["## Implementation Summary", "✅", "## Testing Results"]
+      }
+    }
+  ]
+}

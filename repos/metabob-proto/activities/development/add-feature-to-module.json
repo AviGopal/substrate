@@ -1,0 +1,67 @@
+{
+  "id": "development:add-feature-to-module:v1",
+  "name": "Add Feature to Existing Module",
+  "description": "Adds a new feature or method to an existing module while maintaining consistency with existing code patterns and ensuring tests are updated.",
+  "tags": ["development.feature", "development.enhancement"],
+  "category": "feature",
+  "variables": [
+    {
+      "name": "modulePath",
+      "description": "Path to the module to enhance (e.g., 'src/tasks.ts')",
+      "required": true
+    },
+    {
+      "name": "featureDescription",
+      "description": "Description of the feature to add (e.g., 'Add search by title functionality')",
+      "required": true
+    }
+  ],
+  "input_shapes": ["file_exists", "typescript_compiles"],
+  "output_shapes": ["typescript_compiles", "tests_pass"],
+  "tasks": [
+    {
+      "id": "understand-module",
+      "description": "Read and understand the existing module",
+      "prompt": {
+        "template": "Read {{modulePath}} to understand:\n\n1. The module's purpose and structure\n2. Existing interfaces and types\n3. Existing methods and their patterns\n4. How data is stored/accessed\n5. Error handling patterns\n6. Export patterns\n\nThis understanding will guide how to add the new feature consistently.",
+        "variables": ["modulePath"]
+      },
+      "validation": {
+        "requiredPatterns": ["read"]
+      }
+    },
+    {
+      "id": "plan-implementation",
+      "description": "Plan how to implement the feature",
+      "prompt": {
+        "template": "Plan the implementation for: {{featureDescription}}\n\n1. What new methods/functions are needed?\n2. Are any new interfaces or types required?\n3. Does existing code need modification?\n4. What edge cases should be handled?\n5. How does this integrate with existing functionality?\n\nWrite a brief plan before implementing.",
+        "variables": ["featureDescription"]
+      },
+      "validation": {
+        "requiredPatterns": []
+      }
+    },
+    {
+      "id": "implement-feature",
+      "description": "Implement the new feature",
+      "prompt": {
+        "template": "Implement the feature: {{featureDescription}}\n\n1. Add any new interfaces/types needed\n2. Implement the new method(s)\n3. Follow the existing code style exactly\n4. Add proper TypeScript types\n5. Handle errors consistently with existing code\n6. Update exports if needed\n\nUse the edit tool to modify {{modulePath}}.",
+        "variables": ["featureDescription", "modulePath"]
+      },
+      "validation": {
+        "requiredPatterns": ["edit"]
+      }
+    },
+    {
+      "id": "verify-and-test",
+      "description": "Verify compilation and add tests",
+      "prompt": {
+        "template": "Verify the implementation:\n\n1. Run TypeScript compilation to check for errors\n2. Look for existing tests for this module\n3. Add test cases for the new feature:\n   - Happy path\n   - Edge cases\n   - Error conditions\n4. Run all tests to ensure nothing broke\n\nFix any issues found.",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": ["test"]
+      }
+    }
+  ]
+}
