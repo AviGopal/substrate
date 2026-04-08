@@ -1,7 +1,9 @@
 {
-  "base_url": "http://localhost:8080",
-  "state_directory": ".metabob",
-  "include_paths": [
-    "**/*.py"
-  ]
+  "metabob": {
+    "endpoint": "http://localhost:8080"
+  },
+  "defaults": {
+    "stateDirectory": ".metabob",
+    "includePaths": ["**/*.py"]
+  }
 }

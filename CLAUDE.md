@@ -39,9 +39,12 @@ minibob --single "refactor the Thompson Sampling implementation"
 **MiniBob Config** (`~/.metabob/config.json`):
 ```json
 {
-  "vessels": {
-    "metabob": { "endpoint": "https://activity.metabob.com" },
-    "identity": { "endpoint": "https://identity.metabob.com" }
+  "metabob": {
+    "apiKey": "your-api-key-here",
+    "endpoint": "https://activity.metabob.com"
+  },
+  "providers": {
+    "anthropic": { "apiKey": "sk-ant-..." }
   }
 }
 ```
@@ -593,7 +596,7 @@ resolvectl query surql.metabob.local  # Check resolver path
 
 MiniBob resolves configuration from multiple sources (highest to lowest priority):
 
-1. **Environment variables** (e.g., `ANTHROPIC_API_KEY`, `MINIBOB_INSTANCE_ID`)
+1. **Environment variables** (e.g., `ANTHROPIC_API_KEY`, `METABOB_API_KEY`)
 2. **Project config** (`.metabob/config.json` in project root)
 3. **User config** (`~/.metabob/config.json`)
 4. **Defaults** (hardcoded in MiniBob)
@@ -601,30 +604,21 @@ MiniBob resolves configuration from multiple sources (highest to lowest priority
 **Recommended user config** (`~/.metabob/config.json`):
 ```json
 {
+  "metabob": {
+    "apiKey": "your-metabob-api-key",
+    "endpoint": "https://activity.metabob.com"
+  },
   "providers": {
     "anthropic": { "apiKey": "sk-ant-..." }
   },
-  "instance": {
-    "instanceId": "minibob-local-001",
-    "apiKey": "minibob-local-dev-key",
-    "orgId": "metabob_internal"
-  },
-  "vessels": {
-    "metabob": { "endpoint": "https://activity.metabob.com" },
-    "identity": { "endpoint": "https://identity.metabob.com" }
+  "defaults": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514"
   }
 }
 ```
 
-> **Important**: Always use production endpoints (`https://activity.metabob.com`, `https://identity.metabob.com`), not `.local` endpoints.
-
-### Pre-configured MiniBob Instances
-
-| Instance ID | API Key | Organization | Purpose |
-|-------------|---------|--------------|---------|
-| `minibob-local-001` | `minibob-local-dev-key` | metabob | Local development |
-| `minibob-canary-001` | (in secrets) | metabob | Canary deployments |
-| `minibob-production-001` | (in secrets) | metabob | Production |
+> **Important**: Always use production endpoints (`https://activity.metabob.com`), not `.local` endpoints.
 
 ### Secrets Management (SOPS + Age)
 
@@ -656,12 +650,12 @@ sops -e -i secrets/local.secrets.yaml
 
 **MiniBob:**
 ```bash
-ANTHROPIC_API_KEY           # Required: Anthropic API key
-MINIBOB_INSTANCE_ID         # Instance identifier
-MINIBOB_INSTANCE_API_KEY    # Instance API key
-MINIBOB_ORG_ID              # Organization ID
-ACTIVITY_API_ENDPOINT       # Backend API (default: https://activity.metabob.com)
-LLM_MODEL                   # Default: claude-sonnet-4-20250514
+ANTHROPIC_API_KEY           # Required: Anthropic API key for LLM
+METABOB_API_KEY             # Required: Metabob backend API key
+METABOB_ENDPOINT            # Backend API (default: https://activity.metabob.com)
+MINIBOB_PROVIDER            # LLM provider: anthropic | openai
+MINIBOB_MODEL               # Model to use (default: claude-sonnet-4-20250514)
+MINIBOB_WORKDIR             # Working directory
 ```
 
 **metabob-activity-api:**

@@ -1,5 +1,9 @@
 {
-  "base_url": "http://app.metabob.local/api",
-  "api_key": "mb_2wmCRGJCC69Zup8kVwEYF3r5p5NXIw0JNN3K_q9tC_w",
-  "state_directory": ".metabob"
+  "metabob": {
+    "apiKey": "mb_2wmCRGJCC69Zup8kVwEYF3r5p5NXIw0JNN3K_q9tC_w",
+    "endpoint": "http://app.metabob.local/api"
+  },
+  "defaults": {
+    "stateDirectory": ".metabob"
+  }
 }
