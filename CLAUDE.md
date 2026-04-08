@@ -487,10 +487,9 @@ kubectl get pods -n activity-system
 # Check API health
 curl http://activity.metabob.local/health
 
-# Verify MiniBob authentication
-curl -X POST http://activity.metabob.local/v2/auth/minibob/signin \
-  -H "Content-Type: application/json" \
-  -d '{"instance_id":"minibob-local-001","api_key":"test-api-key-123"}'
+# Verify API key authentication (MiniBob Phase 2)
+curl http://activity.metabob.local/v2/activities/templates \
+  -H "Authorization: ApiKey <your-api-key>"
 ```
 
 **Rollback:**
@@ -589,6 +588,77 @@ If resolution fails, verify with:
 getent hosts surql.metabob.local  # Should return 127.0.0.1
 resolvectl query surql.metabob.local  # Check resolver path
 ```
+
+## Authentication
+
+### API Key Authentication (Current)
+
+All MiniBob instances and clients authenticate using standard API keys managed by the identity service.
+
+**Authentication Flow:**
+```
+1. Client sends: Authorization: ApiKey <key>
+2. Activity-API validates via identity service (primary)
+3. If identity service unavailable, fallback to direct SurrealDB validation
+4. Identity service returns: org_id, user_id, key_id, scopes
+5. Activity-API uses key_id for audit trails
+```
+
+**Request Example:**
+```bash
+curl -X GET https://activity.metabob.com/v2/activities/templates \
+  -H "Authorization: ApiKey <your-api-key>"
+```
+
+**Response:**
+```json
+{
+  "templates": [...]
+}
+```
+
+**Key Points:**
+- **No instance_id required** - API key is sufficient
+- **Identity service manages keys** - Centralized key lifecycle
+- **Automatic fallback** - Direct SurrealDB validation when identity service unavailable
+- **Audit trails use key_id** - All operations tracked by API key ID
+
+### Deprecated: MiniBob Instance Authentication
+
+**Prior to 2026-04-08**, MiniBob instances authenticated using:
+- `instance_id` + `api_key` via `POST /v2/auth/minibob/signin`
+- `minibob_record` SurrealDB ACCESS method
+- `minibob_instance` table
+
+**Migration 052** deprecated this approach:
+- Removed `minibob_record` ACCESS method
+- Made `minibob_instance` table read-only
+- All new authentication uses API keys only
+
+**Rollback:** If needed, uncomment the ACCESS method in `sql/000-auth-schema.surql`
+
+### Multi-Tenant Isolation
+
+Authentication automatically enforces multi-tenant isolation:
+
+**SurrealDB PERMISSIONS:**
+- All multi-tenant tables filter by `WHERE org_id = $auth.org_id`
+- No application-level filtering needed
+- Database enforces isolation at query level
+
+**Usage Pattern:**
+```typescript
+// Use authenticated connection - PERMISSIONS enforced automatically
+const db = await createAuthenticatedClient(jwtToken);
+const templates = await db.query(`SELECT * FROM activity_template`);
+// Returns only templates for $auth.org_id
+```
+
+**Authentication Methods:**
+| Method | Use Case | Token Lifetime | Scopes |
+|--------|----------|----------------|--------|
+| **API Key** | MiniBob, IDE integrations | Auto-refresh | read, write |
+| **JWT External** | Dashboard users | 15 minutes | Varies by role |
 
 ## Configuration
 

@@ -1,6 +1,25 @@
 #!/bin/bash
-# MiniBob Authentication Helper
-# Creates/retrieves JWT tokens for MiniBob development
+#
+# ⚠️  DEPRECATED: MiniBob Authentication Helper ⚠️
+#
+# This script authenticates against the DEPRECATED minibob_instance table.
+# As of 2026-04-08, MiniBob uses API key authentication via identity-vessel.
+#
+# ⛔ DO NOT USE for new development.
+#
+# This script is retained ONLY for:
+# - Backward compatibility testing with legacy instances
+# - Emergency rollback scenarios
+# - Development against pre-migration environments
+#
+# For new authentication, use identity-vessel API keys instead:
+#   1. Create API key via identity-vessel: POST /v1/auth/api-keys
+#   2. Configure in ~/.metabob/config.json: { "metabob": { "apiKey": "..." } }
+#   3. MiniBob will auto-refresh tokens using the API key
+#
+# See: repos/identity-vessel/CLAUDE.md for current authentication
+#
+# ──────────────────────────────────────────────────────────────────────
 
 set -e
 
@@ -61,9 +80,16 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 usage() {
-    echo "MiniBob Authentication Helper"
+    echo "⚠️  DEPRECATED: MiniBob Authentication Helper ⚠️"
     echo ""
-    echo "Usage: $0 <command>"
+    echo "This script is DEPRECATED as of 2026-04-08."
+    echo "Use identity-vessel API key authentication instead."
+    echo ""
+    echo "See: repos/identity-vessel/CLAUDE.md for current authentication"
+    echo ""
+    echo "════════════════════════════════════════════════════════════════"
+    echo ""
+    echo "LEGACY Usage: $0 <command>"
     echo ""
     echo "Commands:"
     echo "  login       Sign in and cache JWT token"
