@@ -14,13 +14,9 @@
 mb_test-metabob-users:kre88ea3i1vmuj1gd12a-key_3K9gkHVhjtQuanRb-e65d59559fcd30902341179137f0208a
 ```
 
-**Scopes:**
-- `activities:read`
-- `activities:write`
-- `templates:read`
-- `templates:write`
-
-**Expires:** 2027-04-09 (365 days)
+**Scopes:** activities:*, templates:*
+**Expires:** 2027-04-09
+**Purpose:** Initial testing and validation
 
 ### 2. Read-Only Key
 
@@ -28,11 +24,39 @@ mb_test-metabob-users:kre88ea3i1vmuj1gd12a-key_3K9gkHVhjtQuanRb-e65d59559fcd3090
 mb_test-metabob-users:kre88ea3i1vmuj1gd12a-key_pdxcMaWJTjNqBhm1-d766abe650ac07366f6ec1b82a8253d8
 ```
 
-**Scopes:**
-- `activities:read`
-- `templates:read`
+**Scopes:** activities:read, templates:read
+**Expires:** 2027-04-09
+**Purpose:** Testing read-only access patterns
 
-**Expires:** 2027-04-09 (365 days)
+### 3. MiniBob Production Key
+
+```
+mb_test-metabob-users:kre88ea3i1vmuj1gd12a-key_JJM_DN589SFgyUfG-a754169a17463acdb48bcb461c5d6e33
+```
+
+**Scopes:** activities:*, templates:*
+**Expires:** 2027-04-09
+**Purpose:** MiniBob production deployment
+
+### 4. CI/CD Integration Key
+
+```
+mb_test-metabob-users:kre88ea3i1vmuj1gd12a-key_LJiGOBiQpNlgbYii-8fe2ff32e9bc423f98f74a1de0d495a7
+```
+
+**Scopes:** activities:*, templates:read
+**Expires:** 2027-04-09
+**Purpose:** CI/CD pipelines (can write traces, read templates)
+
+### 5. Dashboard View Key
+
+```
+mb_test-metabob-users:kre88ea3i1vmuj1gd12a-key_94gfa-XWIKNDKim_-8a8e2fdc5fa58d3756e7ded460201144
+```
+
+**Scopes:** activities:read, templates:read
+**Expires:** 2027-04-09
+**Purpose:** Dashboard and monitoring tools (read-only)
 
 ## Key Format
 
@@ -90,9 +114,26 @@ To use these keys with MiniBob, add to `~/.metabob/config.json`:
 }
 ```
 
+## Quick Reference by Purpose
+
+| Purpose | Key | Scopes |
+|---------|-----|--------|
+| **Production MiniBob** | `...key_JJM_DN589SFgyUfG...` | Full access (read/write) |
+| **CI/CD Pipelines** | `...key_LJiGOBiQpNlgbYii...` | Write traces, read templates |
+| **Dashboard/Monitoring** | `...key_94gfa-XWIKNDKim_...` | Read-only |
+| **Development/Testing** | `...key_3K9gkHVhjtQuanRb...` | Full access (original) |
+| **Read-Only Testing** | `...key_pdxcMaWJTjNqBhm1...` | Read-only (original) |
+
 ## Management Scripts
 
-### Create Additional Keys
+### Generate Keys Directly
+
+```bash
+# Quick key generation via identity-vessel API
+bun run scripts/generate-key.ts
+```
+
+### Create Additional Keys via Commission Script
 
 ```bash
 bun run scripts/commission-canary.ts apikey create \
