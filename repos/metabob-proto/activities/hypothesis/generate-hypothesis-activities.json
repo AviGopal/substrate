@@ -36,15 +36,15 @@
           }
         ]
       },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/hypothesis-{{sessionId}}/CODEBASE_ANALYSIS.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "## Architecture",
             "description": "Must include architecture section"
@@ -54,7 +54,7 @@
             "description": "Must list hypotheses"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "retry": {
@@ -71,15 +71,15 @@
         "template": "Based on the codebase analysis, create hypothesis activity templates.\n\n**Input**: Read `/tmp/hypothesis-{{sessionId}}/CODEBASE_ANALYSIS.md`\n\n**Your Task**: For each hypothesis listed, create an activity template that:\n1. Tests whether the hypothesis is true\n2. Uses validators to check expectations vs observations\n3. Captures execution traces for learning\n\n**Activity Template Structure** (New Paradigm Schema):\n\n```json\n{\n  \"id\": \"hypothesis_{{kebab-case-description}}\",\n  \"name\": \"Check: {{Human-readable hypothesis}}\",\n  \"description\": \"Test hypothesis: {{hypothesis statement}}\",\n  \"execution_type\": \"template\",\n  \"input_shapes\": [\"source_code\"],\n  \"output_shapes\": [\"trace\"],\n  \"tasks\": [\n    {\n      \"id\": \"test_{{aspect}}\",\n      \"description\": \"Test specific aspect of hypothesis\",\n      \"prompt\": {\n        \"template\": \"Read {{files}} and check if {{condition}}\",\n        \"variables\": [{\"name\": \"files\", \"type\": \"string\", \"required\": true}]\n      },\n      \"validation\": {\n        \"required_files\": [\"expected files if hypothesis is true\"],\n        \"required_patterns\": [\"patterns that must exist if hypothesis is true\"],\n        \"forbidden_patterns\": [\"patterns that indicate hypothesis is false\"]\n      }\n    }\n  ]\n}\n```\n\n**Common Hypothesis Categories**:\n\n1. **Existence Hypotheses**:\n   - \"Feature X already exists\"\n   - Validators: Check for files, imports, function definitions\n\n2. **Architecture Hypotheses**:\n   - \"Uses Express middleware pattern\"\n   - Validators: Check for app.use(), router patterns\n\n3. **Dependency Hypotheses**:\n   - \"Uses Redis for caching\"\n   - Validators: Check package.json, imports, client initialization\n\n4. **Data Flow Hypotheses**:\n   - \"Requests go through authentication middleware\"\n   - Validators: Check middleware chain, route definitions\n\n**Output**: Create `/tmp/hypothesis-{{sessionId}}/hypothesis_activities.json`\n\nStructure:\n```json\n{\n  \"session_id\": \"{{sessionId}}\",\n  \"learning_goal\": \"{{learningGoal}}\",\n  \"generated_at\": \"{{timestamp}}\",\n  \"activities\": [\n    { /* activity 1 */ },\n    { /* activity 2 */ },\n    { /* activity 3 */ }\n  ]\n}\n```\n\n**Generate 3-5 hypothesis activities** that comprehensively test understanding of the codebase.",
         "variables": []
       },
-      "context_rules": {
-        "max_tokens": 12000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 12000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/hypothesis-{{sessionId}}/hypothesis_activities.json"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "\"execution_type\": \"template\"",
             "description": "Must use template execution type"
@@ -93,7 +93,7 @@
             "description": "Must define input shapes"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": [
           {
             "command": "cat /tmp/hypothesis-{{sessionId}}/hypothesis_activities.json | jq empty",
@@ -115,15 +115,15 @@
         "template": "Register the generated hypothesis activities with the backend.\n\n**Input**: Read `/tmp/hypothesis-{{sessionId}}/hypothesis_activities.json`\n\n**Your Task**:\n1. Parse the generated activities JSON\n2. For each activity, call the MCP tool to register it\n3. Create a summary report\n\n**Use MCP Tool**: `register_activity_template`\n\nFor each activity in the array:\n```typescript\nregister_activity_template({\n  file_path: \"/tmp/hypothesis-{{sessionId}}/hypothesis_{{activity.id}}.json\",\n  register_with_metabob: true\n})\n```\n\n**Output**: Create `/tmp/hypothesis-{{sessionId}}/REGISTRATION_SUMMARY.md`\n\nStructure:\n```markdown\n# Hypothesis Activities Generated\n\n**Session**: {{sessionId}}  \n**Learning Goal**: {{learningGoal}}  \n**Generated**: {{count}} activities\n\n## Activities\n\n### 1. {{activity.name}}\n- **ID**: `{{activity.id}}`\n- **Tests**: {{activity.description}}\n- **Validators**: {{validator count}}\n- **Status**: ✅ Registered\n\n### 2. ...\n\n## Next Steps\n\n1. Execute hypothesis activities:\n   ```typescript\n   run_goal({ activity_id: \"hypothesis_{{id}}\" })\n   ```\n\n2. Review execution traces to confirm/refute hypotheses\n\n3. Use `interpret-test-results` to decide next actions\n```",
         "variables": []
       },
-      "context_rules": {
-        "max_tokens": 10000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/hypothesis-{{sessionId}}/REGISTRATION_SUMMARY.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "✅ Registered",
             "description": "Must confirm registration"
@@ -133,7 +133,7 @@
             "description": "Must include next steps"
           }
         ],
-        "forbidden_patterns": [
+        "forbiddenPatterns": [
           {
             "pattern": "❌",
             "description": "No failures allowed"

@@ -3,7 +3,7 @@
   "name": "Test Unauthorized Secret Access",
   "description": "Red team: attempt to access secrets without proper authentication or authorization",
   "category": "security",
-  "variant_id": "inspect-unauthorized-access",
+  "id": "inspect-unauthorized-access",
   "learning_mode": "inverse",
   "success_when": "vulnerability_found",
   "contextRequirements": [
@@ -47,16 +47,16 @@
           }
         ]
       },
-      "context_rules": {
-        "max_tokens": 2000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 2000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/vulnerability-found.txt"
         ],
-        "required_patterns": [],
-        "forbidden_patterns": [],
+        "requiredPatterns": [],
+        "forbiddenPatterns": [],
         "commands": [
           "test -f /tmp/vulnerability-found.txt"
         ]
@@ -89,12 +89,12 @@
           }
         ]
       },
-      "context_rules": {
-        "max_tokens": 2000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 2000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [],
+        "requiredFiles": [],
         "commands": []
       },
       "model_hint": "haiku"
@@ -133,11 +133,11 @@
         "variables": []
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/test-summary.txt",
           "/tmp/test-success.txt"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           "Vulnerabilities Found:"
         ],
         "commands": [

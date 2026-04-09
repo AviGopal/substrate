@@ -10,8 +10,8 @@
       "dependencies": [],
       "prompt": {
         "template": "Validate the content of an impulse to ensure it's not corrupted or invalid.\n\n**Impulse Type:**\n{{impulseType}}\n\n**Impulse Content Preview:**\n{{contentPreview}}\n\n**Expected Format:**\n{{expectedFormat}}\n\nCheck for:\n1. **Empty/null content**: Is content missing when it should exist?\n2. **Format mismatch**: If type is JSON, is it valid JSON? If file, does it look like expected file content?\n3. **Truncation**: Does content appear cut off or incomplete?\n4. **Error messages**: Does content contain error messages instead of data?\n5. **Binary corruption**: For text impulses, does content contain binary/unprintable characters?\n\nRespond in this exact format:\n```json\n{\n  \"valid\": true|false,\n  \"corruption_type\": \"none|empty|malformed|truncated|error|binary\",\n  \"confidence\": 0.0-1.0,\n  \"reasoning\": \"explanation\",\n  \"suggested_action\": \"retry|skip|use_fallback|report\"\n}\n```\n\nBe conservative: if unsure, mark as potentially corrupted.",
-        "max_tokens": 1500,
-        "compression_strategy": "filter",
+        "maxTokens": 1500,
+        "compressionStrategy": "filter",
         "variables": [
           {
             "name": "impulseType",
@@ -34,13 +34,13 @@
         ]
       },
       "validation": {
-        "required_files": [],
-        "required_patterns": [
+        "requiredFiles": [],
+        "requiredPatterns": [
           "valid",
           "corruption_type",
           "reasoning"
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "retry": {
@@ -52,6 +52,6 @@
   "variables": {},
   "version": 1,
   "contextRequirements": [],
-  "variant_id": "reliability:validate-impulse-content-v1",
+  "id": "reliability:validate-impulse-content-v1",
   "activity_id": "reliability:validate-impulse-content"
 }

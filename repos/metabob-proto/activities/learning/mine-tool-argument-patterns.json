@@ -1,0 +1,106 @@
+{
+  "id": "mine-tool-argument-patterns",
+  "name": "Mine Tool Argument Patterns from Traces",
+  "version": 1,
+  "description": "Extract successful tool argument patterns from execution traces. Enables argument prediction without LLM reasoning.",
+  "category": "tool",
+  "tags": [
+    "learning.trace",
+    "learning.arguments",
+    "ribosome.patterns"
+  ],
+  "execution_type": "template",
+  "input_shapes": ["trace", "execution_trace"],
+  "output_shapes": ["tool_pattern", "recommendation"],
+  "variables": [
+    {
+      "name": "toolName",
+      "type": "string",
+      "required": true,
+      "description": "Tool to analyze (e.g., 'write', 'bash', 'edit')"
+    },
+    {
+      "name": "minSamples",
+      "type": "number",
+      "required": false,
+      "default": 10,
+      "description": "Minimum samples for pattern confidence"
+    },
+    {
+      "name": "outputDir",
+      "type": "string",
+      "required": false,
+      "default": "/tmp/argument-patterns",
+      "description": "Output directory"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "collect-tool-calls",
+      "description": "Collect all calls to the target tool from successful traces",
+      "dependencies": [],
+      "prompt": {
+        "template": "Collect all {{toolName}} tool calls from successful execution traces.\n\n**Query the backend**:\n\n```bash\n# Query execution traces\ncurl -s 'https://activity.metabob.com/v2/activities/execution-traces?status=success&limit=100' \\\n  -H 'Accept: application/json' | \\\n  jq '[.executions[].execution_data.tasks[].toolCalls[] | select(.tool == \"{{toolName}}\")]'\n```\n\nAlternatively, query the tool_argument_patterns table directly if available.\n\n**For each tool call, extract**:\n- argument_shape: Hash of argument structure\n- arguments: The actual argument values\n- context: What goal/activity used this\n- success: Did the overall execution succeed?\n- execution_ms: How long did this call take?\n\n**Output**: Create `{{outputDir}}/{{toolName}}_calls.json`\n\n```json\n{\n  \"tool\": \"{{toolName}}\",\n  \"total_calls\": 150,\n  \"successful_calls\": 142,\n  \"calls\": [\n    {\n      \"argument_shape\": \"file_path:content\",\n      \"arguments\": {\n        \"file_path\": \"test.txt\",\n        \"content\": \"hello world\"\n      },\n      \"goal_context\": \"write hello world to test.txt\",\n      \"activity_id\": \"improvise\",\n      \"success\": true,\n      \"execution_ms\": 50\n    }\n  ]\n}\n```",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["{{outputDir}}/{{toolName}}_calls.json"]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    },
+    {
+      "id": "cluster-argument-shapes",
+      "description": "Group tool calls by argument shape to find patterns",
+      "dependencies": ["collect-tool-calls"],
+      "prompt": {
+        "template": "Cluster {{toolName}} calls by argument shape.\n\n**Input**: Read `{{outputDir}}/{{toolName}}_calls.json`\n\n**Clustering Strategy**:\n\n1. **Group by argument keys**:\n   - `{file_path, content}` → write-with-content\n   - `{file_path}` → write-empty-or-append\n   - `{command}` → bash-simple\n   - `{command, timeout}` → bash-with-timeout\n\n2. **For each cluster, calculate**:\n   - Success rate\n   - Average execution time\n   - Common value patterns\n   - Goal context patterns\n\n3. **Identify high-value patterns**:\n   - High success rate (>90%)\n   - High frequency (>10 calls)\n   - Fast execution (<100ms)\n\n**Output**: Create `{{outputDir}}/{{toolName}}_clusters.json`\n\n```json\n{\n  \"tool\": \"{{toolName}}\",\n  \"clusters\": [\n    {\n      \"shape\": \"file_path:content\",\n      \"argument_keys\": [\"file_path\", \"content\"],\n      \"sample_count\": 85,\n      \"success_rate\": 0.95,\n      \"avg_execution_ms\": 45,\n      \"value_patterns\": {\n        \"file_path\": {\n          \"common_extensions\": [\".json\", \".txt\", \".ts\"],\n          \"common_prefixes\": [\"./\", \"/tmp/\", \"src/\"]\n        },\n        \"content\": {\n          \"avg_length\": 250,\n          \"common_types\": [\"json\", \"text\", \"code\"]\n        }\n      },\n      \"goal_patterns\": [\n        \"write * to *\",\n        \"create * with *\",\n        \"save * as *\"\n      ]\n    }\n  ]\n}\n```",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["{{outputDir}}/{{toolName}}_clusters.json"],
+        "requiredPatterns": [
+          { "pattern": "clusters", "description": "Must have clustered patterns" }
+        ]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    },
+    {
+      "id": "extract-argument-predictors",
+      "description": "Create argument predictors from high-confidence clusters",
+      "dependencies": ["cluster-argument-shapes"],
+      "prompt": {
+        "template": "Extract argument predictors from clusters.\n\n**Input**: Read `{{outputDir}}/{{toolName}}_clusters.json`\n\n**Predictor Design**:\n\nFor each high-confidence cluster (success_rate > 0.9, sample_count >= {{minSamples}}):\n\nCreate a predictor that can infer arguments from goal text.\n\n**Example Predictor**:\n\nCluster: `file_path:content` for write tool\n\n```json\n{\n  \"predictor_id\": \"write:file_path:content\",\n  \"tool\": \"write\",\n  \"argument_shape\": \"file_path:content\",\n  \"confidence\": 0.95,\n  \"sample_size\": 85,\n  \"extractors\": {\n    \"file_path\": {\n      \"type\": \"regex\",\n      \"patterns\": [\n        \"(?:write|save|create).*(?:to|as|in)\\\\s+([\\\\w./\\\\-]+\\\\.[a-z]+)\",\n        \"([\\\\w./\\\\-]+\\\\.[a-z]+)\\\\s+(?:file|with)\"\n      ],\n      \"fallback\": null\n    },\n    \"content\": {\n      \"type\": \"quoted_or_json\",\n      \"patterns\": [\n        \"'([^']+)'\",\n        \"\\\"([^\\\"]+)\\\"\",\n        \"\\\\{[^}]+\\\\}\"\n      ],\n      \"fallback\": null\n    }\n  },\n  \"validation\": {\n    \"file_path\": {\n      \"must_match\": \"\\\\.[a-z]+$\",\n      \"must_not_match\": \"\\\\.\\\\./\"\n    }\n  }\n}\n```\n\n**Output**: Create `{{outputDir}}/{{toolName}}_predictors.json`\n\n```json\n{\n  \"tool\": \"{{toolName}}\",\n  \"generated_at\": \"{{timestamp}}\",\n  \"predictors\": [\n    {\n      \"predictor_id\": \"{{toolName}}:{{shape}}\",\n      \"confidence\": 0.95,\n      \"extractors\": { ... },\n      \"validation\": { ... }\n    }\n  ],\n  \"coverage\": {\n    \"total_calls\": 150,\n    \"predictable_calls\": 130,\n    \"coverage_rate\": 0.87\n  }\n}\n```",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["{{outputDir}}/{{toolName}}_predictors.json"],
+        "requiredPatterns": [
+          { "pattern": "extractors", "description": "Must have argument extractors" }
+        ]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    },
+    {
+      "id": "generate-usage-report",
+      "description": "Generate report on argument pattern mining results",
+      "dependencies": ["extract-argument-predictors"],
+      "prompt": {
+        "template": "Generate the final argument pattern mining report.\n\n**Input**: Read all files from `{{outputDir}}/`\n\n**Output**: Create `{{outputDir}}/PATTERN_MINING_REPORT.md`\n\n```markdown\n# Tool Argument Pattern Mining: {{toolName}}\n\n## Executive Summary\n\n- **Tool Analyzed**: {{toolName}}\n- **Total Calls Analyzed**: {{total_calls}}\n- **Unique Argument Shapes**: {{cluster_count}}\n- **Predictable Patterns**: {{predictor_count}}\n- **Coverage Rate**: {{coverage_rate}}%\n\n## High-Value Patterns\n\n### Pattern 1: {{shape}}\n\n**Usage**: {{sample_count}} calls ({{success_rate}}% success)\n\n**Argument Structure**:\n| Argument | Type | Extraction Method |\n|----------|------|-------------------|\n| file_path | string | regex: `write .* to (.+)` |\n| content | string | quoted string or JSON |\n\n**Example Goals**:\n- \"write hello to test.txt\" → `{file_path: \"test.txt\", content: \"hello\"}`\n- \"save config as data.json\" → `{file_path: \"data.json\", content: \"config\"}`\n\n**Predictor Confidence**: 95%\n\n### Pattern 2: ...\n\n## Coverage Analysis\n\n```\nTotal {{toolName}} calls: {{total}}\n├── Predictable (no LLM needed): {{predictable}} ({{%}})\n│   ├── Pattern A: {{count}}\n│   ├── Pattern B: {{count}}\n│   └── Pattern C: {{count}}\n└── Requires LLM: {{unpredictable}} ({{%}})\n    └── Complex/novel argument combinations\n```\n\n## Impact\n\n### Before Pattern Mining\n- Every {{toolName}} call required LLM reasoning\n- Avg latency: ~3000ms (LLM inference)\n- Avg cost: ~$0.002 per call\n\n### After Pattern Mining\n- {{coverage_rate}}% of calls use deterministic extraction\n- Avg latency: ~50ms (regex + validation)\n- Avg cost: $0.00 per call\n\n### Savings Per 1000 Calls\n- Time saved: ~{{hours}} hours\n- Cost saved: ~${{amount}}\n\n## Integration\n\n### Register Predictors\n\n```bash\n# Upload predictors to backend\ncurl -X POST 'https://activity.metabob.com/v2/tool-argument-patterns' \\\n  -H 'Content-Type: application/json' \\\n  -d @{{outputDir}}/{{toolName}}_predictors.json\n```\n\n### Usage in MiniBob\n\n```typescript\n// Before tool execution:\nconst predictor = getToolArgumentPredictor(toolName, argumentShape);\nif (predictor && predictor.confidence > 0.9) {\n  const args = predictor.extract(goalText);\n  if (args.valid) {\n    return executeTool(toolName, args.value); // Skip LLM\n  }\n}\n// Fallback to LLM\nreturn improviseTool(toolName, goalText);\n```\n\n## Recommendations\n\n1. **Immediate**: Register top 3 predictors ({{coverage}}% coverage)\n2. **Short-term**: Add validation for edge cases\n3. **Long-term**: Auto-generate predictors from new traces\n\n## Next Steps\n\n1. Run pattern mining for other tools: `bash`, `edit`, `read`\n2. Create combined predictor index\n3. Integrate with Thompson Sampling for pattern selection\n```",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["{{outputDir}}/PATTERN_MINING_REPORT.md"],
+        "requiredPatterns": [
+          { "pattern": "## Executive Summary", "description": "Must have summary" },
+          { "pattern": "## Impact", "description": "Must quantify impact" }
+        ]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    }
+  ],
+  "metadata": {
+    "purpose": "Extract tool argument patterns for deterministic prediction",
+    "innovation": "Replace LLM argument inference with pattern-based extraction",
+    "learning_loop": "Tool calls → Argument shapes → Predictors → Faster execution"
+  }
+}

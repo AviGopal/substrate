@@ -10,8 +10,8 @@
       "dependencies": [],
       "prompt": {
         "template": "You are analyzing whether an activity execution actually moved toward achieving a goal.\n\n**Original Goal:**\n{{goalDescription}}\n\n**Activity Executed:**\n{{activityId}}\n\n**Execution Summary:**\n- Status: {{executionStatus}}\n- Files Modified: {{filesModified}}\n- Files Created: {{filesCreated}}\n- Duration: {{duration}}ms\n\n**Task Results:**\n{{taskResults}}\n\nAnalyze this execution and determine:\n1. Did it move toward the goal? (yes/no/partial)\n2. Alignment score (0.0 = completely misaligned, 1.0 = perfectly aligned)\n3. Reasoning (1-2 sentences)\n\nRespond in this exact format:\n```json\n{\n  \"aligned\": true|false,\n  \"score\": 0.0-1.0,\n  \"reasoning\": \"explanation here\"\n}\n```\n\nBe critical: activities can complete successfully but not address the goal.\nExamples of misalignment:\n- Goal was \"fix login bug\" but activity only added tests\n- Goal was \"optimize performance\" but activity just refactored without improving speed\n- Goal was \"add feature X\" but activity worked on unrelated feature Y",
-        "max_tokens": 1000,
-        "compression_strategy": "filter",
+        "maxTokens": 1000,
+        "compressionStrategy": "filter",
         "variables": [
           {
             "name": "goalDescription",
@@ -58,12 +58,12 @@
         ]
       },
       "validation": {
-        "required_files": [],
-        "required_patterns": [
+        "requiredFiles": [],
+        "requiredPatterns": [
           "score",
           "reasoning"
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "retry": {
@@ -75,6 +75,6 @@
   "variables": {},
   "version": 1,
   "contextRequirements": [],
-  "variant_id": "reliability:verify-goal-alignment-v1",
+  "id": "reliability:verify-goal-alignment-v1",
   "activity_id": "reliability:verify-goal-alignment"
 }

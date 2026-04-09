@@ -1,0 +1,234 @@
+{
+  "activity_id": "react-ui-integration",
+  "name": "Integrate Business Logic with UI Components",
+  "description": "Connect React components to business logic, state management, and data fetching",
+  "category": "feature",
+  "version": 1,
+  "contextRequirements": [],
+  "variables": [
+    {
+      "name": "featureName",
+      "type": "string",
+      "required": true,
+      "description": "Name of the feature being integrated (e.g., 'UserAuthentication', 'TodoList')"
+    },
+    {
+      "name": "featureDescription",
+      "type": "string",
+      "required": true,
+      "description": "Description of what this feature does"
+    },
+    {
+      "name": "dataSource",
+      "type": "string",
+      "required": false,
+      "default": "api",
+      "description": "Data source type: 'api', 'local-storage', 'context', or 'state'"
+    },
+    {
+      "name": "componentsDir",
+      "type": "string",
+      "required": false,
+      "default": "src/components",
+      "description": "Directory containing UI components"
+    },
+    {
+      "name": "apiEndpoint",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "API endpoint URL if dataSource is 'api'"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "create-custom-hooks",
+      "subagent": "general",
+      "description": "Create custom React hooks for business logic and data fetching",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create custom React hooks for the {{featureName}} feature.\n\n**Your Task**: Create hooks that encapsulate business logic and data operations.\n\n**Hook Patterns**:\n\n### 1. Data Fetching Hook (if dataSource is 'api')\n\n**File**: `src/hooks/use{{featureName}}Data.ts`\n\n```typescript\nimport { useState, useEffect } from 'react';\n\ninterface Use{{featureName}}DataResult<T> {\n  data: T | null;\n  loading: boolean;\n  error: Error | null;\n  refetch: () => void;\n}\n\nexport function use{{featureName}}Data<T>(\n  endpoint: string\n): Use{{featureName}}DataResult<T> {\n  const [data, setData] = useState<T | null>(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState<Error | null>(null);\n  \n  const fetchData = async () => {\n    setLoading(true);\n    setError(null);\n    \n    try {\n      const response = await fetch(endpoint);\n      if (!response.ok) {\n        throw new Error(`HTTP error! status: ${response.status}`);\n      }\n      const result = await response.json();\n      setData(result);\n    } catch (err) {\n      setError(err instanceof Error ? err : new Error('Unknown error'));\n    } finally {\n      setLoading(false);\n    }\n  };\n  \n  useEffect(() => {\n    fetchData();\n  }, [endpoint]);\n  \n  return { data, loading, error, refetch: fetchData };\n}\n```\n\n### 2. State Management Hook (if dataSource is 'state')\n\n**File**: `src/hooks/use{{featureName}}State.ts`\n\n```typescript\nimport { useState, useCallback } from 'react';\n\ninterface {{featureName}}State {\n  // Define state shape\n}\n\nexport function use{{featureName}}State() {\n  const [state, setState] = useState<{{featureName}}State>({\n    // Initial state\n  });\n  \n  const updateState = useCallback((updates: Partial<{{featureName}}State>) => {\n    setState(prev => ({ ...prev, ...updates }));\n  }, []);\n  \n  const resetState = useCallback(() => {\n    setState({\n      // Reset to initial state\n    });\n  }, []);\n  \n  return {\n    state,\n    updateState,\n    resetState,\n  };\n}\n```\n\n### 3. Local Storage Hook (if dataSource is 'local-storage')\n\n**File**: `src/hooks/use{{featureName}}Storage.ts`\n\n```typescript\nimport { useState, useEffect } from 'react';\n\nfunction getStorageValue<T>(key: string, defaultValue: T): T {\n  try {\n    const saved = localStorage.getItem(key);\n    return saved ? JSON.parse(saved) : defaultValue;\n  } catch {\n    return defaultValue;\n  }\n}\n\nexport function use{{featureName}}Storage<T>(\n  key: string,\n  defaultValue: T\n) {\n  const [value, setValue] = useState<T>(() => \n    getStorageValue(key, defaultValue)\n  );\n  \n  useEffect(() => {\n    try {\n      localStorage.setItem(key, JSON.stringify(value));\n    } catch (error) {\n      console.error('Failed to save to localStorage:', error);\n    }\n  }, [key, value]);\n  \n  return [value, setValue] as const;\n}\n```\n\n### 4. Business Logic Hook\n\n**File**: `src/hooks/use{{featureName}}.ts`\n\n```typescript\nimport { use{{featureName}}Data } from './use{{featureName}}Data';\nimport { use{{featureName}}State } from './use{{featureName}}State';\n\nexport function use{{featureName}}() {\n  // Combine data fetching + state management\n  const { data, loading, error, refetch } = use{{featureName}}Data('{{apiEndpoint}}');\n  const { state, updateState } = use{{featureName}}State();\n  \n  // Business logic methods\n  const handleAction = async (payload: any) => {\n    try {\n      // Perform action\n      updateState({ /* new state */ });\n      await refetch();\n    } catch (error) {\n      console.error('Action failed:', error);\n    }\n  };\n  \n  return {\n    data,\n    loading,\n    error,\n    state,\n    handleAction,\n    refetch,\n  };\n}\n```\n\n**Create the appropriate hooks based on dataSource: {{dataSource}}**\n\n**Also create** `src/hooks/index.ts` for barrel exports:\n```typescript\nexport { use{{featureName}} } from './use{{featureName}}';\nexport { use{{featureName}}Data } from './use{{featureName}}Data';\n// ... other exports\n```"
+      },
+      "validation": {
+        "requiredFiles": [
+          "src/hooks/use{{featureName}}.ts",
+          "src/hooks/index.ts"
+        ],
+        "requiredPatterns": [
+          "import",
+          "export function use",
+          "useState",
+          "useEffect"
+        ],
+        "forbiddenPatterns": [
+          "console.log",
+          "debugger",
+          "any"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-type-definitions",
+      "subagent": "general",
+      "description": "Create TypeScript type definitions for data models",
+      "dependencies": [],
+      "prompt": {
+        "template": "Create TypeScript type definitions for {{featureName}}.\n\n**Your Task**: Define all types, interfaces, and enums for this feature.\n\n**File**: `src/types/{{featureName}}.types.ts`\n\n**Type Definition Patterns**:\n\n```typescript\n// Domain models\nexport interface {{featureName}}Item {\n  id: string;\n  createdAt: Date;\n  updatedAt: Date;\n  // ... other fields\n}\n\n// API request/response types\nexport interface {{featureName}}ApiResponse {\n  data: {{featureName}}Item[];\n  total: number;\n  page: number;\n}\n\nexport interface Create{{featureName}}Request {\n  // Request payload fields\n}\n\nexport interface Update{{featureName}}Request {\n  id: string;\n  // Update fields\n}\n\n// Component props types\nexport interface {{featureName}}ListProps {\n  items: {{featureName}}Item[];\n  onItemClick?: (item: {{featureName}}Item) => void;\n  loading?: boolean;\n}\n\nexport interface {{featureName}}FormProps {\n  initialValues?: Partial<{{featureName}}Item>;\n  onSubmit: (values: Create{{featureName}}Request) => Promise<void>;\n  onCancel?: () => void;\n}\n\n// State types\nexport interface {{featureName}}State {\n  items: {{featureName}}Item[];\n  selectedItem: {{featureName}}Item | null;\n  filters: {{featureName}}Filters;\n  sort: {{featureName}}Sort;\n}\n\nexport interface {{featureName}}Filters {\n  search?: string;\n  status?: {{featureName}}Status;\n}\n\nexport type {{featureName}}Sort = 'newest' | 'oldest' | 'name';\n\n// Enums\nexport enum {{featureName}}Status {\n  Active = 'active',\n  Inactive = 'inactive',\n  Pending = 'pending',\n}\n\n// Utility types\nexport type {{featureName}}Id = string;\nexport type Partial{{featureName}}Item = Partial<{{featureName}}Item>;\n```\n\n**Best Practices**:\n\n1. **Use interfaces for object shapes**:\n   ```typescript\n   interface User {\n     id: string;\n     name: string;\n   }\n   ```\n\n2. **Use type for unions/intersections**:\n   ```typescript\n   type Status = 'active' | 'inactive';\n   type UserWithRole = User & { role: string };\n   ```\n\n3. **Use enums for fixed sets**:\n   ```typescript\n   enum Role {\n     Admin = 'admin',\n     User = 'user',\n   }\n   ```\n\n4. **Prefix API types clearly**:\n   ```typescript\n   interface UserApiResponse { }\n   interface CreateUserRequest { }\n   ```\n\n5. **Export everything**:\n   ```typescript\n   export interface ...\n   export type ...\n   export enum ...\n   ```\n\n**Create comprehensive type definitions for {{featureName}}**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "src/types/{{featureName}}.types.ts"
+        ],
+        "requiredPatterns": [
+          "export interface",
+          "export type"
+        ],
+        "forbiddenPatterns": [
+          "any",
+          "unknown",
+          "TODO"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "integrate-with-components",
+      "subagent": "general",
+      "description": "Connect custom hooks and types to UI components",
+      "dependencies": ["create-custom-hooks", "create-type-definitions"],
+      "prompt": {
+        "template": "Integrate the business logic with UI components.\n\n**Your Task**: Update or create components that use the hooks and types.\n\n**Integration Pattern**:\n\n### 1. Container Component (Smart Component)\n\n**File**: `{{componentsDir}}/{{featureName}}/{{featureName}}Container.tsx`\n\n```typescript\nimport { use{{featureName}} } from '@hooks/use{{featureName}}';\nimport { {{featureName}}View } from './{{featureName}}View';\nimport { LoadingSpinner } from '@components/LoadingSpinner';\nimport { ErrorMessage } from '@components/ErrorMessage';\n\n/**\n * Container component - handles logic and data\n */\nexport function {{featureName}}Container() {\n  const {\n    data,\n    loading,\n    error,\n    handleAction,\n    refetch,\n  } = use{{featureName}}();\n  \n  // Handle loading state\n  if (loading) {\n    return <LoadingSpinner />;\n  }\n  \n  // Handle error state\n  if (error) {\n    return (\n      <ErrorMessage \n        message={error.message}\n        onRetry={refetch}\n      />\n    );\n  }\n  \n  // Handle empty state\n  if (!data || data.length === 0) {\n    return (\n      <div>\n        <p>No data available</p>\n        <button onClick={refetch}>Refresh</button>\n      </div>\n    );\n  }\n  \n  // Render view with data\n  return (\n    <{{featureName}}View\n      data={data}\n      onAction={handleAction}\n    />\n  );\n}\n```\n\n### 2. Presentational Component (Dumb Component)\n\n**File**: `{{componentsDir}}/{{featureName}}/{{featureName}}View.tsx`\n\n```typescript\nimport { {{featureName}}Item } from '@types/{{featureName}}.types';\nimport styles from './{{featureName}}View.module.css';\n\ninterface {{featureName}}ViewProps {\n  data: {{featureName}}Item[];\n  onAction: (item: {{featureName}}Item) => void;\n}\n\n/**\n * Presentational component - only UI, no logic\n */\nexport function {{featureName}}View({ data, onAction }: {{featureName}}ViewProps) {\n  return (\n    <div className={styles.container}>\n      <h2>{{featureName}}</h2>\n      <ul className={styles.list}>\n        {data.map(item => (\n          <li key={item.id} className={styles.item}>\n            <span>{item.name}</span>\n            <button onClick={() => onAction(item)}>\n              Action\n            </button>\n          </li>\n        ))}\n      </ul>\n    </div>\n  );\n}\n```\n\n### 3. Form Component (if needed)\n\n**File**: `{{componentsDir}}/{{featureName}}/{{featureName}}Form.tsx`\n\n```typescript\nimport { useState, type FormEvent } from 'react';\nimport type { {{featureName}}FormProps } from '@types/{{featureName}}.types';\nimport styles from './{{featureName}}Form.module.css';\n\nexport function {{featureName}}Form({ \n  initialValues,\n  onSubmit,\n  onCancel \n}: {{featureName}}FormProps) {\n  const [formData, setFormData] = useState(initialValues || {});\n  const [submitting, setSubmitting] = useState(false);\n  const [error, setError] = useState<string | null>(null);\n  \n  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {\n    e.preventDefault();\n    setSubmitting(true);\n    setError(null);\n    \n    try {\n      await onSubmit(formData);\n    } catch (err) {\n      setError(err instanceof Error ? err.message : 'Submission failed');\n    } finally {\n      setSubmitting(false);\n    }\n  };\n  \n  return (\n    <form onSubmit={handleSubmit} className={styles.form}>\n      {error && <div className={styles.error}>{error}</div>}\n      \n      {/* Form fields */}\n      \n      <div className={styles.actions}>\n        <button type=\"submit\" disabled={submitting}>\n          {submitting ? 'Saving...' : 'Save'}\n        </button>\n        {onCancel && (\n          <button type=\"button\" onClick={onCancel}>\n            Cancel\n          </button>\n        )}\n      </div>\n    </form>\n  );\n}\n```\n\n**Key Integration Principles**:\n\n1. **Container/Presentational Split**:\n   - Container = logic, data, hooks\n   - Presentational = UI only, props only\n\n2. **Type Everything**:\n   - All props interfaces\n   - All state variables\n   - All event handlers\n\n3. **Handle All States**:\n   - Loading\n   - Error\n   - Empty\n   - Success\n\n4. **Extract Reusable Logic**:\n   - Move to custom hooks\n   - Not in components\n\n**Create the integrated components now**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{componentsDir}}/{{featureName}}/{{featureName}}Container.tsx",
+          "{{componentsDir}}/{{featureName}}/{{featureName}}View.tsx"
+        ],
+        "requiredPatterns": [
+          "import",
+          "export function",
+          "interface",
+          "Props"
+        ],
+        "forbiddenPatterns": [
+          "console.log",
+          "debugger",
+          "any"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "add-error-handling",
+      "subagent": "general",
+      "description": "Add comprehensive error handling and loading states",
+      "dependencies": ["integrate-with-components"],
+      "prompt": {
+        "template": "Add error boundaries and improved error handling.\n\n**Your Task**: Create error boundary and error handling utilities.\n\n### 1. Error Boundary Component\n\n**File**: `{{componentsDir}}/ErrorBoundary/ErrorBoundary.tsx`\n\n```typescript\nimport React, { Component, type ReactNode } from 'react';\nimport styles from './ErrorBoundary.module.css';\n\ninterface ErrorBoundaryProps {\n  children: ReactNode;\n  fallback?: ReactNode;\n  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;\n}\n\ninterface ErrorBoundaryState {\n  hasError: boolean;\n  error: Error | null;\n}\n\nexport class ErrorBoundary extends Component<\n  ErrorBoundaryProps,\n  ErrorBoundaryState\n> {\n  constructor(props: ErrorBoundaryProps) {\n    super(props);\n    this.state = { hasError: false, error: null };\n  }\n  \n  static getDerivedStateFromError(error: Error): ErrorBoundaryState {\n    return { hasError: true, error };\n  }\n  \n  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {\n    console.error('Error caught by boundary:', error, errorInfo);\n    this.props.onError?.(error, errorInfo);\n  }\n  \n  render() {\n    if (this.state.hasError) {\n      if (this.props.fallback) {\n        return this.props.fallback;\n      }\n      \n      return (\n        <div className={styles.container}>\n          <h2>Something went wrong</h2>\n          <p>{this.state.error?.message}</p>\n          <button onClick={() => this.setState({ hasError: false, error: null })}>\n            Try Again\n          </button>\n        </div>\n      );\n    }\n    \n    return this.props.children;\n  }\n}\n```\n\n### 2. Loading Component\n\n**File**: `{{componentsDir}}/LoadingSpinner/LoadingSpinner.tsx`\n\n```typescript\nimport styles from './LoadingSpinner.module.css';\n\ninterface LoadingSpinnerProps {\n  size?: 'small' | 'medium' | 'large';\n  message?: string;\n}\n\nexport function LoadingSpinner({ \n  size = 'medium',\n  message \n}: LoadingSpinnerProps) {\n  return (\n    <div className={styles.container}>\n      <div className={`${styles.spinner} ${styles[size]}`} />\n      {message && <p className={styles.message}>{message}</p>}\n    </div>\n  );\n}\n```\n\n### 3. Error Message Component\n\n**File**: `{{componentsDir}}/ErrorMessage/ErrorMessage.tsx`\n\n```typescript\nimport styles from './ErrorMessage.module.css';\n\ninterface ErrorMessageProps {\n  message: string;\n  onRetry?: () => void;\n  onDismiss?: () => void;\n}\n\nexport function ErrorMessage({ \n  message,\n  onRetry,\n  onDismiss \n}: ErrorMessageProps) {\n  return (\n    <div className={styles.container} role=\"alert\">\n      <div className={styles.icon}>⚠️</div>\n      <p className={styles.message}>{message}</p>\n      <div className={styles.actions}>\n        {onRetry && (\n          <button onClick={onRetry} className={styles.retry}>\n            Retry\n          </button>\n        )}\n        {onDismiss && (\n          <button onClick={onDismiss} className={styles.dismiss}>\n            Dismiss\n          </button>\n        )}\n      </div>\n    </div>\n  );\n}\n```\n\n### 4. Update Container to Use Error Boundary\n\n**Update**: `{{componentsDir}}/{{featureName}}/{{featureName}}Container.tsx`\n\nWrap the container in ErrorBoundary:\n\n```typescript\nimport { ErrorBoundary } from '@components/ErrorBoundary';\n\nexport function {{featureName}}WithErrorBoundary() {\n  return (\n    <ErrorBoundary\n      fallback={\n        <div>\n          <h2>{{featureName}} Error</h2>\n          <p>Failed to load feature</p>\n        </div>\n      }\n    >\n      <{{featureName}}Container />\n    </ErrorBoundary>\n  );\n}\n```\n\n**Create these error handling components**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{componentsDir}}/ErrorBoundary/ErrorBoundary.tsx",
+          "{{componentsDir}}/LoadingSpinner/LoadingSpinner.tsx",
+          "{{componentsDir}}/ErrorMessage/ErrorMessage.tsx"
+        ],
+        "requiredPatterns": [
+          "Component",
+          "getDerivedStateFromError",
+          "componentDidCatch"
+        ],
+        "forbiddenPatterns": [
+          "console.log",
+          "any"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-integration-tests",
+      "subagent": "test",
+      "description": "Create integration tests for connected components",
+      "dependencies": ["integrate-with-components"],
+      "prompt": {
+        "template": "Create integration tests for {{featureName}}.\n\n**Your Task**: Test the complete integration of hooks + components.\n\n**File**: `{{componentsDir}}/{{featureName}}/{{featureName}}.integration.test.tsx`\n\n```typescript\nimport { render, screen, waitFor } from '@testing-library/react';\nimport userEvent from '@testing-library/user-event';\nimport { {{featureName}}Container } from './{{featureName}}Container';\n\n// Mock the custom hook\njest.mock('@hooks/use{{featureName}}', () => ({\n  use{{featureName}}: jest.fn(),\n}));\n\nimport { use{{featureName}} } from '@hooks/use{{featureName}}';\n\nconst mockUse{{featureName}} = use{{featureName}} as jest.MockedFunction<typeof use{{featureName}}>;\n\ndescribe('{{featureName}} Integration', () => {\n  beforeEach(() => {\n    jest.clearAllMocks();\n  });\n  \n  it('shows loading state initially', () => {\n    mockUse{{featureName}}.mockReturnValue({\n      data: null,\n      loading: true,\n      error: null,\n      handleAction: jest.fn(),\n      refetch: jest.fn(),\n    });\n    \n    render(<{{featureName}}Container />);\n    expect(screen.getByRole('status')).toBeInTheDocument();\n  });\n  \n  it('renders data when loaded', async () => {\n    const mockData = [\n      { id: '1', name: 'Item 1' },\n      { id: '2', name: 'Item 2' },\n    ];\n    \n    mockUse{{featureName}}.mockReturnValue({\n      data: mockData,\n      loading: false,\n      error: null,\n      handleAction: jest.fn(),\n      refetch: jest.fn(),\n    });\n    \n    render(<{{featureName}}Container />);\n    \n    await waitFor(() => {\n      expect(screen.getByText('Item 1')).toBeInTheDocument();\n      expect(screen.getByText('Item 2')).toBeInTheDocument();\n    });\n  });\n  \n  it('shows error message when request fails', () => {\n    const mockError = new Error('Failed to fetch');\n    \n    mockUse{{featureName}}.mockReturnValue({\n      data: null,\n      loading: false,\n      error: mockError,\n      handleAction: jest.fn(),\n      refetch: jest.fn(),\n    });\n    \n    render(<{{featureName}}Container />);\n    expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();\n  });\n  \n  it('calls handleAction when action triggered', async () => {\n    const user = userEvent.setup();\n    const mockHandleAction = jest.fn();\n    const mockData = [{ id: '1', name: 'Item 1' }];\n    \n    mockUse{{featureName}}.mockReturnValue({\n      data: mockData,\n      loading: false,\n      error: null,\n      handleAction: mockHandleAction,\n      refetch: jest.fn(),\n    });\n    \n    render(<{{featureName}}Container />);\n    \n    const actionButton = screen.getByRole('button', { name: /action/i });\n    await user.click(actionButton);\n    \n    expect(mockHandleAction).toHaveBeenCalledWith(mockData[0]);\n  });\n  \n  it('refetches data when retry clicked', async () => {\n    const user = userEvent.setup();\n    const mockRefetch = jest.fn();\n    const mockError = new Error('Network error');\n    \n    mockUse{{featureName}}.mockReturnValue({\n      data: null,\n      loading: false,\n      error: mockError,\n      handleAction: jest.fn(),\n      refetch: mockRefetch,\n    });\n    \n    render(<{{featureName}}Container />);\n    \n    const retryButton = screen.getByRole('button', { name: /retry/i });\n    await user.click(retryButton);\n    \n    expect(mockRefetch).toHaveBeenCalledTimes(1);\n  });\n});\n```\n\n**Create comprehensive integration tests**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{componentsDir}}/{{featureName}}/{{featureName}}.integration.test.tsx"
+        ],
+        "requiredPatterns": [
+          "describe(",
+          "it(",
+          "expect(",
+          "mockReturnValue"
+        ],
+        "forbiddenPatterns": [
+          ".only(",
+          "debugger"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "composition": {
+    "standalone": false,
+    "composesWith": [
+      "react-component-creation",
+      "react-styling"
+    ],
+    "examples": []
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "summary",
+    "feedbackPoints": [
+      "hook-integration",
+      "state-management",
+      "error-handling"
+    ]
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 12000,
+    "annotationStrategy": "key-components"
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": "Claude Sonnet 4.5",
+  "created_at": "2026-04-08T00:00:00.000Z",
+  "metadata": {
+    "difficulty": "intermediate",
+    "learning_objective": "Master connecting business logic to UI through custom hooks and proper component architecture"
+  }
+}

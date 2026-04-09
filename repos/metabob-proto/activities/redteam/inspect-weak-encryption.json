@@ -3,7 +3,7 @@
   "name": "Test Encryption Implementation",
   "description": "Red team: validate encryption strength, key management, and cryptographic implementation",
   "category": "security",
-  "variant_id": "inspect-weak-encryption",
+  "id": "inspect-weak-encryption",
   "learning_mode": "inverse",
   "success_when": "weak_crypto_found",
   "contextRequirements": [
@@ -33,12 +33,12 @@
           }
         ]
       },
-      "context_rules": {
-        "max_tokens": 2500,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 2500,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/vulnerability-found.txt"
         ],
         "commands": [
@@ -93,11 +93,11 @@
         "variables": []
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/crypto-summary.txt",
           "/tmp/test-success.txt"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           "Vulnerabilities Found:"
         ],
         "commands": [

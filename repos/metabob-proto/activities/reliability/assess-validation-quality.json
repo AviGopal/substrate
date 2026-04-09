@@ -10,8 +10,8 @@
       "dependencies": [],
       "prompt": {
         "template": "Analyze the quality of validation rules by comparing validation results with actual outcomes.\n\n**Activity:**\n{{activityId}}\n\n**Validation Result:**\n{{validationPassed}}\n\n**Validation Rules:**\n- Required files: {{requiredFiles}}\n- Required patterns: {{requiredPatterns}}\n- Forbidden patterns: {{forbiddenPatterns}}\n\n**Actual Outcome:**\n- Files created: {{filesCreated}}\n- Files modified: {{filesModified}}\n- Execution status: {{executionStatus}}\n- Goal alignment score: {{alignmentScore}}\n\n**Analysis:**\nCompare validation result with actual outcome:\n\n1. **False Positive**: Validation passed BUT alignment is low (<0.3)\n   → Validation is too lenient, needs stricter rules\n\n2. **False Negative**: Validation failed BUT outcome looks good\n   → Validation is too strict, needs relaxed rules\n\n3. **True Positive**: Validation passed AND alignment is high (>0.7)\n   → Validation is working correctly\n\n4. **True Negative**: Validation failed AND outcome is poor\n   → Validation is working correctly\n\nRespond in this exact format:\n```json\n{\n  \"validation_accurate\": true|false,\n  \"issue_type\": \"none|false_positive|false_negative\",\n  \"confidence\": 0.0-1.0,\n  \"reasoning\": \"explanation\",\n  \"recommended_fix\": \"suggestion for improving validation rules\"\n}\n```",
-        "max_tokens": 1500,
-        "compression_strategy": "filter",
+        "maxTokens": 1500,
+        "compressionStrategy": "filter",
         "variables": [
           {
             "name": "activityId",
@@ -70,13 +70,13 @@
         ]
       },
       "validation": {
-        "required_files": [],
-        "required_patterns": [
+        "requiredFiles": [],
+        "requiredPatterns": [
           "validation_accurate",
           "issue_type",
           "reasoning"
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "retry": {
@@ -88,6 +88,6 @@
   "variables": {},
   "version": 1,
   "contextRequirements": [],
-  "variant_id": "reliability:assess-validation-quality-v1",
+  "id": "reliability:assess-validation-quality-v1",
   "activity_id": "reliability:assess-validation-quality"
 }
