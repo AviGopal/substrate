@@ -1,0 +1,5 @@
+.metabob/config.json
+*.key
+**/secrets/
+.env
+.env.*

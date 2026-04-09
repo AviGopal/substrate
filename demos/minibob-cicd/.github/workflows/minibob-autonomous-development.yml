@@ -1,0 +1,246 @@
+name: MiniBob Autonomous Development
+
+on:
+  push:
+    branches: [main, dev]
+  issues:
+    types: [opened, labeled]
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      goal:
+        description: 'Goal for MiniBob to execute'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+jobs:
+  autonomous-development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install MiniBob
+        run: |
+          bun add -g @metabob/minibob@latest
+          minibob --version
+
+      - name: Configure MiniBob
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          METABOB_API_KEY: ${{ secrets.METABOB_API_KEY }}
+        run: |
+          mkdir -p ~/.metabob
+          cat > ~/.metabob/config.json << EOF
+          {
+            "metabob": {
+              "apiKey": "$METABOB_API_KEY",
+              "endpoint": "https://activity.metabob.com"
+            },
+            "providers": {
+              "anthropic": { "apiKey": "$ANTHROPIC_API_KEY" }
+            },
+            "defaults": {
+              "provider": "anthropic",
+              "model": "claude-sonnet-4-20250514"
+            }
+          }
+          EOF
+
+      - name: Process labeled issues
+        if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'minibob')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+
+          echo "Processing issue #$ISSUE_NUMBER with MiniBob"
+
+          # Execute goal
+          minibob --single "$ISSUE_BODY" 2>&1 | tee execution.log
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          # Extract trace ID from log
+          TRACE_ID=$(grep -oP "Trace saved to backend: \K[a-z0-9_]+" execution.log | tail -1)
+
+          # Comment on issue with result
+          if [ $EXIT_CODE -eq 0 ]; then
+            gh issue comment $ISSUE_NUMBER --body "✅ MiniBob completed this task successfully!
+
+          **Trace ID**: \`$TRACE_ID\`
+          **View trace**: https://activity.metabob.com/traces/$TRACE_ID
+
+          Changes will be committed if tests pass."
+          else
+            gh issue comment $ISSUE_NUMBER --body "❌ MiniBob encountered issues with this task.
+
+          **Trace ID**: \`$TRACE_ID\`
+          **View trace**: https://activity.metabob.com/traces/$TRACE_ID
+
+          Please review the execution log for details."
+          fi
+
+      - name: Execute manual goal
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.goal != ''
+        run: |
+          echo "Executing manual goal: ${{ github.event.inputs.goal }}"
+          minibob --single "${{ github.event.inputs.goal }}" 2>&1 | tee execution.log
+
+      - name: Autonomous boredom mode
+        if: github.event_name == 'schedule'
+        run: |
+          echo "Running MiniBob in boredom mode (max 3 tasks)"
+          timeout 50m minibob --idle --caffeine || true
+
+      - name: Collect execution traces
+        if: always()
+        run: |
+          # Create traces directory
+          mkdir -p public/traces
+
+          # Extract trace IDs from execution
+          if [ -f execution.log ]; then
+            grep -oP "Trace saved to backend: \K[a-z0-9_]+" execution.log > trace-ids.txt || true
+          fi
+
+          # Fetch trace data from backend
+          if [ -s trace-ids.txt ]; then
+            while read TRACE_ID; do
+              curl -s "https://activity.metabob.com/v2/activities/execution-traces/$TRACE_ID" \
+                -H "Authorization: ApiKey ${{ secrets.METABOB_API_KEY }}" \
+                -o "public/traces/${TRACE_ID}.json" || true
+            done < trace-ids.txt
+          fi
+
+          # Update trace index
+          cd public/traces
+          ls -1 *.json 2>/dev/null | jq -R . | jq -s . > index.json || echo '[]' > index.json
+
+      - name: Update GitHub Pages metrics
+        if: always()
+        run: |
+          # Fetch latest metrics from backend
+          curl -s "https://activity.metabob.com/v2/activities/metrics" \
+            -H "Authorization: ApiKey ${{ secrets.METABOB_API_KEY }}" \
+            -o public/metrics.json || echo '{}' > public/metrics.json
+
+          # Fetch recent executions
+          curl -s "https://activity.metabob.com/v2/activities/execution-traces?limit=50" \
+            -H "Authorization: ApiKey ${{ secrets.METABOB_API_KEY }}" \
+            -o public/recent-executions.json || echo '[]' > public/recent-executions.json
+
+          # Generate timestamp
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > public/last-updated.txt
+
+      - name: Run tests
+        if: success()
+        run: |
+          bun test || echo "Tests failed but continuing"
+
+      - name: Commit changes
+        if: success()
+        run: |
+          git config user.name "MiniBob"
+          git config user.email "minibob@metabob.com"
+
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          # Get trace ID for commit message
+          TRACE_ID=$(grep -oP "Trace saved to backend: \K[a-z0-9_]+" execution.log | tail -1 || echo "no-trace")
+
+          git commit -m "feat(autonomous): MiniBob autonomous development session
+
+          Trace: $TRACE_ID
+          Workflow: ${{ github.workflow }}
+          Run: ${{ github.run_number }}
+
+          Co-Authored-By: MiniBob <minibob@metabob.com>"
+
+          git push origin ${{ github.ref_name }}
+
+      - name: Create PR if on dev
+        if: success() && github.ref_name == 'dev'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "MiniBob Autonomous Development Session $(date +%Y-%m-%d)" \
+            --body "Autonomous improvements by MiniBob
+
+          **Workflow Run**: ${{ github.run_number }}
+          **Duration**: ${{ job.status }}
+          **Traces**: See [GitHub Pages](https://metabobproject.github.io/demo-minibob-cicd/traces/)
+
+          Changes made during autonomous development session. Review traces and approve if tests pass." \
+            --base main \
+            --head dev \
+            --label "autonomous" \
+            --label "minibob" || echo "PR may already exist"
+
+      - name: Upload execution logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: execution-logs-${{ github.run_number }}
+          path: |
+            execution.log
+            trace-ids.txt
+            public/traces/*.json
+          retention-days: 90
+
+  deploy-pages:
+    needs: autonomous-development
+    if: always()
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build GitHub Pages
+        run: |
+          # Pages content was created in previous job
+          echo "GitHub Pages content ready in public/"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'public'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -14,6 +14,66 @@
 3. **Demonstration**: This repository showcases autonomous development
 4. **Validation**: Proves activities work in real-world development scenarios
 
+## Core Principle: Composition Over Implementation
+
+**MiniBob should compose existing tools, not write new code.**
+
+### Composition-First Approach
+
+When faced with a task, MiniBob should:
+
+1. **Identify existing tools** that accomplish subtasks (find, grep, git, curl, jq, etc.)
+2. **Compose them into activities** using task dependencies and impulse chaining
+3. **Reuse scripts** when they exist, not duplicate functionality
+4. **Minimize new code** - only write what doesn't exist
+
+### Example: Good vs Bad
+
+**❌ Bad - Writing New Scripts:**
+```bash
+# MiniBob creates scripts/cleanup-test-artifacts.ts (146 lines)
+# MiniBob creates scripts/cleanup.ts
+# MiniBob creates scripts/cleanup-config.json
+```
+
+**✅ Good - Composing Existing Tools:**
+```json
+{
+  "id": "cleanup-test-artifacts",
+  "tasks": [
+    {
+      "id": "find-artifacts",
+      "tool": "bash",
+      "params": {"command": "find . -name '*.tmp' -mtime +1"}
+    },
+    {
+      "id": "verify-safe",
+      "dependencies": ["find-artifacts"],
+      "prompt": {
+        "template": "Review: {{find-artifacts.output}}\n\nWhich are safe to delete?"
+      }
+    },
+    {
+      "id": "delete-files",
+      "dependencies": ["verify-safe"],
+      "tool": "bash",
+      "params": {"command": "rm {{verify-safe.filesToDelete}}"}
+    }
+  ]
+}
+```
+
+### State Space Navigation
+
+MiniBob should traverse the **activity execution graph** from current impulse state → desired state:
+
+1. **Identify current state** from impulse metadata (not LLM)
+2. **Query execution graph** for known state transitions
+3. **Select activities** that bridge current → desired states
+4. **Execute deterministically** when possible, LLM only for ambiguity
+
+This reduces LLM usage while maintaining adaptability.
+
 ## Development Workflow
 
 ### For All Changes
