@@ -1,0 +1,41 @@
+{
+  "name": "minibob-cicd-demo",
+  "version": "0.1.0",
+  "description": "MiniBob CI/CD integration demo: deterministic activities + learning-based fixes + upkeep automation",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ tests/",
+    "build": "bun build src/index.ts --outdir=dist",
+    "ci": "bun run typecheck && bun run lint && bun run test",
+
+    "minibob": "bunx @metabob/minibob@latest",
+
+    "check:types": "bunx @metabob/minibob@latest --template activities/deterministic/run-typecheck.json",
+    "check:lint": "bunx @metabob/minibob@latest --template activities/deterministic/run-lint.json",
+    "check:tests": "bunx @metabob/minibob@latest --template activities/deterministic/run-test-suite.json",
+
+    "fix:types": "bunx @metabob/minibob@latest --template activities/learning/fix-type-error.json",
+    "fix:lint": "bunx @metabob/minibob@latest --template activities/learning/fix-lint-error.json",
+    "fix:tests": "bunx @metabob/minibob@latest --template activities/learning/fix-test-failure.json",
+
+    "upkeep:readme": "bunx @metabob/minibob@latest --template activities/upkeep/sync-readme.json",
+    "upkeep:changelog": "bunx @metabob/minibob@latest --template activities/upkeep/sync-changelog.json",
+
+    "goal": "bunx @metabob/minibob@latest --single",
+
+    "dev:introduce-bug": "bunx @metabob/minibob@latest --template activities/development/introduce-change.json --var changeType=random",
+    "dev:add-feature": "bunx @metabob/minibob@latest --template activities/development/introduce-change.json --var changeType=feature"
+  },
+  "dependencies": {
+    "@metabob/minibob": "^0.3.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.4.0",
+    "eslint": "^9.0.0",
+    "@eslint/js": "^9.0.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

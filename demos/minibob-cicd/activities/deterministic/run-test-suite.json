@@ -1,0 +1,54 @@
+{
+  "id": "run-test-suite",
+  "name": "Run Test Suite",
+  "description": "Purely deterministic activity that runs tests and validates results. No LLM reasoning - just command execution and validation.",
+  "category": "infrastructure",
+  "tags": ["deterministic", "testing", "validation"],
+  "mode": "deterministic",
+
+  "variables": [
+    {
+      "name": "testPattern",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "Optional test file pattern (e.g., 'calculator' to run only calculator tests)"
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "run-tests",
+      "description": "Execute test suite with bun test",
+      "type": "command",
+      "command": {
+        "run": "bun test {{testPattern}}",
+        "captureOutput": true,
+        "timeout": 60000
+      },
+      "validation": {
+        "exitCode": 0
+      },
+      "outputCapture": {
+        "stdout": "testOutput",
+        "exitCode": "testExitCode"
+      }
+    }
+  ],
+
+  "outputSchema": {
+    "produces": [
+      { "shape": "tests_pass", "condition": "exitCode === 0" },
+      { "shape": "tests_fail", "condition": "exitCode !== 0" }
+    ]
+  },
+
+  "tracing": {
+    "recordTrace": true,
+    "contributeToLearning": true,
+    "metadata": {
+      "integrationPoint": "ci/testing",
+      "deterministic": true
+    }
+  }
+}

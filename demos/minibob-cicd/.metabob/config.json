@@ -1,0 +1,19 @@
+{
+  "metabob": {
+    "endpoint": "https://activity.metabob.com"
+  },
+  "activities": {
+    "localTemplatesPath": "./activities",
+    "preferLocal": true
+  },
+  "learning": {
+    "enabled": true,
+    "reportTraces": true
+  },
+  "cicd": {
+    "maxRemediationAttempts": 2,
+    "autoCommit": false,
+    "autoPush": false,
+    "createPR": true
+  }
+}
