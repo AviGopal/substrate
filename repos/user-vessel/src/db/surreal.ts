@@ -157,6 +157,49 @@ export function getFirstRecord<T>(result: any[]): T | null {
 }
 
 /**
+ * Parse SurrealDB result array to get last non-null record
+ *
+ * Use this for transactions that have multiple statements but only
+ * the last RETURN statement contains the actual data.
+ *
+ * Handles multiple formats:
+ * - Array format: [[{record}]]
+ * - Wrapped format: [{result: [{record}]}]
+ * - Direct object format: [{org: [...], user: [...]}] (SurrealDB 3.0 transactions)
+ */
+export function getLastRecord<T>(result: any[]): T | null {
+  if (!result || result.length === 0) return null
+
+  // Find the last non-null result
+  for (let i = result.length - 1; i >= 0; i--) {
+    const item = result[i]
+    if (!item) continue
+
+    // Format 1: Array [{record}]
+    if (Array.isArray(item) && item.length > 0) {
+      return item[0] as T
+    }
+
+    // Format 2: Wrapped {result: [...]}
+    if (item.result !== undefined && item.result !== null) {
+      if (Array.isArray(item.result)) {
+        return item.result.length > 0 ? (item.result[0] as T) : null
+      }
+      // Single object: {result: {org: [...], user: [...]}}
+      return item.result as T
+    }
+
+    // Format 3: Direct object {org: [...], user: [...]} (SurrealDB 3.0 transaction RETURN)
+    // This is what transactions actually return - a direct object without "result" wrapper
+    if (typeof item === 'object' && !Array.isArray(item)) {
+      return item as T
+    }
+  }
+
+  return null
+}
+
+/**
  * Parse SurrealDB result array to get all records
  *
  * Handles both formats:
