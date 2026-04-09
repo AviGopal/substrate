@@ -1,9 +1,9 @@
 {
-  "metabob": {
-    "apiKey": "mb_devbob_test_simple_2026_v2",
-    "endpoint": "https://activity.metabob.com"
-  },
-  "defaults": {
-    "stateDirectory": ".metabob"
+  "vessels": {
+    "terminal": {
+      "type": "http",
+      "endpoint": "http://localhost:9137",
+      "capabilities": ["terminalState", "terminalCommand", "terminalOutput"]
+    }
   }
 }
