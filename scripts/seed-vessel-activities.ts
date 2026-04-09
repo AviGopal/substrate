@@ -34,6 +34,7 @@ const VESSEL_ACTIVITIES = [
   'vessel-add-tool',
   'vessel-register',
   'vessel-test',
+  'search-changes',
 ]
 
 const ACTIVITIES_DIR = new URL('../repos/metabob-proto/activities/vessel/', import.meta.url).pathname
