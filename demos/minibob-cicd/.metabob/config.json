@@ -1,19 +1,22 @@
 {
+  "project": "minibob-cicd-demo",
+  "workingDirectory": "/home/avi/documents/work/exp-repo/metabob-devbob/demos/minibob-cicd",
   "metabob": {
-    "endpoint": "https://activity.metabob.com"
+    "endpoint": "https://activity.metabob.com",
+    "apiKey": "mb_live_1775604106145_a9b6cd5b1e9aaf06c2ad0b96362341dbff397453655d3012b2d31ee12b07a7f3"
   },
-  "activities": {
-    "localTemplatesPath": "./activities",
-    "preferLocal": true
+  "providers": {
+    "anthropic": {
+      "apiKey": "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"
+    }
   },
-  "learning": {
+  "defaults": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514"
+  },
+  "tracing": {
     "enabled": true,
-    "reportTraces": true
-  },
-  "cicd": {
-    "maxRemediationAttempts": 2,
-    "autoCommit": false,
-    "autoPush": false,
-    "createPR": true
+    "recordAllExecutions": true,
+    "traceDirectory": ".metabob/traces"
   }
 }
