@@ -1,0 +1,126 @@
+{
+  "id": "terminal-observe-feature-development",
+  "name": "Observe Terminal Vessel Feature Development",
+  "category": "observation",
+  "description": "Observe development of new features in terminal vessel, capturing before/after state, code changes, and validation results",
+
+  "input_impulses": [
+    {
+      "id": "feature_description",
+      "pointer": { "type": "memo" },
+      "metadata": { "shape": "goal" },
+      "budget": 2000,
+      "priority": "critical",
+      "required": true
+    },
+    {
+      "id": "current_codebase",
+      "pointer": {
+        "type": "directoryTree",
+        "path": "repos/terminal/src",
+        "glob": "**/*.ts"
+      },
+      "metadata": { "shape": "source_code" },
+      "budget": 15000,
+      "priority": "high"
+    },
+    {
+      "id": "existing_tests",
+      "pointer": {
+        "type": "directoryTree",
+        "path": "repos/terminal/tests",
+        "glob": "**/*.test.ts"
+      },
+      "metadata": { "shape": "test_suite" },
+      "budget": 5000,
+      "priority": "medium"
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "snapshot-before",
+      "description": "Capture state before feature development",
+      "prompt": {
+        "template": "Capture baseline state:\n1. Run: git status --porcelain > /tmp/terminal-dev-git-before.txt\n2. Run: git rev-parse HEAD > /tmp/terminal-dev-commit-before.txt\n3. Run: find repos/terminal/src -type f -name '*.ts' | xargs wc -l | tail -1 > /tmp/terminal-dev-loc-before.txt\n4. Run: bun test 2>&1 | grep -E '(pass|fail)' | tail -1 > /tmp/terminal-dev-tests-before.txt",
+        "variables": []
+      }
+    },
+    {
+      "id": "implement-feature",
+      "description": "Implement the requested feature",
+      "prompt": {
+        "template": "Implement feature: {{impulses.feature_description.content}}\n\nContext:\n{{impulses.current_codebase}}\n\nImplement the feature following these guidelines:\n1. Modify existing files or create new ones as needed\n2. Follow TypeScript best practices\n3. Add types for all new functions\n4. Update tests if functionality changes\n5. Run typecheck after changes\n\nDo NOT use LLM for this - just execute the implementation.",
+        "variables": [
+          {
+            "name": "feature_description",
+            "source": "impulse",
+            "impulseId": "feature_description",
+            "path": "content"
+          }
+        ]
+      },
+      "validation": {
+        "requiredPatterns": ["export", "function", "interface"],
+        "forbiddenPatterns": ["any", "TODO", "FIXME"]
+      }
+    },
+    {
+      "id": "validate-implementation",
+      "description": "Run validation checks on implementation",
+      "prompt": {
+        "template": "Validate implementation:\n1. Run: cd repos/terminal && bun run typecheck 2>&1 | tee /tmp/terminal-dev-typecheck.txt\n2. Check exit code: echo $? > /tmp/terminal-dev-typecheck-exit.txt\n3. Run: bun test 2>&1 | tee /tmp/terminal-dev-test-output.txt\n4. Check test exit code: echo $? > /tmp/terminal-dev-test-exit.txt",
+        "variables": []
+      }
+    },
+    {
+      "id": "snapshot-after",
+      "description": "Capture state after implementation",
+      "prompt": {
+        "template": "Capture post-implementation state:\n1. Run: git status --porcelain > /tmp/terminal-dev-git-after.txt\n2. Run: git diff > /tmp/terminal-dev-diff.txt\n3. Run: find repos/terminal/src -type f -name '*.ts' | xargs wc -l | tail -1 > /tmp/terminal-dev-loc-after.txt",
+        "variables": []
+      }
+    },
+    {
+      "id": "compute-delta",
+      "description": "Calculate what changed",
+      "prompt": {
+        "template": "Compute changes:\n1. Run: diff /tmp/terminal-dev-git-before.txt /tmp/terminal-dev-git-after.txt > /tmp/terminal-dev-git-delta.txt || true\n2. Count modified files: wc -l < /tmp/terminal-dev-git-after.txt > /tmp/terminal-dev-files-changed.txt\n3. Calculate LOC delta: paste /tmp/terminal-dev-loc-before.txt /tmp/terminal-dev-loc-after.txt | awk '{print $1 - $NF}' > /tmp/terminal-dev-loc-delta.txt",
+        "variables": []
+      },
+      "output_impulses": [
+        {
+          "id": "implementation_diff",
+          "shape": "git_diff",
+          "pointer": { "type": "file", "path": "/tmp/terminal-dev-diff.txt" }
+        },
+        {
+          "id": "validation_result",
+          "shape": "test_result",
+          "pointer": { "type": "file", "path": "/tmp/terminal-dev-test-output.txt" }
+        }
+      ]
+    },
+    {
+      "id": "classify-outcome",
+      "description": "Classify success/failure and reason",
+      "prompt": {
+        "template": "Classify outcome:\n1. Read typecheck exit: TYPECHECK_EXIT=$(cat /tmp/terminal-dev-typecheck-exit.txt)\n2. Read test exit: TEST_EXIT=$(cat /tmp/terminal-dev-test-exit.txt)\n3. If both = 0: echo 'SUCCESS' > /tmp/terminal-dev-outcome.txt\n4. If typecheck != 0: echo 'FAILED_TYPECHECK' > /tmp/terminal-dev-outcome.txt\n5. If test != 0: echo 'FAILED_TESTS' > /tmp/terminal-dev-outcome.txt\n6. Report outcome",
+        "variables": []
+      }
+    }
+  ],
+
+  "validation": {
+    "local": {
+      "requiredFiles": [
+        "/tmp/terminal-dev-diff.txt",
+        "/tmp/terminal-dev-outcome.txt"
+      ]
+    },
+    "integration": {
+      "typecheck_passes": true,
+      "tests_pass": true
+    }
+  }
+}

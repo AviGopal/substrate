@@ -1,0 +1,71 @@
+{
+  "id": "react-renderer",
+  "version": "0.1.0",
+  "name": "React Renderer",
+  "description": "UI rendering vessel - resolves ui_component impulses to rendered primitives",
+
+  "resolvers": [
+    {
+      "type": "ui_component",
+      "description": "Renders primitive compositions as React components",
+      "protocol": "http",
+      "endpoint": "/resolve/ui_component"
+    },
+    {
+      "type": "ui_state",
+      "description": "Resolves UI application state paths",
+      "protocol": "http",
+      "endpoint": "/resolve/ui_state"
+    },
+    {
+      "type": "viewport_state",
+      "description": "Resolves current viewport configuration",
+      "protocol": "http",
+      "endpoint": "/resolve/viewport_state"
+    }
+  ],
+
+  "activities": [
+    {
+      "id": "render-impulse-collection",
+      "category": "ui",
+      "description": "Render a collection of impulses as UI components",
+      "templatePath": "templates/render-impulse-collection.json"
+    },
+    {
+      "id": "update-from-execution-trace",
+      "category": "ui",
+      "description": "Update UI when execution trace changes",
+      "templatePath": "templates/update-from-execution-trace.json"
+    },
+    {
+      "id": "handle-user-interaction",
+      "category": "ui",
+      "description": "Convert user events into activity execution",
+      "templatePath": "templates/handle-user-interaction.json"
+    }
+  ],
+
+  "dependencies": {
+    "vessels": [],
+    "services": ["metabob-activity-api", "surrealdb"]
+  },
+
+  "endpoints": {
+    "http": "http://react-renderer.activity-system.svc.cluster.local:3000",
+    "health": "/health",
+    "resolve": "/resolve",
+    "activities": "/activities",
+    "websocket": "/ws"
+  },
+
+  "development": {
+    "enabled": true,
+    "cacheStrategy": "backend-first",
+    "promotion": {
+      "minExecutions": 5,
+      "minSuccessRate": 0.8,
+      "autoPromote": true
+    }
+  }
+}

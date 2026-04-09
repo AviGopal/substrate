@@ -1,0 +1,65 @@
+{
+  "description": "Configuration for automated test artifact cleanup",
+  "defaultMode": "dryRun",
+  "logging": {
+    "enabled": true,
+    "logFile": "logs/cleanup-report.json",
+    "verbose": true
+  },
+  "safePatterns": {
+    "description": "File patterns that are safe to delete (temporary test artifacts)",
+    "patterns": [
+      "bug-analysis-",
+      "bug-complete-",
+      "bug-fix-",
+      "bug-reproduction",
+      ".tsbuildinfo",
+      ".tmp",
+      ".log",
+      "coverage",
+      ".nyc_output",
+      "test-results",
+      "junit.xml",
+      ".cache",
+      "dist/test",
+      "build/test"
+    ]
+  },
+  "protectedFiles": {
+    "description": "Files that should never be deleted",
+    "patterns": [
+      "package.json",
+      "package-lock.json",
+      "yarn.lock",
+      "bun.lock",
+      "tsconfig.json",
+      "README.md",
+      ".gitignore",
+      "eslint.config.js",
+      "jest.config.js",
+      "vitest.config.js",
+      "webpack.config.js",
+      "rollup.config.js"
+    ]
+  },
+  "protectedDirectories": {
+    "description": "Directories that should never be deleted or scanned",
+    "patterns": [
+      "node_modules",
+      ".git",
+      "src",
+      "tests",
+      "test",
+      "activities",
+      "docs",
+      "public",
+      ".github",
+      ".metabob"
+    ]
+  },
+  "scanSettings": {
+    "maxDepth": 5,
+    "followSymlinks": false,
+    "excludeHidden": true
+  }
+}

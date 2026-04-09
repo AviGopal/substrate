@@ -1,0 +1,46 @@
+{
+  "variant_id": "precommit:run-lint",
+  "activity_id": "precommit:run-lint",
+  "variant_name": "Run Lint on Repository",
+  "description": "Run lint checks for a repository using its configured linter",
+  "category": "tool",
+  "tags": ["precommit.lint", "code.quality", "development.workflow"],
+  "tag_prefixes": ["precommit", "precommit.lint", "code", "code.quality"],
+  "scope": "org",
+  "org_id": "metabob_internal",
+  "task_steps": [
+    {
+      "id": "detect-linter",
+      "description": "Detect which linter is configured",
+      "prompt": {
+        "template": "Check {{repo_path}}/package.json for lint/format scripts:\n\n1. Look for `scripts.lint` - could be eslint, biome, etc.\n2. Look for `scripts.format` - could be prettier, biome\n3. Check for biome.json, .eslintrc*, .prettierrc\n\nReport which linting tool(s) are available.",
+        "variables": [
+          { "name": "repo_path", "type": "string", "required": true }
+        ]
+      },
+      "subagent": "Explore"
+    },
+    {
+      "id": "run-lint",
+      "description": "Execute the lint command",
+      "dependencies": ["detect-linter"],
+      "prompt": {
+        "template": "Run the detected lint command in {{repo_path}}:\n\n- If biome: `bunx @biomejs/biome check src`\n- If eslint: `bun run lint` or `bunx eslint src`\n- If no linter found, report that linting is not configured\n\nCapture the output including any errors.",
+        "variables": [
+          { "name": "repo_path", "type": "string", "required": true }
+        ]
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "parse-lint-results",
+      "description": "Parse and summarize lint results",
+      "dependencies": ["run-lint"],
+      "prompt": {
+        "template": "Parse the lint output:\n\n1. Count errors vs warnings\n2. Group by file\n3. Categorize issues (unused vars, type errors, style, etc.)\n\nReport:\n- PASS: No errors\n- WARN: Only warnings\n- FAIL: Has errors that need fixing",
+        "variables": []
+      },
+      "subagent": "general-purpose"
+    }
+  ]
+}

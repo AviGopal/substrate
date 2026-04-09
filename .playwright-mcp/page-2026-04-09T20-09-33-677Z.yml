@@ -1,0 +1,18 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e7]: M
+    - generic [ref=e8]: Welcome to Metabob
+    - generic [ref=e9]: Sign in to access your dashboard
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]: Email
+      - textbox "Email" [ref=e14]:
+        - /placeholder: you@company.com
+    - generic [ref=e15]:
+      - generic [ref=e16]: Password
+      - textbox "Password" [ref=e17]:
+        - /placeholder: ••••••••
+    - button "Sign in" [ref=e18]
+    - generic [ref=e19]:
+      - text: Don't have an account?
+      - button "Sign up" [ref=e20]

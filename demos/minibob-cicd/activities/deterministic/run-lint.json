@@ -39,6 +39,10 @@
       "outputCapture": {
         "stdout": "lintOutput",
         "exitCode": "lintExitCode"
+      },
+      "prompt": {
+        "template": "Run ESLint on the specified paths to check code quality and style",
+        "maxTokens": 100
       }
     }
   ],

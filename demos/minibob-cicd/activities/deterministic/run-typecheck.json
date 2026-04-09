@@ -22,6 +22,10 @@
       "outputCapture": {
         "stderr": "typecheckErrors",
         "exitCode": "typecheckExitCode"
+      },
+      "prompt": {
+        "template": "Run TypeScript type checking using tsc --noEmit command",
+        "maxTokens": 100
       }
     }
   ],

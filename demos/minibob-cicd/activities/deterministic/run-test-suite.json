@@ -21,6 +21,11 @@
       "id": "run-tests",
       "description": "Execute test suite with bun test",
       "type": "command",
+      "prompt": {
+        "template": "Run the test suite using bun test {{testPattern}}",
+        "max_tokens": 1000,
+        "compression_strategy": "filter"
+      },
       "command": {
         "run": "bun test {{testPattern}}",
         "captureOutput": true,

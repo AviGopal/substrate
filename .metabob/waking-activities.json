@@ -1,0 +1,39 @@
+{
+  "description": "Waking activities for metabob-devbob workspace",
+  "activities": [
+    {
+      "activityId": "precommit:full-check",
+      "trigger": "manual",
+      "priority": 100,
+      "enabled": true,
+      "description": "Run full pre-commit validation",
+      "impulses": [
+        {
+          "key": "workspace",
+          "pointer": { "type": "memo", "content": "/home/avi/documents/work/exp-repo/metabob-devbob" },
+          "required": true,
+          "budget": 100
+        }
+      ],
+      "cooldown": 60000
+    },
+    {
+      "activityId": "precommit:detect-llm-cruft",
+      "trigger": "idle",
+      "priority": 50,
+      "enabled": false,
+      "description": "Scan for LLM cruft when idle (disabled by default)",
+      "impulses": [],
+      "cooldown": 300000
+    },
+    {
+      "activityId": "precommit:fix-lint-errors",
+      "trigger": "manual",
+      "priority": 80,
+      "enabled": true,
+      "description": "Auto-fix lint errors for a repo",
+      "impulses": [],
+      "cooldown": 30000
+    }
+  ]
+}
