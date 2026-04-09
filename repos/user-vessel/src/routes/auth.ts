@@ -14,7 +14,7 @@ import type {
   LoginResponse,
 } from "../types"
 import { requireAuth, getAuth } from "../middleware/auth"
-import { getRootDb, getFirstRecord, getAllRecords } from "../db/surreal"
+import { getRootDb, getFirstRecord, getLastRecord, getAllRecords } from "../db/surreal"
 import { hashPassword, validatePassword, verifyPassword } from "../utils/crypto"
 import { generateToken } from "../utils/jwt"
 
@@ -114,9 +114,45 @@ export function authRoutes(config: UserVesselConfig) {
         }
       )
 
+      // DEBUG: Log transaction result structure
+      console.log("=== SIGNUP TRANSACTION DEBUG ===")
+      console.log("Transaction result length:", transactionResult?.length || 0)
+      console.log("Transaction result type:", typeof transactionResult)
+      console.log("Transaction result:", JSON.stringify(transactionResult, null, 2))
+
+      // Log each result item
+      if (Array.isArray(transactionResult)) {
+        transactionResult.forEach((item, index) => {
+          console.log(`Result[${index}]:`, {
+            type: typeof item,
+            isArray: Array.isArray(item),
+            status: item?.status,
+            hasResult: item && 'result' in item,
+            resultType: typeof item?.result,
+            resultIsArray: Array.isArray(item?.result),
+            keys: Object.keys(item || {})
+          })
+        })
+      }
+
       // Extract org and user from transaction result
-      const result = getFirstRecord<{ org: Organization[], user: User[] }>(transactionResult)
+      // Use getLastRecord because transactions return multiple results (one per statement)
+      // and only the last RETURN statement contains the actual data
+      const result = getLastRecord<{ org: Organization[], user: User[] }>(transactionResult)
+
+      // DEBUG: Log what getLastRecord returned
+      console.log("After getLastRecord:")
+      console.log("  result:", result)
+      console.log("  result type:", typeof result)
+      console.log("  has org:", result && 'org' in result)
+      console.log("  has user:", result && 'user' in result)
+      console.log("  org value:", result?.org)
+      console.log("  user value:", result?.user)
+      console.log("=== END DEBUG ===")
+
       if (!result || !result.org || !result.user) {
+        console.error("SIGNUP FAILED: Transaction did not return valid result")
+        console.error("  result:", result)
         return c.json({
           error: "Signup failed - transaction did not complete"
         }, 500)
