@@ -61,6 +61,21 @@ MiniBob composes these primitives to create any UI:
 | `code` | Syntax-highlighted code with line numbers |
 | `image` | Images from URLs or base64 |
 
+## Security Model
+
+This dashboard is designed for **internal use only**. Access control is enforced at the infrastructure level via **Cloudflare Zero Trust**.
+
+**No application-level authentication is implemented.** The dashboard assumes:
+- All requests come from authenticated internal users
+- Zero Trust extracts user identity from `CF-Access-Authenticated-User-Email` header
+- Audit logging tracks all operations by user email
+- Authorization enforces admin-only operations via environment variable
+
+**Production Access:**
+- URL: `https://internal.metabob.com`
+- Access: Cloudflare Zero Trust (email-based authentication)
+- Audit: All operations logged to stdout (JSON format) and optionally to activity-api
+
 ## Development
 
 ```bash
@@ -83,8 +98,8 @@ bun run typecheck
 |----------|-------------|---------|
 | `PORT` | Server port | `3001` |
 | `MINIBOB_API_URL` | Activity API URL | `http://localhost:8080` |
-| `INTERNAL_DASHBOARD_CREDENTIAL_ID` | Auth credential ID | `internal-dashboard-local` |
-| `INTERNAL_DASHBOARD_SECRET` | Auth secret | (required) |
+| `ANTHROPIC_API_KEY` | Claude API key for MiniBob | (required) |
+| `ADMIN_EMAILS` | Comma-separated admin emails | (optional) |
 
 ## Deployment
 

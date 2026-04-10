@@ -1,0 +1,56 @@
+{
+  "id": "admin-template-performance",
+  "name": "Activity Template Performance",
+  "description": "Analyze activity template success rates, costs, and execution times",
+  "category": "admin",
+  "tags": ["templates", "metrics", "performance"],
+  "tasks": [
+    {
+      "id": "template-success-rates",
+      "description": "Show template success rates",
+      "prompt": {
+        "template": "Query the activity API endpoint /v2/activities/templates to get all templates with their performance metrics. Display as a bar chart showing success rate by template. Include: Template Name, Success Rate (%), Total Executions.",
+        "variables": []
+      }
+    },
+    {
+      "id": "template-cost-analysis",
+      "description": "Analyze cost per template",
+      "prompt": {
+        "template": "Query execution traces to calculate average cost per template. Display as a table with columns: Template Name, Total Executions, Total Cost (USD), Avg Cost per Execution, Cost per Success.",
+        "variables": []
+      }
+    },
+    {
+      "id": "template-execution-times",
+      "description": "Show template execution time distribution",
+      "prompt": {
+        "template": "Query execution traces to get execution duration statistics per template. Create a box plot or table showing: Template Name, Min Duration, Max Duration, Median Duration, P95 Duration.",
+        "variables": []
+      }
+    },
+    {
+      "id": "template-variants-comparison",
+      "description": "Compare template variants performance",
+      "prompt": {
+        "template": "For template {{templateId}}, query all variants and compare their Thompson Sampling scores, success rates, and execution counts. Display as a comparison table or grouped bar chart.",
+        "variables": [
+          {
+            "name": "templateId",
+            "type": "string",
+            "required": false,
+            "description": "Base template ID to compare variants"
+          }
+        ]
+      }
+    },
+    {
+      "id": "template-recommendations",
+      "description": "Show Thompson Sampling recommendation distribution",
+      "prompt": {
+        "template": "Query recent recommendation events to see which templates are being selected by Thompson Sampling. Show distribution over time as a stacked area chart or heatmap.",
+        "variables": []
+      }
+    }
+  ]
+}

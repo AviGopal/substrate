@@ -3,9 +3,12 @@
  *
  * Manages WebSocket connections, message routing, and state broadcasting.
  * Integrates with MiniBob for query processing and UI control.
+ * Includes audit logging and authorization for admin operations.
  */
 
 import type { ServerWebSocket } from 'bun'
+import { audit } from './audit-logger'
+import { authorizeQuery, getUserRole } from './authorization'
 
 // ============================================================================
 // Message Types (Task 3.2)
@@ -320,6 +323,8 @@ interface ConnectionState {
   connectedAt: number
   viewport?: { width: number; height: number }
   lastPing?: number
+  user?: string // User email from Zero Trust headers
+  role?: 'admin' | 'viewer' // User role
 }
 
 // ============================================================================
@@ -329,33 +334,56 @@ interface ConnectionState {
 export class WebSocketHandler {
   private connections: Map<ServerWebSocket<ConnectionState>, ConnectionState> = new Map()
   private impulseState: Map<string, UIComponentImpulse> = new Map()
-  private queryHandler?: (query: QueryMessage, sessionId: string) => Promise<void>
-  private actionHandler?: (action: ActionMessage, sessionId: string) => Promise<void>
+  private queryHandler?: (query: QueryMessage, sessionId: string, user: string) => Promise<void>
+  private actionHandler?: (action: ActionMessage, sessionId: string, user: string) => Promise<void>
+  private activityApiUrl?: string
 
   constructor() {
     // No protected impulses needed - QueryInput component handles query input
     // The impulse state starts empty and gets populated via createImpulse()
   }
 
+  /** Set Activity API URL for audit logging */
+  setActivityApiUrl(url: string) {
+    this.activityApiUrl = url
+  }
+
   /** Set handler for query messages */
-  onQuery(handler: (query: QueryMessage, sessionId: string) => Promise<void>) {
+  onQuery(handler: (query: QueryMessage, sessionId: string, user: string) => Promise<void>) {
     this.queryHandler = handler
   }
 
   /** Set handler for action messages */
-  onAction(handler: (action: ActionMessage, sessionId: string) => Promise<void>) {
+  onAction(handler: (action: ActionMessage, sessionId: string, user: string) => Promise<void>) {
     this.actionHandler = handler
   }
 
   /** Handle new WebSocket connection */
-  handleOpen(ws: ServerWebSocket<ConnectionState>) {
+  handleOpen(ws: ServerWebSocket<ConnectionState & { user?: string }>) {
     const sessionId = crypto.randomUUID()
+    // Extract user from connection data (set during upgrade)
+    const user = (ws.data as any).user || 'unknown'
+    const role = getUserRole(user)
+
     const state: ConnectionState = {
       sessionId,
-      connectedAt: Date.now()
+      connectedAt: Date.now(),
+      user,
+      role
     }
 
     this.connections.set(ws, state)
+
+    // Audit connection
+    audit(
+      user,
+      'websocket_connect',
+      'dashboard',
+      true,
+      { sessionId, role },
+      undefined,
+      this.activityApiUrl
+    )
 
     // Send connected acknowledgment
     this.send(ws, {
@@ -375,7 +403,7 @@ export class WebSocketHandler {
     // Send full state sync
     this.sendStateSync(ws)
 
-    console.log(`[WebSocket] Client connected: ${sessionId}`)
+    console.log(`[WebSocket] Client connected: ${sessionId} (user: ${user}, role: ${role})`)
   }
 
   /** Handle incoming WebSocket message */
@@ -399,7 +427,44 @@ export class WebSocketHandler {
 
         case 'query':
           if (this.queryHandler) {
-            await this.queryHandler(data, state.sessionId)
+            const user = state.user || 'unknown'
+
+            // Audit query attempt
+            audit(
+              user,
+              'query_execute',
+              'dashboard_query',
+              true,
+              { queryId: data.id, queryText: data.text },
+              undefined,
+              this.activityApiUrl
+            )
+
+            try {
+              // Authorization happens inside MiniBob for SurrealDB queries
+              // This is just high-level audit logging
+              await this.queryHandler(data, state.sessionId, user)
+            } catch (error) {
+              const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+
+              // Audit query failure
+              audit(
+                user,
+                'query_execute',
+                'dashboard_query',
+                false,
+                { queryId: data.id, queryText: data.text },
+                errorMsg,
+                this.activityApiUrl
+              )
+
+              this.send(ws, {
+                type: 'error',
+                error: errorMsg,
+                code: 'QUERY_FAILED',
+                queryId: data.id
+              })
+            }
           } else {
             this.send(ws, {
               type: 'error',
@@ -412,7 +477,41 @@ export class WebSocketHandler {
 
         case 'action':
           if (this.actionHandler) {
-            await this.actionHandler(data, state.sessionId)
+            const user = state.user || 'unknown'
+
+            // Audit action attempt
+            audit(
+              user,
+              'action_execute',
+              data.componentId,
+              true,
+              { action: data.action, payload: data.payload },
+              undefined,
+              this.activityApiUrl
+            )
+
+            try {
+              await this.actionHandler(data, state.sessionId, user)
+            } catch (error) {
+              const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+
+              // Audit action failure
+              audit(
+                user,
+                'action_execute',
+                data.componentId,
+                false,
+                { action: data.action },
+                errorMsg,
+                this.activityApiUrl
+              )
+
+              this.send(ws, {
+                type: 'error',
+                error: errorMsg,
+                code: 'ACTION_FAILED'
+              })
+            }
           } else {
             this.send(ws, {
               type: 'error',
@@ -439,7 +538,18 @@ export class WebSocketHandler {
   handleClose(ws: ServerWebSocket<ConnectionState>) {
     const state = this.connections.get(ws)
     if (state) {
-      console.log(`[WebSocket] Client disconnected: ${state.sessionId}`)
+      // Audit disconnection
+      audit(
+        state.user || 'unknown',
+        'websocket_disconnect',
+        'dashboard',
+        true,
+        { sessionId: state.sessionId, duration: Date.now() - state.connectedAt },
+        undefined,
+        this.activityApiUrl
+      )
+
+      console.log(`[WebSocket] Client disconnected: ${state.sessionId} (user: ${state.user})`)
       this.connections.delete(ws)
     }
   }
