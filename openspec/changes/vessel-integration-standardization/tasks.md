@@ -1,238 +1,260 @@
+# Implementation Tasks: Vessel Integration Standardization
+
 ## Implementation Philosophy
 
 **Logical Dependencies Over Strict Phasing:**
 - Implement tasks in logical dependency order - if Task B requires output from Task A, do A first
 - Phases can overlap when dependencies are satisfied - don't wait for entire phase to complete
-- No backward compatibility concerns - we're implementing the correct architecture
-- Focus on correctness and alignment with foundation principles, not elaborate migration paths
+- Focus on correctness and alignment with foundation principles
+
+**Architecture Note:**
+- Discovery-vessel is a standalone vessel (not Activity-API endpoints)
+- Activity-API retains: shape registry, trace storage, health scoring, Thompson Sampling
+- Discovery-vessel owns: vessel registration, heartbeat, capability queries
 
 ---
 
-## 1. Phase 1 - Foundation (Activity-API)
+## Phase 1: Discovery-Vessel Core
 
-- [x] 1.1 Create `shape_definition` table in SurrealDB schema
-- [x] 1.2 Implement `POST /v2/shapes/register` endpoint in Activity-API
-- [x] 1.3 Implement `GET /v2/shapes` endpoint for listing shapes
-- [x] 1.4 Implement `GET /v2/shapes/:name/:version` endpoint for shape retrieval
-- [x] 1.5 Add shape validation logic using JSON schema
-- [x] 1.6 Create `vessel` table enhancements for VesselCapabilityV2 format
-- [x] 1.7 Implement `POST /v2/vessels/register` endpoint for vessel registration
-- [x] 1.8 Implement `GET /v2/vessels/discover` endpoint for capability discovery
-- [x] 1.9 Add vessel health score computation logic
-- [x] 1.10 Create `routing_trace` table for routing decision traces
-- [x] 1.11 Create `circuit_breaker_trace` table for circuit breaker events
-- [x] 1.12 Add shape versioning and compatibility validation
-- [x] 1.13 Register 8 bootstrap shapes (goal, error_log, source_code, trace, etc.)
-- [x] 1.14 Write unit tests for shape registry endpoints
-- [x] 1.15 Write unit tests for vessel discovery endpoints
+### 1.1 Discovery-Vessel Implementation
+- [ ] 1.1.1 Implement `POST /register` endpoint for vessel registration
+- [ ] 1.1.2 Implement `POST /heartbeat` endpoint for TTL refresh
+- [ ] 1.1.3 Implement `DELETE /vessels/:vesselId` endpoint for deregistration
+- [ ] 1.1.4 Implement `POST /resolve` endpoint for capability queries
+- [ ] 1.1.5 Implement `GET /health` endpoint with registry stats
+- [ ] 1.1.6 Add in-memory registry with shape indexing
+- [ ] 1.1.7 Add TTL-based expiration (5 minute default)
+- [ ] 1.1.8 Add periodic cleanup job (60 second interval)
+- [ ] 1.1.9 Add self-registration on startup (discovery is discoverable)
+- [ ] 1.1.10 Write unit tests for all endpoints
 
-## 2. Phase 1 - Foundation (Analysis-API)
+### 1.2 Shared Client Package (@metabob/vessel-discovery-client)
+- [ ] 1.2.1 Create package structure with TypeScript
+- [ ] 1.2.2 Implement `register()` function
+- [ ] 1.2.3 Implement `VesselClient` class with heartbeat management
+- [ ] 1.2.4 Implement exponential backoff for retries
+- [ ] 1.2.5 Implement graceful shutdown handler (SIGTERM/SIGINT)
+- [ ] 1.2.6 Implement health middleware for Express/Hono
+- [ ] 1.2.7 Implement `discoverByShape()` function with caching
+- [ ] 1.2.8 Add metrics emission (vessel.registration.*, vessel.heartbeat.*)
+- [ ] 1.2.9 Write unit tests for client package
+- [ ] 1.2.10 Publish to npm registry
 
-- [x] 2.1 Implement `POST /v2/impulses/resolve` endpoint in Analysis-API
-- [x] 2.2 Add resolver for `problem_detection` impulse shape
-- [x] 2.3 Add resolver for `error_log` impulse shape
-- [x] 2.4 Add resolver for `source_code` impulse shape
-- [x] 2.5 Implement `GET /health` endpoint with detailed status
-- [x] 2.6 Implement `GET /capabilities` endpoint returning VesselCapabilityV2
-- [x] 2.7 Add startup registration call to Activity-API `/v2/vessels/register`
-- [x] 2.8 Add execution tracing for impulse resolution performance
-- [x] 2.9 Register shape definitions for produced shapes on startup
-- [x] 2.10 Write integration tests for direct impulse resolution
-- [x] 2.11 Update API documentation for new endpoints
+### 1.3 Activity-API Shape Registry (retained)
+- [x] 1.3.1 Create `shape_definition` table in SurrealDB schema
+- [x] 1.3.2 Implement `POST /v2/shapes/register` endpoint
+- [x] 1.3.3 Implement `GET /v2/shapes` endpoint for listing shapes
+- [x] 1.3.4 Implement `GET /v2/shapes/:name/:version` endpoint
+- [x] 1.3.5 Add shape validation logic using JSON schema
+- [x] 1.3.6 Add shape versioning and compatibility validation
+- [x] 1.3.7 Register bootstrap shapes (goal, error_log, source_code, etc.)
+- [x] 1.3.8 Write unit tests for shape registry endpoints
 
-## 3. Phase 1 - Validation and Deployment
+---
 
-- [x] 3.1 Deploy Activity-API changes to canary environment
-- [x] 3.2 Deploy Analysis-API changes to canary environment
-- [x] 3.3 Verify shape registry endpoints respond correctly
-- [x] 3.4 Verify vessel discovery endpoints list Analysis-API
-- [x] 3.5 Test direct Analysis-API impulse resolution via curl
-- [x] 3.6 Verify vessel registration persists in SurrealDB
-- [x] 3.7 Monitor canary logs for errors (48 hours)
-- [x] 3.8 Promote to production after validation
+## Phase 2: Vessel Discovery Integrations
 
-## 4. Phase 2 - MiniBob Config and mTLS
+### 2.1 Activity-API Discovery Integration
+- [ ] 2.1.1 Add discovery-vessel registration on startup
+- [ ] 2.1.2 Add heartbeat manager (2 minute interval)
+- [ ] 2.1.3 Add shutdown handler for deregistration
+- [ ] 2.1.4 Add deprecation headers to legacy `/v2/vessels/*` endpoints
+- [ ] 2.1.5 Implement proxy mode for gradual migration
+- [ ] 2.1.6 Update health endpoint to include discovery status
+- [ ] 2.1.7 Write integration tests for registration flow
 
-- [x] 4.1 Update MiniBob config schema to support `vessels.analysis` section
-- [x] 4.2 Add mTLS configuration fields (cert, key, ca paths)
-- [x] 4.3 Implement config validation on MiniBob startup
-- [x] 4.4 Add validation checks: URL reachability, mTLS cert validity, API key validity
-- [x] 4.5 Implement graceful degradation for unreachable vessels
-- [x] 4.6 Add actionable error messages for config issues
-- [x] 4.7 Create `./scripts/generate-dev-mtls-certs.sh` for local development
-- [x] 4.8 Update Docker Compose to include certificate generation
-- [x] 4.9 Add `DISABLE_MTLS=true` option for local dev mode
-- [x] 4.10 Document mTLS setup in DEPLOYMENT_WORKFLOW.md
-- [x] 4.11 Write unit tests for config validation logic
+### 2.2 Analysis-API Discovery Integration
+- [x] 2.2.1 Implement `POST /v2/impulses/resolve` endpoint
+- [x] 2.2.2 Add resolver for `problem_detection` impulse shape
+- [x] 2.2.3 Add resolver for `error_log` impulse shape
+- [x] 2.2.4 Add resolver for `source_code` impulse shape
+- [x] 2.2.5 Implement `GET /health` endpoint with detailed status
+- [x] 2.2.6 Implement `GET /capabilities` endpoint
+- [ ] 2.2.7 Add discovery-vessel registration on startup (migrate from Activity-API)
+- [ ] 2.2.8 Add heartbeat manager
+- [ ] 2.2.9 Add shutdown handler for deregistration
+- [ ] 2.2.10 Write integration tests
 
-## 5. Phase 2 - MiniBob Direct Integration
+### 2.3 Identity-Vessel Discovery Integration
+- [ ] 2.3.1 Add discovery-vessel registration with bootstrap delay
+- [ ] 2.3.2 Handle circular dependency (30-second validation window)
+- [ ] 2.3.3 Add heartbeat manager
+- [ ] 2.3.4 Add shutdown handler for deregistration
+- [ ] 2.3.5 Ensure identity-vessel operates independently of discovery
+- [ ] 2.3.6 Write integration tests
 
-- [x] 5.1 Implement mTLS client in MiniBob for vessel-to-vessel communication
-- [x] 5.2 Add fallback resolution logic: local → vessel direct → Activity-API routing
-- [x] 5.3 Update impulse resolver to try Analysis-API direct for analysis shapes
-- [x] 5.4 Add `resolved_by_vessel_id` field to execution traces
-- [x] 5.5 Add `impulse_resolutions` array to trace detailed resolution tracking
-- [x] 5.6 Remove SurrealDB credential requirements from MiniBob config
-- [x] 5.7 Update Helm chart with mTLS certificate secret mounts
-- [x] 5.8 Add cert-manager integration for production mTLS renewal
-- [x] 5.9 Write integration tests for vessel-to-vessel authentication
-- [x] 5.10 Write integration tests for fallback resolution logic
+### 2.4 MiniBob Discovery Integration
+- [ ] 2.4.1 Add discovery-vessel configuration to MiniBob config schema
+- [ ] 2.4.2 Implement registration on startup with local shapes
+- [ ] 2.4.3 Add heartbeat manager
+- [ ] 2.4.4 Add shutdown handler for deregistration
+- [ ] 2.4.5 Update resolution logic: local → discovery query → direct call
+- [ ] 2.4.6 Add discovery-vessel status to `/status` command
+- [ ] 2.4.7 Write integration tests
 
-## 6. Phase 2 - MiniBob Context Acquisition Activities
+### 2.5 Terminal-Vessel Discovery Integration
+- [ ] 2.5.1 Migrate from Activity-API registration to discovery-vessel
+- [ ] 2.5.2 Add heartbeat manager using shared client
+- [ ] 2.5.3 Add shutdown handler for deregistration
+- [ ] 2.5.4 Update health endpoint to include discovery status
+- [ ] 2.5.5 Write integration tests
 
-- [x] 6.1 Create `acquire-error-log-context.json` activity template
-- [x] 6.2 Implement error log parsing logic (stack traces, error messages)
-- [x] 6.3 Define `error_log` impulse shape schema
-- [x] 6.4 Create `acquire-requirements-context.json` activity template
-- [x] 6.5 Implement requirements parsing logic (markdown, spec files)
-- [x] 6.6 Define `requirement` impulse shape schema
-- [x] 6.7 Create `acquire-codebase-context.json` activity template
-- [x] 6.8 Implement codebase structure analysis (file tree, entry points)
-- [x] 6.9 Define `codebase_structure` impulse shape schema
-- [x] 6.10 Register all 3 context acquisition activities in Activity-API
-- [x] 6.11 Integrate context acquisition into goal-processor workflow
-- [x] 6.12 Write unit tests for each context acquisition activity
-- [x] 6.13 Write integration tests for goal-seeking with context
+### 2.6 React-Renderer Discovery Integration
+- [ ] 2.6.1 Add discovery-vessel registration on startup
+- [ ] 2.6.2 Add heartbeat manager
+- [ ] 2.6.3 Add shutdown handler for deregistration
+- [ ] 2.6.4 Update health endpoint to include discovery status
+- [ ] 2.6.5 Write integration tests
 
-## 7. Phase 2 - Validation and Deployment
+### 2.7 User-Vessel Discovery Integration
+- [ ] 2.7.1 Add discovery-vessel registration on startup
+- [ ] 2.7.2 Add heartbeat manager
+- [ ] 2.7.3 Add shutdown handler for deregistration
+- [ ] 2.7.4 Update manifest endpoint with discovery status
+- [ ] 2.7.5 Write integration tests
 
-- [x] 7.1 Deploy MiniBob changes to canary environment
-- [x] 7.2 Run `minibob --validate-config` on canary instance
-- [x] 7.3 Test direct Analysis-API resolution with `--trace` flag
-- [x] 7.4 Verify `resolved_by_vessel_id` appears in traces
-- [x] 7.5 Test context acquisition activities end-to-end
-- [x] 7.6 Verify error_log, requirement, and codebase_structure impulses created
-- [x] 7.7 Test graceful degradation when Analysis-API unavailable
-- [x] 7.8 Monitor canary metrics for 72 hours
-- [x] 7.9 Promote to production after validation
+---
 
-## 8. Phase 3 - MiniBob Goal Orchestrators
+## Phase 3: MiniBob Context Acquisition
 
-- [x] 8.1 Create `orchestrate-test-goal.json` activity template
-- [x] 8.2 Implement test orchestration logic (acquire context → generate → run → report)
-- [x] 8.3 Add child activity composition for test workflow
-- [x] 8.4 Add success validation for test creation and execution
-- [x] 8.5 Create `orchestrate-refactor-goal.json` activity template
-- [x] 8.6 Implement refactor orchestration logic (analyze → transform → validate)
-- [x] 8.7 Add child activity composition for refactor workflow
-- [x] 8.8 Add rollback logic for failed refactoring
-- [x] 8.9 Register both orchestrator activities in Activity-API
-- [x] 8.10 Integrate orchestrators into goal-processor routing
-- [x] 8.11 Write unit tests for orchestration logic
-- [x] 8.12 Write integration tests for `goal:test` end-to-end
-- [x] 8.13 Write integration tests for `goal:refactor` end-to-end
+### 3.1 Context Acquisition Activities
+- [x] 3.1.1 Create `acquire-error-log-context.json` activity template
+- [x] 3.1.2 Implement error log parsing logic
+- [x] 3.1.3 Define `error_log` impulse shape schema
+- [x] 3.1.4 Create `acquire-requirements-context.json` activity template
+- [x] 3.1.5 Implement requirements parsing logic
+- [x] 3.1.6 Define `requirement` impulse shape schema
+- [x] 3.1.7 Create `acquire-codebase-context.json` activity template
+- [x] 3.1.8 Implement codebase structure analysis
+- [x] 3.1.9 Define `codebase_structure` impulse shape schema
+- [x] 3.1.10 Register all 3 context activities in Activity-API
+- [x] 3.1.11 Integrate into goal-processor workflow
+- [x] 3.1.12 Write unit tests
 
-## 9. Phase 3 - Validation and Deployment
+### 3.2 Goal Orchestrators
+- [ ] 3.2.1 Define input/output shapes for goal:test orchestrator
+- [ ] 3.2.2 Define input/output shapes for goal:refactor orchestrator
+- [ ] 3.2.3 Implement state machine (PLANNING → EXECUTING → VALIDATING → DONE)
+- [ ] 3.2.4 Implement rollback activity pattern
+- [ ] 3.2.5 Implement composition graph structure
+- [ ] 3.2.6 Create `orchestrate-test-goal.json` activity template
+- [ ] 3.2.7 Create `orchestrate-refactor-goal.json` activity template
+- [ ] 3.2.8 Integrate into goal-processor routing
+- [ ] 3.2.9 Write unit tests for orchestration logic
+- [ ] 3.2.10 Write integration tests for end-to-end orchestration
 
-- [ ] 9.1 Deploy MiniBob changes to canary environment
-- [ ] 9.2 Test `minibob --single "test the authentication module"`
-- [ ] 9.3 Verify test orchestrator executes all child activities
-- [ ] 9.4 Test `minibob --single "refactor user service to use repository pattern"`
-- [ ] 9.5 Verify refactor orchestrator with codebase analysis
-- [ ] 9.6 Verify composition graph snapshot in traces
-- [ ] 9.7 Monitor canary for orchestrator failures (48 hours)
-- [ ] 9.8 Promote to production after validation
+---
 
-## 10. Phase 4 - Circuit Breaker and Health Scoring
+## Phase 4: Health Scoring and Circuit Breakers
 
-- [x] 10.1 Implement circuit breaker state machine (CLOSED → OPEN → HALF_OPEN)
-- [x] 10.2 Add circuit breaker logic to Activity-API impulse routing
-- [x] 10.3 Configure circuit breaker thresholds (opens when EITHER: 5 consecutive failures OR failure rate ≥ 50% over 60-second window; half-open after 30s timeout)
-- [x] 10.4 Implement `POST /v2/vessels/heartbeat` endpoint in Activity-API
-- [x] 10.5 Add heartbeat sending logic to MiniBob (every 60 seconds)
-- [x] 10.6 Add heartbeat sending logic to Analysis-API (every 60 seconds)
-- [x] 10.7 Implement health score computation (success rate, latency, availability)
-- [x] 10.8 Add exponential moving average for health metrics
-- [x] 10.9 Add latency-based penalties to health score
-- [x] 10.10 Add heartbeat freshness factor to health score
-- [x] 10.11 Implement gradual decay and alert thresholds
-- [x] 10.12 Add circuit breaker state to routing decision traces
-- [x] 10.13 Write unit tests for circuit breaker state machine
-- [x] 10.14 Write unit tests for health score computation
+**Status:** ✅ INFRASTRUCTURE DEPLOYED (Validated 2026-04-11)
+- All code deployed to canary environment
+- Database schema created (4 tables, 11 indexes)
+- Services integrated into VesselRouter
+- End-to-end testing blocked by vessel registration (400 errors)
+- See: PHASE_4_VALIDATION_REPORT.md
 
-## 11. Phase 4 - Routing Traces and Learning Integration
+### 4.1 Health Score Computation (Activity-API)
+- [x] 4.1.1 Implement health score computation logic
+- [x] 4.1.2 Add exponential moving average for metrics
+- [x] 4.1.3 Add latency-based penalties
+- [x] 4.1.4 Add heartbeat freshness factor
+- [x] 4.1.5 Implement gradual decay and alert thresholds
 
-- [x] 11.1 Implement routing trace recording in Activity-API `/v2/impulses/resolve`
-- [x] 11.2 Add trace fields: candidates, selected, selection_reason, latency
-- [x] 11.3 Implement circuit breaker event tracing
-- [x] 11.4 Add trace fields: vessel_id, event, consecutive_failures, health_score
-- [x] 11.5 Implement sampling for routing traces (100% failures, 10% successes)
-- [x] 11.6 Add async trace writing via queue (non-blocking)
-- [x] 11.7 Implement batch writing (buffer 100 traces)
-- [x] 11.8 Add TTL for routing traces (30 days)
-- [x] 11.9 Add monitoring alert for trace queue depth > 1000
-- [x] 11.10 Integrate routing traces into dashboard visualization
-- [x] 11.11 Add Thompson Sampling on routing decisions (learn optimal vessel)
-- [x] 11.12 Write integration tests for trace capture
+### 4.2 Circuit Breaker (Activity-API)
+- [x] 4.2.1 Implement circuit breaker state machine (CLOSED → OPEN → HALF_OPEN)
+- [x] 4.2.2 Configure thresholds (5 failures, 30s timeout)
+- [x] 4.2.3 Add circuit breaker state to routing decisions
+- [x] 4.2.4 Create `circuit_breaker_trace` table
+- [x] 4.2.5 Write unit tests
 
-## 12. Phase 4 - Validation and Deployment
+### 4.3 Routing Traces
+- [x] 4.3.1 Create `routing_trace` table
+- [x] 4.3.2 Implement routing trace recording
+- [x] 4.3.3 Add sampling (100% failures, 10% successes)
+- [x] 4.3.4 Add async trace writing via queue
+- [x] 4.3.5 Add TTL for routing traces (30 days)
 
-- [ ] 12.1 Deploy Activity-API changes to canary environment
-- [ ] 12.2 Deploy vessel changes (heartbeat logic) to canary
-- [ ] 12.3 Simulate vessel failure (stop Analysis-API pod)
-- [ ] 12.4 Trigger 5 impulse resolutions to open circuit breaker
-- [ ] 12.5 Verify circuit breaker state = "open" via API
-- [ ] 12.6 Restart Analysis-API and verify half-open state after 30s
-- [ ] 12.7 Verify circuit closes after successful resolution
-- [ ] 12.8 Verify routing traces appear in SurrealDB
-- [ ] 12.9 Verify dashboard shows routing decision visualizations
-- [ ] 12.10 Monitor canary for false positives (72 hours)
-- [ ] 12.11 Promote to production after validation
+---
 
-## 13. Phase 5 - Remove Proxy Pattern
+## Phase 5: Validation and Deployment
 
-- [ ] 13.1 Remove Analysis-API proxy logic from Activity-API `/v2/impulses/resolve`
-- [ ] 13.2 Update routing logic to only handle unknown shapes
-- [ ] 13.3 Add error response for direct Analysis-API shapes: "Use vessel-direct resolution"
-- [ ] 13.4 Verify backward compatibility for unknown shapes routing
-- [ ] 13.5 Deploy to canary environment
-- [ ] 13.6 Test that Activity-API rejects `error_log` shape resolution
-- [ ] 13.7 Test that Activity-API still routes `unknown_shape` to vessels
-- [ ] 13.8 Monitor error rate for 48 hours
-- [ ] 13.9 Verify no regression in overall system performance
-- [ ] 13.10 Promote to production after validation
+**Status:** ⚠️ BLOCKED - Discovery-vessel not yet implemented
+**Note:** Analysis-API successfully deployed (2026-04-11)
+- metabob-analysis-api v0.1.2 operational at https://api.metabob.com
+- Fixed: imagePullSecrets, cpg-inference-ts dependencies, image tagging
+- See: ANALYSIS_API_DEPLOYMENT_FIX.md, ANALYSIS_API_VALIDATION_REPORT.md
 
-## 14. Documentation and Migration Guides
+### 5.1 Discovery-Vessel Deployment
+- [ ] 5.1.1 Deploy discovery-vessel to canary environment (BLOCKED: Phase 1 not started)
+- [ ] 5.1.2 Verify self-registration works
+- [ ] 5.1.3 Test vessel registration from Activity-API
+- [ ] 5.1.4 Test heartbeat and TTL expiration
+- [ ] 5.1.5 Monitor for 48 hours
+- [ ] 5.1.6 Promote to production
 
-- [ ] 14.1 Update DEPLOYMENT_WORKFLOW.md with mTLS setup instructions
-- [ ] 14.2 Create MIGRATION.md with step-by-step upgrade guide
-- [ ] 14.3 Document VesselCapabilityV2 format specification
-- [ ] 14.4 Document shape registry API endpoints
-- [ ] 14.5 Document vessel discovery API endpoints
-- [ ] 14.6 Document circuit breaker configuration options
-- [ ] 14.7 Document health score computation algorithm
-- [ ] 14.8 Add examples for context acquisition activities
-- [ ] 14.9 Add examples for goal orchestrator activities
-- [ ] 14.10 Update MiniBob CLAUDE.md with new capabilities
-- [ ] 14.11 Update Activity-API CLAUDE.md with new endpoints
-- [ ] 14.12 Update Analysis-API CLAUDE.md with direct integration
+### 5.2 Vessel Integration Validation
+- [ ] 5.2.1 Test all vessels register with discovery-vessel (BLOCKED: Discovery-vessel not deployed)
+- [ ] 5.2.2 Test capability queries return correct vessels
+- [ ] 5.2.3 Test graceful shutdown deregistration
+- [ ] 5.2.4 Test circuit breaker opens after failures (BLOCKED: Vessel registration failing)
+- [ ] 5.2.5 Test health scoring reflects vessel state
+- [ ] 5.2.6 Verify traces appear in Activity-API
 
-## 15. Testing and Quality Assurance
+### 5.3 Legacy Endpoint Migration
+- [ ] 5.3.1 Enable deprecation headers on Activity-API `/v2/vessels/*`
+- [ ] 5.3.2 Monitor deprecation warning adoption (30 days)
+- [ ] 5.3.3 Enable 410 Gone for legacy endpoints
+- [ ] 5.3.4 Remove legacy endpoint code
 
-- [ ] 15.1 Write load tests: 1000 concurrent impulse resolutions
-- [ ] 15.2 Write load tests: 10k routing decisions with trace capture
-- [ ] 15.3 Write chaos test: Kill Analysis-API during resolution
-- [ ] 15.4 Write chaos test: Expire mTLS certificate
-- [ ] 15.5 Write chaos test: SurrealDB connection loss
-- [ ] 15.6 Run all unit tests across all services
-- [ ] 15.7 Run all integration tests across all services
-- [ ] 15.8 Run load tests in staging environment
-- [ ] 15.9 Run chaos tests in staging environment
-- [ ] 15.10 Perform security audit of mTLS implementation
-- [ ] 15.11 Perform security audit of API key handling
-- [ ] 15.12 Verify trace data doesn't leak credentials
+---
 
-## 16. Monitoring and Observability
+## Phase 6: Documentation and Quality
 
-- [ ] 16.1 Add Prometheus metrics for circuit breaker state
-- [ ] 16.2 Add Prometheus metrics for health scores
-- [ ] 16.3 Add Prometheus metrics for routing decisions
-- [ ] 16.4 Add Prometheus metrics for trace queue depth
-- [ ] 16.5 Add Grafana dashboard for vessel health overview
-- [ ] 16.6 Add Grafana dashboard for routing performance
-- [ ] 16.7 Add Grafana dashboard for circuit breaker events
-- [ ] 16.8 Add alert: Circuit breaker open for > 5 minutes
-- [ ] 16.9 Add alert: Health score < 0.3 for > 10 minutes
-- [ ] 16.10 Add alert: Trace queue depth > 1000
-- [ ] 16.11 Add alert: mTLS certificate expiring in < 7 days
-- [ ] 16.12 Update runbooks for circuit breaker incidents
+### 6.1 Documentation
+- [ ] 6.1.1 Update DEPLOYMENT_WORKFLOW.md with discovery-vessel
+- [ ] 6.1.2 Create DISCOVERY_INTEGRATION.md guide
+- [ ] 6.1.3 Document @metabob/vessel-discovery-client usage
+- [ ] 6.1.4 Document standard configuration parameters
+- [ ] 6.1.5 Update MiniBob CLAUDE.md with discovery capabilities
+- [ ] 6.1.6 Update Activity-API CLAUDE.md with architecture changes
+
+### 6.2 Testing and Quality
+- [ ] 6.2.1 Write load tests: 1000 concurrent registrations
+- [ ] 6.2.2 Write chaos test: Kill discovery-vessel during registration
+- [ ] 6.2.3 Write chaos test: Network partition between vessels
+- [ ] 6.2.4 Run all unit tests
+- [ ] 6.2.5 Run all integration tests
+- [ ] 6.2.6 Perform security audit of discovery endpoints
+
+### 6.3 Monitoring
+- [ ] 6.3.1 Add Prometheus metrics for discovery operations
+- [ ] 6.3.2 Add Grafana dashboard for vessel health overview
+- [ ] 6.3.3 Add alert: Discovery-vessel unhealthy > 5 minutes
+- [ ] 6.3.4 Add alert: Vessel registration failure rate > 10%
+- [ ] 6.3.5 Update runbooks for discovery incidents
+
+---
+
+## Summary
+
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| 1. Discovery-Vessel Core | 30 | Not Started |
+| 2. Vessel Integrations | 35 | Not Started |
+| 3. Context Acquisition | 22 | Mostly Complete |
+| 4. Health/Circuit Breakers | 15 | ✅ **Deployed to Canary** (2026-04-11) |
+| 5. Validation/Deployment | 16 | Blocked (Discovery-vessel needed) |
+| 6. Documentation/Quality | 17 | Not Started |
+| **Total** | **135** | |
+
+---
+
+## Deployment Notes
+
+**2026-04-11:** Analysis-API Deployment Success
+- Fixed 5 cascading deployment issues (imagePullSecrets, dependencies, image tags)
+- metabob-analysis-api v0.1.2 deployed to canary (https://api.metabob.com)
+- Phase 4 infrastructure validated: Circuit breaker & health scoring deployed
+- See detailed reports: ANALYSIS_API_DEPLOYMENT_FIX.md, PHASE_4_VALIDATION_REPORT.md
+- CI/CD workflow 24286591406 completed successfully
