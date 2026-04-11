@@ -10,10 +10,12 @@
     "build": "bun build src/index.ts --outdir dist --target bun",
     "apply-schema": "bun run scripts/apply-schema.ts",
     "test": "bun test",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
+    "@metabob/vessel-discovery-client": "file:../../packages/vessel-discovery-client",
     "hono": "^4.12.9",
     "jose": "^5.2.0",
     "nanoid": "^5.0.4",

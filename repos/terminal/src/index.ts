@@ -36,7 +36,6 @@ import type {
 // ============================================================================
 
 const INSTANCE_ID = process.env.INSTANCE_ID || 'terminal-vessel-1';
-const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT || 'http://activity.metabob.local';
 const MODE = process.env.MODE || 'http'; // 'http' | 'stdio' | 'both'
 
 // Parse command-line arguments for port/socket configuration
@@ -118,47 +117,50 @@ async function findAvailablePort(startPort: number = 9090): Promise<number> {
 }
 
 // ============================================================================
-// Vessel Registration
+// Discovery Vessel Integration
 // ============================================================================
 
-async function registerWithBackend(endpoint: string) {
-  const registrationUrl = `${ACTIVITY_API_ENDPOINT}/v2/vessels/register`;
+import { VesselClient, type DiscoveryConfig } from '@metabob/vessel-discovery-client';
 
-  try {
-    const response = await fetch(registrationUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        vesselId: INSTANCE_ID,
-        vesselName: 'Terminal Vessel',
-        endpoint,
-        shapes: [
-          'terminalState',
-          'terminalCommand',
-          'terminalOutput'
-        ],
-        metadata: {
-          version: '1.0.0',
-          capabilities: ['pty', 'multi-viewer', 'checkpoints', 'replay'],
-          environment: process.env.NODE_ENV || 'development',
-          serverMode: SERVER_CONFIG.mode,
-          ...(SERVER_CONFIG.mode === 'unix' && { socketPath: SERVER_CONFIG.socketPath })
-        }
-      })
-    });
+let discoveryClient: VesselClient | null = null;
 
-    if (response.ok) {
-      console.error(`✅ Registered with backend: ${ACTIVITY_API_ENDPOINT}`);
-      console.error(`   Vessel ID: ${INSTANCE_ID}`);
-      console.error(`   Endpoint: ${endpoint}`);
-    } else {
-      console.error(`⚠️  Backend registration failed: ${response.status} ${response.statusText}`);
-      console.error(`   Continuing without registration - discovery may not work`);
+async function registerWithDiscovery(endpoint: string) {
+  const discoveryEndpoint = process.env.DISCOVERY_VESSEL_ENDPOINT || 'http://discovery-vessel.activity-system.svc.cluster.local:8080';
+
+  const config: DiscoveryConfig = {
+    discoveryEndpoint,
+    vesselId: INSTANCE_ID,
+    vesselName: 'Terminal Vessel',
+    version: '1.0.0',
+    endpoint,
+    shapes: [
+      'terminalState',
+      'terminalCommand',
+      'terminalOutput'
+    ],
+    protocol: 'http',
+    metadata: {
+      capabilities: ['pty', 'multi-viewer', 'checkpoints', 'replay'],
+      environment: process.env.NODE_ENV || 'development',
+      serverMode: SERVER_CONFIG.mode,
+      ...(SERVER_CONFIG.mode === 'unix' && { socketPath: SERVER_CONFIG.socketPath })
     }
-  } catch (error: any) {
-    console.error(`⚠️  Could not connect to backend: ${error.message}`);
+  };
+
+  discoveryClient = new VesselClient(config);
+
+  const success = await discoveryClient.register();
+
+  if (success) {
+    console.error(`✅ Registered with discovery: ${discoveryEndpoint}`);
+    console.error(`   Vessel ID: ${INSTANCE_ID}`);
+    console.error(`   Endpoint: ${endpoint}`);
+
+    // Start heartbeat
+    discoveryClient.startHeartbeat();
+    console.error(`   Heartbeat started`);
+  } else {
+    console.error(`⚠️  Discovery registration failed`);
     console.error(`   Continuing without registration - discovery may not work`);
   }
 }
@@ -172,14 +174,35 @@ async function startHttpServer(): Promise<{ server: any; endpoint: string }> {
   const fetchHandler = async (req: Request) => {
     const url = new URL(req.url);
 
-    // Health check
+    // Health check with discovery status
     if (url.pathname === '/health') {
-      return Response.json({
+      const healthStatus: any = {
         status: 'ok',
         vessel: 'terminal',
         instanceId: INSTANCE_ID,
-        shapes: ['terminalState', 'terminalCommand', 'terminalOutput']
-      });
+        shapes: ['terminalState', 'terminalCommand', 'terminalOutput'],
+        checks: {
+          discovery: { status: 'unknown', registered: false }
+        }
+      };
+
+      if (discoveryClient) {
+        const isRunning = discoveryClient.isRunning;
+        const lastHeartbeat = discoveryClient.lastHeartbeat;
+
+        healthStatus.checks.discovery = {
+          status: isRunning ? 'healthy' : 'pending',
+          registered: isRunning,
+          lastHeartbeat: lastHeartbeat ? lastHeartbeat.toISOString() : null
+        };
+      } else {
+        healthStatus.checks.discovery = {
+          status: 'disabled',
+          registered: false
+        };
+      }
+
+      return Response.json(healthStatus);
     }
 
     // Impulse resolution endpoint (vessel discovery)
@@ -606,7 +629,7 @@ async function main() {
 
   if (MODE === 'http' || MODE === 'both') {
     const { endpoint } = await startHttpServer();
-    await registerWithBackend(endpoint);
+    await registerWithDiscovery(endpoint);
   }
 
   if (MODE === 'stdio' || MODE === 'both') {
@@ -622,4 +645,27 @@ async function main() {
 main().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
+});
+
+// Graceful shutdown handler
+process.on('SIGTERM', async () => {
+  console.error('[Server] SIGTERM received, shutting down gracefully');
+
+  if (discoveryClient) {
+    await discoveryClient.shutdown();
+  }
+
+  console.error('[Server] Graceful shutdown complete');
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.error('[Server] SIGINT received, shutting down gracefully');
+
+  if (discoveryClient) {
+    await discoveryClient.shutdown();
+  }
+
+  console.error('[Server] Graceful shutdown complete');
+  process.exit(0);
 });

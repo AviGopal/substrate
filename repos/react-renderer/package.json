@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@metabob/vessel-discovery-client": "file:../../packages/vessel-discovery-client",
     "hono": "^4.0.0",
     "nanoid": "^5.0.0",
     "react": "^19.0.0",

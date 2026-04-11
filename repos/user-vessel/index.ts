@@ -22,6 +22,62 @@ import { projectRoutes } from "./src/routes/projects"
 import { apiKeyRoutes } from "./src/routes/api-keys"
 import { costRoutes } from "./src/routes/costs"
 import type { UserVesselConfig } from "./src/types"
+import { VesselClient, type DiscoveryConfig } from "@metabob/vessel-discovery-client"
+
+// Global discovery client
+let discoveryClient: VesselClient | null = null
+
+/**
+ * Initialize discovery vessel integration
+ */
+async function initializeDiscovery(config: UserVesselConfig) {
+  if (!config.discovery?.enabled) {
+    console.log("[Discovery] Discovery integration disabled")
+    return
+  }
+
+  const discoveryConfig: DiscoveryConfig = {
+    discoveryEndpoint: config.discovery.endpoint,
+    vesselId: config.discovery.vesselId,
+    vesselName: "user-vessel",
+    version: "0.1.0",
+    endpoint: getEndpoint(config),
+    shapes: config.discovery.shapes,
+    protocol: "http",
+    heartbeatIntervalMs: config.discovery.heartbeatIntervalMs,
+    metadata: {
+      capabilities: ["user-management", "rbac", "jwt-auth"],
+      environment: process.env.NODE_ENV || "development",
+    },
+  }
+
+  discoveryClient = new VesselClient(discoveryConfig)
+
+  const success = await discoveryClient.register()
+
+  if (success) {
+    console.log(`[Discovery] ✓ Registered successfully`)
+    discoveryClient.startHeartbeat()
+    console.log(`[Discovery] Heartbeat started`)
+  } else {
+    console.warn(`[Discovery] ✗ Registration failed (will retry)`)
+  }
+}
+
+/**
+ * Get this vessel's external endpoint
+ */
+function getEndpoint(config: UserVesselConfig): string {
+  if (process.env.VESSEL_ENDPOINT) {
+    return process.env.VESSEL_ENDPOINT
+  }
+
+  const namespace = config.surrealdb.namespace || "activity-system"
+  const serviceName = process.env.SERVICE_NAME || "user-vessel"
+  const port = config.port
+
+  return `http://${serviceName}.${namespace}.svc.cluster.local:${port}`
+}
 
 // =============================================================================
 // CLI ARGUMENT PARSING
@@ -101,13 +157,34 @@ async function startServer() {
     credentials: true,
   }))
 
-  // Health check
+  // Health check with discovery status
   app.get("/health", (c) => {
-    return c.json({
+    const healthStatus: any = {
       status: "ok",
       vessel: "user-vessel",
       version: "0.1.0",
-    })
+      checks: {
+        discovery: { status: 'unknown', registered: false }
+      }
+    }
+
+    if (discoveryClient) {
+      const isRunning = discoveryClient.isRunning
+      const lastHeartbeat = discoveryClient.lastHeartbeat
+
+      healthStatus.checks.discovery = {
+        status: isRunning ? 'healthy' : 'pending',
+        registered: isRunning,
+        lastHeartbeat: lastHeartbeat ? lastHeartbeat.toISOString() : null
+      }
+    } else {
+      healthStatus.checks.discovery = {
+        status: 'disabled',
+        registered: false
+      }
+    }
+
+    return c.json(healthStatus)
   })
 
   // Vessel manifest
@@ -153,9 +230,24 @@ async function startServer() {
   console.log(`  Manifest: http://${config.host}:${config.port}/manifest`)
   console.log(`\nPress Ctrl+C to stop.\n`)
 
+  // Discovery Vessel Integration
+  await initializeDiscovery(config)
+
   // Graceful shutdown
   process.on("SIGINT", async () => {
     console.log("\nShutting down...")
+    if (discoveryClient) {
+      await discoveryClient.shutdown()
+    }
+    await closeRootDb()
+    process.exit(0)
+  })
+
+  process.on("SIGTERM", async () => {
+    console.log("\nShutting down...")
+    if (discoveryClient) {
+      await discoveryClient.shutdown()
+    }
     await closeRootDb()
     process.exit(0)
   })

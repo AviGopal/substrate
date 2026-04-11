@@ -15,9 +15,13 @@ import {
   setActionHandler
 } from './websocket/handler'
 import type { Primitive, UIComponentImpulse } from './types'
+import { VesselClient, type DiscoveryConfig } from '@metabob/vessel-discovery-client'
 
 // Load resolvers
 import './resolvers/ui-component'
+
+// Global discovery client
+let discoveryClient: VesselClient | null = null
 
 // ============================================================================
 // HTTP Server (Hono)
@@ -32,21 +36,51 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization']
 }))
 
-// Health check
+// Health check with discovery status
 app.get('/health', (c) => {
-  return c.json({
+  const healthStatus: any = {
     status: 'ok',
     vessel: vesselManifest.id,
     version: vesselManifest.version,
     uptime: process.uptime(),
     impulseCount: impulseStore.getAll().length,
-    resolvers: getResolverTypes()
-  })
+    resolvers: getResolverTypes(),
+    checks: {
+      discovery: { status: 'unknown', registered: false }
+    }
+  }
+
+  if (discoveryClient) {
+    const isRunning = discoveryClient.isRunning
+    const lastHeartbeat = discoveryClient.lastHeartbeat
+
+    healthStatus.checks.discovery = {
+      status: isRunning ? 'healthy' : 'pending',
+      registered: isRunning,
+      lastHeartbeat: lastHeartbeat ? lastHeartbeat.toISOString() : null
+    }
+  } else {
+    healthStatus.checks.discovery = {
+      status: 'disabled',
+      registered: false
+    }
+  }
+
+  return c.json(healthStatus)
 })
 
 // Vessel manifest (for discovery)
 app.get('/manifest', (c) => {
-  return c.json(vesselManifest)
+  const manifest: any = { ...vesselManifest }
+
+  if (discoveryClient) {
+    manifest.discovery = {
+      registered: discoveryClient.isRunning,
+      lastHeartbeat: discoveryClient.lastHeartbeat?.toISOString() || null
+    }
+  }
+
+  return c.json(manifest)
 })
 
 // List registered resolvers
@@ -280,6 +314,78 @@ const server = Bun.serve<ClientInfo>({
 })
 
 console.log(`[Server] Listening on port ${PORT}`)
+
+// ============================================================================
+// Discovery Vessel Integration
+// ============================================================================
+
+async function initializeDiscovery() {
+  const discoveryEnabled = process.env.DISCOVERY_ENABLED !== 'false'
+  if (!discoveryEnabled) {
+    console.log('[Discovery] Discovery integration disabled')
+    return
+  }
+
+  const discoveryEndpoint = process.env.DISCOVERY_VESSEL_ENDPOINT || 'http://discovery-vessel.activity-system.svc.cluster.local:8080'
+  const hostname = process.env.HOSTNAME || 'react-renderer'
+  const podName = process.env.POD_NAME || hostname
+  const vesselId = process.env.VESSEL_ID || `react-renderer-${podName}`
+
+  const endpoint = process.env.VESSEL_ENDPOINT || `http://react-renderer.activity-system.svc.cluster.local:${PORT}`
+
+  const config: DiscoveryConfig = {
+    discoveryEndpoint,
+    vesselId,
+    vesselName: 'react-renderer',
+    version: vesselManifest.version,
+    endpoint,
+    shapes: ['uiComponent'],
+    protocol: 'http',
+    metadata: {
+      capabilities: ['ui-rendering', 'websocket', 'real-time-updates'],
+      environment: process.env.NODE_ENV || 'development',
+    },
+  }
+
+  discoveryClient = new VesselClient(config)
+
+  const success = await discoveryClient.register()
+
+  if (success) {
+    console.log('[Discovery] ✓ Registered successfully')
+    discoveryClient.startHeartbeat()
+    console.log('[Discovery] Heartbeat started')
+  } else {
+    console.warn('[Discovery] ✗ Registration failed (will retry)')
+  }
+}
+
+initializeDiscovery().catch((error) => {
+  console.error('[Discovery] Initialization error:', error)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('[Server] SIGTERM received, shutting down gracefully')
+
+  if (discoveryClient) {
+    await discoveryClient.shutdown()
+  }
+
+  console.log('[Server] Graceful shutdown complete')
+  process.exit(0)
+})
+
+process.on('SIGINT', async () => {
+  console.log('[Server] SIGINT received, shutting down gracefully')
+
+  if (discoveryClient) {
+    await discoveryClient.shutdown()
+  }
+
+  console.log('[Server] Graceful shutdown complete')
+  process.exit(0)
+})
 
 // Export for external configuration
 export { setQueryHandler, setActionHandler, impulseStore }
