@@ -1,6 +1,74 @@
 # Vessel Integration Standardization - Revision Summary
 
-## Date: 2026-04-10
+## Revision 2: 2026-04-11 (Discovery-Vessel Architecture Clarification)
+
+### Overview
+
+This revision addresses architectural misalignments identified during the integration review. The primary change is clarifying that **discovery-vessel is a standalone vessel**, not Activity-API endpoints.
+
+### Architectural Clarification
+
+**Discovery-vessel** is a standalone vessel that owns:
+- Vessel registration (`POST /register`)
+- Heartbeat management (`POST /heartbeat`)
+- Capability queries (`POST /resolve`)
+- Deregistration (`DELETE /vessels/:vesselId`)
+
+**Activity-API** continues to own:
+- Shape registry (`/v2/shapes/*`)
+- Execution trace storage
+- Thompson Sampling computation
+- Health score computation
+- Circuit breaker state management
+
+### Spec Updates
+
+#### vessel-discovery/spec.md
+- Updated architectural overview to describe standalone discovery-vessel
+- Added relationship clarification between Activity-API and discovery-vessel
+- Added **Standard Configuration Parameters** section with defaults
+- Added **Heartbeat failure handling** requirement
+- Added **Deregistration timeout** scenario (5 seconds)
+- Added **Shutdown signal handlers** scenario (SIGTERM/SIGINT)
+
+#### activity-api-discovery-migration/spec.md
+- Added `protocol: "http"` to registration payload
+- Added **Metadata requirement** with domain-agnostic examples
+- Added **Consecutive heartbeat failures** scenario
+- Added **Graceful shutdown** requirement
+- Added **Deregistration timeout** scenario
+
+#### minibob-goal-orchestrators/spec.md
+- Added **Input/Output Shape Contracts** section
+- Added **State Machine** specification (PLANNING → EXECUTING → VALIDATING → DONE)
+- Added **Rollback Specification**
+- Added **Composition Graph Structure**
+- Added **Domain-Agnostic Examples**
+- Added **Configuration** section
+
+#### design.md
+- Updated Decision 2 (Service Boundaries) - Activity-API no longer owns discovery
+- Updated Decision 4 (Discovery Mechanism) - Uses discovery-vessel endpoints
+- Updated routing logic example
+
+#### tasks.md
+- Complete rewrite to reflect discovery-vessel architecture
+- Reorganized into 6 phases with 135 total tasks
+- Added tasks for all vessel integrations
+
+### Consistency Fixes
+
+All specs now use consistent parameters:
+- Heartbeat interval: 120000ms (2 min)
+- TTL: 300000ms (5 min)
+- Deregistration timeout: 5000ms (5 sec)
+- Consecutive failures: 3
+
+All specs use domain-agnostic metadata: `Record<string, unknown>`
+
+---
+
+## Revision 1: 2026-04-10
 
 This document summarizes all revisions made to fix critical and major issues identified in the OpenSpec review.
 

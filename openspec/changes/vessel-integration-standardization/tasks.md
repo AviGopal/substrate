@@ -70,48 +70,48 @@
 - [x] 2.2.4 Add resolver for `source_code` impulse shape
 - [x] 2.2.5 Implement `GET /health` endpoint with detailed status
 - [x] 2.2.6 Implement `GET /capabilities` endpoint
-- [ ] 2.2.7 Add discovery-vessel registration on startup (migrate from Activity-API)
-- [ ] 2.2.8 Add heartbeat manager
-- [ ] 2.2.9 Add shutdown handler for deregistration
-- [ ] 2.2.10 Write integration tests
+- [x] 2.2.7 Add discovery-vessel registration on startup (migrate from Activity-API)
+- [x] 2.2.8 Add heartbeat manager
+- [x] 2.2.9 Add shutdown handler for deregistration
+- [x] 2.2.10 Write integration tests
 
 ### 2.3 Identity-Vessel Discovery Integration
-- [ ] 2.3.1 Add discovery-vessel registration with bootstrap delay
-- [ ] 2.3.2 Handle circular dependency (30-second validation window)
-- [ ] 2.3.3 Add heartbeat manager
-- [ ] 2.3.4 Add shutdown handler for deregistration
-- [ ] 2.3.5 Ensure identity-vessel operates independently of discovery
-- [ ] 2.3.6 Write integration tests
+- [x] 2.3.1 Add discovery-vessel registration with bootstrap delay
+- [x] 2.3.2 Handle circular dependency (30-second validation window)
+- [x] 2.3.3 Add heartbeat manager
+- [x] 2.3.4 Add shutdown handler for deregistration
+- [x] 2.3.5 Ensure identity-vessel operates independently of discovery
+- [x] 2.3.6 Write integration tests
 
 ### 2.4 MiniBob Discovery Integration
-- [ ] 2.4.1 Add discovery-vessel configuration to MiniBob config schema
-- [ ] 2.4.2 Implement registration on startup with local shapes
-- [ ] 2.4.3 Add heartbeat manager
-- [ ] 2.4.4 Add shutdown handler for deregistration
-- [ ] 2.4.5 Update resolution logic: local → discovery query → direct call
-- [ ] 2.4.6 Add discovery-vessel status to `/status` command
-- [ ] 2.4.7 Write integration tests
+- [x] 2.4.1 Add discovery-vessel configuration to MiniBob config schema
+- [x] 2.4.2 Implement registration on startup with local shapes
+- [x] 2.4.3 Add heartbeat manager
+- [x] 2.4.4 Add shutdown handler for deregistration
+- [x] 2.4.5 Update resolution logic: local → discovery query → direct call
+- [x] 2.4.6 Add discovery-vessel status to `/status` command
+- [x] 2.4.7 Write integration tests
 
 ### 2.5 Terminal-Vessel Discovery Integration
-- [ ] 2.5.1 Migrate from Activity-API registration to discovery-vessel
-- [ ] 2.5.2 Add heartbeat manager using shared client
-- [ ] 2.5.3 Add shutdown handler for deregistration
-- [ ] 2.5.4 Update health endpoint to include discovery status
-- [ ] 2.5.5 Write integration tests
+- [x] 2.5.1 Migrate from Activity-API registration to discovery-vessel
+- [x] 2.5.2 Add heartbeat manager using shared client
+- [x] 2.5.3 Add shutdown handler for deregistration
+- [x] 2.5.4 Update health endpoint to include discovery status
+- [x] 2.5.5 Write integration tests
 
 ### 2.6 React-Renderer Discovery Integration
-- [ ] 2.6.1 Add discovery-vessel registration on startup
-- [ ] 2.6.2 Add heartbeat manager
-- [ ] 2.6.3 Add shutdown handler for deregistration
-- [ ] 2.6.4 Update health endpoint to include discovery status
-- [ ] 2.6.5 Write integration tests
+- [x] 2.6.1 Add discovery-vessel registration on startup
+- [x] 2.6.2 Add heartbeat manager
+- [x] 2.6.3 Add shutdown handler for deregistration
+- [x] 2.6.4 Update health endpoint to include discovery status
+- [x] 2.6.5 Write integration tests
 
 ### 2.7 User-Vessel Discovery Integration
-- [ ] 2.7.1 Add discovery-vessel registration on startup
-- [ ] 2.7.2 Add heartbeat manager
-- [ ] 2.7.3 Add shutdown handler for deregistration
-- [ ] 2.7.4 Update manifest endpoint with discovery status
-- [ ] 2.7.5 Write integration tests
+- [x] 2.7.1 Add discovery-vessel registration on startup
+- [x] 2.7.2 Add heartbeat manager
+- [x] 2.7.3 Add shutdown handler for deregistration
+- [x] 2.7.4 Update manifest endpoint with discovery status
+- [x] 2.7.5 Write integration tests
 
 ---
 
@@ -240,25 +240,34 @@
 
 | Phase | Tasks | Status |
 |-------|-------|--------|
-| 1. Discovery-Vessel Core | 30 | ✅ **Complete** (2026-04-11) - Tests pass, Dockerfile ready |
-| 2. Vessel Integrations | 35 | 🚧 **In Progress** - Activity-API done, other vessels pending |
+| 1. Discovery-Vessel Core | 30 | ✅ **Complete** (2026-04-11 AM) |
+| 2. Vessel Integrations | 35 | ✅ **Complete** (2026-04-11 PM) - All vessels integrated |
 | 3. Context Acquisition | 22 | ✅ **Complete** |
-| 4. Health/Circuit Breakers | 15 | ✅ **Deployed to Canary** (2026-04-11) |
-| 5. Validation/Deployment | 16 | ⏸️ **Ready** - Discovery-vessel implemented, ready for deployment |
+| 4. Health/Circuit Breakers | 15 | ✅ **Deployed to Canary** (2026-04-11 AM) |
+| 5. Validation/Deployment | 16 | ⏸️ **Ready** - Helm chart ready, pending deployment |
 | 6. Documentation/Quality | 17 | Not Started |
-| **Total** | **135** | **46% Complete** (62/135 tasks) |
+| **Total** | **135** | **75% Complete** (102/135 tasks) |
 
 ---
 
 ## Deployment Notes
 
-**2026-04-11 (PM):** Phase 1 Discovery-Vessel Implementation Complete
+**2026-04-11 (PM-2):** Phase 2 Vessel Integrations Complete
+- All 6 vessels integrated: Analysis-API, Identity-Vessel, MiniBob, Terminal-Vessel, React-Renderer, User-Vessel
+- Helm chart created: charts/discovery-vessel/ with production-ready configuration
+- Deployment ready: helmfile.yaml updated, environment values configured
+- Tasks completed: 2.2.7-2.2.10, 2.3.1-2.3.6, 2.4.1-2.4.7, 2.5.1-2.5.5, 2.6.1-2.6.5, 2.7.1-2.7.5
+- Commits: identity-vessel (5d40512), analysis-api (52dc4f7), main (ec07b385), deployment (e4f08d8)
+- Progress: 75% complete (102/135 tasks)
+- Next: Deploy discovery-vessel to canary, run Phase 5 validation tests
+
+**2026-04-11 (PM-1):** Phase 1 Discovery-Vessel Implementation Complete
 - Discovery-vessel: Comprehensive tests (57 passing) + Dockerfile ready
 - @metabob/vessel-discovery-client: Shared package created (24 tests passing)
 - Activity-API integration: Discovery registration, heartbeat, deprecation + proxy mode
 - All code committed: discovery-vessel (a7405b5), main repo (0c186069)
 - Tasks completed: 1.1.1-1.1.10 (discovery-vessel), 1.2.1-1.2.9 (client), 2.1.1-2.1.7 (Activity-API)
-- Next: Deploy discovery-vessel to canary, integrate remaining vessels
+- Progress: 46% complete (62/135 tasks)
 
 **2026-04-11 (AM):** Analysis-API Deployment Success
 - Fixed 5 cascading deployment issues (imagePullSecrets, dependencies, image tags)
