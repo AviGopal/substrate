@@ -2,37 +2,48 @@
 
 ## Architectural Overview
 
-Vessel discovery is implemented as **Activity-API endpoints** (`/v2/vessels/*`). Following the Impulse-Activity Foundation principle that **resolvers live where data lives**, Activity-API holds the registry of vessel capabilities and therefore provides discovery endpoints.
+The discovery-vessel is a **standalone vessel** that resolves discovery-related impulse types. Following the Impulse-Activity Foundation principle that **resolvers live where data lives**, the discovery-vessel holds the registry of vessel capabilities and therefore resolves discovery impulses.
 
-Discovery starts as Activity-API functionality and may be extracted to a dedicated service later when complexity warrants (5+ vessels, complex routing algorithms, or query latency > 10ms P99).
+Discovery is not special infrastructure - it is **just another vessel** that happens to resolve discovery impulses. Any vessel can implement these resolvers; this one provides the canonical implementation.
 
 ### Foundation Alignment
 
-| Principle | How Discovery Implements It |
-|-----------|-----------------------------------|
-| Impulses are data | Discovery queries use impulse shapes (vesselCapability, vesselEndpoint, etc.) |
-| Resolvers live where data lives | Registry data lives in Activity-API, so discovery endpoints live there |
-| Backend owns trace storage | Activity-API stores vessel registration and health data for learning |
-| Simple until proven complex | Start with Activity-API endpoints, extract service only when needed |
+| Principle | How Discovery-Vessel Implements It |
+|-----------|--------------------------------------|
+| Impulses are data | Discovery queries are impulse pointers (`vesselCapability`, `vesselEndpoint`, etc.) |
+| Resolvers live where data lives | Registry data lives in discovery-vessel, so resolvers live here |
+| Vessels are composable | Discovery-vessel is just a vessel, can be replaced or replicated |
+| No special cases | Uses the same impulse resolution pattern as everything else |
+
+### Relationship with Activity-API
+
+Activity-API continues to own:
+- **Shape registry** (`/v2/shapes/*`) - Central shape definitions with versioning
+- **Execution trace storage** - All traces including discovery operations
+- **Thompson Sampling** - Learning from execution patterns
+- **Health scoring** - Computing vessel health scores from metrics
+
+Discovery-vessel owns:
+- **Vessel registry** - In-memory registry of vessel capabilities
+- **Heartbeat management** - TTL-based registration lifecycle
+- **Capability queries** - Finding vessels by shape
 
 ---
 
 ## ADDED Requirements
 
-### Requirement: Activity-API provides vessel discovery endpoints
+### Requirement: Discovery-vessel provides vessel discovery endpoints
 
-Activity-API SHALL provide `/v2/vessels/*` endpoints for vessel registration, discovery, and health tracking.
+Discovery-vessel SHALL provide HTTP endpoints for vessel registration, discovery, and health tracking.
 
-#### Scenario: Activity-API provides discovery endpoints
-- **WHEN** Activity-API starts
-- **THEN** it SHALL expose HTTP endpoints: `/v2/vessels/register`, `/v2/vessels/discover`, `/v2/vessels/heartbeat`, `/v2/vessels/{id}/health`
-- **AND** these endpoints SHALL be documented in Activity-API OpenAPI spec
+#### Scenario: Discovery-vessel provides endpoints
+- **WHEN** discovery-vessel starts
+- **THEN** it SHALL expose HTTP endpoints: `POST /register`, `POST /heartbeat`, `DELETE /vessels/:vesselId`, `POST /resolve`, `GET /health`
+- **AND** it SHALL advertise support for shapes: `vesselCapability`, `vesselEndpoint`, `vesselHealth`, `vesselRegistry`
 
-#### Scenario: Discovery queries shape registry for compatibility
-- **WHEN** client queries `GET /v2/vessels/discover?shape=error_log`
-- **THEN** Activity-API SHALL look up shape definition in shape registry (`/v2/shapes/error_log`)
-- **AND** SHALL return only vessels advertising compatible version of error_log shape
-- **AND** SHALL include shape version in response for client validation
+#### Scenario: Discovery can be discovered through itself
+- **WHEN** a vessel queries for which vessel can resolve `vesselCapability`
+- **THEN** the discovery-vessel SHALL return itself as a capable resolver (self-registration)
 
 ### Requirement: VesselRegistration format for capability advertisement
 
@@ -139,6 +150,36 @@ Vessels SHALL be able to gracefully deregister when shutting down.
 - **WHEN** a vessel sends `DELETE /vessels/:vesselId`
 - **THEN** the discovery-vessel SHALL remove the vessel from the registry and return 200 OK
 
+#### Scenario: Deregistration timeout
+- **WHEN** deregistration request takes longer than 5 seconds
+- **THEN** vessels SHALL proceed with shutdown (best effort deregistration)
+- **NOTE** Default timeout is 5000ms; configurable via `deregistrationTimeoutMs`
+
+#### Scenario: Shutdown signal handlers
+- **WHEN** a vessel receives SIGTERM or SIGINT signal
+- **THEN** it SHALL attempt deregistration before exiting
+- **AND** respect the deregistration timeout
+
+### Requirement: Heartbeat failure handling
+
+Vessels SHALL handle heartbeat failures with re-registration.
+
+#### Scenario: Heartbeat returns 404
+- **WHEN** heartbeat returns 404 Not Found
+- **THEN** vessel SHALL attempt re-registration immediately
+
+#### Scenario: Consecutive heartbeat failures
+- **WHEN** 3 consecutive heartbeats fail (network error or non-2xx response)
+- **THEN** vessel SHALL stop heartbeat timer
+- **AND** attempt re-registration
+- **NOTE** Default threshold is 3; configurable via `maxConsecutiveFailures`
+
+#### Scenario: Exponential backoff on failure
+- **WHEN** heartbeat or registration fails
+- **THEN** vessel SHALL retry with exponential backoff
+- **AND** backoff formula: `min(initialDelay * 2^failures, maxDelay)`
+- **NOTE** Default: initialDelay=1000ms, maxDelay=30000ms
+
 ### Requirement: Shape definition lookup integration
 
 Discovery endpoints SHALL query Activity-API shape registry for shape metadata to validate compatibility.
@@ -237,13 +278,31 @@ The discovery-vessel SHALL use a simple health model based on heartbeat status.
 
 ---
 
+## Standard Configuration Parameters
+
+All vessels integrating with discovery-vessel SHALL use these default parameters unless explicitly overridden:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `heartbeatIntervalMs` | 120000 (2 min) | Interval between heartbeats |
+| `ttlMs` | 300000 (5 min) | Registration TTL before expiration |
+| `deregistrationTimeoutMs` | 5000 (5 sec) | Max wait for deregistration on shutdown |
+| `maxConsecutiveFailures` | 3 | Failures before attempting re-registration |
+| `initialRetryDelayMs` | 1000 (1 sec) | Initial retry delay for exponential backoff |
+| `maxRetryDelayMs` | 30000 (30 sec) | Maximum retry delay |
+| `cleanupIntervalMs` | 60000 (1 min) | Interval for pruning expired registrations |
+
+These parameters ensure consistent behavior across all vessel integrations and are referenced by the `@metabob/vessel-discovery-client` package.
+
+---
+
 ## Design Decisions
 
 ### No persistent storage required
 The discovery-vessel operates with in-memory storage only. Registrations are ephemeral.
 
 ### No authentication required for cluster-internal use
-The discovery-vessel operates on a trust model within the cluster. Network policies restrict access.
+The discovery-vessel operates on a trust model within the cluster. Network policies restrict access. For cross-cluster communication, API key authentication is required.
 
 ### Metadata is opaque
 The discovery-vessel stores and returns metadata without interpretation. Domain-specific routing logic belongs in clients, not in discovery.

@@ -118,16 +118,20 @@ Analysis-API accepts two authentication patterns depending on caller:
 **Activity-API (Backend):**
 - ✅ Execution trace storage
 - ✅ Thompson Sampling computation
-- ✅ Vessel capability discovery endpoints (`/v2/vessels/register`, `/v2/vessels/discover`)
-- ✅ Health aggregation and circuit breaker state
+- ✅ Health scoring computation (from vessel heartbeat metrics)
+- ✅ Circuit breaker state management
 - ✅ Shape registry (`/v2/shapes/*`)
+- ❌ NOT: Vessel capability discovery (moved to discovery-vessel)
 - ❌ NOT: Impulse resolution (delegates to vessels)
 - ❌ NOT: Direct vessel health checks (vessels self-report)
 
-**Vessel Registry (Future):**
-- Initial implementation: Endpoints in Activity-API
-- Future extraction: When 5+ vessels exist or query complexity warrants dedicated service
-- Would own: Discovery, health scoring, routing optimization
+**Discovery-Vessel (Standalone):**
+- ✅ Vessel registration and capability advertisement
+- ✅ Heartbeat management and TTL expiration
+- ✅ Capability queries (find vessels by shape)
+- ✅ Self-registration (discovery is discoverable)
+- ❌ NOT: Trace storage (delegates to Activity-API)
+- ❌ NOT: Health scoring (delegates to Activity-API)
 
 **Cross-Vessel Protocol (Standard):**
 - HTTP API specification for vessel-to-vessel communication
@@ -135,10 +139,9 @@ Analysis-API accepts two authentication patterns depending on caller:
 - Required endpoints: `/v2/impulses/resolve`, `/health`, `/capabilities`
 
 **Alternatives Considered:**
-- ❌ **Separate Vessel Registry service immediately**: Over-engineering for 2 vessels
 - ❌ **Activity-API owns all impulse resolution**: Violates "resolvers live where data lives"
 - ❌ **gRPC for vessel-to-vessel**: HTTP is simpler, works with existing infrastructure
-- ✅ **Activity-API hosts discovery, vessels resolve impulses**: Balances centralization with localization
+- ✅ **Discovery-vessel as standalone**: Follows impulse-activity foundation ("resolvers live where data lives")
 
 ### Decision 3: Shape registry ownership
 
@@ -180,10 +183,11 @@ DEFINE INDEX idx_shape_version ON shape_definition FIELDS shape_name, version UN
 **Rationale:** Vessels must be discoverable for routing without manual configuration.
 
 **Implementation:**
-- Vessels call `POST /v2/vessels/register` on startup with `VesselCapabilityV2` payload
-- Activity-API stores in `vessel` table with `capabilities` field
-- Vessels send health heartbeat every 60 seconds (`POST /v2/vessels/heartbeat`)
-- Activity-API computes health score (success rate, latency, availability)
+- Vessels call `POST /register` to discovery-vessel on startup with registration payload
+- Discovery-vessel maintains in-memory registry with shape indexing
+- Vessels send heartbeat every 2 minutes (`POST /heartbeat`) to maintain TTL
+- Discovery-vessel sets TTL to 5 minutes; expired vessels excluded from queries
+- Activity-API computes health score from heartbeat metrics (success rate, latency, availability)
 - Circuit breaker opens after 5 consecutive failures or health score < 0.3
 
 **VesselCapabilityV2 Format:**
@@ -209,30 +213,37 @@ interface VesselCapabilityV2 {
 
 **Routing Logic:**
 ```typescript
-// In Activity-API /v2/impulses/resolve
-async function routeImpulseToVessel(impulse: Impulse): Promise<ResolvedImpulse> {
-  // 1. Find vessels that can resolve this shape
-  const candidates = await db.query(`
-    SELECT * FROM vessel
-    WHERE capabilities.resolvers[*].shapes CONTAINS $shape
-    AND health_score > 0.3
-  `, { shape: impulse.pointer.type });
+// In MiniBob or other vessels needing to resolve impulses
+async function resolveImpulse(impulse: Impulse): Promise<ResolvedImpulse> {
+  // 1. Try local resolution first (MiniBob resolves file, memo, etc.)
+  if (localResolvers.canResolve(impulse.pointer.type)) {
+    return localResolvers.resolve(impulse);
+  }
 
-  // 2. Apply circuit breaker filter
-  const available = candidates.filter(v => !circuitBreaker.isOpen(v.vessel_id));
+  // 2. Query discovery-vessel for capable vessels
+  const discoveryResult = await fetch(`${DISCOVERY_VESSEL_URL}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({
+      pointer: { type: "vesselCapability", shape: impulse.pointer.type }
+    })
+  });
+  const vessels = await discoveryResult.json();
 
-  // 3. Select vessel (round-robin or Thompson Sampling)
+  // 3. Filter by circuit breaker state (from Activity-API health service)
+  const available = vessels.filter(v => !circuitBreaker.isOpen(v.vesselId));
+
+  // 4. Select vessel (round-robin or Thompson Sampling)
   const vessel = selectVessel(available);
 
-  // 4. Call vessel's /v2/impulses/resolve endpoint
+  // 5. Call vessel's /v2/impulses/resolve endpoint directly
   const result = await callVessel(vessel, impulse);
 
-  // 5. Record trace
+  // 6. Record trace to Activity-API
   await recordRoutingTrace({
     impulse_id: impulse.id,
     shape: impulse.pointer.type,
-    routed_to: vessel.vessel_id,
-    candidates: candidates.map(v => v.vessel_id),
+    routed_to: vessel.vesselId,
+    candidates: vessels.map(v => v.vesselId),
     latency_ms: result.duration,
     success: result.success
   });

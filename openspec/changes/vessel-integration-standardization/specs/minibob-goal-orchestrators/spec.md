@@ -1,3 +1,124 @@
+# Specification: MiniBob Goal Orchestrators
+
+## Overview
+
+Goal orchestrators are meta-activities that compose child activities to achieve complex goals. They manage state transitions, handle failures with rollback, and record comprehensive traces for learning.
+
+---
+
+## Input/Output Shape Contracts
+
+### goal:test Orchestrator
+
+| Field | Value |
+|-------|-------|
+| **Input Shapes** | `requirement`, `source_code`, `error_log` (optional), `codebase_structure` (optional) |
+| **Output Shapes** | `test_suite`, `test_result`, `execution_trace` |
+| **Target Shapes** | `test_result` with `status: "passing"` |
+
+### goal:refactor Orchestrator
+
+| Field | Value |
+|-------|-------|
+| **Input Shapes** | `codebase_structure`, `requirement` (optional), `design_pattern` (optional) |
+| **Output Shapes** | `refactored_code`, `test_result`, `execution_trace` |
+| **Target Shapes** | `refactored_code` with `validated: true` |
+
+---
+
+## State Machine
+
+Orchestrators follow a standard state machine:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ┌──────────┐    ┌───────────┐    ┌────────────┐    ┌────────┐ │
+│  │ PLANNING │───▶│ EXECUTING │───▶│ VALIDATING │───▶│ DONE   │ │
+│  └──────────┘    └───────────┘    └────────────┘    └────────┘ │
+│       │               │                 │                       │
+│       │               ▼                 ▼                       │
+│       │         ┌───────────┐    ┌────────────┐                │
+│       └────────▶│ ROLLING   │◀───│  FAILED    │                │
+│                 │   BACK    │    └────────────┘                │
+│                 └───────────┘                                   │
+│                       │                                         │
+│                       ▼                                         │
+│                 ┌───────────┐                                   │
+│                 │ RETRYING  │──────────────────────────────────┘
+│                 └───────────┘
+│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### State Definitions
+
+| State | Description | Transitions |
+|-------|-------------|-------------|
+| `PLANNING` | Analyzing goal, selecting child activities | → EXECUTING, → FAILED |
+| `EXECUTING` | Running child activities in sequence | → VALIDATING, → ROLLING_BACK |
+| `VALIDATING` | Checking target shapes achieved | → DONE, → FAILED |
+| `ROLLING_BACK` | Reverting changes from failed execution | → RETRYING, → FAILED |
+| `RETRYING` | Re-attempting with alternative strategy | → PLANNING |
+| `DONE` | Target shapes achieved, orchestration complete | (terminal) |
+| `FAILED` | Max retries exceeded or unrecoverable error | (terminal) |
+
+### Transition Triggers
+
+| From | To | Trigger |
+|------|-----|---------|
+| PLANNING | EXECUTING | Child activities selected |
+| PLANNING | FAILED | No valid child activities found |
+| EXECUTING | VALIDATING | All children completed |
+| EXECUTING | ROLLING_BACK | Child activity failed |
+| VALIDATING | DONE | All target shapes present |
+| VALIDATING | FAILED | Target shapes missing after max attempts |
+| ROLLING_BACK | RETRYING | Rollback successful |
+| ROLLING_BACK | FAILED | Rollback failed |
+| RETRYING | PLANNING | Ready for next attempt |
+
+---
+
+## Rollback Specification
+
+### Rollback Activity Structure
+
+Rollback activities are special activities that undo changes from failed executions:
+
+```typescript
+{
+  id: "rollback:{original_activity_id}",
+  name: "Rollback {original_activity_name}",
+  category: "rollback",
+  input_shapes: ["execution_trace"],  // Trace of failed activity
+  output_shapes: ["rollback_result"],
+  tasks: [
+    { description: "Identify files modified by failed activity" },
+    { description: "Restore files to pre-execution state" },
+    { description: "Verify restoration successful" }
+  ]
+}
+```
+
+### Rollback Triggers
+
+| Trigger | Action |
+|---------|--------|
+| Child activity fails with `rollbackable: true` | Execute rollback activity |
+| Test validation fails after refactoring | Rollback code changes |
+| Compilation fails during refactoring | Rollback to last compilable state |
+| Max retries exceeded | Final rollback before FAILED state |
+
+### Rollback NOT Triggered
+
+| Condition | Reason |
+|-----------|--------|
+| Child activity fails with `rollbackable: false` | Activity marked as non-reversible |
+| Context acquisition fails | No state changes to undo |
+| Validation only detects missing shapes | No harmful state changes |
+
+---
+
 ## ADDED Requirements
 
 ### Requirement: goal:test orchestration activity
@@ -148,3 +269,115 @@ The system SHALL record execution traces for orchestration activities with compo
 #### Scenario: Trace includes cost breakdown
 - **WHEN** orchestrator executes activities with LLM costs
 - **THEN** trace records total cost for orchestration, cost per child activity, token usage breakdown, cost attribution by activity type, enables budget analysis and optimization
+
+---
+
+## Composition Graph Structure
+
+The composition graph tracks valid activity chains and their success rates.
+
+### Graph Schema
+
+```typescript
+interface CompositionGraph {
+  nodes: Map<string, ActivityNode>
+  edges: Map<string, CompositionEdge[]>
+}
+
+interface ActivityNode {
+  activityId: string
+  inputShapes: string[]
+  outputShapes: string[]
+  successRate: number
+  avgDuration: number
+}
+
+interface CompositionEdge {
+  fromActivity: string
+  toActivity: string
+  shapeProduced: string    // Shape that enables this transition
+  weight: number           // Thompson Sampling score
+  successCount: number
+  failureCount: number
+}
+```
+
+### Graph Queries
+
+| Query | Input | Output |
+|-------|-------|--------|
+| `findChains(currentShapes, targetShapes)` | Available shapes, goal shapes | Ranked list of activity chains |
+| `selectNext(currentShapes, candidates)` | Available shapes, candidate activities | Thompson Sampling selected activity |
+| `updateEdge(edge, success)` | Edge, outcome | Updated Thompson Sampling parameters |
+
+### Thompson Sampling at Edge Level
+
+Each edge maintains (α, β) parameters:
+- **α** (alpha): Incremented on successful traversal
+- **β** (beta): Incremented on failed traversal
+- **Score**: Sampled from Beta(α, β) distribution
+
+---
+
+## Domain-Agnostic Examples
+
+While the primary use case is software development, orchestrators are domain-agnostic:
+
+### Software Development Domain
+```
+Goal: "Write tests for authentication module"
+Orchestrator: goal:test
+Input shapes: requirement, source_code
+Output shapes: test_suite, test_result
+```
+
+### Data Pipeline Domain
+```
+Goal: "Validate ETL pipeline outputs"
+Orchestrator: goal:validate-pipeline
+Input shapes: pipeline_config, data_schema, sample_data
+Output shapes: validation_report, data_quality_metrics
+```
+
+### Infrastructure Domain
+```
+Goal: "Migrate service to new cluster"
+Orchestrator: goal:migrate-service
+Input shapes: deployment_config, cluster_topology
+Output shapes: migration_result, health_check_result
+```
+
+### Documentation Domain
+```
+Goal: "Generate API documentation"
+Orchestrator: goal:generate-docs
+Input shapes: openapi_spec, code_comments
+Output shapes: documentation_site, api_reference
+```
+
+The orchestrator pattern works for any domain where:
+1. Complex goals decompose into child activities
+2. Activities have defined input/output shapes
+3. Success is measurable via target shapes
+
+---
+
+## Configuration
+
+### Orchestrator Limits
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `maxRetries` | 3 | Maximum retry attempts before FAILED |
+| `maxChildren` | 10 | Maximum child activities per orchestration |
+| `executionTimeoutMs` | 600000 (10 min) | Total orchestration timeout |
+| `childTimeoutMs` | 120000 (2 min) | Per-child activity timeout |
+| `parallelChildren` | 3 | Max concurrent child activities |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `ORCHESTRATOR_MAX_RETRIES` | Override maxRetries |
+| `ORCHESTRATOR_TIMEOUT_MS` | Override executionTimeoutMs |
+| `ORCHESTRATOR_PARALLEL_CHILDREN` | Override parallelChildren |

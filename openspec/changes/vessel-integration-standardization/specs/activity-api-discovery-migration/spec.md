@@ -20,7 +20,19 @@ Activity-API SHALL register itself with discovery-vessel on startup.
   - `version`: from package.json
   - `endpoint`: `ACTIVITY_API_EXTERNAL_URL`
   - `shapes`: advertised impulse shapes (see below)
-  - `metadata`: domain-specific context
+  - `protocol`: "http"
+  - `metadata`: domain-specific context (see metadata requirement)
+
+### Requirement: Metadata is domain-specific and extensible
+
+Activity-API SHALL include domain-specific metadata in registration, but the schema is not prescribed.
+
+#### Scenario: Metadata reflects operational context
+- **WHEN** activity-api registers
+- **THEN** registration metadata MAY include any fields meaningful to the deployment
+- **EXAMPLE** (learning context): `{ "samplingEnabled": true, "traceRetentionDays": 30 }`
+- **EXAMPLE** (infrastructure): `{ "region": "us-west-2", "replicaCount": 3 }`
+- **EXAMPLE** (capacity): `{ "maxConcurrentResolutions": 100 }`
 
 #### Scenario: Shapes to advertise
 - **WHEN** activity-api registers
@@ -53,6 +65,26 @@ Activity-API SHALL send periodic heartbeats.
 #### Scenario: Heartbeat failure triggers re-registration
 - **WHEN** heartbeat returns 404
 - **THEN** activity-api SHALL re-register
+
+#### Scenario: Consecutive heartbeat failures
+- **WHEN** 3 consecutive heartbeats fail
+- **THEN** activity-api SHALL attempt re-registration on the next interval
+
+### Requirement: Graceful shutdown with deregistration
+
+Activity-API SHALL deregister from discovery-vessel when shutting down gracefully.
+
+#### Scenario: SIGTERM triggers deregistration
+- **WHEN** activity-api receives SIGTERM signal
+- **THEN** activity-api sends `DELETE /vessels/{vesselId}` before exiting
+
+#### Scenario: SIGINT triggers deregistration
+- **WHEN** activity-api receives SIGINT signal
+- **THEN** same behavior as SIGTERM
+
+#### Scenario: Deregistration timeout
+- **WHEN** deregistration request takes longer than 5 seconds
+- **THEN** activity-api proceeds with shutdown (best effort deregistration)
 
 ---
 
