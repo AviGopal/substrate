@@ -32,6 +32,15 @@
     "microservices",
     "service-registry"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MetabobProject/metabob-devbob.git",
+    "directory": "packages/vessel-discovery-client"
+  },
+  "bugs": {
+    "url": "https://github.com/MetabobProject/metabob-devbob/issues"
+  },
+  "homepage": "https://github.com/MetabobProject/metabob-devbob/tree/main/packages/vessel-discovery-client#readme",
   "author": "Metabob",
   "license": "MIT",
   "peerDependencies": {
