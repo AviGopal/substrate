@@ -63,18 +63,9 @@ MiniBob composes these primitives to create any UI:
 
 ## Security Model
 
-This dashboard is designed for **internal use only**. Access control is enforced at the infrastructure level via **Cloudflare Zero Trust**.
+**For security details, see [CLAUDE.md](./CLAUDE.md#security-model)**
 
-**No application-level authentication is implemented.** The dashboard assumes:
-- All requests come from authenticated internal users
-- Zero Trust extracts user identity from `CF-Access-Authenticated-User-Email` header
-- Audit logging tracks all operations by user email
-- Authorization enforces admin-only operations via environment variable
-
-**Production Access:**
-- URL: `https://internal.metabob.com`
-- Access: Cloudflare Zero Trust (email-based authentication)
-- Audit: All operations logged to stdout (JSON format) and optionally to activity-api
+This dashboard is designed for internal use only. Production deployment will use Cloudflare Zero Trust for authentication. Current development version has no authentication (local dev only).
 
 ## Development
 
@@ -94,26 +85,33 @@ bun run typecheck
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `3001` |
-| `MINIBOB_API_URL` | Activity API URL | `http://localhost:8080` |
-| `ANTHROPIC_API_KEY` | Claude API key for MiniBob | (required) |
-| `ADMIN_EMAILS` | Comma-separated admin emails | (optional) |
+**For complete configuration details, see [CLAUDE.md](./CLAUDE.md#standard-configuration)**
+
+Key variables:
+- `ANTHROPIC_API_KEY` - Required: Claude API key for MiniBob
+- `MINIBOB_API_URL` - Activity API endpoint (default: `https://activity.metabob.com`)
+- `PORT` - Server port (default: `3001`)
+
+See CLAUDE.md for full list of standard vessel configuration.
 
 ## Deployment
 
-Deployed via Helm to Kubernetes:
+**Production endpoint** (when deployed): `https://internal.metabob.com`
+
+**Local Kubernetes** (for development):
 
 ```bash
 # Build image
 ./scripts/build-vessels.sh metabob-internal-dashboard
 
 # Deploy
-helmfile -f helm/activity-system-minimal.yaml.gotmpl sync
+cd helm
+helmfile -f activity-system-minimal.yaml.gotmpl sync
 ```
 
-Access at: `http://internal.metabob.local`
+Local access: `http://internal.metabob.local`
+
+**For complete deployment details, see [CLAUDE.md](./CLAUDE.md#cicd-integration)**
 
 ## WebSocket Protocol
 

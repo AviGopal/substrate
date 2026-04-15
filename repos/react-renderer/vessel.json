@@ -67,5 +67,39 @@
       "minSuccessRate": 0.8,
       "autoPromote": true
     }
+  },
+
+  "discovery": {
+    "enabled": false,
+    "heartbeatIntervalMs": 120000,
+    "retryAttempts": 3,
+    "bootstrapDelayMs": 0,
+    "metadata": {
+      "protocols": ["http", "websocket"],
+      "primitiveTypes": [
+        "container",
+        "text",
+        "data-table",
+        "chart",
+        "graph",
+        "input",
+        "button",
+        "badge",
+        "progress",
+        "code",
+        "image",
+        "custom"
+      ],
+      "wsPath": "/ws",
+      "maxConnections": 1000
+    }
+  },
+
+  "environment": {
+    "PORT": 3000,
+    "HOST": "0.0.0.0",
+    "WS_PATH": "/ws",
+    "WS_MAX_CONNECTIONS": 1000,
+    "LOG_LEVEL": "info"
   }
 }
