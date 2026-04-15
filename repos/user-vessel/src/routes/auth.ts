@@ -167,13 +167,13 @@ export function authRoutes(config: UserVesselConfig) {
         }, 500)
       }
 
-      // Generate JWT token
+      // Generate JWT token via identity-vessel
       const token = await generateToken(
         user.id,
         org.org_id,
         user.role,
         [], // No project IDs yet
-        config.jwt.secret,
+        config,
         config.jwt.expiresIn
       )
 
@@ -262,13 +262,13 @@ export function authRoutes(config: UserVesselConfig) {
         // Table doesn't exist yet - that's OK
       }
 
-      // Generate JWT token
+      // Generate JWT token via identity-vessel
       const token = await generateToken(
         user.id,
         user.org_id,
         user.role,
         projectIds,
-        config.jwt.secret,
+        config,
         config.jwt.expiresIn
       )
 
