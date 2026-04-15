@@ -72,8 +72,8 @@ export async function getAuthenticatedDb(
   // Import JWT utilities
   const { createToken } = await import("../utils/jwt")
 
-  // Create JWT token from auth context
-  const token = await createToken(auth, config.jwt.secret, config.jwt.expiresIn)
+  // Create JWT token from auth context via identity-vessel
+  const token = await createToken(auth, config, config.jwt.expiresIn)
 
   // Create authenticated connection
   return createAuthenticatedClient(config, token)

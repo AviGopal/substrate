@@ -82,6 +82,11 @@ export function requireProjectAccess(projectIdParam: string = "id") {
     const auth = getAuth(c)
     const projectId = c.req.param(projectIdParam)
 
+    // Project ID is required
+    if (!projectId) {
+      return c.json({ error: "Forbidden - Project ID required" }, 403)
+    }
+
     // Admin has access to all projects in their org
     if (auth.role === "admin") {
       await next()

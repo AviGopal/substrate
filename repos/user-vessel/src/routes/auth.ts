@@ -123,14 +123,15 @@ export function authRoutes(config: UserVesselConfig) {
       // Log each result item
       if (Array.isArray(transactionResult)) {
         transactionResult.forEach((item, index) => {
+          const typedItem = item as Record<string, unknown>
           console.log(`Result[${index}]:`, {
             type: typeof item,
             isArray: Array.isArray(item),
-            status: item?.status,
-            hasResult: item && 'result' in item,
-            resultType: typeof item?.result,
-            resultIsArray: Array.isArray(item?.result),
-            keys: Object.keys(item || {})
+            status: typedItem?.status,
+            hasResult: typedItem && 'result' in typedItem,
+            resultType: typeof typedItem?.result,
+            resultIsArray: Array.isArray(typedItem?.result),
+            keys: Object.keys(typedItem || {})
           })
         })
       }

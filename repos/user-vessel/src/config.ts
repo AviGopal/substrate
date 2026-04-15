@@ -115,8 +115,9 @@ export async function loadConfig(): Promise<UserVesselConfig> {
 
   // Identity Vessel config
   if (process.env.IDENTITY_VESSEL_ENDPOINT) {
-    config.identityVessel = config.identityVessel || {}
-    config.identityVessel.endpoint = process.env.IDENTITY_VESSEL_ENDPOINT
+    config.identityVessel = {
+      endpoint: process.env.IDENTITY_VESSEL_ENDPOINT
+    }
   }
 
   // Discovery Vessel config

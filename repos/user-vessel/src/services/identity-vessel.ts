@@ -149,6 +149,9 @@ export interface IdentityVesselClient {
  * Create a client for identity-vessel API
  */
 export function createIdentityVesselClient(config: UserVesselConfig): IdentityVesselClient {
+  if (!config.identityVessel?.endpoint) {
+    throw new Error("Identity vessel endpoint not configured")
+  }
   const baseUrl = config.identityVessel.endpoint
 
   async function fetchJson<T>(path: string, body: unknown): Promise<T> {
