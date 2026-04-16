@@ -1,0 +1,142 @@
+{
+  "id": "merge-pr",
+  "name": "Merge Pull Request",
+  "description": "Verifies CI passes, checks reviews, merges PR, closes linked issues",
+  "category": "github-management",
+  "tags": ["github", "pull-requests", "automation", "merge"],
+  "mode": "deterministic",
+
+  "variables": [
+    {
+      "name": "prNumber",
+      "type": "number",
+      "required": true,
+      "description": "PR number to merge"
+    },
+    {
+      "name": "mergeMethod",
+      "type": "string",
+      "required": false,
+      "description": "Merge method: merge, squash, or rebase",
+      "default": "squash"
+    },
+    {
+      "name": "requireReviews",
+      "type": "boolean",
+      "required": false,
+      "description": "Require reviews before merging",
+      "default": true
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "check-pr-status",
+      "description": "Check PR status (CI, reviews, conflicts)",
+      "type": "command",
+      "command": {
+        "run": "gh pr view {{prNumber}} --json state,mergeable,statusCheckRollup,reviews,isDraft",
+        "captureOutput": true
+      },
+      "validation": {
+        "exitCode": 0
+      },
+      "outputShapes": ["pr_status"]
+    },
+    {
+      "id": "validate-ready",
+      "description": "Validate PR is ready to merge",
+      "dependencies": ["check-pr-status"],
+      "type": "validate",
+      "validation": {
+        "customChecks": [
+          {
+            "name": "not-draft",
+            "check": "{{check-pr-status.output | jq '.isDraft'}} == false"
+          },
+          {
+            "name": "ci-passing",
+            "check": "{{check-pr-status.output | jq '.statusCheckRollup[0].conclusion'}} == 'SUCCESS'"
+          },
+          {
+            "name": "no-conflicts",
+            "check": "{{check-pr-status.output | jq '.mergeable'}} == 'MERGEABLE'"
+          },
+          {
+            "name": "has-reviews",
+            "condition": "requireReviews",
+            "check": "{{check-pr-status.output | jq '.reviews | length'}} > 0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "merge-pr",
+      "description": "Merge the PR",
+      "dependencies": ["validate-ready"],
+      "type": "command",
+      "command": {
+        "run": "gh pr merge {{prNumber}} --{{mergeMethod}} --delete-branch",
+        "captureOutput": true,
+        "timeout": 30000
+      },
+      "validation": {
+        "exitCode": 0,
+        "requiredPatterns": ["Merged|merged"]
+      },
+      "outputShapes": ["merge_result"]
+    },
+    {
+      "id": "close-linked-issues",
+      "description": "Close issues linked to PR",
+      "dependencies": ["merge-pr"],
+      "type": "command",
+      "command": {
+        "run": "ISSUES=$(gh pr view {{prNumber}} --json body --jq '.body' | grep -oP '#\\K\\d+' | sort -u) && for ISSUE in $ISSUES; do gh issue close $ISSUE --comment 'Closed by PR #{{prNumber}}'; done || true",
+        "captureOutput": true
+      }
+    }
+  ],
+
+  "outputSchema": {
+    "produces": [
+      {
+        "shape": "merge_result",
+        "description": "Merge confirmation and details"
+      }
+    ]
+  },
+
+  "tracing": {
+    "recordTrace": true,
+    "contributeToLearning": true,
+    "metadata": {
+      "integrationPoint": "github/pr-merge",
+      "learningCategory": "merge-validation"
+    }
+  },
+
+  "learning": {
+    "onSuccess": {
+      "action": "recordMetrics",
+      "metrics": {
+        "mergeMethod": "{{mergeMethod}}",
+        "hadReviews": "{{check-pr-status.output | jq '.reviews | length' > 0}}",
+        "ciDuration": "measured-separately"
+      }
+    },
+    "onFailure": {
+      "action": "recordFailure",
+      "data": {
+        "failureReason": "{{validate-ready.failedCheck}}",
+        "prState": "{{check-pr-status.output}}"
+      }
+    }
+  },
+
+  "metadata": {
+    "demonstratesActivityDriven": true,
+    "requiresGitHubCLI": true,
+    "safetyChecks": ["ci-passing", "no-conflicts", "has-reviews"]
+  }
+}

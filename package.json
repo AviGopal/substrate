@@ -29,10 +29,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@metabob/minibob": "*",
     "@types/node": "^20.0.0",
+    "surrealdb": "^2.0.3",
     "uuid": "^9.0.0",
-    "zod": "^3.22.0",
-    "@metabob/minibob": "*"
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",

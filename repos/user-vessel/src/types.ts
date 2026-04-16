@@ -23,6 +23,13 @@ export interface UserVesselConfig {
   identityVessel?: {
     endpoint: string
   }
+  discovery?: {
+    enabled: boolean
+    endpoint: string
+    vesselId: string
+    heartbeatIntervalMs: number
+    shapes: string[]
+  }
 }
 
 // =============================================================================

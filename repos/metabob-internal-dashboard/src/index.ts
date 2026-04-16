@@ -37,9 +37,12 @@ const minibobIntegration = await initializeMiniBobIntegration({
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+// Configure wsHandler with activity API URL for audit logging
+wsHandler.setActivityApiUrl(MINIBOB_API_URL)
+
 // Set up query handler - routes to MiniBob
-wsHandler.onQuery(async (query: QueryMessage, sessionId: string) => {
-  console.log(`[Query] ${sessionId}: ${query.text}`)
+wsHandler.onQuery(async (query: QueryMessage, sessionId: string, user: string) => {
+  console.log(`[Query] ${sessionId} (${user}): ${query.text}`)
   const integration = getMiniBobIntegration()
   if (integration) {
     await integration.handleQuery(query, sessionId)
@@ -47,8 +50,8 @@ wsHandler.onQuery(async (query: QueryMessage, sessionId: string) => {
 })
 
 // Set up action handler - routes to MiniBob
-wsHandler.onAction(async (action: ActionMessage, sessionId: string) => {
-  console.log(`[Action] ${sessionId}: ${action.action} on ${action.componentId}`)
+wsHandler.onAction(async (action: ActionMessage, sessionId: string, user: string) => {
+  console.log(`[Action] ${sessionId} (${user}): ${action.action} on ${action.componentId}`)
   const integration = getMiniBobIntegration()
   if (integration) {
     await integration.handleAction(action, sessionId)
@@ -80,6 +83,7 @@ console.log('Frontend built successfully')
 // Interface for WebSocket connection data
 interface ConnectionData {
   connectedAt: number
+  user: string // User email from Zero Trust headers
 }
 
 // Bun server with WebSocket support
@@ -91,8 +95,13 @@ const server = Bun.serve<ConnectionData>({
 
     // WebSocket upgrade
     if (url.pathname === '/ws') {
+      // Extract user from Zero Trust headers
+      const user = req.headers.get('CF-Access-Authenticated-User-Email') ||
+                   process.env.LOCAL_DEV_USER ||
+                   'local-dev'
+
       const upgraded = server.upgrade(req, {
-        data: { connectedAt: Date.now() }
+        data: { connectedAt: Date.now(), user }
       })
       if (upgraded) return undefined
       return new Response('WebSocket upgrade failed', { status: 400 })
@@ -134,6 +143,8 @@ const server = Bun.serve<ConnectionData>({
 
   websocket: {
     open(ws) {
+      // Note: Bun doesn't provide request in open() callback
+      // We'll need to extract user during upgrade instead
       wsHandler.handleOpen(ws as any)
     },
     message(ws, message) {

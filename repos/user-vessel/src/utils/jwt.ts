@@ -1,202 +1,115 @@
 /**
  * JWT token generation and validation utilities
+ *
+ * ALL JWT operations are delegated to identity-vessel,
+ * which is the single source of truth for authentication.
+ *
+ * This module provides convenience wrappers that call identity-vessel.
  */
 
-import type { JWTPayload, AuthContext } from "../types"
+import type { AuthContext, UserVesselConfig } from "../types"
+import { createIdentityVesselClient } from "../services/identity-vessel"
 
 /**
- * Generate JWT token for user
+ * Generate JWT token for user via identity-vessel
  */
 export async function generateToken(
   userId: string,
   orgId: string,
-  role: 'admin' | 'member',
+  role: 'admin' | 'member' | 'viewer',
   projectIds: string[],
-  secret: string,
+  config: UserVesselConfig,
   expiresIn: string = "15m"
 ): Promise<string> {
-  const now = Math.floor(Date.now() / 1000)
-
-  // Parse expiresIn (supports "15m", "1h", "7d" format)
-  const expirySeconds = parseExpiry(expiresIn)
-
-  const payload: JWTPayload = {
-    iss: "https://metabob.com",
-    sub: userId,
-    org_id: orgId,
-    project_ids: projectIds,
-    role,
-    user_id: userId,
-    exp: now + expirySeconds,
-    iat: now,
+  // Ensure identity-vessel endpoint is configured
+  if (!config.identityVessel?.endpoint) {
+    throw new Error("Identity vessel endpoint not configured")
   }
 
-  // Use Bun's built-in JWT signing
-  const jwt = await signJWT(payload, secret)
-  return jwt
+  // Parse expiresIn to seconds
+  const expiresInSeconds = parseExpiry(expiresIn)
+
+  // Delegate to identity-vessel
+  const identityClient = createIdentityVesselClient(config)
+  const result = await identityClient.generateJWT({
+    user_id: userId,
+    org_id: orgId,
+    role,
+    project_ids: projectIds,
+    expires_in_seconds: expiresInSeconds,
+  })
+
+  return result.token
 }
 
 /**
- * Create JWT token from auth context
+ * Create JWT token from auth context via identity-vessel
  */
 export async function createToken(
   auth: AuthContext,
-  secret: string,
+  config: UserVesselConfig,
   expiresIn: string = "15m"
 ): Promise<string> {
   return generateToken(
     auth.id,
     auth.org_id,
-    auth.role,
+    auth.role as 'admin' | 'member' | 'viewer',
     auth.project_ids,
-    secret,
+    config,
     expiresIn
   )
 }
 
 /**
- * Verify and decode JWT token
+ * Verify and decode JWT token via identity-vessel
  */
 export async function verifyToken(
   token: string,
-  secret: string
-): Promise<JWTPayload | null> {
+  config: UserVesselConfig
+): Promise<{
+  valid: boolean
+  user_id?: string
+  org_id?: string
+  role?: string
+  project_ids?: string[]
+  exp?: number
+  iat?: number
+  error?: string
+} | null> {
   try {
-    const payload = await verifyJWT(token, secret)
-
-    // Check expiration
-    const now = Math.floor(Date.now() / 1000)
-    if (payload.exp && payload.exp < now) {
+    // Ensure identity-vessel endpoint is configured
+    if (!config.identityVessel?.endpoint) {
       return null
     }
 
-    return payload as JWTPayload
+    const identityClient = createIdentityVesselClient(config)
+    const result = await identityClient.verifyJWT({ token })
+
+    if (!result.valid) {
+      return null
+    }
+
+    return result
   } catch {
     return null
   }
 }
 
 /**
- * Extract auth context from JWT payload
+ * Extract auth context from JWT verification result
  */
-export function extractAuthContext(payload: JWTPayload): AuthContext {
+export function extractAuthContext(result: {
+  user_id?: string
+  org_id?: string
+  role?: string
+  project_ids?: string[]
+}): AuthContext {
   return {
-    id: payload.user_id,
-    org_id: payload.org_id,
-    role: payload.role,
-    project_ids: payload.project_ids,
+    id: result.user_id || "",
+    org_id: result.org_id || "",
+    role: (result.role as "admin" | "member") || "member",
+    project_ids: result.project_ids || [],
   }
-}
-
-// =============================================================================
-// JWT SIGNING/VERIFICATION (Bun-compatible)
-// =============================================================================
-
-/**
- * Sign JWT using HMAC SHA-256
- */
-async function signJWT(payload: JWTPayload, secret: string): Promise<string> {
-  // Encode header
-  const header = {
-    alg: "HS256",
-    typ: "JWT",
-  }
-  const encodedHeader = base64UrlEncode(JSON.stringify(header))
-
-  // Encode payload
-  const encodedPayload = base64UrlEncode(JSON.stringify(payload))
-
-  // Create signature
-  const message = `${encodedHeader}.${encodedPayload}`
-  const signature = await hmacSHA256(message, secret)
-  const encodedSignature = base64UrlEncode(signature)
-
-  return `${message}.${encodedSignature}`
-}
-
-/**
- * Verify JWT signature and decode payload
- */
-async function verifyJWT(token: string, secret: string): Promise<any> {
-  const parts = token.split(".")
-  if (parts.length !== 3) {
-    throw new Error("Invalid token format")
-  }
-
-  const [encodedHeader, encodedPayload, encodedSignature] = parts
-
-  // Verify signature
-  const message = `${encodedHeader}.${encodedPayload}`
-  const expectedSignature = await hmacSHA256(message, secret)
-  const expectedEncoded = base64UrlEncode(expectedSignature)
-
-  if (encodedSignature !== expectedEncoded) {
-    throw new Error("Invalid signature")
-  }
-
-  // Decode payload
-  const payload = JSON.parse(base64UrlDecode(encodedPayload))
-  return payload
-}
-
-/**
- * HMAC SHA-256 signature
- */
-async function hmacSHA256(message: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  )
-
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(message)
-  )
-
-  return arrayBufferToBase64(signature)
-}
-
-/**
- * Base64 URL-safe encoding
- */
-function base64UrlEncode(data: string): string {
-  const base64 = btoa(data)
-  return base64
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "")
-}
-
-/**
- * Base64 URL-safe decoding
- */
-function base64UrlDecode(encoded: string): string {
-  // Add padding
-  let padded = encoded
-  while (padded.length % 4 !== 0) {
-    padded += "="
-  }
-
-  // Replace URL-safe chars
-  const base64 = padded.replace(/-/g, "+").replace(/_/g, "/")
-  return atob(base64)
-}
-
-/**
- * Convert ArrayBuffer to base64 string
- */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ""
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return btoa(binary)
 }
 
 /**

@@ -1,0 +1,150 @@
+{
+  "id": "scan-file-system",
+  "name": "Scan File System for Relevant Files",
+  "description": "Discover source files, tests, configs. Produces file impulses with metadata (not loaded content). Thompson Sampling learns which file patterns are useful.",
+  "category": "discovery",
+  "tags": ["loop-3", "discovery", "environment-scan", "deterministic"],
+  "mode": "deterministic",
+
+  "variables": [
+    {
+      "name": "goalCategory",
+      "type": "string",
+      "required": false,
+      "description": "Goal category (bugfix, feature, refactor) to filter relevant files",
+      "default": "bugfix"
+    },
+    {
+      "name": "searchPatterns",
+      "type": "array",
+      "required": false,
+      "description": "File patterns to search for",
+      "default": ["src/**/*.ts", "tests/**/*.ts", "*.json"]
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "discover-source-files",
+      "description": "Find all source files matching patterns",
+      "type": "command",
+      "command": {
+        "run": "find src -name '*.ts' -type f -exec sh -c 'echo \"{}:$(wc -l < \"{}\"):$(stat -c%s \"{}\")\"' \\;",
+        "captureOutput": true,
+        "timeout": 10000
+      },
+      "outputShapes": ["file_metadata_list"],
+      "validation": {
+        "exitCode": 0
+      }
+    },
+    {
+      "id": "discover-test-files",
+      "description": "Find all test files",
+      "type": "command",
+      "command": {
+        "run": "find tests -name '*.test.ts' -o -name '*.spec.ts' -type f -exec sh -c 'echo \"{}:$(wc -l < \"{}\"):$(stat -c%s \"{}\")\"' \\;",
+        "captureOutput": true,
+        "timeout": 10000
+      },
+      "outputShapes": ["test_file_metadata_list"]
+    },
+    {
+      "id": "discover-configs",
+      "description": "Find configuration files",
+      "type": "command",
+      "command": {
+        "run": "find . -maxdepth 2 -name '*.json' -o -name '*.config.js' -o -name 'tsconfig.json' -type f",
+        "captureOutput": true,
+        "timeout": 5000
+      },
+      "outputShapes": ["config_file_list"]
+    },
+    {
+      "id": "create-impulses",
+      "description": "Convert discovered files into impulse metadata (NOT loaded)",
+      "type": "transform",
+      "transform": {
+        "input": ["discover-source-files", "discover-test-files", "discover-configs"],
+        "operation": "createImpulseMetadata",
+        "config": {
+          "shapes": {
+            "*.ts": "source_code",
+            "*.test.ts": "test_file",
+            "*.spec.ts": "test_file",
+            "*.json": "config_file",
+            "tsconfig.json": "typescript_config",
+            "package.json": "package_manifest"
+          },
+          "extractSummary": true,
+          "loadContent": false
+        }
+      },
+      "outputShapes": ["impulse_metadata_batch"]
+    }
+  ],
+
+  "outputSchema": {
+    "produces": [
+      {
+        "shape": "impulse_metadata_batch",
+        "description": "Batch of impulse metadata for discovered files",
+        "structure": {
+          "impulses": [
+            {
+              "id": "generated-id",
+              "pointer": { "type": "file", "path": "src/calculator.ts" },
+              "metadata": {
+                "shape": "source_code",
+                "rowCount": 245,
+                "sizeBytes": 8192,
+                "summary": "calculator.ts (245 lines)",
+                "discoveredBy": "scan-file-system"
+              },
+              "loaded": false,
+              "content": null
+            }
+          ],
+          "totalDiscovered": 15,
+          "byShape": {
+            "source_code": 8,
+            "test_file": 5,
+            "config_file": 2
+          }
+        }
+      }
+    ]
+  },
+
+  "tracing": {
+    "recordTrace": true,
+    "contributeToLearning": true,
+    "metadata": {
+      "learningCategory": "discovery-effectiveness",
+      "loopType": "loop-3-discovery"
+    }
+  },
+
+  "learning": {
+    "onSuccess": {
+      "action": "recordMetrics",
+      "metrics": {
+        "filesDiscovered": "{{create-impulses.output.totalDiscovered}}",
+        "byShape": "{{create-impulses.output.byShape}}",
+        "executionTime": "{{duration}}",
+        "goalCategory": "{{goalCategory}}"
+      }
+    },
+    "thompsonSampling": {
+      "track": "per-goal-category",
+      "condition": "filesDiscovered > 0"
+    }
+  },
+
+  "metadata": {
+    "demonstratesLoop": 3,
+    "learningMechanism": "Thompson Sampling learns which goal categories benefit from filesystem scanning",
+    "costProfile": "very-low",
+    "deterministicOutput": true
+  }
+}

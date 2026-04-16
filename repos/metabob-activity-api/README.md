@@ -16,15 +16,15 @@ This is a TypeScript rewrite of the `repos/metabob-rpc-api` activity system with
 
 ```
 ┌─────────────────┐
-│ metabob-cli     │  (MCP Server)
-│  (activity_     │
-│   manager.py)   │
+│ MiniBob         │  (Primary client - autonomous vessel)
+│ OpenCode        │  (IDE integration - vessel)
+│ Other Vessels   │
 └────────┬────────┘
-         │ HTTP/REST
+         │ HTTP/REST + MCP
          ▼
 ┌─────────────────┐
-│ metabob-        │  (This server - TypeScript/Bun)
-│ activity-api    │  Deployed at {host}/v2/*
+│ metabob-        │  (Learning backend - TypeScript/Bun)
+│ activity-api    │  Deployed at activity.metabob.com
 │  /v2/* routes   │
 └────────┬────────┘
          │
@@ -33,7 +33,7 @@ This is a TypeScript rewrite of the `repos/metabob-rpc-api` activity system with
     ▼         ▼
 ┌────────┐ ┌────────┐
 │SurrealDB│ │ Redis  │
-│(primary)│ │(cache) │
+│(traces) │ │(cache) │
 └────────┘ └────────┘
 ```
 
@@ -121,36 +121,52 @@ bun run build
 bun test
 ```
 
-## API Endpoints
+## Authentication
 
-### Session Management
+### API Key Authentication (Current)
 
-```http
-POST /v2/session
-Authorization: X-API-Key <api_key>
+All requests use standard API key authentication via the `Authorization` header:
 
-Creates a new session and returns Bearer token
+```bash
+curl -X GET https://activity.metabob.com/v2/activities/templates \
+  -H "Authorization: ApiKey <your-api-key>"
 ```
+
+**Authentication Flow:**
+1. Client sends `Authorization: ApiKey <key>` header
+2. Activity-API validates via identity service (primary)
+3. If identity service unavailable, fallback to direct SurrealDB validation
+4. Returns org_id, user_id, key_id, scopes for multi-tenant isolation
+
+**Key Benefits:**
+- No separate signin endpoint needed
+- Automatic multi-tenant isolation via SurrealDB PERMISSIONS
+- Audit trails track operations by key_id
+- Fallback ensures high availability
+
+**Note**: Prior to 2026-04-08, MiniBob instances used a separate authentication mechanism via `/v2/auth/minibob/signin`. This has been fully migrated to standard API key authentication.
+
+## API Endpoints
 
 ### Activity Templates
 
 ```http
 GET /v2/activities/templates?category=feature&limit=50
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 
 List activity templates with Thompson Sampling scores
 ```
 
 ```http
 GET /v2/activities/templates/{template_id}
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 
 Get specific template details
 ```
 
 ```http
 POST /v2/activities/templates
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 Content-Type: application/json
 
 {
@@ -168,7 +184,7 @@ Create a new activity template
 
 ```http
 POST /v2/impulses
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 Content-Type: application/json
 
 {
@@ -183,14 +199,14 @@ Store an impulse
 
 ```http
 GET /v2/impulses/{impulse_id}?project_id=proj_abc
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 
 Retrieve impulse content
 ```
 
 ```http
 GET /v2/impulses?project_id=proj_abc&limit=50
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 
 List project impulses
 ```
@@ -199,7 +215,7 @@ List project impulses
 
 ```http
 POST /v2/activities/executions
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 Content-Type: application/json
 
 {
@@ -217,7 +233,7 @@ Record activity execution
 
 ```http
 GET /v2/activities/executions?limit=20&offset=0
-Authorization: Bearer <token>
+Authorization: ApiKey <api-key>
 
 Get execution history
 ```

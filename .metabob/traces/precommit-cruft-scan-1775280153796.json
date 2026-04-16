@@ -1,0 +1,77 @@
+{
+  "activityId": "precommit:cruft-scan",
+  "variantId": "precommit:cruft-scan-resolver",
+  "name": "LLM Cruft Scanner (Resolver-Based)",
+  "startedAt": 1775280153796,
+  "tasks": [
+    {
+      "taskId": "get-staged-files",
+      "description": "Get list of staged TypeScript files",
+      "resolver": "bash",
+      "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' || echo 'NO_STAGED_FILES'",
+      "startedAt": 1775280153796,
+      "stdout": "scripts/test-precommit-activities.ts\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280153804,
+      "durationMs": 8
+    },
+    {
+      "taskId": "scan-todo-llm",
+      "description": "Scan for TODO.*LLM patterns",
+      "resolver": "bash",
+      "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -nE 'TODO.*LLM|FIXME.*generated|TODO.*remove' 2>/dev/null || echo 'CLEAN'",
+      "startedAt": 1775280153804,
+      "stdout": "CLEAN\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280153811,
+      "durationMs": 7
+    },
+    {
+      "taskId": "scan-unused-placeholders",
+      "description": "Scan for _unused variable patterns",
+      "resolver": "bash",
+      "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -nE '_unused[A-Z]|_deprecat' 2>/dev/null || echo 'CLEAN'",
+      "startedAt": 1775280153811,
+      "stdout": "CLEAN\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280153818,
+      "durationMs": 7
+    },
+    {
+      "taskId": "scan-removed-comments",
+      "description": "Scan for // removed or // DEPRECATED comments",
+      "resolver": "bash",
+      "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -nE '// removed|// DEPRECATED|// legacy' 2>/dev/null || echo 'CLEAN'",
+      "startedAt": 1775280153818,
+      "stdout": "CLEAN\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280153825,
+      "durationMs": 7
+    },
+    {
+      "taskId": "generate-summary",
+      "description": "Generate scan summary",
+      "resolver": "bash",
+      "command": "echo '=== CRUFT SCAN SUMMARY ===' && echo 'Staged files:' && git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | wc -l && echo 'Cruft patterns found:' && (git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -lE 'TODO.*LLM|FIXME.*generated|_unused[A-Z]|// removed|// DEPRECATED' 2>/dev/null | wc -l) && echo '=========================='",
+      "startedAt": 1775280153825,
+      "stdout": "=== CRUFT SCAN SUMMARY ===\nStaged files:\n1\nCruft patterns found:\n0\n==========================\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280153837,
+      "durationMs": 12
+    }
+  ],
+  "success": true,
+  "completedAt": 1775280153837,
+  "durationMs": 41,
+  "summary": "5/5 tasks passed in 41ms"
+}

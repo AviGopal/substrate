@@ -51,6 +51,19 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 
 ## Response Format
 
+### HTTP Status Codes
+
+The endpoint uses standard HTTP status codes to indicate authentication status:
+
+- **200 OK**: API key is valid and authenticated
+- **401 Unauthorized**: API key is invalid, malformed, revoked, or missing
+
+**Why 401 instead of 200 with `valid: false`?**
+- Follows HTTP semantics: 401 means "authentication failed"
+- Allows HTTP middleware/proxies to handle auth failures uniformly
+- Prevents clients from treating validation failures as successful operations
+- Consistent with OAuth 2.0 and standard authentication patterns
+
 ### Success Response (Valid Key)
 
 **Status:** `200 OK`
@@ -69,16 +82,16 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 }
 ```
 
-### Success Response (Invalid Key)
+### Error Response (Invalid Key)
 
-**Status:** `200 OK`
+**Status:** `401 Unauthorized`
 
 ```json
 {
-  "success": true,
-  "data": {
-    "valid": false,
-    "error": "Invalid API key format or signature"
+  "success": false,
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "Invalid API key format or signature"
   }
 }
 ```
@@ -121,6 +134,8 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 
 ### 1. Invalid Format
 
+**Status:** `401 Unauthorized`
+
 **Error:** `"Invalid API key format"`
 
 **Cause:** The API key is not properly base64url-encoded, or doesn't contain 5 parts when decoded.
@@ -134,15 +149,17 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 
 # Response:
 {
-  "success": true,
-  "data": {
-    "valid": false,
-    "error": "Invalid API key format"
+  "success": false,
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "Invalid API key format"
   }
 }
 ```
 
 ### 2. Invalid Signature
+
+**Status:** `401 Unauthorized`
 
 **Error:** `"Invalid API key signature"`
 
@@ -157,15 +174,17 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 
 # Response:
 {
-  "success": true,
-  "data": {
-    "valid": false,
-    "error": "Invalid API key signature"
+  "success": false,
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "Invalid API key signature"
   }
 }
 ```
 
 ### 3. Revoked Key
+
+**Status:** `401 Unauthorized`
 
 **Error:** `"API key has been revoked"`
 
@@ -185,10 +204,10 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 
 # Response:
 {
-  "success": true,
-  "data": {
-    "valid": false,
-    "error": "API key has been revoked"
+  "success": false,
+  "error": {
+    "code": "API_KEY_REVOKED",
+    "message": "API key has been revoked"
   }
 }
 ```
@@ -428,9 +447,9 @@ bun run test-identity-vessel-validation.ts
 
 ## FAQ
 
-### Q: Why does validation return 200 for invalid keys?
+### Q: Why does validation return 401 for invalid keys?
 
-**A:** The endpoint successfully performed the validation operation. The result of that validation is conveyed in the `valid` field. This prevents clients from treating validation failures as server errors.
+**A:** As of 2026-04-08, the endpoint returns standard HTTP status codes (200 for valid, 401 for invalid) to align with HTTP semantics and standard authentication patterns. Previously, it returned 200 for all cases with a `valid` field, but this was changed to better support HTTP middleware and proxy authentication patterns.
 
 ### Q: What's the difference between format/signature errors and revocation?
 

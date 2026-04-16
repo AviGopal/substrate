@@ -2,12 +2,14 @@
  * Authentication Service
  *
  * Validates both JWT tokens and API keys.
- * - JWT tokens are validated locally using the configured secret
- * - API keys are validated by calling identity-vessel
+ * ALL authentication operations are delegated to identity-vessel,
+ * which is the single source of truth for authentication.
+ *
+ * - JWT tokens are validated via identity-vessel POST /v1/jwt/verify
+ * - API keys are validated via identity-vessel POST /v1/keys/validate
  */
 
-import { jwtVerify, createSecretKey } from "jose"
-import type { AuthContext, JWTPayload, UserVesselConfig } from "../types"
+import type { AuthContext, UserVesselConfig } from "../types"
 import { createIdentityVesselClient } from "./identity-vessel"
 
 export interface AuthResult {
@@ -46,26 +48,32 @@ export async function authenticate(
 }
 
 /**
- * Authenticate using JWT token
+ * Authenticate using JWT token via identity-vessel
  */
 async function authenticateJWT(
   token: string,
   config: UserVesselConfig
 ): Promise<AuthResult> {
   try {
-    // Create secret key from config
-    const secretKey = new TextEncoder().encode(config.jwt.secret)
+    // Ensure identity-vessel endpoint is configured
+    if (!config.identityVessel?.endpoint) {
+      return { success: false, error: "Identity vessel endpoint not configured" }
+    }
 
-    // Verify and decode JWT using jose
-    const { payload } = await jwtVerify(token, secretKey)
-    const jwtPayload = payload as unknown as JWTPayload
+    // Delegate JWT verification to identity-vessel (single source of truth)
+    const identityClient = createIdentityVesselClient(config)
+    const result = await identityClient.verifyJWT({ token })
 
-    // Build auth context
+    if (!result.valid) {
+      return { success: false, error: result.error || "Invalid token" }
+    }
+
+    // Build auth context from verification result
     const auth: AuthContext = {
-      id: jwtPayload.user_id || jwtPayload.sub,
-      org_id: jwtPayload.org_id,
-      role: jwtPayload.role || "member",
-      project_ids: jwtPayload.project_ids || [],
+      id: result.user_id || "",
+      org_id: result.org_id || "",
+      role: (result.role as "admin" | "member") || "member",
+      project_ids: result.project_ids || [],
     }
 
     return { success: true, auth }

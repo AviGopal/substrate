@@ -1,0 +1,137 @@
+{
+  "id": "example-generate-sql-validated",
+  "name": "Generate SQL Migration (Externally Validated)",
+  "description": "Generate SQL migration and validate against database before deployment",
+  "tags": [
+    "example.database.migration",
+    "validation.external.database"
+  ],
+  "input_shapes": ["goal", "database_schema"],
+  "output_shapes": ["sql_migration", "external_validation_result"],
+  "tasks": [
+    {
+      "id": "analyze-schema",
+      "description": "Analyze current database schema to understand migration requirements",
+      "resolver": "llm",
+      "prompt": {
+        "template": "Analyze the database schema and identify what migration is needed for: {{goal}}\n\nCurrent schema information:\n{{impulse:database_schema}}\n\nProvide a clear analysis of:\n1. What tables/columns need to be added or modified\n2. What constraints are required\n3. What indexes should be created\n4. Any potential conflicts or dependencies"
+      },
+      "impulseReferences": ["database_schema"],
+      "validation": {
+        "requiredPatterns": ["Table:", "Column:"]
+      }
+    },
+    {
+      "id": "generate-migration",
+      "description": "Generate SQL migration based on schema analysis",
+      "resolver": "llm",
+      "prompt": {
+        "template": "Generate a PostgreSQL migration to: {{goal}}\n\nSchema analysis:\n{{impulse:schema_analysis}}\n\nRequirements:\n- Use CREATE TABLE for new tables with appropriate data types\n- Use ALTER TABLE for modifications\n- Include all foreign key constraints with proper referential actions\n- Add indexes for frequently queried columns\n- Include meaningful column constraints (NOT NULL, UNIQUE, etc.)\n- Use proper PostgreSQL data types (VARCHAR, INTEGER, TIMESTAMP, etc.)\n- End each statement with semicolon\n\nReturn ONLY the SQL statements, no explanation."
+      },
+      "impulseReferences": [
+        {
+          "id": "schema_analysis",
+          "ref": "task-analyze-schema-output",
+          "priority": "required",
+          "budget": 2000
+        }
+      ],
+      "validation": {
+        "requiredPatterns": [
+          "CREATE TABLE|ALTER TABLE",
+          ";"
+        ],
+        "forbiddenPatterns": [
+          {
+            "file": "migration.sql",
+            "pattern": "DROP DATABASE|DROP SCHEMA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "validate-sql-syntax",
+      "description": "Validate SQL syntax and schema compatibility against PostgreSQL",
+      "resolver": "external-validation",
+      "impulseReferences": [
+        {
+          "id": "sql_output",
+          "ref": "task-generate-migration-output",
+          "priority": "required",
+          "budget": 3000
+        }
+      ],
+      "resolverRequirements": {
+        "resolver": "external-validation",
+        "config": {
+          "validationType": "database",
+          "dbType": "postgres",
+          "connectionString": "${DATABASE_URL}",
+          "dryRun": true,
+          "timeout": 5000
+        }
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "save-migration",
+      "description": "Save validated migration to file",
+      "resolver": "file",
+      "resolverRequirements": {
+        "resolver": "file",
+        "config": {
+          "operation": "write"
+        }
+      },
+      "impulseReferences": [
+        {
+          "id": "file_path",
+          "ref": "memo:migrations/{{timestamp}}_{{goal_slug}}.sql",
+          "priority": "required",
+          "budget": 100
+        },
+        {
+          "id": "content",
+          "ref": "task-generate-migration-output",
+          "priority": "required",
+          "budget": 3000
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "name": "goal",
+      "type": "string",
+      "description": "What the migration should accomplish (e.g., 'add users table')"
+    },
+    {
+      "name": "timestamp",
+      "type": "string",
+      "default": "{{now}}",
+      "description": "Timestamp for migration file naming"
+    },
+    {
+      "name": "goal_slug",
+      "type": "string",
+      "default": "{{slugify(goal)}}",
+      "description": "Slugified version of goal for filename"
+    },
+    {
+      "name": "DATABASE_URL",
+      "type": "string",
+      "fromEnv": true,
+      "description": "PostgreSQL connection string for validation"
+    }
+  ],
+  "metadata": {
+    "created_by": "system",
+    "created_at": "2026-04-08",
+    "purpose": "Example template demonstrating external database validation",
+    "external_validation": true,
+    "external_validation_type": "database"
+  }
+}

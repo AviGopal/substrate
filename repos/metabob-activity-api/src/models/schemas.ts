@@ -46,23 +46,39 @@ export const SessionPostResponseSchema = z.object({
 });
 
 // Activity Template schemas
+// Task prompt schema for LLM-based tasks
+const TaskPromptSchema = z.object({
+  template: z.string(),
+  maxTokens: z.number().optional(),
+  compressionStrategy: z.string().optional(),
+  variables: z.array(z.any()).optional(),
+});
+
+// Task config schema for resolver-based tasks
+const TaskConfigSchema = z.record(z.any());
+
+// Validation schema for task output
+const TaskValidationSchema = z.object({
+  exitCode: z.number().optional(),
+  outputContains: z.string().optional(),
+  outputMatches: z.string().optional(),
+  requiredFiles: z.array(z.string()).optional(),
+  requiredPatterns: z.array(z.any()).optional(),
+  forbiddenPatterns: z.array(z.any()).optional(),
+  commands: z.array(z.any()).optional(),
+});
+
 export const TemplateTaskSchema = z.object({
   id: z.string(),
   subagent: z.string().optional(),
   description: z.string(),
   dependencies: z.array(z.string()).optional(),
-  prompt: z.object({
-    template: z.string(),
-    maxTokens: z.number().optional(),
-    compressionStrategy: z.string().optional(),
-    variables: z.array(z.any()).optional(),
-  }),
-  validation: z.object({
-    requiredFiles: z.array(z.string()).optional(),
-    requiredPatterns: z.array(z.any()).optional(),
-    forbiddenPatterns: z.array(z.any()).optional(),
-    commands: z.array(z.any()).optional(),
-  }).optional(),
+  // Task execution: either prompt-based or resolver-based
+  prompt: TaskPromptSchema.optional(),
+  resolver: z.string().optional(), // e.g., "bash", "llm", "http", "file"
+  config: TaskConfigSchema.optional(), // resolver-specific config
+  // Validation for task output
+  validation: TaskValidationSchema.optional(),
   retry: z.object({
     // Accept both snake_case (from MiniBob MCP) and camelCase (from ribosome)
     max_attempts: z.number().optional(),
@@ -72,7 +88,11 @@ export const TemplateTaskSchema = z.object({
     (data) => data.max_attempts !== undefined || data.maxAttempts !== undefined,
     { message: "Either max_attempts or maxAttempts is required" }
   ).optional(),
-});
+}).refine(
+  // Either prompt OR resolver must be provided
+  (data) => data.prompt !== undefined || data.resolver !== undefined,
+  { message: "Either 'prompt' or 'resolver' is required" }
+);
 
 export const TemplateMetricsSchema = z.object({
   // Canonical: use 'id' as the primary identifier
@@ -735,6 +755,16 @@ export const ExecutedTaskSchema = z.object({
     environment: z.record(z.string()),
     impulses: z.array(z.string()),
     variables: z.record(z.any()),
+    git: z.object({
+      branch: z.string(),
+      commit: z.string(),
+      dirty: z.boolean(),
+      changedFiles: z.array(z.string()),
+      stagedFiles: z.array(z.string()),
+      unstagedFiles: z.array(z.string()),
+      ahead: z.number().optional(),
+      behind: z.number().optional(),
+    }).optional(),
   }).optional(),
   outputState: z.object({
     filesModified: z.array(z.string()),
@@ -758,6 +788,17 @@ export const ExecutionTraceDataSchema = z.object({
     goal: z.string(),
     intent: z.string(),
     context: z.record(z.any()),
+  }).optional(),
+  // Session context for within-session composition learning (Task #26)
+  session_context: z.object({
+    session_id: z.string(),
+    previous_activities: z.array(z.object({
+      activity_id: z.string(),
+      shapes_produced: z.array(z.string()),
+      success: z.boolean(),
+    })),
+    accumulated_shapes: z.array(z.string()),
+    goal_chain: z.array(z.string()),
   }).optional(),
 });
 
@@ -1406,3 +1447,46 @@ export const ImpulseShapeActivityScoreSchema = z.object({
 export type ShapeScoreUpdateRequest = z.infer<typeof ShapeScoreUpdateRequestSchema>;
 export type ShapeScoreUpdateResponse = z.infer<typeof ShapeScoreUpdateResponseSchema>;
 export type ImpulseShapeActivityScore = z.infer<typeof ImpulseShapeActivityScoreSchema>;
+
+// =============================================================================
+// MANUAL FEEDBACK SCHEMAS
+// =============================================================================
+
+/**
+ * ActivityFeedbackRequest - Manual feedback from /teach and /warn commands
+ * Request body for POST /v2/activities/feedback
+ */
+export const ActivityFeedbackRequestSchema = z.object({
+  activity_id: z.string()
+    .describe('Activity ID to provide feedback on'),
+  direction: z.enum(['positive', 'negative'])
+    .describe('Feedback type: positive (teach) or negative (warn)'),
+  intensity: z.number().int().min(0).max(3).default(0)
+    .describe('Feedback strength: 0=1.5x, 1=2x, 2=2.5x, 3=3x'),
+  include_adjacent: z.boolean().optional()
+    .describe('Whether to apply feedback to adjacent activities (composition graph)'),
+  session_id: z.string().optional()
+    .describe('Session ID for finding adjacent activities'),
+  reason: z.string().optional()
+    .describe('Optional reason for feedback (logged for learning)'),
+});
+
+/**
+ * ActivityFeedbackResponse - Response from feedback endpoint
+ * Returns updated Thompson Sampling parameters
+ */
+export const ActivityFeedbackResponseSchema = z.object({
+  success: z.boolean()
+    .describe('Whether feedback was successfully recorded'),
+  affected_activities: z.array(z.string())
+    .describe('Activity IDs that received feedback updates'),
+  multiplier: z.number()
+    .describe('Applied multiplier based on intensity'),
+  direction: z.string()
+    .describe('Feedback direction that was applied'),
+  message: z.string().optional()
+    .describe('Optional status message'),
+});
+
+export type ActivityFeedbackRequest = z.infer<typeof ActivityFeedbackRequestSchema>;
+export type ActivityFeedbackResponse = z.infer<typeof ActivityFeedbackResponseSchema>;

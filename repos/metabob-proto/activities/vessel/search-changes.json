@@ -1,0 +1,134 @@
+{
+  "id": "search:changes:v1",
+  "name": "Search for Recent Changes",
+  "description": "Search the codebase for recent changes, analyzing git history and file modifications to understand what has changed.",
+  "category": "tool",
+  "tags": ["search", "git", "changes", "analysis", "exploration"],
+
+  "inputSchema": {
+    "required": [
+      { "shape": "goal", "description": "The search criteria or question about changes" }
+    ],
+    "optional": [
+      { "shape": "source_code", "description": "Specific files to focus on" },
+      { "shape": "config_file", "description": "Project configuration for context" }
+    ]
+  },
+
+  "outputSchema": {
+    "produces": [
+      { "shape": "analysis", "description": "Summary of changes found" },
+      { "shape": "file_list", "description": "List of modified files" },
+      { "shape": "patch", "description": "Actual diff content", "collection": true }
+    ]
+  },
+
+  "variables": [
+    {
+      "name": "timeRange",
+      "type": "string",
+      "required": false,
+      "description": "Time range for changes (e.g., '1 week', '3 days', 'since v1.0')",
+      "default": "1 week"
+    },
+    {
+      "name": "pathFilter",
+      "type": "string",
+      "required": false,
+      "description": "Path pattern to filter (e.g., 'src/', '*.ts')"
+    },
+    {
+      "name": "author",
+      "type": "string",
+      "required": false,
+      "description": "Filter by author name or email"
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "list-recent-commits",
+      "description": "Get list of recent commits with summary",
+      "dependencies": [],
+      "prompt": {
+        "template": "List recent git commits to understand what has changed.\n\nTime range: {{timeRange}}\nPath filter: {{pathFilter}}\nAuthor: {{author}}\n\nUse git log with appropriate flags to get commit hashes, authors, dates, and messages.",
+        "variables": ["timeRange", "pathFilter", "author"]
+      },
+      "resolver": "bash",
+      "resolverConfig": {
+        "command": "git log --oneline --since='{{timeRange}}' {{#if pathFilter}}-- '{{pathFilter}}'{{/if}} {{#if author}}--author='{{author}}'{{/if}} | head -20"
+      },
+      "validation": {
+        "requiredPatterns": ["[a-f0-9]{7,}"]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "get-changed-files",
+      "description": "Get list of files that have been modified",
+      "dependencies": ["list-recent-commits"],
+      "prompt": {
+        "template": "Get the list of files changed in recent commits.\n\nBased on the commits found, use git diff --stat or git log --name-only to list modified files.",
+        "variables": []
+      },
+      "resolver": "bash",
+      "resolverConfig": {
+        "command": "git log --name-only --pretty=format: --since='{{timeRange}}' {{#if pathFilter}}-- '{{pathFilter}}'{{/if}} | sort -u | grep -v '^$' | head -50"
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "analyze-changes",
+      "description": "Analyze the nature of changes and create a summary",
+      "dependencies": ["list-recent-commits", "get-changed-files"],
+      "prompt": {
+        "template": "Analyze the changes found and create a summary.\n\nCommits found:\n{{task.list-recent-commits.output}}\n\nFiles changed:\n{{task.get-changed-files.output}}\n\nProvide:\n1. Overview of what changed\n2. Key areas affected\n3. Any notable patterns (e.g., many changes to one area)\n4. Potential areas of concern",
+        "variables": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "get-detailed-diff",
+      "description": "Get detailed diff for significant changes (optional, based on analysis)",
+      "dependencies": ["analyze-changes"],
+      "prompt": {
+        "template": "Based on the analysis, get detailed diffs for the most significant changes.\n\nFocus on files that seem most important based on the analysis. Use git diff or git show to get actual code changes.",
+        "variables": []
+      },
+      "resolver": "bash",
+      "resolverConfig": {
+        "command": "git diff HEAD~5..HEAD --stat && echo '---' && git diff HEAD~5..HEAD {{#if pathFilter}}'{{pathFilter}}'{{/if}} | head -200"
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+
+  "metadata": {
+    "author": "minibob-teaching",
+    "createdAt": 1775596800000,
+    "primordial": true,
+    "bootstrap": true,
+    "level": 1,
+    "initialAlpha": 2,
+    "initialBeta": 1,
+    "learningProgression": {
+      "deterministicTasks": 3,
+      "learnedTasks": 0,
+      "llmTasks": 1,
+      "deterministicRatio": 0.75,
+      "learnedRatio": 0.0
+    }
+  }
+}

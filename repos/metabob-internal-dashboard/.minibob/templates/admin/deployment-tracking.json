@@ -1,0 +1,41 @@
+{
+  "id": "admin-deployment-tracking",
+  "name": "Deployment Tracking",
+  "description": "Track and compare canary vs production deployments",
+  "category": "admin",
+  "tags": ["deployment", "ci-cd", "versioning"],
+  "tasks": [
+    {
+      "id": "check-canary-version",
+      "description": "Get canary deployment version",
+      "prompt": {
+        "template": "Query the activity API at https://activity.metabob.com/health to get the canary version information",
+        "variables": []
+      }
+    },
+    {
+      "id": "check-production-version",
+      "description": "Get production deployment version",
+      "prompt": {
+        "template": "Query the activity API production endpoint to get the production version information. If separate production endpoint exists, use it, otherwise note that canary is the active deployment.",
+        "variables": []
+      }
+    },
+    {
+      "id": "compare-versions",
+      "description": "Compare canary and production versions",
+      "prompt": {
+        "template": "Create a comparison table showing the differences between canary and production deployments. Include columns: Service, Canary Version, Production Version, Status.",
+        "variables": []
+      }
+    },
+    {
+      "id": "recent-deployments",
+      "description": "Show recent deployment history",
+      "prompt": {
+        "template": "Query for recent deployment events from the activity API or show deployment-related execution traces. Display as a timeline or table with: Timestamp, Service, Version, Status.",
+        "variables": []
+      }
+    }
+  ]
+}

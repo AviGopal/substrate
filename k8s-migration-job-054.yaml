@@ -1,0 +1,80 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: apply-migration-054
+  namespace: activity-system
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migration
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          cat > /tmp/migration.surql <<'EOF'
+          -- Remove existing field definitions for tasks
+          REMOVE FIELD IF EXISTS tasks ON activity;
+          REMOVE FIELD IF EXISTS tasks.* ON activity;
+
+          -- Redefine tasks field as completely FLEXIBLE
+          DEFINE FIELD IF NOT EXISTS tasks ON activity TYPE option<array> FLEXIBLE
+            COMMENT "Task steps array - supports any resolver type (LLM, deterministic, tool, etc.)";
+          EOF
+
+          echo "Applying migration 054..."
+          curl -X POST http://surrealdb.activity-system.svc.cluster.local:8000/sql \
+            -H "Content-Type: application/surql" \
+            -H "Accept: application/json" \
+            -H "surreal-ns: activity-system" \
+            -H "surreal-db: learning_loop" \
+            -u "root:${SURREALDB_PASSWORD}" \
+            --data-binary @/tmp/migration.surql
+
+          echo ""
+          echo "Migration applied. Verifying by creating test activity..."
+          curl -X POST http://surrealdb.activity-system.svc.cluster.local:8000/sql \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "surreal-ns: activity-system" \
+            -H "surreal-db: learning_loop" \
+            -u "root:${SURREALDB_PASSWORD}" \
+            -d 'CREATE activity:test_migration_054 CONTENT {
+              id: "test-migration-054",
+              name: "Test Activity",
+              execution_type: "template",
+              scope: "global",
+              org_id: "NONE",
+              tasks: [
+                {
+                  id: "task-1",
+                  prompt: {
+                    template: "Test",
+                    variables: [
+                      {
+                        name: "testVar",
+                        description: "This field should work now",
+                        type: "string"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }'
+
+          echo ""
+          echo "Cleaning up test activity..."
+          curl -X POST http://surrealdb.activity-system.svc.cluster.local:8000/sql \
+            -H "surreal-ns: activity-system" \
+            -H "surreal-db: learning_loop" \
+            -u "root:${SURREALDB_PASSWORD}" \
+            -d 'DELETE activity:test_migration_054'
+        env:
+        - name: SURREALDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: surrealdb
+              key: password

@@ -80,6 +80,7 @@ import {
   ToolArgumentPatternRecordRequestSchema,
   ToolArgumentRecommendationsQuerySchema,
   ShapeScoreUpdateRequestSchema,
+  ActivityFeedbackRequestSchema,
   type ExecutionRecord,
   type ExecutionRecordResponse,
   type CreateTemplateRequest,
@@ -97,8 +98,12 @@ import {
   type ToolArgumentPattern,
   type ToolArgumentRecommendationsResponse,
   type ShapeScoreUpdateResponse,
+  type ActivityFeedbackRequest,
+  type ActivityFeedbackResponse,
+  type ImpulseShapeActivityScore,
 } from '../models/schemas';
 import { broadcaster } from '../websocket/broadcaster';
+import { autoCreateVariantIfNeeded, checkAndRetireTemplate } from '../services/variant-creator';
 
 const app = new Hono();
 
@@ -356,15 +361,16 @@ async function enrichTemplatesWithMetrics(
         WHERE activity_id IN $activity_ids
       `;
       metricsResult = await surrealDB.query<any>(fallbackQuery, {
-        activity_ids: activityIds
+        activity_ids: normalizedIds  // Use normalized IDs to match stored activity_id format
       });
     }
 
     // For templates not found in v_activity_score (no executions yet),
     // try to get initial metrics from variant_performance_metrics
-    if (metricsResult.length < activityIds.length) {
+    if (metricsResult.length < normalizedIds.length) {
       const foundIds = new Set(metricsResult.map((m: any) => m.activity_id || m.variant_id));
-      const missingIds = activityIds.filter(id => !foundIds.has(id) && !foundIds.has(id.replace(/^activity:/, '').replace(/[⟨⟩`]/g, '')));
+      // Use normalized IDs for comparison since variant_performance_metrics stores plain IDs
+      const missingIds = normalizedIds.filter(id => !foundIds.has(id));
 
       if (missingIds.length > 0) {
         logger.debug('Fetching initial metrics for templates without executions', {
@@ -499,6 +505,7 @@ async function listAllTemplatesFromDB(
     query = `
       SELECT * FROM activity
       WHERE execution_type = $execution_type
+      AND (retired = false OR retired IS NONE)
       ${whereClause ? 'AND ' + whereClause.replace('WHERE ', '') : ''}
       ORDER BY created_at DESC
       LIMIT $limit
@@ -536,6 +543,7 @@ async function listAllTemplatesFromDB(
       query = `
         SELECT * FROM activity
         WHERE execution_type = $execution_type
+        AND (retired = false OR retired IS NONE)
         AND (
           (scope = 'global' AND public = true)
           OR (scope = 'org' AND org_id = $org_id)
@@ -549,7 +557,9 @@ async function listAllTemplatesFromDB(
       // User has org_id but no project_id: return global + org activities
       query = `
         SELECT * FROM activity
-        WHERE execution_type = $execution_type AND (
+        WHERE execution_type = $execution_type
+        AND (retired = false OR retired IS NONE)
+        AND (
           scope IS NULL
           OR scope = 'global'
           OR (scope = 'org' AND org_id = $org_id)
@@ -563,7 +573,9 @@ async function listAllTemplatesFromDB(
     // No org_id: return only global activities
     query = `
       SELECT * FROM activity
-      WHERE execution_type = $execution_type AND (
+      WHERE execution_type = $execution_type
+      AND (retired = false OR retired IS NONE)
+      AND (
         scope IS NULL
         OR scope = 'global'
       ) ${scopeClause}
@@ -664,6 +676,14 @@ app.post('/templates', async (c) => {
     const activityName = validated.name || validated.variant_name;
     const activityTasks = validated.tasks || validated.task_steps;
     const activityVariantOf = validated.variant_of || validated.genealogy;
+
+    // Validate required fields
+    if (!activityId) {
+      return c.json({ error: 'Missing required field: id or variant_id' }, 400);
+    }
+    if (!activityName) {
+      return c.json({ error: 'Missing required field: name or variant_name' }, 400);
+    }
 
     // Convert category to tags if needed (backward compatibility)
     const tags = ensureTags({ tags: validated.tags, category: validated.category });
@@ -982,7 +1002,7 @@ app.post('/templates', async (c) => {
         error.errors,
         body,
         {
-          callerId: jwtAuth?.instanceId,
+          callerId: jwtAuth?.keyId || jwtAuth?.userId,
           orgId: orgId || undefined,
           projectId: projectId || undefined,
         }
@@ -1314,14 +1334,24 @@ app.get('/templates/:variantId', async (c) => {
     let result: ActivityTemplate[] = [];
 
     // Query from activity table (the canonical table for templates)
-    // Use meta::id() to extract just the ID part (without table prefix) and compare
+    // Try multiple ID formats to handle SurrealDB's auto-wrapping of string IDs in angle brackets
+    // 1. Simple name (e.g., "report-metrics")
+    // 2. Angle-bracket wrapped (e.g., "⟨report-metrics⟩") - SurrealDB auto-format
+    // 3. Full record ID (e.g., "activity:report-metrics")
+    const normalizedId = variantId.includes('⟨') || variantId.includes('⟩')
+      ? variantId
+      : `⟨${variantId}⟩`;
+
     const variantQuery = `
       SELECT * FROM activity
-      WHERE meta::id(id) = $variant_id
-        AND execution_type = 'template'
+      WHERE (meta::id(id) = $variant_id OR meta::id(id) = $normalized_id)
+        AND (execution_type = 'template' OR execution_type IS NONE OR execution_type IS NULL)
       LIMIT 1
     `;
-    result = await surrealDB.query<ActivityTemplate>(variantQuery, { variant_id: variantId });
+    result = await surrealDB.query<ActivityTemplate>(variantQuery, {
+      variant_id: variantId,
+      normalized_id: normalizedId,
+    });
 
     // If not found, try treating variant_id as a full record ID (for activity:xyz format)
     if (result.length === 0 && variantId.includes(':')) {
@@ -1329,7 +1359,7 @@ app.get('/templates/:variantId', async (c) => {
         const recordQuery = `
           SELECT * FROM activity
           WHERE id = type::record($variant_id)
-            AND execution_type = 'template'
+            AND (execution_type = 'template' OR execution_type IS NONE OR execution_type IS NULL)
         `;
         result = await surrealDB.query<ActivityTemplate>(recordQuery, { variant_id: variantId });
       } catch (recordError) {
@@ -1576,7 +1606,8 @@ app.post('/executions', async (c) => {
         activityIdFromRequest,
         validated.input_impulse_shapes,
         validated.success,
-        orgId
+        orgId,
+        jwtAuth?.jwtToken
       ).catch((error) => {
         logger.warn('Shape score update failed (non-blocking)', {
           activity_id: activityIdFromRequest,
@@ -1672,6 +1703,72 @@ app.post('/executions', async (c) => {
           },
         },
       });
+    }
+
+    // Step 4: Auto-create variant if needed (after consecutive failures)
+    // Non-blocking: don't await, fire and forget
+    if (orgId) {
+      autoCreateVariantIfNeeded(activityIdFromRequest, orgId, validated.success)
+        .then((variantResult) => {
+          if (variantResult) {
+            logger.info('Auto-created variant from consecutive failures', {
+              parentTemplateId: activityIdFromRequest,
+              variantId: variantResult.variantId,
+              variantGeneration: variantResult.variantGeneration,
+              modifications: variantResult.modifications.length,
+            });
+
+            // Emit variant_created event via WebSocket
+            broadcaster.emit({
+              type: 'variant_created',
+              timestamp: new Date().toISOString(),
+              data: {
+                parent_activity_id: activityIdFromRequest,
+                variant_id: variantResult.variantId,
+                variant_generation: variantResult.variantGeneration,
+                reason: variantResult.reason,
+                modifications: variantResult.modifications,
+              },
+            });
+          }
+        })
+        .catch((error) => {
+          logger.warn('Auto-variant creation failed (non-blocking)', {
+            activity_id: activityIdFromRequest,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+
+      // Step 5: Check and retire template if needed (after enough executions)
+      // Non-blocking: don't await, fire and forget
+      checkAndRetireTemplate(activityIdFromRequest, orgId)
+        .then((wasRetired) => {
+          if (wasRetired) {
+            logger.info('Template retired due to poor performance', {
+              activity_id: activityIdFromRequest,
+            });
+
+            // Emit template_retired event via WebSocket
+            broadcaster.emit({
+              type: 'template_retired',
+              timestamp: new Date().toISOString(),
+              data: {
+                activity_id: activityIdFromRequest,
+                reason: 'poor_performance',
+              },
+            });
+
+            // Invalidate cache for retired template
+            redis.del(`${CACHE_KEY_PREFIX}${activityIdFromRequest}`);
+            redis.srem(CACHE_LIST_KEY, activityIdFromRequest);
+          }
+        })
+        .catch((error) => {
+          logger.warn('Template retirement check failed (non-blocking)', {
+            activity_id: activityIdFromRequest,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
     }
 
     // Return response with updated metrics
@@ -2280,6 +2377,115 @@ app.get('/:id/variants', async (c) => {
 });
 
 /**
+ * POST /v2/activities/:id/variants
+ * Manually trigger variant creation for a template.
+ *
+ * This endpoint allows users to explicitly request variant creation
+ * without waiting for automatic creation from consecutive failures.
+ *
+ * Request body:
+ * - reason: Optional reason for creating the variant (default: 'manual_improvement')
+ *
+ * Returns:
+ * - variant_id: ID of the created variant
+ * - variant_generation: Generation number
+ * - modifications: Array of modifications made
+ * - reason: Reason for variant creation
+ */
+app.post('/:id/variants', async (c) => {
+  try {
+    const activityId = c.req.param('id');
+    const jwtAuth = getJwtAuthFromContext(c);
+    const session = (c.get as any)('session') as SessionData | undefined;
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    if (!orgId) {
+      return c.json({ error: 'Organization ID required' }, 401);
+    }
+
+    // Parse optional request body
+    let reason = 'manual_improvement';
+    try {
+      const body = await c.req.json();
+      if (body.reason) {
+        reason = body.reason;
+      }
+    } catch {
+      // No body or invalid JSON, use default
+    }
+
+    logger.info('POST /v2/activities/:id/variants', {
+      activityId,
+      orgId,
+      reason,
+      authMethod: jwtAuth ? 'jwt' : 'session',
+    });
+
+    // Import the createVariant function from variant-creator
+    const { createVariant, shouldCreateVariant } = await import('../services/variant-creator');
+
+    // Check current failure pattern to provide context
+    const failurePattern = await shouldCreateVariant(activityId, orgId);
+
+    // Create variant even if no failure pattern (manual improvement)
+    const defaultFailurePattern = failurePattern || {
+      templateId: activityId,
+      consecutiveFailures: 0,
+      totalExecutions: 0,
+      successRate: 1.0,
+      commonErrors: [],
+      failedTasks: [],
+    };
+
+    const variantResult = await createVariant(
+      activityId,
+      defaultFailurePattern,
+      orgId,
+      reason
+    );
+
+    if (!variantResult) {
+      return c.json({
+        error: 'Failed to create variant',
+        message: 'Variant creation returned null. Template may not exist or maximum variants reached.',
+      }, 500);
+    }
+
+    // Emit variant_created event via WebSocket
+    broadcaster.emit({
+      type: 'variant_created',
+      timestamp: new Date().toISOString(),
+      data: {
+        parent_activity_id: activityId,
+        variant_id: variantResult.variantId,
+        variant_generation: variantResult.variantGeneration,
+        reason: variantResult.reason,
+        modifications: variantResult.modifications,
+      },
+    });
+
+    return c.json({
+      success: true,
+      variant_id: variantResult.variantId,
+      variant_generation: variantResult.variantGeneration,
+      modifications: variantResult.modifications,
+      reason: variantResult.reason,
+    }, 201);
+
+  } catch (error: any) {
+    logger.error('POST /v2/activities/:id/variants failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to create variant',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
  * GET /v2/activities/:id/variant-scores
  * Get per-variant Thompson Sampling scores.
  *
@@ -2401,6 +2607,279 @@ app.get('/family/:baseId', async (c) => {
 
     return c.json({
       error: 'Failed to fetch activity family tree',
+      message: error.message,
+    }, 500);
+  }
+});
+
+// =============================================================================
+// POST /feedback - Manual feedback on activity performance
+// =============================================================================
+/**
+ * Record human feedback on activity performance (/teach and /warn commands)
+ *
+ * Positive feedback (teach):
+ * - Multiplies alpha (success parameter) in Thompson Sampling
+ * - Optionally boosts adjacent activities with reduced multiplier
+ *
+ * Negative feedback (warn):
+ * - Multiplies beta (failure parameter) in Thompson Sampling
+ * - Does NOT penalize adjacent activities (warnings are specific)
+ *
+ * Updates impulse_shape_activity_score table for all shapes the activity handles.
+ */
+app.post('/feedback', async (c) => {
+  try {
+    // Check for JWT auth
+    const jwtAuth = getJwtAuthFromContext(c);
+
+    // Extract session from context (set by auth middleware)
+    const session = (c.get as any)('session') as SessionData | undefined;
+
+    // Use JWT auth claims if available, otherwise fall back to session
+    const orgId = jwtAuth?.orgId || session?.org_id || null;
+
+    if (!orgId) {
+      return c.json({
+        error: 'Unauthorized',
+        message: 'Missing organization context',
+      }, 401);
+    }
+
+    // Parse and validate request body
+    const body = await c.req.json();
+    const validated = ActivityFeedbackRequestSchema.parse(body);
+
+    logger.info('POST /v2/activities/feedback', {
+      activity_id: validated.activity_id,
+      direction: validated.direction,
+      intensity: validated.intensity,
+      include_adjacent: validated.include_adjacent,
+      reason: validated.reason,
+      orgId,
+    });
+
+    // Map intensity to multiplier (0=1.5x, 1=2x, 2=2.5x, 3=3x)
+    const multiplier = 1.5 + (validated.intensity * 0.5);
+
+    // Verify activity exists
+    const activityLookup = await surrealDB.query<{ id: string; input_shapes?: string[] }>(
+      'SELECT id, input_shapes FROM activity WHERE id = $activity_id LIMIT 1',
+      { activity_id: validated.activity_id }
+    );
+
+    if (!activityLookup || activityLookup.length === 0 || !activityLookup[0]) {
+      return c.json({
+        error: 'Activity not found',
+        message: `Activity ${validated.activity_id} does not exist`,
+      }, 404);
+    }
+
+    const activity = activityLookup[0];
+    const inputShapes = activity.input_shapes || [];
+
+    // Find all shape scores for this activity
+    const shapesQuery = await surrealDB.query<ImpulseShapeActivityScore>(
+      `SELECT * FROM impulse_shape_activity_score
+       WHERE org_id = $org_id AND activity_id = $activity_id`,
+      { org_id: orgId, activity_id: validated.activity_id }
+    );
+
+    const existingScores = shapesQuery || [];
+
+    logger.debug('Found existing shape scores', {
+      activity_id: validated.activity_id,
+      count: existingScores.length,
+      shapes: existingScores.map(s => s.shape),
+    });
+
+    // If no scores exist yet, initialize for all input shapes
+    if (existingScores.length === 0 && inputShapes.length > 0) {
+      logger.info('Initializing shape scores for new activity', {
+        activity_id: validated.activity_id,
+        shapes: inputShapes,
+      });
+
+      for (const shape of inputShapes) {
+        await surrealDB.query(
+          `CREATE impulse_shape_activity_score CONTENT {
+            shape: $shape,
+            activity_id: $activity_id,
+            org_id: $org_id,
+            success_count: 0,
+            failure_count: 0,
+            alpha: 1,
+            beta: 1,
+            updated_at: time::now()
+          }`,
+          {
+            shape,
+            activity_id: validated.activity_id,
+            org_id: orgId,
+          }
+        );
+      }
+
+      // Re-fetch scores
+      const refreshedScores = await surrealDB.query<ImpulseShapeActivityScore>(
+        `SELECT * FROM impulse_shape_activity_score
+         WHERE org_id = $org_id AND activity_id = $activity_id`,
+        { org_id: orgId, activity_id: validated.activity_id }
+      );
+      existingScores.push(...(refreshedScores || []));
+    }
+
+    // Apply feedback multiplier to all shape scores
+    const affectedActivities: string[] = [validated.activity_id];
+
+    if (validated.direction === 'positive') {
+      // Positive feedback: multiply alpha
+      for (const score of existingScores) {
+        const currentAlpha = score.alpha || 1;
+        const newAlpha = Math.ceil(currentAlpha * multiplier);
+
+        await surrealDB.query(
+          `UPDATE impulse_shape_activity_score
+           SET alpha = $new_alpha, updated_at = time::now()
+           WHERE org_id = $org_id
+             AND shape = $shape
+             AND activity_id = $activity_id`,
+          {
+            new_alpha: newAlpha,
+            org_id: orgId,
+            shape: score.shape,
+            activity_id: validated.activity_id,
+          }
+        );
+
+        logger.info('Updated alpha for positive feedback', {
+          activity_id: validated.activity_id,
+          shape: score.shape,
+          old_alpha: currentAlpha,
+          new_alpha: newAlpha,
+          multiplier,
+        });
+      }
+
+      // TODO: Handle include_adjacent for positive feedback
+      // This would query the composition graph to find adjacent activities
+      // and apply a reduced multiplier to their scores
+      if (validated.include_adjacent && validated.session_id) {
+        logger.debug('Adjacent activity boosting not yet implemented', {
+          session_id: validated.session_id,
+        });
+      }
+
+    } else {
+      // Negative feedback: multiply beta
+      for (const score of existingScores) {
+        const currentBeta = score.beta || 1;
+        const newBeta = Math.ceil(currentBeta * multiplier);
+
+        await surrealDB.query(
+          `UPDATE impulse_shape_activity_score
+           SET beta = $new_beta, updated_at = time::now()
+           WHERE org_id = $org_id
+             AND shape = $shape
+             AND activity_id = $activity_id`,
+          {
+            new_beta: newBeta,
+            org_id: orgId,
+            shape: score.shape,
+            activity_id: validated.activity_id,
+          }
+        );
+
+        logger.info('Updated beta for negative feedback', {
+          activity_id: validated.activity_id,
+          shape: score.shape,
+          old_beta: currentBeta,
+          new_beta: newBeta,
+          multiplier,
+        });
+      }
+
+      // Negative feedback is specific - don't penalize adjacent activities
+    }
+
+    // Invalidate Redis cache for template recommendations
+    try {
+      const redisWrapper = RedisClient.getInstance();
+      const redis = redisWrapper.getClient();
+      if (redis) {
+        // Invalidate all cached recommendations since scores changed
+        const keys = await redis.keys(`${CACHE_KEY_PREFIX}*`);
+        if (keys.length > 0) {
+          await redis.del(...keys);
+          logger.debug('Invalidated Redis cache after feedback', {
+            keys_deleted: keys.length,
+          });
+        }
+      }
+    } catch (redisError) {
+      logger.warn('Failed to invalidate Redis cache', {
+        error: redisError instanceof Error ? redisError.message : String(redisError),
+      });
+      // Non-critical, continue
+    }
+
+    // Emit WebSocket event for dashboard updates
+    try {
+      broadcaster.emit({
+        type: 'feedback_recorded',
+        timestamp: new Date().toISOString(),
+        data: {
+          activity_id: validated.activity_id,
+          direction: validated.direction,
+          intensity: validated.intensity,
+          multiplier,
+          affected_activities: affectedActivities,
+          org_id: orgId,
+        },
+      });
+    } catch (wsError) {
+      logger.warn('Failed to emit WebSocket event', {
+        error: wsError instanceof Error ? wsError.message : String(wsError),
+      });
+      // Non-critical, continue
+    }
+
+    // Log feedback for learning (optional audit trail)
+    if (validated.reason) {
+      logger.info('Feedback reason', {
+        activity_id: validated.activity_id,
+        direction: validated.direction,
+        reason: validated.reason,
+      });
+    }
+
+    const response: ActivityFeedbackResponse = {
+      success: true,
+      affected_activities: affectedActivities,
+      multiplier,
+      direction: validated.direction,
+      message: `${validated.direction === 'positive' ? 'Positive' : 'Negative'} feedback applied with ${multiplier}x multiplier`,
+    };
+
+    return c.json(response, 200);
+
+  } catch (error: any) {
+    logger.error('POST /v2/activities/feedback failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    // Handle Zod validation errors
+    if (error.name === 'ZodError') {
+      return c.json({
+        error: 'Validation error',
+        message: error.errors[0]?.message || 'Invalid request body',
+        details: error.errors,
+      }, 400);
+    }
+
+    return c.json({
+      error: 'Failed to record feedback',
       message: error.message,
     }, 500);
   }
@@ -2759,7 +3238,7 @@ app.post('/recommend', async (c) => {
       });
     }
 
-    // Filter out templates without a valid ID before processing
+    // Filter out templates without a valid ID or that are retired before processing
     // Note: Use normalizeRecordId to handle SurrealDB RecordId objects
     const validTemplates = templates.filter((template: any) => {
       const templateId = normalizeRecordId(template.id || template.variant_id);
@@ -2771,6 +3250,17 @@ app.post('/recommend', async (c) => {
         });
         return false;
       }
+
+      // Filter out retired templates
+      if (template.retired === true) {
+        logger.debug('Filtering out retired template', {
+          template_id: templateId,
+          template_name: template.name || template.variant_name,
+          retired_reason: template.retired_reason,
+        });
+        return false;
+      }
+
       return true;
     });
 
@@ -2934,6 +3424,16 @@ app.post('/recommend', async (c) => {
       count: recommendations.length,
       top: recommendations[0]?.template_id,
       correlationIds: recommendations.map((r: any) => r.correlation_id),
+      scoreMethod,
+      fallbackTier,
+      // Log selection details for top recommendation
+      topRecommendation: recommendations[0] ? {
+        template_id: recommendations[0].template_id,
+        thompson_sample: recommendations[0].selection_metadata.sample,
+        alpha: recommendations[0].selection_metadata.alpha,
+        beta: recommendations[0].selection_metadata.beta,
+        output_shapes: recommendations[0].output_shapes,
+      } : null,
     });
 
     // Log Thompson Sampling selections for explainability (non-blocking)
@@ -3530,6 +4030,86 @@ app.get('/composition/graph', async (c) => {
 });
 
 /**
+ * GET /v2/activities/composition/successors
+ * Query composition successors for an activity
+ *
+ * Returns activities that have historically followed the given activity
+ * with their success rates, costs, and durations. Used for post-execution
+ * recommendations.
+ *
+ * Query parameters:
+ * - activity_id: Activity to get successors for (required)
+ * - min_weight: Minimum edge weight (default: 0.5 = 50% success rate)
+ * - limit: Max results (default: 10)
+ *
+ * Returns array of successor activities sorted by weight (success rate)
+ */
+app.get('/composition/successors', async (c) => {
+  try {
+    const query = c.req.query();
+    const activityId = query.activity_id;
+    const minWeight = query.min_weight ? parseFloat(query.min_weight) : 0.5;
+    const limit = query.limit ? parseInt(query.limit) : 10;
+
+    if (!activityId) {
+      return c.json({
+        error: 'Validation failed',
+        message: 'activity_id is required',
+      }, 400);
+    }
+
+    logger.info('GET /v2/activities/composition/successors', {
+      activityId,
+      minWeight,
+      limit,
+    });
+
+    // Query composition graph for edges where this activity is parent
+    const successorsQuery = `
+      SELECT
+        child_activity_id,
+        weight,
+        avg_duration_ms,
+        avg_cost_usd,
+        success_count,
+        total_count
+      FROM activity_composition_graph
+      WHERE parent_activity_id = $activity_id
+        AND weight >= $min_weight
+      ORDER BY weight DESC
+      LIMIT $limit
+    `;
+
+    const result = await surrealDB.query(successorsQuery, {
+      activity_id: activityId,
+      min_weight: minWeight,
+      limit,
+    });
+
+    const successors = (result && Array.isArray(result) ? result.flat() : []);
+
+    logger.info('Composition successors query result', {
+      activityId,
+      successorCount: successors.length,
+    });
+
+    return c.json({
+      successors,
+    });
+  } catch (error: any) {
+    logger.error('GET /v2/activities/composition/successors failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to query composition successors',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
  * GET /v2/activities/composition/impulse-success
  * Query impulse-conditioned success rates from composition data
  *
@@ -3656,18 +4236,196 @@ app.get('/composition/impulse-success', async (c) => {
 });
 
 /**
+ * POST /v2/activities/similar-state
+ * Query executions with similar available shapes (Task #29)
+ *
+ * Finds past executions that had similar impulse state (available shapes)
+ * to the current state. Uses Jaccard similarity on shape sets.
+ *
+ * Request body:
+ * - state_signature: State signature hash
+ * - available_shapes: Array of shapes currently available
+ * - min_similarity: Minimum similarity threshold (0.0-1.0, default: 0.5)
+ * - limit: Maximum results (default: 10)
+ *
+ * Returns executions sorted by similarity score descending.
+ */
+app.post('/similar-state', async (c) => {
+  try {
+    const body = await c.req.json();
+    const {
+      state_signature,
+      available_shapes,
+      min_similarity = 0.5,
+      limit = 10,
+    } = body;
+
+    logger.info('POST /v2/activities/similar-state', {
+      state_signature,
+      shapes_count: available_shapes?.length || 0,
+      min_similarity,
+      limit,
+    });
+
+    if (!available_shapes || !Array.isArray(available_shapes)) {
+      return c.json({
+        error: 'available_shapes is required and must be an array',
+      }, 400);
+    }
+
+    // Fast path: Check for exact state_signature match using indexed field
+    // This enables instant retrieval of executions with identical state
+    if (state_signature) {
+      logger.debug('Attempting fast path: exact state_signature match', { state_signature });
+
+      const exactQuery = `
+        SELECT
+          id,
+          activity_id,
+          success,
+          duration_ms,
+          cost_usd,
+          input_impulses,
+          output_impulses
+        FROM execution
+        WHERE state_signature = $state_signature
+        ORDER BY created_at DESC
+        LIMIT $limit
+      `;
+
+      const exactResults = await surrealDB.query<any[]>(exactQuery, {
+        state_signature,
+        limit,
+      });
+
+      const exactMatches = exactResults && Array.isArray(exactResults) ? exactResults.flat() : [];
+
+      if (exactMatches.length > 0) {
+        logger.info('Fast path hit: exact state_signature matches found', {
+          count: exactMatches.length,
+          state_signature,
+        });
+
+        // Return exact matches with similarity score of 1.0
+        const formatted = exactMatches.map((exec: any) => ({
+          execution_id: exec.id,
+          activity_id: exec.activity_id,
+          similarity: 1.0,
+          success: exec.success || false,
+          duration_ms: exec.duration_ms || 0,
+          cost_usd: exec.cost_usd || 0,
+          input_shapes: exec.input_impulses || [],
+          output_shapes: exec.output_impulses || [],
+        }));
+
+        return c.json({
+          executions: formatted,
+          total: formatted.length,
+          fast_path: true,
+        });
+      }
+
+      logger.debug('Fast path miss: no exact state_signature matches, falling back to similarity', {
+        state_signature,
+      });
+    }
+
+    // Fallback path: Jaccard similarity on shapes
+    // Query executions that have input shapes overlapping with available shapes
+    // Use CONTAINSANY to find executions with at least one matching shape
+    const similarityQuery = `
+      SELECT
+        id,
+        activity_id,
+        success,
+        duration_ms,
+        cost_usd,
+        input_impulses,
+        output_impulses
+      FROM execution
+      WHERE input_impulses CONTAINSANY $available_shapes
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+
+    const results = await surrealDB.query<any[]>(similarityQuery, {
+      available_shapes,
+    });
+
+    const executions = results && Array.isArray(results) ? results.flat() : [];
+
+    // Calculate Jaccard similarity for each execution
+    const availableSet = new Set(available_shapes);
+    const withSimilarity = executions.map((exec: any) => {
+      const execShapes = exec.input_impulses || [];
+      const execSet = new Set(execShapes);
+
+      // Calculate intersection
+      const intersection = new Set(
+        [...execSet].filter(shape => availableSet.has(shape))
+      );
+
+      // Calculate union
+      const union = new Set([...execSet, ...availableSet]);
+
+      // Jaccard similarity
+      const similarity = union.size > 0 ? intersection.size / union.size : 0;
+
+      return {
+        execution_id: exec.id,
+        activity_id: exec.activity_id,
+        similarity,
+        success: exec.success || false,
+        duration_ms: exec.duration_ms || 0,
+        cost_usd: exec.cost_usd || 0,
+        input_shapes: execShapes,
+        output_shapes: exec.output_impulses || [],
+      };
+    });
+
+    // Filter by minimum similarity and sort by similarity descending
+    const filtered = withSimilarity
+      .filter(exec => exec.similarity >= min_similarity)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit);
+
+    logger.info('Similarity fallback query result', {
+      total_executions: executions.length,
+      filtered_count: filtered.length,
+      top_similarity: filtered[0]?.similarity,
+    });
+
+    return c.json({
+      executions: filtered,
+      total: filtered.length,
+      fast_path: false,
+    });
+  } catch (error: any) {
+    logger.error('POST /v2/activities/similar-state failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to query similar executions',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
  * POST /v2/activities/impulse-relevance
  * Record impulse usage and outcome for relevance learning
- * 
+ *
  * This endpoint implements Bayesian learning for impulse relevance:
  * - Track: was impulse loaded? did execution succeed?
  * - Learn: P(success | impulse present) vs P(success | impulse absent)
  * - Optimize: Skip loading irrelevant impulses (save tokens)
- * 
+ *
  * Bayesian calculation:
  * relevance_score = P(success | loaded) = times_execution_succeeded / times_loaded
  * irrelevance_score = P(success | not loaded) = times_not_loaded_succeeded / times_not_loaded
- * 
+ *
  * Decision rule:
  * - If relevance_score >> irrelevance_score → impulse is critical
  * - If relevance_score ≈ irrelevance_score → impulse is irrelevant
@@ -5455,7 +6213,8 @@ async function updateShapeScoresFromExecution(
   activityId: string,
   shapes: string[],
   success: boolean,
-  orgId: string
+  orgId: string,
+  jwtToken?: string | null
 ): Promise<void> {
   if (!shapes || shapes.length === 0) {
     return; // No shapes to update
@@ -5489,13 +6248,20 @@ async function updateShapeScoresFromExecution(
           };
         `;
 
-        await surrealDB.query(upsertQuery, {
+        const params = {
           shape,
           activity_id: activityId,
           org_id: orgId,
           success_increment: successIncrement,
           failure_increment: failureIncrement,
-        });
+        };
+
+        // Use authenticated connection if JWT token provided, otherwise use root connection
+        if (jwtToken) {
+          await queryWithAuth(jwtToken, upsertQuery, params);
+        } else {
+          await surrealDB.query(upsertQuery, params);
+        }
       } catch (shapeError: any) {
         logger.warn('Failed to update shape score in execution flow', {
           shape,

@@ -1,0 +1,235 @@
+{
+  "activity_id": "react-app-scaffolding",
+  "name": "Scaffold React Application",
+  "description": "Set up complete React application with Vite, TypeScript, routing, and project structure",
+  "category": "infrastructure",
+  "version": 1,
+  "contextRequirements": [],
+  "variables": [
+    {
+      "name": "appName",
+      "type": "string",
+      "required": true,
+      "description": "Application name in kebab-case (e.g., 'todo-app', 'notes-app')"
+    },
+    {
+      "name": "appDescription",
+      "type": "string",
+      "required": true,
+      "description": "Brief description of what this application does"
+    },
+    {
+      "name": "framework",
+      "type": "string",
+      "required": false,
+      "default": "vite",
+      "description": "Build tool: 'vite', 'next', or 'cra' (Create React App)"
+    },
+    {
+      "name": "includeRouting",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "Include React Router for navigation"
+    },
+    {
+      "name": "includeStateManagement",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Include state management (Zustand/Context API)"
+    },
+    {
+      "name": "outputDir",
+      "type": "string",
+      "required": false,
+      "default": ".",
+      "description": "Directory where app should be created"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "initialize-project",
+      "subagent": "general",
+      "description": "Initialize React project with build tool and TypeScript",
+      "dependencies": [],
+      "prompt": {
+        "template": "Initialize a new React application with TypeScript.\n\n**Specification**:\n- App Name: {{appName}}\n- Description: {{appDescription}}\n- Framework: {{framework}}\n- Output Directory: {{outputDir}}/{{appName}}\n\n**Your Task**: Create the project using the appropriate scaffolding tool.\n\n**Framework Commands**:\n\n**Vite (Recommended - Fast, Modern)**:\n```bash\nnpm create vite@latest {{appName}} -- --template react-ts\ncd {{appName}}\nnpm install\n```\n\n**Next.js (If SSR/SSG needed)**:\n```bash\nnpx create-next-app@latest {{appName}} --typescript --tailwind --app --no-src-dir\ncd {{appName}}\n```\n\n**Create React App (Legacy)**:\n```bash\nnpx create-react-app {{appName}} --template typescript\ncd {{appName}}\n```\n\n**After initialization**:\n\n1. **Install additional dependencies**:\n   ```bash\n   cd {{outputDir}}/{{appName}}\n   npm install --save-dev @types/react @types/react-dom\n   npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event\n   npm install --save-dev prettier eslint-config-prettier\n   ```\n\n2. **If routing enabled** ({{includeRouting}}):\n   ```bash\n   npm install react-router-dom\n   npm install --save-dev @types/react-router-dom\n   ```\n\n3. **If state management enabled** ({{includeStateManagement}}):\n   ```bash\n   npm install zustand\n   ```\n\n4. **Create initial directory structure**:\n   ```bash\n   mkdir -p src/components\n   mkdir -p src/pages\n   mkdir -p src/hooks\n   mkdir -p src/utils\n   mkdir -p src/types\n   mkdir -p src/styles\n   mkdir -p src/assets\n   ```\n\n5. **Create a PROJECT_INFO.md file** documenting what was created:\n   ```markdown\n   # {{appName}}\n   \n   {{appDescription}}\n   \n   ## Stack\n   \n   - Framework: {{framework}}\n   - TypeScript: ✓\n   - Routing: {{includeRouting}}\n   - State Management: {{includeStateManagement}}\n   \n   ## Directory Structure\n   \n   ```\n   src/\n     components/    # Reusable UI components\n     pages/         # Page components (if routing enabled)\n     hooks/         # Custom React hooks\n     utils/         # Utility functions\n     types/         # TypeScript type definitions\n     styles/        # Global styles\n     assets/        # Images, fonts, etc.\n   ```\n   \n   ## Getting Started\n   \n   ```bash\n   npm install\n   npm run dev\n   ```\n   ```\n\n**Execute the initialization now**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{outputDir}}/{{appName}}/package.json",
+          "{{outputDir}}/{{appName}}/tsconfig.json",
+          "{{outputDir}}/{{appName}}/src",
+          "{{outputDir}}/{{appName}}/PROJECT_INFO.md"
+        ],
+        "requiredPatterns": [
+          "react",
+          "typescript"
+        ],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "verify-install",
+            "command": "cd {{outputDir}}/{{appName}} && npm list react react-dom typescript",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "configure-typescript",
+      "subagent": "config",
+      "description": "Configure TypeScript with strict settings and path aliases",
+      "dependencies": ["initialize-project"],
+      "prompt": {
+        "template": "Configure TypeScript for the React application.\n\n**Your Task**: Update `{{outputDir}}/{{appName}}/tsconfig.json` with optimal settings.\n\n**Recommended Configuration**:\n\n```json\n{\n  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"useDefineForClassFields\": true,\n    \"lib\": [\"ES2020\", \"DOM\", \"DOM.Iterable\"],\n    \"module\": \"ESNext\",\n    \"skipLibCheck\": true,\n\n    /* Bundler mode */\n    \"moduleResolution\": \"bundler\",\n    \"allowImportingTsExtensions\": true,\n    \"resolveJsonModule\": true,\n    \"isolatedModules\": true,\n    \"noEmit\": true,\n    \"jsx\": \"react-jsx\",\n\n    /* Linting */\n    \"strict\": true,\n    \"noUnusedLocals\": true,\n    \"noUnusedParameters\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"noImplicitReturns\": true,\n\n    /* Path aliases */\n    \"baseUrl\": \".\",\n    \"paths\": {\n      \"@/*\": [\"./src/*\"],\n      \"@components/*\": [\"./src/components/*\"],\n      \"@pages/*\": [\"./src/pages/*\"],\n      \"@hooks/*\": [\"./src/hooks/*\"],\n      \"@utils/*\": [\"./src/utils/*\"],\n      \"@types/*\": [\"./src/types/*\"]\n    }\n  },\n  \"include\": [\"src\"],\n  \"references\": [{ \"path\": \"./tsconfig.node.json\" }]\n}\n```\n\n**Key Settings Explained**:\n\n1. **strict: true** - Enable all strict type checking options\n2. **noUnusedLocals/Parameters** - Catch unused variables\n3. **noUncheckedIndexedAccess** - Prevent undefined access errors\n4. **jsx: \"react-jsx\"** - Use new JSX transform (no import React needed)\n5. **paths** - Enable clean imports like `import { Button } from '@components/Button'`\n\n**If using Vite**, also create/update `vite.config.ts`:\n\n```typescript\nimport { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\nimport path from 'path';\n\nexport default defineConfig({\n  plugins: [react()],\n  resolve: {\n    alias: {\n      '@': path.resolve(__dirname, './src'),\n      '@components': path.resolve(__dirname, './src/components'),\n      '@pages': path.resolve(__dirname, './src/pages'),\n      '@hooks': path.resolve(__dirname, './src/hooks'),\n      '@utils': path.resolve(__dirname, './src/utils'),\n      '@types': path.resolve(__dirname, './src/types'),\n    },\n  },\n  server: {\n    port: 3000,\n  },\n});\n```\n\n**Update the configuration files now**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{outputDir}}/{{appName}}/tsconfig.json"
+        ],
+        "requiredPatterns": [
+          "\"strict\": true",
+          "\"paths\":",
+          "\"jsx\":"
+        ],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "typecheck",
+            "command": "cd {{outputDir}}/{{appName}} && npx tsc --noEmit",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "setup-routing",
+      "subagent": "general",
+      "description": "Set up React Router with example routes",
+      "dependencies": ["configure-typescript"],
+      "prompt": {
+        "template": "Set up React Router for the application.\n\n**Condition**: Only execute if {{includeRouting}} is true\n\n**Your Task**: Create routing infrastructure with example pages.\n\n**1. Create Router Setup** (`src/routes/index.tsx`):\n\n```typescript\nimport { createBrowserRouter, RouterProvider } from 'react-router-dom';\nimport { Layout } from '@/components/Layout';\nimport { HomePage } from '@/pages/HomePage';\nimport { NotFoundPage } from '@/pages/NotFoundPage';\n\nconst router = createBrowserRouter([\n  {\n    path: '/',\n    element: <Layout />,\n    children: [\n      {\n        index: true,\n        element: <HomePage />,\n      },\n      {\n        path: '*',\n        element: <NotFoundPage />,\n      },\n    ],\n  },\n]);\n\nexport function AppRouter() {\n  return <RouterProvider router={router} />;\n}\n```\n\n**2. Create Layout Component** (`src/components/Layout/Layout.tsx`):\n\n```typescript\nimport { Outlet, Link } from 'react-router-dom';\nimport styles from './Layout.module.css';\n\nexport function Layout() {\n  return (\n    <div className={styles.container}>\n      <header className={styles.header}>\n        <nav className={styles.nav}>\n          <Link to=\"/\" className={styles.link}>Home</Link>\n        </nav>\n      </header>\n      \n      <main className={styles.main}>\n        <Outlet />\n      </main>\n      \n      <footer className={styles.footer}>\n        <p>{{appName}} - {{appDescription}}</p>\n      </footer>\n    </div>\n  );\n}\n```\n\n**3. Create HomePage** (`src/pages/HomePage/HomePage.tsx`):\n\n```typescript\nimport styles from './HomePage.module.css';\n\nexport function HomePage() {\n  return (\n    <div className={styles.container}>\n      <h1>Welcome to {{appName}}</h1>\n      <p>{{appDescription}}</p>\n    </div>\n  );\n}\n```\n\n**4. Create NotFoundPage** (`src/pages/NotFoundPage/NotFoundPage.tsx`):\n\n```typescript\nimport { Link } from 'react-router-dom';\nimport styles from './NotFoundPage.module.css';\n\nexport function NotFoundPage() {\n  return (\n    <div className={styles.container}>\n      <h1>404 - Page Not Found</h1>\n      <p>The page you're looking for doesn't exist.</p>\n      <Link to=\"/\">Go Home</Link>\n    </div>\n  );\n}\n```\n\n**5. Update App.tsx** to use the router:\n\n```typescript\nimport { AppRouter } from './routes';\nimport './styles/globals.css';\n\nfunction App() {\n  return <AppRouter />;\n}\n\nexport default App;\n```\n\n**6. Create barrel exports** (index.ts files) for each component/page.\n\n**Create the routing infrastructure now**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{outputDir}}/{{appName}}/src/routes/index.tsx",
+          "{{outputDir}}/{{appName}}/src/components/Layout/Layout.tsx",
+          "{{outputDir}}/{{appName}}/src/pages/HomePage/HomePage.tsx",
+          "{{outputDir}}/{{appName}}/src/pages/NotFoundPage/NotFoundPage.tsx"
+        ],
+        "requiredPatterns": [
+          "createBrowserRouter",
+          "RouterProvider",
+          "Outlet"
+        ],
+        "forbiddenPatterns": ["console.log", "debugger"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-global-styles",
+      "subagent": "general",
+      "description": "Create global CSS with CSS variables and reset",
+      "dependencies": ["configure-typescript"],
+      "prompt": {
+        "template": "Create global styles for the application.\n\n**Your Task**: Create `{{outputDir}}/{{appName}}/src/styles/globals.css`\n\n**Global Styles Structure**:\n\n```css\n/* CSS Reset */\n*, *::before, *::after {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\n\nhtml {\n  font-size: 16px;\n  -webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale;\n}\n\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',\n    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',\n    sans-serif;\n  line-height: 1.5;\n}\n\n/* CSS Variables (Design Tokens) */\n:root {\n  /* Colors */\n  --color-primary: #3b82f6;\n  --color-secondary: #8b5cf6;\n  --color-success: #10b981;\n  --color-warning: #f59e0b;\n  --color-error: #ef4444;\n  --color-info: #06b6d4;\n  \n  /* Neutrals */\n  --color-bg: #ffffff;\n  --color-bg-secondary: #f9fafb;\n  --color-text: #111827;\n  --color-text-secondary: #6b7280;\n  --color-border: #e5e7eb;\n  \n  /* Spacing */\n  --space-xs: 0.25rem;\n  --space-sm: 0.5rem;\n  --space-md: 1rem;\n  --space-lg: 1.5rem;\n  --space-xl: 2rem;\n  --space-2xl: 3rem;\n  \n  /* Border Radius */\n  --radius-sm: 0.25rem;\n  --radius-md: 0.5rem;\n  --radius-lg: 1rem;\n  --radius-full: 9999px;\n  \n  /* Shadows */\n  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);\n  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);\n  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);\n  \n  /* Transitions */\n  --transition-fast: 150ms ease-in-out;\n  --transition-base: 250ms ease-in-out;\n  --transition-slow: 350ms ease-in-out;\n}\n\n/* Dark mode support */\n@media (prefers-color-scheme: dark) {\n  :root {\n    --color-bg: #111827;\n    --color-bg-secondary: #1f2937;\n    --color-text: #f9fafb;\n    --color-text-secondary: #9ca3af;\n    --color-border: #374151;\n  }\n}\n\n/* Focus styles */\n:focus-visible {\n  outline: 2px solid var(--color-primary);\n  outline-offset: 2px;\n}\n\n/* Accessibility */\n@media (prefers-reduced-motion: reduce) {\n  *,\n  *::before,\n  *::after {\n    animation-duration: 0.01ms !important;\n    animation-iteration-count: 1 !important;\n    transition-duration: 0.01ms !important;\n  }\n}\n\n/* Utility classes */\n.visually-hidden {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border-width: 0;\n}\n```\n\n**Create the global styles file now**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{outputDir}}/{{appName}}/src/styles/globals.css"
+        ],
+        "requiredPatterns": [
+          ":root",
+          "--color-",
+          "@media (prefers-color-scheme: dark)"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-development-docs",
+      "subagent": "docs",
+      "description": "Create comprehensive README with setup and development instructions",
+      "dependencies": ["setup-routing", "create-global-styles"],
+      "prompt": {
+        "template": "Create project documentation.\n\n**Your Task**: Create/update `{{outputDir}}/{{appName}}/README.md`\n\n**Documentation Structure**:\n\n```markdown\n# {{appName}}\n\n{{appDescription}}\n\n## Tech Stack\n\n- **Framework**: React 18+ with TypeScript\n- **Build Tool**: {{framework}}\n- **Routing**: React Router v6 ({{includeRouting}})\n- **State Management**: {{includeStateManagement}}\n- **Styling**: CSS Modules\n- **Testing**: React Testing Library + Jest\n\n## Project Structure\n\n```\n{{appName}}/\n├── src/\n│   ├── components/     # Reusable UI components\n│   │   └── Layout/     # Layout wrapper component\n│   ├── pages/          # Page components (routes)\n│   │   ├── HomePage/\n│   │   └── NotFoundPage/\n│   ├── hooks/          # Custom React hooks\n│   ├── utils/          # Utility functions\n│   ├── types/          # TypeScript type definitions\n│   ├── styles/         # Global styles and variables\n│   ├── routes/         # Router configuration\n│   └── App.tsx         # Root component\n├── public/             # Static assets\n├── package.json\n├── tsconfig.json       # TypeScript configuration\n└── vite.config.ts      # Vite configuration\n```\n\n## Getting Started\n\n### Prerequisites\n\n- Node.js 18+ and npm/yarn/pnpm\n\n### Installation\n\n```bash\n# Install dependencies\nnpm install\n\n# Start development server\nnpm run dev\n\n# Open http://localhost:3000\n```\n\n### Available Scripts\n\n```bash\nnpm run dev          # Start development server\nnpm run build        # Build for production\nnpm run preview      # Preview production build\nnpm run test         # Run tests\nnpm run typecheck    # Run TypeScript checks\nnpm run lint         # Lint code\n```\n\n## Development Guidelines\n\n### Component Structure\n\nEach component should have its own directory:\n\n```\nComponentName/\n├── ComponentName.tsx          # Component logic\n├── ComponentName.module.css   # Scoped styles\n├── ComponentName.test.tsx     # Tests\n├── index.ts                   # Barrel export\n└── README.md                  # Component docs\n```\n\n### TypeScript Best Practices\n\n1. **Always type props**:\n   ```typescript\n   interface ComponentProps {\n     title: string;\n     count?: number;\n   }\n   \n   export function Component({ title, count = 0 }: ComponentProps) {\n     // ...\n   }\n   ```\n\n2. **Use type inference**:\n   ```typescript\n   const [count, setCount] = useState(0); // inferred as number\n   const [text, setText] = useState(''); // inferred as string\n   ```\n\n3. **Type event handlers**:\n   ```typescript\n   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {\n     // ...\n   };\n   ```\n\n### Path Aliases\n\nUse path aliases for cleaner imports:\n\n```typescript\n// Instead of:\nimport { Button } from '../../../components/Button';\n\n// Use:\nimport { Button } from '@components/Button';\n```\n\nAvailable aliases:\n- `@/*` → `src/*`\n- `@components/*` → `src/components/*`\n- `@pages/*` → `src/pages/*`\n- `@hooks/*` → `src/hooks/*`\n- `@utils/*` → `src/utils/*`\n- `@types/*` → `src/types/*`\n\n### Styling Guidelines\n\n1. Use CSS Modules for component-scoped styles\n2. Use global CSS variables from `src/styles/globals.css`\n3. Follow BEM-like naming within modules\n4. Support dark mode via `prefers-color-scheme`\n\n### Testing Guidelines\n\n1. Write tests for all components\n2. Use React Testing Library queries (getByRole, getByText, etc.)\n3. Test user behavior, not implementation\n4. Aim for >80% coverage\n\n## Building for Production\n\n```bash\nnpm run build\n```\n\nBuilds the app for production to the `dist` folder.\n\n## Deployment\n\n### Vercel (Recommended for Vite)\n\n```bash\nnpm install -g vercel\nvercel\n```\n\n### Netlify\n\n```bash\nnpm run build\n# Upload dist/ folder to Netlify\n```\n\n## License\n\nMIT\n```\n\n**Create the README.md file now**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{outputDir}}/{{appName}}/README.md"
+        ],
+        "requiredPatterns": [
+          "# {{appName}}",
+          "## Getting Started",
+          "## Project Structure",
+          "## Development Guidelines"
+        ],
+        "forbiddenPatterns": ["TODO", "FIXME"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": []
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [
+      "react-component-creation",
+      "react-ui-integration"
+    ],
+    "examples": []
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "summary",
+    "feedbackPoints": [
+      "project-structure",
+      "configuration",
+      "routing-setup"
+    ]
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 10000,
+    "annotationStrategy": "key-components"
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": "Claude Sonnet 4.5",
+  "created_at": "2026-04-08T00:00:00.000Z",
+  "metadata": {
+    "difficulty": "intermediate",
+    "learning_objective": "Understand React application architecture, project setup, and configuration"
+  }
+}

@@ -1,4 +1,23 @@
 /**
+ * DEPRECATED: SurrealDB minibob_record ACCESS Method & RBAC Model
+ *
+ * This test validates the DEPRECATED minibob_record ACCESS method and RBAC model:
+ *   SIGNIN minibob_record { instance_id, api_key }
+ *
+ * As of 2026-04-08, MiniBob uses API key-only authentication via identity-vessel.
+ * The minibob_record ACCESS method has been removed (migration 052).
+ * The minibob_instance table and associated RBAC model are deprecated.
+ *
+ * This test is RETAINED for:
+ * - Emergency rollback validation
+ * - Schema migration verification
+ * - Historical RBAC model reference
+ *
+ * Do NOT use this authentication pattern for new development.
+ * See: repos/metabob-activity-api/test/api-key-auth.test.ts for current auth tests.
+ *
+ * ============================================================================
+ *
  * Test script for MiniBob instance RECORD authentication (Phase 4)
  *
  * This script tests:

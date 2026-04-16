@@ -1,0 +1,76 @@
+{
+  "id": "validate:environment-agnostic:v1",
+  "name": "Environment-Agnostic Validation Demo",
+  "description": "Demonstrates shape-based environment discovery. No assumptions about available tools - discovers capabilities through shape matching, then validates using whatever is available.",
+  "tags": ["tool.validation", "meta.demonstrate", "environment.discovery"],
+  "category": "tool",
+  "variables": [
+    {
+      "name": "workDir",
+      "description": "Working directory for the demo",
+      "required": false,
+      "default": "."
+    }
+  ],
+  "inputSchema": {
+    "requires": []
+  },
+  "outputSchema": {
+    "produces": [
+      {
+        "shape": "environment_typescript",
+        "description": "TypeScript compilation capability must be discovered"
+      },
+      {
+        "shape": "file_exists",
+        "description": "Demo output file must exist"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "id": "discover-environment",
+      "description": "Discover available tools without assuming anything",
+      "prompt": {
+        "template": "Discover what development tools are available in this environment.\n\nUse bash to check which of these commands exist:\n1. `which bun` or `bun --version`\n2. `which node` or `node --version`\n3. `which npx` or `npx --version`\n4. `which tsc` or `tsc --version`\n\nReport what you find. Don't assume anything is installed - probe and discover.\n\nWorking directory: {{workDir}}",
+        "variables": ["workDir"]
+      },
+      "validation": {
+        "requiredPatterns": ["version", "which"]
+      }
+    },
+    {
+      "id": "create-demo-file",
+      "description": "Create a simple file based on discovered capabilities",
+      "prompt": {
+        "template": "Based on what you discovered about the environment:\n\n1. If TypeScript is available (bun tsc, npx tsc, or tsc):\n   - Create a file `{{workDir}}/.env-demo.ts` with a simple typed function\n\n2. If only JavaScript is available:\n   - Create a file `{{workDir}}/.env-demo.js` with a simple function\n\n3. If neither:\n   - Create a file `{{workDir}}/.env-demo.txt` explaining what's missing\n\nUse the write tool to create the appropriate file. The goal is to demonstrate adaptive behavior based on environment discovery.",
+        "variables": ["workDir"]
+      },
+      "validation": {
+        "requiredPatterns": ["write"]
+      }
+    },
+    {
+      "id": "validate-with-discovered-tools",
+      "description": "Validate using whatever tools are available (may be skipped via early exit)",
+      "prompt": {
+        "template": "Using the tools you discovered:\n\n1. If you created a TypeScript file, compile it with whatever TypeScript compiler is available\n2. If you created a JavaScript file, run a syntax check\n3. If you created a text file, just read it back to confirm\n\nUse bash with the appropriate command based on what you discovered. Don't hardcode 'bun tsc' - use whatever is actually available.",
+        "variables": ["workDir"]
+      },
+      "validation": {
+        "requiredPatterns": []
+      }
+    },
+    {
+      "id": "cleanup",
+      "description": "Clean up demo files (should be SKIPPED if early exit triggers)",
+      "prompt": {
+        "template": "This task cleans up. If you see this task running, early exit did NOT trigger.\n\nRemove the demo file you created:\n- `rm {{workDir}}/.env-demo.ts` or\n- `rm {{workDir}}/.env-demo.js` or  \n- `rm {{workDir}}/.env-demo.txt`",
+        "variables": ["workDir"]
+      },
+      "validation": {
+        "requiredPatterns": ["rm"]
+      }
+    }
+  ]
+}

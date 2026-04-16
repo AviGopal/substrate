@@ -1,0 +1,49 @@
+{
+  "id": "observe-terminal-state",
+  "name": "Observe Terminal State",
+  "description": "Simple observation activity that captures terminal state without LLM",
+  "category": "observation",
+  "tags": ["terminal", "observation", "deterministic"],
+  "inputSchema": {
+    "required": []
+  },
+  "outputSchema": {
+    "produces": [
+      { "shape": "terminalState" },
+      { "shape": "observation_log" }
+    ]
+  },
+  "tasks": [
+    {
+      "id": "check-vessel-health",
+      "description": "Verify terminal vessel is reachable",
+      "resolver": "bash",
+      "config": {
+        "command": "curl -s http://localhost:9137/health",
+        "timeout": 5000
+      },
+      "outputShapes": ["stdout"]
+    },
+    {
+      "id": "list-terminals",
+      "description": "Get list of active terminal sessions",
+      "resolver": "bash",
+      "config": {
+        "command": "curl -s -X POST http://localhost:9137/v2/terminals/list -H 'Content-Type: application/json' -d '{\"filter\":\"all\"}'",
+        "timeout": 5000
+      },
+      "outputShapes": ["stdout"]
+    },
+    {
+      "id": "log-observation",
+      "description": "Create observation log",
+      "resolver": "file",
+      "inputShapes": ["stdout"],
+      "config": {
+        "path": ".metabob/observations/terminal-observation-{{timestamp}}.json",
+        "content": "{{impulses.stdout.content}}"
+      },
+      "outputShapes": ["file_content"]
+    }
+  ]
+}

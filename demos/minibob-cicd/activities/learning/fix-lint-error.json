@@ -1,0 +1,95 @@
+{
+  "id": "fix-lint-error",
+  "name": "Fix Lint Error (Learning)",
+  "description": "LLM-assisted lint fix that learns rule patterns. Can auto-fix simple cases, reasons about complex ones.",
+  "category": "bugfix",
+  "tags": ["learning", "linting", "fix", "llm-assisted"],
+  "mode": "learning",
+
+  "variables": [
+    {
+      "name": "errorLog",
+      "type": "string",
+      "required": true,
+      "description": "ESLint error output"
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "try-autofix",
+      "description": "First try ESLint's built-in autofix",
+      "type": "command",
+      "command": {
+        "run": "eslint src/ tests/ --fix",
+        "captureOutput": true,
+        "timeout": 60000
+      },
+      "outputCapture": {
+        "stdout": "autofixOutput",
+        "exitCode": "autofixExitCode"
+      },
+      "continueOnFailure": true
+    },
+    {
+      "id": "check-remaining",
+      "description": "Check if any errors remain after autofix",
+      "dependencies": ["try-autofix"],
+      "type": "command",
+      "command": {
+        "run": "eslint src/ tests/",
+        "captureOutput": true,
+        "timeout": 60000
+      },
+      "outputCapture": {
+        "stdout": "remainingErrors",
+        "exitCode": "remainingExitCode"
+      },
+      "continueOnFailure": true
+    },
+    {
+      "id": "manual-fix",
+      "description": "Use LLM to fix errors that autofix couldn't handle",
+      "dependencies": ["check-remaining"],
+      "condition": "{{remainingExitCode}} !== 0",
+      "prompt": {
+        "template": "ESLint autofix ran but some errors remain:\n\n```\n{{remainingErrors}}\n```\n\nThese errors require manual fixing. Common cases:\n- no-unused-vars: Remove or use the variable\n- prefer-const: Change let to const if never reassigned\n- @typescript-eslint/no-explicit-any: Add proper types\n- no-console: Remove or use proper logging\n\nRead the files and apply fixes.",
+        "maxTokens": 6000
+      }
+    },
+    {
+      "id": "verify-fix",
+      "description": "Final lint verification",
+      "dependencies": ["manual-fix"],
+      "type": "command",
+      "command": {
+        "run": "eslint src/ tests/",
+        "captureOutput": true,
+        "timeout": 60000
+      },
+      "validation": {
+        "exitCode": 0
+      },
+      "outputShapes": ["lint_passes"],
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+
+  "outputSchema": {
+    "produces": [
+      { "shape": "lint_passes", "description": "All lint rules pass" }
+    ]
+  },
+
+  "tracing": {
+    "recordTrace": true,
+    "contributeToLearning": true,
+    "metadata": {
+      "integrationPoint": "ci/lint-remediation",
+      "learningCategory": "lint-fix-patterns"
+    }
+  }
+}

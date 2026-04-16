@@ -1,0 +1,57 @@
+{
+  "variant_id": "precommit:fix-lint-errors",
+  "activity_id": "precommit:fix-lint-errors",
+  "variant_name": "Fix Lint Errors",
+  "description": "Automatically fix lint errors in a repository",
+  "category": "development",
+  "tags": ["precommit.lint", "code.fix", "development.workflow"],
+  "tag_prefixes": ["precommit", "precommit.lint", "code", "code.fix"],
+  "scope": "org",
+  "org_id": "metabob_internal",
+  "task_steps": [
+    {
+      "id": "detect-and-autofix",
+      "description": "Run lint with autofix flag",
+      "prompt": {
+        "template": "In {{repo_path}}, run the appropriate autofix command:\n\n- If biome: `bunx @biomejs/biome check --fix src`\n- If eslint: `bunx eslint --fix src` or `bun run lint -- --fix`\n- If prettier: `bunx prettier --write src`\n\nCapture what was fixed automatically.",
+        "variables": [
+          { "name": "repo_path", "type": "string", "required": true }
+        ]
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "check-remaining-errors",
+      "description": "Check for errors that couldn't be auto-fixed",
+      "dependencies": ["detect-and-autofix"],
+      "prompt": {
+        "template": "Re-run lint to check for remaining errors that need manual fixes:\n\n1. Run lint again in {{repo_path}}\n2. If errors remain, analyze each one\n3. For type errors: Check if it's a real bug or a false positive\n4. For unused imports: These should have been auto-fixed\n\nReport what still needs manual attention.",
+        "variables": [
+          { "name": "repo_path", "type": "string", "required": true }
+        ]
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "fix-remaining-manually",
+      "description": "Fix remaining errors manually",
+      "dependencies": ["check-remaining-errors"],
+      "prompt": {
+        "template": "For each remaining lint error in {{repo_path}}:\n\n1. Read the problematic file\n2. Understand the error context\n3. Apply the appropriate fix:\n   - Unused variable: Remove it (unless it's intentional)\n   - Type error: Fix the type or add proper typing\n   - Missing return: Add return statement\n   - Import order: Let formatter handle it\n\nUse the edit tool to fix each file. After all fixes, re-run lint to verify.",
+        "variables": [
+          { "name": "repo_path", "type": "string", "required": true }
+        ]
+      },
+      "subagent": "general-purpose",
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "exponential"
+      }
+    }
+  ],
+  "validation": {
+    "commands": [
+      { "command": "cd {{repo_path}} && bun run lint 2>&1 || echo LINT_EXIT_CODE=$?", "expectedOutput": "" }
+    ]
+  }
+}

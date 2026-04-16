@@ -1,0 +1,298 @@
+{
+  "activity_id": "react-full-stack",
+  "name": "Build Complete React Application End-to-End",
+  "description": "Create a full-stack React application with routing, state management, API integration, and deployment",
+  "category": "feature",
+  "version": 1,
+  "contextRequirements": [],
+  "variables": [
+    {
+      "name": "appName",
+      "type": "string",
+      "required": true,
+      "description": "Application name (e.g., 'task-manager', 'blog-platform')"
+    },
+    {
+      "name": "appDescription",
+      "type": "string",
+      "required": true,
+      "description": "What the application does"
+    },
+    {
+      "name": "features",
+      "type": "string",
+      "required": true,
+      "description": "Comma-separated list of features (e.g., 'auth,crud,search,notifications')"
+    },
+    {
+      "name": "backendType",
+      "type": "string",
+      "required": false,
+      "default": "rest-api",
+      "description": "Backend type: 'rest-api', 'graphql', 'firebase', or 'mock'"
+    },
+    {
+      "name": "deployTarget",
+      "type": "string",
+      "required": false,
+      "default": "vercel",
+      "description": "Deployment target: 'vercel', 'netlify', 'docker', or 'none'"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "plan-application-architecture",
+      "subagent": "general",
+      "description": "Design comprehensive application architecture",
+      "dependencies": [],
+      "prompt": {
+        "template": "Design the architecture for {{appName}}.\n\n**Specification**:\n- Name: {{appName}}\n- Description: {{appDescription}}\n- Features: {{features}}\n- Backend: {{backendType}}\n- Deploy: {{deployTarget}}\n\n**Your Task**: Create comprehensive architecture documentation.\n\n**Architecture Considerations**:\n\n### 1. Feature Breakdown\n\nFor each feature in {{features}}, define:\n- User stories\n- Data models\n- API endpoints\n- UI components\n- State management needs\n\n### 2. Tech Stack\n\n**Frontend**:\n- React 18+ with TypeScript\n- React Router for navigation\n- Zustand/Context for state\n- React Query for server state\n- CSS Modules/Tailwind for styling\n\n**Backend** (if {{backendType}} is 'rest-api'):\n- RESTful API design\n- Authentication strategy\n- Data persistence\n\n**Testing**:\n- React Testing Library (unit/integration)\n- Playwright (e2e)\n- MSW (API mocking)\n\n**Deployment** ({{deployTarget}}):\n- Build configuration\n- Environment variables\n- CI/CD pipeline\n\n### 3. Directory Structure\n\n```\n{{appName}}/\n├── src/\n│   ├── components/        # Reusable UI components\n│   │   ├── common/        # Shared components (Button, Input, etc.)\n│   │   └── features/      # Feature-specific components\n│   ├── pages/             # Route pages\n│   ├── hooks/             # Custom React hooks\n│   │   ├── api/           # API hooks (useQuery, useMutation)\n│   │   ├── state/         # State management hooks\n│   │   └── utils/         # Utility hooks\n│   ├── services/          # API client and services\n│   │   ├── api.ts         # API client setup\n│   │   └── auth.ts        # Auth service\n│   ├── stores/            # Global state stores (Zustand)\n│   ├── types/             # TypeScript definitions\n│   ├── utils/             # Utility functions\n│   ├── routes/            # Router configuration\n│   ├── styles/            # Global styles\n│   └── config/            # App configuration\n├── tests/\n│   ├── unit/              # Unit tests\n│   ├── integration/       # Integration tests\n│   └── e2e/               # E2E tests (Playwright)\n├── public/                # Static assets\n├── .github/               # GitHub Actions\n│   └── workflows/\n│       └── deploy.yml\n└── deployment/            # Deployment configs\n```\n\n### 4. Data Flow\n\n```\nUser Action → Component → Hook → API Service → Backend\n                ↓           ↓\n            Local State   Cache (React Query)\n                ↓\n            Re-render\n```\n\n### 5. Authentication Flow (if auth feature)\n\n```\n1. User submits credentials\n2. API validates and returns token\n3. Token stored in localStorage/cookie\n4. API client adds token to headers\n5. Protected routes check auth state\n6. Redirect to login if unauthorized\n```\n\n**Output**: Create `{{appName}}/ARCHITECTURE.md`\n\n```markdown\n# {{appName}} Architecture\n\n## Overview\n{{appDescription}}\n\n## Features\n{{features}}\n\n## Tech Stack\n- Frontend: React 18 + TypeScript + {{stylingLib}}\n- Backend: {{backendType}}\n- Deployment: {{deployTarget}}\n\n## Directory Structure\n[Full tree]\n\n## Data Models\n\n### Feature 1\n```typescript\ninterface Model {\n  id: string;\n  // fields\n}\n```\n\n## API Endpoints\n\n### Feature 1\n- `GET /api/items` - List items\n- `POST /api/items` - Create item\n- `GET /api/items/:id` - Get item\n- `PUT /api/items/:id` - Update item\n- `DELETE /api/items/:id` - Delete item\n\n## State Management\n\n### Global State (Zustand)\n- Auth state\n- User preferences\n- App configuration\n\n### Server State (React Query)\n- API data caching\n- Optimistic updates\n- Background refetching\n\n### Local State (useState)\n- Form inputs\n- UI toggles\n- Component-specific state\n\n## Authentication\n[Auth flow diagram]\n\n## Deployment\n[Deployment steps]\n```\n\n**Create the architecture document**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{appName}}/ARCHITECTURE.md"
+        ],
+        "requiredPatterns": [
+          "## Tech Stack",
+          "## Directory Structure",
+          "## Data Models",
+          "## API Endpoints"
+        ],
+        "forbiddenPatterns": ["TODO"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "scaffold-application",
+      "subagent": "general",
+      "description": "Initialize project with all dependencies and configuration",
+      "dependencies": ["plan-application-architecture"],
+      "prompt": {
+        "template": "Scaffold the {{appName}} application.\n\n**Use the react-app-scaffolding activity** to create the base project.\n\nThen add feature-specific dependencies:\n\n```bash\ncd {{appName}}\n\n# State management\nnpm install zustand\nnpm install @tanstack/react-query\nnpm install @tanstack/react-query-devtools\n\n# API client\nnpm install axios\nnpm install --save-dev msw\n\n# Forms (if needed)\nnpm install react-hook-form\nnpm install zod\nnpm install @hookform/resolvers\n\n# UI utilities\nnpm install clsx\nnpm install tailwind-merge  # if using Tailwind\n\n# Date handling (if needed)\nnpm install date-fns\n\n# Icons (optional)\nnpm install lucide-react\n\n# Testing\nnpm install --save-dev @playwright/test\nnpm install --save-dev @testing-library/react\nnpm install --save-dev @testing-library/jest-dom\nnpm install --save-dev @testing-library/user-event\n\n# Development\nnpm install --save-dev @types/node\n```\n\n**Create directory structure** as defined in ARCHITECTURE.md.\n\n**Configure React Query** (`src/config/queryClient.ts`):\n```typescript\nimport { QueryClient } from '@tanstack/react-query';\n\nexport const queryClient = new QueryClient({\n  defaultOptions: {\n    queries: {\n      staleTime: 1000 * 60 * 5, // 5 minutes\n      cacheTime: 1000 * 60 * 10, // 10 minutes\n      retry: 1,\n      refetchOnWindowFocus: false,\n    },\n  },\n});\n```\n\n**Setup API client** (`src/services/api.ts`):\n```typescript\nimport axios from 'axios';\n\nconst API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';\n\nexport const apiClient = axios.create({\n  baseURL: API_BASE_URL,\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n\n// Request interceptor (add auth token)\napiClient.interceptors.request.use((config) => {\n  const token = localStorage.getItem('auth_token');\n  if (token) {\n    config.headers.Authorization = `Bearer ${token}`;\n  }\n  return config;\n});\n\n// Response interceptor (handle errors)\napiClient.interceptors.response.use(\n  (response) => response,\n  (error) => {\n    if (error.response?.status === 401) {\n      localStorage.removeItem('auth_token');\n      window.location.href = '/login';\n    }\n    return Promise.reject(error);\n  }\n);\n```\n\n**Scaffold the application now**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{appName}}/package.json",
+          "{{appName}}/src/config/queryClient.ts",
+          "{{appName}}/src/services/api.ts"
+        ],
+        "requiredPatterns": [
+          "zustand",
+          "react-query",
+          "axios"
+        ],
+        "forbiddenPatterns": [],
+        "commands": [
+          {
+            "name": "verify-install",
+            "command": "cd {{appName}} && npm list zustand axios @tanstack/react-query",
+            "required": true
+          }
+        ]
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "implement-features",
+      "subagent": "general",
+      "description": "Implement each feature using component/integration activities",
+      "dependencies": ["scaffold-application"],
+      "prompt": {
+        "template": "Implement the features for {{appName}}.\n\n**Features to implement**: {{features}}\n\n**For each feature**:\n\n1. **Create data types** (`src/types/{feature}.types.ts`)\n2. **Create API service** (`src/services/{feature}.service.ts`)\n3. **Create custom hooks** (`src/hooks/api/use{Feature}.ts`)\n4. **Create components**:\n   - Container (logic)\n   - View (presentation)\n   - Form (if CRUD)\n5. **Create page** (`src/pages/{Feature}Page/`)\n6. **Add route** (update `src/routes/index.tsx`)\n7. **Write tests**\n\n**Example: CRUD Feature**\n\n### 1. Types (`src/types/tasks.types.ts`)\n```typescript\nexport interface Task {\n  id: string;\n  title: string;\n  description: string;\n  completed: boolean;\n  createdAt: Date;\n  updatedAt: Date;\n}\n\nexport interface CreateTaskRequest {\n  title: string;\n  description: string;\n}\n\nexport interface UpdateTaskRequest {\n  id: string;\n  title?: string;\n  description?: string;\n  completed?: boolean;\n}\n```\n\n### 2. API Service (`src/services/tasks.service.ts`)\n```typescript\nimport { apiClient } from './api';\nimport type { Task, CreateTaskRequest, UpdateTaskRequest } from '@types/tasks.types';\n\nexport const tasksService = {\n  async getAll(): Promise<Task[]> {\n    const { data } = await apiClient.get<Task[]>('/tasks');\n    return data;\n  },\n  \n  async getById(id: string): Promise<Task> {\n    const { data } = await apiClient.get<Task>(`/tasks/${id}`);\n    return data;\n  },\n  \n  async create(task: CreateTaskRequest): Promise<Task> {\n    const { data } = await apiClient.post<Task>('/tasks', task);\n    return data;\n  },\n  \n  async update(task: UpdateTaskRequest): Promise<Task> {\n    const { data } = await apiClient.put<Task>(`/tasks/${task.id}`, task);\n    return data;\n  },\n  \n  async delete(id: string): Promise<void> {\n    await apiClient.delete(`/tasks/${id}`);\n  },\n};\n```\n\n### 3. React Query Hook (`src/hooks/api/useTasks.ts`)\n```typescript\nimport { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';\nimport { tasksService } from '@/services/tasks.service';\nimport type { CreateTaskRequest, UpdateTaskRequest } from '@types/tasks.types';\n\nconst TASKS_KEY = ['tasks'];\n\nexport function useTasks() {\n  return useQuery({\n    queryKey: TASKS_KEY,\n    queryFn: tasksService.getAll,\n  });\n}\n\nexport function useTask(id: string) {\n  return useQuery({\n    queryKey: [...TASKS_KEY, id],\n    queryFn: () => tasksService.getById(id),\n    enabled: !!id,\n  });\n}\n\nexport function useCreateTask() {\n  const queryClient = useQueryClient();\n  \n  return useMutation({\n    mutationFn: tasksService.create,\n    onSuccess: () => {\n      queryClient.invalidateQueries({ queryKey: TASKS_KEY });\n    },\n  });\n}\n\nexport function useUpdateTask() {\n  const queryClient = useQueryClient();\n  \n  return useMutation({\n    mutationFn: tasksService.update,\n    onSuccess: (data) => {\n      queryClient.invalidateQueries({ queryKey: TASKS_KEY });\n      queryClient.invalidateQueries({ queryKey: [...TASKS_KEY, data.id] });\n    },\n  });\n}\n\nexport function useDeleteTask() {\n  const queryClient = useQueryClient();\n  \n  return useMutation({\n    mutationFn: tasksService.delete,\n    onSuccess: () => {\n      queryClient.invalidateQueries({ queryKey: TASKS_KEY });\n    },\n  });\n}\n```\n\n### 4. Page Component (`src/pages/TasksPage/TasksPage.tsx`)\n```typescript\nimport { useTasks, useCreateTask } from '@hooks/api/useTasks';\nimport { TaskList } from '@components/features/tasks/TaskList';\nimport { TaskForm } from '@components/features/tasks/TaskForm';\nimport { LoadingSpinner } from '@components/common/LoadingSpinner';\nimport { ErrorMessage } from '@components/common/ErrorMessage';\nimport type { CreateTaskRequest } from '@types/tasks.types';\n\nexport function TasksPage() {\n  const { data: tasks, isLoading, error } = useTasks();\n  const createTask = useCreateTask();\n  \n  const handleCreateTask = async (taskData: CreateTaskRequest) => {\n    await createTask.mutateAsync(taskData);\n  };\n  \n  if (isLoading) return <LoadingSpinner />;\n  if (error) return <ErrorMessage message={error.message} />;\n  \n  return (\n    <div>\n      <h1>Tasks</h1>\n      <TaskForm onSubmit={handleCreateTask} />\n      <TaskList tasks={tasks || []} />\n    </div>\n  );\n}\n```\n\n**Implement all features in {{features}} following this pattern**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{appName}}/src/services",
+          "{{appName}}/src/hooks/api",
+          "{{appName}}/src/pages"
+        ],
+        "requiredPatterns": [
+          "useQuery",
+          "useMutation",
+          "apiClient"
+        ],
+        "forbiddenPatterns": [
+          "console.log",
+          "any"
+        ],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "add-authentication",
+      "subagent": "general",
+      "description": "Implement authentication if required",
+      "dependencies": ["scaffold-application"],
+      "prompt": {
+        "template": "Add authentication to {{appName}}.\n\n**Condition**: Only if {{features}} includes 'auth'\n\n**Implementation**:\n\n### 1. Auth Store (`src/stores/authStore.ts`)\n```typescript\nimport { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\ninterface User {\n  id: string;\n  email: string;\n  name: string;\n}\n\ninterface AuthState {\n  user: User | null;\n  token: string | null;\n  isAuthenticated: boolean;\n  login: (email: string, password: string) => Promise<void>;\n  logout: () => void;\n  setUser: (user: User, token: string) => void;\n}\n\nexport const useAuthStore = create<AuthState>()(persist(\n  (set) => ({\n    user: null,\n    token: null,\n    isAuthenticated: false,\n    \n    setUser: (user, token) => {\n      localStorage.setItem('auth_token', token);\n      set({ user, token, isAuthenticated: true });\n    },\n    \n    login: async (email, password) => {\n      const response = await fetch('/api/auth/login', {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({ email, password }),\n      });\n      \n      if (!response.ok) {\n        throw new Error('Login failed');\n      }\n      \n      const { user, token } = await response.json();\n      localStorage.setItem('auth_token', token);\n      set({ user, token, isAuthenticated: true });\n    },\n    \n    logout: () => {\n      localStorage.removeItem('auth_token');\n      set({ user: null, token: null, isAuthenticated: false });\n    },\n  }),\n  {\n    name: 'auth-storage',\n    partialize: (state) => ({ user: state.user, token: state.token }),\n  }\n));\n```\n\n### 2. Protected Route (`src/components/common/ProtectedRoute.tsx`)\n```typescript\nimport { Navigate, Outlet } from 'react-router-dom';\nimport { useAuthStore } from '@/stores/authStore';\n\nexport function ProtectedRoute() {\n  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);\n  \n  if (!isAuthenticated) {\n    return <Navigate to=\"/login\" replace />;\n  }\n  \n  return <Outlet />;\n}\n```\n\n### 3. Login Page (`src/pages/LoginPage/LoginPage.tsx`)\n```typescript\nimport { useState, type FormEvent } from 'react';\nimport { useNavigate } from 'react-router-dom';\nimport { useAuthStore } from '@/stores/authStore';\n\nexport function LoginPage() {\n  const [email, setEmail] = useState('');\n  const [password, setPassword] = useState('');\n  const [error, setError] = useState('');\n  const login = useAuthStore((state) => state.login);\n  const navigate = useNavigate();\n  \n  const handleSubmit = async (e: FormEvent) => {\n    e.preventDefault();\n    setError('');\n    \n    try {\n      await login(email, password);\n      navigate('/');\n    } catch (err) {\n      setError('Invalid credentials');\n    }\n  };\n  \n  return (\n    <form onSubmit={handleSubmit}>\n      <h1>Login</h1>\n      {error && <p>{error}</p>}\n      <input\n        type=\"email\"\n        value={email}\n        onChange={(e) => setEmail(e.target.value)}\n        required\n      />\n      <input\n        type=\"password\"\n        value={password}\n        onChange={(e) => setPassword(e.target.value)}\n        required\n      />\n      <button type=\"submit\">Login</button>\n    </form>\n  );\n}\n```\n\n### 4. Update Routes\n```typescript\nimport { ProtectedRoute } from '@components/common/ProtectedRoute';\n\nconst router = createBrowserRouter([\n  {\n    path: '/login',\n    element: <LoginPage />,\n  },\n  {\n    element: <ProtectedRoute />,\n    children: [\n      {\n        path: '/',\n        element: <HomePage />,\n      },\n      // ... other protected routes\n    ],\n  },\n]);\n```\n\n**Implement authentication**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{appName}}/src/stores/authStore.ts",
+          "{{appName}}/src/components/common/ProtectedRoute.tsx",
+          "{{appName}}/src/pages/LoginPage/LoginPage.tsx"
+        ],
+        "requiredPatterns": [
+          "zustand",
+          "useAuthStore",
+          "ProtectedRoute"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "setup-testing",
+      "subagent": "test",
+      "description": "Create comprehensive test suite",
+      "dependencies": ["implement-features"],
+      "prompt": {
+        "template": "Set up testing infrastructure for {{appName}}.\n\n**Test Types**:\n\n### 1. Unit Tests (Components)\n\n**Setup MSW** (`src/mocks/handlers.ts`):\n```typescript\nimport { http, HttpResponse } from 'msw';\nimport type { Task } from '@types/tasks.types';\n\nconst mockTasks: Task[] = [\n  { id: '1', title: 'Test Task', description: 'Description', completed: false, createdAt: new Date(), updatedAt: new Date() },\n];\n\nexport const handlers = [\n  http.get('/api/tasks', () => {\n    return HttpResponse.json(mockTasks);\n  }),\n  \n  http.post('/api/tasks', async ({ request }) => {\n    const newTask = await request.json();\n    return HttpResponse.json({ id: '2', ...newTask });\n  }),\n];\n```\n\n**Test Setup** (`src/test/setup.ts`):\n```typescript\nimport '@testing-library/jest-dom';\nimport { setupServer } from 'msw/node';\nimport { handlers } from '@/mocks/handlers';\n\nexport const server = setupServer(...handlers);\n\nbeforeAll(() => server.listen());\nafterEach(() => server.resetHandlers());\nafterAll(() => server.close());\n```\n\n### 2. E2E Tests (Playwright)\n\n**Playwright Config** (`playwright.config.ts`):\n```typescript\nimport { defineConfig, devices } from '@playwright/test';\n\nexport default defineConfig({\n  testDir: './tests/e2e',\n  fullyParallel: true,\n  forbidOnly: !!process.env.CI,\n  retries: process.env.CI ? 2 : 0,\n  workers: process.env.CI ? 1 : undefined,\n  reporter: 'html',\n  use: {\n    baseURL: 'http://localhost:3000',\n    trace: 'on-first-retry',\n  },\n  projects: [\n    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },\n  ],\n  webServer: {\n    command: 'npm run dev',\n    url: 'http://localhost:3000',\n    reuseExistingServer: !process.env.CI,\n  },\n});\n```\n\n**E2E Test Example** (`tests/e2e/tasks.spec.ts`):\n```typescript\nimport { test, expect } from '@playwright/test';\n\ntest.describe('Tasks Feature', () => {\n  test('should create a new task', async ({ page }) => {\n    await page.goto('/');\n    \n    await page.fill('input[name=\"title\"]', 'New Task');\n    await page.fill('textarea[name=\"description\"]', 'Task description');\n    await page.click('button[type=\"submit\"]');\n    \n    await expect(page.locator('text=New Task')).toBeVisible();\n  });\n  \n  test('should complete a task', async ({ page }) => {\n    await page.goto('/');\n    \n    const task = page.locator('[data-testid=\"task-1\"]');\n    await task.locator('input[type=\"checkbox\"]').check();\n    \n    await expect(task).toHaveAttribute('data-completed', 'true');\n  });\n});\n```\n\n**Set up comprehensive testing**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{appName}}/src/mocks/handlers.ts",
+          "{{appName}}/src/test/setup.ts",
+          "{{appName}}/playwright.config.ts"
+        ],
+        "requiredPatterns": [
+          "msw",
+          "setupServer",
+          "defineConfig"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "setup-deployment",
+      "subagent": "general",
+      "description": "Configure deployment pipeline",
+      "dependencies": ["setup-testing"],
+      "prompt": {
+        "template": "Set up deployment for {{appName}} to {{deployTarget}}.\n\n**GitHub Actions** (`.github/workflows/deploy.yml`):\n```yaml\nname: Deploy\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: '18'\n      - run: npm ci\n      - run: npm run typecheck\n      - run: npm run lint\n      - run: npm test\n      - run: npx playwright install --with-deps\n      - run: npm run test:e2e\n  \n  deploy:\n    needs: test\n    runs-on: ubuntu-latest\n    if: github.ref == 'refs/heads/main'\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n      - run: npm ci\n      - run: npm run build\n      - name: Deploy to {{deployTarget}}\n        run: |\n          # Deploy command based on target\n```\n\n**Vercel** (`vercel.json`):\n```json\n{\n  \"buildCommand\": \"npm run build\",\n  \"outputDirectory\": \"dist\",\n  \"devCommand\": \"npm run dev\",\n  \"installCommand\": \"npm install\",\n  \"framework\": \"vite\",\n  \"rewrites\": [\n    { \"source\": \"/(.*)\", \"destination\": \"/\" }\n  ]\n}\n```\n\n**Netlify** (`netlify.toml`):\n```toml\n[build]\n  command = \"npm run build\"\n  publish = \"dist\"\n\n[[redirects]]\n  from = \"/*\"\n  to = \"/index.html\"\n  status = 200\n```\n\n**Docker** (`Dockerfile`):\n```dockerfile\nFROM node:18-alpine AS build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM nginx:alpine\nCOPY --from=build /app/dist /usr/share/nginx/html\nCOPY nginx.conf /etc/nginx/nginx.conf\nEXPOSE 80\nCMD [\"nginx\", \"-g\", \"daemon off;\"]\n```\n\n**Environment Variables** (`.env.example`):\n```bash\nVITE_API_BASE_URL=https://api.example.com\nVITE_APP_NAME={{appName}}\n```\n\n**Set up deployment for {{deployTarget}}**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{appName}}/.github/workflows/deploy.yml",
+          "{{appName}}/.env.example"
+        ],
+        "requiredPatterns": [
+          "npm run build",
+          "npm test"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-comprehensive-documentation",
+      "subagent": "docs",
+      "description": "Create complete documentation for the application",
+      "dependencies": ["setup-deployment"],
+      "prompt": {
+        "template": "Create comprehensive documentation for {{appName}}.\n\n**README.md**:\n\n```markdown\n# {{appName}}\n\n{{appDescription}}\n\n## Features\n\n{{features}}\n\n## Demo\n\n[Live Demo](https://your-app.vercel.app)\n\n## Screenshots\n\n![Homepage](./docs/screenshots/home.png)\n\n## Tech Stack\n\n- **Frontend**: React 18 + TypeScript\n- **State Management**: Zustand + React Query\n- **Styling**: CSS Modules / Tailwind\n- **Testing**: React Testing Library + Playwright\n- **Deployment**: {{deployTarget}}\n\n## Getting Started\n\n### Prerequisites\n\n- Node.js 18+\n- npm/yarn/pnpm\n\n### Installation\n\n```bash\ngit clone https://github.com/username/{{appName}}.git\ncd {{appName}}\nnpm install\ncp .env.example .env\n# Configure environment variables\nnpm run dev\n```\n\n## Development\n\n```bash\nnpm run dev         # Start dev server\nnpm run build       # Build for production\nnpm run preview     # Preview production build\nnpm test            # Run unit tests\nnpm run test:e2e    # Run E2E tests\nnpm run typecheck   # TypeScript check\nnpm run lint        # Lint code\n```\n\n## Project Structure\n\n```\nsrc/\n├── components/     # UI components\n├── pages/          # Route pages\n├── hooks/          # Custom hooks\n├── services/       # API services\n├── stores/         # State stores\n├── types/          # TypeScript types\n└── utils/          # Utilities\n```\n\n## Testing\n\nSee [TESTING.md](./docs/TESTING.md)\n\n## Deployment\n\nSee [DEPLOYMENT.md](./docs/DEPLOYMENT.md)\n\n## Contributing\n\nSee [CONTRIBUTING.md](./CONTRIBUTING.md)\n\n## License\n\nMIT\n```\n\n**Also create**:\n- `docs/TESTING.md` - Testing guide\n- `docs/DEPLOYMENT.md` - Deployment guide\n- `docs/API.md` - API documentation\n- `CONTRIBUTING.md` - Contribution guidelines\n\n**Create all documentation**."
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{appName}}/README.md",
+          "{{appName}}/docs/TESTING.md",
+          "{{appName}}/docs/DEPLOYMENT.md"
+        ],
+        "requiredPatterns": [
+          "# {{appName}}",
+          "## Features",
+          "## Getting Started"
+        ],
+        "forbiddenPatterns": ["TODO"],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "integration": {
+    "preChecks": [],
+    "postChecks": [],
+    "qualityGates": [
+      {
+        "name": "tests-passing",
+        "command": "cd {{appName}} && npm test",
+        "required": true
+      },
+      {
+        "name": "typecheck-passing",
+        "command": "cd {{appName}} && npm run typecheck",
+        "required": true
+      },
+      {
+        "name": "build-successful",
+        "command": "cd {{appName}} && npm run build",
+        "required": true
+      }
+    ]
+  },
+  "composition": {
+    "standalone": true,
+    "composesWith": [
+      "react-app-scaffolding",
+      "react-component-creation",
+      "react-ui-integration",
+      "react-styling"
+    ],
+    "examples": []
+  },
+  "learning": {
+    "enabled": true,
+    "captureStrategy": "detailed",
+    "feedbackPoints": [
+      "architecture-design",
+      "feature-implementation",
+      "testing-coverage",
+      "deployment-success"
+    ]
+  },
+  "metabob": {
+    "enabled": false,
+    "learningMode": true,
+    "targetContextTokens": 15000,
+    "annotationStrategy": "key-components"
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 0,
+    "avg_cost": 0
+  },
+  "author": "Claude Sonnet 4.5",
+  "created_at": "2026-04-08T00:00:00.000Z",
+  "metadata": {
+    "difficulty": "advanced",
+    "learning_objective": "Master building complete, production-ready React applications from architecture to deployment"
+  }
+}

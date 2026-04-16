@@ -79,10 +79,10 @@
         "template": "Analyze this SurrealDB schema mismatch error and identify the root cause.\n\n**Error Message**:\n```\n{{errorMessage}}\n```\n\n**API Endpoint** (if provided): {{apiEndpoint}}\n\n## Known Error Patterns\n\nSurrealDB schema errors follow predictable patterns:\n\n### 1. Type Coercion Errors\n```\nCouldn't coerce value for field 'field_name'\n```\n**Cause**: Field type in schema doesn't match the value being inserted\n**Common cases**:\n- `TYPE record<users>` but receiving a string ID like `\"user-123\"`\n- `TYPE string` but receiving an object\n- `TYPE int` but receiving a float\n\n### 2. Missing Field Errors\n```\nFound field 'field_name', but no such field exists in the schema\n```\n**Cause**: Inserting a field not defined in SCHEMAFULL table\n**Common cases**:\n- New field added to API but not to schema\n- Typo in field name\n- Using legacy field name\n\n### 3. Assertion Failures\n```\nField 'field_name' failed assertion: $value != NONE\n```\n**Cause**: Required field is null/missing\n\n### 4. Value Constraint Violations\n```\nField 'field_name' failed assertion: $value IN ['a', 'b', 'c']\n```\n**Cause**: Value not in allowed set\n\n## Your Task\n\n1. **Parse the Error**:\n   - Identify the error type (coercion, missing field, assertion, constraint)\n   - Extract the field name\n   - Extract the table name (from error or context)\n   - Determine what value was being inserted (if available)\n\n2. **Diagnose the Mismatch**:\n   - What type does the schema expect?\n   - What type/value is being sent?\n   - Why is there a mismatch?\n\n3. **Classify the Fix Type**:\n   - **SCHEMA_UPDATE**: Schema needs to change to accept the value\n   - **CODE_FIX**: Code needs to send the right type/value\n   - **FLEXIBLE_FIELD**: Field needs FLEXIBLE modifier for dynamic content\n   - **TYPE_UNION**: Field needs union type (e.g., `string | record<users>`)\n\n**Output**: Create `{{outputDir}}/ERROR_ANALYSIS.md`\n\n```markdown\n# Schema Mismatch Analysis\n\n## Error Classification\n\n**Error Type**: [coercion | missing_field | assertion | constraint]\n**Severity**: [HIGH - blocks API | MEDIUM - partial failure | LOW - data loss]\n\n## Affected Components\n\n**Table**: [table_name]\n**Field**: [field_name]\n**Schema File**: [likely filename based on table]\n\n## Error Details\n\n**Full Error**:\n```\n[paste error]\n```\n\n**Expected by Schema**: [type/constraint expected]\n**Received Value**: [what was actually sent]\n\n## Root Cause\n\n[Clear explanation of why the mismatch occurred]\n\n## Recommended Fix\n\n**Fix Type**: [SCHEMA_UPDATE | CODE_FIX | FLEXIBLE_FIELD | TYPE_UNION]\n\n**Rationale**: [Why this fix type is appropriate]\n\n**Schema Change** (if applicable):\n```surql\n-- Before\nDEFINE FIELD IF NOT EXISTS field_name ON table TYPE [old_type]\n\n-- After  \nDEFINE FIELD IF NOT EXISTS field_name ON table TYPE [new_type]\n```\n\n**Code Change** (if applicable):\n```typescript\n// Before\nconst value = somethingWrong;\n\n// After\nconst value = correctedValue;\n```\n\n## Risk Assessment\n\n- **Breaking Changes**: [Yes/No - explanation]\n- **Data Migration**: [Required/Not required]\n- **Backward Compatibility**: [Compatible/Requires migration]\n\n## Next Steps\n\n1. [First step]\n2. [Second step]\n3. [Verify step]\n```\n\n**Create the directory and file now.**"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "{{outputDir}}/ERROR_ANALYSIS.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "## Error Classification",
             "description": "Must classify the error type"
@@ -100,7 +100,7 @@
             "description": "Must identify affected field"
           }
         ],
-        "forbidden_patterns": [
+        "forbiddenPatterns": [
           {
             "pattern": "UNKNOWN",
             "description": "Must determine all components"
@@ -128,10 +128,10 @@
         "template": "Locate the schema file that defines the affected table.\n\n**Read the error analysis**: `{{outputDir}}/ERROR_ANALYSIS.md`\n\n## Schema File Organization\n\nSchema files are in `{{schemaDir}}/` with naming convention:\n- `0XX-*.surql` - Core schemas (auth, paradigm tables)\n- `01X-*.surql` - Execution tracking\n- `02X-*.surql` - Paradigm views and computed tables\n- `04X-*.surql` - Learning and scoring\n\nKey files by table:\n- `impulse`, `activity`, `execution`, `vessel` -> `020-paradigm-core-tables.surql`\n- `activity_execution_traces` -> `011-executions.surql`\n- `activity_template`, `activity_metrics` -> Legacy in `001-init-schema.surql`\n- `activity_score` -> `042-enhanced-activity-score.surql`\n- `tool_argument_pattern` -> `029-tool-argument-patterns.surql`\n\n## Your Task\n\n1. **Read the Error Analysis**: Get the table name from previous task\n\n2. **Search for Schema Definition**:\n   ```bash\n   grep -r \"DEFINE TABLE.*{table_name}\" {{schemaDir}}/\n   grep -r \"DEFINE FIELD.*ON {table_name}\" {{schemaDir}}/\n   ```\n\n3. **Find the Field Definition**:\n   Look for the specific field that's causing the error.\n\n4. **Read the Current Schema**:\n   Read the entire schema file to understand context.\n\n**Output**: Create `{{outputDir}}/SCHEMA_LOCATION.md`\n\n```markdown\n# Schema File Location\n\n## Target Table\n\n**Table Name**: [from error analysis]\n**Field Name**: [from error analysis]\n\n## Schema File\n\n**File Path**: {{schemaDir}}/[filename].surql\n**Line Range**: Lines [start]-[end] define the table\n\n## Current Field Definition\n\n```surql\nDEFINE FIELD IF NOT EXISTS [field_name] ON [table] TYPE [current_type]\n  [constraints/comments]\n```\n\n## Full Table Context\n\n```surql\n[Paste the full table definition for context]\n```\n\n## Related Fields\n\nOther fields that might need similar updates:\n- [field1]: [reason]\n- [field2]: [reason]\n```\n\n**Important**: Read the actual schema file content, don't guess."
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "{{outputDir}}/SCHEMA_LOCATION.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "**File Path**:",
             "description": "Must identify schema file path"
@@ -145,7 +145,7 @@
             "description": "Must include actual schema definition"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "tools": {
@@ -168,10 +168,10 @@
         "template": "Generate the schema fix for the mismatch.\n\n**Read previous analysis**:\n- `{{outputDir}}/ERROR_ANALYSIS.md`\n- `{{outputDir}}/SCHEMA_LOCATION.md`\n\n## Fix Patterns by Error Type\n\n### Type Coercion Fixes\n\n**Record vs String ID**:\n```surql\n-- Before: Only accepts record type\nDEFINE FIELD IF NOT EXISTS created_by ON table TYPE record<users>\n\n-- After: Accept string OR record (union type)\nDEFINE FIELD IF NOT EXISTS created_by ON table TYPE option<string | record<users> | record<minibob_instance>>\n  VALUE $value OR $auth.id\n  COMMENT \"User, MiniBob instance, or instance ID string\";\n```\n\n**Dynamic Object Content**:\n```surql\n-- Before: Strict object type\nDEFINE FIELD IF NOT EXISTS metadata ON table TYPE object\n\n-- After: Flexible for dynamic content\nDEFINE FIELD IF NOT EXISTS metadata ON table TYPE option<object> FLEXIBLE\n  COMMENT \"Dynamic metadata\";\n```\n\n### Missing Field Fixes\n\n**Add new field**:\n```surql\n-- Add after related fields in table definition\nDEFINE FIELD IF NOT EXISTS new_field ON table TYPE option<type>\n  VALUE $value OR default\n  COMMENT \"Description\";\n```\n\n**Add with index** (if frequently queried):\n```surql\nDEFINE FIELD IF NOT EXISTS new_field ON table TYPE option<string>;\nDEFINE INDEX IF NOT EXISTS idx_table_new_field ON table FIELDS new_field;\n```\n\n### Array with Dynamic Elements\n\n```surql\n-- For arrays containing objects with varying structure\nDEFINE FIELD IF NOT EXISTS items ON table TYPE option<array<object>> FLEXIBLE;\nDEFINE FIELD IF NOT EXISTS items.* ON table TYPE object FLEXIBLE\n  COMMENT \"Individual items with arbitrary nested fields\";\n```\n\n## Your Task\n\n1. **Determine Exact Fix**:\n   - What type change is needed?\n   - Should field be optional (`option<type>`)?\n   - Should field be FLEXIBLE?\n   - Does it need a VALUE clause?\n   - Does it need a COMMENT?\n\n2. **Check for Consistency**:\n   - Are similar fields in other tables defined the same way?\n   - Does this match the paradigm patterns in 020-paradigm-core-tables.surql?\n\n3. **Consider Side Effects**:\n   - Will existing data be affected?\n   - Do indexes need updating?\n   - Are there views that reference this field?\n\n**Output**: Create `{{outputDir}}/SCHEMA_FIX.md`\n\n```markdown\n# Schema Fix\n\n## Summary\n\n**Fix Type**: [ADD_FIELD | CHANGE_TYPE | ADD_FLEXIBLE | TYPE_UNION]\n**Risk Level**: [LOW | MEDIUM | HIGH]\n\n## Changes Required\n\n### File: {{schemaDir}}/[filename].surql\n\n**Before** (lines X-Y):\n```surql\n[current definition]\n```\n\n**After**:\n```surql\n[new definition]\n```\n\n## Full Diff\n\n```diff\n- DEFINE FIELD IF NOT EXISTS field_name ON table TYPE old_type\n+ DEFINE FIELD IF NOT EXISTS field_name ON table TYPE new_type\n+   VALUE $value OR default\n+   COMMENT \"description\";\n```\n\n## Migration Notes\n\n**Backward Compatible**: [Yes/No]\n**Data Migration Required**: [Yes/No]\n\n### If Migration Needed:\n```surql\n-- Migration script\nUPDATE table SET field_name = <type>field_name;\n```\n\n## Related Changes\n\nOther files that may need updates:\n- [ ] [file1]: [reason]\n- [ ] [file2]: [reason]\n\n## Verification Query\n\nAfter applying fix, verify with:\n```surql\nINFO FOR TABLE [table_name];\nSELECT * FROM [table_name] LIMIT 1;\n```\n```"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "{{outputDir}}/SCHEMA_FIX.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "## Full Diff",
             "description": "Must show the diff"
@@ -189,7 +189,7 @@
             "description": "Must include verification"
           }
         ],
-        "forbidden_patterns": [
+        "forbiddenPatterns": [
           {
             "pattern": "TODO",
             "description": "Fix must be complete"
@@ -217,10 +217,10 @@
         "template": "Apply the schema fix to the schema file.\n\n**Read the fix specification**: `{{outputDir}}/SCHEMA_FIX.md`\n\n## Your Task\n\n1. **Read Current Schema File**:\n   - Get the file path from SCHEMA_LOCATION.md\n   - Read the entire file\n\n2. **Apply the Fix**:\n   - Use the edit tool to make the exact change specified\n   - Preserve all other content\n   - Maintain proper formatting and comments\n\n3. **Verify the Edit**:\n   - Re-read the file to confirm change was applied\n   - Ensure no syntax errors introduced\n\n## Important Guidelines\n\n- Make ONLY the specified change\n- Do NOT reformat unrelated code\n- Preserve comment blocks and spacing\n- Use `DEFINE FIELD IF NOT EXISTS` (idempotent)\n- Include `COMMENT` for documentation\n\n**Output**: Create `{{outputDir}}/FIX_APPLIED.md`\n\n```markdown\n# Fix Applied\n\n## File Modified\n\n**Path**: {{schemaDir}}/[filename].surql\n**Timestamp**: [now]\n\n## Change Applied\n\n```diff\n[actual diff of what was changed]\n```\n\n## Verification\n\n**File re-read confirms**: [Yes - change applied correctly]\n\n## Next Steps\n\n1. Commit the schema change:\n   ```bash\n   git add {{schemaDir}}/[filename].surql\n   git commit -m \"fix(schema): [brief description of fix]\"\n   ```\n\n2. Apply to database (if local):\n   ```bash\n   surreal import --conn http://localhost:8000 --user root --pass <password> --ns activity-system --db learning_loop {{schemaDir}}/[filename].surql\n   ```\n\n3. Deploy to update production:\n   ```bash\n   git push origin main\n   ```\n\n4. Verify via API call:\n   ```bash\n   curl -X POST http://activity.metabob.local/[endpoint] -H \"Content-Type: application/json\" -d '[test payload]'\n   ```\n```"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "{{outputDir}}/FIX_APPLIED.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "## File Modified",
             "description": "Must identify modified file"
@@ -234,7 +234,7 @@
             "description": "Must provide follow-up steps"
           }
         ],
-        "forbidden_patterns": [
+        "forbiddenPatterns": [
           {
             "pattern": "ERROR",
             "description": "Should not have errors"
@@ -266,10 +266,10 @@
         "template": "Verify the schema fix was applied correctly.\n\n**Read the applied fix**: `{{outputDir}}/FIX_APPLIED.md`\n\n## Verification Steps\n\n1. **Syntax Check**:\n   - Read the modified schema file\n   - Check for SurrealQL syntax errors\n   - Verify semicolons, parentheses, quotes\n\n2. **Consistency Check**:\n   - Does the fix match the pattern used elsewhere?\n   - Are similar fields defined the same way?\n\n3. **API Verification** (if endpoint provided):\n   - Make a test API call to {{apiEndpoint}}\n   - Verify no more schema errors\n\n4. **Documentation**:\n   - Is the COMMENT helpful?\n   - Does it explain the fix rationale?\n\n## Syntax Patterns to Verify\n\n```surql\n-- Correct: semicolon after each definition\nDEFINE FIELD IF NOT EXISTS name ON table TYPE string;\n\n-- Correct: COMMENT inside the definition\nDEFINE FIELD IF NOT EXISTS name ON table TYPE string\n  COMMENT \"description\";\n\n-- Correct: VALUE clause before COMMENT\nDEFINE FIELD IF NOT EXISTS name ON table TYPE string\n  VALUE $value OR default\n  COMMENT \"description\";\n\n-- Correct: Union types with option\nDEFINE FIELD IF NOT EXISTS name ON table TYPE option<string | record<users>>\n  VALUE $value OR $auth.id;\n```\n\n**Output**: Create `{{outputDir}}/VERIFICATION_COMPLETE.md`\n\n```markdown\n# Verification Complete\n\n## Syntax Check\n\n- [x] Valid SurrealQL syntax\n- [x] Proper semicolons\n- [x] Correct TYPE definition\n- [x] COMMENT present\n\n## Consistency Check\n\n- [x] Matches pattern in other tables\n- [x] Uses paradigm-aligned types\n\n## API Verification\n\n**Endpoint**: {{apiEndpoint}}\n**Test Command**:\n```bash\ncurl -X POST [endpoint] -H \"Content-Type: application/json\" -d '[payload]'\n```\n\n**Result**: [PASS | NOT_TESTED | FAIL - reason]\n\n## Summary\n\n**Status**: FIX VERIFIED\n**Schema File**: {{schemaDir}}/[filename].surql\n**Field Fixed**: [field_name] on [table_name]\n**Fix Type**: [ADD_FIELD | CHANGE_TYPE | ADD_FLEXIBLE | TYPE_UNION]\n\n## Final Checklist\n\n- [ ] Schema change committed\n- [ ] Deployed to environment\n- [ ] API error resolved\n- [ ] No regression in other endpoints\n```"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "{{outputDir}}/VERIFICATION_COMPLETE.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "## Syntax Check",
             "description": "Must verify syntax"
@@ -283,7 +283,7 @@
             "description": "Must provide completion checklist"
           }
         ],
-        "forbidden_patterns": [
+        "forbiddenPatterns": [
           {
             "pattern": "SYNTAX ERROR",
             "description": "Should not have syntax errors"

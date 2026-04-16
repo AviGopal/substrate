@@ -35,6 +35,7 @@ minibob --single "refactor the Thompson Sampling implementation"
 **Production Endpoints (use these, not .local):**
 - `https://activity.metabob.com` - Activity API (learning backend)
 - `https://identity.metabob.com` - Identity/auth service
+- `https://discovery.metabob.com` - Discovery-vessel (capability registry) - if exposed
 
 **MiniBob Config** (`~/.metabob/config.json`):
 ```json
@@ -155,7 +156,33 @@ Vessels are **collections of ideas and intent in the instructional state** that 
 
 ## Core Components
 
-### 1. MiniBob (`repos/minibob`)
+### 1. Discovery-Vessel (`repos/discovery-vessel`)
+Vessel capability registry and resolver (~1,500 LOC TypeScript/Bun):
+
+**Key Files:**
+- `src/index.ts`: HTTP server entry point
+- `src/registry.ts`: In-memory vessel registry with TTL
+- `src/types.ts`: Registration, heartbeat, and query types
+
+**Capabilities:**
+- Vessel registration with shape advertisement
+- TTL-based expiration (5 min default, 60s cleanup)
+- Heartbeat management (60-120s intervals)
+- Capability queries (find vessels by shape)
+- Self-registration (discovery is just another vessel)
+- Circuit breaker and health scoring
+- Routing trace recording
+
+**Endpoints:**
+- `POST /register` - Register vessel with shapes
+- `POST /heartbeat` - Refresh TTL
+- `DELETE /vessels/:id` - Graceful deregistration
+- `POST /resolve` - Query vessels by capability
+- `GET /health`, `/shapes`, `/registry/stats` - Observability
+
+**Deployment:** Singleton (1 replica) with in-memory registry
+
+### 2. MiniBob (`repos/minibob`)
 Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 
 **Key Files:**
@@ -167,33 +194,43 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - `src/activity.ts`: Activity template executor
 - `src/goal-processor.ts`: Goal-seeking activity recommendations
 - `src/mcp.ts`: MCP client for backend integration
+- `src/vessel-discovery.ts`: Discovery-vessel integration (optional)
 
 **Capabilities:**
 - Execute activities with LLM
 - Capture execution traces with state snapshots
 - Create impulses from executions
-- Resolve LOCAL impulse types only (`memo`, `file`)
-- Delegate to backend for all other impulse types
+- Resolve LOCAL impulse types (`memo`, `file`, `directoryTree`, `gitDiff`)
+- Enhanced resolution: local → discovery → MCP backend (when discovery enabled)
 - Self-development via ribosome pattern
+- Optional vessel registration and discovery
 
-### 2. metabob-activity-api (`repos/metabob-activity-api`)
-TypeScript/Bun/Hono backend (replaces Python RPC API v2):
+### 3. metabob-activity-api (`repos/metabob-activity-api`)
+TypeScript/Bun/Hono backend - Learning system and trace storage:
 
 **Key Files:**
 - `src/index.ts`: Server entry point
 - `src/routes/activities.ts`: Activity template endpoints
 - `src/routes/impulses.ts`: Impulse resolution endpoints
+- `src/services/discovery-client.ts`: Discovery-vessel integration
 - `src/models/schemas.ts`: SurrealDB schemas
 
 **Capabilities:**
 - Store execution traces persistently
-- Resolve ALL impulse pointer types
+- Resolve activity-related impulse types (traces, templates, metrics)
 - Thompson Sampling for template selection
 - Pattern recognition and learning
 - Impulse relevance tracking
 - Tool usage analysis
+- Register with discovery-vessel (advertises 7 activity-related shapes)
 
-### 3. Activity Dashboard (`repos/activity-dashboard`)
+**Discovery Integration:**
+- Registers on startup, heartbeats every 60s
+- Non-blocking registration (graceful degradation)
+- Health endpoint includes discovery status
+- Legacy `/v2/vessels/*` endpoints deprecated (proxy mode until July 2026)
+
+### 4. Activity Dashboard (`repos/activity-dashboard`)
 React 19/Bun real-time observability:
 
 **Key Files:**
@@ -206,19 +243,29 @@ React 19/Bun real-time observability:
 - Live execution monitoring
 - Learning loop visualization
 - System health dashboards
+- Vessel registry visualization (discovery integration)
 
-### 4. Helm Deployment (`helm/`)
-Kubernetes orchestration:
+### 5. Helm Deployment (`repos/deployment/`)
+Kubernetes orchestration via Helmfile:
 
 **Key Files:**
-- `helmfile-activity-system.yaml`: Full system deployment
-- `charts/devbob/`: MiniBob deployment chart
+- `helmfile.yaml`: Main deployment configuration
+- `charts/discovery-vessel/`: Discovery-vessel Helm chart
+- `charts/*/`: Per-vessel Helm charts
 - `environments/*.values.yaml`: Environment configurations
+- `scripts/build_changed.sh`: Build and tag changed vessels
+- `scripts/promote-canary-to-production.sh`: Production promotion
 
 **Infrastructure:**
+- Discovery-Vessel (vessel registry)
 - SurrealDB 3.x (persistent storage)
-- Redis (live selection cache)
+- Valkey/Redis (cache)
 - Istio (service mesh)
+
+**Deployment Order:**
+1. Infrastructure (SurrealDB, Valkey)
+2. Discovery-Vessel
+3. Application vessels (Activity-API, Analysis-API, MiniBob, etc.)
 
 ## Key Architectural Concepts
 
@@ -248,7 +295,7 @@ Structured, measured, and validatable recipes for sequences of state mutations (
 - Variants created automatically on failure (trailblazing)
 
 ### Impulses
-Dynamic context injection mechanism - lazy-loaded pointers to content with token budgets.
+Universal data access mechanism - lazy-loaded pointers with metadata and resource budgets.
 
 **Lifecycle:**
 ```typescript
@@ -256,7 +303,7 @@ Dynamic context injection mechanism - lazy-loaded pointers to content with token
 {
   id: "errorFile",
   pointer: { type: "file", path: "src/tool/bash.ts", offset: 40, limit: 20 },
-  budget: 2000,  // Max tokens
+  budget: 2000,  // Resource budget (could be rows, bytes, time, tokens depending on resolver)
   priority: "high",
   loaded: false,
   content: null
@@ -277,17 +324,43 @@ const unloaded = ImpulseResolver.unload(impulse)
 **Local** (MiniBob resolves):
 - `memo`: Embedded content
 - `file`: Read from filesystem
+- `directoryTree`: Directory structure
+- `gitDiff`: Git diff output
 
-**Backend** (metabob-activity-api resolves via MCP):
+**Discovery-Vessel** (capability queries):
+- `vesselCapability`: Find vessels by shape
+- `vesselEndpoint`: Get vessel endpoint by ID
+- `vesselHealth`: Get vessel health status
+- `vesselRegistry`: Query full registry
+
+**Activity-API** (learning backend):
 - `activityExecutionTrace`: Full execution trace with state
 - `activityTemplate`: Template structure and metadata
 - `activityMetrics`: Performance data
-- *Any new type*: Backend can add types without MiniBob changes
+- `activityCompositionGraph`: Activity composition relationships
+- `impulseRelevanceMetrics`: Impulse relevance scores
+- `toolUsagePatterns`: Tool usage patterns
+
+**Analysis-API** (code analysis):
+- `problem_detection`: Code quality issues
+- `error_log`: Error log analysis
+- `source_code`: Source code content
+- `code_quality`: Quality metrics
+
+**Enhanced Resolution** (when discovery enabled):
+1. Try local resolvers
+2. Try custom registered resolvers
+3. **Query discovery-vessel** for capable vessels
+4. Direct HTTP call to discovered vessel
+5. Fallback to MCP backend delegation
 
 **Key Points:**
-- Impulses are NOT instructions - they're **context data**
-- Managed by memory agent to optimize context window usage
-- Flexible system: backend introduces new types without vessel changes
+- Impulses are NOT instructions - they're **universal data access** with metadata
+- Metadata-first reasoning: reasoners see shape/summary, resolvers load content
+- Resource budgets manage data volume (DB rows, file bytes, API calls, LLM tokens)
+- Resolvers live where data lives (vessels own their data)
+- Discovery enables dynamic vessel routing without hardcoded endpoints
+- Lazy loading for efficiency (load only what's needed, when it's needed)
 
 ### Lifecycle Hooks
 Events that trigger at specific points in the activity/session/impulse lifecycle:
@@ -365,10 +438,12 @@ Probabilistic template selection that learns which variants perform best over ti
 
 **metabob-activity-api (Storage/Learning Backend):**
 - ✅ Store execution traces
-- ✅ Resolve ALL impulse types
+- ✅ Resolve activity-related impulse types (traces, templates, metrics)
 - ✅ Thompson sampling
 - ✅ Pattern recognition
 - ✅ Metrics aggregation
+- ❌ NOT: Universal resolver for arbitrary data
+- ❌ NOT: Resolve impulses owned by other vessels
 
 ## Development Workflows
 
@@ -487,10 +562,9 @@ kubectl get pods -n activity-system
 # Check API health
 curl http://activity.metabob.local/health
 
-# Verify MiniBob authentication
-curl -X POST http://activity.metabob.local/v2/auth/minibob/signin \
-  -H "Content-Type: application/json" \
-  -d '{"instance_id":"minibob-local-001","api_key":"test-api-key-123"}'
+# Verify API key authentication (MiniBob Phase 2)
+curl http://activity.metabob.local/v2/activities/templates \
+  -H "Authorization: ApiKey <your-api-key>"
 ```
 
 **Rollback:**
@@ -589,6 +663,77 @@ If resolution fails, verify with:
 getent hosts surql.metabob.local  # Should return 127.0.0.1
 resolvectl query surql.metabob.local  # Check resolver path
 ```
+
+## Authentication
+
+### API Key Authentication (Current)
+
+All MiniBob instances and clients authenticate using standard API keys managed by the identity service.
+
+**Authentication Flow:**
+```
+1. Client sends: Authorization: ApiKey <key>
+2. Activity-API validates via identity service (primary)
+3. If identity service unavailable, fallback to direct SurrealDB validation
+4. Identity service returns: org_id, user_id, key_id, scopes
+5. Activity-API uses key_id for audit trails
+```
+
+**Request Example:**
+```bash
+curl -X GET https://activity.metabob.com/v2/activities/templates \
+  -H "Authorization: ApiKey <your-api-key>"
+```
+
+**Response:**
+```json
+{
+  "templates": [...]
+}
+```
+
+**Key Points:**
+- **No instance_id required** - API key is sufficient
+- **Identity service manages keys** - Centralized key lifecycle
+- **Automatic fallback** - Direct SurrealDB validation when identity service unavailable
+- **Audit trails use key_id** - All operations tracked by API key ID
+
+### Deprecated: MiniBob Instance Authentication
+
+**Prior to 2026-04-08**, MiniBob instances authenticated using:
+- `instance_id` + `api_key` via `POST /v2/auth/minibob/signin`
+- `minibob_record` SurrealDB ACCESS method
+- `minibob_instance` table
+
+**Migration 052** deprecated this approach:
+- Removed `minibob_record` ACCESS method
+- Made `minibob_instance` table read-only
+- All new authentication uses API keys only
+
+**Rollback:** If needed, uncomment the ACCESS method in `sql/000-auth-schema.surql`
+
+### Multi-Tenant Isolation
+
+Authentication automatically enforces multi-tenant isolation:
+
+**SurrealDB PERMISSIONS:**
+- All multi-tenant tables filter by `WHERE org_id = $auth.org_id`
+- No application-level filtering needed
+- Database enforces isolation at query level
+
+**Usage Pattern:**
+```typescript
+// Use authenticated connection - PERMISSIONS enforced automatically
+const db = await createAuthenticatedClient(jwtToken);
+const templates = await db.query(`SELECT * FROM activity_template`);
+// Returns only templates for $auth.org_id
+```
+
+**Authentication Methods:**
+| Method | Use Case | Token Lifetime | Scopes |
+|--------|----------|----------------|--------|
+| **API Key** | MiniBob, IDE integrations | Auto-refresh | read, write |
+| **JWT External** | Dashboard users | 15 minutes | Varies by role |
 
 ## Configuration
 
@@ -812,10 +957,16 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 **Canonical reference (read this first):**
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md): The foundational model defining impulses, activities, vessels, and learning
 
+**Discovery System:**
+- [`DISCOVERY_INTEGRATION.md`](DISCOVERY_INTEGRATION.md): Complete vessel discovery integration guide
+- [`packages/vessel-discovery-client/README.md`](packages/vessel-discovery-client/README.md): VesselClient package documentation
+- [`PHASE_1_IMPLEMENTATION_SUMMARY.md`](PHASE_1_IMPLEMENTATION_SUMMARY.md): Discovery-vessel core implementation
+- [`PHASE_2_IMPLEMENTATION_SUMMARY.md`](PHASE_2_IMPLEMENTATION_SUMMARY.md): Vessel integration details
+
 **Complementary architecture docs:**
 - `COMPOSITION_AND_CONTROL_FLOW.md`: Activity composition patterns and hooks
 - `ACTIVITY_BASED_IMPROVISATION.md`: VM-as-executor philosophy
-- `DEPLOYMENT_GUIDE.md`: Kubernetes deployment procedures
+- `repos/deployment/DEPLOYMENT_WORKFLOW.md`: Kubernetes deployment procedures
 
 **Multi-tenant & RBAC:**
 - `docs/MULTI_TENANT_ARCHITECTURE.md`: Tenancy model and authentication

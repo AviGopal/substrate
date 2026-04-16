@@ -10,22 +10,22 @@
       "dependencies": [],
       "prompt": {
         "template": "Write a hello world message to /tmp/hello-{{testId}}.txt\n\nThe message should say: Hello from {{name}}!\n\nUse the write tool to create the file.",
-        "max_tokens": 2000,
-        "compression_strategy": "filter"
+        "maxTokens": 2000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/hello-{{testId}}.txt"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           "Hello from"
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "retry": {
         "strategy": "simple",
-        "max_attempts": 2
+        "maxAttempts": 2
       }
     }
   ],
@@ -45,7 +45,7 @@
   ],
   "version": 1,
   "contextRequirements": [],
-  "variant_id": "hello-world-minimal",
+  "id": "hello-world-minimal",
   "activity_id": "hello-world-minimal",
   "id": "hello-world-minimal"
 }

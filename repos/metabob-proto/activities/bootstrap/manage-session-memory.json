@@ -142,7 +142,7 @@
     "annotationStrategy": "none"
   },
   "id": "manage-session-memory",
-  "variant_id": "manage-session-memory",
+  "id": "manage-session-memory",
   "variables": [
     {
       "name": "userMessage",

@@ -1,0 +1,52 @@
+{
+  "id": "add-ls-tool-wrapper",
+  "name": "Add LS Tool Wrapper",
+  "description": "Register 'ls' tool as wrapper around bash ls command to fix 'Unknown tool: ls' errors",
+  "category": "bugfix",
+  "variables": {
+    "minibob_repo_path": {
+      "type": "string",
+      "description": "Path to MiniBob source repository",
+      "required": true
+    }
+  },
+  "tasks": [
+    {
+      "id": "find-tool-registry",
+      "tool": "bash",
+      "params": {
+        "command": "find {{minibob_repo_path}} -name '*.ts' -type f -exec grep -l 'registerTool\\|tools.*bash\\|availableTools' {} \\; | head -5"
+      },
+      "description": "Find where tools are registered"
+    },
+    {
+      "id": "analyze-tool-registration",
+      "dependencies": ["find-tool-registry"],
+      "prompt": {
+        "template": "Tool registration files:\n{{find-tool-registry.output}}\n\nIdentify:\n1. Where bash tool is registered\n2. How to add new tool wrapper\n3. Tool registration pattern\n4. Where to add ls tool that wraps bash",
+        "maxTokens": 1500
+      },
+      "description": "Understand tool registration mechanism"
+    },
+    {
+      "id": "create-ls-tool-wrapper",
+      "dependencies": ["analyze-tool-registration"],
+      "prompt": {
+        "template": "Based on analysis:\n{{analyze-tool-registration.output}}\n\nCreate ls tool that wraps bash:\n```typescript\nregisterTool('ls', {\n  description: 'List directory contents',\n  params: { path: string },\n  handler: async (params) => {\n    return await bashTool.handler({ command: `ls -la ${params.path || '.'}` });\n  }\n});\n```\n\nProvide exact file path and registration location.",
+        "maxTokens": 1000
+      },
+      "description": "Determine where to register ls tool"
+    }
+  ],
+  "expected_outputs": [
+    {
+      "name": "ls_tool_registered",
+      "description": "ls tool registered as wrapper around bash ls command"
+    }
+  ],
+  "success_criteria": [
+    "ls tool available in tool registry",
+    "ls tool calls bash ls command",
+    "No more 'Unknown tool: ls' errors"
+  ]
+}

@@ -35,15 +35,15 @@
           }
         ]
       },
-      "context_rules": {
-        "max_tokens": 10000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/hypothesis-test-{{testId}}/OBSERVATIONS.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "## Expectations (Validators)",
             "description": "Must document what was expected"
@@ -57,7 +57,7 @@
             "description": "Must state confirmation/refutation"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "retry": {
@@ -79,15 +79,15 @@
         "template": "Retrieve the execution trace for detailed analysis.\n\n**Test ID**: {{testId}}  \n**Activity ID**: {{hypothesisActivityId}}\n\n**Your Task**:\n1. Use MCP tool to get execution trace from backend\n2. Extract key information:\n   - Input impulses used\n   - Output impulses created\n   - State transitions (files read/written)\n   - Validator results\n   - Tool calls made\n3. Store trace for interpretation\n\n**MCP Tool**: Use `get_execution_trace` or query the backend for recent executions\n\n**Output**: Create `/tmp/hypothesis-test-{{testId}}/EXECUTION_TRACE.json`\n\nStructure:\n```json\n{\n  \"test_id\": \"{{testId}}\",\n  \"activity_id\": \"{{hypothesisActivityId}}\",\n  \"execution_id\": \"{{from backend}}\",\n  \"started_at\": \"{{timestamp}}\",\n  \"completed_at\": \"{{timestamp}}\",\n  \"duration_ms\": 0,\n  \"status\": \"completed|failed\",\n  \"success\": true,\n  \"input_impulses\": [\n    {\n      \"id\": \"impulse_id\",\n      \"shape\": \"source_code\",\n      \"pointer\": { /* pointer details */ }\n    }\n  ],\n  \"output_impulses\": [\n    {\n      \"id\": \"impulse_id\",\n      \"shape\": \"trace\",\n      \"summary\": \"Execution trace\"\n    }\n  ],\n  \"state_transitions\": {\n    \"files_read\": [\"file1\", \"file2\"],\n    \"files_written\": [],\n    \"files_modified\": []\n  },\n  \"validator_results\": [\n    {\n      \"type\": \"required_files\",\n      \"passed\": true,\n      \"details\": \"All required files found\"\n    },\n    {\n      \"type\": \"required_patterns\",\n      \"passed\": false,\n      \"details\": \"Pattern 'redis' not found in src/cache.ts\",\n      \"expected\": \"redis\",\n      \"actual\": \"Map<string, any>\"\n    }\n  ],\n  \"tool_calls\": [\n    {\"tool\": \"read\", \"count\": 5},\n    {\"tool\": \"grep\", \"count\": 2}\n  ],\n  \"cost_usd\": 0.02,\n  \"tokens_used\": 5000\n}\n```\n\n**Store the trace** for the interpret-test-results activity.",
         "variables": []
       },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/hypothesis-test-{{testId}}/EXECUTION_TRACE.json"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "\"validator_results\":",
             "description": "Must include validator results"
@@ -97,7 +97,7 @@
             "description": "Must capture state changes"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": [
           {
             "command": "cat /tmp/hypothesis-test-{{testId}}/EXECUTION_TRACE.json | jq empty",
@@ -119,15 +119,15 @@
         "template": "Create a summary report of the hypothesis test.\n\n**Inputs**:\n- `/tmp/hypothesis-test-{{testId}}/OBSERVATIONS.md`\n- `/tmp/hypothesis-test-{{testId}}/EXECUTION_TRACE.json`\n\n**Output**: Create `/tmp/hypothesis-test-{{testId}}/TEST_SUMMARY.md`\n\nStructure:\n```markdown\n# Hypothesis Test Summary\n\n**Hypothesis**: {{hypothesisDescription}}  \n**Status**: {{CONFIRMED/REFUTED/PARTIAL}}  \n**Test ID**: {{testId}}\n\n## Quick Results\n\n{{\"✅ Hypothesis CONFIRMED\" or \"❌ Hypothesis REFUTED\" or \"⚠️  Hypothesis PARTIALLY confirmed\"}}\n\n**Validators**:\n- Passed: {{count}}/{{total}}\n- Failed: {{count}}/{{total}}\n\n**Execution**:\n- Duration: {{ms}}\n- Cost: ${{cost}}\n- Success: {{yes/no}}\n\n## Key Findings\n\n### What We Learned\n{{summary of what the test revealed about the codebase}}\n\n### Confirmed Assumptions\n{{list of validators that passed}}\n\n### Refuted Assumptions\n{{list of validators that failed with explanations}}\n\n## Recommendations\n\nBased on the test results:\n\n{{if hypothesis confirmed}}\n1. This understanding is accurate\n2. Can rely on this pattern in implementation\n3. Update mental model accordingly\n\n{{if hypothesis refuted}}\n1. Need to align expectations or code\n2. Run `interpret-test-results` to decide action\n3. Consider creating variant hypothesis\n\n## Next Steps\n\n{{actionable next steps based on results}}\n```",
         "variables": []
       },
-      "context_rules": {
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+      "contextRules": {
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": [
+        "requiredFiles": [
           "/tmp/hypothesis-test-{{testId}}/TEST_SUMMARY.md"
         ],
-        "required_patterns": [
+        "requiredPatterns": [
           {
             "pattern": "## Quick Results",
             "description": "Must include results"
@@ -137,7 +137,7 @@
             "description": "Must provide next steps"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "retry": {

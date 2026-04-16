@@ -1,0 +1,27 @@
+{
+  "name": "@metabob/react-renderer",
+  "version": "1.0.0",
+  "description": "React renderers for metabob impulse shapes",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target browser",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@xterm/xterm": "^5.5.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "bun-types": "^1.0.25",
+    "typescript": "^5.3.3"
+  }
+}

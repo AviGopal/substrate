@@ -5,7 +5,7 @@
   "description": "FOUNDATIONAL TEMPLATE: Achieves development goals through progressive composition with try-verify-backtrack-learn. Uses search_activities→execute→create_activity_goal_seeking pattern. This is the ONLY hand-written template - all others are learned via ribosome extraction from executions of this template.",
   "category": "meta",
   "tags": ["progressive", "foundation", "bootstrap.primordial", "self-bootstrapping"],
-  "variant_id": "progressive-goal-achievement",
+  "id": "progressive-goal-achievement",
   "activity_id": "progressive-goal-achievement",
   "contextRequirements": [],
 
@@ -36,12 +36,12 @@
       "impulseReferences": [],
       "prompt": {
         "template": "# Goal Decomposition\n\n**GOAL**: {{goal}}\n\n**Maximum Stages**: {{maxStages}}\n\n**Your Task**: Decompose this goal into 2-{{maxStages}} logical, verifiable stages.\n\n## Requirements\n\nFor each stage:\n1. **Objective** - Clear description of what needs to be accomplished\n2. **Success Criteria** - Specific, tool-checkable conditions (file exists, tests pass, command succeeds)\n3. **Search Keywords** - Terms to find activities (e.g., \"auth\", \"middleware\", \"jwt\", \"setup\")\n\n## Output Format\n\nWrite JSON array to `./stages.json`:\n\n```json\n[\n  {\n    \"id\": \"stage-1\",\n    \"objective\": \"Setup authentication middleware\",\n    \"successCriteria\": [\n      \"File src/middleware/auth.ts exists\",\n      \"File exports function named 'authenticate'\",\n      \"Function validates JWT tokens\"\n    ],\n    \"searchKeywords\": [\"authentication\", \"middleware\", \"jwt\", \"setup\"]\n  },\n  {\n    \"id\": \"stage-2\",\n    \"objective\": \"Integrate middleware into routes\",\n    \"successCriteria\": [\n      \"Protected routes use auth middleware\",\n      \"Unprotected routes remain accessible\",\n      \"Tests verify auth flow\"\n    ],\n    \"searchKeywords\": [\"auth\", \"routes\", \"integration\", \"middleware\"]\n  }\n]\n```\n\n## Decomposition Guidelines\n\n1. **Focused Stages**: Each stage should accomplish ONE thing\n2. **Build Progressively**: Later stages depend on earlier stages completing\n3. **Verifiable**: Success criteria must be checkable with read/bash tools\n4. **Realistic**: Don't over-decompose simple goals\n\n## Examples\n\n**Goal**: \"Add authentication\"\n→ 3 stages: Setup middleware, Integrate routes, Add tests\n\n**Goal**: \"Fix startup crash in server.ts line 45\"\n→ 2 stages: Identify root cause, Apply fix and verify\n\n**Goal**: \"Refactor error handling\"\n→ 4 stages: Define error types, Update functions, Add tests, Update docs\n\n**CRITICAL**: Use the write tool to create `./stages.json`. Do NOT just output JSON - write the file.",
-        "max_tokens": 4000,
-        "compression_strategy": "filter"
+        "maxTokens": 4000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": ["./stages.json"],
-        "required_patterns": [
+        "requiredFiles": ["./stages.json"],
+        "requiredPatterns": [
           {
             "pattern": "\"objective\"",
             "description": "Must define objectives for stages"
@@ -55,7 +55,7 @@
             "description": "Must provide search keywords"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "tools": {
@@ -77,12 +77,12 @@
       "impulseReferences": [],
       "prompt": {
         "template": "# Stage 1 Execution\n\n**Decomposition**: Read `./stages.json` (created in previous task)\n\n**Extract Stage 1** from the JSON array.\n\n## Execution Pattern: Try → Verify → Backtrack\n\n### Step 1: Search for Known Activities\n\nUse the `search_activities` tool with Stage 1's searchKeywords:\n\n```typescript\nsearch_activities({\n  query: \"<join Stage 1 keywords with spaces>\",\n  limit: 3\n})\n```\n\nThe tool returns matching activity templates ranked by relevance.\n\n### Step 2: Execute or Create\n\n**If activities found** (results.length > 0):\n1. Try first result using `activity` tool:\n   ```typescript\n   activity({\n     templateId: \"<top-ranked-activity-id>\",\n     variables: { /* infer from goal context */ }\n   })\n   ```\n2. If succeeds → Go to Step 3\n3. If fails → Try next result\n4. If all fail → Go to create new activity\n\n**If no activities found** OR **all failed**:\n1. Use `create_activity_goal_seeking` tool:\n   ```typescript\n   create_activity_goal_seeking({\n     goalDescription: \"<Stage 1 objective from JSON>\",\n     templateName: \"<Generate from objective, e.g., 'Setup Auth Middleware'>\",\n     category: \"<infer: feature|bugfix|refactor|tool|infrastructure>\",\n     variables: {}\n   })\n   ```\n2. This creates AND executes a new activity template\n3. The system learns from this execution\n\n### Step 3: Verify Alignment\n\nAfter execution, verify Stage 1 success criteria using tools:\n\n**For file existence**:\n```typescript\nread({ path: \"<file-path>\" })  // Exists if no error\n```\n\n**For file contents**:\n```typescript\nread({ path: \"<file-path>\" })  // Check for exports, functions, etc.\n```\n\n**For command success**:\n```typescript\nbash({ command: \"<verification-command>\" })  // Check exit code\n```\n\n**IMPORTANT**: Do NOT use LLM reasoning for verification - use direct tool calls.\n\n### Step 4: Record Result\n\nWrite `./stage-1-result.json`:\n\n```json\n{\n  \"status\": \"<ALIGNED|MISALIGNED>\",\n  \"executedActivity\": \"<activity-template-id or 'improvised-{timestamp}'>\",\n  \"activitySource\": \"<known|created>\",\n  \"verification\": [\n    { \"criterion\": \"File src/middleware/auth.ts exists\", \"result\": \"PASS|FAIL\", \"evidence\": \"<tool output>\" },\n    { \"criterion\": \"File exports authenticate function\", \"result\": \"PASS|FAIL\", \"evidence\": \"<grep result>\" }\n  ],\n  \"notes\": \"<Any observations>\"\n}\n```\n\n**If MISALIGNED**: Try alternate activity or explain why goal can't proceed.\n\n**Use write tool to create the file.**",
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": ["./stage-1-result.json"],
-        "required_patterns": [
+        "requiredFiles": ["./stage-1-result.json"],
+        "requiredPatterns": [
           {
             "pattern": "\"status\"",
             "description": "Must record status"
@@ -96,7 +96,7 @@
             "description": "Must verify success criteria"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "tools": {
@@ -118,18 +118,18 @@
       "impulseReferences": [],
       "prompt": {
         "template": "# Stage 2 Execution\n\n**Decomposition**: Read `./stages.json`\n**Stage 1 Result**: Read `./stage-1-result.json`\n\n## Pre-Checks\n\n1. **Check Stage 1 Status**:\n   - If Stage 1 status is \"MISALIGNED\" → Write `./stage-2-result.json` with status: \"SKIPPED\", reason: \"Stage 1 failed\"\n   - If Stage 1 status is \"ALIGNED\" → Continue\n\n2. **Check Stage 2 Exists**:\n   - Read `./stages.json`\n   - If array length < 2 → Write `./stage-2-result.json` with status: \"SKIPPED\", reason: \"Goal completed in one stage\"\n   - If Stage 2 exists → Continue\n\n## Execution (Same Pattern as Stage 1)\n\n### Step 1: Search for Activities\n\nUse Stage 2's searchKeywords from `./stages.json`:\n\n```typescript\nsearch_activities({ query: \"<Stage 2 keywords>\", limit: 3 })\n```\n\n### Step 2: Execute with Context from Stage 1\n\n**Context Available**:\n- Read `./stage-1-result.json` to see what activity was executed\n- Read files created in Stage 1\n- Use Stage 1 outputs as context\n\n**Execute**:\n- Try known activities first (use `activity` tool)\n- If none work, use `create_activity_goal_seeking`\n- Pass Stage 1 context in variables if relevant\n\n### Step 3: Verify\n\nCheck Stage 2 success criteria using tools (read, bash, grep).\n\n### Step 4: Record Result\n\nWrite `./stage-2-result.json`:\n\n```json\n{\n  \"status\": \"<ALIGNED|MISALIGNED|SKIPPED>\",\n  \"executedActivity\": \"<activity-id or null if skipped>\",\n  \"activitySource\": \"<known|created|null>\",\n  \"verification\": [ /* criteria checks */ ],\n  \"contextFromStage1\": \"<What was reused from stage 1>\"\n}\n```\n\n**Use write tool to create the file.**",
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": ["./stage-2-result.json"],
-        "required_patterns": [
+        "requiredFiles": ["./stage-2-result.json"],
+        "requiredPatterns": [
           {
             "pattern": "\"status\"",
             "description": "Must record status"
           }
         ],
-        "forbidden_patterns": [],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "tools": {
@@ -151,13 +151,13 @@
       "impulseReferences": [],
       "prompt": {
         "template": "# Stage 3 Execution\n\n**Decomposition**: Read `./stages.json`\n**Stage 2 Result**: Read `./stage-2-result.json`\n\n## Pre-Checks\n\n1. If Stage 2 status is \"SKIPPED\" or \"MISALIGNED\" → Write `./stage-3-result.json` with status: \"SKIPPED\"\n2. If Stage 3 doesn't exist in stages.json → Write `./stage-3-result.json` with status: \"SKIPPED\"\n3. Otherwise → Execute using same pattern as Stage 1 and 2\n\n## Execution Pattern\n\n1. Search for activities using Stage 3 keywords\n2. Execute (known activity or create new)\n3. Verify success criteria\n4. Record result in `./stage-3-result.json`\n\n**Use write tool to create the file.**",
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": ["./stage-3-result.json"],
-        "required_patterns": [{"pattern": "\"status\"", "description": "Must record status"}],
-        "forbidden_patterns": [],
+        "requiredFiles": ["./stage-3-result.json"],
+        "requiredPatterns": [{"pattern": "\"status\"", "description": "Must record status"}],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "tools": {
@@ -179,13 +179,13 @@
       "impulseReferences": [],
       "prompt": {
         "template": "# Stage 4 Execution\n\nSame pattern as Stage 3.\n\nRead `./stages.json` and `./stage-3-result.json`.\n\nIf Stage 3 failed or Stage 4 doesn't exist → Skip (write `./stage-4-result.json` with status: \"SKIPPED\")\n\nOtherwise → search_activities → execute → verify → record in `./stage-4-result.json`",
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": ["./stage-4-result.json"],
-        "required_patterns": [{"pattern": "\"status\"", "description": "Must record status"}],
-        "forbidden_patterns": [],
+        "requiredFiles": ["./stage-4-result.json"],
+        "requiredPatterns": [{"pattern": "\"status\"", "description": "Must record status"}],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "tools": {
@@ -207,13 +207,13 @@
       "impulseReferences": [],
       "prompt": {
         "template": "# Stage 5 Execution (Final)\n\nSame pattern.\n\nRead `./stages.json` and `./stage-4-result.json`.\n\nIf Stage 4 failed or Stage 5 doesn't exist → Skip\n\nOtherwise → Execute\n\nIf goal still not complete after 5 stages → Write `./stage-5-result.json` with status: \"GOAL-TOO-COMPLEX\", notes: \"Goal requires further decomposition\"",
-        "max_tokens": 8000,
-        "compression_strategy": "filter"
+        "maxTokens": 8000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": ["./stage-5-result.json"],
-        "required_patterns": [{"pattern": "\"status\"", "description": "Must record status"}],
-        "forbidden_patterns": [],
+        "requiredFiles": ["./stage-5-result.json"],
+        "requiredPatterns": [{"pattern": "\"status\"", "description": "Must record status"}],
+        "forbiddenPatterns": [],
         "commands": []
       },
       "tools": {
@@ -235,12 +235,12 @@
       "impulseReferences": [],
       "prompt": {
         "template": "# Final Goal Verification\n\n**ORIGINAL GOAL**: {{goal}}\n\n## Review Execution\n\nRead all stage result files:\n- `./stage-1-result.json`\n- `./stage-2-result.json`\n- `./stage-3-result.json`\n- `./stage-4-result.json`\n- `./stage-5-result.json`\n\n## Determine Overall Status\n\n1. Count executed stages (status = \"ALIGNED\")\n2. Check if all executed stages aligned\n3. Verify original goal is achieved\n\n## Extract Learning Data\n\n**Activity Sequence**: List of activity IDs executed in order\n\n**Example**:\n```\n[\n  \"setup-auth-middleware\",           // Stage 1: Known activity\n  \"improvised-1234567890\",           // Stage 2: Created new\n  \"test-auth-flow\"                   // Stage 3: Known activity\n]\n```\n\n**Composition Edges**: Parent → Child relationships\n\n**Example**:\n```\n[\n  { \"parent\": \"setup-auth-middleware\", \"child\": \"improvised-1234567890\", \"success\": true },\n  { \"parent\": \"improvised-1234567890\", \"child\": \"test-auth-flow\", \"success\": true }\n]\n```\n\n## Create Final Report\n\nWrite `./EXECUTION_SUMMARY.md`:\n\n```markdown\n# Execution Summary: {{goal}}\n\n## Goal Status\n\n**Status**: <ACHIEVED|PARTIALLY-ACHIEVED|FAILED>\n\n**Reason**: <Explanation>\n\n## Execution Sequence\n\n| Stage | Activity | Source | Status | Notes |\n|-------|----------|--------|--------|-------|\n| 1 | <activity-id> | <known/created> | ALIGNED | <notes> |\n| 2 | <activity-id> | <known/created> | ALIGNED | <notes> |\n| ... | ... | ... | ... | ... |\n\n## Learning Metrics\n\n- **Total Stages**: <count>\n- **Stages Executed**: <count>\n- **Known Activities Used**: <count>\n- **New Activities Created**: <count>\n- **Success Rate**: <executed/total * 100>%\n\n## Activity Sequence (for Pattern Learning)\n\n```json\n[\n  \"<activity-1-id>\",\n  \"<activity-2-id>\",\n  \"<activity-3-id>\"\n]\n```\n\n## Composition Graph Edges (for Learning)\n\n```json\n[\n  { \"parent\": \"<activity-1>\", \"child\": \"<activity-2>\", \"success\": true },\n  { \"parent\": \"<activity-2>\", \"child\": \"<activity-3>\", \"success\": true }\n]\n```\n\n## Key Artifacts Created\n\n- <List files/directories created>\n- <List tests added>\n- <List documentation updated>\n\n## Ribosome Extraction\n\n**Is this execution extractable as a new template?**: <YES|NO>\n\n**If YES**:\n- **Suggested Template Name**: <name based on goal>\n- **Category**: <feature|bugfix|refactor|tool|infrastructure>\n- **Reusability**: <HIGH|MEDIUM|LOW>\n- **Reason**: <Why this is a good pattern to extract>\n\n**If NO**:\n- **Reason**: <Why not extractable - too specific, failure rate high, etc.>\n\n## Recommendations\n\n### For This Goal\n- <Specific recommendations for similar goals>\n\n### For System Improvement\n- <Template improvements>\n- <New activities needed>\n- <Pattern observations>\n```\n\n**CRITICAL**: This summary will be used for:\n1. Thompson Sampling (learning which activities work)\n2. Composition graph (learning transition patterns)\n3. Sequence mining (learning common paths)\n4. Ribosome extraction (creating new templates)\n\n**Use write tool to create the file.**",
-        "max_tokens": 10000,
-        "compression_strategy": "filter"
+        "maxTokens": 10000,
+        "compressionStrategy": "filter"
       },
       "validation": {
-        "required_files": ["./EXECUTION_SUMMARY.md"],
-        "required_patterns": [
+        "requiredFiles": ["./EXECUTION_SUMMARY.md"],
+        "requiredPatterns": [
           {
             "pattern": "## Goal Status",
             "description": "Must have goal status"
@@ -258,7 +258,7 @@
             "description": "Must assess extractability"
           }
         ],
-        "forbidden_patterns": [
+        "forbiddenPatterns": [
           {
             "pattern": "TODO",
             "description": "Summary must be complete"

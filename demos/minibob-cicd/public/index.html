@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - Activity-Driven Development Demo</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Task Manager</h1>
+            <p class="subtitle">Powered by GitHub Issues API + MiniBob Activities</p>
+        </header>
+
+        <div class="controls">
+            <input type="text" id="newTaskInput" placeholder="Add a new task..." />
+            <button id="addTaskBtn">Add Task</button>
+            <select id="filterSelect">
+                <option value="all">All Tasks</option>
+                <option value="open">Open</option>
+                <option value="closed">Completed</option>
+            </select>
+        </div>
+
+        <div id="taskList" class="task-list">
+            <!-- Tasks will be inserted here -->
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-label">Total Tasks:</span>
+                <span id="totalTasks">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Open:</span>
+                <span id="openTasks">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Completed:</span>
+                <span id="completedTasks">0</span>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                🤖 Managed by <strong>MiniBob Activities</strong><br>
+                <small>All development lifecycle managed through activities</small>
+            </p>
+            <div class="activity-status">
+                <span>Last Activity: <span id="lastActivity">Initializing...</span></span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

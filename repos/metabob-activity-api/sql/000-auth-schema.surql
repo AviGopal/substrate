@@ -6,10 +6,14 @@
 -- =============================================================================
 
 -- =============================================================================
--- Table: minibob_instance (Activity-specific)
+-- Table: minibob_instance (Activity-specific) - DEPRECATED
 -- =============================================================================
--- PERMISSIONS: MiniBob instances can read their own record
--- This is critical for $auth.org_id to work in RBAC checks
+-- DEPRECATED: Use API key authentication instead
+-- Migration 052 makes this table read-only and removes minibob_record ACCESS
+--
+-- MiniBob instances now authenticate using standard API keys:
+--   Authorization: ApiKey <key>
+-- Identity service validates and returns org_id, user_id, key_id, scopes
 -- =============================================================================
 
 -- OVERWRITE ensures PERMISSIONS are always applied (critical for $auth.org_id access)
@@ -51,17 +55,28 @@ DEFINE INDEX IF NOT EXISTS idx_minibob_instance_id
   ON minibob_instance FIELDS instance_id UNIQUE;
 
 -- =============================================================================
--- ACCESS METHOD: minibob_record
+-- ACCESS METHOD: minibob_record - DEPRECATED (removed in migration 052)
 -- =============================================================================
--- Authenticates MiniBob instances using instance_id and API key
--- Returns JWT token with org_id in $auth for RBAC enforcement
+-- DEPRECATED: MiniBob instances now use standard API key authentication
+--
+-- Old flow (removed):
+--   POST /v2/auth/minibob/signin { instance_id, api_key }
+--   Returns JWT via minibob_record ACCESS
+--
+-- New flow (use this):
+--   Authorization: ApiKey <key>
+--   Validated via identity service
+--   Returns org_id, user_id, key_id, scopes
 -- =============================================================================
 
-DEFINE ACCESS IF NOT EXISTS minibob_record ON DATABASE TYPE RECORD
-  SIGNIN (
-    SELECT * FROM minibob_instance
-    WHERE instance_id = $instance_id
-    AND crypto::argon2::compare(api_key_hash, $api_key)
-  )
-  DURATION FOR TOKEN 24h
-  DURATION FOR SESSION 7d;
+-- REMOVED: Migration 052 removes this ACCESS method
+-- Uncomment for rollback if needed:
+--
+-- DEFINE ACCESS IF NOT EXISTS minibob_record ON DATABASE TYPE RECORD
+--   SIGNIN (
+--     SELECT * FROM minibob_instance
+--     WHERE instance_id = $instance_id
+--     AND crypto::argon2::compare(api_key_hash, $api_key)
+--   )
+--   DURATION FOR TOKEN 24h
+--   DURATION FOR SESSION 7d;

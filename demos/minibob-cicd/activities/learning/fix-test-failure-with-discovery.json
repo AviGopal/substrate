@@ -1,0 +1,321 @@
+{
+  "id": "fix-test-failure-with-discovery",
+  "name": "Fix Test Failure (Full Three Loops Demo)",
+  "description": "Demonstrates all three feedback loops: Discovery (Loop 3) → Impulse Flow (Loop 1) → External Validation (Loop 2)",
+  "category": "bugfix",
+  "tags": ["learning", "testing", "three-loops-demo"],
+  "mode": "learning",
+
+  "variables": [
+    {
+      "name": "errorLog",
+      "type": "string",
+      "required": true,
+      "description": "Test failure output from CI"
+    },
+    {
+      "name": "goalDescription",
+      "type": "string",
+      "required": false,
+      "description": "Natural language description of the goal",
+      "default": "Fix test failures in the codebase"
+    }
+  ],
+
+  "phases": [
+    {
+      "id": "discovery",
+      "name": "Phase 1: Discovery (Loop 3)",
+      "description": "Environment scanning to discover relevant context",
+      "activities": [
+        {
+          "ref": "discovery/scan-file-system",
+          "vars": { "goalCategory": "bugfix" }
+        },
+        {
+          "ref": "discovery/scan-git-history",
+          "vars": { "commitCount": 5 }
+        },
+        {
+          "ref": "discovery/scan-execution-traces",
+          "vars": {
+            "goalCategory": "bugfix",
+            "goalKeywords": ["test", "failure"]
+          }
+        }
+      ],
+      "execution": "parallel",
+      "outputHandling": "consolidate-impulses"
+    }
+  ],
+
+  "impulses": [
+    {
+      "id": "error-context",
+      "pointer": { "type": "memo", "content": "{{errorLog}}" },
+      "budget": 3000,
+      "priority": "required",
+      "metadata": {
+        "shape": "error_log",
+        "source": "ci-output"
+      }
+    },
+    {
+      "id": "discovered-impulses",
+      "pointer": { "type": "phaseOutput", "phase": "discovery" },
+      "budget": 5000,
+      "priority": "high",
+      "description": "Impulses discovered by Loop 3 scanning activities",
+      "lazyLoad": true,
+      "metadata": {
+        "shape": "impulse_metadata_batch",
+        "source": "discovery-phase"
+      }
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "shape-inference",
+      "description": "Extract implied shapes from goal and error (Loop 3)",
+      "prompt": {
+        "template": "Analyze the goal and error to infer what data shapes are needed:\n\nGoal: {{goalDescription}}\nError: {{errorLog | truncate:500}}\n\nBased on the error type and goal, what shapes do we need?\nOptions: error_log, source_code, test_file, execution_trace, git_commit, config_file\n\nRespond with JSON: {\"required\": [\"shape1\", \"shape2\"], \"optional\": [\"shape3\"]}",
+        "maxTokens": 1000
+      },
+      "outputShapes": ["inferred_shapes"],
+      "validation": {
+        "requireOutput": true,
+        "requiredPatterns": ["\"required\""]
+      }
+    },
+    {
+      "id": "select-impulses",
+      "description": "Select relevant impulses from discovered batch (Loop 1)",
+      "dependencies": ["shape-inference"],
+      "type": "transform",
+      "transform": {
+        "input": ["discovered-impulses", "shape-inference"],
+        "operation": "filterImpulsesByShapes",
+        "config": {
+          "requiredShapes": "{{shape-inference.output.required}}",
+          "optionalShapes": "{{shape-inference.output.optional}}",
+          "budgetAllocation": {
+            "error_log": 3000,
+            "source_code": 4000,
+            "execution_trace": 2000,
+            "test_file": 2000,
+            "git_commit": 1000
+          },
+          "relevanceThreshold": 0.3
+        }
+      },
+      "outputShapes": ["selected_impulses"],
+      "metadata": {
+        "demonstratesLoop": 1,
+        "description": "Impulse Flow: Select and load impulses based on inferred shapes and learned relevance"
+      }
+    },
+    {
+      "id": "load-selected-impulses",
+      "description": "Lazy load selected impulses with budget enforcement (Loop 1)",
+      "dependencies": ["select-impulses"],
+      "type": "loadImpulses",
+      "impulseRefs": "{{select-impulses.output.impulseIds}}",
+      "budgetEnforcement": true,
+      "trackUsage": true,
+      "outputShapes": ["loaded_impulses"],
+      "metadata": {
+        "demonstratesLoop": 1,
+        "description": "Budget-constrained lazy loading with usage tracking"
+      }
+    },
+    {
+      "id": "analyze-with-context",
+      "description": "Analyze failure with loaded impulses (Loop 1)",
+      "dependencies": ["load-selected-impulses"],
+      "prompt": {
+        "template": "Analyze this test failure with discovered context:\n\nError:\n```\n{{errorLog}}\n```\n\n{{#if loaded_impulses.execution_trace}}\n✓ Found similar past fix:\n{{loaded_impulses.execution_trace | summarize}}\n{{/if}}\n\n{{#if loaded_impulses.source_code}}\n✓ Relevant source files:\n{{loaded_impulses.source_code | listFiles}}\n{{/if}}\n\n1. Read relevant files\n2. Identify the root cause\n3. Check if this matches a pattern from execution traces\n4. Determine the fix approach",
+        "maxTokens": 8000
+      },
+      "validation": {
+        "requireOutput": true
+      },
+      "outputShapes": ["failure_analysis"],
+      "metadata": {
+        "demonstratesLoop": 1,
+        "description": "Impulse chaining: Task receives previous task outputs as impulses"
+      }
+    },
+    {
+      "id": "apply-fix",
+      "description": "Apply fix using analysis (Loop 1 output chaining)",
+      "dependencies": ["analyze-with-context"],
+      "prompt": {
+        "template": "Based on your analysis:\n{{analyze-with-context.output}}\n\nApply the fix:\n1. Make minimal, targeted changes\n2. Use learned patterns if available\n3. Fix root cause, not symptoms\n\nUse edit tool for changes.",
+        "maxTokens": 10000
+      },
+      "outputShapes": ["code_changes"],
+      "metadata": {
+        "demonstratesLoop": 1,
+        "description": "Receives analysis impulse from previous task"
+      }
+    },
+    {
+      "id": "internal-validation",
+      "description": "Internal validation checks (Loop 2)",
+      "dependencies": ["apply-fix"],
+      "type": "validate",
+      "validation": {
+        "requiredFiles": ["src/**/*.ts"],
+        "forbiddenPatterns": ["TODO", "FIXME", "console.log"],
+        "syntaxCheck": {
+          "command": "tsc --noEmit",
+          "timeout": 30000
+        }
+      },
+      "outputShapes": ["internal_validation_result"],
+      "metadata": {
+        "demonstratesLoop": 2,
+        "validationType": "internal"
+      }
+    },
+    {
+      "id": "external-validation",
+      "description": "External validation with tests (Loop 2)",
+      "dependencies": ["internal-validation"],
+      "type": "command",
+      "command": {
+        "run": "bun test",
+        "captureOutput": true,
+        "timeout": 60000
+      },
+      "validation": {
+        "exitCode": 0
+      },
+      "outputShapes": ["external_validation_result"],
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "progressive-context",
+        "onRetry": {
+          "includeImpulse": "previous-attempt-trace"
+        }
+      },
+      "metadata": {
+        "demonstratesLoop": 2,
+        "validationType": "external",
+        "errorClassification": "enabled"
+      }
+    },
+    {
+      "id": "record-impulse-usage",
+      "description": "Record which impulses were actually used (Loop 1 learning)",
+      "dependencies": ["external-validation"],
+      "type": "mcp",
+      "mcp": {
+        "method": "POST",
+        "endpoint": "/v2/activities/impulse-relevance",
+        "body": {
+          "execution_id": "{{execution.id}}",
+          "activity_id": "{{activity.id}}",
+          "impulses": "{{loaded_impulses | mapToRelevanceData}}"
+        }
+      },
+      "metadata": {
+        "demonstratesLoop": 1,
+        "description": "Loop 1 learning: Track loaded vs used impulses"
+      }
+    },
+    {
+      "id": "record-discovery-effectiveness",
+      "description": "Record which discovery activities were useful (Loop 3 learning)",
+      "dependencies": ["record-impulse-usage"],
+      "type": "mcp",
+      "mcp": {
+        "method": "POST",
+        "endpoint": "/v2/activities/feedback",
+        "body": {
+          "execution_id": "{{execution.id}}",
+          "template_id": "{{activity.id}}",
+          "success": "{{external-validation.success}}",
+          "duration": "{{duration}}",
+          "cost": "{{cost}}",
+          "discovery_metrics": {
+            "scan-file-system": {
+              "impulses_discovered": "{{discovery.scan-file-system.totalDiscovered}}",
+              "impulses_used": "{{discovery.scan-file-system.used}}"
+            },
+            "scan-git-history": {
+              "impulses_discovered": "{{discovery.scan-git-history.totalDiscovered}}",
+              "impulses_used": "{{discovery.scan-git-history.used}}"
+            },
+            "scan-execution-traces": {
+              "impulses_discovered": "{{discovery.scan-execution-traces.totalDiscovered}}",
+              "impulses_used": "{{discovery.scan-execution-traces.used}}"
+            }
+          }
+        }
+      },
+      "metadata": {
+        "demonstratesLoop": 3,
+        "description": "Loop 3 learning: Thompson Sampling for discovery activities"
+      }
+    }
+  ],
+
+  "outputSchema": {
+    "produces": [
+      { "shape": "code_changes", "description": "Applied code modifications" },
+      { "shape": "external_validation_result", "description": "Test execution result" },
+      { "shape": "learning_metrics", "description": "All three loops learning data" }
+    ]
+  },
+
+  "tracing": {
+    "recordTrace": true,
+    "contributeToLearning": true,
+    "captureStateTransition": true,
+    "metadata": {
+      "demonstratesLoops": [1, 2, 3],
+      "integrationPoint": "ci/test-remediation-full-demo"
+    }
+  },
+
+  "learning": {
+    "onSuccess": {
+      "action": "updateThompsonSampling",
+      "data": {
+        "activity_alpha_increment": 1,
+        "activity_beta_increment": 0,
+        "discovery_scan_updates": "{{record-discovery-effectiveness.output}}",
+        "impulse_relevance_updates": "{{record-impulse-usage.output}}"
+      }
+    },
+    "onFailure": {
+      "action": "updateThompsonSampling",
+      "data": {
+        "activity_alpha_increment": 0,
+        "activity_beta_increment": "{{error_type | thompsonWeight}}",
+        "error_type": "{{external-validation.error_type}}",
+        "error_classification": "{{external-validation.error_classification}}"
+      },
+      "createVariant": {
+        "condition": "error_type in ['test_expects_specific_behavior', 'test_missing_dependency']",
+        "modifications": "{{error_type | variantStrategy}}"
+      }
+    }
+  },
+
+  "metadata": {
+    "demonstrationActivity": true,
+    "demonstratesAllThreeLoops": true,
+    "loopDescriptions": {
+      "loop1": "Impulse Flow: Discovery → Selection → Lazy Loading → Usage Tracking → Relevance Learning",
+      "loop2": "External Validation: Internal Checks → External Tests → Error Classification → Thompson Sampling Update",
+      "loop3": "Discovery: Shape Inference → Parallel Scans → Impulse Consolidation → Effectiveness Learning"
+    },
+    "expectedBehavior": {
+      "firstExecution": "All scans run, many impulses discovered, some unused (cold start)",
+      "afterTenExecutions": "Low-value scans skipped, relevant impulses prioritized, 60% cost reduction"
+    }
+  }
+}

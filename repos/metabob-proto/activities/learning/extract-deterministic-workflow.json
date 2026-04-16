@@ -1,0 +1,119 @@
+{
+  "id": "extract-deterministic-workflow",
+  "name": "Extract Deterministic Workflow from Traces",
+  "version": 1,
+  "description": "Analyze successful improvisation traces to extract deterministic resolver chains that can replace LLM reasoning. Converts 'learning by doing' into 'knowing how to do'.",
+  "category": "tool",
+  "tags": [
+    "learning.trace",
+    "learning.determinism",
+    "ribosome.advanced"
+  ],
+  "execution_type": "template",
+  "input_shapes": ["trace", "execution_trace", "goal"],
+  "output_shapes": ["activity", "resolver_chain", "recommendation"],
+  "variables": [
+    {
+      "name": "goalPattern",
+      "type": "string",
+      "required": true,
+      "description": "Pattern to match goals for analysis (e.g., 'write * to *.json', 'read package.json')"
+    },
+    {
+      "name": "minSuccessCount",
+      "type": "number",
+      "required": false,
+      "default": 3,
+      "description": "Minimum successful traces required to extract pattern"
+    },
+    {
+      "name": "outputDir",
+      "type": "string",
+      "required": false,
+      "default": "/tmp/deterministic-extraction",
+      "description": "Directory for extraction outputs"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "query-successful-traces",
+      "description": "Find successful improvisation traces matching the goal pattern",
+      "dependencies": [],
+      "prompt": {
+        "template": "Find successful traces for goals matching: {{goalPattern}}\n\n**Your Task**: Query the backend for successful improvisation traces.\n\n**Query Strategy**:\n\n1. Use MCP `query_execution_traces` or direct API:\n   ```bash\n   curl -s 'https://activity.metabob.com/v2/activities/execution-traces?status=success&limit=50' \\\n     -H 'Accept: application/json'\n   ```\n\n2. Filter for:\n   - Status: success\n   - Has improvisation steps (not template execution)\n   - Goal matches pattern: {{goalPattern}}\n\n3. Extract from each trace:\n   - execution_id\n   - goal (original goal text)\n   - steps[] (tool sequence)\n   - outcome (success metrics)\n   - impulses_loaded (inputs used)\n   - impulses_created (outputs produced)\n\n**Output**: Create `{{outputDir}}/successful_traces.json`\n\n```json\n{\n  \"pattern\": \"{{goalPattern}}\",\n  \"traces\": [\n    {\n      \"execution_id\": \"exec_xxx\",\n      \"goal\": \"write hello to test.txt\",\n      \"tool_sequence\": [\"write\"],\n      \"arguments\": {\n        \"write\": { \"file_path\": \"test.txt\", \"content\": \"hello\" }\n      },\n      \"duration_ms\": 1500,\n      \"success\": true\n    }\n  ],\n  \"count\": 5\n}\n```\n\nNeed at least {{minSuccessCount}} traces to proceed.",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["{{outputDir}}/successful_traces.json"],
+        "commands": [
+          {
+            "command": "cat {{outputDir}}/successful_traces.json | jq '.count >= {{minSuccessCount}}'",
+            "expected_output": "true"
+          }
+        ]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    },
+    {
+      "id": "extract-tool-sequence",
+      "description": "Identify the common tool sequence across successful traces",
+      "dependencies": ["query-successful-traces"],
+      "prompt": {
+        "template": "Extract the canonical tool sequence from successful traces.\n\n**Input**: Read `{{outputDir}}/successful_traces.json`\n\n**Analysis Steps**:\n\n1. **Align Tool Sequences**:\n   - Compare tool sequences across all traces\n   - Identify the common pattern (order matters)\n   - Note variations (optional steps, different params)\n\n2. **Extract Argument Patterns**:\n   For each tool in the sequence:\n   - Which arguments are always present? (required)\n   - Which arguments vary? (parameterized)\n   - Which arguments are constant? (hardcoded)\n\n3. **Identify Input-Output Flow**:\n   - What inputs are read? (impulses_loaded)\n   - What outputs are produced? (impulses_created)\n   - How do outputs from one step feed into the next?\n\n**Example Analysis**:\n\nGoal Pattern: \"write * to *.json\"\n\nTraces analyzed: 5\n- Trace 1: write(file_path=\"config.json\", content=\"{...}\")\n- Trace 2: write(file_path=\"data.json\", content=\"{...}\")\n- Trace 3: read → write(file_path=\"output.json\", content=\"{...}\")\n- Trace 4: write(file_path=\"settings.json\", content=\"{...}\")\n- Trace 5: write(file_path=\"result.json\", content=\"{...}\")\n\nCommon Sequence: [write] (80%) or [read, write] (20%)\nRequired Args: file_path (parameterized), content (parameterized)\nConstant Pattern: file_path ends with .json\n\n**Output**: Create `{{outputDir}}/tool_sequence_analysis.json`\n\n```json\n{\n  \"pattern\": \"{{goalPattern}}\",\n  \"sample_size\": 5,\n  \"canonical_sequence\": [\n    {\n      \"tool\": \"write\",\n      \"frequency\": 1.0,\n      \"arguments\": {\n        \"file_path\": {\n          \"type\": \"parameter\",\n          \"pattern\": \"*.json\",\n          \"source\": \"goal_extraction\"\n        },\n        \"content\": {\n          \"type\": \"parameter\",\n          \"source\": \"goal_extraction\"\n        }\n      }\n    }\n  ],\n  \"optional_steps\": [\n    {\n      \"tool\": \"read\",\n      \"frequency\": 0.2,\n      \"condition\": \"when modifying existing file\"\n    }\n  ],\n  \"input_shapes\": [\"goal\"],\n  \"output_shapes\": [\"json_data\"]\n}\n```",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["{{outputDir}}/tool_sequence_analysis.json"],
+        "requiredPatterns": [
+          { "pattern": "canonical_sequence", "description": "Must identify common sequence" }
+        ]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    },
+    {
+      "id": "generate-resolver-chain",
+      "description": "Convert tool sequence into deterministic resolver chain",
+      "dependencies": ["extract-tool-sequence"],
+      "prompt": {
+        "template": "Generate a deterministic resolver chain from the tool sequence.\n\n**Input**: Read `{{outputDir}}/tool_sequence_analysis.json`\n\n**Resolver Chain Design**:\n\nA resolver chain replaces LLM improvisation with:\n1. **Argument Extractor**: Parse goal to extract parameters\n2. **Resolver Steps**: Deterministic tool calls with extracted parameters\n3. **Output Validator**: Verify expected output\n\n**Conversion Pattern**:\n\nFrom improvisation:\n```\nLLM: \"I need to write to test.json\"\n  → thinks about what to do\n  → calls write(file_path=\"test.json\", content=\"...\")\n  → verifies success\n```\n\nTo resolver chain:\n```json\n{\n  \"type\": \"resolver_chain\",\n  \"steps\": [\n    {\n      \"resolver\": \"goal_argument_extractor\",\n      \"config\": {\n        \"pattern\": \"write {{content}} to {{file_path}}\",\n        \"extractions\": [\n          { \"name\": \"content\", \"type\": \"string\" },\n          { \"name\": \"file_path\", \"type\": \"string\", \"pattern\": \"*.json\" }\n        ]\n      }\n    },\n    {\n      \"resolver\": \"write\",\n      \"config\": {\n        \"file_path\": \"{{extracted.file_path}}\",\n        \"content\": \"{{extracted.content}}\"\n      }\n    },\n    {\n      \"resolver\": \"file_exists_validator\",\n      \"config\": {\n        \"path\": \"{{extracted.file_path}}\"\n      }\n    }\n  ]\n}\n```\n\n**Key Insight**: The LLM's \"thinking\" is replaced by:\n- Pattern matching (argument extraction)\n- Direct tool calls (no reasoning needed)\n- Deterministic validation (success check)\n\n**Output**: Create `{{outputDir}}/resolver_chain.json`\n\n```json\n{\n  \"id\": \"chain_{{goalPattern | slugify}}\",\n  \"name\": \"Deterministic: {{goalPattern}}\",\n  \"description\": \"Extracted from {{sample_size}} successful traces\",\n  \"type\": \"resolver_chain\",\n  \"confidence\": 0.92,\n  \"source\": {\n    \"traces_analyzed\": 5,\n    \"success_rate\": 1.0,\n    \"extracted_at\": \"{{timestamp}}\"\n  },\n  \"argument_extractor\": {\n    \"type\": \"pattern_match\",\n    \"patterns\": [\n      \"write {{content}} to {{file_path}}\",\n      \"create {{file_path}} with {{content}}\"\n    ],\n    \"extractions\": [\n      { \"name\": \"content\", \"type\": \"string\", \"required\": true },\n      { \"name\": \"file_path\", \"type\": \"string\", \"required\": true }\n    ]\n  },\n  \"steps\": [\n    {\n      \"id\": \"step-1\",\n      \"resolver\": \"write\",\n      \"arguments\": {\n        \"file_path\": \"{{file_path}}\",\n        \"content\": \"{{content}}\"\n      },\n      \"expected_output\": { \"success\": true }\n    }\n  ],\n  \"validation\": {\n    \"type\": \"file_exists\",\n    \"path\": \"{{file_path}}\"\n  },\n  \"fallback\": {\n    \"on_extraction_failure\": \"improvise\",\n    \"on_resolver_failure\": \"improvise\"\n  },\n  \"metrics\": {\n    \"avg_duration_ms\": 1200,\n    \"avg_cost\": 0.0,\n    \"llm_calls_saved\": 1\n  }\n}\n```\n\nNote: `fallback.on_extraction_failure: \"improvise\"` means if the pattern doesn't match, fall back to LLM improvisation. This is the safety net.",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": ["{{outputDir}}/resolver_chain.json"],
+        "requiredPatterns": [
+          { "pattern": "argument_extractor", "description": "Must have argument extraction" },
+          { "pattern": "fallback", "description": "Must have fallback to improvisation" }
+        ]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    },
+    {
+      "id": "create-activity-template",
+      "description": "Create an activity template that uses the resolver chain",
+      "dependencies": ["generate-resolver-chain"],
+      "prompt": {
+        "template": "Create an activity template that uses the deterministic resolver chain.\n\n**Input**: Read `{{outputDir}}/resolver_chain.json`\n\n**Activity Template Design**:\n\nThe activity wraps the resolver chain with:\n1. Input validation\n2. Resolver chain execution\n3. Output verification\n4. Learning feedback\n\n**Output**: Create `{{outputDir}}/deterministic_activity.json`\n\n```json\n{\n  \"id\": \"deterministic:{{goalPattern | slugify}}\",\n  \"name\": \"{{goalPattern}} (Deterministic)\",\n  \"description\": \"Deterministic workflow extracted from {{sample_size}} successful traces. No LLM required for matching goals.\",\n  \"category\": \"tool\",\n  \"tags\": [\n    \"deterministic\",\n    \"extracted\",\n    \"resolver-chain\"\n  ],\n  \"execution_type\": \"resolver_chain\",\n  \"input_shapes\": [\"goal\"],\n  \"output_shapes\": [\"{{output_shape}}\"],\n  \"resolver_chain_ref\": \"chain_{{goalPattern | slugify}}\",\n  \"metadata\": {\n    \"extraction_source\": \"trace_analysis\",\n    \"traces_analyzed\": 5,\n    \"confidence\": 0.92,\n    \"llm_savings\": {\n      \"calls_per_execution\": 1,\n      \"tokens_per_execution\": 500,\n      \"cost_per_execution\": 0.002\n    },\n    \"created_at\": \"{{timestamp}}\",\n    \"created_by\": \"extract-deterministic-workflow\"\n  },\n  \"matching\": {\n    \"goal_patterns\": [\n      \"write * to *.json\",\n      \"create *.json with *\"\n    ],\n    \"priority\": 100,\n    \"confidence_threshold\": 0.8\n  },\n  \"fallback_activity\": \"improvise\",\n  \"tasks\": [\n    {\n      \"id\": \"execute-resolver-chain\",\n      \"description\": \"Execute the deterministic resolver chain\",\n      \"resolver\": \"chain\",\n      \"config\": {\n        \"chain_id\": \"chain_{{goalPattern | slugify}}\"\n      }\n    }\n  ]\n}\n```\n\nAlso create `{{outputDir}}/EXTRACTION_REPORT.md`:\n\n```markdown\n# Deterministic Workflow Extraction Report\n\n## Summary\n\n- **Goal Pattern**: {{goalPattern}}\n- **Traces Analyzed**: {{count}}\n- **Extraction Confidence**: {{confidence}}%\n- **LLM Calls Saved**: {{calls_per_execution}} per execution\n\n## Extracted Workflow\n\n### Tool Sequence\n1. {{tool_1}}: {{description}}\n2. {{tool_2}}: {{description}}\n\n### Argument Extraction\n| Argument | Type | Source | Pattern |\n|----------|------|--------|---------|\n| file_path | string | goal | *.json |\n| content | string | goal | * |\n\n### Resolver Chain\n```\nGoal → Pattern Match → Extract Args → {{tool}} → Validate → Done\n```\n\n## Benefits\n\n1. **Speed**: No LLM latency (~1s vs ~5s)\n2. **Cost**: $0.00 per execution (vs ~$0.002)\n3. **Reliability**: Deterministic (100% consistent)\n4. **Scalability**: No rate limits\n\n## Fallback\n\nIf goal doesn't match pattern → Falls back to LLM improvisation\n\n## Next Steps\n\n1. Register activity with backend\n2. Add to Thompson Sampling with high prior\n3. Monitor execution success rate\n4. Extract more patterns as traces accumulate\n```",
+        "variables": []
+      },
+      "validation": {
+        "requiredFiles": [
+          "{{outputDir}}/deterministic_activity.json",
+          "{{outputDir}}/EXTRACTION_REPORT.md"
+        ],
+        "commands": [
+          {
+            "command": "cat {{outputDir}}/deterministic_activity.json | jq '.execution_type == \"resolver_chain\"'",
+            "expected_output": "true"
+          }
+        ]
+      },
+      "retry": { "maxAttempts": 2, "strategy": "simple" }
+    }
+  ],
+  "metadata": {
+    "purpose": "Convert improvised LLM work into deterministic resolver chains",
+    "innovation": "Progressive determinism - replace LLM reasoning with proven patterns",
+    "learning_loop": "Traces → Patterns → Resolvers → Faster execution",
+    "key_insight": "LLM teaches us once, then we don't need it for similar goals"
+  }
+}

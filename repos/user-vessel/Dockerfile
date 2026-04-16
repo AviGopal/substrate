@@ -4,21 +4,28 @@ ARG BUILD_SHA
 ARG BUILD_VERSION
 
 FROM oven/bun:1.2 AS build
-WORKDIR /app
-COPY package.json bun.lock ./
+WORKDIR /app/user-vessel
+
+# Copy shared packages first (when built from deployment repo context)
+COPY ../packages /app/packages
+
+# Copy package files
+COPY user-vessel/package.json user-vessel/bun.lock ./
 RUN bun install --frozen-lockfile
-COPY src ./src
-COPY sql ./sql
-COPY index.ts ./
-COPY tsconfig.json ./
+
+# Copy source code
+COPY user-vessel/src ./src
+COPY user-vessel/sql ./sql
+COPY user-vessel/index.ts ./
+COPY user-vessel/tsconfig.json ./
 
 FROM oven/bun:1.2-slim AS runtime
 WORKDIR /app
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/src ./src
-COPY --from=build /app/sql ./sql
-COPY --from=build /app/index.ts ./
-COPY --from=build /app/package.json ./
+COPY --from=build /app/user-vessel/node_modules ./node_modules
+COPY --from=build /app/user-vessel/src ./src
+COPY --from=build /app/user-vessel/sql ./sql
+COPY --from=build /app/user-vessel/index.ts ./
+COPY --from=build /app/user-vessel/package.json ./
 # Re-declare build args
 ARG BUILD_SHA
 ARG BUILD_VERSION

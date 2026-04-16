@@ -1,0 +1,21 @@
+{
+  "id": "test:tutor-verification-1775730359",
+  "name": "Test Template for Tutor Verification",
+  "description": "A minimal template to verify the tutor command works",
+  "category": "tool",
+  "tags": ["tool", "verification"],
+  "input_shapes": ["goal"],
+  "output_shapes": ["validation_result"],
+  "tasks": [
+    {
+      "id": "verify",
+      "description": "Verify the system is working",
+      "prompt": {
+        "template": "Echo 'System is working'",
+        "variables": []
+      }
+    }
+  ],
+  "scope": "org",
+  "public": false
+}

@@ -115,8 +115,29 @@ export async function loadConfig(): Promise<UserVesselConfig> {
 
   // Identity Vessel config
   if (process.env.IDENTITY_VESSEL_ENDPOINT) {
-    config.identityVessel = config.identityVessel || {}
-    config.identityVessel.endpoint = process.env.IDENTITY_VESSEL_ENDPOINT
+    config.identityVessel = {
+      endpoint: process.env.IDENTITY_VESSEL_ENDPOINT
+    }
+  }
+
+  // Discovery Vessel config
+  const discoveryEnabled = process.env.DISCOVERY_ENABLED !== 'false'
+  if (discoveryEnabled) {
+    const hostname = process.env.HOSTNAME || 'user-vessel'
+    const podName = process.env.POD_NAME || hostname
+
+    config.discovery = {
+      enabled: true,
+      endpoint: process.env.DISCOVERY_VESSEL_ENDPOINT || 'http://discovery-vessel.activity-system.svc.cluster.local:8080',
+      vesselId: process.env.VESSEL_ID || `user-vessel-${podName}`,
+      heartbeatIntervalMs: parseInt(process.env.DISCOVERY_HEARTBEAT_INTERVAL_MS || '60000'),
+      shapes: [
+        'user_profile',
+        'org_settings',
+        'api_key_info',
+        'project_list',
+      ],
+    }
   }
 
   return config

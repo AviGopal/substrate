@@ -1,0 +1,134 @@
+{
+  "id": "analyze-traces",
+  "name": "Analyze Execution Traces for Patterns",
+  "description": "Query backend for recent execution traces, identify patterns, and generate findings",
+  "category": "monitoring",
+  "tags": ["monitoring", "traces", "analytics", "pattern-detection"],
+  "mode": "learning",
+
+  "variables": [
+    {
+      "name": "lookbackHours",
+      "type": "number",
+      "required": false,
+      "description": "Hours to look back for traces",
+      "default": 6
+    },
+    {
+      "name": "minSeverity",
+      "type": "string",
+      "required": false,
+      "description": "Minimum severity to report (low, medium, high)",
+      "default": "medium"
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "query-traces",
+      "description": "Query execution traces from backend",
+      "type": "mcp",
+      "mcp": {
+        "method": "GET",
+        "endpoint": "/v2/activities/execution-traces",
+        "params": {
+          "limit": 100,
+          "since": "{{lookbackHours}}h",
+          "includeMetrics": true
+        }
+      },
+      "outputShapes": ["execution_trace_list"],
+      "validation": {
+        "statusCode": 200
+      }
+    },
+    {
+      "id": "analyze-failures",
+      "description": "Analyze failure patterns",
+      "dependencies": ["query-traces"],
+      "prompt": {
+        "template": "Analyze these execution traces for failure patterns:\n\n```json\n{{query-traces.output | truncate:8000}}\n```\n\nGroup failures by:\n1. Error type (test_failure, type_error, timeout, etc.)\n2. Activity ID\n3. File patterns\n4. Time patterns (time of day, day of week)\n\nFor each pattern, calculate:\n- Count of occurrences\n- Success rate\n- Average duration\n- Trend (increasing/decreasing/stable)\n\nReturn JSON with top 5 failure patterns.",
+        "maxTokens": 6000
+      },
+      "outputShapes": ["failure_analysis"]
+    },
+    {
+      "id": "analyze-performance",
+      "description": "Analyze performance degradation",
+      "dependencies": ["query-traces"],
+      "prompt": {
+        "template": "Analyze execution traces for performance degradation:\n\n```json\n{{query-traces.output | truncate:8000}}\n```\n\nFor each activity:\n1. Compare duration over time (first 25% vs last 25%)\n2. Identify activities getting slower (>20% increase)\n3. Calculate impact (frequency × degradation)\n\nReturn JSON with:\n- Activities with degradation >20%\n- Root cause hypothesis\n- Suggested optimizations",
+        "maxTokens": 5000
+      },
+      "outputShapes": ["performance_analysis"]
+    },
+    {
+      "id": "analyze-impulse-usage",
+      "description": "Analyze impulse relevance and usage",
+      "dependencies": ["query-traces"],
+      "prompt": {
+        "template": "Analyze impulse usage patterns:\n\n```json\n{{query-traces.output | truncate:8000}}\n```\n\nIdentify:\n1. Impulses frequently discovered but never loaded (wasted discovery)\n2. Impulses loaded but never used (wasted tokens)\n3. Impulses with declining relevance scores\n\nReturn JSON with:\n- Top 5 wasted discoveries\n- Top 5 wasted loads\n- Suggested budget adjustments",
+        "maxTokens": 4000
+      },
+      "outputShapes": ["impulse_analysis"]
+    },
+    {
+      "id": "consolidate-findings",
+      "description": "Consolidate all findings into actionable report",
+      "dependencies": ["analyze-failures", "analyze-performance", "analyze-impulse-usage"],
+      "prompt": {
+        "template": "Consolidate findings into actionable report:\n\nFailures:\n```json\n{{analyze-failures.output}}\n```\n\nPerformance:\n```json\n{{analyze-performance.output}}\n```\n\nImpulse Usage:\n```json\n{{analyze-impulse-usage.output}}\n```\n\nCreate JSON report:\n```json\n{\n  \"failures\": [\n    {\n      \"pattern\": \"string\",\n      \"count\": number,\n      \"severity\": \"high|medium|low\",\n      \"suggestion\": \"string\",\n      \"createIssue\": boolean\n    }\n  ],\n  \"degradations\": [...],\n  \"improvements\": [...]\n}\n```\n\nPrioritize:\n- High severity: >10 occurrences or >50% degradation\n- Medium severity: 5-10 occurrences or 20-50% degradation\n- Low severity: <5 occurrences or <20% degradation",
+        "maxTokens": 8000
+      },
+      "outputShapes": ["findings_report"]
+    },
+    {
+      "id": "write-report",
+      "description": "Write findings to file",
+      "dependencies": ["consolidate-findings"],
+      "type": "command",
+      "command": {
+        "run": "echo '{{consolidate-findings.output}}' > /tmp/trace-analysis.json && cat /tmp/trace-analysis.json",
+        "captureOutput": true
+      },
+      "validation": {
+        "exitCode": 0
+      }
+    }
+  ],
+
+  "outputSchema": {
+    "produces": [
+      {
+        "shape": "findings_report",
+        "description": "Consolidated findings with severity and suggestions"
+      }
+    ]
+  },
+
+  "tracing": {
+    "recordTrace": true,
+    "contributeToLearning": true,
+    "metadata": {
+      "integrationPoint": "monitoring/trace-analysis",
+      "learningCategory": "pattern-detection"
+    }
+  },
+
+  "learning": {
+    "onSuccess": {
+      "action": "recordMetrics",
+      "metrics": {
+        "tracesAnalyzed": "{{query-traces.output | count}}",
+        "findingsGenerated": "{{consolidate-findings.output | count}}",
+        "highSeverityCount": "{{consolidate-findings.output | filterBySeverity:'high' | count}}"
+      }
+    }
+  },
+
+  "metadata": {
+    "demonstratesLoop": 3,
+    "requiresBackend": true,
+    "schedulable": true
+  }
+}

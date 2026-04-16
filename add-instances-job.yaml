@@ -1,3 +1,21 @@
+#
+# ⚠️  DEPRECATED: MiniBob Instance Creation Job ⚠️
+#
+# This Kubernetes job creates records in the DEPRECATED minibob_instance table.
+# As of 2026-04-08, MiniBob uses API key authentication via identity-vessel.
+#
+# ⛔ DO NOT USE for new deployments.
+#
+# This job is retained ONLY for:
+# - Backward compatibility testing
+# - Emergency rollback scenarios
+# - Historical data migration
+#
+# For new MiniBob instances, create API keys via identity-vessel instead.
+# Migration 052 made the minibob_instance table read-only.
+#
+# See: repos/identity-vessel/CLAUDE.md for current authentication
+#
 apiVersion: batch/v1
 kind: Job
 metadata:

@@ -1,0 +1,94 @@
+{
+  "id": "development:add-react-dashboard-page:v1",
+  "name": "Add React Dashboard Page",
+  "description": "Creates a new page component for the Metabob Cloud Dashboard, adds routing to App.tsx, and updates sidebar navigation. Follows React 19, shadcn/ui, and Bun patterns.",
+  "tags": ["development.dashboard", "development.react", "development.ui"],
+  "category": "development",
+  "variables": [
+    {
+      "name": "pageName",
+      "description": "Name of the page to create (e.g., 'Members', 'UsageAnalytics', 'ExecutionTraces')",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "pageId",
+      "description": "ID for the page route (e.g., 'members', 'usage-analytics', 'execution-traces')",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "pageDescription",
+      "description": "Brief description of what the page displays or does",
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "iconName",
+      "description": "Icon emoji or text to use in sidebar (e.g., '👥', '📊', '📋')",
+      "required": false,
+      "type": "string",
+      "default": "•"
+    }
+  ],
+  "input_shapes": ["file_exists"],
+  "output_shapes": ["file_exists", "typescript_compiles"],
+  "tasks": [
+    {
+      "id": "analyze-dashboard-structure",
+      "description": "Analyze existing dashboard pages and component patterns",
+      "prompt": {
+        "template": "Analyze the Metabob Cloud Dashboard structure to understand existing patterns:\n\n1. **Read existing pages** in repos/metabob-cloud-dashboard/src/pages/:\n   - Look at APIKeys.tsx or Settings.tsx for page structure patterns\n   - Note how they import components from @/components/ui\n   - Observe state management patterns (useState, hooks)\n   - Check how they use shadcn components (Card, Button, etc.)\n\n2. **Review App.tsx** at repos/metabob-cloud-dashboard/src/App.tsx:\n   - Find the Page type definition (union of page IDs)\n   - Locate the renderPage() function and switch statement\n   - Note the import patterns at the top\n\n3. **Review Sidebar.tsx** at repos/metabob-cloud-dashboard/src/components/Sidebar.tsx:\n   - Find the navItems array\n   - Note the structure: { id, label, icon }\n   - Observe how icons are defined (text/emoji format)\n\n4. **Check dependencies** in repos/metabob-cloud-dashboard/package.json:\n   - Verify React version (should be 19.x)\n   - Check for shadcn/ui components\n   - Note if Tailwind CSS is configured\n\nSummarize the patterns you find - these will guide creating the new page.",
+        "variables": []
+      },
+      "validation": {
+        "requiredPatterns": ["App.tsx", "Sidebar.tsx", "pages"]
+      }
+    },
+    {
+      "id": "create-page-component",
+      "description": "Create the new page component file",
+      "prompt": {
+        "template": "Create the {{pageName}} page component.\n\n**File**: repos/metabob-cloud-dashboard/src/pages/{{pageName}}.tsx\n\n**Requirements**:\n1. Use functional component with TypeScript\n2. Import from '@/components/ui' for shadcn components (Card, CardHeader, CardTitle, etc.)\n3. Import cn from '@/lib/utils' for className utilities\n4. Follow the pattern from existing pages (APIKeys.tsx, Settings.tsx)\n5. Include a placeholder layout with:\n   - Page title using CardHeader/CardTitle\n   - Brief description: {{pageDescription}}\n   - Placeholder content area (e.g., \"Content coming soon\")\n6. Export the component as named export: export function {{pageName}}()\n\n**Example structure**:\n```tsx\nimport { Card, CardContent, CardDescription, CardHeader, CardTitle } from \"@/components/ui/card\";\n\nexport function {{pageName}}() {\n  return (\n    <div className=\"space-y-6\">\n      <Card>\n        <CardHeader>\n          <CardTitle>{{pageName | titleCase}}</CardTitle>\n          <CardDescription>{{pageDescription}}</CardDescription>\n        </CardHeader>\n        <CardContent>\n          {/* Page content */}\n          <div className=\"text-muted-foreground\">\n            Page content will be implemented here.\n          </div>\n        </CardContent>\n      </Card>\n    </div>\n  );\n}\n```\n\nFollow existing code style exactly (2-space indentation, functional components, TypeScript types).",
+        "variables": ["pageName", "pageDescription"]
+      },
+      "validation": {
+        "requiredFiles": ["repos/metabob-cloud-dashboard/src/pages/{{pageName}}.tsx"],
+        "requiredPatterns": ["export function {{pageName}}", "Card", "import"]
+      }
+    },
+    {
+      "id": "add-route-to-app",
+      "description": "Add the new page to App.tsx routing",
+      "prompt": {
+        "template": "Add {{pageName}} page to the routing in App.tsx.\n\n**File**: repos/metabob-cloud-dashboard/src/App.tsx\n\n**Changes needed**:\n\n1. **Add import** at the top (after existing page imports):\n   ```tsx\n   import { {{pageName}} } from \"@/pages/{{pageName}}\";\n   ```\n\n2. **Update Page type** (around line 23):\n   Add \"{{pageId}}\" to the union type:\n   ```tsx\n   type Page = \"api-keys\" | \"settings\" | \"{{pageId}}\" | \"signup\" | \"login\";\n   ```\n\n3. **Add case to renderPage()** function (inside Dashboard component):\n   Add a new case in the switch statement:\n   ```tsx\n   case \"{{pageId}}\":\n     return <{{pageName}} />;\n   ```\n\nUse the Edit tool to make these changes. Follow the exact formatting of existing imports and cases.",
+        "variables": ["pageName", "pageId"]
+      },
+      "validation": {
+        "requiredPatterns": ["import.*{{pageName}}", "\"{{pageId}}\"", "case \"{{pageId}}\""]
+      }
+    },
+    {
+      "id": "add-navigation-to-sidebar",
+      "description": "Add navigation item to Sidebar.tsx",
+      "prompt": {
+        "template": "Add {{pageName}} to the sidebar navigation.\n\n**File**: repos/metabob-cloud-dashboard/src/components/Sidebar.tsx\n\n**Changes needed**:\n\n1. **Add to navItems array** (around line 9-12):\n   Add a new item to the navItems array:\n   ```tsx\n   { id: \"{{pageId}}\", label: \"{{pageName | titleCase}}\", icon: \"{{iconName}}\" },\n   ```\n\n**Note**: The icon should be an emoji or text character. If {{iconName}} is not provided, use a default like \"📄\".\n\nPlace this item in a logical position (usually before \"settings\" which is typically last).\n\nUse the Edit tool to make this change. Maintain the existing array format and indentation.",
+        "variables": ["pageId", "pageName", "iconName"]
+      },
+      "validation": {
+        "requiredPatterns": ["id: \"{{pageId}}\"", "label:"]
+      }
+    },
+    {
+      "id": "verify-compilation",
+      "description": "Verify TypeScript compilation and page accessibility",
+      "prompt": {
+        "template": "Verify the {{pageName}} page is properly integrated.\n\n**Steps**:\n\n1. **Type check** the dashboard:\n   ```bash\n   cd repos/metabob-cloud-dashboard\n   bun run typecheck\n   ```\n   Fix any TypeScript errors.\n\n2. **Check imports** are correct:\n   - Verify {{pageName}}.tsx has no import errors\n   - Verify App.tsx imports {{pageName}} correctly\n   - Ensure all @/components/ui imports are valid\n\n3. **Verify routing**:\n   - Confirm Page type includes \"{{pageId}}\"\n   - Confirm renderPage() has case for \"{{pageId}}\"\n   - Confirm navItems includes the new navigation item\n\n4. **Build check** (optional but recommended):\n   ```bash\n   cd repos/metabob-cloud-dashboard\n   bun run build\n   ```\n\nIf there are errors, fix them before completing.",
+        "variables": ["pageName", "pageId"]
+      },
+      "validation": {
+        "requiredPatterns": ["bun"]
+      }
+    }
+  ]
+}

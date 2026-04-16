@@ -1,0 +1,182 @@
+{
+  "id": "dashboard:test-with-playwright",
+  "name": "Test Cloud Dashboard with Playwright",
+  "description": "Test dashboard features using Playwright MCP. Validates authentication, navigation, and feature functionality.",
+  "category": "testing",
+  "vessel_type": "minibob",
+  "tags": ["dashboard", "testing", "playwright", "e2e", "authentication"],
+  "inputSchema": {
+    "type": "object",
+    "required": ["dashboard_url"],
+    "properties": {
+      "dashboard_url": {
+        "type": "string",
+        "description": "Dashboard URL to test (e.g., 'https://app.metabob.com' or 'http://localhost:3000')"
+      },
+      "test_signup": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to test signup flow (creates new test account)"
+      },
+      "test_login": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to test login flow"
+      },
+      "test_features": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["api-keys", "members", "usage-analytics", "execution-traces"]
+        },
+        "default": ["api-keys"],
+        "description": "Which feature pages to test"
+      },
+      "test_email": {
+        "type": "string",
+        "description": "Email for testing (generated if not provided)"
+      },
+      "test_password": {
+        "type": "string",
+        "default": "TestPassword123!",
+        "description": "Password for test account"
+      }
+    }
+  },
+  "tasks": [
+    {
+      "id": "navigate-to-dashboard",
+      "description": "Navigate to the dashboard URL",
+      "prompt": {
+        "template": "Use Playwright MCP to navigate to the dashboard:\n\n1. Navigate to {{dashboard_url}}\n2. Take a snapshot to see what loads\n3. Verify the page title contains 'Metabob'\n4. Take a screenshot and save it as dashboard-initial-load.png\n\nIf the page doesn't load or shows an error, report the issue.",
+        "variables": ["dashboard_url"]
+      },
+      "tools": ["mcp__playwright__browser_navigate", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_take_screenshot"],
+      "validation": {
+        "requiredPatterns": ["Metabob"]
+      }
+    },
+    {
+      "id": "test-signup",
+      "description": "Test the signup flow",
+      "prompt": {
+        "template": "Test user signup:\n\n1. Click the 'Sign up' button\n2. Fill in the signup form:\n   - Email: {{test_email}} (generate one if not provided: test-<timestamp>@metabob.demo)\n   - Full Name: Test User\n   - Organization: Test Org <timestamp>\n   - Password: {{test_password}}\n   - Confirm Password: {{test_password}}\n3. Click 'Sign up'\n4. Take a snapshot after submission\n5. Check for:\n   - Success: Dashboard loads with user authenticated\n   - Failure: Error message displayed\n6. Take a screenshot of the result\n\nReport whether signup succeeded or failed, and what error message appeared if any.",
+        "variables": ["test_email", "test_password"],
+        "conditional": "{{test_signup}} === true"
+      },
+      "tools": ["mcp__playwright__browser_click", "mcp__playwright__browser_fill_form", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_wait_for"],
+      "validation": {
+        "optional": true
+      }
+    },
+    {
+      "id": "test-login",
+      "description": "Test the login flow",
+      "prompt": {
+        "template": "Test user login:\n\n1. If already logged in from signup, log out first (look for logout button)\n2. On the login page, fill in:\n   - Email: {{test_email}}\n   - Password: {{test_password}}\n3. Click 'Sign in'\n4. Wait for page to load\n5. Take a snapshot\n6. Verify:\n   - User is logged in (dashboard visible)\n   - User name or email shown somewhere\n   - Navigation menu accessible\n7. Take a screenshot\n\nReport success or failure with details.",
+        "variables": ["test_email", "test_password"],
+        "conditional": "{{test_login}} === true"
+      },
+      "tools": ["mcp__playwright__browser_click", "mcp__playwright__browser_fill_form", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_wait_for"],
+      "validation": {
+        "optional": true
+      }
+    },
+    {
+      "id": "test-api-keys-page",
+      "description": "Test the API Keys page functionality",
+      "prompt": {
+        "template": "Test API Keys page:\n\n1. Navigate to the API Keys page (look for navigation link)\n2. Take a snapshot of the page\n3. Verify page shows:\n   - List of API keys (or empty state)\n   - 'Create API Key' button\n   - Table headers (Name, Key, Created, Last Used, Actions)\n4. Try to create a new API key:\n   - Click 'Create API Key'\n   - Fill in name: 'Test Key <timestamp>'\n   - Submit\n   - Check if key appears in list\n5. Take screenshots before and after creation\n6. Report success or any errors\n\nNote: Don't try to revoke keys unless they're test keys.",
+        "variables": [],
+        "conditional": "{{test_features}} includes 'api-keys'"
+      },
+      "tools": ["mcp__playwright__browser_click", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_fill_form", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_wait_for"],
+      "validation": {
+        "optional": true
+      }
+    },
+    {
+      "id": "test-members-page",
+      "description": "Test the Members page functionality",
+      "prompt": {
+        "template": "Test Members page:\n\n1. Navigate to Members page\n2. Take a snapshot\n3. Verify page shows:\n   - List of members with current test user\n   - Role badges (Admin, Developer, Viewer)\n   - 'Invite Member' button (if admin)\n   - Member activity info (executions, last active)\n4. Take a screenshot\n5. Report what's displayed and any issues\n\nDon't actually invite or remove members - just verify the UI loads.",
+        "variables": [],
+        "conditional": "{{test_features}} includes 'members'"
+      },
+      "tools": ["mcp__playwright__browser_click", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_take_screenshot"],
+      "validation": {
+        "optional": true
+      }
+    },
+    {
+      "id": "test-usage-analytics-page",
+      "description": "Test the Usage Analytics page",
+      "prompt": {
+        "template": "Test Usage Analytics page:\n\n1. Navigate to Usage Analytics page\n2. Take a snapshot\n3. Verify page shows:\n   - Summary metrics cards (Total Executions, Success Rate, etc.)\n   - Token consumption chart\n   - Time range filter (7d, 30d, 90d)\n   - Usage by member table\n   - Usage by API key table\n   - Most used activities section\n4. Try clicking different time ranges\n5. Take screenshots of different views\n6. Report what data is displayed (or if empty state shown)\n\nNote: Page might be empty if no executions have been recorded yet.",
+        "variables": [],
+        "conditional": "{{test_features}} includes 'usage-analytics'"
+      },
+      "tools": ["mcp__playwright__browser_click", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_wait_for"],
+      "validation": {
+        "optional": true
+      }
+    },
+    {
+      "id": "test-execution-traces-page",
+      "description": "Test the Execution Traces page",
+      "prompt": {
+        "template": "Test Execution Traces page:\n\n1. Navigate to Execution Traces page\n2. Take a snapshot\n3. Verify page shows:\n   - List of execution traces (or empty state)\n   - Status filter dropdown (All, Running, Completed, Failed)\n   - Search box for filtering\n   - Pagination controls\n   - Trace details when expanded\n4. If traces exist, try:\n   - Filtering by status\n   - Searching for a term\n   - Expanding a trace to see details\n5. Take screenshots\n6. Report what's visible\n\nNote: Page might be empty if no executions recorded yet.",
+        "variables": [],
+        "conditional": "{{test_features}} includes 'execution-traces'"
+      },
+      "tools": ["mcp__playwright__browser_click", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_type", "mcp__playwright__browser_take_screenshot", "mcp__playwright__browser_wait_for"],
+      "validation": {
+        "optional": true
+      }
+    },
+    {
+      "id": "check-network-requests",
+      "description": "Examine network requests to verify API communication",
+      "prompt": {
+        "template": "Check network requests:\n\n1. Get network requests from Playwright\n2. Filter for API calls (requests to /api/*)\n3. Check:\n   - Are requests going to the correct backend services?\n   - Are status codes correct (200, 201, etc. for success)?\n   - Are there any 404 or 500 errors?\n   - Is authentication working (JWT tokens sent)?\n4. Report any issues found\n\nLook especially for:\n- /api/auth/* requests (should succeed)\n- /api/v2/* requests\n- Any failed requests",
+        "variables": []
+      },
+      "tools": ["mcp__playwright__browser_network_requests"],
+      "validation": {
+        "optional": true
+      }
+    },
+    {
+      "id": "generate-test-report",
+      "description": "Generate a test report summarizing results",
+      "prompt": {
+        "template": "Create a test report in DASHBOARD_TEST_REPORT.md:\n\n## Test Execution Report\n\n**Dashboard URL**: {{dashboard_url}}\n**Date**: <current date/time>\n**Test Account**: {{test_email}}\n\n### Results\n\n#### Authentication\n- Signup: [✓ PASS / ✗ FAIL / - SKIPPED]\n- Login: [✓ PASS / ✗ FAIL / - SKIPPED]\n\n#### Features Tested\n{{for each feature in test_features}}\n- {{feature}}: [✓ PASS / ✗ FAIL / - SKIPPED]\n{{end}}\n\n### Screenshots\n<list all screenshots taken>\n\n### Network Issues\n<list any failed API requests>\n\n### Recommendations\n<any issues that need to be fixed>\n\nInclude details about what worked and what didn't, with specific error messages.",
+        "variables": ["dashboard_url", "test_email", "test_features"]
+      },
+      "tools": ["write"],
+      "validation": {
+        "requiredFiles": ["DASHBOARD_TEST_REPORT.md"]
+      }
+    }
+  ],
+  "output_impulses": [
+    {
+      "type": "file",
+      "path": "DASHBOARD_TEST_REPORT.md",
+      "label": "test_report"
+    },
+    {
+      "type": "memo",
+      "label": "test_summary",
+      "content_template": "Dashboard test completed. Signup: {{signup_result}}, Login: {{login_result}}, Features: {{feature_results}}"
+    }
+  ],
+  "success_criteria": [
+    "Dashboard loads successfully",
+    "At least one authentication flow tested",
+    "Network requests examined for errors",
+    "Test report generated with results"
+  ],
+  "estimated_duration_minutes": 20,
+  "learning_tags": ["playwright-testing", "e2e-testing", "dashboard-validation", "authentication-testing"]
+}
