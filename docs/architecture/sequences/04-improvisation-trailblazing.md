@@ -4,26 +4,27 @@
 
 This document maps the complete flow of how MiniBob handles situations when no activity template matches (improvisation), learns from failures (trailblazing), and manages execution safety (checkpoints and rollbacks). These mechanisms enable continuous learning and autonomous adaptation.
 
+**Key Insight:** Improvisation is not a fallback mode - it's an activity template like any other. The `improvise_solution` activity uses LLM-directed tool use to explore solutions, and the ribosome resolver extracts successful improvisations into reusable templates.
+
 ## Key Concepts
 
-1. **Improvisation** - LLM-directed tool use when no template matches the goal
+1. **Improvisation as an Activity** - `improvise_solution` template with plan → execute → extract tasks
 2. **Trailblazing** - Creating variant templates from failed executions
 3. **Checkpoints** - Git state capture before execution for rollback capability
 4. **Rollbacks** - Restoring pre-execution state after failures
-5. **Ribosome Pattern** - Extracting successful improvisation into reusable templates
+5. **Ribosome Resolver** - Task 3 of `improvise_solution` that extracts successful patterns into templates
 6. **Thompson Sampling Learning** - Updating α/β scores based on execution outcomes
 7. **Stuck Detection** - Identifying when improvisation is making no progress
 
-## Main Sequence Diagram: Goal Processing with Fallback
+## Main Sequence Diagram: Goal Processing via Activity Composition
 
 ```mermaid
 sequenceDiagram
     participant User as User/CLI
     participant GP as GoalProcessor<br/>(goal-processor.ts)
     participant BE as Backend<br/>(Thompson Sampling)
-    participant Impr as GoalImproviser<br/>(improviser.ts)
     participant Exec as ActivityExecutor<br/>(activity.ts)
-    participant Ribosome as RibosomeExtractor<br/>(template-extractor.ts)
+    participant Ribosome as RibosomeResolver<br/>(resolvers/ribosome.ts)
     participant MCP as MCP Client
 
     User->>GP: processGoal(message)
@@ -33,60 +34,175 @@ sequenceDiagram
     GP->>GP: enrichGoal(message)
     Note over GP: LLM semantic analysis<br/>category, intent, capabilities
 
-    Note over GP: 2. EARLY-EXIT CHECK
-    GP->>GP: isSimpleGoal()?
-    alt Simple Goal (read-only, exploration)
-        Note over GP: Skip templates,<br/>use direct improvisation
-        GP->>Impr: improviseUntilComplete()
-    else Complex Goal (file_write, etc)
-        Note over GP: 3. PRE-FLIGHT ANALYSIS
-        GP->>GP: analyzePreFlight()
-        Note over GP: Check if relevant<br/>activities exist
+    Note over GP: 2. ACTIVITY RECOMMENDATION
+    GP->>BE: recommendActivities(goal)
+    Note over BE: Thompson Sampling<br/>selects by α, β scores
+    BE-->>GP: [ActivityRecommendation]
 
-        alt High Confidence Match
-            Note over GP: 4. ACTIVITY RECOMMENDATION
-            GP->>BE: recommendActivities(goal)
-            Note over BE: Thompson Sampling<br/>selects by α, β scores
-            BE-->>GP: [ActivityRecommendation]
+    alt Recommendations Found (score >= 0.7)
+        Note over GP: 3a. EXECUTE RECOMMENDED ACTIVITY
+        loop For each recommendation until success
+            GP->>Exec: execute(template)
+            Exec-->>GP: ActivityExecution
 
-            Note over GP: 5. ACTIVITY EXECUTION
-            loop For each recommendation until success
-                GP->>Exec: execute(template)
-                Exec-->>GP: ActivityExecution
-
-                GP->>GP: verifyGoal()
-                alt Goal Achieved
-                    Note over GP: ✓ SUCCESS
-                else Goal Not Achieved
-                    Note over GP: Continue to next template
-                end
+            GP->>GP: verifyGoal()
+            alt Goal Achieved
+                Note over GP: ✓ SUCCESS
+            else Goal Not Achieved
+                Note over GP: Continue to next template
             end
-        else Low Confidence
-            Note over GP: No relevant templates found<br/>(score < 0.7 threshold)
-            GP->>Impr: improviseUntilComplete()
         end
+    else No Recommendations OR All Failed
+        Note over GP: 3b. EXECUTE IMPROVISE_SOLUTION ACTIVITY
+        GP->>Exec: execute("improvise_solution", goal)
+
+        Note over Exec: Task 1: plan_approach
+        Exec->>Exec: LLM plans solution steps
+
+        Note over Exec: Task 2: execute_plan
+        Exec->>Exec: LLM + tools execute plan
+
+        alt Improvisation Succeeded
+            Note over Exec: Task 3: extract_template
+            Exec->>Ribosome: extract(execution_trace)
+            Ribosome->>Ribosome: shouldExtractTemplate()
+            alt Extraction Criteria Met
+                Ribosome->>Ribosome: assembleTemplate()
+                Ribosome->>MCP: registerTemplate()
+                Note over MCP: New template available<br/>for Thompson Sampling
+            end
+        end
+
+        Exec-->>GP: ActivityExecution
     end
 
-    Note over GP: 6. RETURN RESULT
+    Note over GP: 4. RETURN RESULT
     GP-->>User: GoalResult
     deactivate GP
 ```
 
 **Implementation:** `repos/minibob/src/goal-processor.ts:650-6800+`
 
-## Decomposition: Activity Matching Failure → Improvisation
+## Improvisation as an Activity
+
+Improvisation is no longer a special "fallback mode" - it's a first-class activity template that gets composed like any other.
+
+### The `improvise_solution` Activity Template
+
+```typescript
+{
+  id: "improvise_solution",
+  name: "Improvise Solution via LLM Tool Use",
+  category: "tool",
+  tasks: [
+    {
+      id: "plan_approach",
+      description: "Analyze the goal and plan a solution approach",
+      prompt: {
+        template: `Given this goal: {{goalDescription}}
+
+Analyze the requirements and create a step-by-step plan to achieve it.
+Consider available tools: bash, read, write, edit, glob, grep.
+
+Identify:
+1. What information you need to gather
+2. What changes you need to make
+3. How to verify success`,
+        variables: [
+          { name: "goalDescription", type: "string", required: true }
+        ]
+      }
+    },
+    {
+      id: "execute_plan",
+      description: "Execute the planned solution using available tools",
+      prompt: {
+        template: `Execute your plan from the previous task.
+
+Use available tools to:
+- Read files (read, grep)
+- Modify code (edit, write)
+- Run commands (bash)
+- Verify changes (bash tests)
+
+Track your progress after each step. If stuck, try a different approach.`,
+        variables: []
+      },
+      validation: {
+        maxSteps: 50,
+        maxCost: 5.00,
+        stuckDetection: true
+      }
+    },
+    {
+      id: "extract_template",
+      description: "Extract successful execution into reusable template",
+      resolver: "ribosome",
+      condition: "execution.status === 'completed' && execution.tasks.length >= 2"
+    }
+  ],
+  inputSchema: {
+    required: [
+      { shape: "goal_description", budget: 500 }
+    ],
+    optional: [
+      { shape: "context_files", budget: 2000 },
+      { shape: "previous_attempts", budget: 1000 }
+    ]
+  },
+  outputSchema: {
+    produces: [
+      { shape: "execution_trace" },
+      { shape: "activity_template", condition: "ribosome_extraction" }
+    ]
+  },
+  metadata: {
+    author: "system",
+    category: "improvisation",
+    thompsonParams: { alpha: 1, beta: 1 }
+  }
+}
+```
+
+### How It Works
+
+1. **Goal processor selects activity**: Thompson Sampling returns `improvise_solution` when no domain-specific template matches
+2. **Task 1 - Plan**: LLM analyzes the goal and creates a solution plan
+3. **Task 2 - Execute**: LLM uses tools (bash, read, write, edit) to execute the plan
+   - Step limit: 50 steps max
+   - Cost limit: $5.00 max
+   - Stuck detection: Break if same action repeated 3x
+4. **Task 3 - Extract**: Ribosome resolver checks if extraction criteria met
+   - If yes: Creates new activity template from execution
+   - If no: Execution completes without extraction
+
+### Key Difference from Old "Fallback" Model
+
+**Before (fallback improvisation):**
+```
+Activity failed → Exit activity system → Enter improvisation mode → Ad-hoc LLM loop
+```
+
+**Now (activity composition):**
+```
+Activity failed → Execute improvise_solution activity → Tasks with validation
+```
+
+All workflows go through the activity composition system. Improvisation is just another activity.
+
+## Decomposition: Activity Matching → Improvisation Selection
 
 ```mermaid
 sequenceDiagram
     participant GP as GoalProcessor
     participant MCPc as MCP Client
     participant BE as Backend
-    participant Impr as GoalImproviser
+    participant Exec as ActivityExecutor
     participant LLM as LLM (Claude)
 
     Note over GP: Activity Recommendation Phase
 
-    GP->>MCPc: recommendActivities(goal, category, limit=3)
+    GP->>MCPc: recommendActivities(goal, category, limit=5)
     Note over MCPc: Build request to backend
 
     MCPc->>BE: POST /v2/activities/recommend
@@ -95,138 +211,288 @@ sequenceDiagram
     Note over BE: Thompson Sampling Engine
     Note over BE: 1. Query similar templates<br/>2. Compute scores: score = beta(α, β)<br/>3. Sort by score<br/>4. Return top-N
 
-    alt Templates Found (score >= 0.5)
-        BE-->>MCPc: ActivityRecommendation[]
-        Note over MCPc: [template_id, confidence, thompson_metadata]
-    else No Templates OR All Low Score
-        Note over BE: No relevant templates<br/>OR best_score < minSuccessRate
-        BE-->>MCPc: empty array
+    alt Domain-Specific Templates Found
+        Note over BE: Filter by category, keywords<br/>Check success rate
+        BE-->>MCPc: [template1, template2, ...] + improvise_solution
+        Note over MCPc: Sorted by Thompson score
+    else No Domain Templates
+        Note over BE: Only return improvise_solution
+        BE-->>MCPc: [improvise_solution]
     end
     deactivate BE
 
     MCPc-->>GP: recommendations
 
-    alt Recommendations Empty or Low Confidence
-        Note over GP: NO MATCH FOUND
-        Note over GP: - Check pre-flight analysis<br/>- Verify goal relevance<br/>- No suitable templates
+    alt Recommendations Include Domain Template (score >= 0.7)
+        Note over GP: EXECUTE DOMAIN TEMPLATE
+        GP->>Exec: execute(domain_template)
 
-        GP->>GP: selectImprovisationStrategy()
-        Note over GP: Decision:<br/>- Goal is complex but unmatched<br/>- Use LLM-based improvisation<br/>- Record all steps for learning
+        Exec->>Exec: executeTaskSequence()
+        Exec-->>GP: result
 
-        GP->>Impr: new GoalImproviser()
-        Note over Impr: Initialize with:<br/>- Available tools (bash, read, write)<br/>- LLM client<br/>- Activity executor adapter
-
-        GP->>Impr: improviseUntilComplete(goal)
-        Note over Impr: START IMPROVISATION
-    else Recommendations Found
-        Note over GP: EXECUTE ACTIVITY
-        GP->>GP: selectBestTemplate(recommendations)
+        alt Result Success
+            Note over GP: ✓ GOAL ACHIEVED
+        else Result Failed OR Verification Failed
+            Note over GP: Next recommendation<br/>(may be improvise_solution)
+            GP->>Exec: execute(next_template)
+        end
+    else Only improvise_solution Returned
+        Note over GP: EXECUTE IMPROVISATION ACTIVITY
+        GP->>Exec: execute(improvise_solution)
+        Note over Exec: Task sequence:<br/>1. plan_approach<br/>2. execute_plan<br/>3. extract_template
     end
 ```
 
-**Failure Reasons Triggering Improvisation:**
-- `recommendations.length === 0`
-- `bestScore < RELEVANCE_THRESHOLD (0.7)`
-- `bestScore < minSuccessRate (0.5)`
-- Backend unavailable → fallback to local goal resolver
+**Selection Logic:**
+- Thompson Sampling ranks ALL templates (including `improvise_solution`)
+- Domain-specific templates rank higher if they have good success history
+- `improvise_solution` ranks higher when:
+  - No domain templates exist
+  - Domain templates have low success rates
+  - Goal is novel/exploratory
 
-## Decomposition: LLM-Based Improvisation Loop
+## Decomposition: Improvise Solution Activity Execution
 
 ```mermaid
 sequenceDiagram
-    participant Impr as GoalImproviser
+    participant Exec as ActivityExecutor
     participant LLM as LLM (Claude)
     participant Tools as Tool Handlers<br/>(bash, read, write, etc)
-    participant FS as Filesystem
     participant State as State Tracker<br/>(impulses_loaded,<br/>impulses_created)
+    participant Ribosome as RibosomeResolver
 
-    Impr->>Impr: resetImpulseTracking()
-    Note over Impr: Clear impulse state
+    Note over Exec: EXECUTE: improvise_solution
 
-    Impr->>Impr: captureStateSnapshot()
-    Note over Impr: Capture pre-improvisation state:<br/>- File metadata<br/>- Git HEAD<br/>- Working directory structure
+    Note over Exec: TASK 1: plan_approach
+    Exec->>Exec: captureStateSnapshot()
+    Note over Exec: Pre-execution checkpoint
 
-    loop For each step (max 50)
-        Note over Impr: STEP N: Tool Selection & Execution
+    Exec->>LLM: executeTask("plan_approach", {goalDescription})
+    activate LLM
+    Note over LLM: Analyze goal<br/>Identify requirements<br/>Create step-by-step plan
+    LLM-->>Exec: Plan {steps, approach, tools_needed}
+    deactivate LLM
 
-        Impr->>LLM: sendMessage(goal, context, tools_list)
-        Note over LLM: Available tools:<br/>- bash: Run commands<br/>- read: Read files<br/>- write: Create files<br/>- edit: Modify files<br/>- glob: Find files<br/>- grep: Search content<br/>- activity: Call other activities
+    Note over Exec: TASK 2: execute_plan
+
+    loop For each planned step (max 50)
+        Exec->>LLM: sendMessage(goal, context, plan, tools_list)
+        Note over LLM: Available tools:<br/>- bash: Run commands<br/>- read: Read files<br/>- write: Create files<br/>- edit: Modify files<br/>- glob: Find files<br/>- grep: Search content
 
         activate LLM
-        LLM->>LLM: reason(goal, context)
+        LLM->>LLM: reason(goal, plan, progress)
         Note over LLM: Step {n}:<br/>Thought: "..."<br/>Action: tool_name<br/>Parameters: {...}
-        LLM-->>Impr: ToolCall
+        LLM-->>Exec: ToolCall
         deactivate LLM
 
-        Impr->>Impr: recordThought(thought)
-        Note over Impr: impulses_loaded,<br/>impulses_created tracking
-
-        Impr->>Tools: execute(action, params)
+        Exec->>Tools: execute(action, params)
         activate Tools
 
         alt action === "read"
-            Tools->>FS: readFile(path)
-            FS-->>Tools: content
+            Tools->>Tools: readFile(path)
             Tools->>State: recordImpulseLoad(path, "source_code")
             Note over State: Track shape + tokens
         else action === "write"
-            Tools->>FS: writeFile(path, content)
-            FS-->>Tools: success
+            Tools->>Tools: writeFile(path, content)
             Tools->>State: recordImpulseCreate(path, inferred_shape)
-            Note over State: Infer shape from filename
         else action === "bash"
-            Tools->>FS: execSync(command)
-            FS-->>Tools: stdout, stderr
+            Tools->>Tools: execSync(command)
             Tools->>State: recordImpulseLoad(pattern, "bash_output")
-        else action === "activity"
-            Tools->>Tools: loadActivityTemplate(id)
-            Tools->>Tools: executor.execute(template)
-            Note over Tools: Nested activity execution
         end
 
-        Tools-->>Impr: ToolResult
+        Tools-->>Exec: ToolResult
         deactivate Tools
 
-        Impr->>Impr: recordStep({<br/>  step: n<br/>  thought: "..."<br/>  action: "..."<br/>  result: {...}<br/>  duration_ms<br/>  cost_estimate<br/>  expected_output_shape<br/>  step_purpose<br/>})
+        Exec->>Exec: recordStep({<br/>  step: n<br/>  thought: "..."<br/>  action: "..."<br/>  result: {...}<br/>  duration_ms<br/>  cost_estimate<br/>})
 
-        Impr->>LLM: sendToolResult(result)
-        Note over LLM: Feedback to LLM
+        Exec->>LLM: sendToolResult(result)
 
-        Impr->>Impr: verifyGoalAchieved(goal)?
+        Exec->>Exec: verifyGoalAchieved()?
         alt Goal Achieved
-            Note over Impr: ✓ Break loop
+            Note over Exec: ✓ Break loop
             break Goal Complete
         else Stuck Detection
-            Impr->>Impr: isStuck()
-            Note over Impr: Same action repeated 3x?
+            Exec->>Exec: isStuck()
+            Note over Exec: Same action repeated 3x?
             alt Stuck
-                Note over Impr: ✗ Break loop
+                Note over Exec: ✗ Break loop
                 break Exit: Stuck
             end
-        else Max Steps Reached
-            alt steps >= maxSteps
-                Note over Impr: ✗ Break loop
-                break Exit: Max steps
+        else Max Steps/Cost Reached
+            alt steps >= 50 OR cost >= $5.00
+                Note over Exec: ✗ Break loop
+                break Exit: Limits
             end
         end
     end
 
-    Note over Impr: OUTCOME COMPUTATION
-    Impr->>Impr: computeOutcome()
-    Note over Impr: status: "success"|"failure"|"stuck"<br/>goal_achieved: boolean<br/>total_duration_ms<br/>total_cost<br/>total_tokens<br/>files_modified<br/>files_created<br/>files_deleted<br/>error?
+    Note over Exec: TASK 3: extract_template
 
-    Impr->>Impr: computeStateDelta(before, after)
-    Note over Impr: Files changed?<br/>Git commit changes?<br/>State transition metadata
+    Exec->>Ribosome: resolve("ribosome", execution_trace)
+    activate Ribosome
+
+    Ribosome->>Ribosome: shouldExtractTemplate(trace)
+    Note over Ribosome: Check criteria:<br/>1. status === "completed"<br/>2. tasks.length >= 2<br/>3. cost < $1.00<br/>4. impulses <= 10<br/>5. depth === 0
+
+    alt Criteria Met
+        Ribosome->>Ribosome: assembleTemplate(trace)
+        Note over Ribosome: Extract:<br/>- Input schema from impulses_loaded<br/>- Output schema from impulses_created<br/>- Tasks from step sequences<br/>- Variables from patterns
+
+        Ribosome->>Ribosome: registerTemplate(template)
+        Note over Ribosome: Store in backend<br/>Thompson params: α=1, β=1
+
+        Ribosome-->>Exec: {template_id, registered: true}
+    else Criteria Not Met
+        Note over Ribosome: Skip extraction
+        Ribosome-->>Exec: {registered: false}
+    end
+    deactivate Ribosome
+
+    Exec->>Exec: computeOutcome()
+    Note over Exec: Execution complete<br/>Template may be available
 ```
 
-**Implementation:** `repos/minibob/src/improviser.ts:125-1650+`
+**Implementation:**
+- Activity executor: `repos/minibob/src/activity.ts`
+- Ribosome resolver: `repos/minibob/src/resolvers/ribosome.ts`
+- State tracking: `repos/minibob/src/improviser.ts:256-299`
 
-**Key Mechanisms:**
-1. **Impulse Tracking** (lines 256-299): Every read/write tracked with shape inference
-2. **State Snapshot** (lines 401-489): Captures pre-improvisation state
-3. **Step Limits** (line 90): maxSteps=50 prevents infinite loops
-4. **Stuck Detection** (line 90): Repeated actions detected
-5. **Shape Inference** (line 1647): inferShapeFromPath() for output shapes
+## Decomposition: Ribosome Resolver (Template Extraction)
+
+The ribosome resolver is invoked as Task 3 of the `improvise_solution` activity.
+
+```mermaid
+sequenceDiagram
+    participant Exec as ActivityExecutor
+    participant Ribosome as RibosomeResolver
+    participant Analyzer as Quality<br/>Analyzer
+    participant Extractor as Template<br/>Extractor
+    participant BE as Backend
+
+    Note over Exec: Task 3: extract_template
+
+    Exec->>Ribosome: resolve("ribosome", {execution_trace})
+    activate Ribosome
+
+    Note over Ribosome: PHASE 1: QUALITY CHECK
+
+    Ribosome->>Analyzer: shouldExtractTemplate(trace)
+    activate Analyzer
+
+    Note over Analyzer: Check criteria:<br/>1. status === "completed"<br/>2. tasks.length >= 2<br/>3. cost < $1.00<br/>4. impulses <= 10<br/>5. depth === 0 (top-level)<br/>6. No critical errors
+
+    alt Criteria Met
+        Analyzer-->>Ribosome: true
+    else Criteria Not Met
+        Analyzer-->>Ribosome: false
+        Note over Ribosome: ✗ Skip extraction
+        Ribosome-->>Exec: {registered: false}
+    end
+    deactivate Analyzer
+
+    alt Extract Template
+        Note over Ribosome: PHASE 2: TASK IDENTIFICATION
+
+        Ribosome->>Extractor: identifyTaskBoundaries(steps)
+        activate Extractor
+
+        Note over Extractor: Group steps into tasks:<br/>- Boundaries on action changes<br/>- Group size >= 5 steps<br/>- Logical phase transitions
+
+        Extractor-->>Ribosome: taskGroups[][]
+        deactivate Extractor
+
+        Note over Ribosome: PHASE 3: SCHEMA EXTRACTION
+
+        Ribosome->>Extractor: extractInputSchema(trace)
+        activate Extractor
+        Note over Extractor: From impulses_loaded:<br/>- Shape names<br/>- Format requirements<br/>- Budget estimates
+        Extractor-->>Ribosome: InputSchema {<br/>  required: [{shape}]<br/>  optional: [{shape}]<br/>}
+        deactivate Extractor
+
+        Ribosome->>Extractor: extractOutputSchema(trace)
+        activate Extractor
+        Note over Extractor: From impulses_created:<br/>- Produced shapes<br/>- Success indicators
+        Extractor-->>Ribosome: OutputSchema {<br/>  produces: [{shape}]<br/>}
+        deactivate Extractor
+
+        Note over Ribosome: PHASE 4: TEMPLATE ASSEMBLY
+
+        loop For each task group
+            Ribosome->>Extractor: summarizeTaskGroup(group)
+            activate Extractor
+            Note over Extractor: Create description<br/>from steps
+            Extractor-->>Ribosome: taskDescription
+            deactivate Extractor
+
+            Ribosome->>Extractor: extractPromptPattern(group)
+            activate Extractor
+            Note over Extractor: Convert to LLM prompt<br/>with {{variables}}
+            Extractor-->>Ribosome: promptTemplate
+            deactivate Extractor
+
+            Ribosome->>Extractor: identifyVariables(group)
+            activate Extractor
+            Note over Extractor: Find parameterizable:<br/>- File paths<br/>- Patterns<br/>- Thresholds
+            Extractor-->>Ribosome: Variable[]
+            deactivate Extractor
+        end
+
+        Ribosome->>Ribosome: assembleTemplate(tasks, schemas)
+        Note over Ribosome: Create ActivityTemplate:<br/>- name from goal<br/>- category from outcome<br/>- tasks with prompts<br/>- inputSchema<br/>- outputSchema<br/>- metadata
+
+        Note over Ribosome: PHASE 5: VALIDATION
+
+        Ribosome->>Ribosome: assertValidTemplate(template)
+        Note over Ribosome: Verify structure,<br/>camelCase, unique IDs
+
+        Note over Ribosome: PHASE 6: REGISTRATION
+
+        Ribosome->>BE: POST /v2/activities/templates
+        activate BE
+
+        Note over BE: 1. Validate template<br/>2. Generate template_id<br/>3. Store in SurrealDB<br/>4. Initialize Thompson:<br/>   alpha = 1<br/>   beta = 1
+
+        BE-->>Ribosome: registered_template_id
+        deactivate BE
+
+        Ribosome-->>Exec: {<br/>  template_id<br/>  registered: true<br/>  name<br/>}
+    end
+    deactivate Ribosome
+
+    Note over Exec: ✓ Template available<br/>for future recommendations
+```
+
+**Ribosome Extraction Criteria:**
+- Status: `completed` (successful execution)
+- Minimum complexity: `tasks >= 2`
+- Maximum cost: `< $1.00`
+- Impulse count: `<= 10`
+- Depth: `0` (top-level, not nested)
+- No critical errors in execution
+
+**Extracted Template Structure:**
+```typescript
+{
+  id: "tpl_{timestamp}_{randomId}"
+  name: Capitalized goal
+  category: Inferred from goal/outcome
+  tasks: [{ id, description, prompt, validation }]
+  inputSchema: { required, optional }
+  outputSchema: { produces }
+  metadata: {
+    generatedFrom: "execution"
+    sourceExecutionId: trace.execution_id
+    author: "ribosome"
+    inputSchemaInferredFrom: {
+      executionId
+      confidence
+      impulseCount
+    }
+  }
+}
+```
+
+**Implementation:** `repos/minibob/src/template-extractor.ts:24-400+`, `repos/minibob/src/ribosome-quality.ts:103-142+`
 
 ## Decomposition: Checkpoint Creation Before Execution
 
@@ -282,6 +548,8 @@ sequenceDiagram
 
 ## Decomposition: Trailblazing (Failure → Variant Creation)
 
+Trailblazing works the same whether the failed activity is domain-specific or `improvise_solution`.
+
 ```mermaid
 sequenceDiagram
     participant Exec as ActivityExecutor
@@ -312,7 +580,7 @@ sequenceDiagram
         deactivate LLM
 
         Exec->>Template: generateVariantId(templateId)
-        Note over Template: variant_id format:<br/>"{templateId}:variant-{hashOfChanges}"<br/>Example: "fix-bug:variant-7f4a9e"
+        Note over Template: variant_id format:<br/>"{templateId}:variant-{hashOfChanges}"<br/>Example: "improvise_solution:variant-7f4a9e"
         Template-->>Exec: variantId
 
         Note over Exec: VARIANT REGISTRATION
@@ -330,7 +598,7 @@ sequenceDiagram
 ```
 
 **Trailblazing Decision Flow:**
-1. Failed execution detected
+1. Failed execution detected (any activity, including `improvise_solution`)
 2. Failure analysis performed
 3. LLM generates variant with modifications
 4. Variant registered with fresh Thompson scores
@@ -423,185 +691,79 @@ sequenceDiagram
 
 **Implementation:** `repos/minibob/src/rollback.ts:79-250+`
 
-## Decomposition: Ribosome Pattern (Success → Template Extraction)
-
-```mermaid
-sequenceDiagram
-    participant Impr as GoalImproviser
-    participant TE as TemplateExtractor
-    participant Analyzer as RibosomeQuality
-    participant BE as Backend
-    participant MCP as MCP Client
-
-    Note over Impr: IMPROVISATION COMPLETED (SUCCESS)
-
-    Impr->>Analyzer: shouldExtractTemplate(execution)
-    activate Analyzer
-    Note over Analyzer: Check criteria:<br/>1. status === "completed"<br/>2. tasks.length >= 2<br/>3. cost < $1.00<br/>4. impulses <= 10<br/>5. depth === 0
-    alt Criteria Met
-        Analyzer-->>Impr: true
-    else Criteria Not Met
-        Note over Analyzer: ✗ Skip extraction
-        Analyzer-->>Impr: false
-    end
-    deactivate Analyzer
-
-    alt Extract Template
-        Note over TE: PHASE 1: IDENTIFY TASKS
-
-        TE->>TE: identifyTaskBoundaries(steps)
-        Note over TE: Group steps into logical tasks:<br/>1. Read & analyze (steps 1-3)<br/>2. Modify files (steps 4-6)<br/>3. Validate (step 7)<br/><br/>Boundaries on:<br/>- Action changes (read → write)<br/>- File changes<br/>- Group size >= 5
-        TE-->>TE: taskGroups[][]
-
-        Note over TE: PHASE 2: EXTRACT SCHEMAS
-
-        TE->>TE: extractInputSchema(trace)
-        Note over TE: From impulses_loaded:<br/>- Shape names (source_code, config, etc)<br/>- Format requirements<br/>- Budget estimates
-        TE-->>TE: InputSchema {<br/>  required: [{shape}]<br/>  optional: [{shape}]<br/>}
-
-        TE->>TE: extractOutputSchema(trace)
-        Note over TE: From impulses_created:<br/>- What shapes were produced<br/>- Success indicators
-        TE-->>TE: OutputSchema {<br/>  produces: [{shape}]<br/>}
-
-        Note over TE: PHASE 3: BUILD TEMPLATE
-
-        loop For each task group
-            TE->>TE: summarizeTaskGroup(group)
-            Note over TE: Create description from<br/>- First step's thought<br/>- Action patterns<br/>- Purpose inference
-            TE-->>TE: taskDescription
-
-            TE->>TE: extractPromptPattern(group)
-            Note over TE: Convert steps into<br/>reusable LLM prompt template<br/>with {{variables}}
-            TE-->>TE: promptTemplate
-
-            TE->>TE: identifyVariables(group)
-            Note over TE: Find parameterizable values:<br/>- File paths<br/>- Patterns<br/>- Thresholds
-            TE-->>TE: Variable[]
-        end
-
-        TE->>TE: assembleTemplate(tasks, schemas)
-        Note over TE: Create ActivityTemplate:<br/>1. name from goal<br/>2. category from outcome<br/>3. tasks with descriptions<br/>4. inputSchema<br/>5. outputSchema<br/>6. metadata<br/>   - sourceExecutionId<br/>   - author: "ribosome"<br/>   - createdAt<br/>   - inputSchemaInferredFrom
-
-        TE-->>TE: ActivityTemplate
-
-        Note over TE: PHASE 4: VALIDATION
-
-        TE->>TE: assertValidTemplate(template)
-        Note over TE: Verify:<br/>- All fields present<br/>- camelCase (no snake_case)<br/>- Task IDs unique<br/>- Schema shapes valid
-
-        Note over TE: PHASE 5: REGISTER
-
-        TE->>MCP: registerTemplate(template)
-        activate MCP
-        MCP->>BE: POST /v2/activities/templates
-        activate BE
-
-        Note over BE: 1. Validate template<br/>2. Generate template_id<br/>3. Store in SurrealDB<br/>4. Initialize Thompson params:<br/>   alpha = 1<br/>   beta = 1<br/>   successRate = 0
-
-        BE-->>MCP: registered_template_id
-        deactivate BE
-        deactivate MCP
-
-        Note over TE: ✓ TEMPLATE REGISTERED
-        Note over TE: Can now be recommended<br/>via Thompson Sampling
-    end
-
-    Note over Impr: LEARNING FEEDBACK
-    Note over Impr: - Execution trace stored<br/>- New template available<br/>- Thompson Sampling learns<br/>- Pattern documented
-```
-
-**Ribosome Extraction Criteria:**
-- Status: `completed` (successful execution)
-- Minimum complexity: `tasks >= 2`
-- Maximum cost: `< $1.00`
-- Impulse count: `<= 10`
-- Depth: `0` (top-level, not nested)
-
-**Extracted Template Structure:**
-```typescript
-{
-  id: "tpl_{timestamp}_{randomId}"
-  name: Capitalized goal
-  category: Inferred from goal/outcome
-  tasks: [{ id, description, prompt, validation }]
-  inputSchema: { required, optional }
-  outputSchema: { produces }
-  metadata: {
-    generatedFrom: "execution"
-    sourceExecutionId: trace.execution_id
-    author: "ribosome"
-    inputSchemaInferredFrom: {
-      executionId
-      confidence
-      impulseCount
-    }
-  }
-}
-```
-
-**Implementation:** `repos/minibob/src/template-extractor.ts:24-400+`
-
 ## Complete Learning Loop Diagram
 
 ```mermaid
 graph TB
     Start([User Goal]) -->|Enrich| A["1. Goal Enrichment<br/>(LLM semantic analysis)"]
 
-    A -->|Analyze| B{"Simple Goal?<br/>(read-only, exploration)"}
+    A -->|Recommend| B["2. Thompson Sampling<br/>(all templates ranked)"]
 
-    B -->|Yes| C["2a. Direct Improvisation<br/>(skip templates)"]
-    B -->|No| D{"Templates Available?<br/>(Thompson Sampling)"}
+    B -->|Select| C{"Best Template?"}
 
-    D -->|No Match| E["2b. Activity Fallback<br/>→ Improvisation"]
-    D -->|Match| F["2b. Activity Execution<br/>(use template)"]
+    C -->|Domain Template| D["3a. Execute Domain Activity<br/>(specialized template)"]
+    C -->|improvise_solution| E["3b. Execute Improvisation Activity<br/>(plan → execute → extract)"]
 
-    C -->|Execute| G["3. Improvisation Loop<br/>(LLM + Tools)"]
-    E -->|Execute| G
-    F -->|Execute| H["3. Activity Loop<br/>(template tasks)"]
+    D -->|Execute| F["4. Activity Loop<br/>(template tasks)"]
+    E -->|Execute| G["4. Improvisation Tasks<br/>(LLM + tools)"]
 
-    G -->|Verify| I{"Goal Achieved?"}
-    H -->|Verify| I
+    F -->|Verify| H{"Goal Achieved?"}
+    G -->|Verify| H
 
-    I -->|No| J{"Max Attempts?"}
-    I -->|Yes| K["4. SUCCESS"]
+    H -->|No| I{"Max Attempts?"}
+    H -->|Yes| J["5. SUCCESS"]
 
-    J -->|No| L["5. Retry Logic<br/>(variant or next template)"]
-    J -->|Yes| M["4. FAILURE<br/>(max retries)"]
+    I -->|No| K["6. Retry Logic<br/>(try next template or variant)"]
+    I -->|Yes| L["5. FAILURE<br/>(max retries)"]
 
-    L -->|Loop| I
+    K -->|Loop| B
 
-    K -->|Extract| N["6a. Ribosome Pattern<br/>(successful execution<br/>→ template extraction)"]
-    M -->|Extract| O["6b. Failure Analysis<br/>(failed execution<br/>→ variant template)"]
+    J -->|Check| M{"Ribosome Criteria?<br/>(if improvise_solution)"}
+    M -->|Yes| N["7a. Template Extraction<br/>(ribosome resolver)"]
+    M -->|No| O["7a. Store Trace Only"]
 
-    N -->|Register| P["7. Backend Learning<br/>(Thompson Sampling)"]
-    O -->|Register| P
+    L -->|Analyze| P["7b. Failure Analysis<br/>(create variant template)"]
 
-    P -->|Store| Q["8. Trace + Pattern Storage<br/>(future recommendations)"]
+    N -->|Register| Q["8. Backend Learning<br/>(Thompson Sampling)"]
+    O -->|Store| Q
+    P -->|Register| Q
 
-    Q -->|Complete| R([Loop: Next Goal])
+    Q -->|Store| R["9. Trace + Pattern Storage<br/>(future recommendations)"]
+
+    R -->|Complete| S([Loop: Next Goal])
 
     style Start fill:#90EE90
-    style K fill:#87CEEB
-    style M fill:#FFB6C6
-    style P fill:#FFD700
-    style R fill:#90EE90
+    style J fill:#87CEEB
+    style L fill:#FFB6C6
+    style Q fill:#FFD700
+    style S fill:#90EE90
 ```
 
-## The Three Main Pathways
+## The Unified Activity Pathway
 
-| Pathway | Trigger | Mechanism | Outcome |
-|---------|---------|-----------|---------|
-| **Activity Execution** | Template match (score >= 0.7) | Execute template tasks with LLM reasoning | Execution trace + metrics |
-| **Improvisation (Goal Achieved)** | No template match OR simple goal | LLM-directed tool use (bash, read, write, edit) | Improvisation trace + extracted template (Ribosome) |
-| **Improvisation (Goal Failed)** | Max attempts/cost exceeded | Analyze failure + create variant template | Failure analysis + variant registered for learning |
+**All workflows go through activity composition. There is no separate "improvisation mode."**
+
+| Scenario | Template Selected | Tasks Executed | Extraction |
+|----------|-------------------|----------------|------------|
+| **Domain-specific goal with matching template** | `fix_typescript_error` | Domain-specific tasks | No (domain template already exists) |
+| **Novel goal, no matches** | `improvise_solution` | 1. plan_approach<br/>2. execute_plan<br/>3. extract_template | Yes (if criteria met) |
+| **Template failed, retry** | Variant of original template | Modified tasks | No (variant already exists) |
+| **Improvisation failed** | Variant of `improvise_solution` | Modified plan/execution | Yes (if variant succeeds) |
+
+**Key Points:**
+- No distinction between "activity execution" and "improvisation" in the execution engine
+- `improvise_solution` is ranked alongside other templates via Thompson Sampling
+- Ribosome extraction is a resolver task, not external post-processing
+- All executions (domain or improvisation) produce traces for learning
+- Variants can be created for any activity, including `improvise_solution`
 
 ## Key Configuration
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `RELEVANCE_THRESHOLD` | 0.7 | Minimum score to use template |
-| `MAX_IMPROVISATION_STEPS` | 50 | Step limit for improvisation loop |
-| `MAX_IMPROVISATION_COST` | $5.00 | Cost limit for improvisation |
+| `RELEVANCE_THRESHOLD` | 0.7 | Minimum score to prefer domain template over improvise_solution |
+| `MAX_IMPROVISATION_STEPS` | 50 | Step limit for execute_plan task |
+| `MAX_IMPROVISATION_COST` | $5.00 | Cost limit for execute_plan task |
 | `RIBOSOME_MIN_TASKS` | 2 | Minimum tasks for template extraction |
 | `RIBOSOME_MAX_COST` | $1.00 | Maximum cost for template extraction |
 | `RIBOSOME_MAX_IMPULSES` | 10 | Maximum impulses for extraction |
@@ -611,11 +773,12 @@ graph TB
 | Component | File | Lines | Purpose |
 |-----------|------|-------|---------|
 | Goal Processor | `repos/minibob/src/goal-processor.ts` | 650-6800+ | Complete goal processing flow |
-| Improvisation | `repos/minibob/src/improviser.ts` | 125-1650+ | LLM-based improvisation loop |
-| Template Extraction | `repos/minibob/src/template-extractor.ts` | 24-400+ | Ribosome pattern extraction |
+| Activity Executor | `repos/minibob/src/activity.ts` | 100-2000+ | Task execution and composition |
+| Improvisation Tasks | `repos/minibob/src/improviser.ts` | 125-1650+ | LLM tool use for execute_plan |
+| Ribosome Resolver | `repos/minibob/src/template-extractor.ts` | 24-400+ | Template extraction from traces |
+| Ribosome Quality | `repos/minibob/src/ribosome-quality.ts` | 103-142+ | Extraction criteria |
 | Rollback | `repos/minibob/src/rollback.ts` | 79-250+ | Checkpoint and restore |
 | Checkpoint | `repos/minibob/src/activity.ts` | 455-610+ | Git state capture |
-| Ribosome Quality | `repos/minibob/src/ribosome-quality.ts` | 103-142+ | Template extraction criteria |
 
 ## Related Documentation
 

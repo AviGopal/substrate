@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document maps how different resolver types (LLM, bash, git, file operations, activities) process required input impulses during task execution. It shows the complete flow from impulse context injection through tool execution to output impulse creation.
+This document maps how different resolver types (LLM, bash, git, file operations, activities, ribosome) process required input impulses during task execution. It shows the complete flow from impulse context injection through tool execution to output impulse creation.
 
 ## Key Concepts
 
@@ -12,7 +12,8 @@ This document maps how different resolver types (LLM, bash, git, file operations
 4. **Tool Argument Patterns** - Proven argument patterns from historical executions
 5. **Output Impulse Creation** - Tool results become new impulses for downstream tasks
 6. **Activity Composition** - Nested activity execution with composition tracking
-7. **Pattern Learning** - Tool usage and argument patterns recorded for Thompson Sampling
+7. **Ribosome Pattern** - Successful executions extracted into reusable templates
+8. **Pattern Learning** - Tool usage and argument patterns recorded for Thompson Sampling
 
 ## Main Sequence Diagram: Complete Resolver Flow
 
@@ -25,6 +26,8 @@ sequenceDiagram
     participant ToolWrap as Tool Wrapper<br/>(tools.ts)
     participant Bash as Bash Resolver<br/>(bash tool)
     participant Git as Git Resolver<br/>(git tool)
+    participant ActTool as Activity Resolver<br/>(activity tool)
+    participant Ribosome as Ribosome Resolver<br/>(template extraction)
     participant ImpCreate as Impulse Creator<br/>(impulse.ts)
     participant MCP as MCP Backend<br/>(mcp.ts)
 
@@ -81,10 +84,18 @@ sequenceDiagram
         else Tool Calls Found
             LLMClient->>LLMClient: For each tool call:
             LLMClient->>ToolWrap: Wrap handler to<br/>capture tool execution
-            ToolWrap->>Bash: bash resolver<br/>(validateCommand +<br/>spawn process)
-            Bash-->>ToolWrap: {success, output, error}
-            ToolWrap->>Git: git resolver<br/>(git command with<br/>timeout + auth)
-            Git-->>ToolWrap: {success, output, error}
+
+            alt Bash Tool
+                ToolWrap->>Bash: bash resolver<br/>(validateCommand +<br/>spawn process)
+                Bash-->>ToolWrap: {success, output, error}
+            else Git Tool
+                ToolWrap->>Git: git resolver<br/>(git command with<br/>timeout + auth)
+                Git-->>ToolWrap: {success, output, error}
+            else Activity Tool
+                ToolWrap->>ActTool: activity resolver<br/>(nested execution)
+                ActTool-->>ToolWrap: {success, output, childExecId}
+            end
+
             ToolWrap-->>LLMClient: Return tool result
 
             LLMClient->>LLMClient: Record tool call:<br/>- name<br/>- arguments<br/>- result
@@ -162,26 +173,21 @@ sequenceDiagram
 
     TaskExec->>TaskExec: Return {status: completed,<br/>output: result.content,<br/>tokens: {input, output},<br/>metadata: {<br/>  inputState,<br/>  outputState,<br/>  stateTransition,<br/>  toolCalls,<br/>  impulseEvolution,<br/>  modelSelection<br/>}}
 
-    Note over TaskExec,MCP: PHASE 10: ACTIVITY COMPOSITION (NESTED EXECUTION)
+    Note over TaskExec,MCP: PHASE 10: RIBOSOME EXTRACTION (ON SUCCESS)
 
-    alt Activity Calls Activity
-        TaskExec->>TaskExec: activity resolver<br/>(runActivity tool)
+    alt Execution Succeeded & Criteria Met
+        TaskExec->>Ribosome: shouldExtractTemplate()<br/>- success = true<br/>- has state transitions<br/>- has tool calls<br/>- not already extracted
 
-        TaskExec->>TaskExec: Prepare nested context:<br/>- parentActivityId<br/>- parentExecutionId<br/>- impulses passed as context
+        Ribosome->>Ribosome: Criteria passed
 
-        TaskExec->>TaskExec: executeActivity()<br/>(recursive call)
+        Ribosome->>Ribosome: assembleTemplateFromExecution()<br/>- Extract tasks from trace<br/>- Generalize prompts<br/>- Extract variables<br/>- Build validation rules
 
-        TaskExec-->>TaskExec: Return nested execution result
+        Ribosome->>MCP: registerTemplate()<br/>{<br/>  name: "extracted_{original}_{hash}",<br/>  category,<br/>  tasks,<br/>  extractedFrom: executionId<br/>}
 
-        TaskExec->>ImpCreate: Create composition edge impulse<br/>(parent → child)
-
-        ImpCreate->>MCP: recordActivityComposition()
-        MCP-->>ImpCreate: Composition tracked
-
-        ImpCreate-->>TaskExec: Composition recorded
+        MCP-->>Ribosome: Template registered<br/>(available for Thompson Sampling)
     end
 
-    Note over TaskExec,MCP: FINAL: BATCH STORAGE & RIBOSOME EXTRACTION
+    Note over TaskExec,MCP: FINAL: BATCH STORAGE & LEARNING
 
     TaskExec->>MCP: storeExecutionTrace()<br/>{<br/>  executionId,<br/>  templateId,<br/>  tasks: [{<br/>    id, prompt, result,<br/>    tokens, metadata<br/>  }],<br/>  totalTokens,<br/>  costUSD,<br/>  success,<br/>  duration<br/>}
 
@@ -189,9 +195,7 @@ sequenceDiagram
 
     MCP->>MCP: Thompson Sampling update<br/>α/β for template variants
 
-    MCP->>MCP: Ribosome pattern extraction<br/>(if shouldExtractTemplate)<br/>→ assembleTemplateFromExecution
-
-    MCP-->>TaskExec: Template candidate created<br/>(for next iteration)
+    MCP-->>TaskExec: Learning updated<br/>(ready for next iteration)
 ```
 
 ## Decomposition: LLM Resolver with Impulse Context
@@ -340,7 +344,11 @@ sequenceDiagram
 - Path validation (must be within working directory)
 - Timeout protection (60 seconds default)
 
-## Decomposition: Activity Composition (Nested Execution)
+## Activity Resolver (Composition)
+
+The activity resolver enables **nested activity execution** - activities calling other activities. This is a powerful composition mechanism that enables complex workflows to be built from simpler, reusable activities.
+
+### How Activity Composition Works
 
 ```mermaid
 sequenceDiagram
@@ -402,11 +410,260 @@ sequenceDiagram
 
 **Implementation:** `repos/minibob/src/tools.ts:1214-1246`
 
-**Key Points:**
-- Child execution is recursive (same flow as parent)
-- Parent impulses available to child
-- Composition edges recorded for learning
-- Thompson Sampling learns from both parent and child outcomes
+### Activity Tool Definition
+
+```typescript
+{
+  name: "activity",
+  description: "Execute another activity as a subtask. Use this when the current task would benefit from a specialized activity that already exists.",
+  input_schema: {
+    type: "object",
+    properties: {
+      templateId: {
+        type: "string",
+        description: "ID of the activity template to execute"
+      },
+      variables: {
+        type: "object",
+        description: "Variables to pass to the activity"
+      },
+      reason: {
+        type: "string",
+        description: "Why you're calling this activity (for composition learning)"
+      }
+    },
+    required: ["templateId", "reason"]
+  }
+}
+```
+
+### Composition Edge Recording
+
+When an activity calls another activity, a **composition edge** is recorded:
+
+```typescript
+interface ActivityCompositionEdge {
+  parentActivityId: string;
+  childActivityId: string;
+  parentExecutionId: string;
+  childExecutionId: string;
+  context: {
+    reason: string;              // Why was child called?
+    variables: Record<string, unknown>;
+    impulsesPassed: string[];    // Which impulses were passed to child?
+  };
+  timestamp: Date;
+  success: boolean;              // Did child execution succeed?
+}
+```
+
+**Storage:** `POST /v2/activities/composition` endpoint in metabob-activity-api
+
+### Recursive Execution Tracking
+
+Activities can be nested multiple levels deep. Each execution tracks:
+
+- `parentActivityId` - Template ID of parent activity (if nested)
+- `parentExecutionId` - Execution ID of parent instance (if nested)
+- `depth` - Nesting depth (0 = top-level, 1 = child, 2 = grandchild, etc.)
+
+**Example hierarchy:**
+```
+goal_processing_standard (depth=0)
+  ├─ goal_analysis (depth=1)
+  ├─ activity_recommendation (depth=1)
+  ├─ execute_user_activity (depth=1)
+  │   └─ run_tests (depth=2, user's activity)
+  ├─ goal_verification (depth=1)
+  └─ improvise_solution (depth=1, if needed)
+```
+
+### Composition Learning Benefits
+
+By recording composition edges, the system learns:
+
+1. **Which activities work well together** - Thompson Sampling on edges
+2. **Common composition patterns** - Frequent parent→child pairs
+3. **Context requirements** - What impulses child activities need
+4. **Failure modes** - Which compositions tend to fail
+
+This enables **automatic activity orchestration** where the system learns to compose activities without explicit programming.
+
+## Ribosome Resolver (Template Extraction)
+
+The ribosome pattern is the **self-replication mechanism** - successful executions are extracted into reusable templates. This is how the system **learns by doing**.
+
+### How Ribosome Extraction Works
+
+```mermaid
+sequenceDiagram
+    participant Exec as Execution Complete
+    participant Criteria as Extraction<br/>Criteria Check
+    participant Ribosome as assembleTemplateFromExecution
+    participant Template as Template Builder
+    participant Registry as Template Registry
+    participant Thompson as Thompson Sampling
+
+    Note over Exec,Thompson: RIBOSOME PATTERN - TEMPLATE EXTRACTION
+
+    Exec->>Criteria: Execution succeeded?
+
+    Criteria->>Criteria: Check extraction criteria:<br/>✓ success = true<br/>✓ Has state transitions<br/>✓ Has tool calls<br/>✓ Not previously extracted<br/>✓ Unique execution pattern
+
+    alt Criteria NOT Met
+        Criteria-->>Exec: Skip extraction
+    else Criteria Met
+        Criteria->>Ribosome: assembleTemplateFromExecution(trace)
+
+        Ribosome->>Ribosome: STEP 1: Extract tasks<br/>From execution trace
+
+        Ribosome->>Ribosome: For each task result:<br/>- Extract prompt template<br/>- Identify variable placeholders<br/>- Generalize tool arguments<br/>- Extract validation rules
+
+        Ribosome->>Template: STEP 2: Build template structure
+
+        Template->>Template: {<br/>  name: "extracted_{original}_{hash}",<br/>  category: inferCategory(),<br/>  description: summarize(),<br/>  tasks: [{<br/>    id, description,<br/>    prompt: {<br/>      template: generalized,<br/>      variables: extracted[]<br/>    },<br/>    validation: {<br/>      requiredFiles: inferred,<br/>      requiredPatterns: from success,<br/>      forbiddenPatterns: from failures<br/>    }<br/>  }],<br/>  metadata: {<br/>    extractedFrom: executionId,<br/>    extractedAt: timestamp,<br/>    sourceTemplate: originalId,<br/>    confidence: calculateConfidence()<br/>  }<br/>}
+
+        Template->>Template: STEP 3: Generalize variables
+
+        Template->>Template: Detect patterns:<br/>- File paths → {{filePath}}<br/>- Names → {{itemName}}<br/>- Counts → {{count}}<br/>- IDs → {{id}}
+
+        Template->>Template: Extract variable metadata:<br/>- type: string | number | boolean<br/>- required: true | false<br/>- default: value?<br/>- description: inferred
+
+        Template->>Registry: STEP 4: Register template
+
+        Registry->>Registry: Validate template structure
+
+        Registry->>Registry: Assign ID:<br/>"extracted_{hash}"
+
+        Registry->>Thompson: Initialize Thompson Sampling<br/>α = 1, β = 1<br/>(neutral prior)
+
+        Thompson-->>Registry: Template ready for selection
+
+        Registry-->>Ribosome: Template registered
+
+        Ribosome-->>Exec: Extraction complete:<br/>New template available
+    end
+```
+
+**Implementation:** `repos/metabob-activity-api/src/services/ribosome.ts`
+
+### Extraction Criteria
+
+Not all executions become templates. The ribosome only extracts when:
+
+```typescript
+function shouldExtractTemplate(trace: ExecutionTrace): boolean {
+  return (
+    trace.success === true &&                    // Must succeed
+    trace.tasks.length > 0 &&                    // Must have tasks
+    trace.tasks.some(t => t.toolCalls?.length > 0) &&  // Must use tools
+    hasStateTransitions(trace) &&                // Must change state
+    !alreadyExtracted(trace.executionId) &&      // Not already extracted
+    hasUniquePattern(trace)                      // Novel execution pattern
+  );
+}
+```
+
+**Why these criteria?**
+- **Success required** - Only learn from working executions
+- **Tool usage required** - Pure reasoning tasks don't need extraction
+- **State transitions required** - Must actually do something
+- **Uniqueness required** - Don't create duplicate templates
+- **Not already extracted** - One template per execution
+
+### Template Generalization
+
+The ribosome converts **specific executions** into **general templates**:
+
+**Before (specific execution):**
+```typescript
+{
+  prompt: "Fix the authentication bug in src/auth.ts by updating the token validation logic",
+  variables: {},
+  result: "Fixed token validation by adding expiry check"
+}
+```
+
+**After (generalized template):**
+```typescript
+{
+  prompt: {
+    template: "Fix the {{bugType}} bug in {{filePath}} by {{fixStrategy}}",
+    variables: [
+      { name: "bugType", type: "string", required: true,
+        description: "Type of bug (e.g., authentication, validation)" },
+      { name: "filePath", type: "string", required: true,
+        description: "Path to file containing the bug" },
+      { name: "fixStrategy", type: "string", required: true,
+        description: "Strategy for fixing the bug" }
+    ]
+  }
+}
+```
+
+### Validation Rule Extraction
+
+The ribosome also extracts validation rules from execution patterns:
+
+**From successful execution:**
+```typescript
+// Observed: Modified src/auth.ts, created test file
+{
+  validation: {
+    requiredFiles: ["src/auth.ts"],           // From filesModified
+    requiredPatterns: [
+      "token.*expiry",                         // From diff content
+      "validateToken"                          // From tool outputs
+    ],
+    forbiddenPatterns: []                      // From known anti-patterns
+  }
+}
+```
+
+**From failed attempts:**
+```typescript
+// Observed: Previous attempts failed with missing imports
+{
+  validation: {
+    requiredPatterns: [
+      "import.*Token",                         // Must have imports
+    ],
+    forbiddenPatterns: [
+      "require\\(",                            // Don't use require()
+      "eval\\("                                // Never use eval
+    ]
+  }
+}
+```
+
+### Ribosome in the Learning Loop
+
+```
+1. Developer runs activity → Execution traced
+2. Execution succeeds → Ribosome extracts template
+3. Template registered → Thompson Sampling initialized
+4. Next similar goal → Template recommended
+5. Template executes → More data for Thompson Sampling
+6. Template improves → Or new variant extracted
+```
+
+**Key insight:** The ribosome creates a **continuous improvement loop** where:
+- Successful work becomes templates
+- Templates compete via Thompson Sampling
+- Best templates get used more
+- Variations are tried and extracted
+- The system evolves toward better solutions
+
+### Example: Ribosome Self-Development
+
+The ribosome can extract templates for **improving itself**:
+
+**Execution:** Developer improves ribosome extraction logic
+**Extracted template:** "improve_pattern_extraction"
+**Next time:** System uses this template to improve other extractors
+**Result:** Self-improving extraction capabilities
+
+This is the **process-of-becoming** in action - the system improving the mechanism by which it improves.
 
 ## Tool Argument Pattern Learning
 
@@ -631,16 +888,25 @@ graph TD
 
 ## Tool Resolver Comparison
 
-| Resolver Type | Uses LLM | Latency | Impulse Input | Output Type | Security |
-|---------------|----------|---------|---------------|-------------|----------|
-| **LLM** | Yes | Variable (seconds) | Context injection | Text + tool calls | Prompt injection risk |
-| **bash** | No | Fast (ms-seconds) | None | stdout/stderr | Command whitelist |
-| **git** | No | Fast (ms-seconds) | None | git output | Safe git commands |
-| **read** | No | Fast (ms) | None | File content | Path validation |
-| **write** | No | Fast (ms) | File content | Success/error | Path validation |
-| **edit** | No | Fast (ms) | old/new strings | Success/error | Exact match only |
-| **activity** | Yes (nested) | Variable (seconds) | Full context | Execution result | Template validation |
-| **impulse_create** | No | Fast (ms) | Pointer spec | Impulse ID | Type validation |
+| Resolver Type | Uses LLM | Latency | Impulse Input | Output Type | Security | Learning |
+|---------------|----------|---------|---------------|-------------|----------|----------|
+| **LLM** | Yes | Variable (seconds) | Context injection | Text + tool calls | Prompt injection risk | Token usage patterns |
+| **bash** | No | Fast (ms-seconds) | None | stdout/stderr | Command whitelist | Argument patterns |
+| **git** | No | Fast (ms-seconds) | None | git output | Safe git commands | Argument patterns |
+| **read** | No | Fast (ms) | None | File content | Path validation | Access patterns |
+| **write** | No | Fast (ms) | File content | Success/error | Path validation | Write patterns |
+| **edit** | No | Fast (ms) | old/new strings | Success/error | Exact match only | Edit patterns |
+| **activity** | Yes (nested) | Variable (seconds) | Full context | Execution result | Template validation | Composition edges |
+| **ribosome** | No | Fast (ms) | Execution trace | Template | Structure validation | Template evolution |
+| **impulse_create** | No | Fast (ms) | Pointer spec | Impulse ID | Type validation | Relevance scores |
+
+**Key insights:**
+
+1. **LLM resolver is the orchestrator** - Calls other resolvers via tool calling
+2. **Deterministic resolvers are fast** - No LLM overhead, just execution
+3. **Activity resolver enables composition** - Activities can call activities
+4. **Ribosome resolver enables learning** - Successful patterns become templates
+5. **All resolvers feed learning** - Every execution improves Thompson Sampling
 
 ## File References
 
@@ -651,6 +917,7 @@ graph TD
 | Bash Resolver | `repos/minibob/src/tools.ts` | 790-835 | Command execution |
 | Git Resolver | `repos/minibob/src/tools.ts` | 1114-1168 | Git operations |
 | Activity Composition | `repos/minibob/src/tools.ts` | 1214-1246 | Nested execution |
+| Ribosome Extractor | `repos/metabob-activity-api/src/services/ribosome.ts` | Full file | Template extraction |
 | Impulse Creation | `repos/minibob/src/impulse.ts` | Full file | Store and lifecycle |
 | Output Impulses | `repos/minibob/src/activity.ts` | 3213-3273 | Tool result → impulse |
 | Error Impulses | `repos/minibob/src/impulse.ts` | 881-961 | Error context capture |

@@ -2,17 +2,20 @@
 
 ## Overview
 
-This document maps the complete flow from user goal to activity execution through Thompson Sampling recommendation. The activity selection process is the entry point for all MiniBob executions, determining which activity template (if any) should be used to achieve a given goal.
+This document maps the complete flow from user goal to activity execution through Thompson Sampling recommendation. The activity selection process is the entry point for all MiniBob executions, determining which activity template should be used to achieve a given goal.
+
+**Key Architectural Shift:** Goal processing is itself a meta-activity that composes other activities. There is no branching between "activity execution" and "improvisation" - everything flows through the activity composition system.
 
 ## Key Concepts
 
-1. **Goal Enrichment** - LLM semantic analysis extracts category, intent, and capabilities from user input
+1. **Composition-Based Architecture** - Goal processing is a meta-activity that orchestrates sub-activities
 2. **Impulse State Space** - Available shapes and impulses inform activity compatibility
 3. **Thompson Sampling** - Probabilistic template selection that learns which variants perform best
 4. **Tiered Fallback** - Three-tier query strategy (exact → compatible → full-text search)
 5. **Heuristic Boosts** - 8-point boost system influences exploration-exploitation balance
 6. **Shape-Conditioned Scoring** - Activities scored based on impulse state space compatibility
 7. **Correlation Tracking** - Links selection decisions to execution outcomes for learning
+8. **Recursive Composition** - Activities can invoke other activities as sub-tasks
 
 ## Main Sequence Diagram
 
@@ -29,22 +32,26 @@ sequenceDiagram
     activate GP
 
     rect rgb(240, 248, 255)
-    Note over GP: PHASE 1: GOAL ENRICHMENT
-    GP->>GP: enrichGoal(message)<br/>(lines 2565-2625)
-    Note over GP: LLM semantic analysis:<br/>- Extract category<br/>- Identify intent<br/>- Detect capabilities needed<br/>- Parse constraints
+    Note over GP: META-ACTIVITY LOADING
+    GP->>Backend: Load goal_processing_standard template
+    Backend-->>GP: Meta-activity template with composition chain
+    Note over GP: Template defines sub-activities:<br/>1. goal_analysis<br/>2. activity_recommendation<br/>3. execute_primary<br/>4. goal_verification<br/>5. improvise_solution (if needed)
     end
 
     rect rgb(255, 250, 240)
-    Note over GP,SSM: PHASE 2: STATE SPACE ANALYSIS
+    Note over GP,SSM: SUB-ACTIVITY 1: GOAL ANALYSIS
     GP->>SSM: getAvailableShapes()
     SSM-->>GP: Set<string> shapes
     GP->>SSM: getShapeSignature()
     Note over SSM: Return sorted, deduplicated<br/>shape list for matching
     SSM-->>GP: string[] signature
+    GP->>Exec: Execute goal_analysis activity
+    Note over Exec: LLM semantic analysis:<br/>- Extract category<br/>- Identify intent<br/>- Detect capabilities needed<br/>- Parse constraints
+    Exec-->>GP: Analysis result impulse
     end
 
     rect rgb(240, 255, 240)
-    Note over GP,Backend: PHASE 3: ACTIVITY RECOMMENDATION
+    Note over GP,Backend: SUB-ACTIVITY 2: ACTIVITY RECOMMENDATION
     GP->>Backend: POST /v2/activities/recommend<br/>(activities.ts:3080-3116)
     Note over Backend: Request:<br/>{<br/>  goal: enriched_description,<br/>  shapes: available_shapes,<br/>  category: detected_category,<br/>  limit: 3<br/>}
 
@@ -103,44 +110,137 @@ sequenceDiagram
     end
 
     rect rgb(255, 240, 245)
-    Note over GP,Exec: PHASE 4: ACTIVITY EXECUTION
+    Note over GP,Exec: SUB-ACTIVITY 3: EXECUTE PRIMARY
 
-    GP->>GP: selectBestTemplate(recommendations)
-    Note over GP: Select highest confidence<br/>(or user choice if interactive)
+    alt Recommendations found
+        GP->>GP: selectBestTemplate(recommendations)
+        Note over GP: Select highest confidence<br/>(or user choice if interactive)
 
-    loop For each recommendation (until success)
-        GP->>Exec: executeActivity(template, impulses)
-        activate Exec
+        loop For each recommendation (until success)
+            GP->>Exec: executeActivity(template, impulses)
+            activate Exec
 
-        Exec->>Exec: Load impulses by shape
-        Exec->>Exec: Execute tasks with LLM
-        Exec-->>GP: ActivityExecution<br/>{<br/>  status: completed|failed,<br/>  trace: full_execution_trace<br/>}
-        deactivate Exec
+            Exec->>Exec: Load impulses by shape
+            Exec->>Exec: Execute tasks with LLM
+            Note over Exec: Can recursively invoke<br/>other activities via<br/>activity resolver
+            Exec-->>GP: ActivityExecution<br/>{<br/>  status: completed|failed,<br/>  trace: full_execution_trace<br/>}
+            deactivate Exec
 
-        GP->>GP: verifyGoal(execution)
-        alt Goal Achieved
-            Note over GP: ✓ SUCCESS
-            break Goal satisfied
-        else Goal Not Achieved
-            Note over GP: Try next template
+            alt Execution succeeded
+                Note over GP: ✓ PRIMARY SUCCESS
+                break Primary activity completed
+            else Execution failed
+                Note over GP: Try next recommendation
+            end
         end
+    else No recommendations
+        Note over GP: ✗ No templates found<br/>Proceed to improvisation
+    end
+    end
+
+    rect rgb(255, 235, 238)
+    Note over GP,Exec: SUB-ACTIVITY 4: GOAL VERIFICATION
+    GP->>Exec: Execute goal_verification activity
+    Exec->>Exec: Verify goal achieved
+    Exec-->>GP: Verification result
+
+    alt Goal achieved
+        Note over GP: ✓ GOAL COMPLETE
+    else Goal not achieved
+        Note over GP: Proceed to improvisation
     end
     end
 
     rect rgb(245, 255, 245)
-    Note over GP,Backend: PHASE 5: LEARNING FEEDBACK
+    Note over GP,Exec: SUB-ACTIVITY 5: IMPROVISE SOLUTION (IF NEEDED)
 
-    GP->>Backend: storeExecutionTrace(trace)<br/>+ correlation_id: recommendation_id
-    Note over Backend: Links selection → execution<br/>for Thompson Sampling learning
+    alt Goal not achieved
+        GP->>Backend: Load improvise_solution template
+        Backend-->>GP: Improvisation activity
+        GP->>Exec: Execute improvise_solution activity
+        Note over Exec: Improvisation is just another activity<br/>Not a special code path<br/>Uses activity resolver for composition
+        Exec-->>GP: Improvisation result
+    end
+    end
 
-    Backend->>Backend: Update α or β based on outcome
-    Backend->>Backend: Recalculate success_rate
-    Backend->>Backend: Store in variant_performance_metrics
+    rect rgb(240, 240, 255)
+    Note over GP,Backend: LEARNING FEEDBACK (ALL SUB-ACTIVITIES)
+
+    loop For each sub-activity execution
+        GP->>Backend: storeExecutionTrace(trace)<br/>+ correlation_id: parent_activity_id<br/>+ composition_edge: parent→child
+        Note over Backend: Links parent activity → child activity<br/>for composition learning
+    end
+
+    GP->>Backend: storeExecutionTrace(meta_activity_trace)
+    Note over Backend: Store complete composition graph:<br/>- All sub-activity edges<br/>- Overall success/failure<br/>- Composition pattern effectiveness
+
+    Backend->>Backend: Update Thompson Sampling (α/β)
+    Backend->>Backend: Update composition_edges table
+    Backend->>Backend: Update variant_performance_metrics
     end
 
     GP-->>User: GoalResult
     deactivate GP
 ```
+
+## Decomposition: Meta-Activity Composition
+
+This diagram shows how the `goal_processing_standard` meta-activity orchestrates sub-activities in a composition chain.
+
+```mermaid
+graph TD
+    Start([User Goal]) --> MetaActivity["Meta-Activity:<br/>goal_processing_standard"]
+
+    MetaActivity --> Sub1["Sub-Activity 1:<br/>goal_analysis"]
+    Sub1 --> Sub1Out["Output: analysis_result impulse"]
+    Sub1Out --> Sub2["Sub-Activity 2:<br/>activity_recommendation"]
+
+    Sub2 --> Sub2Query["Query backend via<br/>activity resolver"]
+    Sub2Query --> Sub2Out["Output: recommendation_list impulse"]
+    Sub2Out --> Decision1{Recommendations<br/>found?}
+
+    Decision1 -->|Yes| Sub3A["Sub-Activity 3a:<br/>execute_primary"]
+    Decision1 -->|No| Sub3B["Sub-Activity 3b:<br/>improvise_solution"]
+
+    Sub3A --> Sub3AOut["Output: execution_trace impulse"]
+    Sub3B --> Sub3BOut["Output: improvisation_trace impulse"]
+
+    Sub3AOut --> Sub4
+    Sub3BOut --> Sub4
+
+    Sub4["Sub-Activity 4:<br/>goal_verification"]
+    Sub4 --> Sub4Check["Verify goal via<br/>LLM reasoning"]
+    Sub4Check --> Decision2{Goal<br/>achieved?}
+
+    Decision2 -->|Yes| Success["✓ Meta-Activity Success<br/>Store composition graph"]
+    Decision2 -->|No| Loop["Retry with next recommendation<br/>or proceed to improvisation"]
+
+    Loop --> Sub3A
+
+    Success --> Learning["Learning Update:<br/>- Thompson Sampling α/β<br/>- Composition edge weights<br/>- Shape-conditioned scores"]
+
+    style MetaActivity fill:#b39ddb
+    style Sub1 fill:#e1f5ff
+    style Sub2 fill:#fff9c4
+    style Sub3A fill:#c8e6c9
+    style Sub3B fill:#ffcc80
+    style Sub4 fill:#ffd54f
+    style Success fill:#a5d6a7
+    style Learning fill:#ce93d8
+```
+
+**Key Points:**
+- Each box represents an activity (not a code path)
+- Activities communicate via impulses
+- Composition edges are recorded in the database
+- Meta-activities can recursively invoke other meta-activities
+- All activities use the same execution engine
+- Improvisation is an activity, not a fallback
+
+**Implementation:**
+- Meta-activity templates: `repos/metabob-activity-api/sql/seed/meta-activities/`
+- Composition tracking: `repos/metabob-activity-api/src/routes/composition-edges.ts`
+- Activity resolver: `repos/minibob/src/impulse.ts` (activity shape resolution)
 
 ## Decomposition: Shape-Conditioned Scoring
 
@@ -270,7 +370,7 @@ graph TD
     T3Query --> T3Results{Results found?}
 
     T3Results -->|Yes| T3Success["✓ Return text matches"]
-    T3Results -->|No| NoMatch["✗ No templates found<br/>→ Improvisation"]
+    T3Results -->|No| NoMatch["✗ No templates found<br/>→ Empty recommendation list"]
 
     T1Success --> ThompsonSampling["Apply Thompson Sampling<br/>+ Heuristic Boosts"]
     T2Success --> ThompsonSampling
@@ -278,7 +378,7 @@ graph TD
 
     ThompsonSampling --> Ranked["Ranked Recommendations<br/>(top 3)"]
 
-    NoMatch --> Improvise["Fallback to<br/>Goal Improvisation"]
+    NoMatch --> EmptyList["Empty list returned<br/>Meta-activity proceeds to<br/>improvise_solution sub-activity"]
 
     style Start fill:#e1f5ff
     style T1Success fill:#c8e6c9
@@ -286,74 +386,140 @@ graph TD
     style T3Success fill:#ffcc80
     style NoMatch fill:#ffccbc
     style Ranked fill:#b39ddb
+    style EmptyList fill:#ce93d8
 ```
 
 **Implementation:** `repos/metabob-activity-api/src/db/paradigm.ts:2915-3049`
 
 ## Key Decision Points
 
-### 1. Simple Goal Detection
-**Location:** `goal-processor.ts:1409-1430`
+### 1. Activity Composition Chain
+**Location:** Meta-activity template definition (database)
+
+```json
+{
+  "id": "goal_processing_standard",
+  "name": "Standard Goal Processing",
+  "tasks": [
+    {
+      "id": "goal_analysis",
+      "activity_ref": "analyze_goal_structure"
+    },
+    {
+      "id": "activity_recommendation",
+      "activity_ref": "recommend_activities"
+    },
+    {
+      "id": "execute_primary",
+      "activity_ref": "execute_recommended_activity"
+    },
+    {
+      "id": "goal_verification",
+      "activity_ref": "verify_goal_completion"
+    },
+    {
+      "id": "improvise_solution",
+      "activity_ref": "improvise_until_complete",
+      "condition": "goal_not_achieved"
+    }
+  ]
+}
+```
+
+**Key Points:**
+- No code-level branching between execution and improvisation
+- Composition defined declaratively in database
+- Can be modified without code changes
+- Learning applies to composition patterns
+
+### 2. Recommendation Evaluation
+**Location:** `goal-processor.ts:906` (conceptual - actual logic in meta-activity)
 
 ```typescript
-if (isSimpleGoal(enrichedGoal)) {
-  // Skip template search, use direct improvisation
-  return improviseUntilComplete(goal);
+// Meta-activity evaluates recommendations
+if (recommendations.length > 0 && recommendations[0].confidence >= 0.5) {
+  // Execute primary activity
+  return executeActivity(recommendations[0]);
+} else {
+  // Proceed to improvisation sub-activity
+  return executeActivity("improvise_solution");
 }
 ```
 
 **Criteria:**
-- Read-only operations
-- Exploration patterns
-- No file writes required
-
-### 2. Relevance Threshold
-**Location:** `goal-processor.ts:906`
-
-```typescript
-if (bestScore < RELEVANCE_THRESHOLD) { // 0.7
-  // No relevant templates found
-  return improviseUntilComplete(goal);
-}
-```
+- Recommendation list not empty
+- Best recommendation confidence >= 0.5
+- If criteria not met, composition chain proceeds to improvisation
 
 ### 3. Goal Verification
-**Location:** `goal-processor.ts:4579`
+**Location:** Composition chain (goal_verification sub-activity)
 
 ```typescript
-if (verifyGoal(execution)) {
-  return { status: "success", execution };
+// Executed as a sub-activity, not inline code
+const verification = await executeActivity("goal_verification", {
+  impulses: {
+    goal: originalGoal,
+    execution_trace: primaryExecution
+  }
+});
+
+if (verification.status === "completed" && verification.result.achieved) {
+  return { status: "success" };
 } else {
-  // Try next template or improvise
+  // Meta-activity proceeds to improvisation
+  return executeActivity("improvise_solution");
 }
 ```
+
+**Key Points:**
+- Verification is an activity, not a boolean check
+- Uses LLM reasoning to assess goal completion
+- Result determines next sub-activity in composition chain
 
 ## Data Flow Summary
 
 ```
 User Goal (text)
   ↓
-Goal Enrichment (LLM semantic analysis)
+Load Meta-Activity (goal_processing_standard)
   ↓
-State Space Query (available shapes)
+Sub-Activity 1: Goal Analysis (LLM semantic extraction)
   ↓
-Backend Recommendation (Thompson Sampling)
-  ├─ Tier 1: Exact shape match
-  ├─ Tier 2: Compatible activities
-  └─ Tier 3: Full-text search
+Sub-Activity 2: Activity Recommendation
+  ├─ Query impulse state space (available shapes)
+  ├─ Backend Thompson Sampling
+  │   ├─ Tier 1: Exact shape match
+  │   ├─ Tier 2: Compatible activities
+  │   └─ Tier 3: Full-text search
+  ├─ Heuristic Boosts Applied (8 components)
+  ├─ Shape-Conditioned Scoring
+  └─ Return ranked recommendations (or empty list)
   ↓
-Heuristic Boosts Applied (8 components)
+Sub-Activity 3: Execute Primary (if recommendations exist)
+  ├─ Execute highest-confidence activity
+  ├─ Recursive composition (activities can invoke activities)
+  └─ Return execution trace
   ↓
-Shape-Conditioned Scoring
+Sub-Activity 4: Goal Verification
+  ├─ LLM reasoning about goal achievement
+  └─ Return verification result
   ↓
-Ranked Recommendations (top 3)
+Sub-Activity 5: Improvise Solution (if goal not achieved)
+  ├─ Execute improvisation activity
+  └─ Return improvisation trace
   ↓
-Activity Execution (best → fallback)
-  ↓
-Goal Verification
-  ↓
-Learning Feedback (α/β update)
+Learning Feedback
+  ├─ Store all sub-activity traces
+  ├─ Record composition edges (parent → child)
+  ├─ Update Thompson Sampling (α/β)
+  └─ Update composition pattern effectiveness
 ```
+
+**Key Difference from Linear Flow:**
+- No if/else branching at code level
+- Composition chain defined in database
+- All paths are activities (including improvisation)
+- Learning applies to composition patterns, not just individual activities
 
 ## Metrics Captured
 
@@ -383,23 +549,33 @@ At each stage, the following metrics are captured for learning:
 - `success_rate_change` - How this execution affected rate
 - `shape_signature` - For shape-conditioned scoring
 
+**Composition Metrics (NEW):**
+- `composition_pattern_id` - Which meta-activity was used
+- `sub_activity_sequence` - Order of sub-activities executed
+- `composition_edge_weights` - Effectiveness of parent→child relationships
+- `composition_success_rate` - Success rate for this composition pattern
+- `recursive_depth` - How many levels of activity nesting
+
 ## File References
 
 | Component | File | Lines | Purpose |
 |-----------|------|-------|---------|
-| Goal Processing | `repos/minibob/src/goal-processor.ts` | 2565-2625 | Goal enrichment, orchestration |
+| Goal Processing | `repos/minibob/src/goal-processor.ts` | 2565-2625 | Meta-activity orchestration |
 | State Space Manager | `repos/minibob/src/state-space-manager.ts` | Full file | Shape querying, compatibility |
 | Backend Recommendation | `repos/metabob-activity-api/src/routes/activities.ts` | 3080-3116 | POST /recommend endpoint |
 | Thompson Sampling | `repos/metabob-activity-api/src/routes/activities.ts` | 3345 | Beta distribution sampling |
 | Heuristic Boosts | `repos/metabob-activity-api/src/routes/activities.ts` | 3285-3340 | 8-point boost system |
 | Paradigm Queries | `repos/metabob-activity-api/src/db/paradigm.ts` | 2915-3049 | Tiered fallback queries |
 | Shape Scoring | `repos/metabob-activity-api/src/db/paradigm.ts` | 797-909 | Shape-conditioned scores |
+| Composition Tracking | `repos/metabob-activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
+| Activity Resolver | `repos/minibob/src/impulse.ts` | Activity shape | Activity→activity resolution |
 
 ## Related Documentation
 
 - [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded for execution
-- [Improvisation & Trailblazing](./04-improvisation-trailblazing.md) - What happens when no activity matches
+- [Improvisation & Trailblazing](./04-improvisation-trailblazing.md) - How improvisation works as an activity
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) - Foundational model
+- [IMPULSE_DRIVEN_COMPOSITION.md](../IMPULSE_DRIVEN_COMPOSITION.md) - Composition architecture details
 
 ---
 
