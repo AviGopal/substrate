@@ -1,0 +1,42 @@
+[
+  {
+    "sequence": "01-activity-selection",
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [],
+    "duration": 3
+  },
+  {
+    "sequence": "02-impulse-resolution",
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [],
+    "duration": 1
+  },
+  {
+    "sequence": "03-resolver-processing",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [],
+    "duration": 0
+  },
+  {
+    "sequence": "04-improvisation",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [],
+    "duration": 1
+  },
+  {
+    "sequence": "05-hooks",
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [],
+    "duration": 1
+  }
+]

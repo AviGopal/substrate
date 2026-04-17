@@ -212,8 +212,78 @@ sequenceDiagram
     end
     end
 
+    rect rgb(230, 240, 255)
+    Note over Act: PHASE 10: Resolver Tracking<br/>Record which resolvers were used
+    Act->>Act: For each loaded impulse:<br/>- Extract resolver metadata<br/>- Calculate latency_ms<br/>- Calculate cost_usd
+
+    Act->>Act: Aggregate resolver data:<br/>{impulse_id, resolver_id,<br/>resolver_tier, vessel_id,<br/>latency_ms, cost_usd}
+
+    Note over Act: Store in taskResult.metadata.resolverData<br/>Include in execution trace
+
+    Act->>MCP: Include resolver tracking in trace:<br/>execution.impulse_resolutions[]<br/>execution.resolved_by_vessel_id
+
+    Note over Act: Enable learning:<br/>- Resolver success rates<br/>- Vessel performance<br/>- Cost optimization
+    end
+
     deactivate Act
 ```
+
+## Decomposition: Resolver Tracking (Phase 10)
+
+```mermaid
+sequenceDiagram
+    participant Act as ActivityExecutor
+    participant Task as TaskResult
+    participant IR as ImpulseResolver
+    participant MCP as MCPBackend
+
+    Note over Act: After impulse resolution completes
+
+    loop For each loaded impulse
+        Act->>IR: Get resolver metadata
+        IR-->>Act: {<br/>  resolverId,<br/>  resolverTier,<br/>  vesselId,<br/>  startTime,<br/>  endTime<br/>}
+
+        Act->>Act: Calculate metrics:<br/>- latency_ms = endTime - startTime<br/>- cost_usd = calculateCost(tier)
+
+        Act->>Task: Store in metadata.resolverData:<br/>{<br/>  impulse_id,<br/>  resolver_id,<br/>  resolver_tier,<br/>  vessel_id,<br/>  latency_ms,<br/>  cost_usd<br/>}
+    end
+
+    Note over Act: Aggregate all resolver data
+
+    Act->>Act: Build trace payload:<br/>execution.impulse_resolutions[]<br/>execution.resolved_by_vessel_id
+
+    Act->>MCP: POST /v2/activities/execution-traces
+    activate MCP
+
+    Note over MCP: Store resolver tracking data<br/>for learning algorithms
+
+    MCP->>MCP: Update resolver success rates
+    MCP->>MCP: Update vessel performance metrics
+    MCP->>MCP: Track cost patterns
+
+    MCP-->>Act: 201 Created
+    deactivate MCP
+
+    Note over Act: Resolver tracking complete<br/>Learning data recorded
+```
+
+**Purpose:**
+- Track which resolvers work best for which impulses
+- Measure vessel-level performance
+- Identify cost optimization opportunities
+- Enable Thompson Sampling for resolver selection
+
+**Tracked Metrics:**
+- `resolver_id`: Which resolver was used (bash, git, llm, discovery, etc.)
+- `resolver_tier`: Tier classification (deterministic, pattern, llm)
+- `vessel_id`: Which vessel executed the resolver
+- `latency_ms`: Resolution duration (performance tracking)
+- `cost_usd`: Resolution cost (budget optimization)
+
+**Implementation:**
+- Location: `repos/minibob/src/activity.ts:2915+` (executeWithResolver)
+- Trace field: `execution.impulse_resolutions: [{...}]`
+- Backend storage: `execution` table with `resolved_by_vessel_id` field
 
 ## Decomposition: Relevance-Based Filtering
 
@@ -619,6 +689,122 @@ const impulseEvolution = {
 | Discovery Integration | `repos/minibob/src/vessel-discovery.ts` | Vessel discovery client |
 | MCP Backend | `repos/minibob/src/mcp.ts` | Backend integration |
 | Activity Executor | `repos/minibob/src/activity.ts` | Lines 2920-3110 (impulse integration) |
+
+## Implementation Architecture
+
+This sequence is **entirely MiniBob-local** with optional backend integration for learning.
+
+### MiniBob (Execution Environment)
+
+**Responsibilities:**
+- **6-step resolver dispatch** (local → custom → discovery → MCP → fallback) - THIS IS THE KEY ARCHITECTURAL POINT
+- Relevance-based filtering (query backend for scores)
+- Pointer resolution for all LOCAL types (memo, file, directoryTree, gitDiff)
+- Custom resolver registration and invocation
+- Discovery-vessel queries for capability-based routing
+- MCP backend delegation as last resort
+- Budget enforcement and content truncation
+- Impulse state tracking (before/after hashes)
+- Context formatting (pointer-mode vs content-mode)
+
+**Key Files:**
+- `repos/minibob/src/impulse.ts` (1056 lines) - **Core resolver dispatch logic**
+- `repos/minibob/src/impulse-filter.ts` - Relevance filtering
+- `repos/minibob/src/state-space-manager.ts` - Shape compatibility
+- `repos/minibob/src/vessel-discovery.ts` - Discovery integration
+- `repos/minibob/src/mcp.ts` - Backend client (optional)
+
+**The 6-Step Resolver Dispatch (MiniBob-Owned):**
+1. **LOCAL: memo** - Return embedded content directly
+2. **LOCAL: file/directoryTree/gitDiff** - Filesystem operations
+3. **CUSTOM: registered resolvers** - Plugin-style custom resolvers
+4. **DISCOVERY: vessel discovery** - Query discovery-vessel for capable vessels
+5. **BACKEND: MCP fallback** - Delegate to activity-api via MCP
+6. **FALLBACK: in-memory cache** - Activity output from current session
+
+**What MiniBob Does NOT Do:**
+- Does NOT persist impulses beyond session (backend does this)
+- Does NOT aggregate relevance metrics (backend computes these)
+- Does NOT resolve activity-specific types without backend (activityExecutionTrace, activityTemplate, etc.)
+
+### Activity-API (Storage & Learning Backend)
+
+**Responsibilities:**
+- Resolve activity-related impulse types (activityExecutionTrace, activityTemplate, activityMetrics)
+- Store impulses persistently
+- Compute impulse relevance scores (via Thompson Sampling)
+- Track which impulses correlate with success
+- Aggregate cross-execution impulse usage patterns
+- Register with discovery-vessel (advertises 7 activity-related shapes)
+
+**Key Endpoints:**
+- `POST /v2/impulses/resolve` - Resolve activity-related impulse pointers
+- `POST /v2/impulses` - Store impulse persistently
+- `GET /v2/activities/impulse-relevance` - Query relevance metrics
+- Discovery advertisement: activityExecutionTrace, activityTemplate, activityMetrics, etc.
+
+**Key Files:**
+- `repos/metabob-activity-api/src/routes/impulses.ts` - Impulse resolution endpoint
+- `repos/metabob-activity-api/src/services/discovery-client.ts` - Discovery registration
+
+### Discovery-Vessel (Capability Registry)
+
+**Responsibilities:**
+- Register vessels with advertised shapes
+- Route shape queries to capable vessels
+- Maintain TTL-based registry (5 min expiration)
+- Provide health scoring and circuit breaking
+
+**Key Endpoints:**
+- `POST /register` - Vessel registration with shapes
+- `POST /resolve` - Query vessels by capability
+- `GET /shapes` - List available shapes
+
+**Key Files:**
+- `repos/discovery-vessel/src/registry.ts` - In-memory registry with TTL
+
+### SurrealDB Schema
+
+**Tables:**
+- `impulse` - Persistent impulse storage (pointer + metadata)
+- `impulse_relevance_metrics` - Activity→impulse relevance scores
+- `impulse_load_pattern` - Which impulses loaded together
+- `impulse_evolution` - Before/after state transitions
+
+**Indexes:**
+- `impulse` by type, shape, tags
+- `impulse_relevance_metrics` by activity_id, impulse_id
+
+### Correct Separation
+
+**MiniBob handles (execution-time):**
+- Resolver dispatch (6-step chain) - **THIS IS CRITICAL**
+- Local resolution (memo, file, directoryTree, gitDiff)
+- Discovery queries (find vessels for shapes)
+- Budget enforcement (truncation)
+- Context formatting (pointer-mode vs content-mode)
+- State tracking (before/after hashes)
+
+**Activity-API handles (storage/learning):**
+- Persistent impulse storage
+- Relevance score computation
+- Activity-related shape resolution (activityExecutionTrace, etc.)
+- Cross-execution pattern aggregation
+- Discovery registration (advertises activity shapes)
+
+**Discovery-Vessel handles (routing):**
+- Vessel registration and TTL management
+- Capability-based routing (shape → vessels)
+- Health scoring and circuit breaking
+
+**Why This Separation Matters:**
+- MiniBob can resolve LOCAL impulses offline (no backend needed for file/memo/directoryTree)
+- Backend only queried for relevance filtering and activity-specific shapes
+- Discovery enables dynamic routing without hardcoded endpoints
+- Resolver dispatch stays in MiniBob (execution environment), not backend
+
+**Key Architectural Point:**
+The 6-step resolver dispatch is **MiniBob's responsibility**, not the backend's. The backend is a resolver among many, not the universal resolution authority.
 
 ## Related Documentation
 

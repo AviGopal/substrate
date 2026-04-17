@@ -922,6 +922,99 @@ graph TD
 | Output Impulses | `repos/minibob/src/activity.ts` | 3213-3273 | Tool result → impulse |
 | Error Impulses | `repos/minibob/src/impulse.ts` | 881-961 | Error context capture |
 
+## Implementation Architecture
+
+This sequence is **primarily MiniBob (execution)** with backend involvement for pattern storage and learning.
+
+### MiniBob (Execution Environment)
+
+**Responsibilities:**
+- LLM resolver with tool calling loop (max 20 iterations)
+- Deterministic resolvers (bash, git, read, write, edit)
+- Activity resolver (nested activity execution for composition)
+- Ribosome resolver (template extraction from successful executions)
+- Impulse context injection into LLM prompts
+- Tool argument pattern extraction
+- Output impulse creation from tool results
+- Error impulse creation on validation failures
+- State capture (input/output/transition)
+
+**Key Files:**
+- `repos/minibob/src/llm.ts` (360-448) - LLM tool calling loop
+- `repos/minibob/src/tools.ts` (790-1722) - All tool handlers
+- `repos/minibob/src/activity.ts` (3213-3273) - Activity resolver (composition)
+- `repos/minibob/src/impulse.ts` - Impulse creation and storage
+
+**What MiniBob Does NOT Do:**
+- Does NOT compute tool argument success rates (backend aggregates)
+- Does NOT select "best" argument patterns (backend provides recommendations)
+- Does NOT persist patterns beyond session (backend stores)
+
+### Activity-API (Storage & Learning Backend)
+
+**Responsibilities:**
+- Store tool argument patterns with success/failure tracking
+- Compute tool argument success rates (Thompson Sampling)
+- Provide top argument recommendations for tasks
+- Store execution traces with tool call records
+- Track impulse relevance (which impulses loaded → success)
+- Aggregate composition edges (parent activity → child activity)
+- Ribosome template storage (new templates from extractions)
+
+**Key Endpoints:**
+- `POST /v2/activities/tool-usage` - Record tool argument patterns
+- `GET /v2/activities/tool-recommendations` - Get proven argument patterns (top 5)
+- `POST /v2/activities/execution-traces` - Store full execution trace
+- `POST /v2/activities/composition` - Record composition edges
+- `POST /v2/activities/templates` - Register extracted templates (ribosome output)
+
+**Key Files:**
+- `repos/metabob-activity-api/src/routes/activities.ts` - Tool pattern endpoints
+- `repos/metabob-activity-api/src/services/ribosome.ts` - Template extraction service
+- `repos/metabob-activity-api/src/routes/composition-edges.ts` - Composition tracking
+
+### SurrealDB Schema
+
+**Tables:**
+- `tool_argument_pattern` - Tool argument hashes with success/failure counts
+- `activity_execution_trace` - Full execution traces with tool call records
+- `composition_edges` - Parent activity → child activity relationships
+- `activity_template` - Templates (including ribosome-extracted ones)
+- `impulse_relevance_metrics` - Impulse→activity success correlation
+
+**Indexes:**
+- `tool_argument_pattern` by tool_name, argument_hash
+- `composition_edges` by parent_id, child_id
+- `activity_template` by category, extracted_from
+
+### Correct Separation
+
+**MiniBob handles (execution-time):**
+- Tool execution (bash, git, file operations)
+- LLM tool calling loop (max 20 iterations)
+- Activity composition (nested execution)
+- Ribosome extraction logic (template assembly)
+- Impulse creation (output, error, argument impulses)
+- State transitions (before/after hashes)
+
+**Activity-API handles (storage/learning):**
+- Tool argument pattern storage
+- Success rate computation (Thompson Sampling on arguments)
+- Proven pattern recommendations
+- Execution trace persistence
+- Composition edge tracking
+- Template registration (from ribosome)
+
+**Why This Separation Matters:**
+- MiniBob executes tools synchronously (no backend latency)
+- Backend learns from tool usage patterns asynchronously
+- Tool recommendations improve over time (Thompson Sampling)
+- Ribosome extracts templates locally, backend stores for reuse
+- Composition tracking enables learning orchestration patterns
+
+**Key Architectural Point:**
+Resolvers execute in MiniBob (local), but their patterns are learned in the backend (aggregated). This allows offline execution with optional online learning.
+
 ## Related Documentation
 
 - [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded

@@ -445,6 +445,55 @@ Probabilistic template selection that learns which variants perform best over ti
 - ❌ NOT: Universal resolver for arbitrary data
 - ❌ NOT: Resolve impulses owned by other vessels
 
+### Execution Trace Model
+
+Execution traces capture complete information about activity execution for learning.
+
+**New Fields (April 2026):**
+
+```typescript
+execution {
+  // ... existing fields ...
+
+  // NEW: Vessel tracking
+  resolved_by_vessel_id: string  // Which vessel resolved impulses
+
+  // NEW: Per-impulse resolution details
+  impulse_resolutions: [{
+    impulse_id: string           // Impulse that was resolved
+    resolver_id: string          // Resolver used (bash, git, llm, etc.)
+    resolver_tier: string        // deterministic, pattern, llm
+    vessel_id: string            // Vessel that executed resolver
+    latency_ms: number           // Resolution duration
+    cost_usd: number            // Resolution cost
+  }]
+}
+```
+
+**Purpose:**
+- Learn which resolvers work best for which impulses
+- Track vessel-level performance
+- Enable Thompson Sampling for resolver selection
+- Identify optimization opportunities
+
+**Backward Compatibility:**
+- Existing traces without these fields still valid
+- Fields optional (not breaking change)
+- Queries handle null values gracefully
+
+**Resolver Tiers:**
+- `deterministic`: No LLM, fast, zero cost (bash, git, file)
+- `pattern`: Pattern matching from history (PreValidationResolver)
+- `llm`: LLM reasoning required (LLMResolver with tool calling)
+
+**Learning Applications:**
+1. **Resolver Selection**: Track success rate per resolver per shape
+2. **Vessel Performance**: Measure latency per vessel, detect degradation
+3. **Cost Optimization**: Identify expensive patterns, prefer deterministic resolvers
+4. **Pattern Recognition**: Learn which resolvers work together
+
+**See also**: [`docs/architecture/RESOLVER_TRACKING.md`](docs/architecture/RESOLVER_TRACKING.md)
+
 ## Development Workflows
 
 ### Primary Workflow: MiniBob + Canary CI/CD

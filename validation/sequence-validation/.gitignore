@@ -1,0 +1,14 @@
+node_modules/
+bun.lockb
+*.log
+.DS_Store
+
+# Reports (generated)
+reports/alignment/*.md
+reports/coverage/*.json
+reports/traces/*.json
+
+# But keep the directories
+!reports/alignment/.gitkeep
+!reports/coverage/.gitkeep
+!reports/traces/.gitkeep
