@@ -1,0 +1,305 @@
+# Impulse Resolution Validation Scenarios
+# Based on: docs/architecture/sequences/02-impulse-resolution.md
+
+metadata:
+  sequence: "02-impulse-resolution"
+  doc_path: "docs/architecture/sequences/02-impulse-resolution.md"
+  last_updated: "2026-04-16"
+
+# Phase 1: Relevance Filtering (lines 218-273)
+scenarios:
+  - name: "Relevance filtering applies thresholds correctly"
+    doc_reference: "lines 242-262"
+    assertion: "Impulses with relevance_score >= 0.5 are loaded, < 0.5 are skipped"
+
+    setup:
+      activity_id: "test-activity"
+      impulses:
+        - id: "impulse-high-relevance"
+          shape: "error_log"
+          relevance_score: 0.85
+          irrelevance_score: 0.10
+        - id: "impulse-medium-relevance"
+          shape: "source_code"
+          relevance_score: 0.60
+          irrelevance_score: 0.30
+        - id: "impulse-low-relevance"
+          shape: "test_artifact"
+          relevance_score: 0.30
+          irrelevance_score: 0.75
+
+    action:
+      type: "filter_impulses"
+      impulse_ids: ["impulse-high-relevance", "impulse-medium-relevance", "impulse-low-relevance"]
+      config:
+        relevance_threshold: 0.5
+        max_impulses: 5
+
+    expected:
+      loaded: ["impulse-high-relevance", "impulse-medium-relevance"]
+      skipped: ["impulse-low-relevance"]
+      skip_reasons:
+        impulse-low-relevance: "relevance_score (0.30) < threshold (0.5)"
+
+    validation:
+      - Check loaded impulses match expected list
+      - Verify skipped impulses have correct reasons
+      - Confirm max_impulses constraint respected
+
+  - name: "Always-load threshold bypasses filtering"
+    doc_reference: "lines 248-251"
+    assertion: "Impulses with relevance_score >= 0.8 always loaded"
+
+    setup:
+      impulses:
+        - id: "impulse-critical"
+          relevance_score: 0.95
+          irrelevance_score: 0.02
+        - id: "impulse-filler-1"
+          relevance_score: 0.65
+        - id: "impulse-filler-2"
+          relevance_score: 0.60
+        - id: "impulse-filler-3"
+          relevance_score: 0.55
+        - id: "impulse-filler-4"
+          relevance_score: 0.52
+
+    action:
+      type: "filter_impulses"
+      impulse_ids: ["impulse-critical", "impulse-filler-1", "impulse-filler-2", "impulse-filler-3", "impulse-filler-4"]
+      config:
+        relevance_threshold: 0.5
+        always_load_threshold: 0.8
+        max_impulses: 3  # Would normally exclude some
+
+    expected:
+      loaded: ["impulse-critical", "impulse-filler-1", "impulse-filler-2"]
+      reasoning: "impulse-critical loaded despite max_impulses limit (score >= 0.8)"
+
+    validation:
+      - Verify high-relevance impulse always included
+      - Confirm max_impulses applies to remaining impulses
+
+  - name: "Irrelevance score causes skip"
+    doc_reference: "lines 253-256"
+    assertion: "Skip if irrelevance_score > relevance_score"
+
+    setup:
+      impulses:
+        - id: "impulse-harmful"
+          relevance_score: 0.40
+          irrelevance_score: 0.70  # Higher irrelevance
+        - id: "impulse-beneficial"
+          relevance_score: 0.70
+          irrelevance_score: 0.20
+
+    action:
+      type: "filter_impulses"
+      impulse_ids: ["impulse-harmful", "impulse-beneficial"]
+      config:
+        relevance_threshold: 0.5
+
+    expected:
+      loaded: ["impulse-beneficial"]
+      skipped: ["impulse-harmful"]
+      skip_reasons:
+        impulse-harmful: "irrelevance_score (0.70) > relevance_score (0.40)"
+
+    validation:
+      - Verify harmful impulse skipped
+      - Confirm skip reason references irrelevance
+
+# Phase 2-3: Resolver Dispatch (lines 281-334)
+  - name: "Resolver dispatch follows 6-step chain"
+    doc_reference: "lines 281-334"
+    assertion: "Resolvers tried in order: LOCAL → CUSTOM → DISCOVERY → BACKEND → FALLBACK"
+
+    setup:
+      impulses:
+        - id: "impulse-memo"
+          pointer:
+            type: "memo"
+            content: "embedded content"
+        - id: "impulse-file"
+          pointer:
+            type: "file"
+            path: "/tmp/test-file.txt"
+        - id: "impulse-backend"
+          pointer:
+            type: "activityExecutionTrace"
+            execution_id: "exec_123"
+
+    action:
+      type: "resolve_impulses"
+      impulse_ids: ["impulse-memo", "impulse-file", "impulse-backend"]
+
+    expected:
+      impulse-memo:
+        resolver: "LOCAL"
+        content: "embedded content"
+      impulse-file:
+        resolver: "LOCAL"
+        content_source: "filesystem"
+      impulse-backend:
+        resolver: "BACKEND"
+        content_source: "mcp"
+
+    validation:
+      - Verify each impulse resolved by correct resolver
+      - Confirm fallback chain not triggered for local types
+      - Check backend resolver used for activity-specific types
+
+# Phase 4: Budget Enforcement (lines 464-505)
+  - name: "Budget enforcement truncates content"
+    doc_reference: "lines 464-505"
+    assertion: "Content truncated to budget * 0.9 if over budget"
+
+    setup:
+      impulse:
+        id: "impulse-large"
+        pointer:
+          type: "file"
+          path: "/tmp/large-file.txt"  # 10,000 tokens
+        budget: 2000  # 2000 tokens max
+
+    action:
+      type: "load_impulse"
+      impulse_id: "impulse-large"
+
+    expected:
+      loaded: true
+      token_count: 1800  # budget * 0.9
+      metadata:
+        was_truncated: true
+        original_token_count: 10000
+        truncation_ratio: 0.18
+      content_suffix: "...(truncated to fit budget)"
+
+    validation:
+      - Verify content truncated to ~90% of budget
+      - Confirm metadata tracks truncation
+      - Check truncation message appended
+
+# Phase 5: Content Hashing & Metadata (lines 509-548)
+  - name: "Content hashing enables evolution tracking"
+    doc_reference: "lines 509-548"
+    assertion: "Content hashed via Bun.hash() for change detection"
+
+    setup:
+      impulse:
+        id: "impulse-evolving"
+        pointer:
+          type: "file"
+          path: "/tmp/evolving-file.txt"
+
+    action:
+      type: "load_and_modify"
+      impulse_id: "impulse-evolving"
+      modifications:
+        - load: true
+        - modify_content: "append new line"
+        - reload: true
+
+    expected:
+      before_hash: "hash_abc123"
+      after_hash: "hash_def456"
+      evolution_detected: true
+      metadata:
+        impulse_evolution:
+          unchanged: []
+          modified: ["impulse-evolving"]
+          created: []
+          deleted: []
+
+    validation:
+      - Verify hash changes after modification
+      - Confirm evolution tracking captures change
+      - Check metadata includes before/after hashes
+
+# Metadata-First, Content-Later Principle (lines 392-446)
+  - name: "Pointer-mode provides metadata without loading"
+    doc_reference: "lines 392-446"
+    assertion: "Impulses formatted as pointer-mode when metadata available"
+
+    setup:
+      impulse:
+        id: "impulse-unloaded"
+        pointer:
+          type: "file"
+          path: "src/auth.ts"
+        shape: "source_code"
+        summary: "Authentication module with JWT handling"
+        metadata:
+          row_count: 250
+          available_ops: ["debug", "refactor", "test"]
+
+    action:
+      type: "format_for_context"
+      impulse_id: "impulse-unloaded"
+      load_content: false
+
+    expected:
+      format: "pointer-mode"
+      xml: '<impulse_ref id="impulse-unloaded" type="source_code" shape="source_code" row_count="250" summary="Authentication module with JWT handling" available_ops="debug,refactor,test" />'
+
+    validation:
+      - Verify pointer-mode format used
+      - Confirm no content loaded
+      - Check all metadata fields present
+
+  - name: "Content-mode loads and includes full content"
+    doc_reference: "lines 419-446"
+    assertion: "Impulses formatted as content-mode when loaded"
+
+    setup:
+      impulse:
+        id: "impulse-loaded"
+        pointer:
+          type: "memo"
+          content: "Error: Cannot read property 'foo' of undefined"
+        shape: "error_log"
+
+    action:
+      type: "format_for_context"
+      impulse_id: "impulse-loaded"
+      load_content: true
+
+    expected:
+      format: "content-mode"
+      xml_start: '<impulse id="impulse-loaded" type="error_log" tokens="8/2000">'
+      xml_end: '</impulse>'
+      content_included: true
+
+    validation:
+      - Verify content-mode format used
+      - Confirm full content included in XML
+      - Check token count displayed
+
+# Savings Calculation
+  - name: "Token savings calculated and logged"
+    doc_reference: "implicit from filtering"
+    assertion: "Skipped impulses tracked for savings calculation"
+
+    setup:
+      impulses:
+        - id: "impulse-1"
+          token_estimate: 2000
+          relevance_score: 0.85
+        - id: "impulse-2"
+          token_estimate: 1500
+          relevance_score: 0.30  # Will be skipped
+
+    action:
+      type: "filter_impulses"
+      impulse_ids: ["impulse-1", "impulse-2"]
+
+    expected:
+      loaded: ["impulse-1"]
+      skipped: ["impulse-2"]
+      savings:
+        tokens_saved: 1500
+        cost_saved: 0.0045  # $3 per 1M tokens
+
+    validation:
+      - Verify savings calculation correct
+      - Confirm cost based on token savings
