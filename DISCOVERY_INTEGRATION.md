@@ -495,9 +495,85 @@ kubectl logs {vessel-pod-name} | grep -i sigterm
 - Kubernetes grace period too short: Set `terminationGracePeriodSeconds: 30`
 - Async shutdown not awaited: Use `await client.stop()`
 
+## Routing Trace Recording
+
+When MiniBob resolves impulses via discovery-vessel, it records routing decisions for learning.
+
+**Tracked Information:**
+- `shape`: Impulse shape being resolved
+- `candidates`: List of vessel IDs considered
+- `selected`: Vessel ID that successfully resolved
+- `latency_ms`: Time taken for successful resolution
+- `success`: Whether resolution succeeded
+
+**Implementation:**
+```typescript
+// In vessel-discovery.ts
+const routingDecision = {
+  shape: 'error_log',
+  candidates: ['analysis-api-abc', 'analysis-api-xyz'],
+  selected: 'analysis-api-abc',
+  latency_ms: 245,
+  success: true
+};
+
+await mcp.recordRoutingTrace(routingDecision);
+```
+
+**Backend Endpoint:**
+- `POST /v2/routing-traces`
+- Non-blocking (fire-and-forget)
+- Enables learning vessel performance
+
+**Use Cases:**
+- Learn which vessels are faster for which shapes
+- Detect vessel performance degradation
+- Optimize vessel selection algorithm
+- Enable Thompson Sampling for vessel routing
+
+**Data Flow:**
+```
+MiniBob discovers vessels for shape
+  ↓
+Try vessels in order (health-weighted)
+  ↓
+First successful resolution wins
+  ↓
+Record routing decision
+  ↓
+Send to Activity-API (async, non-blocking)
+  ↓
+Backend stores in routing_trace table
+  ↓
+Thompson Sampling learns best vessels per shape
+```
+
+**Example Trace:**
+```json
+{
+  "shape": "activityExecutionTrace",
+  "candidates": [
+    "activity-api-pod-1",
+    "activity-api-pod-2",
+    "activity-api-pod-3"
+  ],
+  "selected": "activity-api-pod-2",
+  "latency_ms": 180,
+  "success": true,
+  "timestamp": "2026-04-16T10:30:00Z"
+}
+```
+
+**Learning Applications:**
+- **Vessel ranking**: Vessels with better latency/success rates ranked higher
+- **Circuit breaking**: Repeated failures trigger circuit breaker
+- **Load balancing**: Distribute load based on performance history
+- **Anomaly detection**: Detect when vessel performance degrades
+
 ## Related Documentation
 
 - [Vessel Discovery Client Package](packages/vessel-discovery-client/README.md)
 - [Discovery-Vessel CLAUDE.md](repos/discovery-vessel/CLAUDE.md)
 - [DEPLOYMENT_WORKFLOW.md](repos/deployment/DEPLOYMENT_WORKFLOW.md)
 - [IMPULSE_ACTIVITY_FOUNDATION.md](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
+- [RESOLVER_TRACKING.md](docs/architecture/RESOLVER_TRACKING.md)
