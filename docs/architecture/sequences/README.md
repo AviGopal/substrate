@@ -82,6 +82,12 @@ The **activity resolver** enables composition. The **ribosome resolver** enables
 
 ## Diagrams by Workflow
 
+Each diagram now includes an **Implementation Architecture** section that clarifies:
+- Which responsibilities belong to MiniBob (execution environment)
+- Which responsibilities belong to activity-api (storage & learning backend)
+- What data structures are stored in SurrealDB
+- Why this separation matters
+
 ### [1. Activity Selection from Impulse State Space](./01-activity-selection.md)
 
 Maps the complete flow from user goal → Thompson Sampling recommendation → activity execution, **now showing composition-based orchestration**.
@@ -101,6 +107,10 @@ Maps the complete flow from user goal → Thompson Sampling recommendation → a
 - `activities.ts` (lines 3080-3116, 3285-3340) - Activity resolver for composition
 - `paradigm.ts` (lines 2915-3049, 797-909) - Thompson Sampling logic
 
+**Architecture Split:**
+- **MiniBob**: Meta-activity orchestration, trace capture
+- **Activity-API**: Thompson Sampling, template storage, learning
+
 ---
 
 ### [2. Impulse Resolution During Activity Execution](./02-impulse-resolution.md)
@@ -109,18 +119,23 @@ Shows the complete 11-phase flow from impulse filtering through resolution to co
 
 **Key Concepts:**
 - Relevance-based filtering with threshold logic
-- 6-step resolver dispatch chain (local → custom → discovery → MCP → fallback)
+- **6-step resolver dispatch chain (local → custom → discovery → MCP → fallback)** - THIS IS MINIBOB
 - Budget enforcement with truncation
 - Dual-mode formatting (pointer-mode vs content-mode)
 - Impulse evolution tracking (P3.2)
 - State capture (before/after/transition)
 
 **Files Covered:**
-- `impulse.ts` (complete, 1056 lines)
+- `impulse.ts` (complete, 1056 lines) - **Contains the 6-step dispatch**
 - `impulse-filter.ts`
 - `activity.ts` (lines 2920-3110)
 - `vessel-discovery.ts`
 - `mcp.ts`
+
+**Architecture Split:**
+- **MiniBob**: 6-step resolver dispatch (local → custom → discovery → MCP → fallback)
+- **Activity-API**: Relevance scores, activity-related shape resolution
+- **Discovery-Vessel**: Capability-based routing (shape → vessels)
 
 ---
 
@@ -143,6 +158,10 @@ Documents how each resolver type processes impulses and creates output impulses,
 - `activity.ts` (lines 3213-3273) - Activity resolver (composition)
 - `template-extractor.ts` - Ribosome resolver (learning)
 
+**Architecture Split:**
+- **MiniBob**: All resolvers (LLM, bash, git, activity, ribosome), tool execution
+- **Activity-API**: Tool argument pattern storage, proven pattern recommendations
+
 ---
 
 ### [4. Improvisation, Trailblazing, Checkpoints, and Rollbacks](./04-improvisation-trailblazing.md)
@@ -164,6 +183,10 @@ Shows how the system handles failures, creates variants, and extracts new templa
 - `template-extractor.ts` (lines 24-400+) - Ribosome resolver
 - `rollback.ts` (lines 79-250+) - Rollback activity
 
+**Architecture Split:**
+- **MiniBob**: Improvisation execution, ribosome extraction, checkpoint/rollback
+- **Activity-API**: Template storage (improvise_solution + extracted + variants)
+
 ---
 
 ### [5. Hook Registration and Behavior Injection](./05-hooks-behavior-injection.md)
@@ -178,12 +201,19 @@ Maps the hook system for customizing and extending behavior at all lifecycle poi
 - Promotion hooks for template registration
 - Behavior modification through impulse injection
 - **Hooks work uniformly across all activities** (composition-aware)
+- **CRITICAL: Hooks are vessel configuration, NOT activity schema**
 
 **Files Covered:**
 - `lifecycle-hooks.ts`
 - `vessel-hooks.ts`
 - `promotion-hooks.ts`
 - `impulse-verification-hooks.ts`
+
+**Architecture Split:**
+- **MiniBob**: ALL hook logic (registration, execution, caching) - vessel-level
+- **Activity-API**: NONE - hooks are not backend data (vessel-specific, not portable)
+
+**Key Point:** Hooks customize **how this vessel executes** (instance-specific), while activities define **what work gets done** (portable templates).
 
 ---
 
@@ -262,6 +292,58 @@ These sequence diagrams complement:
 - [`IMPULSE_DRIVEN_COMPOSITION.md`](../IMPULSE_DRIVEN_COMPOSITION.md) - Composition-based architecture
 - [`DISCOVERY_INTEGRATION.md`](../../../DISCOVERY_INTEGRATION.md) - Vessel discovery system
 - [`DEPLOYMENT_WORKFLOW.md`](../../../repos/deployment/DEPLOYMENT_WORKFLOW.md) - CI/CD and deployment
+
+## Architectural Clarity: MiniBob vs Activity-API
+
+Each sequence document now includes an **Implementation Architecture** section that clarifies the separation of concerns. Here's the high-level split:
+
+### MiniBob (Execution Environment)
+
+**What MiniBob Does:**
+- Execute activities (meta-activities and domain-specific)
+- **6-step resolver dispatch** (local → custom → discovery → MCP → fallback)
+- Resolve LOCAL impulse types (memo, file, directoryTree, gitDiff)
+- Execute all resolvers (LLM, bash, git, activity, ribosome)
+- Capture execution traces (structure and state)
+- Register hooks (lifecycle, vessel, promotion) - **vessel configuration**
+- Create impulses (output, error, argument)
+- Checkpoints and rollbacks
+
+**What MiniBob Does NOT Do:**
+- Does NOT store templates (backend owns)
+- Does NOT compute Thompson Sampling (backend owns)
+- Does NOT aggregate metrics (backend owns)
+- Does NOT persist beyond session (backend owns)
+
+### Activity-API (Storage & Learning Backend)
+
+**What Activity-API Does:**
+- Store activity templates persistently
+- Implement Thompson Sampling (α/β scoring)
+- Execute tiered fallback queries (exact → compatible → full-text)
+- Compute heuristic boosts (8-point system)
+- Track shape-conditioned performance
+- Store execution traces for learning
+- Provide tool argument recommendations
+- Register with discovery-vessel (advertises 7 activity shapes)
+
+**What Activity-API Does NOT Do:**
+- Does NOT execute activities (MiniBob does)
+- Does NOT resolve LOCAL impulses (MiniBob does)
+- Does NOT manage hooks (vessel configuration, not activity schema)
+- Does NOT own resolver dispatch (MiniBob does)
+
+### Key Architectural Points
+
+1. **Resolver Dispatch is MiniBob** - The 6-step chain (local → custom → discovery → MCP → fallback) lives in MiniBob, not the backend. The backend is one resolver among many.
+
+2. **Hooks are Vessel Configuration** - Hooks live in MiniBob (per-instance customization), not the backend (portable templates). Hooks customize how a vessel executes; activities define what work gets done.
+
+3. **Improvisation is an Activity** - `improvise_solution.json` is stored in the backend and selected via Thompson Sampling. No special code paths.
+
+4. **Learning is Backend, Execution is MiniBob** - MiniBob executes and captures; backend aggregates and learns. This enables offline execution with optional online learning.
+
+5. **Composition Edges Link Activities** - Parent→child activity relationships are stored in the backend for learning orchestration patterns.
 
 ## Diagram Format
 

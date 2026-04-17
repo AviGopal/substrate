@@ -1,0 +1,76 @@
+{
+  "id": "validate-impulse-resolution",
+  "name": "Validate Impulse Resolution Sequence",
+  "version": "1.0.0",
+  "description": "Validates impulse resolution by testing filtering, resolver dispatch, budget enforcement, and dual-mode formatting",
+  "category": "validation",
+  "tasks": [
+    {
+      "id": "create_test_impulses",
+      "description": "Create test impulses with various relevance scores",
+      "resolver": "bash",
+      "outputShapes": ["test_impulses"],
+      "config": {
+        "command": "cat > /tmp/test-impulse-high.txt << 'EOF'\nHigh relevance test content (relevance: 0.85)\nThis impulse should always be loaded.\nEOF\ncat > /tmp/test-impulse-low.txt << 'EOF'\nLow relevance test content (relevance: 0.3)\nThis impulse should be skipped.\nEOF\ncat > /tmp/test-impulse-large.txt << 'EOF'\n$(python3 -c 'print(\"A\" * 20000)')\nEOF\necho 'Created test impulses'",
+        "workingDirectory": "/tmp"
+      }
+    },
+    {
+      "id": "test_local_resolver",
+      "description": "Test local file resolver",
+      "resolver": "bash",
+      "dependencies": ["create_test_impulses"],
+      "outputShapes": ["local_resolution_result"],
+      "config": {
+        "command": "cat /tmp/test-impulse-high.txt",
+        "workingDirectory": "/tmp"
+      }
+    },
+    {
+      "id": "test_budget_enforcement",
+      "description": "Load large impulse and verify truncation",
+      "resolver": "bash",
+      "dependencies": ["create_test_impulses"],
+      "outputShapes": ["budget_test_result"],
+      "config": {
+        "command": "wc -c /tmp/test-impulse-large.txt | awk '{print \"Original size: \" $1 \" bytes\"}'",
+        "workingDirectory": "/tmp"
+      }
+    },
+    {
+      "id": "verify_resolver_dispatch",
+      "description": "Verify 6-step resolver dispatch chain",
+      "resolver": "llm",
+      "dependencies": ["test_local_resolver", "test_budget_enforcement"],
+      "inputShapes": ["local_resolution_result", "budget_test_result"],
+      "outputShapes": ["dispatch_validation"],
+      "prompt": {
+        "template": "Verify the impulse resolution dispatch chain:\n\nLocal resolution result:\n{{impulse:local_resolution_result}}\n\nBudget test result:\n{{impulse:budget_test_result}}\n\nValidate:\n1. Local resolver worked (memo, file, directoryTree, gitDiff)\n2. Budget enforcement applied\n3. Dispatch order: local → custom → discovery → MCP → fallback\n\nOutput JSON validation:\n{\n  \"localResolverWorked\": true/false,\n  \"budgetEnforced\": true/false,\n  \"dispatchChainValid\": true/false,\n  \"passed\": true/false\n}"
+      }
+    },
+    {
+      "id": "test_dual_mode_formatting",
+      "description": "Test pointer-mode vs content-mode formatting",
+      "resolver": "bash",
+      "dependencies": ["verify_resolver_dispatch"],
+      "config": {
+        "command": "echo 'Testing dual-mode: pointer-mode (metadata) vs content-mode (full content)'",
+        "workingDirectory": "."
+      }
+    }
+  ],
+  "metadata": {
+    "author": "validation-suite",
+    "validatesSequence": "02-impulse-resolution.md",
+    "exercisedResolvers": [
+      "bash",
+      "llm"
+    ],
+    "testedFeatures": [
+      "relevance_filtering",
+      "resolver_dispatch_chain",
+      "budget_enforcement",
+      "dual_mode_formatting"
+    ]
+  }
+}

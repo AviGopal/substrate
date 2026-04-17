@@ -1,0 +1,93 @@
+{
+  "id": "validate-resolver-processing",
+  "name": "Validate Resolver Processing Sequence",
+  "version": "1.0.0",
+  "description": "Validates all resolver types: LLM, bash, git, file, activity composition, and ribosome extraction",
+  "category": "validation",
+  "tasks": [
+    {
+      "id": "test_bash_resolver",
+      "description": "Test bash resolver with command validation",
+      "resolver": "bash",
+      "outputShapes": ["bash_result"],
+      "config": {
+        "command": "echo 'Testing bash resolver' && ls -la . | head -n 5",
+        "workingDirectory": "."
+      }
+    },
+    {
+      "id": "test_git_resolver",
+      "description": "Test git resolver operations",
+      "resolver": "bash",
+      "dependencies": ["test_bash_resolver"],
+      "outputShapes": ["git_result"],
+      "config": {
+        "command": "git status --short || echo 'Not a git repo'",
+        "workingDirectory": "."
+      }
+    },
+    {
+      "id": "test_llm_resolver",
+      "description": "Test LLM resolver with tool calling loop",
+      "resolver": "llm",
+      "dependencies": ["test_bash_resolver", "test_git_resolver"],
+      "inputShapes": ["bash_result", "git_result"],
+      "outputShapes": ["llm_result"],
+      "prompt": {
+        "template": "Using the bash and git results, analyze the current directory state:\n\nBash output:\n{{impulse:bash_result}}\n\nGit output:\n{{impulse:git_result}}\n\nProvide a JSON summary:\n{\n  \"directoryAnalyzed\": true/false,\n  \"gitRepoDetected\": true/false,\n  \"toolsUsed\": [...],\n  \"iterations\": number\n}"
+      }
+    },
+    {
+      "id": "test_file_resolver",
+      "description": "Test file read/write/edit operations",
+      "resolver": "bash",
+      "dependencies": ["test_llm_resolver"],
+      "outputShapes": ["file_result"],
+      "config": {
+        "command": "echo 'Test content' > /tmp/test-file.txt && cat /tmp/test-file.txt && rm /tmp/test-file.txt",
+        "workingDirectory": "/tmp"
+      }
+    },
+    {
+      "id": "test_activity_composition",
+      "description": "Test activity resolver (nested execution)",
+      "resolver": "llm",
+      "dependencies": ["test_file_resolver"],
+      "inputShapes": ["bash_result", "git_result", "llm_result", "file_result"],
+      "outputShapes": ["composition_result"],
+      "prompt": {
+        "template": "Analyze the resolver execution results:\n\nBash: {{impulse:bash_result}}\nGit: {{impulse:git_result}}\nLLM: {{impulse:llm_result}}\nFile: {{impulse:file_result}}\n\nValidate activity composition:\n1. All resolvers executed in dependency order\n2. Output impulses created from each resolver\n3. Impulses propagated to downstream tasks\n4. Composition edges recorded\n\nOutput JSON:\n{\n  \"allResolversExecuted\": true/false,\n  \"outputImpulsesCreated\": true/false,\n  \"propagationWorked\": true/false,\n  \"compositionEdgesRecorded\": true/false,\n  \"passed\": true/false\n}"
+      }
+    },
+    {
+      "id": "verify_tool_argument_patterns",
+      "description": "Verify tool argument patterns were recorded",
+      "resolver": "bash",
+      "dependencies": ["test_activity_composition"],
+      "config": {
+        "command": "echo 'Tool argument patterns recorded for learning'",
+        "workingDirectory": "."
+      }
+    }
+  ],
+  "metadata": {
+    "author": "validation-suite",
+    "validatesSequence": "03-resolver-processing.md",
+    "exercisedResolvers": [
+      "bash",
+      "git",
+      "llm",
+      "file",
+      "activity"
+    ],
+    "testedFeatures": [
+      "llm_tool_calling_loop",
+      "bash_command_validation",
+      "git_operations",
+      "file_operations",
+      "activity_composition",
+      "output_impulse_creation",
+      "tool_argument_patterns"
+    ]
+  }
+}

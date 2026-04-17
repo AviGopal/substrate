@@ -780,6 +780,93 @@ graph TB
 | Rollback | `repos/minibob/src/rollback.ts` | 79-250+ | Checkpoint and restore |
 | Checkpoint | `repos/minibob/src/activity.ts` | 455-610+ | Git state capture |
 
+## Implementation Architecture
+
+This sequence spans **both MiniBob (execution) and activity-api (storage/learning)**.
+
+### MiniBob (Execution Environment)
+
+**Responsibilities:**
+- Execute `improvise_solution` activity (plan → execute → extract tasks)
+- LLM-driven improvisation (tool use loop with stuck detection)
+- Checkpoint creation (git state capture before execution)
+- Rollback execution (git restore to pre-execution state)
+- Ribosome extraction criteria evaluation
+- Template assembly from successful executions
+- Variant creation on failures (trailblazing)
+
+**Key Files:**
+- `repos/minibob/src/goal-processor.ts` (650-6800+) - Meta-activity orchestration
+- `repos/minibob/src/improviser.ts` (125-1650+) - Improvisation activity implementation
+- `repos/minibob/src/template-extractor.ts` (24-400+) - Ribosome template assembly
+- `repos/minibob/src/ribosome-quality.ts` (103-142+) - Extraction criteria
+- `repos/minibob/src/rollback.ts` (79-250+) - Checkpoint and rollback logic
+
+**What MiniBob Does NOT Do:**
+- Does NOT store templates (backend owns template registry)
+- Does NOT compute variant performance (backend tracks Thompson scores)
+- Does NOT aggregate extraction patterns (backend learns)
+
+### Activity-API (Storage & Learning Backend)
+
+**Responsibilities:**
+- Store `improvise_solution` template and variants
+- Thompson Sampling for improvisation vs domain-specific selection
+- Register ribosome-extracted templates
+- Track variant performance (α/β scores for variants)
+- Store execution traces (success and failure)
+- Compute extraction success rates
+
+**Key Endpoints:**
+- `GET /v2/activities/templates?id=improvise_solution` - Get improvisation activity template
+- `POST /v2/activities/templates` - Register ribosome-extracted templates
+- `POST /v2/activities/templates` - Register variant templates (trailblazing)
+- `POST /v2/activities/execution-traces` - Store improvisation traces
+- `POST /v2/activities/recommend` - Thompson Sampling (includes improvise_solution)
+
+**Key Files:**
+- `repos/metabob-activity-api/src/routes/activities.ts` - Template registration
+- `repos/metabob-activity-api/src/db/paradigm.ts` - Thompson Sampling (includes improvise_solution in pool)
+- `repos/metabob-activity-api/sql/seed/meta-activities/improvise_solution.json` - Template definition
+
+### SurrealDB Schema
+
+**Tables:**
+- `activity_template` - All templates (domain + improvise_solution + variants + extracted)
+- `variant_performance_metrics` - Variant success rates
+- `activity_execution_trace` - Improvisation execution traces
+- `checkpoint` - Git state snapshots (optional persistence)
+
+**Indexes:**
+- `activity_template` by category, family (for variant tracking)
+- `variant_performance_metrics` by template_id, variant_id
+
+### Correct Separation
+
+**MiniBob handles (execution-time):**
+- Improvisation activity execution (plan, execute, extract tasks)
+- LLM tool use loop with stuck detection
+- Checkpoint creation (git state capture)
+- Rollback execution (git restore)
+- Ribosome extraction logic (template assembly)
+- Variant creation (modified template generation)
+
+**Activity-API handles (storage/learning):**
+- Template storage (improvise_solution, extracted, variants)
+- Thompson Sampling (ranks improvise_solution alongside domain templates)
+- Variant performance tracking
+- Execution trace persistence
+- Extraction pattern learning
+
+**Why This Separation Matters:**
+- Improvisation runs locally (MiniBob can improvise offline)
+- Backend learns which improvisation strategies work (Thompson Sampling)
+- Extracted templates become first-class citizens (Thompson Sampling includes them)
+- Variants compete with originals (Thompson Sampling selects best)
+
+**Key Architectural Point:**
+Improvisation is an **activity**, not a fallback code path. It's stored in the backend as `improvise_solution.json` and selected via Thompson Sampling like any other template.
+
 ## Related Documentation
 
 - [Activity Selection](./01-activity-selection.md) - How templates are recommended

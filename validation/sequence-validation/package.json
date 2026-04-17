@@ -1,0 +1,29 @@
+{
+  "name": "@metabob/sequence-validation",
+  "version": "1.0.0",
+  "description": "Validates MiniBob implementation against documented sequence diagrams",
+  "type": "module",
+  "scripts": {
+    "test": "bun run run-tests.ts",
+    "test:verbose": "bun run run-tests.ts --verbose",
+    "test:sequence": "bun run run-tests.ts --sequence",
+    "report:alignment": "bun run run-tests.ts --report alignment",
+    "report:coverage": "bun run run-tests.ts --report coverage",
+    "report:all": "bun run run-tests.ts --report alignment && bun run run-tests.ts --report coverage"
+  },
+  "keywords": [
+    "metabob",
+    "minibob",
+    "validation",
+    "testing",
+    "sequence-diagrams"
+  ],
+  "author": "Metabob DevBob",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  }
+}

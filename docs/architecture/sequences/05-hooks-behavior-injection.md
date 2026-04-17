@@ -769,6 +769,99 @@ function cacheResult(hook: VesselHook, impulses: Impulse[]): void {
 | Impulse Verification | `repos/minibob/src/impulse-verification-hooks.ts` | Impulse lifecycle verification |
 | Goal Processor | `repos/minibob/src/goal-processor.ts` | Hook invocation for pre-selection |
 
+## Implementation Architecture
+
+This sequence is **entirely MiniBob (vessel configuration)** with NO backend involvement.
+
+### MiniBob (Execution Environment)
+
+**Responsibilities:**
+- Hook registration (lifecycle, vessel, promotion, impulse verification)
+- Hook execution at trigger points (priority-ordered)
+- Condition evaluation (requiredShapes, requiredAbsent, custom predicates)
+- Hook resolver invocation with state snapshots
+- Caching (TTL-based, default 1 minute)
+- Non-blocking error handling (log and continue)
+- Impulse injection from hook resolvers
+
+**Key Files:**
+- `repos/minibob/src/lifecycle-hooks.ts` - Activity/task lifecycle hooks
+- `repos/minibob/src/vessel-hooks.ts` - State-based impulse injection
+- `repos/minibob/src/vessel/promotion-hooks.ts` - Template promotion decisions
+- `repos/minibob/src/impulse-verification-hooks.ts` - Impulse lifecycle verification
+
+**What MiniBob Does NOT Do:**
+- Does NOT store hooks in backend (vessel configuration, not activity schema)
+- Does NOT query backend for hook definitions (registered locally)
+- Does NOT persist hook execution history (ephemeral, session-scoped)
+
+### Activity-API (Storage & Learning Backend)
+
+**Responsibilities:**
+- **NONE** - Hooks are vessel-level configuration, not backend data
+
+**Why Hooks Are NOT in Activity-API:**
+- Hooks are **vessel configuration** (how this MiniBob instance behaves)
+- Activities are **portable templates** (what work gets done)
+- Hooks customize execution environment (vessel-specific)
+- Activities define work to be done (vessel-independent)
+
+**Example:**
+- **Activity template** (backend): "fix_typescript_error" - portable, reusable
+- **Vessel hook** (MiniBob): "Before execution, verify impulses" - this instance's behavior
+
+### SurrealDB Schema
+
+**Tables:**
+- **NONE** - Hooks are not persisted
+
+**Why No Schema:**
+- Hooks are runtime configuration, not data
+- Different MiniBob instances may have different hooks
+- Hooks are registered programmatically (code), not declaratively (data)
+
+### Correct Separation
+
+**MiniBob handles (vessel configuration):**
+- Hook registration and storage (in-memory, per-instance)
+- Hook execution (lifecycle, vessel, promotion, verification)
+- Condition evaluation (requiredShapes, custom predicates)
+- Impulse injection from hook resolvers
+- Caching and timeout management
+
+**Activity-API handles (portable templates):**
+- **NOTHING** - Hooks are not backend data
+
+**Why This Separation Matters:**
+- Hooks are vessel-specific customizations (different MiniBob instances can have different hooks)
+- Activities are universal templates (same activity runs on any MiniBob)
+- Hooks enable per-instance behavior without polluting activity definitions
+- This keeps activity templates portable and vessel behavior flexible
+
+**Key Architectural Point:**
+Hooks are **vessel configuration**, not **activity schema**. They live in MiniBob's runtime, not the backend's database. Activities remain portable; vessels customize execution.
+
+**Contrast with Activity Composition:**
+- **Activity composition** (backend): "activity A composes activity B" → stored in backend, learned via Thompson Sampling
+- **Vessel hooks** (MiniBob): "before any activity, inject these impulses" → configured per instance, not stored
+
+### Vessel vs Activity
+
+| Aspect | Vessel (MiniBob) | Activity (Backend) |
+|--------|------------------|-------------------|
+| **Definition** | Execution environment | Work template |
+| **Scope** | This instance | Any instance |
+| **Configuration** | Hooks, resolvers, tools | Tasks, prompts, validation |
+| **Storage** | In-memory (session) | SurrealDB (persistent) |
+| **Portability** | Instance-specific | Cross-instance |
+| **Example** | "Before execution, verify impulses" | "Fix TypeScript errors" |
+
+**Why Hooks Are Vessel-Level:**
+- Different MiniBob instances may have different priorities (e.g., enterprise vs personal)
+- Hooks customize behavior without modifying activity templates
+- Allows A/B testing of hook strategies per instance
+- Keeps activity definitions clean and portable
+
 ## Related Documentation
 
 - [Activity Selection](./01-activity-selection.md) - How hooks influence selection

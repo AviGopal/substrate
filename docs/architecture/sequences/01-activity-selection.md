@@ -570,6 +570,92 @@ At each stage, the following metrics are captured for learning:
 | Composition Tracking | `repos/metabob-activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
 | Activity Resolver | `repos/minibob/src/impulse.ts` | Activity shape | Activity→activity resolution |
 
+## Implementation Architecture
+
+This sequence spans **both MiniBob (execution) and activity-api (storage/learning)** with clear separation of concerns.
+
+### MiniBob (Execution Environment)
+
+**Responsibilities:**
+- Execute meta-activity templates (goal_processing_standard)
+- Query backend for Thompson Sampling recommendations
+- Load and format impulses for execution context
+- Execute activity tasks with LLM + tools
+- Capture execution traces with state transitions
+- Store traces to backend (via MCP)
+
+**Key Files:**
+- `repos/minibob/src/goal-processor.ts` (2565-2625) - Meta-activity orchestration
+- `repos/minibob/src/state-space-manager.ts` - Shape querying, impulse state space
+- `repos/minibob/src/activity.ts` - Task execution engine
+- `repos/minibob/src/mcp.ts` - Backend communication client
+
+**What MiniBob Does NOT Do:**
+- Does NOT store templates (backend owns this)
+- Does NOT compute Thompson Sampling scores (backend owns this)
+- Does NOT aggregate metrics (backend owns this)
+- Does NOT persist execution traces beyond session (backend owns this)
+
+### Activity-API (Storage & Learning Backend)
+
+**Responsibilities:**
+- Store activity templates persistently
+- Implement Thompson Sampling algorithm (α/β scoring)
+- Execute tiered fallback queries (exact → compatible → full-text)
+- Compute heuristic boosts (8-point system)
+- Track shape-conditioned performance metrics
+- Store execution traces for learning
+- Update composition edges
+- Return ranked recommendations to MiniBob
+
+**Key Endpoints:**
+- `POST /v2/activities/recommend` (activities.ts:3080-3116) - Thompson Sampling recommendations
+- `GET /v2/activities/templates` - Template listing
+- `POST /v2/activities/execution-traces` - Trace storage
+- `POST /v2/activities/composition` - Composition edge tracking
+- `POST /v2/activities/impulse-relevance` - Relevance score updates
+
+**Key Files:**
+- `repos/metabob-activity-api/src/routes/activities.ts` (3080-3116, 3285-3340) - Recommendation endpoint + boost logic
+- `repos/metabob-activity-api/src/db/paradigm.ts` (2915-3049, 797-909) - Thompson Sampling + tiered queries
+
+### SurrealDB Schema
+
+**Tables:**
+- `activity_template` - Template definitions with Thompson params (α, β)
+- `activity_execution_trace` - Full execution traces with correlation IDs
+- `variant_performance_metrics` - Shape-conditioned success rates
+- `composition_edges` - Parent→child activity relationships
+- `impulse_relevance_metrics` - Impulse→activity relevance scores
+
+**Indexes:**
+- `activity_template` by category, tags, input_shapes
+- `variant_performance_metrics` by shape_signature
+- `composition_edges` by parent_id, child_id
+
+### Correct Separation
+
+**MiniBob handles (execution-time):**
+- Activity orchestration (meta-activities)
+- Impulse loading and formatting
+- LLM tool calling loop
+- State capture (before/after/transition)
+- Trace creation (structure)
+
+**Activity-API handles (storage/learning):**
+- Template storage and versioning
+- Thompson Sampling computation (Beta distribution)
+- Tiered fallback query strategy
+- Heuristic boost calculation
+- Shape-conditioned scoring
+- Composition pattern learning
+
+**Why This Separation Matters:**
+- MiniBob can operate offline (executes locally)
+- Backend can evolve learning algorithms without MiniBob changes
+- Multiple MiniBob instances can share learning via centralized backend
+- Backend can aggregate cross-instance patterns
+
 ## Related Documentation
 
 - [Impulse Resolution](./02-impulse-resolution.md) - How impulses are loaded for execution
