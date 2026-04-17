@@ -1,0 +1,457 @@
+[
+  {
+    "id": "simple-list-files",
+    "category": "simple",
+    "goal": "List all TypeScript files in src/",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "improvise",
+    "expectedComplexity": "simple",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ImproviserResolver"],
+      "shouldNotInclude": ["TemplateSearchResolver", "ActivityExecutorResolver"],
+      "maxTurns": 2,
+      "expectedTools": ["bash"],
+      "expectedImpulses": []
+    },
+    "description": "Basic exploration goal - should trigger improvisation with minimal turns"
+  },
+  {
+    "id": "simple-find-pattern",
+    "category": "simple",
+    "goal": "Find all console.log statements in the codebase",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "improvise",
+    "expectedComplexity": "simple",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ImproviserResolver"],
+      "maxTurns": 2,
+      "expectedTools": ["bash"],
+      "expectedImpulses": []
+    },
+    "description": "Simple grep operation - tests read-only exploration"
+  },
+  {
+    "id": "simple-show-file",
+    "category": "simple",
+    "goal": "Show me the contents of src/index.ts",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "improvise",
+    "expectedComplexity": "simple",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ImproviserResolver"],
+      "maxTurns": 1,
+      "expectedTools": ["read"],
+      "expectedImpulses": []
+    },
+    "description": "Single file read - simplest possible goal"
+  },
+  {
+    "id": "simple-count-files",
+    "category": "simple",
+    "goal": "How many test files are in the project?",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "improvise",
+    "expectedComplexity": "simple",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ImproviserResolver"],
+      "maxTurns": 2,
+      "expectedTools": ["bash"],
+      "expectedImpulses": []
+    },
+    "description": "Simple analysis task - tests reasoning without modification"
+  },
+  {
+    "id": "complex-add-feature",
+    "category": "complex",
+    "goal": "Add a new endpoint /health/detailed to the server",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "template",
+    "expectedComplexity": "complex",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "TemplateSearchResolver", "ActivityExecutorResolver"],
+      "shouldNotInclude": ["ImproviserResolver"],
+      "expectedTools": ["edit", "bash"],
+      "expectedImpulses": ["activityTemplate"],
+      "minTasks": 3,
+      "expectedCompositionEdges": 0
+    },
+    "description": "Feature addition - should find activity template and execute"
+  },
+  {
+    "id": "complex-fix-bug",
+    "category": "complex",
+    "goal": "Fix the bug where impulse resolution fails for missing types",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "template",
+    "expectedComplexity": "complex",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "TemplateSearchResolver", "ActivityExecutorResolver"],
+      "expectedTools": ["read", "edit", "bash"],
+      "expectedImpulses": ["activityTemplate", "activityExecutionTrace"],
+      "minTasks": 2,
+      "expectedCompositionEdges": 0
+    },
+    "description": "Bug fix - should search templates and execute fix activity"
+  },
+  {
+    "id": "complex-refactor",
+    "category": "complex",
+    "goal": "Extract impulse resolution logic into a separate ImpulseResolver class",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "template",
+    "expectedComplexity": "complex",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "TemplateSearchResolver", "ActivityExecutorResolver"],
+      "expectedTools": ["read", "edit", "write"],
+      "expectedImpulses": ["activityTemplate"],
+      "minTasks": 4,
+      "expectedCompositionEdges": 0
+    },
+    "description": "Refactoring - multi-step task with file creation"
+  },
+  {
+    "id": "complex-add-tests",
+    "category": "complex",
+    "goal": "Add comprehensive tests for the GoalProcessor class",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "template",
+    "expectedComplexity": "complex",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "TemplateSearchResolver", "ActivityExecutorResolver"],
+      "expectedTools": ["write", "bash"],
+      "expectedImpulses": ["activityTemplate"],
+      "minTasks": 3,
+      "expectedCompositionEdges": 0
+    },
+    "description": "Test creation - should execute test writing activity"
+  },
+  {
+    "id": "bootstrap-no-context",
+    "category": "bootstrap",
+    "goal": "Debug why the activity execution is failing",
+    "impulseState": {
+      "impulses": []
+    },
+    "expectedResolver": "ImpulseStateAnalysisResolver",
+    "expectedApproach": "bootstrap",
+    "traceValidation": {
+      "shouldInclude": ["ImpulseStateAnalysisResolver", "BootstrapResolver"],
+      "expectedImpulses": ["activityExecutionTrace", "directoryTree"],
+      "bootstrapActions": ["fetch_error_logs", "scan_codebase"]
+    },
+    "description": "Cold start - no context available, should bootstrap"
+  },
+  {
+    "id": "bootstrap-missing-traces",
+    "category": "bootstrap",
+    "goal": "Optimize the performance of activity template selection",
+    "impulseState": {
+      "impulses": [
+        {
+          "id": "codebase",
+          "pointer": {"type": "directoryTree", "path": "."}
+        }
+      ]
+    },
+    "expectedResolver": "ImpulseStateAnalysisResolver",
+    "expectedApproach": "bootstrap",
+    "traceValidation": {
+      "shouldInclude": ["ImpulseStateAnalysisResolver", "BootstrapResolver"],
+      "expectedImpulses": ["activityExecutionTrace", "activityMetrics"],
+      "bootstrapActions": ["fetch_execution_traces", "fetch_metrics"]
+    },
+    "description": "Missing execution context - should fetch traces and metrics"
+  },
+  {
+    "id": "bootstrap-error-analysis",
+    "category": "bootstrap",
+    "goal": "Why is the test suite failing in CI?",
+    "impulseState": {
+      "impulses": []
+    },
+    "expectedResolver": "ImpulseStateAnalysisResolver",
+    "expectedApproach": "bootstrap",
+    "traceValidation": {
+      "shouldInclude": ["ImpulseStateAnalysisResolver", "BootstrapResolver"],
+      "expectedImpulses": ["activityExecutionTrace", "gitDiff"],
+      "bootstrapActions": ["fetch_error_logs", "get_git_context"]
+    },
+    "description": "Error investigation - needs execution traces and git context"
+  },
+  {
+    "id": "composition-debug-fix-test",
+    "category": "composition",
+    "goal": "Debug the failing test, fix it, and verify the fix works",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "composition",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ActivityExecutorResolver", "CompositionDetector"],
+      "expectedImpulses": ["activityTemplate", "activityExecutionTrace"],
+      "expectedCompositionEdges": 2,
+      "compositionPattern": "sequential",
+      "activitySequence": ["debug", "fix", "test"]
+    },
+    "description": "Multi-activity composition - debug → fix → test chain"
+  },
+  {
+    "id": "composition-implement-test",
+    "category": "composition",
+    "goal": "Implement the new feature and add tests for it",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "composition",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ActivityExecutorResolver", "CompositionDetector"],
+      "expectedImpulses": ["activityTemplate"],
+      "expectedCompositionEdges": 1,
+      "compositionPattern": "sequential",
+      "activitySequence": ["feature", "test"]
+    },
+    "description": "Feature + test composition - parallel or sequential"
+  },
+  {
+    "id": "composition-refactor-test-deploy",
+    "category": "composition",
+    "goal": "Refactor the impulse resolver, test it thoroughly, and deploy to canary",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "composition",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ActivityExecutorResolver", "CompositionDetector"],
+      "expectedImpulses": ["activityTemplate"],
+      "expectedCompositionEdges": 2,
+      "compositionPattern": "sequential",
+      "activitySequence": ["refactor", "test", "deploy"]
+    },
+    "description": "Complex composition - three-stage sequential workflow"
+  },
+  {
+    "id": "state-navigation-target",
+    "category": "state",
+    "goal": {
+      "targetState": {
+        "filesExist": ["src/resolvers/new-resolver.ts", "src/resolvers/new-resolver.test.ts"],
+        "testsPass": true,
+        "typeCheckPasses": true
+      }
+    },
+    "expectedResolver": "StateNavigator",
+    "expectedApproach": "procedural",
+    "traceValidation": {
+      "shouldInclude": ["StateNavigator", "ProceduralGenerator"],
+      "expectedImpulses": ["activityTemplate"],
+      "stateTransitions": ["files_created", "tests_written", "validation_passed"]
+    },
+    "description": "State-based goal - navigate to target configuration"
+  },
+  {
+    "id": "state-navigation-fix",
+    "category": "state",
+    "goal": {
+      "targetState": {
+        "testsPass": true,
+        "lintPass": true,
+        "typeCheckPasses": true
+      }
+    },
+    "expectedResolver": "StateNavigator",
+    "expectedApproach": "procedural",
+    "traceValidation": {
+      "shouldInclude": ["StateNavigator", "ProceduralGenerator"],
+      "expectedImpulses": ["activityExecutionTrace"],
+      "stateTransitions": ["tests_fixed", "lint_fixed", "types_fixed"]
+    },
+    "description": "Fix validation failures - procedurally achieve passing state"
+  },
+  {
+    "id": "edge-no-templates",
+    "category": "edge",
+    "goal": "Implement a quantum entanglement resolver for impulses",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "improvise",
+    "expectedComplexity": "complex",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "TemplateSearchResolver", "ImproviserResolver"],
+      "fallbackReason": "no_matching_templates",
+      "expectedTools": ["write", "edit"],
+      "ribosome": {
+        "shouldExtract": true,
+        "expectedTemplateCategory": "feature"
+      }
+    },
+    "description": "No matching templates - should fallback to improvisation and extract"
+  },
+  {
+    "id": "edge-activity-fails",
+    "category": "edge",
+    "goal": "Fix the deliberately broken test in src/broken.test.ts",
+    "setupRequired": {
+      "createFile": "src/broken.test.ts",
+      "content": "intentionally invalid syntax {{"
+    },
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "template",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ActivityExecutorResolver", "RetryHandler"],
+      "expectedFailures": 1,
+      "expectedRetries": 1,
+      "recoveryStrategy": "next_template"
+    },
+    "description": "Activity execution fails - should retry with next template"
+  },
+  {
+    "id": "edge-cycle-detection",
+    "category": "edge",
+    "goal": "Fix the bug in the bug fixer",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "template",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "CycleDetector"],
+      "cycleDetected": true,
+      "maxCompositionDepth": 5,
+      "terminationReason": "cycle_detected"
+    },
+    "description": "Self-referential goal - should detect cycle and terminate"
+  },
+  {
+    "id": "edge-depth-limit",
+    "category": "edge",
+    "goal": "Recursively optimize all activities in the system",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "composition",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "CompositionDetector", "DepthLimiter"],
+      "maxCompositionDepth": 10,
+      "terminationReason": "depth_limit_reached",
+      "partialCompletion": true
+    },
+    "description": "Deep recursion - should hit depth limit and terminate gracefully"
+  },
+  {
+    "id": "integration-full-pipeline",
+    "category": "integration",
+    "goal": "Add a new feature: impulse type validation with tests and documentation",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "composition",
+    "traceValidation": {
+      "shouldInclude": [
+        "GoalAnalysisResolver",
+        "TemplateSearchResolver",
+        "ActivityExecutorResolver",
+        "CompositionDetector"
+      ],
+      "expectedImpulses": ["activityTemplate", "activityMetrics"],
+      "expectedCompositionEdges": 2,
+      "activitySequence": ["feature", "test", "docs"],
+      "thompsonSampling": {
+        "shouldRecord": true,
+        "expectedRewards": [1.0, 1.0, 1.0]
+      }
+    },
+    "description": "Full pipeline - feature → test → docs with Thompson Sampling updates"
+  },
+  {
+    "id": "integration-bootstrap-compose",
+    "category": "integration",
+    "goal": "Debug and fix the failing activity in the last execution",
+    "impulseState": {
+      "impulses": []
+    },
+    "expectedResolver": "ImpulseStateAnalysisResolver",
+    "expectedApproach": "bootstrap_then_compose",
+    "traceValidation": {
+      "shouldInclude": [
+        "ImpulseStateAnalysisResolver",
+        "BootstrapResolver",
+        "GoalAnalysisResolver",
+        "CompositionDetector"
+      ],
+      "bootstrapActions": ["fetch_error_logs", "fetch_execution_traces"],
+      "expectedCompositionEdges": 1,
+      "activitySequence": ["debug", "fix"]
+    },
+    "description": "Bootstrap + composition - fetch context, then execute activities"
+  },
+  {
+    "id": "integration-state-to-activity",
+    "category": "integration",
+    "goal": {
+      "targetState": {
+        "filesExist": ["src/new-feature.ts", "src/new-feature.test.ts"],
+        "testsPass": true
+      }
+    },
+    "expectedResolver": "StateNavigator",
+    "expectedApproach": "procedural_to_activity",
+    "traceValidation": {
+      "shouldInclude": ["StateNavigator", "ProceduralGenerator", "ActivityExecutorResolver"],
+      "stateTransitions": ["files_created", "tests_written"],
+      "shouldFindMatchingActivity": true,
+      "hybridExecution": true
+    },
+    "description": "State navigation finds matching activity mid-execution"
+  },
+  {
+    "id": "performance-large-codebase",
+    "category": "performance",
+    "goal": "List all TypeScript interfaces defined in the project",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "improvise",
+    "expectedComplexity": "simple",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ImproviserResolver"],
+      "maxDuration": 5000,
+      "maxTokens": 2000,
+      "expectedTools": ["bash"]
+    },
+    "description": "Large codebase scan - tests performance and token efficiency"
+  },
+  {
+    "id": "performance-parallel-composition",
+    "category": "performance",
+    "goal": "Add tests to all files in src/resolvers/",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "composition",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ParallelExecutor"],
+      "parallelActivities": true,
+      "maxDuration": 30000,
+      "concurrency": 3
+    },
+    "description": "Parallel execution - tests concurrent activity execution"
+  },
+  {
+    "id": "learning-thompson-update",
+    "category": "learning",
+    "goal": "Fix the TypeScript compilation error in src/index.ts",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "template",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "TemplateSearchResolver", "ThompsonSampler"],
+      "thompsonSampling": {
+        "shouldRecord": true,
+        "templateSelectionLogged": true,
+        "rewardCalculated": true,
+        "posteriorUpdated": true
+      }
+    },
+    "description": "Thompson Sampling update - verifies learning loop integration"
+  },
+  {
+    "id": "learning-ribosome-extract",
+    "category": "learning",
+    "goal": "Implement a custom resolver for git history impulses",
+    "expectedResolver": "GoalAnalysisResolver",
+    "expectedApproach": "improvise",
+    "expectedComplexity": "complex",
+    "traceValidation": {
+      "shouldInclude": ["GoalAnalysisResolver", "ImproviserResolver", "RibosomeExtractor"],
+      "ribosome": {
+        "shouldExtract": true,
+        "expectedTemplateCategory": "feature",
+        "stateTracking": true,
+        "validationRules": true
+      },
+      "newTemplateCreated": true
+    },
+    "description": "Ribosome extraction - improvisation should create new template"
+  }
+]

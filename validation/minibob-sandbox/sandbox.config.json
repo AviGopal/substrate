@@ -1,0 +1,34 @@
+{
+  "environment": "validation",
+  "backend": {
+    "endpoint": "https://activity.metabob.com",
+    "apiKey": "${METABOB_API_KEY}"
+  },
+  "llm": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514",
+    "apiKey": "${ANTHROPIC_API_KEY}"
+  },
+  "workingDirectory": "./sandbox/workspace",
+  "traceCollection": {
+    "enabled": true,
+    "autoSubmit": true,
+    "includeResolverMetrics": true,
+    "includeStateSnapshots": true
+  },
+  "logging": {
+    "level": "debug",
+    "outputFile": "./sandbox/logs/execution.log",
+    "includeTimestamps": true,
+    "includeResolverDetails": true
+  },
+  "discovery": {
+    "enabled": false,
+    "comment": "Disable discovery for controlled sandbox environment - direct backend only"
+  },
+  "validation": {
+    "validateBeforeSubmit": true,
+    "requireSuccessfulCompletion": false,
+    "collectFailureTraces": true
+  }
+}

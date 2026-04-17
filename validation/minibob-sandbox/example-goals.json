@@ -1,0 +1,7 @@
+[
+  "list files in the current directory",
+  "show git status",
+  "read package.json",
+  "check for TypeScript files",
+  "show the last 3 commits"
+]
