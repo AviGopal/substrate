@@ -127,7 +127,8 @@ class HistoricalValidator {
             additions,
             deletions,
           };
-        });
+        })
+        .reverse(); // Reverse to chronological order (oldest first)
     } catch (error) {
       console.error("Failed to get commit history:", error);
       return [];
@@ -448,6 +449,20 @@ class HistoricalValidator {
     // Step 3: Get next N commits
     console.log(`\n📦 Getting next ${this.config.numCommits} commits...`);
     const targetCommits = this.getNextCommits(commits, startCommit, this.config.numCommits);
+
+    if (targetCommits.length === 0) {
+      throw new Error("No commits found after the start commit");
+    }
+
+    // Validate chronological order (sanity check)
+    const startDate = new Date(startCommit.date);
+    const invalidCommits = targetCommits.filter(c => new Date(c.date) <= startDate);
+    if (invalidCommits.length > 0) {
+      console.error("⚠️  Warning: Some target commits are not chronologically after start commit:");
+      invalidCommits.forEach(c => {
+        console.error(`   ${c.hash.substring(0, 8)} (${c.date}) is not after ${startCommit.date}`);
+      });
+    }
 
     targetCommits.forEach((commit, i) => {
       console.log(`   ${i + 1}. ${commit.hash.substring(0, 8)} - ${commit.message}`);
