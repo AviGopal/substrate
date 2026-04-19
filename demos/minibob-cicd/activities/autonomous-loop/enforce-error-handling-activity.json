@@ -1,0 +1,159 @@
+{
+  "id": "enforce-error-handling-pattern",
+  "name": "Enforce Error Handling Pattern",
+  "category": "tool",
+  "description": "Enforces the Express.js error handling pattern: parameter validation → typed errors → descriptive messages. Scans functions for missing validation, adds appropriate type checks, and ensures errors include context.",
+  "version": "1.0.0",
+  "created_at": "2026-04-18T00:00:00Z",
+  "metadata": {
+    "source": "express-specification-extraction",
+    "specification_id": "error-handling",
+    "pattern_type": "Type-Safe Error Construction",
+    "automation_level": "Fully automatable via AST analysis"
+  },
+  "tasks": [
+    {
+      "id": "identify_functions_needing_validation",
+      "description": "Scan the target file for exported functions and identify which ones lack parameter validation",
+      "prompt": {
+        "template": "You are enforcing the Express.js error handling pattern.\n\nTarget file: {{target_file}}\n\nTask: Identify all exported functions that accept parameters but do NOT validate them at entry.\n\nLook for:\n1. Functions that accept parameters\n2. Missing typeof checks, Array.isArray(), Number.isInteger(), etc.\n3. Functions that use parameters without validation\n\nFor each function found, output:\n- Function name\n- Line number range\n- Parameters that need validation\n- Recommended validation (e.g., 'typeof x === \"string\"', 'Number.isInteger(code)')\n\nOutput format: JSON array of findings to /tmp/validation-findings.json",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "description": "Path to the file to analyze",
+            "required": true
+          }
+        ]
+      },
+      "tools": ["bash", "read", "write"],
+      "validation": {
+        "requiredFiles": ["/tmp/validation-findings.json"],
+        "successCriteria": "Output file exists and contains valid JSON array"
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "exponential_backoff"
+      }
+    },
+    {
+      "id": "add_parameter_validation",
+      "description": "Add parameter validation to functions identified in previous task",
+      "prompt": {
+        "template": "You are adding parameter validation to enforce the Express.js error handling pattern.\n\nTarget file: {{target_file}}\nFindings: Load from /tmp/validation-findings.json\n\nFor each finding:\n1. Add parameter validation at the start of the function\n2. Use appropriate error types:\n   - TypeError for type mismatches\n   - RangeError for bounds violations\n3. Include descriptive error messages with actual values:\n   - Use JSON.stringify() for parameter values\n   - Format: \"Invalid {param}: expected {type}, got ${JSON.stringify(value)}\"\n\nExample pattern:\n```javascript\nfunction status(code) {\n  if (!Number.isInteger(code)) {\n    throw new TypeError(`Invalid status code: ${JSON.stringify(code)} - must be integer`);\n  }\n  if (code < 100 || code > 999) {\n    throw new RangeError(`Invalid status code: ${JSON.stringify(code)} - must be between 100-999`);\n  }\n  // ... rest of function\n}\n```\n\nModify {{target_file}} to add validation to ALL functions in the findings.",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "description": "Path to the file to modify",
+            "required": true
+          }
+        ]
+      },
+      "tools": ["read", "edit", "write"],
+      "validation": {
+        "requiredPatterns": [
+          "TypeError",
+          "JSON.stringify"
+        ],
+        "forbiddenPatterns": [
+          "// TODO",
+          "// FIXME"
+        ],
+        "successCriteria": "All identified functions have parameter validation added"
+      },
+      "retry": {
+        "maxAttempts": 3,
+        "strategy": "exponential_backoff"
+      }
+    },
+    {
+      "id": "verify_error_handling",
+      "description": "Verify that error handling has been correctly applied",
+      "prompt": {
+        "template": "You are verifying the error handling pattern enforcement.\n\nTarget file: {{target_file}}\n\nVerification checklist:\n1. All functions with parameters have validation at entry (within first 5 lines)\n2. Validation uses appropriate error types (TypeError, RangeError)\n3. Error messages include parameter values via JSON.stringify()\n4. No validation is missing\n\nCreate a verification report:\n- Functions checked: count\n- Validations added: count\n- Pattern compliance: percentage\n- Issues found: list any problems\n\nOutput: /tmp/error-handling-verification.json",
+        "variables": [
+          {
+            "name": "target_file",
+            "type": "string",
+            "description": "Path to the file to verify",
+            "required": true
+          }
+        ]
+      },
+      "tools": ["read", "bash", "write"],
+      "validation": {
+        "requiredFiles": ["/tmp/error-handling-verification.json"],
+        "successCriteria": "Verification report shows 100% pattern compliance"
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "fail_fast"
+      }
+    }
+  ],
+  "impulses": {
+    "inputs": [
+      {
+        "id": "target_file",
+        "pointer": {
+          "type": "file",
+          "path": "{{target_file}}"
+        },
+        "budget": 5000,
+        "priority": "high"
+      },
+      {
+        "id": "specification",
+        "pointer": {
+          "type": "memo",
+          "content": "Express.js error handling pattern: All public methods must validate parameters before use. Use TypeError for type mismatches, RangeError for bounds. Include expected/actual values in error messages via JSON.stringify()."
+        },
+        "budget": 500,
+        "priority": "medium"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "validation_findings",
+        "pointer": {
+          "type": "file",
+          "path": "/tmp/validation-findings.json"
+        },
+        "description": "Functions identified as needing validation"
+      },
+      {
+        "id": "modified_file",
+        "pointer": {
+          "type": "file",
+          "path": "{{target_file}}"
+        },
+        "description": "File with error handling enforced"
+      },
+      {
+        "id": "verification_report",
+        "pointer": {
+          "type": "file",
+          "path": "/tmp/error-handling-verification.json"
+        },
+        "description": "Verification results"
+      }
+    ]
+  },
+  "execution_requirements": {
+    "working_directory": ".",
+    "environment": {},
+    "dependencies": []
+  },
+  "success_metrics": {
+    "required_outputs": [
+      "/tmp/validation-findings.json",
+      "/tmp/error-handling-verification.json"
+    ],
+    "validation_rules": [
+      "All functions have parameter validation",
+      "Error types are appropriate (TypeError/RangeError)",
+      "Error messages include parameter values"
+    ]
+  }
+}

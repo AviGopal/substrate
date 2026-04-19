@@ -1,0 +1,186 @@
+{
+  "id": "validate-specification-enforcement",
+  "name": "Validate Specification Enforcement",
+  "category": "tool",
+  "description": "Validates that specification enforcement preserved all original specs, introduced no regressions, and achieved 100% compliance. Analyzes before/after code to verify pattern adherence.",
+  "version": "1.0.0",
+  "created_at": "2026-04-18T13:30:00Z",
+  "metadata": {
+    "purpose": "autonomous-learning-loop-validation",
+    "validates_activity": "enforce-error-handling-pattern",
+    "specification_reference": "express-error-handling"
+  },
+  "tasks": [
+    {
+      "id": "load_enforcement_results",
+      "description": "Load the enforcement execution results and analyze what was changed",
+      "prompt": {
+        "template": "Load and analyze the enforcement execution results.\n\nEnforcement Results: {{enforcement_results_file}}\nOriginal File: {{original_file}}\nModified File: {{modified_file}}\n\nAnalyze:\n1. What functions were identified for validation?\n2. What validations were added?\n3. What changes were made to the code?\n\nCreate a structured analysis:\n- Functions analyzed: count\n- Validations added: list\n- Code changes: summary\n- Files modified: list\n\nOutput: /tmp/validation-analysis.json",
+        "variables": [
+          {
+            "name": "enforcement_results_file",
+            "type": "string",
+            "description": "Path to enforcement execution results",
+            "required": true
+          },
+          {
+            "name": "original_file",
+            "type": "string",
+            "description": "Path to original file before enforcement",
+            "required": true
+          },
+          {
+            "name": "modified_file",
+            "type": "string",
+            "description": "Path to modified file after enforcement",
+            "required": true
+          }
+        ]
+      },
+      "tools": ["read", "bash", "write"],
+      "validation": {
+        "requiredFiles": ["/tmp/validation-analysis.json"],
+        "successCriteria": "Analysis file exists with structured data"
+      }
+    },
+    {
+      "id": "verify_specification_preservation",
+      "description": "Verify that all original specifications are preserved in modified code",
+      "prompt": {
+        "template": "Verify specification preservation:\n\nOriginal Specification:\n- Parameter validation at function entry\n- TypeError for type mismatches\n- RangeError for bounds violations\n- Descriptive error messages with JSON.stringify()\n\nModified File: {{modified_file}}\nAnalysis: Load from /tmp/validation-analysis.json\n\nFor EACH validation that was added, verify:\n1. ✓ Uses typeof, Array.isArray(), or Number.isInteger() for type checking\n2. ✓ Throws TypeError for type mismatches (or RangeError for bounds)\n3. ✓ Error message includes parameter value via JSON.stringify()\n4. ✓ Validation is at function entry (within first 5-10 lines)\n5. ✓ Original function logic is preserved (no behavior changes)\n\nCreate verification report:\n- Specifications checked: list\n- Preservation status: pass/fail for each spec\n- Regressions detected: list (should be empty)\n- Compliance percentage: calculated\n\nOutput: /tmp/specification-preservation-report.json",
+        "variables": [
+          {
+            "name": "modified_file",
+            "type": "string",
+            "description": "Path to modified file to verify",
+            "required": true
+          }
+        ]
+      },
+      "tools": ["read", "bash", "write"],
+      "validation": {
+        "requiredFiles": ["/tmp/specification-preservation-report.json"],
+        "requiredPatterns": ["compliance_percentage"],
+        "successCriteria": "All specifications preserved, 100% compliance"
+      }
+    },
+    {
+      "id": "validate_no_regressions",
+      "description": "Validate that no regressions or bugs were introduced",
+      "prompt": {
+        "template": "Regression analysis:\n\nOriginal File: {{original_file}}\nModified File: {{modified_file}}\n\nCheck for regressions:\n1. All original function signatures preserved (no parameter changes)\n2. All original logic preserved (only validation added)\n3. No syntax errors introduced\n4. No unreachable code created\n5. No breaking changes to exports\n\nFor each function modified:\n- Original behavior: describe\n- Modified behavior: describe\n- Behavioral changes: list (should only be validation errors thrown on invalid input)\n- Breaking changes: list (should be empty)\n\nCreate regression report:\n- Functions checked: count\n- Regressions found: count (should be 0)\n- Syntax valid: true/false\n- Backward compatible: true/false\n- Issues: list\n\nOutput: /tmp/regression-analysis.json",
+        "variables": [
+          {
+            "name": "original_file",
+            "type": "string",
+            "description": "Original file before changes",
+            "required": true
+          },
+          {
+            "name": "modified_file",
+            "type": "string",
+            "description": "Modified file to check",
+            "required": true
+          }
+        ]
+      },
+      "tools": ["read", "bash", "write"],
+      "validation": {
+        "requiredFiles": ["/tmp/regression-analysis.json"],
+        "successCriteria": "Zero regressions, backward compatible, syntax valid"
+      }
+    },
+    {
+      "id": "generate_validation_summary",
+      "description": "Generate final validation summary confirming autonomous loop success",
+      "prompt": {
+        "template": "Create final validation summary for the autonomous learning loop:\n\nInputs:\n- Specification preservation: /tmp/specification-preservation-report.json\n- Regression analysis: /tmp/regression-analysis.json\n- Validation analysis: /tmp/validation-analysis.json\n\nSummary should include:\n\n## Autonomous Loop Validation\n\n### Phase 1: Specification Learning ✓\n- Specifications extracted: count\n- Patterns identified: list\n\n### Phase 2: Activity Creation ✓\n- Activity created: name\n- Tasks defined: count\n- Immediately executable: yes/no\n\n### Phase 3: Enforcement Execution ✓\n- Functions analyzed: count\n- Validations added: count\n- Files modified: count\n\n### Phase 4: Validation ✓\n- Specification preservation: percentage\n- Regressions detected: count\n- Compliance achieved: percentage\n\n## Overall Result\n- Autonomous loop: SUCCESS/FAILURE\n- Specifications preserved: yes/no\n- Pattern compliance: percentage\n- Ready for production: yes/no\n\nOutput: /tmp/autonomous-loop-validation-summary.json",
+        "variables": []
+      },
+      "tools": ["read", "write"],
+      "validation": {
+        "requiredFiles": ["/tmp/autonomous-loop-validation-summary.json"],
+        "successCriteria": "Summary shows 100% compliance and zero regressions"
+      }
+    }
+  ],
+  "impulses": {
+    "inputs": [
+      {
+        "id": "enforcement_results",
+        "pointer": {
+          "type": "file",
+          "path": "{{enforcement_results_file}}"
+        },
+        "budget": 3000,
+        "priority": "high"
+      },
+      {
+        "id": "original_file",
+        "pointer": {
+          "type": "file",
+          "path": "{{original_file}}"
+        },
+        "budget": 5000,
+        "priority": "high"
+      },
+      {
+        "id": "modified_file",
+        "pointer": {
+          "type": "file",
+          "path": "{{modified_file}}"
+        },
+        "budget": 5000,
+        "priority": "high"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "validation_analysis",
+        "pointer": {
+          "type": "file",
+          "path": "/tmp/validation-analysis.json"
+        },
+        "description": "Structured analysis of enforcement results"
+      },
+      {
+        "id": "preservation_report",
+        "pointer": {
+          "type": "file",
+          "path": "/tmp/specification-preservation-report.json"
+        },
+        "description": "Specification preservation verification"
+      },
+      {
+        "id": "regression_report",
+        "pointer": {
+          "type": "file",
+          "path": "/tmp/regression-analysis.json"
+        },
+        "description": "Regression analysis results"
+      },
+      {
+        "id": "validation_summary",
+        "pointer": {
+          "type": "file",
+          "path": "/tmp/autonomous-loop-validation-summary.json"
+        },
+        "description": "Final autonomous loop validation summary"
+      }
+    ]
+  },
+  "success_metrics": {
+    "required_outputs": [
+      "/tmp/validation-analysis.json",
+      "/tmp/specification-preservation-report.json",
+      "/tmp/regression-analysis.json",
+      "/tmp/autonomous-loop-validation-summary.json"
+    ],
+    "validation_rules": [
+      "All specifications preserved",
+      "Zero regressions detected",
+      "100% pattern compliance",
+      "Backward compatible changes only"
+    ]
+  }
+}

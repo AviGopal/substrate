@@ -1,0 +1,280 @@
+{
+  "id": "autonomous-code-quality-loop",
+  "name": "Autonomous Code Quality Improvement Loop",
+  "version": "1.0.0",
+  "category": "meta",
+  "description": "Complete autonomous loop: learn specifications → create enforcement activities → apply enforcement → validate compliance → improve variants. Demonstrates full composition of the learning loop.",
+  "metadata": {
+    "composition_type": "sequential-with-feedback",
+    "demonstrates": "complete-autonomous-development-loop",
+    "phases": 7,
+    "autonomous": true
+  },
+  "tasks": [
+    {
+      "id": "phase_1_learn_specifications",
+      "description": "Analyze repository and extract coding specifications",
+      "prompt": {
+        "template": "Analyze the codebase at {{repository_path}} and extract specifications.\n\nPatterns to identify: {{patterns_to_extract}}\n\nFor each pattern:\n1. Find 3+ real examples in the code\n2. Define verification rules\n3. Create programmatic checks\n4. Document automation feasibility\n\nOutput: {{output_path}}/specifications.json",
+        "variables": [
+          {
+            "name": "repository_path",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "patterns_to_extract",
+            "type": "array",
+            "default": ["error-handling", "parameter-validation", "test-coverage"]
+          },
+          {
+            "name": "output_path",
+            "type": "string",
+            "default": "/tmp"
+          }
+        ]
+      },
+      "tools": ["bash", "read", "write"],
+      "validation": {
+        "requiredFiles": ["{{output_path}}/specifications.json"],
+        "successCriteria": "At least 3 specifications extracted with examples"
+      },
+      "outputs": {
+        "specifications_file": "{{output_path}}/specifications.json"
+      }
+    },
+    {
+      "id": "phase_2_create_enforcement_activities",
+      "description": "Generate executable activity templates from specifications",
+      "prompt": {
+        "template": "Load specifications from {{phase_1.specifications_file}}\n\nFor each specification, create a complete activity template:\n1. Activity metadata (id, name, category)\n2. Tasks array with executable steps\n3. Validation rules and success criteria\n4. Tool requirements\n5. Impulse definitions\n\nCreate both:\n- Enforcement activity (applies the pattern)\n- Validation activity (verifies compliance)\n\nOutput enforcement activities to: {{output_path}}/enforcement-activities/\nOutput validation activities to: {{output_path}}/validation-activities/",
+        "variables": [
+          {
+            "name": "output_path",
+            "type": "string",
+            "default": "/tmp"
+          }
+        ]
+      },
+      "tools": ["read", "write"],
+      "validation": {
+        "requiredPatterns": ["tasks", "validation", "impulses"],
+        "successCriteria": "Activities are immediately executable"
+      },
+      "outputs": {
+        "enforcement_templates": "{{output_path}}/enforcement-activities/*.json",
+        "validation_templates": "{{output_path}}/validation-activities/*.json"
+      }
+    },
+    {
+      "id": "phase_3_enforce_specifications",
+      "description": "Execute enforcement activities on target files",
+      "prompt": {
+        "template": "Load enforcement activities from {{phase_2.enforcement_templates}}\n\nFor each activity and target file combination:\n1. Execute the activity's tasks in order\n2. Record execution traces\n3. Capture before/after state\n4. Collect verification results\n\nTarget files: {{target_files}}\n\nOutput results to: {{output_path}}/enforcement-results/\n\nThis demonstrates activity composition - activities executing other activities.",
+        "variables": [
+          {
+            "name": "target_files",
+            "type": "array",
+            "required": true
+          },
+          {
+            "name": "output_path",
+            "type": "string",
+            "default": "/tmp"
+          }
+        ]
+      },
+      "tools": ["bash", "read", "write", "edit"],
+      "validation": {
+        "successCriteria": "All enforcement activities execute successfully"
+      },
+      "outputs": {
+        "modified_files": "{{target_files}}",
+        "execution_traces": "{{output_path}}/enforcement-results/traces/*.json",
+        "verification_reports": "{{output_path}}/enforcement-results/verification/*.json"
+      }
+    },
+    {
+      "id": "phase_4_validate_enforcement",
+      "description": "Validate that specifications are preserved and no regressions introduced",
+      "prompt": {
+        "template": "Load validation activities from {{phase_2.validation_templates}}\nLoad enforcement results from {{phase_3.execution_traces}}\n\nFor each modified file:\n1. Verify specification preservation (100% required)\n2. Check for regressions (0 required)\n3. Validate pattern compliance\n4. Confirm backward compatibility\n\nOutput validation results to: {{output_path}}/validation-results/\n\nGenerate final report:\n- Compliance percentage\n- Regressions detected (should be 0)\n- Ready for production (yes/no)",
+        "variables": [
+          {
+            "name": "output_path",
+            "type": "string",
+            "default": "/tmp"
+          }
+        ]
+      },
+      "tools": ["read", "write", "bash"],
+      "validation": {
+        "successCriteria": "100% compliance, 0 regressions"
+      },
+      "outputs": {
+        "compliance_report": "{{output_path}}/validation-results/compliance.json",
+        "regression_report": "{{output_path}}/validation-results/regressions.json"
+      }
+    },
+    {
+      "id": "phase_5_decide_next_action",
+      "description": "Determine if improvement iteration is needed",
+      "prompt": {
+        "template": "Load compliance report from {{phase_4.compliance_report}}\nLoad regression report from {{phase_4.regression_report}}\n\nDecision logic:\n- If compliance = 100% AND regressions = 0: COMPLETE (go to phase 7)\n- If compliance < 100% OR regressions > 0: IMPROVE (go to phase 6)\n- If iterations >= {{max_iterations}}: ABORT (report failure)\n\nOutput decision to: {{output_path}}/decision.json",
+        "variables": [
+          {
+            "name": "max_iterations",
+            "type": "number",
+            "default": 3
+          },
+          {
+            "name": "current_iteration",
+            "type": "number",
+            "default": 1
+          },
+          {
+            "name": "output_path",
+            "type": "string",
+            "default": "/tmp"
+          }
+        ]
+      },
+      "tools": ["read", "write"],
+      "validation": {
+        "successCriteria": "Decision made based on compliance and regressions"
+      },
+      "outputs": {
+        "decision": "{{output_path}}/decision.json",
+        "next_phase": "phase_6_improve_variants OR phase_7_complete"
+      }
+    },
+    {
+      "id": "phase_6_improve_variants",
+      "description": "Create improved activity variants based on fault analysis",
+      "prompt": {
+        "template": "Load execution traces from {{phase_3.execution_traces}}\nLoad regression report from {{phase_4.regression_report}}\n\nAnalyze faults:\n1. Identify why compliance < 100%\n2. Find patterns in failures\n3. Determine root causes\n\nCreate improved variants:\n1. Fix identified issues\n2. Add missing edge case handling\n3. Improve validation logic\n4. Generate variant templates\n\nOutput improved templates to: {{output_path}}/improved-activities/\n\nThen: Loop back to phase 3 with improved templates\nMax iterations: {{max_iterations}}",
+        "variables": [
+          {
+            "name": "max_iterations",
+            "type": "number",
+            "default": 3
+          },
+          {
+            "name": "output_path",
+            "type": "string",
+            "default": "/tmp"
+          }
+        ]
+      },
+      "tools": ["read", "write"],
+      "validation": {
+        "successCriteria": "Improved variants created that address identified faults"
+      },
+      "outputs": {
+        "improved_templates": "{{output_path}}/improved-activities/*.json",
+        "loop_back_to": "phase_3_enforce_specifications"
+      },
+      "conditional": {
+        "execute_if": "{{phase_5.decision.next_phase}} == 'phase_6_improve_variants'",
+        "skip_if": "{{phase_5.decision.next_phase}} == 'phase_7_complete'"
+      }
+    },
+    {
+      "id": "phase_7_complete",
+      "description": "Finalize autonomous loop execution",
+      "prompt": {
+        "template": "Generate final summary of autonomous loop execution:\n\nLoad all results:\n- Specifications: {{phase_1.specifications_file}}\n- Activities created: {{phase_2.enforcement_templates}}\n- Files modified: {{phase_3.modified_files}}\n- Compliance: {{phase_4.compliance_report}}\n- Iterations: {{current_iteration}}\n\nSummary should include:\n1. Loop status: SUCCESS/FAILURE\n2. Phases completed: count\n3. Iterations needed: count\n4. Final compliance: percentage\n5. Regressions: count\n6. Files modified: count\n7. Validations added: count\n8. Ready for production: yes/no\n\nOutput: {{output_path}}/autonomous-loop-summary.json",
+        "variables": [
+          {
+            "name": "current_iteration",
+            "type": "number",
+            "default": 1
+          },
+          {
+            "name": "output_path",
+            "type": "string",
+            "default": "/tmp"
+          }
+        ]
+      },
+      "tools": ["read", "write"],
+      "validation": {
+        "successCriteria": "Final summary generated with all metrics"
+      },
+      "outputs": {
+        "final_summary": "{{output_path}}/autonomous-loop-summary.json"
+      },
+      "conditional": {
+        "execute_if": "{{phase_5.decision.next_phase}} == 'phase_7_complete'"
+      }
+    }
+  ],
+  "composition": {
+    "type": "sequential-with-conditional-loop",
+    "execution_order": [
+      "phase_1_learn_specifications",
+      "phase_2_create_enforcement_activities",
+      "phase_3_enforce_specifications",
+      "phase_4_validate_enforcement",
+      "phase_5_decide_next_action",
+      {
+        "conditional": {
+          "condition": "{{phase_5.decision.next_phase}} == 'phase_6_improve_variants'",
+          "true_path": [
+            "phase_6_improve_variants",
+            "phase_3_enforce_specifications"
+          ],
+          "false_path": [
+            "phase_7_complete"
+          ]
+        }
+      }
+    ],
+    "max_loop_iterations": 3,
+    "successCriteria": {
+      "compliance_percentage": 100,
+      "max_regressions": 0
+    }
+  },
+  "impulses": {
+    "inputs": [
+      {
+        "id": "repository_path",
+        "pointer": {
+          "type": "directoryTree",
+          "path": "{{repository_path}}"
+        },
+        "budget": 10000,
+        "priority": "high"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "specifications",
+        "pointer": {
+          "type": "file",
+          "path": "{{output_path}}/specifications.json"
+        }
+      },
+      {
+        "id": "final_summary",
+        "pointer": {
+          "type": "file",
+          "path": "{{output_path}}/autonomous-loop-summary.json"
+        }
+      }
+    ]
+  },
+  "success_metrics": {
+    "required_outputs": [
+      "{{output_path}}/specifications.json",
+      "{{output_path}}/autonomous-loop-summary.json"
+    ],
+    "validation_rules": [
+      "All 7 phases executed",
+      "100% compliance achieved",
+      "Zero regressions",
+      "Activities created and tested"
+    ]
+  }
+}
