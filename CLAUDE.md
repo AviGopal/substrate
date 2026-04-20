@@ -340,6 +340,12 @@ const unloaded = ImpulseResolver.unload(impulse)
 - `activityCompositionGraph`: Activity composition relationships
 - `impulseRelevanceMetrics`: Impulse relevance scores
 - `toolUsagePatterns`: Tool usage patterns
+- `executionCostSummary`: Aggregate cost metrics for executions (grouped by activity/vessel)
+- `resolverCostAnalysis`: Cost breakdown by resolver tier and resolver ID
+- `vesselPerformanceMetrics`: Performance and cost metrics for specific vessels
+- `costByActivity`: Cost breakdown grouped by activity template
+- `resolverPerformanceByShape`: Resolver performance metrics grouped by impulse shape
+- `costTrendOverTime`: Time-series cost data for trend analysis
 
 **Analysis-API** (code analysis):
 - `problem_detection`: Code quality issues

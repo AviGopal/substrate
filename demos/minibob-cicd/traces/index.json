@@ -1,0 +1,43 @@
+{
+  "traces": [
+    {
+      "id": "trace-001",
+      "timestamp": "2024-04-19T10:23:00.000Z",
+      "duration": 2340,
+      "status": "completed",
+      "activity": "Build MiniBob Dashboard",
+      "cost": 0.15,
+      "files_changed": ["public/index.html", "public/dashboard.css", "public/dashboard.js"],
+      "insights": ["Responsive layout implemented", "Dark theme applied", "Auto-refresh configured"],
+      "errors": []
+    },
+    {
+      "id": "trace-002", 
+      "timestamp": "2024-04-19T09:45:00.000Z",
+      "duration": 1200,
+      "status": "completed",
+      "activity": "Thompson Sampling Analysis",
+      "cost": 0.08,
+      "files_changed": ["src/thompson-sampling.ts"],
+      "insights": ["Bayesian optimization convergence improved", "Exploration rate adjusted"],
+      "errors": []
+    },
+    {
+      "id": "trace-003",
+      "timestamp": "2024-04-19T09:15:00.000Z", 
+      "duration": 890,
+      "status": "failed",
+      "activity": "CI/CD Integration",
+      "cost": 0.05,
+      "files_changed": [],
+      "insights": [],
+      "errors": ["Authentication failed", "Rate limit exceeded"]
+    }
+  ],
+  "summary": {
+    "total_traces": 3,
+    "success_rate": 0.667,
+    "avg_duration": 1476,
+    "total_cost": 0.28
+  }
+}

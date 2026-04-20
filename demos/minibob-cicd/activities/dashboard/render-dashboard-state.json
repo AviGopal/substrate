@@ -1,0 +1,41 @@
+{
+  "id": "render-dashboard-state",
+  "name": "Render Dashboard State",
+  "category": "dashboard",
+  "description": "Orchestrates data sourcing for all dashboard views. Queries the impulse state space and produces a complete dashboard state for rendering.",
+  "version": "1.0.0",
+  "metadata": {
+    "dashboard_views": ["traces", "metrics", "compliance", "health"]
+  },
+  "tasks": [
+    {
+      "id": "source_all_views",
+      "description": "Query impulse state space for all dashboard data",
+      "prompt": {
+        "template": "Source data for the minibob-cicd dashboard from the impulse state space.\n\n## Data Sources\n\n### 1. Execution Traces\nQuery: activityExecutionTrace (limit 20, recent first)\nShape needed: trace_list\n\n### 2. Activity Metrics  \nQuery: activityMetrics (last 24 hours)\nShape needed: activity_metrics\n\n### 3. Specification Compliance\nQuery: specValidationResult (all specs)\nShape needed: compliance_summary\n\n### 4. System Health\nQuery: vesselHealth (all registered vessels)\nShape needed: health_status\n\n## Implementation\n\nUse bash/curl to query the Activity API at $ACTIVITY_API_ENDPOINT:\n- POST /v2/impulses/resolve for each shape\n- Or read from local impulse cache if available\n\nProduce unified dashboard state:\n```json\n{\n  \"generated_at\": \"<ISO timestamp>\",\n  \"generated_by\": \"render-dashboard-state\",\n  \"views\": {\n    \"traces\": {\n      \"shape\": \"trace_list\",\n      \"data\": { ... }\n    },\n    \"metrics\": {\n      \"shape\": \"activity_metrics\", \n      \"data\": { ... }\n    },\n    \"compliance\": {\n      \"shape\": \"compliance_summary\",\n      \"data\": { ... }\n    },\n    \"health\": {\n      \"shape\": \"health_status\",\n      \"data\": { ... }\n    }\n  }\n}\n```\n\nIf any source fails, include error state:\n```json\n{\n  \"error\": \"Failed to resolve\",\n  \"fallback\": \"cached\" | \"empty\"\n}\n```\n\nOutput to: /tmp/dashboard/state.json",
+        "maxTokens": 5000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/dashboard/state.json"],
+        "requiredPatterns": ["generated_at", "views"]
+      }
+    }
+  ],
+  "outputSchema": {
+    "produces": [
+      {
+        "shape": "dashboard_state",
+        "description": "Complete dashboard state for rendering",
+        "structure": {
+          "generated_at": "ISO timestamp",
+          "views": {
+            "traces": "trace_list shape",
+            "metrics": "activity_metrics shape",
+            "compliance": "compliance_summary shape",
+            "health": "health_status shape"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "dailyBudget": 5.0,
+  "todayCost": 1.23,
+  "budgetUsedPercent": 24.6,
+  "currency": "USD",
+  "lastUpdate": "2024-04-19T10:23:00.000Z",
+  "breakdown": {
+    "execution": 0.89,
+    "analysis": 0.24,
+    "storage": 0.10
+  },
+  "trends": {
+    "yesterday": 1.05,
+    "weekAvg": 0.95,
+    "monthlyTotal": 28.45
+  }
+}

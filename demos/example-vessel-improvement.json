@@ -1,0 +1,102 @@
+{
+  "id": "demo:vessel-self-analysis",
+  "name": "Vessel Self-Analysis",
+  "description": "A real activity that analyzes MiniBob's own performance and suggests improvements. Demonstrates a vessel examining and improving itself.",
+  "category": "meta",
+  "tags": ["demo", "self-improvement", "meta.analysis"],
+  "variables": [],
+  "inputSchema": {
+    "required": [],
+    "optional": []
+  },
+  "outputSchema": {
+    "produces": [
+      {"shape": "self_analysis_report", "description": "Analysis of vessel's own performance"},
+      {"shape": "improvement_recommendations", "description": "Concrete improvement suggestions"}
+    ]
+  },
+  "tasks": [
+    {
+      "id": "scan-own-activities",
+      "description": "Scan MiniBob's activities directory to understand current capabilities",
+      "resolver": "bash",
+      "config": {
+        "command": "find activities -name '*.json' -exec echo {} \\; | head -20"
+      },
+      "outputShapes": ["activity_list"],
+      "validation": {
+        "requireOutput": true
+      }
+    },
+    {
+      "id": "analyze-activity-patterns",
+      "description": "Analyze patterns in existing activities to find optimization opportunities",
+      "dependencies": ["scan-own-activities"],
+      "prompt": {
+        "template": "Analyze MiniBob's activities for improvement opportunities.\n\nActivity files found:\n{{impulse:scan-own-activities}}\n\nYour task:\n1. Read a sample of these activity files\n2. Identify common patterns:\n   - How many use LLM vs deterministic resolvers?\n   - What shapes are most commonly used?\n   - Are there repeated task patterns?\n   - Which activities might be slow/expensive?\n\n3. For each pattern, describe:\n   - Current implementation\n   - Optimization opportunity\n   - Expected improvement\n\nOutput JSON:\n{\n  \"activities_analyzed\": 20,\n  \"patterns_found\": [\n    {\n      \"pattern\": \"bash command execution via LLM\",\n      \"count\": 12,\n      \"optimization\": \"Create BashCommandResolver\",\n      \"expected_improvement\": {\n        \"cost_reduction\": \"100%\",\n        \"speed_improvement\": \"50x\",\n        \"reliability_increase\": \"+15%\"\n      },\n      \"bootstrap_activity\": \"system:extract-deterministic-resolver\"\n    },\n    {\n      \"pattern\": \"sequential test execution\",\n      \"count\": 5,\n      \"optimization\": \"Parallelize test tasks\",\n      \"expected_improvement\": {\n        \"speed_improvement\": \"3-4x\",\n        \"cost_reduction\": \"0%\",\n        \"reliability_increase\": \"0%\"\n      },\n      \"bootstrap_activity\": \"system:optimize-composition\"\n    }\n  ],\n  \"total_potential_savings\": {\n    \"monthly_cost_usd\": 50,\n    \"avg_execution_time_ms\": 30000\n  }\n}",
+        "maxTokens": 4000
+      },
+      "outputShapes": ["pattern_analysis"],
+      "validation": {
+        "requireOutput": true,
+        "requiredPatterns": ["patterns_found", "total_potential_savings"]
+      }
+    },
+    {
+      "id": "generate-improvement-roadmap",
+      "description": "Create concrete improvement roadmap with priorities",
+      "dependencies": ["analyze-activity-patterns"],
+      "prompt": {
+        "template": "Based on the pattern analysis:\n\n{{impulse:analyze-activity-patterns}}\n\nCreate a concrete improvement roadmap:\n\n# MiniBob Self-Improvement Roadmap\n\n## Executive Summary\n- Current state: [describe]\n- Potential improvements identified: [count]\n- Expected impact: [cost/speed/reliability]\n\n## Priority 1: Quick Wins (This Week)\n[List highest impact, lowest effort improvements]\n\nFor each:\n- Current state\n- Action: Which bootstrap activity to run\n- Expected improvement\n- Command to execute\n\n## Priority 2: Medium-term (Next 2 Weeks)\n[List medium impact improvements]\n\n## Priority 3: Long-term (Month)\n[List strategic improvements]\n\n## Execution Plan\n1. [First step with exact command]\n2. [Second step with exact command]\n3. [Monitoring: what metrics to watch]\n\n## Success Metrics\n- Before: [current metrics]\n- After: [target metrics]\n- How to measure: [specific queries]\n\nOutput this roadmap as markdown.",
+        "maxTokens": 3000
+      },
+      "outputShapes": ["improvement_roadmap"],
+      "validation": {
+        "requireOutput": true,
+        "requiredPatterns": ["# MiniBob Self-Improvement Roadmap", "Priority 1", "Execution Plan"]
+      }
+    },
+    {
+      "id": "save-roadmap",
+      "description": "Save improvement roadmap to file",
+      "dependencies": ["generate-improvement-roadmap"],
+      "resolver": "bash",
+      "config": {
+        "command": "mkdir -p /tmp/minibob-self-improvement && cat > /tmp/minibob-self-improvement/roadmap-$(date +%s).md <<'ROADMAP_EOF'\n{{impulse:generate-improvement-roadmap}}\nROADMAP_EOF\necho \"Roadmap saved to: /tmp/minibob-self-improvement/roadmap-$(date +%s).md\""
+      },
+      "outputShapes": ["file_path"],
+      "validation": {
+        "requireOutput": true,
+        "requiredPatterns": ["Roadmap saved"]
+      }
+    },
+    {
+      "id": "create-tracking-dashboard",
+      "description": "Create simple tracking dashboard to monitor improvement",
+      "dependencies": ["save-roadmap"],
+      "prompt": {
+        "template": "Create a simple tracking template for monitoring the improvement roadmap.\n\nRoadmap:\n{{impulse:generate-improvement-roadmap}}\n\nCreate a JSON tracking structure:\n{\n  \"roadmap_id\": \"{{execution_id}}\",\n  \"created_at\": \"{{timestamp}}\",\n  \"status\": \"in_progress\",\n  \"priorities\": [\n    {\n      \"priority\": 1,\n      \"items\": [\n        {\n          \"improvement\": \"Extract bash deterministic resolver\",\n          \"status\": \"not_started\",\n          \"bootstrap_activity\": \"system:extract-deterministic-resolver\",\n          \"expected_metrics\": {\"cost_reduction_usd\": 50, \"speed_improvement_ms\": 30000},\n          \"actual_metrics\": null,\n          \"started_at\": null,\n          \"completed_at\": null\n        }\n      ]\n    }\n  ],\n  \"overall_metrics\": {\n    \"baseline\": {\"avg_cost_usd\": null, \"avg_duration_ms\": null, \"success_rate\": null},\n    \"current\": {\"avg_cost_usd\": null, \"avg_duration_ms\": null, \"success_rate\": null},\n    \"target\": {\"avg_cost_usd\": null, \"avg_duration_ms\": null, \"success_rate\": null}\n  },\n  \"next_action\": \"Run: bun run index.ts --activity system:extract-deterministic-resolver\"\n}\n\nOutput this JSON.",
+        "maxTokens": 2000
+      },
+      "outputShapes": ["improvement_tracker"],
+      "validation": {
+        "requireOutput": true,
+        "requiredPatterns": ["roadmap_id", "priorities", "next_action"]
+      }
+    }
+  ],
+  "metadata": {
+    "generatedFrom": "manual",
+    "demonstrates": "vessel_self_improvement",
+    "primordial": false,
+    "bootstrap": false,
+    "schemaConfidence": 0.85,
+    "learningProgression": {
+      "deterministicTasks": 2,
+      "learnedTasks": 0,
+      "llmTasks": 3,
+      "deterministicRatio": 0.4,
+      "learnedRatio": 0.0
+    }
+  }
+}

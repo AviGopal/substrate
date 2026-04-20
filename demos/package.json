@@ -1,0 +1,21 @@
+{
+  "name": "minibob-demos",
+  "version": "1.0.0",
+  "description": "MiniBob vessel demonstrations with terminal and React rendering",
+  "type": "module",
+  "scripts": {
+    "dashboard": "bun run learning-dashboard.tsx",
+    "dashboard:live": "bun run learning-dashboard-live.tsx",
+    "demo:dedup": "bun run deduplication-vessel-demo.ts",
+    "demo:self-improve": "bun run terminal-vessel-demo.ts",
+    "demo:activity": "./show-activity-execution.sh"
+  },
+  "dependencies": {
+    "ink": "^5.0.1",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "bun-types": "latest"
+  }
+}

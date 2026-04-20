@@ -1,0 +1,31 @@
+- generic [ref=e2]:
+  - heading "MiniBob Dashboard" [level=1] [ref=e3]
+  - generic [ref=e4]: ⚡ Live Data via /resolve • Vessel Protocol
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: Total Executions
+      - generic [ref=e8]: "10"
+    - generic [ref=e9]:
+      - heading "Current Goal" [level=2] [ref=e10]
+      - heading "Dashboard Development" [level=3] [ref=e11]
+      - paragraph [ref=e12]: Building activity-driven dashboard
+    - generic [ref=e13]:
+      - heading "Recent Activities" [level=2] [ref=e14]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - strong [ref=e17]: activity-1
+          - text: "- failed (57103ms)"
+        - generic [ref=e18]:
+          - strong [ref=e19]: activity-2
+          - text: "- success (21267ms)"
+        - generic [ref=e20]:
+          - strong [ref=e21]: activity-3
+          - text: "- success (60510ms)"
+        - generic [ref=e22]:
+          - strong [ref=e23]: activity-1
+          - text: "- success (40806ms)"
+        - generic [ref=e24]:
+          - strong [ref=e25]: activity-2
+          - text: "- success (3417ms)"
+    - button "Refresh" [ref=e26] [cursor=pointer]
+    - paragraph [ref=e27]: "Last: 20/04/2026, 01:57:09"

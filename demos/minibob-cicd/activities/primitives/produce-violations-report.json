@@ -1,0 +1,27 @@
+{
+  "id": "produce-violations-report",
+  "name": "Produce Violations Report",
+  "category": "tool",
+  "description": "Transforms analysis:violations into spec_validation_result for dashboard display.",
+  "version": "1.0.1",
+
+  "inputShapes": ["analysis:violations", "spec:id"],
+  "outputShapes": ["spec_validation_result"],
+
+  "handlesGoals": ["report:violations", "format:results"],
+
+  "tasks": [
+    {
+      "id": "produce",
+      "description": "Format violations into dashboard-compatible report",
+      "prompt": {
+        "template": "Transform analysis:violations into spec_validation_result shape.\n\nRead the analysis:violations from outputs/analysis-violations.json\n\nProduce results/specification-violations.json:\n{\n  \"shape\": \"spec_validation_result\",\n  \"totalViolations\": <count from input>,\n  \"timestamp\": \"<current ISO date>\",\n  \"specId\": \"error-handling\",\n  \"compliance\": <1 - (violations/total_checks)>,\n  \"violations\": <copy from input>\n}\n\nThe compliance score is the ratio of passing checks to total checks.",
+        "maxTokens": 1500
+      },
+      "validation": {
+        "requiredFiles": ["results/specification-violations.json"]
+      },
+      "outputShapes": ["spec_validation_result"]
+    }
+  ]
+}

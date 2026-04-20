@@ -1,0 +1,27 @@
+{
+  "id": "analyze-error-patterns",
+  "name": "Analyze Error Patterns",
+  "category": "tool",
+  "description": "Analyzes source code for error handling patterns. Produces analysis shapes for downstream activities.",
+  "version": "1.0.1",
+
+  "inputShapes": ["file:source", "spec:error-handling"],
+  "outputShapes": ["analysis:functions", "analysis:violations"],
+
+  "handlesGoals": ["analyze:errors", "find:violations"],
+
+  "tasks": [
+    {
+      "id": "analyze",
+      "description": "Analyze error handling patterns in source and produce analysis shapes",
+      "prompt": {
+        "template": "Analyze the source code for error handling patterns.\n\nInput shapes:\n- file:source (the code to analyze)\n- spec:error-handling (the specification to check against)\n\nFind:\n1. Functions with parameters\n2. Which have validation (typeof, instanceof, etc.)\n3. Which throw typed errors (TypeError, RangeError)\n4. Which include parameter values in messages\n\nProduce two output files:\n\n1. outputs/analysis-functions.json:\n{\n  \"shape\": \"analysis:functions\",\n  \"functions\": [{\"name\": \"...\", \"line\": N, \"params\": [...], \"hasValidation\": bool, \"throwsTypedError\": bool}],\n  \"totalFunctions\": N\n}\n\n2. outputs/analysis-violations.json:\n{\n  \"shape\": \"analysis:violations\",\n  \"violations\": [{\"function\": \"...\", \"line\": N, \"issue\": \"...\"}],\n  \"totalViolations\": N\n}",
+        "maxTokens": 3000
+      },
+      "validation": {
+        "requiredFiles": ["outputs/analysis-functions.json", "outputs/analysis-violations.json"]
+      },
+      "outputShapes": ["analysis:functions", "analysis:violations"]
+    }
+  ]
+}

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impulse State Dashboard</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --primary: #0f3460;
+            --accent: #e94560;
+            --text: #eee;
+            --muted: #888;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 2rem; padding-bottom: 1rem;
+            border-bottom: 1px solid var(--primary);
+        }
+        h1 { font-size: 1.5rem; }
+        .config { display: flex; gap: 1rem; align-items: center; }
+        .config input {
+            background: var(--surface); border: 1px solid var(--primary);
+            color: var(--text); padding: 0.5rem; border-radius: 4px; width: 300px;
+        }
+        .btn {
+            background: var(--primary); border: none; color: var(--text);
+            padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;
+        }
+        .btn:hover { background: var(--accent); }
+
+        .resolution-stats {
+            display: flex; gap: 2rem; margin-bottom: 1.5rem;
+            padding: 1rem; background: var(--surface); border-radius: 8px;
+            font-size: 0.875rem;
+        }
+        .resolution-stats .stat { display: flex; gap: 0.5rem; }
+        .resolution-stats .label { color: var(--muted); }
+        .resolution-stats .value { color: var(--accent); font-family: monospace; }
+
+        .impulse-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+        .impulse-card {
+            background: var(--surface); border-radius: 8px;
+            padding: 1.5rem; border: 1px solid var(--primary);
+        }
+        .impulse-card.loading { opacity: 0.6; }
+        .impulse-card.error { border-color: var(--accent); }
+        .impulse-card h2 {
+            font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .resolution-meta {
+            font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem;
+            display: flex; gap: 1rem; flex-wrap: wrap;
+        }
+        .resolution-meta span { display: flex; gap: 0.25rem; }
+        .shape-badge {
+            background: var(--primary); padding: 0.25rem 0.5rem;
+            border-radius: 4px; font-size: 0.75rem; font-family: monospace;
+        }
+        .data-list { list-style: none; }
+        .data-list li {
+            padding: 0.5rem 0; border-bottom: 1px solid var(--primary);
+            display: flex; justify-content: space-between; font-size: 0.875rem;
+        }
+        .data-list li:last-child { border-bottom: none; }
+        .metric { text-align: center; padding: 1rem; }
+        .metric-value { font-size: 2rem; font-weight: bold; color: var(--accent); }
+        .metric-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+        .metrics-row { display: flex; gap: 2rem; justify-content: center; }
+        .compliance-bar {
+            height: 8px; background: var(--primary); border-radius: 4px;
+            overflow: hidden; margin: 0.5rem 0;
+        }
+        .compliance-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #4ade80);
+        }
+        .trace-status { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.5rem; }
+        .trace-status.completed { background: #4ade80; }
+        .trace-status.failed { background: var(--accent); }
+        .empty-state { text-align: center; padding: 2rem; color: var(--muted); }
+        footer {
+            margin-top: 3rem; text-align: center; color: var(--muted);
+            font-size: 0.875rem; padding-top: 1rem; border-top: 1px solid var(--primary);
+        }
+        pre { font-size: 0.75rem; overflow: auto; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>◇ Impulse State Dashboard</h1>
+            <div class="config">
+                <input type="text" id="api-endpoint" placeholder="Activity API endpoint"
+                       value="https://activity.metabob.com" />
+                <button class="btn" onclick="refreshAll()">↻ Resolve All</button>
+            </div>
+        </header>
+
+        <div class="resolution-stats" id="resolution-stats">
+            <div class="stat"><span class="label">Resolutions:</span><span class="value" id="stat-count">0</span></div>
+            <div class="stat"><span class="label">Total Latency:</span><span class="value" id="stat-latency">0ms</span></div>
+            <div class="stat"><span class="label">Errors:</span><span class="value" id="stat-errors">0</span></div>
+            <div class="stat"><span class="label">Session:</span><span class="value" id="stat-session">--</span></div>
+        </div>
+
+        <div class="impulse-grid" id="impulse-grid"></div>
+
+        <footer>
+            <p>Each card resolves an impulse shape from the Activity API. Resolutions are traced for learning.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Session ID for tracing
+        const sessionId = `dashboard-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        document.getElementById('stat-session').textContent = sessionId.slice(-12);
+
+        // Resolution statistics
+        const stats = { count: 0, totalLatency: 0, errors: 0 };
+
+        // Shapes to resolve for this dashboard
+        const shapesToResolve = [
+            {
+                shape: 'activityExecutionTrace',
+                title: 'Recent Executions',
+                query: { limit: 20, orderBy: 'started_at DESC' }
+            },
+            {
+                shape: 'activityMetrics',
+                title: 'Activity Metrics',
+                query: { timeWindowHours: 24 }
+            },
+            {
+                shape: 'activityTemplate',
+                title: 'Activity Templates',
+                query: { limit: 10 }
+            }
+        ];
+
+        // Resolve a single impulse shape from Activity API
+        async function resolveImpulse(shape, query = {}) {
+            const endpoint = document.getElementById('api-endpoint').value;
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(`${endpoint}/v2/impulses/resolve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Trace-Session': sessionId,
+                        'X-Trace-Source': 'impulse-dashboard'
+                    },
+                    body: JSON.stringify({
+                        pointer: { type: shape, query },
+                        trace: true  // Request resolution tracing
+                    })
+                });
+
+                const latency = Math.round(performance.now() - startTime);
+                stats.count++;
+                stats.totalLatency += latency;
+
+                if (!response.ok) {
+                    stats.errors++;
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return {
+                    success: true,
+                    data: data.content || data.data || data,
+                    metadata: {
+                        shape,
+                        latency,
+                        resolver: response.headers.get('X-Resolver-Id') || 'unknown',
+                        cached: response.headers.get('X-Cache-Hit') === 'true',
+                        timestamp: new Date().toISOString()
+                    }
+                };
+            } catch (error) {
+                const latency = Math.round(performance.now() - startTime);
+                stats.errors++;
+                return {
+                    success: false,
+                    error: error.message,
+                    metadata: { shape, latency, timestamp: new Date().toISOString() }
+                };
+            }
+        }
+
+        // Render resolved impulse based on shape
+        function renderImpulse(shape, title, result) {
+            const meta = result.metadata;
+            const metaHtml = `
+                <div class="resolution-meta">
+                    <span>⏱ ${meta.latency}ms</span>
+                    <span>◈ ${meta.resolver || 'direct'}</span>
+                    ${meta.cached ? '<span>⚡ cached</span>' : ''}
+                    <span>📅 ${new Date(meta.timestamp).toLocaleTimeString()}</span>
+                </div>
+            `;
+
+            if (!result.success) {
+                return `
+                    <div class="impulse-card error">
+                        <h2>${title} <span class="shape-badge">${shape}</span></h2>
+                        ${metaHtml}
+                        <div class="empty-state">Error: ${result.error}</div>
+                    </div>
+                `;
+            }
+
+            const data = result.data;
+
+            // Shape-specific rendering
+            if (shape === 'activityExecutionTrace') {
+                const traces = Array.isArray(data) ? data : (data.traces || []);
+                return `
+                    <div class="impulse-card">
+                        <h2>${title} <span class="shape-badge">${shape}</span></h2>
+                        ${metaHtml}
+                        <ul class="data-list">
+                            ${traces.slice(0, 10).map(t => `
+                                <li>
+                                    <span><span class="trace-status ${t.status}"></span>${t.template_id || t.id}</span>
+                                    <span>${t.duration_ms || 0}ms</span>
+                                </li>
+                            `).join('') || '<li class="empty-state">No traces</li>'}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (shape === 'activityMetrics') {
+                const activities = Array.isArray(data) ? data : (data.activities || []);
+                const totals = data.totals || {};
+                return `
+                    <div class="impulse-card">
+                        <h2>${title} <span class="shape-badge">${shape}</span></h2>
+                        ${metaHtml}
+                        <div class="metrics-row">
+                            <div class="metric">
+                                <div class="metric-value">${totals.executions || activities.length || 0}</div>
+                                <div class="metric-label">Executions</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${((totals.success_rate || 0) * 100).toFixed(0)}%</div>
+                                <div class="metric-label">Success</div>
+                            </div>
+                        </div>
+                        <ul class="data-list">
+                            ${activities.slice(0, 5).map(a => `
+                                <li><span>${a.template_id || a.name}</span><span>${a.executions || 0} runs</span></li>
+                            `).join('') || '<li class="empty-state">No metrics</li>'}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (shape === 'activityTemplate') {
+                const templates = Array.isArray(data) ? data : (data.templates || []);
+                return `
+                    <div class="impulse-card">
+                        <h2>${title} <span class="shape-badge">${shape}</span></h2>
+                        ${metaHtml}
+                        <ul class="data-list">
+                            ${templates.slice(0, 8).map(t => `
+                                <li><span>${t.id || t.name}</span><span>${t.category || ''}</span></li>
+                            `).join('') || '<li class="empty-state">No templates</li>'}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Default: show JSON
+            return `
+                <div class="impulse-card">
+                    <h2>${title} <span class="shape-badge">${shape}</span></h2>
+                    ${metaHtml}
+                    <pre>${JSON.stringify(data, null, 2).slice(0, 500)}...</pre>
+                </div>
+            `;
+        }
+
+        function updateStats() {
+            document.getElementById('stat-count').textContent = stats.count;
+            document.getElementById('stat-latency').textContent = `${stats.totalLatency}ms`;
+            document.getElementById('stat-errors').textContent = stats.errors;
+        }
+
+        async function refreshAll() {
+            const grid = document.getElementById('impulse-grid');
+            grid.innerHTML = shapesToResolve.map(s => `
+                <div class="impulse-card loading">
+                    <h2>${s.title} <span class="shape-badge">${s.shape}</span></h2>
+                    <div class="empty-state">Resolving...</div>
+                </div>
+            `).join('');
+
+            // Resolve all shapes in parallel
+            const results = await Promise.all(
+                shapesToResolve.map(s => resolveImpulse(s.shape, s.query))
+            );
+
+            // Render results
+            grid.innerHTML = shapesToResolve.map((s, i) =>
+                renderImpulse(s.shape, s.title, results[i])
+            ).join('');
+
+            updateStats();
+        }
+
+        // Initial load
+        refreshAll();
+
+        // Auto-refresh every 60 seconds
+        setInterval(refreshAll, 60000);
+    </script>
+</body>
+</html>

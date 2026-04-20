@@ -1,0 +1,61 @@
+{
+  "id": "add-dashboard-view",
+  "name": "Add Dashboard View",
+  "category": "dashboard",
+  "description": "Adds a new view to the impulse dashboard. Defines the shape to render and generates the renderer code.",
+  "version": "1.0.0",
+  "variables": [
+    {
+      "name": "shape_name",
+      "type": "string",
+      "description": "The impulse shape this view renders (e.g., 'trace_list', 'activity_metrics')",
+      "required": true
+    },
+    {
+      "name": "view_title",
+      "type": "string",
+      "description": "Human-readable title for the dashboard card",
+      "required": true
+    },
+    {
+      "name": "data_fields",
+      "type": "string",
+      "description": "Comma-separated list of fields to display from the shape data",
+      "required": true
+    }
+  ],
+  "tasks": [
+    {
+      "id": "design_renderer",
+      "description": "Design the renderer function for this shape",
+      "prompt": {
+        "template": "Design a renderer for the {{shape_name}} impulse shape.\n\nView Title: {{view_title}}\nFields to display: {{data_fields}}\n\nCreate a JavaScript function that:\n1. Takes the shape data as input\n2. Returns HTML string for rendering\n3. Handles missing/null fields gracefully\n4. Uses the existing dashboard CSS classes:\n   - .impulse-card (container)\n   - .metric / .metric-value / .metric-label (for numbers)\n   - .data-list (for lists)\n   - .shape-badge (for shape type indicator)\n\nOutput the renderer function to add to shapeRenderers:\n\n```javascript\n{{shape_name}}: (data) => `\n    <div class=\"impulse-card\">\n        <h2>{{view_title}} <span class=\"shape-badge\">{{shape_name}}</span></h2>\n        // ... render fields\n    </div>\n`\n```\n\nSave to: /tmp/dashboard/new-renderer.js",
+        "maxTokens": 2000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/dashboard/new-renderer.js"],
+        "requiredPatterns": ["shapeRenderers", "{{shape_name}}"]
+      }
+    },
+    {
+      "id": "create_source_activity",
+      "description": "Create activity that sources data for this view",
+      "dependencies": ["design_renderer"],
+      "prompt": {
+        "template": "Create an activity that sources data for the {{shape_name}} shape.\n\nThe activity should:\n1. Query the impulse state space (via Activity API)\n2. Transform data into the {{shape_name}} format\n3. Output to /tmp/dashboard/{{shape_name}}.json\n\nTemplate:\n```json\n{\n  \"id\": \"fetch-{{shape_name}}\",\n  \"name\": \"Fetch {{view_title}}\",\n  \"category\": \"dashboard\",\n  \"description\": \"Sources {{shape_name}} data for dashboard\",\n  \"tasks\": [\n    {\n      \"id\": \"query\",\n      \"description\": \"Query and transform data\",\n      \"prompt\": {\n        \"template\": \"...\"\n      }\n    }\n  ],\n  \"outputSchema\": {\n    \"produces\": [{ \"shape\": \"{{shape_name}}\" }]\n  }\n}\n```\n\nSave to: activities/dashboard/fetch-{{shape_name}}.json",
+        "maxTokens": 2000
+      },
+      "validation": {
+        "requiredPatterns": ["fetch-{{shape_name}}"]
+      }
+    }
+  ],
+  "outputSchema": {
+    "produces": [
+      {
+        "shape": "dashboard_view_definition",
+        "description": "New view added to dashboard"
+      }
+    ]
+  }
+}
