@@ -342,70 +342,40 @@ async function enrichTemplatesWithMetrics(
     });
 
     try {
+      // Query metrics directly from activity table where Thompson Sampling updates are written
+      // This replaces the previous v_activity_score/variant_performance_metrics approach
       const metricsQuery = `
-        SELECT * FROM v_activity_score
-        WHERE activity_id IN $activity_ids
+        SELECT
+          id as activity_id,
+          thompson_alpha,
+          thompson_beta,
+          total_executions,
+          successful_executions,
+          failed_executions,
+          (successful_executions / NULLIF(total_executions, 0)) as success_rate,
+          avg_duration_ms,
+          avg_cost_usd,
+          last_executed_at
+        FROM activity
+        WHERE id IN $activity_ids
       `;
       metricsResult = await surrealDB.query<any>(metricsQuery, {
-        activity_ids: normalizedIds
+        activity_ids: activityIds  // Use original IDs (with activity: prefix)
+      });
+
+      logger.debug('Metrics queried directly from activity table', {
+        queryResultCount: metricsResult?.length || 0
       });
     } catch (error: any) {
-      // Fallback to variant_performance_metrics if view doesn't exist or fails
-      logger.warn('Failed to query v_activity_score, falling back to variant_performance_metrics', {
+      logger.error('Failed to query metrics from activity table', {
         error: error.message
       });
-      const fallbackQuery = `
-        SELECT activity_id, variant_id,
-               total_executions, successful_executions, failed_executions,
-               thompson_alpha, thompson_beta, success_rate,
-               avg_duration_ms, avg_cost_usd, total_selections
-        FROM variant_performance_metrics
-        WHERE activity_id IN $activity_ids
-      `;
-      metricsResult = await surrealDB.query<any>(fallbackQuery, {
-        activity_ids: normalizedIds  // Use normalized IDs to match stored activity_id format
-      });
+      metricsResult = [];
     }
 
-    // For templates not found in v_activity_score (no executions yet),
-    // try to get initial metrics from variant_performance_metrics
-    if (metricsResult.length < normalizedIds.length) {
-      const foundIds = new Set(metricsResult.map((m: any) => m.activity_id || m.variant_id));
-      // Use normalized IDs for comparison since variant_performance_metrics stores plain IDs
-      const missingIds = normalizedIds.filter(id => !foundIds.has(id));
-
-      if (missingIds.length > 0) {
-        logger.debug('Fetching initial metrics for templates without executions', {
-          missingCount: missingIds.length,
-          sampleMissing: missingIds.slice(0, 3)
-        });
-
-        try {
-          const initialMetricsQuery = `
-            SELECT activity_id, variant_id,
-                   total_executions, successful_executions, failed_executions,
-                   thompson_alpha, thompson_beta, success_rate,
-                   avg_duration_ms, avg_cost_usd, total_selections
-            FROM variant_performance_metrics
-            WHERE activity_id IN $missing_ids
-          `;
-          const initialMetrics = await surrealDB.query<any>(initialMetricsQuery, {
-            missing_ids: missingIds
-          });
-
-          if (initialMetrics.length > 0) {
-            logger.info('Found initial metrics for new templates', {
-              count: initialMetrics.length
-            });
-            metricsResult = [...metricsResult, ...initialMetrics];
-          }
-        } catch (initialError: any) {
-          logger.debug('Failed to fetch initial metrics from variant_performance_metrics', {
-            error: initialError.message
-          });
-        }
-      }
-    }
+    // Templates without executions will have default values from activity table:
+    // thompson_alpha=1, thompson_beta=1, total_executions=0
+    // No need for fallback query - metrics are co-located with templates in activity table
 
     logger.info('Metrics query result', {
       metricsFound: metricsResult?.length || 0,
