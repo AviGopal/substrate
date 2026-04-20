@@ -1,0 +1,270 @@
+{
+  "name": "Chaos Engineering Scenarios for Activities",
+  "description": "Intentionally break activities to test fault detection and recovery",
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "invalid-input-data",
+      "name": "Invalid Input Data Scenario",
+      "description": "Provide malformed or unexpected input to activities",
+      "category": "input-validation",
+      "severity": "medium",
+      "test_cases": [
+        {
+          "case": "null-repository-path",
+          "activity": "autonomous-code-quality-loop",
+          "inject": {
+            "repository_path": null
+          },
+          "expected_behavior": "Activity should throw TypeError with descriptive message",
+          "recovery_strategy": "Validate inputs at activity entry, provide default fallback"
+        },
+        {
+          "case": "empty-target-files",
+          "activity": "enforce-error-handling-pattern",
+          "inject": {
+            "target_files": []
+          },
+          "expected_behavior": "Activity should exit gracefully with 'no files to process' message",
+          "recovery_strategy": "Check array length before processing"
+        },
+        {
+          "case": "corrupted-json-specification",
+          "activity": "autonomous-code-quality-loop",
+          "inject": {
+            "specifications_file": "/tmp/corrupted-specs.json",
+            "file_content": "{invalid json}"
+          },
+          "expected_behavior": "Activity should catch JSON parse error and report",
+          "recovery_strategy": "Wrap JSON.parse in try-catch, validate structure"
+        }
+      ]
+    },
+    {
+      "id": "missing-dependencies",
+      "name": "Missing Dependencies Scenario",
+      "description": "Remove required files or tools during execution",
+      "category": "dependency-management",
+      "severity": "high",
+      "test_cases": [
+        {
+          "case": "missing-input-file",
+          "activity": "validate-specification-enforcement",
+          "inject": {
+            "delete_file": "/tmp/enforcement-results.json"
+          },
+          "expected_behavior": "Activity should detect missing file and report error",
+          "recovery_strategy": "Check file existence before read, provide helpful error message"
+        },
+        {
+          "case": "missing-tool",
+          "activity": "enforce-error-handling-pattern",
+          "inject": {
+            "remove_tool": "bash"
+          },
+          "expected_behavior": "Activity should fail gracefully with tool availability error",
+          "recovery_strategy": "Check tool availability before use, suggest alternatives"
+        }
+      ]
+    },
+    {
+      "id": "timeout-conditions",
+      "name": "Timeout and Performance Scenarios",
+      "description": "Trigger timeout or slow execution conditions",
+      "category": "performance",
+      "severity": "medium",
+      "test_cases": [
+        {
+          "case": "large-file-timeout",
+          "activity": "enforce-error-handling-pattern",
+          "inject": {
+            "target_file": "/tmp/massive-file.js",
+            "file_size_mb": 100
+          },
+          "expected_behavior": "Activity should timeout gracefully and report partial progress",
+          "recovery_strategy": "Implement progress tracking, allow resume from checkpoint"
+        },
+        {
+          "case": "infinite-loop-detection",
+          "activity": "autonomous-code-quality-loop",
+          "inject": {
+            "max_iterations": -1
+          },
+          "expected_behavior": "Activity should detect invalid iteration count",
+          "recovery_strategy": "Validate max_iterations > 0 and <= safe_limit"
+        }
+      ]
+    },
+    {
+      "id": "resource-exhaustion",
+      "name": "Resource Exhaustion Scenarios",
+      "description": "Exhaust memory, disk, or other resources",
+      "category": "resource-management",
+      "severity": "high",
+      "test_cases": [
+        {
+          "case": "memory-exhaustion",
+          "activity": "autonomous-code-quality-loop",
+          "inject": {
+            "impulse_budget": 999999999,
+            "load_entire_codebase": true
+          },
+          "expected_behavior": "Activity should respect impulse budgets and fail safely",
+          "recovery_strategy": "Enforce hard limits on impulse budgets, implement streaming"
+        },
+        {
+          "case": "disk-space-exhaustion",
+          "activity": "autonomous-code-quality-loop",
+          "inject": {
+            "output_directory": "/tmp/no-space-device"
+          },
+          "expected_behavior": "Activity should detect disk space issues and report",
+          "recovery_strategy": "Check available disk space before writing large outputs"
+        }
+      ]
+    },
+    {
+      "id": "concurrent-execution-conflicts",
+      "name": "Concurrent Execution Conflicts",
+      "description": "Run multiple activities concurrently on same files",
+      "category": "concurrency",
+      "severity": "high",
+      "test_cases": [
+        {
+          "case": "file-lock-conflict",
+          "activity": "enforce-error-handling-pattern",
+          "inject": {
+            "concurrent_activities": 3,
+            "same_target_file": true
+          },
+          "expected_behavior": "Activities should coordinate or fail gracefully",
+          "recovery_strategy": "Implement file locking or detect concurrent modifications"
+        },
+        {
+          "case": "specification-race-condition",
+          "activity": "autonomous-code-quality-loop",
+          "inject": {
+            "modify_specs_during_execution": true
+          },
+          "expected_behavior": "Activity should detect spec changes and abort or adapt",
+          "recovery_strategy": "Version specifications, detect changes via checksum"
+        }
+      ]
+    },
+    {
+      "id": "malicious-input",
+      "name": "Malicious Input Injection",
+      "description": "Attempt code injection or path traversal",
+      "category": "security",
+      "severity": "critical",
+      "test_cases": [
+        {
+          "case": "path-traversal",
+          "activity": "autonomous-code-quality-loop",
+          "inject": {
+            "repository_path": "../../../../etc/passwd"
+          },
+          "expected_behavior": "Activity should reject path traversal attempts",
+          "recovery_strategy": "Validate paths are within expected directory, sanitize inputs"
+        },
+        {
+          "case": "command-injection",
+          "activity": "enforce-error-handling-pattern",
+          "inject": {
+            "target_file": "file.js; rm -rf /"
+          },
+          "expected_behavior": "Activity should escape shell commands properly",
+          "recovery_strategy": "Use parameterized commands, never interpolate untrusted input"
+        }
+      ]
+    }
+  ],
+  "recovery_workflows": [
+    {
+      "id": "detect-fault",
+      "steps": [
+        "Capture exception and stack trace",
+        "Categorize fault type (input, dependency, timeout, etc.)",
+        "Extract fault parameters (what caused failure)",
+        "Store fault report with full context"
+      ]
+    },
+    {
+      "id": "create-variant",
+      "steps": [
+        "Load original activity template",
+        "Load fault report",
+        "Identify fix pattern (add validation, improve error handling, etc.)",
+        "Generate improved variant template",
+        "Add fault-specific validation to tasks",
+        "Store variant with version increment"
+      ]
+    },
+    {
+      "id": "test-variant",
+      "steps": [
+        "Execute variant with fault scenario",
+        "Verify fault is handled correctly",
+        "Ensure no regressions on normal inputs",
+        "Measure performance impact",
+        "Approve or reject variant"
+      ]
+    },
+    {
+      "id": "deploy-variant",
+      "steps": [
+        "Register variant in backend",
+        "Update Thompson Sampling priors",
+        "Enable variant for selection",
+        "Monitor variant performance",
+        "Roll back if failure rate exceeds threshold"
+      ]
+    }
+  ],
+  "execution_plan": {
+    "phase_1_inject_chaos": {
+      "duration": "10 minutes",
+      "concurrent_scenarios": 1,
+      "record_all_failures": true
+    },
+    "phase_2_fault_detection": {
+      "duration": "5 minutes",
+      "analyze_execution_traces": true,
+      "categorize_faults": true,
+      "output": "./chaos/fault-reports/"
+    },
+    "phase_3_variant_creation": {
+      "duration": "15 minutes",
+      "activity": "create-improved-variants",
+      "input": "./chaos/fault-reports/*.json",
+      "output": "./activities/autonomous-loop/variants/"
+    },
+    "phase_4_variant_testing": {
+      "duration": "10 minutes",
+      "test_with_original_scenarios": true,
+      "test_with_chaos_scenarios": true,
+      "require_zero_regressions": true
+    },
+    "phase_5_deployment": {
+      "auto_deploy_on_success": true,
+      "thompson_sampling_boost": 0.1,
+      "monitor_duration_hours": 24
+    }
+  },
+  "metrics": {
+    "track": [
+      "faults_detected_per_scenario",
+      "variants_created_successfully",
+      "variants_passed_testing",
+      "variants_deployed",
+      "recovery_time_minutes",
+      "regression_rate"
+    ],
+    "goals": {
+      "fault_detection_rate": "100%",
+      "variant_success_rate": ">= 80%",
+      "average_recovery_time": "<= 30 minutes",
+      "regression_rate": "0%"
+    }
+  }
+}

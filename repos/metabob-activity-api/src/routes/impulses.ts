@@ -237,6 +237,16 @@ router.post('/', async (c) => {
       }, 400);
     }
 
+    // Handle duplicate impulse (already exists) - return 409 Conflict instead of 500
+    // This allows clients to treat duplicates as successful idempotent operations
+    if (error.message && error.message.includes('already exists')) {
+      logger.info('Impulse already exists (deduplication)', { impulse_id: error.message });
+      return c.json({
+        error: 'Impulse already exists',
+        message: error.message,
+      }, 409);
+    }
+
     return c.json({
       error: 'Failed to create impulse',
       message: error.message,
