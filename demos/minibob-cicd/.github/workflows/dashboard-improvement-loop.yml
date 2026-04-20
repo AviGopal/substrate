@@ -1,0 +1,441 @@
+name: Dashboard Self-Improvement Loop
+
+on:
+  schedule:
+    # Run analysis every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      improvement_type:
+        description: 'Type of improvement to run'
+        required: false
+        default: 'analyze'
+        type: choice
+        options:
+          - analyze
+          - improve-code
+          - improve-activities
+          - meta-improve
+          - full-cycle
+      force_improvements:
+        description: 'Apply improvements even if below threshold'
+        required: false
+        default: false
+        type: boolean
+      lookback_hours:
+        description: 'Hours to look back for trace analysis'
+        required: false
+        default: '6'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  ACTIVITY_API_ENDPOINT: https://activity.metabob.com
+  MINIBOB_VERSION: latest
+
+jobs:
+  # Job 1: Analyze Dashboard Traces (always runs)
+  analyze-traces:
+    runs-on: ubuntu-latest
+    outputs:
+      has_improvements: ${{ steps.check-improvements.outputs.has_improvements }}
+      high_severity_count: ${{ steps.check-improvements.outputs.high_severity_count }}
+      recommendations_count: ${{ steps.check-improvements.outputs.recommendations_count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup MiniBob
+        run: |
+          npm install -g @metabob/minibob@${{ env.MINIBOB_VERSION }} || echo "MiniBob not yet published, using local"
+          mkdir -p ~/.metabob
+          echo '{"metabob":{"endpoint":"${{ env.ACTIVITY_API_ENDPOINT }}","apiKey":"${{ secrets.METABOB_API_KEY }}"},"providers":{"anthropic":{"apiKey":"${{ secrets.ANTHROPIC_API_KEY }}"}}}' > ~/.metabob/config.json
+
+      - name: Run Trace Analysis
+        id: analyze
+        run: |
+          cd demos/minibob-cicd
+          mkdir -p /tmp/dashboard-analysis
+
+          LOOKBACK_HOURS="${{ github.event.inputs.lookback_hours || '6' }}"
+
+          # Run analyze-dashboard-traces activity
+          if command -v minibob &> /dev/null; then
+            minibob --activity activities/dashboard/analyze-dashboard-traces.json \
+              --var "lookbackHours=$LOOKBACK_HOURS" \
+              --var "outputPath=/tmp/dashboard-analysis" \
+              --trace
+          else
+            # Fallback: direct API query for traces
+            curl -s -X GET "${{ env.ACTIVITY_API_ENDPOINT }}/v2/activities/executions?limit=100&since=${LOOKBACK_HOURS}h" \
+              -H "Authorization: ApiKey ${{ secrets.METABOB_API_KEY }}" \
+              -o /tmp/dashboard-analysis/raw-traces.json || echo '{"executions":[]}' > /tmp/dashboard-analysis/raw-traces.json
+
+            # Create minimal analysis
+            echo '{"patterns":[],"summary":{"high_severity":0,"medium_severity":0,"low_severity":0}}' > /tmp/dashboard-analysis/improvement-opportunities.json
+            echo '{"recommendations":[],"summary":{"total_recommendations":0}}' > /tmp/dashboard-analysis/recommendations.json
+            echo '{"issues":[]}' > /tmp/dashboard-analysis/issues-to-create.json
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          METABOB_API_KEY: ${{ secrets.METABOB_API_KEY }}
+
+      - name: Check for Improvements
+        id: check-improvements
+        run: |
+          if [ -f /tmp/dashboard-analysis/recommendations.json ]; then
+            RECOMMENDATIONS=$(jq -r '.recommendations | length' /tmp/dashboard-analysis/recommendations.json 2>/dev/null || echo "0")
+            HIGH_PRIORITY=$(jq -r '[.recommendations[] | select(.priority <= 3)] | length' /tmp/dashboard-analysis/recommendations.json 2>/dev/null || echo "0")
+          else
+            RECOMMENDATIONS=0
+            HIGH_PRIORITY=0
+          fi
+
+          if [ -f /tmp/dashboard-analysis/improvement-opportunities.json ]; then
+            HIGH_SEVERITY=$(jq -r '.summary.high_severity // 0' /tmp/dashboard-analysis/improvement-opportunities.json 2>/dev/null || echo "0")
+          else
+            HIGH_SEVERITY=0
+          fi
+
+          echo "recommendations_count=$RECOMMENDATIONS" >> $GITHUB_OUTPUT
+          echo "high_severity_count=$HIGH_SEVERITY" >> $GITHUB_OUTPUT
+
+          if [ "$RECOMMENDATIONS" -gt "0" ] || [ "${{ github.event.inputs.force_improvements }}" == "true" ]; then
+            echo "has_improvements=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_improvements=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Found $RECOMMENDATIONS recommendations, $HIGH_SEVERITY high severity patterns"
+
+      - name: Upload Analysis Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-analysis
+          path: /tmp/dashboard-analysis/
+          retention-days: 30
+
+  # Job 2: Create GitHub Issues (if high severity issues found)
+  create-issues:
+    runs-on: ubuntu-latest
+    needs: analyze-traces
+    if: needs.analyze-traces.outputs.high_severity_count > 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Analysis
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard-analysis
+          path: /tmp/dashboard-analysis/
+
+      - name: Create Issues from Analysis
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let issuesData = { issues: [] };
+            try {
+              issuesData = JSON.parse(fs.readFileSync('/tmp/dashboard-analysis/issues-to-create.json', 'utf8'));
+            } catch (e) {
+              console.log('No issues file found or invalid JSON');
+              return;
+            }
+
+            for (const issue of issuesData.issues.slice(0, 5)) {  // Max 5 issues per run
+              try {
+                // Check if similar issue already exists
+                const existingIssues = await github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'open',
+                  labels: issue.labels.join(',')
+                });
+
+                const duplicate = existingIssues.data.find(i =>
+                  i.title.includes(issue.title.split(']')[1]?.trim() || issue.title)
+                );
+
+                if (duplicate) {
+                  console.log(`Skipping duplicate issue: ${issue.title}`);
+                  continue;
+                }
+
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: issue.title,
+                  body: issue.body,
+                  labels: issue.labels
+                });
+
+                console.log(`Created issue: ${issue.title}`);
+              } catch (e) {
+                console.log(`Failed to create issue: ${e.message}`);
+              }
+            }
+
+  # Job 3: Implement Dashboard Improvements (if improvements found)
+  implement-improvements:
+    runs-on: ubuntu-latest
+    needs: analyze-traces
+    if: |
+      needs.analyze-traces.outputs.has_improvements == 'true' &&
+      (github.event.inputs.improvement_type == 'improve-code' ||
+       github.event.inputs.improvement_type == 'full-cycle' ||
+       github.event_name == 'schedule')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Download Analysis
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard-analysis
+          path: /tmp/dashboard-analysis/
+
+      - name: Setup MiniBob
+        run: |
+          npm install -g @metabob/minibob@${{ env.MINIBOB_VERSION }} || echo "MiniBob not yet published"
+          mkdir -p ~/.metabob
+          echo '{"metabob":{"endpoint":"${{ env.ACTIVITY_API_ENDPOINT }}","apiKey":"${{ secrets.METABOB_API_KEY }}"},"providers":{"anthropic":{"apiKey":"${{ secrets.ANTHROPIC_API_KEY }}"}}}' > ~/.metabob/config.json
+
+      - name: Run Code Improvements
+        id: improve
+        run: |
+          cd demos/minibob-cicd
+          mkdir -p /tmp/dashboard-improvement
+
+          if command -v minibob &> /dev/null; then
+            minibob --activity activities/dashboard/improve-dashboard-code.json \
+              --var "recommendationsPath=/tmp/dashboard-analysis/recommendations.json" \
+              --var "dashboardPath=public/dashboard" \
+              --var "maxChanges=5" \
+              --trace
+          else
+            echo "MiniBob not available, skipping code improvements"
+            echo '{"improvement_summary":{"total_changes":0}}' > /tmp/dashboard-improvement/summary.json
+          fi
+
+          # Check if changes were made
+          if [ -f /tmp/dashboard-improvement/summary.json ]; then
+            CHANGES=$(jq -r '.improvement_summary.total_changes // 0' /tmp/dashboard-improvement/summary.json)
+            echo "changes_made=$CHANGES" >> $GITHUB_OUTPUT
+          else
+            echo "changes_made=0" >> $GITHUB_OUTPUT
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          METABOB_API_KEY: ${{ secrets.METABOB_API_KEY }}
+
+      - name: Create Pull Request
+        if: steps.improve.outputs.changes_made > 0
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            feat(dashboard): self-improvement based on trace analysis
+
+            Automated improvements from dashboard trace analysis:
+            - Error handling enhancements
+            - Caching optimizations
+            - Performance improvements
+
+            Based on recommendations from analyze-dashboard-traces activity.
+          title: "[Auto] Dashboard Improvements - ${{ github.run_number }}"
+          body: |
+            ## Dashboard Self-Improvement PR
+
+            This PR contains automated improvements to the dashboard based on trace analysis.
+
+            ### Analysis Summary
+            - Recommendations: ${{ needs.analyze-traces.outputs.recommendations_count }}
+            - High Severity Issues: ${{ needs.analyze-traces.outputs.high_severity_count }}
+
+            ### Changes
+            See attached artifacts for detailed changes.
+
+            ---
+            *Auto-generated by the Dashboard Self-Improvement Loop*
+
+            Run: ${{ github.run_id }}
+          branch: dashboard/auto-improve-${{ github.run_number }}
+          labels: |
+            dashboard
+            auto-generated
+            self-improvement
+
+  # Job 4: Improve Activities (parallel to code improvements)
+  improve-activities:
+    runs-on: ubuntu-latest
+    needs: analyze-traces
+    if: |
+      needs.analyze-traces.outputs.has_improvements == 'true' &&
+      (github.event.inputs.improvement_type == 'improve-activities' ||
+       github.event.inputs.improvement_type == 'full-cycle' ||
+       github.event_name == 'schedule')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup MiniBob
+        run: |
+          npm install -g @metabob/minibob@${{ env.MINIBOB_VERSION }} || echo "MiniBob not yet published"
+          mkdir -p ~/.metabob
+          echo '{"metabob":{"endpoint":"${{ env.ACTIVITY_API_ENDPOINT }}","apiKey":"${{ secrets.METABOB_API_KEY }}"},"providers":{"anthropic":{"apiKey":"${{ secrets.ANTHROPIC_API_KEY }}"}}}' > ~/.metabob/config.json
+
+      - name: Run Activity Improvements
+        run: |
+          cd demos/minibob-cicd
+          mkdir -p /tmp/activity-improvement
+          mkdir -p activities/dashboard/variants
+
+          if command -v minibob &> /dev/null; then
+            minibob --activity activities/dashboard/improve-dashboard-activities.json \
+              --var "activityCategory=dashboard" \
+              --var "performanceThreshold=0.7" \
+              --var "variantsPath=activities/dashboard/variants" \
+              --trace
+          else
+            echo "MiniBob not available, skipping activity improvements"
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          METABOB_API_KEY: ${{ secrets.METABOB_API_KEY }}
+
+      - name: Commit Activity Variants
+        run: |
+          cd demos/minibob-cicd
+          if [ -n "$(git status --porcelain activities/dashboard/variants/)" ]; then
+            git config user.name "MiniBob Improvement Loop"
+            git config user.email "minibob@metabob.com"
+            git add activities/dashboard/variants/
+            git commit -m "feat(activities): add improved activity variants
+
+            Auto-generated variants based on Thompson Sampling analysis.
+
+            Co-Authored-By: MiniBob <minibob@metabob.com>"
+            git push
+          else
+            echo "No activity variants to commit"
+          fi
+
+      - name: Upload Activity Improvement Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: activity-improvements
+          path: /tmp/activity-improvement/
+          retention-days: 30
+
+  # Job 5: Deploy Dashboard (after improvements)
+  deploy-dashboard:
+    runs-on: ubuntu-latest
+    needs: [analyze-traces, implement-improvements]
+    if: always() && needs.analyze-traces.result == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Last Updated Timestamp
+        run: |
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > demos/minibob-cicd/public/dashboard/last-updated.txt
+
+      - name: Trigger Pages Deploy
+        run: |
+          echo "Dashboard analysis complete. GitHub Pages deployment handled by deploy-pages.yml"
+          echo "Recommendations found: ${{ needs.analyze-traces.outputs.recommendations_count }}"
+
+  # Job 6: Meta-Improvement (weekly only)
+  meta-improvement:
+    runs-on: ubuntu-latest
+    needs: [analyze-traces, implement-improvements, improve-activities]
+    if: |
+      always() &&
+      (github.event.inputs.improvement_type == 'meta-improve' ||
+       github.event.inputs.improvement_type == 'full-cycle' ||
+       (github.event_name == 'schedule' && github.run_number % 28 == 0))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup MiniBob
+        run: |
+          npm install -g @metabob/minibob@${{ env.MINIBOB_VERSION }} || echo "MiniBob not yet published"
+          mkdir -p ~/.metabob
+          echo '{"metabob":{"endpoint":"${{ env.ACTIVITY_API_ENDPOINT }}","apiKey":"${{ secrets.METABOB_API_KEY }}"},"providers":{"anthropic":{"apiKey":"${{ secrets.ANTHROPIC_API_KEY }}"}}}' > ~/.metabob/config.json
+
+      - name: Run Meta-Improvement
+        run: |
+          cd demos/minibob-cicd
+          mkdir -p /tmp/meta-improvement
+          mkdir -p activities/dashboard/archive
+
+          if command -v minibob &> /dev/null; then
+            minibob --activity activities/dashboard/improve-development-activities.json \
+              --var "lookbackDays=7" \
+              --trace
+          else
+            echo "MiniBob not available, skipping meta-improvement"
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          METABOB_API_KEY: ${{ secrets.METABOB_API_KEY }}
+
+      - name: Commit Analysis Activity Updates
+        run: |
+          cd demos/minibob-cicd
+          if [ -n "$(git status --porcelain activities/dashboard/)" ]; then
+            git config user.name "MiniBob Meta-Improvement"
+            git config user.email "minibob@metabob.com"
+            git add activities/dashboard/
+            git commit -m "feat(meta): improve the improvement loop
+
+            Meta-improvement updates based on effectiveness analysis:
+            - Updated thresholds for pattern detection
+            - Improved prompt specificity
+            - Added new pattern types
+
+            Co-Authored-By: MiniBob <minibob@metabob.com>"
+            git push
+          else
+            echo "No meta-improvement changes to commit"
+          fi
+
+      - name: Upload Meta-Improvement Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-improvement-report
+          path: /tmp/meta-improvement/
+          retention-days: 90
