@@ -1,22 +1,23 @@
-name: CI with MiniBob Auto-Remediation
+name: CI - Quality Checks
 
 on:
   push:
     branches: [main, dev, 'feature/**', 'fix/**']
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 env:
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  METABOB_API_KEY: ${{ secrets.METABOB_API_KEY }}
   ACTIVITY_API_ENDPOINT: https://activity.metabob.com
 
 jobs:
-  ci:
+  quality-checks:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-      issues: write
+      checks: write
 
     steps:
       - name: Checkout
@@ -34,19 +35,8 @@ jobs:
 
       # ========================================
       # STAGE 1: Deterministic Checks
-      # Run all checks first, collect failures
       # ========================================
-      - name: TypeCheck (Deterministic)
-        id: typecheck
-        run: |
-          set -o pipefail
-          if bun run typecheck 2>&1 | tee typecheck-output.log; then
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "status=failure" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Lint (Deterministic)
+      - name: Run Lint
         id: lint
         run: |
           set -o pipefail
@@ -54,9 +44,21 @@ jobs:
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
-      - name: Test (Deterministic)
+      - name: Run Type Check
+        id: typecheck
+        run: |
+          set -o pipefail
+          if bun run typecheck 2>&1 | tee typecheck-output.log; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Run Tests
         id: test
         run: |
           set -o pipefail
@@ -64,176 +66,26 @@ jobs:
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "status=failure" >> $GITHUB_OUTPUT
-          fi
-
-      # ========================================
-      # STAGE 2: Learning-Based Remediation
-      # MiniBob uses LLM + learned patterns to fix
-      # ========================================
-      - name: Remediate TypeCheck (MiniBob Learning)
-        if: steps.typecheck.outputs.status == 'failure'
-        id: fix-typecheck
-        timeout-minutes: 15
-        run: |
-          echo "::group::MiniBob Learning: Type Error Fix"
-          ERROR_LOG="$(cat typecheck-output.log)"
-          bunx @metabob/minibob@latest --single "Fix TypeScript errors:
-
-          $ERROR_LOG
-
-          Tools: read (path), edit (path, oldString, newString), bash (command='tsc --noEmit')"
-          echo "::endgroup::"
-
-      - name: Verify TypeCheck Fix
-        if: steps.typecheck.outputs.status == 'failure'
-        run: bun run typecheck
-
-      - name: Remediate Lint (MiniBob Learning)
-        if: steps.lint.outputs.status == 'failure'
-        id: fix-lint
-        timeout-minutes: 15
-        run: |
-          echo "::group::MiniBob Learning: Lint Error Fix"
-          ERROR_LOG="$(cat lint-output.log)"
-          # First try eslint --fix for auto-fixable issues
-          if bun run lint -- --fix; then
-            echo "Auto-fix successful"
-          else
-            echo "Auto-fix completed with remaining issues"
-          fi
-          # Then use MiniBob for remaining issues
-          if ! bun run lint 2>&1; then
-            bunx @metabob/minibob@latest --single "Fix lint errors:
-
-            $ERROR_LOG
-
-            Tools: read (path), edit (path, oldString, newString), bash (command='eslint src/ tests/')"
-          fi
-          echo "::endgroup::"
-
-      - name: Verify Lint Fix
-        if: steps.lint.outputs.status == 'failure'
-        run: bun run lint
-
-      - name: Remediate Tests (MiniBob Learning)
-        if: steps.test.outputs.status == 'failure'
-        id: fix-test
-        timeout-minutes: 20
-        run: |
-          echo "::group::MiniBob Learning: Test Failure Fix"
-          ERROR_LOG="$(head -50 test-output.log)"
-          bunx @metabob/minibob@latest --template fix-bug-complete \
-            --var "bugDescription=Test failures in calculator: $ERROR_LOG"
-          echo "::endgroup::"
-
-      - name: Verify Test Fix
-        if: steps.test.outputs.status == 'failure'
-        run: bun test
-
-      # ========================================
-      # STAGE 3: Commit or Escalate
-      # ========================================
-      - name: Check for changes
-        id: changes
-        run: |
-          if git diff --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "### Changes made by MiniBob auto-remediation:" >> $GITHUB_STEP_SUMMARY
-            echo '```diff' >> $GITHUB_STEP_SUMMARY
-            git diff >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Commit fixes
-        if: steps.changes.outputs.has_changes == 'true'
-        timeout-minutes: 5
-        run: |
-          git config user.name "MiniBob"
-          git config user.email "minibob@metabob.com"
-          git add -A
-          if git commit -m "fix(ci): minibob auto-remediation
-
-          Automatically fixed CI failures:
-          - TypeCheck: ${{ steps.typecheck.outputs.status }}
-          - Lint: ${{ steps.lint.outputs.status }}
-          - Test: ${{ steps.test.outputs.status }}
-
-          Execution traces stored at: $ACTIVITY_API_ENDPOINT
-          Learning: Thompson Sampling updated with this fix pattern
-
-          Co-Authored-By: MiniBob <minibob@metabob.com>"; then
-            echo "✓ Commit successful"
-            if git push; then
-              echo "✓ Push successful"
-            else
-              echo "::error::Failed to push remediation changes"
-              exit 1
-            fi
-          else
-            echo "::error::Failed to commit remediation changes"
             exit 1
           fi
 
       # ========================================
-      # STAGE 4: Upkeep Tasks (LLM Side-Effects)
-      # ========================================
-      - name: Sync Documentation
-        if: success()
-        continue-on-error: true
-        run: |
-          if git diff --name-only HEAD~1 2>/dev/null | grep -q "^src/"; then
-            echo "::group::MiniBob Upkeep: Sync README"
-            bunx @metabob/minibob@latest --single "Check if README.md needs updating based on recent code changes in src/. If API changed, update the docs. Otherwise, skip."
-            echo "::endgroup::"
-          fi
-
-      - name: Commit upkeep changes
-        if: success()
-        continue-on-error: true
-        run: |
-          if ! git diff --quiet; then
-            git add -A
-            if git commit -m "docs: minibob upkeep sync
-
-            Co-Authored-By: MiniBob <minibob@metabob.com>"; then
-              echo "Commit successful"
-              if git push; then
-                echo "Push successful"
-              else
-                echo "::warning::Push failed for upkeep changes"
-                exit 1
-              fi
-            else
-              echo "::warning::Commit failed for upkeep changes"
-              exit 1
-            fi
-          fi
-
-      # ========================================
-      # STAGE 5: Build (Final Gate)
+      # STAGE 2: Build Verification
       # ========================================
       - name: Build
+        if: success()
         run: bun run build
 
       # ========================================
-      # STAGE 6: Summary
+      # STAGE 3: Summary
       # ========================================
       - name: Summary
+        if: always()
         run: |
           echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Stage | Initial | Remediated |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|---------|------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| TypeCheck | ${{ steps.typecheck.outputs.status }} | ${{ steps.typecheck.outputs.status == 'failure' && '✅ Fixed' || '-' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Lint | ${{ steps.lint.outputs.status }} | ${{ steps.lint.outputs.status == 'failure' && '✅ Fixed' || '-' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test | ${{ steps.test.outputs.status }} | ${{ steps.test.outputs.status == 'failure' && '✅ Fixed' || '-' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### MiniBob Integration" >> $GITHUB_STEP_SUMMARY
-          echo "- **Package**: \`@metabob/minibob@latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Learning Backend**: \`$ACTIVITY_API_ENDPOINT\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Modes Used**:" >> $GITHUB_STEP_SUMMARY
-          echo "  - ✅ Deterministic (type/lint/test execution)" >> $GITHUB_STEP_SUMMARY
-          echo "  - ✅ Learning (fix patterns → Thompson Sampling)" >> $GITHUB_STEP_SUMMARY
-          echo "  - ✅ Upkeep (docs/changelog sync)" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ steps.lint.outputs.status == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| TypeCheck | ${{ steps.typecheck.outputs.status == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ steps.test.outputs.status == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
