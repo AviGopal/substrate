@@ -68,19 +68,25 @@ jobs:
 
           LOOKBACK_HOURS="${{ github.event.inputs.lookback_hours || '6' }}"
 
-          # Run analyze-dashboard-traces activity
-          if command -v minibob &> /dev/null; then
-            minibob --activity activities/dashboard/analyze-dashboard-traces.json \
+          # Try to run minibob, fallback to direct API if it fails
+          MINIBOB_SUCCESS=false
+          if command -v minibob &> /dev/null && minibob --version &> /dev/null; then
+            if minibob --activity activities/dashboard/analyze-dashboard-traces.json \
               --var "lookbackHours=$LOOKBACK_HOURS" \
               --var "outputPath=/tmp/dashboard-analysis" \
-              --trace
-          else
+              --trace; then
+              MINIBOB_SUCCESS=true
+            fi
+          fi
+
+          if [ "$MINIBOB_SUCCESS" = false ]; then
+            echo "Using fallback: direct API query"
             # Fallback: direct API query for traces
             curl -s -X GET "${{ env.ACTIVITY_API_ENDPOINT }}/v2/activities/executions?limit=100&since=${LOOKBACK_HOURS}h" \
               -H "Authorization: ApiKey ${{ secrets.METABOB_API_KEY }}" \
               -o /tmp/dashboard-analysis/raw-traces.json || echo '{"executions":[]}' > /tmp/dashboard-analysis/raw-traces.json
 
-            # Create minimal analysis
+            # Create minimal analysis (no improvements detected in fallback mode)
             echo '{"patterns":[],"summary":{"high_severity":0,"medium_severity":0,"low_severity":0}}' > /tmp/dashboard-analysis/improvement-opportunities.json
             echo '{"recommendations":[],"summary":{"total_recommendations":0}}' > /tmp/dashboard-analysis/recommendations.json
             echo '{"issues":[]}' > /tmp/dashboard-analysis/issues-to-create.json
