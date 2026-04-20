@@ -138,19 +138,21 @@ const DashboardMonitor = (function() {
             return { ...cached.data, cached: true };
         }
 
-        // Start trace
-        const traceEntry = DashboardTracer?.traceResolution?.(shapeConfig.shape, {
-            query: { ...shapeConfig.params, ...params }
-        });
-
-        state.stats.totalFetches++;
-        state.stats.lastFetch = new Date().toISOString();
-
+        // Build URL first so we can include it in trace
         const mergedParams = { ...shapeConfig.params, ...params };
         const url = new URL(`${state.endpoint}${shapeConfig.endpoint}`);
         Object.entries(mergedParams).forEach(([key, value]) => {
             url.searchParams.append(key, String(value));
         });
+
+        // Start trace with URL for CORS detection
+        const traceEntry = DashboardTracer?.traceResolution?.(shapeConfig.shape, {
+            query: mergedParams,
+            url: url.toString()
+        });
+
+        state.stats.totalFetches++;
+        state.stats.lastFetch = new Date().toISOString();
 
         let lastError = null;
         for (let attempt = 0; attempt < config.retryAttempts; attempt++) {
