@@ -273,7 +273,7 @@ app.get("/api/data", (c) => {
   // Return only summary data needed by dashboard (not full execution/template objects with traces)
   const summaryData = {
     executions: cachedData.executions.map(exec => ({
-      id: exec.id,
+      id: exec.id || exec.execution_id,
       execution_id: exec.execution_id,
       activity_id: exec.activity_id,
       status: exec.status || (exec.success ? 'success' : 'failure'),
