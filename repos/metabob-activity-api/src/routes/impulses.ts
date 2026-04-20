@@ -28,6 +28,12 @@ import {
   formatCompositionSuccessAsMarkdown,
   formatImpulseRelevanceAsMarkdown,
   formatPreValidationResultAsMarkdown,
+  formatExecutionCostSummaryAsMarkdown,
+  formatResolverCostAnalysisAsMarkdown,
+  formatVesselPerformanceMetricsAsMarkdown,
+  formatCostByActivityAsMarkdown,
+  formatResolverPerformanceByShapeAsMarkdown,
+  formatCostTrendOverTimeAsMarkdown,
 } from '../services/impulse-formatters';
 import { getJwtAuthFromContext, type JwtAuthContext } from '../middleware/jwtAuth';
 import activitiesRouter from './activities';
@@ -51,6 +57,7 @@ const router = new Hono();
  * 6. Return 201 with impulse data
  */
 router.post('/', async (c) => {
+  let body: any; // Declare outside try block for error handler access
   try {
     const jwtAuth = getJwtAuthFromContext(c);
 
@@ -132,15 +139,15 @@ router.post('/', async (c) => {
     const pointer = impulse_data.pointer;
 
     // Generate summary for metadata-first resolution
-    // Priority: metadata description > pointer path/type > shape
+    // Priority: metadata summary > pointer path/type > shape
     let summary = '';
-    if (impulse_data.metadata?.description) {
-      summary = impulse_data.metadata.description.substring(0, 100);
-    } else if (pointer.path || pointer.file_path) {
-      const path = pointer.path || pointer.file_path;
+    if (impulse_data.metadata?.summary) {
+      summary = impulse_data.metadata.summary.substring(0, 100);
+    } else if ((pointer as any).path || (pointer as any).file_path) {
+      const path = (pointer as any).path || (pointer as any).file_path;
       summary = `${shape}: ${path}`.substring(0, 100);
-    } else if (pointer.type) {
-      summary = `${shape} (${pointer.type})`.substring(0, 100);
+    } else if ((pointer as any).type) {
+      summary = `${shape} (${(pointer as any).type})`.substring(0, 100);
     } else {
       summary = shape.substring(0, 100);
     }
@@ -155,8 +162,8 @@ router.post('/', async (c) => {
       metadata: impulse_data.metadata || {},
       token_estimate: impulse_data.budget || 0,
       org_id,
-      project_id,
-      created_at: new Date().toISOString(),
+      // Note: created_at will be set via time::now() in SQL query (not passed as parameter)
+      // JavaScript Date objects serialize to ISO strings which SurrealDB can't coerce to datetime
     };
 
     // Only include content if it has a value (avoid null → NULL coercion issue)
@@ -165,29 +172,37 @@ router.post('/', async (c) => {
       params.content = pointer.content;
     }
 
+    // Only include project_id if it has a value (avoid null → NULL coercion issue)
+    // Convert to record reference if it's a plain string
+    const projectIdField = project_id ? 'project_id: $project_id,' : '';
+    if (project_id) {
+      // Check if it's already a record reference (contains ':')
+      params.project_id = project_id.includes(':') ? project_id : `projects:${project_id}`;
+    }
+
     // Only include created_by if it has a value (empty string means internal service)
     const createdByField = created_by ? 'created_by: $created_by,' : '';
     if (created_by) {
       params.created_by = created_by;
     }
 
-    // Use UPDATE for idempotency (creates if not exists, updates if exists)
-    // This prevents race conditions where CREATE succeeds but verification fails
+    // Use CREATE with ON DUPLICATE KEY UPDATE for true idempotency
+    // This prevents race conditions and duplicate key errors
+    // If the record exists, just return it without modification
     // Use type::record() for SurrealDB 3.x to safely handle IDs with hyphens
+    // Use time::now() instead of Date parameter to avoid datetime coercion errors
     const createOrUpdateQuery = `
-      UPDATE type::record('impulse', $impulse_id) CONTENT {
-        id: $impulse_id,
-        pointer: $pointer,
-        shape: $shape,
-        summary: $summary,
-        ${contentField}
-        metadata: $metadata,
-        token_estimate: $token_estimate,
-        org_id: $org_id,
-        project_id: $project_id,
-        ${createdByField}
-        created_at: $created_at
-      }
+      UPDATE type::record('impulse', $impulse_id) SET
+        pointer = $pointer,
+        shape = $shape,
+        summary = $summary,
+        ${contentField ? 'content = $content,' : ''}
+        metadata = $metadata,
+        token_estimate = $token_estimate,
+        org_id = $org_id,
+        ${projectIdField ? 'project_id = $project_id,' : ''}
+        ${createdByField ? 'created_by = $created_by,' : ''}
+        created_at = created_at OR time::now()
     `;
 
     const [result] = await executeQuery<any>(createOrUpdateQuery, params);
@@ -237,14 +252,43 @@ router.post('/', async (c) => {
       }, 400);
     }
 
-    // Handle duplicate impulse (already exists) - return 409 Conflict instead of 500
-    // This allows clients to treat duplicates as successful idempotent operations
-    if (error.message && error.message.includes('already exists')) {
-      logger.info('Impulse already exists (deduplication)', { impulse_id: error.message });
+    // Handle duplicate impulse (already exists) - return 200 OK for idempotency
+    // MiniBob's sync queue expects duplicates to be treated as success
+    if (error.message && (
+      error.message.includes('already exists') ||
+      error.message.includes('duplicate') ||
+      error.message.includes('UNIQUE constraint')
+    )) {
+      logger.info('Impulse already exists (deduplication)', { impulse_id: body?.impulse_id || 'unknown' });
+      // Fetch and return the existing impulse
+      try {
+        const [existing] = await surrealDB.query<any>(
+          'SELECT * FROM type::record("impulse", $impulse_id)',
+          { impulse_id: body?.impulse_id }
+        );
+        if (existing) {
+          return c.json({
+            impulse_id: existing.id,
+            api_key: existing.created_by,
+            project_id: existing.project_id,
+            impulse_data: {
+              type: existing.shape,
+              content: existing.content,
+              ...existing.pointer,
+              ...existing.metadata,
+            },
+            created_at: existing.created_at,
+            updated_at: existing.created_at,
+          }, 200);
+        }
+      } catch (fetchError) {
+        logger.warn('Failed to fetch existing impulse', { error: fetchError });
+      }
+      // Fallback: return success without data
       return c.json({
-        error: 'Impulse already exists',
-        message: error.message,
-      }, 409);
+        impulse_id: body?.impulse_id,
+        message: 'Impulse already exists',
+      }, 200);
     }
 
     return c.json({
@@ -1471,6 +1515,361 @@ router.post('/resolve', async (c) => {
         };
 
         content = formatPreValidationResultAsMarkdown(result);
+        break;
+      }
+
+      case 'executionCostSummary': {
+        const extendedPointer = pointer as typeof pointer & {
+          activityId?: string;
+          templateId?: string;
+          vesselId?: string;
+          since?: string;
+          until?: string;
+          groupBy?: 'day' | 'week' | 'month' | 'activity' | 'vessel';
+        };
+
+        const activityId = extendedPointer.activityId;
+        const vesselId = extendedPointer.vesselId;
+        const since = extendedPointer.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const until = extendedPointer.until || new Date().toISOString();
+
+        logger.info('Resolving executionCostSummary', { activityId, vesselId, since, until });
+
+        // Build WHERE clause dynamically
+        const conditions: string[] = ['executed_at >= type::datetime($since)', 'executed_at <= type::datetime($until)'];
+        const params: Record<string, any> = { since, until };
+
+        if (activityId) {
+          conditions.push('activity_id = $activityId');
+          params.activityId = activityId;
+        }
+
+        if (vesselId) {
+          conditions.push('resolved_by_vessel_id = $vesselId');
+          params.vesselId = vesselId;
+        }
+
+        const whereClause = conditions.join(' AND ');
+
+        const query = `
+          SELECT
+            activity_id,
+            count() AS execution_count,
+            math::sum(cost_usd) AS total_cost,
+            math::mean(cost_usd) AS avg_cost,
+            math::max(cost_usd) AS max_cost,
+            math::min(cost_usd) AS min_cost
+          FROM execution
+          WHERE ${whereClause}
+          GROUP BY activity_id
+          ORDER BY total_cost DESC
+        `;
+
+        const results = await surrealDB.query<any>(query, params);
+
+        if (results.length === 0) {
+          return c.json({
+            success: false,
+            error: 'No execution cost data found for the specified filters',
+          } as ImpulseResolveResponse, 404);
+        }
+
+        content = formatExecutionCostSummaryAsMarkdown(results);
+        break;
+      }
+
+      case 'resolverCostAnalysis': {
+        const extendedPointer = pointer as typeof pointer & {
+          shape?: string;
+          vesselId?: string;
+          since?: string;
+          limit?: number;
+        };
+
+        const shape = extendedPointer.shape;
+        const vesselId = extendedPointer.vesselId;
+        const since = extendedPointer.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const limit = extendedPointer.limit || 50;
+
+        logger.info('Resolving resolverCostAnalysis', { shape, vesselId, since, limit });
+
+        // Build WHERE clause for nested query
+        const conditions: string[] = ['executed_at >= type::datetime($since)'];
+        const params: Record<string, any> = { since, limit };
+
+        if (shape) {
+          conditions.push('value.impulse_id CONTAINS $shape');
+          params.shape = shape;
+        }
+
+        if (vesselId) {
+          conditions.push('value.vessel_id = $vesselId');
+          params.vesselId = vesselId;
+        }
+
+        const whereClause = conditions.join(' AND ');
+
+        const query = `
+          SELECT
+            value.resolver_id AS resolver_id,
+            value.resolver_tier AS resolver_tier,
+            count() AS usage_count,
+            math::sum(value.cost_usd) AS total_cost,
+            math::mean(value.cost_usd) AS avg_cost,
+            math::mean(value.latency_ms) AS avg_latency
+          FROM execution
+          SPLIT impulse_resolutions
+          WHERE ${whereClause}
+          GROUP BY resolver_id, resolver_tier
+          ORDER BY total_cost DESC
+          LIMIT $limit
+        `;
+
+        const results = await surrealDB.query<any>(query, params);
+
+        if (results.length === 0) {
+          return c.json({
+            success: false,
+            error: 'No resolver cost data found for the specified filters',
+          } as ImpulseResolveResponse, 404);
+        }
+
+        content = formatResolverCostAnalysisAsMarkdown(results);
+        break;
+      }
+
+      case 'vesselPerformanceMetrics': {
+        const extendedPointer = pointer as typeof pointer & {
+          vesselId: string;
+          since?: string;
+          includeResolutions?: boolean;
+        };
+
+        const vesselId = extendedPointer.vesselId;
+        const since = extendedPointer.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const includeResolutions = extendedPointer.includeResolutions ?? true;
+
+        if (!vesselId) {
+          return c.json({
+            success: false,
+            error: 'vesselId required for vesselPerformanceMetrics pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        logger.info('Resolving vesselPerformanceMetrics', { vesselId, since, includeResolutions });
+
+        // Get aggregate metrics
+        const aggregateQuery = `
+          SELECT
+            count() AS execution_count,
+            math::mean(duration_ms) AS avg_duration,
+            math::sum(cost_usd) AS total_cost,
+            math::mean(cost_usd) AS avg_cost,
+            math::sum(CASE WHEN success = true THEN 1 ELSE 0 END) * 1.0 / count() AS success_rate
+          FROM execution
+          WHERE resolved_by_vessel_id = $vesselId
+            AND executed_at >= type::datetime($since)
+        `;
+
+        const aggregateResults = await surrealDB.query<any>(aggregateQuery, { vesselId, since });
+
+        if (aggregateResults.length === 0 || aggregateResults[0].execution_count === 0) {
+          return c.json({
+            success: false,
+            error: `No execution data found for vessel: ${vesselId}`,
+          } as ImpulseResolveResponse, 404);
+        }
+
+        const aggregate = aggregateResults[0];
+
+        // Get resolution breakdown if requested
+        let resolutions: any[] | undefined;
+        if (includeResolutions) {
+          const resolutionsQuery = `
+            SELECT
+              value.resolver_id AS resolver_id,
+              value.resolver_tier AS resolver_tier,
+              count() AS usage_count,
+              math::mean(value.latency_ms) AS avg_latency,
+              math::sum(value.cost_usd) AS total_cost
+            FROM execution
+            SPLIT impulse_resolutions
+            WHERE resolved_by_vessel_id = $vesselId
+              AND executed_at >= type::datetime($since)
+            GROUP BY resolver_id, resolver_tier
+            ORDER BY usage_count DESC
+          `;
+
+          resolutions = await surrealDB.query<any>(resolutionsQuery, { vesselId, since });
+        }
+
+        content = formatVesselPerformanceMetricsAsMarkdown(vesselId, aggregate, resolutions);
+        break;
+      }
+
+      case 'costByActivity': {
+        const extendedPointer = pointer as typeof pointer & {
+          since?: string;
+          until?: string;
+          limit?: number;
+          minCost?: number;
+        };
+
+        const since = extendedPointer.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const until = extendedPointer.until || new Date().toISOString();
+        const limit = extendedPointer.limit || 50;
+        const minCost = extendedPointer.minCost;
+
+        logger.info('Resolving costByActivity', { since, until, limit, minCost });
+
+        const query = `
+          SELECT
+            activity_id,
+            count() AS execution_count,
+            math::sum(cost_usd) AS total_cost,
+            math::mean(cost_usd) AS avg_cost,
+            math::mean(duration_ms) AS avg_duration,
+            math::sum(CASE WHEN success = true THEN 1 ELSE 0 END) * 1.0 / count() AS success_rate
+          FROM execution
+          WHERE executed_at >= type::datetime($since)
+            AND executed_at <= type::datetime($until)
+          GROUP BY activity_id
+          ${minCost ? 'HAVING total_cost >= $minCost' : ''}
+          ORDER BY total_cost DESC
+          LIMIT $limit
+        `;
+
+        const params: Record<string, any> = { since, until, limit };
+        if (minCost) {
+          params.minCost = minCost;
+        }
+
+        const results = await surrealDB.query<any>(query, params);
+
+        if (results.length === 0) {
+          return c.json({
+            success: false,
+            error: 'No activity cost data found for the specified filters',
+          } as ImpulseResolveResponse, 404);
+        }
+
+        content = formatCostByActivityAsMarkdown(results);
+        break;
+      }
+
+      case 'resolverPerformanceByShape': {
+        const extendedPointer = pointer as typeof pointer & {
+          shape: string;
+          since?: string;
+          limit?: number;
+        };
+
+        const shape = extendedPointer.shape;
+        const since = extendedPointer.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const limit = extendedPointer.limit || 20;
+
+        if (!shape) {
+          return c.json({
+            success: false,
+            error: 'shape required for resolverPerformanceByShape pointer',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        logger.info('Resolving resolverPerformanceByShape', { shape, since, limit });
+
+        const query = `
+          SELECT
+            value.resolver_id AS resolver_id,
+            value.resolver_tier AS resolver_tier,
+            count() AS usage_count,
+            math::mean(value.latency_ms) AS avg_latency,
+            math::sum(value.cost_usd) AS total_cost,
+            math::sum(CASE WHEN value.success = true THEN 1 ELSE 0 END) * 1.0 / count() AS success_rate
+          FROM execution
+          SPLIT impulse_resolutions
+          WHERE value.impulse_id CONTAINS $shape
+            AND executed_at >= type::datetime($since)
+          GROUP BY resolver_id, resolver_tier
+          ORDER BY usage_count DESC
+          LIMIT $limit
+        `;
+
+        const results = await surrealDB.query<any>(query, { shape, since, limit });
+
+        if (results.length === 0) {
+          return c.json({
+            success: false,
+            error: `No resolver performance data found for shape: ${shape}`,
+          } as ImpulseResolveResponse, 404);
+        }
+
+        content = formatResolverPerformanceByShapeAsMarkdown(shape, results);
+        break;
+      }
+
+      case 'costTrendOverTime': {
+        const extendedPointer = pointer as typeof pointer & {
+          activityId?: string;
+          vesselId?: string;
+          interval: 'hour' | 'day' | 'week';
+          since?: string;
+          until?: string;
+        };
+
+        const activityId = extendedPointer.activityId;
+        const vesselId = extendedPointer.vesselId;
+        const interval = extendedPointer.interval;
+        const since = extendedPointer.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const until = extendedPointer.until || new Date().toISOString();
+
+        if (!interval) {
+          return c.json({
+            success: false,
+            error: 'interval required for costTrendOverTime pointer (hour, day, or week)',
+          } as ImpulseResolveResponse, 400);
+        }
+
+        logger.info('Resolving costTrendOverTime', { activityId, vesselId, interval, since, until });
+
+        // Build WHERE clause
+        const conditions: string[] = ['executed_at >= type::datetime($since)', 'executed_at <= type::datetime($until)'];
+        const params: Record<string, any> = { since, until, interval };
+
+        if (activityId) {
+          conditions.push('activity_id = $activityId');
+          params.activityId = activityId;
+        }
+
+        if (vesselId) {
+          conditions.push('resolved_by_vessel_id = $vesselId');
+          params.vesselId = vesselId;
+        }
+
+        const whereClause = conditions.join(' AND ');
+
+        const query = `
+          SELECT
+            time::group(executed_at, $interval) AS time_bucket,
+            count() AS execution_count,
+            math::sum(cost_usd) AS total_cost,
+            math::mean(cost_usd) AS avg_cost,
+            math::sum(CASE WHEN success = true THEN 1 ELSE 0 END) * 1.0 / count() AS success_rate
+          FROM execution
+          WHERE ${whereClause}
+          GROUP BY time_bucket
+          ORDER BY time_bucket ASC
+        `;
+
+        const results = await surrealDB.query<any>(query, params);
+
+        if (results.length === 0) {
+          return c.json({
+            success: false,
+            error: 'No cost trend data found for the specified time range',
+          } as ImpulseResolveResponse, 404);
+        }
+
+        content = formatCostTrendOverTimeAsMarkdown(results);
         break;
       }
 
