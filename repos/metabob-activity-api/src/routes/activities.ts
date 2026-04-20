@@ -81,6 +81,7 @@ import {
   ToolArgumentRecommendationsQuerySchema,
   ShapeScoreUpdateRequestSchema,
   ActivityFeedbackRequestSchema,
+  ShapeCompositionEdgeRequestSchema,
   type ExecutionRecord,
   type ExecutionRecordResponse,
   type CreateTemplateRequest,
@@ -101,6 +102,7 @@ import {
   type ActivityFeedbackRequest,
   type ActivityFeedbackResponse,
   type ImpulseShapeActivityScore,
+  type ShapeCompositionEdgeRequest,
 } from '../models/schemas';
 import { broadcaster } from '../websocket/broadcaster';
 import { autoCreateVariantIfNeeded, checkAndRetireTemplate } from '../services/variant-creator';
@@ -1847,7 +1849,37 @@ app.get('/executions', async (c) => {
     });
 
     // Build query with filters
-    let query = 'SELECT * FROM v_paradigm_execution_traces WHERE 1=1';
+    // TEMPORARY: Query execution table directly (view not yet applied)
+    let query = `
+      SELECT
+        id AS execution_id,
+        activity_id,
+        activity_id AS variant_id,
+        activity_id AS template_id,
+        success,
+        IF success = true { 'success' } ELSE { 'failure' } AS status,
+        duration_ms,
+        cost_usd,
+        tokens_in AS tokens_input,
+        tokens_out AS tokens_output,
+        tokens_in + tokens_out AS tokens_total,
+        error.message AS error_message,
+        error.type AS error_type,
+        error.task_id AS failed_task_id,
+        input_impulses AS impulses_used,
+        output_impulses AS impulses_created,
+        trace AS execution_trace,
+        trace.state_transition.after AS component_changes,
+        parent_execution_id,
+        org_id,
+        project_id,
+        vessel_id,
+        executed_at,
+        created_at,
+        created_at AS stored_at,
+        created_at AS updated_at
+      FROM execution WHERE 1=1
+    `.trim();
     const params: Record<string, any> = {};
     
     // Multi-tenant filtering (same as templates)
@@ -4230,6 +4262,343 @@ app.get('/composition/impulse-success', async (c) => {
 
     return c.json({
       error: 'Failed to query impulse success rates',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * POST /v2/activities/composition/edges
+ * Record shape-based composition edge for Thompson Sampling learning.
+ *
+ * This endpoint records edges between activities based on the shapes they produce/consume.
+ * When Activity A produces shape X that Activity B consumes, record an edge for learning.
+ *
+ * Uses fn::update_composition_edge from schema 046-composition-graph.surql to:
+ * - Create edge if it doesn't exist (alpha=2/beta=1 or alpha=1/beta=2 based on success)
+ * - Update Thompson Sampling parameters (alpha+1 for success, beta+1 for failure)
+ * - Track success/failure counts per edge
+ *
+ * Request body:
+ * - parent_activity_id: Activity that produced the shape
+ * - child_activity_id: Activity that consumed the shape
+ * - shape_produced: The shape that connects them (optional - will compute overlap if not provided)
+ * - state_before: State when parent completed (shapes, git, env)
+ * - state_after: State after child completed (shapes, git, env)
+ * - success: Whether the child activity succeeded
+ * - duration_ms: Execution duration (optional)
+ */
+app.post('/composition/edges', async (c) => {
+  try {
+    // Check JWT authentication
+    const jwtAuth = getJwtAuthFromContext(c);
+    if (!jwtAuth?.orgId) {
+      return c.json({ error: 'Authentication required' }, 401);
+    }
+
+    const body = await c.req.json();
+    const validated = ShapeCompositionEdgeRequestSchema.parse(body);
+
+    logger.info('POST /v2/activities/composition/edges', {
+      parent: validated.parent_activity_id,
+      child: validated.child_activity_id,
+      shape: validated.shape_produced,
+      success: validated.success,
+      orgId: jwtAuth.orgId,
+    });
+
+    // If shape_produced is not provided, compute overlapping shapes
+    let shapesToRecord: string[] = [];
+
+    if (validated.shape_produced) {
+      // Single shape provided
+      shapesToRecord = [validated.shape_produced];
+    } else if (validated.state_before?.shapes && validated.state_after?.shapes) {
+      // Compute overlap: shapes that parent produced that child consumed
+      // state_before.shapes = shapes available when child started (includes parent's output)
+      // state_after.shapes = shapes available after child completed
+      const beforeSet = new Set(validated.state_before.shapes);
+      const afterSet = new Set(validated.state_after.shapes);
+
+      // Shapes that were in before (parent produced) and still in after (used by child)
+      shapesToRecord = [...beforeSet].filter(s => afterSet.has(s));
+
+      // If no overlap, record edge without shape
+      if (shapesToRecord.length === 0) {
+        shapesToRecord = ['_direct']; // Placeholder for direct composition without shape flow
+      }
+    } else {
+      // No state info, record with placeholder
+      shapesToRecord = ['_unknown'];
+    }
+
+    // Record edge for each overlapping shape using fn::update_composition_edge
+    const recordedEdges: any[] = [];
+
+    for (const shape of shapesToRecord) {
+      try {
+        // Use the fn::update_composition_edge function from schema 046
+        const updateQuery = `
+          RETURN fn::update_composition_edge(
+            $from_activity,
+            $to_activity,
+            $shape,
+            $success
+          );
+        `;
+
+        await surrealDB.query(updateQuery, {
+          from_activity: validated.parent_activity_id,
+          to_activity: validated.child_activity_id,
+          shape: shape,
+          success: validated.success,
+        });
+
+        recordedEdges.push({
+          from_activity: validated.parent_activity_id,
+          to_activity: validated.child_activity_id,
+          shape_produced: shape,
+          success: validated.success,
+        });
+
+        logger.debug('Recorded composition edge', {
+          parent: validated.parent_activity_id,
+          child: validated.child_activity_id,
+          shape: shape,
+          success: validated.success,
+        });
+      } catch (edgeError: any) {
+        // Log but continue - fn::update_composition_edge may not exist in older schemas
+        logger.warn('Failed to record edge via fn::update_composition_edge, falling back', {
+          error: edgeError.message,
+          shape: shape,
+        });
+
+        // Fallback: Direct insert into composition_edge table
+        const fallbackQuery = `
+          LET $existing = (
+            SELECT * FROM composition_edge
+            WHERE from_activity = $from_activity
+              AND to_activity = $to_activity
+              AND shape_produced = $shape
+              AND org_id = $org_id
+            LIMIT 1
+          );
+
+          IF array::len($existing) > 0 THEN (
+            UPDATE composition_edge SET
+              success_count = IF($success, success_count + 1, success_count),
+              failure_count = IF($success, failure_count, failure_count + 1),
+              total_count = total_count + 1,
+              alpha = IF($success, alpha + 1, alpha),
+              beta = IF($success, beta, beta + 1),
+              updated_at = time::now()
+            WHERE from_activity = $from_activity
+              AND to_activity = $to_activity
+              AND shape_produced = $shape
+              AND org_id = $org_id
+            RETURN AFTER
+          ) ELSE (
+            CREATE composition_edge SET
+              from_activity = $from_activity,
+              to_activity = $to_activity,
+              shape_produced = $shape,
+              alpha = IF($success, 2.0, 1.0),
+              beta = IF($success, 1.0, 2.0),
+              weight = 0.5,
+              success_count = IF($success, 1, 0),
+              failure_count = IF($success, 0, 1),
+              total_count = 1,
+              org_id = $org_id,
+              public = false
+            RETURN AFTER
+          ) END;
+        `;
+
+        try {
+          await surrealDB.query(fallbackQuery, {
+            from_activity: validated.parent_activity_id,
+            to_activity: validated.child_activity_id,
+            shape: shape,
+            success: validated.success,
+            org_id: jwtAuth.orgId,
+          });
+
+          recordedEdges.push({
+            from_activity: validated.parent_activity_id,
+            to_activity: validated.child_activity_id,
+            shape_produced: shape,
+            success: validated.success,
+          });
+        } catch (fallbackError: any) {
+          logger.error('Fallback edge recording also failed', {
+            error: fallbackError.message,
+          });
+        }
+      }
+    }
+
+    // Also record to activity_composition_graph for backward compatibility
+    // (existing queries may use that table)
+    try {
+      const compatQuery = `
+        LET $existing = (
+          SELECT * FROM activity_composition_graph
+          WHERE parent_activity_id = $parent AND child_activity_id = $child
+          LIMIT 1
+        );
+
+        IF array::len($existing) > 0 THEN (
+          UPDATE activity_composition_graph SET
+            execution_count = execution_count + 1,
+            success_count = IF($success, success_count + 1, success_count),
+            weight = (IF($success, success_count + 1, success_count)) / (execution_count + 1),
+            updated_at = time::now()
+          WHERE parent_activity_id = $parent AND child_activity_id = $child
+        ) ELSE (
+          CREATE activity_composition_graph SET
+            parent_activity_id = $parent,
+            child_activity_id = $child,
+            execution_count = 1,
+            success_count = IF($success, 1, 0),
+            weight = IF($success, 1.0, 0.0),
+            created_at = time::now(),
+            updated_at = time::now()
+        ) END;
+      `;
+
+      await surrealDB.query(compatQuery, {
+        parent: validated.parent_activity_id,
+        child: validated.child_activity_id,
+        success: validated.success,
+      });
+    } catch (compatError: any) {
+      // Non-critical - log and continue
+      logger.debug('Compat write to activity_composition_graph failed', {
+        error: compatError.message,
+      });
+    }
+
+    // Generate edge_id from first recorded edge for backward compatibility
+    const edgeId = recordedEdges.length > 0
+      ? `${recordedEdges[0].from_activity}:${recordedEdges[0].to_activity}:${recordedEdges[0].shape_produced}`
+      : undefined;
+
+    return c.json({
+      success: true,
+      edge_id: edgeId,
+      edges_recorded: recordedEdges.length,
+      edges: recordedEdges,
+    });
+
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      logger.warn('POST /v2/activities/composition/edges validation failed', {
+        errors: error.errors,
+      });
+      return c.json({
+        error: 'Validation failed',
+        details: error.errors,
+      }, 400);
+    }
+
+    logger.error('POST /v2/activities/composition/edges failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to record composition edge',
+      message: error.message,
+    }, 500);
+  }
+});
+
+/**
+ * GET /v2/activities/composition/edges/successors/:activityId
+ * Query successor activities for a given activity based on composition edges.
+ *
+ * Returns activities that typically follow the given activity, ranked by Thompson Sampling.
+ */
+app.get('/composition/edges/successors/:activityId', async (c) => {
+  try {
+    // Check JWT authentication
+    const jwtAuth = getJwtAuthFromContext(c);
+    if (!jwtAuth?.orgId) {
+      return c.json({ error: 'Authentication required' }, 401);
+    }
+
+    const activityId = c.req.param('activityId');
+    const stateSignature = c.req.query('stateSignature');
+    const minOccurrences = parseInt(c.req.query('minOccurrences') || '1', 10);
+    const limit = parseInt(c.req.query('limit') || '10', 10);
+
+    logger.info('GET /v2/activities/composition/edges/successors', {
+      activityId,
+      stateSignature,
+      minOccurrences,
+      limit,
+      orgId: jwtAuth.orgId,
+    });
+
+    // Query composition_edge for successors
+    let query = `
+      SELECT
+        to_activity as child_activity_id,
+        shape_produced,
+        math::sum(success_count) as successful_occurrences,
+        math::sum(total_count) as total_occurrences,
+        (math::sum(success_count) / math::sum(total_count)) as success_rate,
+        math::mean(alpha) as avg_alpha,
+        math::mean(beta) as avg_beta
+      FROM composition_edge
+      WHERE from_activity = $activity_id
+        AND (org_id = $org_id OR public = true)
+    `;
+
+    const params: Record<string, any> = {
+      activity_id: activityId,
+      org_id: jwtAuth.orgId,
+    };
+
+    // Add state signature filter if provided
+    if (stateSignature) {
+      // For now, state signature filtering would need additional schema support
+      // This is a placeholder for future state-aware queries
+      logger.debug('State signature filtering not yet implemented', { stateSignature });
+    }
+
+    query += `
+      GROUP BY to_activity, shape_produced
+      HAVING math::sum(total_count) >= $min_occurrences
+      ORDER BY success_rate DESC
+      LIMIT $limit
+    `;
+
+    params.min_occurrences = minOccurrences;
+    params.limit = limit;
+
+    const results = await surrealDB.query<any[]>(query, params);
+    const successors = results && Array.isArray(results) ? results.flat() : [];
+
+    logger.info('Composition edge successors query result', {
+      activityId,
+      successors_count: successors.length,
+    });
+
+    return c.json({
+      successors: successors,
+      total: successors.length,
+    });
+
+  } catch (error: any) {
+    logger.error('GET /v2/activities/composition/edges/successors failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to query composition successors',
       message: error.message,
     }, 500);
   }
