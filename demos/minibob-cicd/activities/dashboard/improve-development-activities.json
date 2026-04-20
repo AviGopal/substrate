@@ -1,0 +1,112 @@
+{
+  "id": "improve-development-activities",
+  "name": "Improve Development Activities (Meta)",
+  "category": "dashboard",
+  "description": "Meta-activity that improves the improvement loop itself. Analyzes which improvements actually work and updates the analysis prompts accordingly.",
+  "version": "1.0.0",
+  "tags": ["dashboard", "meta-learning", "self-improvement", "loop-optimization"],
+  "mode": "learning",
+
+  "variables": [
+    {
+      "name": "lookbackDays",
+      "type": "number",
+      "description": "Days to look back for improvement effectiveness analysis",
+      "required": false,
+      "default": 7
+    },
+    {
+      "name": "improvementActivities",
+      "type": "array",
+      "description": "List of improvement activity IDs to analyze",
+      "required": false,
+      "default": ["analyze-dashboard-traces", "improve-dashboard-code", "improve-dashboard-activities"]
+    }
+  ],
+
+  "tasks": [
+    {
+      "id": "analyze_improvement_effectiveness",
+      "description": "Analyze which improvements actually led to better metrics",
+      "prompt": {
+        "template": "Analyze the effectiveness of previous improvement cycles.\n\n1. Query improvement activity executions from last {{lookbackDays}} days:\n```bash\ncurl -X GET \"$ACTIVITY_API_ENDPOINT/v2/activities/executions?template_id=improve-dashboard-code&limit=50\" \\\n  -H \"Authorization: ApiKey $METABOB_API_KEY\"\n```\n\n2. For each improvement execution:\n   - Get the recommendations that were addressed\n   - Get the dashboard trace metrics BEFORE the improvement\n   - Get the dashboard trace metrics AFTER the improvement (next 24-48h)\n   - Calculate delta: did error rates decrease? did latency improve?\n\n3. Categorize improvements by effectiveness:\n   - **Effective**: Metrics improved by >10%\n   - **Neutral**: Metrics within +/-10%\n   - **Counterproductive**: Metrics degraded by >10%\n\n4. Identify patterns:\n   - Which types of recommendations are most effective?\n   - Which patterns consistently fail?\n   - Are there correlations with shape types?\n\nOutput:\n```json\n{\n  \"analysis_period\": {\n    \"start\": \"<ISO date>\",\n    \"end\": \"<ISO date>\",\n    \"days\": {{lookbackDays}}\n  },\n  \"improvement_cycles\": [\n    {\n      \"execution_id\": \"<id>\",\n      \"timestamp\": \"<ISO date>\",\n      \"recommendations_addressed\": [\"<list>\"],\n      \"metrics_before\": {\n        \"avg_error_rate\": <0-1>,\n        \"avg_latency_ms\": <number>\n      },\n      \"metrics_after\": {\n        \"avg_error_rate\": <0-1>,\n        \"avg_latency_ms\": <number>\n      },\n      \"effectiveness\": \"effective|neutral|counterproductive\",\n      \"error_rate_delta\": <percentage>,\n      \"latency_delta\": <percentage>\n    }\n  ],\n  \"pattern_analysis\": {\n    \"effective_patterns\": [\n      {\n        \"pattern_type\": \"<type>\",\n        \"success_rate\": <0-1>,\n        \"avg_improvement\": <percentage>\n      }\n    ],\n    \"ineffective_patterns\": [...]\n  }\n}\n```\n\nOutput to: /tmp/meta-improvement/effectiveness-analysis.json",
+        "maxTokens": 6000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/meta-improvement/effectiveness-analysis.json"]
+      }
+    },
+    {
+      "id": "analyze_analysis_activity_performance",
+      "description": "Analyze the analyze-dashboard-traces activity itself",
+      "dependencies": ["analyze_improvement_effectiveness"],
+      "prompt": {
+        "template": "Analyze the performance of the analysis activity itself.\n\n1. Query executions of analyze-dashboard-traces:\n```bash\ncurl -X GET \"$ACTIVITY_API_ENDPOINT/v2/activities/executions?template_id=analyze-dashboard-traces&limit=20\" \\\n  -H \"Authorization: ApiKey $METABOB_API_KEY\"\n```\n\n2. For each execution, analyze:\n   - Did it correctly identify HIGH_ERROR patterns that were real?\n   - Did it miss any actual problems?\n   - Were the recommendations actionable?\n   - Did following the recommendations help?\n\n3. Identify prompt improvements:\n   - Are thresholds too high/low?\n   - Are pattern detection rules accurate?\n   - Are there missing pattern types?\n   - Are recommendations too vague or too specific?\n\nCorrelate with effectiveness analysis from previous task.\n\nOutput:\n```json\n{\n  \"analysis_activity_performance\": {\n    \"executions_analyzed\": <number>,\n    \"true_positives\": <count>,  // Correctly identified real problems\n    \"false_positives\": <count>, // Flagged non-issues\n    \"false_negatives\": <count>, // Missed real problems\n    \"precision\": <0-1>,\n    \"recall\": <0-1>\n  },\n  \"threshold_analysis\": {\n    \"error_rate_threshold\": {\n      \"current\": 0.15,\n      \"recommended\": <number>,\n      \"reason\": \"<why>\"\n    },\n    \"latency_threshold\": {\n      \"current\": 3000,\n      \"recommended\": <number>,\n      \"reason\": \"<why>\"\n    }\n  },\n  \"prompt_improvements\": [\n    {\n      \"task_id\": \"<task in analyze-dashboard-traces>\",\n      \"issue\": \"<what's wrong>\",\n      \"improvement\": \"<how to fix>\",\n      \"priority\": \"high|medium|low\"\n    }\n  ]\n}\n```\n\nOutput to: /tmp/meta-improvement/analysis-activity-performance.json",
+        "maxTokens": 5000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/meta-improvement/analysis-activity-performance.json"]
+      }
+    },
+    {
+      "id": "update_analysis_activity",
+      "description": "Update analyze-dashboard-traces with improved prompts",
+      "dependencies": ["analyze_analysis_activity_performance"],
+      "prompt": {
+        "template": "Update the analyze-dashboard-traces activity with improvements.\n\nRead improvements from: /tmp/meta-improvement/analysis-activity-performance.json\n\n1. Read current activity: activities/dashboard/analyze-dashboard-traces.json\n\n2. Apply improvements:\n   - Update thresholds based on threshold_analysis\n   - Improve prompts based on prompt_improvements\n   - Add new pattern types if identified\n   - Improve recommendation specificity\n\n3. Create updated version:\n   - Increment version number\n   - Add changelog in metadata\n   - Keep backward compatibility where possible\n\n4. Write updated activity to: activities/dashboard/analyze-dashboard-traces.json\n   - Create backup first: activities/dashboard/archive/analyze-dashboard-traces-<old_version>.json\n\nOutput:\n```json\n{\n  \"update_summary\": {\n    \"previous_version\": \"<old>\",\n    \"new_version\": \"<new>\",\n    \"changes\": [\n      {\n        \"type\": \"threshold_update|prompt_improvement|new_pattern\",\n        \"description\": \"<what changed>\"\n      }\n    ],\n    \"backup_path\": \"<backup file path>\"\n  }\n}\n```\n\nOutput to: /tmp/meta-improvement/analysis-update.json",
+        "maxTokens": 6000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/meta-improvement/analysis-update.json"]
+      }
+    },
+    {
+      "id": "generate_meta_report",
+      "description": "Generate meta-improvement report",
+      "dependencies": ["update_analysis_activity"],
+      "prompt": {
+        "template": "Generate a comprehensive meta-improvement report.\n\nRead from:\n- /tmp/meta-improvement/effectiveness-analysis.json\n- /tmp/meta-improvement/analysis-activity-performance.json\n- /tmp/meta-improvement/analysis-update.json\n\nCreate report:\n```json\n{\n  \"meta_improvement_report\": {\n    \"timestamp\": \"<ISO date>\",\n    \"period_analyzed\": \"{{lookbackDays}} days\",\n    \"improvement_loop_health\": {\n      \"status\": \"healthy|degrading|needs_attention\",\n      \"overall_effectiveness\": <percentage>,\n      \"trend\": \"improving|stable|degrading\"\n    },\n    \"key_findings\": [\n      {\n        \"finding\": \"<description>\",\n        \"impact\": \"high|medium|low\",\n        \"action_taken\": \"<what was done>\"\n      }\n    ],\n    \"loop_metrics\": {\n      \"analysis_precision\": <0-1>,\n      \"analysis_recall\": <0-1>,\n      \"improvement_success_rate\": <0-1>,\n      \"time_to_improvement\": \"<avg hours>\"\n    },\n    \"changes_made\": [\n      {\n        \"activity\": \"<activity_id>\",\n        \"change\": \"<description>\"\n      }\n    ],\n    \"recommendations_for_next_cycle\": [\n      \"<recommendation>\"\n    ]\n  }\n}\n```\n\nAlso create markdown summary: /tmp/meta-improvement/META_REPORT.md\n\nOutput to: /tmp/meta-improvement/meta-report.json",
+        "maxTokens": 4000
+      },
+      "validation": {
+        "requiredFiles": ["/tmp/meta-improvement/meta-report.json", "/tmp/meta-improvement/META_REPORT.md"]
+      }
+    }
+  ],
+
+  "outputSchema": {
+    "produces": [
+      {
+        "shape": "effectiveness_analysis",
+        "description": "Analysis of improvement effectiveness"
+      },
+      {
+        "shape": "meta_improvement_report",
+        "description": "Report on the improvement loop health"
+      }
+    ]
+  },
+
+  "tracing": {
+    "recordTrace": true,
+    "contributeToLearning": true,
+    "metadata": {
+      "integrationPoint": "dashboard/meta-improvement",
+      "learningCategory": "meta-learning"
+    }
+  },
+
+  "scheduling": {
+    "recommended": "weekly",
+    "reason": "Meta-improvements need time to accumulate enough data"
+  },
+
+  "metadata": {
+    "demonstratesLoop": 6,
+    "requiresBackend": true,
+    "modifiesActivities": true,
+    "selfImproving": true,
+    "metaActivity": true,
+    "recursiveImprovement": true
+  }
+}
