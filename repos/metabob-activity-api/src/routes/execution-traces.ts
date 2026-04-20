@@ -817,9 +817,10 @@ app.post('/', async (c) => {
     if (trace.success && trace.output_impulses && trace.output_impulses.length > 0) {
       try {
         // Fetch activity template to get declared output_shapes
+        // Use record::id(id) to extract the ID part from full record ID for matching
         const activityQuery = `
           SELECT output_shapes FROM activity_template
-          WHERE id = $activity_id OR variant_id = $variant_id
+          WHERE record::id(id) = $activity_id OR record::id(id) = $variant_id
           LIMIT 1
         `;
         const activityResult = await surrealDB.query(activityQuery, {
@@ -1032,9 +1033,12 @@ app.post('/', async (c) => {
     // ========================================================================
     try {
       // Fetch activity template to get declared output_shapes
+      // Try both id and name matching since variant_id may be either format
+      // Use record::id(id) to extract the ID part from full record ID for matching
+      // e.g., activity_template:`add-feature-complete` -> 'add-feature-complete'
       const activityQuery = `
-        SELECT output_shapes FROM activity
-        WHERE id = $activity_id
+        SELECT output_shapes FROM activity_template
+        WHERE record::id(id) = $activity_id OR name = $activity_id
         LIMIT 1
       `;
       const activityResult = await surrealDB.query(activityQuery, {
@@ -1085,16 +1089,18 @@ app.post('/', async (c) => {
         });
       }
 
+      // Use record::id(id) to extract the ID part from full record ID for matching
+      // e.g., activity_template:`add-feature-complete` -> 'add-feature-complete'
       const updateQuery = `
-        UPDATE activity
+        UPDATE activity_template
         SET
-          thompson_alpha = thompson_alpha + $alpha_delta,
-          thompson_beta = thompson_beta + $beta_delta,
-          total_executions = total_executions + 1,
-          successful_executions = successful_executions + $success_delta,
-          failed_executions = failed_executions + $failure_delta,
+          thompson_alpha = (thompson_alpha ?? 1) + $alpha_delta,
+          thompson_beta = (thompson_beta ?? 1) + $beta_delta,
+          total_executions = (total_executions ?? 0) + 1,
+          successful_executions = (successful_executions ?? 0) + $success_delta,
+          failed_executions = (failed_executions ?? 0) + $failure_delta,
           last_executed_at = time::now()
-        WHERE id = $activity_id
+        WHERE (record::id(id) = $activity_id OR name = $activity_id) AND org_id = $org_id
         RETURN {
           id,
           thompson_alpha,
@@ -1103,8 +1109,11 @@ app.post('/', async (c) => {
         }
       `;
 
+      // Get org_id from trace for RBAC-compliant update
+      const traceOrgId = (trace as any).org_id || jwtAuth?.org_id;
       const updateParams = {
         activity_id: trace.variant_id, // variant_id is the activity ID
+        org_id: traceOrgId, // RBAC: ensure updates only affect org's own templates
         alpha_delta: alphaDelta,
         beta_delta: betaDelta,
         success_delta: trace.success ? 1 : 0,
