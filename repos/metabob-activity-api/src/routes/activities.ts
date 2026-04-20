@@ -2193,20 +2193,10 @@ app.get('/metrics', async (c) => {
     }
 
     // Query deterministic task ratio (tasks that don't require LLM)
-    // Tasks are deterministic if they have tool_calls but no llm_tokens
-    const taskRatioResult = await surrealDB.query(`
-      SELECT
-        count() AS total_tasks,
-        count(IF llm_tokens = 0 OR llm_tokens = NONE THEN 1 ELSE NONE END) AS deterministic_tasks
-      FROM activity_execution_task_result
-      WHERE activity_id = $activity_id
-      GROUP ALL
-    `, { activity_id: activityId });
-
-    const taskStats = (taskRatioResult[0] as any) || {};
-    const totalTasks = taskStats.total_tasks || 0;
-    const deterministicTasks = taskStats.deterministic_tasks || 0;
-    const deterministicTaskRatio = totalTasks > 0 ? deterministicTasks / totalTasks : 0;
+    // Note: Deterministic task tracking is not yet implemented
+    // Task-level data exists in activity_execution_traces.tasks (flexible array)
+    // but separate activity_execution_task_result table does not exist
+    const deterministicTaskRatio = 0; // Placeholder until proper task-level metrics implemented
 
     const metrics = {
       activity_id: activityId,
@@ -2952,11 +2942,43 @@ app.post('/feedback', async (c) => {
     // Map intensity to multiplier (0=1.5x, 1=2x, 2=2.5x, 3=3x)
     const multiplier = 1.5 + (validated.intensity * 0.5);
 
-    // Verify activity exists
-    const activityLookup = await surrealDB.query<{ id: string; input_shapes?: string[] }>(
-      'SELECT id, input_shapes FROM activity WHERE id = $activity_id LIMIT 1',
-      { activity_id: validated.activity_id }
+    // Verify activity exists - normalize ID format
+    // SurrealDB uses three ID formats:
+    // 1. Simple ID (e.g., "acquire-codebase-context")
+    // 2. Angle-bracket wrapped (e.g., "⟨report-metrics⟩")
+    // 3. Full record ID (e.g., "activity:report-metrics")
+    const normalizedActivityId = validated.activity_id.includes('⟨') || validated.activity_id.includes('⟩')
+      ? validated.activity_id
+      : `⟨${validated.activity_id}⟩`;
+
+    let activityLookup = await surrealDB.query<{ id: string; input_shapes?: string[] }>(
+      `SELECT id, input_shapes FROM activity
+       WHERE (meta::id(id) = $activity_id OR meta::id(id) = $normalized_id)
+         AND (execution_type = 'template' OR execution_type IS NONE OR execution_type IS NULL)
+       LIMIT 1`,
+      {
+        activity_id: validated.activity_id,
+        normalized_id: normalizedActivityId,
+      }
     );
+
+    // If not found, try treating activity_id as a full record ID (for activity:xyz format)
+    if (activityLookup.length === 0 && validated.activity_id.includes(':')) {
+      try {
+        activityLookup = await surrealDB.query<{ id: string; input_shapes?: string[] }>(
+          `SELECT id, input_shapes FROM activity
+           WHERE id = type::record($activity_id)
+             AND (execution_type = 'template' OR execution_type IS NONE OR execution_type IS NULL)
+           LIMIT 1`,
+          { activity_id: validated.activity_id }
+        );
+      } catch (recordError) {
+        logger.debug('Record ID query failed for activity lookup', {
+          activity_id: validated.activity_id,
+          error: recordError
+        });
+      }
+    }
 
     if (!activityLookup || activityLookup.length === 0 || !activityLookup[0]) {
       return c.json({
