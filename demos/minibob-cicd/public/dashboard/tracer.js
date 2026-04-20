@@ -80,6 +80,7 @@ const DashboardTracer = (function() {
             type: 'resolution',
             shape,
             query: options.query || {},
+            url: options.url || null,
             startTime: Date.now()
         });
     }
@@ -98,11 +99,14 @@ const DashboardTracer = (function() {
         );
 
         if (index !== -1) {
+            // Pass URL context for better CORS detection
+            const errorContext = { url: traceBuffer[index].url };
+
             traceBuffer[index] = {
                 ...traceBuffer[index],
                 latency_ms: latencyMs,
                 success: result.success,
-                error_type: result.error ? categorizeError(result.error) : null,
+                error_type: result.error ? categorizeError(result.error, errorContext) : null,
                 error_message: result.error || null,
                 resolver: result.resolver || 'unknown',
                 cached: result.cached || false,
@@ -145,13 +149,37 @@ const DashboardTracer = (function() {
     /**
      * Categorize an error for pattern analysis
      * @param {Error|string} error - The error
+     * @param {Object} context - Additional context (url, etc.)
      */
-    function categorizeError(error) {
+    function categorizeError(error, context = {}) {
         const message = (error.message || String(error)).toLowerCase();
 
-        if (message.includes('network') || message.includes('fetch')) {
-            return 'NETWORK_ERROR';
+        // CORS errors in browsers often appear as generic network/fetch errors
+        // Detect CORS by checking if it's a cross-origin request that failed
+        if (message.includes('cors') || message.includes('cross-origin')) {
+            return 'CORS_ERROR';
         }
+
+        // Network errors to cross-origin URLs are likely CORS
+        if ((message.includes('network') || message.includes('fetch')) && context.url) {
+            try {
+                const targetUrl = new URL(context.url);
+                const currentOrigin = window.location.origin;
+                if (targetUrl.origin !== currentOrigin) {
+                    // Cross-origin network error = likely CORS
+                    return 'CORS_ERROR';
+                }
+            } catch (e) {
+                // URL parsing failed, fall through
+            }
+        }
+
+        // "Failed to fetch" with no response is typically CORS
+        if (message.includes('failed to fetch') ||
+            (message.includes('networkerror') && message.includes('fetch'))) {
+            return 'CORS_ERROR';
+        }
+
         if (message.includes('timeout')) {
             return 'TIMEOUT';
         }
@@ -170,11 +198,11 @@ const DashboardTracer = (function() {
         if (message.includes('500') || message.includes('server error')) {
             return 'SERVER_ERROR';
         }
-        if (message.includes('cors')) {
-            return 'CORS_ERROR';
-        }
         if (message.includes('parse') || message.includes('json')) {
             return 'PARSE_ERROR';
+        }
+        if (message.includes('network') || message.includes('fetch')) {
+            return 'NETWORK_ERROR';
         }
 
         return 'UNKNOWN_ERROR';
