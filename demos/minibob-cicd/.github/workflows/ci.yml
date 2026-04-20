@@ -73,6 +73,7 @@ jobs:
       - name: Remediate TypeCheck (MiniBob Learning)
         if: steps.typecheck.outputs.status == 'failure'
         id: fix-typecheck
+        timeout-minutes: 15
         run: |
           echo "::group::MiniBob Learning: Type Error Fix"
           ERROR_LOG="$(cat typecheck-output.log)"
@@ -90,11 +91,16 @@ jobs:
       - name: Remediate Lint (MiniBob Learning)
         if: steps.lint.outputs.status == 'failure'
         id: fix-lint
+        timeout-minutes: 15
         run: |
           echo "::group::MiniBob Learning: Lint Error Fix"
           ERROR_LOG="$(cat lint-output.log)"
           # First try eslint --fix for auto-fixable issues
-          bun run lint -- --fix || true
+          if bun run lint -- --fix; then
+            echo "Auto-fix successful"
+          else
+            echo "Auto-fix completed with remaining issues"
+          fi
           # Then use MiniBob for remaining issues
           if ! bun run lint 2>&1; then
             bunx @metabob/minibob@latest --single "Fix lint errors:
@@ -112,6 +118,7 @@ jobs:
       - name: Remediate Tests (MiniBob Learning)
         if: steps.test.outputs.status == 'failure'
         id: fix-test
+        timeout-minutes: 20
         run: |
           echo "::group::MiniBob Learning: Test Failure Fix"
           ERROR_LOG="$(head -50 test-output.log)"
@@ -141,11 +148,12 @@ jobs:
 
       - name: Commit fixes
         if: steps.changes.outputs.has_changes == 'true'
+        timeout-minutes: 5
         run: |
           git config user.name "MiniBob"
           git config user.email "minibob@metabob.com"
           git add -A
-          git commit -m "fix(ci): minibob auto-remediation
+          if git commit -m "fix(ci): minibob auto-remediation
 
           Automatically fixed CI failures:
           - TypeCheck: ${{ steps.typecheck.outputs.status }}
@@ -155,8 +163,18 @@ jobs:
           Execution traces stored at: $ACTIVITY_API_ENDPOINT
           Learning: Thompson Sampling updated with this fix pattern
 
-          Co-Authored-By: MiniBob <minibob@metabob.com>"
-          git push
+          Co-Authored-By: MiniBob <minibob@metabob.com>"; then
+            echo "✓ Commit successful"
+            if git push; then
+              echo "✓ Push successful"
+            else
+              echo "::error::Failed to push remediation changes"
+              exit 1
+            fi
+          else
+            echo "::error::Failed to commit remediation changes"
+            exit 1
+          fi
 
       # ========================================
       # STAGE 4: Upkeep Tasks (LLM Side-Effects)
@@ -177,10 +195,20 @@ jobs:
         run: |
           if ! git diff --quiet; then
             git add -A
-            git commit -m "docs: minibob upkeep sync
+            if git commit -m "docs: minibob upkeep sync
 
-            Co-Authored-By: MiniBob <minibob@metabob.com>" || true
-            git push || true
+            Co-Authored-By: MiniBob <minibob@metabob.com>"; then
+              echo "Commit successful"
+              if git push; then
+                echo "Push successful"
+              else
+                echo "::warning::Push failed for upkeep changes"
+                exit 1
+              fi
+            else
+              echo "::warning::Commit failed for upkeep changes"
+              exit 1
+            fi
           fi
 
       # ========================================

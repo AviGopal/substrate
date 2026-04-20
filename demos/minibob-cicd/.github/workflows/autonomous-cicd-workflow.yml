@@ -44,6 +44,7 @@ jobs:
 
       - name: Run Autonomous Quality Loop
         id: quality-loop
+        timeout-minutes: 45
         run: |
           cd demos/minibob-cicd
           minibob --single "Execute autonomous-code-quality-loop \
@@ -56,10 +57,19 @@ jobs:
       - name: Check Compliance
         run: |
           cd demos/minibob-cicd
+          if [ ! -f "results/quality-loop/autonomous-loop-summary.json" ]; then
+            echo "::error::Quality loop results not found"
+            exit 1
+          fi
           COMPLIANCE=$(jq -r '.final_compliance' results/quality-loop/autonomous-loop-summary.json)
           echo "Quality Compliance: $COMPLIANCE"
           if [ "$COMPLIANCE" != "100%" ]; then
             echo "::warning::Quality compliance is $COMPLIANCE%, target is 100%"
+            # Don't fail for now, but log for monitoring
+            echo "compliance=$COMPLIANCE" >> $GITHUB_OUTPUT
+          else
+            echo "✓ 100% quality compliance achieved"
+            echo "compliance=100%" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload Results
@@ -97,8 +107,13 @@ jobs:
       - name: Inject Chaos
         id: chaos
         continue-on-error: true
+        timeout-minutes: 30
         run: |
           cd demos/minibob-cicd
+          if [ ! -f "chaos/chaos-scenarios.json" ]; then
+            echo "::error::Chaos scenarios file not found"
+            exit 1
+          fi
           minibob --single "Execute chaos scenario: ${{ steps.scenario.outputs.scenario }} \
             from chaos/chaos-scenarios.json \
             targeting autonomous-code-quality-loop \
@@ -107,16 +122,20 @@ jobs:
 
       - name: Detect Faults
         if: steps.chaos.outcome == 'failure'
+        timeout-minutes: 15
         run: |
           cd demos/minibob-cicd
+          mkdir -p ./chaos/fault-reports
           minibob --single "Analyze chaos test failure for scenario ${{ steps.scenario.outputs.scenario }} \
             from execution traces \
             and create fault report in ./chaos/fault-reports/"
 
       - name: Create Recovery Variant
         if: steps.chaos.outcome == 'failure'
+        timeout-minutes: 20
         run: |
           cd demos/minibob-cicd
+          mkdir -p ./activities/autonomous-loop/variants
           minibob --single "Create improved activity variant \
             to fix faults in ./chaos/fault-reports/ \
             for activity autonomous-code-quality-loop \
@@ -124,6 +143,7 @@ jobs:
 
       - name: Test Recovery Variant
         if: steps.chaos.outcome == 'failure'
+        timeout-minutes: 25
         run: |
           cd demos/minibob-cicd
           minibob --single "Test variant against chaos scenario ${{ steps.scenario.outputs.scenario }} \
@@ -132,13 +152,25 @@ jobs:
 
       - name: Deploy Successful Variant
         if: steps.chaos.outcome == 'failure'
+        timeout-minutes: 10
         run: |
           cd demos/minibob-cicd
+          # Check if variants directory exists
+          if [ ! -d "activities/autonomous-loop/variants" ]; then
+            echo "::warning::Variants directory not found, skipping deployment"
+            exit 0
+          fi
           # Register improved variant
-          VARIANT=$(ls -t activities/autonomous-loop/variants/*.json | head -1)
+          VARIANT=$(ls -t activities/autonomous-loop/variants/*.json 2>/dev/null | head -1)
           if [ -f "$VARIANT" ]; then
-            minibob doctor tutor "$VARIANT"
-            echo "Deployed variant: $VARIANT"
+            if minibob doctor tutor "$VARIANT"; then
+              echo "✓ Successfully deployed variant: $VARIANT"
+            else
+              echo "::error::Failed to deploy variant: $VARIANT"
+              exit 1
+            fi
+          else
+            echo "::warning::No variant file found to deploy"
           fi
 
       - name: Upload Chaos Results
@@ -163,6 +195,7 @@ jobs:
           echo "${{ secrets.METABOB_CONFIG }}" > ~/.metabob/config.json
 
       - name: Update Thompson Sampling Scores
+        timeout-minutes: 30
         run: |
           cd demos/minibob-cicd
           minibob --single "Update Thompson Sampling scores \
@@ -171,8 +204,10 @@ jobs:
             with create_variants_for_low_performers true"
 
       - name: Generate Performance Report
+        timeout-minutes: 15
         run: |
           cd demos/minibob-cicd
+          mkdir -p ./results/performance
           minibob --single "Generate activity performance report \
             for autonomous-loop activities \
             output to ./results/performance/weekly-report-$(date +%Y%m%d).md"
