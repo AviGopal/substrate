@@ -63,7 +63,7 @@ jobs:
       - name: Run Trace Analysis
         id: analyze
         run: |
-          cd demos/minibob-cicd
+          # Working directory is repo root
           mkdir -p /tmp/dashboard-analysis
 
           LOOKBACK_HOURS="${{ github.event.inputs.lookback_hours || '6' }}"
@@ -227,7 +227,7 @@ jobs:
       - name: Run Code Improvements
         id: improve
         run: |
-          cd demos/minibob-cicd
+          # Working directory is repo root
           mkdir -p /tmp/dashboard-improvement
 
           if command -v minibob &> /dev/null; then
@@ -317,7 +317,7 @@ jobs:
 
       - name: Run Activity Improvements
         run: |
-          cd demos/minibob-cicd
+          # Working directory is repo root
           mkdir -p /tmp/activity-improvement
           mkdir -p activities/dashboard/variants
 
@@ -336,7 +336,7 @@ jobs:
 
       - name: Commit Activity Variants
         run: |
-          cd demos/minibob-cicd
+          # Working directory is repo root
           if [ -n "$(git status --porcelain activities/dashboard/variants/)" ]; then
             git config user.name "MiniBob Improvement Loop"
             git config user.email "minibob@metabob.com"
@@ -369,7 +369,7 @@ jobs:
 
       - name: Update Last Updated Timestamp
         run: |
-          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > demos/minibob-cicd/public/dashboard/last-updated.txt
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > public/dashboard/last-updated.txt
 
       - name: Trigger Pages Deploy
         run: |
@@ -403,7 +403,7 @@ jobs:
 
       - name: Run Meta-Improvement
         run: |
-          cd demos/minibob-cicd
+          # Working directory is repo root
           mkdir -p /tmp/meta-improvement
           mkdir -p activities/dashboard/archive
 
@@ -420,7 +420,7 @@ jobs:
 
       - name: Commit Analysis Activity Updates
         run: |
-          cd demos/minibob-cicd
+          # Working directory is repo root
           if [ -n "$(git status --porcelain activities/dashboard/)" ]; then
             git config user.name "MiniBob Meta-Improvement"
             git config user.email "minibob@metabob.com"
