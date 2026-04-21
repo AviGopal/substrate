@@ -1,335 +1,223 @@
-import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
+#!/usr/bin/env bun
+/**
+ * Activity Monitor Server
+ *
+ * Provides a dashboard showing real-time activity executions, templates, and impulse metrics
+ * from the metabob-activity-api backend.
+ */
+
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 
 const app = new Hono();
 
 // Configuration
-const ACTIVITY_API = process.env.ACTIVITY_API_URL || "https://activity.metabob.com";
-const API_KEY = process.env.METABOB_API_KEY || "";
-const PORT = parseInt(process.env.PORT || "3030");
+const ACTIVITY_API_URL = process.env.ACTIVITY_API_URL || 'https://activity.metabob.com';
+const METABOB_API_KEY = process.env.METABOB_API_KEY || '';
+const PORT = parseInt(process.env.PORT || '3030', 10);
 
-interface ActivityExecution {
-  id: string;
-  activity_id: string;
-  variant_id?: string;
-  status: string;
-  created_at: string;
-  duration_ms?: number;
-  cost_usd?: number;
-  tokens_in?: number;
-  tokens_out?: number;
+// Cache
+interface CachedData {
+  executions: any[];
+  templates: any[];
+  impulses: any[];
+  scores: any[];
+  compositions: any[];
+  recommendations: any;
+  relevance: any[];
+  taskViews: any[];
+  lastUpdate: number;
 }
 
-interface ActivityTemplate {
-  id: string;
-  name: string;
-  category: string;
-  tags: string[];
-  variant_count: number;
-  thompson_alpha?: number;
-  thompson_beta?: number;
-  metrics?: {
-    total_executions: number;
-    successful_executions: number;
-    failed_executions: number;
-    success_rate: number;
-    thompson_alpha: number;
-    thompson_beta: number;
-    avg_duration_ms: number;
-    avg_cost_usd: number;
-  };
-}
-
-interface ThompsonScore {
-  activity_id: string;
-  alpha: number;
-  beta: number;
-  total_executions: number;
-  successful_executions: number;
-  failed_executions: number;
-  success_rate: number;
-  mean_score: number;
-  confidence_interval: {
-    lower: number;
-    upper: number;
-  };
-  confidence_level: number;
-  exploring: boolean;
-}
-
-interface ImpulseResolution {
-  shape: string;
-  resolver: string;
-  count: number;
-  avg_duration_ms: number;
-}
-
-// Data source metadata
-interface DataSource {
-  endpoint: string;
-  shape: string;
-  vessel: string;
-  lastFetch: number;
-  status: "healthy" | "error" | "stale";
-}
-
-// Cache for real-time updates
-let cachedData = {
-  executions: [] as ActivityExecution[],
-  templates: [] as ActivityTemplate[],
-  thompsonScores: [] as ThompsonScore[],
-  impulses: [] as ImpulseResolution[],
-  lastUpdate: Date.now(),
-  sources: {
-    executions: {
-      endpoint: "/v2/activities/executions?limit=50",
-      shape: "execution_trace",
-      vessel: "metabob-activity-api",
-      lastFetch: 0,
-      status: "healthy" as const,
-    },
-    templates: {
-      endpoint: "/v2/activities/templates",
-      shape: "activity_template",
-      vessel: "metabob-activity-api",
-      lastFetch: 0,
-      status: "healthy" as const,
-    },
-    // thompsonScores: {
-    //   endpoint: "/v2/activities/scores?limit=50&org_id=test-metabob-users",
-    //   shape: "thompson_scores",
-    //   vessel: "metabob-activity-api",
-    //   lastFetch: 0,
-    //   status: "healthy" as const,
-    // },
-    impulses: {
-      endpoint: "/v2/impulses/resolution-metrics?limit=20",
-      shape: "impulse_resolution_metrics",
-      vessel: "metabob-activity-api",
-      lastFetch: 0,
-      status: "healthy" as const,
-    },
-  },
+let cache: CachedData = {
+  executions: [],
+  templates: [],
+  impulses: [],
+  scores: [],
+  compositions: [],
+  recommendations: null,
+  relevance: [],
+  taskViews: [],
+  lastUpdate: 0,
 };
 
-// Fetch recent executions
-async function fetchExecutions(): Promise<ActivityExecution[]> {
-  const source = cachedData.sources.executions;
-  try {
-    console.log(`[IMPULSE] Resolving ${source.shape} from ${source.vessel}${source.endpoint}`);
-    const response = await fetch(`${ACTIVITY_API}${source.endpoint}`, {
-      headers: {
-        Authorization: `ApiKey ${API_KEY}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`Failed to fetch executions: ${response.status}`);
-      source.status = "error";
-      return [];
-    }
-
-    const data = await response.json();
-    source.lastFetch = Date.now();
-    source.status = "healthy";
-    console.log(`[IMPULSE] Resolved ${data.executions?.length || 0} execution_trace impulses`);
-    return data.executions || [];
-  } catch (error) {
-    console.error("Error fetching executions:", error);
-    source.status = "error";
-    return [];
-  }
+interface DataSource {
+  name: string;
+  shape: string;
+  vessel: string;
+  status: 'healthy' | 'error';
+  lastFetch: string;
 }
 
-// Fetch activity templates
-async function fetchTemplates(): Promise<ActivityTemplate[]> {
-  const source = cachedData.sources.templates;
-  try {
-    console.log(`[IMPULSE] Resolving ${source.shape} from ${source.vessel}${source.endpoint}`);
-    const response = await fetch(`${ACTIVITY_API}${source.endpoint}`, {
-      headers: {
-        Authorization: `ApiKey ${API_KEY}`,
-      },
-    });
+const dataSources: DataSource[] = [
+  {
+    name: 'executions',
+    shape: 'execution_trace',
+    vessel: 'metabob-activity-api',
+    status: 'healthy',
+    lastFetch: 'never',
+  },
+  {
+    name: 'templates',
+    shape: 'activity_template',
+    vessel: 'metabob-activity-api',
+    status: 'healthy',
+    lastFetch: 'never',
+  },
+  {
+    name: 'impulses',
+    shape: 'impulse_resolution_metrics',
+    vessel: 'metabob-activity-api',
+    status: 'error',
+    lastFetch: 'never',
+  },
+];
 
-    if (!response.ok) {
-      console.error(`Failed to fetch templates: ${response.status}`);
-      source.status = "error";
-      return [];
-    }
+// Helper function to make authenticated requests
+async function fetchWithAuth(url: string): Promise<Response> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
 
-    const data = await response.json();
-    source.lastFetch = Date.now();
-    source.status = "healthy";
-    console.log(`[IMPULSE] Resolved ${data.templates?.length || 0} activity_template impulses`);
-    return data.templates || [];
-  } catch (error) {
-    console.error("Error fetching templates:", error);
-    source.status = "error";
-    return [];
+  if (METABOB_API_KEY) {
+    headers['Authorization'] = `ApiKey ${METABOB_API_KEY}`;
   }
+
+  return fetch(url, { headers });
 }
 
-// Fetch Thompson Sampling scores
-async function fetchThompsonScores(): Promise<ThompsonScore[]> {
-  const source = cachedData.sources.thompsonScores;
-  try {
-    console.log(`[IMPULSE] Resolving ${source.shape} from ${source.vessel}${source.endpoint}`);
-    const response = await fetch(`${ACTIVITY_API}${source.endpoint}`, {
-      headers: {
-        Authorization: `ApiKey ${API_KEY}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`Failed to fetch Thompson scores: ${response.status}`);
-      source.status = "error";
-      return [];
-    }
-
-    const data = await response.json();
-    source.lastFetch = Date.now();
-    source.status = "healthy";
-    console.log(`[IMPULSE] Resolved ${data.scores?.length || 0} thompson_scores`);
-    return data.scores || [];
-  } catch (error) {
-    console.error("Error fetching Thompson scores:", error);
-    source.status = "error";
-    return [];
-  }
-}
-
-// Fetch impulse resolution metrics
-async function fetchImpulseMetrics(): Promise<ImpulseResolution[]> {
-  const source = cachedData.sources.impulses;
-  try {
-    console.log(`[IMPULSE] Resolving ${source.shape} from ${source.vessel}${source.endpoint}`);
-    const response = await fetch(`${ACTIVITY_API}${source.endpoint}`, {
-      headers: {
-        Authorization: `ApiKey ${API_KEY}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`Failed to fetch impulse metrics: ${response.status}`);
-      source.status = "error";
-      return [];
-    }
-
-    const data = await response.json();
-    source.lastFetch = Date.now();
-    source.status = "healthy";
-    console.log(`[IMPULSE] Resolved ${data.metrics?.length || 0} impulse_resolution_metrics`);
-    return data.metrics || [];
-  } catch (error) {
-    console.error("Error fetching impulse metrics:", error);
-    source.status = "error";
-    return [];
-  }
-}
-
-// Update cache periodically
+// Update cache from backend
 async function updateCache() {
-  console.log("Updating cache...");
-  const [executions, templates, impulses] = await Promise.all([
-    fetchExecutions(),
-    fetchTemplates(),
-    fetchImpulseMetrics(),
-  ]);
+  console.log('Updating cache...');
 
-  // Derive Thompson scores from templates (since /scores endpoint requires JWT auth)
-  const thompsonScores = templates
-    .filter(t => t.thompson_alpha != null && t.thompson_beta != null)
-    .map(t => ({
-      activity_id: t.id,
-      alpha: t.thompson_alpha!,
-      beta: t.thompson_beta!,
-      total_executions: t.total_executions || 0,
-      success_rate: t.success_rate || 0,
-      mean_score: t.thompson_alpha! / (t.thompson_alpha! + t.thompson_beta!),
-      confidence_interval: {
-        lower: 0, // Simplified - would need beta distribution calculation
-        upper: 1,
-      },
-      confidence_level: t.total_executions || 0,
-      exploring: (t.total_executions || 0) < 10,
-    }));
+  try {
+    // Fetch executions
+    console.log('[IMPULSE] Resolving execution_trace from metabob-activity-api/v2/activities/executions?limit=50');
+    const executionsRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/executions?limit=50`);
 
-  cachedData.executions = executions;
-  cachedData.templates = templates;
-  cachedData.thompsonScores = thompsonScores;
-  cachedData.impulses = impulses;
-  cachedData.lastUpdate = Date.now();
+    if (executionsRes.ok) {
+      const executionsData = await executionsRes.json();
+      // Filter out auth_resolve_v1 traces - they flood the dashboard
+      const allExecutions = executionsData.executions || [];
+      cache.executions = allExecutions.filter((e: any) =>
+        e.template_id !== 'auth_resolve_v1' && e.activity_id !== 'auth_resolve_v1'
+      );
+      dataSources[0].status = 'healthy';
+      dataSources[0].lastFetch = new Date().toISOString();
+      console.log(`[IMPULSE] Resolved ${cache.executions.length} execution_trace impulses (filtered from ${allExecutions.length})`);
+    } else {
+      console.error(`Failed to fetch executions: ${executionsRes.status}`);
+      dataSources[0].status = 'error';
+    }
 
-  console.log(`Cache updated: ${executions.length} executions, ${templates.length} templates, ${thompsonScores.length} scores (derived), ${impulses.length} impulses`);
-}
+    // Fetch templates
+    console.log('[IMPULSE] Resolving activity_template from metabob-activity-api/v2/activities/templates');
+    const templatesRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/templates`);
 
-// Start periodic updates
-setInterval(updateCache, 3000); // Update every 3 seconds
-updateCache(); // Initial update
+    if (templatesRes.ok) {
+      const templatesData = await templatesRes.json();
+      cache.templates = templatesData.templates || [];
+      dataSources[1].status = 'healthy';
+      dataSources[1].lastFetch = new Date().toISOString();
+      console.log(`[IMPULSE] Resolved ${cache.templates.length} activity_template impulses`);
 
-// API Routes
-app.get("/api/data", (c) => {
-  // Return only summary data needed by dashboard (not full execution/template objects with traces)
-  const summaryData = {
-    executions: cachedData.executions.map(exec => ({
-      id: exec.id || exec.execution_id,
+      // Derive Thompson scores from templates
+      cache.scores = cache.templates.map((t: any) => ({
+        activity_id: t.id,
+        alpha: t.alpha || 1,
+        beta: t.beta || 1,
+        score: (t.alpha || 1) / ((t.alpha || 1) + (t.beta || 1)),
+        confidence: Math.min(t.alpha + t.beta, 100),
+        exploration_count: t.beta,
+        exploitation_count: t.alpha - 1,
+      }));
+    } else {
+      console.error(`Failed to fetch templates: ${templatesRes.status}`);
+      dataSources[1].status = 'error';
+    }
+
+    // Fetch impulse metrics
+    console.log('[IMPULSE] Resolving impulse_resolution_metrics from metabob-activity-api/v2/impulses/resolution-metrics?limit=20');
+    const impulsesRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/impulses/resolution-metrics?limit=20`);
+
+    if (impulsesRes.ok) {
+      const impulsesData = await impulsesRes.json();
+      cache.impulses = impulsesData.metrics || [];
+      dataSources[2].status = 'healthy';
+      dataSources[2].lastFetch = new Date().toISOString();
+      console.log(`[IMPULSE] Resolved ${cache.impulses.length} impulse_resolution_metrics impulses`);
+    } else {
+      console.error(`Failed to fetch impulse metrics: ${impulsesRes.status}`);
+      dataSources[2].status = 'error';
+    }
+
+    // Fetch composition graph
+    console.log('[IMPULSE] Resolving activity_composition_graph from metabob-activity-api/v2/activities/composition/graph?limit=100');
+    const compositionsRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/composition/graph?limit=100`);
+
+    if (compositionsRes.ok) {
+      const compositionsData = await compositionsRes.json();
+      cache.compositions = compositionsData.edges || [];
+      console.log(`[IMPULSE] Resolved ${cache.compositions.length} composition edges`);
+    } else {
+      console.error(`Failed to fetch compositions: ${compositionsRes.status}`);
+    }
+
+    // Fetch impulse relevance metrics
+    console.log('[IMPULSE] Resolving impulse_relevance from metabob-activity-api/v2/activities/impulse-relevance?limit=50');
+    const relevanceRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/impulse-relevance?limit=50`);
+
+    if (relevanceRes.ok) {
+      const relevanceData = await relevanceRes.json();
+      cache.relevance = relevanceData.metrics || [];
+      console.log(`[IMPULSE] Resolved ${cache.relevance.length} relevance metrics`);
+    } else {
+      console.error(`Failed to fetch relevance: ${relevanceRes.status}`);
+    }
+
+    // Get recommendations for a sample goal to show weights
+    console.log('[IMPULSE] Fetching recommendation weights for sample goal');
+    const recommendRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/recommend`);
+
+    if (recommendRes.ok) {
+      const recommendPayload = {
+        task_description: "Sample task to show recommendation weights",
+        impulse_shapes: ["goal", "requirements"],
+        limit: 10
+      };
+
+      const recommendResult = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/recommend`);
+      if (recommendResult.status === 405) {
+        // POST not allowed, endpoint might be GET only
+        console.log('[IMPULSE] Recommend endpoint requires POST with task description');
+      } else if (recommendResult.ok) {
+        cache.recommendations = await recommendResult.json();
+        console.log(`[IMPULSE] Resolved ${cache.recommendations?.recommendations?.length || 0} recommendations with weights`);
+      }
+    }
+
+    // Extract task views from recent executions
+    cache.taskViews = cache.executions.slice(0, 10).map((exec: any) => ({
       execution_id: exec.execution_id,
       activity_id: exec.activity_id,
-      status: exec.status || (exec.success ? 'success' : 'failure'),
-      success: exec.success,
+      tasks: exec.tasks || [],
       created_at: exec.created_at,
-      executed_at: exec.executed_at,
-      duration_ms: exec.duration_ms || 0,
-      cost_usd: exec.cost_usd || 0,
-      tokens_in: exec.tokens_in || exec.tokens_input || 0,
-      tokens_out: exec.tokens_out || exec.tokens_output || 0,
-    })),
-    templates: cachedData.templates.map(t => ({
-      id: t.id,
-      name: t.name,
-      category: t.category,
-      thompson_alpha: t.thompson_alpha,
-      thompson_beta: t.thompson_beta,
-      total_executions: t.total_executions,
-      success_rate: t.success_rate,
-      created_at: t.created_at,
-    })),
-    thompsonScores: cachedData.thompsonScores || [],
-    impulses: cachedData.impulses || [],
-    sources: cachedData.sources,
-    lastUpdate: cachedData.lastUpdate,
-  };
-  return c.json(summaryData);
-});
+      success: exec.success,
+    }));
 
-app.get("/api/sources", (c) => {
-  return c.json({
-    backend: ACTIVITY_API,
-    sources: cachedData.sources,
-    timestamp: new Date().toISOString(),
-  });
-});
+    cache.lastUpdate = Date.now();
+    console.log(`Cache updated: ${cache.executions.length} executions, ${cache.templates.length} templates, ${cache.scores.length} scores (derived), ${cache.impulses.length} impulses, ${cache.compositions.length} compositions, ${cache.relevance.length} relevance metrics`);
+  } catch (error) {
+    console.error('Error updating cache:', error);
+  }
+}
 
-app.get("/api/health", (c) => {
-  return c.json({
-    status: "healthy",
-    backend: ACTIVITY_API,
-    lastUpdate: new Date(cachedData.lastUpdate).toISOString(),
-    cacheAge: Date.now() - cachedData.lastUpdate,
-    sources: Object.entries(cachedData.sources).map(([key, src]) => ({
-      name: key,
-      shape: src.shape,
-      vessel: src.vessel,
-      status: src.status,
-      lastFetch: src.lastFetch ? new Date(src.lastFetch).toISOString() : "never",
-    })),
-  });
-});
+// Enable CORS
+app.use('/*', cors());
 
-// Frontend
-app.get("/", (c) => {
-  const html = `
+// Main dashboard page
+app.get('/', (c) => {
+  return c.html(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -338,831 +226,772 @@ app.get("/", (c) => {
   <title>Activity Monitor - Live Dashboard</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
-      font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+      font-family: 'Monaco', 'Menlo', monospace;
       background: #0a0a0a;
       color: #e0e0e0;
       padding: 20px;
-      line-height: 1.5;
+      line-height: 1.6;
     }
-
-    .container {
-      max-width: 1800px;
-      margin: 0 auto;
-    }
-
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 30px;
-      padding-bottom: 20px;
+      padding-bottom: 15px;
       border-bottom: 2px solid #333;
     }
+    h1 { color: #10b981; font-size: 2em; }
+    .status { display: flex; gap: 20px; align-items: center; }
+    .live-indicator { color: #10b981; display: flex; align-items: center; gap: 8px; }
+    .live-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .timestamp { color: #666; }
 
-    h1 {
-      font-size: 24px;
-      color: #00ff88;
-      font-weight: 600;
-    }
-
-    .status {
-      display: flex;
-      gap: 20px;
-      font-size: 12px;
-      color: #888;
-    }
-
-    .status-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .pulse {
-      width: 8px;
-      height: 8px;
-      background: #00ff88;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-
+    .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
     .panel {
-      background: #1a1a1a;
+      background: #111;
       border: 1px solid #333;
       border-radius: 8px;
       padding: 20px;
     }
-
     .panel-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       margin-bottom: 15px;
       padding-bottom: 10px;
       border-bottom: 1px solid #333;
     }
+    .panel-title { color: #10b981; font-size: 1.2em; font-weight: bold; }
+    .panel-count { color: #666; font-size: 0.9em; }
 
-    .panel-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #00ff88;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .panel-count {
-      font-size: 12px;
-      color: #666;
-    }
-
-    .execution-list {
-      max-height: 400px;
-      overflow-y: auto;
-    }
-
+    .execution-list { display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; }
     .execution-item {
+      background: #1a1a1a;
       padding: 12px;
-      margin-bottom: 8px;
-      background: #0f0f0f;
-      border-left: 3px solid #333;
-      border-radius: 4px;
-      font-size: 12px;
-      transition: all 0.2s;
+      border-radius: 6px;
+      border-left: 3px solid #666;
     }
+    .execution-item.success { border-left-color: #10b981; }
+    .execution-item.failure { border-left-color: #ef4444; }
+    .execution-item.running { border-left-color: #f59e0b; }
 
-    .execution-item:hover {
-      background: #151515;
-      border-left-color: #00ff88;
-    }
-
-    .execution-item.status-completed { border-left-color: #00ff88; }
-    .execution-item.status-failed { border-left-color: #ff4444; }
-    .execution-item.status-running { border-left-color: #ffaa00; }
-    .execution-item.status-success { border-left-color: #00ff88; }
-    .execution-item.status-failure { border-left-color: #ff4444; }
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateX(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
-    }
-
-    .execution-item.new {
-      animation: slideIn 0.3s ease-out;
-    }
-
-    .execution-meta {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 6px;
-      color: #666;
-      font-size: 11px;
-    }
-
-    .tag {
+    .execution-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .execution-id { font-weight: bold; color: #10b981; }
+    .execution-timestamp { color: #666; font-size: 0.85em; }
+    .execution-metrics { display: flex; gap: 15px; font-size: 0.9em; color: #999; }
+    .execution-status {
       display: inline-block;
       padding: 2px 8px;
-      background: #222;
-      border-radius: 3px;
-      font-size: 10px;
-      color: #00ff88;
-      margin-right: 5px;
-    }
-
-    .template-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      margin-bottom: 6px;
-      background: #0f0f0f;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 0.75em;
+      font-weight: bold;
+      margin-top: 8px;
     }
+    .execution-status.success { background: #10b981; color: #000; }
+    .execution-status.failure { background: #ef4444; color: #fff; }
 
-    .template-info {
-      flex: 1;
-    }
-
-    .template-name {
-      color: #e0e0e0;
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-
-    .template-tags {
-      display: flex;
-      gap: 5px;
-      margin-top: 4px;
-    }
-
-    .template-metrics {
-      display: flex;
-      gap: 12px;
-      font-size: 11px;
-      color: #666;
-    }
-
-    .metric {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      min-width: 45px;
-    }
-
-    .metric-value {
-      color: #00ff88;
-      font-weight: 600;
-      font-size: 12px;
-    }
-
-    .metric-value.zero {
-      color: #666;
-    }
-
-    .metric-label {
-      color: #666;
-      font-size: 9px;
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .template-group { margin-bottom: 20px; }
+    .template-group-title {
+      color: #10b981;
+      font-size: 0.9em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      padding: 5px;
+      background: #1a1a1a;
+      border-radius: 4px;
     }
+    .template-item {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 0.9em;
+    }
+    .template-name { color: #e0e0e0; font-weight: bold; margin-bottom: 5px; }
+    .template-meta { color: #666; font-size: 0.85em; display: flex; gap: 10px; }
+
+    .score-item {
+      background: #1a1a1a;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .score-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .score-name { color: #e0e0e0; font-weight: bold; font-size: 0.9em; }
+    .score-value { color: #10b981; font-size: 1.1em; font-weight: bold; }
+    .score-meta { color: #666; font-size: 0.8em; }
 
     .impulse-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px;
-      margin-bottom: 6px;
-      background: #0f0f0f;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-
-    .impulse-shape {
-      color: #ffaa00;
-      font-weight: 500;
-    }
-
-    .impulse-resolver {
-      color: #666;
-      font-size: 11px;
-    }
-
-    .impulse-stats {
-      display: flex;
-      gap: 15px;
-      font-size: 11px;
-      color: #666;
-    }
-
-    .thompson-item {
+      background: #1a1a1a;
       padding: 12px;
-      margin-bottom: 8px;
-      background: #0f0f0f;
-      border-left: 3px solid #333;
-      border-radius: 4px;
-      font-size: 12px;
-      transition: all 0.2s;
+      border-radius: 6px;
+      margin-bottom: 10px;
     }
+    .impulse-shape { color: #10b981; font-weight: bold; margin-bottom: 5px; }
+    .impulse-resolver { color: #999; font-size: 0.9em; }
+    .impulse-stats { color: #666; font-size: 0.85em; margin-top: 5px; }
 
-    .thompson-item:hover {
-      background: #151515;
+    .learning-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+    .learning-metric {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 6px;
+      border-left: 3px solid #10b981;
     }
+    .metric-label { color: #999; font-size: 0.85em; margin-bottom: 5px; }
+    .metric-value { color: #10b981; font-size: 1.5em; font-weight: bold; }
+    .metric-detail { color: #666; font-size: 0.8em; margin-top: 5px; }
 
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #0a0a0a;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #333;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #444;
-    }
-
-    .full-width {
-      grid-column: 1 / -1;
-    }
-
-    .source-item {
-      background: #0f0f0f;
-      border: 1px solid #333;
-      border-radius: 4px;
+    .data-sources-grid { display: grid; gap: 10px; }
+    .data-source-item {
+      background: #1a1a1a;
       padding: 12px;
-      font-size: 11px;
+      border-radius: 6px;
+      border-left: 3px solid #666;
     }
+    .data-source-item.healthy { border-left-color: #10b981; }
+    .data-source-item.error { border-left-color: #ef4444; }
+    .data-source-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .data-source-shape { color: #e0e0e0; font-weight: bold; }
+    .data-source-status {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      font-weight: bold;
+    }
+    .data-source-status.healthy { background: #10b981; color: #000; }
+    .data-source-status.error { background: #ef4444; color: #fff; }
+    .data-source-meta { color: #666; font-size: 0.85em; }
+    .data-source-endpoint { color: #999; font-size: 0.8em; margin-top: 5px; }
 
-    .source-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
     }
-
-    .source-shape {
-      color: #ffaa00;
-      font-weight: 600;
-      font-size: 12px;
-    }
-
-    .source-status {
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 10px;
-      font-weight: 600;
-    }
-
-    .source-status.healthy {
-      background: #00ff88;
-      color: #000;
-    }
-
-    .source-status.error {
-      background: #ff4444;
-      color: #fff;
-    }
-
-    .source-status.stale {
-      background: #666;
-      color: #fff;
-    }
-
-    .source-detail {
-      color: #888;
-      margin-top: 4px;
-      line-height: 1.6;
-    }
-
-    .source-detail strong {
-      color: #e0e0e0;
-    }
-
-    .source-endpoint {
-      color: #00ff88;
-      font-family: monospace;
-      font-size: 10px;
-      margin-top: 6px;
-      padding: 4px;
-      background: #0a0a0a;
-      border-radius: 2px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    .empty-icon { font-size: 3em; margin-bottom: 10px; }
+    .empty-text { font-size: 1.1em; margin-bottom: 5px; }
+    .empty-subtext { font-size: 0.9em; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>⚡ Activity Monitor</h1>
-      <div class="status">
-        <div class="status-item">
-          <div class="pulse"></div>
-          <span id="status-text">Connecting...</span>
-        </div>
-        <div class="status-item">
-          <span id="last-update">--:--:--</span>
-        </div>
+  <header>
+    <h1>⚡ Activity Monitor</h1>
+    <div class="status">
+      <div class="live-indicator">
+        <div class="live-dot"></div>
+        <span>Live</span>
       </div>
-    </header>
+      <div class="timestamp" id="last-update">--:--:--</div>
+    </div>
+  </header>
 
-    <div class="grid">
-      <div class="panel full-width">
-        <div class="panel-header">
-          <div class="panel-title">Recent Executions</div>
-          <div class="panel-count" id="executions-count">0 executions</div>
-        </div>
-        <div class="execution-list" id="executions-list">
-          <div style="color: #666; text-align: center; padding: 20px;">Loading...</div>
-        </div>
+  <div class="grid">
+    <!-- Recent Executions -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Recent Executions</div>
+        <div class="panel-count" id="executions-count">0 executions</div>
       </div>
+      <div class="execution-list" id="executions-list"></div>
+    </div>
 
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">📊 Learning Insights</div>
-          <div class="panel-count" id="insights-count">--</div>
-        </div>
-        <div id="insights-list">
-          <div style="color: #666; text-align: center; padding: 20px;">Loading...</div>
-        </div>
+    <!-- Learning Insights -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📊 Learning Insights</div>
+        <div class="panel-count" id="learning-count">20 recent</div>
       </div>
+      <div class="learning-grid" id="learning-metrics"></div>
+    </div>
 
+    <!-- Two column layout -->
+    <div class="two-col">
+      <!-- Activity Templates -->
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">Activity Templates</div>
           <div class="panel-count" id="templates-count">0 templates</div>
         </div>
-        <div id="templates-list">
-          <div style="color: #666; text-align: center; padding: 20px;">Loading...</div>
-        </div>
+        <div id="templates-list"></div>
       </div>
 
-      <div class="panel full-width" style="background: #151515; border: 2px solid #00ff88;">
+      <!-- Thompson Sampling -->
+      <div class="panel">
         <div class="panel-header">
-          <div class="panel-title" style="color: #00ff88;">🎲 Thompson Sampling (Learning System)</div>
-          <div class="panel-count" id="thompson-count">0 scores</div>
+          <div class="panel-title">🎲 Thompson Sampling (Learning System)</div>
+          <div class="panel-count" id="scores-count">0 scores</div>
         </div>
-        <div id="thompson-list" style="max-height: 500px; overflow-y: auto;">
-          <div style="color: #666; text-align: center; padding: 20px;">Loading...</div>
-        </div>
+        <div id="scores-list"></div>
       </div>
+    </div>
 
+    <!-- Two column layout -->
+    <div class="two-col">
+      <!-- Impulse Resolution -->
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">Impulse Resolution</div>
           <div class="panel-count" id="impulses-count">0 shapes</div>
         </div>
-        <div id="impulses-list">
-          <div style="color: #666; text-align: center; padding: 20px;">Loading...</div>
-        </div>
+        <div id="impulses-list"></div>
       </div>
 
-      <div class="panel full-width" style="background: #151515; border-color: #444;">
+      <!-- Data Sources -->
+      <div class="panel">
         <div class="panel-header">
-          <div class="panel-title" style="color: #ffaa00;">📡 Data Sources (Impulse Resolution)</div>
-          <div class="panel-count" id="sources-count">0 vessels</div>
+          <div class="panel-title">📡 Data Sources (Impulse Resolution)</div>
+          <div class="panel-count" id="sources-count">0 data sources</div>
         </div>
-        <div id="sources-list" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-          <div style="color: #666; text-align: center; padding: 20px; grid-column: 1 / -1;">Loading...</div>
-        </div>
+        <div class="data-sources-grid" id="sources-list"></div>
       </div>
+    </div>
+
+    <!-- Activity Compositions -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🔗 Activity Compositions</div>
+        <div class="panel-count" id="compositions-count">0 edges</div>
+      </div>
+      <div id="compositions-list"></div>
+    </div>
+
+    <!-- Recommendation Weights -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">⚖️ Recommendation Weights (Thompson Sampling)</div>
+        <div class="panel-count" id="recommendations-count">0 recommendations</div>
+      </div>
+      <div id="recommendations-list"></div>
+    </div>
+
+    <!-- Impulse Relevancy -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🎯 Impulse Relevancy Metrics</div>
+        <div class="panel-count" id="relevance-count">0 metrics</div>
+      </div>
+      <div id="relevance-list"></div>
+    </div>
+
+    <!-- Task Resolver Views -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🔍 Task Execution Views (Resolver Perspective)</div>
+        <div class="panel-count" id="tasks-count">0 executions</div>
+      </div>
+      <div id="tasks-list"></div>
     </div>
   </div>
 
   <script>
-    let lastExecutionId = null;
+    let lastData = null;
 
-    function formatTime(timestamp) {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString();
-    }
+    async function updateDashboard() {
+      try {
+        const response = await fetch('/api/data');
+        const data = await response.json();
+        lastData = data;
 
-    function formatDuration(ms) {
-      if (!ms) return '--';
-      if (ms < 1000) return ms + 'ms';
-      return (ms / 1000).toFixed(1) + 's';
-    }
+        // Update timestamp
+        const date = new Date(data.lastUpdate);
+        document.getElementById('last-update').textContent =
+          date.toLocaleTimeString('en-US', { hour12: false });
 
-    function formatCost(usd) {
-      if (!usd) return '$0.00';
-      return '$' + usd.toFixed(4);
+        // Update executions
+        renderExecutions(data.executions || []);
+
+        // Update learning metrics
+        renderLearningMetrics(data.executions || []);
+
+        // Update templates
+        renderTemplates(data.templates || []);
+
+        // Update Thompson scores
+        renderScores(data.scores || []);
+
+        // Update impulses
+        renderImpulses(data.impulses || []);
+
+        // Update data sources
+        renderDataSources(data.sources || []);
+
+        // Update compositions
+        renderCompositions(data.compositions || []);
+
+        // Update recommendations
+        renderRecommendations(data.recommendations);
+
+        // Update relevance
+        renderRelevance(data.relevance || []);
+
+        // Update task views
+        renderTaskViews(data.taskViews || []);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      }
     }
 
     function renderExecutions(executions) {
-      const list = document.getElementById('executions-list');
+      const container = document.getElementById('executions-list');
       const count = document.getElementById('executions-count');
-
-      count.textContent = executions.length + ' executions';
+      count.textContent = \`\${executions.length} executions\`;
 
       if (executions.length === 0) {
-        list.innerHTML = \`
-          <div style="color: #666; text-align: center; padding: 30px;">
-            <div style="font-size: 14px; margin-bottom: 10px;">📭 No recent executions</div>
-            <div style="font-size: 11px; color: #555;">
-              Run an activity to see executions appear here<br/>
-              <code style="color: #00ff88; background: #0a0a0a; padding: 2px 6px; border-radius: 2px; margin-top: 8px; display: inline-block;">
-                minibob --single "check git status"
-              </code>
-            </div>
-          </div>
-        \`;
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No executions yet</div><div class="empty-subtext">Run some activities to see them here</div></div>';
         return;
       }
 
-      list.innerHTML = executions.map((exec, index) => {
-        const isNew = index === 0 && lastExecutionId && exec.id !== lastExecutionId;
-        const statusIcon = exec.status === 'success' || exec.status === 'completed' ? '✓' : '✗';
-        const statusColor = exec.status === 'success' || exec.status === 'completed' ? '#00ff88' : '#ff4444';
+      container.innerHTML = executions.slice(0, 50).map(exec => {
+        const status = exec.success ? 'success' : 'failure';
+        const icon = exec.success ? '✓' : '✗';
+        const date = new Date(exec.created_at);
+        const time = date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        const duration = exec.duration_ms
+          ? (exec.duration_ms < 1000 ? \`\${exec.duration_ms}ms\` : \`\${(exec.duration_ms / 1000).toFixed(1)}s\`)
+          : '--';
+        const cost = exec.cost_usd?.toFixed(4) || '0.00';
+        const tokens = \`\${exec.total_tokens_in || 0} → \${exec.total_tokens_out || 0}\`;
 
         return \`
-          <div class="execution-item status-\${exec.status} \${isNew ? 'new' : ''}">
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-              <div style="flex: 1;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                  <span style="color: \${statusColor}; font-size: 16px; font-weight: bold;">\${statusIcon}</span>
-                  <strong style="color: #e0e0e0;">\${exec.activity_id}</strong>
-                </div>
-                <div style="font-size: 11px; color: #666; margin-left: 24px;">
-                  \${exec.id.substring(0, 16)}... • \${formatTime(exec.created_at)}
-                </div>
+          <div class="execution-item \${status}">
+            <div class="execution-header">
+              <div>
+                <span style="font-size: 1.2em; margin-right: 8px;">\${icon}</span>
+                <strong class="execution-id">\${exec.activity_id}</strong>
               </div>
-              <div style="text-align: right; font-size: 11px;">
-                <div style="color: #00ff88; margin-bottom: 4px;">⏱ \${formatDuration(exec.duration_ms)}</div>
-                <div style="color: #ffaa00;">💰 \${formatCost(exec.cost_usd)}</div>
-              </div>
+              <div class="execution-timestamp">\${exec.execution_id.substring(0, 17)}... • \${time}</div>
             </div>
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #222; display: flex; justify-content: space-between; font-size: 11px; color: #666;">
-              <span>Tokens: \${exec.tokens_in || 0} → \${exec.tokens_out || 0}</span>
-              <span class="tag" style="background: \${statusColor}; color: #000;">\${exec.status.toUpperCase()}</span>
+            <div class="execution-metrics">
+              <div>⏱ \${duration}</div>
+              <div>💰 $\${cost}</div>
+            </div>
+            <div style="margin-top: 8px; color: #666; font-size: 0.85em;">
+              Tokens: \${tokens}
+              <span class="execution-status \${status}">\${status.toUpperCase()}</span>
             </div>
           </div>
         \`;
       }).join('');
-
-      if (executions.length > 0) {
-        lastExecutionId = executions[0].id;
-      }
     }
 
-    function renderTemplates(templates) {
-      const list = document.getElementById('templates-list');
-      const count = document.getElementById('templates-count');
-
-      count.textContent = templates.length + ' templates';
-
-      if (templates.length === 0) {
-        list.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No templates</div>';
-        return;
-      }
-
-      // Group by category
-      const grouped = templates.reduce((acc, t) => {
-        if (!acc[t.category]) acc[t.category] = [];
-        acc[t.category].push(t);
-        return acc;
-      }, {});
-
-      list.innerHTML = Object.entries(grouped).map(([category, items]) => \`
-        <div style="margin-bottom: 20px;">
-          <div style="font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px;">
-            \${category}
-          </div>
-          \${items.map(t => {
-            const alpha = t.metrics?.thompson_alpha || t.thompson_alpha || 1;
-            const beta = t.metrics?.thompson_beta || t.thompson_beta || 1;
-            const score = ((alpha / (alpha + beta)) * 100).toFixed(0);
-            const executions = t.metrics?.total_executions || 0;
-            const successRate = t.metrics?.success_rate || 0;
-
-            return \`
-            <div class="template-item">
-              <div class="template-info">
-                <div class="template-name">\${t.name}</div>
-                <div class="template-tags">
-                  \${(t.tags || []).slice(0, 3).map(tag => \`<span class="tag">\${tag}</span>\`).join('')}
-                </div>
-              </div>
-              <div class="template-metrics">
-                <div class="metric">
-                  <div class="metric-value \${executions === 0 ? 'zero' : ''}">\${executions}</div>
-                  <div class="metric-label">runs</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">\${score}%</div>
-                  <div class="metric-label">Thompson</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value \${successRate === 0 ? 'zero' : ''}">\${successRate.toFixed(0)}%</div>
-                  <div class="metric-label">success</div>
-                </div>
-              </div>
-            </div>
-          \`;
-          }).join('')}
-        </div>
-      \`).join('');
-    }
-
-    function renderImpulses(impulses) {
-      const list = document.getElementById('impulses-list');
-      const count = document.getElementById('impulses-count');
-
-      count.textContent = impulses.length + ' shapes';
-
-      if (impulses.length === 0) {
-        list.innerHTML = \`
-          <div style="color: #666; text-align: center; padding: 30px;">
-            <div style="font-size: 14px; margin-bottom: 10px;">🔒 Impulse metrics unavailable</div>
-            <div style="font-size: 11px; color: #555;">
-              Requires API key authentication<br/>
-              <span style="color: #ffaa00;">Status: Waiting for authenticated executions</span>
-            </div>
-          </div>
-        \`;
-        return;
-      }
-
-      list.innerHTML = impulses.map(imp => \`
-        <div class="impulse-item">
-          <div>
-            <div class="impulse-shape">\${imp.shape}</div>
-            <div class="impulse-resolver">via \${imp.resolver}</div>
-          </div>
-          <div class="impulse-stats">
-            <div>
-              <strong style="color: #00ff88;">\${imp.count}</strong>
-              <span style="color: #666; margin-left: 5px;">resolutions</span>
-            </div>
-            <div>
-              <strong style="color: #ffaa00;">\${formatDuration(imp.avg_duration_ms)}</strong>
-              <span style="color: #666; margin-left: 5px;">avg</span>
-            </div>
-          </div>
-        </div>
-      \`).join('');
-    }
-
-    function renderLearningInsights(executions, thompsonScores) {
-      const list = document.getElementById('insights-list');
-      const count = document.getElementById('insights-count');
-
-      if (executions.length === 0) {
-        list.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No data yet</div>';
-        count.textContent = '--';
-        return;
-      }
-
-      // Calculate insights
+    function renderLearningMetrics(executions) {
+      const container = document.getElementById('learning-metrics');
       const recentExecs = executions.slice(0, 20);
-      const successCount = recentExecs.filter(e => e.status === 'success' || e.status === 'completed').length;
-      const successRate = (successCount / recentExecs.length * 100).toFixed(1);
+      const successCount = recentExecs.filter(e => e.success).length;
+      const successRate = recentExecs.length > 0 ? (successCount / recentExecs.length * 100).toFixed(1) : '0.0';
+      const avgCost = recentExecs.reduce((sum, e) => sum + (e.cost_usd || 0), 0) / Math.max(recentExecs.length, 1);
+      const avgDuration = recentExecs.reduce((sum, e) => sum + (e.duration_ms || 0), 0) / Math.max(recentExecs.length, 1);
 
-      const totalCost = recentExecs.reduce((sum, e) => sum + (e.cost_usd || 0), 0);
-      const avgCost = (totalCost / recentExecs.length).toFixed(4);
+      const mostUsed = {};
+      executions.forEach(e => {
+        mostUsed[e.activity_id] = (mostUsed[e.activity_id] || 0) + 1;
+      });
+      const topActivity = Object.entries(mostUsed).sort((a, b) => b[1] - a[1])[0] || ['None', 0];
 
-      const avgDuration = recentExecs.reduce((sum, e) => sum + (e.duration_ms || 0), 0) / recentExecs.length;
+      const scores = lastData?.scores || [];
+      const converged = scores.filter(s => s.confidence > 80).length;
+      const exploring = scores.filter(s => s.confidence <= 80).length;
 
-      // Exploring vs exploiting
-      const exploring = thompsonScores.filter(s => s.exploring).length;
-      const exploiting = thompsonScores.length - exploring;
-      const explorationPct = thompsonScores.length > 0 ? (exploring / thompsonScores.length * 100).toFixed(0) : 0;
+      document.getElementById('learning-count').textContent = \`\${recentExecs.length} recent\`;
 
-      // Most/least used
-      const sortedByExecs = thompsonScores.sort((a, b) => b.total_executions - a.total_executions);
-      const mostUsed = sortedByExecs[0];
-      const leastUsed = sortedByExecs[sortedByExecs.length - 1];
-
-      // Converging templates (high confidence)
-      const converged = thompsonScores.filter(s => s.confidence_level >= 10).length;
-
-      count.textContent = recentExecs.length + ' recent';
-
-      list.innerHTML = \`
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="insight-box" style="background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%); padding: 12px; border-radius: 6px; border: 1px solid #333;">
-            <div style="font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 6px;">Success Rate (Last 20)</div>
-            <div style="display: flex; align-items: baseline; gap: 8px;">
-              <span style="font-size: 24px; color: \${successRate >= 75 ? '#00ff88' : successRate >= 50 ? '#ffaa00' : '#ff4444'}; font-weight: 600;">
-                \${successRate}%
-              </span>
-              <span style="font-size: 12px; color: #666;">
-                \${successCount}/\${recentExecs.length} succeeded
-              </span>
-            </div>
-          </div>
-
-          <div class="insight-box" style="background: #0f0f0f; padding: 12px; border-radius: 6px; border: 1px solid #333;">
-            <div style="font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 6px;">Average Cost</div>
-            <div style="font-size: 20px; color: #ffaa00; font-weight: 600;">
-              $\${avgCost}
-            </div>
-            <div style="font-size: 10px; color: #666; margin-top: 4px;">
-              ⏱ Avg duration: \${formatDuration(avgDuration)}
-            </div>
-          </div>
-
-          <div class="insight-box" style="background: #0f0f0f; padding: 12px; border-radius: 6px; border: 1px solid #333;">
-            <div style="font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 6px;">Exploration Balance</div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-              <span style="color: #ffaa00; font-size: 12px;">🔍 Exploring: \${exploring}</span>
-              <span style="color: #00ff88; font-size: 12px;">🎯 Exploiting: \${exploiting}</span>
-            </div>
-            <div style="height: 8px; background: #0a0a0a; border-radius: 4px; overflow: hidden;">
-              <div style="height: 100%; background: linear-gradient(to right, #ffaa00, #00ff88); width: \${100 - explorationPct}%;"></div>
-            </div>
-          </div>
-
-          \${mostUsed ? \`
-          <div class="insight-box" style="background: #0f0f0f; padding: 12px; border-radius: 6px; border: 1px solid #333;">
-            <div style="font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 6px;">🏆 Most Used Template</div>
-            <div style="font-size: 13px; color: #00ff88; font-weight: 500; margin-bottom: 4px;">
-              \${mostUsed.activity_id}
-            </div>
-            <div style="font-size: 11px; color: #666;">
-              \${mostUsed.total_executions} executions • \${(mostUsed.success_rate * 100).toFixed(0)}% success
-            </div>
-          </div>
-          \` : ''}
-
-          <div class="insight-box" style="background: #0f0f0f; padding: 12px; border-radius: 6px; border: 1px solid #333;">
-            <div style="font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 6px;">System Learning State</div>
-            <div style="font-size: 12px; color: #e0e0e0;">
-              <div style="margin-bottom: 4px;">✓ \${converged} templates converged (high confidence)</div>
-              <div style="margin-bottom: 4px;">⚡ \${exploring} templates still exploring</div>
-              <div>📈 \${thompsonScores.length} total templates tracked</div>
-            </div>
+      container.innerHTML = \`
+        <div class="learning-metric">
+          <div class="metric-label">Success Rate (Last 20)</div>
+          <div class="metric-value">\${successRate}%</div>
+          <div class="metric-detail">\${successCount}/\${recentExecs.length} succeeded</div>
+        </div>
+        <div class="learning-metric">
+          <div class="metric-label">Average Cost</div>
+          <div class="metric-value">$\${avgCost.toFixed(4)}</div>
+          <div class="metric-detail">⏱ Avg duration: \${avgDuration.toFixed(2)}ms</div>
+        </div>
+        <div class="learning-metric">
+          <div class="metric-label">Exploration Balance</div>
+          <div class="metric-value">\${exploring} / \${scores.length}</div>
+          <div class="metric-detail">🔍 Exploring: \${exploring}<br>🎯 Exploiting: \${converged}</div>
+        </div>
+        <div class="learning-metric" style="grid-column: 1 / -1;">
+          <div class="metric-label">🏆 Most Used Template</div>
+          <div class="metric-value" style="font-size: 1em;">\${topActivity[0]}</div>
+          <div class="metric-detail">\${topActivity[1]} executions • \${(successCount / Math.max(topActivity[1], 1) * 100).toFixed(0)}% success</div>
+        </div>
+        <div class="learning-metric" style="grid-column: 1 / -1;">
+          <div class="metric-label">System Learning State</div>
+          <div class="metric-detail">
+            ✓ \${converged} templates converged (high confidence)<br>
+            ⚡ \${exploring} templates still exploring<br>
+            📈 \${scores.length} total templates tracked
           </div>
         </div>
       \`;
     }
 
-    function renderThompsonScores(scores) {
-      const list = document.getElementById('thompson-list');
-      const count = document.getElementById('thompson-count');
+    function renderTemplates(templates) {
+      const container = document.getElementById('templates-list');
+      const count = document.getElementById('templates-count');
+      count.textContent = \`\${templates.length} templates\`;
 
-      count.textContent = scores.length + ' scores';
-
-      if (scores.length === 0) {
-        list.innerHTML = \`
-          <div style="color: #666; text-align: center; padding: 30px;">
-            <div style="font-size: 14px; margin-bottom: 10px;">🎲 No Thompson Sampling data</div>
-            <div style="font-size: 11px; color: #555;">
-              Run activities to see learning system in action
-            </div>
-          </div>
-        \`;
+      if (templates.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">No templates</div></div>';
         return;
       }
 
-      // Sort by confidence level (most uncertain first)
-      const sortedScores = scores.sort((a, b) => a.confidence_level - b.confidence_level);
+      // Group by category
+      const grouped = {};
+      templates.forEach(t => {
+        const cat = t.category || 'uncategorized';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(t);
+      });
 
-      list.innerHTML = sortedScores.slice(0, 10).map(score => {
-        const meanPct = (score.mean_score * 100).toFixed(1);
-        const ciWidth = (score.confidence_interval.upper - score.confidence_interval.lower) * 100;
-        const ciWidthPct = ciWidth.toFixed(1);
+      container.innerHTML = Object.entries(grouped).map(([category, items]) => \`
+        <div class="template-group">
+          <div class="template-group-title">\${category}</div>
+          \${items.slice(0, 5).map(t => {
+            const score = (t.alpha / (t.alpha + t.beta) * 100).toFixed(0);
+            const runs = (t.alpha + t.beta - 2);
+            const successRate = t.alpha > 1 ? ((t.alpha - 1) / runs * 100).toFixed(0) : '0';
+            return \`
+              <div class="template-item">
+                <div class="template-name">\${t.name || t.id}</div>
+                <div class="template-meta">
+                  <span>\${runs} runs</span>
+                  <span>\${score}% Thompson</span>
+                  <span>\${successRate}% success</span>
+                </div>
+              </div>
+            \`;
+          }).join('')}
+        </div>
+      \`).join('');
+    }
+
+    function renderScores(scores) {
+      const container = document.getElementById('scores-list');
+      const count = document.getElementById('scores-count');
+      count.textContent = \`\${scores.length} scores\`;
+
+      if (scores.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎲</div><div class="empty-text">No scores</div></div>';
+        return;
+      }
+
+      // Sort by score descending, show top 10
+      const sorted = [...scores].sort((a, b) => b.score - a.score).slice(0, 10);
+
+      container.innerHTML = sorted.map(s => {
+        const pct = (s.score * 100).toFixed(1);
+        const uncertainty = (100 / Math.sqrt(s.alpha + s.beta)).toFixed(1);
+        const phase = s.confidence < 20 ? 'EXPLORING' : s.confidence > 80 ? 'CONVERGED' : 'LEARNING';
+        const runs = s.alpha + s.beta - 2;
 
         return \`
-          <div class="thompson-item" style="\${score.exploring ? 'border-left-color: #ffaa00;' : 'border-left-color: #00ff88;'}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div style="flex: 1;">
-                <div style="color: #e0e0e0; font-weight: 500; font-size: 13px; margin-bottom: 4px;">
-                  \${score.activity_id}
-                </div>
-                <div style="font-size: 11px; color: #888;">
-                  <span class="tag" style="background: \${score.exploring ? '#ffaa00' : '#00ff88'}; color: #000;">
-                    \${score.exploring ? 'EXPLORING' : 'EXPLOITING'}
-                  </span>
-                  <span style="margin-left: 10px;">\${score.total_executions} runs</span>
+          <div class="score-item">
+            <div class="score-header">
+              <div>
+                <div class="score-name">\${s.activity_id}</div>
+                <div style="color: #666; font-size: 0.75em; margin-top: 2px;">
+                  <span style="background: #333; padding: 2px 6px; border-radius: 3px;">\${phase}</span>
+                  \${runs} runs
                 </div>
               </div>
-              <div style="text-align: right;">
-                <div style="font-size: 16px; color: #00ff88; font-weight: 600;">
-                  \${meanPct}%
-                </div>
-                <div style="font-size: 10px; color: #666;">
-                  ±\${ciWidthPct}%
-                </div>
-              </div>
+              <div class="score-value">\${pct}%<span style="font-size: 0.6em; color: #666;"> ±\${uncertainty}%</span></div>
             </div>
-            <div style="margin-top: 10px;">
-              <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 4px;">
-                <span>α=\${score.alpha.toFixed(1)}</span>
-                <span>β=\${score.beta.toFixed(1)}</span>
-                <span>confidence=\${score.confidence_level}</span>
-              </div>
-              <div style="height: 6px; background: #0f0f0f; border-radius: 3px; overflow: hidden;">
-                <div style="height: 100%; background: linear-gradient(to right, #ff4444, #ffaa00, #00ff88); width: \${meanPct}%;"></div>
-              </div>
+            <div class="score-meta" style="margin-top: 8px;">
+              α=\${s.alpha.toFixed(1)} • β=\${s.beta.toFixed(1)} • confidence=\${s.confidence}
             </div>
           </div>
         \`;
       }).join('');
     }
 
-    function renderSources(sources) {
-      const list = document.getElementById('sources-list');
-      const count = document.getElementById('sources-count');
+    function renderImpulses(impulses) {
+      const container = document.getElementById('impulses-list');
+      const count = document.getElementById('impulses-count');
+      count.textContent = \`\${impulses.length} shapes\`;
 
-      if (!sources) {
-        list.innerHTML = '<div style="color: #666; text-align: center; padding: 20px; grid-column: 1 / -1;">Loading sources...</div>';
+      if (impulses.length === 0) {
+        container.innerHTML = \`
+          <div class="empty-state">
+            <div class="empty-icon">🔒</div>
+            <div class="empty-text">Impulse metrics unavailable</div>
+            <div class="empty-subtext">Requires API key authentication<br>Status: Waiting for authenticated executions</div>
+          </div>
+        \`;
         return;
       }
 
-      const sourceArray = Object.entries(sources).map(([key, src]) => ({
-        name: key,
-        ...src
-      }));
-
-      count.textContent = sourceArray.length + ' data sources';
-
-      list.innerHTML = sourceArray.map(src => \`
-        <div class="source-item">
-          <div class="source-header">
-            <div class="source-shape">\${src.shape}</div>
-            <div class="source-status \${src.status}">\${src.status.toUpperCase()}</div>
-          </div>
-          <div class="source-detail">
-            <strong>Vessel:</strong> \${src.vessel}
-          </div>
-          <div class="source-detail">
-            <strong>Type:</strong> \${src.name}
-          </div>
-          <div class="source-detail">
-            <strong>Last Fetch:</strong> \${src.lastFetch ? formatTime(src.lastFetch) : 'Never'}
-          </div>
-          <div class="source-endpoint" title="\${src.endpoint}">
-            GET \${src.endpoint}
-          </div>
+      container.innerHTML = impulses.map(imp => \`
+        <div class="impulse-item">
+          <div class="impulse-shape">\${imp.shape}</div>
+          <div class="impulse-resolver">Resolver: \${imp.resolver}</div>
+          <div class="impulse-stats">\${imp.count} resolutions • Avg \${imp.avg_duration_ms}ms</div>
         </div>
       \`).join('');
     }
 
-    async function fetchData() {
-      try {
-        const [dataResponse, sourcesResponse] = await Promise.all([
-          fetch('/api/data'),
-          fetch('/api/data')  // sources are now included in data
-        ]);
+    function renderDataSources(sources) {
+      const container = document.getElementById('sources-list');
+      const count = document.getElementById('sources-count');
+      count.textContent = \`\${sources.length} data sources\`;
 
-        const data = await dataResponse.json();
-
-        renderExecutions(data.executions);
-        renderLearningInsights(data.executions, data.thompsonScores || []);
-        renderTemplates(data.templates);
-        renderThompsonScores(data.thompsonScores || []);
-        renderImpulses(data.impulses);
-        renderSources(data.sources);
-
-        document.getElementById('status-text').textContent = 'Live';
-        document.getElementById('last-update').textContent = formatTime(data.lastUpdate);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        document.getElementById('status-text').textContent = 'Error';
+      if (sources.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">No sources</div></div>';
+        return;
       }
+
+      container.innerHTML = sources.map(src => {
+        const lastFetch = src.lastFetch === 'never' ? 'Never' :
+          new Date(src.lastFetch).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        return \`
+          <div class="data-source-item \${src.status}">
+            <div class="data-source-header">
+              <div class="data-source-shape">\${src.shape}</div>
+              <span class="data-source-status \${src.status}">\${src.status.toUpperCase()}</span>
+            </div>
+            <div class="data-source-meta">
+              <strong>Vessel:</strong> \${src.vessel}<br>
+              <strong>Type:</strong> \${src.name}<br>
+              <strong>Last Fetch:</strong> \${lastFetch}
+            </div>
+            <div class="data-source-endpoint">GET \${src.endpoint || 'N/A'}</div>
+          </div>
+        \`;
+      }).join('');
     }
 
-    // Initial fetch
-    fetchData();
+    function renderCompositions(compositions) {
+      const container = document.getElementById('compositions-list');
+      const count = document.getElementById('compositions-count');
+      count.textContent = \`\${compositions.length} edges\`;
+
+      if (compositions.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔗</div><div class="empty-text">No compositions yet</div><div class="empty-subtext">Activity compositions will appear here when activities call other activities</div></div>';
+        return;
+      }
+
+      // Group by parent activity
+      const grouped = {};
+      compositions.forEach(comp => {
+        const parent = comp.parent_activity_id || 'unknown';
+        if (!grouped[parent]) grouped[parent] = [];
+        grouped[parent].push(comp);
+      });
+
+      container.innerHTML = Object.entries(grouped).slice(0, 10).map(([parent, edges]) => {
+        const successRate = edges.reduce((sum, e) => sum + (e.success_count || 0), 0) /
+                           edges.reduce((sum, e) => sum + (e.total_count || 1), 0) * 100;
+        return \`
+          <div class="template-group">
+            <div class="template-group-title">\${parent} → \${edges.length} children</div>
+            \${edges.slice(0, 5).map(edge => \`
+              <div class="template-item">
+                <div class="template-name">→ \${edge.child_activity_id}</div>
+                <div class="template-meta">
+                  <span>\${edge.total_count || 0} calls</span>
+                  <span>\${((edge.success_count || 0) / (edge.total_count || 1) * 100).toFixed(0)}% success</span>
+                  <span>Avg \${(edge.avg_duration_ms || 0).toFixed(0)}ms</span>
+                </div>
+              </div>
+            \`).join('')}
+          </div>
+        \`;
+      }).join('');
+    }
+
+    function renderRecommendations(recommendations) {
+      const container = document.getElementById('recommendations-list');
+      const count = document.getElementById('recommendations-count');
+
+      if (!recommendations || !recommendations.recommendations || recommendations.recommendations.length === 0) {
+        count.textContent = '0 recommendations';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-text">No recommendations</div><div class="empty-subtext">Recommendation weights require active goal processing</div></div>';
+        return;
+      }
+
+      const recs = recommendations.recommendations;
+      count.textContent = \`\${recs.length} recommendations\`;
+
+      container.innerHTML = recs.slice(0, 10).map((rec, idx) => {
+        const metadata = rec.selection_metadata || {};
+        const alpha = metadata.alpha || 1;
+        const beta = metadata.beta || 1;
+        const sample = metadata.sample || 0.5;
+        const boosts = metadata.boost_breakdown || {};
+        const totalBoost = metadata.heuristic_boost || 0;
+
+        return \`
+          <div class="score-item">
+            <div class="score-header">
+              <div>
+                <div class="score-name">#\${idx + 1} \${rec.template_id}</div>
+                <div style="color: #666; font-size: 0.75em; margin-top: 2px;">
+                  <span style="background: #333; padding: 2px 6px; border-radius: 3px;">\${metadata.method || 'unknown'}</span>
+                  <span style="background: #333; padding: 2px 6px; border-radius: 3px; margin-left: 4px;">\${metadata.score_source || 'unknown'}</span>
+                </div>
+              </div>
+              <div class="score-value">\${(sample * 100).toFixed(1)}%</div>
+            </div>
+            <div class="score-meta" style="margin-top: 8px;">
+              α=\${alpha.toFixed(1)} • β=\${beta.toFixed(1)} • boost=+\${totalBoost}
+            </div>
+            <div style="margin-top: 8px; font-size: 0.8em; color: #666;">
+              Boost breakdown:
+              \${Object.entries(boosts).map(([key, val]) => \`\${key}=+\${val}\`).join(' • ')}
+            </div>
+          </div>
+        \`;
+      }).join('');
+    }
+
+    function renderRelevance(relevance) {
+      const container = document.getElementById('relevance-list');
+      const count = document.getElementById('relevance-count');
+      count.textContent = \`\${relevance.length} metrics\`;
+
+      if (relevance.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-text">No relevance metrics</div><div class="empty-subtext">Impulse relevancy tracking will appear here</div></div>';
+        return;
+      }
+
+      container.innerHTML = relevance.slice(0, 20).map(rel => {
+        const relevanceScore = rel.relevance_score || 0;
+        const loadTime = rel.load_time_ms || 0;
+        const accuracy = rel.state_transition_accuracy || 0;
+
+        return \`
+          <div class="impulse-item">
+            <div class="impulse-shape">\${rel.impulse_id || rel.impulse_shape}</div>
+            <div class="impulse-resolver">Activity: \${rel.activity_id || 'unknown'}</div>
+            <div class="impulse-stats">
+              Relevance: \${(relevanceScore * 100).toFixed(0)}% •
+              Load: \${loadTime.toFixed(0)}ms •
+              Accuracy: \${(accuracy * 100).toFixed(0)}%
+            </div>
+          </div>
+        \`;
+      }).join('');
+    }
+
+    function renderTaskViews(taskViews) {
+      const container = document.getElementById('tasks-list');
+      const count = document.getElementById('tasks-count');
+      count.textContent = \`\${taskViews.length} executions\`;
+
+      if (taskViews.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">No task views</div></div>';
+        return;
+      }
+
+      container.innerHTML = taskViews.map(view => {
+        const tasks = view.tasks || [];
+        const date = new Date(view.created_at);
+        const time = date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        const status = view.success ? 'success' : 'failure';
+        const icon = view.success ? '✓' : '✗';
+
+        return \`
+          <div class="execution-item \${status}" style="margin-bottom: 15px;">
+            <div class="execution-header">
+              <div>
+                <span style="font-size: 1.2em; margin-right: 8px;">\${icon}</span>
+                <strong class="execution-id">\${view.activity_id}</strong>
+              </div>
+              <div class="execution-timestamp">\${view.execution_id.substring(0, 17)}... • \${time}</div>
+            </div>
+            <div style="margin-top: 10px; padding-left: 10px; border-left: 2px solid #333;">
+              \${tasks.map((task, idx) => {
+                const taskStatus = task.success ? '✓' : task.error ? '✗' : '⏳';
+                const taskColor = task.success ? '#10b981' : task.error ? '#ef4444' : '#f59e0b';
+
+                return \`
+                  <div style="margin-bottom: 10px; padding: 8px; background: #0a0a0a; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                      <div>
+                        <span style="color: \${taskColor}; margin-right: 8px;">\${taskStatus}</span>
+                        <strong style="color: #e0e0e0;">Task #\${idx + 1}: \${task.task_id || task.id || 'unknown'}</strong>
+                      </div>
+                      <div style="color: #666; font-size: 0.85em;">\${task.duration_ms ? task.duration_ms + 'ms' : '--'}</div>
+                    </div>
+                    <div style="color: #999; font-size: 0.85em;">
+                      Resolver: \${task.resolver || task.resolver_id || 'llm'}
+                    </div>
+                    \${task.impulse_refs ? \`
+                      <div style="color: #666; font-size: 0.8em; margin-top: 5px;">
+                        Impulses: \${task.impulse_refs.map(ref => ref.key || ref).join(', ')}
+                      </div>
+                    \` : ''}
+                    \${task.error ? \`
+                      <div style="color: #ef4444; font-size: 0.8em; margin-top: 5px; background: #1a0000; padding: 5px; border-radius: 3px;">
+                        Error: \${task.error}
+                      </div>
+                    \` : ''}
+                  </div>
+                \`;
+              }).join('')}
+            </div>
+          </div>
+        \`;
+      }).join('');
+    }
 
     // Poll every 3 seconds
-    setInterval(fetchData, 3000);
+    updateDashboard();
+    setInterval(updateDashboard, 3000);
   </script>
 </body>
 </html>
-  `;
-
-  return c.html(html);
+  `);
 });
 
-console.log(`🚀 Activity Monitor starting on http://localhost:${PORT}`);
-console.log(`📊 Backend: ${ACTIVITY_API}`);
-console.log(`🔑 API Key: ${API_KEY ? '✓ Set' : '✗ Not set'}`);
+// API endpoint for data
+app.get('/api/data', (c) => {
+  return c.json({
+    executions: cache.executions,
+    templates: cache.templates,
+    impulses: cache.impulses,
+    scores: cache.scores,
+    compositions: cache.compositions,
+    recommendations: cache.recommendations,
+    relevance: cache.relevance,
+    taskViews: cache.taskViews,
+    sources: dataSources.map(ds => ({
+      ...ds,
+      endpoint: ds.name === 'executions' ? '/v2/activities/executions?limit=50' :
+                ds.name === 'templates' ? '/v2/activities/templates' :
+                ds.name === 'impulses' ? '/v2/impulses/resolution-metrics?limit=20' : 'N/A',
+    })),
+    lastUpdate: cache.lastUpdate,
+  });
+});
 
+// Health check
+app.get('/api/health', (c) => {
+  return c.json({
+    status: 'healthy',
+    backend: ACTIVITY_API_URL,
+    lastUpdate: new Date(cache.lastUpdate).toISOString(),
+    cacheAge: Date.now() - cache.lastUpdate,
+    sources: dataSources,
+  });
+});
+
+// Start server
+console.log(`🚀 Activity Monitor starting on port ${PORT}`);
+console.log(`📡 Backend: ${ACTIVITY_API_URL}`);
+console.log(`🔑 API Key: ${METABOB_API_KEY ? '✓ Set' : '✗ Not set'}`);
+
+// Initial cache update
+updateCache();
+
+// Update cache every 3 seconds
+setInterval(updateCache, 3000);
+
+// Start HTTP server
 export default {
   port: PORT,
   fetch: app.fetch,
