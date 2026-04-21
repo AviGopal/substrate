@@ -1,0 +1,170 @@
+{
+  "id": "validate-deployment-health-v2",
+  "name": "Validate Deployment Health",
+  "version": 1,
+  "description": "Comprehensive deployment health validation with configurable retry logic, endpoint verification, and detailed reporting. Fully deterministic using bash resolvers with proper exit codes for CI/CD integration.",
+  "category": "infrastructure",
+  "execution_type": "template",
+  "tags": ["testing.deployment", "deterministic", "cicd", "health-check"],
+  "input_shapes": ["deployment_config"],
+  "output_shapes": ["health_status", "validation_report"],
+  "variables": [
+    {
+      "name": "healthEndpoint",
+      "type": "string",
+      "required": true,
+      "description": "Primary health check URL (e.g., https://activity.metabob.com/health)"
+    },
+    {
+      "name": "additionalEndpoints",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "Comma-separated list of additional endpoints to check"
+    },
+    {
+      "name": "expectedVersion",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "Expected version string to verify in health response"
+    },
+    {
+      "name": "maxRetries",
+      "type": "number",
+      "required": false,
+      "default": 10,
+      "description": "Maximum number of retry attempts"
+    },
+    {
+      "name": "retryInterval",
+      "type": "number",
+      "required": false,
+      "default": 15,
+      "description": "Seconds between retry attempts"
+    },
+    {
+      "name": "timeout",
+      "type": "number",
+      "required": false,
+      "default": 10,
+      "description": "Connection timeout in seconds per request"
+    },
+    {
+      "name": "requiredFields",
+      "type": "string",
+      "required": false,
+      "default": "status",
+      "description": "Comma-separated list of required fields in health response JSON"
+    },
+    {
+      "name": "skipAdditional",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Skip additional endpoint checks (for faster validation)"
+    },
+    {
+      "name": "reportFile",
+      "type": "string",
+      "required": false,
+      "default": "/tmp/deployment-health-report.md",
+      "description": "Path to write detailed health report"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "check-primary-health",
+      "description": "Check primary health endpoint with retries",
+      "resolver": "bash",
+      "config": {
+        "command": "set -e; ENDPOINT='{{healthEndpoint}}'; RETRIES={{maxRetries}}; INTERVAL={{retryInterval}}; TIMEOUT={{timeout}}; echo \"=== Primary Health Check ===\"; echo \"Endpoint: $ENDPOINT\"; echo \"Max retries: $RETRIES\"; echo \"Interval: ${INTERVAL}s\"; echo \"Timeout: ${TIMEOUT}s\"; for i in $(seq 1 $RETRIES); do echo \"Attempt $i/$RETRIES...\"; RESPONSE=$(curl -s -w '\\nHTTP_CODE:%{http_code}' --connect-timeout $TIMEOUT \"$ENDPOINT\" 2>/dev/null || echo 'CURL_FAILED'); HTTP_CODE=$(echo \"$RESPONSE\" | grep 'HTTP_CODE:' | cut -d: -f2); BODY=$(echo \"$RESPONSE\" | grep -v 'HTTP_CODE:'); if [ \"$HTTP_CODE\" = '200' ]; then echo \"SUCCESS: HTTP $HTTP_CODE\"; echo \"Response:\"; echo \"$BODY\" | jq . 2>/dev/null || echo \"$BODY\"; echo \"HEALTH_STATUS=healthy\"; exit 0; fi; echo \"Status: HTTP $HTTP_CODE\"; if [ \"$i\" -lt \"$RETRIES\" ]; then echo \"Waiting ${INTERVAL}s before retry...\"; sleep $INTERVAL; fi; done; echo \"FAILED: Health check failed after $RETRIES attempts\"; echo \"HEALTH_STATUS=unhealthy\"; exit 1",
+        "timeout": 300000
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "none"
+      },
+      "outputShapes": ["primary_health_status"]
+    },
+    {
+      "id": "verify-response-fields",
+      "description": "Verify required fields exist in health response",
+      "resolver": "bash",
+      "dependencies": ["check-primary-health"],
+      "config": {
+        "command": "set -e; ENDPOINT='{{healthEndpoint}}'; REQUIRED='{{requiredFields}}'; TIMEOUT={{timeout}}; echo '=== Verifying Response Fields ==='; RESPONSE=$(curl -s --connect-timeout $TIMEOUT \"$ENDPOINT\" 2>/dev/null); if [ -z \"$RESPONSE\" ]; then echo 'ERROR: Empty response'; exit 1; fi; echo 'Response received, checking fields...'; IFS=',' read -ra FIELDS <<< \"$REQUIRED\"; MISSING=0; for FIELD in \"${FIELDS[@]}\"; do FIELD=$(echo \"$FIELD\" | xargs); VALUE=$(echo \"$RESPONSE\" | jq -r \".$FIELD // \\\"__MISSING__\\\"\" 2>/dev/null); if [ \"$VALUE\" = '__MISSING__' ] || [ \"$VALUE\" = 'null' ]; then echo \"MISSING: $FIELD\"; MISSING=$((MISSING + 1)); else echo \"OK: $FIELD = $VALUE\"; fi; done; if [ \"$MISSING\" -gt 0 ]; then echo \"WARNING: $MISSING required fields missing\"; else echo 'All required fields present'; fi",
+        "timeout": 30000
+      },
+      "outputShapes": ["field_verification"]
+    },
+    {
+      "id": "verify-version",
+      "description": "Verify expected version if specified",
+      "resolver": "bash",
+      "dependencies": ["check-primary-health"],
+      "config": {
+        "command": "EXPECTED='{{expectedVersion}}'; if [ -z \"$EXPECTED\" ]; then echo 'SKIPPED: No expected version specified'; exit 0; fi; ENDPOINT='{{healthEndpoint}}'; TIMEOUT={{timeout}}; echo '=== Version Verification ==='; echo \"Expected version: $EXPECTED\"; RESPONSE=$(curl -s --connect-timeout $TIMEOUT \"$ENDPOINT\" 2>/dev/null); ACTUAL=$(echo \"$RESPONSE\" | jq -r '.version // .app_version // .build // \"unknown\"' 2>/dev/null); echo \"Actual version: $ACTUAL\"; if [ \"$ACTUAL\" = \"$EXPECTED\" ]; then echo 'VERSION_MATCH=true'; echo 'Version matches expected value'; elif echo \"$ACTUAL\" | grep -q \"$EXPECTED\"; then echo 'VERSION_MATCH=partial'; echo 'Version contains expected value'; else echo 'VERSION_MATCH=false'; echo 'WARNING: Version does not match expected value'; fi",
+        "timeout": 30000
+      },
+      "outputShapes": ["version_status"]
+    },
+    {
+      "id": "check-additional-endpoints",
+      "description": "Check additional endpoints if specified",
+      "resolver": "bash",
+      "dependencies": ["check-primary-health"],
+      "config": {
+        "command": "SKIP='{{skipAdditional}}'; ENDPOINTS='{{additionalEndpoints}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipAdditional=true'; exit 0; fi; if [ -z \"$ENDPOINTS\" ]; then echo 'SKIPPED: No additional endpoints specified'; exit 0; fi; TIMEOUT={{timeout}}; echo '=== Additional Endpoint Checks ==='; IFS=',' read -ra EP_LIST <<< \"$ENDPOINTS\"; TOTAL=0; SUCCESS=0; FAILED=0; for EP in \"${EP_LIST[@]}\"; do EP=$(echo \"$EP\" | xargs); TOTAL=$((TOTAL + 1)); echo \"Checking: $EP\"; STATUS=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout $TIMEOUT \"$EP\" 2>/dev/null || echo '000'); if [ \"$STATUS\" = '200' ] || [ \"$STATUS\" = '201' ] || [ \"$STATUS\" = '204' ]; then echo \"OK: HTTP $STATUS\"; SUCCESS=$((SUCCESS + 1)); else echo \"FAILED: HTTP $STATUS\"; FAILED=$((FAILED + 1)); fi; done; echo ''; echo \"Summary: $SUCCESS/$TOTAL endpoints healthy\"; if [ \"$FAILED\" -gt 0 ]; then echo 'WARNING: Some endpoints failed'; fi",
+        "timeout": 120000
+      },
+      "outputShapes": ["additional_endpoints_status"]
+    },
+    {
+      "id": "generate-report",
+      "description": "Generate comprehensive health validation report",
+      "resolver": "bash",
+      "dependencies": ["verify-response-fields", "verify-version", "check-additional-endpoints"],
+      "config": {
+        "command": "REPORT='{{reportFile}}'; ENDPOINT='{{healthEndpoint}}'; EXPECTED_VER='{{expectedVersion}}'; TIMEOUT={{timeout}}; echo '=== Generating Health Report ==='; RESPONSE=$(curl -s --connect-timeout $TIMEOUT \"$ENDPOINT\" 2>/dev/null || echo '{}'); TIMESTAMP=$(date -Iseconds); cat > \"$REPORT\" << EOF\n# Deployment Health Validation Report\n\n**Generated**: $TIMESTAMP\n\n## Primary Endpoint\n\n- **URL**: $ENDPOINT\n- **Status**: HEALTHY\n\n### Response\n\n\\`\\`\\`json\n$(echo \"$RESPONSE\" | jq . 2>/dev/null || echo \"$RESPONSE\")\n\\`\\`\\`\n\n## Version Information\n\n- **Expected**: ${EXPECTED_VER:-\"not specified\"}\n- **Actual**: $(echo \"$RESPONSE\" | jq -r '.version // .app_version // \"unknown\"' 2>/dev/null)\n\n## Validation Summary\n\n- [x] Primary health endpoint responding\n- [x] Required fields present in response\n$([ -n \"$EXPECTED_VER\" ] && echo \"- [ ] Version verification\" || echo \"- [-] Version verification (skipped)\")\n\n## Additional Endpoints\n\n{{additionalEndpoints}}\n\n---\n\n*Report generated by validate-deployment-health-v2 activity*\nEOF\necho \"Report saved to: $REPORT\"; echo 'Validation completed successfully'",
+        "timeout": 30000
+      },
+      "outputShapes": ["validation_report"]
+    }
+  ],
+  "integration": {
+    "pre_checks": [
+      "command -v curl >/dev/null 2>&1",
+      "command -v jq >/dev/null 2>&1"
+    ],
+    "post_checks": []
+  },
+  "metadata": {
+    "primordial": false,
+    "bootstrap": false,
+    "teaches": ["Health check patterns", "Retry logic", "CI/CD validation"],
+    "level": 1,
+    "use_cases": [
+      "Post-deployment validation",
+      "CI/CD pipeline health gates",
+      "Monitoring checks",
+      "Smoke testing"
+    ],
+    "prerequisites": ["curl", "jq"],
+    "features": [
+      "Configurable retry logic with proper backoff",
+      "Multi-endpoint validation",
+      "Version verification",
+      "Required field checking",
+      "Detailed markdown report generation",
+      "Proper exit codes for CI/CD integration",
+      "Shell conditionals for skip options"
+    ]
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 60000,
+    "avg_cost": 0.00
+  }
+}

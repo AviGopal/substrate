@@ -1,0 +1,171 @@
+{
+  "id": "git-workflow-sync-deterministic",
+  "name": "Deterministic Git Workflow Sync",
+  "version": 1,
+  "description": "Fully deterministic git sync using only bash resolvers. Fetches latest changes, handles uncommitted work, rebases on remote, and pushes. No LLM reasoning needed - pure bash execution with proper error handling.",
+  "category": "infrastructure",
+  "execution_type": "template",
+  "tags": ["infrastructure.git", "deterministic", "automation"],
+  "input_shapes": ["git_repository"],
+  "output_shapes": ["git_sync_result"],
+  "variables": [
+    {
+      "name": "workDir",
+      "type": "string",
+      "required": false,
+      "default": ".",
+      "description": "Working directory (must be a git repository)"
+    },
+    {
+      "name": "remoteName",
+      "type": "string",
+      "required": false,
+      "default": "origin",
+      "description": "Remote name to sync with"
+    },
+    {
+      "name": "autoStash",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "Automatically stash uncommitted changes before rebase"
+    },
+    {
+      "name": "forcePush",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Use --force-with-lease for push (needed after rebase that changes history)"
+    },
+    {
+      "name": "skipPush",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Skip pushing to remote (for dry-run testing)"
+    },
+    {
+      "name": "skipRebase",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Skip rebase step (just fetch and push)"
+    },
+    {
+      "name": "outputFile",
+      "type": "string",
+      "required": false,
+      "default": "/tmp/git-sync-status.md",
+      "description": "Path to write status report"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "validate-git-repo",
+      "description": "Validate working directory is a git repository",
+      "resolver": "bash",
+      "config": {
+        "command": "set -e; cd '{{workDir}}'; if ! git rev-parse --git-dir >/dev/null 2>&1; then echo 'ERROR: Not a git repository: {{workDir}}'; exit 1; fi; BRANCH=$(git rev-parse --abbrev-ref HEAD); REMOTE_BRANCH=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo 'none'); echo \"REPO_ROOT=$(git rev-parse --show-toplevel)\"; echo \"CURRENT_BRANCH=$BRANCH\"; echo \"REMOTE_TRACKING=$REMOTE_BRANCH\"; echo 'Git repository validated'",
+        "timeout": 10000
+      },
+      "outputShapes": ["git_repo_info"]
+    },
+    {
+      "id": "fetch-remote",
+      "description": "Fetch latest changes from remote",
+      "resolver": "bash",
+      "dependencies": ["validate-git-repo"],
+      "config": {
+        "command": "set -e; cd '{{workDir}}'; echo '=== Fetching from {{remoteName}} ==='; git fetch {{remoteName}} --prune || { echo 'ERROR: Failed to fetch from {{remoteName}}'; exit 1; }; BRANCH=$(git rev-parse --abbrev-ref HEAD); AHEAD=$(git rev-list --count {{remoteName}}/$BRANCH..HEAD 2>/dev/null || echo '0'); BEHIND=$(git rev-list --count HEAD..{{remoteName}}/$BRANCH 2>/dev/null || echo '0'); echo \"AHEAD=$AHEAD commits ahead of remote\"; echo \"BEHIND=$BEHIND commits behind remote\"; echo 'Fetch completed'",
+        "timeout": 60000
+      },
+      "outputShapes": ["fetch_result"]
+    },
+    {
+      "id": "check-uncommitted",
+      "description": "Check for uncommitted changes and optionally stash them",
+      "resolver": "bash",
+      "dependencies": ["fetch-remote"],
+      "config": {
+        "command": "set -e; cd '{{workDir}}'; AUTO_STASH='{{autoStash}}'; echo '=== Checking for uncommitted changes ==='; CHANGES=$(git status --porcelain); if [ -z \"$CHANGES\" ]; then echo 'WORKING_TREE=clean'; echo 'No uncommitted changes'; exit 0; fi; echo 'WORKING_TREE=dirty'; echo \"Changes detected:\"; echo \"$CHANGES\" | head -20; if [ \"$AUTO_STASH\" = 'true' ]; then STASH_MSG=\"auto-stash-$(date +%Y%m%d-%H%M%S)\"; echo \"Stashing changes as: $STASH_MSG\"; git stash push -m \"$STASH_MSG\" --include-untracked || { echo 'ERROR: Failed to stash changes'; exit 1; }; echo 'STASHED=true'; else echo 'STASHED=false'; echo 'WARNING: Uncommitted changes exist but autoStash=false'; echo 'Rebase may fail or include unwanted changes'; fi",
+        "timeout": 30000
+      },
+      "outputShapes": ["stash_result"]
+    },
+    {
+      "id": "rebase-remote",
+      "description": "Rebase current branch on remote tracking branch",
+      "resolver": "bash",
+      "dependencies": ["check-uncommitted"],
+      "config": {
+        "command": "SKIP='{{skipRebase}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipRebase=true'; exit 0; fi; set -e; cd '{{workDir}}'; BRANCH=$(git rev-parse --abbrev-ref HEAD); REMOTE_BRANCH=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo ''); if [ -z \"$REMOTE_BRANCH\" ]; then echo 'WARNING: No upstream tracking branch configured'; echo 'Attempting to rebase on {{remoteName}}/$BRANCH'; REMOTE_BRANCH=\"{{remoteName}}/$BRANCH\"; fi; echo \"=== Rebasing $BRANCH onto $REMOTE_BRANCH ===\"; BEHIND=$(git rev-list --count HEAD..$REMOTE_BRANCH 2>/dev/null || echo '0'); if [ \"$BEHIND\" = '0' ]; then echo 'Already up to date, no rebase needed'; exit 0; fi; echo \"$BEHIND commits to rebase\"; git rebase \"$REMOTE_BRANCH\" || { echo 'ERROR: Rebase failed (conflicts detected)'; echo 'Run: git rebase --abort  to undo'; echo 'Run: git rebase --continue  after resolving conflicts'; exit 1; }; echo 'Rebase completed successfully'",
+        "timeout": 120000
+      },
+      "outputShapes": ["rebase_result"]
+    },
+    {
+      "id": "push-remote",
+      "description": "Push rebased branch to remote",
+      "resolver": "bash",
+      "dependencies": ["rebase-remote"],
+      "config": {
+        "command": "SKIP='{{skipPush}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipPush=true'; exit 0; fi; set -e; cd '{{workDir}}'; BRANCH=$(git rev-parse --abbrev-ref HEAD); FORCE='{{forcePush}}'; echo \"=== Pushing $BRANCH to {{remoteName}} ===\"; AHEAD=$(git rev-list --count {{remoteName}}/$BRANCH..HEAD 2>/dev/null || echo '0'); if [ \"$AHEAD\" = '0' ]; then echo 'Nothing to push (already in sync)'; exit 0; fi; echo \"$AHEAD commits to push\"; if [ \"$FORCE\" = 'true' ]; then echo 'Using --force-with-lease (safe force push)'; git push --force-with-lease {{remoteName}} $BRANCH || { echo 'ERROR: Force push failed'; exit 1; }; else git push {{remoteName}} $BRANCH || { echo 'ERROR: Push failed'; echo 'If rebase changed history, use forcePush=true'; exit 1; }; fi; echo 'Push completed'",
+        "timeout": 120000
+      },
+      "outputShapes": ["push_result"]
+    },
+    {
+      "id": "restore-stash",
+      "description": "Restore stashed changes if any were stashed",
+      "resolver": "bash",
+      "dependencies": ["push-remote"],
+      "config": {
+        "command": "cd '{{workDir}}'; echo '=== Checking for stashed changes ==='; STASH_LIST=$(git stash list | grep 'auto-stash-' | head -1 || echo ''); if [ -z \"$STASH_LIST\" ]; then echo 'No auto-stash found, nothing to restore'; exit 0; fi; echo \"Found stash: $STASH_LIST\"; echo 'Restoring stashed changes...'; git stash pop || { echo 'WARNING: Stash pop failed (may have conflicts)'; echo 'Manual resolution may be needed'; echo 'Stash still available: git stash list'; exit 0; }; echo 'Stash restored successfully'",
+        "timeout": 30000
+      },
+      "outputShapes": ["stash_restore_result"]
+    },
+    {
+      "id": "generate-report",
+      "description": "Generate sync status report",
+      "resolver": "bash",
+      "dependencies": ["restore-stash"],
+      "config": {
+        "command": "cd '{{workDir}}'; BRANCH=$(git rev-parse --abbrev-ref HEAD); COMMIT=$(git rev-parse --short HEAD); REMOTE_BRANCH=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo 'none'); STATUS=$(git status --short 2>/dev/null || echo 'clean'); AHEAD=$(git rev-list --count {{remoteName}}/$BRANCH..HEAD 2>/dev/null || echo '0'); BEHIND=$(git rev-list --count HEAD..{{remoteName}}/$BRANCH 2>/dev/null || echo '0'); cat > '{{outputFile}}' << 'REPORT_EOF'\n# Git Sync Status Report\n\n## Branch Info\n- **Local Branch**: $BRANCH\n- **Remote Tracking**: $REMOTE_BRANCH\n- **Current Commit**: $COMMIT\n\n## Sync Status\n- **Ahead**: $AHEAD commits\n- **Behind**: $BEHIND commits\n\n## Working Tree\n```\n$STATUS\n```\n\n## Recent Commits\nREPORT_EOF\ngit log --oneline -5 >> '{{outputFile}}' 2>/dev/null; echo ''; echo \"Report written to: {{outputFile}}\"; echo 'Sync completed successfully'",
+        "timeout": 15000
+      },
+      "outputShapes": ["sync_report"]
+    }
+  ],
+  "integration": {
+    "pre_checks": [
+      "git rev-parse --git-dir >/dev/null 2>&1"
+    ],
+    "post_checks": [
+      "git status --porcelain | wc -l | grep -q '^0$' || true"
+    ]
+  },
+  "metadata": {
+    "primordial": false,
+    "bootstrap": false,
+    "teaches": ["Git workflows", "Rebase strategy", "Stash management"],
+    "level": 1,
+    "use_cases": ["Daily sync", "Pre-deploy sync", "CI/CD pipelines"],
+    "prerequisites": ["git"],
+    "improvements_over_original": [
+      "Fully deterministic - no LLM reasoning needed",
+      "All tasks use bash resolver instead of prompt/subagent",
+      "Proper error handling with exit codes",
+      "Shell conditionals for skip options",
+      "Auto-stash with restore after push",
+      "Generates status report file",
+      "Configurable force-push option for rebase scenarios"
+    ]
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 60000,
+    "avg_cost": 0.00
+  }
+}

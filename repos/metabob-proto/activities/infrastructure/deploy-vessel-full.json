@@ -1,0 +1,231 @@
+{
+  "id": "deploy-vessel-full",
+  "name": "Full Vessel Deployment Pipeline",
+  "version": 1,
+  "description": "Complete CI/CD deployment for vessels with version checking, submodule management, and helm release recovery. Uses bash resolvers for full determinism.",
+  "category": "infrastructure",
+  "execution_type": "template",
+  "tags": ["infrastructure.deployment", "deterministic", "submodule-management"],
+  "input_shapes": ["vessel_name"],
+  "output_shapes": ["deployment_result"],
+  "variables": [
+    {
+      "name": "vesselName",
+      "type": "string",
+      "required": true,
+      "description": "Name of the vessel to deploy (e.g., 'metabob-activity-api')"
+    },
+    {
+      "name": "environment",
+      "type": "string",
+      "required": false,
+      "default": "production",
+      "description": "Target environment: local, canary, or production"
+    },
+    {
+      "name": "namespace",
+      "type": "string",
+      "required": false,
+      "default": "activity-system",
+      "description": "Kubernetes namespace"
+    },
+    {
+      "name": "healthEndpoint",
+      "type": "string",
+      "required": false,
+      "default": "https://activity.metabob.com/health",
+      "description": "Health check URL"
+    },
+    {
+      "name": "skipPush",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Skip Docker push (for dry-run testing)"
+    },
+    {
+      "name": "deploymentRepo",
+      "type": "string",
+      "required": false,
+      "default": "repos/deployment",
+      "description": "Path to deployment repository"
+    },
+    {
+      "name": "skipDeploy",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Skip helmfile deploy (for dry-run testing)"
+    },
+    {
+      "name": "mainRepo",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "Path to main vessel repo for version comparison (e.g., 'repos/metabob-activity-api'). Empty to skip version check."
+    },
+    {
+      "name": "skipSubmoduleUpdate",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Skip submodule clean and update steps"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "check-versions",
+      "description": "Compare versions between main repo, deployment submodule, and production values",
+      "resolver": "bash",
+      "config": {
+        "command": "MAIN_REPO='{{mainRepo}}'; DEPLOY_REPO='{{deploymentRepo}}'; VESSEL='{{vesselName}}'; ENV='{{environment}}'; if [ -z \"$MAIN_REPO\" ]; then echo 'SKIPPED: mainRepo not specified'; exit 0; fi; echo '=== Version Comparison ==='; MAIN_VER='N/A'; SUB_VER='N/A'; PROD_TAG='N/A'; if [ -d \"$MAIN_REPO\" ]; then MAIN_VER=$(cd \"$MAIN_REPO\" && jq -r '.version // \"unknown\"' package.json 2>/dev/null || echo 'unknown'); MAIN_SHA=$(cd \"$MAIN_REPO\" && git rev-parse --short=7 HEAD 2>/dev/null || echo 'unknown'); echo \"Main repo:       $MAIN_VER ($MAIN_SHA)\"; fi; if [ -d \"$DEPLOY_REPO/vessels/$VESSEL\" ]; then SUB_VER=$(cd \"$DEPLOY_REPO/vessels/$VESSEL\" && jq -r '.version // \"unknown\"' package.json 2>/dev/null || echo 'unknown'); SUB_SHA=$(cd \"$DEPLOY_REPO/vessels/$VESSEL\" && git rev-parse --short=7 HEAD 2>/dev/null || echo 'unknown'); echo \"Submodule:       $SUB_VER ($SUB_SHA)\"; fi; if [ -f \"$DEPLOY_REPO/environments/$ENV.values.yaml\" ]; then PROD_TAG=$(yq eval '.\"'$VESSEL'\".image.tag // \"unknown\"' \"$DEPLOY_REPO/environments/$ENV.values.yaml\" 2>/dev/null || echo 'unknown'); echo \"Production tag:  $PROD_TAG\"; fi; echo ''; if [ \"$MAIN_SHA\" != \"$SUB_SHA\" ] && [ \"$MAIN_SHA\" != 'unknown' ] && [ \"$SUB_SHA\" != 'unknown' ]; then echo \"WARNING: Main repo and submodule are out of sync\"; echo \"  Main:      $MAIN_SHA\"; echo \"  Submodule: $SUB_SHA\"; fi",
+        "timeout": 30000
+      },
+      "outputShapes": ["version_comparison"]
+    },
+    {
+      "id": "clean-submodule",
+      "description": "Clean untracked files from deployment submodule",
+      "resolver": "bash",
+      "dependencies": ["check-versions"],
+      "config": {
+        "command": "SKIP='{{skipSubmoduleUpdate}}'; DEPLOY_REPO='{{deploymentRepo}}'; VESSEL='{{vesselName}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipSubmoduleUpdate=true'; exit 0; fi; if [ ! -d \"$DEPLOY_REPO/vessels/$VESSEL\" ]; then echo 'SKIPPED: Vessel directory not found in submodule'; exit 0; fi; echo '=== Cleaning submodule ==='; cd \"$DEPLOY_REPO/vessels/$VESSEL\"; DIRTY=$(git status --porcelain 2>/dev/null | wc -l); if [ \"$DIRTY\" -gt 0 ]; then echo \"Found $DIRTY untracked/modified files\"; git status --short; echo ''; echo 'Cleaning...'; git clean -fd; git checkout -- . 2>/dev/null || true; echo 'Cleaned'; else echo 'Submodule is clean'; fi",
+        "timeout": 30000
+      },
+      "outputShapes": ["clean_result"]
+    },
+    {
+      "id": "update-submodule",
+      "description": "Fetch and checkout latest commit in submodule",
+      "resolver": "bash",
+      "dependencies": ["clean-submodule"],
+      "config": {
+        "command": "SKIP='{{skipSubmoduleUpdate}}'; DEPLOY_REPO='{{deploymentRepo}}'; VESSEL='{{vesselName}}'; MAIN_REPO='{{mainRepo}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipSubmoduleUpdate=true'; exit 0; fi; if [ ! -d \"$DEPLOY_REPO/vessels/$VESSEL\" ]; then echo 'SKIPPED: Vessel directory not found in submodule'; exit 0; fi; echo '=== Updating submodule ==='; cd \"$DEPLOY_REPO/vessels/$VESSEL\"; BEFORE_SHA=$(git rev-parse --short=7 HEAD); echo \"Before: $BEFORE_SHA\"; git fetch origin; if [ -n \"$MAIN_REPO\" ] && [ -d \"$MAIN_REPO\" ]; then TARGET_SHA=$(cd \"$MAIN_REPO\" && git rev-parse HEAD); echo \"Checking out main repo HEAD: $TARGET_SHA\"; git checkout $TARGET_SHA; else DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo 'main'); echo \"Checking out origin/$DEFAULT_BRANCH\"; git checkout origin/$DEFAULT_BRANCH; fi; AFTER_SHA=$(git rev-parse --short=7 HEAD); echo \"After: $AFTER_SHA\"; if [ \"$BEFORE_SHA\" != \"$AFTER_SHA\" ]; then echo \"Updated: $BEFORE_SHA -> $AFTER_SHA\"; else echo \"No change (already at latest)\"; fi",
+        "timeout": 60000
+      },
+      "outputShapes": ["submodule_update"]
+    },
+    {
+      "id": "detect-version",
+      "description": "Detect version and commit SHA from vessel",
+      "resolver": "bash",
+      "dependencies": ["update-submodule"],
+      "config": {
+        "command": "cd {{deploymentRepo}}/vessels/{{vesselName}} && VERSION=$(jq -r '.version // \"0.1.0\"' package.json) && SHA=$(git rev-parse --short=7 HEAD) && echo \"VERSION=$VERSION\" && echo \"SHA=$SHA\" && echo \"TAG=$VERSION-$SHA\"",
+        "timeout": 10000
+      },
+      "outputShapes": ["version_info"]
+    },
+    {
+      "id": "update-values",
+      "description": "Update production values with new image tag",
+      "resolver": "bash",
+      "dependencies": ["detect-version"],
+      "config": {
+        "command": "cd {{deploymentRepo}} && TAG=$(cd vessels/{{vesselName}} && echo \"$(jq -r '.version' package.json)-$(git rev-parse --short=7 HEAD)\") && CURRENT=$(yq eval '.\"{{vesselName}}\".image.tag' environments/{{environment}}.values.yaml) && if [ \"$CURRENT\" = \"$TAG\" ]; then echo \"Already set to: $TAG\"; else yq eval -i '.\"{{vesselName}}\".image.tag = \"'$TAG'\"' environments/{{environment}}.values.yaml && echo \"Updated: $CURRENT -> $TAG\"; fi",
+        "timeout": 10000
+      },
+      "outputShapes": ["values_updated"]
+    },
+    {
+      "id": "build-image",
+      "description": "Build Docker image",
+      "resolver": "bash",
+      "dependencies": ["update-values"],
+      "config": {
+        "command": "cd {{deploymentRepo}} && TAG=$(cd vessels/{{vesselName}} && echo \"$(jq -r '.version' package.json)-$(git rev-parse --short=7 HEAD)\") && docker build -f vessels/{{vesselName}}/Dockerfile -t metabobapp/{{vesselName}}:$TAG -t metabobapp/{{vesselName}}:latest vessels/ && echo \"Built: metabobapp/{{vesselName}}:$TAG\"",
+        "timeout": 300000
+      },
+      "outputShapes": ["docker_image"]
+    },
+    {
+      "id": "push-image",
+      "description": "Push Docker image to registry",
+      "resolver": "bash",
+      "dependencies": ["build-image"],
+      "config": {
+        "command": "SKIP='{{skipPush}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipPush=true'; else cd {{deploymentRepo}} && TAG=$(cd vessels/{{vesselName}} && echo \"$(jq -r '.version' package.json)-$(git rev-parse --short=7 HEAD)\") && docker push metabobapp/{{vesselName}}:$TAG && docker push metabobapp/{{vesselName}}:latest && echo \"Pushed: metabobapp/{{vesselName}}:$TAG\"; fi",
+        "timeout": 300000
+      },
+      "outputShapes": ["push_result"]
+    },
+    {
+      "id": "fix-pending-releases",
+      "description": "Fix any pending or failed helm releases before deploy",
+      "resolver": "bash",
+      "dependencies": ["push-image"],
+      "config": {
+        "command": "SKIP='{{skipDeploy}}'; NS='{{namespace}}'; VESSEL='{{vesselName}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipDeploy=true'; exit 0; fi; echo '=== Checking Helm Release Status ==='; STATUS=$(helm status $VESSEL -n $NS -o json 2>/dev/null | jq -r '.info.status // \"not-found\"' || echo 'not-found'); echo \"Current status: $STATUS\"; if [ \"$STATUS\" = 'pending-install' ] || [ \"$STATUS\" = 'pending-upgrade' ] || [ \"$STATUS\" = 'pending-rollback' ] || [ \"$STATUS\" = 'failed' ]; then echo \"Fixing stuck release (status: $STATUS)...\"; REVISION=$(helm history $VESSEL -n $NS -o json 2>/dev/null | jq -r '.[0].revision // 0' || echo '0'); if [ \"$REVISION\" -gt 0 ]; then echo \"Rolling back to revision 0 (uninstall and reinstall)\"; helm rollback $VESSEL 0 -n $NS 2>/dev/null || helm uninstall $VESSEL -n $NS --wait 2>/dev/null || true; echo 'Fixed'; else echo \"No history found, uninstalling...\"; helm uninstall $VESSEL -n $NS --wait 2>/dev/null || true; echo 'Uninstalled'; fi; elif [ \"$STATUS\" = 'not-found' ]; then echo 'Release not found (fresh install)'; else echo \"Release healthy (status: $STATUS)\"; fi",
+        "timeout": 120000
+      },
+      "outputShapes": ["release_status"]
+    },
+    {
+      "id": "deploy",
+      "description": "Deploy with helmfile (fixes field manager conflicts first)",
+      "resolver": "bash",
+      "dependencies": ["fix-pending-releases"],
+      "config": {
+        "command": "SKIP='{{skipDeploy}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipDeploy=true'; else cd {{deploymentRepo}} && TAG=$(cd vessels/{{vesselName}} && echo \"$(jq -r '.version' package.json)-$(git rev-parse --short=7 HEAD)\") && kubectl patch deployment {{vesselName}} -n {{namespace}} --type='merge' -p '{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"{{vesselName}}\",\"image\":\"metabobapp/{{vesselName}}:'$TAG'\"}]}}}}' --field-manager=helm 2>/dev/null || true && helmfile -f helmfile.yaml.gotmpl --environment {{environment}} -l name={{vesselName}} sync; fi",
+        "timeout": 600000
+      },
+      "outputShapes": ["deployment_result"]
+    },
+    {
+      "id": "verify-health",
+      "description": "Verify deployment health",
+      "resolver": "bash",
+      "dependencies": ["deploy"],
+      "config": {
+        "command": "SKIP='{{skipDeploy}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipDeploy=true - no health check needed'; else for i in 1 2 3 4 5; do STATUS=$(curl -s -o /dev/null -w '%{http_code}' {{healthEndpoint}}); if [ \"$STATUS\" = \"200\" ]; then echo \"HEALTHY: $STATUS\"; curl -s {{healthEndpoint}} | jq -c .; exit 0; fi; echo \"Attempt $i: HTTP $STATUS\"; sleep 10; done; echo 'FAILED after 5 attempts'; exit 1; fi",
+        "timeout": 120000
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "linear"
+      },
+      "outputShapes": ["health_status"]
+    },
+    {
+      "id": "verify-image",
+      "description": "Verify the deployed pod is running the expected image",
+      "resolver": "bash",
+      "dependencies": ["verify-health"],
+      "config": {
+        "command": "SKIP='{{skipDeploy}}'; NS='{{namespace}}'; VESSEL='{{vesselName}}'; if [ \"$SKIP\" = 'true' ]; then echo 'SKIPPED: skipDeploy=true'; exit 0; fi; echo '=== Verifying Deployed Image ==='; EXPECTED_TAG=$(cd {{deploymentRepo}}/vessels/$VESSEL && echo \"$(jq -r '.version' package.json)-$(git rev-parse --short=7 HEAD)\"); ACTUAL_IMAGE=$(kubectl get pods -n $NS -l app.kubernetes.io/name=$VESSEL -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || echo 'unknown'); echo \"Expected tag: $EXPECTED_TAG\"; echo \"Actual image: $ACTUAL_IMAGE\"; if echo \"$ACTUAL_IMAGE\" | grep -q \"$EXPECTED_TAG\"; then echo 'VERIFIED: Image matches expected tag'; else echo 'WARNING: Image may not match expected tag'; fi",
+        "timeout": 30000
+      },
+      "outputShapes": ["image_verification"]
+    }
+  ],
+  "integration": {
+    "pre_checks": [
+      "command -v docker >/dev/null 2>&1",
+      "command -v kubectl >/dev/null 2>&1",
+      "command -v helmfile >/dev/null 2>&1",
+      "command -v helm >/dev/null 2>&1",
+      "command -v yq >/dev/null 2>&1",
+      "command -v jq >/dev/null 2>&1",
+      "command -v git >/dev/null 2>&1",
+      "command -v curl >/dev/null 2>&1"
+    ],
+    "post_checks": [
+      "curl -s -o /dev/null -w '%{http_code}' {{healthEndpoint}} | grep -q '^200$'"
+    ]
+  },
+  "metadata": {
+    "primordial": false,
+    "bootstrap": false,
+    "teaches": ["CI/CD deployment", "Docker builds", "Helmfile sync", "Submodule management", "Helm release recovery"],
+    "level": 2,
+    "use_cases": ["Full deployment with version checking", "Recovery from stuck helm releases", "Submodule synchronization"],
+    "prerequisites": ["docker", "kubectl", "helmfile", "helm", "yq", "jq", "git", "curl"],
+    "derived_from": "deploy-vessel-manual"
+  },
+  "estimated_metrics": {
+    "execution_count": 0,
+    "success_rate": 0,
+    "avg_duration_ms": 420000,
+    "avg_cost": 0.00
+  }
+}
