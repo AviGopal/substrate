@@ -28,10 +28,22 @@ JSON
 
 ## Usage
 
+### Vessel Identity
+
+As of April 2026 (minibob `341bfb5`), vessels must supply their own `vessel_id` — the old hostname fallback was removed. Callers that want discovery registration or trace attribution must set one of:
+
+- `MINIBOB_VESSEL_ID` (env)
+- `MINIBOB_INSTANCE_ID` (env, legacy alias)
+- `POD_NAME` (env, Kubernetes downward API)
+- `discovery.vesselId` in `~/.metabob/config.json` or project config
+
+If none are set, discovery registration is skipped and activity traces emit with an undefined `vessel_id`, which excludes them from vessel-grouped learning queries.
+
 ### Start Terminal Vessel
 ```bash
 # In terminal 1
 cd repos/terminal
+export MINIBOB_VESSEL_ID="terminal-$(hostname)-$$"  # explicit, stable per process
 bun run src/index.ts --port 9137
 ```
 

@@ -369,9 +369,22 @@ Task 5: Validate
     success: true,
     duration_ms: 45000,
     cost_usd: 0.12
-  }
+  },
+
+  // Composition (for nested/meta-activities)
+  parent_execution_id: "exec-parent-123",           // Direct parent in composition tree
+  composition_chain: ["exec-root-42", "exec-parent-123", "exec-abc123"]
+  // Denormalized ancestor chain, ordered root-first. Populated by the
+  // activity-api write path (v1.5.5+, April 2026) so queries can filter
+  // by root goal or any intermediate ancestor without recursive joins.
 }
 ```
+
+**Composition fields** (added April 2026, activity-api v1.5.5):
+- `parent_execution_id` — the direct caller. Set when one activity invokes another (e.g. orchestrator → worker).
+- `composition_chain` — root-first list of all ancestors including self. Written atomically alongside the execution row; lets the learning loop answer "which root goals triggered resolver X" cheaply.
+
+Both fields are optional for backward compatibility. Existing traces without them remain valid; queries must handle null values.
 
 ### 5. Learn
 
