@@ -360,6 +360,17 @@ graph TD
 
 **Implementation:** `repos/metabob-activity-api/src/routes/activities.ts:3285-3340` (boosts 1–8), `:3757-3779` (shape mismatch penalty + boost_breakdown logging)
 
+### How tags are extracted (Boost #1 input)
+
+Boost #1 (Tag Match Quality) compares template tags against **prefixes extracted deterministically from the goal description**, not against the LLM semantic analysis from Sub-Activity 1. The extraction lives in `repos/metabob-activity-api/src/utils/semantic-tags.ts`:
+
+- `KEYWORD_TO_TAGS` — a static keyword → tag-prefix map (hundreds of entries across `tool.*`, `bugfix.*`, `development.*`, `meta.*`, `feature.*`). Each keyword maps to an ordered list of prefixes (most specific first). Compound keys like `"dependency vulnerabilities"` and `"find security"` let multi-word phrases match in a single lookup.
+- `extractTagPrefixes(description)` — tokenises the description and returns the union of matched prefixes.
+- `calculateTagMatchQuality(extractedPrefixes, templateTags)` — scores template-tag match with a position-weighted formula: first extracted prefix contributes weight `1.0`, second `0.5`, third `0.33`, etc. A template tag counts as a match when it `startsWith(prefix)`. Final quality is `totalScore / maxScore` in `[0, 1]`; the boost is `floor(quality * 10)`.
+- `analyzeTaskSemantics(description)` — the combined entry point called from `activities.ts:3533` during the recommend path.
+
+The keyword map is evolved in-repo as new task vocabularies emerge (e.g. `23994d1` on 2026-04-22 added security-focused keys: `owasp`, `scan`, `audit`, `cve`, `resolve`, and the compound phrases above). This layer is deliberately deterministic — it exists so tag pre-filtering and Boost #1 do not depend on an LLM call. The Sub-Activity 1 LLM analysis (category/intent/capabilities) runs in parallel on the MiniBob side; the two extractions converge at the `/recommend` call.
+
 ## Decomposition: Tiered Fallback Query Strategy
 
 ```mermaid
@@ -577,6 +588,7 @@ At each stage, the following metrics are captured for learning:
 | Backend Recommendation | `repos/metabob-activity-api/src/routes/activities.ts` | 3080-3116 | POST /recommend endpoint |
 | Thompson Sampling | `repos/metabob-activity-api/src/routes/activities.ts` | 3345 | Beta distribution sampling |
 | Heuristic Boosts | `repos/metabob-activity-api/src/routes/activities.ts` | 3285-3340, 3757-3779 | 8 boost components + shape mismatch penalty |
+| Tag Extraction | `repos/metabob-activity-api/src/utils/semantic-tags.ts` | Full file | Keyword→tag-prefix map + position-weighted match quality (input to Boost #1) |
 | Paradigm Queries | `repos/metabob-activity-api/src/db/paradigm.ts` | 2915-3049 | Tiered fallback queries |
 | Shape Scoring | `repos/metabob-activity-api/src/db/paradigm.ts` | 797-909 | Shape-conditioned scores |
 | Composition Tracking | `repos/metabob-activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
