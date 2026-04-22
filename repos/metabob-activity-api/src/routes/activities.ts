@@ -426,10 +426,19 @@ async function enrichTemplatesWithMetrics(
       allMetricIds: metricsResult?.map((m: any) => m.activity_id || m.variant_id)
     });
 
+    // Helper function to normalize IDs for consistent comparison
+    // Strips "activity:" prefix and angle brackets to create canonical lookup keys
+    const normalizeIdForLookup = (id: string | unknown): string => {
+      const idStr = typeof id === 'string' ? id : String(id);
+      return idStr.replace(/^activity:/, '').replace(/[⟨⟩`]/g, '');
+    };
+
     // Create a map of activity_id -> metrics (handle both canonical and legacy field names)
     const metricsMap = new Map();
     for (const metric of metricsResult) {
       const id = metric.activity_id || metric.variant_id;
+      // Normalize the ID for consistent lookup (strip prefix and brackets)
+      const normalizedKey = normalizeIdForLookup(id);
       // Normalize metrics to canonical field names
       const normalizedMetric = {
         id,
@@ -446,15 +455,14 @@ async function enrichTemplatesWithMetrics(
         created_at: metric.created_at,
         updated_at: metric.updated_at,
       };
-      metricsMap.set(id, normalizedMetric);
+      metricsMap.set(normalizedKey, normalizedMetric);
     }
 
     // Attach metrics to each template using canonical 'id' field
     // Normalize template ID to match metricsMap keys (plain IDs)
     // Note: IDs may be SurrealDB RecordId objects, so convert to string first
     const enriched = templates.map(template => {
-      const idStr = typeof template.id === 'string' ? template.id : String(template.id);
-      const normalizedId = idStr.replace(/^activity:/, '').replace(/[⟨⟩`]/g, '');
+      const normalizedId = normalizeIdForLookup(template.id);
       const metrics = metricsMap.get(normalizedId);
 
       logger.debug('Template metrics lookup', {
@@ -1500,6 +1508,46 @@ app.post('/executions', async (c) => {
     );
     const activityId = templateLookup[0]?.id || activityIdFromRequest;
 
+    // Auto-create missing base template if it doesn't exist (v1.4.5)
+    // This handles cases where MiniBob executes embedded templates without registering them first
+    if (!templateLookup[0]) {
+      logger.info('[template] Auto-creating missing base template from execution', {
+        activity_id: activityIdFromRequest,
+        org_id: orgId
+      });
+
+      try {
+        // Create minimal template with auto-created tag
+        await surrealDB.query(`
+          INSERT INTO activity {
+            id: $id,
+            name: $name,
+            description: "Auto-created from execution trace",
+            tags: ["infrastructure.auto-created"],
+            tag_prefixes: ["infrastructure"],
+            execution_type: "template",
+            scope: "org",
+            org_id: $org_id,
+            created_at: time::now(),
+            updated_at: time::now()
+          }
+        `, {
+          id: activityIdFromRequest,
+          name: activityIdFromRequest.replace(/^activity:/, '').replace(/[⟨⟩`]/g, ''),
+          org_id: orgId
+        });
+
+        logger.info('[template] Successfully auto-created base template', {
+          activity_id: activityIdFromRequest
+        });
+      } catch (templateError) {
+        logger.warn('[template] Failed to auto-create template (non-blocking)', {
+          activity_id: activityIdFromRequest,
+          error: templateError instanceof Error ? templateError.message : String(templateError)
+        });
+      }
+    }
+
     // Emit execution_started event via WebSocket
     const executionStartedData: any = {
       execution_id: executionId,
@@ -1946,6 +1994,7 @@ app.get('/executions', async (c) => {
         trace AS execution_trace,
         trace.state_transition.after AS component_changes,
         parent_execution_id,
+        composition_chain,
         org_id,
         project_id,
         vessel_id,
@@ -3655,9 +3704,10 @@ app.post('/recommend', async (c) => {
         const templateShapes = template.input_shapes || [];
         let totalBoost = 0;
 
-        // 1. Tag match quality boost (+0 to +6 based on match quality)
+        // 1. Tag match quality boost (+0 to +10 based on match quality)
+        // Higher weight ensures semantic relevance outweighs execution history
         const tagMatchQuality = semantics.getMatchQuality(templateTags);
-        const tagBoost = Math.floor(tagMatchQuality * 6);
+        const tagBoost = Math.floor(tagMatchQuality * 10);
         totalBoost += tagBoost;
 
         // 2. Shape compatibility boost (+3 if input_shapes ⊆ available shapes)
@@ -3672,9 +3722,10 @@ app.post('/recommend', async (c) => {
         const recencyBoost = daysSinceCreation < 30 ? 1 : 0;
         totalBoost += recencyBoost;
 
-        // 4. Execution history boost (proven templates get +1 to +5)
+        // 4. Execution history boost (proven templates get +1 to +3)
+        // Reduced weight prevents well-tested but irrelevant templates from dominating
         const executionCount = (scores?.successes || 0) + (scores?.failures || 0);
-        const historyBoost = Math.min(5, Math.floor(executionCount / 10));
+        const historyBoost = Math.min(3, Math.floor(executionCount / 20));
         totalBoost += historyBoost;
 
         // 5. Scope preference boost (+1 for org-specific templates)
@@ -3702,6 +3753,49 @@ app.post('/recommend', async (c) => {
         // +0 to +4 based on coverage (0% = +0, 50% = +2, 100% = +4)
         const outputShapeBoost = Math.floor(outputCoverage * 4);
         totalBoost += outputShapeBoost;
+
+        // 9. Shape mismatch penalty (penalize templates missing required shapes)
+        // If we have expected shapes (from context/impulses), penalize activities that don't support them
+        let shapeMismatchPenalty = 0;
+        if (effectiveShapes && effectiveShapes.length > 0) {
+          const missingShapes = effectiveShapes.filter(
+            (shape: string) => !templateShapes.includes(shape)
+          );
+          shapeMismatchPenalty = missingShapes.length * -2;
+          totalBoost += shapeMismatchPenalty;
+
+          if (missingShapes.length > 0) {
+            logger.debug('Shape mismatch penalty', {
+              template_id: template.id,
+              template_name: template.name,
+              expected_shapes: effectiveShapes,
+              template_shapes: templateShapes,
+              missing_shapes: missingShapes,
+              missing_count: missingShapes.length,
+              penalty: shapeMismatchPenalty,
+            });
+          }
+        }
+
+        // Log boost calculation for debugging
+        logger.debug('Thompson boost calculation', {
+          template_id: activityId,
+          template_name: template.name || template.variant_name,
+          execution_boost: historyBoost,
+          tag_boost: tagBoost,
+          total_boost: totalBoost,
+          boost_breakdown: {
+            tag_match: tagBoost,
+            shape_compatible: shapeBoost,
+            recency: recencyBoost,
+            execution_history: historyBoost,
+            scope_preference: scopeBoost,
+            impulse_relevancy: impulseAlphaBoost,
+            category_match: categoryBoost,
+            output_shape_coverage: outputShapeBoost,
+            shape_mismatch_penalty: shapeMismatchPenalty,
+          },
+        });
 
         // Apply boosts and penalties
         alpha += totalBoost;
@@ -3742,6 +3836,7 @@ app.post('/recommend', async (c) => {
               impulse_relevancy: impulseAlphaBoost,
               category_match: categoryBoost,
               output_shape_coverage: outputShapeBoost,
+              shape_mismatch_penalty: shapeMismatchPenalty,
             },
             // Output shape analysis
             output_shape_analysis: expected_output_shapes.length > 0 ? {
