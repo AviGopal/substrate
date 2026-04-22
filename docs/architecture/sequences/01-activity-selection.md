@@ -86,10 +86,10 @@ sequenceDiagram
         Backend->>TS: computeHeuristicBoosts(template, goal)<br/>(activities.ts:3285-3340)
 
         Note over TS: 8 BOOST COMPONENTS:
-        Note over TS: 1. Tag Match Quality (+0 to +6)<br/>   - Exact: +6, Partial: +3, None: 0
+        Note over TS: 1. Tag Match Quality (+0 to +10)<br/>   - Exact: +10, Partial: +5, None: 0<br/>   (tagBoost = floor(quality * 10))
         Note over TS: 2. Shape Compatibility (+3)<br/>   - All required shapes available
         Note over TS: 3. Recency (+1)<br/>   - Recently used templates
-        Note over TS: 4. Execution History (+1 to +5)<br/>   - High success rate: +5<br/>   - Medium: +3, Low: +1
+        Note over TS: 4. Execution History (+1 to +3)<br/>   - min(3, floor(executionCount / 20))<br/>   (rebalanced 2026-04-22 to favor semantic relevance)
         Note over TS: 5. Scope Preference (+1)<br/>   - Local > file_write > read_only
         Note over TS: 6. Impulse Relevancy (+variable)<br/>   - Computed from relevance metrics
         Note over TS: 7. Category Match (+3)<br/>   - Exact category match
@@ -278,16 +278,16 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    Start([Template Candidate]) --> TagMatch["1. Tag Match Quality<br/>(+0 to +6)"]
+    Start([Template Candidate]) --> TagMatch["1. Tag Match Quality<br/>(+0 to +10)"]
 
     TagMatch --> TagExact{Exact match?}
-    TagExact -->|Yes| AddSix["+6"]
+    TagExact -->|Yes| AddTen["+10"]
     TagExact -->|No| TagPartial{Partial match?}
-    TagPartial -->|Yes| AddThree["+3"]
+    TagPartial -->|Yes| AddFive0["+5"]
     TagPartial -->|No| AddZero["+0"]
 
-    AddSix --> ShapeCheck
-    AddThree --> ShapeCheck
+    AddTen --> ShapeCheck
+    AddFive0 --> ShapeCheck
     AddZero --> ShapeCheck
 
     ShapeCheck["2. Shape Compatibility<br/>(+3)"] --> ShapeMatch{All required<br/>shapes available?}
@@ -304,14 +304,16 @@ graph TD
     AddOne --> History
     Skip3 --> History
 
-    History["4. Execution History<br/>(+1 to +5)"] --> SuccessRate{Success rate?}
-    SuccessRate -->|"> 80%"| AddFive["+5"]
-    SuccessRate -->|"60-80%"| AddThree3["+3"]
-    SuccessRate -->|"< 60%"| AddOne2["+1"]
+    History["4. Execution History<br/>(+0 to +3)<br/>min(3, floor(count / 20))"] --> ExecCount{executionCount?}
+    ExecCount -->|">= 60"| AddThreeH["+3"]
+    ExecCount -->|"40–59"| AddTwoH["+2"]
+    ExecCount -->|"20–39"| AddOneH["+1"]
+    ExecCount -->|"< 20"| AddZeroH["+0"]
 
-    AddFive --> Scope
-    AddThree3 --> Scope
-    AddOne2 --> Scope
+    AddThreeH --> Scope
+    AddTwoH --> Scope
+    AddOneH --> Scope
+    AddZeroH --> Scope
 
     Scope["5. Scope Preference<br/>(+1)"] --> ScopeCheck{Scope match?}
     ScopeCheck -->|Local| AddOne3["+1"]
