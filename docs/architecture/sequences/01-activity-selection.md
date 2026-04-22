@@ -12,7 +12,7 @@ This document maps the complete flow from user goal to activity execution throug
 2. **Impulse State Space** - Available shapes and impulses inform activity compatibility
 3. **Thompson Sampling** - Probabilistic template selection that learns which variants perform best
 4. **Tiered Fallback** - Three-tier query strategy (exact → compatible → full-text search)
-5. **Heuristic Boosts** - 8-point boost system influences exploration-exploitation balance
+5. **Heuristic Boosts** - 8 boost components + 1 mismatch penalty influence exploration-exploitation balance
 6. **Shape-Conditioned Scoring** - Activities scored based on impulse state space compatibility
 7. **Correlation Tracking** - Links selection decisions to execution outcomes for learning
 8. **Recursive Composition** - Activities can invoke other activities as sub-tasks
@@ -85,7 +85,7 @@ sequenceDiagram
     loop For each candidate template
         Backend->>TS: computeHeuristicBoosts(template, goal)<br/>(activities.ts:3285-3340)
 
-        Note over TS: 8 BOOST COMPONENTS:
+        Note over TS: 9 BOOST/PENALTY COMPONENTS:
         Note over TS: 1. Tag Match Quality (+0 to +10)<br/>   - Exact: +10, Partial: +5, None: 0<br/>   (tagBoost = floor(quality * 10))
         Note over TS: 2. Shape Compatibility (+3)<br/>   - All required shapes available
         Note over TS: 3. Recency (+1)<br/>   - Recently used templates
@@ -94,6 +94,7 @@ sequenceDiagram
         Note over TS: 6. Impulse Relevancy (+variable)<br/>   - Computed from relevance metrics
         Note over TS: 7. Category Match (+3)<br/>   - Exact category match
         Note over TS: 8. Output Shape Coverage (+0 to +4)<br/>   - Produces expected shapes
+        Note over TS: 9. Shape Mismatch Penalty (−2 × missing)<br/>   - Only when effectiveShapes provided<br/>   - Penalizes templates that can't run with<br/>     the available context (added 2026-04-22)
 
         TS->>TS: totalBoost = sum(boosts)
         TS->>TS: alpha += totalBoost
@@ -334,7 +335,15 @@ graph TD
     Skip7 --> Output
 
     Output["8. Output Shape Coverage<br/>(+0 to +4)"] --> OutputCalc["Count matching output shapes"]
-    OutputCalc --> FinalSum["Total Boost = Σ all boosts"]
+    OutputCalc --> ShapePenalty["9. Shape Mismatch Penalty<br/>(−2 × missing)"]
+
+    ShapePenalty --> ShapeMissing{effectiveShapes<br/>provided?}
+    ShapeMissing -->|No| Skip9["Skip"]
+    ShapeMissing -->|Yes| CountMissing["missing = effectiveShapes<br/>− templateShapes"]
+    CountMissing --> ApplyPenalty["totalBoost += missing.length × −2"]
+
+    ApplyPenalty --> FinalSum["Total Boost = Σ boosts − penalties"]
+    Skip9 --> FinalSum
 
     FinalSum --> ApplyBoost["α += totalBoost<br/>score = Beta(α, β).sample()"]
 
@@ -342,13 +351,14 @@ graph TD
 
     style Start fill:#e1f5ff
     style End fill:#c8e6c9
-    style AddSix fill:#c8e6c9
-    style AddThree fill:#fff9c4
-    style AddFive fill:#c8e6c9
+    style AddTen fill:#c8e6c9
+    style AddFive0 fill:#fff9c4
+    style AddThreeH fill:#c8e6c9
+    style ApplyPenalty fill:#ffcdd2
     style FinalSum fill:#ffd54f
 ```
 
-**Implementation:** `repos/metabob-activity-api/src/routes/activities.ts:3285-3340`
+**Implementation:** `repos/metabob-activity-api/src/routes/activities.ts:3285-3340` (boosts 1–8), `:3757-3779` (shape mismatch penalty + boost_breakdown logging)
 
 ## Decomposition: Tiered Fallback Query Strategy
 
@@ -493,7 +503,7 @@ Sub-Activity 2: Activity Recommendation
   │   ├─ Tier 1: Exact shape match
   │   ├─ Tier 2: Compatible activities
   │   └─ Tier 3: Full-text search
-  ├─ Heuristic Boosts Applied (8 components)
+  ├─ Heuristic Boosts Applied (8 components + shape mismatch penalty)
   ├─ Shape-Conditioned Scoring
   └─ Return ranked recommendations (or empty list)
   ↓
@@ -566,7 +576,7 @@ At each stage, the following metrics are captured for learning:
 | State Space Manager | `repos/minibob/src/state-space-manager.ts` | Full file | Shape querying, compatibility |
 | Backend Recommendation | `repos/metabob-activity-api/src/routes/activities.ts` | 3080-3116 | POST /recommend endpoint |
 | Thompson Sampling | `repos/metabob-activity-api/src/routes/activities.ts` | 3345 | Beta distribution sampling |
-| Heuristic Boosts | `repos/metabob-activity-api/src/routes/activities.ts` | 3285-3340 | 8-point boost system |
+| Heuristic Boosts | `repos/metabob-activity-api/src/routes/activities.ts` | 3285-3340, 3757-3779 | 8 boost components + shape mismatch penalty |
 | Paradigm Queries | `repos/metabob-activity-api/src/db/paradigm.ts` | 2915-3049 | Tiered fallback queries |
 | Shape Scoring | `repos/metabob-activity-api/src/db/paradigm.ts` | 797-909 | Shape-conditioned scores |
 | Composition Tracking | `repos/metabob-activity-api/src/routes/composition-edges.ts` | Full file | Composition edge storage |
@@ -604,7 +614,7 @@ This sequence spans **both MiniBob (execution) and activity-api (storage/learnin
 - Store activity templates persistently
 - Implement Thompson Sampling algorithm (α/β scoring)
 - Execute tiered fallback queries (exact → compatible → full-text)
-- Compute heuristic boosts (8-point system)
+- Compute heuristic boosts (8 boosts + shape mismatch penalty)
 - Track shape-conditioned performance metrics
 - Store execution traces for learning
 - Update composition edges
