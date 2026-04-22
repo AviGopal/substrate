@@ -36,20 +36,33 @@ Following [IMPULSE_ACTIVITY_FOUNDATION.md](../architecture/IMPULSE_ACTIVITY_FOUN
 
 ### Activity Learning Shapes
 
-(Not yet documented - these exist in activity-api implementation)
+Canonical source of truth for advertised shapes: [`repos/metabob-activity-api/src/config.ts`](../../repos/metabob-activity-api/src/config.ts) (`discovery.shapes`). Case handlers live in `repos/metabob-activity-api/src/routes/impulses.ts`. Do not advertise a shape here that has no `case` in that router.
 
-**Shapes in use**:
+**Read shapes** (v1.5.5):
 - `activityExecutionTrace` - Full execution trace with state transitions
 - `activityTemplate` - Activity template definitions
 - `activityMetrics` - Thompson Sampling statistics
-- `activityCompositionGraph` - Activity composition relationships
-- `impulseRelevanceMetrics` - Impulse relevance scores
-- `toolUsagePatterns` - Tool usage patterns
-- `executionSequences` - Execution sequence data
+- `executionTraceList` - Paginated execution list (browse/inspect)
+- `variantMetricsSummary` - Thompson Sampling summary per variant
+- `activityTemplateRecommendation` - Recommendation output of the recommend path
+- `activityTemplatesByMetrics` - Templates filtered/ordered by performance
+- `executionTraces` - Query-able slice of execution trace rows
+- `goal` - Goal records used by orchestrator / goal-seeking flows
+- `toolRiskProfile` - Per-tool risk signals extracted from traces
+- `compositionSuccess` - Composition-edge success stats (**renamed** from `activityCompositionGraph`)
+- `impulseRelevance` - Impulse relevance scores (**renamed** from `impulseRelevanceMetrics`)
+- `preValidationResult` - Pattern-based pre-validation verdicts for tool arguments
+
+**Write shapes** (v1.5.0+) — see [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md):
+- 14 `*_write` shapes (e.g. `activityExecutionTrace_write`, `activityFeedback_write`, `impulseRelevance_write`) that delegate to REST endpoints so activities can invoke learning-loop writes through `POST /v2/impulses/resolve` without hardcoding routes.
+
+**Destructive shapes** (admin-only, emit `upkeepAuditLog`):
+- `activityTemplate_update` / `activityTemplate_deprecate` — see [`../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md)
+- `activityExecutionTrace_delete` — hard delete, audited.
 
 **Resolver**: `activity-api`
 
-**TODO**: Document these shapes in `ACTIVITY_LEARNING_SHAPES.md`
+**Renamed shapes (2026-04)**: `activityCompositionGraph` → `compositionSuccess`; `impulseRelevanceMetrics` → `impulseRelevance`; `toolUsagePatterns` → (internal `toolUsage` table, no longer advertised as a read shape — use the `toolRiskProfile` aggregate or the `toolUsage_write` resolver). The legacy names remain defined in older migrations for back-compat but are not in the discovery advertisement.
 
 ### Code Analysis Shapes
 

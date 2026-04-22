@@ -103,6 +103,7 @@ Hard deletion, when truly needed, goes through `activityExecutionTrace_delete` a
 
 ## Related
 
+- [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the full `*_write` / `*_update` / `*_delete` resolver contract, including auth paths and upkeepAuditLog emission
 - `IMPULSE_ACTIVITY_FOUNDATION.md` — why the backend is a trace store, not a universal resolver
 - `VARIANT_CREATION_DESIGN.md` — how variants are spawned (the other end of the lifecycle)
 - `sql/migrations/081-composition-chain-on-traces.surql` — sibling migration from the same batch

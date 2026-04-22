@@ -334,12 +334,30 @@ const unloaded = ImpulseResolver.unload(impulse)
 - `vesselRegistry`: Query full registry
 
 **Activity-API** (learning backend):
+
+Read resolvers (as advertised via discovery; see `repos/metabob-activity-api/src/config.ts`):
 - `activityExecutionTrace`: Full execution trace with state
 - `activityTemplate`: Template structure and metadata
 - `activityMetrics`: Performance data
-- `activityCompositionGraph`: Activity composition relationships
-- `impulseRelevanceMetrics`: Impulse relevance scores
-- `toolUsagePatterns`: Tool usage patterns
+- `executionTraceList`: Paginated list of executions for browse/inspect
+- `variantMetricsSummary`: Thompson Sampling summary per variant
+- `activityTemplateRecommendation`: Recommendation output of the recommend path
+- `activityTemplatesByMetrics`: Templates filtered/ordered by performance
+- `executionTraces`: Query-able slice of execution trace rows
+- `goal`: Goal records (used by orchestrator / goal-seeking flows)
+- `toolRiskProfile`: Per-tool risk signals extracted from traces
+- `compositionSuccess`: Composition-edge success statistics (renamed from `activityCompositionGraph`)
+- `impulseRelevance`: Impulse relevance scores (renamed from `impulseRelevanceMetrics`)
+- `preValidationResult`: Pattern-based pre-validation verdicts for tool arguments
+
+Write/destructive resolvers (v1.5.0+, invoked via `POST /v2/impulses/resolve`):
+- `*_write` — 14 learning-loop writes exposed as impulse shapes (e.g. `activityExecutionTrace_write`, `activityFeedback_write`, `impulseRelevance_write`). Each delegates to the equivalent REST endpoint so activities can invoke writes without hardcoding REST knowledge.
+- `activityTemplate_update` / `activityTemplate_deprecate` — whitelisted mutations and soft-delete. Admin-only via SurrealDB PERMISSIONS; each emits an `upkeepAuditLog` impulse.
+- `activityExecutionTrace_delete` — hard delete with audit log.
+
+See [`docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) for the full list and contract.
+
+Cost & metrics (separate family, resolved by activity-api):
 - `executionCostSummary`: Aggregate cost metrics for executions (grouped by activity/vessel)
 - `resolverCostAnalysis`: Cost breakdown by resolver tier and resolver ID
 - `vesselPerformanceMetrics`: Performance and cost metrics for specific vessels
@@ -473,6 +491,10 @@ execution {
     latency_ms: number           // Resolution duration
     cost_usd: number            // Resolution cost
   }]
+
+  // NEW: Composition tracking (minibob → activity-api v1.5.5, April 2026)
+  parent_execution_id: string    // Direct parent in the composition tree (nested invocations)
+  composition_chain: string[]    // Denormalized ancestor chain, ordered root-first
 }
 ```
 
@@ -1015,13 +1037,10 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 **Discovery System:**
 - [`DISCOVERY_INTEGRATION.md`](DISCOVERY_INTEGRATION.md): Complete vessel discovery integration guide
 - [`packages/vessel-discovery-client/README.md`](packages/vessel-discovery-client/README.md): VesselClient package documentation
-- [`PHASE_1_IMPLEMENTATION_SUMMARY.md`](PHASE_1_IMPLEMENTATION_SUMMARY.md): Discovery-vessel core implementation
-- [`PHASE_2_IMPLEMENTATION_SUMMARY.md`](PHASE_2_IMPLEMENTATION_SUMMARY.md): Vessel integration details
 
 **Complementary architecture docs:**
-- `COMPOSITION_AND_CONTROL_FLOW.md`: Activity composition patterns and hooks
-- `ACTIVITY_BASED_IMPROVISATION.md`: VM-as-executor philosophy
-- `repos/deployment/DEPLOYMENT_WORKFLOW.md`: Kubernetes deployment procedures
+- [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md): Kubernetes deployment procedures
+- [`docs/archive/2026-04-11-jiggle-and-prune/ACTIVITY_BASED_IMPROVISATION.md`](docs/archive/2026-04-11-jiggle-and-prune/ACTIVITY_BASED_IMPROVISATION.md): VM-as-executor philosophy (archived)
 
 **Multi-tenant & RBAC:**
 - `docs/MULTI_TENANT_ARCHITECTURE.md`: Tenancy model and authentication
