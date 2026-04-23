@@ -246,26 +246,41 @@ React 19/Bun real-time observability:
 - Vessel registry visualization (discovery integration)
 
 ### 5. Workbench (`repos/workbench`)
-Human-in-the-loop development interface for activities, executions, and learning-loop state. React + Vite, Vitest + Playwright, shadcn/ui primitives. **Alpha (v0.1.0), landed 2026-04-22.**
+Human-in-the-loop development interface for activities, executions, and learning-loop state. React + Vite, Vitest + Playwright, shadcn/ui primitives. **Alpha (v0.1.0) landed 2026-04-22; composition-builder + trace-viz surfaces landed 2026-04-23.**
 
 **Key Files:**
 - `src/App.tsx`: Root shell
 - `src/pages/`: `TemplatesPage`, `ExecutionsPage`, `GoalsPage`, `ShapesPage`, `CompositionPage`
-- `src/hooks/`: React Query data hooks for templates/executions/goals/shapes
+- `src/hooks/`: React Query data hooks for templates/executions/goals/shapes; `useWebSocket.ts` for live execution streams
 - `src/lib/`: API client, query setup, format utilities
 - `src/components/ui/`: Base shadcn/ui primitives (do not modify in-place)
+- `src/components/executions/`: `LiveExecutionMonitor`, `GanttTimeline`, `ExecutionFlameGraph`, `StateDiffViewer`
 
 **Features:**
 - Interactive activity template editing and variant management
 - Execution inspection with real-time updates
 - Goal and shape browsers
-- Composition-graph visualization
+- **Composition builder** (`23e8b94`): node-based editor on React Flow — drag activities from a searchable palette, connect output→input ports with shape-compatibility validation, cycle detection, localStorage autosave, export to activity template, minimap + zoom. Real-time validation via POST `/v2/activities/validate-composition` (DFS-based cycle detection, shape compatibility checking, added `ec493b8d`)
+- **Live execution monitor + Gantt timeline** (`3a1ca84`): WebSocket connection with reconnect and event-catchup protocol for missed events; Gantt bars with expand/collapse for nested tool calls and impulse-resolution markers by resolver tier
+- **Flame graph** (`75b7a46`): D3-rendered hierarchical flame with cost and duration modes, resolver-tier color coding (deterministic / pattern / LLM), drill-down into tool calls, PNG/SVG export, time-aware mode
+- **State diff viewer** (`1235867`): split/unified diff modes on task state transitions, file-list navigation with change counts, syntax highlighting (TS/JS/JSON), task-based grouping with expand/collapse, cumulative vs incremental toggle, auto-collapse of unchanged sections
+- **Trajectory editor** (`f134aaf` → `035af79` → `b2edb1d2`): horizontal CSS-Grid layout for an activity sequence (ActivityCard with expand/collapse, zustand store, localStorage autosave, keyboard nav), drag-and-drop reordering via `@dnd-kit`, insert/remove/reorder activities, parallel execution via multi-row columns, shape-validation indicators, goal-to-trajectory with Thompson Sampling (POST `/goal-paths/recommend` → `/v2/activities/discover-by-shapes` for shape-based activity discovery, confidence scores, endpoint prediction, "suggest next activity"), inline task editor (prompt editing with variable highlighting, validation rules, retry config, Thompson α/β + selection-strength sliders, save-as-variant with genealogy tracking)
 
-**Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control (template editing, retries, manual trace curation). Both talk to the same activity-api.
+**Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control (template editing, retries, manual trace curation, composition authoring, trace drill-down). Both talk to the same activity-api.
 
 **Docs:** local `INDEX.md`, `OPENSPEC.md`, `docs/` in-repo (this super-repo tracks only the pointer).
 
-### 6. Helm Deployment (`repos/deployment/`)
+### 6. Adjacent Vessels (brief)
+
+Additional vessels tracked in this super-repo with less CLAUDE.md coverage — each owns its own `CLAUDE.md` / `README.md`:
+
+- **concept-db** (`repos/concept-db`): resolves concept-graph shapes. As of `04157b1` (2026-04-23) registers with discovery-vessel and advertises five shapes — `concept`, `conceptGraph`, `relatedConcepts`, `conceptUsageStats`, `conceptSequence` — all routed through `POST /v2/impulses/resolve` by `pointer.type`. Legacy `VesselHeartbeat` targeting the deprecated activity-api `/v2/vessels/register` endpoint is no longer invoked from startup (removed in `faa7d8e`). As of `8399767`, an `ExecutionObserver` WebSocket client subscribes to activity-api's `/ws` broadcaster, listens for `task.completed` / `tool.call` events across all vessels (standardized in activity-api `ec493b8d`), and calls `recordUsage` locally when a concept-referencing `impulse_resolutions` entry appears — cross-vessel passive learning without explicit calls. Handshake: `{type:"authenticate", token:apiKey}` first, then optionally `{type:"catchup", lastSeenSequence:n}` on reconnect. Exponential backoff 1s→30s; all handlers swallow and log so the observer never throws into the WS loop or startup. **Deployment status:** Helm plumbing for the discovery client and observer landed in `deployment/6c8746e` (env-var surface + `METABOB_API_KEY` via `secretKeyRef` + `POD_NAME` via `fieldRef` for stable `VESSEL_ID` + `needs:` dependency on `activity-system/discovery-vessel`). **Pending before canary activation:** add a `conceptDb` block to `deployment/scripts/generate-secrets.sh`, sops-edit `canary.secrets.yaml` with `conceptDb.apiKey` (openssl rand -hex 32, prefix `mb_concept_canary_`), and register the key in identity-vessel seed.
+- **conversation-vessel** (`repos/conversation-vessel`): new lightweight vessel (v0.1.0, 2026-04-23) for LLM conversations using Vercel `ai-sdk` (`@ai-sdk/anthropic`, `@ai-sdk/openai`, `ai`, `zod`). Builds up impulse system, AI provider, tools, context management, and a resolver set (`llm-resolver`, `llm-to-llm` transformation, manager, server).
+- **identity-vessel** (`repos/identity-vessel`): API-key + JWT issuer used by every other vessel. See `docs/AUTH_JWT_CLAIMS.md`, `docs/API_KEY_VALIDATION_ENDPOINT.md`.
+- **discovery-vessel** (`repos/discovery-vessel`): documented under §1 above.
+- **Other vessels under `repos/`** (`metabob-analysis-api`, `metabob-rpc-api`, `metabob-mcp`, `metabob-opencode`, `metabob-cli`, `metabob-cloud-dashboard`, `metabob-internal-dashboard`, `minibob-tui`, `obsidian-vessel`, `user-vessel`, `terminal`, `react-renderer`, `cpg-inference` / `cpg-inference-ts`, `k8s-activity-executor`, `activity-monitor`, `platform`, `vessels`, `metabob-proto`): tracked in the super-repo (some as git submodules, some as direct file trees); consult each vessel's own docs.
+
+### 7. Helm Deployment (`repos/deployment/`)
 Kubernetes orchestration via Helmfile:
 
 **Key Files:**
@@ -1068,6 +1083,11 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 - `docs/RBAC_GUIDE.md`: PERMISSIONS patterns and best practices
 - `docs/AUTH_JWT_CLAIMS.md`: JWT token structure
 - `docs/SCHEMA_OWNERSHIP.md`: Service-to-table ownership
+
+**Template Patterns & Learning:**
+- [`docs/guides/TEMPLATE_DISPATCHABLE_RESOLVERS.md`](docs/guides/TEMPLATE_DISPATCHABLE_RESOLVERS.md): Resolver dispatch pattern (resolvers callable from activity JSON)
+- [`docs/guides/CONCEPT_INTEGRATION_TEMPLATES.md`](docs/guides/CONCEPT_INTEGRATION_TEMPLATES.md): Concept-consuming templates (prime-context, extract-concepts, link-composition)
+- [`docs/guides/TEMPLATE_UPKEEP.md`](docs/guides/TEMPLATE_UPKEEP.md): Template audit and backfill pipeline
 
 **Archived docs** (superseded by foundation doc):
 - `docs/archive/2026-03-27-superseded/`: Historical design documents

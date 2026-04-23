@@ -131,6 +131,29 @@ A dedicated REST API would have bypassed all four.
 
 **Why `impulse-resolve` as a primitive?** It decouples minibob's resolver set from the backend's shape advertisement. New shape on the backend → usable in task JSON the next run. No redeploy of minibob, no code change per shape.
 
+## Sibling upkeep flow: `cleanup-stale-traces-v1`
+
+**Landed:** activity-api commit `c4c95ba` (2026-04-22), registered via migration `078-register-cleanup-templates.surql`. Runbook lives in the activity-api submodule at [`repos/metabob-activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md`](../../repos/metabob-activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md).
+
+A second concrete upkeep activity that exercises the same resolver surface as audit-and-backfill — but against execution traces rather than template metadata:
+
+```
+executionTraceList (read)       ← candidates older than N days
+       │
+       ▼
+activityExecutionTrace_delete   ← destructive write
+       │
+       ▼
+upkeepAuditLog                  ← trace of what was deleted
+```
+
+- Scope is global (seeded with the system `org_id`, matching migration 058's bootstrap pattern); organisations see it via `SELECT PERMISSIONS` that include `scope='global'`.
+- `dryRun=true` by default: task 2 short-circuits to a preview report listing candidate ids without touching the DB. Flip to `dryRun=false` to actually delete.
+- Admin-gating is not enforced at the template metadata level — the destructive resolver itself enforces it at SurrealDB `PERMISSIONS`. A non-admin invocation therefore fails at task 3 with a DB-level permission error, not earlier.
+- Thompson priors seeded `Beta(1,1)` neutral, so the recommend path surfaces it once it has at least one execution.
+
+**Why this matters for the narrative:** the pattern scales. Any "observe → decide → destructive write → audit" upkeep can follow the same four-task shape. A future `cleanup-orphan-impulses-v1` or `reconcile-variant-metrics-v1` is a sibling, not a new mechanism.
+
 ## Related
 
 - [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the write/destructive resolver contract
