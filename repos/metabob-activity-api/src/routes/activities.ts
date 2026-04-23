@@ -3317,6 +3317,115 @@ app.post('/feedback', async (c) => {
   }
 });
 
+/**
+ * POST /v2/activities/discover-by-shapes
+ * Discover activities by their output shapes
+ *
+ * Use case: Find activities that can produce specific output shapes
+ * Useful for goal-to-trajectory recommendations when missing certain shapes
+ */
+app.post('/discover-by-shapes', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { required_shapes, limit = 10 } = body;
+
+    if (!required_shapes || !Array.isArray(required_shapes) || required_shapes.length === 0) {
+      return c.json({
+        error: 'Validation failed',
+        message: 'required_shapes must be a non-empty array',
+      }, 400);
+    }
+
+    logger.info('Discovering activities by shapes', {
+      required_shapes,
+      limit,
+    });
+
+    // Query activities that have at least one of the required output shapes
+    // Use array:intersect to check if output_shapes contains any required shapes
+    const query = `
+      SELECT * FROM activity
+      WHERE array::len(array::intersect(output_shapes, $required_shapes)) > 0
+      ORDER BY (
+        SELECT VALUE metrics.total_executions FROM activity_metrics WHERE activity = $parent.id LIMIT 1
+      )[0] DESC NULLS LAST
+      LIMIT $limit
+    `;
+
+    const activities = await surrealDB.query(query, {
+      required_shapes,
+      limit,
+    });
+
+    // Get Thompson Sampling scores for each activity
+    const activitiesWithScores = await Promise.all(
+      (activities || []).map(async (activity: any) => {
+        try {
+          const scoresQuery = `
+            SELECT * FROM activity_metrics
+            WHERE activity = $activity_id
+            LIMIT 1
+          `;
+          const scores = await surrealDB.query(scoresQuery, {
+            activity_id: activity.id,
+          });
+
+          const score = scores && scores.length > 0 ? scores[0] : null;
+
+          return {
+            ...activity,
+            metrics: score ? {
+              total_executions: score.total_executions || 0,
+              successful_executions: score.successful_executions || 0,
+              success_rate: score.success_rate || 0,
+              thompson_alpha: score.alpha || 1,
+              thompson_beta: score.beta || 1,
+              confidence: (score.alpha || 1) / ((score.alpha || 1) + (score.beta || 1)),
+            } : {
+              total_executions: 0,
+              successful_executions: 0,
+              success_rate: 0,
+              thompson_alpha: 1,
+              thompson_beta: 1,
+              confidence: 0.5,
+            },
+          };
+        } catch (error) {
+          logger.warn('Failed to fetch metrics for activity', {
+            activity_id: activity.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return activity;
+        }
+      })
+    );
+
+    // Transform to legacy format for compatibility
+    const legacyActivities = activitiesWithScores.map(transformToLegacyTemplate);
+
+    logger.info('Activities discovered by shapes', {
+      count: legacyActivities.length,
+      required_shapes,
+    });
+
+    return c.json({
+      activities: legacyActivities,
+      total: legacyActivities.length,
+    });
+
+  } catch (error: any) {
+    logger.error('POST /v2/activities/discover-by-shapes failed', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return c.json({
+      error: 'Failed to discover activities by shapes',
+      message: error.message,
+    }, 500);
+  }
+});
+
 export default app;
 
 /**
