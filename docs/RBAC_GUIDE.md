@@ -4,18 +4,33 @@ This document covers Role-Based Access Control (RBAC) implementation using Surre
 
 ## Core Concept
 
-SurrealDB PERMISSIONS are evaluated at query time using the `$auth` variable, which is populated from the JWT token. This enables **database-level enforcement** of access control, not just application-level filtering.
+SurrealDB PERMISSIONS are evaluated at query time using the `$auth` or `$token` variable, populated from the JWT. This enables **database-level enforcement** of access control, not just application-level filtering.
 
 ```surql
 -- When a user queries, SurrealDB automatically filters:
 SELECT * FROM activity_template
 -- Becomes (internally):
-SELECT * FROM activity_template WHERE org_id = $auth.org_id
+SELECT * FROM activity_template WHERE org_id = $token.org_id
 ```
 
-## The $auth Variable
+## `$auth` vs `$token` (which one do I use?)
 
-After authentication, `$auth` contains the claims from the JWT:
+All activity-api JWTs — both identity-vessel-minted dashboard tokens and activity-api self-signed API-key tokens — verify against a single access method: `jwt_external` (`TYPE JWT`, `ALGORITHM HS256`, defined in `metabob-proto/surrealdb/core/001-auth-access.surql`). The `$auth` vs `$token` split comes from whether the JWT's `id` claim resolves to a real SurrealDB record:
+
+| Caller | `id` claim | `$auth` | `$token` |
+|---|---|---|---|
+| Dashboard user (identity-vessel JWT) | `users:alice` — resolves to a real row | Populated (the user record) | Populated (raw claims) |
+| API-key auth (activity-api self-signs with `jwt_external` since commit a20314a, 2026-04-22) | `api_key:${keyId}` — **not** a record | `NONE` | Populated (raw claims) |
+
+**Rule of thumb for activity-api tables:** prefer `$token` in PERMISSIONS. It works for both callers (dashboard *and* API-key), whereas `$auth` evaluates to `NONE` under API-key auth and silently filters everything out. Migrations 079, 080, and 083 (2026-04) swept 20 tables from `$auth.*` to `$token.*` precisely because Thompson-Sampling queries, template listing, and impulse resolution were returning empty under API-key auth.
+
+`$auth` remains correct when a pattern genuinely needs the authenticated record — for example, looking up the user row for display name or preferences — and the caller is known to be dashboard-JWT. For raw org scoping, use `$token.org_id`.
+
+> **Historical note:** activity-api previously self-signed API-key JWTs with `AC: 'apikey_token'` + `alg: HS512` against a `DEFINE ACCESS apikey_token ... TYPE JWT` block introduced in migration 064. Commit a20314a switched to `AC: 'jwt_external'` + `alg: HS256` to match the shared `metabob-proto` access definition. The `apikey_token` access is still defined in `metabob-activity-api/sql/000-auth-schema.surql` and migration 064/069 for backward compatibility but is no longer issued against.
+
+## The $token Variable
+
+After authentication, `$token` contains the claims from the JWT:
 
 ```json
 {
@@ -28,6 +43,8 @@ After authentication, `$auth` contains the claims from the JWT:
 ```
 
 ## PERMISSIONS Patterns
+
+> **Note:** The examples below use `$auth.*` for readability and historical continuity. In deployed activity-api migrations these are `$token.*` — see the `$auth` vs `$token` section above. When authoring new migrations, default to `$token.*` for org/project scoping; reach for `$auth.*` only when you truly need the authenticated record.
 
 ### Pattern 1: Org-Scoped Read/Write
 

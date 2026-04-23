@@ -91,8 +91,29 @@ Ship in `repos/minibob/src/embedded-templates/`:
 
 - **`interactive-activity-selector.json`** — asks the user to pick from a ranked list of activity templates before committing to one. Useful when Thompson Sampling has several close candidates and the user wants a final say.
 - **`human-guided-orchestrator.json`** — the maximal human-in-loop template. A meta-activity that asks the user at every orchestration step: what to do, which activity to run next, whether the goal is complete. Useful for training the system on new domains where the learning loop hasn't yet converged.
+- **`build-and-execute.json`** *(v0.8.0, commit `d935064`)* — interactive **template authoring**. Builds a new activity template one task at a time, executing each proposed task against the live impulse state space before committing it to the draft. Seven-step cycle per iteration: `show_state` (bash echo of iteration + template-so-far) → `propose_next_step` (LLM drafts one concrete task) → `confirm_plan` (human: execute / revise / stop) → `revise_step` (LLM, conditional) → `execute_step` (run the approved task live) → `assess_progress` (LLM + impulse-delta → JSON assessment) → `report_and_decide` (human: continue / revise-last / stop). The point is to author templates *by running them*, so every task ships pre-validated against real state.
 
-Both templates tag themselves with `human-resolver` and `interactive` so they can be filtered out of autonomous (`--daemon`, boredom) runs.
+All three templates tag themselves with `human.resolver` and `interactive` (per the dot-separated tag hierarchy normalized in `3e20d8f`, 2026-04-22) so they can be filtered out of autonomous (`--daemon`, boredom) runs.
+
+## Entering an embedded template: `minibob -t`
+
+Embedded activity templates used to only be reachable via the recommender picking them up for some goal. The `-t <template-id>` flag (commit `d935064`, v0.8.0) makes them first-class CLI entry points:
+
+```bash
+minibob -t build-and-execute --var goal="activity that audits route handlers for hardcoded URLs"
+minibob -t human-guided-orchestrator --var goal="refactor auth middleware"
+```
+
+Semantics:
+
+- **TTY-aware.** The CLI sets `isInteractive` from `process.stdin.isTTY`, so `HumanResolver` activates under a real terminal and auto-disables (per non-TTY fallback rules above) when piped or run in CI.
+- **Progress rendering.** Under a TTY, the same DAG renderer as the REPL streams live (activities, tasks, impulse events); off-TTY, the tree prints once at completion, matching `--single`.
+- **Wiring.** `src/cli/run-activity.ts` registers `onActivityStarted/Completed/Failed/TaskStarted/TaskCompleted` callbacks into the renderer, and bridges the global impulse-store singleton into the same event stream. The store listener is cleared in a `finally` so a second `-t` invocation in the same process starts clean.
+- **Variable defaults honored** *(`5817d4d` + `d01d946`, 2026-04-22)*. After the required-vars check, the loader builds `effectiveVariables` by merging `template.variables[].default` for every variable not passed via `--var`. This relies on the template having its top-level `variables` array — which the backend strips, so the `-t` loader also runs `mergeEmbeddedTaskFields` after the backend resolve to graft `variables`, `inputSchema`, `outputSchema`, and per-task declarative fields back from the embedded JSON. See [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) §2 for the full graft contract.
+
+Off-TTY use (CI, `--daemon`, piped stdin) still works because every interactive template in the bundle provides a `default` on its human tasks — the activity degrades to its default branch rather than blocking.
+
+**On conditionals in these templates.** Every built-in interactive template uses `conditional.expression` on most tasks to branch on human answers and LLM verdicts. The evaluator (fixed in `6d66c5b`, same day) supports pseudo-operators (`contains`, `not-contains`, `exists`, `AND`, `OR`) and `{{impulse:id}}` substitution — see [`./CONDITIONAL_TASKS.md`](./CONDITIONAL_TASKS.md) for the authoring contract.
 
 ## Composition pattern: human as a gate
 
@@ -125,5 +146,8 @@ Activities that truly require human input in production — not just development
 
 - `IMPULSE_ACTIVITY_FOUNDATION.md` — resolvers, impulses, shapes
 - `ADVANCED_IMPULSE_PATTERNS.md` — composition and gating patterns
+- [`./CONDITIONAL_TASKS.md`](./CONDITIONAL_TASKS.md) — authoring contract for `conditional.expression`
+- [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — variable defaults, field graft, deterministic output impulses
 - `repos/minibob/src/embedded-templates/interactive-activity-selector.json` — canonical selector
 - `repos/minibob/src/embedded-templates/human-guided-orchestrator.json` — canonical meta-orchestrator
+- `repos/minibob/src/embedded-templates/build-and-execute.json` — interactive template authoring (entered via `minibob -t build-and-execute`)

@@ -9,7 +9,7 @@ Activity templates accumulate. Some underperform. Some are superseded by variant
 
 Both operations are exposed as impulse resolvers — `activityTemplate_update` and `activityTemplate_deprecate` — rather than dedicated REST endpoints. That's intentional: destructive and mutating operations flow through `POST /v2/impulses/resolve` so they inherit the same auth check, audit emission (`upkeepAuditLog` impulse), and trace path as every other resolver. A "deprecate template" call is just another line in the execution log.
 
-RBAC is enforced at the SurrealDB `PERMISSIONS` layer (`$auth.role = 'admin'` on UPDATE). Non-admin callers get a permissions error from the DB, not a missing-endpoint 404.
+RBAC is enforced at the SurrealDB `PERMISSIONS` layer — `$token.role = 'admin'` (or `$auth.role` under dashboard-JWT access) on UPDATE. Non-admin callers get a permissions error from the DB, not a missing-endpoint 404. See [`../RBAC_GUIDE.md`](../RBAC_GUIDE.md) §`$auth` vs `$token` for why API-key auth uses `$token`.
 
 ## `activityTemplate_update`
 

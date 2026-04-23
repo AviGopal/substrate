@@ -52,6 +52,7 @@ Canonical source of truth for advertised shapes: [`repos/metabob-activity-api/sr
 - `compositionSuccess` - Composition-edge success stats (**renamed** from `activityCompositionGraph`)
 - `impulseRelevance` - Impulse relevance scores (**renamed** from `impulseRelevanceMetrics`)
 - `preValidationResult` - Pattern-based pre-validation verdicts for tool arguments
+- `templateAuditReport` - Per-template deficiency reports (missing shapes, weak descriptions, alias clusters); descriptive, writes nothing. See [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
 
 **Write shapes** (v1.5.0+) — see [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md):
 - 14 `*_write` shapes (e.g. `activityExecutionTrace_write`, `activityFeedback_write`, `impulseRelevance_write`) that delegate to REST endpoints so activities can invoke learning-loop writes through `POST /v2/impulses/resolve` without hardcoding routes.

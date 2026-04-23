@@ -245,7 +245,27 @@ React 19/Bun real-time observability:
 - System health dashboards
 - Vessel registry visualization (discovery integration)
 
-### 5. Helm Deployment (`repos/deployment/`)
+### 5. Workbench (`repos/workbench`)
+Human-in-the-loop development interface for activities, executions, and learning-loop state. React + Vite, Vitest + Playwright, shadcn/ui primitives. **Alpha (v0.1.0), landed 2026-04-22.**
+
+**Key Files:**
+- `src/App.tsx`: Root shell
+- `src/pages/`: `TemplatesPage`, `ExecutionsPage`, `GoalsPage`, `ShapesPage`, `CompositionPage`
+- `src/hooks/`: React Query data hooks for templates/executions/goals/shapes
+- `src/lib/`: API client, query setup, format utilities
+- `src/components/ui/`: Base shadcn/ui primitives (do not modify in-place)
+
+**Features:**
+- Interactive activity template editing and variant management
+- Execution inspection with real-time updates
+- Goal and shape browsers
+- Composition-graph visualization
+
+**Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control (template editing, retries, manual trace curation). Both talk to the same activity-api.
+
+**Docs:** local `INDEX.md`, `OPENSPEC.md`, `docs/` in-repo (this super-repo tracks only the pointer).
+
+### 6. Helm Deployment (`repos/deployment/`)
 Kubernetes orchestration via Helmfile:
 
 **Key Files:**
@@ -349,6 +369,7 @@ Read resolvers (as advertised via discovery; see `repos/metabob-activity-api/src
 - `compositionSuccess`: Composition-edge success statistics (renamed from `activityCompositionGraph`)
 - `impulseRelevance`: Impulse relevance scores (renamed from `impulseRelevanceMetrics`)
 - `preValidationResult`: Pattern-based pre-validation verdicts for tool arguments
+- `templateAuditReport`: Per-template deficiency reports — missing shapes, weak descriptions, all-LLM task graphs, hardcoded URLs, alias-cluster proposals. Descriptive (reads templates from both paradigm `activity` and legacy `activity_template` views); writes nothing. Feeds the upcoming audit-and-backfill activity that calls the `activityTemplate_update` write resolver.
 
 Write/destructive resolvers (v1.5.0+, invoked via `POST /v2/impulses/resolve`):
 - `*_write` — 14 learning-loop writes exposed as impulse shapes (e.g. `activityExecutionTrace_write`, `activityFeedback_write`, `impulseRelevance_write`). Each delegates to the equivalent REST endpoint so activities can invoke writes without hardcoding REST knowledge.

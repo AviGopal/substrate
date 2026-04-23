@@ -83,7 +83,7 @@ Destructive operations additionally require authentication (401 when unauthentic
 
 Allowed update fields for `activityTemplate_update`: `name`, `description`, `tags`, `tasks`, `input_shapes`, `output_shapes`, `deprecated`. Any other key in `updates` returns 400 with the rejected list.
 
-For the full lifecycle story (why deprecate instead of delete, how `deprecated = true` is interpreted by the recommend path), see [`../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md).
+For the full lifecycle story (why deprecate instead of delete, how `deprecated = true` is interpreted by the recommend path), see [`../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md`](../guides/ACTIVITY_LIFECYCLE_DEPRECATION.md). For the end-to-end observe → audit → correct pipeline these writes slot into — including the `templateAuditReport` read companion (activity-api `5a70e13`) and minibob's `impulse-resolve` dispatch primitive (`13c84b2`) — see [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
 
 ## Auth context for writes
 
