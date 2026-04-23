@@ -192,7 +192,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - `src/tools.ts`: Built-in tools (bash, read, write, edit, git)
 - `src/impulse.ts`: Impulse system for context management
 - `src/activity.ts`: Activity template executor
-- `src/goal-processor.ts`: Goal-seeking activity recommendations
+- `src/goal-processor.ts`: Goal-seeking activity recommendations (12 resolvers extracted 2026-04-23; shrunk 7752 → 5982 LOC -22.8%)
 - `src/mcp.ts`: MCP client for backend integration
 - `src/vessel-discovery.ts`: Discovery-vessel integration (optional)
 
@@ -204,6 +204,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - Enhanced resolution: local → discovery → MCP backend (when discovery enabled)
 - Self-development via ribosome pattern
 - Optional vessel registration and discovery
+- **Template-dispatchable resolvers** (2026-04-23): 13 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, activity recommendation, orchestration detection, keyword extraction) callable from activity JSON via `"resolver": "<name>"` in task config, closing the goal-processor extraction cycle
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript/Bun/Hono backend - Learning system and trace storage:
