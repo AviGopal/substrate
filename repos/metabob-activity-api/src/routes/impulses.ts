@@ -12,7 +12,7 @@
  */
 
 import { Hono } from 'hono';
-import { surrealDB, queryWithAuth } from '../db/surreal';
+import { surrealDB, queryWithAuth, createAuthenticatedClient } from '../db/surreal';
 import { logger } from '../utils/logger';
 import {
   ImpulseCreateRequestSchema,
@@ -31,8 +31,153 @@ import {
 } from '../services/impulse-formatters';
 import { getJwtAuthFromContext, type JwtAuthContext } from '../middleware/jwtAuth';
 import activitiesRouter from './activities';
+import executionTracesRouter from './execution-traces';
+import { runTemplateAuditReport, type TemplateAuditInput } from './template-audit';
+import { z } from 'zod';
 
 const router = new Hono();
+
+/**
+ * Delegate a write resolver to the appropriate REST handler, forwarding auth.
+ * Used by `*_write` impulse shapes so activities can invoke learning-loop
+ * writes through POST /v2/impulses/resolve instead of hardcoding REST calls.
+ *
+ * Returns the raw JSON body from the target handler along with its status.
+ * Callers wrap this into the impulse-resolve envelope.
+ */
+async function delegateWriteToRouter(
+  c: any,
+  target: Hono,
+  path: string,
+  body: unknown,
+): Promise<{ status: number; data: any }> {
+  const jwtAuth = getJwtAuthFromContext(c);
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (jwtAuth?.jwtToken) headers['Authorization'] = `Bearer ${jwtAuth.jwtToken}`;
+
+  const internalApiKey = c.req.header('x-internal-api-key');
+  if (internalApiKey) headers['X-Internal-Api-Key'] = internalApiKey;
+
+  const sessionId = c.req.header('x-session-id');
+  if (sessionId) headers['X-Session-ID'] = sessionId;
+
+  const req = new Request(`http://internal${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body ?? {}),
+  });
+
+  const res = await target.fetch(req);
+  const data = await res.json().catch(() => ({}));
+  return { status: res.status, data };
+}
+
+/**
+ * Early-reject unauthenticated requests for destructive resolvers. The
+ * authoritative admin check happens at SurrealDB PERMISSIONS level for JWT
+ * auth (`$auth.role = 'admin'` on UPDATE/DELETE). For API key auth we rely
+ * on the key being admin-scoped — PERMISSIONS are bypassed because API keys
+ * use self-signed JWTs SurrealDB can't validate against its ACCESS methods.
+ *
+ * Returns null if the caller should proceed, or {status, error} to emit.
+ */
+function requireAuthenticated(c: any): { status: 401; error: string } | null {
+  const jwtAuth = getJwtAuthFromContext(c);
+  if (!jwtAuth?.jwtToken) {
+    return { status: 401, error: 'Authentication required for destructive operations' };
+  }
+  return null;
+}
+
+/**
+ * Execute a query with the right auth context.
+ *
+ * - For API key auth, the JWT is self-signed and SurrealDB cannot validate it
+ *   against the ACCESS method — queryWithAuth returns "The access method
+ *   cannot be used in the requested operation". Fall back to root credentials
+ *   with manual org_id filtering (caller is responsible for including
+ *   `org_id = $orgId` in the WHERE clause).
+ * - For real JWT auth (SurrealDB ACCESS), use queryWithAuth so PERMISSIONS
+ *   fire (which is also where the admin role check lives).
+ *
+ * Matches the pattern already used in POST /v2/impulses (executeQuery).
+ */
+async function executeAsAuth<T>(
+  jwtAuth: JwtAuthContext,
+  sql: string,
+  params: Record<string, unknown>,
+): Promise<T[]> {
+  if (jwtAuth.authType === 'apikey') {
+    return surrealDB.query<T>(sql, params);
+  }
+  return queryWithAuth<T>(jwtAuth.jwtToken, sql, params);
+}
+
+/**
+ * Emit an upkeepAuditLog impulse for a destructive operation. Non-blocking —
+ * a failure to audit never fails the operation (the log is best-effort, the
+ * underlying op has already succeeded in SQL). See migration 077 for schema.
+ */
+async function emitUpkeepAudit(payload: {
+  operation: 'delete' | 'update' | 'deprecate';
+  target_table: string;
+  target_ids: string[];
+  filter_used: Record<string, unknown>;
+  dry_run: boolean;
+  count: number;
+  performed_by: string;
+  org_id: string;
+  reason?: string;
+  diff?: Record<string, unknown>;
+}): Promise<string | null> {
+  const auditId = `upkeep-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  const audit = { ...payload, performed_at: new Date().toISOString() };
+  try {
+    await surrealDB.query(
+      `INSERT INTO impulse {
+        id: $id,
+        shape: 'upkeepAuditLog',
+        pointer: $pointer,
+        org_id: $org_id,
+        created_at: time::now()
+      }`,
+      { id: auditId, pointer: audit, org_id: payload.org_id },
+    );
+    return auditId;
+  } catch (err) {
+    logger.warn('upkeepAuditLog emit failed (non-fatal)', {
+      error: err instanceof Error ? err.message : String(err),
+      operation: payload.operation,
+    });
+    return null;
+  }
+}
+
+/**
+ * Build a standard impulse-resolve envelope for a successful write resolver.
+ * Write resolvers return structured JSON (not markdown), with the shape tag
+ * suffixed `_result` so clients can distinguish write-ack from read-content.
+ */
+function buildWriteResolverResponse(
+  pointerType: string,
+  delegated: { status: number; data: any },
+  summary?: string,
+): { success: boolean; content?: string; metadata?: any; error?: string } {
+  if (delegated.status >= 200 && delegated.status < 300) {
+    return {
+      success: true,
+      content: JSON.stringify(delegated.data),
+      metadata: {
+        shape: `${pointerType}_result`,
+        summary: summary ?? `${pointerType} delegated successfully`,
+      },
+    };
+  }
+  return {
+    success: false,
+    error: (delegated.data && (delegated.data.error || delegated.data.message)) || `write resolver failed (status ${delegated.status})`,
+  };
+}
 
 /**
  * POST /v2/impulses
@@ -330,9 +475,20 @@ router.get('/:impulseId', async (c) => {
       project_id: project_id || 'not specified',
     });
 
-    // Query impulse by id - RBAC permissions handle org_id filtering
-    let query = `SELECT * FROM impulse WHERE id = $impulse_id`;
+    // Query impulse by id.
+    // - Use record::id(id) = $impulse_id because SurrealDB stores ids as
+    //   composite `impulse:\`strid\``; a plain `id = $impulse_id` never
+    //   matches when callers pass a bare id (same bug fixed elsewhere).
+    // - Add `org_id = $org_id` explicitly for callers on the API-key path
+    //   where PERMISSIONS aren't enforced (self-signed JWT can't pass the
+    //   ACCESS method). JWT-auth path sees the predicate as a no-op since
+    //   PERMISSIONS already scope to `$auth.org_id`.
+    let query = `SELECT * FROM impulse WHERE record::id(id) = $impulse_id`;
     const params: Record<string, any> = { impulse_id };
+    if (jwtAuth?.orgId) {
+      query += ` AND org_id = $org_id`;
+      params.org_id = jwtAuth.orgId;
+    }
 
     // Add optional project_id filter
     if (project_id) {
@@ -341,10 +497,11 @@ router.get('/:impulseId', async (c) => {
     }
     query += ` LIMIT 1`;
 
-    // Use authenticated query when JWT is present
+    // executeAsAuth routes apikey auth -> surrealDB.query (root) and real
+    // JWT auth -> queryWithAuth (PERMISSIONS-enforced).
     let result: any[];
-    if (jwtAuth?.jwtToken) {
-      result = await queryWithAuth<any>(jwtAuth.jwtToken, query, params);
+    if (jwtAuth) {
+      result = await executeAsAuth<any>(jwtAuth, query, params);
     } else {
       result = await surrealDB.query<any>(query, params);
     }
@@ -441,22 +598,27 @@ router.get('/', async (c) => {
       offset,
     });
 
-    // Build query with optional project_id filter
-    // RBAC permissions handle org_id filtering automatically
-    let query = `SELECT * FROM impulse`;
+    // Build query. Org scope is added explicitly for callers on the API-key
+    // path (self-signed JWT cannot pass SurrealDB ACCESS validation so
+    // PERMISSIONS do not fire). JWT auth callers get the same predicate as a
+    // no-op since PERMISSIONS already scope to `$auth.org_id`.
+    const whereParts: string[] = [];
     const params: Record<string, any> = { limit, offset };
-
+    if (jwtAuth?.orgId) {
+      whereParts.push('org_id = $org_id');
+      params.org_id = jwtAuth.orgId;
+    }
     if (project_id) {
-      query += ` WHERE project_id = $project_id`;
+      whereParts.push('project_id = $project_id');
       params.project_id = project_id;
     }
+    let query = 'SELECT * FROM impulse';
+    if (whereParts.length > 0) query += ' WHERE ' + whereParts.join(' AND ');
+    query += ' ORDER BY created_at DESC LIMIT $limit START $offset';
 
-    query += ` ORDER BY created_at DESC LIMIT $limit START $offset`;
-
-    // Use authenticated query when JWT is present
     let result: any[];
-    if (jwtAuth?.jwtToken) {
-      result = await queryWithAuth<any>(jwtAuth.jwtToken, query, params);
+    if (jwtAuth) {
+      result = await executeAsAuth<any>(jwtAuth, query, params);
     } else {
       result = await surrealDB.query<any>(query, params);
     }
@@ -640,10 +802,14 @@ router.post('/resolve', async (c) => {
           } as ImpulseResolveResponse, 400);
         }
 
-        // Load template from canonical 'activity' table using 'id' field
+        // Load template from canonical 'activity' table. Use record::id(id)
+        // to extract the string portion of the composite record id (e.g.
+        // `activity:\`cleanup-stale-traces-v1\`` -> 'cleanup-stale-traces-v1')
+        // since callers pass the bare id. Matches the pattern used by the
+        // *_update/_deprecate write resolvers.
         const query = `
           SELECT * FROM activity
-          WHERE id = $activity_id
+          WHERE record::id(id) = $activity_id
           LIMIT 1
         `;
 
@@ -1518,6 +1684,442 @@ router.post('/resolve', async (c) => {
 
         content = formatPreValidationResultAsMarkdown(result);
         break;
+      }
+
+      // =============================================================================
+      // Write resolvers: expose learning-loop writes as impulse shapes so
+      // activities can invoke them through POST /v2/impulses/resolve instead of
+      // hardcoding REST knowledge. Each `*_write` case delegates to the same
+      // underlying handler used by the REST endpoint, reusing all validation
+      // and SQL in place. Returns structured JSON with metadata.shape
+      // suffixed `_result`.
+      // =============================================================================
+
+      case 'activityExecutionTrace_write': {
+        const writePointer = pointer as typeof pointer & { traceData?: unknown };
+        if (!writePointer.traceData) {
+          return c.json({ success: false, error: 'traceData required for activityExecutionTrace_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, executionTracesRouter, '/', writePointer.traceData);
+        return c.json(buildWriteResolverResponse('activityExecutionTrace_write', delegated, 'execution trace stored') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'activityFeedback_write': {
+        const writePointer = pointer as typeof pointer & { feedbackData?: unknown };
+        if (!writePointer.feedbackData) {
+          return c.json({ success: false, error: 'feedbackData required for activityFeedback_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/feedback', writePointer.feedbackData);
+        return c.json(buildWriteResolverResponse('activityFeedback_write', delegated, 'feedback applied') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'activityComposition_write': {
+        const writePointer = pointer as typeof pointer & { compositionData?: unknown };
+        if (!writePointer.compositionData) {
+          return c.json({ success: false, error: 'compositionData required for activityComposition_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/composition', writePointer.compositionData);
+        return c.json(buildWriteResolverResponse('activityComposition_write', delegated, 'composition edge recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'activityTemplate_write': {
+        const writePointer = pointer as typeof pointer & { templateData?: unknown };
+        if (!writePointer.templateData) {
+          return c.json({ success: false, error: 'templateData required for activityTemplate_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/templates', writePointer.templateData);
+        return c.json(buildWriteResolverResponse('activityTemplate_write', delegated, 'template proposed') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'activityVariant_write': {
+        const writePointer = pointer as typeof pointer & { activityId?: string; variantData?: unknown };
+        if (!writePointer.activityId || !writePointer.variantData) {
+          return c.json({ success: false, error: 'activityId and variantData required for activityVariant_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, `/${encodeURIComponent(writePointer.activityId)}/variants`, writePointer.variantData);
+        return c.json(buildWriteResolverResponse('activityVariant_write', delegated, 'variant created') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'impulseRelevance_write': {
+        const writePointer = pointer as typeof pointer & { relevanceData?: unknown };
+        if (!writePointer.relevanceData) {
+          return c.json({ success: false, error: 'relevanceData required for impulseRelevance_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/impulse-relevance', writePointer.relevanceData);
+        return c.json(buildWriteResolverResponse('impulseRelevance_write', delegated, 'impulse relevance recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'toolUsage_write': {
+        const writePointer = pointer as typeof pointer & { usageData?: unknown };
+        if (!writePointer.usageData) {
+          return c.json({ success: false, error: 'usageData required for toolUsage_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/tool-usage', writePointer.usageData);
+        return c.json(buildWriteResolverResponse('toolUsage_write', delegated, 'tool usage recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'toolArgumentPattern_write': {
+        const writePointer = pointer as typeof pointer & { patternData?: unknown };
+        if (!writePointer.patternData) {
+          return c.json({ success: false, error: 'patternData required for toolArgumentPattern_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/tool-argument-patterns', writePointer.patternData);
+        return c.json(buildWriteResolverResponse('toolArgumentPattern_write', delegated, 'tool argument pattern recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'executionSequences_write': {
+        const writePointer = pointer as typeof pointer & { sequenceData?: unknown };
+        if (!writePointer.sequenceData) {
+          return c.json({ success: false, error: 'sequenceData required for executionSequences_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/execution-sequences', writePointer.sequenceData);
+        return c.json(buildWriteResolverResponse('executionSequences_write', delegated, 'execution sequence recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'shapeScore_write': {
+        const writePointer = pointer as typeof pointer & { scoreData?: unknown };
+        if (!writePointer.scoreData) {
+          return c.json({ success: false, error: 'scoreData required for shapeScore_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/shape-scores', writePointer.scoreData);
+        return c.json(buildWriteResolverResponse('shapeScore_write', delegated, 'shape score updated') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'similarState_write': {
+        const writePointer = pointer as typeof pointer & { stateData?: unknown };
+        if (!writePointer.stateData) {
+          return c.json({ success: false, error: 'stateData required for similarState_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/similar-state', writePointer.stateData);
+        return c.json(buildWriteResolverResponse('similarState_write', delegated, 'similar state recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'goalSeeking_write': {
+        const writePointer = pointer as typeof pointer & { goalData?: unknown };
+        if (!writePointer.goalData) {
+          return c.json({ success: false, error: 'goalData required for goalSeeking_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/create-goal-seeking', writePointer.goalData);
+        return c.json(buildWriteResolverResponse('goalSeeking_write', delegated, 'goal-seeking activity created') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'execution_write': {
+        const writePointer = pointer as typeof pointer & { executionData?: unknown };
+        if (!writePointer.executionData) {
+          return c.json({ success: false, error: 'executionData required for execution_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/executions', writePointer.executionData);
+        return c.json(buildWriteResolverResponse('execution_write', delegated, 'execution recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      case 'compositionEdge_write': {
+        const writePointer = pointer as typeof pointer & { edgeData?: unknown };
+        if (!writePointer.edgeData) {
+          return c.json({ success: false, error: 'edgeData required for compositionEdge_write' } as ImpulseResolveResponse, 400);
+        }
+        const delegated = await delegateWriteToRouter(c, activitiesRouter, '/composition/edges', writePointer.edgeData);
+        return c.json(buildWriteResolverResponse('compositionEdge_write', delegated, 'composition edge recorded') as ImpulseResolveResponse, delegated.status >= 200 && delegated.status < 300 ? 200 : delegated.status as 400 | 401 | 403 | 404 | 500);
+      }
+
+      // =============================================================================
+      // Destructive resolvers: DELETE, UPDATE, DEPRECATE. RBAC is enforced at the
+      // SurrealDB PERMISSIONS layer (`$auth.role = 'admin'` on UPDATE/DELETE).
+      // Each successful destructive op emits an upkeepAuditLog impulse so the
+      // operation is traceable independent of app logs.
+      // =============================================================================
+
+      case 'activityTemplate_update': {
+        const authCheck = requireAuthenticated(c);
+        if (authCheck) return c.json({ success: false, error: authCheck.error } as ImpulseResolveResponse, authCheck.status);
+
+        const updatePointer = pointer as typeof pointer & {
+          templateId?: string;
+          updates?: Record<string, unknown>;
+        };
+        if (!updatePointer.templateId || !updatePointer.updates) {
+          return c.json({ success: false, error: 'templateId and updates (object) required for activityTemplate_update' } as ImpulseResolveResponse, 400);
+        }
+
+        const allowedFields = new Set(['name', 'description', 'tags', 'tasks', 'input_shapes', 'output_shapes', 'deprecated']);
+        const rejected = Object.keys(updatePointer.updates).filter((k) => !allowedFields.has(k));
+        if (rejected.length > 0) {
+          return c.json({
+            success: false,
+            error: `Disallowed update fields: ${rejected.join(', ')}. Allowed: ${Array.from(allowedFields).join(', ')}`,
+          } as ImpulseResolveResponse, 400);
+        }
+
+        const jwtAuth = getJwtAuthFromContext(c)!;
+        const templateId = updatePointer.templateId;
+        const updates = updatePointer.updates;
+
+        try {
+          // SurrealDB stores record ids as `table:`id`` composites. Use
+          // record::id(id) to extract the string part for matching, matching
+          // the pattern used elsewhere (execution-traces.ts:1063).
+          const before = await executeAsAuth<any>(jwtAuth, `SELECT * FROM activity WHERE record::id(id) = $id AND (org_id = $orgId OR scope = 'global') LIMIT 1`, { id: templateId, orgId: jwtAuth.orgId });
+          const beforeRow = (before || [])[0];
+          if (!beforeRow) {
+            return c.json({ success: false, error: `Template not found: ${templateId}` } as ImpulseResolveResponse, 404);
+          }
+
+          const after = await executeAsAuth<any>(
+            jwtAuth,
+            `UPDATE activity MERGE $updates WHERE record::id(id) = $id AND (org_id = $orgId OR scope = 'global') RETURN AFTER`,
+            { id: templateId, updates, orgId: jwtAuth.orgId },
+          );
+          const afterRow = (after || [])[0];
+
+          const diff: Record<string, { before: unknown; after: unknown }> = {};
+          for (const key of Object.keys(updates)) {
+            diff[key] = { before: beforeRow[key], after: afterRow?.[key] };
+          }
+
+          const auditId = await emitUpkeepAudit({
+            operation: 'update',
+            target_table: 'activity',
+            target_ids: [templateId],
+            filter_used: { id: templateId },
+            dry_run: false,
+            count: 1,
+            performed_by: jwtAuth.keyId || jwtAuth.userId || 'unknown',
+            org_id: jwtAuth.orgId,
+            diff,
+          });
+
+          return c.json({
+            success: true,
+            content: JSON.stringify({ template: afterRow, auditImpulseId: auditId }),
+            metadata: { shape: 'activityTemplate_update_result', summary: `Updated ${Object.keys(updates).length} field(s) on ${templateId}` },
+          } as ImpulseResolveResponse, 200);
+        } catch (err: any) {
+          logger.error('activityTemplate_update failed', { error: err?.message });
+          return c.json({ success: false, error: err?.message || 'update failed' } as ImpulseResolveResponse, 500);
+        }
+      }
+
+      case 'activityTemplate_deprecate': {
+        const authCheck = requireAuthenticated(c);
+        if (authCheck) return c.json({ success: false, error: authCheck.error } as ImpulseResolveResponse, authCheck.status);
+
+        const deprecatePointer = pointer as typeof pointer & {
+          templateId?: string;
+          reason?: string;
+        };
+        if (!deprecatePointer.templateId) {
+          return c.json({ success: false, error: 'templateId required for activityTemplate_deprecate' } as ImpulseResolveResponse, 400);
+        }
+
+        const jwtAuth = getJwtAuthFromContext(c)!;
+        const templateId = deprecatePointer.templateId;
+        const reason = deprecatePointer.reason;
+
+        try {
+          const before = await executeAsAuth<any>(jwtAuth, `SELECT id, deprecated FROM activity WHERE record::id(id) = $id AND (org_id = $orgId OR scope = 'global') LIMIT 1`, { id: templateId, orgId: jwtAuth.orgId });
+          if (!(before || [])[0]) {
+            return c.json({ success: false, error: `Template not found: ${templateId}` } as ImpulseResolveResponse, 404);
+          }
+
+          const after = await executeAsAuth<any>(
+            jwtAuth,
+            `UPDATE activity SET deprecated = true, updated_at = time::now() WHERE record::id(id) = $id AND (org_id = $orgId OR scope = 'global') RETURN AFTER`,
+            { id: templateId, orgId: jwtAuth.orgId },
+          );
+          const afterRow = (after || [])[0];
+
+          const auditId = await emitUpkeepAudit({
+            operation: 'deprecate',
+            target_table: 'activity',
+            target_ids: [templateId],
+            filter_used: { id: templateId },
+            dry_run: false,
+            count: 1,
+            performed_by: jwtAuth.keyId || jwtAuth.userId || 'unknown',
+            org_id: jwtAuth.orgId,
+            reason,
+          });
+
+          return c.json({
+            success: true,
+            content: JSON.stringify({ template: afterRow, auditImpulseId: auditId }),
+            metadata: { shape: 'activityTemplate_deprecate_result', summary: `Deprecated ${templateId}${reason ? `: ${reason}` : ''}` },
+          } as ImpulseResolveResponse, 200);
+        } catch (err: any) {
+          logger.error('activityTemplate_deprecate failed', { error: err?.message });
+          return c.json({ success: false, error: err?.message || 'deprecate failed' } as ImpulseResolveResponse, 500);
+        }
+      }
+
+      case 'activityExecutionTrace_delete': {
+        // Auth check first so unauth'd callers get 401 instead of a hint about
+        // required pointer fields.
+        const authCheck = requireAuthenticated(c);
+        if (authCheck) return c.json({ success: false, error: authCheck.error } as ImpulseResolveResponse, authCheck.status);
+
+        const deletePointer = pointer as typeof pointer & {
+          olderThan?: string;
+          success?: boolean;
+          limit?: number;
+          dryRun?: boolean;
+        };
+
+        if (!deletePointer.olderThan) {
+          return c.json({ success: false, error: 'olderThan (ISO datetime) required for activityExecutionTrace_delete' } as ImpulseResolveResponse, 400);
+        }
+
+        const olderThan = deletePointer.olderThan;
+        const successFilter = deletePointer.success;
+        const limit = Math.min(Math.max(1, deletePointer.limit ?? 100), 1000);
+        const dryRun = deletePointer.dryRun !== false; // default true
+        const jwtAuth = getJwtAuthFromContext(c)!;
+
+        // For API-key auth we use root credentials (self-signed JWTs can't pass
+        // SurrealDB ACCESS validation), so we must add org_id scoping ourselves.
+        // For real JWT auth PERMISSIONS handle it but the extra predicate is
+        // a no-op since the row will already be scoped.
+        const conditions = ['org_id = $orgId', 'executed_at < type::datetime($olderThan)'];
+        const params: Record<string, unknown> = { olderThan, lim: limit, orgId: jwtAuth.orgId };
+        if (successFilter !== undefined) {
+          conditions.push(`success = ${successFilter ? 'true' : 'false'}`);
+        }
+        const whereClause = 'WHERE ' + conditions.join(' AND ');
+
+        try {
+          if (dryRun) {
+            const selectSql = `SELECT id, activity_id, executed_at, success FROM activity_execution_traces ${whereClause} LIMIT $lim`;
+            const rows = await executeAsAuth<any>(jwtAuth, selectSql, params);
+            const ids = (rows || []).map((r: any) => String(r.id));
+            return c.json({
+              success: true,
+              content: JSON.stringify({ type: 'activityExecutionTrace', ids, count: ids.length, dryRun: true, olderThan, successFilter }),
+              metadata: { shape: 'activityExecutionTrace_delete_result', summary: `Dry run: ${ids.length} trace(s) match` },
+            } as ImpulseResolveResponse, 200);
+          }
+
+          const selectSql = `SELECT id FROM activity_execution_traces ${whereClause} LIMIT $lim`;
+          const selected = await executeAsAuth<any>(jwtAuth, selectSql, params);
+          const targetIds = (selected || []).map((r: any) => String(r.id));
+
+          if (targetIds.length === 0) {
+            return c.json({
+              success: true,
+              content: JSON.stringify({ type: 'activityExecutionTrace', count: 0, dryRun: false, olderThan, successFilter }),
+              metadata: { shape: 'activityExecutionTrace_delete_result', summary: 'No matching traces to delete' },
+            } as ImpulseResolveResponse, 200);
+          }
+
+          await executeAsAuth<any>(jwtAuth, `DELETE FROM activity_execution_traces WHERE id IN $ids AND org_id = $orgId`, { ids: targetIds, orgId: jwtAuth.orgId });
+
+          const auditId = await emitUpkeepAudit({
+            operation: 'delete',
+            target_table: 'activity_execution_traces',
+            target_ids: targetIds,
+            filter_used: { olderThan, success: successFilter, limit },
+            dry_run: false,
+            count: targetIds.length,
+            performed_by: jwtAuth.keyId || jwtAuth.userId || 'unknown',
+            org_id: jwtAuth.orgId,
+          });
+
+          return c.json({
+            success: true,
+            content: JSON.stringify({ type: 'activityExecutionTrace', count: targetIds.length, dryRun: false, olderThan, successFilter, auditImpulseId: auditId }),
+            metadata: { shape: 'activityExecutionTrace_delete_result', summary: `Deleted ${targetIds.length} trace(s)` },
+          } as ImpulseResolveResponse, 200);
+        } catch (err: any) {
+          logger.error('activityExecutionTrace_delete failed', { error: err?.message });
+          return c.json({ success: false, error: err?.message || 'delete failed' } as ImpulseResolveResponse, 500);
+        }
+      }
+
+      // =============================================================================
+      // templateAuditReport: READ-ONLY. Scans stored templates, returns a per-template
+      // deficiency report (missing shapes/tags, default-shape placeholders, hardcoded
+      // URLs, etc.) plus optional semantic-tags-derived backfill proposals. Feeds the
+      // upcoming audit-and-backfill activity; never mutates.
+      // =============================================================================
+
+      case 'templateAuditReport': {
+        const authCheck = requireAuthenticated(c);
+        if (authCheck) return c.json({ success: false, error: authCheck.error } as ImpulseResolveResponse, authCheck.status);
+
+        const jwtAuth = getJwtAuthFromContext(c)!;
+
+        // Zod schema local to this case. The global pointer schema is
+        // intentionally permissive; we validate the audit-specific fields here
+        // so bad input produces a clean 400 instead of a cryptic downstream
+        // error.
+        const AuditInputSchema = z.object({
+          filter: z
+            .object({
+              missingMarkers: z
+                .array(
+                  z.enum([
+                    'input_shapes',
+                    'output_shapes',
+                    'tags',
+                    'description',
+                    'task_outputs',
+                    'hardcoded_urls',
+                  ]),
+                )
+                .optional(),
+              taskFormat: z.enum(['all_llm', 'all_resolver', 'mixed', 'any']).optional(),
+              scope: z.enum(['global', 'org', 'project']).optional(),
+              limit: z.number().int().positive().optional(),
+              offset: z.number().int().nonnegative().optional(),
+            })
+            .optional(),
+          includeProposals: z.boolean().optional(),
+          includeAliasWarnings: z.boolean().optional(),
+        });
+
+        let parsed: TemplateAuditInput;
+        try {
+          parsed = AuditInputSchema.parse({
+            filter: (pointer as any).filter,
+            includeProposals: (pointer as any).includeProposals,
+            includeAliasWarnings: (pointer as any).includeAliasWarnings,
+          }) as TemplateAuditInput;
+        } catch (err: any) {
+          return c.json({
+            success: false,
+            error: `Invalid templateAuditReport input: ${err?.message || 'validation failed'}`,
+          } as ImpulseResolveResponse, 400);
+        }
+
+        try {
+          // Pick the right DB client: for API-key auth the self-signed JWT
+          // can't pass SurrealDB ACCESS validation, so we use the root client
+          // (via surrealDB.getInstance()) and rely on runTemplateAuditReport's
+          // app-side org filter. For real JWT auth we create an authenticated
+          // Surreal instance so PERMISSIONS apply. runTemplateAuditReport
+          // expects the raw Surreal client (shared with observeShapes).
+          const db =
+            jwtAuth.authType === 'apikey' || !jwtAuth.jwtToken
+              ? await surrealDB.getInstance()
+              : await createAuthenticatedClient(jwtAuth.jwtToken);
+
+          const report = await runTemplateAuditReport(db, parsed, {
+            orgId: jwtAuth.orgId,
+            authType: jwtAuth.authType,
+          });
+
+          return c.json({
+            success: true,
+            content: JSON.stringify(report),
+            metadata: {
+              shape: 'templateAuditReport',
+              summary: `Audited ${report.total_scanned} template(s), ${report.total_with_deficiencies} with deficiencies`,
+            },
+          } as ImpulseResolveResponse, 200);
+        } catch (err: any) {
+          logger.error('templateAuditReport failed', { error: err?.message });
+          return c.json({
+            success: false,
+            error: err?.message || 'audit failed',
+          } as ImpulseResolveResponse, 500);
+        }
       }
 
       default: {

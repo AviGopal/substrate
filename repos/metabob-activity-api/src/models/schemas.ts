@@ -821,6 +821,12 @@ export const StoreExecutionTraceRequestSchema = z.object({
   duration_ms: z.number(),
   cost_usd: z.number(),
   execution_trace: ExecutionTraceDataSchema,
+  // Composition tracking (three-level activity tracing from minibob).
+  // parent_execution_id: direct parent in the composition tree.
+  // composition_chain: denormalized ancestor chain, ordered root-first,
+  //   so consumers can reconstruct composition trees in a single read.
+  parent_execution_id: z.string().optional(),
+  composition_chain: z.array(z.string()).optional(),
 });
 
 export const StoreExecutionTraceResponseSchema = z.object({
@@ -877,7 +883,7 @@ export const ImpulseResolveRequestSchema = z.object({
     arguments: z.record(z.unknown()).optional(), // For preValidationResult - argument values to validate
     minSuccessRate: z.number().min(0).max(1).optional(), // For preValidationResult - threshold for skip
     skipThreshold: z.number().min(0).max(1).optional(), // For preValidationResult - confidence threshold
-  }),
+  }).passthrough(), // Allow unknown pointer fields (v1.5.0 *_write/_delete/_update resolvers carry typed payloads like traceData, feedbackData, updates, olderThan, etc. — enumerating every one here would fight the open-ended design)
 });
 
 // =============================================================================

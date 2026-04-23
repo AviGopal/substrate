@@ -74,12 +74,14 @@ const dataSources: DataSource[] = [
 ];
 
 // Helper function to make authenticated requests
-async function fetchWithAuth(url: string): Promise<Response> {
+// Note: Most endpoints are publicly readable and don't require auth
+async function fetchWithAuth(url: string, requireAuth: boolean = false): Promise<Response> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
 
-  if (METABOB_API_KEY) {
+  // Only send API key if explicitly required (most read endpoints are public)
+  if (requireAuth && METABOB_API_KEY) {
     headers['Authorization'] = `ApiKey ${METABOB_API_KEY}`;
   }
 
@@ -110,9 +112,9 @@ async function updateCache() {
       dataSources[0].status = 'error';
     }
 
-    // Fetch templates
+    // Fetch templates (public endpoint, no auth required)
     console.log('[IMPULSE] Resolving activity_template from metabob-activity-api/v2/activities/templates');
-    const templatesRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/templates`);
+    const templatesRes = await fetchWithAuth(`${ACTIVITY_API_URL}/v2/activities/templates`, false);
 
     if (templatesRes.ok) {
       const templatesData = await templatesRes.json();
@@ -122,17 +124,26 @@ async function updateCache() {
       console.log(`[IMPULSE] Resolved ${cache.templates.length} activity_template impulses`);
 
       // Derive Thompson scores from templates
-      cache.scores = cache.templates.map((t: any) => ({
-        activity_id: t.id,
-        alpha: t.alpha || 1,
-        beta: t.beta || 1,
-        score: (t.alpha || 1) / ((t.alpha || 1) + (t.beta || 1)),
-        confidence: Math.min(t.alpha + t.beta, 100),
-        exploration_count: t.beta,
-        exploitation_count: t.alpha - 1,
-      }));
+      // Prefer metrics field when available (enriched data), fallback to root fields
+      cache.scores = cache.templates.map((t: any) => {
+        const alpha = t.metrics?.thompson_alpha || t.thompson_alpha || 1;
+        const beta = t.metrics?.thompson_beta || t.thompson_beta || 1;
+        return {
+          activity_id: t.id,
+          alpha,
+          beta,
+          score: alpha / (alpha + beta),
+          confidence: Math.min(alpha + beta, 100),
+          exploration_count: beta,
+          exploitation_count: alpha - 1,
+        };
+      });
     } else {
+      const errorText = await templatesRes.text().catch(() => 'Could not read error body');
       console.error(`Failed to fetch templates: ${templatesRes.status}`);
+      console.error(`Error response: ${errorText.substring(0, 500)}`);
+      console.error(`Request URL: ${ACTIVITY_API_URL}/v2/activities/templates`);
+      console.error(`API Key set: ${METABOB_API_KEY ? 'YES (length ' + METABOB_API_KEY.length + ')' : 'NO'}`);
       dataSources[1].status = 'error';
     }
 
@@ -651,9 +662,15 @@ app.get('/', (c) => {
         <div class="template-group">
           <div class="template-group-title">\${category}</div>
           \${items.slice(0, 5).map(t => {
-            const score = (t.alpha / (t.alpha + t.beta) * 100).toFixed(0);
-            const runs = (t.alpha + t.beta - 2);
-            const successRate = t.alpha > 1 ? ((t.alpha - 1) / runs * 100).toFixed(0) : '0';
+            // Prefer metrics field when available (enriched data), fallback to root fields
+            const alpha = t.metrics?.thompson_alpha || t.thompson_alpha || 1;
+            const beta = t.metrics?.thompson_beta || t.thompson_beta || 1;
+            const totalExecs = t.metrics?.total_executions || t.total_executions || 0;
+            const successExecs = t.metrics?.successful_executions || t.successful_executions || 0;
+
+            const score = (alpha / (alpha + beta) * 100).toFixed(0);
+            const runs = (alpha + beta - 2);
+            const successRate = totalExecs > 0 ? ((successExecs / totalExecs) * 100).toFixed(0) : '0';
             return \`
               <div class="template-item">
                 <div class="template-name">\${t.name || t.id}</div>

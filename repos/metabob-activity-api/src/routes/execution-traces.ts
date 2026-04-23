@@ -808,6 +808,14 @@ app.post('/', async (c) => {
 
       // Selection-to-execution correlation (from /recommend endpoint)
       ...(body.correlation_id ? { correlation_id: body.correlation_id } : {}),
+
+      // Composition tracking (three-level activity tracing):
+      //   parent_execution_id → direct parent in the composition tree
+      //   composition_chain   → denormalized ancestor chain, ordered root-first,
+      //                         so consumers can reconstruct trees in one read
+      ...(body.parent_execution_id ? { parent_execution_id: body.parent_execution_id } : {}),
+      ...(Array.isArray(body.composition_chain) && body.composition_chain.length > 0
+        ? { composition_chain: body.composition_chain } : {}),
     };
 
     // ========================================================================
@@ -905,6 +913,9 @@ app.post('/', async (c) => {
     if (trace.metadata) optionalFields.push('metadata: $metadata');
     // Selection-to-execution correlation
     if ((trace as any).correlation_id) optionalFields.push('correlation_id: $correlation_id');
+    // Composition tracking (from three-level activity tracing)
+    if ((trace as any).parent_execution_id) optionalFields.push('parent_execution_id: $parent_execution_id');
+    if ((trace as any).composition_chain) optionalFields.push('composition_chain: $composition_chain');
     // Project ID - only include if set (MiniBob instances may not have projects)
     if (trace.project_id) optionalFields.push('project_id: $project_id');
 
@@ -999,6 +1010,9 @@ app.post('/', async (c) => {
         tokens_in: trace.tokens_input,
         tokens_out: trace.tokens_output,
         parent_execution_id: body.parent_execution_id,
+        composition_chain: Array.isArray(body.composition_chain) && body.composition_chain.length > 0
+          ? body.composition_chain
+          : undefined,
         trace: {
           tasks: trace.tasks,
           state_snapshot: trace.state_snapshot,
@@ -1109,11 +1123,20 @@ app.post('/', async (c) => {
         }
       `;
 
-      // Get org_id from trace for RBAC-compliant update
-      const traceOrgId = (trace as any).org_id || jwtAuth?.orgId;
+      // Validate org_id is set (defined at line 737 with session fallback)
+      if (!traceOrgId || traceOrgId === 'undefined') {
+        logger.error('[learning] Cannot update Thompson Sampling - org_id is undefined', {
+          execution_id: trace.execution_id,
+          variant_id: trace.variant_id,
+          trace_org_id: trace.org_id,
+          jwt_org_id: jwtAuth?.orgId,
+        });
+        throw new Error('org_id is required for Thompson Sampling updates');
+      }
+
       const updateParams = {
         activity_id: trace.variant_id, // variant_id is the activity ID
-        org_id: traceOrgId, // RBAC: ensure updates only affect org's own templates
+        org_id: traceOrgId, // RBAC: ensure updates only affect org's own templates (from line 737)
         alpha_delta: alphaDelta,
         beta_delta: betaDelta,
         success_delta: trace.success ? 1 : 0,
@@ -1170,6 +1193,81 @@ app.post('/', async (c) => {
         execution_id: trace.execution_id,
         activity_id: trace.variant_id,
         error: scoreUpdateError instanceof Error ? scoreUpdateError.message : String(scoreUpdateError),
+      });
+    }
+
+    // DUAL-WRITE: Update variant_performance_metrics for dashboard compatibility
+    // Dashboard queries this table for Thompson Sampling scores, so we need to maintain it
+    // in addition to the activity_template updates above.
+    try {
+      const variantMetricsUpsert = `
+        INSERT INTO variant_performance_metrics {
+          variant_id: $variant_id,
+          activity_id: $variant_id,
+          org_id: $org_id,
+          total_executions: 1,
+          successful_executions: $success_delta,
+          failed_executions: $failure_delta,
+          success_rate: $success_delta,
+          avg_duration_ms: $duration_ms,
+          avg_cost_usd: $cost,
+          thompson_alpha: $success_delta + 1,
+          thompson_beta: $failure_delta + 1,
+          total_selections: 0,
+          last_executed_at: time::now(),
+          created_at: time::now(),
+          updated_at: time::now()
+        }
+        ON DUPLICATE KEY UPDATE
+          total_executions += 1,
+          successful_executions += $input.successful_executions,
+          failed_executions += $input.failed_executions,
+          success_rate = successful_executions / total_executions,
+          avg_duration_ms = ((avg_duration_ms * (total_executions - 1)) + $input.avg_duration_ms) / total_executions,
+          avg_cost_usd = ((avg_cost_usd * (total_executions - 1)) + $input.avg_cost_usd) / total_executions,
+          thompson_alpha = successful_executions + 1,
+          thompson_beta = failed_executions + 1,
+          last_executed_at = time::now(),
+          updated_at = time::now()
+        RETURN AFTER;
+      `;
+
+      const variantMetricsParams = {
+        variant_id: trace.variant_id,
+        org_id: traceOrgId,
+        success_delta: trace.success ? 1 : 0,
+        failure_delta: trace.success ? 0 : 1,
+        duration_ms: trace.duration_ms || 0,
+        cost: trace.cost_usd || 0,
+      };
+
+      const variantMetricsResult = jwtAuth?.jwtToken
+        ? await queryWithAuth(jwtAuth.jwtToken, variantMetricsUpsert, variantMetricsParams)
+        : await surrealDB.query(variantMetricsUpsert, variantMetricsParams);
+
+      if (variantMetricsResult && variantMetricsResult.length > 0) {
+        const updatedMetrics = variantMetricsResult[0];
+        logger.info('[learning] Variant performance metrics updated (dual-write)', {
+          execution_id: trace.execution_id,
+          variant_id: trace.variant_id,
+          total_executions: updatedMetrics.total_executions,
+          success_rate: updatedMetrics.success_rate,
+          thompson_alpha: updatedMetrics.thompson_alpha,
+          thompson_beta: updatedMetrics.thompson_beta,
+        });
+      } else {
+        logger.warn('[learning] Variant metrics UPSERT returned no results', {
+          execution_id: trace.execution_id,
+          variant_id: trace.variant_id,
+          query_params: variantMetricsParams,
+        });
+      }
+    } catch (variantMetricsError) {
+      // Don't fail the request if variant metrics update fails - trace is already stored
+      logger.error('[learning] Failed to update variant_performance_metrics (non-blocking)', {
+        execution_id: trace.execution_id,
+        variant_id: trace.variant_id,
+        error: variantMetricsError instanceof Error ? variantMetricsError.message : String(variantMetricsError),
       });
     }
 

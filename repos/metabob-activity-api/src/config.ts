@@ -136,7 +136,7 @@ export function loadConfig(): Config {
 
     auth: {
       requireAuth: parseEnvBool('REQUIRE_AUTH', false),
-      jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+      jwtSecret: process.env.JWT_SECRET || 'metabob-jwt-secret-key-change-in-production', // Must match KEY in 001-auth-access.surql
     },
     
     logLevel: (process.env.LOG_LEVEL || 'info') as Config['logLevel'],
@@ -153,14 +153,27 @@ export function loadConfig(): Config {
       heartbeatIntervalMs: parseEnvInt('DISCOVERY_HEARTBEAT_INTERVAL_MS', 60000), // 60 seconds
       retryAttempts: parseEnvInt('DISCOVERY_RETRY_ATTEMPTS', 3),
       retryBackoffMs: parseEnvInt('DISCOVERY_RETRY_BACKOFF_MS', 1000),
+      // Entries must match case statements in src/routes/impulses.ts.
+      // Do not advertise shapes that return 410 Gone or have no case.
       shapes: [
         'activityExecutionTrace',
         'activityTemplate',
         'activityMetrics',
-        'activityCompositionGraph',
-        'impulseRelevanceMetrics',
-        'toolUsagePatterns',
-        'executionSequences',
+        'executionTraceList',
+        'variantMetricsSummary',
+        'activityTemplateRecommendation',
+        'activityTemplatesByMetrics',
+        'executionTraces',
+        'goal',
+        'toolRiskProfile',
+        'compositionSuccess',
+        'impulseRelevance',
+        'preValidationResult',
+        // templateAuditReport: per-template deficiency report (read-only).
+        // Scans stored templates and surfaces missing shapes/tags, default
+        // placeholders, hardcoded URLs, etc., with optional semantic-tags
+        // backfill proposals. Feeds audit-and-backfill activities.
+        'templateAuditReport',
       ],
     },
   };
