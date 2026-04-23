@@ -1,0 +1,210 @@
+{
+  "id": "extract-concepts-from-trace",
+  "name": "Extract Concepts From Trace",
+  "description": "Ribosome pattern for concepts: read a successful execution trace, propose reusable concept candidates, dedupe against the existing concept graph, and persist new concepts linked back to the trace.",
+  "category": "learning",
+  "impulses": [
+    {
+      "id": "source-trace",
+      "pointer": {
+        "type": "activityExecutionTrace",
+        "trace_id": "{{traceId}}",
+        "include_state": true,
+        "include_tool_calls": true
+      },
+      "budget": 4000,
+      "priority": "high"
+    },
+    {
+      "id": "existing-neighborhood",
+      "pointer": {
+        "type": "conceptGraph",
+        "root_query": "{{traceTopic}}",
+        "hops": 2,
+        "limit": 40
+      },
+      "budget": 3000,
+      "priority": "high"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "analyze-trace-for-concept-candidates",
+      "subagent": "general",
+      "description": "Read the trace and propose 3-8 reusable concept candidates: code patterns, error signatures, decisions, reusable snippets.",
+      "dependencies": [],
+      "prompt": {
+        "template": "Extract reusable concepts from the execution trace in impulse `source-trace`.\n\n**Goal**: Propose concepts that would generalize beyond this one task. Ignore one-off details (specific file paths, PR numbers, timestamps).\n\n**Candidate classes** (pick 3-8 across these):\n- `code_pattern` - a tool-call sequence or code structure that succeeded\n- `error_signature` - an error shape and the fix that resolved it\n- `decision` - a choice made with reasoning (\"used X over Y because Z\")\n- `snippet` - a small reusable code block\n\n**For each candidate output**:\n- `summary` (one sentence, generalized)\n- `shape` (one of: code_pattern, error_signature, decision, snippet)\n- `content` (the generalized content, 1-3 sentences or a code block)\n- `source_trace_ref` (the tool-call index or task-id inside the trace it came from)\n\nStore the list as a memo impulse with id `candidates-{{traceId}}`, budget 3000. Do not POST to concept-db yet.",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "traceId",
+            "type": "string",
+            "required": true,
+            "description": "Execution trace id to extract concepts from"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "candidates-"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "dedupe-against-existing-graph",
+      "subagent": "general",
+      "description": "For each candidate, check impulse `existing-neighborhood` for a close match. Mark duplicates for merge, keep novel candidates for creation.",
+      "dependencies": [
+        "analyze-trace-for-concept-candidates"
+      ],
+      "prompt": {
+        "template": "Dedupe candidates from `candidates-{{traceId}}` against impulse `existing-neighborhood`.\n\n**For each candidate**:\n1. Compute summary similarity against every concept in the neighborhood (simple cosine on normalized summary text is fine; LLM judgment is acceptable).\n2. If similarity >= 0.8, mark as `duplicate` and record the matched concept id.\n3. Otherwise mark as `novel`.\n\n**Output**: overwrite impulse `candidates-{{traceId}}` with the annotated list. Print a one-line summary: `novel=N duplicate=M`.\n\nDo not be aggressive; when in doubt, mark novel. Better to create two related concepts than to drop a useful one.",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "traceId",
+            "type": "string",
+            "required": true,
+            "description": "Same trace id as the previous task"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "novel=",
+          "duplicate="
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "create-new-concepts",
+      "subagent": "general",
+      "description": "POST novel candidates to concept-db /concepts/from-source with source_type=extracted. Collect the returned concept ids.",
+      "dependencies": [
+        "dedupe-against-existing-graph"
+      ],
+      "prompt": {
+        "template": "Create concepts for every `novel` candidate in `candidates-{{traceId}}`.\n\n**For each novel candidate**, POST to `{{conceptDbUrl}}/concepts/from-source`:\n```\n{\n  \"source_type\": \"extracted\",\n  \"shape\": <candidate.shape>,\n  \"summary\": <candidate.summary>,\n  \"content\": <candidate.content>,\n  \"budget\": 2000,\n  \"priority\": 0.5\n}\n```\n\nCollect the returned `id` for each. Store the id list as impulse `new-concept-ids-{{traceId}}`, budget 1000. If any POST returns non-2xx, log the error and continue with the remaining candidates.\n\nReport: `created=N failed=M`.",
+        "maxTokens": 4000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "traceId",
+            "type": "string",
+            "required": true,
+            "description": "Same trace id"
+          },
+          {
+            "name": "conceptDbUrl",
+            "type": "string",
+            "required": false,
+            "default": "http://concept-db.activity-system.svc.cluster.local:8081",
+            "description": "concept-db base URL"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "created="
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "link-to-trace",
+      "subagent": "general",
+      "description": "Create `derived_from` edges from each new concept to the trace's root concept so lineage is preserved.",
+      "dependencies": [
+        "create-new-concepts"
+      ],
+      "prompt": {
+        "template": "Link new concepts back to their source.\n\n**Steps**:\n1. Read impulse `new-concept-ids-{{traceId}}`.\n2. Resolve impulse `existing-neighborhood` to find the root concept id (the concept matching `{{traceTopic}}` most closely; fall back to the first node if ambiguous).\n3. For each new concept id, POST to `{{conceptDbUrl}}/concepts/<new_id>/link`:\n```\n{\n  \"target_id\": <root_concept_id>,\n  \"edge_type\": \"derived_from\",\n  \"weight\": 0.6\n}\n```\n4. Report: `linked=N failed=M`.\n\nIf the root cannot be resolved, skip linking and log a warning; the concepts themselves are still useful without the edge.",
+        "maxTokens": 3000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "traceId",
+            "type": "string",
+            "required": true,
+            "description": "Same trace id"
+          },
+          {
+            "name": "traceTopic",
+            "type": "string",
+            "required": true,
+            "description": "Short label of the trace's subject; used to locate the root concept"
+          },
+          {
+            "name": "conceptDbUrl",
+            "type": "string",
+            "required": false,
+            "default": "http://concept-db.activity-system.svc.cluster.local:8081",
+            "description": "concept-db base URL"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "linked="
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "variables": [
+    {
+      "name": "traceId",
+      "type": "string",
+      "required": true,
+      "description": "Execution trace id to mine for concepts"
+    },
+    {
+      "name": "traceTopic",
+      "type": "string",
+      "required": true,
+      "description": "Short label of the trace's subject; seeds the existing-neighborhood lookup"
+    },
+    {
+      "name": "conceptDbUrl",
+      "type": "string",
+      "required": false,
+      "default": "http://concept-db.activity-system.svc.cluster.local:8081",
+      "description": "concept-db base URL"
+    }
+  ],
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 6000,
+    "annotationStrategy": "key-components"
+  }
+}
