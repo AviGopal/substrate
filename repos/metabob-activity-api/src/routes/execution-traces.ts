@@ -980,6 +980,64 @@ app.post('/', async (c) => {
       db_result: result[0],
     });
 
+    // Emit fine-grained WebSocket events for real-time execution visualization
+    if (body.execution_trace?.tasks && Array.isArray(body.execution_trace.tasks)) {
+      const { broadcaster } = await import('../websocket/broadcaster');
+
+      for (let taskIndex = 0; taskIndex < body.execution_trace.tasks.length; taskIndex++) {
+        const task = body.execution_trace.tasks[taskIndex];
+        const taskId = task.id || task.taskId || `task-${taskIndex}`;
+
+        // Emit task.started event
+        broadcaster.emit({
+          type: 'task.started',
+          timestamp: new Date().toISOString(),
+          data: {
+            execution_id: trace.execution_id,
+            task_id: taskId,
+            task_index: taskIndex,
+            description: task.description || '',
+            started_at: new Date().toISOString(),
+          },
+        });
+
+        // Emit tool.call events for each tool call in the task
+        if (task.toolCalls && Array.isArray(task.toolCalls)) {
+          for (const toolCall of task.toolCalls) {
+            broadcaster.emit({
+              type: 'tool.call',
+              timestamp: new Date().toISOString(),
+              data: {
+                execution_id: trace.execution_id,
+                task_id: taskId,
+                tool_name: toolCall.name || 'unknown',
+                resolver_tier: toolCall.resolver_tier || 'llm',
+                latency_ms: toolCall.duration_ms || 0,
+                cost_usd: toolCall.cost_usd || 0,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          }
+        }
+
+        // Emit task.completed event
+        const taskSuccess = task.result?.status === 'success';
+        broadcaster.emit({
+          type: 'task.completed',
+          timestamp: new Date().toISOString(),
+          data: {
+            execution_id: trace.execution_id,
+            task_id: taskId,
+            task_index: taskIndex,
+            success: taskSuccess,
+            duration_ms: task.duration || task.duration_ms || 0,
+            completed_at: new Date().toISOString(),
+            error: taskSuccess ? undefined : (task.result?.error || task.error),
+          },
+        });
+      }
+    }
+
     // DUAL-WRITE: Also insert into new paradigm execution table (schema-paradigm-alignment)
     // v_activity_score view computes Thompson Sampling from execution table automatically
     // P4.1: Feature flag controlled
