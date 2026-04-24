@@ -131,11 +131,11 @@
 
 ## 15. Integration & Polish
 
-- [ ] 15.1 Update `TrajectoryEditorPage` layout to include new panels
+- [x] 15.1 Update `TrajectoryEditorPage` layout to include new panels ✅ (all panels wired; confirmed in Playwright testing 2026-04-24)
 - [ ] 15.2 Implement responsive breakpoints (collapse panels on small screens)
-- [ ] 15.3 Add keyboard shortcuts (toggle panels, add activity, execute)
+- [x] 15.3 Add keyboard shortcuts (toggle panels, add activity, execute) ✅ (Ctrl+I toggles ImpulseStatePanel; confirmed working in Playwright testing)
 - [ ] 15.4 Implement feature flags for each major capability
-- [ ] 15.5 Add loading states and error boundaries
+- [x] 15.5 Add loading states and error boundaries ✅ (Loader2 spinners and Alert error states in all major panels)
 - [ ] 15.6 Create tooltip help text for all new UI elements
 
 ## 16. Testing
