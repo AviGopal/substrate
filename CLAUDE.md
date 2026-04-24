@@ -534,14 +534,22 @@ execution {
   // NEW: Composition tracking (minibob → activity-api v1.5.5, April 2026)
   parent_execution_id: string    // Direct parent in the composition tree (nested invocations)
   composition_chain: string[]    // Denormalized ancestor chain, ordered root-first
+
+  // NEW: Per-task impulse grouping (minibob 3d537c8 → activity-api 2a7984e, April 2026)
+  tasks: [{
+    // ... existing task fields ...
+    input_impulse_ids: string[]    // Impulses that fed this specific task
+    output_impulse_ids: string[]   // Impulses produced by this specific task
+  }]
 }
 ```
 
 **Purpose:**
-- Learn which resolvers work best for which impulses
-- Track vessel-level performance
-- Enable Thompson Sampling for resolver selection
-- Identify optimization opportunities
+- **Per-task impulse grouping**: Track which impulses were consumed and produced by each task for co-occurrence analysis
+- **Deterministic co-occurrence extraction**: ImpulseCooccurrenceResolver can extract task-scoped signal without LLM reshaping (via executionTraceWithSignatures)
+- **Learn which resolvers work best** for which impulses
+- **Track vessel-level performance** and resolver selection success rates
+- **Identify optimization opportunities** through resolver tier analysis
 
 **Backward Compatibility:**
 - Existing traces without these fields still valid
@@ -555,9 +563,10 @@ execution {
 
 **Learning Applications:**
 1. **Resolver Selection**: Track success rate per resolver per shape
-2. **Vessel Performance**: Measure latency per vessel, detect degradation
-3. **Cost Optimization**: Identify expensive patterns, prefer deterministic resolvers
-4. **Pattern Recognition**: Learn which resolvers work together
+2. **Impulse Co-Occurrence**: Determine which impulses are semantically related (e.g., "file contents" + "git diff" frequently co-occur)
+3. **Vessel Performance**: Measure latency per vessel, detect degradation
+4. **Cost Optimization**: Identify expensive patterns, prefer deterministic resolvers
+5. **Task-Level Signal**: Extract per-task semantics for activity variant optimization (which impulse combinations work best for specific tasks)
 
 **See also**: [`docs/architecture/RESOLVER_TRACKING.md`](docs/architecture/RESOLVER_TRACKING.md)
 
