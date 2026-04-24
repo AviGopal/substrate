@@ -1,0 +1,239 @@
+{
+  "id": "learn-impulse-relationships",
+  "name": "Learn impulse-pointer relationships from traces",
+  "description": "Passively learns semantic relationships between impulse-pointer signatures by analyzing co-occurrence in execution traces. Builds/refines concept-graph edges on concept-db with LLM-based edge-type classification as a ribosome layer.",
+  "category": "learning",
+  "impulses": [
+    {
+      "id": "recent-traces",
+      "pointer": {
+        "type": "executionTraceWithSignatures",
+        "since": "{{sinceIso}}",
+        "limit": "{{traceLimit}}",
+        "success_only": false
+      },
+      "budget": 6000,
+      "priority": "high"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "fetch-recent-traces",
+      "subagent": "general",
+      "description": "Load the executionTraceWithSignatures impulse and report trace count, task count, and signature diversity. The cooccurrence resolver in the next task ingests the hydrated payload directly — no normalization needed.",
+      "dependencies": [],
+      "prompt": {
+        "template": "Load impulse `recent-traces` (shape `executionTraceWithSignatures`) and report basic statistics. Do NOT paste the trace blob into your reply — log only counts.\n\n**Steps**:\n1. Load the `recent-traces` impulse and inspect its `traces` array.\n2. Emit a summary impulse with id `trace-fetch-summary` (memo, budget 500) with content like: `trace_count=N task_count=M signature_count=K`, where signature_count counts distinct `pointer_type`+`shape` pairs across all `impulses_by_id` maps.\n3. If `trace_count=0`, note it explicitly — downstream tasks will short-circuit on empty input.\n\n**No normalization required**: the `impulse_cooccurrence` resolver in the next task reads the hydrated shape directly (auto-maps `tasks[].input_impulse_ids` → `impulse_ids`). The next task consumes the `recent-traces` impulse directly.",
+        "maxTokens": 6000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "sinceIso",
+            "type": "string",
+            "required": true,
+            "description": "ISO-8601 lower bound for trace fetch; passed through to the executionTraceWithSignatures pointer"
+          },
+          {
+            "name": "traceLimit",
+            "type": "number",
+            "required": true,
+            "description": "Max traces to fetch (clamped 1..500 by the resolver)"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "trace_count=",
+          "signature_count="
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "extract-cooccurrence-matrix",
+      "subagent": "general",
+      "description": "Deterministic co-occurrence matrix extraction. Reads the recent-traces impulse (executionTraceWithSignatures shape) directly and produces an impulseCooccurrenceMatrix impulse. The resolver auto-maps input_impulse_ids into its internal shape.",
+      "dependencies": [
+        "fetch-recent-traces"
+      ],
+      "resolver": "impulse_cooccurrence",
+      "config": {
+        "inputImpulseIds": [
+          "recent-traces"
+        ]
+      },
+      "outputShapes": [
+        "impulseCooccurrenceMatrix"
+      ],
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "impulseCooccurrenceMatrix"
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "upsert-signature-concepts-and-base-edges",
+      "subagent": "general",
+      "description": "For each co-occurring signature pair above threshold, upsert both signatures as concepts and create/refresh an edge between them. concept_link is EMA-upsert, so running this template repeatedly reinforces edges without duplication.",
+      "dependencies": [
+        "extract-cooccurrence-matrix"
+      ],
+      "prompt": {
+        "template": "Read the output impulse from the previous task (shape `impulseCooccurrenceMatrix`). Its content is JSON: `{ generated_at, trace_count, task_count, signature_count, pairs: [{ a, b, success_count, failure_count, a_before_b, b_before_a, total_tasks_observed }] }`.\n\nIf `pairs` is empty or `trace_count == 0`, report `pairs_above_threshold=0` and stop — that is a valid outcome.\n\n**For each pair where `success_count >= {{minCooccurrences}}`**:\n\n1. Call MCP tool `concept_upsert_by_signature` twice:\n   - `{ pointer_type: pair.a.pointer_type, shape: pair.a.shape || '' }` → conceptA\n   - `{ pointer_type: pair.b.pointer_type, shape: pair.b.shape || '' }` → conceptB\n   (An empty-string `shape` is fine; the signature pair is still unique.)\n2. Compute `observed_weight = pair.success_count / max(1, pair.total_tasks_observed)`. Clamp to [0.01, 1.0].\n3. Choose the base edge type:\n   - If `max(a_before_b, b_before_a) > 2 * min(a_before_b, b_before_a)` AND `max(a_before_b, b_before_a) >= 2`: `sequence_next` (from the EARLIER signature's concept to the LATER one — i.e. if `a_before_b > b_before_a`, use `from=conceptA, to=conceptB`).\n   - Otherwise: `related_to` (direction is arbitrary but stable; use `from=conceptA, to=conceptB`).\n4. Call MCP tool `concept_link` with `{ from_concept_id, to_concept_id, edge_type, weight: observed_weight, description: 'co-occurrence frequency' }`. concept_link is EMA-upsert on (from, to, edge_type) — repeat runs refine the weight rather than creating duplicates.\n\n**Report**: `pairs_above_threshold=N concepts_upserted=M edges_linked=K errors=E`. Continue past individual errors; do not abort the batch.\n\nDo not invent signatures. Only emit concepts for signatures present in the matrix.",
+        "maxTokens": 8000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "minCooccurrences",
+            "type": "number",
+            "required": false,
+            "default": 3,
+            "description": "Minimum same-task success_count for a pair to create/refresh an edge"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "pairs_above_threshold="
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "classify-strong-edges-with-llm",
+      "subagent": "general",
+      "description": "Ribosome layer: for edges above the classification threshold, ask the LLM to refine edge_type (related_to -> derived_from/resolves_to/description_of/example_of/contradicts or a better sequence_next direction). Only overwrite when confidence is high.",
+      "dependencies": [
+        "upsert-signature-concepts-and-base-edges"
+      ],
+      "prompt": {
+        "template": "Refine edge classifications using the LLM as a ribosome over mechanically-derived edges. LLM tokens are only spent on edges above `{{classifyThreshold}}` — weak signals are left at their co-occurrence-derived type.\n\n**Steps**:\n\n1. Resolve an impulse of shape `impulseCooccurrenceEdges` with pointer `{ type: 'impulseCooccurrenceEdges', min_weight: {{classifyThreshold}}, limit: 100 }` against concept-db. The response is `{ edges: [ { from_concept_id, to_concept_id, edge_type, weight, from_signature: {pointer_type, shape}, to_signature: {pointer_type, shape} } ] }`. (If the resolver's actual response field names differ, adapt; the load-bearing fields are the two concept ids, current `edge_type`, and the two signatures.)\n2. If no edges are returned, report `classified=0 updated=0` and stop.\n3. For each edge:\n   a. Resolve two `impulseSignatureConcept` impulses — one per endpoint — with pointers `{ type: 'impulseSignatureConcept', pointer_type, shape }`. Use the returned `summary` fields as human context.\n   b. Ask yourself: given signatures `(from_pointer_type, from_shape)` and `(to_pointer_type, to_shape)`, plus their summaries, which edge type BEST describes their relationship as observed in recent execution traces? Choose exactly one of: `related_to | derived_from | resolves_to | sequence_next | description_of | example_of | contradicts`. Output a single-line JSON object `{ classified_edge_type, confidence }` with `confidence` in [0, 1].\n   c. If `confidence >= {{minClassifyConfidence}}` AND `classified_edge_type != edge.edge_type`, call MCP tool `concept_link` with `{ from_concept_id, to_concept_id, edge_type: classified_edge_type, weight: edge.weight, description: 'llm-refined' }`. EMA means the underlying weight is preserved across re-runs.\n   d. Otherwise leave the edge as-is.\n4. Report `classified=N updated=M kept=K low_confidence=L`.\n\nDo not propose edge types outside the enum. Do not touch edges below `{{classifyThreshold}}`.",
+        "maxTokens": 12000,
+        "compressionStrategy": "filter",
+        "variables": [
+          {
+            "name": "classifyThreshold",
+            "type": "number",
+            "required": false,
+            "default": 0.4,
+            "description": "Minimum edge weight to spend LLM tokens on classification"
+          },
+          {
+            "name": "minClassifyConfidence",
+            "type": "number",
+            "required": false,
+            "default": 0.7,
+            "description": "Minimum LLM confidence to overwrite an existing edge_type"
+          }
+        ]
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "classified=",
+          "updated="
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "strategy": "simple"
+      }
+    },
+    {
+      "id": "prune-weak-edges",
+      "subagent": "general",
+      "description": "Trigger concept-db's upkeep cycle (which includes prune-irrelevant-neighbors) to clean up stale / weak edges. Non-blocking on failure.",
+      "dependencies": [
+        "classify-strong-edges-with-llm"
+      ],
+      "resolver": "bash",
+      "config": {
+        "command": "set +e; RESP=$(curl -sS -m 15 -X POST -H 'Content-Type: application/json' '{{conceptDbUrl}}/upkeep/trigger' -d '{}'); RC=$?; if [ $RC -ne 0 ]; then echo 'prune_triggered=false reason=unreachable rc='$RC; exit 0; fi; echo \"prune_triggered=true response=$RESP\"; exit 0",
+        "timeout": 20000
+      },
+      "validation": {
+        "requiredFiles": [],
+        "requiredPatterns": [
+          "prune_triggered="
+        ],
+        "forbiddenPatterns": [],
+        "commands": []
+      },
+      "retry": {
+        "maxAttempts": 1,
+        "strategy": "simple"
+      }
+    }
+  ],
+  "variables": [
+    {
+      "name": "sinceIso",
+      "type": "string",
+      "required": false,
+      "default": "",
+      "description": "ISO-8601 lower bound for trace fetch; when empty the resolver defaults to 24h ago"
+    },
+    {
+      "name": "traceLimit",
+      "type": "number",
+      "required": false,
+      "default": 100,
+      "description": "Max traces to process (clamped 1..500 by the resolver)"
+    },
+    {
+      "name": "minCooccurrences",
+      "type": "number",
+      "required": false,
+      "default": 3,
+      "description": "Minimum same-task success_count for a pair to create/refresh an edge"
+    },
+    {
+      "name": "classifyThreshold",
+      "type": "number",
+      "required": false,
+      "default": 0.4,
+      "description": "Minimum edge weight to send through the LLM classifier"
+    },
+    {
+      "name": "minClassifyConfidence",
+      "type": "number",
+      "required": false,
+      "default": 0.7,
+      "description": "Minimum LLM confidence to overwrite an existing edge_type"
+    },
+    {
+      "name": "conceptDbUrl",
+      "type": "string",
+      "required": false,
+      "default": "https://concept-db.metabob.com",
+      "description": "concept-db base URL; override in-cluster to http://concept-db.activity-system.svc.cluster.local:8081"
+    }
+  ],
+  "metabob": {
+    "enabled": true,
+    "learningMode": true,
+    "targetContextTokens": 8000,
+    "annotationStrategy": "key-components"
+  }
+}
