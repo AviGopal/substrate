@@ -374,6 +374,7 @@ const unloaded = ImpulseResolver.unload(impulse)
 
 Read resolvers (as advertised via discovery; see `repos/metabob-activity-api/src/config.ts`):
 - `activityExecutionTrace`: Full execution trace with state
+- `executionTraceWithSignatures`: Hydrated trace with per-impulse pointer/shape signatures; supports `since`, `limit`, `activity_template_id`, `success_only`, `min_duration_ms` filters; response carries `impulses_by_id` map and per-task `input_impulse_ids`/`output_impulse_ids` arrays. Enables deterministic impulse co-occurrence extraction without LLM reshaping (see minibob ImpulseCooccurrenceResolver).
 - `activityTemplate`: Template structure and metadata
 - `activityMetrics`: Performance data
 - `executionTraceList`: Paginated list of executions for browse/inspect
