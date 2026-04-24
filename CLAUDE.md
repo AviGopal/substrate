@@ -265,7 +265,7 @@ Human-in-the-loop development interface for activities, executions, and learning
 - **Live execution monitor + Gantt timeline** (`3a1ca84`): WebSocket connection with reconnect and event-catchup protocol for missed events; Gantt bars with expand/collapse for nested tool calls and impulse-resolution markers by resolver tier
 - **Flame graph** (`75b7a46`): D3-rendered hierarchical flame with cost and duration modes, resolver-tier color coding (deterministic / pattern / LLM), drill-down into tool calls, PNG/SVG export, time-aware mode
 - **State diff viewer** (`1235867`): split/unified diff modes on task state transitions, file-list navigation with change counts, syntax highlighting (TS/JS/JSON), task-based grouping with expand/collapse, cumulative vs incremental toggle, auto-collapse of unchanged sections
-- **Trajectory editor** (`f134aaf` → `035af79` → `b2edb1d2`): horizontal CSS-Grid layout for an activity sequence (ActivityCard with expand/collapse, zustand store, localStorage autosave, keyboard nav), drag-and-drop reordering via `@dnd-kit`, insert/remove/reorder activities, parallel execution via multi-row columns, shape-validation indicators, goal-to-trajectory with Thompson Sampling (POST `/goal-paths/recommend` → `/v2/activities/discover-by-shapes` for shape-based activity discovery, confidence scores, endpoint prediction, "suggest next activity"), inline task editor (prompt editing with variable highlighting, validation rules, retry config, Thompson α/β + selection-strength sliders, save-as-variant with genealogy tracking)
+- **Trajectory editor** (`f134aaf` → `035af79` → `b2edb1d2`): horizontal CSS-Grid layout for an activity sequence (ActivityCard with expand/collapse, zustand store, localStorage autosave, keyboard nav), drag-and-drop reordering via `@dnd-kit`, insert/remove/reorder activities, parallel execution via multi-row columns, shape-validation indicators, goal-to-trajectory with Thompson Sampling (POST `/v2/goal-paths/recommend` → `/v2/activities/discover-by-shapes` for shape-based activity discovery, confidence scores, endpoint prediction, "suggest next activity"), inline task editor (prompt editing with variable highlighting, validation rules, retry config, Thompson α/β + selection-strength sliders, save-as-variant with genealogy tracking)
 
 **Distinct from activity-dashboard:** the dashboard is a read-only observability surface; the workbench is authoring + correction + live control (template editing, retries, manual trace curation, composition authoring, trace drill-down). Both talk to the same activity-api.
 
@@ -712,6 +712,7 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 - `GET /health`: Health check
 - `POST /v2/activities/recommend`: Thompson Sampling recommendations
 - `GET /v2/activities/templates`: List templates
+- `POST /v2/goal-paths/recommend`: Goal-to-trajectory generation with Thompson Sampling
 - `POST /v2/impulses/resolve`: Resolve impulse pointers
 - `POST /v2/activities/execution-traces`: Store execution trace
 - `POST /v2/activities/composition`: Record activity composition
@@ -828,20 +829,22 @@ curl -X GET https://activity.metabob.com/v2/activities/templates \
 
 ### Multi-Tenant Isolation
 
-Authentication automatically enforces multi-tenant isolation:
+Authentication automatically enforces multi-tenant isolation via SurrealDB PERMISSIONS:
 
-**SurrealDB PERMISSIONS:**
-- All multi-tenant tables filter by `WHERE org_id = $auth.org_id`
-- No application-level filtering needed
-- Database enforces isolation at query level
+**Core Pattern:**
+- All multi-tenant tables enforce org scoping at the database level
+- No application-level filtering needed — isolation is automatic
+- Migrations 079, 080, 083 (2026-04) fixed org-scoping to use `$token.org_id` for API-key auth (where `$auth` is unavailable)
 
 **Usage Pattern:**
 ```typescript
 // Use authenticated connection - PERMISSIONS enforced automatically
 const db = await createAuthenticatedClient(jwtToken);
 const templates = await db.query(`SELECT * FROM activity_template`);
-// Returns only templates for $auth.org_id
+// Returns only templates for authenticated caller's org
 ```
+
+**Important:** For PERMISSIONS clauses, use `$token.org_id` (works for both dashboard and API-key auth) rather than `$auth.org_id` (only works for dashboard). See [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md) §`$auth` vs `$token` for details.
 
 **Authentication Methods:**
 | Method | Use Case | Token Lifetime | Scopes |
