@@ -1,0 +1,714 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "⚡ Activity Monitor" [level=1] [ref=e3]
+    - generic [ref=e4]:
+      - generic [ref=e7]: Live
+      - generic [ref=e8]: 11:31:49
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: Recent Executions
+        - generic [ref=e13]: 16 executions
+      - generic [ref=e52]:
+        - generic [ref=e738]:
+          - generic [ref=e739]:
+            - generic [ref=e740]:
+              - text: ✓
+              - strong [ref=e741]: activity:goal_processing_standard
+            - generic [ref=e742]: execution:act_177... • 11:25
+          - generic [ref=e743]:
+            - generic [ref=e744]: ⏱ 47.4s
+            - generic [ref=e745]: 💰 $0.1658
+          - generic [ref=e746]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e747]: SUCCESS
+        - generic [ref=e748]:
+          - generic [ref=e749]:
+            - generic [ref=e750]:
+              - text: ✓
+              - strong [ref=e751]: activity:goal_processing_standard
+            - generic [ref=e752]: execution:exec_17... • 11:25
+          - generic [ref=e753]:
+            - generic [ref=e754]: ⏱ 47.4s
+            - generic [ref=e755]: 💰 $0.1658
+          - generic [ref=e756]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e757]: SUCCESS
+        - generic [ref=e758]:
+          - generic [ref=e759]:
+            - generic [ref=e760]:
+              - text: ✓
+              - strong [ref=e761]: activity:⟨deploy-vessel-deterministic⟩
+            - generic [ref=e762]: execution:act_177... • 11:25
+          - generic [ref=e763]:
+            - generic [ref=e764]: ⏱ 1.5s
+            - generic [ref=e765]: 💰 $0.0000
+          - generic [ref=e766]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e767]: SUCCESS
+        - generic [ref=e768]:
+          - generic [ref=e769]:
+            - generic [ref=e770]:
+              - text: ✓
+              - strong [ref=e771]: activity:⟨deploy-vessel-deterministic⟩
+            - generic [ref=e772]: execution:exec_17... • 11:25
+          - generic [ref=e773]:
+            - generic [ref=e774]: ⏱ 1.5s
+            - generic [ref=e775]: 💰 $0.0000
+          - generic [ref=e776]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e777]: SUCCESS
+        - generic [ref=e778]:
+          - generic [ref=e779]:
+            - generic [ref=e780]:
+              - text: ✓
+              - strong [ref=e781]: activity:⟨startup:template-sync⟩
+            - generic [ref=e782]: execution:act_177... • 11:24
+          - generic [ref=e783]:
+            - generic [ref=e784]: ⏱ 5.1s
+            - generic [ref=e785]: 💰 $0.0000
+          - generic [ref=e786]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e787]: SUCCESS
+        - generic [ref=e788]:
+          - generic [ref=e789]:
+            - generic [ref=e790]:
+              - text: ✓
+              - strong [ref=e791]: activity:⟨startup:template-sync⟩
+            - generic [ref=e792]: execution:exec_17... • 11:24
+          - generic [ref=e793]:
+            - generic [ref=e794]: ⏱ 5.1s
+            - generic [ref=e795]: 💰 $0.0000
+          - generic [ref=e796]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e797]: SUCCESS
+        - generic [ref=e798]:
+          - generic [ref=e799]:
+            - generic [ref=e800]:
+              - text: ✓
+              - strong [ref=e801]: activity:⟨startup:health-check⟩
+            - generic [ref=e802]: execution:act_177... • 11:24
+          - generic [ref=e803]:
+            - generic [ref=e804]: ⏱ 12.3s
+            - generic [ref=e805]: 💰 $0.1037
+          - generic [ref=e806]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e807]: SUCCESS
+        - generic [ref=e808]:
+          - generic [ref=e809]:
+            - generic [ref=e810]:
+              - text: ✓
+              - strong [ref=e811]: activity:⟨startup:health-check⟩
+            - generic [ref=e812]: execution:exec_17... • 11:24
+          - generic [ref=e813]:
+            - generic [ref=e814]: ⏱ 12.3s
+            - generic [ref=e815]: 💰 $0.1037
+          - generic [ref=e816]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e817]: SUCCESS
+        - generic [ref=e818]:
+          - generic [ref=e819]:
+            - generic [ref=e820]:
+              - text: ✓
+              - strong [ref=e821]: activity:goal_processing_standard
+            - generic [ref=e822]: execution:act_177... • 11:24
+          - generic [ref=e823]:
+            - generic [ref=e824]: ⏱ 110.1s
+            - generic [ref=e825]: 💰 $0.6506
+          - generic [ref=e826]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e827]: SUCCESS
+        - generic [ref=e828]:
+          - generic [ref=e829]:
+            - generic [ref=e830]:
+              - text: ✓
+              - strong [ref=e831]: activity:goal_processing_standard
+            - generic [ref=e832]: execution:exec_17... • 11:24
+          - generic [ref=e833]:
+            - generic [ref=e834]: ⏱ 110.1s
+            - generic [ref=e835]: 💰 $0.6506
+          - generic [ref=e836]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e837]: SUCCESS
+        - generic [ref=e838]:
+          - generic [ref=e839]:
+            - generic [ref=e840]:
+              - text: ✓
+              - strong [ref=e841]: activity:⟨deploy-vessel-deterministic⟩
+            - generic [ref=e842]: execution:act_177... • 11:23
+          - generic [ref=e843]:
+            - generic [ref=e844]: ⏱ 1.5s
+            - generic [ref=e845]: 💰 $0.0000
+          - generic [ref=e846]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e847]: SUCCESS
+        - generic [ref=e848]:
+          - generic [ref=e849]:
+            - generic [ref=e850]:
+              - text: ✓
+              - strong [ref=e851]: activity:⟨deploy-vessel-deterministic⟩
+            - generic [ref=e852]: execution:exec_17... • 11:23
+          - generic [ref=e853]:
+            - generic [ref=e854]: ⏱ 1.5s
+            - generic [ref=e855]: 💰 $0.0000
+          - generic [ref=e856]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e857]: SUCCESS
+        - generic [ref=e858]:
+          - generic [ref=e859]:
+            - generic [ref=e860]:
+              - text: ✓
+              - strong [ref=e861]: activity:⟨startup:template-sync⟩
+            - generic [ref=e862]: execution:act_177... • 11:22
+          - generic [ref=e863]:
+            - generic [ref=e864]: ⏱ 5.7s
+            - generic [ref=e865]: 💰 $0.0000
+          - generic [ref=e866]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e867]: SUCCESS
+        - generic [ref=e868]:
+          - generic [ref=e869]:
+            - generic [ref=e870]:
+              - text: ✓
+              - strong [ref=e871]: activity:⟨startup:template-sync⟩
+            - generic [ref=e872]: execution:exec_17... • 11:22
+          - generic [ref=e873]:
+            - generic [ref=e874]: ⏱ 5.7s
+            - generic [ref=e875]: 💰 $0.0000
+          - generic [ref=e876]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e877]: SUCCESS
+        - generic [ref=e878]:
+          - generic [ref=e879]:
+            - generic [ref=e880]:
+              - text: ✓
+              - strong [ref=e881]: activity:⟨startup:health-check⟩
+            - generic [ref=e882]: execution:act_177... • 11:22
+          - generic [ref=e883]:
+            - generic [ref=e884]: ⏱ 10.0s
+            - generic [ref=e885]: 💰 $0.1109
+          - generic [ref=e886]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e887]: SUCCESS
+        - generic [ref=e888]:
+          - generic [ref=e889]:
+            - generic [ref=e890]:
+              - text: ✓
+              - strong [ref=e891]: activity:⟨startup:health-check⟩
+            - generic [ref=e892]: execution:exec_17... • 11:22
+          - generic [ref=e893]:
+            - generic [ref=e894]: ⏱ 10.0s
+            - generic [ref=e895]: 💰 $0.1109
+          - generic [ref=e896]:
+            - text: "Tokens: 0 → 0"
+            - generic [ref=e897]: SUCCESS
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: 📊 Learning Insights
+        - generic [ref=e17]: 16 recent
+      - generic [ref=e213]:
+        - generic [ref=e898]:
+          - generic [ref=e899]: Success Rate (Last 20)
+          - generic [ref=e900]: 100.0%
+          - generic [ref=e901]: 16/16 succeeded
+        - generic [ref=e902]:
+          - generic [ref=e903]: Average Cost
+          - generic [ref=e904]: $0.1289
+          - generic [ref=e905]: "⏱ Avg duration: 24215.75ms"
+        - generic [ref=e906]:
+          - generic [ref=e907]: Exploration Balance
+          - generic [ref=e908]: 10 / 10
+          - generic [ref=e909]:
+            - text: "🔍 Exploring: 10"
+            - text: "🎯 Exploiting: 0"
+        - generic [ref=e910]:
+          - generic [ref=e911]: 🏆 Most Used Template
+          - generic [ref=e912]: activity:goal_processing_standard
+          - generic [ref=e913]: 4 executions • 400% success
+        - generic [ref=e914]:
+          - generic [ref=e915]: System Learning State
+          - generic [ref=e916]:
+            - text: ✓ 0 templates converged (high confidence)
+            - text: ⚡ 10 templates still exploring
+            - text: 📈 10 total templates tracked
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]: Activity Templates
+          - generic [ref=e22]: 10 templates
+        - generic [ref=e233]:
+          - generic [ref=e917]:
+            - generic [ref=e918]: tool
+            - generic [ref=e919]:
+              - generic [ref=e920]: Generate Directory Tree Diagram
+              - generic [ref=e921]:
+                - generic [ref=e922]: NaN runs
+                - generic [ref=e923]: NaN% Thompson
+                - generic [ref=e924]: 0% success
+            - generic [ref=e925]:
+              - generic [ref=e926]: Create Folder Structure Diagram
+              - generic [ref=e927]:
+                - generic [ref=e928]: NaN runs
+                - generic [ref=e929]: NaN% Thompson
+                - generic [ref=e930]: 0% success
+            - generic [ref=e931]:
+              - generic [ref=e932]: learned-dashboard-specification-validator-mo8ukzf1
+              - generic [ref=e933]:
+                - generic [ref=e934]: NaN runs
+                - generic [ref=e935]: NaN% Thompson
+                - generic [ref=e936]: 0% success
+            - generic [ref=e937]:
+              - generic [ref=e938]: Dashboard Specification Validator
+              - generic [ref=e939]:
+                - generic [ref=e940]: NaN runs
+                - generic [ref=e941]: NaN% Thompson
+                - generic [ref=e942]: 0% success
+          - generic [ref=e943]:
+            - generic [ref=e944]: meta
+            - generic [ref=e945]:
+              - generic [ref=e946]: Orchestrate Test Goal
+              - generic [ref=e947]:
+                - generic [ref=e948]: NaN runs
+                - generic [ref=e949]: NaN% Thompson
+                - generic [ref=e950]: 0% success
+            - generic [ref=e951]:
+              - generic [ref=e952]: Orchestrate Refactor Goal
+              - generic [ref=e953]:
+                - generic [ref=e954]: NaN runs
+                - generic [ref=e955]: NaN% Thompson
+                - generic [ref=e956]: 0% success
+          - generic [ref=e957]:
+            - generic [ref=e958]: infrastructure
+            - generic [ref=e959]:
+              - generic [ref=e960]: Validate Deployment Health
+              - generic [ref=e961]:
+                - generic [ref=e962]: NaN runs
+                - generic [ref=e963]: NaN% Thompson
+                - generic [ref=e964]: 0% success
+            - generic [ref=e965]:
+              - generic [ref=e966]: Database Migration with Validation
+              - generic [ref=e967]:
+                - generic [ref=e968]: NaN runs
+                - generic [ref=e969]: NaN% Thompson
+                - generic [ref=e970]: 0% success
+            - generic [ref=e971]:
+              - generic [ref=e972]: Deterministic Git Workflow Sync
+              - generic [ref=e973]:
+                - generic [ref=e974]: NaN runs
+                - generic [ref=e975]: NaN% Thompson
+                - generic [ref=e976]: 0% success
+            - generic [ref=e977]:
+              - generic [ref=e978]: Deterministic Vessel Deployment with Rollback
+              - generic [ref=e979]:
+                - generic [ref=e980]: NaN runs
+                - generic [ref=e981]: NaN% Thompson
+                - generic [ref=e982]: 0% success
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]: 🎲 Thompson Sampling (Learning System)
+          - generic [ref=e26]: 10 scores
+        - generic [ref=e366]:
+          - generic [ref=e983]:
+            - generic [ref=e984]:
+              - generic [ref=e985]:
+                - generic [ref=e986]: activity:⟨Generate Directory Tree Diagram⟩
+                - generic [ref=e987]: EXPLORING 0 runs
+              - generic [ref=e988]: 50.0% ±70.7%
+            - generic [ref=e989]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e990]:
+            - generic [ref=e991]:
+              - generic [ref=e992]:
+                - generic [ref=e993]: activity:⟨Create Folder Structure Diagram⟩
+                - generic [ref=e994]: EXPLORING 0 runs
+              - generic [ref=e995]: 50.0% ±70.7%
+            - generic [ref=e996]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e997]:
+            - generic [ref=e998]:
+              - generic [ref=e999]:
+                - generic [ref=e1000]: activity:tpl_1776789483085_wyxyw
+                - generic [ref=e1001]: EXPLORING 0 runs
+              - generic [ref=e1002]: 50.0% ±70.7%
+            - generic [ref=e1003]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1004]:
+            - generic [ref=e1005]:
+              - generic [ref=e1006]:
+                - generic [ref=e1007]: activity:⟨activity:⟨Dashboard Specification Validator\⟩⟩
+                - generic [ref=e1008]: EXPLORING 0 runs
+              - generic [ref=e1009]: 50.0% ±70.7%
+            - generic [ref=e1010]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1011]:
+            - generic [ref=e1012]:
+              - generic [ref=e1013]:
+                - generic [ref=e1014]: activity:⟨activity:⟨orchestrate-test-goal\⟩⟩
+                - generic [ref=e1015]: EXPLORING 0 runs
+              - generic [ref=e1016]: 50.0% ±70.7%
+            - generic [ref=e1017]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1018]:
+            - generic [ref=e1019]:
+              - generic [ref=e1020]:
+                - generic [ref=e1021]: activity:⟨activity:⟨orchestrate-refactor-goal\⟩⟩
+                - generic [ref=e1022]: EXPLORING 0 runs
+              - generic [ref=e1023]: 50.0% ±70.7%
+            - generic [ref=e1024]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1025]:
+            - generic [ref=e1026]:
+              - generic [ref=e1027]:
+                - generic [ref=e1028]: activity:⟨validate-deployment-health-v2⟩
+                - generic [ref=e1029]: EXPLORING 0 runs
+              - generic [ref=e1030]: 50.0% ±70.7%
+            - generic [ref=e1031]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1032]:
+            - generic [ref=e1033]:
+              - generic [ref=e1034]:
+                - generic [ref=e1035]: activity:⟨run-db-migration-v2⟩
+                - generic [ref=e1036]: EXPLORING 0 runs
+              - generic [ref=e1037]: 50.0% ±70.7%
+            - generic [ref=e1038]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1039]:
+            - generic [ref=e1040]:
+              - generic [ref=e1041]:
+                - generic [ref=e1042]: activity:⟨git-workflow-sync-deterministic⟩
+                - generic [ref=e1043]: EXPLORING 0 runs
+              - generic [ref=e1044]: 50.0% ±70.7%
+            - generic [ref=e1045]: α=1.0 • β=1.0 • confidence=null
+          - generic [ref=e1046]:
+            - generic [ref=e1047]:
+              - generic [ref=e1048]:
+                - generic [ref=e1049]: activity:⟨deploy-vessel-deterministic⟩
+                - generic [ref=e1050]: EXPLORING 0 runs
+              - generic [ref=e1051]: 50.0% ±70.7%
+            - generic [ref=e1052]: α=1.0 • β=1.0 • confidence=null
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: Impulse Resolution
+          - generic [ref=e31]: 0 shapes
+        - generic [ref=e1053]:
+          - generic [ref=e1054]: 🔒
+          - generic [ref=e1055]: Impulse metrics unavailable
+          - generic [ref=e1056]:
+            - text: Requires API key authentication
+            - text: "Status: Waiting for authenticated executions"
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]: 📡 Data Sources (Impulse Resolution)
+          - generic [ref=e35]: 3 data sources
+        - generic [ref=e442]:
+          - generic [ref=e1057]:
+            - generic [ref=e1058]:
+              - generic [ref=e1059]: execution_trace
+              - generic [ref=e1060]: HEALTHY
+            - generic [ref=e1061]:
+              - strong [ref=e1062]: "Vessel:"
+              - text: metabob-activity-api
+              - strong [ref=e1063]: "Type:"
+              - text: executions
+              - strong [ref=e1064]: "Last Fetch:"
+              - text: 11:31:49
+            - generic [ref=e1065]: GET /v2/activities/executions?limit=50
+          - generic [ref=e1066]:
+            - generic [ref=e1067]:
+              - generic [ref=e1068]: activity_template
+              - generic [ref=e1069]: HEALTHY
+            - generic [ref=e1070]:
+              - strong [ref=e1071]: "Vessel:"
+              - text: metabob-activity-api
+              - strong [ref=e1072]: "Type:"
+              - text: templates
+              - strong [ref=e1073]: "Last Fetch:"
+              - text: 11:31:49
+            - generic [ref=e1074]: GET /v2/activities/templates
+          - generic [ref=e1075]:
+            - generic [ref=e1076]:
+              - generic [ref=e1077]: impulse_resolution_metrics
+              - generic [ref=e1078]: ERROR
+            - generic [ref=e1079]:
+              - strong [ref=e1080]: "Vessel:"
+              - text: metabob-activity-api
+              - strong [ref=e1081]: "Type:"
+              - text: impulses
+              - strong [ref=e1082]: "Last Fetch:"
+              - text: Never
+            - generic [ref=e1083]: GET /v2/impulses/resolution-metrics?limit=20
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]: 🔗 Activity Compositions
+        - generic [ref=e39]: 100 edges
+      - generic [ref=e470]:
+        - generic [ref=e1084]:
+          - generic [ref=e1085]: activity:⟨Analyze System Health and Performance Issues⟩ → 1 children
+          - generic [ref=e1086]:
+            - generic [ref=e1087]: → activity:⟨Workflow Analysis and System Improvement⟩
+            - generic [ref=e1088]:
+              - generic [ref=e1089]: 0 calls
+              - generic [ref=e1090]: 100% success
+              - generic [ref=e1091]: Avg 0ms
+        - generic [ref=e1092]:
+          - generic [ref=e1093]: activity:⟨startup:health-check⟩ → 2 children
+          - generic [ref=e1094]:
+            - generic [ref=e1095]: → tpl_1776750676534_p7vz9
+            - generic [ref=e1096]:
+              - generic [ref=e1097]: 0 calls
+              - generic [ref=e1098]: 100% success
+              - generic [ref=e1099]: Avg 0ms
+          - generic [ref=e1100]:
+            - generic [ref=e1101]: → tpl_1776768615865_v5tqwe
+            - generic [ref=e1102]:
+              - generic [ref=e1103]: 0 calls
+              - generic [ref=e1104]: 100% success
+              - generic [ref=e1105]: Avg 0ms
+        - generic [ref=e1106]:
+          - generic [ref=e1107]: activity:⟨Analyze App Usage Traces⟩ → 7 children
+          - generic [ref=e1108]:
+            - generic [ref=e1109]: → activity:⟨analyze-app-traces-comprehensive⟩
+            - generic [ref=e1110]:
+              - generic [ref=e1111]: 0 calls
+              - generic [ref=e1112]: 100% success
+              - generic [ref=e1113]: Avg 0ms
+          - generic [ref=e1114]:
+            - generic [ref=e1115]: → activity:⟨Comprehensive Trace Analysis with Insights⟩
+            - generic [ref=e1116]:
+              - generic [ref=e1117]: 0 calls
+              - generic [ref=e1118]: 100% success
+              - generic [ref=e1119]: Avg 0ms
+          - generic [ref=e1120]:
+            - generic [ref=e1121]: → activity:⟨Analyze Application Usage Traces⟩
+            - generic [ref=e1122]:
+              - generic [ref=e1123]: 0 calls
+              - generic [ref=e1124]: 700% success
+              - generic [ref=e1125]: Avg 0ms
+          - generic [ref=e1126]:
+            - generic [ref=e1127]: → activity:⟨Analyze Activity Usage Traces⟩
+            - generic [ref=e1128]:
+              - generic [ref=e1129]: 0 calls
+              - generic [ref=e1130]: 300% success
+              - generic [ref=e1131]: Avg 0ms
+          - generic [ref=e1132]:
+            - generic [ref=e1133]: → activity:⟨Comprehensive Application Trace Analysis⟩
+            - generic [ref=e1134]:
+              - generic [ref=e1135]: 0 calls
+              - generic [ref=e1136]: 200% success
+              - generic [ref=e1137]: Avg 0ms
+        - generic [ref=e1138]:
+          - generic [ref=e1139]: assess-development-loop → 8 children
+          - generic [ref=e1140]:
+            - generic [ref=e1141]: → activity:⟨Analyze Loop Performance and Create Improvement Issue⟩
+            - generic [ref=e1142]:
+              - generic [ref=e1143]: 0 calls
+              - generic [ref=e1144]: 100% success
+              - generic [ref=e1145]: Avg 0ms
+          - generic [ref=e1146]:
+            - generic [ref=e1147]: → activity:⟨Workflow Issue Analysis⟩
+            - generic [ref=e1148]:
+              - generic [ref=e1149]: 0 calls
+              - generic [ref=e1150]: 200% success
+              - generic [ref=e1151]: Avg 0ms
+          - generic [ref=e1152]:
+            - generic [ref=e1153]: → activity:⟨Analyze Workflow Health Metrics⟩
+            - generic [ref=e1154]:
+              - generic [ref=e1155]: 0 calls
+              - generic [ref=e1156]: 100% success
+              - generic [ref=e1157]: Avg 0ms
+          - generic [ref=e1158]:
+            - generic [ref=e1159]: → activity:⟨Analyze Workflow Data for Issues⟩
+            - generic [ref=e1160]:
+              - generic [ref=e1161]: 0 calls
+              - generic [ref=e1162]: 100% success
+              - generic [ref=e1163]: Avg 0ms
+          - generic [ref=e1164]:
+            - generic [ref=e1165]: → activity:⟨Query Specific Activity Stats⟩
+            - generic [ref=e1166]:
+              - generic [ref=e1167]: 0 calls
+              - generic [ref=e1168]: 100% success
+              - generic [ref=e1169]: Avg 0ms
+        - generic [ref=e1170]:
+          - generic [ref=e1171]: activity:⟨Analyze Workflow Issues⟩ → 3 children
+          - generic [ref=e1172]:
+            - generic [ref=e1173]: → activity:⟨Operational Workflow Analysis⟩
+            - generic [ref=e1174]:
+              - generic [ref=e1175]: 0 calls
+              - generic [ref=e1176]: 100% success
+              - generic [ref=e1177]: Avg 0ms
+          - generic [ref=e1178]:
+            - generic [ref=e1179]: → activity:⟨Workflow Health Analysis⟩
+            - generic [ref=e1180]:
+              - generic [ref=e1181]: 0 calls
+              - generic [ref=e1182]: 100% success
+              - generic [ref=e1183]: Avg 0ms
+          - generic [ref=e1184]:
+            - generic [ref=e1185]: → activity:⟨Workflow Effectiveness Analysis⟩
+            - generic [ref=e1186]:
+              - generic [ref=e1187]: 0 calls
+              - generic [ref=e1188]: 100% success
+              - generic [ref=e1189]: Avg 0ms
+        - generic [ref=e1190]:
+          - generic [ref=e1191]: activity:⟨fetch-activity-metrics⟩ → 10 children
+          - generic [ref=e1192]:
+            - generic [ref=e1193]: → activity:⟨Fetch API Metrics (Environment-Safe)⟩
+            - generic [ref=e1194]:
+              - generic [ref=e1195]: 0 calls
+              - generic [ref=e1196]: 100% success
+              - generic [ref=e1197]: Avg 0ms
+          - generic [ref=e1198]:
+            - generic [ref=e1199]: → activity:⟨Node.js API Metrics Fetcher⟩
+            - generic [ref=e1200]:
+              - generic [ref=e1201]: 0 calls
+              - generic [ref=e1202]: 100% success
+              - generic [ref=e1203]: Avg 0ms
+          - generic [ref=e1204]:
+            - generic [ref=e1205]: → activity:⟨Fetch and Save Activity Metrics⟩
+            - generic [ref=e1206]:
+              - generic [ref=e1207]: 0 calls
+              - generic [ref=e1208]: 200% success
+              - generic [ref=e1209]: Avg 0ms
+          - generic [ref=e1210]:
+            - generic [ref=e1211]: → activity:⟨Fetch API Data Without Curl⟩
+            - generic [ref=e1212]:
+              - generic [ref=e1213]: 0 calls
+              - generic [ref=e1214]: 100% success
+              - generic [ref=e1215]: Avg 0ms
+          - generic [ref=e1216]:
+            - generic [ref=e1217]: → activity:⟨API Data Fetcher⟩
+            - generic [ref=e1218]:
+              - generic [ref=e1219]: 0 calls
+              - generic [ref=e1220]: 500% success
+              - generic [ref=e1221]: Avg 0ms
+        - generic [ref=e1222]:
+          - generic [ref=e1223]: activity:⟨Fetch and Analyze App Usage Traces⟩ → 3 children
+          - generic [ref=e1224]:
+            - generic [ref=e1225]: → activity:⟨Analyze Activity Usage Traces⟩
+            - generic [ref=e1226]:
+              - generic [ref=e1227]: 0 calls
+              - generic [ref=e1228]: 100% success
+              - generic [ref=e1229]: Avg 0ms
+          - generic [ref=e1230]:
+            - generic [ref=e1231]: → activity:⟨Analyze and Categorize Usage Traces⟩
+            - generic [ref=e1232]:
+              - generic [ref=e1233]: 0 calls
+              - generic [ref=e1234]: 100% success
+              - generic [ref=e1235]: Avg 0ms
+          - generic [ref=e1236]:
+            - generic [ref=e1237]: → activity:⟨Analyze App Usage Trace Patterns⟩
+            - generic [ref=e1238]:
+              - generic [ref=e1239]: 0 calls
+              - generic [ref=e1240]: 200% success
+              - generic [ref=e1241]: Avg 0ms
+        - generic [ref=e1242]:
+          - generic [ref=e1243]: activity:⟨Trace Error Statistics Analysis⟩ → 1 children
+          - generic [ref=e1244]:
+            - generic [ref=e1245]: → activity:⟨Comprehensive Trace Error Analysis⟩
+            - generic [ref=e1246]:
+              - generic [ref=e1247]: 0 calls
+              - generic [ref=e1248]: 100% success
+              - generic [ref=e1249]: Avg 0ms
+        - generic [ref=e1250]:
+          - generic [ref=e1251]: activity:⟨Convert Specification to Contract Enforcement⟩ → 1 children
+          - generic [ref=e1252]:
+            - generic [ref=e1253]: → activity:⟨Convert Specification to Contract Enforcement⟩
+            - generic [ref=e1254]:
+              - generic [ref=e1255]: 0 calls
+              - generic [ref=e1256]: 100% success
+              - generic [ref=e1257]: Avg 0ms
+        - generic [ref=e1258]:
+          - generic [ref=e1259]: activity:⟨GitHub Autonomous Development Metrics⟩ → 7 children
+          - generic [ref=e1260]:
+            - generic [ref=e1261]: → activity:⟨GitHub Repository Analysis and Metrics Report⟩
+            - generic [ref=e1262]:
+              - generic [ref=e1263]: 0 calls
+              - generic [ref=e1264]: 100% success
+              - generic [ref=e1265]: Avg 0ms
+          - generic [ref=e1266]:
+            - generic [ref=e1267]: → activity:⟨GitHub Autonomous Development Reporter⟩
+            - generic [ref=e1268]:
+              - generic [ref=e1269]: 0 calls
+              - generic [ref=e1270]: 200% success
+              - generic [ref=e1271]: Avg 0ms
+          - generic [ref=e1272]:
+            - generic [ref=e1273]: → activity:⟨GitHub Development Activity Analysis⟩
+            - generic [ref=e1274]:
+              - generic [ref=e1275]: 0 calls
+              - generic [ref=e1276]: 100% success
+              - generic [ref=e1277]: Avg 0ms
+          - generic [ref=e1278]:
+            - generic [ref=e1279]: → activity:⟨GitHub Development Analytics Report⟩
+            - generic [ref=e1280]:
+              - generic [ref=e1281]: 0 calls
+              - generic [ref=e1282]: 100% success
+              - generic [ref=e1283]: Avg 0ms
+          - generic [ref=e1284]:
+            - generic [ref=e1285]: → activity:⟨GitHub Development Activity Report⟩
+            - generic [ref=e1286]:
+              - generic [ref=e1287]: 0 calls
+              - generic [ref=e1288]: 100% success
+              - generic [ref=e1289]: Avg 0ms
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]: ⚖️ Recommendation Weights (Thompson Sampling)
+        - generic [ref=e43]: 0 recommendations
+      - generic [ref=e1290]:
+        - generic [ref=e1291]: ⚖️
+        - generic [ref=e1292]: No recommendations
+        - generic [ref=e1293]: Recommendation weights require active goal processing
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e46]: 🎯 Impulse Relevancy Metrics
+        - generic [ref=e47]: 0 metrics
+      - generic [ref=e1294]:
+        - generic [ref=e1295]: 🎯
+        - generic [ref=e1296]: No relevance metrics
+        - generic [ref=e1297]: Impulse relevancy tracking will appear here
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e50]: 🔍 Task Execution Views (Resolver Perspective)
+        - generic [ref=e51]: 10 executions
+      - generic [ref=e687]:
+        - generic [ref=e1299]:
+          - generic [ref=e1300]:
+            - text: ✓
+            - strong [ref=e1301]: activity:goal_processing_standard
+          - generic [ref=e1302]: execution:act_177... • 11:25
+        - generic [ref=e1304]:
+          - generic [ref=e1305]:
+            - text: ✓
+            - strong [ref=e1306]: activity:goal_processing_standard
+          - generic [ref=e1307]: execution:exec_17... • 11:25
+        - generic [ref=e1309]:
+          - generic [ref=e1310]:
+            - text: ✓
+            - strong [ref=e1311]: activity:⟨deploy-vessel-deterministic⟩
+          - generic [ref=e1312]: execution:act_177... • 11:25
+        - generic [ref=e1314]:
+          - generic [ref=e1315]:
+            - text: ✓
+            - strong [ref=e1316]: activity:⟨deploy-vessel-deterministic⟩
+          - generic [ref=e1317]: execution:exec_17... • 11:25
+        - generic [ref=e1319]:
+          - generic [ref=e1320]:
+            - text: ✓
+            - strong [ref=e1321]: activity:⟨startup:template-sync⟩
+          - generic [ref=e1322]: execution:act_177... • 11:24
+        - generic [ref=e1324]:
+          - generic [ref=e1325]:
+            - text: ✓
+            - strong [ref=e1326]: activity:⟨startup:template-sync⟩
+          - generic [ref=e1327]: execution:exec_17... • 11:24
+        - generic [ref=e1329]:
+          - generic [ref=e1330]:
+            - text: ✓
+            - strong [ref=e1331]: activity:⟨startup:health-check⟩
+          - generic [ref=e1332]: execution:act_177... • 11:24
+        - generic [ref=e1334]:
+          - generic [ref=e1335]:
+            - text: ✓
+            - strong [ref=e1336]: activity:⟨startup:health-check⟩
+          - generic [ref=e1337]: execution:exec_17... • 11:24
+        - generic [ref=e1339]:
+          - generic [ref=e1340]:
+            - text: ✓
+            - strong [ref=e1341]: activity:goal_processing_standard
+          - generic [ref=e1342]: execution:act_177... • 11:24
+        - generic [ref=e1344]:
+          - generic [ref=e1345]:
+            - text: ✓
+            - strong [ref=e1346]: activity:goal_processing_standard
+          - generic [ref=e1347]: execution:exec_17... • 11:24
