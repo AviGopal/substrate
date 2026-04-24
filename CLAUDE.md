@@ -1078,6 +1078,10 @@ curl "http://api.minibob.local/v2/activities/execution-sequences?limit=10" | jq 
 - [`DISCOVERY_INTEGRATION.md`](DISCOVERY_INTEGRATION.md): Complete vessel discovery integration guide
 - [`packages/vessel-discovery-client/README.md`](packages/vessel-discovery-client/README.md): VesselClient package documentation
 
+**Vessel construction:**
+- [`docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md`](docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md): Current canonical template for building a TypeScript vessel — file layout, the three invariants, discovery-client + observer + auth patterns, Helm wiring, and what NOT to do (2026-04-24). Supersedes `VESSEL_QUICK_START.md` and `VESSEL_WIRING_PRACTICAL.md` for new work.
+- [`docs/architecture/VESSEL_CONSTRUCTION_PATTERNS.md`](docs/architecture/VESSEL_CONSTRUCTION_PATTERNS.md): Cross-vessel pattern analysis (2026-04-08). Idioms remain current; registration path is superseded by the template above.
+
 **Complementary architecture docs:**
 - [`repos/deployment/DEPLOYMENT_WORKFLOW.md`](repos/deployment/DEPLOYMENT_WORKFLOW.md): Kubernetes deployment procedures
 - [`docs/archive/2026-04-11-jiggle-and-prune/ACTIVITY_BASED_IMPROVISATION.md`](docs/archive/2026-04-11-jiggle-and-prune/ACTIVITY_BASED_IMPROVISATION.md): VM-as-executor philosophy (archived)

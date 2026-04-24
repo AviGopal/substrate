@@ -1,5 +1,7 @@
 # Vessel Creation: Quick Start
 
+> **Superseded (2026-04-24):** This doc shows registration against activity-api's `POST /v2/vessels/register`, which is deprecated (proxy mode until July 2026). New vessels should register with discovery-vessel directly. See [`TYPESCRIPT_VESSEL_TEMPLATE.md`](TYPESCRIPT_VESSEL_TEMPLATE.md) for the current pattern, and `repos/concept-db/` as a reference implementation.
+
 ## Your Question
 
 > What is required to realize this? How are vessels created? How are they wired up?

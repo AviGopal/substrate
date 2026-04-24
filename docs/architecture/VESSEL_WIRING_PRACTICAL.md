@@ -1,5 +1,7 @@
 # Vessel Wiring: Practical Guide
 
+> **Superseded (2026-04-24):** This doc wires vessels against activity-api's `/v2/vessels/*` endpoints, which are deprecated (proxy mode until July 2026). Register with discovery-vessel directly. See [`TYPESCRIPT_VESSEL_TEMPLATE.md`](TYPESCRIPT_VESSEL_TEMPLATE.md) for the current pattern and [`../../DISCOVERY_INTEGRATION.md`](../../DISCOVERY_INTEGRATION.md) for the discovery-vessel API contract.
+
 The vessel discovery infrastructure **already exists** in activity-api. This guide shows you how to wire new vessels into the system using existing APIs.
 
 ## What Already Exists

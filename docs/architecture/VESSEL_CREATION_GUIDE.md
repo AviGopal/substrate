@@ -1,5 +1,7 @@
 # Vessel Creation and Wiring Guide
 
+> **Superseded (2026-04-24):** Portions of this guide describe the deprecated activity-api `/v2/vessels/*` registration path (proxy mode until July 2026). See [`TYPESCRIPT_VESSEL_TEMPLATE.md`](TYPESCRIPT_VESSEL_TEMPLATE.md) for the current discovery-vessel pattern. The conceptual sections below (what a vessel is, impulse-driven design, capability-based architecture) remain accurate.
+
 ## Overview
 
 A **vessel** is an independently deployable service that:
