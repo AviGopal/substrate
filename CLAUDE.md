@@ -285,7 +285,8 @@ Additional vessels tracked in this super-repo with less CLAUDE.md coverage — e
 - **conversation-vessel** (`repos/conversation-vessel`): new lightweight vessel (v0.1.0, 2026-04-23) for LLM conversations using Vercel `ai-sdk` (`@ai-sdk/anthropic`, `@ai-sdk/openai`, `ai`, `zod`). Builds up impulse system, AI provider, tools, context management, and resolver server. As of `002144b`, resolver server exposes four endpoints: `POST /resolve/impulse` (resolve impulses), `POST /resolve/tool` (execute tools), `POST /resolve/llm` (LLM resolution with tool calling), `GET /resolve/health` (health check). Adds multi-LLM conversation support via `callLLM` tool for relaying messages between LLMs.
 - **identity-vessel** (`repos/identity-vessel`): API-key + JWT issuer used by every other vessel. See `docs/AUTH_JWT_CLAIMS.md`, `docs/API_KEY_VALIDATION_ENDPOINT.md`.
 - **discovery-vessel** (`repos/discovery-vessel`): documented under §1 above.
-- **Other vessels under `repos/`** (`metabob-analysis-api`, `metabob-rpc-api`, `metabob-mcp`, `metabob-opencode`, `metabob-cli`, `metabob-cloud-dashboard`, `metabob-internal-dashboard`, `minibob-tui`, `obsidian-vessel`, `user-vessel`, `terminal`, `react-renderer`, `cpg-inference` / `cpg-inference-ts`, `k8s-activity-executor`, `activity-monitor`, `platform`, `vessels`, `metabob-proto`): tracked in the super-repo (some as git submodules, some as direct file trees); consult each vessel's own docs.
+- **activity-monitor** (`repos/activity-monitor`): Real-time monitoring dashboard for MiniBob activity system. Polls activity-api every 3 seconds to display recent executions (last 50), activity templates with Thompson scores, and impulse resolution patterns. Single-page Bun application with clean UI; useful for observing MiniBob activity in development. Provides `/api/data` and `/api/health` endpoints. Configuration via `METABOB_API_KEY` and `ACTIVITY_API_URL` env vars. Complements the workbench (authoring) and activity-dashboard (canary observability) as a lightweight monitoring vessel.
+- **Other vessels under `repos/`** (`metabob-analysis-api`, `metabob-rpc-api`, `metabob-mcp`, `metabob-opencode`, `metabob-cli`, `metabob-cloud-dashboard`, `metabob-internal-dashboard`, `minibob-tui`, `obsidian-vessel`, `user-vessel`, `terminal`, `react-renderer`, `cpg-inference` / `cpg-inference-ts`, `k8s-activity-executor`, `platform`, `vessels`, `metabob-proto`): tracked in the super-repo (some as git submodules, some as direct file trees); consult each vessel's own docs.
 
 ### 7. Helm Deployment (`repos/deployment/`)
 Kubernetes orchestration via Helmfile:
@@ -523,10 +524,12 @@ Execution traces capture complete information about activity execution for learn
 execution {
   // ... existing fields ...
 
-  // NEW: Vessel tracking
-  resolved_by_vessel_id: string  // Which vessel resolved impulses
+  // NEW: Vessel tracking (migration 086, 2026-04-22)
+  vessel_id: string              // Vessel that executed this activity (sender of trace)
+  resolved_by_vessel_id: string  // Vessel that resolved impulses (typically same as vessel_id)
+  vessel_version: string         // Vessel version (semver-sha7, e.g., 0.3.3-f24a329)
 
-  // NEW: Per-impulse resolution details
+  // NEW: Per-impulse resolution details (migration 086, 2026-04-22)
   impulse_resolutions: [{
     impulse_id: string           // Impulse that was resolved
     resolver_id: string          // Resolver used (bash, git, llm, etc.)
@@ -536,16 +539,20 @@ execution {
     cost_usd: number            // Resolution cost
   }]
 
-  // NEW: Composition tracking (minibob → activity-api v1.5.5, April 2026)
-  parent_execution_id: string    // Direct parent in the composition tree (nested invocations)
-  composition_chain: string[]    // Denormalized ancestor chain, ordered root-first
-
-  // NEW: Per-task impulse grouping (minibob 3d537c8 → activity-api 2a7984e, April 2026)
+  // NEW: Per-task resolver fields (minibob 6f8c727, activity-api 1.8.0, 2026-04-24)
   tasks: [{
     // ... existing task fields ...
+    resolver_id: string          // Resolver used by this task (bash, git, llm, etc.)
+    resolver_tier: string        // deterministic, pattern, llm
+    success: boolean             // Task succeeded
+    cost_usd: number            // Task resolution cost
     input_impulse_ids: string[]    // Impulses that fed this specific task
     output_impulse_ids: string[]   // Impulses produced by this specific task
   }]
+
+  // NEW: Composition tracking (minibob → activity-api v1.5.5, April 2026)
+  parent_execution_id: string    // Direct parent in the composition tree (nested invocations)
+  composition_chain: string[]    // Denormalized ancestor chain, ordered root-first
 }
 ```
 
@@ -723,6 +730,14 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 - **Activity API**: `https://activity.metabob.com`
 - **Identity API**: `https://identity.metabob.com`
 
+**API Documentation:**
+See `repos/metabob-activity-api/docs/API_PHASE1_ENDPOINTS.md` for comprehensive Phase 1 API reference covering:
+- WebSocket real-time events (`wss://activity.metabob.com/ws`) with authentication and catchup protocol
+- Activity discovery by shapes (forward/backward chaining modes)
+- Goal-to-trajectory recommendations with endpoint prediction
+- State transition analysis
+- Error handling and testing procedures
+
 **Local Development (if using local K8s):**
 - **Backend API:** `http://activity.metabob.local` (external) / `http://metabob-activity-api.activity-system.svc.cluster.local:8080` (internal)
 - `GET /health`: Health check
@@ -735,6 +750,10 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 - `POST /v2/activities/impulse-relevance`: Track impulse relevance
 - `POST /v2/activities/tool-usage`: Record tool usage patterns
 - `POST /v2/activities/execution-sequences`: Store execution sequences
+- `POST /v2/activities/discover-by-shapes`: Find activities by input/output shapes (Phase 1)
+- `POST /v2/activities/validate-composition`: Validate activity composition graphs (Phase 1)
+- `GET /v2/activities/composition/state-transitions`: Analyze shape flow through compositions (Phase 1)
+- `wss://activity.metabob.local/ws`: WebSocket real-time events with event types: `task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved` (Phase 1)
 
 **SurrealDB:** `http://surql.metabob.local` (external) / `http://surrealdb.activity-system.svc.cluster.local:8000` (internal)
 - Namespace: `activity-system`

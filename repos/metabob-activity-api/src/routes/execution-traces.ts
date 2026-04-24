@@ -21,6 +21,113 @@ import {
 
 const app = new Hono();
 
+/**
+ * Normalize a minibob-sent task object into the persisted shape. Preserves
+ * per-task impulse grouping (`input_impulse_ids`, `output_impulse_ids`) so
+ * `executionTraceWithSignatures` can surface task-scoped signal to the
+ * co-occurrence extractor.
+ *
+ * The canonical wire shape (emitted by minibob's `serializeTasksForTrace`)
+ * uses snake_case. We also accept camelCase and the richer
+ * `inputState.impulses` / `outputState.impulses` shapes as fallbacks so
+ * payloads from older minibob builds keep writing cleanly.
+ *
+ * Exported for tests — see `execution-traces.test.ts`.
+ */
+export function normalizePersistedTask(task: any): {
+  task_id: string;
+  description?: string;
+  status?: string;
+  duration_ms?: number;
+  tool_calls: unknown[] | null;
+  input_impulse_ids: string[];
+  output_impulse_ids: string[];
+  resolver_id?: string;
+  resolver_tier?: string;
+  success?: boolean;
+  cost_usd?: number;
+} {
+  const inputImpulseIds = Array.isArray(task?.input_impulse_ids)
+    ? task.input_impulse_ids
+    : Array.isArray(task?.inputImpulseIds)
+      ? task.inputImpulseIds
+      : Array.isArray(task?.inputState?.impulses)
+        ? task.inputState.impulses
+        : [];
+  const outputImpulseIds = Array.isArray(task?.output_impulse_ids)
+    ? task.output_impulse_ids
+    : Array.isArray(task?.outputImpulseIds)
+      ? task.outputImpulseIds
+      : Array.isArray(task?.outputState?.impulses)
+        ? task.outputState.impulses
+        : [];
+
+  // Per-task resolver attribution (canonical six-field shape from minibob's
+  // serializeTasksForTrace). The `tasks` column is FLEXIBLE so these can ride
+  // through without a schema bump. Only emit a key when a value is present so
+  // SurrealDB stores `null` only where minibob explicitly set it.
+  const out: ReturnType<typeof normalizePersistedTask> = {
+    task_id: task?.taskId || task?.task_id,
+    description: task?.description,
+    status: task?.status,
+    duration_ms: task?.duration ?? task?.duration_ms,
+    tool_calls: Array.isArray(task?.toolCalls)
+      ? task.toolCalls
+      : Array.isArray(task?.tool_calls)
+        ? task.tool_calls
+        : null,
+    input_impulse_ids: inputImpulseIds,
+    output_impulse_ids: outputImpulseIds,
+  };
+
+  if (typeof task?.resolver_id === 'string' && task.resolver_id.length > 0) {
+    out.resolver_id = task.resolver_id;
+  }
+  if (typeof task?.resolver_tier === 'string' && task.resolver_tier.length > 0) {
+    out.resolver_tier = task.resolver_tier;
+  }
+  if (typeof task?.success === 'boolean') {
+    out.success = task.success;
+  }
+  if (typeof task?.cost_usd === 'number') {
+    out.cost_usd = task.cost_usd;
+  }
+
+  return out;
+}
+
+/**
+ * Resolve the set of activity_template ids that should receive a Thompson
+ * Sampling update for a given trace.
+ *
+ * Direct executions (variant_id is the dispatched template) collapse to a
+ * single id. Meta-trace failures emitted from minibob's `emitMetaTrace` carry
+ * a synthetic variant_id (`_goal_resolve` / `_activity_execute`) plus the
+ * real dispatched template id in `metadata.template_id` — both rows need the
+ * outcome propagated, otherwise the dispatched template's beta never moves
+ * when an upstream goal aborts.
+ *
+ * Returns a de-duplicated list with `variant_id` first (so it's logged as the
+ * primary update) and `metadata.template_id` appended only when distinct.
+ *
+ * Exported for tests.
+ */
+export function resolveTemplateIdsForUpdate(args: {
+  variantId: string;
+  metadata?: Record<string, unknown> | null;
+}): string[] {
+  const { variantId, metadata } = args;
+  const metadataTemplateId =
+    metadata && typeof (metadata as { template_id?: unknown }).template_id === 'string'
+      ? ((metadata as { template_id: string }).template_id)
+      : undefined;
+  const candidates = [
+    variantId,
+    ...(metadataTemplateId && metadataTemplateId !== variantId ? [metadataTemplateId] : []),
+  ].filter((id): id is string => typeof id === 'string' && id.length > 0);
+  return Array.from(new Set(candidates));
+}
+
 interface ExecutionTrace {
   execution_id: string;
   variant_id: string;
@@ -78,7 +185,19 @@ interface ExecutionTrace {
   org_id: string | null;
   project_id: string | null;
   vessel_id?: string;
+  resolved_by_vessel_id?: string;
   vessel_version?: string;
+  // Per-impulse resolver attribution (canonical six-field shape from minibob).
+  // See migration 086 for the persisted form.
+  impulse_resolutions?: Array<{
+    impulse_id: string;
+    resolver_id: string;
+    resolver_tier: string;
+    vessel_id: string;
+    latency_ms: number;
+    cost_usd: number;
+  }>;
+  composition_chain?: string[];
   executed_at: string;
   created_at: string;
   // Edge learning fields
@@ -767,15 +886,15 @@ app.post('/', async (c) => {
       ...(body.impulses_used && body.impulses_used.length > 0 ? { impulses_used: body.impulses_used } : {}),
       ...(body.component_changes && body.component_changes.length > 0 ? { component_changes: body.component_changes } : {}),
 
-      // Extract task details from execution_trace if available
+      // Extract task details from execution_trace if available.
+      //
+      // Per-task impulse grouping (`input_impulse_ids`, `output_impulse_ids`)
+      // is the canonical snake_case shape emitted by minibob's
+      // `serializeTasksForTrace` (see repos/minibob/src/mcp.ts). The read
+      // resolver in `execution-trace-with-signatures.ts` reads these fields
+      // to surface task-scoped signal to the co-occurrence extractor.
       tasks: body.execution_trace?.tasks && body.execution_trace.tasks.length > 0
-        ? body.execution_trace.tasks.map((task: any) => ({
-            task_id: task.taskId || task.task_id,
-            description: task.description,
-            status: task.status,
-            duration_ms: task.duration || task.duration_ms,
-            tool_calls: task.toolCalls || null,
-          }))
+        ? body.execution_trace.tasks.map(normalizePersistedTask)
         : null,
 
       // Extract state snapshot from execution_trace
@@ -816,6 +935,16 @@ app.post('/', async (c) => {
       ...(body.parent_execution_id ? { parent_execution_id: body.parent_execution_id } : {}),
       ...(Array.isArray(body.composition_chain) && body.composition_chain.length > 0
         ? { composition_chain: body.composition_chain } : {}),
+
+      // Vessel attribution + per-impulse resolver tracking (minibob 6f8c727+).
+      // See migration 086. The legacy table is SCHEMAFULL, so unknown keys are
+      // dropped silently — this block ensures we round-trip what minibob
+      // actually sends on the wire.
+      ...(body.vessel_id ? { vessel_id: body.vessel_id } : {}),
+      ...(body.resolved_by_vessel_id ? { resolved_by_vessel_id: body.resolved_by_vessel_id } : {}),
+      ...(body.vessel_version ? { vessel_version: body.vessel_version } : {}),
+      ...(Array.isArray(body.impulse_resolutions) && body.impulse_resolutions.length > 0
+        ? { impulse_resolutions: body.impulse_resolutions } : {}),
     };
 
     // ========================================================================
@@ -916,6 +1045,11 @@ app.post('/', async (c) => {
     // Composition tracking (from three-level activity tracing)
     if ((trace as any).parent_execution_id) optionalFields.push('parent_execution_id: $parent_execution_id');
     if ((trace as any).composition_chain) optionalFields.push('composition_chain: $composition_chain');
+    // Vessel attribution + per-impulse resolver tracking (migration 086)
+    if ((trace as any).vessel_id) optionalFields.push('vessel_id: $vessel_id');
+    if ((trace as any).resolved_by_vessel_id) optionalFields.push('resolved_by_vessel_id: $resolved_by_vessel_id');
+    if ((trace as any).vessel_version) optionalFields.push('vessel_version: $vessel_version');
+    if ((trace as any).impulse_resolutions) optionalFields.push('impulse_resolutions: $impulse_resolutions');
     // Project ID - only include if set (MiniBob instances may not have projects)
     if (trace.project_id) optionalFields.push('project_id: $project_id');
 
@@ -1163,6 +1297,12 @@ app.post('/', async (c) => {
 
       // Use record::id(id) to extract the ID part from full record ID for matching
       // e.g., activity_template:`add-feature-complete` -> 'add-feature-complete'
+      //
+      // Match org_id against both the plain string ("metabob") and the record-id-style
+      // form ("organizations:metabob") because templates registered through different
+      // code paths land with different formats. Without this dual match, a failed
+      // trace whose body.org_id arrives plain but whose template was stored with a
+      // prefixed org_id silently updates 0 rows — and beta never increments.
       const updateQuery = `
         UPDATE activity_template
         SET
@@ -1172,7 +1312,8 @@ app.post('/', async (c) => {
           successful_executions = (successful_executions ?? 0) + $success_delta,
           failed_executions = (failed_executions ?? 0) + $failure_delta,
           last_executed_at = time::now()
-        WHERE (record::id(id) = $activity_id OR name = $activity_id) AND org_id = $org_id
+        WHERE (record::id(id) = $activity_id OR name = $activity_id)
+          AND (org_id = $org_id OR org_id = $org_id_alt)
         RETURN {
           id,
           thompson_alpha,
@@ -1192,57 +1333,105 @@ app.post('/', async (c) => {
         throw new Error('org_id is required for Thompson Sampling updates');
       }
 
-      const updateParams = {
-        activity_id: trace.variant_id, // variant_id is the activity ID
-        org_id: traceOrgId, // RBAC: ensure updates only affect org's own templates (from line 737)
-        alpha_delta: alphaDelta,
-        beta_delta: betaDelta,
-        success_delta: trace.success ? 1 : 0,
-        failure_delta: trace.success ? 0 : 1,
-      };
+      // Resolve the dispatched template id(s).
+      //
+      // Failed traces emitted from minibob's meta-trace path (mcp.ts
+      // `emitMetaTrace`) carry a synthetic variant_id like `_goal_resolve` or
+      // `_activity_execute`, with the real dispatched template surfaced in
+      // metadata.template_id (e.g. `goal-processing-activity-driven`). Without
+      // surfacing that, a goal-level abort on a recommended template never
+      // increments beta — the system learns from successes only. We update
+      // BOTH the variant_id row and the metadata.template_id row when they
+      // differ, so both the synthetic meta-trace bucket and the real
+      // dispatched template see the failure. See resolveTemplateIdsForUpdate.
+      const metadataTemplateId =
+        body.metadata && typeof body.metadata.template_id === 'string'
+          ? body.metadata.template_id
+          : undefined;
 
-      // Use JWT auth if available for RBAC enforcement
-      const updateResult = jwtAuth?.jwtToken
-        ? await queryWithAuth(jwtAuth.jwtToken, updateQuery, updateParams)
-        : await surrealDB.query(updateQuery, updateParams);
+      const candidateIds = resolveTemplateIdsForUpdate({
+        variantId: trace.variant_id,
+        metadata: body.metadata,
+      });
 
-      if (updateResult && updateResult.length > 0) {
-        logger.info('[learning] Thompson Sampling scores updated', {
-          execution_id: trace.execution_id,
-          activity_id: trace.variant_id,
-          success: trace.success,
-          new_alpha: updateResult[0].thompson_alpha,
-          new_beta: updateResult[0].thompson_beta,
-          total_executions: updateResult[0].total_executions,
-        });
+      // Pre-compute alt org_id form once per loop. Mirrors getActivityScores
+      // (paradigm.ts:412): we accept either format because templates landed
+      // with both at different points in history.
+      const orgIdAlt = traceOrgId.startsWith('organizations:')
+        ? traceOrgId.replace(/^organizations:/, '')
+        : `organizations:${traceOrgId}`;
 
-        // FIX 3: Invalidate Redis cache to ensure fresh scores in next recommendation
-        try {
-          const { RedisClient } = await import('../db/redis');
-          const redis = RedisClient.getInstance();
+      let primaryUpdateMatched = false;
 
-          // Invalidate both the specific template cache and the template list cache
-          const CACHE_KEY_PREFIX = 'activity:template:';
-          const CACHE_LIST_KEY = 'activity:templates:list';
+      for (const candidateId of candidateIds) {
+        const updateParams = {
+          activity_id: candidateId,
+          org_id: traceOrgId,
+          org_id_alt: orgIdAlt,
+          alpha_delta: alphaDelta,
+          beta_delta: betaDelta,
+          success_delta: trace.success ? 1 : 0,
+          failure_delta: trace.success ? 0 : 1,
+        };
 
-          await redis.del(`${CACHE_KEY_PREFIX}${trace.variant_id}`);
-          await redis.del(CACHE_LIST_KEY);
+        // Use JWT auth if available for RBAC enforcement
+        const updateResult = jwtAuth?.jwtToken
+          ? await queryWithAuth(jwtAuth.jwtToken, updateQuery, updateParams)
+          : await surrealDB.query(updateQuery, updateParams);
 
-          logger.debug('[learning] Redis cache invalidated after score update', {
-            activity_id: trace.variant_id,
-          });
-        } catch (cacheError) {
-          // Non-critical - scores will eventually propagate when cache expires
-          logger.warn('[learning] Failed to invalidate Redis cache (non-blocking)', {
+        if (updateResult && updateResult.length > 0) {
+          if (candidateId === trace.variant_id) {
+            primaryUpdateMatched = true;
+          }
+          logger.info('[learning] Thompson Sampling scores updated', {
             execution_id: trace.execution_id,
-            error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+            activity_id: candidateId,
+            via_metadata_template_id: candidateId !== trace.variant_id,
+            success: trace.success,
+            new_alpha: updateResult[0].thompson_alpha,
+            new_beta: updateResult[0].thompson_beta,
+            total_executions: updateResult[0].total_executions,
+          });
+
+          // FIX 3: Invalidate Redis cache to ensure fresh scores in next recommendation
+          try {
+            const { RedisClient } = await import('../db/redis');
+            const redis = RedisClient.getInstance();
+
+            // Invalidate both the specific template cache and the template list cache
+            const CACHE_KEY_PREFIX = 'activity:template:';
+            const CACHE_LIST_KEY = 'activity:templates:list';
+
+            await redis.del(`${CACHE_KEY_PREFIX}${candidateId}`);
+            await redis.del(CACHE_LIST_KEY);
+
+            logger.debug('[learning] Redis cache invalidated after score update', {
+              activity_id: candidateId,
+            });
+          } catch (cacheError) {
+            // Non-critical - scores will eventually propagate when cache expires
+            logger.warn('[learning] Failed to invalidate Redis cache (non-blocking)', {
+              execution_id: trace.execution_id,
+              error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+            });
+          }
+        } else {
+          logger.warn('[learning] Thompson Sampling score update returned no results', {
+            execution_id: trace.execution_id,
+            activity_id: candidateId,
+            query_params: updateParams,
           });
         }
-      } else {
-        logger.warn('[learning] Thompson Sampling score update returned no results', {
+      }
+
+      // Surface the case where the primary variant_id matched nothing but a
+      // metadata.template_id fanout DID — useful for observing meta-trace
+      // failures that propagate to a real dispatched template.
+      if (!primaryUpdateMatched && candidateIds.length > 1) {
+        logger.info('[learning] Primary variant_id had no matching template; metadata.template_id used as fallback', {
           execution_id: trace.execution_id,
-          activity_id: trace.variant_id,
-          query_params: updateParams,
+          variant_id: trace.variant_id,
+          metadata_template_id: metadataTemplateId,
         });
       }
     } catch (scoreUpdateError) {
@@ -1257,6 +1446,12 @@ app.post('/', async (c) => {
     // DUAL-WRITE: Update variant_performance_metrics for dashboard compatibility
     // Dashboard queries this table for Thompson Sampling scores, so we need to maintain it
     // in addition to the activity_template updates above.
+    //
+    // Same metadata.template_id fanout as the activity_template update above:
+    // when a meta-trace failure (variant_id `_goal_resolve` / `_activity_execute`)
+    // names a real dispatched template in metadata.template_id, the dispatched
+    // template's metrics row also needs the failure recorded — otherwise its
+    // beta never moves.
     try {
       const variantMetricsUpsert = `
         INSERT INTO variant_performance_metrics {
@@ -1290,35 +1485,43 @@ app.post('/', async (c) => {
         RETURN AFTER;
       `;
 
-      const variantMetricsParams = {
-        variant_id: trace.variant_id,
-        org_id: traceOrgId,
-        success_delta: trace.success ? 1 : 0,
-        failure_delta: trace.success ? 0 : 1,
-        duration_ms: trace.duration_ms || 0,
-        cost: trace.cost_usd || 0,
-      };
+      const metricsCandidateIds = resolveTemplateIdsForUpdate({
+        variantId: trace.variant_id,
+        metadata: body.metadata,
+      });
 
-      const variantMetricsResult = jwtAuth?.jwtToken
-        ? await queryWithAuth(jwtAuth.jwtToken, variantMetricsUpsert, variantMetricsParams)
-        : await surrealDB.query(variantMetricsUpsert, variantMetricsParams);
+      for (const candidateId of metricsCandidateIds) {
+        const variantMetricsParams = {
+          variant_id: candidateId,
+          org_id: traceOrgId,
+          success_delta: trace.success ? 1 : 0,
+          failure_delta: trace.success ? 0 : 1,
+          duration_ms: trace.duration_ms || 0,
+          cost: trace.cost_usd || 0,
+        };
 
-      if (variantMetricsResult && variantMetricsResult.length > 0) {
-        const updatedMetrics = variantMetricsResult[0];
-        logger.info('[learning] Variant performance metrics updated (dual-write)', {
-          execution_id: trace.execution_id,
-          variant_id: trace.variant_id,
-          total_executions: updatedMetrics.total_executions,
-          success_rate: updatedMetrics.success_rate,
-          thompson_alpha: updatedMetrics.thompson_alpha,
-          thompson_beta: updatedMetrics.thompson_beta,
-        });
-      } else {
-        logger.warn('[learning] Variant metrics UPSERT returned no results', {
-          execution_id: trace.execution_id,
-          variant_id: trace.variant_id,
-          query_params: variantMetricsParams,
-        });
+        const variantMetricsResult = jwtAuth?.jwtToken
+          ? await queryWithAuth(jwtAuth.jwtToken, variantMetricsUpsert, variantMetricsParams)
+          : await surrealDB.query(variantMetricsUpsert, variantMetricsParams);
+
+        if (variantMetricsResult && variantMetricsResult.length > 0) {
+          const updatedMetrics = variantMetricsResult[0];
+          logger.info('[learning] Variant performance metrics updated (dual-write)', {
+            execution_id: trace.execution_id,
+            variant_id: candidateId,
+            via_metadata_template_id: candidateId !== trace.variant_id,
+            total_executions: updatedMetrics.total_executions,
+            success_rate: updatedMetrics.success_rate,
+            thompson_alpha: updatedMetrics.thompson_alpha,
+            thompson_beta: updatedMetrics.thompson_beta,
+          });
+        } else {
+          logger.warn('[learning] Variant metrics UPSERT returned no results', {
+            execution_id: trace.execution_id,
+            variant_id: candidateId,
+            query_params: variantMetricsParams,
+          });
+        }
       }
     } catch (variantMetricsError) {
       // Don't fail the request if variant metrics update fails - trace is already stored
