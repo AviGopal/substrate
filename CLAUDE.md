@@ -204,6 +204,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - Enhanced resolution: local → discovery → MCP backend (when discovery enabled)
 - Self-development via ribosome pattern
 - Optional vessel registration and discovery
+- **Activity-driven goal processing** (2026-04-24): Default goal-processing now uses a meta-activity (goal_processing_activity_driven) that chains template-dispatchable resolvers for goal verification, enrichment, decomposition, and activity selection. User interacts with the DAG (divergence asks, fallback decision) via HumanResolver when on TTY. Non-interactive pipes skip UI. Backward-compatible: goal_processing_standard (LLM chain) remains loadable by ID.
 - **Template-dispatchable resolvers** (2026-04-23): 14 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, activity recommendation, orchestration detection, keyword extraction, relevance scoring) callable from activity JSON via `"resolver": "<name>"` in task config. Goal-processor shrunk 7752→5833 LOC (−24.8%) by resolver extraction
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
