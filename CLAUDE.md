@@ -206,6 +206,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - Optional vessel registration and discovery
 - **Activity-driven goal processing** (2026-04-24): Default goal-processing now uses a meta-activity (goal_processing_activity_driven) that chains template-dispatchable resolvers for goal verification, enrichment, decomposition, and activity selection. User interacts with the DAG (divergence asks, fallback decision) via HumanResolver when on TTY. Non-interactive pipes skip UI. Backward-compatible: goal_processing_standard (LLM chain) remains loadable by ID.
 - **Template-dispatchable resolvers** (2026-04-23): 14 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, activity recommendation, orchestration detection, keyword extraction, relevance scoring) callable from activity JSON via `"resolver": "<name>"` in task config. Goal-processor shrunk 7752→5833 LOC (−24.8%) by resolver extraction
+- **Output-shape gating for variants** (2026-04-24): Goal enrichment now infers `expectedOutputShapes` from goal keywords (e.g., "write markdown" → `markdown_document`, "bash" → `bash_output`). Variant selection filters Thompson-Sampling recommendations by shape compatibility; if all candidates are incompatible, falls back to `execute-shell-command`. Prevents silent failures from routing "write file" goals to bash-only templates. Opt-in: empty `expectedOutputShapes` preserves existing selection behavior.
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript/Bun/Hono backend - Learning system and trace storage:
@@ -721,7 +722,7 @@ The main deployment file is `helm/activity-system-minimal.yaml.gotmpl` which use
 **Local Development (if using local K8s):**
 - **Backend API:** `http://activity.metabob.local` (external) / `http://metabob-activity-api.activity-system.svc.cluster.local:8080` (internal)
 - `GET /health`: Health check
-- `POST /v2/activities/recommend`: Thompson Sampling recommendations
+- `POST /v2/activities/recommend`: Thompson Sampling recommendations with optional `expected_output_shapes` filter for shape-compatible variants
 - `GET /v2/activities/templates`: List templates
 - `POST /v2/goal-paths/recommend`: Goal-to-trajectory generation with Thompson Sampling
 - `POST /v2/impulses/resolve`: Resolve impulse pointers
