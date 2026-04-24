@@ -1,10 +1,18 @@
 import { z } from 'zod';
+import { defaultLLMToLLMResolver } from '../resolvers/llm-to-llm';
 
 // Tool parameter schemas
 export const bashParams = z.object({ command: z.string() });
 export const readParams = z.object({ path: z.string(), offset: z.number().optional(), limit: z.number().optional() });
 export const writeParams = z.object({ path: z.string(), content: z.string() });
 export const editParams = z.object({ path: z.string(), oldText: z.string(), newText: z.string() });
+export const callLLMParams = z.object({
+  targetLLMId: z.string(),
+  message: z.string(),
+  model: z.string().optional(),
+  temperature: z.number().optional(),
+  maskAsHuman: z.boolean().optional()
+});
 
 // Tool definitions for LLM
 export const toolDefinitions = {
@@ -12,6 +20,11 @@ export const toolDefinitions = {
   read: { name: 'read', description: 'Read file content', parameters: readParams },
   write: { name: 'write', description: 'Write content to file', parameters: writeParams },
   edit: { name: 'edit', description: 'Replace text in file', parameters: editParams },
+  callLLM: { 
+    name: 'callLLM', 
+    description: 'Call another LLM and relay the message, useful for multi-LLM conversations',
+    parameters: callLLMParams 
+  },
 } as const;
 
 export type ToolName = keyof typeof toolDefinitions;

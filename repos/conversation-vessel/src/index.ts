@@ -4,6 +4,7 @@ export * from './ai-provider';
 export * from './stream';
 export * from './tools';
 export * from './context';
+export * from './resolvers';
 
 interface ParsedArgs {
   command?: string;
@@ -110,7 +111,7 @@ function showBanner(): void {
 `);
 }
 
-function main() {
+async function main() {
   try {
     const args = parseArgs(process.argv);
     
@@ -129,8 +130,18 @@ function main() {
       console.log('📡 Streaming: Enabled');
       console.log('');
       
-      // Server implementation would go here
+      // Import and start resolver server
+      const { createResolverServer } = await import('./resolvers/server');
+      const resolverServer = createResolverServer({ port: args.port });
+      resolverServer.start();
+      
       console.log('✅ Server ready - streaming chat completions available');
+      console.log('✅ LLM Resolver available on port ' + args.port);
+      console.log('📚 Available endpoints:');
+      console.log('   POST /resolve/impulse  - Resolve impulses');
+      console.log('   POST /resolve/tool     - Execute tools');
+      console.log('   POST /resolve/llm      - LLM resolution with tools');
+      console.log('   GET  /resolve/health   - Health check');
     } else if (!args.command) {
       console.log('⚠️  No command specified.');
       console.log('💡 Use "serve" to start the server or --help for usage information.');
@@ -150,5 +161,8 @@ function main() {
 
 // Run main if this file is executed directly
 if (require.main === module) {
-  main();
+  main().catch(error => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
 }
