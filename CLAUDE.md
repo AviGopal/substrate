@@ -846,6 +846,7 @@ Authentication automatically enforces multi-tenant isolation via SurrealDB PERMI
 - All multi-tenant tables enforce org scoping at the database level
 - No application-level filtering needed — isolation is automatic
 - Migrations 079, 080, 083 (2026-04) fixed org-scoping to use `$token.org_id` for API-key auth (where `$auth` is unavailable)
+- Migrations 084, 085 (2026-04-24) fixed project-scoped access for dashboard users with empty `project_ids` claims (allow-all-traces pattern)
 
 **Usage Pattern:**
 ```typescript
@@ -856,6 +857,19 @@ const templates = await db.query(`SELECT * FROM activity_template`);
 ```
 
 **Important:** For PERMISSIONS clauses, use `$token.org_id` (works for both dashboard and API-key auth) rather than `$auth.org_id` (only works for dashboard). See [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md) §`$auth` vs `$token` for details.
+
+**Project-Scoped Access Pattern (Migrations 084, 085):**
+Tables using project-scoping must handle three cases: user has specific projects, user has no restriction (empty/null `project_ids`), or record has no project restriction. Pattern:
+```
+WHERE org_id = $auth.org_id
+AND (
+  project_id IS NONE                    // Record has no project restriction
+  OR project_id IN $auth.project_ids   // User has access to this project
+  OR $auth.project_ids IS NONE         // User has no project restriction
+  OR array::len($auth.project_ids) = 0 // Same as above (defensive)
+)
+```
+Applies to: `activity_execution_traces` (084), `goal_execution_paths` (085), and other multi-project tables.
 
 **Authentication Methods:**
 | Method | Use Case | Token Lifetime | Scopes |
