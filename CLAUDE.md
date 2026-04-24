@@ -204,7 +204,7 @@ Lightweight autonomous vessel (~3,000 LOC TypeScript/Bun):
 - Enhanced resolution: local → discovery → MCP backend (when discovery enabled)
 - Self-development via ribosome pattern
 - Optional vessel registration and discovery
-- **Template-dispatchable resolvers** (2026-04-23): 13 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, activity recommendation, orchestration detection, keyword extraction) callable from activity JSON via `"resolver": "<name>"` in task config, closing the goal-processor extraction cycle
+- **Template-dispatchable resolvers** (2026-04-23): 14 registered resolvers (impulse analysis, context acquisition, LLM selectors, goal verification/enrichment/decomposition, activity recommendation, orchestration detection, keyword extraction, relevance scoring) callable from activity JSON via `"resolver": "<name>"` in task config. Goal-processor shrunk 7752→5833 LOC (−24.8%) by resolver extraction
 
 ### 3. metabob-activity-api (`repos/metabob-activity-api`)
 TypeScript/Bun/Hono backend - Learning system and trace storage:
