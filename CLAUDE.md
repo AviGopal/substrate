@@ -231,6 +231,7 @@ TypeScript/Bun/Hono backend - Learning system and trace storage:
 - Registers on startup, heartbeats every 60s
 - Non-blocking registration (graceful degradation)
 - Health endpoint includes discovery status
+- **Advertises resolver contract** (2026-04-24): Sends `resolve_endpoint` (/v2/impulses/resolve), `resolve_request_format` (pointer), `auth_scheme` (ApiKey), and `resolve_timeout_ms` (10000) in registration payload. Enables minibob to route impulses to activity-api via discovery without hardcoded assumptions.
 - Legacy `/v2/vessels/*` endpoints deprecated (proxy mode until July 2026)
 
 ### 4. Activity Dashboard (`repos/activity-dashboard`)
