@@ -82,7 +82,11 @@ export interface DiscoveryConfig {
 }
 
 /**
- * Vessel registration record
+ * Vessel registration record.
+ *
+ * The four `resolve_*` fields mirror the contract on `VesselCapability`
+ * — what a vessel advertises at registration flows through to what
+ * discovery returns in resolve queries. Added 2026-04-24.
  */
 export interface VesselRegistration {
   vesselId: string
@@ -97,6 +101,22 @@ export interface VesselRegistration {
   registeredAt: number
   lastHeartbeat: number
   expiresAt?: number
+
+  /** HTTP path appended to `endpoint` when resolving impulses.
+   *  Default when absent: `"/v2/impulses/resolve"`. */
+  resolve_endpoint?: string
+
+  /** Shape of the POST body when resolving impulses.
+   *  Default when absent: `"pointer"`. */
+  resolve_request_format?: ResolveRequestFormat
+
+  /** Authorization header format for calls to this vessel's resolve
+   *  endpoint. Default when absent: `"none"`. */
+  auth_scheme?: ResolveAuthScheme
+
+  /** Vessel-declared max-time-to-respond on the resolve endpoint, in
+   *  milliseconds. No default — clients apply their own policy. */
+  resolve_timeout_ms?: number
 }
 
 /**
@@ -124,7 +144,34 @@ export interface HealthStatus {
 }
 
 /**
- * Vessel capability information
+ * Request body shape expected by a vessel's impulse-resolve endpoint.
+ *
+ *   "pointer"  — POST body is `{ pointer: { type, ...pointerFields } }`
+ *                (the canonical impulse-resolve contract used by
+ *                metabob-activity-api and concept-db)
+ *   "mcp-tool" — POST body is `{ tool: "${pointer.type}_resolve",
+ *                               arguments: pointer }`
+ *                (the MCP tool-call shape; used by some vessels that
+ *                expose resolution through their MCP tool registry)
+ */
+export type ResolveRequestFormat = "pointer" | "mcp-tool"
+
+/**
+ * Authentication scheme to use when calling a discovered vessel's
+ * resolve endpoint. Distinct from the `authType` used to authenticate
+ * the discovery query itself — that's a different hop.
+ */
+export type ResolveAuthScheme = "none" | "ApiKey" | "Bearer"
+
+/**
+ * Vessel capability information.
+ *
+ * The four `resolve_*` fields are the vessel's self-describing resolve
+ * contract, added 2026-04-24 so clients can call any vessel generically
+ * without per-vessel hardcoded routing. Vessels advertise these at
+ * registration; discovery returns them here; clients honor them. All
+ * are optional for backward compatibility — clients should apply the
+ * documented defaults when a field is absent.
  */
 export interface VesselCapability {
   vesselId: string
@@ -134,6 +181,23 @@ export interface VesselCapability {
   confidence: number
   lastSeen: string
   metadata?: Record<string, unknown>
+
+  /** HTTP path appended to `endpoint` when resolving impulses.
+   *  Default when absent: `"/v2/impulses/resolve"`. */
+  resolve_endpoint?: string
+
+  /** Shape of the POST body when resolving impulses.
+   *  Default when absent: `"pointer"`. */
+  resolve_request_format?: ResolveRequestFormat
+
+  /** Authorization header format for calls to this vessel's resolve
+   *  endpoint. Default when absent: `"none"` (no Authorization header). */
+  auth_scheme?: ResolveAuthScheme
+
+  /** Vessel-declared max-time-to-respond on the resolve endpoint, in
+   *  milliseconds. No default — clients apply their own policy (typically
+   *  5000ms) when absent. */
+  resolve_timeout_ms?: number
 }
 
 /**
