@@ -1,9 +1,0 @@
-{
-  "metabob": {
-    "endpoint": "http://localhost:8080"
-  },
-  "defaults": {
-    "stateDirectory": ".metabob",
-    "includePaths": ["**/*.py"]
-  }
-}
