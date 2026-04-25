@@ -1,0 +1,11 @@
+{
+  "type": "uiComponent",
+  "primitive": {
+    "type": "container",
+    "layout": "vertical",
+    "children": [
+      { "type": "text", "variant": "body", "content": "Child A" },
+      { "type": "badge", "variant": "info", "label": "Child B" }
+    ]
+  }
+}

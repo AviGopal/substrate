@@ -1,0 +1,8 @@
+{
+  "type": "fileList",
+  "files": [
+    { "path": "src/index.ts", "sizeBytes": 1024, "modifiedAt": "2026-04-24T00:00:00Z" },
+    { "path": "src/types.ts", "sizeBytes": 2048, "modifiedAt": "2026-04-24T00:00:00Z" },
+    { "path": "package.json", "sizeBytes": 512, "modifiedAt": "2026-04-24T00:00:00Z" }
+  ]
+}

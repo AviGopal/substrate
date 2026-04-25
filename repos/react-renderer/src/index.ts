@@ -3,9 +3,10 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { nanoid } from 'nanoid'
+import { watch, readFileSync } from 'fs'
 import vesselManifest from '../vessel.json'
 import { resolve, hasResolver, getResolverTypes } from './resolvers'
-import { impulseStore } from './state/impulse-store'
+import { impulseStore, recordRenderError, getRenderErrors } from './state/impulse-store'
 import {
   handleOpen,
   handleMessage,
@@ -24,219 +25,22 @@ import './resolvers/ui-component'
 let discoveryClient: VesselClient | null = null
 
 // ============================================================================
-// HTTP Server (Hono)
+// Shape Mapping Cache
 // ============================================================================
 
-const app = new Hono()
+let shapeMappingCache: Record<string, string> = {}
+try {
+  shapeMappingCache = JSON.parse(readFileSync("config/shape-mapping.json", "utf-8")) as Record<string, string>
+} catch {
+  // file absent or invalid JSON — default to empty mapping
+}
 
-// Enable CORS for browser access
-app.use('*', cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization']
-}))
-
-// Health check with discovery status
-app.get('/health', (c) => {
-  const healthStatus: any = {
-    status: 'ok',
-    vessel: vesselManifest.id,
-    version: vesselManifest.version,
-    uptime: process.uptime(),
-    impulseCount: impulseStore.getAll().length,
-    resolvers: getResolverTypes(),
-    checks: {
-      discovery: { status: 'unknown', registered: false }
-    }
-  }
-
-  if (discoveryClient) {
-    const isRunning = discoveryClient.isRunning
-    const lastHeartbeat = discoveryClient.lastHeartbeat
-
-    healthStatus.checks.discovery = {
-      status: isRunning ? 'healthy' : 'pending',
-      registered: isRunning,
-      lastHeartbeat: lastHeartbeat ? lastHeartbeat.toISOString() : null
-    }
-  } else {
-    healthStatus.checks.discovery = {
-      status: 'disabled',
-      registered: false
-    }
-  }
-
-  return c.json(healthStatus)
-})
-
-// Vessel manifest (for discovery)
-app.get('/manifest', (c) => {
-  const manifest: any = { ...vesselManifest }
-
-  if (discoveryClient) {
-    manifest.discovery = {
-      registered: discoveryClient.isRunning,
-      lastHeartbeat: discoveryClient.lastHeartbeat?.toISOString() || null
-    }
-  }
-
-  return c.json(manifest)
-})
-
-// List registered resolvers
-app.get('/resolvers', (c) => {
-  return c.json({
-    types: getResolverTypes()
-  })
-})
-
-// Resolve impulse pointer
-app.post('/resolve', async (c) => {
-  try {
-    const { pointer } = await c.req.json()
-
-    if (!pointer || !pointer.type) {
-      return c.json({ error: 'Missing pointer or pointer.type' }, 400)
-    }
-
-    if (!hasResolver(pointer.type)) {
-      return c.json({ error: `No resolver for type: ${pointer.type}` }, 404)
-    }
-
-    const content = await resolve(pointer)
-    return c.json({ content })
-  } catch (error) {
-    console.error('[Server] Resolve error:', error)
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Resolution failed' },
-      500
-    )
-  }
-})
-
-// Resolve specific impulse type
-app.post('/resolve/:type', async (c) => {
-  try {
-    const type = c.req.param('type')
-    const body = await c.req.json()
-
-    if (!hasResolver(type)) {
-      return c.json({ error: `No resolver for type: ${type}` }, 404)
-    }
-
-    const pointer = { type, ...body }
-    const content = await resolve(pointer)
-    return c.json({ content })
-  } catch (error) {
-    console.error('[Server] Resolve error:', error)
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Resolution failed' },
-      500
-    )
-  }
-})
+export function getShapeMapping(): Record<string, string> {
+  return shapeMappingCache
+}
 
 // ============================================================================
-// Impulse Management API
-// ============================================================================
-
-// List all impulses
-app.get('/impulses', (c) => {
-  const impulses = impulseStore.getAll()
-  return c.json({ impulses })
-})
-
-// Get specific impulse
-app.get('/impulses/:id', (c) => {
-  const id = c.req.param('id')
-  const impulse = impulseStore.get(id)
-
-  if (!impulse) {
-    return c.json({ error: 'Impulse not found' }, 404)
-  }
-
-  return c.json({ impulse })
-})
-
-// Create impulse
-app.post('/impulses', async (c) => {
-  try {
-    const body = await c.req.json()
-    const { primitive, position, size, layer, animation, priority, metadata, dataRef, deletable } = body
-
-    if (!primitive) {
-      return c.json({ error: 'Missing primitive' }, 400)
-    }
-
-    const impulse = impulseStore.create(primitive as Primitive, {
-      position,
-      size,
-      layer,
-      animation,
-      priority,
-      metadata,
-      dataRef,
-      deletable
-    })
-
-    return c.json({ impulse }, 201)
-  } catch (error) {
-    console.error('[Server] Create impulse error:', error)
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to create impulse' },
-      500
-    )
-  }
-})
-
-// Update impulse
-app.put('/impulses/:id', async (c) => {
-  try {
-    const id = c.req.param('id')
-    const patch = await c.req.json() as Partial<UIComponentImpulse>
-
-    const success = impulseStore.update(id, patch)
-
-    if (!success) {
-      return c.json({ error: 'Impulse not found' }, 404)
-    }
-
-    return c.json({ success: true, impulse: impulseStore.get(id) })
-  } catch (error) {
-    console.error('[Server] Update impulse error:', error)
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to update impulse' },
-      500
-    )
-  }
-})
-
-// Delete impulse
-app.delete('/impulses/:id', (c) => {
-  const id = c.req.param('id')
-  const success = impulseStore.delete(id)
-
-  if (!success) {
-    return c.json({ error: 'Impulse not found or not deletable' }, 404)
-  }
-
-  return c.json({ success: true })
-})
-
-// Clear all impulses
-app.delete('/impulses', async (c) => {
-  try {
-    const { except } = await c.req.json().catch(() => ({ except: [] }))
-    impulseStore.clear(except)
-    return c.json({ success: true })
-  } catch (error) {
-    impulseStore.clear()
-    return c.json({ success: true })
-  }
-})
-
-// ============================================================================
-// WebSocket + HTTP Server (Bun)
+// Handler Builder
 // ============================================================================
 
 interface ClientInfo {
@@ -245,6 +49,468 @@ interface ClientInfo {
   lastActivity: number
   viewport?: { width: number; height: number }
 }
+
+function buildHandler() {
+  const app = new Hono()
+
+  // Enable CORS for browser access
+  app.use('*', cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization']
+  }))
+
+  // Health check with discovery status
+  app.get('/health', (c) => {
+    const healthStatus: any = {
+      status: 'ok',
+      vessel: vesselManifest.id,
+      version: vesselManifest.version,
+      uptime: process.uptime(),
+      impulseCount: impulseStore.getAll().length,
+      resolvers: getResolverTypes(),
+      checks: {
+        discovery: { status: 'unknown', registered: false }
+      }
+    }
+
+    if (discoveryClient) {
+      const isRunning = discoveryClient.isRunning
+      const lastHeartbeat = discoveryClient.lastHeartbeat
+
+      healthStatus.checks.discovery = {
+        status: isRunning ? 'healthy' : 'pending',
+        registered: isRunning,
+        lastHeartbeat: lastHeartbeat ? lastHeartbeat.toISOString() : null
+      }
+    } else {
+      healthStatus.checks.discovery = {
+        status: 'disabled',
+        registered: false
+      }
+    }
+
+    return c.json(healthStatus)
+  })
+
+  // Vessel manifest (for discovery)
+  app.get('/manifest', (c) => {
+    const manifest: any = { ...vesselManifest }
+
+    if (discoveryClient) {
+      manifest.discovery = {
+        registered: discoveryClient.isRunning,
+        lastHeartbeat: discoveryClient.lastHeartbeat?.toISOString() || null
+      }
+    }
+
+    return c.json(manifest)
+  })
+
+  // List registered resolvers
+  app.get('/resolvers', (c) => {
+    return c.json({
+      types: getResolverTypes()
+    })
+  })
+
+  // Resolve impulse pointer
+  app.post('/resolve', async (c) => {
+    try {
+      const { pointer } = await c.req.json()
+
+      if (!pointer || !pointer.type) {
+        return c.json({ error: 'Missing pointer or pointer.type' }, 400)
+      }
+
+      if (!hasResolver(pointer.type)) {
+        return c.json({ error: `No resolver for type: ${pointer.type}` }, 404)
+      }
+
+      const content = await resolve(pointer)
+      return c.json({ content })
+    } catch (error) {
+      console.error('[Server] Resolve error:', error)
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Resolution failed' },
+        500
+      )
+    }
+  })
+
+  // Resolve specific impulse type
+  app.post('/resolve/:type', async (c) => {
+    try {
+      const type = c.req.param('type')
+      const body = await c.req.json()
+
+      if (!hasResolver(type)) {
+        return c.json({ error: `No resolver for type: ${type}` }, 404)
+      }
+
+      const pointer = { type, ...body }
+      const content = await resolve(pointer)
+      return c.json({ content })
+    } catch (error) {
+      console.error('[Server] Resolve error:', error)
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Resolution failed' },
+        500
+      )
+    }
+  })
+
+  // ============================================================================
+  // Impulse Management API
+  // ============================================================================
+
+  // List all impulses
+  app.get('/impulses', (c) => {
+    const impulses = impulseStore.getAll()
+    return c.json({ impulses })
+  })
+
+  // Get specific impulse
+  app.get('/impulses/:id', (c) => {
+    const id = c.req.param('id')
+    const impulse = impulseStore.get(id)
+
+    if (!impulse) {
+      return c.json({ error: 'Impulse not found' }, 404)
+    }
+
+    return c.json({ impulse })
+  })
+
+  // Create impulse
+  app.post('/impulses', async (c) => {
+    try {
+      const body = await c.req.json()
+      const { primitive, position, size, layer, animation, priority, metadata, dataRef, deletable } = body
+
+      if (!primitive) {
+        return c.json({ error: 'Missing primitive' }, 400)
+      }
+
+      const impulse = impulseStore.create(primitive as Primitive, {
+        position,
+        size,
+        layer,
+        animation,
+        priority,
+        metadata,
+        dataRef,
+        deletable
+      })
+
+      return c.json({ impulse }, 201)
+    } catch (error) {
+      console.error('[Server] Create impulse error:', error)
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Failed to create impulse' },
+        500
+      )
+    }
+  })
+
+  // Update impulse
+  app.put('/impulses/:id', async (c) => {
+    try {
+      const id = c.req.param('id')
+      const patch = await c.req.json() as Partial<UIComponentImpulse>
+
+      const success = impulseStore.update(id, patch)
+
+      if (!success) {
+        return c.json({ error: 'Impulse not found' }, 404)
+      }
+
+      return c.json({ success: true, impulse: impulseStore.get(id) })
+    } catch (error) {
+      console.error('[Server] Update impulse error:', error)
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Failed to update impulse' },
+        500
+      )
+    }
+  })
+
+  // Delete impulse
+  app.delete('/impulses/:id', (c) => {
+    const id = c.req.param('id')
+    const success = impulseStore.delete(id)
+
+    if (!success) {
+      return c.json({ error: 'Impulse not found or not deletable' }, 404)
+    }
+
+    return c.json({ success: true })
+  })
+
+  // Clear all impulses
+  app.delete('/impulses', async (c) => {
+    try {
+      const { except } = await c.req.json().catch(() => ({ except: [] }))
+      impulseStore.clear(except)
+      return c.json({ success: true })
+    } catch (error) {
+      impulseStore.clear()
+      return c.json({ success: true })
+    }
+  })
+
+  // Viewer page — renders current impulse state as live HTML
+  app.get('/view', (c) => {
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>react-renderer viewer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; font-size: 14px; background: #fff; color: #111; }
+    #root { padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 100vh; }
+    #status { position: fixed; top: 8px; right: 8px; font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: #f3f4f6; color: #6b7280; }
+    #status.ok { background: #d1fae5; color: #065f46; }
+    .impulse { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+    /* primitives */
+    .p-text-heading { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+    .p-text-body { line-height: 1.6; margin: 0; }
+    .p-text-caption { font-size: 12px; color: #6b7280; margin: 0; }
+    .p-badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+    .p-badge-info { background: #dbeafe; color: #1e40af; }
+    .p-badge-success { background: #d1fae5; color: #065f46; }
+    .p-badge-warning { background: #fef3c7; color: #92400e; }
+    .p-badge-error { background: #fee2e2; color: #991b1b; }
+    .p-badge-neutral { background: #f3f4f6; color: #374151; }
+    .p-container-vertical { display: flex; flex-direction: column; gap: 8px; }
+    .p-container-horizontal { display: flex; flex-direction: row; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+    .p-container-grid { display: grid; gap: 8px; }
+    .p-button { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .p-button-primary { background: #2563eb; color: #fff; }
+    .p-button-secondary { background: #f3f4f6; color: #111; }
+    .p-button-destructive { background: #dc2626; color: #fff; }
+    .p-progress-bar { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; }
+    .p-progress-bar-fill { height: 100%; background: #2563eb; border-radius: 4px; transition: width 0.3s; }
+    .p-code { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; overflow-x: auto; white-space: pre; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th { padding: 6px 10px; border-bottom: 2px solid #e5e7eb; text-align: left; font-weight: 600; cursor: pointer; }
+    td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+    tr:hover td { background: #f9fafb; }
+    .p-unknown { padding: 8px 12px; background: #fef3c7; border-radius: 6px; font-size: 12px; font-family: monospace; color: #92400e; }
+    .empty { color: #9ca3af; text-align: center; padding: 48px; }
+  </style>
+</head>
+<body>
+  <div id="status">connecting…</div>
+  <div id="root"><div class="empty">Waiting for impulses…</div></div>
+  <script>
+    const impulses = new Map()
+    const status = document.getElementById('status')
+    const root = document.getElementById('root')
+
+    function renderPrimitive(p) {
+      if (!p || !p.type) return '<div class="p-unknown">missing type</div>'
+      switch (p.type) {
+        case 'text': {
+          const cls = { heading: 'p-text-heading', body: 'p-text-body', caption: 'p-text-caption', code: 'p-code' }[p.variant] ?? 'p-text-body'
+          const tag = p.variant === 'heading' ? 'h2' : 'p'
+          return \`<\${tag} class="\${cls}">\${esc(p.content ?? '')}</\${tag}>\`
+        }
+        case 'badge':
+          return \`<span class="p-badge p-badge-\${p.variant ?? 'neutral'}">\${esc(p.label ?? '')}</span>\`
+        case 'button':
+          return \`<button class="p-button p-button-\${p.variant ?? 'secondary'}">\${esc(p.label ?? 'Button')}</button>\`
+        case 'progress': {
+          const pct = Math.round(((p.value ?? 0) / (p.max ?? 100)) * 100)
+          return \`<div><div class="p-progress-bar"><div class="p-progress-bar-fill" style="width:\${pct}%"></div></div><div style="font-size:11px;color:#6b7280;margin-top:2px">\${pct}%</div></div>\`
+        }
+        case 'code':
+          return \`<pre class="p-code">\${esc(p.code ?? p.content ?? '')}</pre>\`
+        case 'container': {
+          const cls = { vertical: 'p-container-vertical', horizontal: 'p-container-horizontal', grid: 'p-container-grid' }[p.layout] ?? 'p-container-vertical'
+          const style = p.layout === 'grid' && p.columns ? \` style="grid-template-columns:repeat(\${p.columns},1fr)"\` : ''
+          const children = (p.children ?? []).map(renderPrimitive).join('')
+          return \`<div class="\${cls}"\${style}>\${children}</div>\`
+        }
+        case 'data-table':
+        case 'data-table-v2': {
+          const cols = p.columns ?? []
+          const rows = p.data ?? []
+          const head = cols.map(c => \`<th>\${esc(c)}</th>\`).join('')
+          const body = rows.map(r => \`<tr>\${cols.map(c => \`<td>\${esc(String(r[c] ?? ''))}</td>\`).join('')}</tr>\`).join('')
+          return \`<table><thead><tr>\${head}</tr></thead><tbody>\${body}</tbody></table>\`
+        }
+        default:
+          return \`<div class="p-unknown">Unknown primitive: \${esc(p.type)}<br><pre>\${esc(JSON.stringify(p, null, 2))}</pre></div>\`
+      }
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    }
+
+    function redraw() {
+      const arr = [...impulses.values()]
+      if (arr.length === 0) {
+        root.innerHTML = '<div class="empty">Waiting for impulses…</div>'
+        return
+      }
+      root.innerHTML = arr.map(imp => {
+        const prim = imp.pointer?.primitive ?? imp.content ?? imp.primitive ?? {}
+        return \`<div class="impulse" data-id="\${imp.id}">\${renderPrimitive(prim)}</div>\`
+      }).join('')
+    }
+
+    const wsUrl = location.origin.replace(/^http/, 'ws') + '/ws'
+    let ws
+    function connect() {
+      ws = new WebSocket(wsUrl)
+      ws.onopen = () => { status.textContent = 'connected'; status.className = 'ok' }
+      ws.onclose = () => { status.textContent = 'reconnecting…'; status.className = ''; setTimeout(connect, 1500) }
+      ws.onerror = () => ws.close()
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data)
+        switch (msg.type) {
+          case 'state_sync':
+            impulses.clear()
+            ;(msg.impulses ?? []).forEach(i => impulses.set(i.id, i))
+            redraw(); break
+          case 'impulse_create':
+            if (msg.impulse) impulses.set(msg.impulse.id, msg.impulse)
+            redraw(); break
+          case 'impulse_update':
+            if (msg.id && impulses.has(msg.id)) {
+              impulses.set(msg.id, { ...impulses.get(msg.id), ...msg.patch })
+            }
+            redraw(); break
+          case 'impulse_delete':
+            if (msg.id) impulses.delete(msg.id)
+            redraw(); break
+        }
+      }
+    }
+    connect()
+  </script>
+</body>
+</html>`
+    return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  })
+
+  // ============================================================================
+  // Debugging & Inspection Routes
+  // ============================================================================
+
+  // POST /impulses/:id/errors — called by PrimitiveErrorBoundary (fire-and-forget from browser)
+  app.post('/impulses/:id/errors', async (c) => {
+    const body = await c.req.json()
+    recordRenderError({
+      impulseId: c.req.param('id'),
+      primitiveType: body.primitiveType ?? 'unknown',
+      error: body.error ?? 'unknown error',
+      stack: body.stack,
+      timestamp: body.timestamp ?? Date.now(),
+    })
+    return c.json({ received: true })
+  })
+
+  // GET /debug/errors — returns the render error log for inspection
+  app.get('/debug/errors', (c) => {
+    return c.json({ errors: getRenderErrors(), count: getRenderErrors().length })
+  })
+
+  // POST /validate-spec — validates a primitive spec without creating an impulse
+  app.post('/validate-spec', async (c) => {
+    const body = await c.req.json() as { primitive?: unknown }
+    if (!body.primitive) {
+      return c.json({ valid: false, errors: [{ path: 'primitive', message: 'primitive field is required' }] }, 400)
+    }
+    const prim = body.primitive as Record<string, unknown>
+    if (!prim.type || typeof prim.type !== 'string') {
+      return c.json({ valid: false, errors: [{ path: 'primitive.type', message: 'primitive.type must be a non-empty string' }] }, 400)
+    }
+    // Use the resolver to attempt resolution — if it throws, the spec is invalid
+    try {
+      await resolve({ type: 'ui_component', primitive: body.primitive } as any)
+      return c.json({ valid: true, errors: [] })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return c.json({ valid: false, errors: [{ path: 'primitive', message: msg }] })
+    }
+  })
+
+  // GET /impulses/:id/tree — returns the primitive tree for a specific impulse
+  app.get('/impulses/:id/tree', (c) => {
+    const impulse = impulseStore.get(c.req.param('id'))
+    if (!impulse) return c.json({ error: 'not found' }, 404)
+
+    function buildTree(prim: Record<string, unknown>, depth = 0): unknown {
+      const children = (prim.children as Record<string, unknown>[] | undefined) ?? []
+      return {
+        type: prim.type,
+        depth,
+        childCount: children.length,
+        children: children.map((child) => buildTree(child, depth + 1)),
+      }
+    }
+
+    const primitive = (impulse.pointer?.primitive ?? impulse.content) as unknown as Record<string, unknown>
+    return c.json({
+      impulseId: impulse.id,
+      tree: primitive ? buildTree(primitive) : null,
+    })
+  })
+
+  return {
+    fetch(req: Request, server: ReturnType<typeof Bun.serve>) {
+      const url = new URL(req.url)
+
+      // Handle WebSocket upgrade
+      if (url.pathname === '/ws') {
+        const sessionId = nanoid()
+        const success = server.upgrade(req, {
+          data: {
+            sessionId,
+            connectedAt: Date.now(),
+            lastActivity: Date.now()
+          }
+        })
+
+        if (success) {
+          return undefined // Upgrade successful
+        }
+
+        return new Response('WebSocket upgrade failed', { status: 400 })
+      }
+
+      // Handle HTTP with Hono
+      return app.fetch(req)
+    },
+
+    websocket: {
+      open(ws: any) {
+        handleOpen(ws)
+      },
+
+      message(ws: any, message: any) {
+        handleMessage(ws, message)
+      },
+
+      close(ws: any) {
+        handleClose(ws)
+      },
+
+      drain(ws: any) {
+        handleDrain(ws)
+      }
+    }
+  }
+}
+
+// ============================================================================
+// WebSocket + HTTP Server (Bun)
+// ============================================================================
 
 const PORT = Number(process.env.PORT) || 3000
 
@@ -268,52 +534,38 @@ console.log(`
 
 const server = Bun.serve<ClientInfo>({
   port: PORT,
-
-  fetch(req, server) {
-    const url = new URL(req.url)
-
-    // Handle WebSocket upgrade
-    if (url.pathname === '/ws') {
-      const sessionId = nanoid()
-      const success = server.upgrade(req, {
-        data: {
-          sessionId,
-          connectedAt: Date.now(),
-          lastActivity: Date.now()
-        }
-      })
-
-      if (success) {
-        return undefined // Upgrade successful
-      }
-
-      return new Response('WebSocket upgrade failed', { status: 400 })
-    }
-
-    // Handle HTTP with Hono
-    return app.fetch(req)
-  },
-
-  websocket: {
-    open(ws) {
-      handleOpen(ws)
-    },
-
-    message(ws, message) {
-      handleMessage(ws, message)
-    },
-
-    close(ws) {
-      handleClose(ws)
-    },
-
-    drain(ws) {
-      handleDrain(ws)
-    }
-  }
+  ...buildHandler()
 })
 
 console.log(`[Server] Listening on port ${PORT}`)
+
+// ============================================================================
+// Config File Watcher
+// ============================================================================
+
+// Verified: config reload does not restart process (2026-04-24)
+watch("config/shape-mapping.json", async () => {
+  try {
+    shapeMappingCache = JSON.parse(await Bun.file("config/shape-mapping.json").text()) as Record<string, string>
+    server.reload(buildHandler())
+    console.log("[ConfigReload] shape-mapping.json reloaded")
+  } catch (e) {
+    console.error("[ConfigReload] Failed to reload shape-mapping.json:", e)
+  }
+})
+
+// ============================================================================
+// Hot Reload
+// ============================================================================
+
+// Verified: WS clients survive handler swap (2026-04-24)
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    server.reload(buildHandler())
+    const ts = process.env.DEBUG ? ` [${new Date().toISOString()}]` : ""
+    console.log(`[HotReload] Handler swapped — WebSocket clients preserved${ts}`)
+  })
+}
 
 // ============================================================================
 // Discovery Vessel Integration

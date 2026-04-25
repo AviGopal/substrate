@@ -169,8 +169,8 @@ async function registerWithDiscovery(endpoint: string) {
 // HTTP Server (Vessel Discovery)
 // ============================================================================
 
-async function startHttpServer(): Promise<{ server: any; endpoint: string }> {
-  // Request handler (same for both TCP and Unix socket)
+// Handler Builder — returns { fetch } suitable for Bun.serve / server.reload
+function buildHandler() {
   const fetchHandler = async (req: Request) => {
     const url = new URL(req.url);
 
@@ -323,14 +323,22 @@ async function startHttpServer(): Promise<{ server: any; endpoint: string }> {
     return Response.json({ error: 'Not found' }, { status: 404 });
   };
 
+  return { fetch: fetchHandler };
+}
+
+// Module-level server reference (populated by startHttpServer; used by hot reload)
+let httpServer: ReturnType<typeof Bun.serve> | null = null;
+
+async function startHttpServer(): Promise<{ server: ReturnType<typeof Bun.serve>; endpoint: string }> {
   // Start server based on mode
   if (SERVER_CONFIG.mode === 'unix') {
     // Unix socket mode
     const server = Bun.serve({
       unix: SERVER_CONFIG.socketPath!,
-      fetch: fetchHandler
+      ...buildHandler()
     });
 
+    httpServer = server;
     console.error(`🔌 Server listening on Unix socket: ${SERVER_CONFIG.socketPath}`);
     console.error(`   Endpoint: ${SERVER_CONFIG.endpoint}`);
 
@@ -348,15 +356,30 @@ async function startHttpServer(): Promise<{ server: any; endpoint: string }> {
 
     const server = Bun.serve({
       port,
-      fetch: fetchHandler
+      ...buildHandler()
     });
 
+    httpServer = server;
     console.error(`🌐 HTTP server listening on port ${server.port}`);
     console.error(`   Health: http://localhost:${server.port}/health`);
     console.error(`   Resolve: http://localhost:${server.port}/v2/impulses/resolve`);
 
     return { server, endpoint: SERVER_CONFIG.endpoint };
   }
+}
+
+// ============================================================================
+// Hot Reload
+// ============================================================================
+
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    if (httpServer) {
+      httpServer.reload(buildHandler());
+      const ts = process.env.DEBUG ? ` [${new Date().toISOString()}]` : "";
+      console.error(`[HotReload] Handler swapped${ts}`);
+    }
+  });
 }
 
 // ============================================================================

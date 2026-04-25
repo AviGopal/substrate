@@ -8,6 +8,7 @@ export type PrimitiveType =
   | 'container'
   | 'text'
   | 'data-table'
+  | 'data-table-v2'
   | 'chart'
   | 'graph'
   | 'input'
@@ -138,10 +139,19 @@ export interface CustomPrimitive extends BasePrimitive {
   props: Record<string, unknown>
 }
 
+export interface DataTableTanstackCorePrimitive extends BasePrimitive {
+  type: 'data-table-v2'
+  columns: string[]
+  data: Record<string, unknown>[]
+  pageSize?: number
+  onRowClick?: string
+}
+
 export type Primitive =
   | ContainerPrimitive
   | TextPrimitive
   | DataTablePrimitive
+  | DataTableTanstackCorePrimitive
   | ChartPrimitive
   | GraphPrimitive
   | InputPrimitive

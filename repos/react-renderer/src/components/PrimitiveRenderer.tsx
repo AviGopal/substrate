@@ -9,6 +9,7 @@ import { Button } from '../primitives/button'
 import { Progress } from '../primitives/progress'
 import { Code } from '../primitives/code'
 import { DataTable } from '../primitives/data-table'
+import { DataTableTanstack, type DataTableTanstackPrimitive } from '../primitives/data-table-tanstack'
 import { Chart } from '../primitives/chart'
 
 export interface PrimitiveRendererProps {
@@ -63,6 +64,14 @@ export function PrimitiveRenderer({ primitive, onAction }: PrimitiveRendererProp
 
     case 'data-table':
       return <DataTable primitive={primitive} onAction={onAction} />
+
+    case 'data-table-v2':
+      return (
+        <DataTableTanstack
+          primitive={primitive}
+          onAction={onAction ? (action, payload) => onAction(action, payload as Record<string, unknown>) : undefined}
+        />
+      )
 
     case 'chart':
       return <Chart primitive={primitive} />

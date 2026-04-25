@@ -1,0 +1,9 @@
+{
+  "type": "directoryTree",
+  "root": "/tmp/test-project",
+  "entries": [
+    { "path": "src/index.ts", "kind": "file", "sizeBytes": 1024 },
+    { "path": "src/", "kind": "directory" },
+    { "path": "package.json", "kind": "file", "sizeBytes": 512 }
+  ]
+}

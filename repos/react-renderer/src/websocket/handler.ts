@@ -235,6 +235,29 @@ export function handleDrain(ws: WebSocketClient): void {
   }
 }
 
+// ============================================================================
+// Client-side TanStack Query cache invalidation (browser-side pattern)
+// ============================================================================
+// When the BROWSER client receives an `impulse_update` WebSocket message it
+// should invalidate the TanStack Query cache for that impulse so the UI
+// re-fetches the latest resolved content automatically.  The pattern is:
+//
+//   import { queryClient } from '../components/ImpulseRenderer'
+//   import { impulseQueryKey } from '../hooks/useImpulse'
+//
+//   ws.onmessage = (event) => {
+//     const msg = JSON.parse(event.data)
+//     if (msg.type === 'impulse_update') {
+//       queryClient.invalidateQueries({
+//         queryKey: impulseQueryKey({ type: msg.id, id: msg.id }),
+//       })
+//     }
+//   }
+//
+// This file is SERVER-side (Bun WebSocket handler) and only PUSHES
+// `impulse_update` messages — it does not hold the browser QueryClient.
+// ============================================================================
+
 // Wire impulse store events to broadcaster
 impulseStore.subscribe((event) => {
   switch (event.type) {

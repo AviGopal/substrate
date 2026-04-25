@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "bun run src/index.ts",
-    "dev": "bun --watch src/index.ts",
+    "dev": "bun --hot src/index.ts",
+    "dev:debug": "DEBUG=true bun --hot src/index.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
@@ -16,6 +17,7 @@
     "node-pty": "^1.0.0"
   },
   "devDependencies": {
+    "@metabob/test-helpers": "file:../../packages/test-helpers",
     "@types/node": "^20.11.5",
     "bun-types": "^1.0.25",
     "typescript": "^5.3.3"

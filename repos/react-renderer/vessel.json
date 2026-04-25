@@ -22,6 +22,18 @@
       "description": "Resolves current viewport configuration",
       "protocol": "http",
       "endpoint": "/resolve/viewport_state"
+    },
+    {
+      "type": "data-table-v2",
+      "description": "TanStack Table-backed data table with sorting, filtering, and pagination",
+      "protocol": "http",
+      "endpoint": "/resolve/data-table-v2"
+    },
+    {
+      "type": "query_state",
+      "description": "TanStack Query cache state for impulse pointer resolution",
+      "protocol": "http",
+      "endpoint": "/resolve/query_state"
     }
   ],
 
@@ -80,6 +92,7 @@
         "container",
         "text",
         "data-table",
+        "data-table-v2",
         "chart",
         "graph",
         "input",

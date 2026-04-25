@@ -1,0 +1,8 @@
+{
+  "type": "bashOutput",
+  "exitCode": 0,
+  "stdout": "ok\n",
+  "stderr": "",
+  "command": "echo ok",
+  "durationMs": 12
+}

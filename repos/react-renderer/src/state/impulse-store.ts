@@ -200,3 +200,24 @@ class ImpulseStore {
 
 // Export singleton instance
 export const impulseStore = new ImpulseStore()
+
+// ============================================================================
+// Render error log (in-memory, max 100 entries)
+// ============================================================================
+
+const renderErrors: Array<{
+  impulseId: string
+  primitiveType: string
+  error: string
+  stack?: string
+  timestamp: number
+}> = []
+
+export function recordRenderError(entry: typeof renderErrors[number]): void {
+  renderErrors.unshift(entry)
+  if (renderErrors.length > 100) renderErrors.pop()
+}
+
+export function getRenderErrors(): typeof renderErrors {
+  return renderErrors
+}

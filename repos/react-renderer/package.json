@@ -7,12 +7,15 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --hot run src/index.ts",
+    "dev:debug": "DEBUG=true bun --hot src/index.ts",
     "build": "bun build src/index.ts --outdir=dist --target=bun",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@metabob/vessel-discovery-client": "file:../../packages/vessel-discovery-client",
+    "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-table": "^8.0.0",
     "hono": "^4.0.0",
     "nanoid": "^5.0.0",
     "react": "^19.0.0",
@@ -27,6 +30,7 @@
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
+    "@metabob/test-helpers": "file:../../packages/test-helpers",
     "@types/bun": "latest",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

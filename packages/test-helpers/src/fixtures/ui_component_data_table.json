@@ -1,0 +1,11 @@
+{
+  "type": "uiComponent",
+  "primitive": {
+    "type": "data-table",
+    "columns": ["Name", "Status", "Size"],
+    "data": [
+      { "Name": "alpha", "Status": "ok", "Size": "1 KB" },
+      { "Name": "beta", "Status": "warn", "Size": "4 KB" }
+    ]
+  }
+}

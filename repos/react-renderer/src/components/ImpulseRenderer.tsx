@@ -3,6 +3,69 @@
 import React from 'react'
 import type { UIComponentImpulse, PositionMode } from '../types'
 import { PrimitiveRenderer } from './PrimitiveRenderer'
+import { QueryClient, QueryClientProvider } from '../hooks/useImpulse'
+
+// Module-level QueryClient — created once so it is not reset on re-renders.
+// Exported so the WebSocket layer can call queryClient.invalidateQueries()
+// when it receives an impulse_update push message.
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 2,
+    },
+  },
+})
+
+// ============================================================================
+// PrimitiveErrorBoundary - Isolates render errors per impulse
+// ============================================================================
+
+interface ErrorBoundaryState { error: Error | null; info: string }
+
+class PrimitiveErrorBoundary extends React.Component<
+  { impulseId: string; primitiveType: string; children: React.ReactNode },
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { error: null, info: "" }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error, info: error.message }
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Report to the vessel's error store (fire-and-forget)
+    fetch(`/impulses/${this.props.impulseId}/errors`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        impulseId: this.props.impulseId,
+        primitiveType: this.props.primitiveType,
+        error: error.message,
+        stack: error.stack,
+        componentStack: info.componentStack,
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {}) // best-effort
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          padding: 12, background: "#fef2f2", border: "1px solid #fca5a5",
+          borderRadius: 6, fontFamily: "monospace", fontSize: 12
+        }}>
+          <div style={{ color: "#dc2626", fontWeight: "bold", marginBottom: 4 }}>
+            Render error in {this.props.primitiveType}
+          </div>
+          <div style={{ color: "#7f1d1d" }}>{this.state.info}</div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export interface ImpulseRendererProps {
   impulses: UIComponentImpulse[]
@@ -35,60 +98,62 @@ export function ImpulseRenderer({ impulses, onAction }: ImpulseRendererProps) {
     (a.pointer.layer ?? 0) - (b.pointer.layer ?? 0)
 
   return (
-    <div style={{ position: 'relative', minHeight: '100%' }}>
-      {/* Flow-positioned impulses */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {flowImpulses.sort(sortByLayer).map((impulse) => (
-          <ImpulseCard
-            key={impulse.id}
-            impulse={impulse}
-            onAction={onAction}
-          />
-        ))}
-      </div>
-
-      {/* Absolute-positioned impulses */}
-      {absoluteImpulses.sort(sortByLayer).map((impulse) => {
-        const pos = impulse.pointer.position as { type: 'absolute'; x: number; y: number }
-        return (
-          <div
-            key={impulse.id}
-            style={{
-              position: 'absolute',
-              left: pos.x,
-              top: pos.y,
-              zIndex: impulse.pointer.layer ?? 0
-            }}
-          >
-            <ImpulseCard impulse={impulse} onAction={onAction} />
-          </div>
-        )
-      })}
-
-      {/* Center-positioned impulses (modals) */}
-      {centerImpulses.length > 0 && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1000
-          }}
-        >
-          {centerImpulses.sort(sortByLayer).map((impulse) => (
+    <QueryClientProvider client={queryClient}>
+      <div style={{ position: 'relative', minHeight: '100%' }}>
+        {/* Flow-positioned impulses */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {flowImpulses.sort(sortByLayer).map((impulse) => (
             <ImpulseCard
               key={impulse.id}
               impulse={impulse}
               onAction={onAction}
-              isModal
             />
           ))}
         </div>
-      )}
-    </div>
+
+        {/* Absolute-positioned impulses */}
+        {absoluteImpulses.sort(sortByLayer).map((impulse) => {
+          const pos = impulse.pointer.position as { type: 'absolute'; x: number; y: number }
+          return (
+            <div
+              key={impulse.id}
+              style={{
+                position: 'absolute',
+                left: pos.x,
+                top: pos.y,
+                zIndex: impulse.pointer.layer ?? 0
+              }}
+            >
+              <ImpulseCard impulse={impulse} onAction={onAction} />
+            </div>
+          )
+        })}
+
+        {/* Center-positioned impulses (modals) */}
+        {centerImpulses.length > 0 && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1000
+            }}
+          >
+            {centerImpulses.sort(sortByLayer).map((impulse) => (
+              <ImpulseCard
+                key={impulse.id}
+                impulse={impulse}
+                onAction={onAction}
+                isModal
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </QueryClientProvider>
   )
 }
 
@@ -128,12 +193,17 @@ function ImpulseCard({ impulse, onAction, isModal }: ImpulseCardProps) {
 
   return (
     <div style={cardStyle} data-impulse-id={impulse.id}>
-      <PrimitiveRenderer
-        primitive={primitive}
-        onAction={(actionId, payload) => {
-          onAction?.(actionId, { ...payload, impulseId: impulse.id })
-        }}
-      />
+      <PrimitiveErrorBoundary
+        impulseId={impulse.id}
+        primitiveType={primitive.type ?? "unknown"}
+      >
+        <PrimitiveRenderer
+          primitive={primitive}
+          onAction={(actionId, payload) => {
+            onAction?.(actionId, { ...payload, impulseId: impulse.id })
+          }}
+        />
+      </PrimitiveErrorBoundary>
     </div>
   )
 }
