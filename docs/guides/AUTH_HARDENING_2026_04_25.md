@@ -1,0 +1,200 @@
+# Authentication & Authorization Hardening (2026-04-25)
+
+**Commit**: `c59d0840`  
+**Status**: Deployed to canary
+
+## Overview
+
+Multi-vessel security hardening across discovery, identity, and activity-api to enforce authentication on privileged operations and prevent unauthorized access through default-allow patterns.
+
+## Changes by Vessel
+
+### discovery-vessel 0.3.0
+
+**Mutation Endpoint Auth**
+- Registration (`POST /register`), heartbeat (`POST /heartbeat`), and deregistration (`DELETE /vessels/:id`) endpoints now require API key authentication
+- Request: `Authorization: ApiKey <key>` header
+- Response: 401 Unauthorized if key missing or invalid
+- Impact: Prevents anonymous vessel registration
+
+**Tenant Isolation Fix**
+- Ensures discovery registry respects organization boundaries
+- Vessels can only query/modify their own org's registrations
+- Uses `org_id` from authenticated token to scope queries
+
+### identity-vessel 0.1.1
+
+**Rate Limiting**
+- API key validation endpoint now rate-limited per IP + key
+- Prevents brute-force attacks on authentication
+- Threshold: 100 requests/minute per unique (IP, key) pair
+- Response: 429 Too Many Requests when exceeded
+
+**Bootstrap Key Gitignore**
+- Initial admin/bootstrap keys added to `.gitignore`
+- Prevents accidental credential commits to version control
+- File: `.env.bootstrap` (local development only)
+
+### activity-api 1.9.0
+
+**Impulse Resolve Auth**
+- `POST /v2/impulses/resolve` now validates caller identity
+- Enforces read access to requested impulse types
+- Returns 403 Forbidden if caller lacks access to shape
+- Schema: Migration 087 adds `global_template_write_gate` permission
+
+**Reject-by-Default Middleware**
+- New auth middleware on all endpoints
+- Explicit whitelist of public endpoints:
+  - `GET /health`
+  - `GET /swagger/*` (API documentation)
+- All other endpoints require valid authentication (API key or JWT)
+- Prevents information disclosure from anonymous requests
+
+**Global Template Write Gate**
+- Migration 087: New permission record controls who can write templates
+- Scoped to org_id
+- Defaults to org admin only
+- Activity creation/modification requires this permission
+- Prevents unauthorized template injection
+
+## Security Model
+
+**Before (Implicit Trust)**:
+```
+Client sends request → Router checks endpoint → No auth check → Access granted
+```
+
+**After (Explicit Verification)**:
+```
+Client sends request → Auth middleware validates token → Check endpoint permissions → Access granted/denied
+```
+
+## Deployment & Configuration
+
+### Required Environment Variables
+
+**All vessels**:
+```bash
+METABOB_API_KEY        # Service-to-service communication
+ANTHROPIC_API_KEY      # LLM provider (activity-api)
+```
+
+**identity-vessel**:
+```bash
+BOOTSTRAP_ADMIN_KEY    # Initial admin key (dev only, do not commit)
+RATE_LIMIT_PER_MINUTE  # Default: 100
+```
+
+**discovery-vessel**:
+```bash
+DISCOVERY_API_KEY      # Auth for registration endpoint
+```
+
+**activity-api**:
+```bash
+SURREALDB_*            # Database credentials
+JWT_SECRET             # For JWT token validation
+```
+
+### Database Migrations
+
+**Migration 087**: Global template write permissions
+```sql
+-- Run automatically on startup
+-- Creates global_template_write_gate record
+-- Scoped to org_id, defaults to admin role
+```
+
+## Impact on Clients
+
+### MiniBob
+
+No changes needed. MiniBob already includes `METABOB_API_KEY` in all service calls.
+
+### Custom Clients
+
+If building custom clients that use impulse resolve:
+
+**Before**:
+```bash
+curl -X POST http://activity.metabob.com/v2/impulses/resolve \
+  -H "Content-Type: application/json" \
+  -d '{"shape": "activityTemplate", ...}'
+```
+
+**After**:
+```bash
+curl -X POST http://activity.metabob.com/v2/impulses/resolve \
+  -H "Content-Type: application/json" \
+  -H "Authorization: ApiKey <your-key>" \
+  -d '{"shape": "activityTemplate", ...}'
+```
+
+### Vessel Registration
+
+If registering custom vessels with discovery:
+
+**Before**:
+```bash
+curl -X POST http://discovery.metabob.local/register \
+  -H "Content-Type: application/json" \
+  -d '{...vessel config...}'
+```
+
+**After**:
+```bash
+curl -X POST http://discovery.metabob.local/register \
+  -H "Content-Type: application/json" \
+  -H "Authorization: ApiKey <discovery-key>" \
+  -d '{...vessel config...}'
+```
+
+## Troubleshooting
+
+### 401 Unauthorized on vessel registration
+
+```
+Check:
+1. Discovery-vessel running and accessible
+2. DISCOVERY_API_KEY environment variable set
+3. Key is valid in identity-vessel
+4. Network connectivity between vessels
+```
+
+### 403 Forbidden on template write
+
+```
+Check:
+1. User's org has global_template_write_gate permission
+2. API key/JWT token has write scope
+3. Org_id matches authenticated caller's org_id
+4. Not in read-only mode for your organization
+```
+
+### 429 Too Many Requests
+
+```
+Means: Rate limit exceeded on API key validation
+Solution:
+1. Wait 60 seconds before retrying
+2. Check for auth loop (client retrying too aggressively)
+3. Contact admin if expecting higher volume
+```
+
+## Related Documentation
+
+- [CLAUDE.md - Authentication Section](../../CLAUDE.md#authentication) - Current auth model
+- [RBAC_GUIDE.md](./RBAC_GUIDE.md) - Permission system details
+- [AUTH_JWT_CLAIMS.md](../AUTH_JWT_CLAIMS.md) - JWT token structure
+- [discovery-vessel docs](../../repos/discovery-vessel/README.md) - Vessel discovery
+
+## Deployment Checklist
+
+- [ ] All services updated to versions 0.3.0+
+- [ ] Environment variables configured
+- [ ] Database migrations run (Migration 087)
+- [ ] API keys distributed to service clients
+- [ ] Rate limiting thresholds reviewed
+- [ ] Public endpoint whitelist confirmed
+- [ ] Test auth flows against canary
