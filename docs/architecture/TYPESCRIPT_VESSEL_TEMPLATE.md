@@ -208,12 +208,12 @@ Connect to `${activityApi.url}/ws` (upgrade `http`→`ws`, `https`→`wss`). Sen
 
 Events of interest:
 
-- `task.completed` — scan `impulse_resolutions` for references to shapes this vessel owns; react locally
+- `task.completed` — carries `input_impulse_ids` and `output_impulse_ids` (per-task impulse arrays as of 2026-04-25); scan for references to shapes this vessel owns; react locally
 - `tool.call` — phase 2: extract references from tool arguments
 
 Reconnect with exponential backoff: start at 1s, cap at 30s, reset on clean open. Every handler is try/catch-wrapped; errors log and continue.
 
-`task.completed.data` does **not** currently carry `impulse_resolutions` — that field is on the persisted trace row. Treat it as an optional extension so your observer is a no-op today but auto-activates when activity-api begins broadcasting it.
+`task.completed.data` now carries `input_impulse_ids: string[]` and `output_impulse_ids: string[]` (always present, possibly empty). These are the per-task impulse arrays; note that the richer `impulse_resolutions` (per-resolution metadata with resolver tier, latency, cost) is only on the persisted trace row. See `docs/specs/broadcaster-per-task-grouping.md` for implementation details.
 
 **Concrete implementation:** `repos/concept-db/src/services/execution-observer.ts` (~411 lines) + `tests/execution-observer.test.ts` (14 unit tests covering request building, dedup, failure swallowing, backoff schedule).
 

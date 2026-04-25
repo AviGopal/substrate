@@ -18,10 +18,13 @@ This spec covers two coupled problems:
    JWT is by receiving it from an upstream vessel, and the only way it
    forwards it safely is by spec.
 
-Status: **spec only**. No implementation. Phased rollout: the credential-
-kind field lands first with `caller_identity` declared on every existing
-vessel (no behavior change), then the delegation header surface lands as
-the first `user_identity` consumers come online.
+Status: **Partially Implemented (Wave A3, 2026-04-23)**
+- ✅ `auth_token_source` field added to vessel registration contract
+- ✅ `auth_delegation_mode` field added to vessel registration contract
+- ✅ Activity-API declares `auth_token_source: 'caller_identity'` and `auth_delegation_mode: 'forward'` on registration
+- ⏳ Delegation header surface pending (awaiting first `user_identity` consumers)
+
+Phased rollout: the credential-kind field now lands with `caller_identity` declared on existing vessels (no behavior change), delegation header surface to follow when first `user_identity` consumers come online.
 
 ---
 

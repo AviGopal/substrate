@@ -1,12 +1,13 @@
 # Broadcaster Per-Task Impulse Grouping
 
-> **Status:** Draft spec — third leg of the per-task impulse grouping fix.
-> **Companion changes (already landed):**
+> **Status:** ✅ Implemented (2026-04-25)
+> **Companion changes (all landed):**
 > - `3d537c8` (minibob) — `serializeTasksForTrace` emits `input_impulse_ids` / `output_impulse_ids` per task.
 > - `2a7984e` (activity-api) — `normalizePersistedTask` writes those fields into `activity_execution_traces.tasks[*]`.
-> - `executionTraceWithSignatures` (commit `003f477`) already reads them as canonical snake_case.
+> - `003f477` (activity-api) — `executionTraceWithSignatures` reads them as canonical snake_case.
+> - **NEW (2026-04-25):** `extractTaskImpulseIds` helper added to `execution-traces.ts`; `TaskCompletedMessage` extended with `input_impulse_ids` and `output_impulse_ids` fields in `websocket/types.ts`; broadcaster now emits per-task impulse arrays on `task.completed` events.
 >
-> This spec covers the missing third leg: the **live WebSocket broadcast** still drops the per-task grouping, so concept-db's `ExecutionObserver` and the workbench live monitor see only execution-scoped data on `task.completed`.
+> The three legs are now complete: minibob serializes, activity-api persists and broadcasts, and consumers (concept-db, workbench) receive the data via both REST and WebSocket.
 
 ## Problem
 

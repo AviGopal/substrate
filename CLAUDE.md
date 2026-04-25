@@ -540,6 +540,7 @@ execution {
   }]
 
   // NEW: Per-task resolver fields (minibob 6f8c727, activity-api 1.8.0, 2026-04-24)
+  // Per-task impulse arrays are also broadcast live on WebSocket task.completed events (2026-04-25)
   tasks: [{
     // ... existing task fields ...
     resolver_id: string          // Resolver used by this task (bash, git, llm, etc.)
