@@ -95,16 +95,21 @@ Hook was sending `available_shapes`/`top_k`/`exclude_templates` and missing the 
 
 ## inline-variant-creation
 
-**Component**: `TaskPromptEditor` inside expanded `ActivityCard`
+**Component**: `TaskPromptEditor` inside expanded `ActivityCard`  
+**Retested**: 2026-04-25 session-2 (Playwright)
 
-**Verified (visual):**
-- "Expand" button present on activity card
-- Activity card shows task count (1 tasks), α/β parameters (α:2.0 β:1.0), success rate (100%)
+**Verified:**
 - Expand/collapse toggle functional
+- Task description textbox: editable, pre-filled with prompt text
+- **Prompt Template**: full LLM prompt rendered in scrollable textarea
+- **Variable highlighting**: `${sourceActivity}`, `${transformationType}`, `${preserveValidationChecks}`, `${allowOutputArtifacts}`, `${removeWriteOperations}`, `${goal}` — all rendered as distinct badge tokens below the textarea
+- **Validation Rules**: Required Files, Required Patterns (regex), Forbidden Patterns (regex) — each with "+ Add" button (all showing "None" when empty)
+- **Retry config**: `max attempts` spinbutton (value: 2), `strategy` combobox — both present and interactive
+- **Thompson parameter editor**: opens inline on "edit" button click; shows Alpha (Successes) + Beta (Failures) + Selection Strength sliders with spinbuttons; live `confidence %` and `Est. Selection %` update as alpha is changed (20% → 60% confidence, 50% → 83% est. selection on α=5); "Reset" button present
+- **Thompson header bar**: does NOT live-update while editor is open; shows committed values (α:1.0) until saved. The in-editor preview is real-time, the card header is not — design intent or minor bug
+- **Save as Variant dialog**: opens on "save as variant" button; shows genealogy chain (Parent → "Parent v2"), changes summary (tasks added/removed), editable Template Name (pre-filled with versioned name), Description textarea, Initial Thompson Sampling Scores (α=1, β=0, 0.5 balanced), "Fresh variants start with alpha=1, beta=0. Parent scores remain unchanged." note, Cancel + Save Variant buttons
 
-**Not fully verified:**
-- Full inline task editing with prompt editing, validation rules, variant save
-- These UI elements are present but editing workflow not exercised in this test session
+**User stories covered**: US-6 (inline task editing), US-7 (variant creation with genealogy), US-8 (Thompson parameter tuning)
 
 ---
 
@@ -130,15 +135,22 @@ Hook was sending `available_shapes`/`top_k`/`exclude_templates` and missing the 
 
 ## speculative-prediction
 
-**Component**: `SpeculativePreviewCard` + `useHoverPreview` hook
+**Component**: `SpeculativePreviewCard` + `useHoverPreview` hook  
+**Retested**: 2026-04-25 session-2 (Playwright + code review)
 
-**Verified (structural):**
-- `SpeculativePreviewCard` wraps `ActivityRecommendationCard` in `ApplicableActivitiesPanel`
-- Hover detection with 300ms debounce implemented via `useHoverPreview`
+**Verified (code review):**
+- `useHoverPreview` debounces `isHovering` → `debouncedTemplate` via `useDebounce(300ms)`
+- `getSpeculativePreview()` calls `predictNewState()` which always returns a `StatePreview` (never null); cache via `SpeculativePredictionCache` (WeakMap-keyed)
+- `ApplicableActivitiesPanel` wraps the card button in `<SpeculativePreviewCard delayDuration={0}>` once `isHovering && preview !== null`
+- `SpeculativePreviewCard` uses Radix UI `Tooltip` → `TooltipContent` (side=right, offset=8): shows goal progress delta (current% → predicted%), new shapes produced (green badges), already-available shapes (dimmed), unlocked activities (with sparkle icon), cost/duration estimates
 
-**Not verified:**
-- Actual hover-triggered preview display — preview would require cached speculative computation
-- The `preview` state from `useHoverPreview` was null in quick testing
+**Not testable via Playwright:**
+- Grid overflow bug — the trajectory grid's step column divs extend into the sidebar z-order and intercept pointer events, preventing `browser_hover` from reaching the recommendation card buttons (same overflow bug from 2026-04-25 sidebar fix; sidebar scroll works but pointer interception persists)
+- JS `mouseover` dispatch fires but Radix UI Tooltip requires real pointer tracking; the two-phase render (debounce fires → component re-renders to add Tooltip wrapper → Tooltip needs active hover) cannot be satisfied with synthetic events
+
+**Verdict**: Implementation is correct and complete per code review. Not testable end-to-end until the sidebar overflow / pointer-events issue is resolved. Recommend adding `pointer-events: none` to the trajectory grid scroll container or fixing z-index stacking to allow sidebar interaction.
+
+**User stories covered (code)**: US-5 (speculative shape preview on hover)
 
 ---
 
@@ -186,10 +198,10 @@ Hook was sending `available_shapes`/`top_k`/`exclude_templates` and missing the 
 | cycle-validation | ✅ Working | Productive loop detected correctly |
 | goal-completion-tracking | ✅ Working | 25% progress, shape inference working |
 | impulse-state-space | ✅ Working | All 4 sub-panels + Ctrl+I shortcut |
-| inline-variant-creation | ⚠️ Partial | Card expand/collapse visible; editing not tested |
+| inline-variant-creation | ✅ Working | Full workflow verified 2026-04-25: prompt template, variable badges, validation rules, retry config, Thompson slider editor (live preview), Save-as-Variant dialog with genealogy |
 | keyboard-shortcuts-help | ✅ Working | Dialog opens; 3 sections (Panels/Navigation/Editing) verified 2026-04-25 |
-| learning-feedback-ui | ⏭ Untested | Requires execution |
-| resolver-attribution | ⏭ Untested | Requires execution |
-| speculative-prediction | ⚠️ Partial | Hook wired; preview render not triggered |
+| learning-feedback-ui | ⏭ Untested | Requires completed execution to trigger Thompson delta events |
+| resolver-attribution | ⏭ Untested | Requires execution traces with resolver_tier data |
+| speculative-prediction | ⚠️ Partial | Code verified correct (hook, cache, tooltip); cannot test end-to-end — grid overflow intercepts pointer events over sidebar. Fix: sidebar z-index / pointer-events stacking |
 | thompson-visualization | ✅ Working | Both on card and in recommendation panel |
-| trajectory-execution | ⏭ Untested | WebSocket connected; execution not triggered |
+| trajectory-execution | ⏭ Untested | WebSocket connected; execution not triggered (requires MiniBob integration) |
