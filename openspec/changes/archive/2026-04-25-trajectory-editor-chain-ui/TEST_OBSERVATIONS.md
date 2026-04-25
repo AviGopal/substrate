@@ -187,6 +187,7 @@ Hook was sending `available_shapes`/`top_k`/`exclude_templates` and missing the 
 | goal-completion-tracking | ✅ Working | 25% progress, shape inference working |
 | impulse-state-space | ✅ Working | All 4 sub-panels + Ctrl+I shortcut |
 | inline-variant-creation | ⚠️ Partial | Card expand/collapse visible; editing not tested |
+| keyboard-shortcuts-help | ✅ Working | Dialog opens; 3 sections (Panels/Navigation/Editing) verified 2026-04-25 |
 | learning-feedback-ui | ⏭ Untested | Requires execution |
 | resolver-attribution | ⏭ Untested | Requires execution |
 | speculative-prediction | ⚠️ Partial | Hook wired; preview render not triggered |

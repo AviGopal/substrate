@@ -30,7 +30,7 @@ Key paths read from `~/.metabob/config.json`:
 | Field | JSON path(s) |
 |---|---|
 | `metabobApiKey` | `metabob.apiKey` → `instance.apiKey` |
-| `discoveryEndpoint` | `discovery.endpoint` → default `https://discovery.metabob.com` |
+| `discoveryEndpoint` | `discovery.endpoint` → default `https://activity.metabob.com/v2/vessels` |
 | `identityEndpoint` | parsed from API key `iss` field → default `https://identity.metabob.com` |
 | `vesselEndpoint` | `process.env.VESSEL_ENDPOINT` → `http://localhost:${PORT}` |
 
