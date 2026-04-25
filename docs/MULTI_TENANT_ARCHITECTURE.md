@@ -107,9 +107,11 @@ DEFINE ACCESS apikey_record ON DATABASE TYPE RECORD
 3. MCP server exchanges key for JWT on startup
 4. Auto-refresh every 12 minutes
 
-### 3. MiniBob Record (Autonomous Instances)
+### 3. MiniBob Record (Autonomous Instances) — DEPRECATED
 
-For MiniBob autonomous vessels running boredom activities.
+> **Deprecated (2026-04-08, Migration 052):** MiniBob instance authentication has been replaced with standard API-key authentication. The `minibob_record` ACCESS method and `minibob_instance` table are no longer active. All MiniBob instances now use the same API-key authentication as other clients. This section is kept for historical reference only.
+
+For MiniBob autonomous vessels running boredom activities. **Note: This method is deprecated. Use API-key auth (§2 above) instead.**
 
 ```surql
 DEFINE ACCESS minibob_record ON DATABASE TYPE RECORD
@@ -122,11 +124,13 @@ DEFINE ACCESS minibob_record ON DATABASE TYPE RECORD
   DURATION FOR TOKEN 24h, FOR SESSION 7d;
 ```
 
-**Flow:**
+**Legacy Flow (superseded by API-key auth):**
 1. Admin creates MiniBob instance in org
 2. Instance starts with `MINIBOB_INSTANCE_ID` and `MINIBOB_API_KEY`
 3. Instance authenticates and gets JWT
 4. Longer token lifetime (24h) for autonomous operation
+
+**Current Approach:** Use standard API-key auth (see §2) for all MiniBob instances and clients.
 
 ## RBAC Enforcement
 

@@ -1,7 +1,9 @@
 # Vessel Discovery and Interaction Patterns
 
+> **Deprecated (2026-04-24):** This document references the deprecated activity-api `/v2/vessels/*` endpoints (proxy mode until July 2026). For current vessel registration and discovery, see [`TYPESCRIPT_VESSEL_TEMPLATE.md`](TYPESCRIPT_VESSEL_TEMPLATE.md) which describes discovery-vessel integration. The architectural principles below remain valid.
+
 **Investigation Date:** 2026-04-08
-**Status:** Architectural exploration and design proposal
+**Status:** Architectural exploration and design proposal (superseded by discovery-vessel pattern)
 
 This document answers four key questions about vessel architecture:
 1. How do we do local vessel discovery?

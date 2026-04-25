@@ -60,7 +60,9 @@ Three parts separated by dots:
 }
 ```
 
-### MiniBob Instance Authentication
+### MiniBob Instance Authentication — DEPRECATED
+
+> **Deprecated (2026-04-08, Migration 052):** MiniBob instances now use standard API-key authentication (see above). This format is kept for historical reference only.
 
 ```json
 {
@@ -74,6 +76,8 @@ Three parts separated by dots:
   "exp": 1711447800
 }
 ```
+
+**Note:** MiniBob instances should now use API-key authentication (see §API Key Authentication above) instead of this instance-specific format.
 
 ## Claim Descriptions
 
