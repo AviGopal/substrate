@@ -17,6 +17,7 @@ import {
 } from './websocket/handler'
 import type { Primitive, UIComponentImpulse } from './types'
 import { VesselClient, type DiscoveryConfig } from '@metabob/vessel-discovery-client'
+import { loadRendererConfig, resolveOrgId } from './config-loader'
 
 // Load resolvers
 import './resolvers/ui-component'
@@ -572,27 +573,36 @@ if (import.meta.hot) {
 // ============================================================================
 
 async function initializeDiscovery() {
-  const discoveryEnabled = process.env.DISCOVERY_ENABLED !== 'false'
-  if (!discoveryEnabled) {
+  const rendererConfig = await loadRendererConfig(PORT)
+
+  if (!rendererConfig.discoveryEnabled) {
     console.log('[Discovery] Discovery integration disabled')
     return
   }
 
-  const discoveryEndpoint = process.env.DISCOVERY_VESSEL_ENDPOINT || 'http://discovery-vessel.activity-system.svc.cluster.local:8080'
   const hostname = process.env.HOSTNAME || 'react-renderer'
   const podName = process.env.POD_NAME || hostname
   const vesselId = process.env.VESSEL_ID || `react-renderer-${podName}`
 
-  const endpoint = process.env.VESSEL_ENDPOINT || `http://react-renderer.activity-system.svc.cluster.local:${PORT}`
+  console.log(`[Discovery] Using endpoint: ${rendererConfig.discoveryEndpoint}`)
+  console.log(`[Discovery] Vessel endpoint: ${rendererConfig.vesselEndpoint}`)
+
+  const orgId = await resolveOrgId(rendererConfig.metabobApiKey, rendererConfig.identityEndpoint)
+  if (orgId) {
+    console.log(`[Discovery] Registering with orgId: ${orgId}`)
+  }
 
   const config: DiscoveryConfig = {
-    discoveryEndpoint,
+    discoveryEndpoint: rendererConfig.discoveryEndpoint,
     vesselId,
     vesselName: 'react-renderer',
     version: vesselManifest.version,
-    endpoint,
+    endpoint: rendererConfig.vesselEndpoint,
     shapes: ['uiComponent'],
     protocol: 'http',
+    authToken: rendererConfig.metabobApiKey || undefined,
+    orgId,
+    authType: 'ApiKey',
     metadata: {
       capabilities: ['ui-rendering', 'websocket', 'real-time-updates'],
       environment: process.env.NODE_ENV || 'development',
