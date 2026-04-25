@@ -2,6 +2,8 @@
 
 Spec scope: extend concept-db so activities can *create* concept-db records (concepts, edges, usage, sequences, signature upserts) by resolving a write-shaped pointer against `POST /v2/impulses/resolve`, the same way activity-api already exposes its learning-loop writes. Make the resolve contract symmetric for read and write — but only by adding shapes, not by changing the contract surface itself.
 
+This spec also introduces an `impulse` table to concept-db. Once the vessel exposes write resolvers, the things they emit (audit records, query-result snapshots, metrics) are themselves impulses in the universal-data sense and need a place to live that is *not* activity-api's tables. The vessel that owns the data owns its impulses.
+
 Status: design only. No code changes here.
 
 ---
@@ -16,13 +18,15 @@ The foundation doc (`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`) treats i
 
 The asymmetry has three concrete costs:
 
-1. **Trace integrity.** Every read goes through one code path (`POST /v2/impulses/resolve`), so the per-resolver trace (`execution.impulse_resolutions[]`, see super-repo `CLAUDE.md` "Resolver Tiers") gets full coverage. Writes via MCP tool calls or curl shells produce a heterogeneous mix of trace fragments — some captured by the MCP tool resolver, some never captured at all. The learning loop can't reason about write outcomes the same way it reasons about reads.
+1. **Trace integrity.** Every read goes through one code path (`POST /v2/impulses/resolve`), so the per-resolver trace (`execution.impulse_resolutions[]`) gets full coverage. Writes via MCP tool calls or curl shells produce a heterogeneous mix of trace fragments — some captured by the MCP tool resolver, some never captured at all. The learning loop can't reason about write outcomes the same way it reasons about reads.
 
 2. **No advertised contract.** Discovery (`packages/vessel-discovery-client/src/types.ts:188-213`, `VesselCapability`) lets a vessel advertise the *shapes* it resolves and how to call its resolve endpoint. There is no parallel for "shapes this vessel will create on your behalf". Activities have to hardcode tool names, REST paths, or MCP tool registries.
 
 3. **Templates couple to endpoint paths.** `learn-impulse-relationships.json:170-174` hardcodes `{{conceptDbUrl}}/upkeep/trigger`. Renaming the endpoint or moving the responsibility to a different vessel breaks every template that referenced it.
 
-Activity-api already solved this for its own write surface in v1.5.0 (April 2026) by exposing 14 write shapes plus 3 destructive shapes through the same `POST /v2/impulses/resolve` router. See `docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`. This spec applies the same pattern to concept-db.
+Activity-api already solved this for its own write surface by exposing 14 write shapes plus 3 destructive shapes through the same `POST /v2/impulses/resolve` router. See `docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`. This spec applies the same pattern to concept-db.
+
+A second observation, downstream of the first: **concept-db's resolvers — both the existing read shapes and the new write shapes — produce data that is itself impulse-shaped.** Representations of concepts, query results from `relatedConcepts`, signature upsert decisions, audit trails of destructive operations, co-occurrence metrics: all of these are universal-data outputs with metadata, summary, and resolved content. If they were ephemeral in-memory structures we would lose them every request. If they lived in activity-api's tables we would violate "vessels own their data". Concept-db needs its own `impulse` table.
 
 ---
 
@@ -34,9 +38,11 @@ Activity-api already solved this for its own write surface in v1.5.0 (April 2026
 
 3. **Keep MCP tools.** They're the human-driver and IDE-driver path (concept-db is wired into metabob-mcp). Templates and ad-hoc human use both have to keep working. The choice is between *coexistence* and *deprecation*; we pick coexistence — see "Migration path".
 
-4. **Audit destructive operations.** concept-db has destructive surface (`concept_link` overwrites edge weight via EMA, `concept` PATCH, future deletes) that the activity-api precedent calls out for audit. concept-db today has no audit table — this spec adds the seed.
+4. **Audit destructive operations.** concept-db has destructive surface (`concept_link` overwrites edge weight via EMA, `concept` PATCH, future deletes) that the activity-api precedent calls out for audit. The audit destination is concept-db's own `impulse` table (introduced here).
 
-5. **Multi-tenant isolation must hold.** Every write resolver must thread `org_id` from JWT auth into the underlying resolver function. concept-db's resolver layer (`repos/concept-db/src/resolvers/concept.ts:67`, etc.) already takes `orgId` and `jwtToken`, so this is a passthrough — the dispatch case mirrors the REST handler.
+5. **Multi-tenant isolation must hold.** Every write resolver must thread `org_id` from JWT auth into the underlying resolver function. concept-db's resolver layer (`repos/concept-db/src/resolvers/concept.ts:67`, etc.) already takes `orgId` and `jwtToken`, so this is a passthrough — the dispatch case mirrors the REST handler. The new `impulse` table inherits the same `WHERE org_id = $auth.org_id` PERMISSIONS pattern as `concept`.
+
+6. **Vessels own their data.** Concept-db must not write impulses into activity-api's tables, and vice versa. The `impulse` table being added here is concept-db's, not a copy of activity-api's.
 
 ---
 
@@ -77,11 +83,9 @@ The `_result` suffix on `metadata.shape` is how a client distinguishes a write-a
 
 `requireAuthenticated(c)` (`impulses.ts:85-91`) early-rejects anonymous callers with 401 for destructive resolvers. For non-destructive `_write` it relies on the underlying REST handler's auth, which means a vessel can choose per-shape policy by mounting some shapes behind `requireAuthenticated` and others not.
 
-The DB-layer story (`impulses.ts:78-83` doc-comment): for JWT auth, SurrealDB `PERMISSIONS` clauses on the target tables enforce `$auth.role = 'admin'` on UPDATE/DELETE; for API-key auth, the self-signed JWT can't pass SurrealDB ACCESS validation, so the router uses root credentials with manual `org_id = $orgId` filtering. The API key is presumed to be admin-scoped at the identity layer if it can reach destructive surface at all.
-
 ### Audit
 
-Destructive operations call `emitUpkeepAudit(...)` (`impulses.ts:118-155`), which inserts an `impulse` row with `shape: 'upkeepAuditLog'` and a `pointer` field carrying:
+Destructive operations in activity-api call `emitUpkeepAudit(...)` (`impulses.ts:118-155`), which inserts an `impulse` row into activity-api's `impulse` table with `shape: 'upkeepAuditLog'` and a `pointer` field carrying:
 
 ```ts
 {
@@ -91,15 +95,15 @@ Destructive operations call `emitUpkeepAudit(...)` (`impulses.ts:118-155`), whic
   filter_used: Record<string, unknown>,
   dry_run: boolean,
   count: number,
-  performed_by: string,           // jwtAuth.keyId || jwtAuth.userId || 'unknown'
+  performed_by: string,
   org_id: string,
   reason?: string,
-  diff?: Record<string, unknown>, // for update: { field: { before, after } }
+  diff?: Record<string, unknown>,
   performed_at: ISO timestamp,
 }
 ```
 
-Non-blocking — a failed audit does not roll back the operation. The audit returns the new impulse id to be embedded in the response under `auditImpulseId`.
+Non-blocking — a failed audit does not roll back the operation. The audit returns the new impulse id to be embedded in the response under `auditImpulseId`. Activity-api's `impulse` table (defined in `repos/metabob-activity-api/sql/migrations/071-fix-paradigm-tables-root-access.surql:13`) is the destination. Concept-db will mirror this pattern with its own `impulse` table, not write into activity-api's.
 
 ### Documentation surface
 
@@ -112,7 +116,7 @@ Non-blocking — a failed audit does not roll back the operation. The audit retu
 - No new endpoint paths.
 - No client (minibob) changes — the existing generic resolver already speaks the impulse-resolve contract; new shapes flow through unchanged.
 
-The pattern is purely additive at the vessel level. **This is the answer to most of section 3 below.**
+The pattern is purely additive at the vessel level.
 
 ---
 
@@ -120,15 +124,9 @@ The pattern is purely additive at the vessel level. **This is the answer to most
 
 ### Alt A: Add `"write"` as a third `resolve_request_format`
 
-Add to `packages/vessel-discovery-client/src/types.ts`:
+Adding `ResolveRequestFormat = "pointer" | "mcp-tool" | "write"` and parallel arrays in `VesselCapability` (e.g. `read_shapes`, `write_shapes`).
 
-```ts
-export type ResolveRequestFormat = "pointer" | "mcp-tool" | "write";
-```
-
-Vessels would advertise some shapes as readable, others as writable, possibly via parallel arrays in `VesselCapability` (e.g. `read_shapes: string[]`, `write_shapes: string[]`).
-
-**Why not.** The `resolve_request_format` field describes the **wire format** of the request body — `"pointer"` means `{pointer: {...}}`, `"mcp-tool"` means `{tool: ..., arguments: ...}`. Read-vs-write is **semantics of a particular shape**, not a wire-format axis. The activity-api precedent demonstrates that the existing `"pointer"` format already handles writes fine — `{pointer: {type: "foo_write", barData: {...}}}` is a valid pointer envelope. Splitting on read/write at the contract level would require a parallel split everywhere downstream (clients, discovery resolution, type-narrowing in routers) for zero practical benefit.
+**Why not.** `resolve_request_format` describes the **wire format** of the request body. Read-vs-write is **semantics of a particular shape**, not a wire-format axis. The activity-api precedent demonstrates that the existing `"pointer"` format already handles writes fine — `{pointer: {type: "foo_write", barData: {...}}}` is a valid pointer envelope. Splitting on read/write at the contract level would require parallel splits everywhere downstream for zero practical benefit.
 
 ### Alt B: Naming convention `_write` suffix on shape names, no contract change
 
@@ -138,7 +136,7 @@ Adopt the activity-api convention: a shape ending in `_write` is a write-shape; 
 
 ### Alt C: Response signals write-vs-read instead of name
 
-Same wire format on the way in (`{pointer: {...}}`), but instead of a name suffix, the resolver returns `metadata.kind = "write" | "read"`. Caller decides what to do with the response.
+Same wire format on the way in (`{pointer: {...}}`), but instead of a name suffix, the resolver returns `metadata.kind = "write" | "read"`.
 
 **Why not.** This loses the *static* signal — a template author can't tell from grepping for `_write` what an activity mutates. Discovery query results can't be filtered to "write capabilities" without round-tripping each shape. The `_write` suffix is documentation as well as dispatch.
 
@@ -146,7 +144,7 @@ Same wire format on the way in (`{pointer: {...}}`), but instead of a name suffi
 
 Concede that read = pointer, write = MCP tool, and document the asymmetry as design.
 
-**Why not.** Activity-api already broke the symmetry the *other* way (writes via pointer resolution), so the asymmetry is no longer "design" — it's "concept-db hasn't caught up". Templates that talk to both vessels (e.g. `learn-impulse-relationships`, which writes traces to activity-api implicitly via execution + concepts to concept-db explicitly via tool calls) currently use *both* idioms in the same template. Picking one idiom is the simplification.
+**Why not.** Activity-api already broke the symmetry the *other* way (writes via pointer resolution), so the asymmetry is no longer "design" — it's "concept-db hasn't caught up". Templates that talk to both vessels currently use both idioms. Picking one idiom is the simplification.
 
 ---
 
@@ -154,7 +152,7 @@ Concede that read = pointer, write = MCP tool, and document the asymmetry as des
 
 **Mirror the activity-api `_write` pattern in concept-db.** No contract changes. Add `*_write` cases to `repos/concept-db/src/routes/impulses.ts`. Each case validates the required payload field, calls the corresponding resolver function (the same one the REST handler in `routes/concepts.ts` calls), and wraps the result in the standard impulse-resolve envelope with `metadata.shape = "<type>_result"`.
 
-For destructive shapes (none in scope for this initial cut, but the seam should exist) emit a `conceptUpkeepAuditLog` impulse — concept-db's local analogue of `upkeepAuditLog` — keyed on the same fields activity-api uses. Non-blocking emit.
+For destructive shapes, emit a `conceptUpkeepAuditLog`-shaped impulse into concept-db's new `impulse` table. Non-blocking emit.
 
 Discovery contract (`packages/vessel-discovery-client/src/types.ts`) does not change. concept-db's `config.discovery.shapes` (`repos/concept-db/src/config.ts:181-189`) gains the new write shapes alongside the existing read shapes. A client doing a discovery query for shape `concept_create_write` finds concept-db, calls the advertised `resolve_endpoint` with the advertised `resolve_request_format = "pointer"`, gets a write resolver back. Same plumbing as today's reads.
 
@@ -166,30 +164,29 @@ From the existing surface (`repos/concept-db/src/routes/concepts.ts` and `tools/
 |---|---|---|---|
 | `POST /concepts` (`concepts.ts:40-59`) / `concept_create` (`handler.ts:47-51`) | `concept_create_write` | `conceptData` | Body matches `CreateConceptRequestSchema`. Convert. |
 | `POST /concepts/:id/link` (`concepts.ts:317-341`) / `concept_link` (`handler.ts:59-63`) | `conceptLink_write` | `linkData` (must include `from_concept_id`, `to_concept_id`, `edge_type`) | EMA-upsert; high traffic from learning templates. Convert. |
-| `POST /concepts/upsert-by-signature` (`concepts.ts:131-170`) / `concept_upsert_by_signature` (`handler.ts:65-79`) | `conceptSignatureUpsert_write` | `pointer_type`, `shape` | Idempotent; called per-pair in `learn-impulse-relationships.json:95`. Convert — this is the single biggest call site. |
+| `POST /concepts/upsert-by-signature` (`concepts.ts:131-170`) / `concept_upsert_by_signature` (`handler.ts:65-79`) | `conceptSignatureUpsert_write` | `pointer_type`, `shape` | Idempotent; called per-pair in `learn-impulse-relationships.json:95`. Convert — single biggest call site. |
 | `POST /concepts/:id/usage` (`concepts.ts:347-371`) / `concept_record_usage` (`handler.ts:105-109`) | `conceptUsage_write` | `usageData` (must include `concept_id`) | Hot path for activity callbacks. Convert. |
-| `POST /concepts/sequences` (`concepts.ts:454-473`) / `concept_sequence_record` (`handler.ts:111-115`) | `conceptSequence_write` | `sequenceData` | Lower volume; still worth converting for symmetry — it's a learning-loop write like the others. Convert. |
-| `POST /concepts/from-source` (`concepts.ts:65-83`) | — | — | **Skip.** Source-typed creation is a convenience wrapper over `POST /concepts` with auto-derived shape/budget/priority. Activities should pick which source semantics they want and use `concept_create_write` directly with explicit fields, or this becomes a ribosome target. Add later if a real activity-driven use case appears. |
-| `PATCH /concepts/:id` (`concepts.ts:233-252`) | — | **Skip for v1.** Becomes `concept_update` (destructive) when needed; the activity-api precedent shows that update-shapes carry an `updates` object with a whitelist of allowed keys. No current template needs it. |
-| `POST /concepts/:id/resolve` (`concepts.ts:203-227`) | — | **Skip.** This is read-shaped despite being a POST (it creates a snapshot as a side effect, but the caller's mental model is "load the concept"). Already covered by the existing `concept` read shape (`impulses.ts:88-117`). |
-| `POST /upkeep/trigger` | `conceptUpkeepTrigger_write` (deferred) | `upkeepConfig` | Currently called via curl from `learn-impulse-relationships.json:170-174`. Worth converting in a follow-up — destructive (modifies edges/concepts via prune), so requires audit + admin scope. Note in spec; don't ship in v1. |
+| `POST /concepts/sequences` (`concepts.ts:454-473`) / `concept_sequence_record` (`handler.ts:111-115`) | `conceptSequence_write` | `sequenceData` | Lower volume; still worth converting for symmetry. Convert. |
+| `POST /concepts/from-source` (`concepts.ts:65-83`) | — | — | **Skip.** Convenience wrapper. Activities should pick semantics and use `concept_create_write` directly. |
+| `PATCH /concepts/:id` (`concepts.ts:233-252`) | — | **Out of scope for this design.** Becomes `concept_update_write` (destructive) when needed; carries an `updates` whitelist. |
+| `POST /concepts/:id/resolve` (`concepts.ts:203-227`) | — | **Skip.** Read-shaped despite being a POST. Already covered by the `concept` read shape. |
+| `POST /upkeep/trigger` | `conceptUpkeepTrigger_write` (out of scope) | `upkeepConfig` | Currently called via curl from `learn-impulse-relationships.json:170-174`. Destructive — requires audit + admin scope. Left for a follow-up if/when needed. |
 
-**Five shapes in scope for v1**: `concept_create_write`, `conceptLink_write`, `conceptSignatureUpsert_write`, `conceptUsage_write`, `conceptSequence_write`.
+**Five write shapes in this design**: `concept_create_write`, `conceptLink_write`, `conceptSignatureUpsert_write`, `conceptUsage_write`, `conceptSequence_write`.
 
 ### Decision on contract extension
 
-**No change to the contract.** The activity-api precedent demonstrates `resolve_request_format = "pointer"` is sufficient for both reads and writes. A `"write"` value would be a wire-format axis describing semantics; the two are orthogonal and conflating them adds churn without expressiveness.
+**No change to the contract.** The activity-api precedent demonstrates `resolve_request_format = "pointer"` is sufficient for both reads and writes.
 
 ### Authorization
 
 Mirror activity-api:
 
-- `concept-db`'s `auth_scheme` advertised in discovery stays as it is today (typically `"none"` for inter-vessel calls, or `"Bearer"` if the deployment requires JWT).
 - The five write shapes inherit the underlying REST handler's auth check: `if (config.auth.requireAuth && !jwtAuth) return 401;` (pattern at `concepts.ts:42-44`). Same code, same gate.
-- `org_id` flows through the same `getJwtAuthFromContext(c)` path the read resolvers already use (`repos/concept-db/src/routes/impulses.ts:63-65`). Multi-tenant isolation is preserved because the resolver functions take `orgId` and use it in their queries.
-- Per-shape stronger policy is **not** needed for v1 — none of the five shapes are admin-only. When `concept_update_write` and `conceptUpkeepTrigger_write` land later, those should add `requireAuthenticated(c)` early-reject the same way activity-api's destructive resolvers do.
+- `org_id` flows through the same `getJwtAuthFromContext(c)` path the read resolvers already use. Multi-tenant isolation is preserved because the resolver functions take `orgId` and use it in their queries.
+- Per-shape stronger policy is **not** needed for the five non-destructive shapes here. When `concept_update_write` and `conceptUpkeepTrigger_write` land later, those add `requireAuthenticated(c)` early-reject the same way activity-api's destructive resolvers do.
 
-This means the `auth_scheme` discovery field stays a single value advertised at the vessel level; finer-grained per-shape policy lives inside the dispatcher. Matches activity-api.
+The `auth_scheme` discovery field stays a single value advertised at the vessel level; finer-grained per-shape policy lives inside the dispatcher.
 
 ### Response shape
 
@@ -207,7 +204,7 @@ For each write shape:
 }
 ```
 
-The `content` field is a JSON-stringified blob carrying whatever the underlying resolver returns — full `Concept` row for `concept_create_write`, `{id, created}` for `conceptSignatureUpsert_write`, `Edge` row for `conceptLink_write`, etc. Match what the existing REST handlers return. Don't strip down; activities may need ids for follow-up calls.
+The `content` field is a JSON-stringified blob carrying whatever the underlying resolver returns — full `Concept` row for `concept_create_write`, `{id, created}` for `conceptSignatureUpsert_write`, `Edge` row for `conceptLink_write`, etc. Match what the existing REST handlers return.
 
 **Failure (4xx/5xx):**
 ```jsonc
@@ -221,47 +218,160 @@ Status codes:
 
 - 400 — missing required pointer field; payload Zod parse failure.
 - 401 — `requireAuth` is set and no JWT was forwarded.
-- 404 — referenced concept/edge does not exist (e.g. `conceptLink_write` against a nonexistent `from_concept_id`).
-- 500 — resolver error (DB unreachable, etc.).
+- 404 — referenced concept/edge does not exist.
+- 500 — resolver error.
 
-### Audit semantics
+---
 
-For the v1 set (all non-destructive: create + EMA upsert), full audit logging is overkill. The existing `concept` table writes are themselves the audit trail — every concept has `created_at`, `created_by`, `org_id`. For edges, `concept_edge` records `times_traversed` and `last_observed_at`.
+## concept-db gets an `impulse` table
 
-When destructive shapes land (`concept_update_write`, `concept_delete_write`, `conceptUpkeepTrigger_write`), introduce a `concept_upkeep_audit` impulse — schema mirroring activity-api's `upkeepAuditLog`:
+A first-class deliverable, not a follow-up. The reasoning, restated: concept-db's resolvers (read and write) emit data that is itself impulse-shaped — representations, query results, mappings, metrics, audit records. This data can either live in concept-db's own `impulse` table or it can leak into activity-api's tables. The latter violates "vessels own their data". The former gives concept-db a place to persist these outputs and a story for how future activities reference them.
+
+### Schema
+
+Add `impulse` to concept-db, mirroring the canonical fields used elsewhere in the system. Field set:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `string` | Auto-generated. |
+| `pointer` | `object` | Free-form; shape-specific payload. |
+| `shape` | `string` | The shape this impulse advertises (e.g. `conceptUpkeepAuditLog`, `relatedConceptsResult`). |
+| `summary` | `option<string>` | Human-readable one-liner; what reasoners see before content load. |
+| `content` | `option<string>` | JSON-stringified payload, or null for pointer-only impulses. |
+| `metadata` | `option<object>` | Free-form; resolver tier, latency, cost, etc. |
+| `org_id` | `string` | Tenancy field; mandatory. |
+| `project_id` | `option<string>` | Project scope. |
+| `created_at` | `datetime` | `DEFAULT time::now()`. |
+| `created_by_activity_id` | `option<string>` | The activity execution that produced this impulse, if any. Useful for ribosome / replay. |
+| `created_by_resolver_id` | `option<string>` | The resolver that produced this impulse (e.g. `concept_create_write`, `relatedConcepts`). |
+| `expires_at` | `option<datetime>` | TTL marker for ephemeral impulses (cached query results). NULL = persistent. |
+
+This is intended for **both persistent records** (audit logs, signature upsert decisions — set `expires_at = NULL`) **and ephemeral records** (cached query results from expensive read resolvers — set `expires_at = time::now() + duration`). A periodic cleanup task in the upkeep scheduler removes rows where `expires_at < time::now()`.
+
+### PERMISSIONS
+
+Mirror the existing concept-table pattern (`repos/concept-db/sql/core/001-concept-tables.surql:10-14`):
+
+```surql
+DEFINE TABLE impulse SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE (scope = 'global' AND public = true) OR org_id = $auth.org_id
+    FOR create, update WHERE org_id = $auth.org_id
+    FOR delete WHERE org_id = $auth.org_id AND $auth.role = 'admin';
+```
+
+Same multi-tenant story as `concept`. Root access through the same migration pattern activity-api uses for paradigm tables.
+
+### Indexes
+
+```surql
+DEFINE INDEX idx_impulse_org    ON impulse FIELDS org_id;
+DEFINE INDEX idx_impulse_shape  ON impulse FIELDS shape;
+DEFINE INDEX idx_impulse_created ON impulse FIELDS created_at;
+DEFINE INDEX idx_impulse_expires ON impulse FIELDS expires_at;
+DEFINE INDEX idx_impulse_activity ON impulse FIELDS created_by_activity_id;
+```
+
+The `expires_at` index supports the cleanup query (`DELETE FROM impulse WHERE expires_at < time::now()`).
+
+### Audit story (replaces "deferred")
+
+Audit is no longer deferred — it lives in concept-db's `impulse` table as a `conceptUpkeepAuditLog`-shaped impulse. When a destructive write resolver lands (e.g. `concept_update_write`, `concept_delete_write`, `conceptUpkeepTrigger_write`), it calls a local `emitConceptUpkeepAudit(...)` helper that inserts an impulse row:
 
 ```jsonc
 {
   shape: "conceptUpkeepAuditLog",
   pointer: {
     operation: "update" | "delete" | "prune" | "deprecate",
-    target_table: "concept" | "concept_edge",
-    target_ids: string[],
-    filter_used: Record<string, unknown>,
-    dry_run: boolean,
-    count: number,
-    performed_by: string,
-    org_id: string,
-    reason?: string,
-    diff?: Record<string, unknown>,
-    performed_at: ISO timestamp
-  }
+    target_table: "concept" | "concept_edge" | "concept_usage" | "concept_sequence",
+    target_ids: ["..."],
+    filter_used: { /* ... */ },
+    dry_run: false,
+    count: 7,
+    performed_by: "<key_id or user_id>",
+    org_id: "<org>",
+    reason: "<optional human reason>",
+    diff: { /* update: { field: { before, after } } */ },
+    performed_at: "2026-04-23T..."
+  },
+  summary: "deleted 7 concept_edge rows by prune-weak-edges",
+  org_id: "<org>",
+  created_by_activity_id: "<execution-id-if-known>",
+  created_by_resolver_id: "concept_delete_write",
+  expires_at: null
 }
 ```
 
-Stored as an `impulse` row in concept-db's own impulse table (or activity-api's, if concept-db doesn't store impulses today; this needs to be checked at implementation time and is the one open question that materially affects placement).
+Returned to the destructive write's response under `auditImpulseId` (matching the activity-api precedent).
 
-For v1 (the five non-destructive shapes), no audit table is required. Document the audit pattern up-front so the destructive follow-up doesn't have to reinvent it.
+Non-blocking: a failed audit insert is logged but does not roll back the operation.
+
+### Write resolver output handling (general pattern)
+
+Every write resolver invocation produces three things:
+
+1. **The actual data write** — the row(s) in `concept`, `concept_edge`, `concept_usage`, etc. This is the operation's primary effect.
+2. **An optional audit impulse** in the `impulse` table — required for destructive operations, omitted for plain creates/upserts of non-destructive types (the source tables themselves are append-only enough to serve as audit).
+3. **A return value** — the write resolver's `content` field, JSON-stringified. Typically the created row's id and full record so callers can chain follow-up operations.
+
+For the five write shapes here (all non-destructive), only (1) and (3) apply. The audit impulse is reserved for destructive shapes (out of scope for this design but specified above so the seam is unambiguous).
+
+### Should query-result and metric resolvers also produce impulses?
+
+This question is broader than write resolvers — it applies to **read** resolvers that compute something expensive or non-trivial. Examples in concept-db's existing read surface: `relatedConcepts`, `impulseCooccurrenceEdges`, `conceptUsageStats`, `conceptSequence`. When a caller resolves `impulseCooccurrenceEdges` for a given trace, the result is itself an impulse — a snapshot of co-occurrence statistics with shape, summary, and content.
+
+**Tradeoff:**
+
+- **Persist (with TTL):** future activities can reference past query results by impulse id; the ribosome can extract patterns from query-result history; replay/audit possible. Cost: storage for results that may never be referenced.
+- **Ephemeral:** every consumer re-runs the query. Simpler, cheaper, but loses the "impulse as universal data" benefit — the result exists only in the request/response cycle.
+
+**Recommended default policy:**
+
+- **Always persist** results from **write resolvers** (the audit impulse for destructive writes; nothing required for non-destructive writes since the source row is the record).
+- **Persist with short TTL** (`expires_at = time::now() + 1h` by default) results from **expensive read resolvers** — currently `relatedConcepts`, `impulseCooccurrenceEdges`, `conceptUsageStats`, `conceptSequence`. Caches subsequent reads and gives the ribosome material to learn from. Operators can tune TTL per shape.
+- **Ephemeral** for **simple lookup reads** — `concept` (single-row fetch), `conceptStats` (single-row aggregate). Cheap to recompute; persisting them is noise.
+
+The "expensive vs simple" classification lives in the resolver registration metadata (a new optional `persist_result_ttl_seconds?: number` field on the per-shape config) so the policy is explicit and per-shape, not hardcoded into the dispatcher. Default unset = ephemeral.
+
+This policy is not load-bearing for the write-shapes work — the `impulse` table is required regardless. It's introduced here so the table's design accommodates both audit (persistent, no expiry) and cached results (ephemeral, with expiry) from day one.
+
+### Lifecycle hooks on the impulse table
+
+Concept-db has an existing `lifecycleDispatcher` (`repos/concept-db/src/lifecycle/dispatcher.ts`) emitting `concept:created`, `concept:resolved`, `concept:updated`, `concept:deleted`, `edge:*`. Add three new event names so the in-vessel hook system is symmetric across all the vessel's tables:
+
+- `impulse:created` — fired after a successful insert into `impulse` (whether from an audit emission, a cached-result persistence, or a direct write).
+- `impulse:resolved` — fired when an impulse row's `content` is loaded (in the case of impulses with non-null content this is just an SELECT; for pointer-only impulses, this is the moment a resolver materializes it).
+- `impulse:expired` — fired by the cleanup task when an impulse is deleted because its `expires_at` has passed.
+
+The payload mirrors the existing `LifecyclePayload` shape with an additional `impulse?: unknown` slot. Handlers can subscribe via `lifecycleDispatcher.on('impulse:created', ...)` exactly as today.
+
+This keeps the hook system aligned with the new storage layer: any subscriber that today learns from `concept:created` (e.g. a future ribosome that extracts patterns from concept creation) will naturally extend to learning from `impulse:created`.
+
+### Migration / bootstrap
+
+A SurrealDB migration file is needed:
+
+- **Path:** `repos/concept-db/sql/core/003-impulse-table.surql` (following the existing `001-concept-tables.surql`, `002-add-impulse-signature-source-type.surql` numbering).
+- **Contents:** the table definition, field definitions, indexes, and PERMISSIONS clauses spelled out above.
+- **Applied via:** the existing `bun run apply-schema` script (concept-db's standard migration entrypoint).
+
+No changes to existing tables — this is purely additive.
+
+A second follow-up migration in `repos/concept-db/sql/core/` may eventually be needed to add the cleanup task to the upkeep scheduler config, but for the initial cut a manual cleanup query is acceptable.
 
 ---
 
 ## Implementation outline (per repo)
 
+Implementation order, not versioning:
+
 ### concept-db
 
 Files to touch:
 
-1. **`repos/concept-db/src/routes/impulses.ts`** — add five `case` blocks to the dispatch switch (after the existing read cases at line 308, before the `default`). Each case mirrors the activity-api template:
+1. **`repos/concept-db/sql/core/003-impulse-table.surql`** — new file. Defines the `impulse` table per the schema above. Apply via `bun run apply-schema`.
+
+2. **`repos/concept-db/src/routes/impulses.ts`** — add five `case` blocks to the dispatch switch (after the existing read cases at line 308, before the `default`). Each case mirrors the activity-api template:
 
    ```ts
    case 'concept_create_write': {
@@ -284,41 +394,46 @@ Files to touch:
    }
    ```
 
-   No `delegateWriteToRouter`-style internal-fetch needed: concept-db's resolver functions (`createConcept`, `upsertEdge`, `upsertBySignature`, `recordUsage`, `recordSequence`) are already plain async functions taking `orgId` and `jwtToken`. Calling them directly is simpler than fetch'ing the REST router internally and avoids forwarding-header complexity. (Activity-api needs the internal-fetch only because some of its REST handlers contain logic not extracted into a resolver function. concept-db's REST handlers are already thin wrappers — see `concepts.ts:40-59`, `concepts.ts:317-341`, etc.)
+   No `delegateWriteToRouter`-style internal-fetch needed: concept-db's resolver functions are already plain async functions taking `orgId` and `jwtToken`. Calling them directly is simpler than fetch'ing the REST router internally.
 
-2. **`repos/concept-db/src/routes/impulses.ts`** — add the new shape names to the `SUPPORTED_SHAPES` const at line 35-43.
+3. **`repos/concept-db/src/routes/impulses.ts`** — add the new shape names to the `SUPPORTED_SHAPES` const at line 35-43.
 
-3. **`repos/concept-db/src/config.ts`** — add the five shape names to `discovery.shapes` at line 181-189 so the vessel advertises them on registration.
+4. **`repos/concept-db/src/config.ts`** — add the five write shape names to `discovery.shapes` at line 181-189 so the vessel advertises them on registration.
 
-4. **`repos/concept-db/sql/migrations/`** — no migration needed for v1. (Add a `conceptUpkeepAuditLog` impulse-row template when destructive shapes land.)
+5. **`repos/concept-db/src/lifecycle/dispatcher.ts`** — extend `LifecycleEvent` with `impulse:created`, `impulse:resolved`, `impulse:expired`. No handler additions required at this stage; the events are the seam.
 
-5. **Tests.** Add `repos/concept-db/src/routes/impulses-write.test.ts` (or fold into existing `impulses.test.ts` if it exists) covering:
-   - Each shape: missing payload → 400.
-   - Each shape: well-formed payload → 200 with `metadata.shape` ending in `_result`.
+6. **`repos/concept-db/src/resolvers/impulse.ts`** — new file. Helpers for inserting into the new `impulse` table: `createImpulseRecord(...)`, `resolveImpulseRecord(...)`, `expireImpulseRecord(...)`. Each emits the corresponding `lifecycleDispatcher` event.
+
+7. **`repos/concept-db/src/upkeep/`** — add a cleanup activity that periodically deletes rows from `impulse` where `expires_at < time::now()`. Fires `impulse:expired` per row (or per batch — implementation choice). Wire into the existing upkeep scheduler.
+
+8. **Tests.** Add `repos/concept-db/src/routes/impulses-write.test.ts` covering:
+   - Each write shape: missing payload → 400.
+   - Each write shape: well-formed payload → 200 with `metadata.shape` ending in `_result`.
    - `org_id` from JWT propagates to the resolver call.
    - `requireAuth = true` + no JWT → 401 for each shape.
    - `concept_create_write` followed by `concept` read returns the created concept.
-   - `conceptLink_write` against nonexistent concepts → 404 (or whatever `upsertEdge` raises).
+   - `conceptLink_write` against nonexistent concepts → 404.
    - `conceptSignatureUpsert_write`: idempotent — second call returns `created: false`, same id.
+   - **New `impulse` table tests:** insert, select by org filtered, TTL cleanup, lifecycle event emission.
 
-6. **Docs.** Add `docs/impulse-types/CONCEPT_DB_WRITE_RESOLVERS.md` mirroring `docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`. Same sections: contract, write shapes table, auth context, examples, when-to-use-vs-MCP-tool.
+9. **Docs.** Add `docs/impulse-types/CONCEPT_DB_WRITE_RESOLVERS.md` mirroring `docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`. Same sections: contract, write shapes table, auth context, examples, when-to-use-vs-MCP-tool. Include a section on the new `impulse` table — its purpose, the audit story, the cached-results-with-TTL story.
 
-7. **Shape index.** Add the new shapes to `docs/shapes/README.md` (the canonical shape index referenced from `LEARNING_LOOP_WRITE_RESOLVERS.md:142`).
+10. **Shape index.** Add the new shapes to `docs/shapes/README.md`.
 
 ### minibob
 
-**No changes required.** The generic vessel resolver (`repos/minibob/src/vessel-direct-resolver.ts`) already speaks the impulse-resolve contract — it dispatches by `pointer.type` to the advertised vessel without inspecting the shape name. New `_write` shapes flow through unchanged.
+**No changes required.** The generic vessel resolver (`repos/minibob/src/vessel-direct-resolver.ts`) already speaks the impulse-resolve contract. New `_write` shapes flow through unchanged.
 
-That said, two small ergonomics improvements would be nice but are not required:
+Optional ergonomics improvements (not required):
 
-- Helper in `repos/minibob/src/impulse.ts` that constructs a `_write` pointer given a shape name and payload, with type narrowing per shape. Saves activities from typing the boilerplate. Optional.
-- Update `learn-impulse-relationships.json` to use `concept_upsert_by_signature_write` and `conceptLink_write` resolution instead of MCP tool calls in task 3. This is a template change, not a code change. Defer to a separate "modernize templates" pass.
+- Helper in `repos/minibob/src/impulse.ts` that constructs a `_write` pointer given a shape name and payload, with type narrowing per shape.
+- Update `learn-impulse-relationships.json` to use `concept_upsert_by_signature_write` and `conceptLink_write` resolution instead of MCP tool calls in task 3. This is a template change. Defer to a separate "modernize templates" pass.
 
 ### @metabob/vessel-discovery-client
 
-**No contract change.** The existing `VesselCapability.shapes: string[]` advertisement is shape-name-agnostic — concept-db just adds five more strings. The `resolve_request_format = "pointer"` already covers writes.
+**No contract change.** The existing `VesselCapability.shapes: string[]` advertisement is shape-name-agnostic — concept-db just adds five more strings.
 
-If we ever want clients to filter discovery results to "vessels that can write shape X", that's a future-extension query parameter on the discovery endpoint, not a contract change here. Out of scope.
+If we ever want clients to filter discovery results to "vessels that can write shape X", that's a future-extension query parameter on the discovery endpoint, not a contract change here. Out of scope for this design.
 
 ### activity-api
 
@@ -328,34 +443,38 @@ If we ever want clients to filter discovery results to "vessels that can write s
 
 ## Test plan
 
-End-to-end: after concept-db ships the five write shapes, drive the existing template `templates/concept-learning/learn-impulse-relationships.json` (task 3 — `upsert-signature-concepts-and-base-edges`) using write resolvers instead of MCP tool calls. Same outcome: signatures upserted as concepts, edges created/refined with EMA weight.
+End-to-end: after concept-db ships the five write shapes and the `impulse` table, drive the existing template `templates/concept-learning/learn-impulse-relationships.json` (task 3) using write resolvers instead of MCP tool calls. Same outcome: signatures upserted as concepts, edges created/refined with EMA weight.
 
 Concretely:
 
-1. **Unit (concept-db)** — see the seven test cases listed above under "Implementation outline → concept-db → Tests".
+1. **Unit (concept-db)** — see the test cases listed above under "Implementation outline → concept-db → Tests".
 
 2. **Integration (concept-db, in-process)** — drive `POST /v2/impulses/resolve` end-to-end against a real SurrealDB instance, asserting:
    - A `concept_create_write` resolution actually inserts a row in `concept` with the expected `org_id`.
    - A subsequent `concept` read resolution returns the row.
-   - A `conceptLink_write` between two created concepts inserts a `concept_edge` row, and a follow-up read of `relatedConcepts` returns it.
+   - A `conceptLink_write` between two created concepts inserts a `concept_edge` row.
    - `conceptSignatureUpsert_write` called twice with the same `(pointer_type, shape)` returns the same id with `created: true` then `created: false`.
 
-3. **Discovery roundtrip** — register a concept-db instance with the new shapes in its `config.discovery.shapes`, query discovery for shape `concept_create_write`, get back concept-db's capability record, call its advertised `resolve_endpoint` with `resolve_request_format = "pointer"` carrying a `concept_create_write` pointer. Asserts the discovery contract is unchanged and the new shapes are reachable through it.
+3. **`impulse` table integration** — insert an impulse with `expires_at = time::now() + 1s`, wait, run the cleanup task, assert the row is gone and `impulse:expired` was dispatched. Insert with `expires_at = NULL`, run cleanup, assert the row remains.
 
-4. **Template-driven (deferred to a follow-up template-modernization PR)** — fork `learn-impulse-relationships.json` to a `-v2` variant whose task 3 uses `conceptSignatureUpsert_write` + `conceptLink_write` resolver impulses instead of MCP tool calls. Run both v1 and v2 against the same trace input and assert the resulting `concept_edge` rows are identical. Validates behavioural equivalence and lets us A/B the two idioms via Thompson Sampling before deprecating either.
+4. **Discovery roundtrip** — register a concept-db instance with the new shapes in its `config.discovery.shapes`, query discovery for shape `concept_create_write`, get back concept-db's capability record, call its advertised `resolve_endpoint` with `resolve_request_format = "pointer"` carrying a `concept_create_write` pointer.
 
-5. **Trace cross-check** — run an activity that uses a write resolver and inspect its execution trace's `impulse_resolutions[]` (super-repo `CLAUDE.md` "Per-impulse resolution details"). Every write call should appear with the right `resolver_id` and `vessel_id` populated. This is the trace-integrity benefit promised in the "Problem" section; the test makes it concrete.
+5. **Template-driven (deferred to a follow-up template-modernization PR)** — fork `learn-impulse-relationships.json` whose task 3 uses `conceptSignatureUpsert_write` + `conceptLink_write` resolver impulses instead of MCP tool calls. Run both the original and the fork against the same trace input and assert the resulting `concept_edge` rows are identical.
+
+6. **Trace cross-check** — run an activity that uses a write resolver and inspect its execution trace's `impulse_resolutions[]`. Every write call should appear with the right `resolver_id` and `vessel_id` populated.
 
 ---
 
 ## Open questions
 
-1. **Where do `conceptUpkeepAuditLog` impulses live?** Activity-api stores `upkeepAuditLog` impulses in its own `impulse` table. concept-db does not currently have an `impulse` table — it has `concept`, `concept_edge`, `concept_usage`, `concept_sequence`. The audit trail for destructive concept-db ops needs a destination. Options: (a) add an `impulse` table to concept-db when destructive shapes land; (b) call back to activity-api to write the audit there; (c) store as a special-shape concept (`audit:upkeep` source_type). **(a) is the cleanest** and matches activity-api, but it's a migration. Defer the decision until destructive shapes are actually being designed.
+1. **Should `conceptUpkeepTrigger_write` exist at all, or should that logic move into a vessel-internal scheduler?** Templates currently trigger upkeep imperatively from a `bash` resolver. Wrapping it in a write shape preserves that imperative trigger but makes it traceable. Alternative: concept-db's upkeep scheduler runs autonomously and templates *never* trigger it, reading the upkeep state instead. The latter is more aligned with "vessels own their upkeep" but breaks the template's current execution shape. Out of scope for this spec; flagged for the destructive-shapes follow-up.
 
-2. **Should `conceptUpkeepTrigger_write` exist at all, or should that logic move into a vessel-internal scheduler?** Templates currently trigger upkeep imperatively from a `bash` resolver (`learn-impulse-relationships.json:170-174`). Wrapping it in a write shape preserves that imperative trigger but makes it traceable. Alternative: concept-db's upkeep scheduler runs autonomously and templates *never* trigger it, reading the upkeep state instead. The latter is more aligned with "vessels own their upkeep" but breaks the template's current execution shape. Out of scope for this spec; flagged for the destructive-shapes follow-up.
+2. **MCP tools and write resolvers coexist long-term — for how long?** The recommendation is *coexistence*. Tools serve human/IDE callers (metabob-mcp); write resolvers serve activity templates. Both call the same underlying resolver function, so behavioural drift is bounded. If telemetry eventually shows tools are only ever called by activities (never by humans/IDEs), revisit and deprecate tools at that point. Don't pre-deprecate.
 
-3. **MCP tools and write resolvers coexist long-term — for how long?** The recommendation here is *coexistence*. Tools serve human/IDE callers (metabob-mcp); write resolvers serve activity templates. Both call the same underlying resolver function (`createConcept`, `upsertEdge`, …), so behavioural drift is bounded. If, after a quarter or two, telemetry shows tools are only ever called by activities (never by humans/IDEs), revisit and deprecate tools at that point. Don't pre-deprecate.
+3. **`concept_create_write` payload includes `source_type` — should there be a parallel `concept_create_from_source_write` for the convenience wrapper?** Probably not. `from-source` is sugar that activities should bypass — letting templates pass arbitrary `source_type` strings (which auto-derive shape/budget/priority) bakes a magic dictionary into the activity layer. If a template needs the convenience, document the source-type → defaults table once and have the template emit explicit fields.
 
-4. **`concept_create_write` payload includes `source_type` — should there be a parallel `concept_create_from_source_write` for the convenience wrapper at `concepts.ts:65-83`?** Probably not. `from-source` is sugar that activities should bypass — letting templates pass arbitrary `source_type` strings (which auto-derive shape/budget/priority) bakes a magic dictionary into the activity layer. If a template needs the convenience, document the source-type → defaults table once and have the template emit explicit fields.
+4. **Discovery contract: should `VesselCapability` separate read and write shapes?** No, but if discovery query traffic for write shapes ever becomes high enough to matter, an additive `write_shapes?: string[]` field on `VesselCapability` (with `shapes` continuing to mean "all shapes") is a backward-compatible extension. Document the option; don't ship it.
 
-5. **Discovery contract: should `VesselCapability` separate read and write shapes?** No (per "Decision on contract extension" above), but if discovery query traffic for write shapes ever becomes high enough to matter, an additive `write_shapes?: string[]` field on `VesselCapability` (with `shapes` continuing to mean "all shapes") is a backward-compatible extension. Document the option; don't ship it.
+5. **Default TTL for cached result-impulses.** Recommended default is 1h, configurable per-shape via `persist_result_ttl_seconds`. Whether 1h is the right default needs operational data — probably fine to start, revisit when storage growth or cache-hit-rate metrics suggest otherwise.
+
+6. **Should the `impulse` table on concept-db ever cross-reference rows in activity-api's `impulse` table?** Tempting (e.g. linking a `conceptUpkeepAuditLog` impulse to the activity execution that triggered it), but cross-vessel record references are brittle. Better: store `created_by_activity_id` as a free-form string and let consumers query activity-api by that id when they need the linked execution. No cross-vessel foreign keys.

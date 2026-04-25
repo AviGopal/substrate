@@ -7,61 +7,64 @@ caller should attach, not just *which scheme*. Closes the residual gap from
 the Wave-1 typology investigation: vessels say "I need Bearer auth," callers
 must externally guess where the token comes from.
 
-Status: **spec only**. No implementation, no migration. v1 ships with one
-real consumer (the caller-identity case, current behavior preserved) and the
-shape carved out for `user_identity` so the next vessel that needs it can
-adopt without a contract change.
+This spec covers two coupled problems:
+
+1. The credential-kind declaration itself (the `auth_token_source` field).
+2. **Cross-vessel delegation**: when vessel A is itself serving a user
+   request and needs to call vessel B "as the user," what does A send and
+   how does B verify it? Delegation is in scope from the start because the
+   field's primary new consumer (`user_identity`) is meaningless without a
+   delegation story — the only way a non-edge vessel ends up holding a user
+   JWT is by receiving it from an upstream vessel, and the only way it
+   forwards it safely is by spec.
+
+Status: **spec only**. No implementation. Phased rollout: the credential-
+kind field lands first with `caller_identity` declared on every existing
+vessel (no behavior change), then the delegation header surface lands as
+the first `user_identity` consumers come online.
 
 ---
 
 ## 1. Problem
 
-The current resolve contract on `VesselCapability` has `auth_scheme: "none"
-| "ApiKey" | "Bearer"` (see
+The current resolve contract on `VesselCapability` has `auth_scheme:
+"none" | "ApiKey" | "Bearer"` (see
 `packages/vessel-discovery-client/src/types.ts:176` and
 `repos/discovery-vessel/src/types.ts:26`). When minibob's
-`buildAuthHeader` (see `repos/minibob/src/resolvers/vessel-resolve-call.ts:84`)
-sees `auth_scheme: "ApiKey"`, it builds `Authorization: ApiKey <key>` from:
-
-```
-vesselConfig?.apiKey  ||  process.env.METABOB_API_KEY  ||  AuthService.getToken()
-```
-
-That chain resolves to one specific identity: **the caller's service key**
-(minibob's `METABOB_API_KEY`, the vessel's federated identity-vessel
-credential). Concept-db and activity-api both want exactly this — they
-trust the caller's identity for tenant scoping, the caller's key carries the
-right `org_id`, done.
+`buildAuthHeader` (`repos/minibob/src/resolvers/vessel-resolve-call.ts:84`)
+sees `auth_scheme: "ApiKey"`, it builds the header from
+`vesselConfig?.apiKey || process.env.METABOB_API_KEY ||
+AuthService.getToken()`. That chain resolves to one identity: **the
+caller's service key**. Concept-db and activity-api both want exactly
+this — they trust the caller's identity for tenant scoping.
 
 The gap appears as soon as a vessel needs a *different* credential:
 
-- **react-renderer** (when it lands) renders user-scoped UI state. It needs
-  the *user's* JWT, not minibob's service ApiKey, so `$auth.user_id` in
-  SurrealDB resolves to the actual end user.
-- **identity-vessel** itself, when called from a vessel acting on behalf of
-  a user, may need the user JWT to mint a delegated token.
-- A future audit/billing vessel may want a token tagged with the original
-  caller chain (`A → B → C`), distinct from B's service identity.
+- **react-renderer** (when it lands) renders user-scoped UI state and
+  needs the user's JWT so `$auth.user_id` in SurrealDB resolves to the
+  end user, not minibob.
+- **identity-vessel**, when called from a vessel acting on behalf of a
+  user, may need the user JWT to mint a delegated token.
+- A future audit/billing vessel may want the original-user token,
+  distinct from any intermediate service identity.
 
-There is no way today for these vessels to say "give me the user's token,
-not yours." Callers (today, only minibob) resolve credentials by
-out-of-band convention, and that convention says one thing only: pick the
-service identity from env.
+There is no way for these vessels to say "give me the user's token, not
+yours." Callers resolve credentials by out-of-band convention, and that
+convention says one thing only: service identity from env. The Wave-1
+typology investigation flagged this — vessels declare "I need Bearer
+auth" but callers must externally resolve the credential, blocking
+fully automated discovery-driven invocation.
 
-The Wave-1 typology investigation flagged this:
-
-> Vessels declare "I need Bearer auth" but callers must externally resolve
-> the credential. Blocks fully automated discovery-driven invocation.
-
-This spec adds the missing field.
+This spec adds the missing field and the delegation surface that makes
+the field safe to use end to end.
 
 ---
 
 ## 2. Constraints
 
-**Foundation alignment.** Vessels declare what they need; callers honor the
-declaration. Same shape as the four Wave-1A contract fields. The field is
-descriptive metadata on the registration record, not behavior.
+**Foundation alignment.** Vessels declare what they need; callers honor
+the declaration. Same shape as the four Wave-1A contract fields. The
+field is descriptive metadata on the registration record, not behavior.
 
 **Backward compatibility.** No vessel advertises this today. Every current
 call path uses service identity. The default-when-absent must reproduce
@@ -81,15 +84,21 @@ credential is the caller's business.
 **One field, not a structure.** The contract already carries five
 `resolve_*` fields and four `metadata` fields. A nested
 `auth_metadata: { kind, scope, audience }` object is more flexible but
-forces every caller to re-implement interpretation. v1 is one symbolic
-string; revisit if a real vessel needs more.
+forces every caller to re-implement interpretation. Initial scope is one
+symbolic string plus a sibling `auth_delegation_mode`; revisit if a real
+vessel needs more.
+
+**Delegation is opt-in, never silent.** A vessel that does not advertise a
+delegation expectation must not have any caller behavior change: no token
+forwarded, no metadata header injected, no audit hop appended. The point
+of the contract is that absence-of-declaration is a meaningful default.
 
 ---
 
 ## 3. Design alternatives
 
-Four shapes were considered. Each is evaluated against the constraints
-above.
+Four shapes were considered for the credential-kind field. Delegation
+alternatives are covered in §5.
 
 ### 3.1 Symbolic strings (recommended)
 
@@ -101,84 +110,57 @@ auth_token_source?:
   | "no_token"          // belt-and-suspenders: vessel explicitly wants no token
 ```
 
-The vessel says *what kind* of token it wants. The caller maps that kind
-to a concrete credential from its runtime context. Nothing in the contract
-references identity-vessel, env vars, or config paths — those are the
-caller's internal concern.
+The vessel says *what kind* of token it wants. The caller maps that
+kind to a concrete credential from its runtime context. Nothing in the
+contract references identity-vessel, env vars, or config paths.
 
-**Pros:**
-- Smallest possible contract: one optional enum string.
-- Caller decides how to map kinds to tokens; per-caller flexibility.
-- No leakage of caller-internal naming (env var names, config paths).
-- New kinds added by extending the union — no breaking change.
+Smallest possible contract; caller decides how to map kinds to tokens;
+no leakage of caller-internal naming; new kinds added by extending the
+union. Trade-off: the set of kinds becomes a contract that evolves
+carefully, and definitions ("what does `user_identity` mean for an
+anonymous user?") need a spec table — see §4.1.
 
-**Cons:**
-- The set of kinds is a contract that has to evolve carefully. Adding
-  `tenant_admin_identity` later requires every caller to handle it (same
-  as adding a new `auth_scheme` value, so the precedent exists).
-- Two callers might disagree on what `user_identity` means in edge cases
-  (anonymous user? dashboard user vs API user?). Spec needs a definition
-  table.
-
-### 3.2 Lookup paths
+### 3.2 Lookup paths — rejected
 
 ```typescript
-auth_token_source?: "env:METABOB_API_KEY" | "config:metabob.apiKey" | "context:user.jwt"
+auth_token_source?: "env:METABOB_API_KEY" | "config:metabob.apiKey" | ...
 ```
 
-Vessel directly references where the caller should read the credential
-from.
+Brittle (each caller has different env vars), leaks caller-internal
+structure into the registration contract, makes vessels know about
+minibob's specific configuration.
 
-**Rejected.** Brittle (each caller has different env vars and config
-shapes), leaks caller-internal structure into the registration contract,
-and makes vessels know about minibob's specific configuration. Concept-db
-shouldn't have an opinion about whether minibob calls its env var
-`METABOB_API_KEY` or `MINIBOB_API_KEY`.
-
-### 3.3 Token kinds tied to identity-vessel
+### 3.3 Token kinds tied to identity-vessel — rejected
 
 ```typescript
 auth_token_source?: "identity-vessel:user" | "identity-vessel:service"
 ```
 
-Names identity-vessel as the source-of-truth in the contract value.
+Bakes a specific vessel into the contract namespace; if identity-vessel
+is renamed or replaced, every registration breaks. Symbolic strings
+(3.1) capture the same intent without the coupling.
 
-**Rejected for v1, but informative.** This is *almost* right —
-identity-vessel **is** the policy authority — but bakes a specific vessel
-into the contract namespace. If identity-vessel is renamed or replaced,
-every registration breaks. Symbolic strings (3.1) capture the same intent
-without the coupling: callers free to internally route `"user_identity"`
-to identity-vessel, but the contract doesn't say so.
-
-### 3.4 Free-form metadata
+### 3.4 Free-form metadata — rejected
 
 ```typescript
-auth_metadata?: {
-  kind?: "user" | "service" | "...",
-  scope?: string,
-  audience?: string
-}
+auth_metadata?: { kind?, scope?, audience? }
 ```
 
-Vessel attaches an open structure; callers interpret.
+Maximally flexible, minimally interoperable: every caller has to handle
+every combination with no shared vocabulary. If scopes/audiences are
+later needed, grow the union or add a sibling field instead of an open
+bag.
 
-**Rejected for v1.** Maximally flexible, minimally interoperable. Every
-caller has to handle every possible metadata combination, with no shared
-vocabulary. If we later need scopes/audiences, the right move is to grow
-the symbolic-strings union (3.1) or add a *second* sibling field
-(`auth_token_scope`), not replace the simple field with an open bag.
-
-### 3.5 Recommendation: 3.1 with an explicit default
+### 3.5 Decision
 
 Pick **3.1**. It's the smallest contract that gives callers enough
-information; it composes with `auth_scheme` (which says *how to format*
-the header) without overlap; it doesn't couple to caller config or to
-identity-vessel; and the not-found case is a clean policy decision rather
-than an undefined behavior.
+information; composes with `auth_scheme` (which says *how to format*
+the header) without overlap; doesn't couple to caller config or to
+identity-vessel; not-found is a clean policy decision per §4.4.
 
 ---
 
-## 4. Recommended design
+## 4. Recommended design (credential kind)
 
 ### 4.1 The field
 
@@ -193,29 +175,29 @@ both `packages/vessel-discovery-client/src/types.ts` and
  * format the Authorization header; this field says *whose* token to format.
  *
  * Default when absent: "caller_identity" — the caller attaches its own
- * service identity (preserves pre-2026-04-24 behavior).
+ * service identity (preserves pre-rollout behavior).
  *
  * Values:
- *   "caller_identity" — caller's own service token (e.g., minibob's
+ *   "caller_identity"  — caller's own service token (e.g., minibob's
  *                        METABOB_API_KEY). Used by vessels that trust the
  *                        caller's federated identity for tenant scoping.
  *
- *   "user_identity"   — a user JWT the caller is acting on behalf of. Used
- *                        by vessels that need user-scoped state (UI vessels,
- *                        per-user audit). Caller must have a user token in
- *                        runtime context; if absent, dispatch fails per §4.4.
+ *   "user_identity"    — a user JWT the caller is acting on behalf of.
+ *                        Used by vessels that need user-scoped state (UI
+ *                        vessels, per-user audit). Caller must have a user
+ *                        token in runtime context; if absent, dispatch
+ *                        fails per §4.4.
  *
  *   "service_identity" — explicit alias for "caller_identity" reserved for
  *                        future when callers may have multiple service
  *                        tokens (per-vessel keys, per-environment keys).
- *                        Treated identically to "caller_identity" in v1.
+ *                        Treated identically to "caller_identity" today.
  *
- *   "no_token"        — vessel explicitly wants no Authorization header,
+ *   "no_token"         — vessel explicitly wants no Authorization header,
  *                        even if `auth_scheme` would normally attach one.
  *                        Distinct from `auth_scheme: "none"` which says
  *                        "I don't care about auth"; this says "I care, and
- *                        I want it omitted." Edge case for proxy/preflight
- *                        scenarios. Optional in v1; spec it for completeness.
+ *                        I want it omitted." Edge case for proxy/preflight.
  */
 auth_token_source?: AuthTokenSource
 
@@ -239,7 +221,7 @@ For minibob (`buildAuthHeader` extension):
 | `auth_token_source`  | Lookup chain                                                                                              | If undefined            |
 | -------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------- |
 | `"caller_identity"`  | `vesselConfig.apiKey` → `process.env.METABOB_API_KEY` → `AuthService.getToken()`                          | warn, omit header (current behavior) |
-| `"service_identity"` | identical to `"caller_identity"` in v1                                                                    | identical                |
+| `"service_identity"` | identical to `"caller_identity"`                                                                          | identical                |
 | `"user_identity"`    | `runtimeContext.userJwt` → `process.env.METABOB_USER_JWT` (last-resort, REPL `/auth user-jwt …` writes it) | **fail fast** per §4.4   |
 | `"no_token"`         | always returns undefined (never attaches header)                                                          | n/a                      |
 
@@ -251,7 +233,7 @@ Notes:
   service key when a user key was asked for is wrong (wrong `$auth`,
   wrong scoping); the vessel asked for one thing, we silently sent
   another. Fail fast, surface the policy gap.
-- `runtimeContext.userJwt` is a new field on the runtime context (see §5).
+- `runtimeContext.userJwt` is a new field on the runtime context (see §6).
 
 ### 4.3 Composition with `auth_scheme`
 
@@ -270,19 +252,14 @@ Rules of precedence:
    `auth_scheme`.
 3. Otherwise: format per `auth_scheme`, content per `auth_token_source`.
 
-This matches `auth_scheme: "none"`'s current semantics (it really does
-mean "do not send credentials") and gives `"no_token"` a distinct
-escape-hatch role.
-
 ### 4.4 Dispatch policy on missing token
 
-When the requested `auth_token_source` resolves to `undefined` in the
-caller's runtime context:
+When the requested `auth_token_source` resolves to `undefined`:
 
 | Source                | Policy                  | Rationale                                                                                                              |
 | --------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `caller_identity`     | warn, send anonymous    | Current behavior; preserves backward compat. Vessel will reject with 401 if it cares; caller learns from the failure. |
-| `service_identity`    | warn, send anonymous    | Same as `caller_identity` in v1.                                                                                       |
+| `service_identity`    | warn, send anonymous    | Same as `caller_identity`.                                                                                             |
 | `user_identity`       | **fail fast**           | Sending service identity when user identity was requested is a silent scoping bug. Throw before the network call.      |
 | `no_token`            | n/a (always undefined)  | Field's whole purpose.                                                                                                 |
 
@@ -294,253 +271,441 @@ no user JWT is present in the runtime context. Either pass a user JWT via
 RuntimeContext.userJwt or do not invoke this vessel from this code path.
 ```
 
-This surfaces the wiring gap exactly where it matters (the vessel that
-needs user identity is unreachable from a code path that doesn't have
-one), instead of letting the call hit the network with the wrong credential
-and getting a confusing 403.
+This surfaces the wiring gap exactly where it matters instead of letting
+the call hit the network with the wrong credential and getting a confusing
+403.
 
 ---
 
-## 5. Implementation outline
+## 5. Cross-vessel delegation
 
-### 5.1 `@metabob/vessel-discovery-client` (shared package)
+Once `user_identity` exists, vessel A holding a user JWT will inevitably
+need to call vessel B "as the user." The cases to design for: minibob →
+react-renderer (one hop, originator holds the JWT); minibob → vessel A
+→ vessel B where A's resolver itself calls B (multi-hop); deeper chains
+of intermediates.
 
-`packages/vessel-discovery-client/src/types.ts`:
+### 5.1 Risks
 
-- Add the `AuthTokenSource` type and `DEFAULT_AUTH_TOKEN_SOURCE` const
-  next to `ResolveAuthScheme` and its default (currently around line 176).
-- Add the optional `auth_token_source?: AuthTokenSource` field to:
-  - `DiscoveryConfig` (line 18) — so vessels using the client to register
-    can pass it.
-  - `VesselRegistration` (line 103) — so the registration record carries it.
-  - `VesselCapability` (line 188) — so discovery results expose it to
-    callers.
-- Update the JSDoc on `VesselCapability` (line 184) to mention the new
-  field as part of the resolve contract.
+- **Confused deputy.** A holds the user's JWT and calls B. B trusts A
+  because A presented the JWT. But the user-to-A consent does not
+  transitively authorize user-via-A-to-B; A could be using the JWT
+  beyond its intent.
+- **Token amplification.** A long-lived service key minting many
+  short-lived user-bound tokens is privilege scaling. The reverse — a
+  short-lived user JWT deriving even shorter, narrower tokens — is
+  safer. Forwarding the original is safest of all because it cannot be
+  amplified.
+- **Replay.** A captured user JWT may be re-used against a different
+  vessel or after the user revoked access at A.
+- **Audit blindness.** B logs "user X requested Y" but doesn't see that
+  A was in the chain.
+- **Token leakage.** User JWTs ending up in execution traces, error
+  messages, broadcast WebSocket events, or logs at vessels that should
+  never have seen them.
 
-`packages/vessel-discovery-client/src/registration.ts`: pass through the
-field on register/heartbeat. No behavior change.
+### 5.2 Delegation models considered
 
-This package change is purely additive types; no existing consumer breaks.
+| Model         | Mechanism                                                                 | Confused deputy   | Replay window      | Cost                                        |
+| ------------- | ------------------------------------------------------------------------- | ----------------- | ------------------ | ------------------------------------------- |
+| **Forward**   | A sends user JWT to B unchanged                                           | High (B can't distinguish A's call from user's) | user-JWT TTL (~15min) | Zero (no extra hop)                  |
+| **Mint**      | A asks identity-vessel for token bound to `{user, target=B, granted_by=A, exp=60s, jti}` | Low (`granted_by` claim) | ~60s, single-use     | Identity-vessel roundtrip per hop      |
+| **Hybrid**    | Forward inside one trust domain, mint at boundaries                       | Medium (per-domain) | Mixed              | Zero inside, roundtrip across            |
 
-### 5.2 `repos/discovery-vessel`
+### 5.3 Decision
 
-`repos/discovery-vessel/src/types.ts`:
+**Hybrid, with forwarding as the default and minting reserved for
+explicitly-bounded calls.** All vessels in the metabob cluster share
+identity-vessel as JWT issuer; the cluster is one trust domain. Within
+it, forwarding is acceptable — every vessel verifies against the same
+JWKS, audience is `aud: metabob`. Each forwarded hop carries
+delegation-metadata headers (§5.5) so the chain is auditable even
+though the token doesn't change. Vessels that need narrower audience,
+single-use nonces, or are outside the trust domain advertise
+`auth_delegation_mode: "mint"`.
 
-- Add `AuthTokenSource` type and `DEFAULT_AUTH_TOKEN_SOURCE` const
-  alongside `ResolveAuthScheme` (line 26).
-- Add `auth_token_source?: AuthTokenSource` to `VesselRegistration` (line
-  88), `RegisterRequest` (line 316), and `VesselCapability` (line 221).
+The decision factor: forwarding is what the system can support today
+(JWKS verification exists, no identity-vessel changes required).
+Minting requires an identity-vessel API addition (§5.9) that has not
+landed; defaulting to mint would brick every `user_identity` consumer
+until that work ships. Forwarding plus metadata headers is enough to
+unblock react-renderer and per-user audit reads. Minting lands later
+as a mode change without touching the field surface.
 
-`repos/discovery-vessel/src/registry.ts`: store the field on register;
-return it on resolve. Default at write time when absent
-(`auth_token_source ?? DEFAULT_AUTH_TOKEN_SOURCE`), so older clients
-querying the registry get a value back even if the registering vessel
-didn't pass one.
+### 5.4 Contract additions for delegation
 
-`repos/discovery-vessel/src/resolvers.ts`: include the field in the
-`VesselCapability` payload returned for `vesselCapability` and
-`vesselRegistry` queries.
+Add a sibling field to `auth_token_source`:
 
-No new endpoints. No schema migration (registry is in-memory).
+```typescript
+/**
+ * For vessels that advertise auth_token_source: "user_identity", this
+ * field declares how the caller obtains the token to send.
+ *
+ * Default when absent: "forward" — forwarding model, the user JWT the
+ * caller already holds is passed through unchanged.
+ *
+ * Values:
+ *   "forward" — caller forwards the user JWT it already holds in its
+ *               runtime context. Requires shared trust domain (same
+ *               issuer, compatible audience). Caller must also send the
+ *               delegation-metadata headers per §5.5.
+ *
+ *   "mint"    — caller asks identity-vessel to mint a target-bound,
+ *               short-TTL, single-use delegated token, and sends that.
+ *               Used at trust-domain boundaries or by vessels that need
+ *               narrowed audience / replay protection.
+ *
+ *   "none"    — vessel does not accept delegation. If the caller doesn't
+ *               itself hold a user identity (i.e., the user JWT in the
+ *               runtime context was issued *to* the caller, not received
+ *               from upstream), it must not invoke this vessel.
+ */
+auth_delegation_mode?: AuthDelegationMode
 
-### 5.3 `repos/minibob`
+export type AuthDelegationMode = "forward" | "mint" | "none"
 
-`repos/minibob/src/resolvers/vessel-resolve-call.ts`:
+export const DEFAULT_AUTH_DELEGATION_MODE: AuthDelegationMode = "forward"
+```
 
-- Extend `buildAuthHeader` (line 84) to take an additional `tokenSource:
-  AuthTokenSource = "caller_identity"` parameter (with default to
-  preserve callers that don't pass it). Inside, dispatch on
-  `tokenSource` to select the credential lookup chain per §4.2; format
-  per `scheme` as today.
-- Extend `VesselResolveCallOptions` (line 52) with an optional
-  `userJwt?: string` field, populated by `buildResolveRequest`'s caller
-  from the runtime context.
-- Update `buildResolveRequest` (line 152) to read `auth_token_source`
-  from `vessel`, default to `"caller_identity"`, and pass it plus the
-  `userJwt` option to `buildAuthHeader`.
-- Add the precedence rules from §4.3 inside `buildAuthHeader` (early
-  returns for `scheme === "none"` and `tokenSource === "no_token"`).
-- Throw `VesselAuthError` (new error class) for the
-  `user_identity` + missing-jwt case per §4.4.
+This is meaningful only when `auth_token_source === "user_identity"`. For
+every other token source, callers ignore it (and the registration form
+should not bother setting it).
 
-`repos/minibob/src/types.ts` (or wherever `RuntimeContext` /
-`ExecutorConfig` lives — investigate before implementing): add an
-optional `userJwt?: string` field. Plumb through the activity executor
-so a caller of minibob's HTTP API or REPL can set it once per session.
+### 5.5 Delegation metadata headers
 
-`repos/minibob/src/repl.ts` (REPL command surface): add `/auth user-jwt
-<token>` and `/auth clear-user-jwt` commands so REPL users can attach a
-user JWT for vessels that need it. Document in the REPL `/help`.
+Even in the forwarding model, the delegation chain has to be auditable.
+Define two headers that travel alongside the forwarded JWT:
 
-`repos/minibob/index.ts` (HTTP server entry): accept `X-User-JWT` header
-on incoming goal requests and propagate to `RuntimeContext.userJwt`. This
-is the path by which the user's token reaches user-identity-needing
-vessels when minibob is invoked as a service rather than from a REPL.
+```
+X-Metabob-Delegation-Chain: <vessel-id>,<vessel-id>,...
+X-Metabob-Delegation-Hop: <integer, starting at 1>
+```
 
-`repos/minibob/src/resolvers/vessel-resolve-call.test.ts`: extend with
-the cases in §6.
+`X-Metabob-Delegation-Chain` is the ordered list of vessels through which
+the request has passed, root-first. The originating caller (minibob, the
+dashboard) sets it to its own vessel ID. Every vessel that forwards the
+user JWT must append its own vessel ID before sending. Receiving vessel B
+sees `X-Metabob-Delegation-Chain: minibob,vesselA` and now knows the
+provenance.
 
-### 5.4 `repos/concept-db`
+`X-Metabob-Delegation-Hop` is the integer hop count, set to `1` by the
+originator and incremented by each forwarder. It is redundant with the
+chain length but makes hop-count limits cheap to enforce — receiving
+vessels can reject `Hop > 4` without parsing the chain.
 
-`repos/concept-db/src/services/discovery-client.ts`:
+A receiving vessel that has `auth_delegation_mode: "mint"` (or the
+equivalent strict policy) **rejects** any request with
+`X-Metabob-Delegation-Hop > 1` whose Authorization carries the original
+user JWT — that combination is "you forwarded when I said mint."
 
-- Extend the local `VesselRegistration` interface (line 20) with
-  `auth_token_source?: string`.
-- In the registration object (line 92), add `auth_token_source:
-  'caller_identity'`. Concept-db trusts the caller's identity for
-  tenant scoping; this is a no-op declarative annotation that makes
-  the contract explicit.
-- Add a code comment explaining: concept-db's PERMISSIONS clauses
-  filter on `$auth.org_id` from the caller's token, so any caller's
-  service identity is correct as long as it's tenant-scoped.
+These headers are advisory for forwarding mode (audit-only) and
+load-bearing for stricter modes (rejection criteria).
 
-### 5.5 `repos/metabob-activity-api`
+### 5.6 Receiver verification
 
-`repos/metabob-activity-api/src/services/discovery-client.ts`:
+When vessel B receives a request whose `Authorization` carries a user
+JWT, B verifies in this order:
 
-- Extend `VesselRegistration` interface (line 12) with
-  `auth_token_source?: string`.
-- In the registration object (line 106), add `auth_token_source:
-  'caller_identity'`. Same rationale as concept-db.
+1. **JWT signature** against identity-vessel JWKS (existing path).
+2. **Audience claim**. For forwarding, the audience must include B's
+   vessel ID or the cluster's broad `metabob` audience. For minted
+   tokens, the audience must be exactly B's vessel ID — anything else is
+   a misrouted token.
+3. **TTL**. JWT `exp` must be in the future. Minted delegated tokens
+   carry their own short TTL claim (typically 60s); forwarded user JWTs
+   carry the user-JWT TTL (typically 15min).
+4. **Single-use, if minted.** Minted tokens carry a `jti` claim;
+   identity-vessel maintains a short replay window (token TTL + jitter)
+   in which a `jti` can be used at most once. Receiver checks with
+   identity-vessel, or — in higher-throughput deployments —
+   identity-vessel publishes used-jti events on a topic the receiver
+   subscribes to. Single-use enforcement applies only to minted tokens.
+5. **Delegation chain consistency.** If `X-Metabob-Delegation-Hop > 1`,
+   the JWT must carry a `granted_by` claim (mint mode) or the chain
+   header must be present and non-empty (forward mode). Contradictions
+   fail closed.
+6. **Policy.** The receiver may apply per-vessel allowlists ("react-
+   renderer accepts forwarded user JWTs only via minibob or the
+   dashboard"). This lives in receiver config, not in the contract — the
+   contract just guarantees the receiver can reconstruct who handed it
+   the token.
 
-### 5.6 Other vessels (forward-looking, not in v1)
+After verification, the receiver populates its `$auth` context from the
+JWT subject (the original user) — same as today. The chain headers are
+recorded in the execution trace alongside `resolved_by_vessel_id`.
 
-- **identity-vessel**: when it advertises a resolve contract,
-  `auth_token_source: "caller_identity"` — service-to-service calls
-  authenticate as the caller, identity-vessel mints/validates user
-  tokens internally.
-- **react-renderer** (if/when it advertises): `auth_token_source:
-  "user_identity"` — UI state is per-user.
-- **discovery-vessel** itself does not have a resolve auth_scheme today
-  (`auth_scheme: "none"` for `/resolve` is current default). When/if it
-  gains one, `"caller_identity"` is correct.
+### 5.7 Token-leakage surfaces
 
-### 5.7 Per-vessel summary
+Where forwarded or minted user JWTs might end up that they shouldn't:
 
-| Vessel                     | `auth_scheme` (today) | `auth_token_source` (this spec) | Notes                                      |
-| -------------------------- | --------------------- | ------------------------------- | ------------------------------------------ |
-| concept-db                 | `ApiKey`              | `caller_identity`               | Tenant scoping via caller's `$auth.org_id` |
-| metabob-activity-api       | `ApiKey`              | `caller_identity`               | Same as concept-db                         |
-| discovery-vessel           | `none`                | (n/a; absent → default)         | No auth on resolve today                   |
-| identity-vessel (future)   | `ApiKey` (likely)     | `caller_identity`               | Service-to-service                         |
-| react-renderer (future)    | `Bearer`              | `user_identity`                 | User-scoped UI state                       |
-| audit-vessel (hypothetical)| `Bearer`              | `user_identity` or new value    | Open question                              |
+- **Execution traces** persisted to SurrealDB. Trace serializer redacts
+  `Authorization` and `X-User-JWT` headers, including outbound HTTP
+  requests recorded by tools.
+- **Error messages and stack traces.** `buildAuthHeader` and the HTTP
+  layer scrub `Authorization` from any error path before throw/log;
+  `VesselAuthError` never includes the token.
+- **Broadcast / WebSocket events** to dashboards. Event serializer at
+  activity-api and minibob's HTTP server redacts known auth headers.
+  Use a serialization whitelist, not a blacklist.
+- **Resolver logs in HTTP-shaped tools** (e.g. a fetch resolver). The
+  resolver redacts `Authorization` and `X-User-JWT` from its own
+  logging. Code-review checklist for any new HTTP-shaped resolver.
+- **Discovery-vessel logs.** Discovery does not consume user identity;
+  any incoming `X-User-JWT` or JWT-shaped `Authorization` is rejected
+  with a warning.
+- **Activity-api stored requests.** Request-logging path redacts
+  headers and well-known JWT-shaped fields. Test with a synthetic
+  token prefix and grep stored data.
+- **Crash / panic dumps.** Out of spec scope; flagged for ops. Short
+  user-JWT TTL is the operational mitigation.
+
+The recurring rule: **redact known auth header names at every
+serialization boundary, by name, in code, with tests.** Leakage will
+not be caught by review; it has to be enforced mechanically.
+
+### 5.8 Replay risk
+
+- **Forwarded user JWT.** TTL is the user-JWT TTL (15min today).
+  Replayable within that window against any vessel that accepts the
+  cluster audience. Mitigation: keep user-JWT TTLs short (already true);
+  `X-Metabob-Delegation-Hop` cap (e.g., 4) limits how far a replayed token
+  can spread; a captured token cannot be re-used at a vessel that
+  advertises `auth_delegation_mode: "mint"` because that vessel rejects
+  forwarded tokens by definition.
+- **Minted delegated token.** TTL is short (60s default). Audience-bound
+  to the target vessel. Single-use via `jti` claim. Even if captured,
+  cannot be replayed at any other vessel and cannot be replayed twice at
+  the same vessel.
+- **`X-Metabob-Delegation-Chain` spoofing.** A malicious vessel could
+  rewrite the chain header to omit itself. The chain is advisory in
+  forward mode — for forensic value, not for trust decisions. Trust
+  decisions in mint mode rest on the JWT's signed `granted_by` claim,
+  which the malicious vessel cannot forge without identity-vessel.
+
+### 5.9 Identity-vessel scope
+
+Identity-vessel must, at minimum, gain a mint endpoint to support
+`auth_delegation_mode: "mint"`. The endpoint is **not in the initial
+implementation order** of this spec — forwarding mode covers the first
+consumers (react-renderer, per-user audit reads). When the first
+mint-mode vessel is needed, the work is:
+
+```
+POST /v2/tokens/delegate
+Authorization: ApiKey <calling-vessel-service-key>
+Body: {
+  user_jwt: "<the user JWT held by the caller>",
+  target_vessel_id: "<vessel B>",
+  ttl_seconds: 60
+}
+Returns: {
+  delegated_token: "<JWT with subject=user, aud=B, granted_by=A, jti=<uuid>>",
+  expires_at: "<iso8601>"
+}
+```
+
+Identity-vessel verifies the user JWT, applies a delegation policy
+(per-org / per-vessel allowlist), records the mint, and signs the new
+token. Single-use enforcement is identity-vessel's responsibility.
+
+This API is on the identity-vessel roadmap; this spec depends on it for
+the mint mode. Forwarding mode does not depend on it.
 
 ---
 
-## 6. Test plan
+## 6. Implementation outline
 
-### 6.1 Unit: `buildAuthHeader` per token-source
+### 6.1 Shared types: `@metabob/vessel-discovery-client`
 
-Extend `repos/minibob/src/resolvers/vessel-resolve-call.test.ts` (existing
-tests at lines 173–202) with one case per cell of the table in §4.3 plus
-the dispatch-policy cases in §4.4:
+In `packages/vessel-discovery-client/src/types.ts`: add `AuthTokenSource`
+and `AuthDelegationMode` types and their defaults next to
+`ResolveAuthScheme` (line 176); add both optional fields to
+`DiscoveryConfig` (line 18), `VesselRegistration` (line 103), and
+`VesselCapability` (line 188); update the JSDoc on `VesselCapability`
+(line 184) to mention them. `registration.ts` passes both fields through
+on register/heartbeat. Purely additive — no existing consumer breaks.
 
-- `(scheme=ApiKey, source=caller_identity, env present)` → `"ApiKey <env>"`
-  *(already covered at line 107, retain)*
-- `(scheme=ApiKey, source=caller_identity, vesselConfig present)` →
-  `"ApiKey <vesselConfig>"` *(already at line 132, retain)*
-- `(scheme=ApiKey, source=caller_identity, nothing available)` → undefined
-  + warn *(already at line 195, retain)*
-- `(scheme=ApiKey, source=service_identity, env present)` → `"ApiKey <env>"`
-  *(new — covers alias)*
-- `(scheme=Bearer, source=user_identity, runtimeContext.userJwt present)` →
-  `"Bearer <userJwt>"` *(new)*
-- `(scheme=Bearer, source=user_identity, no userJwt)` → throws
-  `VesselAuthError` *(new — fail-fast)*
-- `(scheme=ApiKey, source=user_identity, userJwt present)` →
-  `"ApiKey <userJwt>"` *(new — unusual but allowed; documents behavior)*
-- `(scheme=ApiKey, source=no_token)` → undefined *(new — escape hatch)*
-- `(scheme=Bearer, source=no_token)` → undefined *(new — escape hatch)*
-- `(scheme=none, source=user_identity)` → undefined, no throw *(new —
-  scheme=none short-circuits before token resolution)*
-- `(scheme=ApiKey, source=undefined / absent)` → behaves as
-  `caller_identity` *(new — backward-compat default)*
+### 6.2 `repos/discovery-vessel`
 
-### 6.2 Unit: `buildResolveRequest` reads the field
+In `src/types.ts`: add the types and defaults alongside
+`ResolveAuthScheme` (line 26); add both fields to `VesselRegistration`
+(line 88), `RegisterRequest` (line 316), `VesselCapability` (line 221).
 
-Extend §3.5 of the existing tests (`buildResolveRequest` block, line 37):
+`src/registry.ts` stores both fields and applies defaults at write time
+when absent (older clients always get values back). `src/resolvers.ts`
+includes both fields in `vesselCapability` and `vesselRegistry`
+payloads. `src/server.ts` rejects (with warning) any incoming request on
+discovery's own endpoints that carries `X-User-JWT` or a JWT-shaped
+`Authorization` — discovery is `caller_identity` only. No new endpoints,
+no schema migration (registry is in-memory).
 
-- Vessel advertises `auth_token_source: "user_identity"`, runtime context
-  has `userJwt`, expect `Authorization: Bearer <userJwt>`.
-- Vessel advertises `auth_token_source: "no_token"`, expect no
-  `Authorization` header even with env keys present.
-- Vessel does not advertise `auth_token_source`, expect current
-  behavior (caller_identity from env).
+### 6.3 `repos/minibob`
 
-### 6.3 Integration: discovery roundtrip
+`src/resolvers/vessel-resolve-call.ts`:
 
-A test (or extension of `repos/discovery-vessel/test/...`) that:
+- Extend `buildAuthHeader` (line 84) to accept `tokenSource:
+  AuthTokenSource = "caller_identity"` and `delegationMode:
+  AuthDelegationMode = "forward"` parameters. Dispatch on `tokenSource`
+  per §4.2; apply precedence rules per §4.3 (early-return for
+  `scheme === "none"` and `tokenSource === "no_token"`).
+- Extend `VesselResolveCallOptions` (line 52) with `userJwt?: string`
+  and `delegationChain?: string[]`, populated by
+  `buildResolveRequest`'s caller from the runtime context.
+- `buildResolveRequest` (line 152) reads both fields from `vessel`,
+  defaults appropriately, passes them through.
+- For `user_identity` + `forward`: attach the JWT and emit
+  `X-Metabob-Delegation-Chain` and `X-Metabob-Delegation-Hop` per §5.5.
+  Chain is `[minibob-vessel-id]` for an originator, or
+  `[...upstream, minibob-vessel-id]` for a forwarder.
+- For `mint`: resolve via the identity-vessel delegate endpoint (§5.9).
+  Until that endpoint exists, throw `VesselAuthError` with "mint mode
+  requires identity-vessel delegate endpoint" — fail closed.
+- Throw `VesselAuthError` for `user_identity` + missing-jwt per §4.4.
+  Error messages must never include the token; same rule applies to
+  any future refresh paths (§5.7).
 
-1. Registers a mock vessel with each `auth_token_source` value.
-2. Resolves `vesselCapability` for that vessel's shape.
-3. Asserts the field round-trips intact — written value equals read
-   value.
-4. Registers a vessel without the field, asserts the resolved
-   `VesselCapability` has `auth_token_source: "caller_identity"` (default
-   applied at write time).
+`src/types.ts` (or wherever `RuntimeContext` / `ExecutorConfig` lives —
+investigate before implementing): add `userJwt?: string` and
+`delegationChain?: string[]`, plumb through the activity executor.
 
-### 6.4 Integration: end-to-end against a fake vessel
+`src/repl.ts`: add `/auth user-jwt <token>` and `/auth clear-user-jwt`
+commands; document in `/help`.
 
-A higher-level test in minibob that runs `callVesselResolve` against an
-in-process fake HTTP server:
+`index.ts` (HTTP entry): accept `X-User-JWT` and
+`X-Metabob-Delegation-Chain` on incoming goal requests; propagate to
+`RuntimeContext`; redact both from every request log line.
 
-- Fake vessel asserts incoming `Authorization` header matches the
-  expected token per its advertised `auth_token_source`.
-- One test per (caller_identity, user_identity, no_token).
+`src/resolvers/vessel-resolve-call.test.ts`: extend per §7.
 
-### 6.5 Regression: existing call paths
+### 6.4 Existing vessel advertisements
 
-The existing `vessel-resolve-call.test.ts` tests (all 13 cases at lines
-55–155) must pass unchanged after the `auth_token_source` extension. The
-default `caller_identity` behavior is the spine of backward
-compatibility — if any existing test fails, the migration is wrong.
+Each existing vessel's `discovery-client.ts` adds `auth_token_source:
+'caller_identity'` to its registration object — explicit declarative
+annotation, no behavior change. Apply to:
+
+- `repos/concept-db/src/services/discovery-client.ts` (interface line
+  20, registration line 92). PERMISSIONS clauses filter on
+  `$auth.org_id` from the caller's token; service identity is correct
+  as long as it's tenant-scoped.
+- `repos/metabob-activity-api/src/services/discovery-client.ts`
+  (interface line 12, registration line 106). Same rationale.
+
+### 6.5 Future vessels
+
+- **identity-vessel** (when it advertises): `auth_token_source:
+  "caller_identity"` for service-to-service. The mint endpoint (§5.9)
+  is a separate API surface on identity-vessel itself, not part of the
+  discovery contract.
+- **react-renderer**: `auth_token_source: "user_identity"`,
+  `auth_delegation_mode: "forward"`. UI state is per-user; cluster
+  trust domain sufficient.
+- **per-user audit-vessel (hypothetical)**: `auth_token_source:
+  "user_identity"`, `auth_delegation_mode: "mint"`. Its arrival is the
+  trigger for landing the identity-vessel mint endpoint.
+
+### 6.6 Per-vessel summary
+
+| Vessel                     | `auth_scheme` (today) | `auth_token_source` | `auth_delegation_mode` | Notes                                      |
+| -------------------------- | --------------------- | ------------------- | ---------------------- | ------------------------------------------ |
+| concept-db                 | `ApiKey`              | `caller_identity`   | (n/a; absent)          | Tenant scoping via caller's `$auth.org_id` |
+| metabob-activity-api       | `ApiKey`              | `caller_identity`   | (n/a; absent)          | Same as concept-db                         |
+| discovery-vessel           | `none`                | (absent → default)  | (n/a)                  | No auth on resolve today                   |
+| identity-vessel            | `ApiKey` (likely)     | `caller_identity`   | (n/a; absent)          | Mint endpoint is separate API surface      |
+| react-renderer             | `Bearer`              | `user_identity`     | `forward`              | One-hop user UI                            |
+| audit-vessel (hypothetical)| `Bearer`              | `user_identity`     | `mint`                 | Audience-bound, replay-resistant           |
 
 ---
 
-## 7. Backward compatibility
+## 7. Test plan
 
-- **No vessel advertises `auth_token_source` today.** Every advertised
-  registration in concept-db (line 111) and activity-api (line 116) lacks
-  the field.
-- **Default on read = `"caller_identity"`.** Discovery-vessel applies the
-  default at write time; minibob's `buildAuthHeader` defaults the
-  parameter; either way, callers behave as today.
+### 7.1 Unit: `buildAuthHeader` per token-source
+
+Extend `repos/minibob/src/resolvers/vessel-resolve-call.test.ts`
+(existing tests at lines 173–202) with one case per cell of the table
+in §4.3 plus the dispatch-policy cases in §4.4. New cases beyond the
+three already-covered `caller_identity` paths:
+
+- `service_identity` + env present → `"ApiKey <env>"` (alias).
+- `user_identity` + `userJwt` present + `Bearer` → `"Bearer <userJwt>"`
+  with delegation headers.
+- `user_identity` + no `userJwt` → throws `VesselAuthError` (fail-fast).
+- `user_identity` + `userJwt` + `ApiKey` → `"ApiKey <userJwt>"`
+  (unusual but allowed).
+- `no_token` + any scheme → undefined (escape hatch).
+- `none` scheme + `user_identity` → undefined, no throw (scheme wins).
+- absent `auth_token_source` → behaves as `caller_identity`
+  (backward-compat default).
+
+### 7.2 Unit: delegation header construction
+
+- Originator, `forward` mode →
+  `X-Metabob-Delegation-Chain: <minibob-vessel-id>`,
+  `X-Metabob-Delegation-Hop: 1`.
+- Forwarder with inbound chain `[upstream]`, `forward` →
+  chain `[upstream, minibob]`, hop `2`.
+- `mint` mode without mint client wired → `VesselAuthError` matching
+  `/mint mode not yet/`.
+
+### 7.3 Unit: `buildResolveRequest` reads both fields
+
+Vessel advertising each combination of (`auth_token_source`,
+`auth_delegation_mode`) is dispatched correctly. A registration with
+no fields produces today's `caller_identity` behavior.
+
+### 7.4 Integration: discovery roundtrip
+
+Register a mock vessel with each combination, resolve
+`vesselCapability`, assert both fields round-trip intact. Register
+without either field, assert defaults applied at write time.
+
+### 7.5 Integration: end-to-end against a fake vessel
+
+`callVesselResolve` against an in-process HTTP server. Fake vessel
+asserts incoming `Authorization` matches the expected token per its
+advertised `auth_token_source`, and that delegation headers appear when
+expected. One test per (caller_identity, user_identity+forward,
+no_token).
+
+### 7.6 Regression: existing call paths
+
+The existing `vessel-resolve-call.test.ts` tests must pass unchanged.
+The default `caller_identity` + absent-delegation behavior is the spine
+of backward compatibility.
+
+### 7.7 Token-leakage tests
+
+For each redaction surface in §5.7: construct an event/trace/log with
+a known synthetic JWT prefix, pass through the serializer, grep the
+output for the prefix, assert absent. Mechanical insurance against the
+leakage classes that review will not catch.
+
+---
+
+## 8. Backward compatibility
+
+- **No vessel advertises either field today.** Every advertised
+  registration in concept-db and activity-api lacks them.
+- **Default on read.** Discovery-vessel applies defaults
+  (`caller_identity`, `forward`) at write time; minibob's
+  `buildAuthHeader` defaults its parameters; either way, callers behave
+  as today.
 - **Caller without the user-JWT plumbing.** A minibob build that hasn't
-  picked up the §5.3 changes simply ignores the field and runs the
+  picked up the §6.3 changes simply ignores both fields and runs the
   existing chain — every vessel today wants `caller_identity`, which is
   what that build produces. New vessels needing `user_identity` will
-  fail to authenticate against old minibobs, which is the right
-  failure mode (the new vessel is not yet supported by that caller).
+  fail to authenticate against old minibobs, which is the right failure
+  mode (the new vessel is not yet supported by that caller).
+- **Receivers without delegation-chain awareness.** A vessel that
+  doesn't yet read the delegation headers simply ignores them.
+  Forwarding still works; the audit trail is incomplete until the
+  receiver picks up the change. This is acceptable — the chain is
+  advisory in forward mode.
 
 ---
 
-## 8. Open questions
+## 9. Open questions
 
-### 8.1 Delegation: forwarding vs minting
-
-If vessel A calls vessel B while *itself* serving a user request, A is
-the caller, but the user's identity is the load-bearing one. Two policies:
-
-- **Forward**: A passes through the user JWT it received. Simple, but
-  the JWT may not be valid for B's audience (audience claim mismatch),
-  and A becomes a confused deputy.
-- **Mint**: A asks identity-vessel for a delegated token scoped to B's
-  audience and the original user. Correct, but introduces a new hop and
-  identity-vessel coupling.
-
-**v1 decision**: out of scope. v1 supports `caller_identity` (today's
-behavior) and `user_identity` (token already in caller's runtime
-context). Cross-vessel delegation chains are deferred to a future spec.
-If a vessel chain needs delegation, the intermediate vessel should
-explicitly call identity-vessel and place the resulting token into its
-outbound runtime context — same mechanism, just the wiring is per-call.
-
-Document the gap in this spec; revisit when a real delegation case
-arises.
-
-### 8.2 Caller without a user JWT, but `user_identity` requested
+### 9.1 Caller without a user JWT, but `user_identity` requested
 
 §4.4 says fail-fast. Alternative policies considered:
 
@@ -554,31 +719,49 @@ make `user_identity` vessels unreachable from idle/boredom code paths
 (no user in context) until the boredom system is taught to either skip
 those vessels or set up a service-account fallback. Deferred.
 
-### 8.3 Token freshness
+### 9.2 Token freshness
 
-A user JWT in `runtimeContext.userJwt` may expire mid-execution. v1
-treats the token as opaque; the vessel will return 401 if it's stale,
-and the caller surfaces the failure. A future spec may add token-refresh
-hooks, but not in v1.
+A user JWT in `runtimeContext.userJwt` may expire mid-execution. The
+spec treats the token as opaque; the vessel will return 401 if it's
+stale, and the caller surfaces the failure. A future addition may
+introduce token-refresh hooks (re-call identity-vessel with a refresh
+token), at which point the refresh path must obey the same redaction
+rules as §5.7.
 
-### 8.4 Multiple service identities
+### 9.3 Multiple service identities
 
-`"service_identity"` is reserved as an alias for `"caller_identity"` in
-v1, anticipating a future where minibob carries multiple service tokens
+`"service_identity"` is reserved as an alias for `"caller_identity"`,
+anticipating a future where minibob carries multiple service tokens
 (per-vessel keys, per-environment keys). When that materializes, the
 contract grows: either `service_identity` becomes parameterized
 (`"service_identity:concept-db"`) or we add a sibling field
-(`auth_token_audience`). Not v1.
+(`auth_token_audience`).
 
-### 8.5 Naming: `auth_token_source` vs `auth_principal` vs `auth_subject`
+### 9.4 Naming: `auth_token_source` vs `auth_principal` vs `auth_subject`
 
-`auth_token_source` describes where the token comes from; `auth_principal`
-or `auth_subject` describes whose identity it represents. The latter is
-arguably cleaner ontology — the contract says "I want a token whose
-subject is the user," not "I want a token sourced from this place."
-v1 keeps `auth_token_source` because it composes with
-`auth_scheme`/`auth_token_source` symmetrically (both are about the
-token, one says how it's framed, one says where it's drawn from). If
-during implementation review the naming feels wrong, `auth_principal` is
-a fine alternative — pick one before merging the type into the shared
+`auth_token_source` describes where the token comes from;
+`auth_principal` or `auth_subject` describes whose identity it
+represents. The latter is arguably cleaner ontology — the contract says
+"I want a token whose subject is the user," not "I want a token sourced
+from this place." This spec keeps `auth_token_source` because it
+composes with `auth_scheme` symmetrically (both about the token, one
+says how it's framed, one says where it's drawn from). If during
+implementation review the naming feels wrong, `auth_principal` is a
+fine alternative — pick one before merging the type into the shared
 package.
+
+### 9.5 Hop-count cap
+
+§5.5 mentions a `Hop > 4` rejection rule but doesn't fix the constant.
+Cap should be small (3–4) to constrain blast radius; the value lives in
+receiver config, not the contract. Pick on first integration.
+
+### 9.6 Trust-domain boundary criteria
+
+The decision in §5.3 ("forward inside the cluster, mint at boundaries")
+defers the precise definition of "cluster boundary" until a
+boundary-crossing vessel exists. Today every vessel shares one
+identity-vessel; the question matters when, e.g., a partner's vessel
+joins the registry under a different issuer. At that point: define
+issuer-equivalence-classes, and any cross-class call defaults to
+`mint`.
