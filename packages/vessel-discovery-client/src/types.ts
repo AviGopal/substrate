@@ -62,6 +62,18 @@ export interface DiscoveryConfig {
    */
   metadata?: Record<string, unknown>
 
+  /** HTTP path for impulse resolution on this vessel (default: "/v2/impulses/resolve") */
+  resolve_endpoint?: string
+
+  /** Request body format for the resolve endpoint (default: "pointer") */
+  resolve_request_format?: ResolveRequestFormat
+
+  /** Auth scheme this vessel expects on resolve calls (default: "none") */
+  auth_scheme?: ResolveAuthScheme
+
+  /** Max response time this vessel declares for resolve calls, in ms */
+  resolve_timeout_ms?: number
+
   /** Maximum consecutive failures before stopping heartbeat (default: 3) */
   maxConsecutiveFailures?: number
 

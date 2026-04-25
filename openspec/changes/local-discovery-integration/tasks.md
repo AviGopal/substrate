@@ -18,9 +18,9 @@
 
 ## Phase 3: MiniBob Discovery with Org Isolation
 
-- [ ] 3.1 Verify MiniBob discovers local react-renderer by shape. Pre-conditions: react-renderer running locally with Tasks 1.x and 2.x complete; MiniBob configured with the same `METABOB_API_KEY` from `~/.metabob/config.json`. Run `minibob --single "list all vessels that can render a ui_component"`. Verify: MiniBob logs show at least one vessel returned for shape `ui_component` with endpoint `http://localhost:3000`. The vessel ID matches the react-renderer registration.
+- [x] 3.1 Verify MiniBob discovers local react-renderer by shape. Pre-conditions: react-renderer running locally with Tasks 1.x and 2.x complete; MiniBob configured with the same `METABOB_API_KEY` from `~/.metabob/config.json`. Run `minibob --single "list all vessels that can render a ui_component"`. Verify: MiniBob logs show at least one vessel returned for shape `ui_component` with endpoint `http://localhost:3000`. The vessel ID matches the react-renderer registration.
 
-- [ ] 3.2 Verify org isolation: a vessel registered without `orgId` or under a different org does not appear in the same query. Using `curl`, register a dummy vessel under `orgId: "other-org"` directly against the discovery backend. Re-run the MiniBob discovery query from Task 3.1. Verify: the dummy vessel does not appear in the results for the developer's own org. Stop react-renderer; re-run the query after TTL expiry (or force a cache clear). Verify: react-renderer no longer appears.
+- [x] 3.2 Verify org isolation: a vessel registered without `orgId` or under a different org does not appear in the same query. Using `curl`, register a dummy vessel under `orgId: "other-org"` directly against the discovery backend. Re-run the MiniBob discovery query from Task 3.1. Verify: the dummy vessel does not appear in the results for the developer's own org. Stop react-renderer; re-run the query after TTL expiry (or force a cache clear). Verify: react-renderer no longer appears.
 
 ## Phase 4: Activity Drives UI Update
 

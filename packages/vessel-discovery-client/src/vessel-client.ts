@@ -112,6 +112,10 @@ export class VesselClient {
         protocol: this.config.protocol,
         orgId: this.config.orgId,
         metadata: this.config.metadata,
+        resolve_endpoint: this.config.resolve_endpoint,
+        resolve_request_format: this.config.resolve_request_format,
+        auth_scheme: this.config.auth_scheme,
+        resolve_timeout_ms: this.config.resolve_timeout_ms,
       })
 
       if (response.success) {
