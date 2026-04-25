@@ -179,3 +179,13 @@ Playwright page audit (2026-04-25):
 - GoalCompletionBar present/missing sections render without overflow ✅
 - BackwardChainingPanel (`── PREREQUISITES ──`) visible ✅
 - ApplicableActivitiesPanel toggle button present ✅
+
+### 2026-04-25 (session 2) — Sidebar overflow root-cause fix + grid wrap
+Root cause of left panel content overflow found and fixed properly:
+- Radix ScrollArea wraps children in `display:table; min-width:100%` causing `width:100%` on any descendant (e.g. `<Progress>`) to resolve to the table's expanded width (1613px) rather than the 255px viewport
+- Fix: `contain:inline-size` on the ScrollArea content div — creates independent inline-size containment so `width:100%` inside resolves to available space (255px). Content now measures `contentComputedWidth: "255px"` (verified via Playwright DOM), Progress bars render correct fill percentages
+- Trajectory grid changed from `inline-flex` to `flex flex-wrap` allowing arbitrarily long sequences to wrap across rows
+- `scrollToActivity()` helper centers selected/new activity cards in the grid viewport rather than snapping to edge
+- Accessibility: `aria-label`, `aria-expanded` added to 8 component files (commit `d64dfb2`)
+- TypeScript: removed unused `Button` import from `ApplicableActivitiesPanel.tsx` (TS6133)
+- All changes committed `1a7a5e5`
