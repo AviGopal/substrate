@@ -55,6 +55,12 @@
       "category": "ui",
       "description": "Convert user events into activity execution",
       "templatePath": "templates/handle-user-interaction.json"
+    },
+    {
+      "id": "render-file-tree",
+      "category": "ui",
+      "description": "Run find on a directory and render the file list as a data-table",
+      "templatePath": "templates/render-file-tree.json"
     }
   ],
 

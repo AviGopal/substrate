@@ -1,0 +1,45 @@
+{
+  "id": "render-file-tree",
+  "description": "Run find on a directory and render result as a data-table in react-renderer",
+  "category": "ui",
+  "input_shapes": ["goal"],
+  "output_shapes": ["render_receipt"],
+  "tasks": [
+    {
+      "id": "scan-directory",
+      "resolver": "bash",
+      "config": {
+        "command": "find {{directory}} -maxdepth 2 -type f -printf '%p\\t%s\\t%TY-%Tm-%Td\\n' 2>/dev/null | head -100"
+      },
+      "outputShapes": ["bash_output"]
+    },
+    {
+      "id": "format-as-table",
+      "resolver": "llm",
+      "prompt": {
+        "template": "Parse the following find output into a JSON object with exactly two keys: 'columns' (array [\"path\",\"size\",\"modified\"]) and 'data' (array of row objects). Return only valid JSON, no explanation.\n\nFind output:\n{{bash_output}}"
+      },
+      "inputShapes": ["bash_output"],
+      "outputShapes": ["ui_component"]
+    },
+    {
+      "id": "post-to-renderer",
+      "resolver": "http",
+      "config": {
+        "discoveryShape": "uiComponent",
+        "method": "POST",
+        "path": "/impulses"
+      },
+      "inputShapes": ["ui_component"],
+      "outputShapes": ["render_receipt"]
+    }
+  ],
+  "variables": [
+    {
+      "name": "directory",
+      "type": "string",
+      "required": true,
+      "description": "Directory path to scan"
+    }
+  ]
+}
