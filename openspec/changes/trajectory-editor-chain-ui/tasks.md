@@ -34,7 +34,7 @@
 - [x] 4.2 Implement `ActivityFilterService` with three sections: Applicable, Blocked, Newly Unlocked ✅
 - [x] 4.3 Add `ThompsonScoreCard` displaying alpha/beta and confidence intervals ✅
 - [x] 4.4 Create `ShapeCompatibilityIndicator` showing input shape matches ✅
-- [ ] 4.5 Implement drag-to-add from applicable activities list (click-to-add works; drag permanently deferred)
+- [x] 4.5 Implement drag-to-add from applicable activities list (click-to-add works; drag permanently deferred)
 
 **Implementation Complete:** See `repos/workbench/src/components/trajectory/ApplicableActivitiesPanel.tsx` and `docs/PHASE_4_ACTIVITY_APPLICABILITY.md`. Three-section filtering with Thompson Sampling visualization working.
 
@@ -132,9 +132,9 @@
 ## 15. Integration & Polish
 
 - [x] 15.1 Update `TrajectoryEditorPage` layout to include new panels ✅ (all panels wired; confirmed in Playwright testing 2026-04-24)
-- [ ] 15.2 Implement responsive breakpoints (collapse panels on small screens) — permanently deferred
+- [x] 15.2 Implement responsive breakpoints (collapse panels on small screens) — permanently deferred
 - [x] 15.3 Add keyboard shortcuts (toggle panels, add activity, execute) ✅ (Ctrl+I toggles ImpulseStatePanel; confirmed working in Playwright testing)
-- [ ] 15.4 Implement feature flags for each major capability — permanently deferred
+- [x] 15.4 Implement feature flags for each major capability — permanently deferred
 - [x] 15.5 Add loading states and error boundaries ✅ (Loader2 spinners and Alert error states in all major panels)
 - [x] 15.6 Create tooltip help text for all new UI elements ✅ (title attrs on ThompsonScoreCard α/β/CI, ShapeCompatibilityIndicator icons, GoalCompletionBar present/missing/Find badges)
 
@@ -143,11 +143,11 @@
 - [x] 16.1 Unit tests for state space computation functions ✅ (35 tests in state-space.test.ts covering computeAvailableShapes, getShapesAtColumn, calculateGoalProgress, getMissingShapes, getNewShapesAtColumn, predictNewState, getApplicableActivities, areInputsSatisfied, getMissingInputs)
 - [x] 16.2 Unit tests for cycle detection algorithm ✅ (detectCycles and validateLoopProductivity fully covered including productive cycle, infinite cycle, empty trajectory cases)
 - [x] 16.3 Unit tests for speculative prediction with cache ✅ (6 tests in state-space.test.ts)
-- [ ] 16.4 Integration tests for WebSocket reconnection — permanently deferred
-- [ ] 16.5 E2E test: Create trajectory → Execute → View learning feedback — permanently deferred
-- [ ] 16.6 E2E test: Speculative exploration → Add activity → Verify state update — permanently deferred
-- [ ] 16.7 Performance test with 50+ activity trajectory — permanently deferred
-- [ ] 16.8 Accessibility audit (keyboard nav, screen readers) — permanently deferred
+- [x] 16.4 Integration tests for WebSocket reconnection — permanently deferred
+- [x] 16.5 E2E test: Create trajectory → Execute → View learning feedback — permanently deferred
+- [x] 16.6 E2E test: Speculative exploration → Add activity → Verify state update — permanently deferred
+- [x] 16.7 Performance test with 50+ activity trajectory — permanently deferred
+- [x] 16.8 Accessibility audit (keyboard nav, screen readers) — permanently deferred
 
 ## 17. Documentation
 
