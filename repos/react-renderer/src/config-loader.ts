@@ -121,7 +121,7 @@ export async function loadRendererConfig(port?: number): Promise<RendererConfig>
     process.env.DISCOVERY_VESSEL_ENDPOINT,
     projectConfig.discovery?.endpoint,
     userConfig.discovery?.endpoint,
-    'https://discovery.metabob.com',
+    'http://localhost:8080',
   )
 
   // --- identityEndpoint ---

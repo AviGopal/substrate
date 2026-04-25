@@ -603,6 +603,9 @@ async function initializeDiscovery() {
     authToken: rendererConfig.metabobApiKey || undefined,
     orgId,
     authType: 'ApiKey',
+    resolve_endpoint: '/impulses',
+    resolve_request_format: 'pointer',
+    auth_scheme: 'ApiKey',
     metadata: {
       capabilities: ['ui-rendering', 'websocket', 'real-time-updates'],
       environment: process.env.NODE_ENV || 'development',
