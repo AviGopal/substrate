@@ -1,0 +1,41 @@
+# Local MiniBob development container
+#
+# Runs a single MiniBob vessel that:
+# - Sends execution traces to activity.metabob.com (canary backend)
+# - Registers with discovery.metabob.com so the workbench can find it
+# - Exposes HTTP+WebSocket on localhost:8083 for direct workbench connections
+#
+# Usage:
+#   docker compose -f docker-compose.minibob.yml up --build -d   # start detached
+#   docker compose -f docker-compose.minibob.yml logs -f          # follow logs
+#   docker compose -f docker-compose.minibob.yml down             # stop
+#
+# Requires: ~/.metabob/config.json with metabob.apiKey + providers.anthropic.apiKey
+# Workbench: if discovery.metabob.com is unreachable, use the manual vessel URL field
+#   in the trajectory editor's "executor vessel" panel to connect directly to http://localhost:8083
+
+name: metabob-local
+
+services:
+  minibob:
+    build:
+      context: ./repos/minibob
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8083:8080"
+    volumes:
+      # Mount user config — provides metabob.apiKey + providers.anthropic.apiKey
+      # Not read-only: MiniBob writes offline cache to ~/.metabob/.cache/
+      - ${HOME}/.metabob:/root/.metabob
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      # Advertise the host-accessible URL so the workbench browser can reach MiniBob directly.
+      MINIBOB_VESSEL_ENDPOINT: "http://localhost:8083"
+      # Backend: send traces + use Thompson Sampling from canary.
+      METABOB_ENDPOINT: "https://activity.metabob.com"
+      # Discovery: register with the backend so the workbench can find this vessel.
+      MINIBOB_DISCOVERY_ENABLED: "true"
+      DISCOVERY_VESSEL_ENDPOINT: "https://discovery.metabob.com"
+      MINIBOB_VESSEL_ID: "minibob-local-dev"
+    restart: unless-stopped
