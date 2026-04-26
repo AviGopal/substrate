@@ -146,12 +146,12 @@ Cross-cutting findings surfaced during implementation iterations 1–15. Finding
 **Origin:** iter 13 / Subagent Q (slot-binding `_parent_goal_text_TODO`); resolved iter 16.
 **Affected files:** `repos/minibob/src/activity.ts:4438, :5004`, `repos/minibob/src/embedded-templates/slot-binding.json`, `openspec/changes/2026-04-26-impulse-binding-selection-layer/specs/lifecycle-task-prebinding/spec.md`.
 
-#### F-3: Lifecycle payload doesn't carry `composition_chain` depth
-**Observation:** The lifecycle dispatcher doesn't thread `composition_chain` through the payload. The `escalate_unbindable` task hardcodes `parent_depth: 0` for the dispatched `create-shape-provider-goal` invocation.
-**Impact:** Recursive depth-guard (default `max_recursion_depth=3`) cannot fire correctly — a chain at depth 2 still appears as depth 1 to its child.
-**Proposed fix:** Add `parent_depth` and/or `composition_chain` fields to the lifecycle payload; alternatively have `create-shape-provider-goal` resolve them via an upstream trace fetch.
-**Origin:** iter 13 / Subagent Q (slot-binding `metadata.openQuestions[2]`).
-**Affected files:** `repos/minibob/src/activity.ts:1249-1273`, `repos/minibob/src/embedded-templates/slot-binding.json`.
+#### F-3: Lifecycle payload doesn't carry `composition_chain` depth — RESOLVED 2026-04-26
+**Observation:** The lifecycle dispatcher didn't thread `composition_chain` depth through the payload. The `escalate_unbindable` task in `slot-binding.json` hardcoded `parent_depth: 0` for the dispatched `create-shape-provider-goal` invocation.
+**Impact:** Recursive depth-guard (default `max_recursion_depth=3`) couldn't fire correctly — a chain at depth 2 still appeared as depth 1 to its child, so the guard would never trip regardless of recursion depth.
+**Resolution:** Extended both `lifecycle:task:preBinding` emit sites in `repos/minibob/src/activity.ts` (resolver-path at `:4438` and LLM-only path at `:5004`) with a `parentDepth: number` field sourced from `(this.config.activityCallStack || []).length` — the executor's root-first ancestor template-id stack (excluding the currently-executing activity itself, which is the trace subject not an ancestor). For root executions with no ancestors the value is `0`. Sibling spec `lifecycle-task-prebinding/spec.md` updated to declare the contract with two new scenarios (root execution `parentDepth: 0` and nested execution `parentDepth > 0`). `slot-binding.json::escalate_unbindable` now forwards `parent_depth: "{{lifecycle.parentDepth}}"` instead of the hardcoded `0`. The dotted-path interpolator emits the value as a number-as-string; `create-shape-provider-goal`'s `compose_goal` LLM already handles defensive parsing per spec §7.1. Mirrors F-2's fix pattern.
+**Origin:** iter 13 / Subagent Q (slot-binding `metadata.openQuestions[2]`); resolved iter 16.
+**Affected files:** `repos/minibob/src/activity.ts:4438, :5004`, `repos/minibob/src/embedded-templates/slot-binding.json`, `openspec/changes/2026-04-26-impulse-binding-selection-layer/specs/lifecycle-task-prebinding/spec.md`.
 
 #### F-4: Template format lacks foreach/iteration primitive (infra gap B)
 **Observation:** Several meta-activity tasks ideally iterate over arrays (per-shape selection in slot-binding, per-validator dispatch in validator-dispatch, per-candidate cost/risk fetches in create-shape-provider-goal). The current template format has no `foreach`/`map` primitive, forcing each template to simplify to single-shape / single-candidate behaviour.
