@@ -36,11 +36,13 @@ export interface ImpulseRelevancyBoost {
  *
  * @param activityIds - Activity IDs to check
  * @param loadedImpulses - Impulse IDs currently loaded
+ * @param decayWeights - Optional per-shape decay weights (from session_context timestamps)
  * @returns Map of activityId → relevancy boost calculation
  */
 export async function calculateImpulseRelevancyBoosts(
   activityIds: string[],
-  loadedImpulses: string[]
+  loadedImpulses: string[],
+  decayWeights?: Map<string, number>
 ): Promise<Map<string, ImpulseRelevancyBoost>> {
   if (activityIds.length === 0) {
     return new Map();
@@ -107,17 +109,18 @@ export async function calculateImpulseRelevancyBoosts(
         const CRITICAL_THRESHOLD = 0.3;   // relevance >> irrelevance
         const HARMFUL_THRESHOLD = -0.3;   // irrelevance >> relevance
 
+        // Decay weight defaults to 1.0 — impulses without timestamps are treated as fully fresh
+        const dw = decayWeights?.get(metric.impulse_id) ?? 1.0;
+
         if (relevanceDiff > CRITICAL_THRESHOLD) {
           // This impulse is CRITICAL (success rate much higher when loaded)
           if (isLoaded) {
-            // We have it! Boost alpha
-            const boost = Math.ceil(relevanceDiff * 10); // 0.3+ → +3 to +10
+            const boost = Math.ceil(relevanceDiff * 10 * dw);
             alphaBoost += boost;
             loadedImpulseBoost += boost;
             relevantImpulses.push(metric.impulse_id);
           } else {
-            // Missing critical impulse! Penalize beta (makes activity less likely)
-            const penalty = Math.ceil(relevanceDiff * 5); // 0.3+ → +1.5 to +5
+            const penalty = Math.ceil(relevanceDiff * 5 * dw);
             betaPenalty += penalty;
             missingImpulsePenalty += penalty;
             missingCriticalImpulses.push(metric.impulse_id);
@@ -125,12 +128,10 @@ export async function calculateImpulseRelevancyBoosts(
         } else if (relevanceDiff < HARMFUL_THRESHOLD) {
           // This impulse is HARMFUL (success rate lower when loaded)
           if (isLoaded) {
-            // We loaded a harmful impulse! Penalize beta
-            const penalty = Math.ceil(Math.abs(relevanceDiff) * 5); // 0.3+ → +1.5 to +5
+            const penalty = Math.ceil(Math.abs(relevanceDiff) * 5 * dw);
             betaPenalty += penalty;
             harmfulImpulsePenalty += penalty;
           }
-          // If not loaded, that's good - do nothing
         }
         // If -0.3 < relevanceDiff < 0.3, impulse is NEUTRAL - ignore
       }

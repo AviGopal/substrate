@@ -34,6 +34,44 @@ const app = new Hono();
  *
  * Exported for tests — see `execution-traces.test.ts`.
  */
+/**
+ * Extract per-task impulse-ID arrays from a minibob-emitted task object.
+ *
+ * Priority order (matches `serializeTasksForTrace` canonical wire shape):
+ *   1. snake_case `input_impulse_ids` / `output_impulse_ids` (canonical)
+ *   2. camelCase `inputImpulseIds` / `outputImpulseIds` (legacy minibob)
+ *   3. richer `inputState.impulses` / `outputState.impulses` containers
+ *      (improviser path, ExecutedTask shape)
+ *   4. `[]` (no source) — never undefined
+ *
+ * Used by both `normalizePersistedTask` (write/persist path) and the
+ * broadcaster's `task.completed` payload constructor so the persisted shape
+ * and the live broadcast carry identical impulse-ID arrays for the same
+ * task. Single source of truth for the priority order.
+ *
+ * Exported for tests — see `execution-traces.test.ts`.
+ */
+export function extractTaskImpulseIds(task: any): {
+  input_impulse_ids: string[];
+  output_impulse_ids: string[];
+} {
+  const input_impulse_ids: string[] = Array.isArray(task?.input_impulse_ids)
+    ? task.input_impulse_ids
+    : Array.isArray(task?.inputImpulseIds)
+      ? task.inputImpulseIds
+      : Array.isArray(task?.inputState?.impulses)
+        ? task.inputState.impulses
+        : [];
+  const output_impulse_ids: string[] = Array.isArray(task?.output_impulse_ids)
+    ? task.output_impulse_ids
+    : Array.isArray(task?.outputImpulseIds)
+      ? task.outputImpulseIds
+      : Array.isArray(task?.outputState?.impulses)
+        ? task.outputState.impulses
+        : [];
+  return { input_impulse_ids, output_impulse_ids };
+}
+
 export function normalizePersistedTask(task: any): {
   task_id: string;
   description?: string;
@@ -47,20 +85,8 @@ export function normalizePersistedTask(task: any): {
   success?: boolean;
   cost_usd?: number;
 } {
-  const inputImpulseIds = Array.isArray(task?.input_impulse_ids)
-    ? task.input_impulse_ids
-    : Array.isArray(task?.inputImpulseIds)
-      ? task.inputImpulseIds
-      : Array.isArray(task?.inputState?.impulses)
-        ? task.inputState.impulses
-        : [];
-  const outputImpulseIds = Array.isArray(task?.output_impulse_ids)
-    ? task.output_impulse_ids
-    : Array.isArray(task?.outputImpulseIds)
-      ? task.outputImpulseIds
-      : Array.isArray(task?.outputState?.impulses)
-        ? task.outputState.impulses
-        : [];
+  const { input_impulse_ids: inputImpulseIds, output_impulse_ids: outputImpulseIds } =
+    extractTaskImpulseIds(task);
 
   // Per-task resolver attribution (canonical six-field shape from minibob's
   // serializeTasksForTrace). The `tasks` column is FLEXIBLE so these can ride
@@ -1154,8 +1180,14 @@ app.post('/', async (c) => {
           }
         }
 
-        // Emit task.completed event
+        // Emit task.completed event. Per-task impulse arrays are derived
+        // from the same task object that `normalizePersistedTask` consumes
+        // (via the shared `extractTaskImpulseIds` helper) so the broadcast
+        // and persisted shape are perfectly symmetric. Always emit arrays
+        // (possibly empty) — never undefined — so consumers can
+        // unconditionally call .length / iterate.
         const taskSuccess = task.result?.status === 'success';
+        const { input_impulse_ids, output_impulse_ids } = extractTaskImpulseIds(task);
         broadcaster.emit({
           type: 'task.completed',
           timestamp: new Date().toISOString(),
@@ -1167,6 +1199,8 @@ app.post('/', async (c) => {
             duration_ms: task.duration || task.duration_ms || 0,
             completed_at: new Date().toISOString(),
             error: taskSuccess ? undefined : (task.result?.error || task.error),
+            input_impulse_ids,
+            output_impulse_ids,
           },
         });
       }
@@ -1441,6 +1475,114 @@ app.post('/', async (c) => {
         activity_id: trace.variant_id,
         error: scoreUpdateError instanceof Error ? scoreUpdateError.message : String(scoreUpdateError),
       });
+    }
+
+    // Context-bucketed Thompson update (Spec 3)
+    // Derive context_bucket from metadata if present, or re-derive from input_impulse_shapes.
+    const rawContextBucket: unknown =
+      body.metadata?.context_bucket ??
+      body.selection_metadata?.context_bucket;
+
+    const isValidBucket = (v: unknown): v is string =>
+      typeof v === 'string' && /^[0-9a-f]{8}$/.test(v);
+
+    if (isValidBucket(rawContextBucket)) {
+      try {
+        const ctxAlphaDelta = trace.success ? 1 : 0;
+        const ctxBetaDelta  = trace.success ? 0 : 1;
+
+        await surrealDB.query(`
+          LET $existing = (SELECT * FROM context_thompson_scores
+            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+            LIMIT 1);
+          IF array::len($existing) > 0 THEN
+            UPDATE context_thompson_scores
+            SET alpha = alpha + $alpha_delta,
+                beta  = beta  + $beta_delta,
+                n_observations = n_observations + 1,
+                last_updated_at = time::now()
+            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+          ELSE
+            CREATE context_thompson_scores CONTENT {
+              org_id: $org_id,
+              template_id: $template_id,
+              context_bucket: $bucket,
+              alpha: 1.0 + $alpha_delta,
+              beta:  1.0 + $beta_delta,
+              n_observations: 1,
+              last_updated_at: time::now(),
+              created_at: time::now()
+            }
+          END
+        `, {
+          org_id: traceOrgId,
+          template_id: trace.variant_id,
+          bucket: rawContextBucket,
+          alpha_delta: ctxAlphaDelta,
+          beta_delta: ctxBetaDelta,
+        });
+
+        logger.debug('[learning] context_thompson_scores updated', {
+          execution_id: trace.execution_id,
+          context_bucket: rawContextBucket,
+          success: trace.success,
+        });
+      } catch (ctxErr: any) {
+        logger.warn('[learning] context_thompson_scores update failed (non-blocking)', {
+          execution_id: trace.execution_id,
+          error: ctxErr.message,
+        });
+      }
+    } else if (
+      !rawContextBucket &&
+      body.input_impulse_shapes &&
+      Array.isArray(body.input_impulse_shapes) &&
+      body.input_impulse_shapes.length > 0
+    ) {
+      // Re-derive bucket when caller didn't embed it but shapes are known
+      try {
+        const { computeContextBucket } = await import('../utils/session-context');
+        const taskDesc = body.metadata?.task_description ?? body.execution_trace?.goalContext?.goal ?? '';
+        const rederived = computeContextBucket(taskDesc, body.input_impulse_shapes, traceOrgId);
+        const rdAlphaDelta = trace.success ? 1 : 0;
+        const rdBetaDelta  = trace.success ? 0 : 1;
+
+        await surrealDB.query(`
+          LET $existing = (SELECT * FROM context_thompson_scores
+            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+            LIMIT 1);
+          IF array::len($existing) > 0 THEN
+            UPDATE context_thompson_scores
+            SET alpha = alpha + $alpha_delta,
+                beta  = beta  + $beta_delta,
+                n_observations = n_observations + 1,
+                last_updated_at = time::now()
+            WHERE org_id = $org_id AND template_id = $template_id AND context_bucket = $bucket
+          ELSE
+            CREATE context_thompson_scores CONTENT {
+              org_id: $org_id,
+              template_id: $template_id,
+              context_bucket: $bucket,
+              alpha: 1.0 + $alpha_delta,
+              beta:  1.0 + $beta_delta,
+              n_observations: 1,
+              last_updated_at: time::now(),
+              created_at: time::now()
+            }
+          END
+        `, {
+          org_id: traceOrgId,
+          template_id: trace.variant_id,
+          bucket: rederived,
+          alpha_delta: rdAlphaDelta,
+          beta_delta: rdBetaDelta,
+        });
+      } catch (ctxRederiveErr: any) {
+        logger.warn('[learning] context_thompson_scores re-derive update failed (non-blocking)', {
+          execution_id: trace.execution_id,
+          error: ctxRederiveErr.message,
+        });
+      }
     }
 
     // DUAL-WRITE: Update variant_performance_metrics for dashboard compatibility

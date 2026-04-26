@@ -447,6 +447,7 @@ export const ImpulseRelevanceMetricSchema = z.object({
   // Learned scores (Bayesian)
   relevance_score: z.number().min(0).max(1), // P(success | impulse present)
   irrelevance_score: z.number().min(0).max(1), // P(success | impulse absent)
+  net_value_score: z.number().min(-1).max(1).optional(), // relevance_score - irrelevance_score * 0.5
 
   // Context metadata
   avg_content_size_tokens: z.number().int().default(0),
