@@ -3366,7 +3366,8 @@ app.post('/feedback', async (c) => {
 app.post('/discover-by-shapes', async (c) => {
   try {
     const body = await c.req.json();
-    const { required_shapes, mode = 'forward', limit = 10, current_shapes = [] } = body;
+    // output_shapes: optional additive filter on backward mode — see OpenSpec change 2026-04-26-validators-and-failure-modes.
+    const { required_shapes, mode = 'forward', limit = 10, current_shapes = [], output_shapes = [] } = body;
 
     if (!required_shapes || !Array.isArray(required_shapes) || required_shapes.length === 0) {
       return c.json({
@@ -3375,12 +3376,18 @@ app.post('/discover-by-shapes', async (c) => {
       }, 400);
     }
 
-    if (!['forward', 'backward'].includes(mode)) {
+    if (!['forward', 'backward', 'candidates_with_scores'].includes(mode)) {
       return c.json({
         error: 'Validation failed',
-        message: 'mode must be either "forward" or "backward"',
+        message: 'mode must be one of "forward", "backward", or "candidates_with_scores"',
       }, 400);
     }
+
+    // candidates_with_scores treats the query as forward mode (find producers)
+    // and augments each result with composition_score from activity_composition_graph.
+    // See OpenSpec change 2026-04-26-impulse-binding-selection-layer.
+    const predecessorActivityId = body.predecessor_activity_id;
+    const queryMode = mode === 'candidates_with_scores' ? 'forward' : mode;
 
     logger.info('Discovering activities by shapes', {
       required_shapes,
@@ -3392,7 +3399,7 @@ app.post('/discover-by-shapes', async (c) => {
     let query: string;
     let params: any;
 
-    if (mode === 'forward') {
+    if (queryMode === 'forward') {
       // Forward mode: Find activities that PRODUCE the required shapes
       // (backward chaining in trajectory editor - finding prerequisites)
       query = `
@@ -3406,10 +3413,14 @@ app.post('/discover-by-shapes', async (c) => {
     } else {
       // Backward mode: Find activities that CONSUME the required shapes
       // (forward chaining - finding next steps given current shapes)
+      // Optional additive filter on output_shapes — see OpenSpec change 2026-04-26-validators-and-failure-modes.
+      const outputFilterClause = output_shapes.length > 0
+        ? ' AND output_shapes CONTAINSANY $output_shapes_filter'
+        : '';
       if (current_shapes.length > 0) {
         query = `
           SELECT * FROM activity
-          WHERE input_shapes CONTAINSANY $required_shapes
+          WHERE input_shapes CONTAINSANY $required_shapes${outputFilterClause}
             AND (retired = false OR retired IS NONE)
           ORDER BY created_at DESC
           LIMIT $limit
@@ -3418,12 +3429,15 @@ app.post('/discover-by-shapes', async (c) => {
       } else {
         query = `
           SELECT * FROM activity
-          WHERE input_shapes CONTAINSANY $required_shapes
+          WHERE input_shapes CONTAINSANY $required_shapes${outputFilterClause}
             AND (retired = false OR retired IS NONE)
           ORDER BY created_at DESC
           LIMIT $limit
         `;
         params = { required_shapes, limit };
+      }
+      if (output_shapes.length > 0) {
+        params.output_shapes_filter = output_shapes;
       }
     }
 
@@ -3475,14 +3489,51 @@ app.post('/discover-by-shapes', async (c) => {
     // Transform to legacy format for compatibility
     const legacyActivities = activitiesWithScores.map(transformToLegacyTemplate);
 
+    // Augment each result with composition_score for candidates_with_scores mode.
+    // Pulls success/execution counts from activity_composition_graph and produces
+    // smoothed Beta(α, β) parameters consumable by Thompson Sampling on the
+    // resolver side. Failures are non-fatal (composition_score: null).
+    const finalActivities = mode === 'candidates_with_scores'
+      ? await Promise.all(
+          legacyActivities.map(async (legacyActivity: any, idx: number) => {
+            const sourceActivity: any = activitiesWithScores[idx];
+            try {
+              const compQuery = predecessorActivityId
+                ? `SELECT success_count, execution_count FROM activity_composition_graph WHERE parent_activity_id = $predecessor_activity_id AND child_activity_id = $activity_id LIMIT 1`
+                : `SELECT math::sum(success_count) AS success_count, math::sum(execution_count) AS execution_count FROM activity_composition_graph WHERE child_activity_id = $activity_id GROUP ALL`;
+              const compParams: Record<string, unknown> = predecessorActivityId
+                ? { predecessor_activity_id: predecessorActivityId, activity_id: sourceActivity.id }
+                : { activity_id: sourceActivity.id };
+              const compRows: any = await surrealDB.query(compQuery, compParams);
+              const row = compRows && compRows.length > 0 ? compRows[0] : null;
+              const composition_score = row && (row.execution_count || 0) > 0
+                ? {
+                    alpha: (row.success_count || 0) + 1,
+                    beta: ((row.execution_count || 0) - (row.success_count || 0)) + 1,
+                    sample_count: row.execution_count || 0,
+                    predecessor_id: predecessorActivityId || undefined,
+                  }
+                : null;
+              return { ...legacyActivity, composition_score };
+            } catch (error) {
+              logger.warn('Failed to fetch composition score', {
+                activity_id: sourceActivity.id,
+                error: error instanceof Error ? error.message : String(error),
+              });
+              return { ...legacyActivity, composition_score: null };
+            }
+          })
+        )
+      : legacyActivities;
+
     logger.info('Activities discovered by shapes', {
-      count: legacyActivities.length,
+      count: finalActivities.length,
       required_shapes,
     });
 
     return c.json({
-      activities: legacyActivities,
-      total: legacyActivities.length,
+      activities: finalActivities,
+      total: finalActivities.length,
     });
 
   } catch (error: any) {
