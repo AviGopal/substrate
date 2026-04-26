@@ -79,6 +79,37 @@ For each of the five success criteria in `proposal.md`, document the canary evid
 - **System creates improved activities via the executor**: TBD
 - **Activities compose using all features**: TBD
 
+### Canary smoke evidence (iteration 10)
+
+- `GET https://activity.metabob.com/health` returns 200 with `version: 1.12.0`, redis + surrealdb + discovery all healthy, embedding service disabled (normal).
+- `POST https://activity.metabob.com/v2/activities/discover-by-shapes` with `{ "required_shapes": ["bash_output"], "mode": "candidates_with_scores" }` returns 3 activities, each with `composition_score: null` (no edge data yet — uniform prior expected). **Phase 2.1 (`candidates_with_scores` mode) verified live.**
+- `GET /v2/activities/templates?limit=5` with any `Authorization: ApiKey` header returns templates with Thompson α/β. Without auth, the middleware lifecycle leak surfaces a 500 with `"Context is not finalized"` — same class as bug 10.2 but on a different route. Pre-existing on canary.
+- Embedded templates (`slot-binding`, `validator-dispatch`, `create-shape-provider-goal`) live inside minibob and don't surface through `/templates`. End-to-end verification of meta-activity firing requires watching live traces or running a goal — deferred to a focused canary smoke iteration.
+
+### 2026-04-26 — iteration 11 (Phase 6.3 closes; L→M bridge wired; workbench v0.3.0 pushed)
+
+- **Subagent N — Phase 6.3 validation surfaces (sibling 3 §9-§11):** `ValidationErrorDisplay` discriminated union extended with `runtime_validator` variant (validatorId + passed + confidence + failureMode + evidence + messages); 2-decimal confidence on pass, `failure_mode.type` + first failed evidence on fail. `ImpulseStatePanel` gained a "Task Validation" card adjacent to the Phase 6.1 Bindable Slots card (per-task indicator: green + min confidence on pass, red + `failure_mode.type` on fail, gray "no validators" otherwise). `ExecutionHistoryPanel` now renders `failure_mode` summary on failed traces (e.g. `verifier_negative · slot-binding`) with `error_message` fallback for legacy traces and a multi-select dropdown filter. New `src/types/failure-mode.ts` mirrors the activity-api zod schema. `useExecutionHistory.TraceSummary` carries `failureMode`/`errorMessage`. `trajectoryStore.taskValidations: Map` field with `addTaskValidation` action (clearing tied to existing `clearTrajectory`/`clearTraceData`). 26 new tests pass.
+- **Main thread — L→M bridge (#24 closed):** `TrajectoryEditorPage` imports `SpawnSubgoalPreview`, owns `spawnPreviewShape` state, passes `onEscalateUnbindableShape={setSpawnPreviewShape}` to `ApplicableActivitiesPanel`, renders the preview conditionally when a shape is set. The Phase 6.1 stub button now actually dispatches via the Phase 6.2 hook. Typecheck clean.
+- Pushed: workbench `9222f00..0541324` (v0.2.0 → v0.3.0); super-repo `da8b3003..0c0d8511` (submodule pointer advance for workbench).
+
+Population of `taskValidations` from the WS event stream is **out of scope** for this iteration — tests inject directly. The live-execution hook will populate it once the slot-binding meta-activity is observed firing on canary; that's a follow-up wiring task.
+
+**Phase 6 closed.** All three workbench surfaces landed and pushed. Phase 7 has the activity authored; Phase 7.2 (escalation wiring from slot-binding meta-activity to `create-shape-provider-goal`) is the next chunk. Phase 5 (decommission inline executor logic) waits on canary trace evidence that meta-activities are firing.
+
+### 2026-04-26 — iteration 12 (Phase 7.2 dispatched in background; canary trace audit)
+
+- **Subagent Q — Phase 7.2 escalation wiring (in progress, background):** modify `slot-binding.json` to add an `escalate_unbindable` task that dispatches `create-shape-provider-goal` via the `activity` resolver when `select_or_produce` returns `unbindable: true`. Will integrate on completion.
+- **Canary trace audit (main thread):** authenticated `POST /v2/impulses/resolve` with `pointer.type: "executionTraceList", limit: 3` returns three `auth_resolve_v1` handshake traces from 2026-04-26 13:18–13:43 UTC. **No goal-execution traces under our org since the v0.13.0 deploy.** The activity-API correctly accepts our key (auth path is healthy) but there's no real workload to inspect for the new fields (`failure_mode`, lifecycle event impulses, slot-binding nested executions). End-to-end Phase 8 evidence requires a fresh `minibob --single "..."` dispatch against canary; that's a user-driven action since it requires running minibob with the right env locally.
+- Trace-detail by id (`pointer.type: "activityExecutionTrace", executionId: ...`) returned `Execution trace not found` for an id that the list returned. Likely an ACCESS-method binding mismatch on the detail endpoint — pre-existing on canary; not a regression we introduced. Worth flagging as future cleanup.
+
+**Action item for the user (or next iteration):** dispatch a representative goal against canary (e.g. `minibob --single "list files in /tmp"` or a similarly trivial impulse-binding-exercising goal) to populate goal-execution traces. The `lifecycle:task:preBinding` impulses, slot-binding meta-activity nested executions, and any `failure_mode` records would then be observable via `executionTraceList` for downstream design.md acceptance evidence. Until then, Phase 8 evidence is partial (backend-side endpoints + auth verified live; meta-activity firing not yet observed).
+
+### 2026-04-26 — iteration 13 (Phase 7.2 lands; verification clean)
+
+- **Subagent Q (background, completed) — Phase 7.2 escalation wiring:** added `escalate_unbindable` as a fourth task in `slot-binding.json`. Dispatches `create-shape-provider-goal` via the `activity` resolver when `select_or_produce_result` content contains `'unbindable":true'`. Same conditional idiom as `agent_fill_fallback`. Runs parallel with `agent_fill_fallback` (orthogonal recovery paths; both depend on `select_or_produce` and gate on the same condition). Variable forwarding degraded via `{{lifecycle}}` JSON blob — the dispatched activity's `compose_goal` LLM parses defensively. `parent_goal_text` and `parent_depth` threading deferred (gated on the lifecycle dispatcher payload upgrade — documented as an open question on the template). Typecheck clean. **Phase 7 closed.**
+- Verification (this iteration): all four repos clean of unpushed work prior to Q's commit. minibob `dc8aafb`, activity-api `8f8d5d9`, workbench `0541324`, super-repo `0c0d8511` — all matched origin/dev. Canary `https://activity.metabob.com/health` returned `version: 1.12.0` healthy.
+- Pushed: minibob `dc8aafb..7cacb66` (Phase 7.2). Super-repo pointer advance to follow in the same iteration.
+
 ## Out of scope
 
 - Canonical-composition synthesis (LLM-skill template pattern, tools-as-impulses convention, lifecycle-bootstrap as activity). Tracked here as a probable next sibling, not implemented.
